@@ -125,8 +125,14 @@ shipped_lacks_probe() {
 check shipped_lacks_probe
 no_home_in_library() { same "$(grep -ac -- "$HOME" "$SHIPPED$("$PG_CONFIG" --pkglibdir)"/thinkthen.* || true)" 0; }
 check no_home_in_library
-no_catch_unwind() { same "$(grep -rc catch_unwind src | awk -F: '{s += $2} END {print s}')" 0; }
-check no_catch_unwind
+# The backend guard is the one catch (ticket 0310), and each SQL function
+# body runs under it.
+one_catch_unwind() { same "$(grep -rl catch_unwind src)" src/call.rs; same "$(grep -c catch_unwind src/call.rs)" 1; }
+check one_catch_unwind
+every_function_is_guarded() {
+	same "$(cat src/*.rs | grep -c '^#\[pg_extern')" "$(cat src/*.rs | grep -c '^    call::guarded(||')"
+}
+check every_function_is_guarded
 every_cargo_call_is_locked_and_offline() {
 	same "$(grep -hE '^\s*(\(.*&& )?cargo (build|test|clippy|check|run)' check.sh | grep -vc -- '--locked --offline' || true)" 0
 }
@@ -435,10 +441,10 @@ the_grant_reaches_the_extension_alone() {
 }
 check the_grant_reaches_the_extension_alone
 a_deliberate_grant_survives() {
-	q -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text, text) TO PUBLIC" \
+	q -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text,text,json,text,text,text,text,bigint) TO PUBLIC" \
 		-c "CREATE FUNCTION tt_deliberate(x integer) RETURNS integer LANGUAGE sql AS 'SELECT \$1'" >/dev/null
-	out=$(q -c "SELECT has_function_privilege('public', 'thinkthen_decide(text, text)', 'EXECUTE')")
-	q -c "REVOKE EXECUTE ON FUNCTION thinkthen_decide(text, text) FROM PUBLIC" -c "DROP FUNCTION tt_deliberate(integer)" >/dev/null
+	out=$(q -c "SELECT has_function_privilege('public', 'thinkthen_decide(text,text,json,text,text,text,text,bigint)', 'EXECUTE')")
+	q -c "REVOKE EXECUTE ON FUNCTION thinkthen_decide(text,text,json,text,text,text,text,bigint) FROM PUBLIC" -c "DROP FUNCTION tt_deliberate(integer)" >/dev/null
 	same "$out" t
 }
 check a_deliberate_grant_survives
@@ -1083,7 +1089,11 @@ a_panic_is_an_error() {
 	fresh generic
 	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_panic_probe()" -c "SELECT 1")
 	has "$out" "XX000"
-	has "$out" "the panic probe fired"
+	has "$out" "ERROR:  XX000: thinkthen defect: the extension panicked (retryable: no)"
+	hasnt "$out" "panic probe"
+	log=$(cat "$LOG")
+	has "$log" "thinkthen defect: the extension panicked (retryable: no)"
+	hasnt "$log" "panic probe"
 	same "$(tail -n1 <<<"$out")" 1
 }
 check a_panic_is_an_error

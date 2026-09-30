@@ -2,11 +2,14 @@
 //! keeps, and the worker every call runs on (ticket 0111 decisions 3, 7,
 //! and 11; ADR 0043 as amended).
 
+use std::any::Any;
+use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
+use pgrx::pg_sys::panic::{CaughtError, ErrorReport, ErrorReportWithLevel};
 use pgrx::prelude::*;
 use thinkthen::{
     BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, SendBudget,
@@ -101,6 +104,30 @@ pub(crate) const fn sqlstate(kind: ErrorKind) -> PgSqlErrorCode {
 /// Raise a failure as PostgreSQL's own error. A failure never reads as NULL.
 pub(crate) fn raise(refusal: Refusal) -> ! {
     ereport!(ERROR, sqlstate(refusal.kind), refusal.text());
+}
+
+/// Run one SQL function's body on the backend thread. pgrx raises every SQL
+/// error by panicking with its own payload types, and a PostgreSQL error
+/// comes back as a `CaughtError`, so those pass through untouched. Any other
+/// panic is forgotten without running its destructor, as
+/// `thinkthen::contained` does, and raises the fixed defect. Its payload
+/// reaches neither the client nor the server log.
+pub(crate) fn guarded<T>(body: impl FnOnce() -> T) -> T {
+    match std::panic::catch_unwind(AssertUnwindSafe(body)) {
+        Ok(value) => value,
+        Err(payload) if pgrx_raised(&*payload) => std::panic::resume_unwind(payload),
+        Err(payload) => {
+            std::mem::forget(payload);
+            raise(Refusal::of(ErrorKind::Defect, "the extension panicked"))
+        }
+    }
+}
+
+/// Whether a payload is one pgrx raises and reports itself.
+fn pgrx_raised(payload: &(dyn Any + Send)) -> bool {
+    payload.is::<CaughtError>()
+        || payload.is::<ErrorReportWithLevel>()
+        || payload.is::<ErrorReport>()
 }
 
 /// Unwrap a value or raise its failure.

@@ -61,25 +61,27 @@ fn decide_many(
         name!(probability, f64),
     ),
 > {
-    let rows = answered(For::Decide, question, input, settings)
-        .into_iter()
-        .map(|(key, detail)| {
-            let value = match detail.value() {
-                Judgment::Decision(answer) => crate::answer_value(*answer),
-                _ => call::raise(Refusal::usage(
-                    "thinkthen_decide_many takes a decide question",
-                )),
-            };
-            let yes = probability(&detail).unwrap_or_else(|| {
-                call::raise(Refusal::of(
-                    thinkthen::ErrorKind::Defect,
-                    "a decide row carried no probability",
-                ))
-            });
-            (key, value, yes)
-        })
-        .collect::<Vec<_>>();
-    TableIterator::new(rows)
+    call::guarded(|| {
+        let rows = answered(For::Decide, question, input, settings)
+            .into_iter()
+            .map(|(key, detail)| {
+                let value = match detail.value() {
+                    Judgment::Decision(answer) => crate::answer_value(*answer),
+                    _ => call::raise(Refusal::usage(
+                        "thinkthen_decide_many takes a decide question",
+                    )),
+                };
+                let yes = probability(&detail).unwrap_or_else(|| {
+                    call::raise(Refusal::of(
+                        thinkthen::ErrorKind::Defect,
+                        "a decide row carried no probability",
+                    ))
+                });
+                (key, value, yes)
+            })
+            .collect::<Vec<_>>();
+        TableIterator::new(rows)
+    })
 }
 
 #[allow(
@@ -99,19 +101,21 @@ fn choose_many(
         name!(probability, Option<f64>),
     ),
 > {
-    let rows = answered(For::Choose, question, input, settings)
-        .into_iter()
-        .map(|(key, detail)| {
-            let value = match detail.value() {
-                Judgment::Choice(value) => value.clone(),
-                _ => call::raise(Refusal::usage(
-                    "thinkthen_choose_many takes a choose question",
-                )),
-            };
-            (key, value, probability(&detail))
-        })
-        .collect::<Vec<_>>();
-    TableIterator::new(rows)
+    call::guarded(|| {
+        let rows = answered(For::Choose, question, input, settings)
+            .into_iter()
+            .map(|(key, detail)| {
+                let value = match detail.value() {
+                    Judgment::Choice(value) => value.clone(),
+                    _ => call::raise(Refusal::usage(
+                        "thinkthen_choose_many takes a choose question",
+                    )),
+                };
+                (key, value, probability(&detail))
+            })
+            .collect::<Vec<_>>();
+        TableIterator::new(rows)
+    })
 }
 
 #[pg_extern(name = "thinkthen_score_many", parallel_restricted)]
@@ -120,19 +124,21 @@ fn score_many(
     input: Option<JsonB>,
     settings: default!(Option<RawJson>, "NULL"),
 ) -> TableIterator<'static, (name!(key, String), name!(value, f64))> {
-    let rows = answered(For::Score, question, input, settings)
-        .into_iter()
-        .map(|(key, detail)| {
-            let value = match detail.value() {
-                Judgment::Score(value) => *value,
-                _ => call::raise(Refusal::usage(
-                    "thinkthen_score_many takes a score question",
-                )),
-            };
-            (key, value)
-        })
-        .collect::<Vec<_>>();
-    TableIterator::new(rows)
+    call::guarded(|| {
+        let rows = answered(For::Score, question, input, settings)
+            .into_iter()
+            .map(|(key, detail)| {
+                let value = match detail.value() {
+                    Judgment::Score(value) => *value,
+                    _ => call::raise(Refusal::usage(
+                        "thinkthen_score_many takes a score question",
+                    )),
+                };
+                (key, value)
+            })
+            .collect::<Vec<_>>();
+        TableIterator::new(rows)
+    })
 }
 
 #[pg_extern(name = "thinkthen_tag_many", parallel_restricted)]
@@ -141,17 +147,19 @@ fn tag_many(
     input: Option<JsonB>,
     settings: default!(Option<RawJson>, "NULL"),
 ) -> TableIterator<'static, (name!(key, String), name!(value, Vec<String>))> {
-    let rows = answered(For::Tag, question, input, settings)
-        .into_iter()
-        .map(|(key, detail)| {
-            let value = match detail.value() {
-                Judgment::Tags(value) => value.clone(),
-                _ => call::raise(Refusal::usage("thinkthen_tag_many takes a tag question")),
-            };
-            (key, value)
-        })
-        .collect::<Vec<_>>();
-    TableIterator::new(rows)
+    call::guarded(|| {
+        let rows = answered(For::Tag, question, input, settings)
+            .into_iter()
+            .map(|(key, detail)| {
+                let value = match detail.value() {
+                    Judgment::Tags(value) => value.clone(),
+                    _ => call::raise(Refusal::usage("thinkthen_tag_many takes a tag question")),
+                };
+                (key, value)
+            })
+            .collect::<Vec<_>>();
+        TableIterator::new(rows)
+    })
 }
 
 #[pg_extern(name = "thinkthen_plan", parallel_restricted)]
@@ -160,33 +168,35 @@ fn plan(
     input: Option<JsonB>,
     settings: default!(Option<RawJson>, "NULL"),
 ) -> Option<JsonB> {
-    let question = question?;
-    let (settings, call) = forms::controls(settings.as_ref(), Named::default());
-    let verb = forms::plan_verb(question, &settings);
-    let question = forms::question(Some(question), None, verb, &settings);
-    let records: Vec<_> = forms::keyed(input)
-        .into_iter()
-        .map(|(_, value)| value)
-        .collect();
-    let estimate = call::run(call, move |engine, options| match &question {
-        LoadedQuestion::Question(held) => engine.plan_with(held, records, options),
-        LoadedQuestion::Banded(held) => engine.plan_with(held, records, options),
-    });
-    let (lower, upper) = estimate.estimated_input_tokens();
-    let first = estimate
-        .first_body()
-        .map(std::str::from_utf8)
-        .transpose()
-        .unwrap_or_else(|_| {
-            call::raise(Refusal::of(
-                thinkthen::ErrorKind::Defect,
-                "planned body was not UTF-8",
-            ))
+    call::guarded(|| {
+        let question = question?;
+        let (settings, call) = forms::controls(settings.as_ref(), Named::default());
+        let verb = forms::plan_verb(question, &settings);
+        let question = forms::question(Some(question), None, verb, &settings);
+        let records: Vec<_> = forms::keyed(input)
+            .into_iter()
+            .map(|(_, value)| value)
+            .collect();
+        let estimate = call::run(call, move |engine, options| match &question {
+            LoadedQuestion::Question(held) => engine.plan_with(held, records, options),
+            LoadedQuestion::Banded(held) => engine.plan_with(held, records, options),
         });
-    Some(JsonB(serde_json::json!({
-        "records": estimate.records(), "requests": estimate.requests(),
-        "estimated_bytes": estimate.estimated_bytes(),
-        "estimated_input_tokens": {"lower": lower, "upper": upper},
-        "upper_bound": estimate.upper_bound(), "first_body_utf8": first,
-    })))
+        let (lower, upper) = estimate.estimated_input_tokens();
+        let first = estimate
+            .first_body()
+            .map(std::str::from_utf8)
+            .transpose()
+            .unwrap_or_else(|_| {
+                call::raise(Refusal::of(
+                    thinkthen::ErrorKind::Defect,
+                    "planned body was not UTF-8",
+                ))
+            });
+        Some(JsonB(serde_json::json!({
+            "records": estimate.records(), "requests": estimate.requests(),
+            "estimated_bytes": estimate.estimated_bytes(),
+            "estimated_input_tokens": {"lower": lower, "upper": upper},
+            "upper_bound": estimate.upper_bound(), "first_body_utf8": first,
+        })))
+    })
 }

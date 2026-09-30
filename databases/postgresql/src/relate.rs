@@ -187,14 +187,16 @@ fn thinkthen_relate(
         name!(probability, f64),
     ),
 > {
-    let rules: Vec<String> = rules
-        .iter()
-        .flat_map(|held| held.iter().flatten().map(str::to_owned))
-        .collect();
-    if rules.is_empty() {
-        call::raise(Refusal::usage("relate needs at least one relation rule"));
-    }
-    relate(query.unwrap_or_default(), |kinds| inline(&rules, kinds))
+    call::guarded(|| {
+        let rules: Vec<String> = rules
+            .iter()
+            .flat_map(|held| held.iter().flatten().map(str::to_owned))
+            .collect();
+        if rules.is_empty() {
+            call::raise(Refusal::usage("relate needs at least one relation rule"));
+        }
+        relate(query.unwrap_or_default(), |kinds| inline(&rules, kinds))
+    })
 }
 
 /// A version-one relate file, as `'@file.json'` or JSON text.
@@ -215,10 +217,12 @@ fn thinkthen_relate_file(
         name!(probability, f64),
     ),
 > {
-    let ask = crate::given(rules, "relate file")
-        .parse(Relate::from_json)
-        .or_raise();
-    relate(query.unwrap_or_default(), |_| Ok(ask))
+    call::guarded(|| {
+        let ask = crate::given(rules, "relate file")
+            .parse(Relate::from_json)
+            .or_raise();
+        relate(query.unwrap_or_default(), |_| Ok(ask))
+    })
 }
 
 #[cfg(test)]

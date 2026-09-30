@@ -80,19 +80,21 @@ fn thinkthen_annotate(
     input: Option<&str>,
     settings: default!(Option<ffi::RawJson>, "NULL"),
 ) -> Option<JsonB> {
-    let call = forms::aggregate_controls(settings.as_ref());
-    let set = given(set, "question set")
-        .parse(thinkthen::QuestionSet::from_json)
-        .or_raise();
-    let input = input?.to_owned();
-    let value = call::run(call, move |engine, options| {
-        let mut records = engine.annotate_with(&set, [input.as_str()], options);
-        records
-            .next()
-            .transpose()
-            .map(|record| record.map(|held| held.value_json()))
-    });
-    value.map(|text| jsonb(&text))
+    call::guarded(|| {
+        let call = forms::aggregate_controls(settings.as_ref());
+        let set = given(set, "question set")
+            .parse(thinkthen::QuestionSet::from_json)
+            .or_raise();
+        let input = input?.to_owned();
+        let value = call::run(call, move |engine, options| {
+            let mut records = engine.annotate_with(&set, [input.as_str()], options);
+            records
+                .next()
+                .transpose()
+                .map(|record| record.map(|held| held.value_json()))
+        });
+        value.map(|text| jsonb(&text))
+    })
 }
 
 /// This backend's totals. Tests read differences around a call (0095).
@@ -106,9 +108,11 @@ fn thinkthen_usage() -> TableIterator<
         name!(output_tokens, i64),
     ),
 > {
-    let wide = |value: u64| i64::try_from(value).unwrap_or(i64::MAX);
-    let [sent, cached, input, output] = call::totals();
-    TableIterator::once((wide(sent), wide(cached), wide(input), wide(output)))
+    call::guarded(|| {
+        let wide = |value: u64| i64::try_from(value).unwrap_or(i64::MAX);
+        let [sent, cached, input, output] = call::totals();
+        TableIterator::once((wide(sent), wide(cached), wide(input), wide(output)))
+    })
 }
 
 type Names = Vec<(String, i32, i32, i32, String, f64)>;
@@ -166,13 +170,15 @@ fn thinkthen_recognize(
         name!(strength, f64),
     ),
 > {
-    let mut ask = Recognize::builder();
-    for kind in kinds.iter().flat_map(|held| held.iter().flatten()) {
-        ask = thinkthen::Kind::new(kind, None)
-            .and_then(|kind| ask.kind(kind))
-            .or_raise();
-    }
-    TableIterator::new(names(body, ask.build().or_raise()))
+    call::guarded(|| {
+        let mut ask = Recognize::builder();
+        for kind in kinds.iter().flat_map(|held| held.iter().flatten()) {
+            ask = thinkthen::Kind::new(kind, None)
+                .and_then(|kind| ask.kind(kind))
+                .or_raise();
+        }
+        TableIterator::new(names(body, ask.build().or_raise()))
+    })
 }
 
 /// Every name a version-one recognize spec asks for, as rows.
@@ -195,10 +201,12 @@ fn thinkthen_recognize_spec(
         name!(strength, f64),
     ),
 > {
-    let ask = given(spec, "recognize spec")
-        .parse(Recognize::from_json)
-        .or_raise();
-    TableIterator::new(names(body, ask))
+    call::guarded(|| {
+        let ask = given(spec, "recognize spec")
+            .parse(Recognize::from_json)
+            .or_raise();
+        TableIterator::new(names(body, ask))
+    })
 }
 
 /// The spec's relations over one text, as rows.
@@ -221,29 +229,31 @@ fn thinkthen_relations(
         name!(probability, f64),
     ),
 > {
-    let ask = given(spec, "recognize spec")
-        .parse(Recognize::from_json)
-        .or_raise();
-    let Some(found) = recognized(body, ask) else {
-        return TableIterator::new(Vec::new());
-    };
-    let rows: Vec<_> = found
-        .relations()
-        .unwrap_or_default()
-        .iter()
-        .map(|held| {
-            let (source, target) = (held.source(), held.target());
-            (
-                held.relation().to_owned(),
-                source.text().to_owned(),
-                source.kind().to_owned(),
-                target.text().to_owned(),
-                target.kind().to_owned(),
-                held.probability(),
-            )
-        })
-        .collect();
-    TableIterator::new(rows)
+    call::guarded(|| {
+        let ask = given(spec, "recognize spec")
+            .parse(Recognize::from_json)
+            .or_raise();
+        let Some(found) = recognized(body, ask) else {
+            return TableIterator::new(Vec::new());
+        };
+        let rows: Vec<_> = found
+            .relations()
+            .unwrap_or_default()
+            .iter()
+            .map(|held| {
+                let (source, target) = (held.source(), held.target());
+                (
+                    held.relation().to_owned(),
+                    source.text().to_owned(),
+                    source.kind().to_owned(),
+                    target.text().to_owned(),
+                    target.kind().to_owned(),
+                    held.probability(),
+                )
+            })
+            .collect();
+        TableIterator::new(rows)
+    })
 }
 
 /// R1-10: a test build's panic becomes XX000, and the session lives.
@@ -251,7 +261,9 @@ fn thinkthen_relations(
 #[pg_extern]
 #[allow(clippy::panic, reason = "the probe's whole job is one panic")]
 fn thinkthen_panic_probe() {
-    panic!("the panic probe fired");
+    call::guarded(|| {
+        panic!("the panic probe fired");
+    })
 }
 
 /// Register the settings. Nothing else runs here: the engine builds on a
