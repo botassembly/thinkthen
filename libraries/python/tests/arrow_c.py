@@ -89,10 +89,12 @@ def guarded(data, reserve=64 << 20):
 class Column:
     """One array of ``form`` over ``buffers``, each an address or None."""
 
-    def __init__(self, form, buffers, length, n_buffers=None, table=None, offset=0):
+    def __init__(self, form, buffers, length, n_buffers=None, table=None, offset=0,
+                 null_count=0):
         KEEP.append(self)
         self.pointers = (ctypes.c_void_p * max(len(buffers), 1))(*buffers)
         self.form, self.length, self.offset = form.encode(), length, offset
+        self.null_count = null_count
         self.count = len(buffers) if n_buffers is None else n_buffers
         self.table = table if table is not None else ctypes.addressof(self.pointers)
         self.schema_release = SCHEMA_RELEASE(lambda made: setattr(made.contents, "release", SCHEMA_RELEASE()))
@@ -100,7 +102,8 @@ class Column:
 
     def __arrow_c_array__(self, requested_schema=None):
         self.structs = (Schema(format=self.form, name=b"", release=self.schema_release),
-                        Array(length=self.length, offset=self.offset, n_buffers=self.count,
+                        Array(length=self.length, null_count=self.null_count, offset=self.offset,
+                              n_buffers=self.count,
                               buffers=ctypes.cast(self.table, ctypes.POINTER(ctypes.c_void_p)),
                               release=self.array_release))
         schema, array = (ctypes.addressof(one) for one in self.structs)

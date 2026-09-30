@@ -56,6 +56,28 @@ def test_extents_past_readable_memory_are_refused(backend, tmp_path):
     assert backend.count() == 2
 
 
+def test_nullable_utf8_offsets_still_refuse_reversal_before_a_send(backend, tmp_path):
+    """A null slot may hide payload bytes, but its Utf8/LargeUtf8 offsets
+    remain ordered. The old nullable reader accepted this 101 bitmap and
+    sent the two valid rows after offsets 3 -> 1 reversed across the null."""
+    printed = run(SETUP + """
+    validity, bits = address(bytes([0b101]))
+    data, values = address(b"abcd")
+    for form, width in (("u", 4), ("U", 8)):
+        raw = b"".join(n.to_bytes(width, "little", signed=True) for n in (0, 3, 1, 4))
+        held, offsets = address(raw)
+        said(lambda: engine.decide(late, Column(form, [bits, offsets, values], 3,
+                                               null_count=1)).value)
+    print(engine.usage()["requests_sent"])
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == [
+        "UsageError the column's offsets are reversed or negative",
+        "UsageError the column's offsets are reversed or negative",
+        "0",
+    ]
+    assert backend.count() == 0
+
+
 @pytest.mark.stress
 def test_refused_inputs_release_their_batches(backend, tmp_path):
     """R2-17: 200 refused 8 MB number columns in a row each release their

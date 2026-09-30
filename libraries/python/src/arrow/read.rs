@@ -136,7 +136,7 @@ pub(super) fn borrow<'a, O: ?Sized>(
         return Err("the frame's struct root asks for rows its column does not carry".to_owned());
     }
     let present = presence(memory, array, &table, skip, count)?;
-    if !present.iter().any(|one| *one) {
+    if text == Text::View && !present.iter().any(|one| *one) {
         return Ok(vec![None; count]);
     }
     let rows = match text {
@@ -322,7 +322,7 @@ fn offset_rows<'a, O: ?Sized>(
     let (Some(&offsets), Some(&values)) = (table.get(1), table.get(2)) else {
         return Err("the string array lacks its offsets or its values buffer");
     };
-    if offsets.is_null() || values.is_null() {
+    if offsets.is_null() || (values.is_null() && present.iter().any(|one| *one)) {
         return Err("the string array lacks its offsets or its values buffer");
     }
     let width = if text == Text::LargeUtf8 { 8 } else { 4 };
@@ -341,6 +341,21 @@ fn offset_rows<'a, O: ?Sized>(
         }
     };
     let ends: Vec<i64> = words(held, width).map(signed).collect();
+    // Utf8 offsets describe every slot, including nulls whose payload is
+    // undefined. Validate their structure before borrowing present bytes.
+    let mut start = 0;
+    for &end in &ends {
+        if end < start {
+            return Err("the column's offsets are reversed or negative");
+        }
+        if end > MAX_DATA as i64 {
+            return Err("the column's offsets name more bytes than a text column carries");
+        }
+        start = end;
+    }
+    if !present.iter().any(|one| *one) {
+        return Ok(vec![None; count]);
+    }
     if present.iter().any(|one| !one) {
         return ends
             .windows(2)
@@ -353,29 +368,13 @@ fn offset_rows<'a, O: ?Sized>(
                     pair.first().copied().unwrap_or(0),
                     pair.get(1).copied().unwrap_or(0),
                 );
-                if low < 0 || high < low {
-                    return Err("the column's offsets are reversed or negative");
-                }
                 let (low, high) = (low as usize, high as usize);
-                if high > MAX_DATA {
-                    return Err("the column's offsets name more bytes than a text column carries");
-                }
                 row_length(high - low)?;
                 bytes(owner, memory, values.wrapping_add(low), high - low)
                     .map(Some)
                     .ok_or(UNREADABLE)
             })
             .collect();
-    }
-    let mut start = ends.first().copied().unwrap_or(0);
-    for &end in ends.iter().skip(1) {
-        if start < 0 || end < start {
-            return Err("the column's offsets are reversed or negative");
-        }
-        if usize::try_from(end).is_ok_and(|end| end > MAX_DATA) {
-            return Err("the column's offsets name more bytes than a text column carries");
-        }
-        start = end;
     }
     let first = usize::try_from(ends.first().copied().unwrap_or(0)).unwrap_or(0);
     let last = usize::try_from(ends.get(count).copied().unwrap_or(0)).unwrap_or(0);
