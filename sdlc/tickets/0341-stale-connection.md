@@ -1,6 +1,6 @@
 # 0341: A backend's keep-alive close no longer fails a send
 
-Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Asks whether the connection reuse that 0340 found in a DuckDB test can fail a real send.
+Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Asks whether the connection reuse that 0340 found in a DuckDB test can fail a real send.
 
 ## Outcome
 
@@ -41,3 +41,5 @@ Local experiment 417 ran the compiled command against a loopback HTTP/1.1 server
 - The race is real and narrow. On loopback, a close crossing the request by a millisecond or two failed 6 of 120 sends. A 20 ms network delay widens the window to 20 ms, and every send inside it failed.
 - Each failure printed `the backend closed the connection before a reply and may have received the request; it was not sent again` and exited 4, the same exit the bench saw. The server read no request body for any failure, so nothing was billed twice. The server counted one request per success and none per failure: before the fix, 20 requests over 20 two-line trials at 1,190 ms; after it, 40 over 20 trials on 40 connections.
 - The last row is the deferred gap: a keep-alive wait under one second still races.
+- `public_controls` `a_host_interrupt_during_relate_chunks_sends_nothing_new` failed one full `test` run. It fails as often on main's code under load, so it is filed as debt in `sdlc/issues/2026-09-30-relate-host-interrupt-test-fails-under-load.md`. The rerun passed 1,286 tests.
+- A fresh review accepted. Its one wording note, that "never" claimed too much in `records.md`, is applied.
