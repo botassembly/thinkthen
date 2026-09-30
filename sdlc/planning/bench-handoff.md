@@ -43,7 +43,7 @@ The bench adds a JSON summary per function pinned to tags (bench ticket 0022), a
 Filed on 2026-09-30:
 
 - `../issues/closed/2026-09-30-command-question-file-has-no-size-cap.md`
-- `../issues/2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`
+- `../issues/closed/2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`
 - `../issues/2026-09-30-spec-no-calls-edges-need-a-real-send.md`
 
 Merged into open issues: the Liquid d1 first-`check` timeout went into `../issues/2026-09-29-docs-page-naming-supported-providers.md`, section 2 and row 19 of `../issues/2026-09-20-new-user-stumble-register.md`. A longer default timeout on the `liquid` built-in waits for ticket 0334's deferred per-backend limits.

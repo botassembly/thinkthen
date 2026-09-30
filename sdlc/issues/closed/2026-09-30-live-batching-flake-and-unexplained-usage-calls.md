@@ -1,6 +1,8 @@
 # One live batching request failed once, and about 1,000 calls on the usage counter are unexplained
 
-Status: open. Reported by the Beatles Bench team on 2026-09-30 from live runs. Investigated read-only on 2026-09-30 against main `e8e2833e9`; see "What the investigation found". The unexplained calls have a likely cause, filed as `closed/2026-09-30-test-stress-writes-the-real-usage-totals.md` and now fixed. The exit 4 stays open. Owner: the queue owner; no paid call was run for this issue.
+Status: closed 2026-09-30 by the queue batches Quick Fix. Both findings are paid: the unexplained calls came from `test-stress` (closed issue `2026-09-30-test-stress-writes-the-real-usage-totals.md`, fixed in `87602e2ad`), and ticket 0341 (`f0308dd9d`) fixed the one mechanism found that gives a lone exit 4 that passes on rerun. A later live exit 4 kept with `--details` and stderr is a new issue.
+
+Resolution: paid by `87602e2ad` and `f0308dd9d`.
 
 ## What was seen
 

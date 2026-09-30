@@ -2,7 +2,7 @@
 
 Status: open for items 1, 2, 3, 6, 7, 9 and 10. Shortened 2026-09-30. Items 4 (ticket 0148), 5 (ticket 0150) and 8 (ticket 0136) are settled, and git history holds their text. Rechecked on main `88649ec0d` after 0304 slices 3b and 3e: items 1, 2, 3 and 9 still stand. Item 10 merged in on 2026-09-30 from the hand-built plan JSON issue, now in `closed/`.
 
-Owner: one SQL host ticket for items 1, 2, 3, 9 and 10 after 0304 slice 4, which rewrites the relate path item 2 reaches; item 10 alone can go first as a Quick Fix. Items 6 and 7: a future ticket after 0.1.
+Owner: ticket 0347 for items 1, 2, 3, 9 and 10, batch B4 of `../planning/issue-priorities-2026-09-30.md`. Items 6 and 7: a future ticket after 0.1.
 
 Kind: debt
 

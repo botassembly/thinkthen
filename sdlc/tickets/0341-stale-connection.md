@@ -8,7 +8,7 @@ The pool reuses no connection that sat idle for one second or more. A backend th
 
 ## Evidence
 
-- Starts from: ticket 0340 and `sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`; the exit 4 the Beatles Bench saw once, in `sdlc/issues/2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`; ticket 0089, which rules that no transport failure is sent again and names this exact cost; ticket 0142, which kept ureq's 15 second idle age; `specification/backends.md` on retries and transport failures.
+- Starts from: ticket 0340 and `sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`; the exit 4 the Beatles Bench saw once, in `sdlc/issues/closed/2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`; ticket 0089, which rules that no transport failure is sent again and names this exact cost; ticket 0142, which kept ureq's 15 second idle age; `specification/backends.md` on retries and transport failures.
 - Keeps: the 0089 rule. A transport failure is never sent again, and a failed attempt still counts as one sent request. Exit codes, messages, retries, spend limits, the usage totals and `--jobs N` opening up to N connections stay the same.
 - Changes: `engine/http.rs` `Client::with_roots` sets ureq's `max_idle_age` to one second, down from ureq's default of 15.
   - `specification/records.md`, section `jobs`: one sentence states the limit.

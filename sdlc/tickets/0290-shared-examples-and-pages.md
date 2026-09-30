@@ -1,6 +1,6 @@
 # 0290 — Shared examples and pages (T8)
 
-Status: deferred. After ADR 0111 slice 3; recapture request bodies then. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
+Status: withdrawn 2026-09-30 by the queue batches Quick Fix. Its E1 to E9 corpus would be a second shared case set beside `conformance/`, which cleanup order item 5 makes the one set every surface replays, and ADR 0111 changed every wire body it would pin. PostgreSQL's key disclosure is already in `databases/postgresql/README.md`. The remaining page items moved to page 24 of `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md`. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
 
 ## Outcome
 

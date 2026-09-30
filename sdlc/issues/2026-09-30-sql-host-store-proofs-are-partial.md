@@ -1,6 +1,6 @@
 # The SQL hosts' question store proofs are partial
 
-Status: open. Reopened on 2026-09-30 when ticket 0304 slice 5 paid the rest of Debt 003 (`closed/2026-09-30-old-batching-files-still-have-live-callers.md`), into which this issue had merged. Owner: none yet.
+Status: open. Reopened on 2026-09-30 when ticket 0304 slice 5 paid the rest of Debt 003 (`closed/2026-09-30-old-batching-files-still-have-live-callers.md`), into which this issue had merged. Owner: ticket 0348, batch B4 of `../planning/issue-priorities-2026-09-30.md`.
 
 Kind: debt
 
