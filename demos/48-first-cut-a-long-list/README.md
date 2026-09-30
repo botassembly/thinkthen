@@ -38,16 +38,16 @@ printf 'rc=%s %s\n' "$rc" "$err" | mustmatch 'rc=2 thinkthen: `find` takes 2 to 
 
 The first cut is the section prefix. `grep` keeps the customer lines, and `cut` drops the prefix, so `find` sees each rule as plain text. A database query or a search index can do the same job.
 
-## A cut can drop the answer
+## When no survivor answers
 
-A first cut is only as good as its rule. The handbook says nothing about a manufacturer warranty, and neither do the customer lines. `--none` lets `find` say that none of the survivors answers. The command prints nothing and exits 3.
+The handbook says nothing about a manufacturer warranty, and neither do the customer lines. `--none` lets `find` say that none of the survivors answers. The command prints nothing and exits 3.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 grep '^customer: ' handbook.txt | cut -d ' ' -f 2- \
-  | thinkthen find 'How long is the manufacturer warranty?' \
+  | env -u THINKTHEN_API_KEY thinkthen find 'How long is the manufacturer warranty?' \
       --lines --none --model jev-1.13.0 --replay recording/ \
   > "$work/hit.txt" && rc=0 || rc=$?
 printf 'rc=%s bytes=%s\n' "$rc" "$(wc -c < "$work/hit.txt" | tr -d ' ')" \

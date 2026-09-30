@@ -15,3 +15,9 @@ Every `demos/*/record.sh` records into a scratch folder, copies its `thinkthen.s
 - Defers: the other docs pages, which follow 0.1.
 
 ## What the build taught us
+
+- The fixture needed no paid call. Grep's twelve survivors equal how-to 15's policy byte for byte, so the `find` request is the same and how-to 48 copies that page's two recorded answers. The page says so.
+- Demo 12's own EXIT trap would have fought `scratch_dir`, which takes the EXIT trap. The repaired input now lives in the scratch folder, so the trap went.
+- Demos 40 and 41 used `--record recording/ --replay recording/` to reuse held answers across reruns. In a scratch folder that reuse lasts one run; a rerun sends every question again.
+- A loopback run of demos 01 and 12 in a scratch copy, against `conformance-backend`'s generic arm, left only `thinkthen.jsonl` in `recording/`. Changing one expected sentence on the new page failed one block.
+- The issue closures cite the landing merge in the record commit after landing, because the merge hash does not exist before it.
