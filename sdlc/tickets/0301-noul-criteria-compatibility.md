@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 301
-opens: sdlc/issues/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md
+opens: sdlc/issues/closed/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md
 ---
 
 # 0301: Omit null descriptions from System One noul criteria
@@ -34,7 +34,7 @@ After local review, the issue's hosted done condition still needs one separately
 
 ## Evidence
 
-- Starts from: [The open issue](../issues/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md), experiment 413's retained result, the current serializer and the settled `noul` wire sentence in `specification/backends.md`.
+- Starts from: [The issue](../issues/closed/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md), experiment 413's retained result, the current serializer and the settled `noul` wire sentence in `specification/backends.md`.
 - Keeps: The question-file null input and its canonical digest, non-null descriptions, no-criteria and both-described bytes, choice/score null rules, exact-byte replay and existing recordings.
 - Changes: Explicit null `noul` descriptions no longer serialize as null wire members; the fixed `check` noul body and matching exact-byte documentation change with them.
 - Proof: A small serializer edge table and distinct-question/same-wire identity case; selected compiled check and structured-file routes; R and TypeScript source and matching installed-addon/package assertions; exact fixture, loopback body/count, retained choice/score checks and affected documentation comparisons.

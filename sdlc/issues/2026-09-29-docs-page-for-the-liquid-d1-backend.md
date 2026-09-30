@@ -24,4 +24,4 @@ The README now names Liquid's address, model and key setting, and states what th
 
 ## Note for marketing
 
-The page belongs in `site/`, so the queue owner leaves it to you. Use the README bullet and the open [null-criteria issue](2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md) as the source. Wait for that issue's hosted recheck before saying `check` passes. Close this issue when the page lands.
+The page belongs in `site/`, so the queue owner leaves it to you. Use the README bullet and the closed [null-criteria issue](closed/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md) as the source. Its 2026-09-30 hosted recheck passed, so the page may say `check` passes. Close this issue when the page lands.
