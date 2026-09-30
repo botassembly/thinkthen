@@ -10,7 +10,7 @@ Read `README.md`, `specification/README.md`, then `sdlc/planning/rust-standards.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`. Compilation and Clippy miss file caps and the adapter-word boundary.
 - Keep checks that protect behavior, secrecy, spend, boundaries, or ticket evidence. A check that only polices prose may go; the commit says why.
 - Linux and M5 builds may overlap when load, memory, and I/O permit. Reduce jobs under pressure; isolate outputs and lane locks. Keep the shared toolchain and cache mutation locks when builds overlap.
-- Tickets follow `sdlc/tickets/README.md` and `sdlc/planning/ticket-preparation.md`. Add `## What the build taught us` before landing. Commit and push whole changes without agent attribution. Use a claimed lane per `sdlc/planning/worktrees.md`; the lander frees it.
+- Tickets follow `sdlc/tickets/README.md`. Commit and push whole changes without agent attribution. Use a claimed lane per `sdlc/planning/worktrees.md`; the lander frees it.
 
 ## Boundaries
 
