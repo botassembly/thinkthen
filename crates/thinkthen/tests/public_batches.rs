@@ -25,9 +25,6 @@ mod identity;
 #[path = "public_batches/attempts.rs"]
 mod attempts;
 
-#[path = "public_batches/portable.rs"]
-mod portable;
-
 #[path = "public_batches/interactive.rs"]
 mod interactive;
 

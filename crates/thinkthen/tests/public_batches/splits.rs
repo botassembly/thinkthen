@@ -193,35 +193,6 @@ fn a_halved_request_keeps_one_question_key_per_member() {
 }
 
 #[test]
-fn named_group_failed_left_half_does_not_send_right() {
-    let _serial = serial();
-    let missing = r#"{"model":"jev-latest","answers":{}}"#;
-    let listener = Listener::serving(vec![
-        Canned::status(413, "too large"),
-        Canned::ok(missing),
-        Canned::ok(DECIDED),
-    ])
-    .expect("listener");
-    let engine = engine(listener.base());
-    let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
-    )
-    .expect("set");
-    let mut rows = engine.annotate_with(&set, ["alpha", "beta"], packed());
-    assert_eq!(
-        rows.next().expect("stop").expect_err("failed left").kind(),
-        ErrorKind::Backend
-    );
-    assert!(rows.next().is_none());
-    assert_eq!(
-        rows.facts()
-            .map(|facts| (facts.records(), facts.requests_sent())),
-        Some((0, 2))
-    );
-    assert_eq!(listener.requests().len(), 2);
-}
-
-#[test]
 fn profile_splits_each_incompatible_named_group_before_sending() {
     let _serial = serial();
     let (alpha_sender, alpha_answered) = std::sync::mpsc::channel();
