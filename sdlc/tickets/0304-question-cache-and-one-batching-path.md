@@ -246,7 +246,7 @@ fn process_requests_sent() -> u64
   - `pair_chunks`, `relation_ceiling`, `ask_chunks_with_plan`, the `PREPARATIONS` counter and `PairPlan`'s re-exports go. `ask_profile` and `PreparedRequest::with_profile` serve tests only.
   - Relate's partial replay on `spec/relate.md` now exits 5 and names the failed question's key, because ADR 0111 section 6 never stores a failed answer. Exit 6 with the good answer kept is proven on loopback. `specification/relate.md`, `recognize.md` and `result.md` say question key where they said request digest, and `CHANGELOG.md` records the change.
   - The shared settings case `request-bytes-splits-relations` turns the cache off in both steps. Its second step asked the same pairs, which the question cache now answers without a send.
-  - The ratchet falls by 515 lines to 105,286.
+  - The ratchet falls by 441 lines to 107,463, from 107,904 on main after 0334. The removed old-store tests, `pair_chunks` and the chunked sender outweigh `each.rs`, the shared fixture and the new proofs.
 - Proof, counted on the loopback backend in `tests/backend/question_cache_steps.rs`:
   - Relate over 420 pairs sends a request of 400 questions and one of 20, stores 420 answers, and a rerun sends zero requests and prints the same bytes.
   - Adding a rule to a cached relate run sends only that rule's 3 questions, and the output equals an uncached run.
