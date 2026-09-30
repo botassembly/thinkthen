@@ -10,6 +10,24 @@ tickets |>
   mutate(team = tt_choose("Which team owns this?", body, c("billing", "shipping", "account"))$value)
 ```
 
+An omitted `input` returns a function judge with its question and call settings checked once. Apply it to a scalar or vector; pass `deadline_ms` or `completion` when applying it. An explicit `NULL` or `NA` input remains an eager call. `tt_plan(judge, input)` previews the same packed work with `records`, prepared `requests`, `estimated_bytes`, a lower/upper `estimated_input_tokens` band, `upper_bound`, and `first_body`. Planning uses the judge's bound batch and context; those controls cannot be overridden at plan time. It needs no key, reads no cache, and sends no request. Its request count precedes cache answers, refusal splits, and retries.
+
+```r
+complaint <- tt_decide("Is this a complaint?", threshold = "0.3:0.7")
+preview <- tt_plan(complaint, tickets$body)
+answer <- complaint(tickets$body)           # one packed call over the vector
+answer$probability                         # yes probabilities from that call
+
+library(dplyr)
+tickets |>
+  group_by(team) |>
+  mutate(complaint = tt_decide("Is this a complaint?", body)$value)
+# One packed call per group. purrr::partial(tt_decide, "Is this a complaint?")
+# can be applied to a vector in the same way.
+```
+
+For a lazy table, dbplyr passes `thinkthen_decide` through to SQL without translating its name: `mutate(tbl, complaint = thinkthen_decide('Is this a complaint?', body, '{"threshold":0.7}'))`. DuckDB's vector execution packs rows. PostgreSQL's scalar `thinkthen_decide` calls once per row; use its `thinkthen_decide_many` keyed form when packing matters. `show_query()` previews SQL only and sends no judgment request.
+
 - `tt_choose`, `tt_score`, and `tt_tag` over a column use the loaded question's dynamic-label many-record path. They retain label order and saved profiles. A structured question text uses one record per request; plain text can pack compatible records.
 - `tt_question(file = path)` keeps a saved calibration `profile` on a single question. A built profiled question is refused by `tt_rank` and `tt_find` before a request; pass plain text to those verbs. The constructor also accepts structured question text and description values. On a decide question, `true = NULL` writes an explicit JSON null while an omitted `false` writes no key.
 - `tt_recognize(...)$value` holds one data frame per text, with the columns `text`, `start`, `end`, `length`, `kind`, and `strength`. The `start` and `end` columns count characters from one, so `substr(text, start, end)` gives the name, and `length` counts its characters. With no kinds, every name has the kind `ENTITY`. Relations ride in the `relations` attribute.

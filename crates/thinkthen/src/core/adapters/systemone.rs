@@ -49,6 +49,9 @@ pub(crate) fn is_mutable_alias(model: &ModelName) -> bool {
 /// values even where they read alike.
 pub(crate) const ENDPOINT_PATH: &str = "systemone";
 
+/// The optional request ID response header this built-in adapter understands.
+pub(crate) const ATTEMPT_REQUEST_ID_HEADER: &str = "x-typesafe-request-id";
+
 /// True when a reported model is safe and useful in a mixed-version diagnostic.
 #[must_use]
 pub(crate) fn diagnostic_model(value: &str, requested: &str) -> bool {

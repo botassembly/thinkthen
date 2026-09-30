@@ -109,7 +109,9 @@ pub(crate) fn ask_sent_observed<E>(
 where
     E: From<Error>,
 {
-    let cancel = cancel.with_process_budget(transport.send_budget.clone());
+    let cancel = cancel
+        .with_process_budget(transport.send_budget.clone())
+        .with_attempt_digest(prepared.digest.as_str());
     ask_prepared(
         backend,
         plan,

@@ -32,3 +32,8 @@ For every sent request, keep three facts: the wall time of the exchange as the c
 ## Why
 
 The Beatles Bench paper compares Jev's median of 0.30 s with GLM's 8.4 s. A reader will ask how much is the model and how much is the network and the machine. With these fields, every run answers that for itself.
+
+
+## Scoped0302 implementation landed
+
+Ticket0302 passed fresh High code review at `c8818e667ffd8d9171803a18969f0a7ec82ba912`. Rust has the opt-in caller-thread attempt callback; decide, choose, filter, rank, score and tag expose attempt rows under CLI details; all ten directCJSON verbs accept the explicit opt-in. Default facts/output and recordings remain unchanged. See [the build record](../records/0302-attempt-timing-build.md) for bounded independent loopback proof and source artifacts. This issue remains open for the four separate CLI writers, failed-run presentation, durable sidecar/status, `command_ms` and typed host adoption. No full package or release qualification follows from this source stage.

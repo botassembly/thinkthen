@@ -22,6 +22,9 @@ mod recognition;
 #[path = "public_batches/identity.rs"]
 mod identity;
 
+#[path = "public_batches/attempts.rs"]
+mod attempts;
+
 #[path = "public_batches/portable.rs"]
 mod portable;
 

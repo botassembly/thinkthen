@@ -7,6 +7,7 @@ use std::io::Read;
 use std::io::{self, Write as _};
 use std::num::NonZeroUsize;
 use std::process::ExitCode;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::core::{
@@ -18,9 +19,11 @@ use crate::args::Common;
 use crate::edge::{self, Environment};
 use crate::engine::Width;
 use crate::engine::facade::{Engine, Settings, Storage};
+use crate::engine::{AttemptSink, Cancel};
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
+use crate::public::AttemptObservation;
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
@@ -40,6 +43,46 @@ use reading::read_by;
 struct RowContext<'a> {
     arrived: Option<&'a [u8]>,
     batch: Option<BatchMeta>,
+    attempts: Vec<AttemptObservation>,
+}
+
+/// One request's events only; every clone of the command cancel shares its ordinal.
+struct Observed {
+    cancel: Cancel<'static>,
+    events: Option<Arc<Mutex<Vec<AttemptObservation>>>>,
+}
+
+impl Observed {
+    fn new(cancel: &Cancel<'static>, detailed: bool) -> Self {
+        if !detailed {
+            return Self {
+                cancel: cancel.clone(),
+                events: None,
+            };
+        }
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let collected = Arc::clone(&events);
+        let sink = AttemptSink::new(move |event| {
+            if let Ok(mut events) = collected.lock() {
+                events.push(event);
+            }
+        });
+        Self {
+            cancel: cancel.with_attempt_sink(sink),
+            events: Some(events),
+        }
+    }
+
+    fn events(&self) -> Vec<AttemptObservation> {
+        let mut events = self
+            .events
+            .as_ref()
+            .and_then(|events| events.lock().ok().map(|events| events.clone()))
+            .unwrap_or_default();
+        events.sort_by_key(AttemptObservation::ordinal);
+        events.dedup_by_key(|event| event.ordinal());
+        events
+    }
 }
 
 /// Build the one engine a command calls, from what the command resolved.

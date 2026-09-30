@@ -195,10 +195,17 @@ tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle
   invisible(NULL)
 }
 
+# Only an unclassed scalar string reaches checks that might otherwise
+# dispatch is.na, length, comparison, or conversion methods.
+.tt_plain_text <- function(value) {
+  typeof(value) == "character" && !is.object(value) &&
+    is.null(attributes(value)) && length(value) == 1L && !is.na(value)
+}
+
 .tt_batch_valid <- function(value) {
-  is.null(value) || (is.character(value) && length(value) == 1L &&
-                      !is.na(value) && identical(value, "max")) ||
-    (is.numeric(value) && is.null(attr(value, "class")) && length(value) == 1L &&
+  is.null(value) || (.tt_plain_text(value) && identical(value, "max")) ||
+    ((typeof(value) == "double" || typeof(value) == "integer") &&
+       !is.object(value) && is.null(attr(value, "class")) && length(value) == 1L &&
        !is.na(value) && is.finite(value) && value >= 1 &&
        value <= 9007199254740991 && value == floor(value))
 }
@@ -207,9 +214,8 @@ tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle
   if (!batch_ok && !is.null(batch)) .tt_usage("this call does not take batch")
   if (!context_ok && !is.null(context)) .tt_usage("this call does not take context")
   if (!.tt_batch_valid(batch)) .tt_usage("batch is max or one positive whole number")
-  if (!is.null(context) && (!is.character(context) || length(context) != 1L ||
-                            is.na(context) || !validUTF8(enc2utf8(context)) ||
-                            !nzchar(trimws(context)))) {
+  if (!is.null(context) && (!.tt_plain_text(context) ||
+                            !validUTF8(enc2utf8(context)) || !nzchar(trimws(context)))) {
     .tt_usage("context must be nonblank UTF-8 text")
   }
   if (!is.null(context)) .tt_json_value(context, "context")
@@ -349,29 +355,114 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
   text[[1L]]
 }
 
-tt_decide <- function(question, input, threshold = NULL, true = NULL, false = NULL,
-                      context = NULL, batch = NULL, ..., deadline_ms = NULL,
-                      completion = NULL) {
-  .tt_asking(completion, {
-    if (length(list(...))) .tt_unknown(...)
-    .tt_controls(batch, context)
-    .tt_call_settings("decide", batch, context, deadline_ms)
-    sides <- list()
-    if (!missing(true)) sides["true"] <- list(true)
-    if (!missing(false)) sides["false"] <- list(false)
-    question <- .tt_settled(question, threshold = threshold, sides = sides)
+# A judge captures a checked question and call controls. The same bound value
+# drives immediate calls and applications, so a question is checked once.
+.tt_bind <- function(kind, question, members, threshold, sides, batch, context) {
+  .tt_controls(batch, context)
+  .tt_call_settings(kind, batch, context, NULL)
+  list(kind = kind, question = .tt_settled(question, kind, members, threshold, sides),
+       batch = batch, context = context)
+}
+
+.tt_execute <- function(bound, input, deadline_ms, completion) {
+  .tt_call_settings(bound$kind, NULL, NULL, deadline_ms)
+  question <- bound$question
+  question_json <- unclass(question)[["json"]]
+  batch <- bound$batch
+  context <- bound$context
+  if (bound$kind == "decide") {
     input <- as.character(input)
     code <- rep(NA_integer_, length(input))
     probability <- rep(NA_real_, length(input))
     live <- !is.na(input)
-    native <- .tt_call(tt_decide_column(question$json, input[live],
+    native <- .tt_call(tt_decide_column(question_json, input[live],
                                         as.integer(which(live) - 1L), deadline_ms,
                                         batch, context, completion))
     code[live] <- native$value$answer
     probability[live] <- native$value$probability
     answer <- .tt_result(ifelse(code < 0L, NA, code == 1L), native)
     answer$probability <- probability
-    answer
+    return(answer)
+  }
+  empty <- switch(bound$kind, choose = NULL, score = NA_real_, tag = character())
+  held <- .tt_column(question, input, deadline_ms, empty, batch, context, completion)
+  value <- switch(bound$kind,
+    choose = vapply(held$value, function(one) if (is.null(one)) NA_character_ else one, character(1)),
+    score = vapply(held$value, as.numeric, numeric(1)),
+    tag = lapply(held$value, as.character))
+  .tt_result(value, held)
+}
+
+# The judge's one captured binding drives both application and planning.
+# Its environment and binding are locked, and plan inspects the body before
+# reading it. A caller's lookalike function is never invoked by plan.
+.tt_judge_apply <- function(input, ..., deadline_ms = NULL, completion = NULL) {
+  .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
+    if (missing(input)) .tt_usage("a judge needs input")
+    .tt_execute(bound, input, deadline_ms, completion)
+  })
+}
+
+.tt_judge <- function(bound) {
+  held <- list2env(list(bound = bound), parent = environment(.tt_judge_apply))
+  lockEnvironment(held, bindings = TRUE)
+  judge <- .tt_judge_apply
+  environment(judge) <- held
+  class(judge) <- c("thinkthen_judge", "function")
+  judge
+}
+
+.tt_judge_bound <- function(judge) {
+  refused <- function() .tt_usage("plan takes an unmodified ThinkThen judge")
+  if (!is.function(judge) || !identical(class(judge), c("thinkthen_judge", "function"))) refused()
+  held <- environment(judge)
+  if (!is.environment(held) || !environmentIsLocked(held) ||
+      !identical(parent.env(held), environment(.tt_judge_apply)) ||
+      !exists("bound", held, inherits = FALSE) || bindingIsActive("bound", held) ||
+      !bindingIsLocked("bound", held) ||
+      !identical(formals(judge), formals(.tt_judge_apply)) ||
+      !identical(body(judge), body(.tt_judge_apply))) refused()
+  bound <- get("bound", held, inherits = FALSE)
+  if (!is.list(bound) || is.object(bound) ||
+      !identical(names(bound), c("kind", "question", "batch", "context"))) refused()
+  kind <- bound[["kind"]]
+  if (!.tt_plain_text(kind) ||
+      !(identical(kind, "decide") || identical(kind, "choose") ||
+        identical(kind, "score") || identical(kind, "tag"))) refused()
+  if (!identical(class(bound[["question"]]), "thinkthen_question")) refused()
+  question <- unclass(bound[["question"]])
+  if (!is.list(question) || !.tt_plain_text(question[["json"]]) ||
+      !.tt_plain_text(question[["kind"]]) ||
+      !identical(question[["kind"]], kind) || !.tt_batch_valid(bound[["batch"]]) ||
+      (!is.null(bound[["context"]]) &&
+       (!.tt_plain_text(bound[["context"]]) ||
+        !validUTF8(enc2utf8(bound[["context"]])) ||
+        !nzchar(trimws(bound[["context"]]))))) refused()
+  bound
+}
+
+.tt_verb <- function(kind, question, input, members, threshold, sides, context, batch,
+                     deadline_ms, completion, omitted) {
+  if (omitted) {
+    if (!is.null(deadline_ms) || !is.null(completion))
+      .tt_usage("deadline_ms and completion belong to judge application")
+    return(.tt_judge(.tt_bind(kind, question, members, threshold, sides, batch, context)))
+  }
+  bound <- .tt_bind(kind, question, members, threshold, sides, batch, context)
+  .tt_execute(bound, input, deadline_ms, completion)
+}
+
+tt_decide <- function(question, input, threshold = NULL, true = NULL, false = NULL,
+                      context = NULL, batch = NULL, ..., deadline_ms = NULL,
+                      completion = NULL) {
+  .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
+    sides <- list()
+    if (!missing(true)) sides["true"] <- list(true)
+    if (!missing(false)) sides["false"] <- list(false)
+    .tt_verb("decide", question, input, NULL, threshold, sides, context, batch,
+             deadline_ms, completion, missing(input))
   })
 }
 
@@ -381,12 +472,12 @@ tt_decide <- function(question, input, threshold = NULL, true = NULL, false = NU
   input <- as.character(input)
   cells <- rep(list(empty), length(input))
   live <- !is.na(input)
-  native <- .tt_call(tt_column(question$json, input[live],
+  native <- .tt_call(tt_column(unclass(question)[["json"]], input[live],
                                 as.integer(which(live) - 1L), deadline_ms,
                                 batch, context, completion))
   cells[live] <- native$value$value
   answer <- .tt_result(cells, native)
-  if (question$kind == "choose") {
+  if (unclass(question)[["kind"]] == "choose") {
     probability <- rep(NA_real_, length(input))
     probability[live] <- native$value$probability
     answer$probability <- probability
@@ -401,12 +492,8 @@ tt_choose <- function(question, input, options = NULL, threshold = NULL,
     if (length(list(...))) .tt_unknown(...)
     if (!missing(true)) .tt_usage("the settings key `true` does not belong to this verb")
     if (!missing(false)) .tt_usage("the settings key `false` does not belong to this verb")
-    .tt_controls(batch, context)
-    .tt_call_settings("choose", batch, context, deadline_ms)
-    question <- .tt_settled(question, "choose", options, threshold)
-    held <- .tt_column(question, input, deadline_ms, NULL, batch, context, completion)
-    .tt_result(vapply(held$value, function(one) if (is.null(one)) NA_character_ else one,
-                      character(1)), held)
+    .tt_verb("choose", question, input, options, threshold, list(), context, batch,
+             deadline_ms, completion, missing(input))
   })
 }
 
@@ -417,11 +504,8 @@ tt_score <- function(question, input, levels = NULL, threshold = NULL,
     if (length(list(...))) .tt_unknown(...)
     if (!missing(true)) .tt_usage("the settings key `true` does not belong to this verb")
     if (!missing(false)) .tt_usage("the settings key `false` does not belong to this verb")
-    .tt_controls(batch, context)
-    .tt_call_settings("score", batch, context, deadline_ms)
-    question <- .tt_settled(question, "score", levels, threshold)
-    held <- .tt_column(question, input, deadline_ms, NA_real_, batch, context, completion)
-    .tt_result(vapply(held$value, as.numeric, numeric(1)), held)
+    .tt_verb("score", question, input, levels, threshold, list(), context, batch,
+             deadline_ms, completion, missing(input))
   })
 }
 
@@ -432,12 +516,20 @@ tt_tag <- function(question, input, labels = NULL, threshold = NULL,
     if (length(list(...))) .tt_unknown(...)
     if (!missing(true)) .tt_usage("the settings key `true` does not belong to this verb")
     if (!missing(false)) .tt_usage("the settings key `false` does not belong to this verb")
-    .tt_controls(batch, context)
-    .tt_call_settings("tag", batch, context, deadline_ms)
-    question <- .tt_settled(question, "tag", labels, threshold)
-    held <- .tt_column(question, input, deadline_ms, character(), batch, context, completion)
-    .tt_result(lapply(held$value, as.character), held)
+    .tt_verb("tag", question, input, labels, threshold, list(), context, batch,
+             deadline_ms, completion, missing(input))
   })
+}
+
+# Preview the bound question over the same live texts execution uses. Missing
+# input is a caller mistake; an explicit NULL is a valid empty column.
+tt_plan <- function(judge, input, ...) {
+  if (length(list(...))) .tt_unknown(...)
+  bound <- .tt_judge_bound(judge)
+  if (missing(input)) .tt_usage("plan needs input")
+  texts <- as.character(input)
+  .tt_call(tt_plan_column(unclass(bound$question)[["json"]], texts[!is.na(texts)],
+                          bound$batch, bound$context))
 }
 
 tt_filter <- function(question, records, threshold = NULL,
