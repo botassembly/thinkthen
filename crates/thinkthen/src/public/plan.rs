@@ -49,10 +49,7 @@ impl fmt::Debug for PlanEstimate {
             .field("records", &self.records)
             .field("requests", &self.requests)
             .field("estimated_bytes", &self.estimated_bytes)
-            .field(
-                "estimated_input_tokens",
-                &self.estimated_input_tokens(),
-            )
+            .field("estimated_input_tokens", &self.estimated_input_tokens())
             .field("upper_bound", &self.upper_bound)
             .finish_non_exhaustive()
     }

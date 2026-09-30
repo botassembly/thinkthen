@@ -54,7 +54,11 @@ pub(crate) fn plan(engine: &Engine, text: &str) -> Result<String, Failure> {
         "choose" => (For::Choose, QuestionKind::Choose),
         "score" => (For::Score, QuestionKind::Score),
         "tag" => (For::Tag, QuestionKind::Tag),
-        _ => return Err(Failure::usage("plan takes the verb decide, choose, score, or tag")),
+        _ => {
+            return Err(Failure::usage(
+                "plan takes the verb decide, choose, score, or tag",
+            ));
+        }
     };
     let source = input.settings.map_or("{}", RawValue::get);
     let settings = Settings::parse(source).map_err(usage)?;
@@ -92,7 +96,9 @@ fn question(
 ) -> Result<LoadedQuestion, Failure> {
     if raw.starts_with('"') {
         let text: String = serde_json::from_str(raw).map_err(usage)?;
-        return Ok(Question::from_json(&settings.question_json(verb, &text).map_err(usage)?)?);
+        return Ok(Question::from_json(
+            &settings.question_json(verb, &text).map_err(usage)?,
+        )?);
     }
     let fields: BTreeMap<String, &RawValue> = serde_json::from_str(raw)
         .map_err(|_| Failure::usage("the question is one text or one JSON object"))?;

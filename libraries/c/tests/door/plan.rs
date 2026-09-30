@@ -16,7 +16,10 @@ fn p1_plans_with_no_key_and_no_send_and_refusals_keep_the_outputs() {
     let backend = Backend::start().expect("a loopback backend");
     let output = Command::new(compile(&crate_dir().join("tests/c/plan.c")))
         .env_clear()
-        .env("THINKTHEN_BASE_URL", format!("{}/generic/v1", backend.origin()))
+        .env(
+            "THINKTHEN_BASE_URL",
+            format!("{}/generic/v1", backend.origin()),
+        )
         .env("THINKTHEN_CACHE", scratch("plan-cache"))
         .env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0")
         .output()
