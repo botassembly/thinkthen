@@ -24,8 +24,12 @@ const BODIES: [&str; 4] = [
 const QUESTION_SHA256: &str = "d20f78e3abbb54d4e8b083e27797cccfd25e673723eb952206f5d69035e221d6";
 
 fn question() -> io::Result<String> {
-    let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("graded-rank-question.json");
-    fs::write(&path, FILE)?;
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
+    let path = folder.join("graded-rank-question.json");
+    // Each nextest process rewrites this name; rename so no reader sees a half-written file.
+    let staged = folder.join(format!("graded-rank-question.json.{}", std::process::id()));
+    fs::write(&staged, FILE)?;
+    fs::rename(&staged, &path)?;
     Ok(format!("@{}", path.display()))
 }
 

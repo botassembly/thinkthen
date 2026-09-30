@@ -13,7 +13,7 @@
 mod call_facts;
 
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
@@ -392,14 +392,30 @@ fn a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new() {
     let asked = question();
     let texts = ["one", "two", "three", "four", "five", "six"];
     let runs = Runs::default();
-    let check = || runs.record(backend.count()) >= 3 && backend.count() == 4;
+    // Requests 1 to 3 answer one round at a time and request 4 stays held, so
+    // the check stops the batch at exactly four sends. The count never passes
+    // through 4 unseen, as it could once every reply went free.
+    // Issue: sdlc/issues/closed/2026-09-30-public-controls-stop-during-a-batch-races-a-free-backend.md
+    let stopped = AtomicBool::new(false);
+    let check = || {
+        let stop = runs.record(backend.count()) >= 3 && backend.count() >= 4;
+        stopped.fetch_or(stop, Ordering::SeqCst);
+        stop
+    };
     let options = CallOptions::new()
         .interrupt(&check)
         .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
     let rows: Vec<_> = thread::scope(|scope| {
         scope.spawn(|| {
-            backend.wait(1);
-            thread::sleep(Duration::from_millis(400));
+            for sent in 1..=3 {
+                backend.wait(sent);
+                backend.round();
+            }
+            // Sent work finishes: request 4 answers once the stop has fired.
+            let bound = Instant::now() + Duration::from_secs(10);
+            while !stopped.load(Ordering::SeqCst) && Instant::now() < bound {
+                thread::sleep(Duration::from_millis(5));
+            }
             backend.release();
         });
         batch.filter_with(&asked, texts, options).collect()

@@ -60,8 +60,9 @@ PASSED=0 FAILED=0
 # Each step runs in a subshell under errexit, so its first failing line fails
 # it. STEPS, when set, names the steps to run, for the planted-bug runs.
 check() {
-	# Load and wall-clock limits run only under the stress profile.
-	case $1 in twenty_thousand_keyed_rows|single_cancel_within_200_ms) stress_only=yes ;; *) stress_only=no ;; esac
+	# Load and wall-clock limits run only under the stress profile. A step
+	# named STEP_within_N_ms reruns STEP and holds its recorded time to N ms.
+	case $1 in twenty_thousand_keyed_rows|*_within_*_ms) stress_only=yes ;; *) stress_only=no ;; esac
 	if [ "$profile" = stress ]; then
 		[ "$stress_only" = yes ] || return 0
 	else
@@ -95,6 +96,10 @@ a_multiline_needle_must_stay_whole() {
 check a_multiline_needle_must_stay_whole
 now_ms() { echo $((${EPOCHREALTIME/./} / 1000)); }
 within() { [ "$1" -le "$2" ] || { echo "took ${1} ms, over ${2} ms" >&2; return 1; }; }
+# A routine step records its elapsed time here; its stress twin checks it.
+# Issue: sdlc/issues/closed/2026-09-30-postgresql-check-keeps-wall-clock-limits-under-load.md
+took() { echo "$2" >"$RUN/$1.ms"; }
+took_within() { "$1"; within "$(cat "$RUN/$1.ms")" "$2"; }
 Q='{"decide":"Is this a complaint?"}'
 rows() { echo "(SELECT jsonb_object_agg(g::text, 'record ' || g ORDER BY g) FROM generate_series(1, $1) g)"; }
 # A statement's elapsed milliseconds, read inside the server.
@@ -484,13 +489,15 @@ dev_zero_refuses_fast() {
 	fresh generic
 	start=$(now_ms)
 	out=$(q -c "SELECT thinkthen_decide('@/dev/zero', 'x')" -c "SELECT 1")
-	within $(($(now_ms) - start)) 2000
+	took dev_zero_refuses_fast $(($(now_ms) - start))
 	has "$out" "thinkthen local: the question file '@/dev/zero' $DID_NOT_READ"
 	same "$(tail -n1 <<<"$out")" 1
 	head -c 1048577 /dev/zero | tr '\0' ' ' >"$RUN/big.json"
 	has "$(q -c "SELECT thinkthen_decide('@$RUN/big.json', 'x')")" "the question file '@$RUN/big.json' is over the 1048576 byte cap"
 }
 check dev_zero_refuses_fast
+dev_zero_refuses_fast_within_2000_ms() { took_within dev_zero_refuses_fast 2000; }
+check dev_zero_refuses_fast_within_2000_ms
 the_file_gate() {
 	mkdir -p "$RUN/files"
 	cp fixtures/refund.json "$RUN/files/"
@@ -545,9 +552,9 @@ held() {
 	q -c '\set VERBOSITY verbose' -c "$1" >"$RUN/held.out" &
 	HELD=$!
 }
-# The routine check proves order: the cancel ends the statement while the
-# held arm still keeps its only reply, since the release comes after the
-# wait. The 200 ms limit runs only under the stress profile.
+# The routine checks prove order: the cancel, timeout or deadline ends the
+# statement while the held arm still keeps its reply, since the release comes
+# after the wait. Each time limit runs only under the stress profile.
 single_cancel() {
 	fresh arm/held
 	held "SELECT thinkthen_decide('$Q', 'held')"
@@ -560,13 +567,10 @@ single_cancel() {
 	brelease
 	sleep 0.2
 	same "$(bcount)" 1
-	echo "$elapsed" >"$RUN/single-cancel.ms"
+	took single_cancel "$elapsed"
 }
 check single_cancel
-single_cancel_within_200_ms() {
-	single_cancel
-	within "$(cat "$RUN/single-cancel.ms")" 200
-}
+single_cancel_within_200_ms() { took_within single_cancel 200; }
 check single_cancel_within_200_ms
 find_cancel() {
 	fresh arm/held
@@ -584,19 +588,21 @@ single_statement_timeout() {
 	start=$(now_ms)
 	held "SET statement_timeout = '300ms'; SELECT thinkthen_decide('$Q', 'held')"
 	wait "$HELD" || true
-	within $(($(now_ms) - start)) 500
+	took single_statement_timeout $(($(now_ms) - start))
 	has "$(cat "$RUN/held.out")" "canceling statement due to statement timeout"
 	brelease
 	sleep 0.2
 	same "$(bcount)" 1
 }
 check single_statement_timeout
+single_statement_timeout_within_500_ms() { took_within single_statement_timeout 500; }
+check single_statement_timeout_within_500_ms
 single_deadline() {
 	fresh arm/held
 	start=$(now_ms)
 	held "SET thinkthen.deadline_ms = 200; SELECT thinkthen_decide('$Q', 'held')"
 	wait "$HELD" || true
-	within $(($(now_ms) - start)) 1000
+	took single_deadline $(($(now_ms) - start))
 	has "$(cat "$RUN/held.out")" "57014"
 	has "$(cat "$RUN/held.out")" "thinkthen deadline"
 	brelease
@@ -604,17 +610,21 @@ single_deadline() {
 	same "$(bcount)" 1
 }
 check single_deadline
+single_deadline_within_1000_ms() { took_within single_deadline 1000; }
+check single_deadline_within_1000_ms
 batch_deadline() {
 	fresh arm/held "thinkthen.throttle = 8"
 	start=$(now_ms)
 	held "SET thinkthen.batch = '2'; SET thinkthen.deadline_ms = 1000; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 200))"
 	wait "$HELD" || true
-	within $(($(now_ms) - start)) 1500
+	took batch_deadline $(($(now_ms) - start))
 	has "$(cat "$RUN/held.out")" "thinkthen deadline"
 	same "$(bcount)" 8
 	brelease
 }
 check batch_deadline
+batch_deadline_within_1500_ms() { took_within batch_deadline 1500; }
+check batch_deadline_within_1500_ms
 batch_cancel() {
 	fresh arm/held "thinkthen.throttle = 8"
 	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 200))"
@@ -622,7 +632,7 @@ batch_cancel() {
 	start=$(now_ms)
 	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
 	wait "$HELD" || true
-	within $(($(now_ms) - start)) 200
+	took batch_cancel $(($(now_ms) - start))
 	has "$(cat "$RUN/held.out")" "canceling statement due to user request"
 	sleep 0.3
 	same "$(bcount)" 8
@@ -631,6 +641,8 @@ batch_cancel() {
 	same "$(bcount)" 8
 }
 check batch_cancel
+batch_cancel_within_200_ms() { took_within batch_cancel 200; }
+check batch_cancel_within_200_ms
 benign_interrupt_finishes() {
 	fresh arm/held "thinkthen.throttle = 8"
 	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 200))"
@@ -656,9 +668,13 @@ a_small_batch_answers_at_once() {
 	fresh generic "thinkthen.batch = '2'"
 	q -c "SELECT thinkthen_decide('$Q', 'warm up')" >/dev/null
 	ms=$(timed "SELECT count(*) INTO n FROM thinkthen_decide_many('$Q', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb)")
-	within "$ms" 90
+	[ -n "$ms" ]
+	same "$(bcount)" 2
+	took a_small_batch_answers_at_once "$ms"
 }
 check a_small_batch_answers_at_once
+a_small_batch_answers_at_once_within_90_ms() { took_within a_small_batch_answers_at_once 90; }
+check a_small_batch_answers_at_once_within_90_ms
 
 echo "== the answer cache"
 # Keyed input preserves one packed answer and reuses its exact cache identity.

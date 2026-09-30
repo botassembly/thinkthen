@@ -1,7 +1,11 @@
 //! The bounds between record input and ordered output.
 
 use conformance_backend::Rendezvous;
+#[cfg(unix)]
+use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 use std::io::{self, BufRead, BufReader, Write};
+#[cfg(unix)]
+use std::os::fd::AsFd;
 use std::process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -44,23 +48,30 @@ fn answered(place: usize) -> String {
 fn interactive(
     base: &str,
     jobs: Option<&str>,
-    events: Option<mpsc::Sender<Observed>>,
     extra: &[&str],
 ) -> io::Result<(Child, ChildStdin, Receiver<String>)> {
     let (child, input, output) = raw_child(base, jobs, extra)?;
+    Ok((child, input, lines(output)))
+}
+
+fn lines(output: ChildStdout) -> Receiver<String> {
     let (send, receive) = mpsc::channel();
     thread::spawn(move || {
         for line in BufReader::new(output).lines() {
             let Ok(line) = line else { return };
-            if let Some(events) = events.as_ref() {
-                let _ = events.send(Observed::Output(line.clone()));
-            }
             if send.send(line).is_err() {
                 return;
             }
         }
     });
-    Ok((child, input, receive))
+    receive
+}
+
+/// Whether bytes wait in the pipe now, without reading or blocking.
+#[cfg(unix)]
+fn written(output: &ChildStdout) -> bool {
+    let mut polled = [PollFd::new(output.as_fd(), PollFlags::POLLIN)];
+    poll(&mut polled, PollTimeout::ZERO).is_ok_and(|ready| ready == 1)
 }
 
 fn raw_child(
@@ -143,7 +154,7 @@ fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
     for (jobs, extra) in rows {
         let before = listener.count();
         let (mut child, mut input, output) =
-            interactive(listener.base(), jobs, None, extra).expect("the compiled binary runs");
+            interactive(listener.base(), jobs, extra).expect("the compiled binary runs");
 
         for place in 1..=2 {
             input
@@ -173,6 +184,7 @@ fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn ordered_output_bounds_every_dispatched_row() {
     let release = Arc::new(Rendezvous::new(2));
@@ -195,13 +207,8 @@ fn ordered_output_bounds_every_dispatched_row() {
         events_send.clone(),
     )
     .expect("a loopback listener");
-    let (mut child, mut input, output) = interactive(
-        listener.base(),
-        Some("4"),
-        Some(events_send),
-        &["--batch", "1"],
-    )
-    .expect("the compiled binary runs");
+    let (mut child, mut input, output) =
+        raw_child(listener.base(), Some("4"), &["--batch", "1"]).expect("the compiled binary runs");
     input
         .write_all(records(8).as_bytes())
         .expect("the records are written");
@@ -209,45 +216,59 @@ fn ordered_output_bounds_every_dispatched_row() {
     // The unemitted window holds (jobs + 1) x --batch inputs, which is five
     // here, so records 2 to 5 answer while record 1 is held, and record 6
     // waits for record 1's row.
-    let deadline = Instant::now() + Duration::from_secs(2);
-    let mut started = 0;
-    while started < 5 && Instant::now() < deadline {
-        started += listener.requests().len();
-        thread::yield_now();
-    }
-    thread::sleep(Duration::from_millis(200));
-    started += listener.requests().len();
-    if started != 5 {
-        let _ = child.kill();
-        let _ = child.wait();
-    }
-    assert_eq!(
-        started, 5,
-        "five requests start before record 1 is released"
-    );
     for _ in 0..5 {
-        assert!(matches!(events.recv(), Ok(Observed::Request)));
+        let started = events.recv_timeout(Duration::from_secs(10));
+        if started.is_err() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        assert!(
+            matches!(started, Ok(Observed::Request)),
+            "five requests start before record 1 is released"
+        );
     }
     for _ in 0..4 {
         completed
-            .recv_timeout(Duration::from_secs(2))
+            .recv_timeout(Duration::from_secs(10))
             .expect("rows 2 through 5 answer while row 1 is held");
     }
+    // A late sixth request only makes this pass wrongly, never fail wrongly.
+    thread::sleep(Duration::from_millis(200));
+    assert_eq!(
+        listener.count(),
+        5,
+        "request 6 waits while record 1 is held"
+    );
+    assert!(
+        !written(&output),
+        "no row is written while record 1 is held"
+    );
 
+    // Nothing reads standard output yet, so the pipe holds whatever the
+    // command wrote. The command writes record 1's row before it sends
+    // request 6, so the row waits in the pipe when request 6 arrives.
+    // Issue: sdlc/issues/closed/2026-09-30-ordered-output-test-races-the-next-request-under-load.md
     release.wait();
-    let first = events
-        .recv_timeout(Duration::from_secs(2))
-        .expect("an output or request event follows record 1 release");
-    let Observed::Output(first) = first else {
-        panic!("request 6 started before record 1 reached standard output");
-    };
-    assert!(first.contains(r#""id":"R-1""#), "{first}");
+    let sixth = events.recv_timeout(Duration::from_secs(10));
+    if sixth.is_err() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    assert!(
+        matches!(sixth, Ok(Observed::Request)),
+        "request 6 starts after record 1 is released"
+    );
+    assert!(
+        written(&output),
+        "request 6 started before record 1 reached standard output"
+    );
+    let output = lines(output);
     drop(input);
 
     let rows: Vec<String> = (0..8)
         .map(|_| {
             output
-                .recv_timeout(Duration::from_secs(2))
+                .recv_timeout(Duration::from_secs(10))
                 .expect("an ordered answer")
         })
         .collect();
