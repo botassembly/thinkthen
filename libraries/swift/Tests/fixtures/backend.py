@@ -6,6 +6,21 @@ import threading
 import time
 import socket
 
+
+def one_record(request):
+    """ADR 0111 quotes every record. Read a request quoting one record with that record as its state."""
+    if request.get('state') != 'Each question quotes the text it asks about.':
+        return request
+    records, questions = set(), {}
+    for name, question in request['questions'].items():
+        text = str(question.get('instructions'))
+        record, end = json.JSONDecoder().raw_decode(text, 12) if text.startswith('The text is ') else (None, 0)
+        if not end or not text.startswith('. ', end):
+            return request
+        records.add(json.dumps(record))
+        questions[name] = dict(question, instructions=text[end + 2:])
+    return dict(request, state=json.loads(records.pop()), questions=questions) if len(records) == 1 else request
+
 PACKED_STATE = 'Each question quotes the text it asks about.'
 
 def packed_rows(request):
@@ -52,10 +67,11 @@ class Backend(http.server.ThreadingHTTPServer):
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers["Content-Length"]))
-        request = json.loads(body)
+        wire = json.loads(body)
+        request = one_record(wire)
         state = request["state"]
         state_key = state if isinstance(state, str) else ""
-        (self.server.barrier / 'requests.jsonl').open('a').write(json.dumps(request,ensure_ascii=False) + '\n')
+        (self.server.barrier / 'requests.jsonl').open('a').write(json.dumps(wire,ensure_ascii=False) + '\n')
         try:
             packed = packed_rows(request)
         except ValueError:

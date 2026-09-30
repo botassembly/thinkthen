@@ -47,7 +47,8 @@ try:
     assert b'INSTALLED_SWIFT_CONSUMER_PASS outcome=yes' in result.stdout,result.stdout
     assert collections.Counter(server.arrivals)==collections.Counter(['consumer-swift','consumer-json']) and server.attempts==2,(server.arrivals,server.attempts)
     bodies=[json.loads(line) for line in (W/'barrier/requests.jsonl').read_text().splitlines()]
-    assert bodies==[{'state':'consumer-swift','model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'Is it?'}}}, {'state':'consumer-json','model':'jev-1.13.0','questions':{'q1':{'type':'choice','instructions':'Which?','criteria':{'first':None,'second':None}}}}], bodies
+    quoted='Each question quotes the text it asks about.'
+    assert bodies==[{'state':quoted,'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'The text is "consumer-swift". Is it?'}}}, {'state':quoted,'model':'jev-1.13.0','questions':{'q1':{'type':'choice','instructions':'The text is "consumer-json". Which?','criteria':{'first':None,'second':None}}}}], bodies
     print('isolated installed Swift consumer',mode,'PASS 2 exact arrivals; pid',result.pid,flush=True)
 finally:
     (W/'counts.json').write_text(json.dumps({'arrivals':server.arrivals,'attempts':server.attempts},indent=2)+'\n')
