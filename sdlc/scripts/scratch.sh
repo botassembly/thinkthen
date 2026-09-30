@@ -98,8 +98,9 @@ usage_link() {
 # the demos check's literal build folder; the Python check's failed venv, a fixed cache prefix and
 # a hash; PostgreSQL's killed run folder, after its name guard, and its literal .runtime/tree; the
 # R tarball's copied .cargo and target, inside its own scratch folder; install.sh, which runs from
-# a pipe and cannot source this file, and must equal site/public/install.sh; and demo 16's triage,
-# a standalone script the page shows, which removes the output folder it made with mkdir. The R
+# a pipe and cannot source this file, and must equal site/public/install.sh; demo 16's triage,
+# a standalone script the page shows, which removes the output folder it made with mkdir; and
+# publish-builds, which removes only an old folder of its own, marked by its manifest. The R
 # package's Makevars.in clean rules ship in its tarball, so they stay outside the scan.
 scratch_lint() {
 	git rev-parse --git-dir >/dev/null || return 1
@@ -112,7 +113,8 @@ scratch_lint() {
 		-e 'databases/postgresql/runtime.sh:case $rest in "$old" | *[!A-Za-z0-9]*) echo "runtime.sh: refused to remove $old" >&2 ;; ??????) rm -rf -- "$old" ;; esac' \
 		-e 'databases/postgresql/runtime.sh:rm -rf .runtime/tree && mkdir -p .runtime/tree && cp -a "$EXTRACTED/." .runtime/tree/' \
 		-e 'libraries/r/tools/make-tarball.sh:rm -rf -- "$PKG/src/rust/.cargo" "$PKG/src/rust/target"' \
-		-e 'install.sh:rm -rf -- "$work"' -e 'demos/16-triage-pipeline/triage:rm -rf -- "$output"') || return 0
+		-e 'install.sh:rm -rf -- "$work"' -e 'demos/16-triage-pipeline/triage:rm -rf -- "$output"' \
+		-e 'sdlc/scripts/publish-builds:rm -rf -- "$old"') || return 0
 	printf 'lint: a recursive rm outside sdlc/scripts/scratch.sh (worktrees.md rule 11):\n%s\n' "$scratch_found" >&2
 	return 1
 }

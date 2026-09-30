@@ -1,0 +1,88 @@
+#!/bin/sh
+# publish-builds TAG ROOT COMMIT FROM: copy the release files `surfaces --publish` packed into FROM
+# to ROOT/TAG, with SHA256SUMS and manifest.json. It builds nothing. Only `surfaces --publish`
+# runs it, after every surface and the release smoke passed on COMMIT. It keeps the newest three
+# folders beside ROOT/TAG that hold its own manifest, and it removes no other folder.
+# `publish-builds --check TAG ROOT` checks the tag, the root and the tools and exits, so that
+# `surfaces --publish` refuses bad inputs before its sweep starts.
+set -eu
+check=
+[ "${1:-}" != --check ] || { check=1; shift; set -- "$@" - -; }
+[ $# -eq 4 ] || { echo 'usage: publish-builds [--check TAG ROOT | TAG ROOT COMMIT FROM]' >&2; exit 2; }
+TAG=$1 ROOT=$2 COMMIT=$3 FROM=$4
+for tool in jq tar rustc; do command -v "$tool" >/dev/null || { echo "publish-builds: $tool is not on PATH" >&2; exit 1; }; done
+. "$(dirname -- "$0")/scratch.sh"
+made_by=sdlc/scripts/publish-builds
+case $TAG in '' | /* | */ | *//* | *..* | *[!A-Za-z0-9._/-]*) echo "publish-builds: refusing tag $TAG" >&2; exit 2 ;; esac
+git check-ref-format "refs/tags/$TAG" || { echo "publish-builds: $TAG is not a tag name" >&2; exit 2; }
+case $ROOT in /*) ;; *) echo "publish-builds: the root $ROOT is not absolute" >&2; exit 2 ;; esac
+dest=$ROOT/$TAG
+parent=${dest%/*}
+[ ! -e "$dest" ] && [ ! -L "$dest" ] || { echo "publish-builds: $dest already exists" >&2; exit 1; }
+[ -z "$check" ] || exit 0
+[ -d "$FROM" ] || { echo "publish-builds: $FROM is not a folder" >&2; exit 1; }
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+
+# surface_of NAME: the surface and how release-pack --reuse made NAME, tab-separated.
+surface_of() {
+	case $1 in
+	thinkthen-first-run.tar.gz) printf 'demos/27-test-with-no-network\tdemo 27 input and recording, tarred\n' ;;
+	thinkthen-c-*.tar.gz) printf 'libraries/c\theader and debug libraries from the C check, tarred\n' ;;
+	thinkthen-sqlite-*.tar.gz) printf 'databases/sqlite\trelease extension from the SQLite check, tarred\n' ;;
+	thinkthen-duckdb-*.tar.gz) printf 'databases/duckdb\textension from the DuckDB check, footer verified, tarred\n' ;;
+	thinkthen-postgresql16-*.tar.gz) printf 'databases/postgresql\tpackage.sh --reuse from the PostgreSQL check, tarred\n' ;;
+	thinkthen-*.whl) printf 'libraries/python\twheel from the Python check, copied\n' ;;
+	thinkthen-*.tgz) printf 'libraries/typescript\tnpm pack from the TypeScript check, copied\n' ;;
+	thinkthen-*.gem) printf 'libraries/ruby\tgem from the Ruby check, copied\n' ;;
+	thinkthen-[0-9]*.tar.gz) printf 'command\tthis host'"'"'s debug thinkthen binary from the rung builds, tarred and renamed\n' ;;
+	*) return 1 ;;
+	esac
+}
+
+REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
+host=$(rustc -vV | sed -n 's/^host: //p')
+scratch_dir stage "$(mkdir -p -- "$parent" && cd -- "$parent" && pwd -P)/.publish.XXXXXX"
+lines=$stage/.files
+: >"$lines"
+count=0
+for file in "$FROM"/*; do
+	name=${file##*/}
+	case $name in *.sha256) continue ;; esac
+	[ -f "$file" ] && [ ! -L "$file" ] || { echo "publish-builds: $name is not a plain file" >&2; exit 1; }
+	row=$(surface_of "$name") || { echo "publish-builds: no surface is known for $name" >&2; exit 1; }
+	(cd -- "$FROM" && sha256 -c "$name.sha256" >/dev/null) || { echo "publish-builds: $name does not match its .sha256" >&2; exit 1; }
+	# With --reuse, release-pack names the command archive for the release target, such as musl,
+	# but it holds this host's debug build. The published name says what it holds.
+	case ${row%%	*} in command) name=thinkthen-$version-$host-debug.tar.gz ;; esac
+	cp -p -- "$file" "$stage/$name"
+	digest=$(sha256 "$stage/$name" | awk '{print $1}')
+	printf '%s  %s\n' "$digest" "$name" >>"$stage/SHA256SUMS"
+	jq -n --arg path "$name" --arg surface "${row%%	*}" --arg how "${row#*	}" --arg sha256 "$digest" \
+		--argjson size "$(wc -c <"$stage/$name" | tr -d ' ')" \
+		'{path: $path, surface: $surface, size: $size, sha256: $sha256, how_built: $how}' >>"$lines"
+	count=$((count + 1))
+done
+[ "$count" -gt 0 ] || { echo "publish-builds: $FROM holds no release file" >&2; exit 1; }
+jq -s --arg made_by "$made_by" --arg commit "$COMMIT" --arg tag "$TAG" \
+	--arg published "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+	'{made_by: $made_by, commit: $commit, tag: $tag, published: $published,
+	  built_by: "sdlc/scripts/surfaces, packed by release-pack --reuse and smoked by release-smoke", files: .}' \
+	"$lines" >"$stage/manifest.json"
+rm -f -- "$lines"
+chmod 755 "$stage"
+[ ! -e "$dest" ] && [ ! -L "$dest" ] || { echo "publish-builds: $dest appeared during the publish" >&2; exit 1; }
+mv -- "$stage" "$dest"
+echo "publish-builds: $count files and SHA256SUMS in $dest"
+
+# Keep the newest three of this step's folders beside dest, by their manifests' publish times.
+for folder in "$parent"/*/; do
+	manifest=${folder}manifest.json
+	[ -f "$manifest" ] && [ ! -L "${folder%/}" ] || continue
+	[ "$(jq -r '.made_by // empty' "$manifest" 2>/dev/null)" = "$made_by" ] || continue
+	printf '%s %s\n' "$(jq -r .published "$manifest")" "${folder%/}"
+done | LC_ALL=C sort -r | sed '1,3d' | cut -d ' ' -f 2- | while IFS= read -r old; do
+	case $old in "$dest" | "$parent"/*/* | "$parent"/.*) echo "publish-builds: refused to remove $old" >&2; continue ;; "$parent"/?*) ;; *) continue ;; esac
+	rm -rf -- "$old"
+	echo "publish-builds: removed $old"
+done
