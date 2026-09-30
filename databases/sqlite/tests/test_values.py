@@ -105,6 +105,23 @@ say(**{{name: [run(db, f"SELECT {{name}}(?, ?)", pair) for pair in (
     expect(backend.close(), 0, "sends")
 
 
+def test_an_annotate_row_missing_its_part_fails_alone() -> None:
+    """ADR 0111 slice 3: a record missing its `on` part fails alone, and its neighbours' answers stay stored."""
+    backend = Backend()
+    parted = json.dumps({"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}})
+    held = child(f"""
+db = connect()
+run(db, "CREATE TABLE t(i INTEGER, x TEXT)")
+run(db, "INSERT INTO t VALUES (1, '{{\\"body\\": \\"one\\"}}'), (2, '{{\\"body\\": \\"two\\"}}'), (3, '{{\\"note\\": \\"three\\"}}')")
+say(all=run(db, "SELECT thinkthen_annotate(?, x) FROM t ORDER BY i", ({parted!r},)),
+    good=run(db, "SELECT i, thinkthen_annotate(?, x) FROM t WHERE i < 3 ORDER BY i", ({parted!r},)))
+""", environment(backend))
+    expect(held["all"], "thinkthen usage: the record holds nothing at `/body` (retryable: no)", "the record missing /body")
+    expect([[at, json.loads(value)] for at, value in held["good"]], [[1, {"refund": True}], [2, {"refund": True}]],
+           "the neighbours' answers")
+    expect(backend.close(), 2, "one send for each neighbour, and none for the rerun")
+
+
 def test_a_banded_question_is_refused_where_it_has_no_answer() -> None:
     """Score, choose and tag refuse a band; removed warm refuses by name."""
     backend = Backend()

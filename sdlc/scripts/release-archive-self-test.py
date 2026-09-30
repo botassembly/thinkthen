@@ -58,7 +58,10 @@ def main():
         native = base / "native-target/release"
         native.mkdir(parents=True)
         (native / "libthinkthen_c.so").write_bytes(b"fixture shared")
-        (native / "libthinkthen_c.a").write_bytes(b"fixture static")
+        # release-pack localizes the static library, so the fixture is a real one-function archive.
+        (base / "fixture.c").write_text("int thinkthen_fixture(void) { return 0; }\n")
+        subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
+        subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
         env = os.environ.copy()
         env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
                    CARGO_TARGET_DIR=str(native.parent),

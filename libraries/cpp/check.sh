@@ -67,7 +67,8 @@ cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --
 "$python_bin" fixtures/exports.py
 header=$repo/libraries/c/include/thinkthen.h
 shared=$repo/libraries/c/target/debug/libthinkthen_c.so
-static=$repo/libraries/c/target/debug/libthinkthen_c.a
+static=$out/libthinkthen.a
+sh "$repo/libraries/c/localize.sh" "$repo/libraries/c/target/debug/libthinkthen_c.a" "$static"
 "$cmake_bin" -S . -B "$out/package-build" -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$out/install" -DTHINKTHEN_C_HEADER="$header" \
     -DTHINKTHEN_NATIVE_SHARED="$shared" -DTHINKTHEN_NATIVE_STATIC="$static"

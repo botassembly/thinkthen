@@ -73,6 +73,23 @@ extern "C" fn flush_usage() {
     let _flushed = thinkthen::contained(crate::settings::finish_usage);
 }
 
+/// Whether the host's SQLite lets another thread open a connection: built
+/// thread-safe and not set to single-thread mode, as rusqlite checks at open.
+pub(crate) fn host_threads() -> bool {
+    // SAFETY: both calls go through the host's API table, which the entry
+    // point stored, and take no connection. In single-thread mode SQLite
+    // returns the fixed marker 8 for a mutex, and freeing it does nothing.
+    unsafe {
+        if ffi::sqlite3_threadsafe() == 0 {
+            return false;
+        }
+        let mutex = ffi::sqlite3_mutex_alloc(ffi::SQLITE_MUTEX_FAST);
+        let single = mutex as usize == 8;
+        ffi::sqlite3_mutex_free(mutex);
+        !single
+    }
+}
+
 /// Whether SQLite has interrupted the connection. Read on the calling thread only.
 pub(crate) fn interrupted(db: *mut sqlite3) -> bool {
     let check = IS_INTERRUPTED.load(Ordering::Acquire);

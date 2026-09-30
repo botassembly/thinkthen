@@ -12,7 +12,7 @@ NATIVE="$HOME/.local/thinkthen-c"
 mkdir -p "$NATIVE/include" "$NATIVE/lib/pkgconfig"
 cp libraries/c/include/thinkthen.h "$NATIVE/include/"
 cp libraries/c/target/debug/libthinkthen_c.so "$NATIVE/lib/libthinkthen.so"
-cp libraries/c/target/debug/libthinkthen_c.a "$NATIVE/lib/libthinkthen.a"
+sh libraries/c/localize.sh libraries/c/target/debug/libthinkthen_c.a "$NATIVE/lib/libthinkthen.a"
 ln -sfn libthinkthen.so "$NATIVE/lib/libthinkthen.so.0"
 printf 'prefix=%s\nName: thinkthen\nDescription: ThinkThen C ABI\nVersion: 0.0.1\nLibs: -L${prefix}/lib -lthinkthen\nCflags: -I${prefix}/include\n' "$NATIVE" > "$NATIVE/lib/pkgconfig/thinkthen.pc"
 ```

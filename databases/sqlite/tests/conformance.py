@@ -5,7 +5,8 @@ Each case runs in its own child process on the backend's case arm, because
 the extension's engine reads its address once per process. Expected request
 digests were recorded against the canonical URL, so each is recomputed for
 the URL the backend served. A record function's row lists the question keys
-of ADR 0111 section 2 in place of request digests. Every case reports pass, FAIL, or not run. A
+of ADR 0111 section 2 in place of request digests, and the store holds one
+row per good answer. Every case reports pass, FAIL, or not run. A
 not-run reason comes only from `NOT_RUN`, the forms with no SQL spelling,
 and the three counts must sum to the file's case count. An optional
 argument names another cases file; the planted-failure test uses it.
@@ -19,6 +20,7 @@ import math
 import os
 import pathlib
 import re
+import sqlite3
 import sys
 
 from helper import ROOT, Backend, child, environment
@@ -254,7 +256,23 @@ def check(case: dict, backend: Backend) -> None:
         same("result", edges, answers[0]["bare"])
     else:
         raise AssertionError(f"no SQL form is written for the {kind} kind")
+    if keyed:
+        # ADR 0111: the case ran on the question store, one row per good answer.
+        keys = {key for one in exchanges for key in question_keys(served, one["request"])}
+        same("stored answers", stored(env["THINKTHEN_CACHE"]), len(keys) - success.get("failed_questions", 0))
     return None
+
+
+def stored(folder: str) -> int:
+    """The answer rows in a cache folder's `thinkthen.sqlite`."""
+    store = pathlib.Path(folder) / "thinkthen.sqlite"
+    if not store.is_file():
+        return 0
+    connection = sqlite3.connect(store)
+    try:
+        return connection.execute("SELECT count(*) FROM answers").fetchone()[0]
+    finally:
+        connection.close()
 
 
 def main() -> int:

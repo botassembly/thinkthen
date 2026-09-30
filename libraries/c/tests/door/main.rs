@@ -66,16 +66,22 @@ fn archive() -> &'static Path {
             .filter_map(|file| file.as_str().map(PathBuf::from))
             .collect();
         let folder = scratch("archive");
-        for (from, to) in [
-            ("libthinkthen_c.so", "libthinkthen.so"),
-            ("libthinkthen_c.a", "libthinkthen.a"),
-        ] {
-            let file = files
+        let built = |from: &str| {
+            files
                 .iter()
                 .find(|file| file.file_name().is_some_and(|name| name == from))
-                .expect("the build reported the door's library under its own name");
-            std::fs::copy(file, folder.join(to)).expect("a built library");
-        }
+                .expect("the build reported the door's library under its own name")
+        };
+        std::fs::copy(built("libthinkthen_c.so"), folder.join("libthinkthen.so"))
+            .expect("a built library");
+        // A release archive holds the localized static library, as `release-pack` writes it.
+        let localized = child::command("sh", &[])
+            .arg(crate_dir().join("localize.sh"))
+            .arg(built("libthinkthen_c.a"))
+            .arg(folder.join("libthinkthen.a"))
+            .output()
+            .expect("sh ran");
+        assert!(localized.status.success(), "{}", text(&localized.stderr));
         std::os::unix::fs::symlink("libthinkthen.so", folder.join("libthinkthen.so.0"))
             .expect("the soname link");
         folder
@@ -240,27 +246,30 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
     assert_eq!(version.join("."), env!("CARGO_PKG_VERSION"));
 }
 
-/// Known failing, pinned inverted: the static library exports the bundled
-/// SQLite's global `sqlite3_` symbols, which clash with a host's own SQLite
-/// at link time. The `nm -D` check above reads only the shared library.
-/// Slice 3b of ticket 0304 localizes them and flips this assertion to zero.
-/// See `sdlc/issues/2026-09-30-static-library-exports-sqlite-symbols.md`.
+/// ADR 0111's 2026-09-30 amendment: the static library defines exactly the
+/// header's functions as global names. The bundled SQLite's `sqlite3_` names
+/// and Rust's runtime names stay local, so a program can link its own SQLite
+/// or a second Rust static library beside it. Gates every release.
 #[test]
-fn the_static_library_still_exports_sqlite_symbols_until_slice_3b() {
+fn the_static_library_exports_exactly_the_header_symbols() {
     let exported = child::command("nm", &[])
         .args(["-g", "--defined-only"])
         .arg(archive().join("libthinkthen.a"))
         .output()
         .expect("nm");
-    let leaked = text(&exported.stdout)
+    let mut names: Vec<String> = text(&exported.stdout)
         .lines()
         .filter_map(|line| line.split_whitespace().nth(2))
-        .filter(|name| name.starts_with("sqlite3_"))
-        .count();
+        .map(str::to_owned)
+        .collect();
     assert!(
-        leaked > 0,
-        "the static library no longer exports sqlite3_ symbols: flip this test to zero and close the issue"
+        !names.iter().any(|name| name.starts_with("sqlite3_")),
+        "the static library exports sqlite3_ symbols"
     );
+    names.sort();
+    let header =
+        std::fs::read_to_string(crate_dir().join("include/thinkthen.h")).expect("the header");
+    assert_eq!(names, declared(&header));
 }
 
 /// Every function the header declares: a `thinkthen_` name followed by `(`

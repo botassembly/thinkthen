@@ -64,6 +64,11 @@ echo "== r: the Rust half"
 
 echo "== r: install the production build"
 R CMD INSTALL -l rlib thinkthen >"$scratch/install.log" 2>&1 || { cat "$scratch/install.log" >&2; exit 1; }
+if [ "$(uname -s)" = Linux ]; then
+  # Ticket 0304 slice 3b: the package exports no bundled SQLite name.
+  leaked=$(nm -D --defined-only rlib/thinkthen/libs/thinkthen.so | awk '$3 ~ /^sqlite3_/' | wc -l)
+  [ "$leaked" = 0 ] || { echo "r: the package exports $leaked sqlite3_ names" >&2; exit 1; }
+fi
 
 echo "== r: the tests, one backend each"
 backend=${CARGO_TARGET_DIR:-$root/target}/debug/conformance-backend

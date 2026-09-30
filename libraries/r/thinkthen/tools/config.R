@@ -64,6 +64,11 @@ configure_file <- function(in_file, out_file, values) {
   writeLines(lines, out_file)
 }
 
+# Ticket 0304 slice 3b: on Linux the package keeps the archive's bundled
+# SQLite and Rust names local, so they never bind to another package's
+# SQLite. R finds the routines through their registration, not by name.
+.exclude_libs <- if (Sys.info()[["sysname"]] == "Linux") "-Wl,--exclude-libs,ALL" else ""
+
 configure_file(
   "src/Makevars.in",
   "src/Makevars",
@@ -75,6 +80,7 @@ configure_file(
     PROFILE = "--release",
     TARGET = "",
     CLEAN_TARGET = "$(TARGET_DIR)",
-    PANIC_EXPORTS = ""
+    PANIC_EXPORTS = "",
+    EXCLUDE_LIBS = .exclude_libs
   )
 )

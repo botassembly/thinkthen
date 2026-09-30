@@ -82,8 +82,11 @@ fn every_applicable_shared_case_passes_through_the_door() {
         ran += 1;
         let mut script = Script::default();
         script.ask("env", &["THINKTHEN_BATCH", "1"]);
-        let checked =
-            plan(&backend, case, &mut script).and_then(|judge| driven(&driver, &script, &judge));
+        let cache = scratch(&format!("case-{id}"));
+        script.ask("env", &["THINKTHEN_CACHE", &cache.display().to_string()]);
+        let checked = plan(&backend, case, &mut script)
+            .and_then(|judge| driven(&driver, &script, &judge))
+            .and_then(|()| stored(&backend, case, &cache));
         if let Err(why) = checked {
             failures.push(format!("{id}: {why}"));
         }
@@ -99,6 +102,40 @@ fn every_applicable_shared_case_passes_through_the_door() {
     .expect("write case counts to stderr");
     assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// ADR 0111: a record function's case runs on the question store, which
+/// holds one row per good answer.
+fn stored(backend: &Backend, case: &Members, folder: &Path) -> Checked {
+    let expect = member(case, "expect");
+    let verb = string(case, "verb");
+    if expect.get("error").is_some() || matches!(verb.as_str(), "find" | "recognize" | "relate") {
+        return Ok(());
+    }
+    let served = format!(
+        "{}/case/{}/v1/systemone",
+        backend.origin(),
+        string(case, "id")
+    );
+    let mut wanted = BTreeSet::new();
+    for exchange in member(case, "exchanges").as_array().into_iter().flatten() {
+        wanted.extend(keys(
+            &served,
+            exchange["request"].as_str().unwrap_or_default().as_bytes(),
+        )?);
+    }
+    let failed = expect["success"]["failed_questions"].as_u64().unwrap_or(0);
+    let want = i64::try_from(wanted.len()).map_err(|error| error.to_string())?
+        - i64::try_from(failed).map_err(|error| error.to_string())?;
+    let store = folder.join("thinkthen.sqlite");
+    let held: i64 = if store.is_file() {
+        rusqlite::Connection::open(store)
+            .and_then(|db| db.query_row("SELECT count(*) FROM answers", [], |row| row.get(0)))
+            .map_err(|error| error.to_string())?
+    } else {
+        0
+    };
+    same("stored answers", &json!(held), &json!(want))
 }
 
 /// Read one optional absolute ID list, and refuse duplicate or unknown IDs.
