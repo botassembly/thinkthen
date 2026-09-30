@@ -1,6 +1,6 @@
 # ADR 0115: An `ollama` built-in backend, and descriptions each backend accepts
 
-- Status: **Proposed**, 2026-09-30. A fresh read-only ticket review accepted it. It moves to accepted when ticket 0339 lands. Ian can overturn each item.
+- Status: **Accepted** by ticket 0339, 2026-09-30. Ian can overturn each item.
 - Date: 2026-09-30
 
 Ian asked on 2026-09-30 for a built-in `ollama` backend. Ollama 0.35 serves System One at `/v1/systemone` on the user's own machine and needs no key. ADR 0114's coordinator default 1 held more built-ins back until a user needs one. That condition is now met. This ADR amends ADR 0114 sections 1, 2, 5 and 6, and ADR 0110's scope. ADR 0111's question key stays as it is.

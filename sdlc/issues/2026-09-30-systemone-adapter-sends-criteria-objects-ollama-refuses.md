@@ -1,6 +1,6 @@
 # The systemone adapter sends criteria descriptions as JSON objects that Ollama refuses
 
-Status: open. Found 2026-09-30 in workspace experiment 415, the same family as `closed/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md`. Designed 2026-09-30 by ADR 0115; ticket 0339 (ready) builds the workaround after 0304 slice 4. Owner: upstream (Ollama), reported at https://github.com/ollama/ollama/issues/18718; ticket 0339 for the workaround; then a ticket deletes it.
+Status: open. Found 2026-09-30 in workspace experiment 415, the same family as `closed/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md`. Designed 2026-09-30 by ADR 0115; ticket 0339 landed the workaround on 2026-09-30: `Descriptions::Text` in `crates/thinkthen/src/core/plan.rs`, rendered by `sent` in `crates/thinkthen/src/core/adapters/systemone/request.rs`, and chosen by the `ollama` row in `crates/thinkthen/src/core/adapters/systemone/backends.rs`. Owner: upstream (Ollama), reported at https://github.com/ollama/ollama/issues/18718; ticket 0339 for the workaround; then a ticket deletes it.
 
 Kind: debt
 
@@ -30,3 +30,13 @@ Replaced by ADR 0115: flattening for every backend would drop `not_for` and `exa
 Ticket 0339 lands the workaround and leaves this issue open as debt. It closes when Ollama accepts object-valued descriptions and a ticket deletes the workaround. Until then, the original condition below holds for the workaround.
 
 `thinkthen check` against Ollama 0.35 serving nimble reports no critical finding, and against Liquid d1 the one-sided noul passes. The adapter's fixtures cover every description form on noul, choice, and score.
+
+## Gaps ticket 0339 left open
+
+Ticket 0339 deferred these with the workaround. Each waits for a user who meets it; none blocks 0.1.
+
+- Nobody has checked whether Ollama accepts an object `state` (the check's mixed probe and a pointer selection) or structured question text. The loopback mimic assumes the first. The machine that built 0339 runs Ollama 0.15.5-rc1, which has no System One endpoint, so its manual check stopped at `critical endpoint` (404).
+- Ollama's hosted service is not in the key guard until it serves decision models.
+- A re-pulled Ollama tag such as `nimble` keeps its cached answers until `--refresh-cache` or `--no-cache`.
+- Bindings and SQL reach the `ollama` form only when ADR 0114 build slice 2 gives them a `backend` setting.
+- `status` does not print the description form, and no backend has its own longer timeout.
