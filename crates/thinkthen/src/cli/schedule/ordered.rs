@@ -92,14 +92,7 @@ impl<R, E> Run<R, E> {
                 match input {
                     Input::End => self.exhausted = true,
                     Input::Failed(error) => self.refuse(error),
-                    Input::Item(value) => {
-                        if work.send((self.dispatched, value)).is_err() {
-                            self.refuse(ended());
-                            return;
-                        }
-                        self.dispatched += 1;
-                        self.in_flight += 1;
-                    }
+                    Input::Item(value) => self.dispatch(value, work, ended),
                 }
             }
             Event::Answered(place, result) => {
@@ -108,6 +101,15 @@ impl<R, E> Run<R, E> {
                 self.pending.insert(place, result);
             }
         }
+    }
+
+    fn dispatch<T>(&mut self, value: T, work: &SyncSender<(usize, T)>, ended: fn() -> E) {
+        if work.send((self.dispatched, value)).is_err() {
+            self.refuse(ended());
+            return;
+        }
+        self.dispatched += 1;
+        self.in_flight += 1;
     }
 
     fn refuse(&mut self, error: E) {
@@ -154,6 +156,10 @@ impl<R, E> Run<R, E> {
 /// each row to `emit` in input order. The reader starts on its own thread,
 /// so a reader blocked on its input never holds the call open. Every worker
 /// has joined on return.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the runner keeps cancellation and each typed bridge callback explicit"
+)]
 pub(crate) fn run<T, R, E>(
     jobs: usize,
     cancel: &Cancel,

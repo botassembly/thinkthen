@@ -13,6 +13,10 @@ type Asked<'a> = (&'a str, &'a str, &'a str);
 
 /// Cache one answer per row in `folder` through a loopback backend, and
 /// return each row's question key.
+#[allow(
+    clippy::expect_used,
+    reason = "a failed fixture step should stop the boundary test"
+)]
 pub(super) fn fill(folder: &Path, evidence: &str, rows: &[Asked<'_>]) -> Vec<String> {
     let mut filled = Vec::new();
     for (model, question, reply) in rows {
@@ -38,6 +42,10 @@ pub(super) fn fill(folder: &Path, evidence: &str, rows: &[Asked<'_>]) -> Vec<Str
 }
 
 /// Set each answer's taken-at second, so age and oldest-first are fixed.
+#[allow(
+    clippy::expect_used,
+    reason = "a failed fixture step should stop the boundary test"
+)]
 fn taken_at(folder: &Path, times: &[(&str, i64)]) {
     let connection =
         rusqlite::Connection::open(folder.join("thinkthen.sqlite")).expect("the live store");
@@ -58,6 +66,10 @@ fn taken_at(folder: &Path, times: &[(&str, i64)]) {
 
 /// The question keys the store holds, as `cache unused` names them against
 /// an empty list.
+#[allow(
+    clippy::expect_used,
+    reason = "a failed fixture step should stop the boundary test"
+)]
 fn held(folder: &Path) -> Vec<String> {
     let used = folder.with_extension("used");
     fs::write(&used, "").expect("empty key list");
@@ -81,12 +93,20 @@ fn held(folder: &Path) -> Vec<String> {
         .collect()
 }
 
+#[allow(
+    clippy::expect_used,
+    reason = "a failed fixture step should stop the boundary test"
+)]
 fn store_bytes(folder: &Path) -> u64 {
     fs::metadata(folder.join("thinkthen.sqlite"))
         .expect("the live store")
         .len()
 }
 
+#[allow(
+    clippy::expect_used,
+    reason = "a failed fixture step should stop the boundary test"
+)]
 fn prune(folder: &Path, options: &[&str]) -> std::process::Output {
     let mut arguments = vec!["cache", "prune", folder.to_str().expect("folder")];
     arguments.extend_from_slice(options);

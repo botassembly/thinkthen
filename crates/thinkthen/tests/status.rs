@@ -105,6 +105,10 @@ fn private_cache(label: &str) -> std::io::Result<(std::path::PathBuf, std::path:
 }
 
 #[cfg(unix)]
+#[allow(
+    clippy::expect_used,
+    reason = "a failed fixture step should stop the boundary test"
+)]
 fn inspect(home: &std::path::Path) -> (Option<i32>, serde_json::Value, Vec<u8>) {
     let output = run::output(command(home).args(["status", "--json"])).expect("read-only status");
     let value = serde_json::from_slice(&output.stdout).unwrap_or(serde_json::Value::Null);

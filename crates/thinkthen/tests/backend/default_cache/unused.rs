@@ -133,7 +133,7 @@ fn supplied_keys_name_the_unused_answers_without_editing_the_folder() {
 
 #[cfg(unix)]
 #[test]
-fn manifest_and_store_refusals_leave_the_folder_unchanged() {
+fn manifest_refusals_leave_the_folder_unchanged() {
     let case = Fixture::new("refusals").expect("scratch fixtures");
     let before = state(&case.recording).expect("before state");
     let absent_option = spawn(
@@ -194,7 +194,12 @@ fn manifest_and_store_refusals_leave_the_folder_unchanged() {
         state(&case.recording).expect("after unreadable list"),
         before
     );
+}
 
+#[cfg(unix)]
+#[test]
+fn store_refusals_leave_the_folder_unchanged() {
+    let case = Fixture::new("store-refusals").expect("scratch fixtures");
     fs::write(&case.manifest, format!("{USED}\n")).expect("valid manifest");
     fs::write(case.recording.join("thinkthen.sqlite"), b"").expect("a second store");
     let both = state(&case.recording).expect("both state");

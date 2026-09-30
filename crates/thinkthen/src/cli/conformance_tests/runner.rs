@@ -81,6 +81,24 @@ fn facade_answer(
     }
 }
 
+/// One exchange's replayed answer, or `None` for the miss a failed question
+/// makes. The store keeps no failed answer, by ADR 0111 section 6, so replay
+/// misses the question a backend failed. The decoding check reads that
+/// failure from the recorded body.
+fn replayed(
+    engine: &Engine,
+    case: &super::Case,
+    request: &Asked,
+    exchange: &super::Exchange,
+    success: &super::Success,
+) -> Option<Answered> {
+    match facade_answer(engine, case, request, &exchange.evidence) {
+        Ok(answered) => Some(answered),
+        Err(EngineError::QuestionMiss(_)) if success.failed_questions > 0 => None,
+        Err(error) => panic!("{}: {error:?}", case.id),
+    }
+}
+
 #[test]
 #[allow(
     clippy::excessive_nesting,
@@ -122,15 +140,8 @@ fn every_case_crosses_the_private_facade_under_replay() {
             } else {
                 asked(case, place, exchange).expect("case plan")
             };
-            let answered = match facade_answer(&engine, case, &request, &exchange.evidence) {
-                Ok(answered) => answered,
-                // The store keeps no failed answer, by ADR 0111 section 6,
-                // so replay misses the question a backend failed. The
-                // decoding check reads that failure from the recorded body.
-                Err(EngineError::QuestionMiss(_)) if success.failed_questions > 0 => {
-                    continue 'cases;
-                }
-                Err(error) => panic!("{}: {error:?}", case.id),
+            let Some(answered) = replayed(&engine, case, &request, exchange, success) else {
+                continue 'cases;
             };
             assert!(answered.replayed, "{}", case.id);
             assert_eq!(answered.requests_sent, 0, "{}", case.id);
