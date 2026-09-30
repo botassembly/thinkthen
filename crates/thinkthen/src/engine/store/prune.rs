@@ -89,38 +89,51 @@ pub(crate) fn preview(folder: &Path, options: &Prune, now: i64) -> Result<Select
 }
 
 /// Remove what the selectors and the size target choose, then the states
-/// no answer uses, then give the freed pages back to the file system.
+/// no answer uses, then give the freed pages back to the file system. The
+/// selection is read under the write lock, so no writer changes an answer
+/// between the choice and the delete.
 pub(crate) fn run(folder: &Path, options: &Prune, now: i64) -> Result<Pruned, Error> {
     let Some(connection) = open(folder, true)? else {
         return Ok(Pruned::default());
     };
     let cancel = Cancel::default();
-    let before = file_bytes(&connection)?;
-    let answers = weighed(&connection)?;
-    let selection = select(&answers, options, now, before)?;
     run_sql(&cancel, &connection, "BEGIN IMMEDIATE")?;
-    let removed = remove(&connection, &selection.keys)
-        .and_then(|()| {
-            connection.execute(
-                "DELETE FROM states WHERE id NOT IN (SELECT state FROM answers)",
-                [],
-            )
-        })
-        .map_err(storage)
-        .and_then(|_| run_sql(&cancel, &connection, "COMMIT"));
-    if removed.is_err() && !connection.is_autocommit() {
+    let chosen = locked(&connection, options, now)
+        .and_then(|chosen| run_sql(&cancel, &connection, "COMMIT").map(|()| chosen));
+    if chosen.is_err() && !connection.is_autocommit() {
         let _rolled_back = connection.execute_batch("ROLLBACK");
     }
-    removed?;
+    let (before, held, selection) = chosen?;
     run_sql(&cancel, &connection, "PRAGMA incremental_vacuum")?;
     let after = file_bytes(&connection)?;
     let count = |keys: usize| u64::try_from(keys).map_err(|_| Error::RecordingStorage);
     Ok(Pruned {
         removed: count(selection.keys.len())?,
         removed_bytes: before.saturating_sub(after),
-        remaining: count(answers.len())? - count(selection.keys.len())?,
+        remaining: count(held)? - count(selection.keys.len())?,
         remaining_bytes: after,
     })
+}
+
+/// Inside the write transaction: the file's bytes, the answer count, and
+/// the selection, with the selected answers and unused states deleted.
+fn locked(
+    connection: &Connection,
+    options: &Prune,
+    now: i64,
+) -> Result<(u64, usize, Selection), Error> {
+    let before = file_bytes(connection)?;
+    let answers = weighed(connection)?;
+    let selection = select(&answers, options, now, before)?;
+    remove(connection, &selection.keys)
+        .and_then(|()| {
+            connection.execute(
+                "DELETE FROM states WHERE id NOT IN (SELECT state FROM answers)",
+                [],
+            )
+        })
+        .map_err(storage)?;
+    Ok((before, answers.len(), selection))
 }
 
 /// The question keys a folder's store holds and `used` lacks, in order. A
