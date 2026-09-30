@@ -254,7 +254,7 @@ test('each verb resolves its host shape, on the module and on an engine', async 
     const band = tt.question({ decide: 'Does it ask for a refund?', threshold: [0.2, 0.8] });
     const shapes = async (on) => (await Promise.all([
       on.decide('Does it ask for a refund?', 'I want a refund'),
-      on.decide(band, 'I want a refund'),
+      on.decide(band, 'I want a refund today'),
       on.decide_many(band, ['one', 'two'], { batch: 1 }),
       on.choose('Which team?', 'text', { options: ['billing', 'other'] }),
       on.score('How urgent?', 'text', { levels: ['low', 'mid', 'high'] }),
@@ -282,7 +282,7 @@ test('each verb resolves its host shape, on the module and on an engine', async 
   ];
   assert.deepEqual(value.module, expected);
   assert.deepEqual(value.engine, expected);
-  // The module's two concurrent decides ask one question; ADR 0111 coalesces only within a call, so each sends.
+  // The two decides ask about different texts. The module caches, so one text would send once or twice by timing.
   assert.equal(await backend.count(), 28);
 });
 
