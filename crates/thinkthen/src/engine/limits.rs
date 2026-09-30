@@ -30,7 +30,8 @@ pub(crate) fn of(pid: u32, cancel: &Cancel) -> Result<&'static Limits, error::Er
     limits_of(pid, rebuild_wait(cancel))
 }
 
-/// This process's limits, for a caller that holds no call to stop.
+/// This process's limits, for a test that holds no call to stop.
+#[cfg(test)]
 pub(crate) fn process() -> &'static Limits {
     let Ok(limits) = limits_of(std::process::id(), || {
         std::thread::sleep(CANCEL_POLL);
