@@ -1,6 +1,6 @@
 # recognize and relate: scale
 
-Status: open for items 4 to 6, all later features. Item 3, the both-ways edge shape, moved on 2026-09-30 to `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, because one relate ticket after 0304 slice 4 settles both. Shortened 2026-09-30. Ticket 0123 fixed items 1 and 2. The recognition-guidance Quick Fix fulfilled items 7 and 8. Git history holds their text. Ian can overturn any fix below.
+Status: open for items 4 to 6, all later features. Item 3, the both-ways edge shape, moved on 2026-09-30 to `closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, because one relate ticket after 0304 slice 4 settles both. Shortened 2026-09-30. Ticket 0123 fixed items 1 and 2. The recognition-guidance Quick Fix fulfilled items 7 and 8. Git history holds their text. Ian can overturn any fix below.
 
 Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0304 slice 4.
 

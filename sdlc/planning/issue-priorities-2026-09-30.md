@@ -21,7 +21,7 @@ Order follows the brief: 0.1 blockers first (B1 to B5), then debt that slows bui
 
 Work outside the lanes:
 
-- **R1, the relate decision run.** One capped paid Beatles Bench run through `sdlc/scripts/live` (ruling 13) on the 0342 menu, after 0344 lands so the bench pins one commit. Conditions and bar: `sdlc/issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run". Blocks 0.1.
+- **R1, the relate decision run.** One capped paid Beatles Bench run through `sdlc/scripts/live` (ruling 13) on the 0342 menu, after 0344 lands so the bench pins one commit. Conditions and bar: `sdlc/issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run". Blocks 0.1.
 - **E1, the loopback TLS count.** A local experiment, no network: `sdlc/issues/2026-09-26-count-secure-connections-at-sixteen-jobs.md`, "A loopback count first". Any lane or a `pi-job`; it becomes a ticket only if the count exceeds 16.
 - **Marketing, owner of `site/`.** Blocks 0.1: the reference page (`2026-09-30-reference-page-exit-codes-and-key-rule-drift.md`); the providers and Liquid d1 pages, including the `--timeout 90` line for stumble row 19 (`2026-09-29-docs-page-naming-supported-providers.md`); the site recording conversion, the five `--dry-run` examples and the site checks (`2026-09-30-site-replay-folders-have-no-fixture.md`, which holds the conversion command); the overhead benchmark for the README line (`2026-09-29-readme-key-backend-and-overhead-lines.md`).
 - **Ian.** The first release rehearsal ran on 2026-09-30 under his test approval and stopped at `resolve` on a bug of ours. It runs again after that fix lands. Then phase 4 and the registry accounts already on his list.

@@ -1,6 +1,6 @@
 # Relate entities
 
-Status: **Settled** for version one by tickets 0088, 0167 and 0342 and ADR 0057.
+Status: **Settled** for version one by tickets 0088, 0167, 0342 and 0353 and ADR 0057.
 
 `relate` reads one complete entity set and prints the relationships that reach one cut. An edge comes from the model's knowledge of the names, not from any text; for edges a text states, use `recognize --relation`. It uses the shared relation planner from `recognize`, but its input and output contain names and kinds rather than text offsets.
 
@@ -19,7 +19,7 @@ The alternative form takes exactly one `@FILE`. The closed version-one file is:
 {"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured"}
 ```
 
-`relations` is required, ordered, nonempty, and has distinct names. A rule may leave out `source` or `target`, which means `*`. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `single` defaults to false; `"single":true` says each source has at most one target, and the rule asks one menu per source, as [Output](#output) says. A rule with both `single` and `either` exits 5, as every refused rule file does, with `a single-answer relation is directed, so \`single\` and \`either\` do not mix`. Inline rules have no `single` form. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix. An `@FILE` beside any other rule exits 2 with zero sends.
+`relations` is required, ordered, nonempty, and has distinct names. A rule may leave out `source` or `target`, which means `*`. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `single` defaults to false; `"single":true` says each source has at most one target, and the rule asks one menu per source, as [Output](#output) says. Mark a single-answer relation, such as song to first album or city to country, `single`: that is the recommended form, for the reasons [Precision](#precision) gives. Leave `single` off a relation that can have many targets, or where recall matters more than precision, and the rule asks one yes/no question per pair. A rule with both `single` and `either` exits 5, as every refused rule file does, with `a single-answer relation is directed, so \`single\` and \`either\` do not mix`. Inline rules have no `single` form. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix. An `@FILE` beside any other rule exits 2 with zero sends.
 
 `--field`, `--kind-field`, `--threshold`, and `--model` independently replace file values. Framing and `--input` are command-only. `--jobs N` bounds the requests in flight, 1 to 32, default 4, as [records.md](records.md) gives it. Relations and split requests go out together. Output keeps rule and pair question order whatever `--jobs` is. A failed request stops the run as `--jobs 1` would, and requests already in flight finish. Saved `profile` has no command-line replacement. `--profile FILE` selects a runtime backend profile and does not replace saved calibration identity.
 
@@ -57,7 +57,20 @@ A `single` rule asks one `choice` per source name, in rule then source order, be
 
 ## Precision
 
-`relate` reads no text, so its edges come from the model's knowledge of the names, and they are less precise than edges a text states. On the public Beatles Bench of 2026-09-30, 182 songs with the four Beatles and 13 core albums, the yes/no pairs at the 0.5 cut scored edge precision 0.420, recall 0.693 and F1 0.523. On 16 sets that leave out each song's right album, precision was 0.296, because a pair can pass the cut for every listed album. `recognize --relation` read edges a sentence states at precision 0.973 and recall 0.783. For relations a text states, or wherever precision matters more than recall, use `recognize --relation`. The `single` menu can say none of these; it is unmeasured until a capped paid bench run, which keeps it only if it beats F1 0.523 on the 182 songs and precision 0.296 on the missing-album sets.
+`relate` reads no text, so its edges come from the model's knowledge of the names, and they are less precise than edges a text states. For relations a text states, use `recognize --relation`, which read edges a sentence states at precision 0.973 and recall 0.783.
+
+The public Beatles Bench measured both forms on 2026-09-30 with `jev-1.13.0` at the default address. Its song-to-album relation ran as yes/no pairs and as a `single` menu; song to singer stayed on pairs. At the 0.5 cut:
+
+| Set | Measure | Yes/no pairs | `single` menu |
+| --- | --- | --- | --- |
+| 182 songs, 4 Beatles, 13 albums | edge F1 | 0.523 | 0.635 |
+| | edge precision | 0.420 | 0.749 |
+| | edge recall | 0.693 | 0.551 |
+| 16 sets without each song's album | edge precision | 0.296 | 0.541 |
+
+The menu trades recall for precision. On the 182 songs, recall fell from 0.693 to 0.551. Where the right album was missing, pairs named an album for every song, because a pair can pass the cut for every listed album. The menu answered none for 16 of 31 songs, and named a wrong album for 11 at or above the cut and 4 below it. Where the right album was listed, it answered none for 2 of the 182 songs, and an exact tie at the top left 5 more without an album.
+
+A cut tuned by `thinkthen audit` on half the sets chose 0.47. On the held half, the menu won where the album was missing, F1 0.526 against 0.373, and tied on sets that each hold the right album, 0.680 against 0.689. Liquid d1 is not yet measured.
 
 ## Plan
 

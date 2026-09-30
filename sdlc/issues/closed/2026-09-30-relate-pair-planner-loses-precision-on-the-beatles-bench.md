@@ -1,8 +1,8 @@
 # relate's pair planner loses precision on the Beatles Bench, and both-ways edges print a direction
 
-Status: open. Measured by Beatles Bench tickets 0019 and 0018 on 2026-09-30, against main `c22512868`. The bench's `reports/results.md` publishes every figure below.
+Status: Closed by ticket 0353, which makes `single` the recommended form for single-answer relations after the decision run below passed. Measured by Beatles Bench tickets 0019 and 0018 on 2026-09-30, against main `c22512868`. The bench's `reports/results.md` publishes every figure below.
 
-Owner: ticket 0342 adds the single-answer menu and the precision statement. Ticket 0344 settled the both-ways edge shape: an `either` edge ends with `"either":true` on every surface. The decision run of 2026-09-30 passed the bar, so ticket 0353 makes the menu the recommended form for single-answer relations; this issue closes when 0353 lands. Ian can overturn the split, the shape and the verdict. Blocks 0.1: the default and the shape must be set before the release.
+Owner: ticket 0342 adds the single-answer menu and the precision statement. Ticket 0344 settled the both-ways edge shape: an `either` edge ends with `"either":true` on every surface. The decision run of 2026-09-30 passed the bar, so ticket 0353 made the menu the recommended form for single-answer relations and closed this issue. The Liquid d1 cell stays open in 0353's Defers. Ian can overturn the split, the shape and the verdict. Blocks 0.1: the default and the shape must be set before the release.
 
 ## The problem
 

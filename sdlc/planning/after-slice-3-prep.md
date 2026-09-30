@@ -44,7 +44,7 @@ Proof list gap (lesson 2): ADR 0111 step 4 names conformance cases 41 to 50 only
 
 ### How the relate precision issue interacts
 
-`sdlc/issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` measures edge precision 0.420 under the pair planner against 0.867 under the old choice planner. Slice 4 keeps the pair planner's wire form, so it neither fixes nor worsens this. Its proof requires identical results from converted fixtures.
+`sdlc/issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` measures edge precision 0.420 under the pair planner against 0.867 under the old choice planner. Slice 4 keeps the pair planner's wire form, so it neither fixes nor worsens this. Its proof requires identical results from converted fixtures.
 
 - Keep slice 4 free of planner changes. The issue's second option, one `choice` per song with a none-of-these answer, changes the question kind and the wire form. That breaks slice 4's identical-results proof and needs new recordings, so it belongs in its own ticket after slice 4.
 - The first option, tuning the default cut (`cli/relate.rs:74`, `unwrap_or(0.5)`), is independent of slice 4. The threshold never enters the request, and `--details` already prints every pair's probability (`specification/relate.md:62`), so the bench's saved runs already give every cut. The issue reports that an audit-tuned cut helps little (held-half F1 0.689, 0.373 and 0.596), so a cut alone is unlikely to settle it.
