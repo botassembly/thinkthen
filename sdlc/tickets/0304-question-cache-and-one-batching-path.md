@@ -135,7 +135,7 @@ Decision for 3d, 2026-09-30: option 1. One throttle per process stays, per Ian's
   - `libraries/polars/README.md` states what a call holds and the measured peaks.
   - The crate ratchet rises by 115 to 105,744: the row builders replace the collect-then-convert helpers for 66 more source lines, and the new lazy test adds 49 nonblank lines.
 - Proof:
-  - `tests/polars/lazy.rs` `a_cached_lazy_frame_collected_twice_sends_nothing_the_second_time`: with a scratch cache, the first collect of 30 rows sends one request of 30 questions; the second collect sends nothing and equals the first; a cached slice sends nothing; a later 10-row slice of a 40-row frame sends one request of only its 5 new questions, so the slice reaches the expression before it runs.
+  - `tests/polars/lazy.rs` `a_cached_lazy_frame_collected_twice_sends_nothing_the_second_time`: with a scratch cache, the first collect of 30 rows sends one request of 30 questions; the second collect sends nothing and equals the first; a cached slice sends nothing; a later 10-row slice of a 40-row frame sends one request of only its 5 new questions, so a slice placed before the expression limits what it asks.
   - Memory and time, release build, 100,000 distinct rows answered from a replay folder, peak resident memory from `VmHWM`, 32 MB before the call on both builds, machine load near 15 to 20:
 
     | Call | Peak before | Peak after | Seconds before | Seconds after |
@@ -220,7 +220,7 @@ What the second review found:
 
 ### Slice 3c
 
-- The rows the door collected cost more than the columns it built. An annotate record carries its member names, labels and JSON text, so `annotate_frame` over 100,000 rows held 77 MB of rows for about 15 MB of output. The decide rows were small, so streaming saved little there.
+- The rows the door collected cost more than the columns it built. An annotate record carries its member names, labels and JSON text, so over 100,000 rows the old `annotate_frame` raised its peak by 77 MB and the new one by 15 MB. The decide rows were small, so streaming saved little there.
 - The question key names the backend address. A replay under another base URL than the recording finds nothing, so a measurement must replay against the recorded address.
-- Polars pushes a slice below an elementwise `map`, so a sliced lazy frame asks only the rows it keeps. The streaming engine, which the feature no longer compiles, is the only way to bound the frame's own memory.
+- A slice placed before the expression limits what it asks, so a sliced lazy frame asks only the rows it keeps. The test does not show whether Polars pushes a later slice below the expression. The streaming engine, which the feature no longer compiles, is the only way to bound the frame's own memory.
 - Replay speed is the engine's: about 50 microseconds per answered question under load, the same with or without Polars.
