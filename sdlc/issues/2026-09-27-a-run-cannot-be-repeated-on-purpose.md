@@ -2,6 +2,8 @@
 
 Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`. Deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement.
 
+Priority: rank 22 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0.1.
+
 ## What happens today
 
 The cache answers a repeated request for free, so asking the same question again through the cache returns the same bytes. `--no-cache` forces every request live, but no command repeats a record a fixed number of times, and no command reports how the answers varied. `audit` reads two saved runs or one run at two cuts; it has no repeat input.

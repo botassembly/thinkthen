@@ -2,6 +2,8 @@
 
 Status: open. Found by the wave 4 macOS dry run on 2026-09-29 at `2c5ac772b`. The same code stands at main `e2ee1d9fa`. No ticket owns it. The release issue lists it as item 7.
 
+Priority: rank 3 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a new ticket, ready now; proof needs macOS.
+
 ## The problem
 
 `cargo pgrx package` fails on macOS while compiling `databases/postgresql/src/ffi.rs`. It stops with seven E0425 errors: `open_how`, `SYS_openat2`, `O_PATH`, `RESOLVE_BENEATH`, `RESOLVE_NO_MAGICLINKS` and `AT_FDCWD` do not exist in macOS's `libc`. The file uses `openat2` and `O_PATH` at lines 268 and 293 with no platform gate.

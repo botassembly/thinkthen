@@ -2,6 +2,8 @@
 
 Status: open for items 3 to 6, all later features. Shortened 2026-09-30. Ticket 0123 fixed items 1 and 2. The recognition-guidance Quick Fix fulfilled items 7 and 8. Git history holds their text. Ian can overturn any fix below.
 
+Priority: rank 14 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0304 slice 4; Ian decides item 3.
+
 The relation planner and the request splitter serve both commands. Each open item is about how that path grows with the input or how its output reads.
 
 ## 3. A both-ways edge prints a direction it does not have
