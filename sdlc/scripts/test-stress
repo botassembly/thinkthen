@@ -5,6 +5,7 @@ case ${1:-} in
 --list)
     echo 'backend binary: fifty rounds; twenty concurrent ports; eight parallel delays; the 30 s wait bound'
     echo 'backend listener: 80-cycle descriptor and thread retirement; the 8 s read timeout'
+    echo 'public controls: relate stop while sends overlap'
     echo 'public batches: 20,000-record memory; engine churn'
     echo 'engine width: 50 repeated first-width races'
     echo 'Polars: 200-record throttle equality'
@@ -51,6 +52,7 @@ ignored_case conformance-backend loopback binary::eight_delayed_replies_wait_in_
 ignored_case conformance-backend loopback binary::a_wait_line_gives_up_at_30_s_and_holds_up_no_line_behind_it
 ignored_case conformance-backend loopback listener::retired_listeners_release_descriptors_and_threads_before_drop_returns
 ignored_case conformance-backend loopback listener::a_silent_connection_held_past_the_read_timeout_takes_no_reply
+ignored_case thinkthen public_controls overlap::a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight
 ignored_case thinkthen public_batches a_long_batch_keeps_memory_flat_as_its_input_grows
 ignored_case thinkthen public_batches engines_built_and_dropped_across_threads_fail_fast_on_a_refused_port
 ignored_lib engine::width_tests::fifty_racing_first_widths_select_exactly_one_and_the_loser_names_it
@@ -66,5 +68,5 @@ if [ "$mode" = --run ]; then
 else
     cargo test --locked --offline -p thinkthen --features polars --test polars \
         throttle_equality::a_series_runs_at_the_throttle_as_a_slice_does -- --exact
-    echo 'test-stress: all ten ignored Rust filters exist; port stress selections are checked by their own check.sh'
+    echo 'test-stress: all eleven ignored Rust filters exist; port stress selections are checked by their own check.sh'
 fi

@@ -6,22 +6,34 @@ Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1.
 
 No routine rung (`test`, `spec`, the surface checks) depends on how fast the machine runs.
 
+This ticket delivers it for `test`, `spec`, and the Python, DuckDB and SQLite surface checks. The other binding checks remain as Debt 027.
+
 ## Evidence
 
 - Starts from: ticket 0340, which fixed the first load flakes, and the closed issues it and later tickets settled. These are `2026-09-24-parallel-lock-test-fails-under-load.md`, `2026-09-24-the-global-queue-concurrency-check-fails-under-load.md`, `2026-09-24-the-model-mismatch-cancel-check-fails-under-load.md`, `2026-09-30-duckdb-split-denials-case-failed-once-under-load.md`, `2026-09-30-ordered-output-test-races-the-next-request-under-load.md`, `2026-09-30-process-cap-test-races-two-records.md` and `2026-09-30-relate-host-interrupt-test-fails-under-load.md`. Ticket 0342 narrowed the relate interrupt race and did not remove it. Ticket 0351 recorded one timing test that failed once under load. Python and DuckDB surface checks passed only on a rerun. A loaded baseline on main failed 1 of 5 runs of `sdlc/scripts/test`, in the batching ceiling test.
-- Keeps: every cancellation, deadline, pacing and ordering regression. Each moved millisecond promise keeps a stress twin under `test-stress --run`.
+- Keeps: every cancellation, deadline, pacing and ordering regression. Each moved millisecond promise keeps a stress twin under `test-stress --run`. The relate stop while four sends overlap keeps its old form as the stress case `overlap::a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight`.
 - Changes: the rules and the list below.
-- Proof: `sdlc/scripts/test` under 24 busy processes, before and after, in the table below. The Python, DuckDB and SQLite surface checks pass after.
-- Defers: the other binding checks, filed as Debt 027. The C door tests, which ticket 0346 owns. The engine's 50 ms input pause, which a stalled reader thread can still reach.
+- Proof: `sdlc/scripts/test` under 24 busy processes, before and after, in the table below. The Python, DuckDB and SQLite surface checks pass after. `test-stress --run` passes on a quiet machine. `spec` runs replayed document examples and two probes. Its only timed wait is the triage demo's file wait, which this ticket raises to 30 s. A search of `spec`'s inputs found no other sleep or elapsed-time check.
+- Defers: the other binding checks, filed as Debt 027. The C door tests, which ticket 0346 owns. The engine's 50 ms input pause, which a stalled reader thread can still reach. The margins named under Exceptions.
 
 ## Rules
 
 - A routine test proves order with an event: a channel, a barrier, a counted request, a held reply, or a file the child writes.
 - A promise in milliseconds, such as "cancelled within 100 ms", runs only under `THINKTHEN_TEST_PROFILE=stress`. The routine run proves the same stop by order: the cancel arrives while the reply is still held.
 - A wait for something that must happen gets a guard of 30 to 60 s. A passing run never waits it out.
-- An upper bound stays only as a hang guard of at least 10 s, and only where the behavior it rules out takes 30 s or more.
+- An upper bound stays only as a hang guard of at least 10 s, and only where the behavior it rules out takes 30 s or more. Every shorter bound either becomes a guard of 30 to 60 s or moves to stress.
 - A lower bound stays. So does a wait for something that must not happen. Load can only make either pass more easily.
-- A deadline of 300 ms or more that covers only loopback work stays.
+- A deadline that the test expects to fire stays. Load can only make it fire sooner. The work it cuts off is held or waits 30 s.
+
+## Exceptions
+
+A few tests still need in-process work to finish inside a margin. No outside event marks that work. Each margin covers only work inside one process and loopback round trips, and a failure needs a stall of the whole margin.
+
+- The ordered-schedule deadline tests: 300 and 500 ms deadlines that must outlast emitting one record.
+- The Polars deadline test: a 1 s deadline that must outlast one held-arm round.
+- The HTTP retry deadline test: a 1 s deadline that must outlast one loopback send.
+- The width test's 400 ms wait for a permit that is already free.
+- The annotate equal-records test: the reply waits 1 s while the engine reads a line already in its pipe.
 
 ## Changes
 
@@ -50,7 +62,7 @@ Rust command tests (`tests/backend`):
 
 Rust library tests:
 
-- The relate host-interrupt test runs at throttle 1 in a fresh copy of the test binary. The check fires at exactly four sends, and nothing more is sent. At throttle 4, overlapping replies could leave no moment with no send out, so the check could miss every chance.
+- The relate host-interrupt test runs at throttle 1 in a fresh copy of the test binary. The check fires at exactly four sends, and nothing more is sent. At throttle 4, overlapping replies could leave no moment with no send out, so the check could miss every chance. The throttle-4 form moves to `public_controls/overlap.rs` as a stress case.
 - The profile-split test holds the alpha reply until beta's is written. The order test holds each slow reply until the fast one beside it is written.
 - Waits in the cap, estimated, batch attempt, interactive and native tests rise to 30 s. The retry-after tests ask for 30 s and allow 10 s.
 

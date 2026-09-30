@@ -33,6 +33,8 @@ const BOUND: Duration = Duration::from_secs(3);
 mod child;
 #[path = "public_controls/fired.rs"]
 mod fired;
+#[path = "public_controls/overlap.rs"]
+mod overlap;
 #[path = "public_controls/stopped.rs"]
 mod stopped;
 #[path = "../src/test_deadline/wait.rs"]
