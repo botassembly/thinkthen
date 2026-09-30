@@ -142,6 +142,21 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 
     `release-workflow resolve` lets `sdlc/scripts/versions` print its success line into `$GITHUB_OUTPUT`, and GitHub refuses the line `versions: 59 places read 0.0.1`. The bug is filed as `sdlc/issues/closed/2026-09-30-release-resolve-writes-the-version-line-into-its-outputs.md`. No runner built or smoked anything, so this run proves no target. It does not close R5-37. It does not check Debt 026, the macOS DuckDB extension's SQLite names, because the macOS jobs never ran. The run published nothing, created no release or tag, and created no environment. No secret or account was needed to reach `resolve`. Environment `release` does not exist yet. GitHub refuses tag rulesets on this private repository without GitHub Pro, so Ian's setup item 3 needs a plan upgrade or a public repository. Rehearse mode references neither. Phase 3b stays open. After the fix lands, the next dispatch repeats this step.
 
+    **Second rehearsal attempt, 2026-09-30.** The quick fix for `resolve` landed at `a7ee565ab`. Under the same test approval, the coordinator's agent dispatched `gh workflow run release.yml --ref main -f mode=rehearse` again. The run is [36780048676](https://github.com/botassembly/thinkthen/actions/runs/36780048676) at main `a7ee565ab`. This dispatch allowed a draft release, which would stay a draft. Phase 4 step 9 has Ian delete rehearsal drafts, so the agent would leave any draft in place. The run never reached `draft`.
+
+    | Job | Result | Cause |
+    | --- | --- | --- |
+    | `resolve` | Success in 6 seconds | The fix holds |
+    | `build` (`aarch64-apple-darwin`, `macos-15`) | Failure in `host-setup` after 2 minutes | Ours: `sdlc/issues/2026-09-30-release-host-setup-uv-check-fails-on-macos.md` |
+    | `build` (`x86_64-apple-darwin`, `macos-15-intel`) | Failure in `host-setup` after 7 minutes | Ours: the same uv issue |
+    | `build` (`x86_64-unknown-linux-gnu`) | Failure in the managed language tools step after 10 minutes | Ours: `sdlc/issues/2026-09-30-release-language-tools-refuses-the-apt-simulation-note.md` |
+    | `build` (`aarch64-unknown-linux-gnu`) | Failure in the container build after 17 minutes | Ours: `sdlc/issues/2026-09-30-release-host-setup-skips-the-duckdb-bridge-crates.md` |
+    | `crate` | Failure in `sdlc/scripts/package` after 2 minutes | Ours: `sdlc/issues/2026-09-30-crate-job-library-tests-start-a-command-never-built.md` |
+    | `wheels`, `gems`, `npm-pack`, `smoke`, `draft` | Skipped, since `build` or `crate` failed | |
+    | `crates`, `pypi`, `npm`, `rubygems`, `tap`, `publish` | Skipped, as rehearse mode requires | |
+
+    All four failures are ours, and each issue names its fix. No failure came from GitHub, a runner, or an upstream package. No runner finished a build, so this run proves no target and does not close R5-37. It does not check Debt 026, because neither macOS job reached the DuckDB build. The run published nothing, created no release, draft, or tag, and changed no setting or secret. No secret was read. Phase 3b stays open. The next dispatch waits until all four fixes land.
+
 ## Phase 4: Ian's release run
 
 The agent writes this checklist into `sdlc/records/0128-release-0-1.md` and follows it beside Ian. Every step marked Ian is his. The run happens in one cycle, and nobody edits `release.yml` inside it. A change to `release.yml` restarts the checklist at step 2.

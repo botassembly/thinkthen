@@ -24,11 +24,11 @@ Work outside the lanes:
 - **R1, the relate decision run.** One capped paid Beatles Bench run through `sdlc/scripts/live` (ruling 13) on the 0342 menu, after 0344 lands so the bench pins one commit. Conditions and bar: `sdlc/issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run". Blocks 0.1.
 - **E1, the loopback TLS count.** Done 2026-09-30: `sdlc/issues/closed/2026-09-26-count-secure-connections-at-sixteen-jobs.md`. Workspace experiment 2039 counted 16 connections at `--jobs 16`, so no ticket.
 - **Marketing, owner of `site/`.** Blocks 0.1: the reference page (`2026-09-30-reference-page-exit-codes-and-key-rule-drift.md`); the providers and Liquid d1 pages, including the `--timeout 90` line for stumble row 19 (`2026-09-29-docs-page-naming-supported-providers.md`); the site recording conversion, the five `--dry-run` examples and the site checks (`2026-09-30-site-replay-folders-have-no-fixture.md`, which holds the conversion command); the overhead benchmark for the README line (`2026-09-29-readme-key-backend-and-overhead-lines.md`).
-- **Ian.** The first release rehearsal ran on 2026-09-30 under his test approval and stopped at `resolve` on a bug of ours. It runs again after that fix lands. Then phase 4 and the registry accounts already on his list.
+- **Ian.** The first release rehearsal ran on 2026-09-30 under his test approval and stopped at `resolve` on a bug of ours. The second run passed `resolve` and stopped on four more bugs of ours in `build` and `crate`. It runs again after those fixes land. Then phase 4 and the registry accounts already on his list.
 
 ## Every open issue
 
-35 open. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
+39 open. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
@@ -53,6 +53,10 @@ Work outside the lanes:
 | `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing; our conversion proof landed with 0304 slice 5 |
 | `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | waits | marketing's overhead benchmark, then the queue owner writes one sentence |
 | `closed/2026-09-30-release-resolve-writes-the-version-line-into-its-outputs.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
+| `2026-09-30-release-host-setup-uv-check-fails-on-macos.md` | yes | ready | ticket 0128 phase 3b; a Quick Fix before the next rehearsal |
+| `2026-09-30-release-language-tools-refuses-the-apt-simulation-note.md` | yes | ready | ticket 0128 phase 3b; a Quick Fix before the next rehearsal |
+| `2026-09-30-release-host-setup-skips-the-duckdb-bridge-crates.md` | yes | ready | ticket 0128 phase 3b; a Quick Fix before the next rehearsal |
+| `2026-09-30-crate-job-library-tests-start-a-command-never-built.md` | yes | ready | ticket 0128 phase 3b; a Quick Fix before the next rehearsal |
 | `2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md` (Debt 026) | if the rehearsal shows a `sqlite3_` name | waits | the rehearsal's macOS DuckDB jobs |
 | `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | waits | every blocker above; Ian's rehearsal dispatch and registry accounts |
 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | waits | the release QA suite's edge list |
