@@ -23,3 +23,8 @@ fn EngineBuilder::shared_host(self) -> EngineBuilder
 ## Design notes
 
 Per-role cache keys in PostgreSQL would close the sharing leak for every operator, but they change the key that ADR 0111 slice 2 replaces, and a role name is not a trust boundary the engine can see. Default-off plus a named folder puts the sharing choice with the administrator who names the folder. `thinkthen.cache` is already superuser-only. Refusing rather than warning follows from the host: DuckDB and SQLite have no warning line, and one rule for three extensions is simpler than a PostgreSQL notice alone. Ian can overturn the default or the refusal.
+
+## What the build taught us
+
+Every SQL harness already named `THINKTHEN_CACHE` except DuckDB's, whose cache tests had been passing through the platform folder without anyone noticing. Test harnesses that clear the environment can hide the very default a ticket changes. So each SQL red run used the unchanged extension: the new SQL tests failed there and pass now. The PostgreSQL engine lives for the whole backend process, so it checks the folder only when it builds the engine. The spec says so. On main, the DuckDB check fails three singleton conformance cases before it reaches its last suites, and the failure has nothing to do with 0318. It is filed as `2026-09-30-duckdb-conformance-fails-three-singleton-cases`. Gates: workspace clippy `-D warnings`, `sdlc/scripts/test`, `lint`, `policy.py`, `tickets` and `inventory` pass; the PostgreSQL check passes 86 of 86; the SQLite check passes; every DuckDB suite passes apart from those three cases.
+
