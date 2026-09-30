@@ -202,6 +202,36 @@ The engine part only. The SQL hosts' own limit copies wait for 3b and land as a 
   - The SQL hosts' copies: PostgreSQL's `ACTIVE_THROTTLE` and early refusal (`call/settings.rs`) and `SEND_BUDGET`, and DuckDB's `SEND_BUDGET`. They touch the SQL host files 3b reruns, so they wait for 3b and land as slice 3e. That slice needs a public way to reach the process total.
   - `default_engine`, to ticket 0314's binding pass, as 3a recorded.
 
+### Slice 3e evidence
+
+The SQL hosts' own copies of the send limits, which 3d deferred.
+
+- Starts from: slice 3d's engine part (`f2278c900`), whose `engine/limits.rs` owns the throttle, the gates and pacer, and the process request total; slice 3b (`0ee0f2b63`); `sdlc/planning/0304-slices-3b-3d-prep.md` section 3d item 3, which served as this slice's ticket review.
+- Keeps: every SQL setting (`SET thinkthen.max_requests_total`, `SET thinkthen_max_requests_total`, `thinkthen.throttle`, `thinkthen_max_requests` and the SQLite `thinkthen_configure` keys) and every refusal sentence and SQLSTATE; one process total that a forked child restarts; the per-row budget denial of ticket 0240; the cancellation, invalid-input and conflict regressions of the three SQL checks. No test was merged or deleted.
+- Changes:
+  - `CallOptions::max_requests_total(limit)` caps one call against the process total that every engine already counts. A send reserves once, against the tighter of the engine's and the call's limit, so a host passing both never counts a send twice.
+  - `process_requests_sent()` reads that total, for a host that cuts its rows before a call.
+  - PostgreSQL drops `SEND_BUDGET` and `ACTIVE_THROTTLE` and the early throttle refusal in `call/settings.rs`. Each call passes `thinkthen.max_requests_total` as its call total, and the engine's own refusal at build gives the same "throttle N is already active for this process" sentence and 22023.
+  - DuckDB drops `SEND_BUDGET`. Its calls pass `thinkthen_max_requests_total` as their call total, and `within_total` reads `process_requests_sent()` instead of summing the engines' usage counters.
+  - SQLite had no copy: `max_requests_total` already reached the engine through `EngineBuilder::max_requests_total`, and its throttle through the builder.
+  - The PostgreSQL `single_cancel` check proves order: the cancel ends the statement while the held arm still keeps its only reply. Its 200 ms limit moves to `single_cancel_within_200_ms`, which runs only under the stress profile (`test-stress --run`).
+  - Ratchets: the crate rises by 79 lines, for the call total, the read and the real-fork proof. PostgreSQL falls by 17 and DuckDB by 1.
+- Proof:
+  - `conformance/consumer/fork-probe` `a_call_total_counts_every_engine_of_the_process`: in a forked child, two engines share one total under call totals; a call cap and an engine cap each refuse when they are the tighter, `process_requests_sent()` reads 3, and the backend counts 3.
+  - `databases/postgresql/check.sh` `an_annotate_row_missing_its_part_fails_alone`: a record missing `/body` fails with "the record holds nothing at `/body`", its two neighbours send once each, and a rerun answers both from the store with no send. It closes that item of `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md`.
+  - Kept unchanged and passing: PostgreSQL `a_changed_throttle_refuses` and the six `max_requests_total` steps; DuckDB `settings_suite.py`, `verbs_budget.py`, `plan_suite.py` and `relate_suite.py`, which pin the spent sentence, the fork reset and the throttle conflict; SQLite `test_try_budget.py` and `test_settings.py`.
+  - CHECKS_PLACEHOLDER
+
+- Defers:
+  - `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md` keeps two gaps: the DuckDB and PostgreSQL shared case runners count no store rows, which needs a DuckDB harness change, and SQLite has no read-only replay or busy wait row on the 3.50.0 host.
+
+### Added public declarations
+
+```text
+const fn CallOptions::max_requests_total(self, Option<u64>) -> CallOptions<'a>
+fn process_requests_sent() -> u64
+```
+
 ## What the build taught us
 
 ### Slice 1
