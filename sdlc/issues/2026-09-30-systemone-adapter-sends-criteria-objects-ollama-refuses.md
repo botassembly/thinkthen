@@ -11,6 +11,10 @@ thinkthen serializes a criteria description as whatever the question gave it: a 
 
 `thinkthen check` therefore reports three criticals against Ollama (choice, score, mixed) although the bench's own request shapes, plain strings, all pass.
 
+## Verified
+
+The published OpenAPI 3.1.0 schema at `api.typesafe.ai/openapi.json` allows a criteria description of `string | object | array | null` on choice, `string | object | array` on score, and `string | object | array | null` on noul. A live `thinkthen check` against `api.typesafe.ai/v1` on 2026-09-30 (account with credit) passed every row, including the object-criteria probes. Ollama's refusal is a deviation from the published schema, not an untested corner. A record of both dialects sits in the awesome-thinkthen list at `apis/system1.md`.
+
 ## The fix candidate
 
 One serialization rule for every backend: a description renders as its plain string when it is one, renders the object's own text when the question supplies one form, and an absent or empty description is omitted entirely. No nulls and no objects on the wire. TypeSafe loses nothing it reads today. A fixture set covering string, object, empty, and absent descriptions on all three question types pins the behavior.
