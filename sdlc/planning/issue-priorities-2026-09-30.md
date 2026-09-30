@@ -110,7 +110,9 @@ Nothing here is closed; each stays open as filed.
 - Ranks 22, 23 and 24, the three tuning issues. They serve the ideal state's tuning loop, where ThinkThen supplies rows for Optimizer. They serve no phase goal and stay deferred past 0.1 as the 2026-09-28 tuning review ruled.
 - Rank 16, the Zig linker issue. It records an upstream bug and the condition for removing its workaround. It needs no work from this phase.
 
-## For Ian
+## Coordinator defaults
+
+The coordinator took each recommendation below on 2026-09-30, under the workspace rule to record reviewed choices and proceed. Ian can overturn each one.
 
 1. Rank 14, item 3: whether a both-ways relate edge gets an unordered `pair` shape. A shape change on every surface is cheap before 0.1 and a breaking change after it. You asked on 2026-09-22 that relate's source and target be more obvious. Options: (a) change the shape before 0.1, about one medium ticket after 0304 slice 4; (b) keep the one-way shape and document `--either` edges. Recommendation: (a), because a breaking change after 0.1 costs every consumer.
 2. Rank 4's rehearsal: dispatch `rehearse` only after 0304 slice 3 and the PostgreSQL macOS ticket land. An earlier dispatch fails on the PostgreSQL part. The queue owner proves that ticket with one light M5 check first, so the two do not wait on each other.
