@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"[{\"id\":\"u001\",\"evidence\":\"Open Settings and choose Reset password.\"},{\"id\":\"u002\",\"evidence\":\"Invoices are emailed on the first of the month.\"},{\"id\":\"u003\",\"evidence\":\"We ship to the US and Canada.\"}]","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which answer says how to reset a password?","criteria":{"u001":null,"u002":null,"u003":null}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"u001","confidence":1.0,"probabilities":{"u003":0.0,"u002":0.0,"u001":1.0}}},"usage":{"input_tokens":371,"output_tokens":51}}
-}

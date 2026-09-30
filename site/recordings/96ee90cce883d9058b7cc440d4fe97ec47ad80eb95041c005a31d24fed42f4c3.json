@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"-    t = 0\\n-    for i in items: t += i.price\\n-    return t\\n+    subtotal = 0\\n+    for item in items: subtotal += item.price\\n+    return subtotal\\n\". Does this change what the code does when it runs?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.08}},"usage":{"input_tokens":325,"output_tokens":21}},
-  "quoted": true
-}

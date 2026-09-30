@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"score","instructions":"The text is \"Reports take a full minute to load.\". How happy is this answer?","criteria":["Unhappy.","Neutral.","Happy."]}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":0.04,"confidence":0.93,"legend":{"0":"Unhappy.","1":"Neutral.","2":"Happy."},"probabilities":{"0":0.96,"1":0.04,"2":0.0}}},"usage":{"input_tokens":309,"output_tokens":18}},
-  "quoted": true
-}

@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Steps: click Log in. Nobody gets in.\". Does the report give steps to reproduce?"},"q2":{"type":"choice","instructions":"The text is \"Steps: click Log in. Nobody gets in.\". Which part of the app is this?","criteria":{"export":null,"login":null,"billing":null}},"q3":{"type":"score","instructions":"The text is \"Steps: click Log in. Nobody gets in.\". How much does this block the user?","criteria":["None.","Slows them.","Blocks work."]}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.84},"q2":{"type":"choice","choice":"login","confidence":1.0,"probabilities":{"login":1.0,"export":0.0,"billing":0.0}},"q3":{"type":"score","score":1.98,"confidence":0.98,"legend":{"0":"None.","1":"Slows them.","2":"Blocks work."},"probabilities":{"0":0.01,"1":0.0,"2":0.99}}},"usage":{"input_tokens":366,"output_tokens":71}},
-  "quoted": true
-}
