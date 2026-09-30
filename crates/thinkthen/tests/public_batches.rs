@@ -393,6 +393,35 @@ fn a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows() {
     assert!(backend.count() <= stopped, "a send without its record");
 }
 
+#[test]
+#[ignore = "known failing: see sdlc/issues/2026-09-30-public-batch-holds-one-send-under-a-throttle.md"]
+fn a_batch_keeps_a_throttle_of_sends_in_flight_while_they_are_held() {
+    let _serial = serial();
+    let backend = Backend::start().expect("backend");
+    let engine = engine(&format!("{}/arm/held/v1", backend.origin()));
+    let asked = question();
+    let records = (0..20).map(|at| format!("record {at}"));
+    let in_flight = thread::scope(|scope| {
+        let watcher = scope.spawn(|| {
+            let in_flight = backend.wait(usize::from(THROTTLE));
+            backend.release();
+            in_flight
+        });
+        let batch = engine.filter_with(
+            &asked,
+            records,
+            CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+        );
+        assert!(batch.take(5).all(|row| row.is_ok()));
+        watcher.join().expect("watcher")
+    });
+    assert_eq!(
+        in_flight,
+        usize::from(THROTTLE),
+        "sends in flight while held"
+    );
+}
+
 /// The resident set of this process in kilobytes. Only Linux reports it.
 #[cfg(target_os = "linux")]
 fn resident() -> usize {

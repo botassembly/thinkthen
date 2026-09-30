@@ -330,33 +330,48 @@ pub(crate) fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
     }
 }
 
-/// Drive one route over every verb and way, and `relate` over its table framings.
+/// One spawn of the sweep: a verb, a view, and a framing.
+type Case = (
+    (&'static str, &'static [&'static str], &'static str),
+    &'static [&'static str],
+    Option<&'static str>,
+);
+
+/// Every case one route drives: each verb in each way, `relate` over its table
+/// framings, and on the hostile replay route the record verbs too.
+fn cases(route: &Route) -> Vec<Case> {
+    let mut cases = Vec::new();
+    for verb in VERBS {
+        for (view, framing) in WAYS {
+            cases.push((verb, view, framing));
+        }
+    }
+    for verb in VERBS.into_iter().filter(|(name, _, _)| *name == "relate") {
+        for (view, framing) in TABLE_WAYS {
+            cases.push((verb, view, framing));
+        }
+    }
+    if route.damage == Some(HOSTILE) {
+        for verb in RECORD_VERBS {
+            for (view, framing) in RECORD_WAYS {
+                cases.push((verb, view, framing));
+            }
+        }
+    }
+    cases
+}
+
+/// Drive every case of one route.
 ///
-/// The hostile replay route also drives the record verbs. Each route is its own
-/// test, so the runner spreads the 518 spawns across its threads.
+/// Each route is its own test, so the runner spreads the 518 spawns across its
+/// threads.
 fn sweep_route(named: &str) -> io::Result<()> {
     let route = PATHS
         .iter()
         .find(|route| route.named == named)
         .ok_or_else(|| io::Error::other("the route left the matrix"))?;
-    for verb in VERBS {
-        for (view, framing) in WAYS {
-            sweep(route, verb, view, framing)?;
-        }
-    }
-    let relate = VERBS
-        .into_iter()
-        .find(|(name, _, _)| *name == "relate")
-        .ok_or_else(|| io::Error::other("relate left the matrix"))?;
-    for (view, framing) in TABLE_WAYS {
-        sweep(route, relate, view, framing)?;
-    }
-    if route.damage == Some(HOSTILE) {
-        for verb in RECORD_VERBS {
-            for (view, framing) in RECORD_WAYS {
-                sweep(route, verb, view, framing)?;
-            }
-        }
+    for (verb, view, framing) in cases(route) {
+        sweep(route, verb, view, framing)?;
     }
     Ok(())
 }
@@ -376,6 +391,10 @@ macro_rules! sweep_tests {
             let tested = [$($named),*];
             let routes: Vec<&str> = PATHS.iter().map(|route| route.named).collect();
             assert_eq!(routes, tested);
+            let hostile = PATHS.iter().filter(|route| route.damage == Some(HOSTILE)).count();
+            assert_eq!(hostile, 1, "exactly one hostile replay route");
+            let total: usize = PATHS.iter().map(|route| cases(route).len()).sum();
+            assert_eq!(total, 518, "the sweep drives 518 cases");
         }
     };
 }

@@ -50,6 +50,16 @@ fn printed(output: &Output) -> String {
     )
 }
 
+/// The runner can fail: a green page with a wrong assertion fails the run.
+#[test]
+fn a_page_whose_assertion_is_wrong_fails_the_run() {
+    let output = demos("crates/thinkthen/tests/fixtures/demos-wrong").expect("the runner runs");
+
+    let said = printed(&output);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("1 failed"), "{said}");
+}
+
 #[test]
 fn every_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
     let output = demos("demos").expect("the runner runs");
