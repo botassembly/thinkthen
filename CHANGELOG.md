@@ -10,6 +10,8 @@ The command handles SIGTERM like Ctrl-C, reports a signal as the cause when a se
 
 The SQL extensions add `thinkthen_try_details` so a recoverable bad row yields a safe typed JSON failure and later good rows continue. SQLite adds a connection-scoped ThinkThen time budget. DuckDB retires idle engine plans while retaining cumulative usage and its 16-plan cap. PostgreSQL refuses a changed explicit throttle. DuckDB's whole-query budget follows in ticket 0201.
 
+Every surface paces its HTTP attempts to 1,000 a minute for each `https://` address, under the vendor's published 1,200. `THINKTHEN_REQUESTS_PER_MINUTE` sets another rate. The pacer counts within one process (ticket 0308).
+
 The default model is the pinned version `jev-1.13.0`, not the alias `jev-latest`, so a vendor's move of its alias moves no default answer (ticket 0159).
 
 Python and Ruby calls now raise cancellation when the caller's token fires before a held reply reaches the call, including when both happen in one wait tick (ticket 0168).

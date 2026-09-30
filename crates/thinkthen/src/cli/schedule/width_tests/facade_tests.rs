@@ -34,6 +34,7 @@ fn facade_width_child() {
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
         width: Width::new(width).ok(),
+        per_minute: None,
         storage: Storage::default(),
         key: std::sync::Arc::new(|| Ok(Key::of("sk-test-value"))),
         usage: Arc::default(),

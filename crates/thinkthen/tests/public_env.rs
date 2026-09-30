@@ -262,6 +262,10 @@ fn run(case: &str, argument: &str) -> Vec<String> {
             shown(seed().throttle(8).and_then(|b| b.no_cache().build())),
             shown(seed().throttle(4).and_then(|b| b.no_cache().build())),
         ],
+        "paced" => {
+            let engine = seed().no_cache().build().expect("the seeded engine");
+            (0..4).map(|_| ask(&engine)).collect()
+        }
         "overrides" => overrides(argument),
         "refused" => vec![shown(EngineBuilder::from_env())],
         "batch-env" => {

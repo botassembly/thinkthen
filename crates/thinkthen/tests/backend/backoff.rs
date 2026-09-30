@@ -105,3 +105,51 @@ fn status_counts_retries_as_a_subset_of_actual_sends() {
         assert_eq!(status["usage"][field]["retries"], 1);
     }
 }
+
+#[test]
+fn the_rate_variable_spaces_request_starts_at_one_address() {
+    let starts = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = Arc::clone(&starts);
+    let listener = Listener::answering(move |_| {
+        seen.lock().unwrap().push(std::time::Instant::now());
+        Canned::ok(ANSWER)
+    })
+    .expect("loopback listener");
+    let arguments = ["decide", "Is it?", "--lines", "--batch", "1", "--jobs", "4"];
+    let output = spawn(
+        &[&arguments[..], &["--no-cache", "--url", listener.base()]].concat(),
+        &[
+            ("THINKTHEN_API_KEY", "sk-test"),
+            ("THINKTHEN_REQUESTS_PER_MINUTE", "600"),
+        ],
+        b"a\nb\nc\nd\ne\nf\n",
+    )
+    .expect("compiled command");
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let starts = starts.lock().unwrap();
+    assert_eq!(starts.len(), 6);
+    // 600 a minute is one start each 100 ms, so six starts span 500 ms. The bound
+    // leaves one interval for a late first delivery on a busy machine.
+    let span = *starts.iter().max().unwrap() - *starts.iter().min().unwrap();
+    assert!(span >= std::time::Duration::from_millis(400), "{span:?}");
+}
+
+#[test]
+fn a_malformed_rate_variable_is_a_usage_error_before_any_send() {
+    let listener = Listener::serving(vec![]).expect("loopback listener");
+    let output = spawn(
+        &["decide", "Is it?", "--url", listener.base(), "--no-cache"],
+        &[
+            ("THINKTHEN_API_KEY", "sk-test"),
+            ("THINKTHEN_REQUESTS_PER_MINUTE", "0"),
+        ],
+        b"evidence",
+    )
+    .expect("compiled command");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(listener.requests().is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000\n"
+    );
+}

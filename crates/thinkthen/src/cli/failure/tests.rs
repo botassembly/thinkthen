@@ -213,6 +213,7 @@ fn loopback_engine(
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
         width: None,
+        per_minute: None,
         storage: crate::engine::facade::Storage::default(),
         key: std::sync::Arc::new(|| Ok(crate::engine::facade::Key::new(KEY.to_owned()))),
         usage: std::sync::Arc::default(),

@@ -45,6 +45,7 @@ pub(crate) fn run(
             timeout: Duration::from_secs(arguments.timeout),
             max_retries: MAX_RETRIES,
             retry_wait: environment.retry_wait(),
+            per_minute: environment.per_minute,
             width: None,
             storage: Storage::default(),
             key: environment.key_reader(),

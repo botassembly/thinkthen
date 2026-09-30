@@ -97,6 +97,8 @@ pub(crate) struct Client {
     agent: Agent,
     timeout: Duration,
     width: &'static Widths,
+    /// The spacing between attempt starts to one address, or none.
+    every: Option<Duration>,
 }
 
 impl fmt::Debug for Client {
@@ -116,6 +118,9 @@ impl Client {
     ) -> Result<Permit<'a>, Error> {
         loop {
             let _open = gates.wait_open(url, cap, cancel)?;
+            if let Some(every) = self.every {
+                gates.pace(url, every, cancel)?;
+            }
             let permit = self.width.acquire(cancel)?;
             if gates.may_send(url, cap) {
                 return Ok(permit);
@@ -163,7 +168,14 @@ impl Client {
             agent: config.build().into(),
             timeout,
             width: crate::engine::client_width(widths),
+            every: None,
         }
+    }
+
+    /// Space attempt starts to each address by `every`.
+    pub(crate) const fn paced(mut self, every: Option<Duration>) -> Self {
+        self.every = every;
+        self
     }
 
     /// Send through this gate in place of the one `new` chose.
