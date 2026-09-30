@@ -62,6 +62,23 @@ def the_exit_flushes_a_call_while_the_usage_lock_is_held():
 
 
 @case
+def a_cached_rerun_sends_nothing_and_adds_a_cache_answer():
+    """ADR 0113: a second process answers from the named cache folder, sends
+    nothing, and its exit adds one cache answer to the month file."""
+    with Backend() as backend, tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-") as folder:
+        env = child_env(backend.base(), Path(folder))
+        usage = (Path(env["HOME"]) / "Library/Caches" if sys.platform == "darwin" else Path(env["XDG_CACHE_HOME"])) / "thinkthen-usage"
+        for _ in range(2):
+            done = subprocess.run([sys.executable, "-c", CHILD, str(EXTENSION), json.dumps([ASK])],
+                                  env=env, capture_output=True, text=True, timeout=60, check=False)
+            expect((done.returncode, done.stdout), (0, '{"rows": [[true]]}\n'), "the answer")
+        written = [json.loads(month.read_text()) for month in usage.glob("*.json")]
+        expect([(month["requests_sent"], month["cache_answers"]) for month in written], [(1, 1)],
+               "one send and one cache answer")
+        expect(backend.count(), 1, "one send")
+
+
+@case
 def environment_token_cap_refuses_before_any_send():
     """Regression: from_env stops reading THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL."""
     with Backend() as backend:

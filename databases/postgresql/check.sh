@@ -763,10 +763,11 @@ check the_platform_cache_stays_off
 # ADR 0113: each backend adds its sends to the server user's usage totals when
 # it exits. The check holds the usage lock while both connections disconnect,
 # so only the exit hook's wait writes the counts.
-usage_requests() {
+usage_total() {
 	env -i PATH="$PATH" HOME="$SCRATCH" XDG_CACHE_HOME="$SCRATCH/.cache" "$COMMAND" status --json |
-		python3 -c 'import json, sys; print(json.load(sys.stdin)["usage"]["total"]["requests_sent"])'
+		python3 -c 'import json, sys; print(json.load(sys.stdin)["usage"]["total"][sys.argv[1]])' "$1"
 }
+usage_requests() { usage_total requests_sent; }
 each_backend_adds_its_sends_at_exit() {
 	fresh generic
 	folder=$SCRATCH/.cache/thinkthen-usage
@@ -793,6 +794,19 @@ sys.stdin.read()' "$folder/.lock" "$RUN/usage-held")
 	same "$(usage_requests)" $((before + 2))
 }
 check each_backend_adds_its_sends_at_exit
+# A second connection answers from the named cache, sends nothing, and its
+# exit adds one cache answer.
+a_cached_rerun_adds_a_cache_answer() {
+	fresh generic
+	before="$(usage_requests) $(usage_total cache_answers)"
+	same "$(q -c "SELECT thinkthen_decide('$Q', 'cached rerun')")" t
+	same "$(q -c "SELECT thinkthen_decide('$Q', 'cached rerun')")" t
+	same "$(bcount)" 1
+	wanted="$((${before% *} + 1)) $((${before#* } + 1))"
+	for _ in $(seq 50); do [ "$(usage_requests) $(usage_total cache_answers)" = "$wanted" ] && break; sleep 0.1; done
+	same "$(usage_requests) $(usage_total cache_answers)" "$wanted"
+}
+check a_cached_rerun_adds_a_cache_answer
 an_open_cache_folder_is_refused() {
 	mkdir -p "$RUN/open-cache" && chmod 0777 "$RUN/open-cache"
 	fresh generic "thinkthen.cache = '$RUN/open-cache'"

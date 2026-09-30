@@ -6,6 +6,7 @@ use super::*;
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     let engine = match case {
         "usage-seeded" => EngineBuilder::from_env().and_then(|seed| seed.no_cache().build()),
+        "usage-cached" => EngineBuilder::from_env().and_then(EngineBuilder::build),
         _ => Engine::builder()
             .base_url(argument)
             .and_then(|builder| builder.no_cache().build()),
@@ -16,9 +17,10 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
         .cut();
     let call = engine.decide(&question, EVIDENCE).expect("an answer");
     vec![format!(
-        "{:?} sent {}",
+        "{:?} sent {} cached {}",
         call.value(),
-        call.facts().requests_sent()
+        call.facts().requests_sent(),
+        call.facts().cache_answers()
     )]
 }
 
@@ -80,11 +82,34 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
             ("THINKTHEN_BASE_URL", listener.base()),
         ],
     );
-    assert_eq!(seeded, "Yes sent 2");
+    assert_eq!(seeded, "Yes sent 2 cached 0");
     assert_eq!(listener.count(), 3);
     assert_eq!(
         status(&home),
         serde_json::json!({"requests_sent": 3, "retries": 1, "input_tokens": 624, "output_tokens": 96, "cache_answers": 0})
+    );
+}
+
+#[test]
+fn a_cached_rerun_sends_nothing_and_adds_a_cache_answer() {
+    let listener = listener();
+    let home = folder("usage-cached-rerun");
+    let environment = [
+        ("XDG_CACHE_HOME", home.to_str().expect("home")),
+        ("THINKTHEN_BASE_URL", listener.base()),
+    ];
+    assert_eq!(
+        in_child("usage-cached", &environment),
+        "Yes sent 1 cached 0"
+    );
+    assert_eq!(
+        in_child("usage-cached", &environment),
+        "Yes sent 0 cached 1"
+    );
+    assert_eq!(listener.count(), 1);
+    assert_eq!(
+        status(&home),
+        serde_json::json!({"requests_sent": 1, "retries": 0, "input_tokens": 312, "output_tokens": 48, "cache_answers": 1})
     );
 }
 
@@ -99,7 +124,7 @@ fn an_engine_built_by_hand_writes_no_usage() {
             (ARGUMENT, listener.base()),
         ],
     );
-    assert_eq!(built, "Yes sent 1");
+    assert_eq!(built, "Yes sent 1 cached 0");
     assert_eq!(listener.count(), 1);
     assert!(!home.join("thinkthen-usage").exists());
 }
@@ -121,7 +146,7 @@ fn a_shared_usage_folder_refuses_the_write_and_changes_no_answer() {
             ("THINKTHEN_BASE_URL", listener.base()),
         ],
     );
-    assert_eq!(seeded, "Yes sent 1");
+    assert_eq!(seeded, "Yes sent 1 cached 0");
     assert_eq!(listener.count(), 1);
     assert_eq!(entries(&usage), 0);
 }

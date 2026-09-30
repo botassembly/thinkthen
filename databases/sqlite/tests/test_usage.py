@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""ADR 0113: the extension adds to the command's usage totals, and the
-process's exit flushes them while another writer holds the usage lock."""
+"""ADR 0113: the extension adds its sends and cache answers to the command's
+usage totals, and the process's exit flushes them while another writer holds
+the usage lock."""
 
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ import subprocess
 import sys
 import time
 
-from helper import ROOT, Backend, Child, environment, expect, main
+from helper import ROOT, Backend, Child, child, environment, expect, main
 
 COMMAND = os.environ.get("THINKTHEN_COMMAND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "thinkthen"))
 HOLD = 0.3
@@ -85,6 +86,19 @@ say(answers=[one, two])
     expect(held["answers"], [[[1]], [[1]]], "both answers")
     expect(backend.count(), 2, "two sends")
     expect(totals(env)["requests_sent"], 2, "each call counted once")
+
+
+def test_a_cached_rerun_sends_nothing_and_adds_a_cache_answer() -> None:
+    """A second process asks the same question from the named cache folder."""
+    backend = Backend()
+    env = usage_environment(backend)
+    code = """
+say(answer=run(connect(), "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund')"))
+"""
+    expect([child(code, env)["answer"] for _ in range(2)], [[[1]], [[1]]], "both answers")
+    expect(backend.count(), 1, "one send")
+    held = totals(env)
+    expect((held["requests_sent"], held["cache_answers"]), (1, 1), "one send and one cache answer")
 
 
 def test_a_forked_child_exits_promptly_and_counts_nothing_twice() -> None:
