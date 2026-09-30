@@ -1,8 +1,14 @@
-# Public library API gaps
+# Public library API gaps, and the SQL host copies they cause
 
-Status: open for items 1, 2, 3, 6, 7 and 9. Shortened 2026-09-30. Items 4 (ticket 0148), 5 (ticket 0150) and 8 (ticket 0136) are settled, and git history holds their text. No ticket owns the rest. Ticket 0304 slice 3b moves the SQL hosts onto the one batching path and touches the code of items 1 and 9, so it may settle them.
+Status: open for items 1, 2, 3, 6, 7, 9 and 10. Shortened 2026-09-30. Items 4 (ticket 0148), 5 (ticket 0150) and 8 (ticket 0136) are settled, and git history holds their text. Rechecked on main `88649ec0d` after 0304 slices 3b and 3e: items 1, 2, 3 and 9 still stand. Item 10 merged in on 2026-09-30 from the hand-built plan JSON issue, now in `closed/`.
 
-Priority: rank 7 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: ticket 0304 slice 3b for items 1 and 9, then one follow-up ticket for items 2 and 3; items 6 and 7 after 0.1.
+Owner: one SQL host ticket for items 1, 2, 3, 9 and 10 after 0304 slice 4, which rewrites the relate path item 2 reaches; item 10 alone can go first as a Quick Fix. Items 6 and 7: a future ticket after 0.1.
+
+Kind: debt
+
+Pay when: before 0.1 for items 1, 2, 3, 9 and 10. Items 6 and 7 are features, paid when a user asks after 0.1.
+
+Keeping it leaves the SQL hosts holding copies of engine code, so a new plan member, rule form or refusal can reach the C door and miss SQL.
 
 Each item names a place where the public API (ticket 0084, `crates/thinkthen/src/public/`) falls short of what the command, a spec, or a ruling promises. Each gap makes a binding copy engine code or drift from the other bindings. Ian's ruling of 2026-09-25 applies throughout: no setting that does nothing.
 
@@ -43,3 +49,9 @@ Done when Python accepts a typed description, including for recognize kinds, the
 Only `Question` and `BandedQuestion` implement `DecisionQuestion`. Twelve SQL host files repeat a `match` on both arms of `LoadedQuestion`: DuckDB's `bridge/src/ffi/{plan,portable,portable_aux,portable_many,scalar}/ffi.rs` and `bridge/src/warm/ffi.rs`, SQLite's `many.rs`, `scalars.rs` and `scalars/plan.rs`, and PostgreSQL's `forms.rs`, `keyed.rs` and `lib.rs`.
 
 Done when the public API says whether a loaded question is asked directly, and the surfaces follow it.
+
+## 10. SQLite and PostgreSQL build their plan JSON by hand
+
+Found while building ticket 0314 slice 4a on main at `6c29039b9`. Slice 4a gave `PlanEstimate` a `Serialize` impl, and the generated result schema now holds its `plan` definition. The C door writes it with `serde_json::to_string`. SQLite (`databases/sqlite/src/scalars/plan.rs:77-91`) and PostgreSQL (`databases/postgresql/src/keyed.rs:184-199`) still build the same six members with `json!`. Both already print `first_body_utf8`, the member name the crate took, so switching each to `serde_json::to_string(&estimate)` changes no byte. DuckDB returns a native `STRUCT` with `first_body` and stays as it is. The SQL hosts are outside ticket 0314's port pass (ADR 0112 section 6). Lane 1 was editing the SQL hosts' limits (0304 slice 3e) when this was found, so slice 4a left them alone. The same two files hold item 9's match.
+
+Done when both hosts serialize `PlanEstimate` and their plan checks pass byte for byte.

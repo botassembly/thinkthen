@@ -1,6 +1,6 @@
 # Zig 0.15.2's linker drops constant alignment
 
-Status: open. A dependency bug noted for Ian. Found by ticket 0329.
+Status: open. A dependency bug noted for Ian. Found by ticket 0329. Owner: upstream (Zig); then a Quick Fix removes the workaround.
 
 Kind: debt
 

@@ -17,7 +17,7 @@ That issue proposed one flattened form for every backend and said TypeSafe loses
 
 ## Ian's ruling, 2026-09-30
 
-Ian ruled that the whole system is not degraded for one backend's bug. The `text` rendering is a temporary workaround for Ollama alone. Every other backend sends descriptions exactly as authored. The workaround is technical debt, tracked in `sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md`. It is deleted as soon as Ollama accepts object-valued criteria descriptions. `thinkthen check` against the `ollama` backend reports the lost detail as a warning that names the workaround, never as a critical. An upstream report to Ollama is pending.
+Ian ruled that the whole system is not degraded for one backend's bug. The `text` rendering is a temporary workaround for Ollama alone. Every other backend sends descriptions exactly as authored. The workaround is technical debt, tracked in `sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md`. It is deleted as soon as Ollama accepts object-valued criteria descriptions. `thinkthen check` against the `ollama` backend reports the lost detail as a warning that names the workaround, never as a critical. The upstream report is https://github.com/ollama/ollama/issues/18718.
 
 The key rules today: `engine/facade.rs` sends no `Authorization` header when the key is unset and the address is `localhost`, `127.0.0.1` or `[::1]`. `http://` reaches only those three hosts. ADR 0114 section 5 refuses a built-in's key variable at the host of another built-in's base.
 
@@ -104,7 +104,7 @@ ADR 0111 keys one question on the adapter name, the posting URL, the model, the 
 - An Ollama tag such as `nimble` can change when the user pulls it again. Cached answers keyed on `nimble` then outlive the old weights until the user passes `--refresh-cache` or `--no-cache`. ADR 0111 forces a refresh only for `jev-latest`.
 - Bindings and SQL gain `backend` in ADR 0114 build slice 2. They inherit the dialect through the backend.
 - `status` does not print the dialect.
-- Removing the workaround: when Ollama accepts object-valued criteria descriptions, a ticket deletes `text`, sets `ollama` to `authored`, and closes the debt issue. Upstream report: pending.
+- Removing the workaround: when Ollama accepts object-valued criteria descriptions, a ticket deletes `text`, sets `ollama` to `authored`, and closes the debt issue. Upstream report: https://github.com/ollama/ollama/issues/18718.
 
 ## Coordinator defaults Ian can overturn
 

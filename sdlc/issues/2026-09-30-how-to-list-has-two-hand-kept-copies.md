@@ -1,6 +1,6 @@
 # The how-to list has two hand-kept copies
 
-Status: open. Deferred by ticket 0312. Owner: none.
+Status: open. Deferred by ticket 0312. Owner: the next docs ticket, or a Quick Fix now; no running lane edits either list.
 
 Kind: debt
 

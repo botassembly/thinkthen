@@ -1,6 +1,6 @@
 # Eleven C-door language packages need a release
 
-Status: open. Merged on 2026-09-30 from eleven "consumer proof needs a supported package" issues, now in `closed/`. Owner: ticket 0128 phases 3b and 4, with the workflow tickets 0268 to 0273, whose static code passed review and whose runner runs remain open. Ian's ruling 10 of 2026-09-30 holds any public release until 0.1, and 0.1 waits for every surface.
+Status: Closed on 2026-09-30. Merged into `../2026-09-25-release-and-install-for-0-1.md`, "Language packages", which ticket 0128 owns.
 
 ## What exists
 

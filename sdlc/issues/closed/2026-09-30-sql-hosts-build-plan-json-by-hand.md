@@ -1,6 +1,6 @@
 # SQLite and PostgreSQL build their plan JSON by hand
 
-Status: open. Found while building ticket 0314 slice 4a on main at `6c29039b9`. Owner: none yet; the SQL hosts are outside ticket 0314's port pass (ADR 0112 section 6).
+Status: Closed on 2026-09-30. Merged into `../2026-09-25-public-library-api-gaps.md`, item 10.
 
 Kind: debt
 

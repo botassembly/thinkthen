@@ -1,6 +1,6 @@
 # `cache prune` and `status` miss the question store
 
-Status: open. Found by reading main at `ec130d3ee`. Owner: ticket 0304 slice 5. Source: `sdlc/planning/after-slice-3-prep.md`, slice 5, item 1.
+Status: Closed on 2026-09-30. Merged into `../2026-09-30-old-batching-files-still-have-live-callers.md`, which ticket 0304 slice 5 pays.
 
 ## The problem
 

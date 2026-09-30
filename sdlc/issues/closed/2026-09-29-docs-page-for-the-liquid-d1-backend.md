@@ -1,6 +1,6 @@
 # Docs: a page for the Liquid d1 backend, its API, and signing up
 
-Status: open for marketing's site page, which owns `site/`. Shortened 2026-09-30. Depends on `2026-09-29-docs-page-naming-supported-providers.md`. Close this issue when the page lands.
+Status: Closed on 2026-09-30. Merged into `../2026-09-29-docs-page-naming-supported-providers.md`, section 2, which marketing owns.
 
 Ian asked on 2026-09-29 for a page about Liquid's d1 decision model, its API, and how a user signs up. `site/src/pages/install/backends.astro` stays vendor-neutral, and no page walks a user from Liquid's console to a working `thinkthen` call.
 

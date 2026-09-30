@@ -1,6 +1,6 @@
 # No cost beside the audit score
 
-Status: open, deferred past 0.1 by the tuning review of 2026-09-28. Ian can overturn this placement. Shortened 2026-09-30. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297 (`experiments/296-gepa-question-tuning/`, `experiments/297-gepa-loop-tests/`).
+Status: Closed on 2026-09-30. Merged into `../2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md`, part 3, deferred past 0.1.
 
 Priority: rank 24 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0.1.
 

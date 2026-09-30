@@ -1,6 +1,6 @@
 # The site's samples and pages after the surfaces land
 
-Status: open for marketing, which owns `site/`. Shortened 2026-09-30. The site rebuild (`201bfcca0`, `fa3e9848e`, `e0989cd87`) removed the status words, moved samples to `site/examples/functions/`, added the Beatles Bench section, corrected the prune line, moved the Ruby, TypeScript and R samples to `.value`, and qualified the SQL warm blurb with `thinkthen_batch(1)`. Git history holds the settled items. Four items remain.
+Status: Closed on 2026-09-30. Merged into `../2026-09-30-site-replay-folders-have-no-fixture.md`, items 3 and 4, which marketing owns.
 
 ## 1. Run the library and database samples
 

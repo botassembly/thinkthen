@@ -1,6 +1,6 @@
 # `audit` and `diff` lost the batch setting
 
-Status: open. Deferred by ticket 0304 slice 2 (ticket, line 84). Owner: none.
+Status: open. Deferred by ticket 0304 slice 2 (ticket, line 84). Owner: ticket 0304 slice 5, which rewrites the run facts; otherwise its own Quick Fix after 0304 slice 4.
 
 Kind: debt
 

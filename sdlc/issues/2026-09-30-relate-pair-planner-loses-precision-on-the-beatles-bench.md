@@ -1,6 +1,8 @@
-# relate's pair planner loses precision on the Beatles Bench
+# relate's pair planner loses precision on the Beatles Bench, and both-ways edges print a direction
 
 Status: open. Measured by Beatles Bench tickets 0019 and 0018 on 2026-09-30, against main `c22512868`. The bench's `reports/results.md` publishes every figure below.
+
+Owner: one relate ticket after 0304 slice 4, which also changes the both-ways edge shape. Blocks 0.1: the default and the shape must be set before the release.
 
 ## The problem
 
@@ -37,6 +39,14 @@ This is a product default. The coordinator sets it, and Ian can overturn it. Dra
 | (c) Keep the pair planner; state the measured precision on the relate page, and point to `recognize --relation` for relations a text states | `recognize --relation` reached precision 0.973 at recall 0.783 | Pages only | 0.1 ships a known weak default |
 
 Recommendation: (b) with (c), in the relate ticket after 0304 slice 4 that also carries the unordered both-ways edge shape (issue priorities, coordinator default 1). Keep the 0.5 cut. The relate page states the measured precision and points to `recognize --relation` in either case. Accept (b) as the default only if the paid bench run beats the pair planner's edge F1 of 0.523 on the 182 songs and its precision of 0.296 on the missing-album sets. Otherwise ship (c) alone for 0.1, and keep this issue open. Option (b) costs more than (a), but (a) cannot fix the missing-album case, and a changed default is cheaper before 0.1 than after.
+
+## The both-ways edge shape
+
+Moved here on 2026-09-30 from item 3 of `2026-09-25-recognize-and-relate-scale-and-shape.md`. Coordinator default 1 of `../planning/issue-priorities-2026-09-30.md`, which Ian can overturn: change the shape before 0.1, in the same relate ticket, because a breaking change after 0.1 costs every consumer.
+
+An `--either` edge still prints `source` and `target`, normalized to input order (`specification/relate.md`). A reader cannot tell a both-ways pair from a one-way edge without the rule. Ian, reviewing the relate examples on 2026-09-22: "relate source and target should be more obvious too."
+
+The fix: give `--either` edges an unordered shape, for example `{"relation":"duplicates","pair":[{…},{…}],"probability":…}`, on the command and every surface in one change. Keep the one-way shape.
 
 ## The decision run
 

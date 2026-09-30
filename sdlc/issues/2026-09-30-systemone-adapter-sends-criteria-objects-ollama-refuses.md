@@ -1,12 +1,12 @@
-Status: Open. Found 2026-09-30 in workspace experiment 415, the same family as `2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md`. Merge consideration applies. Designed 2026-09-30 by ADR 0115; ticket 0339 (ready) builds it after 0304 slice 4. The fix candidate below is replaced: flattening for every backend would drop `not_for` and `examples` that TypeSafe reads, so each backend names its own dialect instead. Owner: ticket 0339. Upstream report: pending.
+# The systemone adapter sends criteria descriptions as JSON objects that Ollama refuses
+
+Status: open. Found 2026-09-30 in workspace experiment 415, the same family as `closed/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md`. Designed 2026-09-30 by ADR 0115; ticket 0339 (ready) builds the workaround after 0304 slice 4. Owner: upstream (Ollama), reported at https://github.com/ollama/ollama/issues/18718; ticket 0339 for the workaround; then a ticket deletes it.
 
 Kind: debt
 
-Pay when: Ollama accepts object-valued criteria descriptions.
+Pay when: Ollama accepts object-valued criteria descriptions. Watch the upstream issue.
 
 Keeping it means Ollama users lose each description's `not_for` and `examples` detail. Ian ruled on 2026-09-30 that the Ollama rendering is a temporary Ollama-only workaround (ADR 0115). When Ollama is fixed, delete it and send descriptions as authored.
-
-# The systemone adapter sends criteria descriptions as JSON objects that Ollama refuses
 
 ## The problem
 
@@ -23,7 +23,7 @@ The published OpenAPI 3.1.0 schema at `api.typesafe.ai/openapi.json` allows a cr
 
 ## The fix candidate
 
-One serialization rule for every backend: a description renders as its plain string when it is one, renders the object's own text when the question supplies one form, and an absent or empty description is omitted entirely. No nulls and no objects on the wire. TypeSafe loses nothing it reads today. A fixture set covering string, object, empty, and absent descriptions on all three question types pins the behavior.
+Replaced by ADR 0115: flattening for every backend would drop `not_for` and `examples` that TypeSafe reads, so each backend names its own dialect instead. The original candidate, kept for the record: One serialization rule for every backend: a description renders as its plain string when it is one, renders the object's own text when the question supplies one form, and an absent or empty description is omitted entirely. No nulls and no objects on the wire. TypeSafe loses nothing it reads today. A fixture set covering string, object, empty, and absent descriptions on all three question types pins the behavior.
 
 ## Done when
 
