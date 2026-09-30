@@ -210,6 +210,8 @@ for (const file of found) {
   const main = find(tree, (n) => n.tag === 'main');
   // A moved page leaves a redirect behind. It gets no twin.
   if (!main && /http-equiv="refresh"/.test(html)) continue;
+  // The search page is never listed, so it gets no twin either.
+  if (/<html[^>]* data-unlisted/.test(html)) continue;
   if (!main) throw new Error(`${file}: no main`);
   const titleNode = find(tree, (n) => n.tag === 'title');
   const title = titleNode ? tidy(inline(titleNode)) : url;

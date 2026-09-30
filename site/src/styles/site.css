@@ -347,3 +347,49 @@ p code, li code { white-space: nowrap; }
   .setting dl.kv > div { grid-template-columns: 1fr; }
 }
 .bindings { display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; list-style: none; padding: 0; margin: 0 0 1.4rem; }
+
+/* ------------------------------------------------------------------ search */
+
+/* The header search box submits to /search/. On a phone it shares the first
+   row with the wordmark and the theme button. Its text is 16px so iOS does
+   not zoom when it takes focus. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+form.search { display: flex; align-items: center; gap: .3rem; }
+form.search input {
+  width: 10rem; min-width: 0; height: 2.1rem; padding: 0 .7rem;
+  font: 16px/1 var(--sans); color: var(--ink); background: var(--ground);
+  border: 1px solid var(--line); border-radius: 999px;
+}
+form.search input::placeholder { color: var(--muted); }
+form.search input:focus { outline: 2px solid var(--think); outline-offset: 1px; }
+form.search button {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 2.1rem; min-width: 2.1rem; padding: 0 .6rem;
+  background: none; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--muted); font: inherit; cursor: pointer;
+}
+form.search button:hover, form.search button:focus-visible { color: var(--ink); border-color: var(--think); }
+header.top form.search button { padding: 0; }
+@media (max-width: 40rem) {
+  header.top form.search input { width: 7.5rem; }
+}
+main form.search { margin: 0 0 1.2rem; flex-wrap: wrap; }
+main form.search input { width: 16rem; }
+
+/* Pagefind's own UI, in the site's palette in both themes. */
+.search-page {
+  --pagefind-ui-scale: .9;
+  --pagefind-ui-primary: var(--then);
+  --pagefind-ui-text: var(--ink);
+  --pagefind-ui-background: var(--ground);
+  --pagefind-ui-border: var(--line);
+  --pagefind-ui-tag: var(--card);
+  --pagefind-ui-border-width: 1px;
+  --pagefind-ui-border-radius: 8px;
+  --pagefind-ui-font: var(--sans);
+  margin-bottom: 2rem;
+}
+.search-page mark { background: none; color: var(--think); font-weight: 700; }

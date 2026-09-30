@@ -1,0 +1,19 @@
+---
+// Goal: tell a reader who followed a broken address that the page is not here, and send them somewhere useful.
+import Base from '../layouts/Base.astro';
+---
+<Base title="Page not found" description="This address holds no page on the ThinkThen site." noindex>
+  <h1>That page is not here.</h1>
+  <p class="lede">The address may have a typo, or the page may have moved.</p>
+  <form class="search" action="/search/" method="get" role="search">
+    <label for="lost-search">Search the site</label>
+    <input id="lost-search" type="search" name="q" enterkeyhint="search">
+    <button type="submit">Search</button>
+  </form>
+  <ul>
+    <li><a href="/">The home page</a></li>
+    <li><a href="/functions/">Functions</a></li>
+    <li><a href="/install/">Install</a></li>
+    <li><a href="/reference/">Reference</a></li>
+  </ul>
+</Base>
