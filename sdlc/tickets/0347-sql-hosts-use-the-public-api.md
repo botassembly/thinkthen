@@ -13,7 +13,7 @@ SQLite, DuckDB and PostgreSQL hold no copy of engine code that the public API co
 - Changes: one change per item, and the issue update.
   - Item 1: `Engine::usage` stays per engine, and its doc and `specification/` say so. PostgreSQL sums its engines through one crate helper, the existing `Tally` if it fits. A process-wide in-memory total would make a second engine's reading depend on its neighbours, and ADR 0113's durable totals already give the process view.
   - Item 2: a public `RelationRule` parser for `NAME` and `NAME=SOURCE:TARGET`, which the command and PostgreSQL both call.
-  - Item 3: public constructors for the error kinds PostgreSQL raises, or the smallest public surface that lets it drop `Refusal`. Each new public item goes in an `### Added public declarations` block at landing.
+  - Item 3: public constructors for the error kinds PostgreSQL raises, or the smallest public surface that lets it drop `Refusal`. Each new public item goes in the ticket's added public declarations block at landing.
   - Item 9: `LoadedQuestion` implements `DecisionQuestion`, and the twelve host files call the engine once.
   - Item 10: both hosts serialize `PlanEstimate`.
   - The issue drops these items and stays open for items 6 and 7, features after 0.1.
