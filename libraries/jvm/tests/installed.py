@@ -102,5 +102,5 @@ for index, lang in enumerate(("java", "kotlin", "scala")):
         print(f"JVM {lang} observed body:", json.dumps(summary["body"], sort_keys=True), flush=True)
         print(f"installed {lang}: one exact body and native load PASS", flush=True)
     else:
-        assert len(summary["arrivals"]) == 60 and summary["attempts"] == summary["connections"] == 60, lang
-        print(f"installed {lang}: 60 exact arrivals, strict cancellation and planted negatives PASS", flush=True)
+        assert len(summary["arrivals"]) == 59 and summary["attempts"] == summary["connections"] == 59, lang
+        print(f"installed {lang}: 59 exact arrivals, strict cancellation and planted negatives PASS", flush=True)

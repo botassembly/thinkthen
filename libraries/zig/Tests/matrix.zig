@@ -209,7 +209,8 @@ pub fn main() !void {
     const usage = try call(&engine, alloc, "{\"usage\":true}");
     defer usage.deinit();
     std.debug.print("recognition-era usage {d} {d} {d}\n", .{ usage.value.object.get("requests_sent").?.integer, usage.value.object.get("input_tokens").?.integer, usage.value.object.get("output_tokens").?.integer });
-    try require(usage.value.object.get("requests_sent").?.integer == 21 and usage.value.object.get("input_tokens").?.integer == 21 and usage.value.object.get("output_tokens").?.integer == 21);
+    // 20, not 21: the repeated first/second bulk call reads the question cache (ADR 0111).
+    try require(usage.value.object.get("requests_sent").?.integer == 20 and usage.value.object.get("input_tokens").?.integer == 20 and usage.value.object.get("output_tokens").?.integer == 20);
     try std.testing.expectError(error.EmbeddedNul, engine.call("{\"usage\":true}\x00suffix", .{}));
     try std.testing.expectError(error.EmbeddedNul, engine.decide("Is it?\x00suffix", "x", .{}));
     try std.testing.expectError(error.EmbeddedNul, engine.decideMany("Is it?\x00suffix", &repeated, .{}));

@@ -72,4 +72,4 @@ if python3 "$here/Tests/guard.py" "$plant" >"$plant.log" 2>&1; then echo 'Zig pr
 grep -q 'rejected private byte pattern' "$plant.log"
 rm -f "$plant" "$plant.log"
 python3 "$here/Tests/installed.py"
-echo 'Zig package PASS: public J1, 42 exact bodies in four installed consumers'
+echo 'Zig package PASS: public J1, 41 exact bodies in four installed consumers'

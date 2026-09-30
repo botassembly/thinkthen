@@ -28,8 +28,9 @@ try:
     counts=collections.Counter(str(s) for s in server.arrivals)
     # Main 71f25087: records.md "Order and requests" and ADR 0055 1+3
     # pack distinct decide/filter/rank rows under one shared evidence state.
+    # The repeated first/second bulk call reads the question cache (ADR 0111).
     packed_state='Each question quotes the text it asks about.'
-    expected={'direct':1,'café':1,'yes':1,'no':1,'unsure':1,'a\x00b':1,packed_state:5,'json-decide':1,
+    expected={'direct':1,'café':1,'yes':1,'no':1,'unsure':1,'a\x00b':1,packed_state:4,'json-decide':1,
      'choose':1,'tag':1,'score':1,
      '[{"id":"u001","evidence":"find-one"},{"id":"u002","evidence":"find-two"}]':1,
      "{'entities': [{'id': 'i1', 'name': 'First', 'kind': 'alert'}, {'id': 'i2', 'name': 'Second', 'kind': 'alert'}]}":1,
@@ -43,14 +44,14 @@ try:
     assert normalize(requests)==normalize(expected_requests), 'complete normalized Swift request bodies differ'
     layouts=collections.Counter(tuple(packed_rows(request).values()) for request in requests if one_record(request)['state']==packed_state)
     wanted_layouts=collections.Counter({
-      ('first','second','third'):1, ('first','second'):1,
+      ('first','second','third'):1,
       ('filter-one','filter-two'):1, ('rank-one','rank-two'):1,
       tuple(f'hold-bulk-{i}' for i in range(1,7)):1})
     assert (counts==expected and layouts==wanted_layouts and
-     server.attempts==server.connections==len(server.arrivals)==30 and
+     server.attempts==server.connections==len(server.arrivals)==29 and
      server.bulk_completion==['packed:first,second,third'] and 'hold-scalar' in server.completions),(counts,layouts,server.bulk_completion)
     (L/'packed-layouts.json').write_text(json.dumps([list(k) for k in layouts.elements()],indent=2)+'\n')
-    print('REPIN_ADAPTED_PACKING_AND_RESULT exact=30 packed=5 layouts=5',flush=True)
+    print('REPIN_ADAPTED_PACKING_AND_RESULT exact=29 packed=4 layouts=4',flush=True)
     status='PASS'
 finally:
     server.close()

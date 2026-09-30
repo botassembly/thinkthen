@@ -177,7 +177,7 @@ func matrix() throws {
     check(rows.facts.records == 3 && rows.facts.requestsSent == 1 && rows.facts.cacheAnswers == 0, "bulk facts")
     for i in rows.value.indices { answer(rows.value[i], [1, 0, 1][i], [0.9, 0.1, 0.6][i]) }
     let replay = try engine.decideMany("Is it?", ["first", "second", "third"])
-    check(replay.value.map(\.probability) == [0.9, 0.1, 0.6] && replay.facts.records == 3 && replay.facts.requestsSent == 0 && replay.facts.cacheAnswers == 1, "packed replay")
+    check(replay.value.map(\.probability) == [0.9, 0.1, 0.6] && replay.facts.records == 3 && replay.facts.requestsSent == 0 && replay.facts.cacheAnswers == 3, "each replayed question is one cache answer")
     let cached = try engine.decideMany("Is it?", ["first", "second", "first", "second"])
     check(cached.value.map(\.probability) == [0.9, 0.1, 0.9, 0.1], "bulk cache/order")
     let empty = try engine.decideMany("Is it?", [])
