@@ -90,8 +90,8 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
     spec = {"version": 1, "questions": {"team": {"choose": "Which team?", "options": ["a", "b"]}}}
     form = tt._thinkthen._QuestionSet._from_json(json.dumps(spec))
     rows = [f"note {n}" for n in range(50)]
-    frame = pl.DataFrame({"body": rows})
-    wanted = [one["team"] for one in engine.annotate(spec, rows).value]
+    frame = pl.DataFrame({"body": pl.Series(rows[:24] + [None] + rows[25:], dtype=pl.String)})
+    wanted = ["a"] * 24 + [None] + ["a"] * 25
     out = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None, None).value
     stream, schema, [batch] = pull(out.__arrow_c_stream__())
     child = batch.children[1].contents
@@ -110,7 +110,7 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
     table = pa.table(column)
     print(table.column("team").to_pylist() == wanted)
     del table
-    answers = engine.choose("Which team?", pl.Series(rows), options=["a", "b"]).value
+    answers = engine.choose("Which team?", frame["body"], options=["a", "b"]).value
     print(answers.to_list() == wanted)
     """, child_env(backend, tmp_path, MALLOC_PERTURB_="165"))
     assert printed.splitlines() == ["False False False", "True", "True", "True"]

@@ -184,18 +184,26 @@ def _mapped(call, convert):
 def _paired(call, verb, multiple=False):
     """Use the owned observations from this call; never ask the engine again."""
     try:
-        probabilities = []
-        for detail in sorted(call.details, key=lambda row: row["index"]):
+        probabilities = [None] * len(call.value) if multiple else []
+        seen = set()
+        for detail in call.details:
+            index = detail["index"]
+            if type(index) is not int or index in seen or index < 0 or \
+                    (multiple and index >= len(probabilities)) or (not multiple and index != 0):
+                raise ValueError("the answer has a duplicate or missing row place")
+            seen.add(index)
             reported = detail["probabilities"]
             if verb == "decide":
-                probabilities.append(reported["yes"])
+                probability = reported["yes"]
             else:
                 selected = detail["answer"]
-                probabilities.append(next((item["probability"] for item in reported
-                                           if item["name"] == selected), None))
+                probability = next((item["probability"] for item in reported
+                                    if item["name"] == selected), None)
+            if multiple:
+                probabilities[index] = probability
+            else:
+                probabilities.append(probability)
         if multiple:
-            if len(probabilities) != len(call.value):
-                raise ValueError("the answer and probability counts differ")
             value = call.value
             if _pandas(value) == "Series":
                 probability = type(value)(probabilities, index=value.index, name=value.name,
@@ -214,9 +222,6 @@ def _paired(call, verb, multiple=False):
         error.kind, error.retryable = "defect", False
         error.facts, error.details = call.facts, call.details
         raise error from source
-
-
-_NULLS = "the column holds nulls; the engine needs text, so drop or fill them first"
 
 
 def _pandas(value):
@@ -250,15 +255,16 @@ def _marked(series, kind):
     if kind != "Series":
         raise UsageError(f"thinkthen reads a pandas Series, not a pandas {kind}; "
                          "pass a pandas Series")
-    if len(series) and series.hasnans:
-        raise UsageError(_NULLS)
-    if not len(series) or series.dtype.name == "category" \
-            or not hasattr(series, "__arrow_c_stream__"):
-        return _thinkthen._Pandas(series, True)
+    if not len(series) or series.dtype.name == "category" or \
+            (series.dtype.name == "object" and series.isna().all()) or \
+            not hasattr(series, "__arrow_c_stream__"):
+        return _thinkthen._Pandas([None if missing else value
+                                  for value, missing in zip(series, series.isna())], True)
     try:
         capsule = series.__arrow_c_stream__()
     except Exception:
-        return _thinkthen._Pandas(series, True)
+        return _thinkthen._Pandas([None if missing else value
+                                  for value, missing in zip(series, series.isna())], True)
     return _thinkthen._Pandas(_Once(capsule), False)
 
 

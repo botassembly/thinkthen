@@ -152,6 +152,31 @@ pub(crate) fn listed(records: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
     Ok(read)
 }
 
+/// The pandas list fallback has already normalized its missing cells to
+/// Python `None`; only its present rows need be text.
+pub(crate) fn listed_nullable(records: &Bound<'_, PyAny>) -> PyResult<Vec<Option<String>>> {
+    let py = records.py();
+    let mut items = host_owned(host_error(host(|| records.try_iter()), || {
+        usage(
+            py,
+            "the records are a list, tuple, or other iterable of str",
+        )
+    })?);
+    let mut read = Vec::new();
+    for (index, item) in std::iter::from_fn(|| host(|| items.next())).enumerate() {
+        let item = host_owned(item?);
+        if item.is_none() {
+            read.push(None);
+        } else {
+            let what = format!("record {index}");
+            read.push(Some(
+                string(&item, &what)?.ok_or_else(|| usage(py, &format!("{what} is not a str")))?,
+            ));
+        }
+    }
+    Ok(read)
+}
+
 /// The entities `relate` reads: `(name, kind)` pairs, dictionaries with
 /// `name` and `kind`, or `Entity` values (decision 10).
 pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Entity>> {
