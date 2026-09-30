@@ -1,6 +1,6 @@
 //! The Rust Polars door, behind the `polars` feature (ticket 0130).
 
-use polars::prelude::{Column, DataFrame, NamedFrom, Series};
+use polars::prelude::{Column, DataFrame, Expr, NamedFrom, Series};
 
 use super::{
     Answer, Batch, Call, CallOptions, DecisionQuestion, Details, Engine, Error, Judgment,
@@ -8,7 +8,9 @@ use super::{
 };
 
 mod column;
+mod lazy;
 mod options;
+pub use lazy::PolarsExprOptions;
 pub use options::PolarsCallOptions;
 
 use column::{answered, failed, kind_word, nullable, restore};
@@ -43,6 +45,51 @@ const MEMBER: &str = "answer";
 /// }
 /// ```
 pub trait PolarsEngine {
+    /// Build a lazy decide expression. One collected morsel is one call;
+    /// build-time controls are owned by the expression.
+    ///
+    /// # Errors
+    /// Refuses a non-decide question or invalid controls before collection.
+    fn decide_expr<Q: DecisionQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+
+    /// Build a lazy choose expression over a text column.
+    ///
+    /// # Errors
+    /// Refuses a non-choose question or invalid controls before collection.
+    fn choose_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+
+    /// Build a lazy score expression over a text column.
+    ///
+    /// # Errors
+    /// Refuses a non-score question or probability before collection.
+    fn score_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+
+    /// Build a lazy tag expression over a text column.
+    ///
+    /// # Errors
+    /// Refuses a non-tag question or probability before collection.
+    fn tag_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+
     /// Judge a column with per-call threshold and meaning overrides. The
     /// returned frame has `value` and, when requested, `probability` columns.
     /// Score and tag refuse a probability request before any send.
@@ -154,6 +201,48 @@ pub trait PolarsEngine {
 }
 
 impl PolarsEngine for Engine {
+    fn decide_expr<Q: DecisionQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        lazy::expression(
+            self,
+            QuestionKind::Decide,
+            question.question(),
+            input,
+            options,
+        )
+    }
+
+    fn choose_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        lazy::expression(self, QuestionKind::Choose, question, input, options)
+    }
+
+    fn score_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        lazy::expression(self, QuestionKind::Score, question, input, options)
+    }
+
+    fn tag_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        lazy::expression(self, QuestionKind::Tag, question, input, options)
+    }
+
     fn column_with(
         &self,
         question: &Question,

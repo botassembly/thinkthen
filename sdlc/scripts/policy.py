@@ -31,7 +31,8 @@ ALLOWED_LICENSES = {
 # quietly cover a crate that lands later. All three are permissive and carry no
 # copyleft term, and there is no HTTPS in Rust without them. A crate listed here
 # that stops needing its exception fails the check, so the list cannot rot.
-# The `polars` feature adds four more, as the root deny.toml records (ticket 0130).
+# The `polars` feature adds named metadata exceptions in tickets 0130 and
+# 0298; cargo-deny separately checks the active graph and shipping notices.
 LICENSE_EXCEPTIONS = {
     "ring": {"ISC"},
     "rustls-webpki": {"ISC"},
@@ -43,6 +44,10 @@ LICENSE_EXCEPTIONS = {
     "slotmap": {"Zlib"},
     "xxhash-rust": {"BSL-1.0"},
     "ar_archive_writer": {"Apache-2.0 WITH LLVM-exception"},
+    # Ticket 0298's pinned lazy/streaming graph: flate2 and zstd's native pair.
+    "zlib-rs": {"Zlib"},
+    "zstd-safe": {"BSD-3-Clause"},
+    "zstd-sys": {"BSD-3-Clause"},
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
@@ -338,9 +343,9 @@ def feature_failures(manifest: dict) -> list[str]:
         held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
         "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
-        "polars": ["dep:polars", "dep:polars-core"],
+        "polars": ["dep:polars", "dep:polars-core", "polars/lazy", "polars/streaming"],
     }:
-        held.append("the default cli feature selects only command dependencies, and polars selects only its two pinned crates")
+        held.append("the default cli feature selects only command dependencies, and polars selects its two pinned crates with lazy and streaming")
     if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
         held.append("polars has its default features off")
     if manifest.get("dependencies", {}).get("polars-core") != {
@@ -771,7 +776,7 @@ def check_bindings() -> None:
         seconds = [{**deny, section: {**deny.get(section, {}), key: [*deny.get(section, {}).get(key, []), "planted"]}}
                    for section, key, _ in tables]
         if name == "databases/duckdb":
-            exceptions = [*deny["licenses"]["exceptions"], {"crate": "zlib-rs", "allow": ["Zlib"]}]
+            exceptions = [*deny["licenses"]["exceptions"], {"crate": "unclaimed-license-plant", "allow": ["Zlib"]}]
             seconds.append({**deny, "licenses": {**deny["licenses"], "exceptions": exceptions}})
         if not all(deny_failures(name, planted) for planted in [other, *seconds]):
             fail("binding", f"{name}/deny.toml with a planted extra entry or another difference is refused")

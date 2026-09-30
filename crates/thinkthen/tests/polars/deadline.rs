@@ -10,41 +10,50 @@
 
 mod common;
 
-use std::time::{Duration, Instant};
+use std::thread;
+use std::time::Duration;
 
 use conformance_backend::Backend;
 use thinkthen::PolarsEngine;
 use thinkthen::polars::prelude::{NamedFrom, Series};
-use thinkthen::{CallOptions, ErrorKind, Question};
+use thinkthen::{BatchSetting, CallOptions, ErrorKind, Question};
 
 #[test]
 fn a_deadline_stops_a_score_column_mid_batch() {
     let backend = Backend::start().expect("a backend");
-    let engine = common::builder(&format!("{}/arm/delay/100/v1", backend.origin()))
-        .throttle(8)
+    let engine = common::builder(&format!("{}/arm/held/v1", backend.origin()))
+        .throttle(1)
         .and_then(thinkthen::EngineBuilder::build)
-        .expect("an engine at throttle 8");
+        .expect("an engine at throttle 1");
     let question = Question::score("How urgent is this?")
         .and_then(|builder| builder.level("low", None))
         .and_then(|builder| builder.level("high", None))
         .and_then(thinkthen::ScoreBuilder::build)
         .expect("a score question");
-    let texts = common::distinct(200);
+    let texts = common::distinct(3);
     let series = Series::new("body".into(), texts);
     let options = CallOptions::new()
+        .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
         .deadline_after(Duration::from_secs(1))
         .expect("a deadline");
-
-    let started = Instant::now();
-    let stopped = engine.score_series(&question, &series, options);
-    let took = started.elapsed();
-
-    let error = stopped.expect_err("the deadline stops the column");
-    assert_eq!(error.kind(), ErrorKind::Deadline, "{error}");
-    assert!(
-        (Duration::from_millis(900)..Duration::from_millis(1500)).contains(&took),
-        "the column stopped at {took:?}, not near its 1 s deadline"
-    );
-    let counted = backend.count();
-    assert!(counted <= 96, "{counted} requests reached the backend");
+    thread::scope(|scope| {
+        let running = scope.spawn(|| engine.score_series(&question, &series, options));
+        assert_eq!(backend.wait(1), 1, "one singleton reached the held arm");
+        backend.round();
+        assert_eq!(
+            backend.wait(2),
+            2,
+            "the second singleton reached the held arm"
+        );
+        // The watchdog is wider than the deadline; it proves a stop, not speed.
+        thread::sleep(Duration::from_millis(1100));
+        backend.release();
+        let error = running
+            .join()
+            .expect("the score call")
+            .expect_err("deadline");
+        assert_eq!(error.kind(), ErrorKind::Deadline, "{error}");
+        assert_eq!(backend.count(), 2, "the third singleton was not sent");
+        assert_eq!(error.facts().map(|facts| facts.requests_sent()), Some(2));
+    });
 }

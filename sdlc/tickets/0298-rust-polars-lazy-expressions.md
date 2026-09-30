@@ -1,6 +1,6 @@
 # 0298 — Rust Polars lazy expressions (F7)
 
-Status: Draft preparation. Accepted ADR 0107 settles the outcome; implementation and issue closure remain open.
+Status: Source candidate built in the claimed codex-2 lane; fresh code review and full package qualification remain open. ADR 0107 settles the outcome.
 
 ## Outcome
 
@@ -10,7 +10,7 @@ The expression deadline applies to each morsel, not the whole query. RSS/load/ch
 
 ## Prerequisites and proposed files
 
-Prerequisite: T7. Proposed file families: `libraries/polars/src/ and tests; existing Polars 0.55 Cargo pin/re-export; README/spec rows and ratchet`. Refresh exact nested helpers, package member inventories, nonblank source headroom and current Lanes claims before implementation. No source file is claimed by this preparation draft.
+T7 is landed. The Rust implementation is `crates/thinkthen/src/public/frame.rs` and cohesive `frame/` modules, with source tests in `crates/thinkthen/tests/polars/`. `libraries/polars/` contains its README and check script only. The pinned 0.55.2 Cargo feature, root lock, Polars-only exports, selected specification, and measured root ratchet are claimed for this build. The three old package criteria are in `cases.rs`, `deadline.rs`, and `throttle_equality.rs`; default-Max body proof remains separate in `door/batching.rs`.
 
 ## Smallest meaningful proof
 
@@ -26,4 +26,8 @@ Lazy/eager parity, score/tag refusal, token stops later morsels, tallies and jud
 
 ## What the build taught us
 
-Pending implementation: record corrected assumptions, preparation misses, proof adjustments and remaining limits before landing.
+The code is in `public/frame.rs` and its new `frame/lazy.rs`; there is no `libraries/polars/src`. The pinned `polars/lazy` and `polars/streaming` features resolve 166 additional locked packages offline. The root feature assertion had to name both edges, while the policy's all-feature metadata scan needed three named license associations. `cargo deny` already allows BSD for the two zstd crates; a zlib-rs exception in `deny.toml` produced an unused-exception warning, so it was removed. The DuckDB planted extra-license name was changed because zlib-rs is now part of the approved metadata graph; the plant still refuses an unclaimed entry.
+
+Streaming evaluates two singleton non-null morsels for the selected three-cell frame while ordinary lazy and eager collection pack one request. The proof pins each body's literal bytes and counts the listener rather than assuming that all modes cut the same way. The original held-throttle fixture tried one three-record call: its lazy input scheduler delivered only one held request. Three distinct singleton calls started at a barrier establish the configured two-slot bound with two held arrivals and the third after release, without a timing band. The corrected `cases.rs` selects batch one only for the saved singleton recordings; the separate default-Max body witness remains. The deadline fixture uses three held singleton score rows and verifies the deadline kind, two sends, and no third request. The 200-row equality case stays ignored for stress.
+
+The new expression uses an owned engine, question and controls; every evaluated morsel receives a fresh call deadline and shared token/tally. The closure catches a panic as a compute error. No core accounting or eager call implementation was copied. The `frame.rs`/`frame/lazy.rs` split keeps both under 500 nonblank lines. The [build record](../records/0298-rust-polars-lazy-expressions-build.md) holds the exact focused receipts and deferred qualification.

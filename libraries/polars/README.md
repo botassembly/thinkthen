@@ -6,7 +6,7 @@ Ask `thinkthen` questions of a Polars `Series` or `DataFrame` from Rust. The doo
 thinkthen = { version = "0.1", features = ["polars"] }
 ```
 
-The feature adds one trait, `thinkthen::PolarsEngine`, to your own `thinkthen::Engine`. Each method reads a text column in place and makes one engine call over the whole column. That call takes the same batch path as a slice of strings, at the same throttle, and the answers come back in input order. The trait's rustdoc holds a full example.
+The feature adds `thinkthen::PolarsEngine` to your own `thinkthen::Engine`. Eager methods read one column in one call. Lazy expressions make one call for each evaluated morsel. Both take the same batch path as a slice of strings, at the same throttle, and return answers in input order. The trait's rustdoc holds a full eager example.
 
 Build that engine with `max_request_bytes`, `max_requests_total`, `timeout`, `max_retries`, `profile`, `record`, or strict `replay` before passing it to Polars.
 
@@ -34,6 +34,26 @@ Asking methods take `CallOptions`. `column_with` also accepts `PolarsCallOptions
 
 Null input cells are omitted from requests and restored as nulls in their original positions; non-null cells keep input order. `plan_series` validates the whole non-null input, discloses the first prepared body and full-input counts, and sends nothing. Its token range is a measured estimate of the prepared body, not billed usage.
 
+## Lazy expressions
+
+`decide_expr`, `choose_expr`, `score_expr` and `tag_expr` take a Polars `Expr` and return an `Expr`. The output keeps the eager dtype and null positions. `PolarsExprOptions::probability(true)` returns a `Struct` with `value` and nullable `probability` for decide or choose; score and tag refuse it before collection. The expression captures an owned question, engine and controls. A `Tally` passed in those options joins the real completed or partially failed facts from each morsel. A shared `CancelToken` stops later sends. `deadline_after(Duration)` starts a separate deadline at each morsel, so repeated collections do not share a spent deadline.
+
+```rust
+use thinkthen::polars::prelude::{col, IntoLazy};
+use thinkthen::{CancelToken, PolarsEngine, PolarsExprOptions, Tally};
+
+let tally = Tally::new();
+let stop = CancelToken::new();
+let judgment = engine.decide_expr(
+    &question,
+    col("body"),
+    PolarsExprOptions::new().tally(tally.clone()).token(stop.clone()),
+)?;
+let judged = frame.lazy().with_columns([judgment.alias("decision")]).collect()?;
+```
+
+Apply cheap filters first, then add the judgment with `with_columns` and filter its result. Polars may push a judged `filter` into the scan, so `filter` or a later `head` does not bound requests to the first matching rows. A streaming source that stops reading is required when only the first matches should be judged. Collection errors from the UDF are Polars compute errors; an internal panic stays inside that boundary. No expression stores call facts on its output, so retain the explicit tally when facts matter.
+
 In a frame, a decide column is nullable `Boolean`, a choose column `String`, a score column nullable `Float64`, and a tag column `List(String)`. These dtypes stay fixed when a question fails. A failed answer is null in its question column; the final `failed` column holds a nullable Struct with one field per question and the full nested `failed: {kind, cause}` marker. A row with no failures has a null outer `failed` cell. A not-sure `decide` or `choose` has a null answer without a marker. Your own columns come back unchanged. A failed row in a series call ends the call with the engine's `Backend` error.
 
 ## Refusals
@@ -49,4 +69,4 @@ An empty column returns a `Call` with an empty value of the method's type and ze
 
 ## Checks
 
-This folder holds no code. The door lives in `crates/thinkthen/src/public/frame.rs`, and its tests in `crates/thinkthen/tests/polars/`. `check.sh` is the one lane that compiles Polars. It runs from the repository root with its own target folder, a fake key, and a closed loopback address. It runs Clippy, the tests, and the rustdoc example with the feature on. It prints "not run" and exits 77 only when cargo's cache lacks the locked crates. The root `deny.toml` holds the four license exceptions the Polars tree needs.
+This folder holds no code. The door lives in `crates/thinkthen/src/public/frame.rs` and its `frame/` modules, and its tests in `crates/thinkthen/tests/polars/`. `check.sh` is the one lane that compiles Polars. It runs from the repository root with its own target folder, a fake key, and a closed loopback address. It runs Clippy, the tests, and the rustdoc example with the feature on. It prints "not run" and exits 77 only when cargo's cache lacks the locked crates. The root `deny.toml` holds the reviewed license exceptions for the locked tree.

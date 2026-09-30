@@ -32,7 +32,7 @@ pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind};
 #[cfg(feature = "polars")]
-pub use frame::{PolarsCallOptions, PolarsEngine};
+pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use native_batch::RecoverableDetails;
 pub(crate) use options::budget::process_budget;
 pub use options::{

@@ -16,8 +16,14 @@ use serde_json::value::RawValue;
 use thinkthen::PolarsEngine;
 use thinkthen::polars::prelude::{AnyValue, DataFrame, IntoColumn, Series};
 use thinkthen::{
-    Answer, CallOptions, Engine, Judgment, LoadedQuestion, Question, QuestionKind, QuestionSet,
+    Answer, BatchSetting, CallOptions, Engine, Judgment, LoadedQuestion, Question, QuestionKind,
+    QuestionSet,
 };
+
+/// Captured shared cases use one recorded request for each source record.
+fn recorded_call() -> CallOptions<'static> {
+    CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+}
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 
@@ -187,7 +193,7 @@ fn judgment(value: &Judgment) -> Option<String> {
 /// `decide_many` for a decision and `details` for the others.
 fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cells, Cells) {
     let column = common::column(texts);
-    let options = CallOptions::new;
+    let options = recorded_call;
     let decided = |listed: Vec<Answer>| -> Cells {
         let answers = listed.into_iter().map(Judgment::Decision);
         answers.map(|answer| judgment(&answer)).collect()
@@ -195,7 +201,7 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
     let answered = match Question::from_json(question).expect("the case's question") {
         LoadedQuestion::Banded(banded) => {
             let listed = slice
-                .decide_many(&banded, texts.to_vec())
+                .decide_many_with(&banded, texts.to_vec(), options())
                 .map(|row| row.map(|row| *row.value()));
             let listed = decided(listed.collect::<Result<_, _>>().expect("the slice form"));
             return (
@@ -209,7 +215,7 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
         }
         LoadedQuestion::Question(asked) if asked.kind() == QuestionKind::Decide => {
             let listed = slice
-                .decide_many(&asked, texts.to_vec())
+                .decide_many_with(&asked, texts.to_vec(), options())
                 .map(|row| row.map(|row| *row.value()));
             let listed = decided(listed.collect::<Result<_, _>>().expect("the slice form"));
             return (
@@ -247,10 +253,10 @@ fn annotated(door: &Engine, slice: &Engine, set: &str, texts: &[&str]) -> (Vec<C
     let records = common::column(texts).with_name("record".into());
     let frame = DataFrame::new(texts.len(), vec![records.into_column()]).expect("a frame");
     let out = door
-        .annotate_frame(&set, &frame, "record", CallOptions::new())
+        .annotate_frame(&set, &frame, "record", recorded_call())
         .expect("the door");
     let records: Vec<String> = slice
-        .annotate(&set, texts.to_vec())
+        .annotate_with(&set, texts.to_vec(), recorded_call())
         .map(|record| record.map(|record| record.value_json()))
         .collect::<Result<_, _>>()
         .expect("the slice form");
