@@ -4,8 +4,8 @@
 //
 //   - No line over 60 characters, apart from the exempt lines below.
 //   - A library sample asserts. It never prints.
-//   - No example, page, or article shows --details. The docs leave it out
-//     for now (Ian, 2026-09-28).
+//   - No example asks for --details. Pages may name it (checklist ruling of
+//     2026-09-30); examples wait for the annotate edge cases.
 //   - Each function page opens with one command example of 10 to 25
 //     lines, script and output together (Ian, 2026-09-28).
 //   - Code carries no comments.
@@ -158,7 +158,7 @@ function main() {
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
     problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
-    if (ext === '.sh' && /--details\b/.test(text)) problems.push(`examples/${rel}: asks for --details. The docs leave it out for now.`);
+    if (ext === '.sh' && /--details\b/.test(text)) problems.push(`examples/${rel}: asks for --details. Examples leave it out for now.`);
   }
 
   const lineCount = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\n+$/, '').split('\n').length : 0);
@@ -169,16 +169,6 @@ function main() {
     const script = path.join(dir, first);
     const shown = lineCount(script) + lineCount(script.replace(/\.sh$/, '.out'));
     if (shown < EXAMPLE_LINES.min || shown > EXAMPLE_LINES.max) problems.push(`examples/functions/${fn.name}/${first}: the page's example shows ${shown} lines of script and output. Keep it from ${EXAMPLE_LINES.min} to ${EXAMPLE_LINES.max}.`);
-  }
-
-  function sources(dir) {
-    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-      const p = path.join(dir, e.name);
-      return e.isDirectory() ? sources(p) : /\.(astro|mjs|md)$/.test(p) ? [p] : [];
-    });
-  }
-  for (const file of sources(path.join(site, 'src'))) {
-    if (/--details\b/.test(fs.readFileSync(file, 'utf8'))) problems.push(`${path.relative(site, file)}: names --details. The docs leave it out for now.`);
   }
 
   const articles = path.join(site, 'src', 'articles');
