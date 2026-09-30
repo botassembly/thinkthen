@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"evidence":"George Martin produced Revolver at Abbey Road Studios for EMI.","entities":[{"id":"i1","name":"George Martin","kind":"person"},{"id":"i2","name":"Revolver","kind":"album"},{"id":"i3","name":"Abbey Road Studios","kind":"place"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i2 recorded at i3?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.49}},"usage":{"input_tokens":393,"output_tokens":21}}
-}

@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Maroon 5 released Songs About Jane.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: Maroon 5 released [[Songs About Jane]].","criteria":{"Songs About Jane":"Maroon 5 released [[Songs About Jane]].","Songs About Jane.":"Maroon 5 released [[Songs About Jane.]]"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Songs About Jane","confidence":0.98,"probabilities":{"Songs About Jane.":0.01,"Songs About Jane":0.99}}},"usage":{"input_tokens":413,"output_tokens":39}}
-}

@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"North and South Korea marched together at the Olympics.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: South Korea marched together at the [[Olympics]].","criteria":{"Olympics":"...South Korea marched together at the [[Olympics]].","Olympics.":"...South Korea marched together at the [[Olympics.]]"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Olympics","confidence":0.99,"probabilities":{"Olympics.":0.0,"Olympics":1.0}}},"usage":{"input_tokens":424,"output_tokens":42}}
-}

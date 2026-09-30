@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"score","instructions":"The text is \"Subject: copy of a receipt\\n\\nCould you send me the receipt for order 4471 again? The first one went to an\\naddress I no longer use. Nothing is wrong with the order itself.\\n\". How hard is this request to answer?","criteria":["A canned reply answers it.","One person can answer it after a look at the account.","It needs a specialist and more than one system."]}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":0.87,"confidence":0.79,"legend":{"0":"A canned reply answers it.","1":"One person can answer it after a look at the account.","2":"It needs a specialist and more than one system."},"probabilities":{"0":0.13,"1":0.87,"2":0.0}}},"usage":{"input_tokens":366,"output_tokens":18}},
-  "quoted": true
-}

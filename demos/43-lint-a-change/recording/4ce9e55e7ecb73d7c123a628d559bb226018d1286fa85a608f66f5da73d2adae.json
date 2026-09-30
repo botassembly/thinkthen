@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"@@ -3,2 +3,3 @@ import { Cart } from \\\"./types\\\";\\n+import { formatMoney } from \\\"./money\\\";\". Does the changed code break the house rule?","criteria":{"true":"The change holds an amount of money in a floating-point number: a float, a double, a decimal literal used as money, or arithmetic on money that yields one.","false":"The change holds no amount of money at all, or it holds money only as a whole number of pence in an integer."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.13}},"usage":{"input_tokens":382,"output_tokens":21}},
-  "quoted": true
-}

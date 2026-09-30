@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"evidence":"Yoko Ono wrote Something.","entities":[{"id":"i1","name":"Yoko Ono","kind":"person"},{"id":"i2","name":"Something","kind":"song"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 sang i2?"},"q2":{"type":"noul","instructions":"Does the text itself state that i1 wrote i2?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03},"q2":{"type":"noul","noul":0.98}},"usage":{"input_tokens":373,"output_tokens":38}}
-}

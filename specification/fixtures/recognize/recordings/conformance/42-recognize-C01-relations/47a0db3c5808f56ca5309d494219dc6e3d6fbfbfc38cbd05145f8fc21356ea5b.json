@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"evidence":"Maria Chen joined Northwind Freight in Chicago last spring.","entities":[{"id":"i1","name":"Maria Chen","kind":"person"},{"id":"i2","name":"Northwind Freight","kind":"organization"},{"id":"i3","name":"Chicago","kind":"place"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 works for i2?"},"q2":{"type":"noul","instructions":"Does the text itself state that i2 based in i3?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.84},"q2":{"type":"noul","noul":0.15}},"usage":{"input_tokens":410,"output_tokens":38}}
-}

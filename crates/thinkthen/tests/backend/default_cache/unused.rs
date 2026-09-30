@@ -10,8 +10,8 @@ use std::time::SystemTime;
 use super::folder;
 use crate::harness::spawn;
 
-const USED: &str = "0311afcb8eba767b756924bd17cba8bdf973788f9103d8feb9ec00d4a7366474";
-const OTHER: &str = "2bc2f3db71bf8156dd2d2060d777a34c80a88cb1c0afa665d469e3b055712f71";
+const USED: &str = "2bc2f3db71bf8156dd2d2060d777a34c80a88cb1c0afa665d469e3b055712f71";
+const OTHER: &str = "0311afcb8eba767b756924bd17cba8bdf973788f9103d8feb9ec00d4a7366474";
 const INVALID: &str =
     "thinkthen: --used takes one lowercase 64-character question key per nonblank line\n";
 
@@ -101,20 +101,20 @@ fn supplied_keys_name_the_unused_answers_without_editing_the_folder() {
     let before = state(&case.recording).expect("before state");
     let cases = [
         (
-            format!("{OTHER}\n"),
-            format!("unused from supplied keys: 1\nunused {USED}\n"),
+            format!("{USED}\n"),
+            format!("unused from supplied keys: 1\nunused {OTHER}\n"),
         ),
         (
-            format!("{OTHER}\n{OTHER}\n\n"),
-            format!("unused from supplied keys: 1\nunused {USED}\n"),
+            format!("{USED}\n{USED}\n\n"),
+            format!("unused from supplied keys: 1\nunused {OTHER}\n"),
         ),
         (
-            format!("{OTHER}\n{}\n", "f".repeat(64)),
-            format!("unused from supplied keys: 1\nunused {USED}\n"),
+            format!("{USED}\n{}\n", "f".repeat(64)),
+            format!("unused from supplied keys: 1\nunused {OTHER}\n"),
         ),
         (
             String::new(),
-            format!("unused from supplied keys: 2\nunused {USED}\nunused {OTHER}\n"),
+            format!("unused from supplied keys: 2\nunused {OTHER}\nunused {USED}\n"),
         ),
     ];
     for (text, expected) in cases {

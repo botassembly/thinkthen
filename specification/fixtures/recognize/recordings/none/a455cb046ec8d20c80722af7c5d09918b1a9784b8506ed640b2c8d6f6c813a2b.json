@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"It rained on Monday and Tuesday.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: It rained on Monday and [[Tuesday]].","criteria":{"Tuesday":"It rained on Monday and [[Tuesday]].","Tuesday.":"It rained on Monday and [[Tuesday.]]"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Tuesday","confidence":0.99,"probabilities":{"Tuesday":0.99,"Tuesday.":0.01}}},"usage":{"input_tokens":405,"output_tokens":33}}
-}

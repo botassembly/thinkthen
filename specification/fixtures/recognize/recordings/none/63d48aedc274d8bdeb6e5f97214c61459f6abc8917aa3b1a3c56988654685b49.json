@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Dr. Mae Jemison flew on the shuttle Endeavour.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: Mae Jemison flew on the shuttle [[Endeavour]].","criteria":{"Endeavour":"...Mae Jemison flew on the shuttle [[Endeavour]].","Endeavour.":"...Mae Jemison flew on the shuttle [[Endeavour.]]"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Endeavour","confidence":0.98,"probabilities":{"Endeavour.":0.01,"Endeavour":0.99}}},"usage":{"input_tokens":430,"output_tokens":42}}
-}

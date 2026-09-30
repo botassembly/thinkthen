@@ -218,12 +218,6 @@ pub(super) struct Details {
 }
 
 #[derive(Deserialize)]
-pub(super) struct Recording {
-    pub(super) request: Box<RawValue>,
-    pub(super) response: Box<RawValue>,
-}
-
-#[derive(Deserialize)]
 struct FilterExpected {
     indexes: Vec<usize>,
 }

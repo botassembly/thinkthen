@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"I took a taxi from an outside firm to get to the airport for the early flight and the fare was twenty two pounds.\". This expense claim needs a receipt attached before it can be paid."}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.79}},"usage":{"input_tokens":304,"output_tokens":21}},
-  "quoted": true
-}

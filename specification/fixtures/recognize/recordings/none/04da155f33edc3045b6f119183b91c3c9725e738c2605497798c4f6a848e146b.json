@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"tbt to our trip to #Lisbon.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: tbt to our trip to #[[Lisbon]].","criteria":{"Lisbon":"...tbt to our trip to #[[Lisbon]].","Lisbon.":"...tbt to our trip to #[[Lisbon.]]","#Lisbon":"#tbt to our trip to [[#Lisbon]]."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Lisbon","confidence":0.88,"probabilities":{"#Lisbon":0.08,"Lisbon.":0.0,"Lisbon":0.92}}},"usage":{"input_tokens":442,"output_tokens":45}}
-}

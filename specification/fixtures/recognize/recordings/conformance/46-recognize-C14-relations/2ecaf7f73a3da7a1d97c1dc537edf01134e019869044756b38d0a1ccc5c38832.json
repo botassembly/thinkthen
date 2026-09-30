@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"evidence":"Elif Demir of Brookline Shipping met Tomas Reyes in Boston.","entities":[{"id":"i1","name":"Elif Demir","kind":"person"},{"id":"i2","name":"Brookline Shipping","kind":"organization"},{"id":"i3","name":"Tomas Reyes","kind":"person"},{"id":"i4","name":"Boston","kind":"place"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 works for i2?"},"q2":{"type":"noul","instructions":"Does the text itself state that i3 works for i2?"},"q3":{"type":"noul","instructions":"Does the text itself state that i2 based in i4?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.72},"q2":{"type":"noul","noul":0.03},"q3":{"type":"noul","noul":0.05}},"usage":{"input_tokens":464,"output_tokens":55}}
-}
