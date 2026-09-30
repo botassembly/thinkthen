@@ -10,23 +10,33 @@ set -eu
 
 # `surfaces --release` counts a check that reports "not run" as a failure (ticket 0128).
 . "$(dirname -- "$0")/verdict.sh"
+# One heavy rung at a time on this machine. See heavy-lock. It re-runs this script with "$@",
+# so it comes before the options are shifted away.
+case " $* " in *' --registry '*) ;; *) . "$(dirname -- "$0")/heavy-lock" ;; esac
 mode=plain
 profile=routine
 registry_only=0
+# `--publish TAG` copies the release files this run packs to ROOT/TAG through publish-builds.
+# ROOT is `--publish-root`, else $HOME/workspace/builds/thinkthen. Only the coordinator asks for it.
+publish_tag= publish_root=
 while [ "$#" -gt 0 ]; do
     case $1 in
     --release) mode=release ;;
     --full-functional) profile=full ;;
     --stress) profile=stress ;;
     --registry) registry_only=1 ;;
+    --publish) [ "$#" -ge 2 ] && [ "${2#-}" = "$2" ] || { echo 'surfaces: --publish needs a tag' >&2; exit 2; }; publish_tag=$2; shift ;;
+    --publish-root) [ "$#" -ge 2 ] || { echo 'surfaces: --publish-root needs a folder' >&2; exit 2; }; publish_root=$2; shift ;;
     *) echo "surfaces: unknown option $1" >&2; exit 2 ;;
     esac
     shift
 done
-
-if [ "$registry_only" -eq 0 ]; then
-	# One heavy rung at a time on this machine. See heavy-lock.
-	. "$(dirname -- "$0")/heavy-lock"
+if [ -n "$publish_root" ] && [ -z "$publish_tag" ]; then
+    echo 'surfaces: --publish-root needs --publish' >&2; exit 2
+fi
+if [ -n "$publish_tag" ]; then
+    [ "$registry_only" -eq 0 ] || { echo 'surfaces: --registry does not publish' >&2; exit 2; }
+    publish_root=${publish_root:-$HOME/workspace/builds/thinkthen}
 fi
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -218,6 +228,10 @@ if [ "$registry_only" -eq 1 ]; then
 fi
 
 registry sdlc/surfaces.txt
+if [ -n "$publish_tag" ]; then
+	[ -z "$(git status --porcelain)" ] || { echo 'surfaces: --publish needs a clean committed tree' >&2; exit 1; }
+	publish_commit=$(git rev-parse HEAD)
+fi
 . "$(dirname -- "$0")/scratch.sh"
 # ADR 0113: a check that bypasses its own scratch usage folder writes this decoy and fails the rung.
 usage_guard
@@ -237,8 +251,16 @@ done
 [ "$failed" -eq 0 ] || exit 1
 # The host's release files, packed from the builds above and each smoked from its install
 # (ticket 0128). A surface that did not run built nothing to pack. --release failed it above.
-if [ -n "$skipped" ]; then
-	echo "surfaces: not run release smoke (${skipped# } did not run)"
+# Only the surfaces the default release-pack parts read gate the pack; Dart's feeds none of them.
+unpacked=
+for surface in $skipped; do
+	case $surface in
+	libraries/rust | libraries/c | libraries/python | libraries/typescript | libraries/ruby | databases/*) unpacked="$unpacked $surface" ;;
+	esac
+done
+if [ -n "$unpacked" ]; then
+	echo "surfaces: not run release smoke (${unpacked# } did not run)"
+	[ -z "$publish_tag" ] || { echo 'surfaces: FAIL publish (nothing packed)'; exit 1; }
 	exit 0
 fi
 scratch_dir packed
@@ -246,3 +268,4 @@ code=0
 { sh sdlc/scripts/release-pack --reuse "$(rustc -vV | sed -n 's/^host: //p')" "$packed" &&
 	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
 verdict "$mode" "release smoke" "$code"
+[ -z "$publish_tag" ] || sh sdlc/scripts/publish-builds "$publish_tag" "$publish_root" "$publish_commit" "$packed"
