@@ -19,6 +19,7 @@ assert (SOURCE / "ThinkThen.m").is_file(), "Objective-C package source missing"
 NATIVE = Path(os.environ["THINKTHEN_PORTABLE_NATIVE"]).resolve()
 LIB_DIR = NATIVE / "lib" if (NATIVE / "lib").is_dir() else NATIVE
 LIB_NAME = "thinkthen" if LIB_DIR != NATIVE else "thinkthen_c"
+INCLUDE = NATIVE / "include" if (NATIVE / "include").is_dir() else ROOT / "libraries/c/include"
 FIXTURE = ROOT / "specification/fixtures/batching"
 corpus = json.loads((FIXTURE / "portable-records.json").read_text())
 bodies = [(FIXTURE / f"portable-{n}.request.json").read_text().removesuffix("\n") for n in range(1, 4)]
@@ -30,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-objc-portable-") as scratch:
     shutil.copytree(SOURCE, target / "Sources")
     source = target / "Sources"
     program = target / "portable_batch"
-    subprocess.run(["gcc", "-std=gnu11", "-x", "objective-c", "-I" + str(source),
+    subprocess.run(["gcc", "-std=gnu11", "-x", "objective-c", "-I" + str(INCLUDE), "-I" + str(source),
                     str(source / "ThinkThen.m"), str(source / "TTJSON.c"),
                     str(HERE / "portable_batch.m"), "-L" + str(LIB_DIR),
                     "-l" + LIB_NAME, "-lobjc", "-pthread", "-lm", "-o", str(program)],

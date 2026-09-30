@@ -267,7 +267,6 @@ objective-c)
 			libraries/objective-c/source-package.json "$folder/"
 		cp libraries/objective-c/Sources/ThinkThen.h libraries/objective-c/Sources/ThinkThen.m \
 			libraries/objective-c/Sources/TTJSON.h libraries/objective-c/Sources/TTJSON.c "$folder/Sources/"
-		cp libraries/c/include/thinkthen.h "$folder/Sources/"
 		cp libraries/objective-c/Examples/consumer.m "$folder/Examples/"
 		;;
 cobol)
@@ -282,13 +281,16 @@ cobol)
 			libraries/cobol/examples/types.cob "$folder/examples/"
 		;;
 	esac
+	# A case-blind volume, such as a default Mac one, keeps only one of two names that differ only in case.
+	twins=$(cd -- "$folder" && find . | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sort | uniq -d)
+	[ -z "$twins" ] || { echo "release-pack: $1 holds names that differ only in case: $twins" >&2; exit 1; }
 	if [ -n "${THINKTHEN_ARCHIVED_SOURCE_TAR:-}" ]; then
 		case $1 in go | cpp | swift | zig | php | dart | ada | objective-c | cobol) ;; *) echo "release-pack: archived source does not permit $1" >&2; exit 1 ;; esac
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
 			member=libraries/$1/$relative
 			# The wrapper's C header is copied from the one C header.
-			case $relative in Sources/thinkthen.h | Sources/CThinkThen/include/thinkthen.h) member=libraries/c/include/thinkthen.h ;; esac
+			case $relative in Sources/CThinkThen/include/thinkthen.h) member=libraries/c/include/thinkthen.h ;; esac
 			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "$member" | cmp -s - "$copied" || {
 				echo "release-pack: $1 source differs from archived commit: $relative" >&2; exit 1;
 			}

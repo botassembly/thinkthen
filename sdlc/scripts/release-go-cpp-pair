@@ -193,7 +193,7 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 				| LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
 			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./Sources/ \
-				./Sources/ThinkThen.h ./Sources/ThinkThen.m ./Sources/thinkthen.h \
+				./Sources/ThinkThen.h ./Sources/ThinkThen.m \
 				./Sources/TTJSON.h ./Sources/TTJSON.c ./Examples/ ./Examples/consumer.m \
 				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$third")
@@ -223,8 +223,5 @@ PY
 		python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p=={"name":sys.argv[2],"version":sys.argv[3],"source_only":True,"native_dependency":"thinkthen-c","bundles_native":False}' \
 			"$work/package-metadata" "$package_name" "$version" || fail "source package identity differs for $name"
 	done
-	tar -xOzf "$dir/$second" ./Sources/thinkthen.h >"$work/objective-header"
-	tar -xOzf "$dir/$c" ./include/thinkthen.h >"$work/c-header"
-	cmp -s "$work/objective-header" "$work/c-header" || fail 'Objective-C copied C header differs'
 fi
 case $mode in go-cpp) echo 'release-go-cpp-pair: pass' ;; csharp-jvm) echo 'release-go-cpp-pair: csharp-jvm pass' ;; swift-zig) echo 'release-go-cpp-pair: swift-zig pass' ;; php-dart) echo 'release-go-cpp-pair: php-dart pass' ;; dart-flutter) echo 'release-go-cpp-pair: dart-flutter pass' ;; ada-objective-c-cobol) echo 'release-go-cpp-pair: ada-objective-c-cobol pass' ;; esac
