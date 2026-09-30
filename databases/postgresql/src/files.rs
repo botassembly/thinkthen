@@ -4,9 +4,7 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use thinkthen::{ErrorKind, For, Settings};
-
-use thinkthen::Error;
+use thinkthen::{Error, ErrorKind, For, Settings};
 
 use crate::call;
 use crate::ffi;
@@ -162,7 +160,7 @@ impl Given {
             "options" => "choose",
             "levels" => "score",
             "labels" => "tag",
-            _ => return Err(Error::new(ErrorKind::Defect, "unknown judgment members")),
+            _ => return Err(call::defect("unknown judgment members")),
         };
         let mut object = serde_json::Map::new();
         object.insert(verb.to_owned(), serde_json::Value::from(text));
@@ -240,7 +238,7 @@ impl Given {
             .ok_or_else(|| call::usage("the question is not a JSON object"))?;
         let separator = if object.is_empty() { "" } else { "," };
         let encoded = serde_json::to_string(&members)
-            .map_err(|_| Error::new(ErrorKind::Defect, "members could not be written as JSON"))?;
+            .map_err(|_| call::defect("members could not be written as JSON"))?;
         self.json = format!("{source}{separator}\"{key}\":{encoded}}}");
         Ok(self)
     }
@@ -269,7 +267,7 @@ impl Given {
         };
         let suffix = extra
             .get(first + 1..extra.len() - 1)
-            .ok_or_else(|| Error::new(ErrorKind::Defect, "settings lost their fields"))?;
+            .ok_or_else(|| call::defect("settings lost their fields"))?;
         let source = self
             .json
             .trim_end()

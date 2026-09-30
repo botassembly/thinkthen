@@ -6,10 +6,9 @@ use std::collections::HashMap;
 use pgrx::Spi;
 use pgrx::datum::Array;
 use pgrx::prelude::*;
-use thinkthen::{Entity, Relate, RelationRule};
+use thinkthen::{Entity, Error, Relate, RelationRule};
 
 use crate::call::{self, OrRaise as _};
-use thinkthen::Error;
 
 /// SPI reads at most this many rows, and the last one refuses.
 const ROW_LIMIT: i64 = 256;
@@ -227,6 +226,10 @@ mod tests {
         let read =
             |text, kinds| call::shown(inline_rule(text, kinds).map(|rule| rule.name().to_owned()));
         assert_eq!(read("caused_by", false), Ok("caused_by".to_owned()));
+        // `ANY` reads as any kind, as the command reads it (ticket 0347).
+        assert_eq!(read("caused_by=ANY:ANY", false), Ok("caused_by".to_owned()));
+        let rule = inline_rule("works_for=ANY:organization", true).expect("one side any");
+        assert_eq!((rule.source(), rule.target()), ("*", "organization"));
         assert_eq!(
             read("works_for=person:organization", true),
             Ok("works_for".to_owned())

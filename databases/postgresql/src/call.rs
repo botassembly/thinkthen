@@ -105,7 +105,7 @@ pub(crate) fn guarded<T>(body: impl FnOnce() -> T) -> T {
         Err(payload) if pgrx_raised(&*payload) => std::panic::resume_unwind(payload),
         Err(payload) => {
             std::mem::forget(payload);
-            raise(Error::new(ErrorKind::Defect, "the extension panicked"))
+            raise(defect("the extension panicked"))
         }
     }
 }
@@ -274,10 +274,7 @@ pub(crate) fn deliver<T>(answer: &Sender<T>, work: impl FnOnce() -> T) {
 
 /// A worker that ended without a result.
 pub(crate) fn lost() -> Error {
-    Error::new(
-        ErrorKind::Defect,
-        "the call's worker stopped without a result",
-    )
+    defect("the call's worker stopped without a result")
 }
 
 /// Run one call on a detachable masked worker, waiting in 50 ms ticks. A
@@ -328,7 +325,7 @@ pub(crate) fn run_result<T: Send + 'static>(
             work(&engine, options)
         });
     })
-    .map_err(|_| Error::new(ErrorKind::Defect, "the call's worker could not start"))
+    .map_err(|_| defect("the call's worker could not start"))
     .or_raise();
     let waited = wait(&answered, TICK, || {
         if ffi::cancel_pending() {

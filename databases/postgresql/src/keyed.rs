@@ -7,7 +7,6 @@ use thinkthen::{Details, For, Judgment, Probabilities};
 use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
 use crate::forms::{self, Named};
-use thinkthen::Error;
 
 fn answered(
     verb: For,
@@ -66,10 +65,7 @@ fn decide_many(
                     _ => call::raise(call::usage("thinkthen_decide_many takes a decide question")),
                 };
                 let yes = probability(&detail).unwrap_or_else(|| {
-                    call::raise(Error::new(
-                        thinkthen::ErrorKind::Defect,
-                        "a decide row carried no probability",
-                    ))
+                    call::raise(call::defect("a decide row carried no probability"))
                 });
                 (key, value, yes)
             })

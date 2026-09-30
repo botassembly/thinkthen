@@ -2,9 +2,9 @@
 
 use pgrx::datum::{Array, JsonB};
 use pgrx::prelude::*;
+use thinkthen::Error;
 
 use crate::call;
-use thinkthen::Error;
 
 fn context_moved() -> Error {
     call::usage(

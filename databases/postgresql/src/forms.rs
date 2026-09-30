@@ -1,12 +1,11 @@
 //! Portable settings and PostgreSQL's defaulted named conveniences.
 
 use pgrx::datum::{Array, JsonB};
-use thinkthen::{For, LoadedQuestion, Question, QuestionKind, Settings, SettingsError};
+use thinkthen::{Error, For, LoadedQuestion, Question, QuestionKind, Settings, SettingsError};
 
 use crate::call::{self, Call, OrRaise as _};
 use crate::ffi::RawJson;
 use crate::files::Given;
-use thinkthen::Error;
 
 #[derive(Clone, Copy, Default)]
 pub(crate) struct Named<'a> {

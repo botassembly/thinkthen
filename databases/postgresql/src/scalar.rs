@@ -8,7 +8,6 @@ use crate::call;
 use crate::ffi::RawJson;
 use crate::forms::{self, Named};
 use crate::{answer_value, details};
-use thinkthen::Error;
 
 fn judged(
     verb: For,
@@ -26,12 +25,7 @@ fn judged(
         call::run(call, move |engine, options| {
             details(engine, &question, &input, options, contextual)
         })
-        .unwrap_or_else(|| {
-            call::raise(Error::new(
-                thinkthen::ErrorKind::Defect,
-                "details returned no record",
-            ))
-        }),
+        .unwrap_or_else(|| call::raise(call::defect("details returned no record"))),
     )
 }
 
@@ -193,12 +187,7 @@ fn details_sql(
         let held = call::run(call, move |engine, options| {
             details(engine, &asked, &input, options, contextual)
         })
-        .unwrap_or_else(|| {
-            call::raise(Error::new(
-                thinkthen::ErrorKind::Defect,
-                "details returned no record",
-            ))
-        });
+        .unwrap_or_else(|| call::raise(call::defect("details returned no record")));
         Some(crate::jsonb(&held.to_json()))
     })
 }
@@ -239,14 +228,12 @@ fn try_details(
             let answer = call::run_result(call, move |engine, options| {
                 details(engine, &question, &input, options, contextual)
             })?;
-            answer.ok_or_else(|| {
-                Error::new(thinkthen::ErrorKind::Defect, "details returned no record")
-            })
+            answer.ok_or_else(|| call::defect("details returned no record"))
         })();
         let value = match result {
             Ok(answer) => {
                 serde_json::json!({"status":"answered","details":serde_json::from_str::<serde_json::Value>(&answer.to_json())
-            .unwrap_or_else(|_| call::raise(Error::new(thinkthen::ErrorKind::Defect, "a result is not JSON")))})
+            .unwrap_or_else(|_| call::raise(call::defect("a result is not JSON")))})
             }
             Err(error) => call::failed_row(&error).unwrap_or_else(|| call::raise(error)),
         };

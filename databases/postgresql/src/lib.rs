@@ -61,7 +61,7 @@ fn answer_value(answer: thinkthen::Answer) -> Option<bool> {
 fn jsonb(text: &str) -> JsonB {
     JsonB(
         serde_json::from_str(text)
-            .map_err(|_| Error::new(thinkthen::ErrorKind::Defect, "a result is not JSON"))
+            .map_err(|_| call::defect("a result is not JSON"))
             .or_raise(),
     )
 }

@@ -2,13 +2,11 @@
 
 use pgrx::datum::{Array, JsonB};
 use pgrx::prelude::*;
-use thinkthen::{Evidence, Question};
+use thinkthen::{Error, Evidence, For, Question};
 
 use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
 use crate::forms::{self, Named};
-use thinkthen::Error;
-use thinkthen::For;
 
 const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
 
@@ -104,12 +102,7 @@ fn found(
         Some(unit) => candidates.get(unit.index),
         None => candidates.last().filter(|candidate| candidate.is_none()),
     }
-    .ok_or_else(|| {
-        Error::new(
-            thinkthen::ErrorKind::Defect,
-            "a find answer selected no candidate",
-        )
-    })
+    .ok_or_else(|| call::defect("a find answer selected no candidate"))
     .or_raise();
     let probabilities: Vec<_> = candidates
         .iter()
