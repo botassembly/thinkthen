@@ -19,7 +19,7 @@ The run's log shows:
 ##[error]Invalid format 'versions: 59 places read 0.0.1'
 ```
 
-The `resolve` job failed in about 10 seconds at commit `8bb32e59a`. All other jobs were skipped. The `sdlc/scripts/workflows` self-test reads the workflow's text and never runs `resolve` with an output file, so it missed this.
+The `resolve` job failed in 8 seconds at commit `8bb32e59a`. All other jobs were skipped. The `sdlc/scripts/workflows` self-test reads the workflow's text and never runs `resolve` with an output file, so it missed this.
 
 ## A fix
 

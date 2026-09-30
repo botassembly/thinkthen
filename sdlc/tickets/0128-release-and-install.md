@@ -132,11 +132,11 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 3. **Partial publishes.** A publish job fails without change when its registry already holds this version. After a partial failure, Ian re-runs only the failed jobs from the same run. Nobody dispatches a second release run for a tag whose draft exists, and the `draft` job enforces it.
 4. **The first rehearsal, Phase 3b.** After Phase 3a lands, Ian dispatches `rehearse` on main. Every job passes on all four targets, and the smoke reports zero "not run". This run is the macOS proof of record for both chips. It closes error-index row R5-37 with the record `sdlc/records/0128-rehearsal-1.md`.
 
-    **First rehearsal attempt, 2026-09-30.** Ian authorized test runs on 2026-09-30, after ticket 0351's M5 proof landed at `e4136b764`. The coordinator's agent dispatched `gh workflow run release.yml --ref main -f mode=rehearse`. The run is [36778953361](https://github.com/botassembly/thinkthen/actions/runs/36778953361) at main `8bb32e59a`. The workflow's `resolve` refuses any ref but `refs/heads/main` in rehearse mode, so the checkpoint commit `145630045` could not be used. The agent watched the run with a guard that would cancel it when `draft` started, because the dispatch allowed no GitHub release, draft or not. The guard never fired.
+    **First rehearsal attempt, 2026-09-30.** Ian authorized test runs on 2026-09-30, after ticket 0351's M5 proof landed at `e4136b764`. The coordinator's agent dispatched `gh workflow run release.yml --ref main -f mode=rehearse`. The run is [36778953361](https://github.com/botassembly/thinkthen/actions/runs/36778953361) at main `8bb32e59a`. The workflow's `resolve` refuses any ref but `refs/heads/main` in rehearse mode, so the run could not be dispatched from the tag `checkpoint/surfaces/2026-09-30-1`. Main `8bb32e59a` contains that checkpoint commit `145630045`. The agent watched the run with a guard that would cancel it when `draft` started, because the dispatch allowed no GitHub release, draft or not. The guard never fired.
 
     | Job | Result |
     | --- | --- |
-    | `resolve` | Failure after about 10 seconds. Cause: our code. |
+    | `resolve` | Failure after 8 seconds. Cause: our code. |
     | `build`, `wheels`, `gems`, `npm-pack`, `crate`, `smoke`, `draft` | Skipped, since `resolve` failed |
     | `crates`, `pypi`, `npm`, `rubygems`, `tap`, `publish` | Skipped, as rehearse mode requires |
 
