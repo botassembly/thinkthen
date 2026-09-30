@@ -349,7 +349,8 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
 /// Shared pair requests fill the throttle of 4. The host check runs only
 /// while no send is out, so it fires at the first such moment after four
 /// sends, and nothing is sent after it fires. Forty entities make exactly
-/// four requests. Ticket 0342 replaced a check on exactly four sends, which
+/// four requests. The 60-entity race is narrower, not gone: replies that
+/// overlap until the call ends leave no quiet moment. Ticket 0342 replaced a check on exactly four sends, which
 /// missed its moment and failed 7 runs in 50 at load 13.
 #[test]
 fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {

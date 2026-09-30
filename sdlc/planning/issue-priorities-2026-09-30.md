@@ -91,7 +91,7 @@ Rank 17 follows ticket 0340's landing, so the Severity and number fields go onto
 
 - **0304 slice 4** (lane 3): rank 6 items 1, 2, 3, 9 (outcome: PostgreSQL uses a public relate rule parser and `thinkthen::Error`, the SQL hosts share one usage total and one rule for a loaded question); rank 8 (outcome: one crate reader returns the text or a typed reason, and every surface maps it, with the Rust and Python loaders refusing over 1 MiB); rank 9 (outcome: relate's single-answer relations ask one choice with none of these, kept if the paid bench run beats F1 0.523, in ticket 0342; both-ways edges print an unordered pair in a later relate ticket after 0314 slice 4); rank 10 (outcome: `audit` and `diff` read the batch setting again and restore ADR 0085's warning); rank 11 items 1 and 2; rank 23's workaround (ticket 0339); ranks 25 (page 11), 26, 27 and 28.
 - **0304 slice 5**: ranks 11 and 12, then marketing's site items in rank 12.
-- **0314 slice 4** (lane 2): rank 22 item 1.
+- **0314 slice 4** (lane 2): rank 22 item 1; after it, rank 9's both-ways edge shape.
 - **0335 slice 2**: none on this list. Ticket 0340 is moving rank 1's timing limits out of the routine check.
 
 ## Coordinator defaults
