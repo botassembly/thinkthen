@@ -27,7 +27,7 @@ Each count ran the old and new test binaries or scripts in the same way, at 1-mi
 | --- | --- | ---: | ---: |
 | graded rank question file | the four tests, two copies each, at once | 35 of 800 failed | 0 of 800 |
 | ordered output | 16 copies at once | 3 of 2,400 failed | 0 of 2,400 |
-| `public_controls` stop during a batch | 4 copies at once | 1 of 200, plus 1 of 200 in a mixed run | 0 of 200 |
+| `public_controls` stop during a batch | 4 copies at once, and 1 beside the other tests | 2 of 400 failed | 0 of 200 |
 | PostgreSQL time limits | the six timed steps, alternating old and new | 1 of 20 (`batch_cancel`, 270 ms) | 0 of 20 |
 | DuckDB split denials | 8 copies at once | 11 of 200 failed | 0 of 30 |
 
