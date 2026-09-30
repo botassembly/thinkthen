@@ -70,9 +70,9 @@ The folder and the exit flush sit in the shared counters, below every batch path
 
 `config::resolve_usage` ignores `XDG_CACHE_HOME` on macOS. So every isolation step below sets `XDG_CACHE_HOME` on Linux and `HOME` on macOS, after pinning `CARGO_HOME` and `RUSTUP_HOME`.
 
-- The shared test helpers start every child from a cleared environment with a scratch `HOME` under `CARGO_TARGET_TMPDIR`. No in-process test builds a sending engine from the environment. So plain `cargo test` never writes the real folder.
+- The shared test helpers start every child from a cleared environment with a scratch `HOME` under `CARGO_TARGET_TMPDIR`. Only the Polars tests build a sending engine from the environment in-process. They refuse to run without the fake key and a loopback address, so plain `cargo test` never writes the real folder. Their scripts, `libraries/polars/check.sh` and `test-stress`, give them a scratch usage folder.
 - `scratch.sh` gives the shell entry points one isolation step. It points the usage folder at a scratch copy of the platform cache folder, which links every entry of the real one except `thinkthen-usage`, so toolchain caches still resolve. On macOS the copy is of `HOME`, with `Library` and `Library/Caches` copied the same way.
-- `sdlc/scripts/test` and `surfaces` take that step as a decoy. A test that bypasses the helpers writes the decoy. The guard fails the run if the decoy's usage folder exists. Ian's own `thinkthen` runs write only the real folder, so they never trip the guard.
+- `sdlc/scripts/test`, `test-stress`, `package` and `surfaces` take that step as a decoy. `lint` refuses a script that runs cargo's tests and takes neither the decoy nor its own scratch folder. A test that bypasses the helpers writes the decoy. The guard fails the run if the decoy's usage folder exists. Ian's own `thinkthen` runs write only the real folder, so they never trip the guard.
 - Each surface check takes the step for its own run, so its engines write its scratch folder. PostgreSQL `check.sh` starts its server that way and runs `status` with the same environment.
 - The build proves the guard once: one deliberately unisolated run fails it, and the record says so.
 

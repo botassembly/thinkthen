@@ -70,6 +70,19 @@ usage_guard() {
 	usage_decoy=$usage_folder
 }
 
+# usage_lint [FILE...]: fail on a script that runs cargo's tests and takes neither usage_guard nor
+# usage_home, since its tests would add to the real usage totals (ADR 0113). The scripts are the
+# shell files in sdlc/scripts and every check.sh under libraries and databases.
+usage_lint() {
+	[ $# -gt 0 ] || set -- $(grep -ls '^#!/bin/sh' sdlc/scripts/*) libraries/*/check.sh databases/*/check.sh
+	usage_found=$(grep -lE 'cargo +(test|nextest|\$runner)([[:space:]]|$)' "$@" | while IFS= read -r usage_file; do
+		grep -qE '^[[:space:]]*usage_(guard|home)$' "$usage_file" || printf '%s\n' "$usage_file"
+	done)
+	[ -n "$usage_found" ] || return 0
+	printf 'lint: these scripts run tests without a scratch usage folder (ADR 0113):\n%s\n' "$usage_found" >&2
+	return 1
+}
+
 # usage_link FROM TO SKIP: make TO and link in it each entry of FROM except SKIP.
 usage_link() {
 	mkdir -p -- "$2"

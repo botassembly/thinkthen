@@ -1,6 +1,6 @@
 # One live batching request failed once, and about 1,000 calls on the usage counter are unexplained
 
-Status: open. Reported by the Beatles Bench team on 2026-09-30 from live runs. Investigated read-only on 2026-09-30 against main `e8e2833e9`; see "What the investigation found". The unexplained calls have a likely cause, filed as `2026-09-30-test-stress-writes-the-real-usage-totals.md`. The exit 4 stays open. Owner: the queue owner; no paid call was run for this issue.
+Status: open. Reported by the Beatles Bench team on 2026-09-30 from live runs. Investigated read-only on 2026-09-30 against main `e8e2833e9`; see "What the investigation found". The unexplained calls have a likely cause, filed as `closed/2026-09-30-test-stress-writes-the-real-usage-totals.md` and now fixed. The exit 4 stays open. Owner: the queue owner; no paid call was run for this issue.
 
 ## What was seen
 
