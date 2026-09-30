@@ -279,6 +279,13 @@ What the build changed beyond the evidence list:
 - DuckDB's `TRY()` refuses volatile functions, so a failed annotate row cannot come back as a null through `TRY`. The test reads the store instead.
 - On the M5, `cc -r -Wl,-exported_symbols_list` wrote an LLVM bitcode object that Apple's `nm` could not read, because the Homebrew rustc embeds a newer LLVM. The macOS static library keeps its `sqlite3_` names for now.
 - A surface check that takes the heavy lock itself deadlocks under a wrapper that already holds it, unless the wrapper sets `THINKTHEN_HEAVY_LOCK_HELD`.
+- The PHP, Ada, Objective-C and COBOL checks wait 180 seconds for the heavy lock and ignore `THINKTHEN_HEAVY_LOCK_HELD`. Under a wrapper that holds the lock, they exit 1 or 75 with no test run. They pass when the wrapper leaves the lock to them.
+
+What the review fixes found:
+
+- `annotate_each_with` skipped the engine's record limit, so DuckDB's `thinkthen_annotate` ignored `SET thinkthen_max_requests`. It now refuses before any send, and a DuckDB case pins it.
+- The R package's shared object exported 285 `sqlite3_` names. The ticket's slice split named R, and the first build dropped it. After the fix, the package's shared object exports one name, `R_init_thinkthen`, and the R check still passes.
+- Lint's recursive-removal rule caught `localize.sh` and `host_sqlite.sh`. Both now use `scratch.sh`, or move a file in place. The release archive self-test packed fake bytes as the static library, so `localize.sh` refused it. The fixture now builds a one-function archive.
 
 ### Slice 3c
 
