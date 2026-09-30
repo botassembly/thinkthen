@@ -1,5 +1,7 @@
 # ADR 0048: Records batch into full requests
 
+> Amended by [ADR 0111](0111-question-cache-and-one-batching-path.md): item 5 is replaced. The cache and replay key is one backend question, not one batch request. Items 1, 2, 6 and 9 change as ADR 0111 lists.
+
 - Status: Accepted 2026-09-26 on Ian's batching rulings of that day, through ticket 0139. The batching tickets named below build it. Ian can overturn each item
 - Date: 2026-09-26
 
