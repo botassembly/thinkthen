@@ -74,6 +74,8 @@ export HOME="$here/target/home" ZIG_GLOBAL_CACHE_DIR="$here/target/cache"
 "$zig" build -j2 -Dnative="$here/target/native" -Dlink-mode=shared --build-file "$here/Tests/build.zig" --cache-dir "$here/target/scratch/tests-cache" --global-cache-dir "$here/target/cache"
 python3 "$here/Tests/public_types.py"
 python3 "$here/Tests/run_matrix.py"
+python3 "$here/Tests/run_matrix.py" facts
+python3 "$here/Tests/run_matrix.py" facts-allocation
 python3 "$here/Tests/run_settings.py"
 python3 "$here/Tests/portable_batch.py"
 python3 "$here/Tests/package_local.py"
