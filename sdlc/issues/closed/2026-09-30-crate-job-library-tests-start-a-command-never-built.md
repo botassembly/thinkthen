@@ -1,4 +1,4 @@
-Status: open. Found by the second release rehearsal, run 36780048676, on 2026-09-30. Owner: ticket 0128 Phase 3b.
+Status: Closed by the quick fix landed as `Land quick fix: release builds clear host setup, apt, offline crates, and library tests`. Found by the second release rehearsal, run 36780048676, on 2026-09-30. Owner: ticket 0128 Phase 3b. Resolution: The five tests, and the three helpers only they use, carry `#[cfg(feature = "cli")]`. They still run in every default-feature test run, which builds the command. `sdlc/scripts/package` runs the library-only tests in their own target folder, `library-only` under the target folder, where no earlier build can leave a command binary to hide a missing gate. `sdlc/scripts/package` passed with a fresh `CARGO_TARGET_DIR`.
 
 Kind: bug
 

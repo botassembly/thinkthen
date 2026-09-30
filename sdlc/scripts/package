@@ -27,10 +27,12 @@ targets=$(cargo metadata --locked --offline --no-deps --format-version 1 \
 test "$targets" = "bin lib" \
     || { printf 'package: thinkthen has targets %s, not one lib and one bin\n' "$targets" >&2; exit 1; }
 # The library-only run. Without `cli` cargo builds no binary but still names
-# its old path, so every test that starts the command carries
-# `#![cfg(feature = "cli")]` and compiles to nothing here. The next command
-# runs the public doctests.
-cargo test --locked --offline --package thinkthen --no-default-features --features bundled-sqlite --all-targets
+# its path, so every test that starts the command carries
+# `#[cfg(feature = "cli")]` and compiles to nothing here. This run uses its
+# own target folder, where no earlier build left a binary to hide a missing
+# gate. The next command runs the public doctests.
+CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/library-only" \
+    cargo test --locked --offline --package thinkthen --no-default-features --features bundled-sqlite --all-targets
 cargo test --locked --offline --package thinkthen --doc --no-default-features --features bundled-sqlite
 
 # Ticket 0104: `cargo package` rewrites a stale crate without truncating it, and

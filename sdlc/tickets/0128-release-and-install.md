@@ -147,11 +147,11 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
     | Job | Result | Cause |
     | --- | --- | --- |
     | `resolve` | Success in 6 seconds | The fix holds |
-    | `build` (`aarch64-apple-darwin`, `macos-15`) | Failure in `host-setup` after 2 minutes | Ours: `sdlc/issues/2026-09-30-release-host-setup-uv-check-fails-on-macos.md` |
+    | `build` (`aarch64-apple-darwin`, `macos-15`) | Failure in `host-setup` after 2 minutes | Ours: `sdlc/issues/closed/2026-09-30-release-host-setup-uv-check-fails-on-macos.md` |
     | `build` (`x86_64-apple-darwin`, `macos-15-intel`) | Failure in `host-setup` after 7 minutes | Ours: the same uv issue |
-    | `build` (`x86_64-unknown-linux-gnu`) | Failure in the managed language tools step after 10 minutes | Ours: `sdlc/issues/2026-09-30-release-language-tools-refuses-the-apt-simulation-note.md` |
-    | `build` (`aarch64-unknown-linux-gnu`) | Failure in the container build after 17 minutes | Ours: `sdlc/issues/2026-09-30-release-host-setup-skips-the-duckdb-bridge-crates.md` |
-    | `crate` | Failure in `sdlc/scripts/package` after 2 minutes | Ours: `sdlc/issues/2026-09-30-crate-job-library-tests-start-a-command-never-built.md` |
+    | `build` (`x86_64-unknown-linux-gnu`) | Failure in the managed language tools step after 10 minutes | Ours: `sdlc/issues/closed/2026-09-30-release-language-tools-refuses-the-apt-simulation-note.md` |
+    | `build` (`aarch64-unknown-linux-gnu`) | Failure in the container build after 17 minutes | Ours: `sdlc/issues/closed/2026-09-30-release-host-setup-skips-the-duckdb-bridge-crates.md` |
+    | `crate` | Failure in `sdlc/scripts/package` after 2 minutes | Ours: `sdlc/issues/closed/2026-09-30-crate-job-library-tests-start-a-command-never-built.md` |
     | `wheels`, `gems`, `npm-pack`, `smoke`, `draft` | Skipped, since `build` or `crate` failed | |
     | `crates`, `pypi`, `npm`, `rubygems`, `tap`, `publish` | Skipped, as rehearse mode requires | |
 

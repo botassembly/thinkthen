@@ -1,4 +1,4 @@
-Status: open. Found by the second release rehearsal, run 36780048676, on 2026-09-30. Owner: ticket 0128 Phase 3b.
+Status: Closed by the quick fix landed as `Land quick fix: release builds clear host setup, apt, offline crates, and library tests`. Found by the second release rehearsal, run 36780048676, on 2026-09-30. Owner: ticket 0128 Phase 3b. Resolution: `host-setup` in `sdlc/scripts/release-workflow` asks the Python that installed uv for its binary through `uv.find_uv_bin()`, reads that binary's version, and puts its folder first on the path for the rest of the step. It accepts `uv 0.9.17` alone or followed by a space and a build note. A mismatch prints the binary's path and the line it read. The host-setup self-test in `sdlc/scripts/workflows` now places a stray uv first on the path that fails if run, and its pinned uv prints a build note; all six uv cases failed on the old script. A new case feeds `uv 0.9.18` and requires the printed line.
 
 Kind: bug
 

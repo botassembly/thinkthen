@@ -192,6 +192,7 @@ impl Drop for Server {
     }
 }
 
+#[cfg(feature = "cli")]
 fn command(url: &str, ca: Option<&Path>, home: &Path, key: Option<&str>) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     child
@@ -225,6 +226,7 @@ fn command(url: &str, ca: Option<&Path>, home: &Path, key: Option<&str>) -> Outp
     child.wait_with_output().expect("command result")
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn genuine_tls_trust_replaces_default_and_keeps_hostname_verification() {
     let fixture = Fixture::new();
@@ -267,6 +269,7 @@ fn genuine_tls_trust_replaces_default_and_keeps_hostname_verification() {
     }
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
     let fixture = Fixture::new();

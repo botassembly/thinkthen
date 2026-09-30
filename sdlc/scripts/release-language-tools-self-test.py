@@ -249,7 +249,12 @@ def acquisition_cli(root):
                OBSERVE_INSTALLED=str(root / "installed"),
                OBSERVE_METADATA=(f"Package: {package}\nVersion: {version}\nArchitecture: amd64\n"
                                  "Filename: pool/main/o/openjdk.deb\nSHA256: " + "a" * 64),
-               OBSERVE_PLAN=(f"Reading package lists...\nInst {package} ({version} Ubuntu:24.04/noble-updates [amd64])"))
+               # apt-get -s run without root prints this note ahead of its plan.
+               OBSERVE_PLAN=("NOTE: This is only a simulation!\n"
+                             "      apt-get needs root privileges for real execution.\n"
+                             "      Keep also in mind that locking is deactivated,\n"
+                             "      so don't depend on the relevance to the real current situation!\n"
+                             f"Reading package lists...\nInst {package} ({version} Ubuntu:24.04/noble-updates [amd64])"))
     # Keep this focused on the acquisition boundary: other installed inputs
     # are represented by the already exercised selected-home fixture.
     script = HERE / "release-language-tools.py"

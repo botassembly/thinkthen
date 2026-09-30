@@ -180,9 +180,8 @@ def ensure_packages(mode, job, acquire, run=command, get=fetch):
            "-o", f"Dir::State::lists={lists}"]
     run(["sudo", *apt, "update"])
     pins = [f"{name}={version}" for name, version in sorted(wanted.items())]
+    # Run without root, apt prints a simulation note first; selected_plan reads only Inst lines.
     plan = run([*apt, "-s", "install", "--no-install-recommends", *pins])
-    if not plan.startswith("Reading package lists"):
-        fail("apt did not produce a package acquisition plan")
     selected_plan_versions = selected_plan(plan)
     for name, version in selected_plan_versions.items():
         if name in wanted and wanted[name] != version:
