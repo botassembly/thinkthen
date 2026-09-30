@@ -47,7 +47,7 @@ impl Failure {
 
     fn attach_replay_context(&mut self, source: ReplayContext) {
         match self {
-            Self::ReplayMiss { context, .. } | Self::QuestionMiss { context, .. } => {
+            Self::QuestionMiss { context, .. } => {
                 context.get_or_insert(source);
             }
             Self::Stopped { cause, .. } | Self::BatchFailed { cause, .. } => {
@@ -68,14 +68,6 @@ impl Failure {
 
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
     Some(match failure {
-        Failure::ReplayMiss { name, context } => (
-            5,
-            format!(
-                "{}the replay folder holds no entry named `{name}`; \
-                 the entry name covers the backend interface, address, and request",
-                context.map(|source| format!("{}: ", source.description())).unwrap_or_default()
-            ),
-        ),
         Failure::QuestionMiss { key, context } => (
             5,
             format!(
@@ -97,13 +89,6 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
                 .to_owned(),
         ),
         Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),
-        Failure::RecordingConflict(name) => (
-            5,
-            format!(
-                "the backend answered the request in entry `{name}` differently from the saved response; \
-                 record into a fresh folder, or use --cache DIR to answer from the saved entries"
-            ),
-        ),
         Failure::RecordingStorage => (
             5,
             "the recording folder could not be read or written; check its permissions and free space"
@@ -112,28 +97,6 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
         Failure::RecordingPathIsFile => (
             5,
             "the recording directory is a file; choose another path or remove the file".to_owned(),
-        ),
-        Failure::RecordingBackendMismatch(url, true) => (
-            5,
-            format!(
-                "the default cache is bound to a backend address other than `{url}`; \
-                 stop every process using the cache, move the entire cache folder shown by \
-                 thinkthen status aside to preserve it, then retry; or set THINKTHEN_CACHE \
-                 to a new folder"
-            ),
-        ),
-        Failure::RecordingBackendMismatch(url, false) => (
-            5,
-            format!(
-                "the recording folder is bound to a backend address other than `{url}`; \
-                 restore its backend settings or choose another folder"
-            ),
-        ),
-        Failure::RecordingFolderLegacy => (
-            5,
-            "the recording folder predates backend binding; \
-             replay it read-only or choose a new folder"
-                .to_owned(),
         ),
         _ => return None,
     })

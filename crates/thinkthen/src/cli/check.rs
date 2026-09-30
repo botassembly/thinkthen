@@ -10,8 +10,8 @@ use std::time::Duration;
 
 use crate::cli::args::CheckArguments;
 use crate::cli::edge::{self, Environment};
-use crate::core::check::{self, Probe, Report};
 use crate::core::adapters::built_in;
+use crate::core::check::{self, Probe, Report};
 use crate::core::{NAME, PlanSummary, json_line};
 use crate::engine::error::Error;
 use crate::engine::facade::{Engine, Settings, Storage};

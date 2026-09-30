@@ -395,9 +395,13 @@ impl Engine {
             retry_wait: transport.retry_wait,
         };
         let answered = crate::engine::workers::on_worker(&cancel, || {
-            transport
-                .client
-                .post_marked_with_retry(&exchange, &cancel, transport.usage, |_| (), || ())
+            transport.client.post_marked_with_retry(
+                &exchange,
+                &cancel,
+                transport.usage,
+                |_| (),
+                || (),
+            )
         })?;
         let decoded = built_in::decode_observed(plan, &answered.body);
         transport.usage.live_reply(decoded.usage);

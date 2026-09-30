@@ -86,7 +86,13 @@ fn ask_as_parent(engine: &Engine, parent: &super::State) -> Result<(), Error> {
     };
     transport
         .client
-        .post_marked_with_retry(&exchange, &Cancel::default(), transport.usage, |_| (), || ())
+        .post_marked_with_retry(
+            &exchange,
+            &Cancel::default(),
+            transport.usage,
+            |_| (),
+            || (),
+        )
         .map(|_| ())
 }
 

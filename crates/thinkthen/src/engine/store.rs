@@ -23,9 +23,9 @@ use crate::engine::error::Error;
 mod convert;
 mod fixture;
 mod prune;
-pub(crate) use prune::{Prune, counts, preview, run as prune, unused};
 pub(crate) use convert::convert;
 pub(crate) use fixture::{Answer, Entries, Replayed};
+pub(crate) use prune::{Prune, counts, preview, run as prune, unused};
 
 /// The live container's file name.
 pub(crate) const SQLITE: &str = "thinkthen.sqlite";

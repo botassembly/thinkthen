@@ -1,4 +1,5 @@
-//! A complete offline run identifies unused entries without editing the folder.
+//! `cache unused` names the question keys a folder holds and a list lacks,
+//! from its fixture or its live store, without editing the folder.
 
 use std::ffi::OsString;
 use std::fs;
@@ -9,10 +10,10 @@ use std::time::SystemTime;
 use super::folder;
 use crate::harness::spawn;
 
-const USED: &str = "9f84b17aaf3d4cced930b7c18340bf0388ca4f451b55d2d83feb207843bca6ab";
-const OTHER: &str = "86523943957338bf3e7ba2d08659a4ccbd246edc081b0d856779a703696f1786";
+const USED: &str = "0311afcb8eba767b756924bd17cba8bdf973788f9103d8feb9ec00d4a7366474";
+const OTHER: &str = "2bc2f3db71bf8156dd2d2060d777a34c80a88cb1c0afa665d469e3b055712f71";
 const INVALID: &str =
-    "thinkthen: --used takes one lowercase 64-character request digest per nonblank line\n";
+    "thinkthen: --used takes one lowercase 64-character question key per nonblank line\n";
 
 #[derive(Debug, PartialEq, Eq)]
 struct EntryState {
@@ -66,10 +67,10 @@ impl Fixture {
         let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../demos/01-refund-gate");
         let recording = folder(&format!("unused-{label}-recording"));
         fs::create_dir(&recording)?;
-        for digest in [USED, OTHER] {
-            let name = format!("{digest}.json");
-            fs::copy(source.join("recording").join(&name), recording.join(name))?;
-        }
+        fs::copy(
+            source.join("recording/thinkthen.jsonl"),
+            recording.join("thinkthen.jsonl"),
+        )?;
         let manifest_root = folder(&format!("unused-{label}-manifests"));
         fs::create_dir(&manifest_root)?;
         Ok(Self {
@@ -93,27 +94,27 @@ impl Fixture {
 
 #[cfg(unix)]
 #[test]
-/// A replay's `meta.requests` names question keys by ADR 0111; `cache
-/// unused` reads request digests until slice 5, so the caller supplies them.
-fn supplied_digests_name_the_unused_entries_without_editing_the_folder() {
+/// A replay's `meta.requests` names question keys by ADR 0111, so the
+/// caller's list is those keys.
+fn supplied_keys_name_the_unused_answers_without_editing_the_folder() {
     let case = Fixture::new("one-run").expect("scratch fixtures");
     let before = state(&case.recording).expect("before state");
     let cases = [
         (
-            format!("{USED}\n"),
-            format!("unused from supplied digests: 1\nunused {OTHER}.json\n"),
+            format!("{OTHER}\n"),
+            format!("unused from supplied keys: 1\nunused {USED}\n"),
         ),
         (
-            format!("{USED}\n{USED}\n\n"),
-            format!("unused from supplied digests: 1\nunused {OTHER}.json\n"),
+            format!("{OTHER}\n{OTHER}\n\n"),
+            format!("unused from supplied keys: 1\nunused {USED}\n"),
         ),
         (
-            format!("{USED}\n{}\n", "f".repeat(64)),
-            format!("unused from supplied digests: 1\nunused {OTHER}.json\n"),
+            format!("{OTHER}\n{}\n", "f".repeat(64)),
+            format!("unused from supplied keys: 1\nunused {USED}\n"),
         ),
         (
             String::new(),
-            format!("unused from supplied digests: 2\nunused {OTHER}.json\nunused {USED}.json\n"),
+            format!("unused from supplied keys: 2\nunused {USED}\nunused {OTHER}\n"),
         ),
     ];
     for (text, expected) in cases {
@@ -124,8 +125,6 @@ fn supplied_digests_name_the_unused_entries_without_editing_the_folder() {
         assert!(output.stderr.is_empty());
         assert_eq!(state(&case.recording).expect("after report"), before);
     }
-    assert!(!case.recording.join(".locks").exists());
-    assert!(!case.recording.join(".thinkthen-backend.json").exists());
     assert!(
         !case.xdg.exists(),
         "neither default cache nor usage was created"
@@ -134,7 +133,7 @@ fn supplied_digests_name_the_unused_entries_without_editing_the_folder() {
 
 #[cfg(unix)]
 #[test]
-fn manifest_and_bad_entry_refusals_leave_the_folder_unchanged() {
+fn manifest_and_store_refusals_leave_the_folder_unchanged() {
     let case = Fixture::new("refusals").expect("scratch fixtures");
     let before = state(&case.recording).expect("before state");
     let absent_option = spawn(
@@ -189,7 +188,7 @@ fn manifest_and_bad_entry_refusals_leave_the_folder_unchanged() {
     assert!(refused.stdout.is_empty());
     assert_eq!(
         refused.stderr,
-        b"thinkthen: the --used digest file could not be read\n"
+        b"thinkthen: the --used key file could not be read\n"
     );
     assert_eq!(
         state(&case.recording).expect("after unreadable list"),
@@ -197,18 +196,78 @@ fn manifest_and_bad_entry_refusals_leave_the_folder_unchanged() {
     );
 
     fs::write(&case.manifest, format!("{USED}\n")).expect("valid manifest");
-    fs::write(
-        case.recording.join(format!("{}.json", "0".repeat(64))),
-        b"not JSON",
-    )
-    .expect("damaged final entry");
-    let damaged = state(&case.recording).expect("damaged state");
-    let refused = case.report(&case.manifest).expect("bad entry refusal");
+    fs::write(case.recording.join("thinkthen.sqlite"), b"").expect("a second store");
+    let both = state(&case.recording).expect("both state");
+    let refused = case.report(&case.manifest).expect("two stores refusal");
     assert_eq!(refused.status.code(), Some(5));
     assert!(refused.stdout.is_empty());
     assert_eq!(
-        refused.stderr,
-        b"thinkthen: the cache contains a malformed final entry\n"
+        String::from_utf8_lossy(&refused.stderr),
+        "thinkthen: the replay folder holds both thinkthen.jsonl and thinkthen.sqlite; \
+         run `thinkthen cache convert DIR` to merge them into thinkthen.jsonl\n"
     );
-    assert_eq!(state(&case.recording).expect("after bad entry"), damaged);
+    assert_eq!(state(&case.recording).expect("after two stores"), both);
+    fs::remove_file(case.recording.join("thinkthen.sqlite")).expect("second store");
+
+    fs::write(case.recording.join("thinkthen.jsonl"), b"not JSON\n").expect("damaged fixture");
+    let damaged = state(&case.recording).expect("damaged state");
+    let refused = case
+        .report(&case.manifest)
+        .expect("damaged fixture refusal");
+    assert_eq!(refused.status.code(), Some(5));
+    assert!(refused.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&refused.stderr),
+        "thinkthen: the entry `thinkthen.jsonl` was refused: line 1 is not a question entry\n"
+    );
+    assert_eq!(
+        state(&case.recording).expect("after damaged fixture"),
+        damaged
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn the_live_store_names_its_unused_keys() {
+    let folder = folder("unused-live-store");
+    let filled = super::prune::fill(
+        &folder,
+        super::EVIDENCE,
+        &[
+            (
+                crate::support::DEFAULT_MODEL,
+                "asks for a refund",
+                super::ANSWERED,
+            ),
+            (
+                crate::support::DEFAULT_MODEL,
+                "asks for a repair",
+                super::ANSWERED,
+            ),
+        ],
+    );
+    let used = folder.with_extension("used");
+    fs::write(&used, format!("{}\n", filled[0])).expect("key list");
+    let before = fs::read(folder.join("thinkthen.sqlite")).expect("store");
+    let output = spawn(
+        &[
+            "cache",
+            "unused",
+            folder.to_str().expect("folder"),
+            "--used",
+            used.to_str().expect("list"),
+        ],
+        &[],
+        &[],
+    )
+    .expect("unused report");
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!("unused from supplied keys: 1\nunused {}\n", filled[1])
+    );
+    assert_eq!(
+        fs::read(folder.join("thinkthen.sqlite")).expect("store"),
+        before
+    );
 }

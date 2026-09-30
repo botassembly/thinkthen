@@ -124,7 +124,10 @@ pub(super) fn replay(case: &Case) -> (Scratch, PathBuf) {
     crate::engine::store::convert(&replay, false).expect("converted replay");
     for item in fs::read_dir(&replay).expect("replay folder") {
         let path = item.expect("replay item").path();
-        if path.file_name().is_some_and(|name| name != crate::engine::store::JSONL) {
+        if path
+            .file_name()
+            .is_some_and(|name| name != crate::engine::store::JSONL)
+        {
             fs::remove_file(path).expect("old entry removed");
         }
     }

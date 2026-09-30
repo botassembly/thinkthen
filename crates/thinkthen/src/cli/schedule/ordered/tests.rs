@@ -37,7 +37,15 @@ fn run<T: Send>(
     answer: &(impl Fn(T) -> Result<Row<T>, &'static str> + Sync),
     emit: impl FnMut(T) -> Result<bool, &'static str>,
 ) -> Result<Outcome<&'static str>, &'static str> {
-    super::run(jobs, cancel, start_reader, answer, emit, &named, || "defect")
+    super::run(
+        jobs,
+        cancel,
+        start_reader,
+        answer,
+        emit,
+        &named,
+        || "defect",
+    )
 }
 
 /// Answer each input request with the next input until the scheduler leaves.

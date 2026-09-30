@@ -54,7 +54,6 @@ pub(crate) enum Error {
     /// The reply passed its request's limit of this many bytes and was not kept.
     ReplyTooLarge(u64),
     Reply(DecodeError),
-    ReplayMiss(String),
     /// Strict replay found no stored answer under this question key.
     QuestionMiss(String),
     /// A replay folder holds both the fixture and the live store.
@@ -62,13 +61,8 @@ pub(crate) enum Error {
     /// A read-only replay met a write that did not finish.
     StoreHotJournal,
     Entry(String, String),
-    RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
-    /// The folder is bound to another backend: this run's endpoint URL, and
-    /// whether the folder is the platform default cache.
-    RecordingBackendMismatch(String, bool),
-    RecordingFolderLegacy,
     DefaultCachePrivate,
     CacheEntry,
     Defect(&'static str),
@@ -165,16 +159,12 @@ impl Error {
             | Self::ModelsDiffer(_)
             | Self::UsageOverflow
             | Self::RecognizeLogical => Kind::Backend,
-            Self::ReplayMiss(_)
-            | Self::QuestionMiss(_)
+            Self::QuestionMiss(_)
             | Self::StoreAmbiguous
             | Self::StoreHotJournal
             | Self::Entry(_, _)
-            | Self::RecordingConflict(_)
             | Self::RecordingStorage
             | Self::RecordingPathIsFile
-            | Self::RecordingBackendMismatch(..)
-            | Self::RecordingFolderLegacy
             | Self::DefaultCachePrivate => Kind::Local,
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,

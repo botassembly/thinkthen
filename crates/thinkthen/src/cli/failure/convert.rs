@@ -75,21 +75,12 @@ impl From<EngineError> for Failure {
             EngineError::TokenLimit => Self::TokenLimit,
             EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),
             EngineError::Reply(error) => Self::Reply(error),
-            EngineError::ReplayMiss(name) => Self::ReplayMiss {
-                name,
-                context: None,
-            },
             EngineError::QuestionMiss(key) => Self::QuestionMiss { key, context: None },
             EngineError::StoreAmbiguous => Self::StoreAmbiguous,
             EngineError::StoreHotJournal => Self::StoreHotJournal,
             EngineError::Entry(name, message) => Self::Entry(name, message),
-            EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
             EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
-            EngineError::RecordingBackendMismatch(url, default) => {
-                Self::RecordingBackendMismatch(url, default)
-            }
-            EngineError::RecordingFolderLegacy => Self::RecordingFolderLegacy,
             EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
             EngineError::CacheEntry => Self::CacheEntry,
             EngineError::Defect(message) => Self::Defect(message),

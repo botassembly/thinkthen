@@ -82,7 +82,9 @@ impl Asks {
             start += count;
         }
         if start != self.asks.len() + asks.len() {
-            return Err(Error::Defect("a plan's wire questions do not match its questions"));
+            return Err(Error::Defect(
+                "a plan's wire questions do not match its questions",
+            ));
         }
         self.asks.extend(asks);
         self.questions.extend(plan.questions().iter().cloned());
@@ -126,7 +128,9 @@ impl Asks {
         let mut packer = packer(backend, profile, bound, self.inputs())?;
         let mut closed = Vec::new();
         for place in 0..self.len() {
-            let wire = self.wire(place).ok_or(Error::Defect("a place asks nothing"))?;
+            let wire = self
+                .wire(place)
+                .ok_or(Error::Defect("a place asks nothing"))?;
             let entries = wire.iter().map(|ask| entry(ask, place)).collect();
             packer.add(entries, &mut closed).map_err(packed)?;
         }

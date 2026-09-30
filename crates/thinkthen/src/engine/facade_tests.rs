@@ -23,9 +23,7 @@ use crate::core::{
     Question, QuestionText, RecognizeSpec, RelateSpec,
 };
 use crate::engine::error::{Error, Kind, TransportKind};
-use crate::engine::facade::{
-    Asks, Bound, Engine, Execution, Key, Settings, Storage, relations,
-};
+use crate::engine::facade::{Asks, Bound, Engine, Execution, Key, Settings, Storage, relations};
 use crate::engine::pipeline::{self, Answered, Asker, Failed, Flow, Packing};
 use crate::engine::{Cancel, Deadline};
 
@@ -199,9 +197,7 @@ fn bulk(
             rows.push(row);
             Flow::Continue
         }
-        Err(
-            Failed::Asker(error) | Failed::Engine { error, .. } | Failed::Stopped(error),
-        ) => {
+        Err(Failed::Asker(error) | Failed::Engine { error, .. } | Failed::Stopped(error)) => {
             failure = Some(error);
             Flow::Stop
         }
@@ -246,7 +242,9 @@ impl Scratch {
                 plain
                     .into_iter()
                     // The live store is binary; a key in it is still ASCII.
-                    .map(|path| String::from_utf8_lossy(&fs::read(path).expect("file")).into_owned()),
+                    .map(|path| {
+                        String::from_utf8_lossy(&fs::read(path).expect("file")).into_owned()
+                    }),
             );
         }
         files
@@ -313,10 +311,11 @@ fn a_close_after_the_body_is_never_resent_on_any_path() {
                 .map(drop)
         }),
         ("relate", &|| relate(&engine, &base, &cancel).map(drop)),
-        (
-            "records",
-            &|| bulk(&engine, &["Refund me."], &cancel).1.map_or(Ok(()), Err),
-        ),
+        ("records", &|| {
+            bulk(&engine, &["Refund me."], &cancel)
+                .1
+                .map_or(Ok(()), Err)
+        }),
     ];
 
     // `requests` hands each request over once, so the test keeps the total.

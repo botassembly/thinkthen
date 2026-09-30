@@ -131,7 +131,6 @@ fn place(error: serde_json::Error) -> EntryError {
     EntryError::Malformed(error.line(), error.column())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::{Converting, EntryError, Exchange, SCHEMA, convert};

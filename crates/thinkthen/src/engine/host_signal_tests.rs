@@ -203,7 +203,10 @@ fn file_size_child() {
     let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("url");
     let state = State::new(r#""The text is short.""#.to_owned(), 0);
     let question = r#"{"type":"noul","instructions":"Is it?"}"#;
-    let answer = format!(r#"{{"type":"noul","noul":0.5,"pad":"{}"}}"#, "x".repeat(8_192));
+    let answer = format!(
+        r#"{{"type":"noul","noul":0.5,"pad":"{}"}}"#,
+        "x".repeat(8_192)
+    );
     let row = Row {
         key: QuestionKey::of(&url, r#""jev-1""#, state.json(), question),
         url: url.as_str(),

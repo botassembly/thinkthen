@@ -7,7 +7,6 @@ use std::thread;
 use crate::harness::{Canned, Listener, spawn};
 use crate::support::{
     DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, keys, plant_fixture,
-    plant_recording,
 };
 
 const ANSWERED: &str = concat!(
@@ -32,11 +31,6 @@ fn url() -> String {
 
 fn body() -> Vec<u8> {
     encoded_decide(EVIDENCE, DEFAULT_MODEL, "asks for a refund")
-}
-
-/// `cache prune` keeps the request-level entries until ADR 0111 slice 5.
-fn plant(folder: &Path, response: &str) -> Option<String> {
-    plant_recording(folder, &url(), &body(), response)
 }
 
 fn usage(status: &Output, name: &str) -> Option<u64> {
@@ -101,10 +95,15 @@ fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
     assert_eq!(value["usage"]["this_month"]["cache_answers"], 1);
 }
 
+#[cfg(unix)]
 #[test]
-fn cache_prune_removes_valid_entries_to_the_explicit_target() {
+fn cache_prune_removes_every_answer_under_a_one_byte_target() {
     let folder = folder("cache-prune");
-    let name = plant(&folder, ANSWERED).expect("entry");
+    prune::fill(
+        &folder,
+        EVIDENCE,
+        &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
+    );
     fs::write(folder.join("sentinel"), "keep me").expect("sentinel");
     let output = run(
         &[
@@ -119,9 +118,15 @@ fn cache_prune_removes_valid_entries_to_the_explicit_target() {
     .expect("prune");
     assert_eq!(output.status.code(), Some(0));
     let line = String::from_utf8(output.stdout).expect("summary");
-    assert!(line.starts_with("removed 1 entries and "), "{line}");
-    assert!(line.ends_with("; 0 entries and 0 bytes remain\n"), "{line}");
-    assert!(!folder.join(name).exists());
+    assert!(line.starts_with("removed 1 answers and "), "{line}");
+    assert!(line.contains("; 0 answers and "), "{line}");
+    let status = run(
+        &["status", "--json"],
+        &[("THINKTHEN_CACHE", folder.to_str().expect("folder"))],
+    )
+    .expect("status");
+    let value: serde_json::Value = serde_json::from_slice(&status.stdout).expect("status JSON");
+    assert_eq!(value["cache"]["entries"], 0);
     assert_eq!(
         fs::read_to_string(folder.join("sentinel")).expect("sentinel"),
         "keep me"

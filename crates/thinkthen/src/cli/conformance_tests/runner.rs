@@ -2,10 +2,10 @@ use super::{
     Asked, CASES, Document, STAGED, asked, command, expected, find_asked, finding, outcomes,
     record_requests, validate_operation,
 };
+use crate::cli::schedule::ordered::{self, Input, Outcome};
 use crate::core::{Backend, DEFAULT_MODEL, Evidence, ModelName, Url, Value};
 use crate::engine::Cancel;
 use crate::engine::error::Error as EngineError;
-use crate::cli::schedule::ordered::{self, Input, Outcome};
 use crate::engine::facade::{Answered, Asks, Bound, Engine, Settings, Storage};
 use crate::failure::{Failure, report};
 use std::path::PathBuf;
@@ -247,9 +247,7 @@ fn injected(name: &str) -> EngineError {
         "response_refusal" => EngineError::Status(422),
         "recording_read_failure" => EngineError::RecordingStorage,
         "cancel_token" => EngineError::Cancelled,
-        "expired_deadline" => {
-            EngineError::Deadline(crate::engine::error::Budget(Duration::ZERO))
-        }
+        "expired_deadline" => EngineError::Deadline(crate::engine::error::Budget(Duration::ZERO)),
         "internal_invariant_failure" => EngineError::Defect("injected invariant failure"),
         other => panic!("unknown injection {other}"),
     }

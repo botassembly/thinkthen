@@ -7,9 +7,9 @@ use std::thread;
 use std::time::Duration;
 
 use super::{child, in_child};
+use crate::cli::schedule::ordered::{self, Outcome, Port};
 use crate::core::{Backend, Evidence, Question, QuestionText};
 use crate::engine::error::Error as EngineError;
-use crate::cli::schedule::ordered::{self, Outcome, Port};
 use crate::engine::facade::{Engine, Key, Settings, Storage};
 use crate::engine::{Cancel, Width, limits};
 

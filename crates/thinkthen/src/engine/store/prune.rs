@@ -140,9 +140,7 @@ pub(crate) fn unused(folder: &Path, used: &HashSet<String>) -> Result<Vec<String
             let mut statement = connection
                 .prepare("SELECT lower(hex(key)) FROM answers ORDER BY key")
                 .map_err(storage)?;
-            let rows = statement
-                .query_map([], |row| row.get(0))
-                .map_err(storage)?;
+            let rows = statement.query_map([], |row| row.get(0)).map_err(storage)?;
             rows.collect::<rusqlite::Result<_>>().map_err(storage)?
         }
         (false, false) => Vec::new(),
@@ -191,12 +189,7 @@ pub(crate) fn counts(folder: &Path, private: bool) -> Result<Counts, Error> {
 /// Choose what leaves: every answer a selector names, then the oldest
 /// until the rest fit `options.max_size`. Taken-at time orders them, and
 /// equal times sort by key.
-fn select(
-    answers: &[Weighed],
-    options: &Prune,
-    now: i64,
-    size: u64,
-) -> Result<Selection, Error> {
+fn select(answers: &[Weighed], options: &Prune, now: i64, size: u64) -> Result<Selection, Error> {
     if let Some(model) = options.answered_by_other_than.as_deref()
         && !answers.is_empty()
         && !answers.iter().any(|answer| answer.answered_by == model)
@@ -237,8 +230,8 @@ fn select(
             selection.keys.push(answer.key.clone());
         }
     }
-    selection.kept = u64::try_from(answers.len() - selection.keys.len())
-        .map_err(|_| Error::RecordingStorage)?;
+    selection.kept =
+        u64::try_from(answers.len() - selection.keys.len()).map_err(|_| Error::RecordingStorage)?;
     selection.kept_bytes = share(kept_text);
     selection.bytes = size.saturating_sub(selection.kept_bytes);
     Ok(selection)

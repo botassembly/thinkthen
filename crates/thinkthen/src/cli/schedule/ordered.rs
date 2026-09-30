@@ -77,7 +77,12 @@ impl<R, E> Run<R, E> {
         }
     }
 
-    fn accept<T>(&mut self, event: Event<T, R, E>, work: &SyncSender<(usize, T)>, ended: fn() -> E) {
+    fn accept<T>(
+        &mut self,
+        event: Event<T, R, E>,
+        work: &SyncSender<(usize, T)>,
+        ended: fn() -> E,
+    ) {
         match event {
             Event::Input(input) => {
                 self.reading = false;
