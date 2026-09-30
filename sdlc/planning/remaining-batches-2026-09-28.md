@@ -125,20 +125,21 @@ Refresh existing preparation against landed 0228/0229/0238. Keep admitted-but-un
 | register 52 | D17: the key is the exact request bytes, so cosmetic changes miss | Batch I: key canonicalization; H states it |
 | register 85 | A single question file cannot carry a version | Batch I: grammar change |
 
-## 5. Run timing, cost and budgets (8)
+## 5. Run timing, cost and budgets (7)
 
 Inspect landed call-facts/accounting work before designing missing behavior. Separate field naming and measured backend time from estimated cost, pacer and cross-process concurrency. These share concepts, not necessarily source or one acceptance decision. Optional efficiency features do not displace release correctness.
 
 | Item | Original title | Current follow-through |
 | --- | --- | --- |
 | register 30 | There is no requests-per-minute pacer | 0162 wording fixed; the requests-per-minute pacer remains to do after 0155 |
-| register 61 | Per-record token shares are even, not by size | Review of 1656a9a7 confirms even-share documentation already exists, but the explicit field-name criterion is unmet: meta.usage remains named usage. Public schema naming decision or explicit criterion revision still required |
 | register 45 | D10: ordered output means one slow or retrying record stalls the whole run | Reviewed guidance b9eb8ddd states streaming dispatch stalls, rank held-output behavior and no whole-run deadline; live waiting-record facts remain open |
 | register 93 | --dry-run cannot estimate cost | Batch I: cost estimate feature |
 | register 96 | Nothing caps concurrency across processes | Batch I: cross-process cap |
 | issue | `record-the-backends-own-time-for-each-call` | Batch I |
 | issue | `status-sees-only-command-spend-and-the-sql-total-has-three-leaks` | its ticket |
 | issue | `every-surface-should-give-back-run-facts` | its ticket |
+
+Register 61 left this list on 2026-09-30. Per-record token shares keep the name `meta.usage`, as the work plan decided. See item 5 of `../issues/2026-09-26-every-surface-should-give-back-run-facts.md`.
 
 ## 6. Record failure handling (4)
 

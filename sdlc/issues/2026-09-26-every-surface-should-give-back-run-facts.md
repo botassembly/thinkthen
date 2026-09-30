@@ -1,8 +1,8 @@
 # Every surface should give back what Jev tells us about each run
 
-Status: open for six parts: full detail on every verb, backend time and request IDs past ticket 0302, caller-priced cost on the remaining hosts (ticket 0300), SQL per-call facts, the `meta.usage` name, and the docs. Shortened 2026-09-30. It absorbs the closed `closed/2026-09-23-record-the-backends-own-time-for-each-call.md`.
+Status: open for five parts: full detail on every verb, backend time and request IDs past ticket 0302, caller-priced cost on the remaining hosts (ticket 0300), SQL per-call facts, and the docs. Item 5, the `meta.usage` name, is settled. Shortened 2026-09-30. It absorbs the closed `closed/2026-09-23-record-the-backends-own-time-for-each-call.md`.
 
-Priority: rank 9 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: the coordinator for item 5, tickets 0300 and 0302 for items 2 and 3, ticket 0314 slice 4 for item 1, marketing for item 6.
+Priority: rank 9 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: tickets 0300 and 0302 for items 2 and 3, ticket 0314 slice 4 for item 1, marketing for item 6.
 
 Ian ruled on 2026-09-26 that library results carry `facts` on every call, with no setting and no second call. `--facts` controls only what the command line prints. Ian can overturn this ruling.
 
@@ -39,9 +39,9 @@ Ticket 0300 stays open for the strict readers and the other typed hosts. SQLite 
 
 DuckDB, PostgreSQL and SQLite keep `thinkthen_details` and `thinkthen_usage()`. A per-call or per-query facts shape waits for its own design, because a scalar returns one value a row.
 
-## 5. The `meta.usage` name
+## 5. The `meta.usage` name: settled
 
-Register 61 asked that per-record token shares carry a name saying they are even shares. `sdlc/planning/work-plan-2026-09-27.md` rejected the rename and keeps `meta.usage`. `sdlc/planning/remaining-batches-2026-09-28.md` still lists the naming decision as required. The two records disagree, so the coordinator settles it.
+Register 61 asked that per-record token shares carry a name saying they are even shares. On 2026-09-30 the coordinator settled it: the shares keep the name `meta.usage`, as `sdlc/planning/work-plan-2026-09-27.md` decided. `specification/result.md` already says each share is even. The generated `specification/result.schema.json` pins the name, so a rename would change every binding. Ruling 8 asks for less pedantry. This is a coordinator decision; Ian can overturn it. Ticket 0337 recorded it.
 
 ## 6. Docs
 

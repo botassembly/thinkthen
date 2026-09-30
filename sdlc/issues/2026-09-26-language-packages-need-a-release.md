@@ -26,7 +26,7 @@ Ticket 0249 landed each package's source under `libraries/<lang>/` with its own 
 | COBOL (GnuCOBOL 4) | Copybook facade plus a C JSON tokenizer; GitHub release only | Other hosts | Single-threaded CALL cannot fire an in-flight token. Pre-fired tokens and deadlines work | `0249-cobol-build.md`, 292 |
 | Ada (GNAT 13) | GNAT `.gpr` source package; Alire later if asked | Other hosts | None beyond the shared list | `0249-ada-objc-cobol-build.md`, 293 |
 | Swift 6.4 | SwiftPM with a system-library target; GitHub tag | macOS consumer proof | A checkout build needs one manual copy of the C header (ticket 0332) | `0249-swift-zig-build.md`, 294 |
-| Objective-C (GNU gobjc) | Source package, no Foundation; GitHub release | Apple Objective-C, which needs its own design. The case-only header collision on macOS (issue `2026-09-30-objective-c-headers-collide-on-macos.md`) | None beyond the shared list | `0249-ada-objc-cobol-build.md`, 295 |
+| Objective-C (GNU gobjc) | Source package, no Foundation; GitHub release | Apple Objective-C, which needs its own design | None beyond the shared list | `0249-ada-objc-cobol-build.md`, 295 |
 | Dart 3.13 and Flutter | `thinkthen_dart` on pub.dev; native archive separate | pub.dev dry run and trusted publishing, other Flutter hosts | No `path:` dependencies at publish. One native archive per platform. No untested runtime download. The README names the archive, version, library discovery and platforms | `0249-dart-build.md`, 300 |
 | C++17 | Header-only CMake package with `find_package`; GitHub release | Direct CMake install, other hosts | Decimal and exponent doubles follow the documented parser rules | `0249-go-cpp-build.md`, 301 |
 
