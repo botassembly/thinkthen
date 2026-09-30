@@ -24,7 +24,7 @@ Work outside the lanes:
 - **R1, the relate decision run.** One capped paid Beatles Bench run through `sdlc/scripts/live` (ruling 13) on the 0342 menu, after 0344 lands so the bench pins one commit. Conditions and bar: `sdlc/issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run". Blocks 0.1.
 - **E1, the loopback TLS count.** A local experiment, no network: `sdlc/issues/2026-09-26-count-secure-connections-at-sixteen-jobs.md`, "A loopback count first". Any lane or a `pi-job`; it becomes a ticket only if the count exceeds 16.
 - **Marketing, owner of `site/`.** Blocks 0.1: the reference page (`2026-09-30-reference-page-exit-codes-and-key-rule-drift.md`); the providers and Liquid d1 pages, including the `--timeout 90` line for stumble row 19 (`2026-09-29-docs-page-naming-supported-providers.md`); the site recording conversion, the five `--dry-run` examples and the site checks (`2026-09-30-site-replay-folders-have-no-fixture.md`, which holds the conversion command); the overhead benchmark for the README line (`2026-09-29-readme-key-backend-and-overhead-lines.md`).
-- **Ian.** The release rehearsal dispatch (ticket 0128 phase 3b) after 0351's M5 proof, then phase 4 and the registry accounts already on his list.
+- **Ian.** The first release rehearsal ran on 2026-09-30 under his test approval and stopped at `resolve` on a bug of ours. It runs again after that fix lands. Then phase 4 and the registry accounts already on his list.
 
 ## Every open issue
 
@@ -52,6 +52,8 @@ Work outside the lanes:
 | `2026-09-29-docs-page-naming-supported-providers.md` | the Liquid timeout line | outside | marketing |
 | `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing; our conversion proof landed with 0304 slice 5 |
 | `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | waits | marketing's overhead benchmark, then the queue owner writes one sentence |
+| `2026-09-30-release-resolve-writes-the-version-line-into-its-outputs.md` | yes | ready | ticket 0128 phase 3b; a Quick Fix, then the rehearsal again |
+| `2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md` (Debt 026) | if the rehearsal shows a `sqlite3_` name | waits | the rehearsal's macOS DuckDB jobs |
 | `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | waits | every blocker above; Ian's rehearsal dispatch and registry accounts |
 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | waits | the release QA suite's edge list |
 | `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (Debt 014) | no | waits | upstream, ollama/ollama#18718 |
