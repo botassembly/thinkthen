@@ -69,10 +69,10 @@ echo "$status" | mustmatch "2"
 printf 'x' | thinkthen decide 'asks for a refund' --plan --url '   ' 2>&1 >/dev/null | mustmatch like "thinkthen: a URL is text, not white space"
 ```
 
-The five `THINKTHEN_*` backend variables of ADR 0004 are gone. None of them changes the plan.
+Four of the five `THINKTHEN_*` backend variables of ADR 0004 are gone, and none of them changes the plan. ADR 0114 brought `THINKTHEN_BACKEND` back to name a backend.
 
 ```bash
-env THINKTHEN_BACKEND=nowhere THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 THINKTHEN_KEY_ENV=OTHER_KEY sh -c "printf 'x' | thinkthen decide 'asks for a refund' --plan" | grep -c '"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
+env THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 THINKTHEN_KEY_ENV=OTHER_KEY sh -c "printf 'x' | thinkthen decide 'asks for a refund' --plan" | grep -c '"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
 ```
 
 `--model` replaces the default model, which is how a run is pinned to one version.
