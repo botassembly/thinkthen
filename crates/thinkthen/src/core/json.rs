@@ -349,18 +349,35 @@ mod tests {
             [open.repeat(depth), inner.to_owned(), close.repeat(depth)].concat()
         };
         let mixed = |depth: usize| {
-            let opens: String = (0..depth).map(|at| if at % 2 == 0 { "[" } else { "{\"a\":" }).collect();
-            let closes: String = (0..depth).rev().map(|at| if at % 2 == 0 { "]" } else { "}" }).collect();
+            let opens: String = (0..depth)
+                .map(|at| if at % 2 == 0 { "[" } else { "{\"a\":" })
+                .collect();
+            let closes: String = (0..depth)
+                .rev()
+                .map(|at| if at % 2 == 0 { "]" } else { "}" })
+                .collect();
             format!("{opens}1{closes}")
         };
         for depth in [1, MAX_DEPTH] {
-            assert!(Json::parse(&nested(depth, "[", "1", "]")).is_ok(), "{depth}");
-            assert!(Json::parse(&nested(depth, "{\"a\":", "1", "}")).is_ok(), "{depth}");
+            assert!(
+                Json::parse(&nested(depth, "[", "1", "]")).is_ok(),
+                "{depth}"
+            );
+            assert!(
+                Json::parse(&nested(depth, "{\"a\":", "1", "}")).is_ok(),
+                "{depth}"
+            );
             assert!(Json::parse(&mixed(depth)).is_ok(), "{depth}");
         }
         for depth in [MAX_DEPTH + 1, 1_000_000] {
-            assert_eq!(Json::parse(&nested(depth, "[", "1", "]")), Err(JsonError::TooDeep));
-            assert_eq!(Json::parse(&nested(depth, "{\"a\":", "1", "}")), Err(JsonError::TooDeep));
+            assert_eq!(
+                Json::parse(&nested(depth, "[", "1", "]")),
+                Err(JsonError::TooDeep)
+            );
+            assert_eq!(
+                Json::parse(&nested(depth, "{\"a\":", "1", "}")),
+                Err(JsonError::TooDeep)
+            );
             assert_eq!(Json::parse(&mixed(depth)), Err(JsonError::TooDeep));
         }
         assert_eq!(

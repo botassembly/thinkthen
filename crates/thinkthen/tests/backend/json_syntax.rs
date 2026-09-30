@@ -241,11 +241,17 @@ const TOO_DEEP: &str =
 /// A decide reply that answers every question the request asks.
 fn answered(body: &[u8]) -> Canned {
     let request: serde_json::Value = serde_json::from_slice(body).unwrap_or_default();
-    let answers: serde_json::Map<String, serde_json::Value> = request["questions"]
-        .as_object()
+    let answers: serde_json::Map<String, serde_json::Value> = request
+        .get("questions")
+        .and_then(serde_json::Value::as_object)
         .into_iter()
         .flat_map(|questions| questions.keys())
-        .map(|name| (name.clone(), serde_json::json!({"type": "noul", "noul": 0.9})))
+        .map(|name| {
+            (
+                name.clone(),
+                serde_json::json!({"type": "noul", "noul": 0.9}),
+            )
+        })
         .collect();
     Canned::ok(&serde_json::json!({"model": "jev-1.13.0", "answers": answers}).to_string())
 }
@@ -278,7 +284,12 @@ fn a_jsonl_record_nests_at_most_127_levels() {
         )
         .expect("the compiled binary runs");
         if depth == 127 {
-            assert_eq!(output.status.code(), Some(0), "{depth} {open}: {}", said(&output));
+            assert_eq!(
+                output.status.code(),
+                Some(0),
+                "{depth} {open}: {}",
+                said(&output)
+            );
             assert_eq!(listener.count(), 1, "{depth} {open}");
             continue;
         }
@@ -295,7 +306,11 @@ fn a_jsonl_record_nests_at_most_127_levels() {
 #[test]
 fn a_question_file_past_the_depth_limit_names_the_limit() {
     let listener = listener().expect("a loopback listener");
-    let deep = format!("{{\"decide\":\"q\",\"x\":{}1{}}}", "[".repeat(127), "]".repeat(127));
+    let deep = format!(
+        "{{\"decide\":\"q\",\"x\":{}1{}}}",
+        "[".repeat(127),
+        "]".repeat(127)
+    );
     let path = written("syntax-question-too-deep.json", deep.as_bytes()).expect("a question file");
     let question = format!("@{}", path.display());
     let output = spawn(

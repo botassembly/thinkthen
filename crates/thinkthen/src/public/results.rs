@@ -5,9 +5,9 @@ use std::fmt;
 
 mod call;
 mod found;
-pub use found::{Candidate, Found, Picked};
 pub use crate::core::{AttemptObservation, AttemptOutcome};
 pub use call::{Call, DoorReply, Facts};
+pub use found::{Candidate, Found, Picked};
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;
