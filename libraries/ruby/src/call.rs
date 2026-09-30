@@ -3,11 +3,11 @@
 use std::sync::{Mutex, PoisonError};
 
 use thinkthen::{
-    Answer, Batch, CallOptions, CancelToken, Details, Engine, Entity, Evidence, Facts, Judgment,
-    LoadedQuestion, Question, QuestionSet, Recognize, Relate,
+    Answer, Batch, CallOptions, CancelToken, Engine, Entity, Evidence, Facts, LoadedQuestion,
+    Question, QuestionSet, Recognize, Relate,
 };
 
-use crate::result::{Completed, Detail};
+use crate::result::Completed;
 use crate::{Controls, Fault};
 
 /// One text and its place in the caller's input.
@@ -45,23 +45,12 @@ pub(crate) enum Ask {
     Relate(Relate, Vec<Entity>),
 }
 
-/// One judgment's value in the shape Ruby reads.
-#[derive(Debug, PartialEq)]
-pub(crate) enum Value {
-    Decision(Option<bool>),
-    Choice(Option<String>),
-    Score(f64),
-    Tags(Vec<String>),
-}
-
 /// What one call answers.
 #[derive(Debug, PartialEq)]
 pub(crate) enum Output {
     Answer(Option<bool>),
     Score(f64),
-    Details(String, Value, Option<String>),
     Rows(Vec<(Option<bool>, f64)>),
-    Many(Vec<Value>),
     Places(Vec<usize>),
     Ranked(Vec<(usize, f64)>),
     Found(Option<(usize, f64)>),
@@ -75,23 +64,6 @@ const fn answer(value: Answer) -> Option<bool> {
         Answer::No => Some(false),
         Answer::Unsure => None,
     }
-}
-
-fn value_of(found: &Judgment) -> Value {
-    match found {
-        Judgment::Decision(held) => Value::Decision(answer(*held)),
-        Judgment::Choice(pick) => Value::Choice(pick.clone()),
-        Judgment::Score(position) => Value::Score(*position),
-        Judgment::Tags(labels) => Value::Tags(labels.clone()),
-    }
-}
-
-fn details(found: &Details) -> Output {
-    Output::Details(
-        found.to_json(),
-        value_of(found.value()),
-        found.nearest().map(str::to_owned),
-    )
 }
 
 /// A question that reads one cut, for the calls that refuse a band.
@@ -130,7 +102,7 @@ pub(crate) fn run(
 ) -> Result<Completed, Fault> {
     let observed = Mutex::new(Vec::new());
     let observe = |event: thinkthen::RecordObservation<'_>| {
-        if let Some(detail) = Detail::copy(event) {
+        if let Some(detail) = event.to_json() {
             observed
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
@@ -187,11 +159,11 @@ fn run_inner(
         }
         Ask::Details(LoadedQuestion::Question(question), text) => {
             let call = engine.details_with(&question, &text, options)?;
-            (details(call.value()), call.facts().clone())
+            (Output::Json(call.value().to_json()), call.facts().clone())
         }
         Ask::Details(LoadedQuestion::Banded(question), text) => {
             let call = engine.details_with(&question, &text, options)?;
-            (details(call.value()), call.facts().clone())
+            (Output::Json(call.value().to_json()), call.facts().clone())
         }
         Ask::Score(question, text) => {
             let call = engine.score_with(&unbanded(question, "score")?, &text, options)?;
@@ -215,16 +187,16 @@ fn run_inner(
         Ask::Many(LoadedQuestion::Question(question), records) => {
             let (rows, facts) = collected(
                 engine.details_many_with(&question, records, options),
-                |row| value_of(row.value().value()),
+                |row| row.value().to_json(),
             )?;
-            (Output::Many(rows), facts)
+            (Output::JsonRows(rows), facts)
         }
         Ask::Many(LoadedQuestion::Banded(question), records) => {
             let (rows, facts) = collected(
                 engine.details_many_with(&question, records, options),
-                |row| value_of(row.value().value()),
+                |row| row.value().to_json(),
             )?;
-            (Output::Many(rows), facts)
+            (Output::JsonRows(rows), facts)
         }
         Ask::Filter(question, records) => {
             let question = unbanded(question, "filter")?;
