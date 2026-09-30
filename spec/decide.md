@@ -20,11 +20,11 @@ thinkthen decide --help | sed -n '/^Examples:/,/^The answer is/p' | grep -c "pri
 thinkthen decide --help | sed -n '/^Examples:/,/^The answer is/p' | grep -Fxc "printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9" | mustmatch "1"
 ```
 
-`--plan` prints what would be sent, in the four fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine.
+`--plan` prints what would be sent, in the four fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine. The question quotes the evidence, and the state is one fixed sentence, by ADR 0111.
 
 ```bash
-printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan | sed -n '1p' | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","request":{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}'
-printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan | sed -n '2p' | mustmatch '{"records":1,"requests":1,"estimated_bytes":120,"estimated_input_tokens":{"lower":61,"upper":109},"upper_bound":false}'
+printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan | sed -n '1p' | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me please.\". asks for a refund"}}}}'
+printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan | sed -n '2p' | mustmatch '{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false}'
 ```
 
 The plan needs no key. It names the variable a key would be read from and never a value.
@@ -84,7 +84,7 @@ printf 'Refund me please.' | thinkthen decide 'asks for a refund' --plan --model
 Options may sit before the question, and `--` ends option parsing, so a question that begins with a dash follows it.
 
 ```bash
-printf 'x' | thinkthen decide --plan -- '--asks for a refund' | grep -c '"instructions":"--asks for a refund"' | mustmatch "1"
+printf 'x' | thinkthen decide --plan -- '--asks for a refund' | grep -c '"instructions":"The text is \\"x\\". --asks for a refund"' | mustmatch "1"
 ```
 
 A question file carries the same settings under `@FILE`, and its question text and criteria may be objects or lists, which the request passes through as written.
@@ -129,7 +129,7 @@ printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure
 `--field` given more than once sends an object of the named parts, keyed by the last part of each pointer. Two pointers that end in one name are a usage error, and so is `--field` beside `--lines`.
 
 ```bash
-printf '{"id":"T-1","body":"Payouts failed."}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --field /id --plan | grep -c '"state":{"body":"Payouts failed.","id":"T-1"}' | mustmatch "1"
+printf '{"id":"T-1","body":"Payouts failed."}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --field /id --plan | grep -Fc 'The text is {\"body\":\"Payouts failed.\",\"id\":\"T-1\"}. ' | mustmatch "1"
 for bad in "--field /a/text --field /b/text" "--lines --field /body"; do
   status=0
   printf '{"a":{"text":"x"},"b":{"text":"y"}}\n' | thinkthen decide 'reports a payment failure' --jsonl --plan $bad >/dev/null 2>&1 || status=$?
@@ -192,17 +192,17 @@ printf 'x' | thinkthen decide if 'asks for a refund' --plan >/dev/null 2>&1 || s
 echo "$status" | mustmatch "2"
 ```
 
-An explicit profile refuses an oversized request before a key or connection. The limit counts the UTF-8 evidence bytes after selection.
+An explicit profile refuses an oversized request before a key or connection. The request limit counts the UTF-8 bytes of the whole body, and the record rides inside its question. The evidence limit counts only the state, which is the fixed sentence or the context.
 
 ```bash
 cat > profile.json <<'JSON'
-{"schema":"thinkthen.backend-profile/1","name":"four-byte-test","max_evidence_bytes":4}
+{"schema":"thinkthen.backend-profile/1","name":"body-test","max_request_bytes":169}
 JSON
-printf 'four' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --plan --profile profile.json | grep -c '"state":"four"' | mustmatch "1"
+printf 'four' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --plan --profile profile.json | grep -c 'The text is \\"four\\"' | mustmatch "1"
 status=0
 printf 'five!' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --plan --profile profile.json >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch "2"
-printf 'five!' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --plan --profile profile.json 2>&1 >/dev/null | mustmatch like "thinkthen: profile four-byte-test allows at most 4 evidence bytes; this request has 5"
+printf 'five!' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --plan --profile profile.json 2>&1 >/dev/null | mustmatch like "thinkthen: profile body-test allows at most 169 request bytes; this request has 170"
 rm profile.json
 ```
 

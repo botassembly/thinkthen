@@ -138,7 +138,7 @@ pub(super) fn print_plan(
         let mut stderr = io::stderr().lock();
         writeln!(
             stderr,
-            "thinkthen: plan: request.state is the evidence; request.questions holds what you asked about it."
+            "thinkthen: plan: each question in request.questions quotes the evidence it asks about."
         )
         .and_then(|()| stderr.flush())
         .map_err(Failure::Output)?;

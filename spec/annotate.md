@@ -39,5 +39,5 @@ thinkthen annotate triage.json --jsonl --batch 1 "${offline[@]}" --replay "$root
 thinkthen annotate triage.json --plan "${offline[@]}" < issue.json \
   | sed -n '1p' \
   | jq -c '{on, request_count, group_requests, state: .request.state}' \
-  | mustmatch '{"on":{"open":["/body"],"kind":[""],"impact":[""]},"request_count":2,"group_requests":[1,1],"state":"Payouts have failed for 3 days."}'
+  | mustmatch '{"on":{"open":["/body"],"kind":[""],"impact":[""]},"request_count":2,"group_requests":[1,1],"state":"Each question quotes the text it asks about."}'
 ```
