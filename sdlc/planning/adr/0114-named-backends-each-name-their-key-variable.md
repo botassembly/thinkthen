@@ -151,10 +151,12 @@ The coordinator's adjustments where the code conflicted, each stated above:
 
 Items 4 to 6 depart from the recommendation, so they wait for Ian as open questions 3 to 5.
 
-## Open questions for Ian
+## Coordinator defaults, 2026-09-30
 
-1. Which other providers should become built-ins, and under which variable names?
-2. Is the refusal in section 5 too strict or too loose? The options are the current rule, own host or loopback only, or no refusal.
-3. May `THINKTHEN_API_KEY` stay off the named path (section 4)? The alternative lets it outrank every backend's variable, which sends one provider's key to another whenever both are set.
-4. May the refusal move from `THINKTHEN_API_KEY` to the built-in variables (section 5)? Keeping it on `THINKTHEN_API_KEY` would break the README's documented Liquid path.
-5. May the library and SQL `backend` setting outrank the configuration file (section 3), as every engine setting does today?
+The workspace rules say configuration choices take a supported default, recorded with its reason. The coordinator settled the five questions this way. Ian can overturn each one.
+
+1. No further built-ins for now. The configuration file names any other provider by URL, key variable name, and model. A built-in is added when a user needs one.
+2. The section 5 rule stands. A built-in's key never goes to the other built-in's host. Unknown hosts pass, because the user named them.
+3. `THINKTHEN_API_KEY` stays off the named path. Letting it outrank a backend's variable would send one provider's key to another whenever both are set, as on Ian's machine today.
+4. The refusal covers the built-in key variables, not `THINKTHEN_API_KEY`. The README's Liquid setup keeps working.
+5. The library and SQL `backend` setting outranks the configuration file, as every engine setting does today.
