@@ -125,8 +125,9 @@ guards=$(grep -rn 'contained(' src | wc -l)
 [ "$sites" = 0 ] && [ "$guards" = 2 ] ||
 	{ echo "FAIL     src holds $sites catch_unwind calls and $guards contained guards, not 0 and 2" >&2; exit 1; }
 
-step "the loopback backend"
+step "the loopback backend and the command that reads the usage totals"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend
+cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package thinkthen --bin thinkthen
 
 failed=""
 if [ "$profile" = stress ]; then

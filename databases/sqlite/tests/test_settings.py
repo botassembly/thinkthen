@@ -172,7 +172,8 @@ say(first=run(db, "SELECT thinkthen_decide('Is this a complaint?', 'i want a ref
     held = child(twice, env)
     expect((held["first"], held["second"]), ([[1]], [[1]]), "both answer")
     expect(backend.close(), 2, "no platform cache answers the second call")
-    expect(list(pathlib.Path(env["XDG_CACHE_HOME"]).rglob("*")), [], "the platform folder stays empty")
+    expect([path.name for path in pathlib.Path(env["XDG_CACHE_HOME"]).iterdir()], ["thinkthen-usage"],
+           "the platform folder holds only the count-only usage totals")
     backend = Backend()
     env = environment(backend)
     folder = pathlib.Path(env["SCRATCH"]) / "open"
