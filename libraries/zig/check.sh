@@ -18,6 +18,18 @@ fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    smoke_guard
+    # The replay smoke (ticket 0335): the package module over the installed C door.
+    . "$root/sdlc/scripts/installed.sh"
+    scratch_dir smoke
+    native_install "$root" "$smoke/native"
+    HOME="$smoke" "$zig" build-exe -j2 --cache-dir "$here/target/scratch/smoke-cache" --global-cache-dir "$here/target/cache" \
+        --dep thinkthen -Mroot="$here/examples/smoke.zig" -I "$smoke/native/include" -Mthinkthen="$here/src/thinkthen.zig" \
+        -L "$smoke/native/lib" -lthinkthen -lc -rpath "$smoke/native/lib" -femit-bin="$smoke/smoke"
+    "$smoke/smoke"
+    exit
+fi
 mkdir -p "$here/target/native/include" "$here/target/native/lib" "$here/target/home" "$here/target/cache" "$here/target/scratch" "$here/target/logs"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.zig.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"

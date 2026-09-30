@@ -3,7 +3,7 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "libraries/c: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+case $profile in routine|full|stress|smoke) ;; *) echo "libraries/c: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 if [ "$profile" = stress ]; then
 	echo 'libraries/c: not run: no port load campaign'
@@ -15,6 +15,17 @@ command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 7
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home
 scratch_dir cache
+if [ "$profile" = smoke ]; then
+	smoke_guard
+	command -v pkg-config >/dev/null 2>&1 || { echo 'libraries/c: no pkg-config' >&2; exit 77; }
+	. ../../sdlc/scripts/installed.sh
+	native_install "$(cd ../.. && pwd)" "$cache"
+	# shellcheck disable=SC2046 # pkg-config prints flags to split.
+	cc -std=c11 -Wall -Wextra -Werror $(PKG_CONFIG_PATH=$cache/lib/pkgconfig pkg-config --cflags thinkthen) \
+		examples/smoke.c $(PKG_CONFIG_PATH=$cache/lib/pkgconfig pkg-config --libs thinkthen) -Wl,-rpath,"$cache/lib" -o "$cache/smoke"
+	"$cache/smoke"
+	exit
+fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the slide builds from the unpacked archive alone,
 	# found through its own pkg-config file.

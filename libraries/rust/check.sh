@@ -3,7 +3,7 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "rust: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+case $profile in routine|full|stress|smoke) ;; *) echo "rust: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 if [ "$profile" = stress ]; then
     echo 'rust: not run: no port load campaign'
@@ -12,6 +12,12 @@ fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home
+if [ "$profile" = smoke ]; then
+    smoke_guard
+    cargo build --quiet --locked --offline --bin smoke
+    "${CARGO_TARGET_DIR:-target}/debug/smoke"
+    exit
+fi
 
 cargo fmt --check
 cargo clippy --locked --offline --all-targets -- -D warnings

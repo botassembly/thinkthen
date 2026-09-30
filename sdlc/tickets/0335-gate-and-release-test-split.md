@@ -1,6 +1,6 @@
 # 0335: Split tests between the gate and the release suite
 
-Status: slice 1 landed; slice 2 waits for 0304 slices 3b and 3d, including 3d's SQL-host part (3a and 3c landed). Slice 3 moved to ticket 0338. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue, closed into this ticket: `sdlc/issues/closed/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
+Status: landed. Slice 1 and slice 2 landed; slice 3 moved to ticket 0338, which landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue, closed into this ticket: `sdlc/issues/closed/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
 
 ## Outcome
 
@@ -55,3 +55,26 @@ Slice 1 landed every item the slice names. The rung ran 42.1 s and 39.9 s before
 No item was deferred for the 0304 slice 3a collision. The slice touched two files that branch also edits, `sdlc/ratchet.json` and `libraries/python/ratchet.py.json`. Each holds one measured number, so the second lander remeasures it with `node sdlc/scripts/ratchet.mjs`.
 
 The Python and DuckDB checks passed. The TypeScript check failed one test, `details equals the command --details document for the same question and text`, on a request digest this slice does not touch. It is filed as `sdlc/issues/2026-09-30-typescript-details-request-digest-differs-from-the-command.md`.
+
+### Slice 2
+
+`sdlc/scripts/smoke` gives 19 bindings one replay smoke each, four at a time. `test` runs it beside nextest. For each surface it starts a loopback backend and seeds a fresh cache folder with conformance case 01 through the command. The binding's `check.sh` then runs under `THINKTHEN_TEST_PROFILE=smoke`. It builds the installed shape, loads it from there, and asks case 01's question through the binding's default engine. The smoke passes when the last line is `smoke: true` and the backend counted only the seed's request. The C door hosts load the door from the header, library and `pkg-config` folder that `native_install` in `installed.sh` lays out. Python installs a wheel into a venv, TypeScript copies its addon into a fresh project, Ruby installs its gem, R installs its package, and the SQL extensions load from a copied file.
+
+Each smoke branch first calls `smoke_guard` from `scratch.sh`. It refuses a run without a loopback address and a named cache folder, and it replaces any key with the loopback placeholder. The smoke runs the command and backend it copied from its own `target/smoke` folder, so the nextest build beside it cannot replace them mid-run. `test` starts the smoke in its own process group and stops the group when an earlier step fails. The smoke variables carry the test-only prefix, `THINKTHEN_TEST_SMOKE_QUESTION` and `THINKTHEN_TEST_SMOKE_TEXT`.
+
+Each smoke failed once against a planted fault before it passed. One plant per binding printed the wrong answer. A second plant gave all 19 checks an empty cache, and each failed with 2 requests counted instead of 1. `test` took 77.0 s after touching `crates/thinkthen/src/lib.rs`, smokes included, at 1-minute loads of 12.5 to 19.2, and 38.9 s warm. Nextest ran 1,271 tests and the consumer 20. `spec` passed. In `surfaces`, 19 checks passed. Python and DuckDB failed when the rung's backend refused connections partway through, and both passed on a rerun with a fresh backend.
+
+PostgreSQL and Polars have no smoke and stay in the routine `surfaces` rung. The rung had 13 s left under the 90 s target. PostgreSQL's extension rebuild alone takes about 30 s after a library change, before its server starts (record 0206). Polars rebuilds the library with its feature in its own target (112 s cold, 12 s warm, record 0130), and its folder may hold no code of its own. Ian can overturn this.
+
+The Cargo bindings keep their own warm target folders instead of one shared smoke target. The routine checks already warm those folders, and one shared folder would run the builds one at a time behind Cargo's folder lock.
+
+The merge table kept three of its six rows. Each mutation ran in a separate copy of the tree:
+
+- Deleted `public_bulk_keeps_portable_question_bytes_and_keys_in_one_request`. A changed quote in `core/batch.rs` failed both command-line portable tests. A reversed row key in `public/asking.rs` failed `identity::duplicate_records_share_one_question_key_in_one_literal_request` and `identity::a_retried_filtered_row_keeps_its_observation_and_call_facts`.
+- Deleted `named_group_failed_left_half_does_not_send_right`. Sending the right half after a failed left half failed `a_failed_left_half_prevents_a_right_send_and_row`.
+- Deleted `retry_visibility_counts_live_attempts_and_no_replay_attempt`. Dropping the retry count failed `backoff::status_counts_retries_as_a_subset_of_actual_sends`. Counting a send on a replay answer failed 12 other tests, among them `public_controls` `call_facts::counters_and_cache_answers_match_the_real_attempts` and `backend` `default_cache::usage_tests::retries_terminal_failures_and_explicit_replay_have_the_ruled_counts`. The table's named library test did not catch it.
+- Kept `saved_annotate_batch_tiers`. Ignoring a question set's own `batch` in `public/bulk.rs` failed only this test, because the library picks a set's tier in its own code.
+- Kept `portable_questions_ride_one_request_across_series_and_frame_calls`. The quote mutation failed six Polars tests. A frame call that sent one record a request failed only this one.
+- Kept `public_json::each_json_method_prints_the_commands_bytes_on_the_shared_cases`. The consumer compares typed values, not the bytes the command prints, so the row's precondition does not hold.
+
+The slice paid two debts. The Dart check now finds Dart and Flutter under `~/.local/opt/flutter/bin` and skips a lock its caller holds. It also reads the shared pub cache, so it runs under `surfaces`. The R check builds its repository install in a kept `target/r` folder, and a second install took 4.8 s instead of 58.4 s.

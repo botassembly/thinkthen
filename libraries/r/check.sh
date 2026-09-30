@@ -9,7 +9,7 @@
 set -euo pipefail
 cd -- "$(dirname -- "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "r: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+case $profile in routine|full|stress|smoke) ;; *) echo "r: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 if [ "$profile" = stress ]; then
   echo 'r: not run: no port load campaign'
@@ -43,6 +43,22 @@ R_LIBS=$libs Rscript -e 'v <- function(p) tryCatch(packageVersion(p), error = fu
 cargo fetch --locked --offline --manifest-path "$rust/Cargo.toml" >/dev/null 2>&1 ||
   not_run "the cargo cache misses a crate; run cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml on a networked machine"
 
+# The package installs build in the lane's own target folder and keep it, so a second install reuses the build.
+lane_target=$root/target/r
+
+if [ "$profile" = smoke ]; then
+  smoke_guard
+  # The replay smoke (ticket 0335): the package installed in a scratch library, loaded from there.
+  CARGO_TARGET_DIR=$lane_target R CMD INSTALL -l "$scratch" thinkthen >"$scratch/install.log" 2>&1 ||
+    { cat "$scratch/install.log" >&2; exit 1; }
+  cd "$scratch"
+  R_LIBS="$scratch:$libs" THINKTHEN_API_KEY=sk-smoke-loopback Rscript -e 'library(thinkthen)
+    stopifnot(startsWith(find.package("thinkthen"), commandArgs(TRUE)[1]))
+    value <- tt_decide(Sys.getenv("THINKTHEN_TEST_SMOKE_QUESTION"), Sys.getenv("THINKTHEN_TEST_SMOKE_TEXT"))$value
+    cat(sprintf("smoke: %s\n", if (is.null(value) || is.na(value)) "null" else tolower(value)))' "$scratch"
+  exit
+fi
+
 echo "== r: script and source counts"
 # R4-19: every cargo call that resolves crates is locked and offline.
 calls=$(grep -nE '(^|[;&|(]|then|do) *cargo (build|test|clippy|run|vendor|package|fetch)' \
@@ -63,7 +79,7 @@ echo "== r: the Rust half"
   cargo test --locked --offline --lib --quiet)
 
 echo "== r: install the production build"
-R CMD INSTALL -l rlib thinkthen >"$scratch/install.log" 2>&1 || { cat "$scratch/install.log" >&2; exit 1; }
+CARGO_TARGET_DIR=$lane_target R CMD INSTALL -l rlib thinkthen >"$scratch/install.log" 2>&1 || { cat "$scratch/install.log" >&2; exit 1; }
 if [ "$(uname -s)" = Linux ]; then
   # Ticket 0304 slice 3b: the package exports no bundled SQLite name.
   leaked=$(nm -D --defined-only rlib/thinkthen/libs/thinkthen.so | awk '$3 ~ /^sqlite3_/' | wc -l)

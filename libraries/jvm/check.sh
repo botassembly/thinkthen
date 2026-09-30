@@ -13,6 +13,20 @@ fi
 usage_home
 for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 python3 "$here/tests/toolchains.py"
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    smoke_guard
+    # The replay smoke (ticket 0335): the door jar as build.sh packs it, over the installed C door.
+    . "$root/sdlc/scripts/installed.sh"
+    scratch_dir smoke
+    native_install "$root" "$smoke/native"
+    jdk=${THINKTHEN_JDK_HOME:+$THINKTHEN_JDK_HOME/bin/}
+    "${jdk}javac" --enable-preview --release 21 -d "$smoke/door" "$here/door/thinkthen/Door.java" "$here/door/thinkthen/Json.java"
+    "${jdk}jar" --create --file "$smoke/thinkthen-door.jar" -C "$smoke/door" .
+    "${jdk}javac" --enable-preview --release 21 -cp "$smoke/thinkthen-door.jar" -d "$smoke/app" "$here/tests/Smoke.java"
+    "${jdk}java" --enable-preview --enable-native-access=ALL-UNNAMED -XX:ActiveProcessorCount=2 \
+        -Dthinkthen.library="$smoke/native/lib/libthinkthen.so" -cp "$smoke/thinkthen-door.jar:$smoke/app" Smoke
+    exit
+fi
 [ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ] || [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
     echo 'JVM portable batch needs an installed artifact' >&2; exit 2;
 }

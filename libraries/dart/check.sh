@@ -3,8 +3,15 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 CHECKS="$ROOT/checks"
 FLUTTER="$ROOT/flutter"
-TT_DART=${TT_DART:-$(command -v dart || true)}
-TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || true)}
+# The pinned Flutter holds the same Dart 3.13.4; the surfaces rung's allow-list drops TT_DART and TT_FLUTTER.
+TT_DART=${TT_DART:-$(command -v dart || echo "$HOME/.local/opt/flutter/bin/dart")}
+TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || echo "$HOME/.local/opt/flutter/bin/flutter")}
+# Run one command under the named lock. A caller that already holds it, such as the surfaces
+# rung, exports THINKTHEN_HEAVY_LOCK_HELD; waiting on it again would only time out.
+locked() {
+  held=$1; shift
+  if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" = "$held" ]; then "$@"; else flock -w 180 -E 75 -o "$held" "$@"; fi
+}
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$ROOT/../../sdlc/scripts/scratch.sh"
 usage_home
@@ -29,7 +36,7 @@ case ${THINKTHEN_ARTIFACT:-} in
     export TT_DART TT_FLUTTER PUB_CACHE=${PUB_CACHE:-"$HOME/.pub-cache"} FLUTTER_SUPPRESS_ANALYTICS=true
     [ -d "$PUB_CACHE/hosted/pub.dev/ffi-2.2.0" ] || { echo 'Flutter installed: offline ffi 2.2.0 cache missing' >&2; exit 77; }
     export PATH="$(dirname "$TT_DART"):$(dirname "$TT_FLUTTER"):$PATH"
-    flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" \
+    locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" \
       python3 "$FLUTTER/installed.py" "$scratch/dart" "$scratch/flutter-stage" "$scratch/native"
     echo 'Flutter installed release PASS: one decoded-body Linux app call'
     exit 0 ;;
@@ -54,7 +61,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   tar -xzf "$THINKTHEN_ARTIFACT" -C "$locked_package"
   "$TT_DART" pub get --offline --enforce-lockfile --directory "$locked_package"
   cmp "$package/pubspec.lock" "$locked_package/pubspec.lock" || { echo 'Dart installed: archived lock changed' >&2; exit 1; }
-  flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \
+  locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \
     env CARGO_TARGET_DIR="$ROOT/../../target" CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     cargo build --locked --offline --manifest-path "$ROOT/../../Cargo.toml" --package conformance-backend -j2
   TT_DART="$TT_DART" TT_NATIVE_LIBRARY="$native/lib/libthinkthen.so" \
@@ -64,6 +71,24 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   python3 "$CHECKS/release_plants.py" "$package" "$native"
   echo 'Dart installed release PASS: five typed rows and three literal requests'
   exit 0
+fi
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+  smoke_guard
+  # The replay smoke (ticket 0335): an unrelated app resolves the package source offline and
+  # loads the installed C door.
+  [ -x "$TT_DART" ] || { echo 'Dart executable unavailable; set TT_DART' >&2; exit 77; }
+  export PUB_CACHE=${PUB_CACHE:-"$HOME/.pub-cache"}
+  [ -d "$PUB_CACHE/hosted/pub.dev/ffi-2.2.0" ] || { echo 'Dart smoke: offline ffi 2.2.0 cache missing' >&2; exit 77; }
+  . "$ROOT/../../sdlc/scripts/installed.sh"
+  scratch_dir smoke
+  native_install "$(cd "$ROOT/../.." && pwd)" "$smoke/native"
+  mkdir "$smoke/app" "$smoke/app/bin"
+  cp "$CHECKS/consumers/smoke.dart" "$smoke/app/bin/smoke.dart"
+  printf '%s\n' 'name: thinkthen_smoke' 'publish_to: none' 'environment:' '  sdk: ">=3.3.0 <4.0.0"' 'dependencies:' \
+    '  thinkthen_dart:' "    path: $ROOT" >"$smoke/app/pubspec.yaml"
+  "$TT_DART" pub get --offline --directory "$smoke/app" >&2
+  (cd "$smoke/app" && "$TT_DART" run bin/smoke.dart "$smoke/native/lib/libthinkthen.so")
+  exit
 fi
 if [ ! -x "$TT_DART" ] || [ ! -x "$TT_FLUTTER" ]; then
   echo 'Dart or Flutter executable unavailable; set TT_DART and TT_FLUTTER' >&2
@@ -81,11 +106,11 @@ export TT_NATIVE_LIBRARY="$CHECKS/scratch/libthinkthen.so"
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$CHECKS/scratch/native-target"}
 export CARGO_NET_OFFLINE=true
 export CARGO_BUILD_RUSTC_WRAPPER=
-export PUB_CACHE=${PUB_CACHE:-"$CHECKS/scratch/pub-cache"}
+export PUB_CACHE=${PUB_CACHE:-"$HOME/.pub-cache"}
 export FLUTTER_SUPPRESS_ANALYTICS=true
 export PATH="$(dirname "$TT_DART"):$(dirname "$TT_FLUTTER"):$PATH"
 LOCK=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}
-flock -w 180 -E 75 -o "$LOCK" cargo build --offline --release -j2 --manifest-path "$ROOT/../c/Cargo.toml"
+locked "$LOCK" cargo build --offline --release -j2 --manifest-path "$ROOT/../c/Cargo.toml"
 cp "$CARGO_TARGET_DIR/release/libthinkthen_c.so" "$TT_NATIVE_LIBRARY"
 python3 "$CHECKS/exports.py" "$TT_NATIVE_LIBRARY" "$ROOT/../c/include/thinkthen.h" "$CHECKS/logs/exports.txt"
 "$TT_DART" pub get --offline --directory "$ROOT"

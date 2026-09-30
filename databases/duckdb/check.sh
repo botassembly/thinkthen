@@ -6,7 +6,7 @@ set -eu
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$HERE"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "duckdb: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+case $profile in routine|full|stress|smoke) ;; *) echo "duckdb: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$HERE/../../sdlc/scripts/time-limit
@@ -37,18 +37,35 @@ if [ -n "${CHECK_SETUP_ONLY:-}" ]; then
 	exit 0
 fi
 PORT=${1:?check.sh takes the loopback port}
-# Shared rule 6: no suite sees a real key or a remote address.
-unset THINKTHEN_API_KEY THINKTHEN_BASE_URL THINKTHEN_CACHE
+# Shared rule 6: no suite sees a real key or a remote address. The replay smoke keeps the
+# loopback address, placeholder key and scratch cache that sdlc/scripts/smoke set.
+[ "$profile" = smoke ] || unset THINKTHEN_API_KEY THINKTHEN_BASE_URL THINKTHEN_CACHE
 REPO=$(cd -- ../.. && pwd)
 . "$REPO/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home
 export THINKTHEN_BACKEND_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend"
-[ -x "$THINKTHEN_BACKEND_BIN" ] || {
+[ "$profile" = smoke ] || [ -x "$THINKTHEN_BACKEND_BIN" ] || {
 	echo "check: the loopback backend is not built; run cargo build --package conformance-backend at the repository root" >&2
 	exit 1
 }
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+if [ "$profile" = smoke ]; then
+	smoke_guard
+	# The replay smoke (ticket 0335): the loadable extension copied to a scratch folder, as the
+	# archive lays it out, and loaded from there by its path.
+	sh cpp/build.sh
+	scratch_dir installed
+	cp build/thinkthen.duckdb_extension "$installed/"
+	cd "$installed"
+	"$PY" -c 'import os, sys, duckdb
+db = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+db.execute(f"LOAD \x27{sys.argv[1]}\x27")
+(value,), = db.execute("SELECT thinkthen_decide(?, ?)",
+                       [os.environ["THINKTHEN_TEST_SMOKE_QUESTION"], os.environ["THINKTHEN_TEST_SMOKE_TEXT"]]).fetchall()
+print("smoke:", {True: "true", False: "false", None: "null"}[value])' "$installed/thinkthen.duckdb_extension"
+	exit
+fi
 stock_cli() {
 	echo "== the stock CLI loads the extension"
 	scratch_dir home && scratch_dir cache && scratch_dir config

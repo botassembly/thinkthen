@@ -11,7 +11,7 @@ cd -- "$here"
 . ../../sdlc/scripts/scratch.sh
 usage_home
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+case $profile in routine|full|stress|smoke) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$here/../../sdlc/scripts/time-limit
@@ -51,6 +51,24 @@ else
 fi
 
 step() { echo "== sqlite: $1"; }
+
+if [ "$profile" = smoke ]; then
+	smoke_guard
+	# The replay smoke (ticket 0335): the release library copied to a scratch folder, as the
+	# archive lays it out, and loaded from there by its path.
+	RUSTFLAGS="--remap-path-prefix=$HOME=/build" cargo build --locked --offline --quiet --release
+	scratch_dir installed
+	cp -- "${CARGO_TARGET_DIR:-$here/target}/release/libthinkthen0.$suffix" "$installed/"
+	cd "$installed"
+	THINKTHEN_API_KEY=sk-smoke-loopback "$python" -c 'import os, sqlite3, sys
+connection = sqlite3.connect(":memory:")
+connection.enable_load_extension(True)
+connection.load_extension(sys.argv[1])
+(value,), = connection.execute("SELECT thinkthen_decide(?, ?)",
+                               (os.environ["THINKTHEN_TEST_SMOKE_QUESTION"], os.environ["THINKTHEN_TEST_SMOKE_TEXT"])).fetchall()
+print("smoke:", {1: "true", 0: "false", None: "null"}[value])' "$installed/libthinkthen0.$suffix"
+	exit
+fi
 
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the shared cases and the examples load the

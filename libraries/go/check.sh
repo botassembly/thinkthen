@@ -4,7 +4,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
-    routine|full) ;;
+    routine|full|smoke) ;;
     stress) echo 'go: not run: no stress gate'; exit 77 ;;
     *) echo 'go: unknown profile' >&2; exit 2 ;;
 esac
@@ -37,6 +37,20 @@ case $patch in
     '' | *[!0-9]*) echo 'go: not run: a stable Go 1.x release is required' >&2; exit 77 ;;
 esac
 [ "$minor" -ge 22 ] || { echo 'go: not run: Go 1.22 or newer is required' >&2; exit 77; }
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    # The replay smoke (ticket 0335): the package builds against the installed C door alone.
+    . "$repo/sdlc/scripts/scratch.sh"
+    usage_home
+    smoke_guard
+    . "$repo/sdlc/scripts/installed.sh"
+    scratch_dir smoke
+    native_install "$repo" "$smoke/native"
+    PKG_CONFIG_PATH="$smoke/native/lib/pkgconfig" GOCACHE="$repo/target/go/cache" GOMODCACHE="$repo/target/go/modcache" \
+        GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1 CGO_LDFLAGS="-Wl,-rpath,$smoke/native/lib" \
+        "$go_bin" build -buildvcs=false -o "$smoke/smoke" ./examples/smoke
+    "$smoke/smoke"
+    exit
+fi
 if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
     "$python_bin" -c 'import jsonschema' || { echo 'go: not run: Python jsonschema is unavailable' >&2; exit 77; }
 fi

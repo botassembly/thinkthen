@@ -69,6 +69,12 @@ configure_file <- function(in_file, out_file, values) {
 # SQLite. R finds the routines through their registration, not by name.
 .exclude_libs <- if (Sys.info()[["sysname"]] == "Linux") "-Wl,--exclude-libs,ALL" else ""
 
+# The repository shape builds in a named CARGO_TARGET_DIR and keeps it, so a
+# second install reuses the build. The shipped shapes build in the package and
+# remove that folder after the install.
+.target_dir <- Sys.getenv("CARGO_TARGET_DIR")
+.keep_target <- !.tarball_shape && !.published_shape && nzchar(.target_dir)
+
 configure_file(
   "src/Makevars.in",
   "src/Makevars",
@@ -79,7 +85,8 @@ configure_file(
     DOC = .doc,
     PROFILE = "--release",
     TARGET = "",
-    CLEAN_TARGET = "$(TARGET_DIR)",
+    TARGET_DIR = if (.keep_target) normalizePath(.target_dir, mustWork = FALSE) else "./rust/target",
+    CLEAN_TARGET = if (.keep_target) "" else "$(TARGET_DIR)",
     PANIC_EXPORTS = "",
     EXCLUDE_LIBS = .exclude_libs
   )

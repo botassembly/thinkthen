@@ -4,7 +4,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
-    routine|full) ;;
+    routine|full|smoke) ;;
     stress) echo 'cpp: not run: no stress gate'; exit 77 ;;
     *) echo 'cpp: unknown profile' >&2; exit 2 ;;
 esac
@@ -21,6 +21,22 @@ done
 for tool in cargo rustc c++ clang++ make nm readelf ldd node git cp cmp grep mkdir; do
     command -v "$tool" >/dev/null 2>&1 || { echo "cpp: not run: no $tool" >&2; exit 77; }
 done
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    # The replay smoke (ticket 0335): the headers as the package installs them, over the installed C door.
+    . "$repo/sdlc/scripts/scratch.sh"
+    usage_home
+    smoke_guard
+    . "$repo/sdlc/scripts/installed.sh"
+    scratch_dir smoke
+    native_install "$repo" "$smoke"
+    mkdir "$smoke/include/thinkthen"
+    cp include/thinkthen/door.hpp include/thinkthen/json.hpp "$smoke/include/thinkthen/"
+    mv "$smoke/include/thinkthen.h" "$smoke/include/thinkthen/thinkthen.h"
+    c++ -std=c++17 -Wall -Wextra -Werror -I "$smoke/include" fixtures/smoke.cpp -L "$smoke/lib" -l:libthinkthen.so.0 \
+        -Wl,-rpath,"$smoke/lib" -o "$smoke/smoke"
+    "$smoke/smoke"
+    exit
+fi
 if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
     "$python_bin" -c 'import jsonschema' || { echo 'cpp: not run: Python jsonschema is unavailable' >&2; exit 77; }
 fi

@@ -12,7 +12,7 @@ repo=$(cd ../.. && pwd)
 usage_home
 port=${1:?usage: check.sh PORT}
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+case $profile in routine|full|stress|smoke) ;; *) echo "unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 
 not_run() {
@@ -34,6 +34,20 @@ done
 [ -n "$host" ] || not_run "no stable Python 3.12 or later (the test pins need it)"
 host_identity=$("$host" -c 'import os, sys; print(os.path.realpath(sys._base_executable), sys.version.split()[0])')
 command -v maturin >/dev/null 2>&1 || not_run "no maturin"
+if [ "$profile" = smoke ]; then
+	smoke_guard
+	# The replay smoke (ticket 0335): the wheel in a fresh venv, imported from outside the checkout.
+	scratch_dir scratch
+	PYO3_PYTHON=$host maturin build --quiet --locked --offline -o "$scratch/wheel"
+	uv venv --quiet --offline --python "$host" "$scratch/venv"
+	uv pip install --quiet --offline --no-deps --python "$scratch/venv/bin/python" "$scratch"/wheel/thinkthen-*.whl
+	cd "$scratch"
+	THINKTHEN_API_KEY=sk-smoke-loopback "$scratch/venv/bin/python" -c 'import os, sys, thinkthen
+assert thinkthen.__file__.startswith(sys.argv[1]), thinkthen.__file__
+value = thinkthen.decide(os.environ["THINKTHEN_TEST_SMOKE_QUESTION"], os.environ["THINKTHEN_TEST_SMOKE_TEXT"]).value
+print("smoke:", {True: "true", False: "false", None: "null"}[value])' "$scratch/venv/"
+	exit
+fi
 
 # One venv per checkout and pin file, outside the product cache and the
 # repository, keyed by the checkout and, past the first, the pin file's name.
