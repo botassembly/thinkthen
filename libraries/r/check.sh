@@ -19,6 +19,8 @@ here=$PWD
 root=$(cd ../.. && pwd)
 rust=thinkthen/src/rust
 . "$root/sdlc/scripts/scratch.sh"
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+usage_home
 scratch_dir scratch
 not_run() { echo "not run: $1" >&2; exit 77; }
 

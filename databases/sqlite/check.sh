@@ -7,6 +7,9 @@ set -eu
 unset THINKTHEN_API_KEY
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$here"
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. ../../sdlc/scripts/scratch.sh
+usage_home
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
@@ -115,14 +118,16 @@ else
 	symbols=$(nm -D --defined-only -- "$library" | awk '{ print $NF }')
 	[ "$symbols" = sqlite3_thinkthen_init ] || { echo "FAIL     the library exports: $symbols" >&2; exit 1; }
 fi
-# Ticket 0306: the one guard is thinkthen::contained; src holds no catch_unwind of its own.
+# Ticket 0306: the guard is thinkthen::contained; src holds no catch_unwind of its own.
+# Two sites: the call guard and the usage exit hook (ADR 0113).
 sites=$(grep -rn 'catch_unwind(' src | wc -l)
-guards=$(grep -rn 'contained(body)' src | wc -l)
-[ "$sites" = 0 ] && [ "$guards" = 1 ] ||
-	{ echo "FAIL     src holds $sites catch_unwind calls and $guards contained guards, not 0 and 1" >&2; exit 1; }
+guards=$(grep -rn 'contained(' src | wc -l)
+[ "$sites" = 0 ] && [ "$guards" = 2 ] ||
+	{ echo "FAIL     src holds $sites catch_unwind calls and $guards contained guards, not 0 and 2" >&2; exit 1; }
 
-step "the loopback backend"
+step "the loopback backend and the command that reads the usage totals"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend
+cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package thinkthen --bin thinkthen
 
 failed=""
 if [ "$profile" = stress ]; then

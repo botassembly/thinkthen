@@ -16,6 +16,8 @@ Every surface reads `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the estimated 
 
 The SQL extensions cache only in a named folder and refuse a folder another user owns or others can write (ticket 0318).
 
+Every engine built from the environment adds its requests, retries, live tokens and cache answers to the command's count-only usage totals, so `thinkthen status` shows one combined total for every surface. The SQL extensions write their counts when their process exits. PostgreSQL writes to the server user's usage folder; its request total and token cap still bind per backend (ticket 0322, ADR 0113).
+
 The default model is the pinned version `jev-1.13.0`, not the alias `jev-latest`, so a vendor's move of its alias moves no default answer (ticket 0159).
 
 Python and Ruby calls now raise cancellation when the caller's token fires before a held reply reaches the call, including when both happen in one wait tick (ticket 0168).

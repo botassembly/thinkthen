@@ -1,0 +1,30 @@
+# 0322: Every surface adds to the usage totals
+
+Status: slice 1 landed; slice 2 (cache-answer proof) waits for ADR 0111 slice 3. Record: `sdlc/records/0322-usage-totals-build.md`. Design: ADR 0113 (accepted). Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`, option 1.
+
+## Outcome
+
+`thinkthen status` shows one combined total of what every surface spent. An engine built by `EngineBuilder::from_env()` adds its requests, retries, live tokens and cache answers to the count-only monthly files the command writes. That covers every port, the C door and the three SQL extensions. The SQL hosts flush their counts at process exit. `EngineBuilder::new()` writes nothing. No test writes the real usage folder. `specification/recording.md` stops listing the SQL leaks that current source already closed.
+
+## Slices
+
+1. Builds now: `from_env` seeds the usage path; `Engine::finish_usage()`; PostgreSQL `on_proc_exit` and SQLite and DuckDB `atexit` hooks; test isolation and its guard; the pages; every proof except cache answers.
+2. Waits for ADR 0111 slice 3: the cache-answer proof. Slice 2 of ADR 0111 changes what a cache answer counts, and slice 3 moves the SQL hosts onto `ask_all`.
+
+### Added public declarations
+
+```text
+fn Engine::finish_usage(&self)
+```
+
+## Evidence
+
+- Starts from: ADR 0113; tickets 0308 and 0311, where one `from_env` read reached every surface with no port code; `engine/usage.rs::Counters` and its `finish()`, which already persist given a folder; the fork rule in `engine/process.rs`; the static engines in `databases/postgresql/src/call.rs`, `databases/sqlite/src/settings.rs` and `databases/duckdb/src/engines.rs`; record `2026-09-28-accounting-after-c-facts.md`.
+- Keeps: the usage files, lock, `0700` folder and `0600` file modes, `thinkthen.usage/1` shape and retry sidecar; best-effort persistence with ADR 0097's one-second finish deadline; the count points; the `status` reader and schema; every port constructor; `shared_host()`'s folder rules, which leave the totals on; the per-process request total and token cap, per backend in PostgreSQL; the existing fork and lock proofs in `engine/facade/fork_tests.rs` and `tests/backend/facts/usage_lock.rs`.
+- Changes: `from_env` seeds the counters with `config::usage_path()`. `Engine::finish_usage()` compares the process ID with the state's owner using atomics only, then calls `Counters::finish()` for this process's own counters. PostgreSQL registers it with `on_proc_exit` and SQLite and DuckDB with `atexit` when each builds its first engine. Each hook runs inside `thinkthen::contained` and takes the engine list with `try_lock`, skipping the flush when it is busy; the guard counts in the three SQL checks follow. The usage writer thread masks host signals. A forked child that drops an engine it never rebuilt leaks the inherited state instead of joining the parent's writer. Library and SQL write failures stay silent. `scratch.sh` gains one isolation step: the usage folder moves to a scratch copy of the platform cache folder (`XDG_CACHE_HOME` on Linux; `HOME` on macOS, after pinning `CARGO_HOME` and `RUSTUP_HOME`). `sdlc/scripts/test` and `surfaces` take it as a decoy and fail if its usage folder appears. Each surface check takes it for its own run, and PostgreSQL `check.sh` starts its server and runs `status` under it. `recording.md`, the SQL READMEs and the changelog say every surface adds to the totals and name PostgreSQL's per-backend cap.
+- Proof: offline, against the counted loopback backend, under a scratch usage folder. The command and a Rust `from_env` engine with one retried 503 send three attempts into one folder; `status --json` then reports 3 requests, 1 retry and the tokens the replies reported. The C door sends one and frees its engine; the month file reports one. A SQLite process answers one row and exits with no sleep while the test holds the usage lock for about 300 ms; `status` reports one. SQLite load, answer, close, reopen, answer, exit reports two. PostgreSQL: two connections that send one each and disconnect while the check holds the usage lock give the server user's `status` two. A DuckDB process answers one row and exits while the test holds the usage lock; its month file reports one. Each exit proof fails once with its hook removed; the record says so. A forked child calls `finish_usage()` while the parent's writer holds its queue lock; it returns promptly and nothing counts twice. A child that drops its parent's engine leaves the parent's counters alive. `EngineBuilder::new()` leaves the folder absent. A `0755` usage folder changes no result and no arrival count. One deliberately unisolated run fails the guard; the record says so. Slice 2: a cached rerun reaches the listener zero times and adds cache answers.
+- Defers: a cross-connection PostgreSQL cap through shared memory; a per-surface split in `status`; a new opt-out switch; reporting library write failures to the caller; the other ports over C beyond the C door case, which start from the same `from_env`; counts lost to a crash or to a port engine its host never frees. That includes the `OnceLock` static in Rust's `thinkthen::default_engine()`, which the module functions of Python, TypeScript, Ruby and R use, and R's `CHOSEN` engine slot; none registers an exit flush. The macOS path of `usage_home` (moving `HOME` after pinning `CARGO_HOME` and `RUSTUP_HOME`) and the SQL exit hooks on macOS are unverified; every proof ran on Linux.
+
+## What the build taught us
+
+A usage folder gives the counters a writer thread, and that changes what a forked child may drop. DuckDB's registry drops its inherited engines in a child, and joining the parent's writer there aborted the child. The existing DuckDB fork check caught it, and `Guarded` now drops only state its own process built. The decoy guard earned its place on the first full run: the type corpus self-test built C door engines from the environment and wrote the platform folder. A test that pins an empty platform folder now has to allow `thinkthen-usage` beside it.

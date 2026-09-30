@@ -133,7 +133,16 @@ pub(crate) fn engine() -> Result<&'static Engine, Failure> {
     let built = held
         .apply(EngineBuilder::from_env()?.shared_host())?
         .build()?;
+    crate::ffi::flush_usage_at_exit();
     Ok(ENGINE.get_or_init(|| built))
+}
+
+/// Flush the process engine's usage totals. Reading the `OnceLock` takes no
+/// lock, and the engine skips counters another process built.
+pub(crate) fn finish_usage() {
+    if let Some(engine) = ENGINE.get() {
+        engine.finish_usage();
+    }
 }
 
 /// The engine when one is built, for `thinkthen_usage`, which builds none.

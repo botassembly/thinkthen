@@ -8,6 +8,9 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ] && command -v flock >/dev/nul
     export THINKTHEN_HEAVY_LOCK_HELD
     exec flock -o "$lock" /bin/sh "$0" "$@"
 fi
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. "$root/sdlc/scripts/scratch.sh"
+usage_home
 dotnet=${THINKTHEN_DOTNET:-$(command -v dotnet || true)}
 [ -x "$dotnet" ] || exit 77
 command -v python3 >/dev/null 2>&1 || exit 77

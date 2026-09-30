@@ -112,7 +112,7 @@ The cache is on by default.
 
 ## Usage counts
 
-`thinkthen status` reports the resolved configuration, cache size, and request, retry, token, and cache-answer counts for the current UTC month and in total. It counts only what the command sends; a library, SQL extension, or data frame keeps its own process counts. The usage files hold no judged evidence and no key. They are local conservative statistics, not an account bill.
+`thinkthen status` reports the resolved configuration, cache size, and request, retry, token, and cache-answer counts for the current UTC month and in total. It counts what every surface sends: the command, and any library, SQL extension, or data frame engine built from the environment. An engine a Rust caller builds by hand keeps its counts in memory. The usage files hold no judged evidence and no key. They are local conservative statistics, not an account bill.
 
 ## How-tos
 

@@ -5,6 +5,9 @@ CHECKS="$ROOT/checks"
 FLUTTER="$ROOT/flutter"
 TT_DART=${TT_DART:-$(command -v dart || true)}
 TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || true)}
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. "$ROOT/../../sdlc/scripts/scratch.sh"
+usage_home
 case ${THINKTHEN_ARTIFACT:-} in
   */thinkthen-flutter-*.tar.gz | thinkthen-flutter-*.tar.gz)
     [ -x "$TT_DART" ] && [ -x "$TT_FLUTTER" ] || { echo 'Flutter installed: Dart or Flutter executable unavailable' >&2; exit 77; }

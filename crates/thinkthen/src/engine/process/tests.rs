@@ -141,13 +141,13 @@ fn a_failed_build_leaves_the_next_call_to_build() {
 }
 
 #[test]
-fn an_ordinary_drop_frees_the_state() {
-    let guarded = Arc::new(Guarded::empty());
-    let parent = call(&guarded, PARENT, Ok("parent"))
-        .0
-        .expect("parent state");
-    drop(guarded);
-    assert_eq!(Arc::strong_count(&parent), 1);
+fn a_drop_frees_only_the_state_this_process_built() {
+    for (owner, count) in [(std::process::id(), 1), (PARENT, 2)] {
+        let guarded = Arc::new(Guarded::empty());
+        let state = call(&guarded, owner, Ok("state")).0.expect("state");
+        drop(guarded);
+        assert_eq!(Arc::strong_count(&state), count, "owner {owner}");
+    }
 }
 
 #[test]

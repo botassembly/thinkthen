@@ -14,6 +14,9 @@ fi
 if [ "${TT_OBJC_LOCKED:-0}" != 1 ]; then
   TT_OBJC_LOCKED=1 exec flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" env TT_OBJC_LOCKED=1 "$0" "$@"
 fi
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. "$REPO/sdlc/scripts/scratch.sh"
+usage_home
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   . "$REPO/sdlc/scripts/scratch.sh"
   . "$REPO/sdlc/scripts/installed.sh"

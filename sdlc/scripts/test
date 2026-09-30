@@ -36,6 +36,9 @@ unset THINKTHEN_CONFORMANCE_IDS THINKTHEN_TEST_PROFILE
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+# ADR 0113: a test that bypasses its scratch usage folder writes this decoy and fails the run.
+. sdlc/scripts/scratch.sh
+usage_guard
 
 # nextest runs the same tests in about half the time; cargo test is the fallback.
 if cargo nextest --version >/dev/null 2>&1; then

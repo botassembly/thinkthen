@@ -8,6 +8,8 @@ A pulled public batch with `BatchSetting::Records(1)` and throttle 2 keeps one s
 
 Two tests hid the gap. `public_batches::a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows` waited for 2 held requests. `public_controls::a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new` waited for 4. Each wait saw 1 request and gave up at the backend's 5 s bound. Neither test asserted the count its wait returned, so both passed. Record 0305 measured both at 5.4 s on 2026-09-29, so the gap already existed then. Ticket 0317 changed both waits to 1, which removes 10 s of test time and keeps every assertion.
 
+On 2026-09-30, `public_controls::a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new` failed once under machine load during ticket 0322's checks and passed on rerun. Ticket 0322 does not touch that path.
+
 ## What the contract says
 
 - `sdlc/issues/closed/2026-09-26-batching-design.md`: "`--jobs N` means N batches in flight."

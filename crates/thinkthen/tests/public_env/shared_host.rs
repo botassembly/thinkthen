@@ -83,10 +83,14 @@ fn a_shared_host_caches_only_in_a_private_named_folder() {
         );
         assert_eq!(sends.is_none(), lines == REFUSED, "{name}: {lines}");
     }
+    let names: Vec<_> = fs::read_dir(&xdg)
+        .expect("the platform folder")
+        .map(|entry| entry.expect("an entry").file_name())
+        .collect();
     assert_eq!(
-        entries(Path::new(&xdg)),
-        0,
-        "the platform folder stays empty"
+        names,
+        ["thinkthen-usage"],
+        "the platform folder holds only the usage totals"
     );
 }
 

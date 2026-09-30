@@ -18,6 +18,8 @@ case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 77 ;; esac
 . ../../sdlc/scripts/scratch.sh
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+usage_home
 . ./runtime.sh
 runtime_ready
 REPO=$(cd ../.. && pwd)
@@ -26,6 +28,7 @@ LIMIT=$REPO/sdlc/scripts/time-limit
 # The extension version names its SQL files (ticket 0128).
 EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
 BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
+COMMAND=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
 
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	echo "== build"
@@ -33,7 +36,7 @@ BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
 	cargo clippy --locked --offline --all-targets -- -D warnings
 	cargo test --locked --offline --lib
 }
-(cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend)
+(cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend --package thinkthen --bin conformance-backend --bin thinkthen)
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
 # package.sh reads the same pg_config and target folder (ticket 0128).
 PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo /usr/bin/pg_config; fi)}
@@ -694,7 +697,7 @@ the_environment_seeds_the_cache() {
 	same "$(q -c "SELECT thinkthen_decide('$Q', 'seed')" -c "SELECT thinkthen_decide('$Q', 'seed')")" "$(printf 't\nt')"
 	same "$(bcount)" 1
 	[ -n "$(find "$CACHEDIR" -type f | head -1)" ]
-	[ -z "$(find "$SCRATCH" -type f | head -1)" ]
+	[ -z "$(find "$SCRATCH" -type f -not -path '*/thinkthen-usage/*' | head -1)" ]
 }
 check the_environment_seeds_the_cache
 the_cache_setting_names_the_folder() {
@@ -711,9 +714,42 @@ the_platform_cache_stays_off() {
 	UNNAMED_CACHE=1 fresh generic
 	same "$(q -c "SELECT thinkthen_decide('$Q', 'seed')" -c "SELECT thinkthen_decide('$Q', 'seed')")" "$(printf 't\nt')"
 	same "$(bcount)" 2
-	[ -z "$(find "$SCRATCH" -type f | head -1)" ]
+	[ -z "$(find "$SCRATCH" -type f -not -path '*/thinkthen-usage/*' | head -1)" ]
 }
 check the_platform_cache_stays_off
+# ADR 0113: each backend adds its sends to the server user's usage totals when
+# it exits. The check holds the usage lock while both connections disconnect,
+# so only the exit hook's wait writes the counts.
+usage_requests() {
+	env -i PATH="$PATH" HOME="$SCRATCH" XDG_CACHE_HOME="$SCRATCH/.cache" "$COMMAND" status --json |
+		python3 -c 'import json, sys; print(json.load(sys.stdin)["usage"]["total"]["requests_sent"])'
+}
+each_backend_adds_its_sends_at_exit() {
+	fresh generic
+	folder=$SCRATCH/.cache/thinkthen-usage
+	[ "$PG_HOST" != Darwin ] || folder=$SCRATCH/Library/Caches/thinkthen-usage
+	mkdir -p -m 700 "$folder"
+	(umask 077 && : >>"$folder/.lock")
+	before=$(usage_requests)
+	exec {HOLD}> >(exec python3 -c 'import fcntl, os, sys
+lock = os.open(sys.argv[1], os.O_RDWR | os.O_CREAT, 0o600)
+fcntl.flock(lock, fcntl.LOCK_EX)
+open(sys.argv[2], "w").close()
+sys.stdin.read()' "$folder/.lock" "$RUN/usage-held")
+	for _ in $(seq 100); do [ -e "$RUN/usage-held" ] && break; sleep 0.05; done
+	[ -e "$RUN/usage-held" ]
+	q -c "SELECT thinkthen_decide('$Q', 'first connection')" >"$RUN/usage-first" &
+	first=$!
+	q -c "SELECT thinkthen_decide('$Q', 'second connection')" >"$RUN/usage-second" &
+	wait "$first" "$!"
+	sleep 0.3
+	exec {HOLD}>&-
+	same "$(cat "$RUN/usage-first" "$RUN/usage-second")" "$(printf 't\nt')"
+	same "$(bcount)" 2
+	for _ in $(seq 50); do [ "$(usage_requests)" = $((before + 2)) ] && break; sleep 0.1; done
+	same "$(usage_requests)" $((before + 2))
+}
+check each_backend_adds_its_sends_at_exit
 an_open_cache_folder_is_refused() {
 	mkdir -p "$RUN/open-cache" && chmod 0777 "$RUN/open-cache"
 	fresh generic "thinkthen.cache = '$RUN/open-cache'"

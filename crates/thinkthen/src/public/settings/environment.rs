@@ -15,6 +15,9 @@ impl EngineBuilder {
     /// `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the XDG cache home, and the
     /// XDG configuration file. The setters and `build` read no environment.
     ///
+    /// The engine adds its requests, retries, live tokens and cache answers to
+    /// the command's count-only usage totals, which `thinkthen status` reads.
+    ///
     /// # Errors
     ///
     /// Returns [`Error::Usage`] naming a malformed variable or configuration
@@ -35,6 +38,7 @@ impl EngineBuilder {
             platform: named.is_none(),
             folder: named.or_else(config::cache_path),
             enabled: config.cache_enabled(),
+            usage: config::usage_path(),
         });
         if let Some(base) =
             variable("THINKTHEN_BASE_URL")?.or_else(|| config.url().map(str::to_owned))

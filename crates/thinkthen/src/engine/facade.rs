@@ -40,6 +40,7 @@ pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
+mod finish;
 #[cfg(test)]
 #[cfg(feature = "cli")]
 mod fork_tests;

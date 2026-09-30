@@ -8,6 +8,8 @@ cd -- "$(dirname -- "$0")"
 here=$(pwd)
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+usage_home
 port=${1:?usage: check.sh PORT}
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac

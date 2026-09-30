@@ -18,6 +18,8 @@ mod batch;
 mod cache_budget;
 #[path = "public_env/shared_host.rs"]
 mod shared_host;
+#[path = "public_env/usage_totals.rs"]
+mod usage_totals;
 
 #[path = "../src/test_deadline/run.rs"]
 mod run;
@@ -295,6 +297,7 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         }
         "zero-budget-default-cache" => cache_budget::run_default_cache(argument),
         "shared-host" => shared_host::run_twice(argument),
+        "usage-seeded" | "usage-builder" => usage_totals::run_usage(case, argument),
         _ => panic!("no child case {case}"),
     }
 }

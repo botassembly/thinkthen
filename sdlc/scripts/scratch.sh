@@ -1,6 +1,6 @@
 # The one way a script here removes a folder (worktrees.md rule 11). A script removes only a
 # folder that scratch_dir made with mktemp in this run. `scratch_made` lists them, one per line.
-scratch_made=
+scratch_made=${scratch_made:-}
 
 # scratch_dir NAME [TEMPLATE]: set NAME to a fresh folder from mktemp, from TEMPLATE when given,
 # which this run's exit removes. The first call takes over the EXIT trap, and a hangup or interrupt
@@ -30,9 +30,53 @@ $1
 	return 1
 }
 
-# scratch_clean: remove every folder scratch_dir made in this run, read one line at a time.
+# scratch_clean: remove every folder scratch_dir made in this run, read one line at a time. A run
+# whose decoy usage folder exists fails (ADR 0113).
 scratch_clean() {
+	scratch_leak=
+	if [ -n "${usage_decoy:-}" ] && { [ -e "$usage_decoy" ] || [ -L "$usage_decoy" ]; }; then
+		echo "FAIL     something wrote the decoy usage folder $usage_decoy, not its own scratch one (ADR 0113)" >&2
+		scratch_leak=1
+	fi
 	printf '%s' "$scratch_made" | while IFS= read -r made; do scratch_remove "$made"; done
+	[ -z "$scratch_leak" ] || exit 1
+}
+
+# usage_home: point the usage folder of everything this run starts at a scratch copy of the
+# platform cache folder, and set usage_folder to it. The copy links each entry of the real folder
+# except thinkthen-usage, so toolchain caches still resolve. Linux moves XDG_CACHE_HOME. macOS
+# finds the usage folder from HOME alone, so it pins CARGO_HOME and RUSTUP_HOME and moves HOME to
+# a copy whose Library and Library/Caches are copied the same way.
+usage_home() {
+	scratch_dir usage_scratch
+	if [ "$(uname -s)" = Darwin ]; then
+		export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}" RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
+		usage_link "$HOME" "$usage_scratch" Library
+		usage_link "$HOME/Library" "$usage_scratch/Library" Caches
+		usage_link "$HOME/Library/Caches" "$usage_scratch/Library/Caches" thinkthen-usage
+		export HOME="$usage_scratch"
+		usage_folder=$usage_scratch/Library/Caches/thinkthen-usage
+	else
+		usage_link "${XDG_CACHE_HOME:-$HOME/.cache}" "$usage_scratch" thinkthen-usage
+		export XDG_CACHE_HOME="$usage_scratch"
+		usage_folder=$usage_scratch/thinkthen-usage
+	fi
+}
+
+# usage_guard: take usage_home as a decoy. Each check takes its own usage_home, so only a run
+# that bypassed one writes the decoy, and scratch_clean then fails the run.
+usage_guard() {
+	usage_home
+	usage_decoy=$usage_folder
+}
+
+# usage_link FROM TO SKIP: make TO and link in it each entry of FROM except SKIP.
+usage_link() {
+	mkdir -p -- "$2"
+	for usage_entry in "$1"/* "$1"/.[!.]* "$1"/..?*; do
+		{ [ -e "$usage_entry" ] || [ -L "$usage_entry" ]; } && [ "${usage_entry##*/}" != "$3" ] || continue
+		ln -s -- "$usage_entry" "$2/${usage_entry##*/}"
+	done
 }
 
 # scratch_lint [FILE...]: fail on a recursive rm in FILE, or in the scripts, outside this file.

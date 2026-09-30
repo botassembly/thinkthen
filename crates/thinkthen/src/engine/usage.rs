@@ -107,6 +107,12 @@ impl Counters {
         settled.map_or(true, |queue| queue.failed)
     }
 
+    /// Hold the queue lock, as a parent thread may hold it when its process forks.
+    #[cfg(test)]
+    pub(crate) fn hold_queue(&self) -> impl Sized + '_ {
+        self.shared.queue.lock()
+    }
+
     /// Only generated usage filenames and fixed categories may reach diagnostics.
     pub(crate) fn failed_file(&self) -> Option<(String, &'static str)> {
         self.shared.queue.lock().ok()?.failed_file.clone()
@@ -170,6 +176,7 @@ impl Drop for Counters {
 
 /// The writer thread: each pass writes everything that piled up since the last.
 fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
+    crate::engine::workers::mask_host_signals();
     carried();
     let mut queue = shared.queue.lock();
     let idle = |held: &mut Queue| held.pending.is_empty() && !held.closing;

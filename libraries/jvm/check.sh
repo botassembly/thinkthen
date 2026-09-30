@@ -8,6 +8,9 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ] && command -v flock >/dev/nul
     export THINKTHEN_HEAVY_LOCK_HELD
     exec flock -o "$lock" /bin/sh "$0" "$@"
 fi
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. "$root/sdlc/scripts/scratch.sh"
+usage_home
 for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 python3 "$here/tests/toolchains.py"
 [ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ] || [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
