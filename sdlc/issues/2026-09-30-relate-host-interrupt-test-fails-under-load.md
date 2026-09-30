@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: before 0.1, or when it fails a landing's `test` run.
 
+Debt: 023
+
+Severity: medium
+
 Keeping it lets `sdlc/scripts/test` fail at random and hide a real cancellation regression behind a rerun.
 
 ## The problem
