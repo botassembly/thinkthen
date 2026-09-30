@@ -8,6 +8,12 @@ A Rust panic never copies its payload to standard output, standard error, or a h
 
 ## Evidence
 
+- Starts from: main `a233dd30c`, tickets 0226, 0227 and 0254, and the three open panic issues.
+- Keeps: each surface's fixed failure message and the host's own hook for unrelated panics.
+- Changes: one shared guard, `thinkthen::contained`, replaces eight copied hooks; the PostgreSQL worker is guarded.
+- Proof: marker tests per surface; the drop-panic case fails on the old door.
+- Defers: the PostgreSQL backend thread under pgrx; macOS and ARM64 package proofs.
+
 Main `a233dd30c` was checked on 2026-09-29.
 
 Fixed in source by tickets 0226, 0227 and 0254, each with its own copy of one scoped hook:
