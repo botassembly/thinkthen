@@ -36,7 +36,7 @@ The rule is "an engine that reads the environment adds to the environment's tota
 - Best effort, as for the command. The first failure stops later writes in that process. A library or SQL call has no warning line, so it stays silent. It never changes a result, an error or an exit.
 - A missing or relative `HOME` and `XDG_CACHE_HOME` means no folder and no write, as today.
 - The writer adds deltas, never totals. Two engines in one process each add only their own attempts.
-- A forked child builds fresh counters and leaks the inherited ones untouched (`engine/process.rs`). The parent's pending deltas are never written twice.
+- A forked child builds fresh counters and leaks the inherited ones untouched (`engine/process.rs`). The parent's pending deltas are never written twice. A child that drops an engine it never rebuilt also leaks the inherited state, because the counters now own a writer thread that exists only in the parent. DuckDB's registry drops its inherited engines in a forked child, and the build found that joining the parent's writer there aborted the child.
 - Accepted: a fork during a write leaves the child holding a copy of the lock's open file. A long-lived child stalls other writers until it exits. Each stalled writer gives up at its deadline and loses only its advisory counts.
 - Dropping an engine flushes its writer, as today.
 - **Static hosts flush at exit.** The SQL hosts never drop their engines: PostgreSQL keeps `ENGINES` in a static, SQLite a `OnceLock`, DuckDB a static registry. So a new `Engine::finish_usage()` calls `Counters::finish()`. PostgreSQL registers it with `on_proc_exit` when a backend builds its first engine. SQLite and DuckDB register it with `atexit` when they build their first engine. The hook lives in the SQL extensions. The library and the C door keep no process-wide hook.
@@ -88,6 +88,7 @@ Ticket 0322. Each slice lands green with the full suite, workspace clippy, `poli
    - A DuckDB process answers one row and exits while the test holds the usage lock. Its month file reports one.
    - Each exit proof fails without its hook. The build removes the hook once, watches the proof fail, and the record says so.
    - A parent writes, then a child of a fork calls `finish_usage()` while the parent's writer holds its queue lock. The child returns promptly, and the files count the parent's attempts once.
+   - A child that drops an engine its parent built leaves the parent's counters alive. An engine this process built frees them.
    - The same calls through `EngineBuilder::new()` leave the usage folder absent.
    - A `0755` usage folder refuses the write. Each call returns the same result, and the listener sees the same arrivals.
    - The existing fork and concurrent-writer proofs stay: `engine/facade/fork_tests.rs` and `tests/backend/facts/usage_lock.rs`.
