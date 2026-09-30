@@ -251,7 +251,8 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 done
 [ "$failed" -eq 0 ] || exit 1
 # The host's release files, packed from the builds above and each smoked from its install
-# (ticket 0128); release-pack rebuilds only the C library. A surface that did not run built nothing to pack. --release failed it above.
+# (ticket 0128). release-pack rebuilds only the C library.
+# A surface that did not run built nothing to pack. --release failed it above.
 # Only the surfaces the default release-pack parts read gate the pack; Dart's feeds none of them.
 unpacked=
 for surface in $skipped; do
