@@ -28,7 +28,7 @@ Three options were weighed.
 
 ## What the build taught us
 
-Experiment `~/workspace/experiments/417-thinkthen-stale-connection` ran the compiled command against a loopback HTTP/1.1 server. The server answers with keep-alive, closes a connection left idle for `idle_ms`, and accepts the next connection normally. A `fin_delay_ms` of 20 stands for a hosted backend's network delay: the server has closed, and a request that lands inside that window is dropped unread. Each trial ran `decide --lines --batch 1 --jobs 1 --no-cache` over two lines, paced by `THINKTHEN_REQUESTS_PER_MINUTE`, from a scratch `HOME`.
+Local experiment 417 ran the compiled command against a loopback HTTP/1.1 server. The server answers with keep-alive, closes a connection left idle for `idle_ms`, and accepts the next connection normally. A `fin_delay_ms` of 20 stands for a hosted backend's network delay: the server has closed, and a request that lands inside that window is dropped unread. Each trial ran `decide --lines --batch 1 --jobs 1 --no-cache` over two lines, paced by `THINKTHEN_REQUESTS_PER_MINUTE`, from a scratch `HOME`.
 
 | Gap between sends | Server keep-alive | Delay | Before | After |
 | --- | --- | ---: | ---: | ---: |
