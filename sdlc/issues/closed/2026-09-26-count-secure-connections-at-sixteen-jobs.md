@@ -1,8 +1,8 @@
 # Count secure connections at sixteen jobs
 
-Status: Open. Filed 2026-09-26 by ticket 0145, the speed test.
+Status: closed 2026-09-30 by a Quick Fix, after workspace experiment 2039. Filed 2026-09-26 by ticket 0145, the speed test. Priority entry E1 of `../../planning/issue-priorities-2026-09-30.md`.
 
-Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: the queue owner, as a local loopback experiment first (below).
+Resolution: settled by workspace experiment 2039, a loopback count. A keep-alive TLS server on `localhost`, trusted through `THINKTHEN_CA_BUNDLE`, answered `filter --batch 1 --no-cache` over 306 lines. At `--jobs 16` it accepted 16 connections and completed 16 handshakes in each of three runs. At the default `--jobs 4` it accepted 4 in each of two runs. Each connection carried about 19 or 76 requests. The count does not exceed 16, so no ticket follows. Ticket 0142's deferred gap closes for the client. The hosted server's own keep-alive policy stays unmeasured. The CONNECT-proxy run below can measure it under `sdlc/scripts/live` if a reason appears.
 
 Ticket 0142 set the connection pool to keep up to `--jobs` connections. Its deferred gap 1 says no gate test counts secure handshakes, because the loopback listener speaks plain HTTP. It left the count to the S1 speed test's live part, or to an authorized run of experiment 268's harness.
 
