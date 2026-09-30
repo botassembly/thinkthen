@@ -13,7 +13,6 @@
 mod call_facts;
 
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
-use std::process::Stdio;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::thread::{self, ThreadId};
@@ -29,6 +28,9 @@ const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","n
 const MOST: &str = "4294967295 seconds";
 const BOUND: Duration = Duration::from_secs(30);
 
+#[path = "public_controls/alone.rs"]
+mod alone;
+use alone::alone;
 #[path = "../src/test_deadline/child.rs"]
 mod child;
 #[path = "public_controls/fired.rs"]
@@ -414,45 +416,6 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
             assert_eq!(backend.count(), 4, "nothing new was sent");
         },
     );
-}
-
-/// Names the one row a rerun child runs.
-const ALONE: &str = "THINKTHEN_TEST_CONTROLS_ALONE";
-
-/// Run `body` alone in a fresh copy of this test binary, because the first
-/// explicit throttle selects the process's width for good (ticket 0077).
-/// Nextest already runs each row alone; `cargo test` and `package` do not.
-fn alone(path: &str, body: impl FnOnce()) {
-    if std::env::var_os(ALONE).is_some_and(|chosen| chosen == path) {
-        body();
-        return;
-    }
-    let binary = std::env::current_exe().expect("this test binary");
-    let child = child::command(
-        binary.to_str().expect("a UTF-8 test binary path"),
-        &["HOME", "XDG_CACHE_HOME", "TMPDIR"],
-    )
-    .args([
-        "--exact",
-        path,
-        "--include-ignored",
-        "--nocapture",
-        "--test-threads=1",
-    ])
-    .env(ALONE, path)
-    .stdin(Stdio::null())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()
-    .expect("the child starts");
-    let output = wait::finish(child, path).expect("the child ends");
-    let said = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        output.status.success(),
-        "{said}\n{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(said.contains("1 passed"), "the child ran {path}");
 }
 
 #[test]
