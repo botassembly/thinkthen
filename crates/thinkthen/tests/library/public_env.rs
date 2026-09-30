@@ -300,7 +300,7 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         }
         "zero-budget-default-cache" => cache_budget::run_default_cache(argument),
         "shared-host" => shared_host::run_twice(argument),
-        "usage-seeded" | "usage-builder" => usage_totals::run_usage(case, argument),
+        _ if case.starts_with("usage-") => usage_totals::run_usage(case, argument),
         _ => panic!("no child case {case}"),
     }
 }

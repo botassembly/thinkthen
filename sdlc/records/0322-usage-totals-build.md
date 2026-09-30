@@ -1,6 +1,6 @@
-# 0322 slice 1: every surface adds to the usage totals — build
+# 0322: every surface adds to the usage totals — build
 
-Status: slice 1 landed on main from `ticket/0322-spend-totals-design`. Ticket: `sdlc/tickets/0322-every-surface-adds-to-usage-totals.md`. Design: ADR 0113. Every run was offline against loopback backends with `THINKTHEN_API_KEY` unset. No paid call ran and the live ledger was not touched.
+Status: slice 1 landed on main from `ticket/0322-spend-totals-design`; slice 2 landed from `ticket/0322-s2-cache-answer-proof`. Ticket: `sdlc/tickets/0322-every-surface-adds-to-usage-totals.md`. Design: ADR 0113. Every run was offline against loopback backends with `THINKTHEN_API_KEY` unset. No paid call ran and the live ledger was not touched.
 
 ## Built
 
@@ -40,3 +40,19 @@ One full test run failed `public_controls::a_stop_during_a_batch_or_a_cache_lock
 - The macOS mirror is unverified. On macOS the checks that search for the home folder inside `Library` compare against the scratch `HOME`, which weakens them.
 - The `spec` rung sets no scratch usage folder. Its command runs can write the real usage folder, as they could before this ticket.
 - `default_engine` statics in the ports still lose the counts after their last flush at exit. The ticket defers them.
+
+## Slice 2: the cache-answer proof
+
+Slice 2 changes no product code. Each counting surface gains one rerun proof. A second process asks the same question from a cache folder the first process filled; PostgreSQL uses a second connection. The listener counts one send, and the saved totals read 1 request and 1 cache answer. SQL hosts name the folder, since they cache only in a named one (ticket 0318).
+
+| Proof | With the change | With the cache-answer count removed |
+| --- | --- | --- |
+| `public_env::usage_totals::a_cached_rerun_sends_nothing_and_adds_a_cache_answer` | second run `sent 0 cached 1`; `status --json` 1 request, 1 cache answer | fails: `cache_answers` 0, wanted 1 |
+| C door `a_cached_rerun_sends_nothing_and_adds_a_cache_answer` | month file 1 request, 1 cache answer | fails: `(1, 0)`, wanted `(1, 1)` |
+| SQLite `test_a_cached_rerun_sends_nothing_and_adds_a_cache_answer` | `status` 1 and 1 | not run; same count point |
+| DuckDB `a_cached_rerun_sends_nothing_and_adds_a_cache_answer` | month file 1 and 1 | not run; same count point |
+| PostgreSQL `a_cached_rerun_adds_a_cache_answer` | `status` rises by 1 and 1 | not run; same count point |
+
+The removal commented out `self.counts.usage.cache_answer()` in `engine/pipeline/run.rs`. Every surface reaches that line through the one pipeline.
+
+Checks on the branch: the SQLite, DuckDB and PostgreSQL `check.sh` runs and the C check pass under a decoy usage guard. `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets` and `lint` in a clean checkout pass. Review found the C door tests race under nextest; `sdlc/issues/2026-09-30-c-door-tests-race-under-nextest.md` holds it as debt 025.
