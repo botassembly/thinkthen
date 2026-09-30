@@ -1,9 +1,3 @@
----
-flow: quick
-priority: 309
-opens: README.md specification/README.md sdlc/planning sdlc/issues sdlc/tickets/0154-a-ceiling-everywhere-and-one-halving.md libraries/swift libraries/objective-c sdlc/scripts
----
-
 # 0309: Docs and records hygiene
 
 Status: in progress. Lane claude-1. Branch `ticket/0309-docs-and-records-hygiene`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, ruling 8.

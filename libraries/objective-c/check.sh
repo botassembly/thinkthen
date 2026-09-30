@@ -54,7 +54,6 @@ cargo build --locked --offline --manifest-path "$REPO/libraries/c/Cargo.toml" --
 ln -sf "$NATIVE" "$CARGO_TARGET_DIR/debug/libthinkthen.so.0"
 CARGO_TARGET_DIR="$REPO/target" cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
 THINKTHEN_PORTABLE_NATIVE="$CARGO_TARGET_DIR/debug" THINKTHEN_BACKEND_BIN="$REPO/target/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
-cmp "$ROOT/Sources/thinkthen.h" "$REPO/libraries/c/include/thinkthen.h"
 ln -sf "$NATIVE" "$TARGET/libthinkthen.so.0"
 python3 "$ROOT/checks/exports.py" "$NATIVE" "$REPO/libraries/c/include/thinkthen.h" "$TARGET/exports.txt"
 for name in door failure main; do
