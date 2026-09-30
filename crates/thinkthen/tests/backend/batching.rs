@@ -463,3 +463,36 @@ fn each_row_carries_its_share() {
         assert_eq!(shares, wanted, "usage {usage:?}");
     }
 }
+
+/// A failed request stops the run sending, as one job did, even while an
+/// earlier record's request is still out: that request finishes, and no
+/// later record's request goes (ticket 0304 slice 4).
+#[test]
+fn a_failed_request_sends_no_later_request() {
+    let listener = Listener::answering(|body| {
+        if first(body) == 2 {
+            Canned::status(500, "{}")
+        } else {
+            answering(body).after(200)
+        }
+    })
+    .expect("a loopback listener");
+    let options = [
+        "--batch",
+        "1",
+        "--jobs",
+        "2",
+        "--max-retries",
+        "0",
+        "--no-cache",
+    ];
+    let output = decide(listener.base(), &options, &[], &lines(1..=6));
+    assert_eq!(
+        output.status.code(),
+        Some(4),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(listener.count(), 2, "line 1's request and line 2's");
+    assert_eq!(text(&output.stdout), row(1));
+}

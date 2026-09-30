@@ -29,7 +29,6 @@ mod blank_lines;
 mod cache_configuration;
 mod cache_identity;
 mod cache_partial;
-#[cfg(target_os = "linux")]
 #[cfg(unix)]
 mod cache_trust;
 #[allow(

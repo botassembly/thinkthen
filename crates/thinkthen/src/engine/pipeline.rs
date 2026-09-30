@@ -213,7 +213,7 @@ impl Engine {
         cancel: &Cancel,
     ) -> Result<(), Error> {
         let state = self.state(cancel)?;
-        let store = self.store()?;
+        let store = self.store(&state)?;
         let model = pack::model_json(self.backend().model().as_str())
             .map_err(|_| Error::Defect("a model could not be written as JSON"))?;
         let limits = self.pack_limits(packing);
@@ -264,7 +264,7 @@ impl Engine {
 
     /// The call's store, by the modes table of ADR 0111 section 3, or `None`
     /// under `--no-cache`.
-    fn store(&self) -> Result<Option<Store>, Error> {
+    fn store(&self, state: &super::facade::State) -> Result<Option<Store>, Error> {
         let storage = self.storage();
         let refresh = storage.refresh_cache
             || crate::core::adapters::built_in::is_mutable_alias(self.backend().model());
@@ -275,7 +275,13 @@ impl Engine {
             (None, Some(folder)) => (folder, Mode::Replay),
             (None, None) => return Ok(None),
         };
-        Store::open(folder, mode, storage.private_default).map(Some)
+        Store::open(
+            folder,
+            mode,
+            storage.private_default,
+            state.replayed.clone(),
+        )
+        .map(Some)
     }
 }
 

@@ -44,7 +44,7 @@ fn row<'a>(state: &'a State, question: &'a str, answer: &'a str) -> Row<'a> {
 }
 
 fn written(folder: &Path, rows: &[Row<'_>]) {
-    let mut store = Store::open(folder, Mode::Cache, false).expect("open");
+    let mut store = Store::open(folder, Mode::Cache, false, None).expect("open");
     store.write(rows, &Cancel::default()).expect("write");
 }
 
@@ -84,7 +84,7 @@ mod tempdir {
 fn a_cache_answers_a_hit_misses_the_rest_and_replaces_under_record() {
     let folder = scratch();
     let state = state();
-    let mut empty = Store::open(folder.path(), Mode::Cache, false).expect("open");
+    let mut empty = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
     assert_eq!(
         empty
             .lookup(&[key("a")], &Cancel::default())
@@ -93,7 +93,7 @@ fn a_cache_answers_a_hit_misses_the_rest_and_replaces_under_record() {
     );
     assert!(!folder.path().exists(), "a lookup creates nothing");
     written(folder.path(), &[row(&state, "a", "{\"n\":1}")]);
-    let mut store = Store::open(folder.path(), Mode::Cache, false).expect("open");
+    let mut store = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
     let found = store
         .lookup(&[key("b"), key("a")], &Cancel::default())
         .expect("lookup");
@@ -105,12 +105,12 @@ fn a_cache_answers_a_hit_misses_the_rest_and_replaces_under_record() {
     );
     assert_eq!(hit.usage, Some(Usage::new(7, 1)));
 
-    let mut record = Store::open(folder.path(), Mode::Record, false).expect("open");
+    let mut record = Store::open(folder.path(), Mode::Record, false, None).expect("open");
     assert!(!record.looks_up() && record.writes());
     record
         .write(&[row(&state, "a", "{\"n\":2}")], &Cancel::default())
         .expect("replace");
-    let replaced = Store::open(folder.path(), Mode::Replay, false)
+    let replaced = Store::open(folder.path(), Mode::Replay, false, None)
         .expect("open")
         .lookup(&[key("a")], &Cancel::default())
         .expect("lookup");
@@ -142,7 +142,7 @@ fn a_new_store_is_private_and_a_read_only_replay_writes_nothing() {
         names(),
         fs::read(folder.path().join(SQLITE)).expect("bytes"),
     );
-    let mut replay = Store::open(folder.path(), Mode::Replay, false).expect("open");
+    let mut replay = Store::open(folder.path(), Mode::Replay, false, None).expect("open");
     assert!(replay.replays() && !replay.writes());
     assert!(
         replay
@@ -167,7 +167,7 @@ fn a_replay_of_a_folder_holding_both_files_is_refused() {
     written(folder.path(), &[row(&state, "a", "{}")]);
     fs::write(folder.path().join(JSONL), "").expect("fixture");
     assert!(matches!(
-        Store::open(folder.path(), Mode::Replay, false),
+        Store::open(folder.path(), Mode::Replay, false, None),
         Err(Error::StoreAmbiguous)
     ));
 }
@@ -201,7 +201,7 @@ fn a_fixture_replays_from_memory_and_writes_the_same_bytes_again() {
     let fixture = scratch();
     fs::create_dir_all(fixture.path()).expect("folder");
     fs::write(fixture.path().join(JSONL), &text).expect("fixture");
-    let found = Store::open(fixture.path(), Mode::Replay, false)
+    let found = Store::open(fixture.path(), Mode::Replay, false, None)
         .expect("open")
         .lookup(&[key("a"), key("b")], &Cancel::default())
         .expect("lookup");
@@ -215,7 +215,7 @@ fn a_fixture_replays_from_memory_and_writes_the_same_bytes_again() {
     );
     fs::write(fixture.path().join(JSONL), edited).expect("edit");
     assert!(matches!(
-        Store::open(fixture.path(), Mode::Replay, false),
+        Store::open(fixture.path(), Mode::Replay, false, None),
         Err(Error::Entry(name, why)) if name == JSONL && why.contains("hand-edited")
     ));
 }
@@ -225,7 +225,7 @@ fn a_lookup_waits_through_another_writer_and_then_answers() {
     let folder = scratch();
     let state = state();
     written(folder.path(), &[row(&state, "a", "{}")]);
-    let mut store = Store::open(folder.path(), Mode::Cache, false).expect("open");
+    let mut store = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
     let holder = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
     let released = std::thread::spawn(move || {
@@ -246,10 +246,10 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
     let folder = scratch();
     let state = state();
     written(folder.path(), &[row(&state, "a", "{}")]);
-    let mut store = Store::open(folder.path(), Mode::Cache, false)
+    let mut store = Store::open(folder.path(), Mode::Cache, false, None)
         .expect("open")
         .with_busy_limit(Duration::from_millis(200));
-    let mut writer = Store::open(folder.path(), Mode::Cache, false).expect("open");
+    let mut writer = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
     let holder = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
     let started = Instant::now();
@@ -300,7 +300,7 @@ fn a_read_only_replay_that_meets_an_unfinished_write_is_refused() {
         fs::copy(folder.path().join(&name), hot.path().join(&name)).expect("copy");
     }
     writer.execute_batch("ROLLBACK").expect("rollback");
-    let mut store = Store::open(hot.path(), Mode::Replay, false).expect("open");
+    let mut store = Store::open(hot.path(), Mode::Replay, false, None).expect("open");
     assert!(matches!(
         store.lookup(&[key("a")], &Cancel::default()),
         Err(Error::StoreHotJournal)

@@ -114,6 +114,8 @@ pub(super) struct State {
     pub(super) width: usize,
     /// The process request and estimated input totals.
     total: crate::engine::budget::SendBudget,
+    /// The replay folder's fixture, read once for this process.
+    pub(super) replayed: Option<Arc<crate::engine::store::Replayed>>,
 }
 
 /// One typed judgment and the metadata its result carries.
@@ -202,6 +204,10 @@ impl Engine {
         let limits = crate::engine::limits::of(pid, cancel)?;
         let widths = &limits.widths;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
+        let replayed = match (&storage.record, &storage.replay) {
+            (None, Some(folder)) => crate::engine::store::Replayed::of(folder)?,
+            _ => None,
+        };
         let secure = self.backend.is_secure();
         let client = match self.roots.as_ref() {
             Some(roots) => Client::with_roots(self.timeout, secure, widths, Some(roots)),
@@ -213,6 +219,7 @@ impl Engine {
             usage,
             width,
             total: limits.total.clone(),
+            replayed,
         })
     }
 

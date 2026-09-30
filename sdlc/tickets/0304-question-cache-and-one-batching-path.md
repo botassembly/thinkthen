@@ -239,10 +239,12 @@ fn process_requests_sent() -> u64
 - Changes:
   - `engine/facade/each.rs` asks planned questions one input each on `ask_all`: `find`, the three recognize steps and relate. Each question is keyed, stored and coalesced as the record functions' are. The pure packer gives dry runs and pre-checks the same requests the pipeline sends with nothing cached.
   - `Packing` gains a question cap and whether requests close at the backend ceiling. `find` and recognize steps 1 and 2 ignore the ceiling, as their old path did.
-  - A whole request that fails in a call that does not continue now stops the pipeline sending, as one job did. The relate `at_once` send count caught this.
+  - A whole request that fails in a call that does not continue now stops the pipeline sending, as one job did. The relate `at_once` send count caught this. The rule covers the record functions too.
+  - One engine reads its replay fixture once per process and answers every later call from that copy. Each `recognize` line and step is its own call, so the five-kind page read the 2.7 MB fixture 600 times and took 16 seconds; it now takes 0.3 seconds with the same bytes.
+  - A stop seen while the call had planned several requests ends it as `Cancelled` once they finish. The count assumes nothing is cached, as the chunked sender's did, so a mostly cached call that sends one request still stops.
   - Details list question keys in `meta.requests` and each answer's `request`. Dry runs keep request digests, now from the pure packer.
   - `pair_chunks`, `relation_ceiling`, `ask_chunks_with_plan`, the `PREPARATIONS` counter and `PairPlan`'s re-exports go. `ask_profile` and `PreparedRequest::with_profile` serve tests only.
-  - Relate's partial replay on `spec/relate.md` now exits 5 and names the failed question's key, because ADR 0111 section 6 never stores a failed answer. Exit 6 with the good answer kept is proven on loopback.
+  - Relate's partial replay on `spec/relate.md` now exits 5 and names the failed question's key, because ADR 0111 section 6 never stores a failed answer. Exit 6 with the good answer kept is proven on loopback. `specification/relate.md`, `recognize.md` and `result.md` say question key where they said request digest, and `CHANGELOG.md` records the change.
   - The shared settings case `request-bytes-splits-relations` turns the cache off in both steps. Its second step asked the same pairs, which the question cache now answers without a send.
   - The ratchet falls by 515 lines to 105,286.
 - Proof, counted on the loopback backend in `tests/backend/question_cache_steps.rs`:
@@ -251,6 +253,7 @@ fn process_requests_sent() -> u64
   - A relate reply with one wrong-kind answer exits 6 and stores the good answer. The rerun sends one request holding one question.
   - A cached recognize rerun sends zero requests across all three steps. Adding a line sends exactly the questions that line asks alone, and the output equals an uncached run.
   - `find.rs` `cache_records_once_and_then_replays_without_a_key_or_second_request` keeps `find`'s zero-send rerun.
+  - `batching.rs` `a_failed_request_sends_no_later_request`: `decide --jobs 2` whose line 2 request fails while line 1's is out sends 2 requests and prints line 1. It sent 3 before the stop rule.
   - The shared conformance cases, including `18-find-second`, `19-find-none`, 41 to 50, `51-same-kind-alerts` and `52-cross-kind-staff`, replay converted fixtures through `cache convert` and compare every question key.
 - Deleted tests, with their replacements. Each drove only the old recorder through `find`:
   - `cache_locking.rs`, `cache_locking/retained.rs` and `cache_prune_locking.rs`: the busy limit and a stop during a wait (`engine/store/tests.rs` `a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it`), a lookup that waits through a commit (`a_lookup_waits_through_another_writer_and_then_answers`), a read-only replay that writes nothing (`a_new_store_is_private_and_a_read_only_replay_writes_nothing`), a hot journal (`a_read_only_replay_that_meets_an_unfinished_write_is_refused`), and two children writing one store (`question_cache.rs` `two_processes_write_one_store_at_once`). Lock setup failing before a key is the secrecy route "a recording folder that cannot be made".
@@ -378,5 +381,7 @@ What the review fixes found:
 - A key names the backend address, so a partial-reply rerun must ask the same loopback listener. A new listener asks every question again.
 - Recognize steps 1 and 2 never obeyed the backend request ceiling. Packing them under it split a 600,000-byte text into 60 requests instead of 2, so `Packing` now says whether a request closes at the ceiling.
 - The old chunked sender returned `Cancelled` after a stop only when it ran several requests on workers. One sent request finished and printed. `ask_each` keeps both, because the command's interrupt test and the public relate interrupt test pin each side.
-- The old pipeline kept sending after a whole request failed. One job stopped at once. A call that does not continue now stops sending too. The rule covers the record functions' calls as well, and no test pinned their old count.
+- The old pipeline kept sending after a whole request failed. One job stopped at once. A call that does not continue now stops sending too. A host stops when it reads the failed row in order, so the old count grew only while an earlier request was still out. The record functions had the same gap, and review asked for its test.
 - Relate requests arrive in any order at width 2, so a count proof sorts them.
+- A replay fixture loaded per call costs nothing for one call over many records, but `recognize` makes one call per line and step. The spec page's 30-second limit caught it.
+- Review found a removed test module's `cfg(target_os = "linux")` left in place. It then gated the next module, so the cache trust tests stopped compiling on macOS.
