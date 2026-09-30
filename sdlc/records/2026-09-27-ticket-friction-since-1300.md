@@ -681,3 +681,7 @@ The help/page follow-up is now independently accepted at5f93aaf5: the selected r
 ## A uniform keyword still needs every accepted representation
 
 The0288 High reviewer found R's direct-call and constructed-question threshold helper refuses `"0.3:0.7"`, while the equivalent saved question reaches the core parser successfully. The accepted threshold contract permits that string band. Numeric-only tests and a shared-parser call did not establish that every documented input form reaches the parser. The original author fixes the host conversion; the0297 preparation now names representation parity across immediate calls, judge closures and partial application. Keep a compact boundary table, not another full corpus campaign.
+
+## Skipping a missing payload must preserve structural refusal
+
+Independent0287 re-review at `1f6dccb9346ff608e5558edadaf58fb55cce6c1f` confirmed the original null-input defect was fixed, including positions, probabilities, observer indexes and zero sends for all-null calls. Its malformed Utf8 producer used validity bits `101` and offsets `[0,3,1,4]`; the installed wheel accepted the reversed null-slot offsets and made one request. The new nullable branch skipped structural validation along with the missing payload. The retained builder fixes this boundary and the same reviewer rechecks. The next frame brief now separates required layout validation from payload use and retains a small malformed producer witness. More conforming nullable cases alone would not have detected this regression.
