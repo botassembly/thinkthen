@@ -694,3 +694,8 @@ The next Python Judge/Stream/Tally brief must trace configuration ownership thro
 
 
 The0297 correction at87327e597 passed the original identity checks, then the same reviewer found validation itself dispatching user code: nested classed character fields reached `is.na` before the plain-scalar refusal. A forged judge's method made one observed judgment request from `tt_plan`. The R author corrects the order and comparisons. Protection of captured state and a non-dispatching validation path are separate obligations; the next host brief must inspect both. The earlier six passing assertions/six sends remain evidence for the identity correction, not acceptance of the whole candidate.
+
+
+## An error-format migration also changes its conformance reader
+
+SQLite error-format review at8eda286ae confirmed the product formatter and explicit plain removals, then found an omitted test consumer. The shared `tests/conformance.py` still matched the old prefix marker and treated new yes, new no and no suffix alike as nonretryable. Representative new exact-message tests did not restore this checker's lost assertion. The retained author owns the correction and a discriminating parser or shared-case proof. Future formatting preparation must search both exact-string assertions and parsers; a green checker with a defaulted field can silently lose coverage.
