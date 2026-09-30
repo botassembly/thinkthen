@@ -38,6 +38,16 @@ This is a product default. The coordinator sets it, and Ian can overturn it. Dra
 
 Recommendation: (b) with (c), in the relate ticket after 0304 slice 4 that also carries the unordered both-ways edge shape (issue priorities, coordinator default 1). Keep the 0.5 cut. The relate page states the measured precision and points to `recognize --relation` in either case. Accept (b) as the default only if the paid bench run beats the pair planner's edge F1 of 0.523 on the 182 songs and its precision of 0.296 on the missing-album sets. Otherwise ship (c) alone for 0.1, and keep this issue open. Option (b) costs more than (a), but (a) cannot fix the missing-album case, and a changed default is cheaper before 0.1 than after.
 
+## The decision run
+
+The Beatles Bench team asked for three conditions on 2026-09-30. The bench harness is ready. It needs the thinkthen commit that adds the single-answer menu with "none of these".
+
+1. Report the none-of-these rate beside precision: how often relate answers "none of these" when the right album is missing from the set.
+2. Compare at an audit-tuned cut as well as at 0.5. The bench reports that tuning moved the pair planner's F1 on solo songs only from 0.689 to 0.696. The menu should win at both cuts.
+3. Run on Liquid d1 as well as on the default backend.
+
+The acceptance bar above holds on the default backend at the 0.5 cut. The other two cells and the none-of-these rate go in the relate ticket's record and on the relate page.
+
 ## Evidence
 
 Beatles Bench `results/runs/2026-09-30-relate-jev` and `results/runs/2026-09-30-recognize-jev`, with their recordings, and `reports/results.md`, "The function suite".
