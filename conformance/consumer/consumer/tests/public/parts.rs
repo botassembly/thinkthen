@@ -147,7 +147,10 @@ pub(crate) fn found(engine: &Engine, asked: &Value, success: &Value) -> Checked 
         .flatten()
         .filter_map(Value::as_str)
         .collect();
-    let found = engine.find(&question, units.clone()).map_err(said)?.into_value();
+    let found = engine
+        .find(&question, units.clone())
+        .map_err(said)?
+        .into_value();
     let rows = found.candidates().iter().map(|candidate| {
         let index = candidate.input().and_then(|unit| at(&units, unit));
         json!({"index": index, "probability": candidate.probability()})

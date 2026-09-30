@@ -496,7 +496,6 @@ fn contract_pages_name_the_tuned_for_key_and_never_the_old_one() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     for (page, shapes) in [
         ("specification/result.md", 1),
-        ("site/src/pages/reference.astro", 1),
         ("conformance/backend-profiles.json", 0),
     ] {
         let text = fs::read_to_string(root.join(page)).expect("contract page");

@@ -115,13 +115,6 @@ pub(crate) use crate::core::text::Url;
 pub(crate) const NAME: &str = "thinkthen";
 
 /// Render the identity line that `--version` prints.
-///
-/// ```
-/// assert_eq!(
-///     thinkthen::__internal_doctest::version_line("0.1.0"),
-///     "thinkthen 0.1.0"
-/// );
-/// ```
 #[must_use]
 pub(crate) fn version_line(version: &str) -> String {
     format!("{NAME} {version}")

@@ -143,7 +143,8 @@ fn a_file_batch_leaves_the_question_digest_and_stays_off_other_files() {
     )
     .expect("the command runs");
     assert_eq!(chosen.status.code(), Some(0), "{}", text(&chosen.stderr));
-    let plan: Value = serde_json::from_slice(&chosen.stdout).expect("a choose plan");
+    let request = chosen.stdout.split(|byte| *byte == b'\n').next();
+    let plan: Value = serde_json::from_slice(request.unwrap_or_default()).expect("a choose plan");
     assert_eq!(
         plan["request"]["questions"].as_object().map(Map::len),
         Some(2)

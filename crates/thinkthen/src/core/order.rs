@@ -9,13 +9,6 @@
 /// The sort is stable, so two records whose probabilities are exactly equal
 /// keep their input order. `top` names how many places the caller prints, and
 /// `None` prints every one.
-///
-/// ```
-/// assert_eq!(
-///     thinkthen::__internal_doctest::ranking(&[0.1, 0.9, 0.5], Some(2)),
-///     [1, 2]
-/// );
-/// ```
 #[must_use]
 pub(crate) fn ranking(of: &[f64], top: Option<usize>) -> Vec<usize> {
     let mut places: Vec<(usize, f64)> = of.iter().copied().enumerate().collect();

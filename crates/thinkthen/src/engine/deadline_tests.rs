@@ -432,8 +432,9 @@ fn folder(label: &str) -> PathBuf {
     path
 }
 
-/// Wait behind a held lock until the deadline passes, and prove the waiter blocked.
-fn waits_out_the_deadline(recorder: &Recorder) {
+/// Wait behind a held lock until the deadline passes, and prove the waiter
+/// blocked without a send. `lookups` counts key reads before the lock.
+fn waits_out_the_deadline(recorder: &Recorder, lookups: usize) {
     let (blocked_send, blocked) = channel();
     let cancel =
         Cancel::observed(blocked_send).with_deadline(Deadline::after(Duration::from_millis(300)));
@@ -443,16 +444,19 @@ fn waits_out_the_deadline(recorder: &Recorder) {
 
     assert!(blocked.try_recv().is_ok(), "the waiter met the held lock");
     assert!(matches!(result, Err(Error::Deadline(_))));
-    assert_eq!(counts.map(|count| count.into_inner()), [0, 0]);
+    assert_eq!(counts.map(|count| count.into_inner()), [lookups, 0]);
 }
 
+/// `specification/recording.md` lets a live request inspect the key before an
+/// unbound empty folder's lock, so a missing key creates no folder. Such a
+/// folder holds nothing to replay.
 #[test]
 fn a_held_folder_ends_as_the_deadline_without_the_owner() {
     let path = folder("folder");
     fs::create_dir_all(&path).expect("recording folder");
     let owner = cache_lock::exclusive_folder(&path).expect("exclusive owner");
 
-    waits_out_the_deadline(&Recorder::of(Some(&path), None).expect("recorder"));
+    waits_out_the_deadline(&Recorder::of(Some(&path), None).expect("recorder"), 1);
 
     drop(owner);
     fs::remove_dir_all(path).expect("fixture removed");
@@ -474,7 +478,7 @@ fn a_held_digest_ends_as_the_deadline_without_the_owner() {
         unreachable!("empty recording cannot replay");
     };
 
-    waits_out_the_deadline(&recorder);
+    waits_out_the_deadline(&recorder, 0);
 
     owner.cancel().expect("owner cleanup");
     assert!(path.join(".locks").join(prepared.digest.as_str()).exists());

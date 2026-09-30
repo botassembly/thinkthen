@@ -93,47 +93,8 @@ impl Folders {
             .as_deref()
             .or(self.replay.as_deref())
             .and_then(|folder| fs::metadata(folder).ok())
-            .is_some_and(|metadata| metadata.is_dir() && shared_directory(&metadata))
-    }
-}
-
-#[cfg(unix)]
-fn shared_directory(metadata: &fs::Metadata) -> bool {
-    use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
-
-    shared_mode_owner(
-        metadata.permissions().mode(),
-        metadata.uid(),
-        nix::unistd::geteuid().as_raw(),
-    )
-}
-
-#[cfg(unix)]
-const fn shared_mode_owner(mode: u32, owner: u32, effective: u32) -> bool {
-    owner != effective || mode & 0o022 != 0
-}
-
-#[cfg(not(unix))]
-const fn shared_directory(_metadata: &fs::Metadata) -> bool {
-    false
-}
-
-#[cfg(test)]
-#[cfg(unix)]
-mod tests {
-    use super::shared_mode_owner;
-
-    #[test]
-    fn a_named_directory_warns_for_other_owners_and_group_or_world_write() {
-        for (mode, owner, effective, warned) in [
-            (0o700, 12, 12, false),
-            (0o500, 12, 12, false),
-            (0o750, 12, 12, false),
-            (0o770, 12, 12, true),
-            (0o707, 12, 12, true),
-            (0o700, 13, 12, true),
-        ] {
-            assert_eq!(shared_mode_owner(mode, owner, effective), warned);
-        }
+            .is_some_and(|metadata| {
+                metadata.is_dir() && crate::config::writable_by_another(&metadata)
+            })
     }
 }

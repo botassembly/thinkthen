@@ -81,23 +81,9 @@ if (orphans.length) {
 const folders = JSON.parse(fs.readFileSync(path.join(root, 'beatles', 'folders.json'), 'utf8'));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-smoke-'));
 
-// A checkout made under umask 002 leaves its folders writable by the group,
-// and thinkthen then warns that another user may change a recording folder.
-// The copy a page runs in keeps only its owner's write bits, as a checkout
-// made under umask 022 does.
-function ownerWrites(dir) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    fs.chmodSync(p, fs.statSync(p).mode & ~0o022);
-    if (e.isDirectory()) ownerWrites(p);
-  }
-}
-
-// The site's recordings, copied so the copy can drop the group write bit.
+// The site's recordings, copied so a run cannot change the checkout.
 const recordings = path.join(tmp, 'recordings');
 fs.cpSync(path.join(site, 'recordings'), recordings, { recursive: true });
-fs.chmodSync(recordings, 0o755);
-ownerWrites(recordings);
 
 // The command every example calls. A function call that names no replay
 // folder of its own answers from the site's recordings. A dry run sends
@@ -143,7 +129,6 @@ for (const [page, list] of pages) {
   } else if (fs.existsSync(path.join(root, page, 'files'))) {
     fs.cpSync(path.join(root, page, 'files'), work, { recursive: true });
   }
-  ownerWrites(work);
   for (const rel of list) {
     const file = path.join(root, rel);
     const text = fs.readFileSync(file, 'utf8');

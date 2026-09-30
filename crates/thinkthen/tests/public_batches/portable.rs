@@ -39,8 +39,8 @@ fn public_bulk_keeps_portable_max_bodies_and_row_identities() {
         .expect("key")
         .model("jev-1.13.0")
         .expect("model")
-        .throttle(1)
-        .expect("one in flight")
+        .throttle(THROTTLE)
+        .expect("the process throttle")
         .no_cache()
         .build()
         .expect("engine");
@@ -71,14 +71,13 @@ fn public_bulk_keeps_portable_max_bodies_and_row_identities() {
         .iter()
         .map(|body| body.strip_suffix('\n').expect("fixture newline").as_bytes())
         .collect();
-    assert_eq!(
-        listener
-            .requests()
-            .iter()
-            .map(|sent| sent.body.as_slice())
-            .collect::<Vec<_>>(),
-        expected
-    );
+    // Two requests may be in flight, so they can arrive in either order.
+    let requests = listener.requests();
+    let mut arrived: Vec<&[u8]> = requests.iter().map(|sent| sent.body.as_slice()).collect();
+    arrived.sort_unstable();
+    let mut sorted = expected.clone();
+    sorted.sort_unstable();
+    assert_eq!(arrived, sorted);
     let hashes: Vec<_> = expected
         .iter()
         .map(|body| super::identity::request_digest(listener.url(), body))

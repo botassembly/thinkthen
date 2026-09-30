@@ -52,7 +52,11 @@ fn an_unknown_body_on_the_case_arm_earns_the_drift_status_and_never_a_generic_an
         "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n"
     );
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(backend.count(), 3, "two retries follow the first 500");
+    assert_eq!(
+        backend.count(),
+        4,
+        "the default three retries follow the first 500"
+    );
 }
 
 #[test]

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
+use crate::result_assertions::normalized_details;
 use crate::support::{DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_recording};
 
 mod replay_context;
@@ -129,7 +130,7 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
             String::from_utf8_lossy(&request.body).contains(EVIDENCE),
             "the request carried the evidence"
         );
-        (listener.base().to_owned(), output.stdout)
+        (listener.base().to_owned(), output)
     };
 
     let (name, written) = only_entry(&folder).expect("one recorded entry");
@@ -154,14 +155,22 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    let live = String::from_utf8(recorded.1).expect("a result is text");
-    let replayed = String::from_utf8(output.stdout).expect("a result is text");
+    let attempts = |output: &Output| {
+        let details: serde_json::Value =
+            serde_json::from_slice(&output.stdout).expect("a result is JSON");
+        details["meta"]["attempts"].as_array().map(Vec::len)
+    };
     assert_eq!(
-        live.replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
-            .replace(r#""cached":false"#, r#""cached":true"#),
-        replayed
+        attempts(&recorded.1),
+        Some(1),
+        "the live send is one attempt"
     );
-    assert!(live.contains(r#""cached":false"#), "{live}");
+    assert_eq!(attempts(&output), None, "a replay adds no attempt");
+    let live = normalized_details(&recorded.1).expect("live details");
+    let replayed = normalized_details(&output).expect("replayed details");
+    assert_eq!((live.1, live.2), (false, 1));
+    assert_eq!((replayed.1, replayed.2), (true, 0));
+    assert_eq!(live.0, replayed.0);
 }
 
 #[test]
