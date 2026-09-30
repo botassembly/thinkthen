@@ -46,3 +46,5 @@ Slice 1 landed every item the slice names. The rung ran 42.1 s and 39.9 s before
 `spec` now runs both probe self-tests beside the checkpoint pages, and it passed. Deleting the demo page run left `demo_runner::a_page_whose_assertion_is_wrong_fails_the_run` as the proof that the runner can fail. The TypeScript and DuckDB binding checks lost only sentence checks. Python lost its deadline-sentence test and the `check.sh` step that checked each test `NOTES.md` names exists. Their code rows stay, and ADR 0038 and the Python `NOTES.md` no longer promise the retired checks.
 
 No item was deferred for the 0304 slice 3a collision. The slice touched two files that branch also edits, `sdlc/ratchet.json` and `libraries/python/ratchet.py.json`. Each holds one measured number, so the second lander remeasures it with `node sdlc/scripts/ratchet.mjs`.
+
+The Python and DuckDB checks passed. The TypeScript check failed one test, `details equals the command --details document for the same question and text`, on a request digest this slice does not touch. It is filed as `sdlc/issues/2026-09-30-typescript-details-request-digest-differs-from-the-command.md`.
