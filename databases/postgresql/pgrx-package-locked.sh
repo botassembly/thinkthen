@@ -22,4 +22,11 @@ restore() {
   rm -f "$held"
 }
 trap restore EXIT
+# macOS links an extension before PostgreSQL loads it, so the server's
+# symbols resolve at load (ticket 0336). `cargo pgrx new` writes this flag to
+# `.cargo/config.toml`, which policy.py refuses here, and RUSTFLAGS would
+# replace it anyway.
+if [ "$(uname -s)" = Darwin ]; then
+  export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Clink-arg=-Wl,-undefined,dynamic_lookup"
+fi
 CARGO_NET_OFFLINE=true cargo pgrx package "$@"

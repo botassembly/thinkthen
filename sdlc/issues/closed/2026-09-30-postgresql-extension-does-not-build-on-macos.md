@@ -1,6 +1,6 @@
 # The PostgreSQL extension does not build on macOS
 
-Status: open. Found by the wave 4 macOS dry run on 2026-09-29 at `2c5ac772b`. The same code stands at main `e2ee1d9fa`. No ticket owns it. The release issue lists it as item 7.
+Status: closed 2026-09-30. Ticket 0336 builds the extension on macOS and confines its file reads there with `openat`, `O_NOFOLLOW_ANY` and `F_GETPATH`. The M5 proved the build and the confined reads; the release rehearsal's macOS jobs run the full check. Found by the wave 4 macOS dry run on 2026-09-29 at `2c5ac772b`.
 
 Priority: rank 3 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a new ticket, ready now; proof needs macOS.
 
