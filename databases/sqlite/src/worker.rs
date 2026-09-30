@@ -235,7 +235,7 @@ mod tests {
         );
         assert_eq!(
             rusqlite::Error::from(failure).to_string(),
-            "thinkthen defect: a panic crossed the SQLite boundary"
+            "thinkthen defect: a panic crossed the SQLite boundary (retryable: no)"
         );
         let (answers, handle) =
             spawn(|| -> Result<(), Failure> { std::panic::panic_any(Exploding) })
@@ -250,7 +250,7 @@ mod tests {
         );
         assert_eq!(
             rusqlite::Error::from(failure).to_string(),
-            "thinkthen defect: a panic crossed the SQLite boundary"
+            "thinkthen defect: a panic crossed the SQLite boundary (retryable: no)"
         );
         assert!(handle.join().is_ok(), "no secondary unwind on the worker");
         assert_eq!(guard("scalar", || Ok(7)).ok(), Some(7));

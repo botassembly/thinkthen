@@ -24,7 +24,7 @@ import time
 
 from helper import CLI, LIB, Backend, Child, environment, expect, main
 
-CANCELLED = "thinkthen cancelled: the call was cancelled"
+CANCELLED = "thinkthen cancelled: the call was cancelled (retryable: no)"
 
 # The child runs `sql` on `db` and interrupts `target` when the parent says
 # go. It reports the error and the time from the interrupt to the return,

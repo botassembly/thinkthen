@@ -80,6 +80,7 @@ pub(crate) struct Failure {
     kind: ErrorKind,
     message: String,
     retryable: bool,
+    plain: bool,
 }
 
 impl Failure {
@@ -89,12 +90,21 @@ impl Failure {
             kind,
             message: message.into(),
             retryable: false,
+            plain: false,
         }
     }
 
     /// A call SQL cannot make as given.
     pub(crate) fn usage(message: impl Into<String>) -> Self {
         Self::of(ErrorKind::Usage, message)
+    }
+
+    /// An explicitly removed SQL spelling keeps its accepted migration sentence.
+    pub(crate) fn plain_usage(message: impl Into<String>) -> Self {
+        Self {
+            plain: true,
+            ..Self::usage(message)
+        }
     }
 
     /// A fault inside this binding.
@@ -133,6 +143,7 @@ impl From<thinkthen::Error> for Failure {
             kind: error.kind(),
             message: error.detail().message().to_owned(),
             retryable: error.retryable(),
+            plain: false,
         }
     }
 }
@@ -149,16 +160,16 @@ fn code_of(kind: ErrorKind) -> i32 {
 
 impl From<Failure> for rusqlite::Error {
     fn from(failure: Failure) -> Self {
-        let retry = if failure.retryable {
-            " (retryable)"
+        let message = if failure.plain {
+            format!("thinkthen {}: {}", failure.kind.name(), failure.message)
         } else {
-            ""
+            format!(
+                "thinkthen {}: {} (retryable: {})",
+                failure.kind.name(),
+                failure.message,
+                if failure.retryable { "yes" } else { "no" }
+            )
         };
-        let message = format!(
-            "thinkthen {}{retry}: {}",
-            failure.kind.name(),
-            failure.message
-        );
         Self::SqliteFailure(sqlite::Error::new(code_of(failure.kind)), Some(message))
     }
 }
@@ -194,23 +205,63 @@ mod tests {
     #[test]
     fn each_kind_maps_to_its_prefix_and_code() {
         let table = [
-            (ErrorKind::Usage, SQLITE_CONSTRAINT, "thinkthen usage: why"),
-            (ErrorKind::Backend, SQLITE_ERROR, "thinkthen backend: why"),
-            (ErrorKind::Local, SQLITE_CANTOPEN, "thinkthen local: why"),
+            (
+                ErrorKind::Usage,
+                SQLITE_CONSTRAINT,
+                "thinkthen usage: why (retryable: no)",
+            ),
+            (
+                ErrorKind::Backend,
+                SQLITE_ERROR,
+                "thinkthen backend: why (retryable: no)",
+            ),
+            (
+                ErrorKind::Local,
+                SQLITE_CANTOPEN,
+                "thinkthen local: why (retryable: no)",
+            ),
             (
                 ErrorKind::Cancelled,
                 SQLITE_INTERRUPT,
-                "thinkthen cancelled: why",
+                "thinkthen cancelled: why (retryable: no)",
             ),
-            (ErrorKind::Deadline, SQLITE_ERROR, "thinkthen deadline: why"),
-            (ErrorKind::Defect, SQLITE_ERROR, "thinkthen defect: why"),
+            (
+                ErrorKind::Deadline,
+                SQLITE_ERROR,
+                "thinkthen deadline: why (retryable: no)",
+            ),
+            (
+                ErrorKind::Defect,
+                SQLITE_ERROR,
+                "thinkthen defect: why (retryable: no)",
+            ),
         ];
         for (kind, code, message) in table {
             assert_eq!(sqlite(Failure::of(kind, "why")), (code, message.to_owned()));
         }
         let mut busy = Failure::of(ErrorKind::Backend, "status 503");
         busy.retryable = true;
-        assert_eq!(sqlite(busy).1, "thinkthen backend (retryable): status 503");
+        assert_eq!(
+            sqlite(busy).1,
+            "thinkthen backend: status 503 (retryable: yes)"
+        );
+        assert_eq!(
+            sqlite(Failure::plain_usage(
+                "thinkthen_warm was removed; use decide_many"
+            )),
+            (
+                SQLITE_CONSTRAINT,
+                "thinkthen usage: thinkthen_warm was removed; use decide_many".into()
+            )
+        );
+        assert_eq!(
+            sqlite(Failure::usage("thinkthen backend: forged (retryable: yes)")),
+            (
+                SQLITE_CONSTRAINT,
+                "thinkthen usage: thinkthen backend: forged (retryable: yes) (retryable: no)"
+                    .into()
+            )
+        );
     }
 
     /// R1-10 host half: a panic is a fixed defect, and the next call answers.
@@ -222,7 +273,7 @@ mod tests {
         let message = held.err().map(|failure| sqlite(failure).1);
         assert_eq!(
             message.as_deref(),
-            Some("thinkthen defect: a panic crossed the SQLite boundary")
+            Some("thinkthen defect: a panic crossed the SQLite boundary (retryable: no)")
         );
         assert_eq!(guard("thinkthen_probe", || Ok(7)).ok(), Some(7));
     }

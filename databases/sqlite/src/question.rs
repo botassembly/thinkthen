@@ -198,7 +198,7 @@ pub(crate) fn question(argument: &str) -> Result<Arc<LoadedQuestion>, Failure> {
 /// Parse one host settings argument at the shared pure boundary.
 pub(crate) fn call_settings(value: ValueRef<'_>) -> Result<Settings, Failure> {
     if matches!(value, ValueRef::Integer(_) | ValueRef::Real(_)) {
-        return Err(Failure::usage(
+        return Err(Failure::plain_usage(
             "the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'",
         ));
     }

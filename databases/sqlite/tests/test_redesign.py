@@ -44,7 +44,7 @@ db.execute("SELECT thinkthen_configure(?)", ('{"batch":1,"max_requests_total":1}
 say(result=run(db, "SELECT key,value FROM thinkthen_decide_many(?, ?)",
                ('Is it red?', '{"a":"one red row","b":"another red row"}')))
 """, environment(backend))
-    expect(held["result"], "thinkthen usage: this process has sent its total of 1 requests (thinkthen_configure)",
+    expect(held["result"], "thinkthen usage: this process has sent its total of 1 requests (thinkthen_configure) (retryable: no)",
            "later packed attempt names the configured total")
     expect(backend.close(), 1, "one live send, refused second send")
 

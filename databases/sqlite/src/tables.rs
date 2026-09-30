@@ -193,7 +193,7 @@ impl Recognizer {
         if kinds.starts_with('{') || kinds.starts_with('@') {
             let (whole, file) = file_json(kinds, "recognize")?;
             if whole.pointer("/recognize/relations").is_some() {
-                return Err(Failure::usage(
+                return Err(Failure::plain_usage(
                     "thinkthen_recognize takes no relations; relate rows with thinkthen_relate",
                 ));
             }
@@ -385,7 +385,7 @@ impl Table for Relater {
             .skip(3)
             .any(|value| !matches!(value, Value::Null))
         {
-            return Err(Failure::usage(
+            return Err(Failure::plain_usage(
                 "relate takes a query and rules; pass 'SELECT id, name, kind FROM …'",
             ));
         }
