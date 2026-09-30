@@ -2,7 +2,7 @@
 
 Status: open. Measured by Beatles Bench tickets 0019 and 0018 on 2026-09-30, against main `c22512868`. The bench's `reports/results.md` publishes every figure below.
 
-Owner: ticket 0342 adds the single-answer menu and the precision statement. Ticket 0344 settled the both-ways edge shape: an `either` edge ends with `"either":true` on every surface. Ian can overturn the split and the shape. Blocks 0.1: the default and the shape must be set before the release.
+Owner: ticket 0342 adds the single-answer menu and the precision statement. Ticket 0344 settled the both-ways edge shape: an `either` edge ends with `"either":true` on every surface. The decision run of 2026-09-30 passed the bar, so ticket 0353 makes the menu the recommended form for single-answer relations; this issue closes when 0353 lands. Ian can overturn the split, the shape and the verdict. Blocks 0.1: the default and the shape must be set before the release.
 
 ## The problem
 
@@ -59,6 +59,39 @@ The Beatles Bench team asked for three conditions on 2026-09-30. The bench harne
 3. Run on Liquid d1 as well as on the default backend.
 
 The acceptance bar above holds on the default backend at the 0.5 cut. The other two cells and the none-of-these rate go in the relate ticket's record and on the relate page.
+
+### Result, 2026-09-30: the menu passes
+
+thinkthen ran the decision run itself on main `8bb32e59a`, which holds 0342 and 0344, so the bench need not run it. It used the bench's own case files, harness (`scripts/run/ask_suite.py`) and scorer (`scripts/score/relate_audit.py`, `scripts/score/score_suite.py`) at bench commit `34128b0f`. The only change to the cases was `"single": true` on `appears_on`, the song-to-album relation, in a scratch copy of `relate-suite.json`. `sung_by` stayed on the pair planner.
+
+- Backend and model: the default address `https://api.typesafe.ai/v1` with `jev-1.13.0`, the model the baseline run's backend reported.
+- Cases: `relate-songs` (182 songs), the 16 `solo` sets and the 16 `wrong-album-only` sets, 33 calls in all, four at a time. The plan's upper bound was 293,161 input tokens; duets and links were left out to stay under 300,000, since neither enters the bar and links has no song-to-album relation.
+- Spend: one `sdlc/scripts/live` job under a 325,000-token cap. 36 requests, 1,220 questions, 151,401 input and 49,389 output tokens, about $0.006.
+- Recording: made with `--record` into a scratch folder and converted with `thinkthen cache convert` (1,220 answers). A replay with no key gave byte-identical outputs. It holds only public bench names and stays local, uncommitted.
+
+At the 0.5 cut, beside the pair planner's figures from the table above:
+
+| Set | Measure | Pair planner, `c22512868` | Menu, `8bb32e59a` | Bar |
+| --- | --- | --- | --- | --- |
+| 182 songs | edge F1 | 0.523 | 0.635 (0.587 to 0.689) | above 0.523: passes |
+| 182 songs | edge precision | 0.420 | 0.749 | |
+| 182 songs | edge recall | 0.693 | 0.551 | |
+| 16 missing-album sets | edge precision | 0.296 | 0.541 (0.384 to 0.690) | above 0.296: passes |
+| 16 missing-album sets | edge recall | | 0.526 | |
+| 16 solo sets | edge F1 | | 0.737 | |
+
+The none-of-these rate: on the missing-album sets, the menu answered none for 16 of 31 songs (0.516). It named a wrong album at or above 0.5 for 11 songs and below 0.5 for 4. Where the right album was listed, it answered none for 7 of 182 songs (0.038) and 2 of 31 solo songs (0.065).
+
+The tuned cut: `thinkthen audit` on a seeded half chose 0.47 on both the solo and the missing-album sets. The 182-song case is one case, so it has no halves and no tuned cut. At 0.47 the held half scored:
+
+| Set | Held-half F1, pair planner | Held-half F1, menu | Menu precision, recall |
+| --- | --- | --- | --- |
+| solo | 0.689 | 0.680 | 0.708, 0.654 |
+| missing album | 0.373 | 0.526 | 0.500, 0.556 |
+
+Verdict: the menu beats both bars on the default backend at the 0.5 cut, so option (b) is accepted with (c), and ticket 0353 carries the default. The menu trades recall for precision: song-set recall fell from 0.693 to 0.551. At the tuned cut the menu wins on the missing-album sets and ties the pair planner on solo sets, 0.680 against 0.689 on eight held cases, so the bench's second condition holds on one of two sets.
+
+The Liquid d1 cell was not run. The instruction for this run allowed one paid run, and the bar needs only the default backend. It stays open in ticket 0353's Defers.
 
 ## Evidence
 
