@@ -1,6 +1,5 @@
 //! The R caller's interrupt-safe worker and one owned completion path.
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::thread;
@@ -9,7 +8,6 @@ use std::time::{Duration, Instant};
 use thinkthen::{CallOptions, CancelToken, Engine, Error};
 
 use super::account::{Account, Completed};
-use super::diagnostics;
 use super::receipt::Receipt;
 use crate::{carry, defect, engine, interrupted, usage};
 
@@ -133,21 +131,17 @@ fn on_worker_with_receipt<T: Send + 'static>(
     thread::Builder::new()
         .name("thinkthen-r".to_owned())
         .spawn(move || {
-            let answer = diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
-                Ok(value) => value,
-                Err(payload) => {
-                    std::mem::forget(payload);
-                    if let Some(held) = &worker_receipt {
-                        held.settle(
-                            "defect".to_owned(),
-                            super::account::Snapshot {
-                                facts: None,
-                                details: Vec::new(),
-                            },
-                        );
-                    }
-                    Err(defect("the call panicked"))
+            let answer = thinkthen::contained(body).unwrap_or_else(|| {
+                if let Some(held) = &worker_receipt {
+                    held.settle(
+                        "defect".to_owned(),
+                        super::account::Snapshot {
+                            facts: None,
+                            details: Vec::new(),
+                        },
+                    );
                 }
+                Err(defect("the call panicked"))
             });
             // The caller left after an interrupt when this send fails.
             let _ignored = sender.send(answer);

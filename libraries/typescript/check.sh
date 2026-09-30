@@ -142,7 +142,7 @@ fi
 grep -q 'npm ci --offline' check.sh || fail 'npm ci runs without --offline'
 node -e 'const d = require("./package.json").devDependencies; for (const [n, v] of Object.entries(d)) if (!/^\d+\.\d+\.\d+$/.test(v)) process.exit(1)' ||
     fail 'a dev dependency is not an exact version'
-[ "$(grep -rc 'catch_unwind(' src | awk -F: '{ n += $2 } END { print n }')" = 1 ] || fail 'src holds other than one catch_unwind'
+[ "$(grep -rc 'catch_unwind(' src | awk -F: '{ n += $2 } END { print n }')" = 0 ] || fail 'src catches panics outside thinkthen::contained'
 ! grep -rnP '\bunsafe\b' src || fail 'src holds unsafe'
 for page in README.md index.d.ts; do
     grep -q 'No deadline is spelled null, left out, or -1.' "$page" || fail "$page lacks the deadline sentence"

@@ -14,7 +14,7 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 
 - Every call runs on a worker thread. The main thread waits in 100 ms ticks and checks R's interrupt flag only inside `R_ToplevelExec`. A drop guard cancels the call's token, so a detached batch stops sending.
 - `.tt_call` checks before it forces the call and after the call returns. The Rust half checks before it spawns the worker and at each tick.
-- One `catch_unwind` turns a worker panic into `defect` and settles a supplied completion with unavailable facts. A worker whose caller left ignores the failed send.
+- `thinkthen::contained` turns a worker panic into `defect` and settles a supplied completion with unavailable facts. A worker whose caller left ignores the failed send.
 - The optional `tt_completion()` handle claims before R question evaluation, then becomes running after spawn. The original worker publishes one owned terminal account after core work stops. `tt_completion_read()` converts copies on R's main thread. A prompt Ctrl-C keeps R's own interrupt while the worker retains only an `Arc`, so collecting the R handle cannot run a finalizer on that worker.
 - `tests/interrupt.R` measures signal to `CAUGHT`. The single call and the batch each answer within one tick. The record holds ten runs.
 - The retired pieces: `ACTIVE`, `tt_cancel_active`, and `.tt_cleanup`. The drop guard does their work.
