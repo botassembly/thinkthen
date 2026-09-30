@@ -10,7 +10,7 @@ procedure Smoke is
    Facts : Unbounded_String;
    Error : Thinkthen.Failure;
 begin
-   Thinkthen.Decide (Client, Value ("THINKTHEN_SMOKE_QUESTION"), Value ("THINKTHEN_SMOKE_TEXT"), Answer, Facts, Error);
+   Thinkthen.Decide (Client, Value ("THINKTHEN_TEST_SMOKE_QUESTION"), Value ("THINKTHEN_TEST_SMOKE_TEXT"), Answer, Facts, Error);
    if Error.Kind /= Thinkthen.None then
       raise Program_Error with "smoke decide failed: " & Thinkthen.Message (Error);
    end if;

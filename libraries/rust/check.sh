@@ -13,6 +13,7 @@ fi
 . ../../sdlc/scripts/scratch.sh
 usage_home
 if [ "$profile" = smoke ]; then
+    smoke_guard
     cargo build --quiet --locked --offline --bin smoke
     "${CARGO_TARGET_DIR:-target}/debug/smoke"
     exit

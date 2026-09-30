@@ -7,7 +7,7 @@
 
 int main() {
     auto engine = tt::create();
-    auto answer = tt::decide(engine, std::getenv("THINKTHEN_SMOKE_QUESTION"), std::getenv("THINKTHEN_SMOKE_TEXT"));
+    auto answer = tt::decide(engine, std::getenv("THINKTHEN_TEST_SMOKE_QUESTION"), std::getenv("THINKTHEN_TEST_SMOKE_TEXT"));
     auto outcome = answer.value.outcome;
     std::cout << "smoke: " << (outcome == tt::Outcome::yes ? "true" : outcome == tt::Outcome::no ? "false" : "null") << "\n";
 }

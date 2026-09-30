@@ -51,6 +51,7 @@ export THINKTHEN_BACKEND_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/conformanc
 }
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 if [ "$profile" = smoke ]; then
+	smoke_guard
 	# The replay smoke (ticket 0335): the loadable extension copied to a scratch folder, as the
 	# archive lays it out, and loaded from there by its path.
 	sh cpp/build.sh
@@ -61,7 +62,7 @@ if [ "$profile" = smoke ]; then
 db = duckdb.connect(config={"allow_unsigned_extensions": "true"})
 db.execute(f"LOAD \x27{sys.argv[1]}\x27")
 (value,), = db.execute("SELECT thinkthen_decide(?, ?)",
-                       [os.environ["THINKTHEN_SMOKE_QUESTION"], os.environ["THINKTHEN_SMOKE_TEXT"]]).fetchall()
+                       [os.environ["THINKTHEN_TEST_SMOKE_QUESTION"], os.environ["THINKTHEN_TEST_SMOKE_TEXT"]]).fetchall()
 print("smoke:", {True: "true", False: "false", None: "null"}[value])' "$installed/thinkthen.duckdb_extension"
 	exit
 fi

@@ -45,6 +45,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 fi
 
 if [ "$profile" = smoke ]; then
+    smoke_guard
     # The replay smoke (ticket 0335): the package laid out in a fresh project's node_modules,
     # required by its name from that project.
     [ -x "$node_home/bin/node" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 77; }
@@ -60,7 +61,7 @@ if [ "$profile" = smoke ]; then
     THINKTHEN_API_KEY=sk-smoke-loopback node -e '
         const tt = require("thinkthen");
         if (!require.resolve("thinkthen").startsWith(process.argv[1])) throw new Error("thinkthen loaded from outside the project");
-        tt.decide(process.env.THINKTHEN_SMOKE_QUESTION, process.env.THINKTHEN_SMOKE_TEXT)
+        tt.decide(process.env.THINKTHEN_TEST_SMOKE_QUESTION, process.env.THINKTHEN_TEST_SMOKE_TEXT)
             .then((call) => console.log(`smoke: ${call.value}`));
     ' "$project/node_modules/"
     exit

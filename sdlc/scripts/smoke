@@ -6,7 +6,7 @@
 # check.sh then runs with THINKTHEN_TEST_PROFILE=smoke and the loopback port as $1. It builds
 # the installed shape, loads it from there, and asks the same question through the binding's
 # default engine, which reads THINKTHEN_BASE_URL, THINKTHEN_CACHE and THINKTHEN_API_KEY. The
-# question is THINKTHEN_SMOKE_QUESTION and the text THINKTHEN_SMOKE_TEXT. Its last line on
+# question is THINKTHEN_TEST_SMOKE_QUESTION and the text THINKTHEN_TEST_SMOKE_TEXT. Its last line on
 # standard output is `smoke: true`. The smoke passes when that line matches case 01's answer
 # and the backend counted the seed's one request and no other. A check that exits 77 found no
 # host toolchain and reports "not run".
@@ -21,11 +21,14 @@ case_id=01-decide-yes-captured
 # The surfaces the rung smokes. PostgreSQL and Polars stay in the routine surfaces rung; see ticket 0335.
 skipped='libraries/polars databases/postgresql'
 
+# one BINARIES SURFACE: smoke one surface with the command and backend copied to BINARIES.
 one() {
+	bin=$1
+	shift
 	scratch_dir work
 	mkdir "$work/cache" "$work/config" "$work/usage"
 	mkfifo "$work/in"
-	target/debug/conformance-backend <"$work/in" >"$work/out" 2>"$work/backend.err" &
+	"$bin/conformance-backend" <"$work/in" >"$work/out" 2>"$work/backend.err" &
 	exec 3>"$work/in"
 	tries=0
 	until [ -s "$work/out" ]; do
@@ -34,14 +37,21 @@ one() {
 		sleep 0.1
 	done
 	port=$(head -n 1 "$work/out")
-	THINKTHEN_SMOKE_QUESTION=$(jq -r --arg id "$case_id" '.cases[] | select(.id == $id) | .question.decide' conformance/cases.json)
+	THINKTHEN_TEST_SMOKE_QUESTION=$(jq -r --arg id "$case_id" '.cases[] | select(.id == $id) | .question.decide' conformance/cases.json)
 	# The mark keeps the text's last newline, which command substitution would drop.
-	THINKTHEN_SMOKE_TEXT=$(jq -j --arg id "$case_id" '.cases[] | select(.id == $id) | .exchanges[0].evidence' conformance/cases.json; echo .)
-	THINKTHEN_SMOKE_TEXT=${THINKTHEN_SMOKE_TEXT%.}
+	THINKTHEN_TEST_SMOKE_TEXT=$(jq -j --arg id "$case_id" '.cases[] | select(.id == $id) | .exchanges[0].evidence' conformance/cases.json; echo .)
+	THINKTHEN_TEST_SMOKE_TEXT=${THINKTHEN_TEST_SMOKE_TEXT%.}
 	want=$(jq -r --arg id "$case_id" '.cases[] | select(.id == $id) | .expect.success.answers[0].bare' conformance/cases.json)
-	export THINKTHEN_SMOKE_QUESTION THINKTHEN_SMOKE_TEXT XDG_CONFIG_HOME="$work/config" THINKTHEN_CACHE="$work/cache" \
+	if [ "$(uname -s)" = Darwin ]; then
+		# macOS reads the configuration file under HOME, so HOME moves to a copy without it.
+		usage_link "$HOME" "$work/home" Library
+		usage_link "$HOME/Library" "$work/home/Library" 'Application Support'
+		usage_link "$HOME/Library/Application Support" "$work/home/Library/Application Support" thinkthen
+		export HOME="$work/home"
+	fi
+	export THINKTHEN_TEST_SMOKE_QUESTION THINKTHEN_TEST_SMOKE_TEXT XDG_CONFIG_HOME="$work/config" THINKTHEN_CACHE="$work/cache" \
 		THINKTHEN_API_KEY=sk-smoke-loopback THINKTHEN_BASE_URL="http://127.0.0.1:$port/case/$case_id/v1"
-	seeded=$(printf '%s' "$THINKTHEN_SMOKE_TEXT" | XDG_CACHE_HOME="$work/usage" target/debug/thinkthen decide "$THINKTHEN_SMOKE_QUESTION") || {
+	seeded=$(printf '%s' "$THINKTHEN_TEST_SMOKE_TEXT" | XDG_CACHE_HOME="$work/usage" "$bin/thinkthen" decide "$THINKTHEN_TEST_SMOKE_QUESTION") || {
 		echo "smoke: FAIL $1 (the seed printed $seeded)"; return 1; }
 	code=0
 	THINKTHEN_TEST_PROFILE=smoke sh "$1/check.sh" "$port" 3>&- >"$work/log" 2>&1 || code=$?
@@ -64,16 +74,20 @@ one() {
 }
 
 if [ "${1:-}" = --one ]; then
-	one "$2"
+	one "$2" "$3"
 	exit
 fi
 # ADR 0113: a smoke that bypasses its check's scratch usage folder writes this decoy and fails.
 usage_guard
-cargo build --locked --offline --quiet --package conformance-backend --bin conformance-backend --package thinkthen --bin thinkthen
+# Its own target folder keeps the nextest build beside it from replacing these binaries mid-run.
+cargo build --locked --offline --quiet --target-dir target/smoke \
+	--package conformance-backend --bin conformance-backend --package thinkthen --bin thinkthen
+scratch_dir bin
+cp target/smoke/debug/thinkthen target/smoke/debug/conformance-backend "$bin/"
 if [ "$#" -eq 0 ]; then
 	set -- $(awk '!/^#/ && ($2 == "landed" || $2 == "feature") { print $1 }' sdlc/surfaces.txt)
 	for surface in $skipped; do
 		set -- $(printf '%s\n' "$@" | grep -vx "$surface")
 	done
 fi
-printf '%s\n' "$@" | xargs -P 4 -n 1 sh "$0" --one
+printf '%s\n' "$@" | xargs -P 4 -n 1 sh "$0" --one "$bin"

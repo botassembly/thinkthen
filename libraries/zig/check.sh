@@ -19,6 +19,7 @@ fi
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    smoke_guard
     # The replay smoke (ticket 0335): the package module over the installed C door.
     . "$root/sdlc/scripts/installed.sh"
     scratch_dir smoke

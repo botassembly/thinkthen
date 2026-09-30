@@ -35,6 +35,7 @@ done
 host_identity=$("$host" -c 'import os, sys; print(os.path.realpath(sys._base_executable), sys.version.split()[0])')
 command -v maturin >/dev/null 2>&1 || not_run "no maturin"
 if [ "$profile" = smoke ]; then
+	smoke_guard
 	# The replay smoke (ticket 0335): the wheel in a fresh venv, imported from outside the checkout.
 	scratch_dir scratch
 	PYO3_PYTHON=$host maturin build --quiet --locked --offline -o "$scratch/wheel"
@@ -43,7 +44,7 @@ if [ "$profile" = smoke ]; then
 	cd "$scratch"
 	THINKTHEN_API_KEY=sk-smoke-loopback "$scratch/venv/bin/python" -c 'import os, sys, thinkthen
 assert thinkthen.__file__.startswith(sys.argv[1]), thinkthen.__file__
-value = thinkthen.decide(os.environ["THINKTHEN_SMOKE_QUESTION"], os.environ["THINKTHEN_SMOKE_TEXT"]).value
+value = thinkthen.decide(os.environ["THINKTHEN_TEST_SMOKE_QUESTION"], os.environ["THINKTHEN_TEST_SMOKE_TEXT"]).value
 print("smoke:", {True: "true", False: "false", None: "null"}[value])' "$scratch/venv/"
 	exit
 fi

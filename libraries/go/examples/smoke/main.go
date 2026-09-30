@@ -17,7 +17,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer engine.Close()
-	answer, err := engine.Decide(context.Background(), os.Getenv("THINKTHEN_SMOKE_QUESTION"), os.Getenv("THINKTHEN_SMOKE_TEXT"))
+	answer, err := engine.Decide(context.Background(), os.Getenv("THINKTHEN_TEST_SMOKE_QUESTION"), os.Getenv("THINKTHEN_TEST_SMOKE_TEXT"))
 	if err != nil {
 		log.Fatal(err)
 	}

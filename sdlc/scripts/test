@@ -43,9 +43,15 @@ cd -- "$REPO"
 usage_guard
 
 # One replay smoke per binding, four at a time beside the Rust tests (ticket 0335).
+# It runs in its own process group, so a failed step here stops every smoke before the lock frees.
 scratch_dir smoke_log
-sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
+if command -v setsid >/dev/null 2>&1; then
+    setsid sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
+else
+    sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
+fi
 smoke=$!
+trap 'kill -- -"$smoke" 2>/dev/null || kill "$smoke" 2>/dev/null; wait "$smoke" 2>/dev/null; scratch_clean' EXIT
 
 # nextest runs the same tests in about half the time; cargo test is the fallback.
 if cargo nextest --version >/dev/null 2>&1; then

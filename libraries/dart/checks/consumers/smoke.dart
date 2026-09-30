@@ -10,8 +10,8 @@ void main(List<String> args) {
   final env = Platform.environment;
   final answer = door.decide(
     engine,
-    env['THINKTHEN_SMOKE_QUESTION']!,
-    env['THINKTHEN_SMOKE_TEXT']!,
+    env['THINKTHEN_TEST_SMOKE_QUESTION']!,
+    env['THINKTHEN_TEST_SMOKE_TEXT']!,
   );
   door.engineFree(engine);
   final outcome = answer.value.outcome;

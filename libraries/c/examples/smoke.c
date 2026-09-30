@@ -11,8 +11,8 @@
 #include <thinkthen.h>
 
 int main(void) {
-    const char *question = getenv("THINKTHEN_SMOKE_QUESTION");
-    const char *text = getenv("THINKTHEN_SMOKE_TEXT");
+    const char *question = getenv("THINKTHEN_TEST_SMOKE_QUESTION");
+    const char *text = getenv("THINKTHEN_TEST_SMOKE_TEXT");
     thinkthen_engine *tt = thinkthen_engine_new();
     thinkthen_answer a;
     if (question == NULL || text == NULL || tt == NULL ||

@@ -9,8 +9,8 @@ pub fn main() !void {
         .failed => return error.EngineBuild,
     };
     defer engine.deinit();
-    const question = std.posix.getenv("THINKTHEN_SMOKE_QUESTION") orelse return error.NoQuestion;
-    const text = std.posix.getenv("THINKTHEN_SMOKE_TEXT") orelse return error.NoText;
+    const question = std.posix.getenv("THINKTHEN_TEST_SMOKE_QUESTION") orelse return error.NoQuestion;
+    const text = std.posix.getenv("THINKTHEN_TEST_SMOKE_TEXT") orelse return error.NoText;
     switch (try engine.decide(question, text, .{})) {
         .ok => |answer| {
             defer answer.deinit(allocator);

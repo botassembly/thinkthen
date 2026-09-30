@@ -21,6 +21,7 @@ fi
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+  smoke_guard
   # The replay smoke (ticket 0335): the package source over the installed C door.
   . "$REPO/sdlc/scripts/installed.sh"
   scratch_dir smoke

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 int main(void) {
- const char *q=getenv("THINKTHEN_SMOKE_QUESTION"),*text=getenv("THINKTHEN_SMOKE_TEXT");
+ const char *q=getenv("THINKTHEN_TEST_SMOKE_QUESTION"),*text=getenv("THINKTHEN_TEST_SMOKE_TEXT");
  TTClient *client=[TTClient create]; if(!client||!q||!text)return 1;
  TTFailure f={0};TTDecision answer={123,-1};char *owned=NULL;
  if([client decideBytes:q questionLength:strlen(q) text:text length:strlen(text) deadline:-1 token:nil answer:&answer facts:&owned failure:&f])return 2;

@@ -2,5 +2,5 @@
 // the environment, with the question and text sdlc/scripts/smoke names.
 using ThinkThen;
 using var engine = Engine.Open();
-var answer = engine.Decide(Environment.GetEnvironmentVariable("THINKTHEN_SMOKE_QUESTION")!, Environment.GetEnvironmentVariable("THINKTHEN_SMOKE_TEXT")!).Value;
+var answer = engine.Decide(Environment.GetEnvironmentVariable("THINKTHEN_TEST_SMOKE_QUESTION")!, Environment.GetEnvironmentVariable("THINKTHEN_TEST_SMOKE_TEXT")!).Value;
 Console.WriteLine("smoke: " + answer.OutcomeKind switch { Outcome.Yes => "true", Outcome.No => "false", _ => "null" });

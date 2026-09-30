@@ -118,3 +118,16 @@ scratch_lint() {
 	printf 'lint: a recursive rm outside sdlc/scripts/scratch.sh (worktrees.md rule 11):\n%s\n' "$scratch_found" >&2
 	return 1
 }
+
+# smoke_guard: the first step of each check's smoke branch (ticket 0335). It refuses a run that
+# `sdlc/scripts/smoke` did not start, so a smoke asks only a loopback backend through a named cache
+# folder, and it replaces any key with the loopback placeholder.
+smoke_guard() {
+	case ${THINKTHEN_BASE_URL:-} in
+	http://127.0.0.1:*) ;;
+	*) echo 'smoke: run this through sdlc/scripts/smoke, which names a loopback address' >&2; exit 2 ;;
+	esac
+	[ -n "${THINKTHEN_CACHE:-}" ] || { echo 'smoke: run this through sdlc/scripts/smoke, which names a cache folder' >&2; exit 2; }
+	THINKTHEN_API_KEY=sk-smoke-loopback
+	export THINKTHEN_API_KEY
+}

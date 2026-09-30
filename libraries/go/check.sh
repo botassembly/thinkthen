@@ -41,6 +41,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     # The replay smoke (ticket 0335): the package builds against the installed C door alone.
     . "$repo/sdlc/scripts/scratch.sh"
     usage_home
+    smoke_guard
     . "$repo/sdlc/scripts/installed.sh"
     scratch_dir smoke
     native_install "$repo" "$smoke/native"

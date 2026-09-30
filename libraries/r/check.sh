@@ -47,13 +47,14 @@ cargo fetch --locked --offline --manifest-path "$rust/Cargo.toml" >/dev/null 2>&
 lane_target=$root/target/r
 
 if [ "$profile" = smoke ]; then
+  smoke_guard
   # The replay smoke (ticket 0335): the package installed in a scratch library, loaded from there.
   CARGO_TARGET_DIR=$lane_target R CMD INSTALL -l "$scratch" thinkthen >"$scratch/install.log" 2>&1 ||
     { cat "$scratch/install.log" >&2; exit 1; }
   cd "$scratch"
   R_LIBS="$scratch:$libs" THINKTHEN_API_KEY=sk-smoke-loopback Rscript -e 'library(thinkthen)
     stopifnot(startsWith(find.package("thinkthen"), commandArgs(TRUE)[1]))
-    value <- tt_decide(Sys.getenv("THINKTHEN_SMOKE_QUESTION"), Sys.getenv("THINKTHEN_SMOKE_TEXT"))$value
+    value <- tt_decide(Sys.getenv("THINKTHEN_TEST_SMOKE_QUESTION"), Sys.getenv("THINKTHEN_TEST_SMOKE_TEXT"))$value
     cat(sprintf("smoke: %s\n", if (is.null(value) || is.na(value)) "null" else tolower(value)))' "$scratch"
   exit
 fi

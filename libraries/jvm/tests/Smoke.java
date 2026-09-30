@@ -6,8 +6,8 @@ import thinkthen.Door;
 public class Smoke {
     public static void main(String[] args) {
         try (var door = new Door()) {
-            var answer = door.decide(System.getenv("THINKTHEN_SMOKE_QUESTION"),
-                    System.getenv("THINKTHEN_SMOKE_TEXT").getBytes(StandardCharsets.UTF_8));
+            var answer = door.decide(System.getenv("THINKTHEN_TEST_SMOKE_QUESTION"),
+                    System.getenv("THINKTHEN_TEST_SMOKE_TEXT").getBytes(StandardCharsets.UTF_8));
             System.out.println("smoke: " + switch (Door.outcome(answer.value())) {
                 case YES -> "true"; case NO -> "false"; default -> "null"; });
         }

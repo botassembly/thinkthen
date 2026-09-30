@@ -16,6 +16,7 @@ command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 7
 usage_home
 scratch_dir cache
 if [ "$profile" = smoke ]; then
+	smoke_guard
 	command -v pkg-config >/dev/null 2>&1 || { echo 'libraries/c: no pkg-config' >&2; exit 77; }
 	. ../../sdlc/scripts/installed.sh
 	native_install "$(cd ../.. && pwd)" "$cache"

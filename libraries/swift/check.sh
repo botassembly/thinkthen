@@ -20,6 +20,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     # The replay smoke (ticket 0335): the package source over the installed C door's module.
     . "$root/sdlc/scripts/scratch.sh"
     usage_home
+    smoke_guard
     . "$root/sdlc/scripts/installed.sh"
     scratch_dir smoke
     native_install "$root" "$smoke/native"

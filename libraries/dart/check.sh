@@ -73,6 +73,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   exit 0
 fi
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+  smoke_guard
   # The replay smoke (ticket 0335): an unrelated app resolves the package source offline and
   # loads the installed C door.
   [ -x "$TT_DART" ] || { echo 'Dart executable unavailable; set TT_DART' >&2; exit 77; }

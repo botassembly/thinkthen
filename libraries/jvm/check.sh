@@ -14,6 +14,7 @@ usage_home
 for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 python3 "$here/tests/toolchains.py"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    smoke_guard
     # The replay smoke (ticket 0335): the door jar as build.sh packs it, over the installed C door.
     . "$root/sdlc/scripts/installed.sh"
     scratch_dir smoke

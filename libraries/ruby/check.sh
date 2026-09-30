@@ -135,6 +135,7 @@ THINKTHEN_TEST_BACKEND=$backend
 export RUBY PATH LIBCLANG_PATH THINKTHEN_TEST_BACKEND
 
 if [ "$profile" = smoke ]; then
+  smoke_guard
   # The replay smoke (ticket 0335): the gem in a fresh gem folder, required from outside the checkout.
   ./build.sh
   "$prefix/bin/gem" install --local --silent --no-document --install-dir "$plant/gems" thinkthen-*.gem
@@ -143,7 +144,7 @@ if [ "$profile" = smoke ]; then
   GEM_PATH="$plant/gems" THINKTHEN_API_KEY=sk-smoke-loopback "$RUBY" -e 'require "thinkthen"
     ours = $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)})
     abort "thinkthen loaded #{ours}" unless ours.any? && ours.all? { |path| path.start_with?(ARGV[0]) }
-    value = ThinkThen.decide(ENV.fetch("THINKTHEN_SMOKE_QUESTION"), ENV.fetch("THINKTHEN_SMOKE_TEXT")).value
+    value = ThinkThen.decide(ENV.fetch("THINKTHEN_TEST_SMOKE_QUESTION"), ENV.fetch("THINKTHEN_TEST_SMOKE_TEXT")).value
     puts "smoke: #{value.nil? ? "null" : value}"' "$plant/gems/gems/"
   exit
 fi

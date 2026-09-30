@@ -15,8 +15,8 @@ copy "thinkthen.cpy".
 01 evidence-text pic x(256).
 01 evidence-length usage binary-double unsigned.
 procedure division.
-    accept question-text from environment "THINKTHEN_SMOKE_QUESTION"
-    accept evidence-text from environment "THINKTHEN_SMOKE_TEXT"
+    accept question-text from environment "THINKTHEN_TEST_SMOKE_QUESTION"
+    accept evidence-text from environment "THINKTHEN_TEST_SMOKE_TEXT"
     move length(trim(question-text trailing)) to question-length
     move length(trim(evidence-text trailing)) to evidence-length
     call "thinkthen_engine_new" returning engine

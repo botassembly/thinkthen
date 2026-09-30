@@ -25,6 +25,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     # The replay smoke (ticket 0335): the headers as the package installs them, over the installed C door.
     . "$repo/sdlc/scripts/scratch.sh"
     usage_home
+    smoke_guard
     . "$repo/sdlc/scripts/installed.sh"
     scratch_dir smoke
     native_install "$repo" "$smoke"

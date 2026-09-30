@@ -16,6 +16,7 @@ dotnet=${THINKTHEN_DOTNET:-$(command -v dotnet || true)}
 command -v python3 >/dev/null 2>&1 || exit 77
 python3 "$here/tests/toolchains.py"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    smoke_guard
     # The replay smoke (ticket 0335): the packed package, restored into a fresh app, over the installed C door.
     . "$root/sdlc/scripts/installed.sh"
     scratch_dir smoke

@@ -53,6 +53,7 @@ fi
 step() { echo "== sqlite: $1"; }
 
 if [ "$profile" = smoke ]; then
+	smoke_guard
 	# The replay smoke (ticket 0335): the release library copied to a scratch folder, as the
 	# archive lays it out, and loaded from there by its path.
 	RUSTFLAGS="--remap-path-prefix=$HOME=/build" cargo build --locked --offline --quiet --release
@@ -64,7 +65,7 @@ connection = sqlite3.connect(":memory:")
 connection.enable_load_extension(True)
 connection.load_extension(sys.argv[1])
 (value,), = connection.execute("SELECT thinkthen_decide(?, ?)",
-                               (os.environ["THINKTHEN_SMOKE_QUESTION"], os.environ["THINKTHEN_SMOKE_TEXT"])).fetchall()
+                               (os.environ["THINKTHEN_TEST_SMOKE_QUESTION"], os.environ["THINKTHEN_TEST_SMOKE_TEXT"])).fetchall()
 print("smoke:", {1: "true", 0: "false", None: "null"}[value])' "$installed/libthinkthen0.$suffix"
 	exit
 fi

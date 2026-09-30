@@ -28,6 +28,7 @@ if [ "$profile" = smoke ]; then
     # The replay smoke (ticket 0335): the package source over the installed C door.
     . "$repo/sdlc/scripts/scratch.sh"
     usage_home
+    smoke_guard
     . "$repo/sdlc/scripts/installed.sh"
     scratch_dir smoke
     native_install "$repo" "$smoke"
