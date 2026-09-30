@@ -237,6 +237,7 @@ pub(crate) fn open_plain(path: &Path) -> std::io::Result<File> {
 }
 
 /// `openat2` on `dir` with the flags and resolve rules given.
+#[cfg(target_os = "linux")]
 fn openat2(dir: c_int, name: &std::ffi::CStr, flags: c_int, resolve: u64) -> c_int {
     // SAFETY: `open_how` is plain integers, and zero is its documented default.
     let mut how: libc::open_how = unsafe { std::mem::zeroed() };
@@ -259,6 +260,7 @@ fn openat2(dir: c_int, name: &std::ffi::CStr, flags: c_int, resolve: u64) -> c_i
 /// Open `rel` beneath `base`: `RESOLVE_BENEATH` refuses a `..` or symlink
 /// step out. Only a process without `openat2` falls back to a plain open,
 /// and the caller checks the spelling before and the descriptor after.
+#[cfg(target_os = "linux")]
 pub(crate) fn open_beneath(base: &Path, rel: &Path) -> std::io::Result<File> {
     use std::os::fd::{AsRawFd, FromRawFd};
     use std::os::unix::ffi::OsStrExt;
@@ -287,6 +289,7 @@ pub(crate) fn open_beneath(base: &Path, rel: &Path) -> std::io::Result<File> {
 }
 
 /// Whether this process cannot call `openat2` at all, probed once on `/`.
+#[cfg(target_os = "linux")]
 fn openat2_missing() -> bool {
     static MISSING: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *MISSING.get_or_init(|| {
@@ -303,8 +306,48 @@ fn openat2_missing() -> bool {
     })
 }
 
+/// Open `rel` beneath `base` on macOS, which has no `openat2`:
+/// `O_NOFOLLOW_ANY` refuses a symlink at any step. The caller refuses a `..`
+/// by spelling before and checks the descriptor's path after.
+#[cfg(target_os = "macos")]
+pub(crate) fn open_beneath(base: &Path, rel: &Path) -> std::io::Result<File> {
+    use std::os::fd::{AsRawFd, FromRawFd};
+    use std::os::unix::ffi::OsStrExt;
+    use std::os::unix::fs::OpenOptionsExt;
+    let dir = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_DIRECTORY)
+        .open(base)?;
+    let name = std::ffi::CString::new(rel.as_os_str().as_bytes())?;
+    let flags = libc::O_RDONLY | libc::O_NONBLOCK | libc::O_NOFOLLOW_ANY | libc::O_CLOEXEC;
+    // SAFETY: a live directory descriptor and a NUL-terminated name.
+    let fd = unsafe { libc::openat(dir.as_raw_fd(), name.as_ptr(), flags) };
+    if fd < 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    // SAFETY: the kernel just returned this descriptor to us alone.
+    Ok(unsafe { File::from_raw_fd(fd) })
+}
+
 /// The path the kernel holds for an open descriptor.
+#[cfg(target_os = "linux")]
 pub(crate) fn path_of(file: &File) -> Option<PathBuf> {
     use std::os::fd::AsRawFd;
     std::fs::read_link(format!("/proc/self/fd/{}", file.as_raw_fd())).ok()
+}
+
+/// The path the kernel holds for an open descriptor, from `F_GETPATH`.
+#[cfg(target_os = "macos")]
+pub(crate) fn path_of(file: &File) -> Option<PathBuf> {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::ffi::OsStrExt;
+    let mut buf = [0_u8; libc::MAXPATHLEN as usize];
+    // SAFETY: `F_GETPATH` writes at most `MAXPATHLEN` bytes, NUL included,
+    // into this live buffer of that size.
+    let got = unsafe { libc::fcntl(file.as_raw_fd(), libc::F_GETPATH, buf.as_mut_ptr()) };
+    if got == -1 {
+        return None;
+    }
+    let path = std::ffi::CStr::from_bytes_until_nul(&buf).ok()?;
+    Some(PathBuf::from(std::ffi::OsStr::from_bytes(path.to_bytes())))
 }
