@@ -705,6 +705,24 @@ the_cache_setting_names_the_folder() {
 	[ -z "$(find "$CACHEDIR" -type f | head -1)" ]
 }
 check the_cache_setting_names_the_folder
+# Ticket 0318: every role shares a named cache, so none runs unless the
+# operator names one, and a folder others can write is refused.
+the_platform_cache_stays_off() {
+	UNNAMED_CACHE=1 fresh generic
+	same "$(q -c "SELECT thinkthen_decide('$Q', 'seed')" -c "SELECT thinkthen_decide('$Q', 'seed')")" "$(printf 't\nt')"
+	same "$(bcount)" 2
+	[ -z "$(find "$SCRATCH" -type f | head -1)" ]
+}
+check the_platform_cache_stays_off
+an_open_cache_folder_is_refused() {
+	mkdir -p "$RUN/open-cache" && chmod 0777 "$RUN/open-cache"
+	fresh generic "thinkthen.cache = '$RUN/open-cache'"
+	has "$(q -c "SELECT thinkthen_decide('$Q', 'a')")" \
+		"thinkthen usage: the answer folder belongs to another user or others can write it, so they could choose its answers; make it this process user's own with mode 0700, or name another folder"
+	same "$(bcount)" 0
+	[ -z "$(find "$RUN/open-cache" -type f | head -1)" ]
+}
+check an_open_cache_folder_is_refused
 
 echo "== engine settings"
 throttle_setting_holds_eight() {

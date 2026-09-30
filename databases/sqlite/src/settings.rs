@@ -130,7 +130,9 @@ pub(crate) fn engine() -> Result<&'static Engine, Failure> {
     if let Some(engine) = ENGINE.get() {
         return Ok(engine);
     }
-    let built = held.apply(EngineBuilder::from_env()?)?.build()?;
+    let built = held
+        .apply(EngineBuilder::from_env()?.shared_host())?
+        .build()?;
     Ok(ENGINE.get_or_init(|| built))
 }
 

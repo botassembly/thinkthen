@@ -160,7 +160,7 @@ fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
 /// Build an engine from the server's environment and the plan.
 fn build(plan: &Plan) -> Result<Engine, Error> {
     let active = std::num::NonZeroU8::new(ACTIVE_THROTTLE.load(Ordering::Acquire)).map(u8::from);
-    let engine = settings::apply(plan, EngineBuilder::from_env()?)?.build()?;
+    let engine = settings::apply(plan, EngineBuilder::from_env()?.shared_host())?.build()?;
     if let (None, Some(value)) = (active, plan.throttle) {
         ACTIVE_THROTTLE.store(value, Ordering::Release);
     }
