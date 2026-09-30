@@ -163,7 +163,8 @@ void ownedFactsCase() {
 }
 // Ticket 0291. run.py's exact arrival count proves each of these sends nothing.
 void planAndLimits(const tt::Engine& engine, const std::string& spec, const std::string& relSpec) {
-    const std::string key = std::getenv("THINKTHEN_API_KEY");
+    const char* held = std::getenv("THINKTHEN_API_KEY");
+    const std::string key = held ? held : "";
     unsetenv("THINKTHEN_API_KEY");
     auto keyless = tt::create();
     setenv("THINKTHEN_API_KEY", key.c_str(), 1);
