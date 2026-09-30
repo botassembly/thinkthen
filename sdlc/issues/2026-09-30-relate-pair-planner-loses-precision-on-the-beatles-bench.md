@@ -80,7 +80,7 @@ At the 0.5 cut, beside the pair planner's figures from the table above:
 | 16 missing-album sets | edge recall | | 0.526 | |
 | 16 solo sets | edge F1 | | 0.737 | |
 
-The none-of-these rate: on the missing-album sets, the menu answered none for 16 of 31 songs (0.516). It named a wrong album at or above 0.5 for 11 songs and below 0.5 for 4. Where the right album was listed, it answered none for 7 of 182 songs (0.038) and 2 of 31 solo songs (0.065).
+The none-of-these rate: on the missing-album sets, the menu answered none for 16 of 31 songs (0.516). It named a wrong album at or above 0.5 for 11 songs and below 0.5 for 4. Where the right album was listed, it answered none for 2 of 182 songs (0.011) and 2 of 31 solo songs (0.065). Five more of the 182 songs got no album edge because the top two albums tied exactly.
 
 The tuned cut: `thinkthen audit` on a seeded half chose 0.47 on both the solo and the missing-album sets. The 182-song case is one case, so it has no halves and no tuned cut. At 0.47 the held half scored:
 

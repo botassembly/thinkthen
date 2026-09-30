@@ -1,10 +1,10 @@
 # 0353: relate recommends the menu for single-answer relations
 
-Status: ready. Serves issue `../issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, whose decision run passed its bar on 2026-09-30. Plan: `sdlc/planning/cleanup-2026-09-30.md`. The coordinator sets this default; Ian can overturn it.
+Status: ready. Serves issue `../issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, whose decision run passed its bar on 2026-09-30. Plan: `sdlc/planning/cleanup-2026-09-30.md`. The coordinator sets this recommendation; Ian can overturn it.
 
 ## Outcome
 
-`"single": true` is relate's documented default for a relation where each source has at most one target. The relate page, its examples, and every demo, fixture README and site page that shows such a relation write `single`. The relate page's Precision section states the menu's measured figures beside the pair planner's and still points to `recognize --relation` for relations a text states. A rule without `single` asks yes/no pairs as today. The precision issue closes.
+`"single": true` is relate's recommended form for a relation where each source has at most one target. The relate page, its examples, and every demo, fixture README and site page that shows such a relation write `single`. The relate page's Precision section states the menu's measured figures beside the pair planner's and still points to `recognize --relation` for relations a text states. A rule without `single` asks yes/no pairs as today. The precision issue closes.
 
 ## Evidence
 
