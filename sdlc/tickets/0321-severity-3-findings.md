@@ -1,0 +1,15 @@
+# 0321: Refuse an API key that holds a control character
+
+Status: ready for ticket review. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 8. Issue: `sdlc/issues/2026-09-26-architect-review-severity-3-findings.md`, report 12 finding 3.2.
+
+## Outcome
+
+A key in `THINKTHEN_API_KEY` that holds a control character is refused before any send. The command exits 2 with `thinkthen: THINKTHEN_API_KEY holds a control character`. A library engine built from the environment fails with a usage error carrying the same sentence. `EngineBuilder::api_key` refuses such a key with `a key holds no control character`. Neither message nor any `Debug` line shows the key. Today such a key fails inside the HTTP layer and reads as `the backend could not be reached`, which blames the network for a local fault.
+
+## Evidence
+
+- Starts from: `origin/main` at `267efff53`. The triage of the severity-3 issue checked every finding against main; this is the only small fix left outside the running work. `KeySnapshot::check` in `crates/thinkthen/src/cli/edge/key.rs` checks only that the key is not in the address. `EngineBuilder::from_env` in `crates/thinkthen/src/public/settings/environment.rs` stores the key unchecked, and `EngineBuilder::api_key` in `public/settings.rs` refuses only a blank key. `engine/http.rs` puts it in the `authorization` header, where a line feed fails as a transport error. Model names already refuse control characters by the same rule (`specification/backends.md`, the model paragraph).
+- Keeps: the key-in-address refusal and its sentence; a missing key's exit and wording; the rule that a key is read once and sent unchanged; every secrecy guarantee in `CLAUDE.md`. A key with ordinary spaces is left alone.
+- Changes: a control character is any char for which `char::is_control` holds, so a trailing line feed from a key file counts. The command's `KeySnapshot::check` returns `Failure::Usage` with the sentence above. `from_env` returns `Error::usage` with the same sentence. `api_key` adds its check beside the blank-key check. One shared predicate and the sentence live beside `KEY_IN_ADDRESS` in `core`. `specification/backends.md` gains one sentence in the key paragraph. The HTTP layer is not touched, so the fix stays clear of 0304 slice 2.
+- Proof: one command edge test runs `decide` with key `planted-key-7Q` followed by a line feed and `9` against a loopback server and pins exit 2, the exact standard error line, zero requests counted at the server, and that `planted-key-7Q` appears in no output. One library edge-table test covers `from_env` and `api_key` with the same key and pins each usage kind and sentence, and that `Debug` of each error withholds the key. Focused checks: those tests, `policy.py`, workspace clippy.
+- Defers: binding-level tests; the bindings reach the check through `api_key` and `from_env`, and 0314 slice 3 owns the Python, R and Ruby code. Every other finding in the issue is fixed, obsolete, tracked, won't fix, or deferred as the issue records.

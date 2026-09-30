@@ -1,139 +1,126 @@
-Disposition, 2026-09-27: ticket 0169 settles register 46, 56 and 116 after fresh review of `84de0a7d`. The stop reports the signal without a guessed record, SIGTERM follows SIGINT, and the second-signal escape is documented and proved. Already-sent requests still finish within their attempt timeout by the retained contract. A first-signal waiting notice and cancellable socket reads remain deferred; this umbrella issue stays open for its other findings.
+# Architect review severity 3 findings
 
-# Architect review severity 3 findings, for triage after 0.1
+Status: Open until ticket 0321 lands, then closed. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 and 03 to 12. Triaged against `origin/main` at `267efff53` on 2026-09-30.
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 and 03 to 12. For triage after 0.1. Nothing here blocks 0.1.
-
-The review rated these findings severity 3: a sharp edge or a missing feature. None was checked against main for this issue, so each is not verified. "Tracked" names the ticket or issue that already carries it. Triage splits the rest into Quick Fixes, doc lines, and later issues.
+Every line below carries its disposition. Fixed names the landed work or the page that now says it. Obsolete names the ADR that removes the cause. Tracked names an open issue that carries it. Won't fix follows Ian's ruling 8 of 2026-09-29 or ADR 0005's rule that a feature waits for a demo. Ticket 0321 carries the one small fix left. Nothing else stays open here.
 
 ## Report 01, `filter` and streams
 
-- I3. One request per record. Tracked: 0146, batching B4.
-- I4. Ordered output blocks at the head of the line. One slow record stalls the run. Document the stall bound.
-- I5. Retries are per worker and move in lockstep. Tracked: 0155, ADR 0052.
-- I6. One bad record ends the stream with no machine-readable stop point. Tracked in part: `2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md`.
-- I7. `filter` records have no default size guard. Tracked: 0154, ADR 0051.
-- I8. `filter` cannot serve as a coprocess, and the README does not say so. Doc line.
-- I9. After Ctrl-C, the stop line names a record that never arrived. Wording fix. Tracked: 0169.
-- I10. The second-Ctrl-C escape is undocumented. Doc line in `channels.md`. Tracked: 0169.
+- I3. One request per record. Fixed by 0146.
+- I4. One slow record stalls ordered output. Fixed: `specification/records.md` states the stall bound (`b753f1d2d`).
+- I5. Retries move in lockstep. Fixed by 0155 and 0315 (jitter).
+- I6. No machine-readable stop point. Fixed by 0170, the `thinkthen.run/1` line.
+- I7. No default record size guard. Fixed by 0154.
+- I8. `filter` cannot serve as a coprocess. Fixed: `README.md` sends long-lived loops to `decide --lines --batch 1` and says `filter` prints only kept records.
+- I9, I10. Ctrl-C stop line and second-signal escape. Fixed by 0169.
 
 ## Report 03, `annotate`
 
-- 3-1. A name collision stops the run even under `--details`.
-- 3-2. A missing pointer stops the whole run.
-- 3-3. Row shape and field types vary within one stream. Doc recipe.
-- 3-4. Failure isolation depends on how questions are grouped.
-- 3-5. `annotate` has no built-in request ceiling. Tracked: 0154, ADR 0051.
-- 3-6. The libraries refuse any set that uses `on`. Tracked: `2026-09-25-public-library-api-gaps.md` item 5.
-- 3-7. Document mode sniffs JSON. Doc line.
+- 3-1. Name collision under `--details`. Fixed by ADR 0104: the member stays under `input` (`specification/annotate.md`).
+- 3-2. A missing pointer stops the run. Fixed as the opt-in `--on-error continue`. The default stop is the contract of `specification/records.md`.
+- 3-3. Row shape varies. Fixed: `annotate.md` recipe "Read a mixed record stream".
+- 3-4. Failure isolation depends on grouping. Fixed: documented in `annotate.md`. ADR 0111 stores the good answers of a partial reply.
+- 3-5. No request ceiling. Fixed by 0154.
+- 3-6. Libraries refuse sets with `on`. Fixed by 0150.
+- 3-7. Document mode sniffs JSON. Fixed: `annotate.md` states the rule and the flags that force framing.
 
 ## Report 04, libraries and databases
 
-- I5. In SQL, one failing row fails the statement, with no per-row error value.
-- I6. A deadline bounds one call, not a query. Tracked in part: the DuckDB query-hook issue.
-- I7. SQLite and PostgreSQL scalars hold one request in flight. Tracked: the equivalence page, E2 and E7.
-- I8. DuckDB's warm pass ignores session settings.
-- I9. DuckDB refuses every call after 16 distinct engines.
-- I10. The throttle belongs to the process for its whole life. Tracked in part: ADR 0047 item 5.
-- I11. Libraries cannot set timeout, retries, profile or replay. Tracked: 0148, 0149.
-- I12. A SQLite cancel leaves a detached worker holding its permit. Tracked: 0168.
-- I13. DuckDB relate's message for an uncommitted table misleads.
-- I14. List calls refuse `choose`, `score` and `tag` over many texts. Tracked: the equivalence page, E2.
-- I15. The missing-key error has a different kind on each surface. Consider folding into 0148.
-- I16. Packaging and loading sharp edges. Tracked: 0128 phases 3 and 4.
+- I5. One failing SQL row fails the statement. Fixed: `thinkthen_try_details` on DuckDB, SQLite and PostgreSQL returns a per-row failure.
+- I6. A deadline bounds one call, not a query. Fixed: the DuckDB query-hook issue closed under 0201 and 0231.
+- I7. SQLite and PostgreSQL hold one request in flight. Deferred to ADR 0111 slice 3, SQL hosts on the one batching path.
+- I8. DuckDB's warm pass ignores session settings. Fixed: `thinkthen_warm` is removed.
+- I9. DuckDB refuses calls after 16 engines. Fixed: the least recently used idle engine retires (`databases/duckdb/src/engines.rs`).
+- I10. The throttle belongs to the process. Fixed in part by 0308's per-process, per-address pacer. The rest is the design.
+- I11. Libraries cannot set timeout, retries, profile or replay. Fixed by 0148, 0149 and 0157.
+- I12. A SQLite cancel holds its permit. Fixed by 0168.
+- I13. DuckDB relate's uncommitted-table message. Fixed: the message hints at the open transaction.
+- I14. List calls refuse `choose`, `score` and `tag` over many texts. Deferred to ADR 0111 slice 3.
+- I15. Missing-key error kind differs by surface. Deferred to 0314 slice 3: ADR 0112 gives every port the same named error codes. The command's exit 4 stays.
+- I16. Packaging and loading sharp edges. Tracked: `2026-09-25-release-and-install-for-0-1.md`.
 
 ## Report 05, the answer contract
 
-- 3.1. Tie policy differs across functions, and score's level tie rule is undocumented.
-- 3.2. Only `decide` has a not-sure region, and `find` answers even with no `--none`. Tracked in part: L4.
-- 3.3. `--threshold` cuts a different quantity in each function.
-- 3.4. The details line has parse traps.
-- 3.5. A single question file cannot carry a version.
-- 3.6. A record run stops at the first failed record. Tracked: the roadmap's `--on-error` hold, H3.
-- 3.7. Contract pages disagree in small ways. Tracked: 0152 Part B.
+- 3.1. Tie policy. Fixed: `score.md`, `choose.md`, `find.md` and `threshold.md` state each tie rule.
+- 3.2. Only `decide` has a not-sure region. Won't fix: documented design in `threshold.md` and `find.md`.
+- 3.3. `--threshold` cuts different quantities. Fixed: `threshold.md` names the quantity per function.
+- 3.4. Details line parse traps. Fixed: `result.md`; ADR 0112 generates the schema.
+- 3.5. A single question file carries no version. Won't fix: `question-file.md` refuses it on purpose and says where a version goes.
+- 3.6. A record run stops at the first failure. Fixed in part by `--on-error continue`. The rest waits on a demo under ADR 0005.
+- 3.7. Contract pages disagree. Fixed by 0152.
 
 ## Report 06, backends and configuration
 
-- I-6. No request-size setting on main. Tracked: 0154, then 0157.
-- I-7. A broken configuration file stops every command, and the message names no field.
-- I-8. The model has no environment tier.
-- I-9. A keyless local server still needs a dummy key. Done by Quick Fix qf-command-edges-and-prune.
-- I-10. The default cache serves one address. Tracked: ticket 0124's deferred gaps.
-- I-11. An extreme `--timeout` panics with exit 101. Done by Quick Fix qf-command-edges-and-prune.
-- I-12. The release binary honors `THINKTHEN_TEST_RETRY_WAIT_MS`. Done by Quick Fix qf-command-edges-and-prune.
-- I-13. Model names are not trimmed or checked for control characters. Done by Quick Fix qf-command-edges-and-prune.
-- I-14. Refusal phrases give advice that misfits the case.
+- I-6. No request-size setting. Fixed by 0154 and 0157.
+- I-7. A broken configuration file names no field. Fixed: `crates/thinkthen/src/config.rs` names the field.
+- I-8. The model has no environment tier. Won't fix: design in `specification/settings.md`, pinned by `tests/decide_edge.rs`.
+- I-9, I-11, I-12, I-13. Fixed by Quick Fix qf-command-edges-and-prune.
+- I-10. The default cache serves one address. Obsolete under ADR 0111: the address sits in every key and the marker goes in slice 5.
+- I-14. Refusal phrases misfit. Fixed: `cli/failure/status.rs` gives 302, 413, 429 and `max_tokens_exceeded` their own sentences.
 
 ## Report 07, throughput, limits and cost
 
-- I3. A long `Retry-After` is cut short. Tracked: 0155.
-- I4. `Retry-After: 0` resends at once with no floor. Consider folding into 0155.
-- I5. Retries have no jitter. Tracked: 0155.
-- I6. Every retry opens a new connection.
-- I7. One slow record stalls the run. Doc line, with report 01 I4.
-- I8. `--dry-run` cannot estimate cost.
-- I9. No run total. Tracked: B5.
-- I10. Retries cannot be told apart from first sends. Tracked: 0155's `retries` count.
-- I11. Libraries cannot set timeout or retries. Tracked: 0148.
-- I12. Nothing caps concurrency across processes.
-- I13. An undocumented test variable removes the retry wait. Same as report 06 I-12.
-- I14. The final 429 message hides the retries. Quick Fix.
+- I3, I5, I10. Fixed by 0155 and 0315.
+- I4. `Retry-After: 0` has no floor. Fixed: `engine/http/retry.rs` raises it to one second.
+- I6. Every retry opens a new connection. Fixed: one shared agent, and the error body is read before return.
+- I7. One slow record stalls the run. Fixed with report 01 I4.
+- I8. `--dry-run` cannot estimate cost. Fixed: `--plan` gives the token range; ADR 0108 puts price only in `--facts`.
+- I9. No run total. Fixed by 0170.
+- I11, I13. Fixed by 0148 and qf-command-edges-and-prune.
+- I12. Nothing caps concurrency across processes. Won't fix: `records.md` says so, and the roadmap calls a cross-process budget a different tool.
+- I14. The final 429 message hides the retries. Fixed: the sentence names the attempts and `--max-retries`.
 
 ## Report 08, the cache
 
-- 6. The key is exact bytes, so input framing changes it. Doc line.
-- 7. Prune evicts the oldest-written entries, not the least recently used.
-- 8. A typo in `--answered-by-other-than` deletes everything, and prune has no dry run. Tracked: ticket 0124's deferred gaps.
-- 9. A cached result repeats the stored usage. Documented. Accept as cost.
-- 10. The default cache binds to one address. Tracked: ticket 0124's deferred gaps.
-- 11. `Engine::builder()` ignores the configuration file's `cache: false`. Check within 0148.
-- 12. Crashed writes leave hidden temporary files. With report 11 issue 4.
-- 13. DuckDB's warm pass ignores `SET thinkthen_cache`. With report 04 I8.
+- 6. Byte-exact keys. Fixed: `specification/recording.md` documents the framing rules.
+- 7. Prune evicts by write time. Fixed: `recording.md` documents it; ADR 0111 prunes on `taken_at`.
+- 8. A model typo prunes everything. Fixed: prune refuses an unknown model and has `--dry-run`.
+- 9. Cached results repeat stored usage. Accepted cost; ADR 0111 stores each question's share.
+- 10. Default cache binds to one address. Obsolete under ADR 0111.
+- 11. `Engine::builder()` ignores `cache: false`. Fixed: documented; `EngineBuilder::from_env` honors it.
+- 12. Crashed writes leave temporary files. Obsolete under ADR 0111 slice 5: SQLite commits replace them.
+- 13. DuckDB warm pass ignores `SET thinkthen_cache`. Fixed: the warm pass is removed.
 
 ## Report 09, record, replay and testing
 
-- 4. Reformatting a recording file breaks it. Doc line.
-- 5. A replay miss does not say why.
-- 6. No process-wide strict replay switch.
-- 7. `--record` into a used folder pays again and discards the answer. Help line.
-- 8. Replay cannot tell a recording is stale. Waits on backlog question 1, the default-model pin.
-- 9. Golden-file tests break across versions. With `closed/2026-09-26-the-result-schema-identifier-never-versions.md`.
-- 10. A token in the base path is written into every recording.
-- 11. Byte-exact keys make recordings fragile. Doc line.
-- 12. No way to find unused fixture entries.
+- 4. Reformatting a recording breaks it. Fixed: `recording.md` says so.
+- 5. A replay miss does not say why. Obsolete under ADR 0111 slice 2: the miss names the key and its parts.
+- 6. No process-wide strict replay switch. Won't fix: no demo reached for it (ADR 0005).
+- 7. `--record` into a used folder. Fixed: the help and `recording.md` say it; ADR 0111 makes `--record` replace the entry.
+- 8. Replay cannot tell a recording is stale. Won't fix: replay is keyless history by design (`recording.md`). ADR 0111 stores `answered_by` and `taken_at` for a later check.
+- 9. Golden files break across versions. Won't fix: ADR 0112's generated schema is the stable contract.
+- 10. A token in the base path lands in recordings. Fixed: user information and queries are refused (`core/backend.rs`); `backends.md` and `recording.md` warn about the path.
+- 11. Byte-exact keys make recordings fragile. Fixed: `recording.md`.
+- 12. No way to find unused fixture entries. Fixed: `thinkthen cache unused`.
 
 ## Report 10, `recognize` and `relate`
 
-- 7. Lowering the name threshold never adds a word. Doc line in R8.
-- 8. Possessives and quotes stay in names, and touching names merge. Tracked: R2, R3.
-- 9. Mentions, not entities, multiply relation cost. Measured and carried by `2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md`.
-- 10. `recognize --relation` has no entity cap. Check within 0147.
-- 11. `recognize` sends its relation rules one after another. Check R4b's scope. Measured and carried by `2026-09-26-relation-requests-carry-one-rule-and-every-entity.md`.
-- 12. `recognize --details` hides relation probabilities.
-- 13. Offset units and field names change by surface.
-- 14. Split texts repeat the whole text in every request. Tracked in part: R4.
+- 7. A lower name threshold adds no word. Fixed: `specification/recognize.md`.
+- 8. Possessives, quotes and touching names. Tracked: `2026-09-25-recognize-and-relate-scale-and-shape.md`.
+- 9. Mentions multiply relation cost. Tracked: `2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md`.
+- 10. No entity cap on `recognize --relation`. Fixed: 255 names and 4,000 pairs, refused before sending.
+- 11. Relation rules sent one after another. Fixed: the relation-requests issue closed.
+- 12. `--details` hides relation probabilities. Fixed: `answer.pairs`.
+- 13. Offset units by surface. Fixed: `recognize.md` table and shared case 41.
+- 14. Split texts repeat the whole text. Tracked with item 8.
 
 ## Report 11, failure and scripting
 
-- 3. SIGTERM is unspecified and ends a run abruptly. Tracked: 0169.
-- 4. Killed runs leave temporary cache entries that prune ignores. With report 08 finding 12.
-- 5. A stored partial reply replays forever. Tracked: ticket 0158 and `2026-09-26-recording-page-says-a-failure-is-never-recorded.md`.
-- 6. A deterministic refusal on one record blocks every rerun. Tracked: 0154 and the roadmap's `--on-error` hold.
-- 7. An absurd `--timeout` panics with exit 101. Quick Fix, with report 06 I-11.
-- 8. Ctrl-C waits out a hung request, then blames the backend. Wording fix. Tracked: 0169.
-- 9. The default cache binds to one address. Tracked: ticket 0124's deferred gaps.
-- 10. No catalog of error sentences with stable identifiers. With `2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md`.
+- 3. SIGTERM. Fixed by 0169.
+- 4. Killed runs leave temporary entries. Obsolete under ADR 0111 slice 5.
+- 5. A stored partial reply replays forever. Fixed by 0158; ADR 0111 stores no failed answer.
+- 6. A deterministic refusal blocks reruns. Same as report 05 3.6.
+- 7. Absurd `--timeout` panics. Fixed by qf-command-edges-and-prune.
+- 8. Ctrl-C blames the backend. Fixed by 0169.
+- 9. Default cache binds to one address. Obsolete under ADR 0111.
+- 10. No catalog of error sentences. Won't fix: ADR 0112 gives the ports six named error kinds; a command catalog waits on a demo.
 
 ## Report 12, security and the data boundary
 
-- 3.1. No private TLS roots, and a certificate failure reads as a network failure.
-- 3.2. Local faults are reported as network faults.
-- 3.3. The configuration file is trusted whatever its mode. With `2026-09-26-folder-writers-decide-the-answers.md`.
-- 3.4. The planted-text guidance is narrower than a reader will take it. Doc line.
-- 3.5. Ruby result values print caller text. Closed: `closed/2026-09-26-ruby-result-values-inspect-caller-text.md`.
-- 3.6. No release to verify. Tracked: 0128.
-- 3.7. The default destination is a third-party service, and nothing says what it keeps. Doc paragraph.
-
-## Done when
-
-Triage after 0.1 has placed every untracked line in a ticket, a Quick Fix, an issue, or a recorded decision to leave it. Then this issue closes.
+- 3.1. No private TLS roots. Fixed: `THINKTHEN_CA_BUNDLE` and its own certificate sentence.
+- 3.2. Local faults read as network faults. In 0321: a key holding a control character fails in the HTTP layer as unreachable. The 302 half is fixed.
+- 3.3. Configuration file trusted whatever its mode. Fixed by qf-config-owner-warning (`53ba4edb`).
+- 3.4. Planted-text guidance too narrow. Fixed: `specification/decide.md` bounds the claim.
+- 3.5. Ruby result values print caller text. Fixed; closed issue.
+- 3.6. No release to verify. Tracked: `2026-09-25-release-and-install-for-0-1.md`.
+- 3.7. Nothing says what the default destination keeps. Fixed: `README.md` links the provider's terms and retention statement.
