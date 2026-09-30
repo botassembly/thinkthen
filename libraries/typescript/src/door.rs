@@ -25,7 +25,7 @@ pub(crate) struct Failure {
     kind: ErrorKind,
     retryable: bool,
     message: String,
-    facts: Option<Facts>,
+    facts: Option<Box<Facts>>,
 }
 
 impl Failure {
@@ -75,7 +75,7 @@ impl From<Error> for Failure {
             kind: error.kind(),
             retryable: error.retryable(),
             message: error.to_string(),
-            facts: error.facts().cloned(),
+            facts: error.facts().cloned().map(Box::new),
         }
     }
 }

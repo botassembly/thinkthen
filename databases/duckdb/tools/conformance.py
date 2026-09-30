@@ -24,6 +24,8 @@ from signal_suite import CANCELLED, held_cancel
 
 CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / "conformance" / "cases.json"))
 CANONICAL_CASES = ROOT.parent.parent / "conformance" / "cases.json"
+# Every case runs at batch 1, as the C door and PostgreSQL runners do; `packed_default` pins the packed body.
+BATCH_ONE = {"THINKTHEN_BATCH": "1"}
 
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
@@ -87,7 +89,7 @@ def digest(url: str, request: str) -> str:
 def single(case: dict, base: str) -> list:
     """decide, choose, tag, and score: the whole line `thinkthen_details` returns."""
     question = quoted(json.dumps(case["question"]))
-    got = run([f"SELECT thinkthen_details({question}, x) FROM {values(evidence(case))} ORDER BY i"], base)
+    got = run([f"SELECT thinkthen_details({question}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=BATCH_ONE)
     lines = [json.loads(line) for (line,) in rows(got[0])]
     return [{"bare": line["value"], "answer": line["answer"], "url": line["meta"]["url"]} | {name: line["meta"].get(name, "absent") for name in FIELDS} for line in lines]
 
@@ -103,11 +105,7 @@ def single_wanted(case: dict, base: str) -> list:
 
 
 def decide(case: dict, base: str) -> list:
-    # These saved exchanges pin singleton request identity. The default packed
-    # route has a separate installed exact-body witness below.
-    single = {"27-decide-many", "28-decide-many-repeated-texts"}
-    extra = {"THINKTHEN_BATCH": "1"} if case["id"] in single else None
-    got = run([f"SELECT thinkthen_decide({quoted(json.dumps(case['question']))}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=extra)
+    got = run([f"SELECT thinkthen_decide({quoted(json.dumps(case['question']))}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=BATCH_ONE)
     return [value for (value,) in rows(got[0])]
 
 
@@ -136,17 +134,15 @@ def packed_default() -> None:
 
 def filtered(case: dict, base: str) -> list:
     table = values(evidence(case)) if case["exchanges"] else "(SELECT 0 AS i, 'none' AS x WHERE false) t"
-    extra = {"THINKTHEN_BATCH": "1"} if case["id"] == "13-filter-records" else None
-    got = run([f"SELECT i FROM {table} WHERE thinkthen_decide({quoted(json.dumps(case['question']))}, x) ORDER BY i"], base, extra=extra)
+    got = run([f"SELECT i FROM {table} WHERE thinkthen_decide({quoted(json.dumps(case['question']))}, x) ORDER BY i"], base, extra=BATCH_ONE)
     return [index for (index,) in rows(got[0])]
 
 
 def ranked(case: dict, base: str) -> list:
-    extra = {"THINKTHEN_BATCH": "1"} if case["id"] in {"15-rank-records", "16-rank-stable-tie"} else None
     got = run(
         [f"SELECT i, thinkthen_probability({quoted(json.dumps(case['question']))}, x) AS p FROM {values(evidence(case))} ORDER BY p DESC, i"],
         base,
-        extra=extra,
+        extra=BATCH_ONE,
     )
     return [{"index": index, "probability": probability} for index, probability in rows(got[0])]
 
@@ -163,6 +159,7 @@ def annotated(case: dict, base: str) -> list:
     got = run(
         [f"SELECT thinkthen_annotate({quoted(json.dumps(case['question_set']))}, x) FROM {values(record(case))} ORDER BY i"],
         base,
+        extra=BATCH_ONE,
     )
     answers = []
     by_text = dict(zip(record(case), [json.loads(value) for (value,) in rows(got[0])], strict=True))
@@ -176,7 +173,7 @@ def annotated(case: dict, base: str) -> list:
 def relations(case: dict, base: str) -> list:
     """Recognize cases: the relations `thinkthen_relations` returns for the
     case's own question file, so the request bytes match the case."""
-    got = run([f"SELECT thinkthen_relations({quoted(case['text'])}, {quoted(json.dumps(case['question']))})"], base)
+    got = run([f"SELECT thinkthen_relations({quoted(case['text'])}, {quoted(json.dumps(case['question']))})"], base, extra=BATCH_ONE)
     return [
         {
             "relation": found["relation"],
@@ -205,7 +202,7 @@ def related(case: dict, base: str) -> list:
     entity's name as its id, with the case's own rules file text."""
     table = ", ".join(f"({quoted(entity['name'])}, {quoted(entity['name'])}, {quoted(entity['kind'])})" for entity in case["entities"])
     query = f"SELECT * FROM (VALUES {table}) v(id, name, kind)"
-    got = run([f"SELECT * FROM thinkthen_relate({quoted(query)}, {quoted(json.dumps(case['question']))})"], base)
+    got = run([f"SELECT * FROM thinkthen_relate({quoted(query)}, {quoted(json.dumps(case['question']))})"], base, extra=BATCH_ONE)
     kinds = {entity["name"]: entity["kind"] for entity in case["entities"]}
     return [
         {"relation": relation, "source": {"name": source, "kind": kinds[source]}, "target": {"name": target, "kind": kinds[target]}, "probability": probability}
@@ -231,7 +228,7 @@ def find(case: dict, base: str, backend: Backend) -> dict:
     question = case["question"]
     sql = (f"SELECT thinkthen_find({quoted(question['find'])}, list(x ORDER BY i), "
            f"{quoted(json.dumps({'none': question.get('none', False)}))}) FROM {values(question['units'])}")
-    result = rows(run([sql], base)[0])[0][0]
+    result = rows(run([sql], base, extra=BATCH_ONE)[0])[0][0]
     observed = backend.capture()
     expect(len(observed), 1, "one captured find body")
     pinned = case["exchanges"][0]["request"]
@@ -246,7 +243,7 @@ def counters(case: dict, base: str) -> dict:
     question, text = quoted(json.dumps(case["question"])), quoted(evidence(case)[0])
     with tempfile.TemporaryDirectory() as cache:
         usage = "SELECT metric, value FROM thinkthen_usage() WHERE metric IN ('requests_sent', 'cache_answers')"
-        got = run([usage, f"SELECT thinkthen_decide({question}, {text})", f"SELECT thinkthen_decide({question}, {text})", usage], base, extra={"THINKTHEN_CACHE": cache})
+        got = run([usage, f"SELECT thinkthen_decide({question}, {text})", f"SELECT thinkthen_decide({question}, {text})", usage], base, extra=BATCH_ONE | {"THINKTHEN_CACHE": cache})
     before, after = dict(rows(got[0])), dict(rows(got[3]))
     return {"calls": 2, "requests": after["requests_sent"] - before["requests_sent"], "cache_answers": after["cache_answers"] - before["cache_answers"]}
 
@@ -271,7 +268,7 @@ def fault(case: dict, backend: Backend) -> str:
         elif injection == "invalid_arguments":
             statement = "SELECT thinkthen_decide('', 'evidence text')"
         elif injection == "backend_refusal" or case["id"].startswith("21-"):
-            got = run([ask.format(quoted(question["decide"]))], backend.base("arm/refuse"))
+            got = run([ask.format(quoted(question["decide"]))], backend.base("arm/refuse"), extra=BATCH_ONE)
             return said(got[0]).split(":")[0].removeprefix("thinkthen ")
         elif injection == "unreadable_question_file" or case["id"].startswith("22-"):
             statement = ask.format(quoted(f"@{folder}/missing.json"))
@@ -279,7 +276,7 @@ def fault(case: dict, backend: Backend) -> str:
             statement = "SELECT thinkthen_decide('Does this need attention?', 'evidence text', '{\"deadline_ms\":0}')"
         else:
             raise LookupError(f"no runner for the injection {injection!r}")
-        got = run([statement], backend.base())
+        got = run([statement], backend.base(), extra=BATCH_ONE)
     return said(got[0]).split(":")[0].removeprefix("thinkthen ")
 
 
