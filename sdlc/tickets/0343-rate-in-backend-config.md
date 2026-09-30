@@ -59,7 +59,7 @@ Every surface builds from `EngineBuilder::from_env`, which reads the file. So th
 - `sdlc/scripts/settings` now checks the settings table's "Configuration file" column against the reader's own field sentences. `key_env` gained a cell in the "Backend key" row as a result.
 - Stale `site/` sentence for marketing: `site/src/pages/reference.astro` line 142 says `--jobs` "sets no limit on requests a minute" and that the default can pass the vendor's limit. Both are true again with no default pacer, but the page names no way to set a rate; it could mention `requests_per_minute` in the configuration file and `THINKTHEN_REQUESTS_PER_MINUTE`, each per process.
 - Growth: 329 nonblank Rust lines; after rebasing on main, 109,349 to 109,678, about 290 of them tests.
-- Checks: `sdlc/scripts/test` (1,298 passed), `spec` (settings 0 failures, self-test 12 of 12), workspace clippy with `-D warnings` on all targets, `policy.py`, `tickets`, lint in a clean checkout, and the C door's clippy and tests (33 passed). One unrelated red appeared once under load and passed six reruns: `annotate::scheduling::a_backend_failure_after_the_output_pipe_closes_stays_quiet` saw 2 requests where it expects 3.
+- Checks: `sdlc/scripts/test` (1,305 passed after rebasing on main), `spec` (settings 0 failures, self-test 12 of 12), workspace clippy with `-D warnings` on all targets, `policy.py`, `tickets`, lint in a clean checkout, and the C door's clippy and tests (33 passed). One unrelated red appeared once under load and passed six reruns: `annotate::scheduling::a_backend_failure_after_the_output_pipe_closes_stays_quiet` saw 2 requests where it expects 3.
 
 ## Code review
 
