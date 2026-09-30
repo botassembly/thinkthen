@@ -107,6 +107,23 @@ function uncited(text) {
     .replace(/\s+The batching design's section \d+ puts them there\./g, '');
 }
 
+// A surface cell drops one form of migration note: a clause that ends
+// "until ticket 0291" loses those words and keeps the rest. Each drop is
+// returned in `dropped`, and check-settings prints it and fails on one it
+// has not been told to expect. A cell a drop empties fails the parse. Any
+// other ticket cited in a cell stays, so check-settings fails on it.
+const UNTIL_TICKET = new RegExp(String.raw`(?:^|\s+)until ${TICKETS}$`, 'i');
+function spelling(cell, setting, surface, dropped) {
+  const kept = cell.split(/;\s+/).map((clause) => {
+    const m = clause.match(UNTIL_TICKET);
+    if (!m) return clause;
+    dropped.push({ setting, surface, clause: m[0].trim() });
+    return clause.slice(0, m.index);
+  }).filter((clause) => clause.trim()).join('; ');
+  if (cell.trim() && !kept.trim()) throw new Error(`settings.md: ${setting}, ${surface}: dropping "until ticket" notes leaves the cell empty`);
+  return kept;
+}
+
 // What a setting does, with its bracketed and final citations taken out. A
 // ticket cited anywhere else stays, so the check fails loudly on it.
 const meaning = (does) => does.replace(CITE_BRACKET, '').replace(CITE_TAIL, '');
@@ -126,7 +143,11 @@ const NO_EFFECT = /\bno effect\b|^not on this surface\b/;
 // The settings the site leaves out. The docs leave out the Details flag for now
 // (Ian, 2026-09-28). The annotate record failure policy works only with
 // the Details flag, so it stays out with it.
-export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy']);
+// Portable call settings is a JSON schema the SQL and frame surfaces read,
+// not a setting a reader changes. Its cells cite tickets and say "later".
+// ThinkThen issue 2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md
+// asks for that row to change; show it again once it does.
+export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy', 'Portable call settings (`thinkthen.settings/1`)']);
 
 export function parseSettings(text) {
   const parts = sections(text);
@@ -137,6 +158,7 @@ export function parseSettings(text) {
   if (head.join('|') !== COLUMNS.join('|')) {
     throw new Error(`settings.md: the table's columns changed.\n  want: ${COLUMNS.join(', ')}\n  have: ${head.join(', ')}`);
   }
+  const dropped = [];
   const rows = tableLines.slice(2).map((line, i) => {
     const cells = cellsOf(line);
     if (cells.length !== COLUMNS.length) {
@@ -151,7 +173,7 @@ export function parseSettings(text) {
       does: meaning(does),
       default: { value: dflt, note: '', source },
       allowed,
-      on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : surfaces[j]])),
+      on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : spelling(surfaces[j], name, s, dropped)])),
     };
   });
   const ids = new Set();
@@ -165,6 +187,7 @@ export function parseSettings(text) {
     precedence: uncitedBlocks(blocksOf(parts.get('Precedence'))),
     howToRead: uncitedBlocks(blocksOf(parts.get('How to read a cell'))),
     rows,
+    dropped,
   };
 }
 

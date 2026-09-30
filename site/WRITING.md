@@ -96,9 +96,9 @@ Every line of code stays at 60 characters or fewer. Code reads down the page, no
 
 `scripts/check-samples.mjs` fails on a longer line. Its `EXEMPT` list names each kind of line that cannot break, with the reason: one JSON string, one JSON Lines record, a record `filter` printed whole, and the `diff` warning. Keep that list short. Add to it only for a line a program really prints wider, or a line the format cannot break.
 
-### Leave out --details
+### Examples leave out --details
 
-The docs leave out `--details` for now (Ian, 2026-09-28). Every example shows the command, its plain value, and its exit code. To show where a probability sits, run the same example at a bar or a band. `check-samples` fails an example, a page, or an article that names `--details`.
+A page may name `--details` where the reference or an edge case needs it (docs checklist ruling of 2026-09-30). An example still leaves it out until the annotate edge cases land. Every example shows the command, its plain value, and its exit code. To show where a probability sits, run the same example at a bar or a band. `check-samples` fails an example script that asks for `--details`.
 
 ### Keep a function page's example short
 
@@ -164,7 +164,7 @@ The build fails when a script has no caption, a caption has no script, or a scri
 - The scripts of one page run in name order in one fresh folder, as a reader would run them. The folder starts with a copy of the page's `files/`.
 - A page may keep a small strict-replay folder under `files/recording/` and its exact recorded input under `files/proposed/`. Smoke copies them; the page and sample-style checker omit those immutable data files from the visible list. JSON Lines input under `files/` is data, not code.
 - A Beatles Bench page runs in a copy of `examples/beatles/bench/`, in the folder `examples/beatles/folders.json` names for the page. Its scripts name `--replay recording` themselves.
-- Every other `thinkthen` function call answers from `recordings/`. The runner adds `--replay recordings/` to a call that names no replay folder and no `--dry-run`.
+- Every other `thinkthen` function call answers from `recordings/`. The runner adds `--replay recordings/` to a call that names no replay folder and no `--plan`.
 - The run has no key and no base address. It sends nothing and costs nothing.
 - A line that starts with `test` is an assert. When it fails, the example fails.
 - A file under `examples/` that is neither run nor kept must match a line in `examples/SKIP`, with its reason. The site smoke runner does not invoke installed library or SQL samples; it counts them as skipped. Their libraries have strict replay controls, which are separate from this site runner.

@@ -1,0 +1,15 @@
+{
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "model": "jev-1.13.0",
+  "key_env": "THINKTHEN_API_KEY",
+  "request": {
+    "state": "Each question quotes the text it asks about.",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "The text is \"I want to send this back.\\n\". Does the customer ask for a refund?"
+      }
+    }
+  }
+}

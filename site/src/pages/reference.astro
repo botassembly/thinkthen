@@ -23,7 +23,7 @@ const PRUNE = setting('Prune target');
 const pruneKey = PRUNE.surface('Configuration file');
 
 const GLOBAL = [
-  ['--dry-run', 'none', 'Prints the plan and sends nothing. It reads no key. In record mode it prints the plan for the first record and stops.', dflt('Dry run')],
+  ['--plan', 'none', 'Checks the whole input, prints the first request it would send and a summary line, and sends nothing. It needs no key.', dflt('Plan preview')],
   ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
   ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
   ['--timeout SECONDS', takes('Timeout').split(';')[0].replace(/^command: /, ''), 'Covers one attempt from connect to last byte. Other values exit 2.', setting('Timeout').number],
@@ -57,12 +57,13 @@ const EXITS = [
   [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
   [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, and evidence past the token limit.'],
   [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
-  [6, 'broken', 'annotate or relate only. The run read all its input, and one or more questions failed. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
+  [6, 'broken', 'annotate or relate only. The run finished with at least one valid and one failed question. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
+  [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row.'],
   [70, 'broken', 'A defect in the tool.'],
 ];
 
 const ENVS = [
-  ['THINKTHEN_API_KEY', 'The key. No option names another variable. Absent or empty is exit 4, and an empty variable counts as absent.', dflt('Key')],
+  ['THINKTHEN_API_KEY', 'The key. Absent or empty is exit 4, and an empty variable counts as absent.', dflt('Key')],
   ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', dflt('Address')],
   ['THINKTHEN_CACHE', 'Selects another folder for the platform cache. It never moves the usage folder.', dflt('Answer cache')],
   ['XDG_CACHE_HOME', 'The root for the cache and the usage folder. It counts only when absolute.', '$HOME/.cache on Linux'],
@@ -189,7 +190,7 @@ const COUNTS = [
       <tr><td><span class={`exit ${outcome}`}>{code}</span></td><td>{what}</td></tr>
     ))}
   </table>
-  <p>Codes 7 and 8 are reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6. A valid answer on standard output can sit beside exit 1, 3, or 6.</p>
+  <p>Code 8 is reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6 or 7. A valid answer on standard output can sit beside exit 1, 3, 6, or 7.</p>
 
   <h2>The environment</h2>
   <table>
@@ -202,26 +203,25 @@ const COUNTS = [
   <h2>The cache</h2>
   <p>The cache is {dflt('Answer cache').split(',')[0]} by default. Ask the same question of the same evidence again and the tool reads the saved answer instead of sending a request.</p>
   <ul>
-    <li>One exchange per file, named <code>DIGEST.json</code>, schema <code>thinkthen.recording/1</code>, five fields in order: <code>schema</code>, <code>adapter</code>, <code>url</code>, <code>request</code>, <code>response</code>.</li>
-    <li><code>DIGEST</code> is the SHA-256, in lowercase hex, of the adapter name, a newline, the address, a newline, and the request body exactly as the adapter encoded it. The same command finds the same entry.</li>
-    <li>The digest covers the encoded bytes. When the input is read as one document, <code>hello\n</code> and <code>hello\r\n</code> make two entries, and so do <code>{'{"a":1}'}</code> and <code>{'{"a":1.0}'}</code>. Record framing may strip line ends or re-encode parsed JSON before the digest. <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> gives the full rule.</li>
-    <li>Bodies only, never headers. No key can reach an entry. Only an exchange that succeeded and decoded is saved. A failure is never saved.</li>
+    <li>The cache keeps one answer for each question, in <code>thinkthen.sqlite</code> in the cache folder. A question's key is the SHA-256 of the adapter, the address, the model, the shared state, and the question as sent. The same command finds the same answer.</li>
+    <li>The key covers the encoded question. When the input is read as one document, <code>hello\n</code> and <code>hello\r\n</code> make two keys, and so do <code>{'{"a":1}'}</code> and <code>{'{"a":1.0}'}</code>. Record framing may strip line ends or re-encode parsed JSON first. <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> gives the full rule.</li>
+    <li>An answer holds the question and the reply's answer, never a header. No key can reach it. Only a good answer is saved. A failure is never saved.</li>
     <li>The folder is <code>$XDG_CACHE_HOME/thinkthen</code>, then <code>$HOME/.cache/thinkthen</code> on Linux and <code>$HOME/Library/Caches/thinkthen</code> on macOS. <code>THINKTHEN_CACHE</code> names another one.</li>
-    <li>An entry holds the evidence. A folder the tool creates is mode 0700 and each entry is 0600, whatever the umask says.</li>
-    <li>The first write binds a folder to one backend through a private marker. Reusing that folder against another address fails at exit 5, before the key is read and before any request. The message names the address this run asked for, and for the default cache it names <code>--no-cache</code> and <code>THINKTHEN_CACHE</code>.</li>
+    <li>A saved question holds the evidence. The tool creates <code>thinkthen.sqlite</code> with mode 0600.</li>
+    <li>Answers from two addresses never mix, because the address is part of every key. A cache pointed at a new address misses and sends again.</li>
     <li>An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run.</li>
-    <li><code>thinkthen cache prune DIR</code> is the only way entries are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> or a model no reply in the folder names, and deletes nothing. An empty folder accepts any model name.</li>
+    <li><code>thinkthen cache prune DIR</code> is the only way answers are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> or a model no reply in the folder names, and deletes nothing. An empty folder accepts any model name.</li>
     <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>cache prune</code>.</li>
   </ul>
   <p>Count-only usage totals live beside the cache, in <code>thinkthen-usage</code>. One file per UTC month holds requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key. <code>THINKTHEN_CACHE</code> never moves them and <code>--no-cache</code> never turns them off. They count what this machine saw. Your provider’s bill is the real cost.</p>
-  <p><code>thinkthen status</code> is read-only and opens no connection. It reports the version, the resolved configuration and where each value came from, whether a key is present, the cache entry count and allocated bytes, and the local usage for the current UTC month and in all. <code>status --json</code> prints the same facts as one <code>thinkthen.status/1</code> object.</p>
+  <p><code>thinkthen status</code> is read-only and opens no connection. It reports the version, the resolved configuration and where each value came from, whether a key is present, the cache entry count and allocated bytes, and the local usage for the current UTC month and in all. <code>status --json</code> prints the same facts as one <code>thinkthen.status/2</code> object.</p>
 
   <h2>The configuration file</h2>
   <p>Optional, and read-only to the command. <b>The tool never creates it and never edits it.</b> There is no command that sets a value in it.</p>
   <ul>
     <li>Path: <code>$XDG_CONFIG_HOME/thinkthen/config.json</code>, then <code>$HOME/.config/thinkthen/config.json</code> on Linux and <code>$HOME/Library/Application Support/thinkthen/config.json</code> on macOS.</li>
     <li>Format: one JSON object with <code>"schema": "thinkthen.config/1"</code>.</li>
-    <li>It may set <code>url</code>, <code>model</code>, <code>cache</code>, and a positive <code>{pruneKey}</code>. Any other field is refused.</li>
+    <li>It may set <code>url</code>, <code>model</code>, <code>cache</code>, a positive <code>{pruneKey}</code>, and the other keys <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> lists. An unknown field is refused.</li>
     <li>The default is the cache on. <code>{pruneKey}</code> defaults to {PRUNE.number} allocated bytes. It is the size <code>cache prune</code> trims to. <code>status</code> shows it as <code>cache_prune_target_bytes</code>.</li>
   </ul>
   <p>A typed list replaces a question file's whole list and never merges. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>

@@ -49,7 +49,7 @@ const BACKEND_OPTIONS = [
 
 const COMMON_OPTIONS = [
   ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
-  ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
+  ['--plan', 'Prints the plan and sends nothing. It needs no key.'],
   ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick at most one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
   ['--jobs N', `How many requests run at once, from ${THROTTLE.range.min} to ${THROTTLE.range.max}. The default is ${THROTTLE.default}. It works on a stream of records, annotate on one document, and relate on one entity set.`],
@@ -225,7 +225,7 @@ export const FUNCTIONS = [
       ['--lines, --jsonl', `How the lines are framed. --${setting('Framing').defaultOn('find')} is the default. CSV and TSV are refused.`],
       ['--field POINTER', 'Names the part of each record to read.'],
       ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
-      ['--dry-run', 'Prints the plan and sends nothing.'],
+      ['--plan', 'Prints the plan and sends nothing.'],
       ...BACKEND_OPTIONS,
     ],
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],
@@ -265,7 +265,7 @@ export const FUNCTIONS = [
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
     gives: 'each name, its kind, where it sits, and a strength',
-    requests: 'It runs three steps. It finds the names. It labels each name with one of your kinds. This step works like choose. When you name a relation, it relates the names. --dry-run prints the request plan for the first record.',
+    requests: 'It runs three steps. It finds the names. It labels each name with one of your kinds. This step works like choose. When you name a relation, it relates the names. --plan prints the first request it would send.',
     args: 'KIND..., or one @FILE question file',
     options: [
       ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
@@ -289,7 +289,7 @@ export const FUNCTIONS = [
     lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. For the links a text states, use <code>recognize --relation</code>.',
     takes: 'one set of named entities and relation rules',
     gives: 'one edge for each related pair, with a probability',
-    requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. --dry-run prints the requests it would send.',
+    requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. --plan prints the first request it would send.',
     args: 'RELATION... as NAME=SOURCE_KIND:TARGET_KIND or a bare NAME, or one @FILE',
     options: [
       ['--either', 'Treats every relation as reading the same both ways.'],
@@ -400,7 +400,7 @@ export const SURFACES = [
       'Standard input carries the evidence. Standard output carries the answer and nothing else.',
       'On one piece of evidence, the exit code is the answer. `if` and `case` read it directly.',
       '`--jobs` sets how many requests run at once.',
-      '`--dry-run` prints the plan and needs no key.',
+      '`--plan` prints the plan and needs no key.',
     ],
   },
   {
@@ -487,11 +487,11 @@ export const SURFACES = [
   {
     slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite',
     lang: 'sql', tab: 'SQL',
-    blurb: 'Warm can prepare saved answers for later queries with the same complete request and model.',
+    blurb: 'Judge a whole table in one call, then join the answers back by key.',
     unsureWord: 'NULL',
     install: [['.load ./thinkthen', null]],
     particular: [
-      'For scalar reuse after warm, set `thinkthen_batch(1)` before the engine is created and keep the question, context, and model the same.',
+      'Its functions are direct-only. A view or trigger in an untrusted schema cannot call them to spend requests or read files.',
     ],
   },
   {

@@ -25,7 +25,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Name the question and the choices in variables above the call.
 - Pipe the input in with a heredoc, or `printf` for one short record.
 - No line over 60 characters. One option per line with a trailing backslash. One array item per line. Python uses bracket indenting. Other languages use their own line breaks and string joining.
-- The docs leave out `--details` for now. Show plain values. Show where a probability sits with a bar or a band.
+- Examples leave out `--details` for now. A page may name it. Show plain values. Show where a probability sits with a bar or a band.
 - A function page's example runs 10 to 25 lines, script and output together. Trim output with `jq`.
 - Examples are honest: a sensible question and Jev's real output. Nothing fake or deliberately false.
 - Output goes in its own block. JSON is pretty-printed with `jq .`.
