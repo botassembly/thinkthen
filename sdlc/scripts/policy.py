@@ -2198,7 +2198,7 @@ def check_live_stores() -> None:
 # `sdlc/issues/README.md` "Debt": a comment that marks unfinished work names its
 # issue. The Flutter tool writes the one exempt file and says not to edit it.
 MARKERS = ("TODO", "FIXME")
-MARKED = re.compile(r"(#|//|--|/\*)\s*(" + "|".join(MARKERS) + r")\b")
+MARKED = re.compile(r"(#|//!?|--|\*>?|<!--)\s*(" + "|".join(MARKERS) + r")\b")
 UNMARKED_ALLOWED = {"libraries/dart/flutter/example/linux/flutter/CMakeLists.txt"}
 
 
@@ -2213,8 +2213,9 @@ def marker_failures(hits: list[str]) -> list[str]:
 
 
 def check_markers() -> None:
-    if not marker_failures([f"src/planted.rs:1:// {MARKERS[0]}: planted"]):
-        fail("debt", "a planted comment marker with no issue path is refused")
+    prefixes = ("#", "//", "//!", "--", "/*", " *", "*>", "<!--")
+    if not all(marker_failures([f"src/planted:1:{prefix} {MARKERS[0]}: planted"]) for prefix in prefixes):
+        fail("debt", "a planted comment marker with no issue path is refused after each comment prefix")
     if marker_failures([f"src/planted.rs:1:// {MARKERS[1]}: sdlc/issues/planted.md"]):
         fail("debt", "a planted comment marker that names its issue is allowed")
     listed = subprocess.run(["git", "grep", "-n", "-I", "-E", "|".join(MARKERS), "--", ":!*.md"],

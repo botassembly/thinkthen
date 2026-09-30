@@ -4,7 +4,7 @@ Status: open. Deferred by ticket 0304 slice 3c after ticket 0307 dropped `polars
 
 Kind: debt
 
-Pay when: a user needs the streaming engine, or `polars/streaming` no longer pulls the two advisories.
+Pay when: a user needs the streaming engine, or `polars/streaming` no longer pulls the three advisories on `bincode` and `quick-xml`.
 
 Keeping it risks the streaming path breaking with no check, and the frame's own memory staying unbounded.
 

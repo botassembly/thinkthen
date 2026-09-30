@@ -2,6 +2,12 @@
 
 Status: open. Found on 2026-09-30 by running the site smoke against main `acebf3044`. Marketing owns `site/` (`sdlc/planning/ownership.md`); the conversion is ours. Owner of our part: ticket 0304 slice 5.
 
+Kind: debt
+
+Pay when: 0304 slice 5 lands.
+
+Keeping it leaves the site smoke red, so a new site failure hides among 79 known ones.
+
 ## The problem
 
 Since 0304 slice 2, replay reads only `thinkthen.jsonl` or `thinkthen.sqlite` (`engine/store.rs:127-133`). Fifteen tracked folders under `site/` hold only old `DIGEST.json` entries:
