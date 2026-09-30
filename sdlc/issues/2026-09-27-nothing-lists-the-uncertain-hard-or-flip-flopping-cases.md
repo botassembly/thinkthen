@@ -2,6 +2,8 @@
 
 Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`. Deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement.
 
+Priority: rank 23 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0.1.
+
 ## What happens today
 
 `audit` reports a whole question: counts, measures, a coverage curve, and a suggested cut. It never ranks the cases inside the question. `diff` names the cases that changed between two runs, which is a different question: it needs two runs, and it does not rank by how much a label would be worth.

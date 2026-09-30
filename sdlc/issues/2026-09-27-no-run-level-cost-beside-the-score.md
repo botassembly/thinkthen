@@ -2,6 +2,8 @@
 
 Status: open, deferred past 0.1 by the tuning review of 2026-09-28. Ian can overturn this placement. Shortened 2026-09-30. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297 (`experiments/296-gepa-question-tuning/`, `experiments/297-gepa-loop-tests/`).
 
+Priority: rank 24 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0.1.
+
 ## What exists
 
 - `--facts` prints whole-run requests and tokens, including rows `filter` drops and `rank --top` cuts (ticket 0170). With caller prices set, it adds `estimated_cost_usd` (ticket 0300, ADR 0108).

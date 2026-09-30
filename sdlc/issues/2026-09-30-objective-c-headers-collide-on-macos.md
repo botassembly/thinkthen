@@ -2,6 +2,8 @@
 
 Status: open. Found by the wave 4 macOS dry run on 2026-09-29 at `2c5ac772b`. Still present at main `e2ee1d9fa`. No ticket owns it. The release issue lists it as item 7.
 
+Priority: rank 8 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a new ticket, ready now.
+
 ## The problem
 
 The Objective-C package puts `ThinkThen.h` and `thinkthen.h` side by side in `Sources/`. macOS's default filesystem ignores case, so the two names are one file there. An unpacked Objective-C package on a default Mac volume loses one of the two headers.

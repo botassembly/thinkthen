@@ -2,6 +2,8 @@
 
 Status: Open. Filed 2026-09-26 by ticket 0145, the speed test.
 
+Priority: rank 15 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: the queue owner, as a local loopback experiment first.
+
 Ticket 0142 set the connection pool to keep up to `--jobs` connections. Its deferred gap 1 says no gate test counts secure handshakes, because the loopback listener speaks plain HTTP. It left the count to the S1 speed test's live part, or to an authorized run of experiment 268's harness.
 
 Ticket 0145 does not count connections. Its live part times a 306-title `filter` at `--jobs 16` and nothing more. Counting connections at the hosted service needs something that sees each new connection.

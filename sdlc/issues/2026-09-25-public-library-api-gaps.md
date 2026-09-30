@@ -2,6 +2,8 @@
 
 Status: open for items 1, 2, 3, 6, 7 and 9. Shortened 2026-09-30. Items 4 (ticket 0148), 5 (ticket 0150) and 8 (ticket 0136) are settled, and git history holds their text. No ticket owns the rest. Ticket 0304 slice 3b moves the SQL hosts onto the one batching path and touches the code of items 1 and 9, so it may settle them.
 
+Priority: rank 7 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: ticket 0304 slice 3b for items 1 and 9, then one follow-up ticket for items 2 and 3; items 6 and 7 after 0.1.
+
 Each item names a place where the public API (ticket 0084, `crates/thinkthen/src/public/`) falls short of what the command, a spec, or a ruling promises. Each gap makes a binding copy engine code or drift from the other bindings. Ian's ruling of 2026-09-25 applies throughout: no setting that does nothing.
 
 ## 1. Engine counters count per engine, not per process

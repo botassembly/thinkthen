@@ -1,5 +1,7 @@
 Status: Open for thirteen pages that can follow 0.1. Ticket 0316 rechecked every item on 2026-09-30 and cut the finished ones. The wrong spec claims, the 0.1 pages 5 to 10, the held-flag answers and the annotate help fix are done; git history holds their record.
 
+Priority: rank 19 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a future docs ticket after 0.1; marketing for page 23.
+
 # Docs and how-tos owed
 
 A new page either joins the `demos/` list under ADR 0018 or becomes a site how-to. A page that shows a SQL or data frame call uses ADR 0105's settings form. The site keeps how-tos to 10 to 25 lines and no `--details`; a page that needs `--details` stays in `demos/`.
