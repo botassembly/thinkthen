@@ -12,6 +12,10 @@ scratch_lint
 scratch_dir planted
 printf '%s -f -r -- "$x"\n' rm >"$planted/check.sh"
 ! scratch_lint "$planted/check.sh" 2>/dev/null || { echo 'lint: scratch_lint passed a planted rm' >&2; exit 1; }
+# ADR 0113: every script that runs tests takes a scratch usage folder. The guard refuses its plant.
+usage_lint
+printf '#!/bin/sh\ncargo %s --locked\n' test >"$planted/check.sh"
+! usage_lint "$planted/check.sh" 2>/dev/null || { echo 'lint: usage_lint passed a planted test run' >&2; exit 1; }
 (scratch_made="$REPO/x
 "; rm() { exit 3; }; ! scratch_remove "$REPO" 2>/dev/null) || { echo 'lint: scratch_remove did not refuse the checkout' >&2; exit 1; }
 

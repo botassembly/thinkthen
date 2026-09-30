@@ -5,6 +5,9 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+# ADR 0113: a test that bypasses its scratch usage folder writes this decoy and fails the run.
+. sdlc/scripts/scratch.sh
+usage_guard
 
 cargo build --locked --offline --package thinkthen --lib --no-default-features --features bundled-sqlite
 # Ticket 0086: the library graph carries no command-only crate, and on Unix it
@@ -50,7 +53,6 @@ test -z "$unexpected" \
 # folder after the unpacked source is gone.
 crate="target/package/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
 python3 sdlc/scripts/catalog.py --crate "$crate"
-. sdlc/scripts/scratch.sh
 scratch_dir isolated && scratch_dir source && scratch_dir built
 mkdir "$isolated/empty" "$isolated/out"
 tar -xzf "$crate" -C "$source" --strip-components=1

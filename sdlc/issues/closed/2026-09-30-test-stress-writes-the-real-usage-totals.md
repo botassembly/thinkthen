@@ -1,6 +1,6 @@
 # test-stress writes the real usage totals
 
-Status: open. Filed 2026-09-30 by the records Quick Fix that investigated `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`. Found by reading source on main `e8e2833e9`; nothing was run. Owner: the queue owner, as a Quick Fix. It touches only `sdlc/scripts/test-stress`, which no running lane edits.
+Status: Closed by the quick fix "stress runs use a scratch usage folder". `test-stress` takes the decoy guard and gives the Polars cases their own scratch usage folder. `package` takes the decoy guard, and `demos` takes its own scratch folder when run alone. `lint` now refuses a script that runs cargo's tests without either step, and refuses its plant. Proof on Linux: the Polars 200-record stress step passed and left the real month file's time and size unchanged. The same step with its scratch folder removed wrote the decoy, and the guard failed the run. Deferred: `polars/common/mod.rs::guarded()` still admits a direct `cargo test` with the fake key exported by hand; that path is no script or rung. Filed 2026-09-30 by the records Quick Fix that investigated `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`, from source on main `e8e2833e9`.
 
 Severity 2: a broken guarantee. ADR 0113 "Test isolation" says no test writes the real usage folder. Severity 1 means a wrong answer, data loss, a security problem or a hang. Severity 2 means a broken guarantee or a misleading document. Severity 3 means a sharp edge or a missing feature an integrator needs.
 

@@ -29,7 +29,7 @@ Ruling 10: no public release before 0.1, and 0.1 waits for every surface and bin
 | 17 | `2026-09-30-debt-issues-lack-the-three-ruled-fields.md` | no | the coordinator, a records Quick Fix | ticket 0340 landing | small |
 | 18 | `2026-09-26-count-secure-connections-at-sixteen-jobs.md` | no | the queue owner, a loopback experiment | nothing | small |
 | 19 | `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md` | no | the queue owner; the calls traced to rank 19a, the exit 4 waits for a live run with `--details` | the next live bench run | small |
-| 19a | `2026-09-30-test-stress-writes-the-real-usage-totals.md` (severity 2) | no | the queue owner, a Quick Fix in `sdlc/scripts/test-stress` | nothing | small |
+| 19a | `closed/2026-09-30-test-stress-writes-the-real-usage-totals.md` (severity 2, closed) | no | the queue owner, a Quick Fix in `sdlc/scripts/test-stress` | nothing | small |
 | 20 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | the queue owner | the release QA suite's edge list | medium |
 | 21 | `2026-09-29-docs-page-naming-supported-providers.md` | no, except the Liquid timeout line for stumble row 19 | marketing | nothing | small |
 | 22 | `2026-09-26-every-surface-should-give-back-run-facts.md` | no | 0314 slice 4 for item 1; tickets 0300 and 0302 for items 2 and 3; marketing for item 6 | 0314 slice 4 | large |

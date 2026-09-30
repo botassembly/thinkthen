@@ -7,6 +7,9 @@ ROOT=${1:-demos}
 
 # A demo replays a recording, so neither variable may reach one.
 unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+# ADR 0113: the binary writes a scratch usage folder, which the exit removes.
+. "$REPO/sdlc/scripts/scratch.sh"
+usage_home
 
 if ! command -v mustmatch >/dev/null 2>&1; then
 	printf 'demos: mustmatch is not on PATH\n' >&2
