@@ -8,11 +8,10 @@
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
-use serde_json::json;
 use serde_json::value::RawValue;
 use thinkthen::{
-    AttemptObservation, BatchSetting, CallOptions, CancelToken, Engine, Facts, Judgment, LoadedQuestion, Question,
-    QuestionSet,
+    AttemptObservation, BatchSetting, CallOptions, CancelToken, DoorReply, Engine, Facts, Judgment, LoadedQuestion,
+    Question, QuestionSet,
 };
 
 use crate::door;
@@ -81,15 +80,7 @@ pub(crate) fn call(
         if members.len() > 1 {
             return Err(Failure::usage("a usage request holds no other key"));
         }
-        let counts = engine.usage();
-        return Ok(format!(
-            "{{\"requests_sent\":{},\"retries\":{},\"input_tokens\":{},\"output_tokens\":{},\"cache_answers\":{}}}",
-            counts.requests_sent(),
-            counts.retries(),
-            counts.input_tokens(),
-            counts.output_tokens(),
-            counts.cache_answers()
-        ));
+        return written(serde_json::to_string(&engine.usage()));
     }
     let request = split(members)?;
     let options = controls(&request, door::options(deadline_ms, token)?)?;
@@ -99,17 +90,14 @@ pub(crate) fn call(
     };
     let options = if request.attempts { options.observe_attempt(&collect) } else { options };
     let (value, facts) = answer(engine, &request, options)?;
-    if request.attempts {
-        let mut events = attempts.lock().map_err(|_| Failure::defect("attempt collection failed"))?;
+    let attempts = if request.attempts {
+        let mut events = attempts.into_inner().map_err(|_| Failure::defect("attempt collection failed"))?;
         events.sort_by_key(AttemptObservation::ordinal);
-        let events = serde_json::to_string(&*events)
-            .map_err(|_| Failure::defect("attempts could not be written"))?;
-        return Ok(format!("{{\"value\":{value},\"facts\":{},\"attempts\":{events}}}", crate::failures::facts_json(&facts)));
-    }
-    Ok(format!(
-        "{{\"value\":{value},\"facts\":{}}}",
-        crate::failures::facts_json(&facts)
-    ))
+        Some(events)
+    } else {
+        None
+    };
+    written(serde_json::to_string(&DoorReply::new(value, facts, attempts)?))
 }
 
 fn controls<'a>(
@@ -253,7 +241,7 @@ fn answer(
                 .facts()
                 .cloned()
                 .ok_or_else(|| Failure::defect("completed filter has no facts"))?;
-            Ok((write(&json!(kept))?, facts))
+            Ok((written(serde_json::to_string(&kept))?, facts))
         }
         "rank" => {
             let asked = Question::rank(&alone(&request.verb, &request.question)?)?;
@@ -262,12 +250,8 @@ fn answer(
             })?;
             let ranked = engine.rank_with(&asked, records.iter().map(String::as_str), options)?;
             Ok((
-                write(&json!(
-                    ranked
-                        .value()
-                        .iter()
-                        .map(|row| *row.input())
-                        .collect::<Vec<_>>()
+                written(serde_json::to_string(
+                    &ranked.value().iter().map(|row| *row.input()).collect::<Vec<_>>(),
                 ))?,
                 ranked.facts().clone(),
             ))
@@ -285,7 +269,7 @@ fn answer(
             })?;
             let found = engine.find_with(&asked, units.iter().map(String::as_str), options)?;
             Ok((
-                write(&json!(found.value().selected()))?,
+                written(serde_json::to_string(&found.value().selected()))?,
                 found.facts().clone(),
             ))
         }
@@ -376,17 +360,18 @@ fn object(question: &Members) -> Result<String, Failure> {
 /// One judgment's bare value, as the command prints it.
 fn bare(value: &Judgment) -> Result<String, Failure> {
     match value {
-        Judgment::Decision(answer) => write(&json!(match answer {
+        Judgment::Decision(answer) => written(serde_json::to_string(&match answer {
             thinkthen::Answer::Yes => Some(true),
             thinkthen::Answer::No => Some(false),
             thinkthen::Answer::Unsure => None,
         })),
-        Judgment::Choice(pick) => write(&json!(pick)),
-        Judgment::Score(position) => write(&json!(position)),
-        Judgment::Tags(labels) => write(&json!(labels)),
+        Judgment::Choice(pick) => written(serde_json::to_string(pick)),
+        Judgment::Score(position) => written(serde_json::to_string(position)),
+        Judgment::Tags(labels) => written(serde_json::to_string(labels)),
     }
 }
 
-fn write(value: &serde_json::Value) -> Result<String, Failure> {
-    serde_json::to_string(value).map_err(|_| Failure::defect("an answer could not be written"))
+/// One typed value's JSON text, or the door's defect.
+fn written(text: serde_json::Result<String>) -> Result<String, Failure> {
+    text.map_err(|_| Failure::defect("an answer could not be written"))
 }

@@ -1,6 +1,6 @@
 # 0314: Rust owns the result schema
 
-Status: slice 1 landed; slice 2 ready
+Status: slice 2 built, awaiting code review
 
 Lane claude-1. Branch `ticket/0314-rust-result-schema`. Design: [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md). Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 7 and 8. Builds with [0291](0291-remaining-language-doors.md), so the fourteen C-door bindings change once.
 
@@ -39,6 +39,16 @@ struct DoorReply
 ```
 
 `Facts` declares its fields in name order, so its serialized keys match today's door bytes. `Counters` declares its fields in the door's `usage` order. `DoorReply` takes the value as JSON text, so no `serde_json` type enters the public API; its `Debug` shows the facts alone. Slice 2 moves the C door onto these types.
+
+## Slice 2 build
+
+Branch `ticket/0314-s2-door-typed-replies`.
+
+- Starts from: main `e434f6952`. `call.rs` builds the reply envelope and the usage counters with `format!` and the bare values through `json!`; `failures.rs` builds facts with `json!` and key-by-key inserts.
+- Keeps: every door byte, the C ABI, the error code, message, and error-facts path, and the batching and record-array code, which ticket 0304 owns.
+- Changes: the door serializes `DoorReply`, `Facts`, and `Counters` with serde, and writes bare values, `filter`, `rank`, and `find` straight from their typed values. The hand envelope, facts builder, usage `format!`, and the `serde_json::Value` writer are deleted.
+- Proof: `libraries/c/tests/door/golden.rs` landed first, green on the hand-built code (`4ac8e07cd`), and passes unchanged after the switch. It pins one driver run: every verb, a detailed row, a null answer, a record array, attempts, usage, a per-record annotate failure, and a failed call with its message and error facts, with every optional facts key present. The C door's tests and `types/self-test` against the real door pass.
+- Defers: the door has no JSON call error, so `CallError` stays a schema type until a surface prints one. `annotate`, record arrays, and `relate` still join the JSON text the public types give; turning those into typed rows waits for 0304's single batching path.
 
 ## What the build taught us
 

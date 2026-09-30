@@ -51,29 +51,10 @@ impl fmt::Debug for Failure {
     }
 }
 
-/// The count-only report for one completed asking call.
+/// The count-only report for one completed asking call. Its members are
+/// numbers and strings, so writing it cannot fail.
 pub(crate) fn facts_json(facts: &Facts) -> String {
-    let mut value = serde_json::json!({
-        "records": facts.records(),
-        "requests_sent": facts.requests_sent(),
-        "cache_answers": facts.cache_answers(),
-        "seconds": facts.seconds(),
-    });
-    if let Some(object) = value.as_object_mut() {
-        if let Some(input) = facts.input_tokens() {
-            object.insert("input_tokens".to_owned(), serde_json::json!(input));
-        }
-        if let Some(output) = facts.output_tokens() {
-            object.insert("output_tokens".to_owned(), serde_json::json!(output));
-        }
-        if let Some(model) = facts.model() {
-            object.insert("model".to_owned(), serde_json::json!(model));
-        }
-        if let Some(cost) = facts.estimated_cost_usd() {
-            object.insert("estimated_cost_usd".to_owned(), serde_json::json!(cost));
-        }
-    }
-    value.to_string()
+    serde_json::to_string(facts).unwrap_or_default()
 }
 
 impl Failure {

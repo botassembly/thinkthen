@@ -4,8 +4,8 @@
 //! backend's full arm, with prices set, so every optional facts key prints.
 //! It also asks a null answer, a per-record annotate failure, the usage
 //! counters, the attempts, and a failed call with its message and error
-//! facts. Elapsed times, request digests, and the
-//! loopback origin vary, so they print as 0 and `ORIGIN`.
+//! facts. Elapsed times, request digests, and the loopback origin vary, so
+//! they print as 0 and `ORIGIN`.
 
 use conformance_backend::Backend;
 use serde_json::json;
