@@ -1,0 +1,312 @@
+warehouse: Bay 1 holds cartons and is counted every Monday.
+payroll: Pay code 100 covers overtime and closes on day 1 of the month.
+facilities: Room 1.01 is booked through the front desk.
+it: Laptop batch A1 gets its updates on Wednesday night.
+security: Door 1 opens with a blue badge between 6:00 and 18:00.
+warehouse: Bay 2 holds pallets and is counted every Tuesday.
+payroll: Pay code 101 covers night shifts and closes on day 8 of the month.
+facilities: Room 1.02 is booked through the second floor.
+it: Laptop batch B1 gets its updates on Thursday night.
+security: Door 2 opens with a green badge between 7:00 and 19:00.
+warehouse: Bay 3 holds labels and is counted every Wednesday.
+payroll: Pay code 102 covers holiday work and closes on day 15 of the month.
+facilities: Room 1.03 is booked through the loading dock.
+customer: Orders are picked the same working day when they are placed before 15:00.
+it: Laptop batch C1 gets its updates on Friday night.
+security: Door 3 opens with a grey badge between 8:00 and 20:00.
+warehouse: Bay 4 holds shrink wrap and is counted every Thursday.
+payroll: Pay code 103 covers training days and closes on day 22 of the month.
+facilities: Room 1.04 is booked through the break room.
+it: Laptop batch D1 gets its updates on Monday night.
+security: Door 4 opens with a red badge between 6:00 and 21:00.
+warehouse: Bay 5 holds spare scanners and is counted every Friday.
+payroll: Pay code 104 covers travel time and closes on day 1 of the month.
+facilities: Room 1.05 is booked through the east stairwell.
+it: Laptop batch E1 gets its updates on Tuesday night.
+security: Door 5 opens with a blue badge between 7:00 and 18:00.
+warehouse: Bay 6 holds returned stock and is counted every Monday.
+payroll: Pay code 105 covers sick leave and closes on day 8 of the month.
+facilities: Room 1.06 is booked through the mail room.
+it: Laptop batch F1 gets its updates on Wednesday night.
+security: Door 6 opens with a green badge between 8:00 and 19:00.
+warehouse: Bay 7 holds packing paper and is counted every Tuesday.
+payroll: Pay code 106 covers overtime and closes on day 15 of the month.
+facilities: Room 1.07 is booked through the front desk.
+it: Laptop batch G1 gets its updates on Thursday night.
+security: Door 7 opens with a grey badge between 6:00 and 20:00.
+warehouse: Bay 8 holds tape rolls and is counted every Wednesday.
+payroll: Pay code 107 covers night shifts and closes on day 22 of the month.
+facilities: Room 1.08 is booked through the second floor.
+customer: Standard delivery arrives in two to four working days.
+it: Laptop batch H1 gets its updates on Friday night.
+security: Door 8 opens with a red badge between 7:00 and 21:00.
+warehouse: Bay 9 holds cartons and is counted every Thursday.
+payroll: Pay code 108 covers holiday work and closes on day 1 of the month.
+facilities: Room 1.09 is booked through the loading dock.
+it: Laptop batch I1 gets its updates on Monday night.
+security: Door 9 opens with a blue badge between 8:00 and 18:00.
+warehouse: Bay 10 holds pallets and is counted every Friday.
+payroll: Pay code 109 covers training days and closes on day 8 of the month.
+facilities: Room 1.10 is booked through the break room.
+it: Laptop batch J1 gets its updates on Tuesday night.
+security: Door 10 opens with a green badge between 6:00 and 19:00.
+warehouse: Bay 11 holds labels and is counted every Monday.
+payroll: Pay code 110 covers travel time and closes on day 15 of the month.
+facilities: Room 2.01 is booked through the east stairwell.
+it: Laptop batch K1 gets its updates on Wednesday night.
+security: Door 11 opens with a grey badge between 7:00 and 20:00.
+warehouse: Bay 12 holds shrink wrap and is counted every Tuesday.
+payroll: Pay code 111 covers sick leave and closes on day 22 of the month.
+facilities: Room 2.02 is booked through the mail room.
+it: Laptop batch L1 gets its updates on Thursday night.
+security: Door 12 opens with a red badge between 8:00 and 21:00.
+warehouse: Bay 13 holds spare scanners and is counted every Wednesday.
+payroll: Pay code 112 covers overtime and closes on day 1 of the month.
+facilities: Room 2.03 is booked through the front desk.
+customer: Express delivery arrives the next working day and costs extra.
+it: Laptop batch M1 gets its updates on Friday night.
+security: Door 13 opens with a blue badge between 6:00 and 18:00.
+warehouse: Bay 14 holds returned stock and is counted every Thursday.
+payroll: Pay code 113 covers night shifts and closes on day 8 of the month.
+facilities: Room 2.04 is booked through the second floor.
+it: Laptop batch N1 gets its updates on Monday night.
+security: Door 14 opens with a green badge between 7:00 and 19:00.
+warehouse: Bay 15 holds packing paper and is counted every Friday.
+payroll: Pay code 114 covers holiday work and closes on day 15 of the month.
+facilities: Room 2.05 is booked through the loading dock.
+it: Laptop batch O1 gets its updates on Tuesday night.
+security: Door 15 opens with a grey badge between 8:00 and 20:00.
+warehouse: Bay 16 holds tape rolls and is counted every Monday.
+payroll: Pay code 115 covers training days and closes on day 22 of the month.
+facilities: Room 2.06 is booked through the break room.
+it: Laptop batch P1 gets its updates on Wednesday night.
+security: Door 16 opens with a red badge between 6:00 and 21:00.
+warehouse: Bay 17 holds cartons and is counted every Tuesday.
+payroll: Pay code 116 covers travel time and closes on day 1 of the month.
+facilities: Room 2.07 is booked through the east stairwell.
+it: Laptop batch Q1 gets its updates on Thursday night.
+security: Door 17 opens with a blue badge between 7:00 and 18:00.
+warehouse: Bay 18 holds pallets and is counted every Wednesday.
+payroll: Pay code 117 covers sick leave and closes on day 8 of the month.
+facilities: Room 2.08 is booked through the mail room.
+customer: Returns are accepted within 30 days of delivery.
+it: Laptop batch R1 gets its updates on Friday night.
+security: Door 18 opens with a green badge between 8:00 and 19:00.
+warehouse: Bay 19 holds labels and is counted every Thursday.
+payroll: Pay code 118 covers overtime and closes on day 15 of the month.
+facilities: Room 2.09 is booked through the front desk.
+it: Laptop batch S1 gets its updates on Monday night.
+security: Door 19 opens with a grey badge between 6:00 and 20:00.
+warehouse: Bay 20 holds shrink wrap and is counted every Friday.
+payroll: Pay code 119 covers night shifts and closes on day 22 of the month.
+facilities: Room 2.10 is booked through the second floor.
+it: Laptop batch T1 gets its updates on Tuesday night.
+security: Door 20 opens with a red badge between 7:00 and 21:00.
+warehouse: Bay 21 holds spare scanners and is counted every Monday.
+payroll: Pay code 120 covers holiday work and closes on day 1 of the month.
+facilities: Room 3.01 is booked through the loading dock.
+it: Laptop batch U1 gets its updates on Wednesday night.
+security: Door 21 opens with a blue badge between 8:00 and 18:00.
+warehouse: Bay 22 holds returned stock and is counted every Tuesday.
+payroll: Pay code 121 covers training days and closes on day 8 of the month.
+facilities: Room 3.02 is booked through the break room.
+it: Laptop batch V1 gets its updates on Thursday night.
+security: Door 22 opens with a green badge between 6:00 and 19:00.
+warehouse: Bay 23 holds packing paper and is counted every Wednesday.
+payroll: Pay code 122 covers travel time and closes on day 15 of the month.
+facilities: Room 3.03 is booked through the east stairwell.
+customer: Items must be unused and in the original packaging.
+it: Laptop batch W1 gets its updates on Friday night.
+security: Door 23 opens with a grey badge between 7:00 and 20:00.
+warehouse: Bay 24 holds tape rolls and is counted every Thursday.
+payroll: Pay code 123 covers sick leave and closes on day 22 of the month.
+facilities: Room 3.04 is booked through the mail room.
+it: Laptop batch X1 gets its updates on Monday night.
+security: Door 24 opens with a red badge between 8:00 and 21:00.
+warehouse: Bay 25 holds cartons and is counted every Friday.
+payroll: Pay code 124 covers overtime and closes on day 1 of the month.
+facilities: Room 3.05 is booked through the front desk.
+it: Laptop batch Y1 gets its updates on Tuesday night.
+security: Door 25 opens with a blue badge between 6:00 and 18:00.
+warehouse: Bay 26 holds pallets and is counted every Monday.
+payroll: Pay code 125 covers night shifts and closes on day 8 of the month.
+facilities: Room 3.06 is booked through the second floor.
+it: Laptop batch Z1 gets its updates on Wednesday night.
+security: Door 26 opens with a green badge between 7:00 and 19:00.
+warehouse: Bay 27 holds labels and is counted every Tuesday.
+payroll: Pay code 126 covers holiday work and closes on day 15 of the month.
+facilities: Room 3.07 is booked through the loading dock.
+it: Laptop batch A2 gets its updates on Thursday night.
+security: Door 27 opens with a grey badge between 8:00 and 20:00.
+warehouse: Bay 28 holds shrink wrap and is counted every Wednesday.
+payroll: Pay code 127 covers training days and closes on day 22 of the month.
+facilities: Room 3.08 is booked through the break room.
+customer: The customer pays return postage unless the item arrived damaged.
+it: Laptop batch B2 gets its updates on Friday night.
+security: Door 28 opens with a red badge between 6:00 and 21:00.
+warehouse: Bay 29 holds spare scanners and is counted every Thursday.
+payroll: Pay code 128 covers travel time and closes on day 1 of the month.
+facilities: Room 3.09 is booked through the east stairwell.
+it: Laptop batch C2 gets its updates on Monday night.
+security: Door 29 opens with a blue badge between 7:00 and 18:00.
+warehouse: Bay 30 holds returned stock and is counted every Friday.
+payroll: Pay code 129 covers sick leave and closes on day 8 of the month.
+facilities: Room 3.10 is booked through the mail room.
+it: Laptop batch D2 gets its updates on Tuesday night.
+security: Door 30 opens with a green badge between 8:00 and 19:00.
+warehouse: Bay 31 holds packing paper and is counted every Monday.
+payroll: Pay code 130 covers overtime and closes on day 15 of the month.
+facilities: Room 4.01 is booked through the front desk.
+it: Laptop batch E2 gets its updates on Wednesday night.
+security: Door 31 opens with a grey badge between 6:00 and 20:00.
+warehouse: Bay 32 holds tape rolls and is counted every Tuesday.
+payroll: Pay code 131 covers night shifts and closes on day 22 of the month.
+facilities: Room 4.02 is booked through the second floor.
+it: Laptop batch F2 gets its updates on Thursday night.
+security: Door 32 opens with a red badge between 7:00 and 21:00.
+warehouse: Bay 33 holds cartons and is counted every Wednesday.
+payroll: Pay code 132 covers holiday work and closes on day 1 of the month.
+facilities: Room 4.03 is booked through the loading dock.
+customer: Refunds reach the original payment method within five working days.
+it: Laptop batch G2 gets its updates on Friday night.
+security: Door 33 opens with a blue badge between 8:00 and 18:00.
+warehouse: Bay 34 holds pallets and is counted every Thursday.
+payroll: Pay code 133 covers training days and closes on day 8 of the month.
+facilities: Room 4.04 is booked through the break room.
+it: Laptop batch H2 gets its updates on Monday night.
+security: Door 34 opens with a green badge between 6:00 and 19:00.
+warehouse: Bay 35 holds labels and is counted every Friday.
+payroll: Pay code 134 covers travel time and closes on day 15 of the month.
+facilities: Room 4.05 is booked through the east stairwell.
+it: Laptop batch I2 gets its updates on Tuesday night.
+security: Door 35 opens with a grey badge between 7:00 and 20:00.
+warehouse: Bay 36 holds shrink wrap and is counted every Monday.
+payroll: Pay code 135 covers sick leave and closes on day 22 of the month.
+facilities: Room 4.06 is booked through the mail room.
+it: Laptop batch J2 gets its updates on Wednesday night.
+security: Door 36 opens with a red badge between 8:00 and 21:00.
+warehouse: Bay 37 holds spare scanners and is counted every Tuesday.
+payroll: Pay code 136 covers overtime and closes on day 1 of the month.
+facilities: Room 4.07 is booked through the front desk.
+it: Laptop batch K2 gets its updates on Thursday night.
+security: Door 37 opens with a blue badge between 6:00 and 18:00.
+warehouse: Bay 38 holds returned stock and is counted every Wednesday.
+payroll: Pay code 137 covers night shifts and closes on day 8 of the month.
+facilities: Room 4.08 is booked through the second floor.
+customer: Exchanges are handled as a return followed by a new order.
+it: Laptop batch L2 gets its updates on Friday night.
+security: Door 38 opens with a green badge between 7:00 and 19:00.
+warehouse: Bay 39 holds packing paper and is counted every Thursday.
+payroll: Pay code 138 covers holiday work and closes on day 15 of the month.
+facilities: Room 4.09 is booked through the loading dock.
+it: Laptop batch M2 gets its updates on Monday night.
+security: Door 39 opens with a grey badge between 8:00 and 20:00.
+warehouse: Bay 40 holds tape rolls and is counted every Friday.
+payroll: Pay code 139 covers training days and closes on day 22 of the month.
+facilities: Room 4.10 is booked through the break room.
+it: Laptop batch N2 gets its updates on Tuesday night.
+security: Door 40 opens with a red badge between 6:00 and 21:00.
+warehouse: Bay 41 holds cartons and is counted every Monday.
+payroll: Pay code 140 covers travel time and closes on day 1 of the month.
+facilities: Room 5.01 is booked through the east stairwell.
+it: Laptop batch O2 gets its updates on Wednesday night.
+security: Door 41 opens with a blue badge between 7:00 and 18:00.
+warehouse: Bay 42 holds pallets and is counted every Tuesday.
+payroll: Pay code 141 covers sick leave and closes on day 8 of the month.
+facilities: Room 5.02 is booked through the mail room.
+it: Laptop batch P2 gets its updates on Thursday night.
+security: Door 42 opens with a green badge between 8:00 and 19:00.
+warehouse: Bay 43 holds labels and is counted every Wednesday.
+payroll: Pay code 142 covers overtime and closes on day 15 of the month.
+facilities: Room 5.03 is booked through the front desk.
+customer: Report damage within 48 hours of delivery.
+it: Laptop batch Q2 gets its updates on Friday night.
+security: Door 43 opens with a grey badge between 6:00 and 20:00.
+warehouse: Bay 44 holds shrink wrap and is counted every Thursday.
+payroll: Pay code 143 covers night shifts and closes on day 22 of the month.
+facilities: Room 5.04 is booked through the second floor.
+it: Laptop batch R2 gets its updates on Monday night.
+security: Door 44 opens with a red badge between 7:00 and 21:00.
+warehouse: Bay 45 holds spare scanners and is counted every Friday.
+payroll: Pay code 144 covers holiday work and closes on day 1 of the month.
+facilities: Room 5.05 is booked through the loading dock.
+it: Laptop batch S2 gets its updates on Tuesday night.
+security: Door 45 opens with a blue badge between 8:00 and 18:00.
+warehouse: Bay 46 holds returned stock and is counted every Monday.
+payroll: Pay code 145 covers training days and closes on day 8 of the month.
+facilities: Room 5.06 is booked through the break room.
+it: Laptop batch T2 gets its updates on Wednesday night.
+security: Door 46 opens with a green badge between 6:00 and 19:00.
+warehouse: Bay 47 holds packing paper and is counted every Tuesday.
+payroll: Pay code 146 covers travel time and closes on day 15 of the month.
+facilities: Room 5.07 is booked through the east stairwell.
+it: Laptop batch U2 gets its updates on Thursday night.
+security: Door 47 opens with a grey badge between 7:00 and 20:00.
+warehouse: Bay 48 holds tape rolls and is counted every Wednesday.
+payroll: Pay code 147 covers sick leave and closes on day 22 of the month.
+facilities: Room 5.08 is booked through the mail room.
+customer: Gift receipts hide the price and keep the order number.
+it: Laptop batch V2 gets its updates on Friday night.
+security: Door 48 opens with a red badge between 8:00 and 21:00.
+warehouse: Bay 49 holds cartons and is counted every Thursday.
+payroll: Pay code 148 covers overtime and closes on day 1 of the month.
+facilities: Room 5.09 is booked through the front desk.
+it: Laptop batch W2 gets its updates on Monday night.
+security: Door 49 opens with a blue badge between 6:00 and 18:00.
+warehouse: Bay 50 holds pallets and is counted every Friday.
+payroll: Pay code 149 covers night shifts and closes on day 8 of the month.
+facilities: Room 5.10 is booked through the second floor.
+it: Laptop batch X2 gets its updates on Tuesday night.
+security: Door 50 opens with a green badge between 7:00 and 19:00.
+warehouse: Bay 51 holds labels and is counted every Monday.
+payroll: Pay code 150 covers holiday work and closes on day 15 of the month.
+facilities: Room 6.01 is booked through the loading dock.
+it: Laptop batch Y2 gets its updates on Wednesday night.
+security: Door 51 opens with a grey badge between 8:00 and 20:00.
+warehouse: Bay 52 holds shrink wrap and is counted every Tuesday.
+payroll: Pay code 151 covers training days and closes on day 22 of the month.
+facilities: Room 6.02 is booked through the break room.
+it: Laptop batch Z2 gets its updates on Thursday night.
+security: Door 52 opens with a red badge between 6:00 and 21:00.
+warehouse: Bay 53 holds spare scanners and is counted every Wednesday.
+payroll: Pay code 152 covers travel time and closes on day 1 of the month.
+facilities: Room 6.03 is booked through the east stairwell.
+customer: Orders ship in cardboard boxes with paper tape.
+it: Laptop batch A3 gets its updates on Friday night.
+security: Door 53 opens with a blue badge between 7:00 and 18:00.
+warehouse: Bay 54 holds returned stock and is counted every Thursday.
+payroll: Pay code 153 covers sick leave and closes on day 8 of the month.
+facilities: Room 6.04 is booked through the mail room.
+it: Laptop batch B3 gets its updates on Monday night.
+security: Door 54 opens with a green badge between 8:00 and 19:00.
+warehouse: Bay 55 holds packing paper and is counted every Friday.
+payroll: Pay code 154 covers overtime and closes on day 15 of the month.
+facilities: Room 6.05 is booked through the front desk.
+it: Laptop batch C3 gets its updates on Tuesday night.
+security: Door 55 opens with a grey badge between 6:00 and 20:00.
+warehouse: Bay 56 holds tape rolls and is counted every Monday.
+payroll: Pay code 155 covers night shifts and closes on day 22 of the month.
+facilities: Room 6.06 is booked through the second floor.
+it: Laptop batch D3 gets its updates on Wednesday night.
+security: Door 56 opens with a red badge between 7:00 and 21:00.
+warehouse: Bay 57 holds cartons and is counted every Tuesday.
+payroll: Pay code 156 covers holiday work and closes on day 1 of the month.
+facilities: Room 6.07 is booked through the loading dock.
+it: Laptop batch E3 gets its updates on Thursday night.
+security: Door 57 opens with a blue badge between 8:00 and 18:00.
+warehouse: Bay 58 holds pallets and is counted every Wednesday.
+payroll: Pay code 157 covers training days and closes on day 8 of the month.
+facilities: Room 6.08 is booked through the break room.
+customer: Support answers email within one working day.
+it: Laptop batch F3 gets its updates on Friday night.
+security: Door 58 opens with a green badge between 6:00 and 19:00.
+warehouse: Bay 59 holds labels and is counted every Thursday.
+payroll: Pay code 158 covers travel time and closes on day 15 of the month.
+facilities: Room 6.09 is booked through the east stairwell.
+it: Laptop batch G3 gets its updates on Monday night.
+security: Door 59 opens with a grey badge between 7:00 and 20:00.
+warehouse: Bay 60 holds shrink wrap and is counted every Friday.
+payroll: Pay code 159 covers sick leave and closes on day 22 of the month.
+facilities: Room 6.10 is booked through the mail room.
+it: Laptop batch H3 gets its updates on Tuesday night.
+security: Door 60 opens with a red badge between 8:00 and 21:00.
