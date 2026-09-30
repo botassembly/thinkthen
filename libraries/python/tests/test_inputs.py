@@ -85,11 +85,9 @@ def test_deadlines_follow_the_millisecond_boundary(backend, tmp_path):
           tt.decide(late, "omitted").value)
     """, child_env(backend, tmp_path))
     whole = "UsageError `deadline_ms` is a whole number of milliseconds"
-    def range_error(value):
-        return (f"UsageError a deadline of {value} milliseconds is not -1, 0, "
-                "or a positive budget of at most 4294967295 seconds")
+    most = "milliseconds is not -1, 0, or a positive budget of at most 4294967295 seconds"
     assert printed.splitlines() == 7 * [whole] + [
-        range_error(-2), range_error(4294967295001),
+        f"UsageError a deadline of -2 {most}", f"UsageError a deadline of 4294967295001 {most}",
         "DeadlineError the deadline of 0 s passed before the call answered",
         "UsageError use deadline_ms= instead of deadline=",
         "True True True",
