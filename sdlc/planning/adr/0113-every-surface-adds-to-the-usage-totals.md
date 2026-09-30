@@ -1,6 +1,6 @@
 # ADR 0113: Every surface adds to the usage totals
 
-- Status: **Proposed**, 2026-09-30. A fresh reviewer checks it before ticket 0322 builds. Ian can overturn each item.
+- Status: **Accepted**, 2026-09-30, by the coordinator after two fresh reviews. Ian can overturn each item.
 - Date: 2026-09-30
 
 This ADR answers option 1 of `sdlc/issues/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`. It follows ruling 8 of `sdlc/planning/cleanup-2026-09-30.md`. It amends ADR 0034, which kept persistence to the command.
@@ -39,9 +39,14 @@ The rule is "an engine that reads the environment adds to the environment's tota
 - A forked child builds fresh counters and leaks the inherited ones untouched (`engine/process.rs`). The parent's pending deltas are never written twice.
 - Accepted: a fork during a write leaves the child holding a copy of the lock's open file. A long-lived child stalls other writers until it exits. Each stalled writer gives up at its deadline and loses only its advisory counts.
 - Dropping an engine flushes its writer, as today.
-- **Static hosts flush at exit.** The SQL hosts never drop their engines: PostgreSQL keeps `ENGINES` in a static, SQLite a `OnceLock`, DuckDB a static registry. So a new `Engine::finish_usage()` calls `Counters::finish()`. PostgreSQL registers it with `on_proc_exit` when a backend builds its first engine. SQLite and DuckDB register it with `atexit` when they build their first engine. The hook reaches only the calling process's own counters. A forked child that never built its own does nothing. The hook lives in the SQL extensions. The library and the C door keep no process-wide hook.
+- **Static hosts flush at exit.** The SQL hosts never drop their engines: PostgreSQL keeps `ENGINES` in a static, SQLite a `OnceLock`, DuckDB a static registry. So a new `Engine::finish_usage()` calls `Counters::finish()`. PostgreSQL registers it with `on_proc_exit` when a backend builds its first engine. SQLite and DuckDB register it with `atexit` when they build their first engine. The hook lives in the SQL extensions. The library and the C door keep no process-wide hook.
+- `finish_usage()` compares the process ID with the engine's `Guarded` owner using atomics only. On a mismatch it returns at once. It never builds state and never touches an inherited mutex. So a forked child that never built its own counters does nothing, and the parent's counts are written once.
+- Each `extern "C"` hook runs inside `thinkthen::contained`, so a panic never crosses into the host.
+- Each hook takes the host's engine list with `try_lock`: PostgreSQL's `ENGINES` and DuckDB's registry. When the list is busy, the hook skips the flush. PostgreSQL can turn an error into `FATAL` and call `proc_exit` in the middle of a call that holds `ENGINES`, and a blocking lock there would deadlock the backend. DuckDB's hook also skips a registry that another process built.
+- SQLite may unload the extension when its connection closes. The C library runs a library's `atexit` hooks when that library is unloaded, so the flush then runs at unload. A reload registers the hook again.
+- The usage writer thread masks host signals as `engine/workers.rs` does for its request threads.
 
-Why flush at exit: `finish()` already exists, the command already uses it, and its one-second deadline bounds the wait. Each host adds one registration. The other choice, accepting the loss, leaves every SQL host undercounting its last calls. It also leaves no race-free proof for PostgreSQL, whose backends never drop an engine. A crash still loses the tail, as ADR 0034 accepts.
+Why flush at exit: `finish()` already exists, and the command already uses it. Its one-second deadline bounds only the wait for the usage lock; other file operations stay unbounded, as ADR 0097 says. Each host adds one registration. The other choice, accepting the loss, leaves every SQL host undercounting its last calls. It also leaves no race-free proof for PostgreSQL, whose backends never drop an engine. A crash still loses the tail, as ADR 0034 accepts.
 
 ### 4. How `status` reads them
 
@@ -63,9 +68,12 @@ The folder and the exit flush sit in the shared counters, below every batch path
 
 ## Test isolation
 
-- The shared test helpers set `XDG_CACHE_HOME` to a scratch folder under `CARGO_TARGET_TMPDIR` for every engine and child process they start. On macOS they set `HOME` instead, after pinning `CARGO_HOME` and `RUSTUP_HOME`. So plain `cargo test` never writes the real folder.
-- `sdlc/scripts/test`, `surfaces` and each surface check set the outer `XDG_CACHE_HOME` (or `HOME` on macOS) to a decoy folder. A test that bypasses the helpers writes the decoy. The guard fails the run if the decoy's usage folder exists. Ian's own `thinkthen` runs write only the real folder, so they never trip the guard.
-- PostgreSQL `check.sh` starts its server with a scratch `XDG_CACHE_HOME`. It runs `status` with the same value.
+`config::resolve_usage` ignores `XDG_CACHE_HOME` on macOS. So every isolation step below sets `XDG_CACHE_HOME` on Linux and `HOME` on macOS, after pinning `CARGO_HOME` and `RUSTUP_HOME`.
+
+- The shared test helpers start every child from a cleared environment with a scratch `HOME` under `CARGO_TARGET_TMPDIR`. No in-process test builds a sending engine from the environment. So plain `cargo test` never writes the real folder.
+- `scratch.sh` gives the shell entry points one isolation step. It points the usage folder at a scratch copy of the platform cache folder, which links every entry of the real one except `thinkthen-usage`, so toolchain caches still resolve. On macOS the copy is of `HOME`, with `Library` and `Library/Caches` copied the same way.
+- `sdlc/scripts/test` and `surfaces` take that step as a decoy. A test that bypasses the helpers writes the decoy. The guard fails the run if the decoy's usage folder exists. Ian's own `thinkthen` runs write only the real folder, so they never trip the guard.
+- Each surface check takes the step for its own run, so its engines write its scratch folder. PostgreSQL `check.sh` starts its server that way and runs `status` with the same environment.
 - The build proves the guard once: one deliberately unisolated run fails it, and the record says so.
 
 ## Build order
@@ -73,11 +81,15 @@ The folder and the exit flush sit in the shared counters, below every batch path
 Ticket 0322. Each slice lands green with the full suite, workspace clippy, `policy.py` and a fresh code review. All proof runs offline against the counted loopback backend.
 
 1. **Builds now: persistence, exit flush and isolation.** `from_env` seeds the usage path. `Engine::finish_usage()` and the three host hooks land. The test isolation above lands. Proof:
-   - The command sends one request. A Rust `from_env` engine sends two, one a retry after a 503. The C door sends one. The SQLite extension answers one row and its process exits without a sleep. `thinkthen status --json` then reports requests equal to the listener's arrivals (5), retries 1, and the tokens the replies reported.
+   - Into one scratch usage folder, the command sends one request and a Rust `from_env` engine sends two, one a retry after a 503. `thinkthen status --json` then reports requests equal to the listener's arrivals (3), retries 1, and the tokens the replies reported.
+   - The C door sends one request and frees its engine. `status` reports one.
+   - The SQLite extension answers one row and its process exits without a sleep while the test holds the usage lock for about 300 ms. `status` reports one. SQLite loads the extension, answers, closes, reopens, answers and exits; `status` reports two.
+   - PostgreSQL `check.sh` opens two connections that each send one request and disconnect while the check holds the usage lock for about 300 ms. The server user's `status` then reports two.
+   - Each exit proof fails without its hook. The build removes the hook once, watches the proof fail, and the record says so.
+   - A parent writes, then a child of a fork calls `finish_usage()` while the parent's writer holds its queue lock. The child returns promptly, and the files count the parent's attempts once.
    - The same calls through `EngineBuilder::new()` leave the usage folder absent.
    - A `0755` usage folder refuses the write. Each call returns the same result, and the listener sees the same arrivals.
-   - PostgreSQL `check.sh` opens two connections that each send one request and disconnect. The server user's `status` then reports two.
-   - Forks and concurrent writers reuse the existing proofs unchanged: `engine/facade/fork_tests.rs` and `tests/backend/facts/usage_lock.rs`.
+   - The existing fork and concurrent-writer proofs stay: `engine/facade/fork_tests.rs` and `tests/backend/facts/usage_lock.rs`.
    - `recording.md`, each SQL extension's README and the changelog say every surface adds to the totals and name PostgreSQL's per-backend cap.
 2. **Waits for ADR 0111 slice 3: the cache-answer proof.** The slice 1 calls again with the cache on reach the listener zero times. `status` adds cache answers equal to the questions answered from the store.
 
@@ -98,5 +110,5 @@ The coordinator settled items 1 to 4 as defaults on 2026-09-30.
 4. `status` shows one combined total, with no split by surface.
 5. `EngineBuilder::new()` writes nothing.
 6. Library write failures stay silent.
-7. Static hosts flush at exit through `on_proc_exit` and `atexit`.
+7. Static hosts flush at exit through `on_proc_exit` and `atexit`, and skip the flush when the engine list is busy.
 8. A forked child holding the usage lock stalls writers until it exits.
