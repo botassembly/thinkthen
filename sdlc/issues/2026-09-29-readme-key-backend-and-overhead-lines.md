@@ -1,6 +1,6 @@
-Status: Open. Filed 2026-09-29 by the marketing lead from Ian's launch review. The main builder owns `README.md`.
+Status: Open for criterion 3 only. Owner: marketing's overhead benchmark (0.1 punch list item 8), then the queue owner writes the README sentence. Filed 2026-09-29 by the marketing lead from Ian's launch review.
 
-Progress: The README now covers criteria 1 and 2, including TypeSafe's official site, the key and address settings, `--model` and its current default, and the loopback no-key case. Criterion 3 remains open until marketing's overhead benchmark supplies a measured result and named run. No overhead number is inferred from other timing work.
+Criteria 1 and 2 are met: the README names TypeSafe's site for a key, `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, `--model` and its default. Ticket 0316 rechecked them on 2026-09-30. No overhead benchmark run exists yet, so the README states no overhead number.
 
 # README: where to get a key, how to change the backend, and the overhead line
 

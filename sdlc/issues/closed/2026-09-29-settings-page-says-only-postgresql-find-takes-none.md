@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-29 by the marketing lead from wave 4 release QA preparation (workspace experiment 218).
+Status: Closed by ticket 0316. ADR 0105 landed first, so all three databases now take find's `none` in the settings object, and the row says so. The same ticket fixed the stale SQL cells for context, deadline, batch and SQLite's engine setters, which moved into `thinkthen_configure`. Filed 2026-09-29 by the marketing lead from wave 4 release QA preparation (workspace experiment 218).
 
 # The settings page says only PostgreSQL's find takes `none`
 

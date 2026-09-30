@@ -60,6 +60,24 @@ class TestEngineSettings < Minitest::Test
     assert_equal 0, count
   end
 
+  # The token cap reaches Ruby through from_env; a regression if from_env stops reading the variable.
+  def test_the_token_cap_variable_refuses_before_any_request
+    TestBackend.with(<<~RUBY, extra: { "THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL" => 10 }) do |backend, child|
+      begin
+        T::Engine.new(cache: false).decide("Is it urgent?", "text")
+      rescue T::Error => e
+        say [e.class.name, e.kind, e.message]
+      end
+    RUBY
+      assert_equal ["ThinkThen::UsageError", "usage",
+                    "max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request"],
+                   child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 0, backend.count
+    end
+  end
+
   def test_cache_names_its_folder
     TestBackend.with(<<~RUBY) do |backend, child, root|
       named = File.join(ENV.fetch("HOME"), "named")

@@ -54,7 +54,7 @@ Direction. Pick one rule and state it on `records.md`, `filter.md` and each verb
 
 Reviews 01 (issue 6), 05 (issue 3.6) and 02 (issue 19) all found this. Offline, a replay miss (exit 5), a blank line (exit 2), invalid UTF-8 (exit 5) and an over-limit line (exit 2) each stop the run. In live run L3, one over-long record ended the run at exit 4. The stop line is on standard error, which `channels.md` says a script never parses. `--facts` is "Not built yet, by ADR 0048 item 10". A pipeline over dirty data must pre-clean it perfectly or fail. After a stop, a `filter` consumer cannot tell from standard output how far the run got, because dropped records leave no trace.
 
-The decision on a skip mode is already owed in `2026-09-25-docs-how-tos-and-spec-claims-owed.md` item 10, and `roadmap.md` holds `--on-error continue`. This entry adds the evidence that three separate reviews asked for it. Direction: ship `--facts` with the stop position, and consider an option that writes refused input records to a named file and keeps going.
+The skip-mode decision is settled: `roadmap.md` holds `--on-error continue`, and the site's `set-aside-bad-records` recipe shows the workaround. The docs issue's former item 10 recorded this; git history holds it. This entry adds the evidence that three separate reviews asked for it. Direction: ship `--facts` with the stop position, and consider an option that writes refused input records to a named file and keeps going.
 
 ## Severity 3 titles
 

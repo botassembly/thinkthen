@@ -38,8 +38,8 @@ mustmatch test specification/fixtures/recognize/README.md
 # Ticket 0167: the public pair recording keeps the exact audited edge rows.
 mustmatch test specification/fixtures/relate/README.md
 
-# The standard of ADR 0016 is checked by the same runner, so the runner is
-# proved against pages that break each rule before it judges the real ones.
+# The runner is proved against pages that break each of its rules before it
+# judges the real ones.
 sh -- "$REPO/sdlc/scripts/demos-self-test"
 
 exec sh -- "$REPO/sdlc/scripts/demos"

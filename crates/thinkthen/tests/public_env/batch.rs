@@ -131,3 +131,27 @@ fn the_rate_variable_paces_an_engine_built_from_the_environment() {
         "Usage: THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000"
     );
 }
+
+#[test]
+fn the_estimated_input_variable_caps_an_engine_built_from_the_environment() {
+    let listener = listener();
+    let address = ("THINKTHEN_BASE_URL", listener.base());
+    let key = ("THINKTHEN_API_KEY", "sk-capped-env-fixture");
+    let capped = ("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL", "10");
+    let said = in_child("paced", &[address, key, capped]);
+    let refused = "Usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request";
+    assert_eq!(said, [refused; 4].join("\n"));
+    assert_eq!(listener.count(), 0);
+    // The explicit setter outranks the variable.
+    let said = in_child("uncapped", &[address, key, capped]);
+    assert!(said.starts_with("sent 1 cached false"), "{said}");
+    assert_eq!(listener.count(), 1);
+    let said = in_child(
+        "refused",
+        &[("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL", "-1")],
+    );
+    assert_eq!(
+        said,
+        "Usage: THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL takes a whole number of 0 or more"
+    );
+}

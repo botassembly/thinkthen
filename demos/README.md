@@ -4,7 +4,7 @@ Every page here is one shell job written so that it runs. A green page is the ho
 
 A how-to is one of the four names in the table in [`../README.md`](../README.md).
 
-ADR 0018 fixed the base list at 20 pages, and `sdlc/planning/documentation-plan.md` holds the current list with the slice or ticket that turns each one green. `sdlc/scripts/pages` checks that the two lists and the folders here agree on every number, title, and state. A number here is a folder under `demos/`.
+ADR 0018 fixed the base list at 20 pages, and `sdlc/planning/documentation-plan.md` holds the current list with the slice or ticket that turns each one green. `sdlc/scripts/pages` checks that every relative link resolves. A number here is a folder under `demos/`.
 
 ## How to read one
 
@@ -18,9 +18,9 @@ Every `thinkthen` command that would otherwise reach a backend carries `--replay
 
 A demo starts **red**, and this list marks it **coming** with the ticket or the slice that writes it. All ten functions are built. Pages that still need a command or recordings remain plans. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
 
-A demo turns **green** when the `spec` rung runs it against a recording and it passes. When it turns green it takes the how-to form and the argument leaves the page. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. It refuses a green page out of form, a green page this index does not list, and a green page that names a `--replay` folder it does not hold.
+A demo turns **green** when the `spec` rung runs it against a recording and it passes. When it turns green it takes the how-to form and the argument leaves the page. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. It refuses a green page that asserts nothing, a `bash` block that asserts nothing, `like ""`, `set +e`, and a `--replay` folder the page does not hold. `sdlc/scripts/demos-self-test` proves each refusal against a page that breaks it.
 
-It also holds every green page to the standard of ADR 0016, which ADR 0018 leaves unchanged: at most 120 lines and 900 words, the first asserting block by line 20 with nothing set up before it, at most six of them and every `bash` block asserting, one command unless the title names the contrast, at most four steps, no design argument, and at most four closing links. A failure names the page, the rule, and the measured number. `sdlc/scripts/demos-self-test` proves each check against a page that breaks it.
+Green pages follow the standard of ADR 0016 as writing guidance: at most 120 lines and 900 words, the first asserting block by line 20, at most six of them, one command unless the title names the contrast, at most four steps, no design argument, and at most four closing links. Ticket 0312 removed the script that measured these limits.
 
 The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and demo 10 left with the configuration file under the same ADR. Demos 05 and 38 left under ADR 0016, into 02 and 25. Demos 20, 24, 30, 23, 37, and 42 left under ADR 0018. Demos 04 and 07 left when page 16 turned green. The table at the end of `documentation-plan.md` says where each idea went. `specification/roadmap.md` says what each retired number held.
 

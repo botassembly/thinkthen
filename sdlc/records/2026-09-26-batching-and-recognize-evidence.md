@@ -1,6 +1,6 @@
 # Evidence for the batching and recognize designs
 
-Filed 2026-09-26. This record copies the measurements that `sdlc/issues/2026-09-26-batching-design.md` and `sdlc/issues/2026-09-26-recognize-design.md` cite. Each table names the workspace experiment that measured it. The experiments stay unpushed in the workspace, so this record is the repository's copy. One model answered every paid call: `jev-1.13.0` behind `jev-latest`. Cost uses the recorded input price of $0.042 a million input tokens. Output tokens are free under the vendor's price list.
+Filed 2026-09-26. This record copies the measurements that `sdlc/issues/closed/2026-09-26-batching-design.md` and `sdlc/issues/2026-09-26-recognize-design.md` cite. Each table names the workspace experiment that measured it. The experiments stay unpushed in the workspace, so this record is the repository's copy. One model answered every paid call: `jev-1.13.0` behind `jev-latest`. Cost uses the recorded input price of $0.042 a million input tokens. Output tokens are free under the vendor's price list.
 
 Section 14 holds live calls a later review made. Sections 8, 9 and 13 hold arithmetic done for the designs over saved replies, dry runs and saved inputs. No new call was made for them.
 

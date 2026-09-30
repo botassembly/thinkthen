@@ -1,6 +1,6 @@
 # Fixture demos
 
-This index lists a folder that does not exist and leaves out the one that does.
+This index lists a green folder that does not exist.
 
 | # | Name | Status |
 | --- | --- | --- |

@@ -68,6 +68,23 @@ def test_process_cap_reserves_actual_attempts(backend, tmp_path):
     assert backend.count() == 2
 
 
+def test_token_cap_variable_refuses_before_any_send(backend, tmp_path):
+    """The engine reads the token cap variable through from_env and sends nothing past it."""
+    printed = run("""
+    import polars as pl, thinkthen as tt
+    engine = tt.Engine(cache=False)
+    for text in ("one", pl.Series(["two", "three"])):
+        try:
+            engine.decide("Is it late?", text)
+        except tt.UsageError as error:
+            print(error.kind, error)
+    """, child_env(backend, tmp_path, THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL="10"))
+    refusal = ("usage max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) "
+               "would be exceeded before this call's first request")
+    assert printed.splitlines() == [refusal, refusal]
+    assert backend.count() == 0
+
+
 def test_default_pack_and_explicit_batch_one_keep_their_distinct_bodies(backend, tmp_path):
     """A default call packs three records; batch one sends three scalar
     bodies. The value and probability for each record survive both cuts."""

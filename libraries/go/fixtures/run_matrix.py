@@ -136,9 +136,23 @@ def main():
             "failure-one": 1, "success": 1}) and facts_server.attempts == 4
     finally:
         facts_server.close()
+    token_barrier = configured / "token-variable-barrier"
+    token_barrier.mkdir(exist_ok=True)
+    token_server = Backend(token_barrier)
+    try:
+        token_env = env | {"THINKTHEN_BASE_URL": f"http://127.0.0.1:{token_server.server_port}/generic/v1",
+                           "THINKTHEN_CACHE": str(configured / "token-variable-cache"),
+                           "TT_BARRIER_DIR": str(token_barrier),
+                           "THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL": "10"}
+        checked([GO, "test", "-race", "-count=1", "-run", "^TestTokenVariable$", "-v", "."],
+                cwd=configured / "module", env=token_env, marker="--- PASS: TestTokenVariable")
+        assert token_server.arrivals == [] and token_server.attempts == 0, token_server.arrivals
+    finally:
+        token_server.close()
     print("GO_INSTALLED_MATRIX_PASS 4 consumers x 39 exact full request bodies plus one external module call each")
     print("GO_SETTINGS_PASS one configured request; invalid object sent nothing")
     print("GO_WRONG_DETAIL_PLANT_REJECTED")
+    print("GO_TOKEN_VARIABLE_PASS the variable refused the call with zero arrivals")
 
 
 if __name__ == "__main__":

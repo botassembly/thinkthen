@@ -384,6 +384,11 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
         matches!(run(below, three()), Err(BatchError::Profile(limit)) if limit.kind == LimitKind::EvidenceBytes),
         "an evidence limit below the fixed sentence refuses every request"
     );
+}
+
+#[test]
+fn the_evidence_limit_bounds_each_quoted_record() {
+    let state = super::QUOTED.len();
     let bounded = |bytes: usize| {
         let batcher = Batcher::new(
             loopback(),

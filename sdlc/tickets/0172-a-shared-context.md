@@ -20,7 +20,7 @@ thinkthen filter 'It appears on the album Abbey Road.' --threshold 0.7 --context
 
 The tool sends one request. The catalog is its evidence, sent once, and each title rides in its own quoted question. In experiment 271 a similar form scored 299 to 302 right of 306 with 2 or 3 false yeses. The default without a context scored 283 to 287 right, by ADR 0055. A context too large to send is refused before any request when the tool can tell, and at the record that makes it too large when it cannot.
 
-This is batching row B7 of `sdlc/issues/2026-09-26-batching-design.md`: "`--context FILE` for `decide`, `filter` and `rank`; exit 2 for a context over the ceiling; `meta.context_sha256`. B7 picks the late-overflow policy of ticket 0144's deferred gap 5 and rewrites ADR 0048 item 11 to match." Proof: design tests 2 and 10. It is Batch D item 6 of `sdlc/planning/work-plan-2026-09-27.md`.
+This is batching row B7 of `sdlc/issues/closed/2026-09-26-batching-design.md`: "`--context FILE` for `decide`, `filter` and `rank`; exit 2 for a context over the ceiling; `meta.context_sha256`. B7 picks the late-overflow policy of ticket 0144's deferred gap 5 and rewrites ADR 0048 item 11 to match." Proof: design tests 2 and 10. It is Batch D item 6 of `sdlc/planning/work-plan-2026-09-27.md`.
 
 Ian's rulings set the frame. Ian can overturn each.
 

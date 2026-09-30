@@ -34,6 +34,17 @@ impl SendReservations {
     }
 }
 
+/// The estimated input limit named by `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`.
+pub(crate) fn estimated_total(text: Option<String>) -> Result<Option<u64>, &'static str> {
+    text.map(|text| {
+        text.parse::<u64>()
+            .ok()
+            .filter(|_| text.bytes().all(|byte| byte.is_ascii_digit()))
+            .ok_or("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL takes a whole number of 0 or more")
+    })
+    .transpose()
+}
+
 impl Cancel<'_> {
     pub(crate) fn with_send_budget(
         &self,

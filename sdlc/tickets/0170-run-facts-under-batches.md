@@ -14,7 +14,7 @@ Review route: the builder follows the work plan: Claude now, or Codex after the 
 
 A user runs `thinkthen filter ... --facts < songs.txt`. The tool prints the kept titles on standard output, as today. The last line on standard error is one `thinkthen.run/1` object. It counts every record and every request the run made, dropped records included. A stopped run's line also says where it stopped, why, and whether a later retry can help. A script reads that one line and never parses prose. Under `--details`, a batched row also says which batch it rode in.
 
-This is batching row B5 of `sdlc/issues/2026-09-26-batching-design.md`: "`meta.batch`, `--facts` and the `thinkthen.run/1` line", proof test 6. Ticket 0146 took the shares out of B5 and builds them. ADR 0048 items 9 and 10 give the shapes. ADR 0052 item 9 adds `retries` to the facts. ADR 0051 item 10 adds `split` to `meta.batch`. `sdlc/issues/closed/2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md` asks for a cause, a retry flag and the stop record. It is Batch D item 4 of `sdlc/planning/work-plan-2026-09-27.md`.
+This is batching row B5 of `sdlc/issues/closed/2026-09-26-batching-design.md`: "`meta.batch`, `--facts` and the `thinkthen.run/1` line", proof test 6. Ticket 0146 took the shares out of B5 and builds them. ADR 0048 items 9 and 10 give the shapes. ADR 0052 item 9 adds `retries` to the facts. ADR 0051 item 10 adds `split` to `meta.batch`. `sdlc/issues/closed/2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md` asks for a cause, a retry flag and the stop record. It is Batch D item 4 of `sdlc/planning/work-plan-2026-09-27.md`.
 
 Ian's rulings set the frame. Ian can overturn each.
 

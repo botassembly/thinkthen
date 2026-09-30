@@ -160,4 +160,14 @@ total_sends <- sent_by(total <- child(c(
 check("process cap counts a prior call and refuses the next before a send",
       total$status == 0L && identical(trimws(total$text), "TRUE TRUE TRUE TRUE") && total_sends == 1L)
 
+# The token cap reaches R through from_env; a regression if from_env stops reading the variable.
+capped_sends <- sent_by(capped <- child(c(
+  'tt_engine(cache = FALSE)',
+  'e <- tryCatch(tt_decide("Q?", "text"), thinkthen_error = function(e) e)',
+  'cat(e$kind, conditionMessage(e), sep = "\\n")'
+), env = "THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10"))
+check("the token cap variable refuses a call before any send",
+      capped$status == 0L && capped_sends == 0L && identical(capped$text, paste0("usage\n",
+        "max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request")))
+
 finish("facts", 11L)

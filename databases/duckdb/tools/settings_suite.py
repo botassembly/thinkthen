@@ -38,6 +38,16 @@ def portable_decide_zero_budget():
 
 
 @case
+def environment_token_cap_refuses_before_any_send():
+    """Regression: from_env stops reading THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL."""
+    with Backend() as backend:
+        got = run(["SET thinkthen_cache = 'off'", ASK], backend.base(),
+                  extra={"THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL": "10"})
+        expect(said(got[1]), "thinkthen usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request (retryable: no)", "token cap")
+        expect(backend.count(), 0, "the refused call sends nothing")
+
+
+@case
 def saved_calibration_details_keep_the_shared_digest_and_warning():
     """The staged C++ scalar keeps the saved question identity in details."""
     shared = json.loads((Path(__file__).resolve().parents[3] / "conformance" / "calibration.json").read_text())

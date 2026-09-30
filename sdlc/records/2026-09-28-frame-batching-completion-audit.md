@@ -1,6 +1,6 @@
 # Frame batching completion audit
 
-Status: Source audit on main `2b388453`, with one offline observation. This proposes disposition for B13a and B13b; it does not close either row. The criteria are [batching design B0 and B13a/B13b](../issues/2026-09-26-batching-design.md), including the common rule that a library result carries per-call facts. Landed 0209, 0212 (`f9d9d128`), 0214 (`dfc1b5fb`), 0233 (`8faa901b`) and the frame-fixture Quick Fix (`069fe2c9`) supply the existing value, batching and consumer contracts.
+Status: Source audit on main `2b388453`, with one offline observation. This proposes disposition for B13a and B13b; it does not close either row. The criteria are [batching design B0 and B13a/B13b](../issues/closed/2026-09-26-batching-design.md), including the common rule that a library result carries per-call facts. Landed 0209, 0212 (`f9d9d128`), 0214 (`dfc1b5fb`), 0233 (`8faa901b`) and the frame-fixture Quick Fix (`069fe2c9`) supply the existing value, batching and consumer contracts.
 
 ## B13a: Rust Polars
 

@@ -2,7 +2,7 @@
 
 Status: built; ladder run once after the merge of `origin/main`; ready for code review. Owner: Claude.
 
-Branch `ticket/0140-settings-reference`, built in `worktrees/thinkthen-lane-3`. The ticket is `sdlc/tickets/0140-settings-reference.md`, design ticket C1 of `sdlc/issues/2026-09-26-batching-design.md`. It lands after ticket 0139, ADR 0048, which is on main. Ian can overturn every decision the ticket lists.
+Branch `ticket/0140-settings-reference`, built in `worktrees/thinkthen-lane-3`. The ticket is `sdlc/tickets/0140-settings-reference.md`, design ticket C1 of `sdlc/issues/closed/2026-09-26-batching-design.md`. It lands after ticket 0139, ADR 0048, which is on main. Ian can overturn every decision the ticket lists.
 
 ## Result
 

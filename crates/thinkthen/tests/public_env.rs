@@ -268,42 +268,14 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         }
         "overrides" => overrides(argument),
         "refused" => vec![shown(EngineBuilder::from_env())],
-        "batch-env" => {
-            let engine = seed().no_cache().build().expect("environment batch");
-            let question = Question::decide("Refund?").unwrap().cut();
-            let rows = engine
-                .decide_many(&question, ["alpha", "beta"])
-                .collect::<Result<Vec<_>, _>>()
-                .expect("two rows");
-            vec![format!("rows {}", rows.len())]
-        }
-        "batch-override" => {
-            let refused = shown(seed().no_cache().build());
-            let engine = seed()
-                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+        "uncapped" => {
+            let seeded = seed().max_estimated_input_tokens_total(None);
+            vec![ask(&seeded
                 .no_cache()
                 .build()
-                .expect("explicit batch overrides an invalid environment");
-            let question = Question::decide("Refund?").unwrap().cut();
-            let rows = engine
-                .decide_many(&question, ["gamma"])
-                .collect::<Result<Vec<_>, _>>()
-                .expect("explicit batch row");
-            vec![refused, format!("rows {}", rows.len())]
+                .expect("the uncapped engine"))]
         }
-        "batch-conflict" => {
-            let engine = seed()
-                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
-                .no_cache()
-                .build()
-                .expect("explicit batch outranks environment max");
-            let question = Question::decide("Refund?").unwrap().cut();
-            let rows = engine
-                .decide_many(&question, ["delta", "epsilon"])
-                .collect::<Result<Vec<_>, _>>()
-                .expect("two explicit batch rows");
-            vec![format!("rows {}", rows.len())]
-        }
+        "batch-env" | "batch-override" | "batch-conflict" => batch(case),
         "no-home" => vec![
             shown(seed().no_cache().build()),
             shown(seed().build()),
@@ -321,6 +293,49 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         }
         "zero-budget-default-cache" => cache_budget::run_default_cache(argument),
         _ => panic!("no child case {case}"),
+    }
+}
+
+fn batch(case: &str) -> Vec<String> {
+    let from_env = || EngineBuilder::from_env().expect("a seed");
+    match case {
+        "batch-env" => {
+            let engine = from_env().no_cache().build().expect("environment batch");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["alpha", "beta"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("two rows");
+            vec![format!("rows {}", rows.len())]
+        }
+        "batch-override" => {
+            let refused = shown(from_env().no_cache().build());
+            let engine = from_env()
+                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+                .no_cache()
+                .build()
+                .expect("explicit batch overrides an invalid environment");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["gamma"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("explicit batch row");
+            vec![refused, format!("rows {}", rows.len())]
+        }
+        "batch-conflict" => {
+            let engine = from_env()
+                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+                .no_cache()
+                .build()
+                .expect("explicit batch outranks environment max");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["delta", "epsilon"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("two explicit batch rows");
+            vec![format!("rows {}", rows.len())]
+        }
+        _ => unreachable!("a batch case"),
     }
 }
 

@@ -1,41 +1,43 @@
 //! A bounded finalization wait for another process's advisory usage lock.
 
-use std::fs::File;
+use std::fs::{File, TryLockError};
 use std::io::{self, ErrorKind};
-use std::thread;
 use std::time::{Duration, Instant};
 
 use super::Shared;
 
-const POLL: Duration = Duration::from_millis(10);
 const FINISH_WAIT: Duration = Duration::from_secs(1);
+const FIRST_PAUSE: Duration = Duration::from_millis(1);
+const LONGEST_PAUSE: Duration = Duration::from_millis(100);
+
+fn poisoned<T>(_: T) -> io::Error {
+    io::Error::other("usage counter lock poisoned")
+}
 
 pub(super) fn deadline() -> Instant {
     Instant::now() + FINISH_WAIT
 }
 
-/// Try without waiting in the OS. The writer can observe the one deadline
-/// that finish or drop published while another process owns this file.
+/// The standard library's blocking lock takes no timeout, so retry the
+/// nonblocking one with a doubling pause. The pause waits on the queue's
+/// condition variable, so the finish deadline wakes it at once.
 pub(super) fn acquire(file: &File, shared: &Shared) -> io::Result<()> {
+    let mut pause = FIRST_PAUSE;
     loop {
         match file.try_lock() {
             Ok(()) => return Ok(()),
-            Err(std::fs::TryLockError::WouldBlock) => {
-                let finish_deadline = shared
-                    .queue
-                    .lock()
-                    .map_err(|_| io::Error::other("usage counter lock poisoned"))?
-                    .finish_deadline;
-                let pause = match finish_deadline {
-                    Some(end) if Instant::now() >= end => {
-                        return Err(io::Error::new(ErrorKind::TimedOut, "usage lock busy"));
-                    }
-                    Some(end) => POLL.min(end.saturating_duration_since(Instant::now())),
-                    None => POLL,
-                };
-                thread::sleep(pause);
-            }
-            Err(error) => return Err(error.into()),
+            Err(TryLockError::WouldBlock) => {}
+            Err(TryLockError::Error(error)) => return Err(error),
         }
+        let queue = shared.queue.lock().map_err(poisoned)?;
+        let wait = match queue.finish_deadline {
+            Some(end) => match end.checked_duration_since(Instant::now()) {
+                Some(left) if !left.is_zero() => pause.min(left),
+                _ => return Err(io::Error::new(ErrorKind::TimedOut, "usage lock busy")),
+            },
+            None => pause,
+        };
+        drop(shared.changed.wait_timeout(queue, wait).map_err(poisoned)?);
+        pause = pause.saturating_mul(2).min(LONGEST_PAUSE);
     }
 }

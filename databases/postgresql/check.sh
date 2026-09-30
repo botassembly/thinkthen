@@ -735,6 +735,15 @@ request_limit_refuses_before_sending() {
 	same "$(bcount)" 0
 }
 check request_limit_refuses_before_sending
+# Ticket 0311: the server's environment carries the estimated input limit,
+# and the next step's fresh server drops it.
+token_variable_refuses_before_sending() {
+	THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10 fresh generic
+	out=$(q -c "SET thinkthen.cache = 'off'" -c "SELECT thinkthen_decide('$Q', 'a')")
+	has "$out" "thinkthen usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request"
+	same "$(bcount)" 0
+}
+check token_variable_refuses_before_sending
 a_changed_limit_rebuilds() {
 	fresh generic
 	out=$(q -c "SET thinkthen.max_requests = 3" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"a\",\"b\":\"b\",\"c\":\"c\"}'::jsonb)" \

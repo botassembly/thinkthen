@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-29 from Ian's dictation. He asked for a documentation page about providers and which providers ThinkThen supports, including System One providers such as Liquid's d1.
+Status: Open for marketing's site page. Filed 2026-09-29 from Ian's dictation. He asked for a documentation page about providers and which providers ThinkThen supports, including System One providers such as Liquid's d1.
 
 # Docs: a providers page that names what ThinkThen supports
 
@@ -15,3 +15,7 @@ A reader has no page that answers "which providers can I use?" The Awesome Think
 ## Done when
 
 A providers page under `site/src/pages/` lists each supported provider with its address, its model names, the status of our verification and its date, and a link to its own page or its signup. It marks announced-but-unreleased providers as such, links the Awesome ThinkThen list for the rest, and adds no provider without a named check run or a named announcement.
+
+## Note for marketing, ticket 0316
+
+The page belongs in `site/`, so the queue owner leaves it to you. The README now names TypeSafe Jev and Liquid d1 and links Awesome ThinkThen. The repo records one Liquid check run, on 2026-09-29, with one critical still awaiting its hosted recheck; the providers list above says "verified", which overstates it. The repo holds no record of OpenAI's Decisions API; list it only from a named announcement. Close this issue when the page lands.
