@@ -73,12 +73,12 @@ All surface tests below ran locally with `-j4`, offline. Every toolchain was pre
 
 Clippy with `-D warnings` is clean for the core, C, SQLite, DuckDB bridge, Python (with and without `probe`), Ruby, R and PostgreSQL. TypeScript clippy fails on main at `src/door/result.rs:38` and on the moved child test with `result_large_err`; this ticket does not change that. `policy.py` passes. The core `--lib` suite has one failure, `engine::deadline_tests::a_held_folder_ends_as_the_deadline_without_the_owner`, which ticket 0303 already names.
 
-Line counts: the core grows 68 and PostgreSQL 48. The seven bindings shrink by 310.
+Line counts: the core grows 72 and PostgreSQL 48. The seven bindings shrink by 310.
 
 ## What the build taught us
 
 - The copies hid a bug in the original. Every binding forgot its payload, but the engine door dropped it. A payload whose destructor panicked escaped the door and printed. One shared guard fixes that for every surface at once.
 - A private helper copied per port drifts. A public helper in the core crate keeps ports thin and gives one place to test.
 - A surface guard needs no marked scope around its own fallback. Only the body needs marking.
-- The core grows by 68 lines and PostgreSQL by 48, after review added the guard's limits and a host-hook check to the PostgreSQL test. The new public API is `thinkthen::contained` and `thinkthen::uncontained`, in `public/panic.rs`. Their docs state the limits: a host that replaces the hook later displaces it, a thread past local-storage teardown runs unmarked, and a first call from a thread already panicking aborts.
+- The core grows by 72 lines and PostgreSQL by 48, after review added the guard's limits and a host-hook check to the PostgreSQL test. The new public API is `thinkthen::contained` and `thinkthen::uncontained`, in `public/panic.rs`. Their docs state the limits: a host that replaces the hook later displaces it, a thread past local-storage teardown runs unmarked, and a first call from a thread already panicking aborts.
 - Package gates on main have rotted: the Python `probe` feature did not compile, TypeScript clippy fails, and C sources on main are not `cargo fmt` clean. Issue `2026-09-29-nine-package-gates-fail-from-clean-checkouts.md` owns the last two.

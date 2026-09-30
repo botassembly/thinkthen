@@ -24,6 +24,19 @@ fn wait_for_host_check(held: mpsc::Receiver<()>, joined: Arc<AtomicBool>) {
     joined.store(true, Ordering::Release);
 }
 
+/// The public guard hides both payload forms and hands host code back.
+fn shared_guard_cases() {
+    assert_eq!(
+        crate::contained(|| panic_any("binding key evidence secret")),
+        None::<()>
+    );
+    assert_eq!(crate::contained(|| panic_any(Exploding)), None::<()>);
+    let hosted = crate::contained(|| {
+        catch_unwind(|| crate::uncontained(|| panic_any("host callback marker"))).is_err()
+    });
+    assert_eq!(hosted, Some(true));
+}
+
 #[test]
 fn diagnostic_boundary_child() {
     if std::env::var_os("THINKTHEN_TEST_DIAGNOSTIC_CHILD").is_none() {
@@ -112,15 +125,7 @@ fn diagnostic_boundary_child() {
     assert_eq!(resumed.downcast_ref::<&str>(), Some(&"host cancel marker"));
     assert!(joined.load(Ordering::Acquire));
 
-    assert_eq!(
-        crate::contained(|| panic_any("binding key evidence secret")),
-        None::<()>
-    );
-    assert_eq!(crate::contained(|| panic_any(Exploding)), None::<()>);
-    let hosted = crate::contained(|| {
-        catch_unwind(|| crate::uncontained(|| panic_any("host callback marker"))).is_err()
-    });
-    assert_eq!(hosted, Some(true));
+    shared_guard_cases();
 
     let _unrelated = std::thread::spawn(|| panic_any("unrelated host marker")).join();
     assert_eq!(guarded(|| Ok(7)).ok(), Some(7));
