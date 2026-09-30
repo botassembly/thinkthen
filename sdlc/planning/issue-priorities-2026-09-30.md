@@ -1,6 +1,6 @@
 # Issue priorities, 2026-09-30
 
-Status: current, refreshed 2026-09-30 evening by the debt and issue sweep. It orders the 31 open issues in `sdlc/issues/`, 14 of them `Kind: debt`. The sweep checked every issue against main `88649ec0d`. None was already fixed. Nine merged into same-family issues and moved to `closed/`, so the count went from 40 to 31 and debt from 15 to 14. Git history holds the earlier page and its investigations. Ian can overturn any rank, owner or trigger.
+Status: current, refreshed 2026-09-30 evening by the debt and issue sweep. It orders the 31 open issues in `sdlc/issues/`, 14 of them `Kind: debt`. The sweep checked every issue against main `88649ec0d`. None was already fixed. Nine merged into same-family issues and moved to `closed/`, so the count went from 40 to 31 and debt from 15 to 14. Git history holds the earlier page and its investigations. Later the same evening a records Quick Fix closed rank 16 and filed rank 19a, so 31 issues stay open, 13 of them debt. Ian can overturn any rank, owner or trigger.
 
 ## How the ranks were set
 
@@ -25,10 +25,11 @@ Ruling 10: no public release before 0.1, and 0.1 waits for every surface and bin
 | 13 | `2026-09-20-new-user-stumble-register.md` | yes, rows 9, 18, 19 | page 11 of rank 25 for row 9; 0128 Phase 4 for row 18; marketing for row 19 | row 9 on 0304 slice 4 | small |
 | 14 | `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | marketing's overhead benchmark, then the queue owner | the benchmark run | small |
 | 15 | `2026-09-25-release-and-install-for-0-1.md` | yes, it is 0.1 | ticket 0128 phases 3b and 4; Ian dispatches | every rank above; Ian's registry accounts | large |
-| 16 | `2026-09-30-how-to-list-has-two-hand-kept-copies.md` (debt) | no | a Quick Fix now | nothing | small |
+| 16 | closed: `closed/2026-09-30-how-to-list-has-two-hand-kept-copies.md` (debt, paid 2026-09-30) | no | done | nothing | small |
 | 17 | `2026-09-30-debt-issues-lack-the-three-ruled-fields.md` | no | the coordinator, a records Quick Fix | ticket 0340 landing | small |
 | 18 | `2026-09-26-count-secure-connections-at-sixteen-jobs.md` | no | the queue owner, a loopback experiment | nothing | small |
-| 19 | `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md` | no | the queue owner, from logs | nothing; no paid call | small |
+| 19 | `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md` | no | the queue owner; the calls traced to rank 19a, the exit 4 waits for a live run with `--details` | the next live bench run | small |
+| 19a | `2026-09-30-test-stress-writes-the-real-usage-totals.md` (severity 2) | no | the queue owner, a Quick Fix in `sdlc/scripts/test-stress` | nothing | small |
 | 20 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | the queue owner | the release QA suite's edge list | medium |
 | 21 | `2026-09-29-docs-page-naming-supported-providers.md` | no, except the Liquid timeout line for stumble row 19 | marketing | nothing | small |
 | 22 | `2026-09-26-every-surface-should-give-back-run-facts.md` | no | 0314 slice 4 for item 1; tickets 0300 and 0302 for items 2 and 3; marketing for item 6 | 0314 slice 4 | large |
@@ -66,7 +67,7 @@ Every debt with `Pay when: before 0.1`, then the other blockers:
 | Before 0.1, can start now | rank 5; rank 6 item 10 |
 | Before 0.1, after 0304 slice 4 | rank 6 items 1, 2, 3, 9; rank 8; rank 10 |
 | 0304 slice 5 lands | ranks 11 and 12 |
-| The next docs ticket | rank 16 |
+| The next docs ticket | none; rank 16 paid 2026-09-30 |
 | Upstream fixes | rank 23 (Ollama), rank 24 (Zig) |
 | A user asks | rank 29; rank 6 items 6 and 7 |
 
@@ -76,9 +77,9 @@ None of these touches the files lanes 1 to 3 edit: lane 1's flake tests and `dat
 
 1. **Rank 6 item 10, Quick Fix.** Outcome: SQLite's and PostgreSQL's `thinkthen_plan` serialize the crate's `PlanEstimate`, and their plan checks pass with no byte changed. Touches `databases/sqlite/src/scalars/plan.rs` and `databases/postgresql/src/keyed.rs`.
 2. **Rank 5, ticket.** Outcome: the macOS `libthinkthen.a` defines only the header's `thinkthen_` functions, the macOS R package exports no `sqlite3_` name, and a check proves both on the M5. Touches `libraries/c/localize.sh` and the R package build. Its M5 proof should come before Ian's rehearsal dispatch, so the rehearsal's macOS jobs confirm it.
-3. **Rank 16, Quick Fix.** Outcome: the how-tos are listed once, and the other file points to that list. Touches `demos/README.md` and `sdlc/planning/documentation-plan.md`.
+3. **Rank 16, Quick Fix. Done 2026-09-30.** Outcome: the how-tos are listed once, and the other file points to that list. Touches `demos/README.md` and `sdlc/planning/documentation-plan.md`.
 4. **Rank 18, experiment.** Outcome: a loopback TLS count of the connections a `--jobs 16` run opens. It becomes a ticket only if the count exceeds 16.
-5. **Rank 19, investigation.** Outcome: the extra usage calls are traced to their runs by comparing `status --json` totals with the bench's logs, with no paid call.
+5. **Rank 19, investigation. Done 2026-09-30; it found rank 19a.** Outcome: the extra usage calls are traced to their runs by comparing `status --json` totals with the bench's logs, with no paid call.
 6. **Rank 7, marketing.** Outcome: the reference page matches `channels.md` and `backends.md`, and the three site links name `closed/` paths.
 
 Rank 17 follows ticket 0340's landing, so the Severity and number fields go onto the final debt list.

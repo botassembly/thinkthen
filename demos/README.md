@@ -4,7 +4,7 @@ Every page here is one shell job written so that it runs. A green page is the ho
 
 A how-to is one of the four names in the table in [`../README.md`](../README.md).
 
-ADR 0018 fixed the base list at 20 pages, and `sdlc/planning/documentation-plan.md` holds the current list with the slice or ticket that turns each one green. `sdlc/scripts/pages` checks that every relative link resolves. A number here is a folder under `demos/`.
+ADR 0018 fixed the base list at 20 pages. This page holds the one list of how-tos. `sdlc/planning/documentation-plan.md` keeps the form, the capability map, the numbers that left and the rules, and points here. `sdlc/scripts/pages` checks that every relative link resolves. A number here is a folder under `demos/`.
 
 ## How to read one
 
