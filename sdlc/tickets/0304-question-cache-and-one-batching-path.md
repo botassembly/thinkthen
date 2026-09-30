@@ -1,6 +1,6 @@
 # 0304: One question cache and one batching path
 
-Status: design accepted; slice 1 ready. Lane claude-2. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: slice 1 landed; slice 2 ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 
@@ -68,3 +68,5 @@ Cache clearing and expiry.
 - The two `portable-frame` batching fixtures became copies of `portable-1` and `portable-2`, so they were removed.
 - The `--plan` hint now says each question quotes the evidence it asks about.
 - Every surface fake that counted per-record arrivals had to read a one-record quoted request as that record. The fakes still log and compare the true body.
+- The full test rung reaches two readers of the state that the shared cases miss: the consumer's annotate parts test and the find-0040 probe self-test. Both now read the quoted form.
+- Surface checks not run for slice 1: Dart and the sqlite3 tool are absent, and the Python pandas 2 pin is not in uv's offline cache. The main Python suite passes.
