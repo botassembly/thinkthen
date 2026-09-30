@@ -1076,19 +1076,23 @@ def token_path_at(tokens: list[str], place: int, path: tuple[str, ...]) -> bool:
     return tokens[place:place + len(expected)] == expected
 
 
+# Core depends on none of the outer modules.
+CORE_REFUSED_ROOTS = {"engine", "cli", "public"}
+
+
 def direct_root_references(tokens: list[str]) -> set[str]:
-    """Find engine or cli reached directly from crate or an ancestor."""
+    """Find an outer module reached directly from crate or an ancestor."""
     held = set()
     for place, token in enumerate(tokens):
         if token == "crate" and place + 2 < len(tokens) and tokens[place + 1] == "::":
-            if tokens[place + 2] in {"engine", "cli"}:
+            if tokens[place + 2] in CORE_REFUSED_ROOTS:
                 held.add(tokens[place + 2])
         if token != "super":
             continue
         end = place
         while end + 2 < len(tokens) and tokens[end + 1:end + 3] == ["::", "super"]:
             end += 2
-        if end + 2 < len(tokens) and tokens[end + 1] == "::" and tokens[end + 2] in {"engine", "cli"}:
+        if end + 2 < len(tokens) and tokens[end + 1] == "::" and tokens[end + 2] in CORE_REFUSED_ROOTS:
             held.add(tokens[end + 2])
     return held
 
@@ -1117,14 +1121,14 @@ def core_policy_failures(text: str) -> list[str]:
             held.append("alias of the crate root or an ancestor")
         if imports_outer_glob(path):
             held.append("glob import from the crate root or an ancestor")
-        if path[:1] == ("crate",) and len(path) > 1 and path[1] in {"engine", "cli"}:
+        if path[:1] == ("crate",) and len(path) > 1 and path[1] in CORE_REFUSED_ROOTS:
             held.append(f"reverse import of {path[1]}")
         if path and set(path) == {"super"}:
             continue
         supers = 0
         while supers < len(path) and path[supers] == "super":
             supers += 1
-        if supers and supers < len(path) and path[supers] in {"engine", "cli"}:
+        if supers and supers < len(path) and path[supers] in CORE_REFUSED_ROOTS:
             held.append(f"reverse import of {path[supers]}")
     if any(root == "self" and alias is not None for root, alias in extern_crates(tokens)):
         held.append("alias of the crate root or an ancestor")
@@ -1206,6 +1210,27 @@ def check_core_policy() -> None:
     )
     if any(not core_policy_failures(plant) for plant in policy_plants):
         fail("core", "the planted API and reverse-reference violations are refused")
+    reference = "reverse reference to public"
+    imported = "reverse import of public"
+    glob = "glob import from the crate root or an ancestor"
+    public_plants = (
+        ("crate::public::AttemptObservation", [reference]),
+        ("crate::r#public::SendBudget", [reference]),
+        ("use crate::public as p;", [imported, reference]),
+        ("use crate::{public as p};", [imported]),
+        ("use crate::{core::Answer, public::{self as p}};", [imported]),
+        ("use crate::{\n    public::{AttemptObservation},\n};", [imported]),
+        ("use super::super::public as p;", [imported, reference]),
+        ("super::super::public::SendBudget::new();", [reference]),
+        ("use crate::*; public::SendBudget::new();", [glob]),
+        ("use super::super::*; public::SendBudget::new();", [glob]),
+        ("use {crate::{*}}; public::SendBudget::new();", [glob]),
+        ("use crate::{core::Answer, public_value as value};", []),
+        ("// crate::public::SendBudget", []),
+        ('const EXAMPLE: &str = "use crate::public as hidden;";', []),
+    )
+    if any(core_policy_failures(text) != expected for text, expected in public_plants):
+        fail("core", "the planted reverse references to public are refused for that cause")
     policy_controls = (
         "// use crate::engine as hidden;",
         "/* use crate::cli; /* crate::engine */ */ use crate::core::Answer;",

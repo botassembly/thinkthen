@@ -12,11 +12,13 @@ use crate::core::reply::{BackendFailure, FailedValue};
 use crate::core::text::{ModelName, Url};
 use crate::core::threshold::Threshold;
 
+mod attempt;
 mod batch_warning;
 mod meta;
 mod profile_warning;
 mod record_value;
 
+pub use attempt::{AttemptObservation, AttemptOutcome};
 pub(crate) use batch_warning::{BatchSetting, BatchWarning};
 pub(crate) use meta::Meta;
 pub(crate) use profile_warning::ProfileWarning;

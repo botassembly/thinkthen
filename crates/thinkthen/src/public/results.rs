@@ -4,9 +4,8 @@
 use std::fmt;
 
 mod call;
+pub use crate::core::{AttemptObservation, AttemptOutcome};
 pub use call::{Call, DoorReply, Facts};
-mod attempt;
-pub use attempt::{AttemptObservation, AttemptOutcome};
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;

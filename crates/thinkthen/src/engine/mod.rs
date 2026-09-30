@@ -57,7 +57,7 @@ pub(crate) struct Cancel<'a> {
 
 /// Private transport-only handoff. Its closure never invokes a host callback.
 #[derive(Clone)]
-pub(crate) struct AttemptSink(Arc<dyn Fn(crate::public::AttemptObservation) + Send + Sync>);
+pub(crate) struct AttemptSink(Arc<dyn Fn(crate::core::AttemptObservation) + Send + Sync>);
 
 impl fmt::Debug for AttemptSink {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -67,7 +67,7 @@ impl fmt::Debug for AttemptSink {
 
 impl AttemptSink {
     pub(crate) fn new(
-        send: impl Fn(crate::public::AttemptObservation) + Send + Sync + 'static,
+        send: impl Fn(crate::core::AttemptObservation) + Send + Sync + 'static,
     ) -> Self {
         Self(Arc::new(send))
     }
@@ -125,7 +125,7 @@ impl<'a> Cancel<'a> {
     }
 
     /// Hand an owned event to the private sink after transport and body read.
-    pub(crate) fn attempt_completed(&self, observation: crate::public::AttemptObservation) {
+    pub(crate) fn attempt_completed(&self, observation: crate::core::AttemptObservation) {
         if let Some(sink) = &self.attempt_sink {
             (sink.0)(observation);
         }

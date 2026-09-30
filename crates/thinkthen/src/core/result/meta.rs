@@ -28,7 +28,7 @@ pub(crate) struct Meta {
     #[serde(skip_serializing_if = "Option::is_none")]
     context_sha256: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    attempts: Option<Vec<crate::public::AttemptObservation>>,
+    attempts: Option<Vec<crate::core::AttemptObservation>>,
 }
 
 impl Meta {
@@ -73,10 +73,7 @@ impl Meta {
         }
     }
 
-    pub(crate) fn with_attempts(
-        mut self,
-        attempts: Vec<crate::public::AttemptObservation>,
-    ) -> Self {
+    pub(crate) fn with_attempts(mut self, attempts: Vec<crate::core::AttemptObservation>) -> Self {
         if !attempts.is_empty() {
             self.attempts = Some(attempts);
         }

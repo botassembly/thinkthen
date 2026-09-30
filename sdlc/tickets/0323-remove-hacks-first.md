@@ -1,10 +1,10 @@
 # 0323: Remove the hacks clear of running work
 
-Status: ready for ticket review. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 4 and ruling 8.
+Status: built, awaiting code review. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 4 and ruling 8.
 
 ## Outcome
 
-`core` names nothing from `public`, and `policy.py` refuses a core reference to `public` as it refuses `engine` and `cli`. `engine` reaches `public` only for the send budget, the process budget and the facade's error mapping, which ADR 0111 slice 3 rewrites. No function outside the ADR 0111 rewrite packs arguments into a tuple only to pass Clippy's argument limit. The ticket records that the folder rule is already one predicate, and it names each remaining hack with the slice that removes it.
+`core` names nothing from `public`, and `policy.py` refuses a core reference to `public` as it refuses `engine` and `cli`. `engine` reaches `public` only for the send budget, the process budget and the facade's error mapping, which ADR 0111 slice 3 rewrites. No function outside the ADR 0111 rewrite packs arguments into a tuple only to pass Clippy's argument limit. The ticket names each remaining hack with the slice that removes it. Ticket 0303 already made the folder rule one predicate.
 
 ## Evidence
 
@@ -12,16 +12,16 @@ Status: ready for ticket review. Plan: `sdlc/planning/cleanup-2026-09-30.md`, st
 - Keeps: every exported name and path. `thinkthen::AttemptObservation`, `AttemptOutcome`, `SendBudgetDenial` and `EstimatedInputDenial` stay public through re-exports. The keeps also cover `specification/result.schema.json` byte for byte, all command output, and every 50 ms cancellation or host-interrupt poll. SQLite's interrupt, PostgreSQL's interrupt flags and a caller's token cannot wake a waiter, so a poll is the only way to see them. This matches pyo3's 50 ms signal check.
 - Changes: four type moves, two argument fixes and one policy rule.
   - Move `AttemptObservation` and `AttemptOutcome` from `public/results/attempt.rs` into `core/result/`. The transport builds the value with a struct literal. The three-slot `response` tuple and the `new` constructor go.
-  - Move `SendBudgetDenial` and `EstimatedInputDenial` from `public/options/budget.rs` into core. `public` re-exports all four.
+  - Move `SendBudgetDenial` and `EstimatedInputDenial` from `public/options/budget.rs` into a new `core/budget.rs`. `public` re-exports all four.
   - `core::recognize::settle` takes `text` and `pieces` as two arguments, six in all.
   - `cli/recognize/dry_run.rs` passes the spec, the from-file flag and the limit as a named struct in place of the `question` triple.
-  - `policy.py` adds `public` to the refused core roots and plants one `crate::public` reference in its self-check.
-- Proof: `policy.py` passes, and its self-check refuses the planted `crate::public` line with `reverse reference to public`. The schema drift test passes with no schema change. The public member inventory test passes with no change. Conformance cases 41 to 50 and the recognize `--plan` tests pass unchanged. `sdlc/scripts/test`, workspace clippy with `-D warnings` on all targets, `sdlc/scripts/tickets` and the ratchet pass. The ratchet does not rise.
+  - `policy.py` adds `public` to the refused core roots. Its self-check plants `public` in the same forms the `engine` and `cli` plants use: a direct path, a raw identifier, `use … as`, braces, `super::super::` and globs. Each plant must fail for its named cause. A `public_value` import, a comment and a string literal stay allowed.
+- Proof: `policy.py` passes. Its self-check refuses each planted `public` form with `reverse reference to public`, `reverse import of public` or the glob failure. The schema drift test passes with no schema change. The public member inventory test passes with no change. Conformance cases 41 to 50 and the recognize `--plan` tests pass unchanged. `sdlc/scripts/test`, workspace clippy with `-D warnings` on all targets, `sdlc/scripts/tickets` and the ratchet pass. The ratchet does not rise.
 - Defers: every row marked b or c below. ADR 0111 slice 3 removes the process statics and the throttle. Once they go, `policy.py` can refuse `crate::public` in `engine` too. Slice 3 owns that check. Test sleep loops wait for step 5.
 
 ## Inventory
 
-Class a: fix here. Class b: inside the ADR 0111 rewrite; the named slice removes it. Class c: in `libraries/python`, `r` or `ruby`, where 0314 slice 3 is in review. Keep: an honest cost with a stated reason. Paths are under `crates/thinkthen/src` unless they start with `databases/` or `libraries/`.
+Class a: fix here. Class b: inside the ADR 0111 rewrite; the named slice removes it. Class c: in `libraries/python`, `r` or `ruby`, where 0314 slice 3 is in review. Keep: an honest cost with a stated reason. Paths are under `crates/thinkthen/src` unless they start with `databases/` or `libraries/`. Line numbers refer to `7c4fdf977`.
 
 | Kind | Where | Class | Why |
 | --- | --- | --- | --- |
@@ -36,8 +36,7 @@ Class a: fix here. Class b: inside the ADR 0111 rewrite; the named slice removes
 | Lint tuple | `public/engine.rs:140-141` `totals`, `source` | b, slice 3 | Engine construction and the process budget |
 | Lint tuple | `public/results/observation.rs:197` `receipt` | b, slice 3 | Only annotate batching calls it |
 | Lint tuple | `engine/facade/recognize.rs:365-366` | b, slice 4 | Facade recognize moves to `ask_all` |
-| Lint tuple | `core/batch.rs:257` | b, slice 2 | File deleted |
-| Lint | `(usize, usize)` spans in `core/recognize*`; `cli/asked.rs:24` alias; about 40 `allow` or `expect` with reasons | keep | Honest; no contortion |
+| Lint | `(usize, usize)` spans in `core/recognize*`; `(String, String)` map key in `core/batch.rs:257`; `cli/asked.rs:24` alias; about 40 `allow` or `expect` with reasons | keep | Honest; no contortion |
 | 1 ms sleep | `cli/annotate/batching/former.rs:92,101` | b, slice 2 | ADR 0111 section 10 deletes them |
 | 1 ms sleep | `engine/mod.rs:493,498,520` `REBUILD_POLL` | b, slice 3 | Serves `PROCESS_WIDTH` and `PROCESS_GATES` |
 | 50 ms poll | `engine/schedule.rs:313`, `engine/annotate_schedule.rs:181`, `cli/asking/batched.rs:205`, `public/batch.rs:147`, `public/batch/annotation.rs:156`, `public/batch/planned.rs:243` | b, slices 2-3 | Old schedulers and batch readers |
@@ -49,5 +48,4 @@ Class a: fix here. Class b: inside the ADR 0111 rewrite; the named slice removes
 | Static | `databases/postgresql/src/call.rs:147` `ACTIVE_THROTTLE`, `:151,152`; `databases/duckdb/src/engines.rs:62,138`; `databases/sqlite/src/settings.rs:75,90`, `budget.rs:19`, `question.rs:182,184` | b, slice 3 | SQL hosts move to `ask_all` |
 | Static | `cli/interrupt.rs:330`, `cli/file_size.rs:23`, `engine/workers.rs:12-19`, `cli/audit/write.rs:160`, SQLite and DuckDB signal and API tables, PostgreSQL settings, `libraries/c/src/failures.rs:163`, test-only thread-locals | keep | Signals, panic hooks, host tables and per-thread C errors are process-wide by nature; a counter names temporary files |
 | Static | `libraries/python/src/worker.rs:33`, `lib.rs:67`, `arrow/gate.rs:26,27,71`; `libraries/r/.../lib.rs:163`, `calls/worker.rs:185` | c | 0314 slice 3 |
-| Folder rule | `config.rs:238` `writable_by_another`, used by `config.rs:97`, `cli/asking/folders.rs:97`, `public/settings/server.rs:42` | done | Already one rule after 0303 and 0318 |
 | Folder rule | `engine/usage.rs:386` exact 0700 | keep | Guards the folder thinkthen creates for its own totals |

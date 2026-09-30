@@ -184,13 +184,13 @@ pub(crate) fn strength(kind: f64, span: f64) -> f64 {
 /// under `cut` goes. Names come in order of start, then end.
 /// Each name's P(span) is its decoded stretch's, before any edge pick.
 pub(crate) fn settle(
-    source: (&str, &[Piece]),
+    text: &str,
+    pieces: &[Piece],
     rows: &[TagRow],
     found: &[(usize, usize)],
     answers: &[(Asked, NameOdds)],
     cut: f64,
 ) -> Vec<RecognizedName> {
-    let (text, pieces) = source;
     let spans = SpanOdds::new(rows);
     let mut names: Vec<RecognizedName> = Vec::new();
     for ((first, last), (asked, odds)) in found.iter().copied().zip(answers) {
