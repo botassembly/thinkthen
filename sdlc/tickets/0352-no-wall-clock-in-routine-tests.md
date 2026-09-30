@@ -34,6 +34,7 @@ A few tests still need in-process work to finish inside a margin. No outside eve
 - The HTTP retry deadline test: a 1 s deadline that must outlast one loopback send.
 - The width test's 400 ms wait for a permit that is already free.
 - The annotate equal-records test: the reply waits 1 s while the engine reads a line already in its pipe.
+- The batching failed-request test: line 1's answer comes 1 s after line 2's failure is written, while the run reads that failure.
 - SQLite's two-row budget test: a 700 ms budget that must outlast one held-arm round and the second send.
 
 ## Changes
@@ -54,8 +55,9 @@ Rust engine unit tests:
 Rust command tests (`tests/backend`):
 
 - The batching ceiling test reads its 120 KB input from a file, through a new harness call `spawn_file`. A pipe filled past its buffer let the writer stall, and the 50 ms input pause then closed a batch early.
-- A new harness helper `Tally` counts written replies, so one reply can wait until another is written. The annotate failure-order test and the batching failed-request test use it.
+- A new harness helper `Tally` counts written replies, so one reply can wait until another is written. The annotate failure-order test and the batching failed-request test use it. The batching test also needs the run to read line 2's failure before line 1's answer, and no outside event marks that read, so line 1 answers 1 s after the failure is written.
 - The annotate closed-pipe test holds records 2 and 3 at a rendezvous until the test has closed the output pipe.
+- The batching pause test waits for the recorded request instead of the request count, which moves before the body is recorded.
 - The parallel tests gather the first requests before answering. The peak test now asserts the full bound. The resume test holds the first run's four replies until all four are in.
 - The annotate stop test gathers records 1 and 2 before record 1 fails. The equal-records test gives the second record a full second to join the first one's request.
 - `cache_convert` measures its lock wait from the lock itself.
@@ -66,7 +68,7 @@ Rust command tests (`tests/backend`):
 Rust library tests:
 
 - The relate host-interrupt test runs at throttle 1 in a fresh copy of the test binary. The check fires at exactly four sends, and nothing more is sent. At throttle 4, overlapping replies could leave no moment with no send out, so the check could miss every chance. The throttle-4 form, with both its 60- and 40-entity rows, moves to `public_controls/overlap.rs` as a stress case. It also runs alone, since another row's explicit throttle would narrow it.
-- The profile-split test holds the alpha reply until beta's is written. The order test holds each slow reply until the fast one beside it is written.
+- The profile-split test holds the alpha reply until beta's is written. The order test meets each pair of requests before either answers, and holds each slow reply until the fast one beside it is written.
 - Waits in the cap, estimated, batch attempt, interactive and native tests rise to 30 s. `public_controls.rs`'s shared `BOUND` rises from 3 s to 30 s. It guards the fired-check and call-facts waits, and the deadline parsing rows only need a valid value. The retry-after tests ask for 30 s and allow 10 s.
 
 Consumer:
@@ -79,7 +81,7 @@ Python, DuckDB and SQLite surfaces:
 - The Python release test drives the held arm from the parent. Its old timer form, where a cancel can land before the send, stays as a stress case. The column-timing test splits into a deadline half and a held-token half. The token fires once the held arm counts a send. At most eight sends go out, and none after the cancel.
 - DuckDB's `harness.py` adds `timed` cases, which run in both profiles and time only under stress. The bridge case repeats SIGINT until the answer arrives. The between-queries case asks the child how many queries it has seen instead of sleeping 20 ms. The queued-relate case waits for a stdin line instead of sleeping.
 - SQLite's conformance and interrupt tests wait on held requests. Where a timer releases the held reply after 30 s, the routine run keeps a 10 s hang guard on the stop, so a stop that waited for the reply still fails. `check.sh` runs the usage and try-budget files under stress too.
-- Waits rise to 30 or 60 s across these tests.
+- Waits rise to 30 or 60 s across these tests. The 100,000-row SQLite join's child guard rises from 60 s to 300 s. The loaded baseline ran it past 60 s in both surface rounds.
 
 Shell self-tests:
 
@@ -87,15 +89,20 @@ Shell self-tests:
 
 ## Proof
 
-Each row runs while 24 busy loops run. Each session started below a one-minute load of 8.
+Each session ran 24 busy loops that it started, and stopped only those. Each started below a one-minute load of 8. Load ran from 31 to 53 during the runs.
 
-| Code | `sdlc/scripts/test` runs | Failed | Load during runs | Failures |
-| --- | --- | --- | --- | --- |
-| main, earlier baseline | 5 | 1 | 32 to 47 | batching ceiling |
-| main's test files | pending | pending | pending | pending |
-| this branch | pending | pending | pending | pending |
-
-| Code | Surface check | Runs | Failed |
+| Code | `sdlc/scripts/test` runs | Failed | Failures |
 | --- | --- | --- | --- |
-| main's test files | Python, DuckDB, SQLite | pending | pending |
-| this branch | Python, DuckDB, SQLite | pending | pending |
+| main, earlier baseline | 5 | 1 | batching ceiling |
+| main's versions of the changed files | 6 | 0 | none |
+| this branch, first session | 6 | 4 | three of this branch's new event waits, and the pause test's count-versus-body race, all fixed |
+| this branch, final code | 3 | 0 | none |
+
+| Code | Surface check runs under load | Failed |
+| --- | --- | --- |
+| main's versions, Python and DuckDB | 2 each | 0 |
+| main's versions, SQLite | 2 | 2, the 100,000-row join past its 60 s guard |
+| this branch, first session, Python, DuckDB and SQLite | 2 each | 0 |
+| this branch, final code, Python, DuckDB and SQLite | 1 each | 0 |
+
+The first branch session failed where a new wait still raced. The batching stop test's `Tally` let line 1 answer before the run had read line 2's failure. The order test's fast reply could finish before the slow request arrived. The pause test counted a request before its body was recorded, a race main also has. Each fix then passed its focused tests, and the final code passed the bounded loaded proof above.
