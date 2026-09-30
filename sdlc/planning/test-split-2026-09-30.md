@@ -1,6 +1,6 @@
 # Test split between the gate and the release suite, 2026-09-30
 
-Status: inventory for ticket 0335. Measured on `origin/main` at `2b3cb67ea` in lane claude-4. Nothing in tests or code changed. The issue is `sdlc/issues/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Ian can overturn each grouping.
+Status: inventory for ticket 0335. Measured on `origin/main` at `2b3cb67ea` in lane claude-4. Test names in the merge table rechecked on main after 0304 slice 3c (`ec130d3ee`). Nothing in tests or code changed. The issue is `sdlc/issues/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Ian can overturn each grouping.
 
 ## Conditions
 
@@ -59,13 +59,13 @@ About 400 of the 430 library unit tests: question parsing (`core::question_file`
 
 | Test to delete | Kept test that catches its regression | Proof before deletion | Waits for |
 | --- | --- | --- | --- |
-| `demo_runner::every_recorded_demo_runs_and_every_demo_still_red_is_skipped` | `spec` runs `sdlc/scripts/demos` over the same pages. A broken demo then fails at a `spec` checkpoint, not in `test` | none needed | nothing |
-| `public_batches/portable.rs::public_bulk_keeps_portable_max_bodies_and_row_identities` | `backend` `batching/portable.rs` `complete_cli_lines_keep_literal_question_bytes_and_keys` and `structured_cli_values_keep_order_and_question_bytes`, plus `public_batches/identity.rs` for row identity | a mutation of the portable cut and of row identity, killed by the kept tests | 0304 slice 3a |
-| `polars/batching.rs::portable_max_cuts_cross_public_series_and_frame_calls` | The same command-line pair, since Polars reaches the one `ask_all` path | the same mutation run, under `--features polars` | 0304 slice 3c |
-| `public_batches/splits.rs::named_group_failed_left_half_does_not_send_right` | `public_batches/splits.rs::a_failed_left_half_prevents_a_right_send_and_row`, which holds the same no-right-send rule and also checks the row | a mutation that sends the right half, killed by the kept test | 0304 slice 3a |
-| `public_batches/tiers.rs::saved_annotate_batch_tiers` | `backend` `batching/tiers.rs::the_batch_setting_follows_its_tiers` | a mutation of one tier edge, killed by the kept test | 0304 slice 3a |
+| `demo_runner::every_recorded_demo_runs_and_every_demo_still_red_is_skipped` | `spec` runs `sdlc/scripts/demos` over the same pages. A broken demo then fails at a `spec` checkpoint, not in `test` | none needed | deleted in slice 1 |
+| `public_batches/portable.rs::public_bulk_keeps_portable_question_bytes_and_keys_in_one_request` (3a renamed it from `public_bulk_keeps_portable_max_bodies_and_row_identities`) | `backend` `batching/portable.rs` `complete_cli_lines_keep_literal_question_bytes_and_keys` and `structured_cli_values_keep_order_and_question_bytes`, plus `public_batches/identity.rs` for row keys | a mutation of the quoted question bytes and of a row's key, killed by the kept tests. ADR 0111 removed the portable cut, so no cut mutation remains | 0304 slice 3a, landed |
+| `polars/batching.rs::portable_questions_ride_one_request_across_series_and_frame_calls` (3a renamed it from `portable_max_cuts_cross_public_series_and_frame_calls`) | The same command-line pair, since Polars reaches the one `ask_all` path | the same mutation run, under `--features polars` | 0304 slice 3c, landed |
+| `public_batches/splits.rs::named_group_failed_left_half_does_not_send_right` | `public_batches/splits.rs::a_failed_left_half_prevents_a_right_send_and_row`, which holds the same no-right-send rule and also checks the row | a mutation that sends the right half, killed by the kept test | 0304 slice 3a, landed |
+| `public_batches/tiers.rs::saved_annotate_batch_tiers` | `backend` `batching/tiers.rs::the_batch_setting_follows_its_tiers` | a mutation of one tier edge, killed by the kept test | 0304 slice 3a, landed |
 | `public_size_retry.rs::retry_visibility_counts_live_attempts_and_no_replay_attempt` | `backend` `backoff::status_counts_retries_as_a_subset_of_actual_sends` for the counts, and `public_size_retry.rs::retry_attempts_use_send_ordinals_and_reject_duplicate_headers` for library attempts | mutations of the retry count and of the replay attempt, killed by the kept tests | 0304 slice 3d |
-| `backend` `public_json::each_json_method_prints_the_commands_bytes_on_the_shared_cases` | The consumer's `cases::every_applicable_shared_case_passes_through_the_public_api`, after it gains the byte comparison with the command | a mutation of one JSON field, killed by the consumer replay | 0304 slice 3a |
+| `backend` `public_json::each_json_method_prints_the_commands_bytes_on_the_shared_cases` | The consumer's `cases::every_applicable_shared_case_passes_through_the_public_api`, after it gains the byte comparison with the command | a mutation of one JSON field, killed by the consumer replay | 0304 slice 3a, landed; and 0304 slice 4, which must run this test on `recognize` and `relate` first, or move those rows into the consumer before the delete |
 
 A slice deletes a row only when its mutation run is recorded. A mutation the kept test misses keeps the old test.
 
@@ -74,7 +74,7 @@ These stay after review, because a merge would drop a retained regression:
 - `backend` `refusals::no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything`. It checks each of 40 refusals on every verb for its own exit code, its own sentence, empty standard output and zero connections. The sweep's route holds one code and one sentence. Two recorded mutation runs rely on it.
 - `question_file` `secrecy::no_message_from_either_home_ever_carries_the_key_or_the_evidence`. It forbids the evidence on standard output too, and each row brings its own question file. The sweep allows the evidence on standard output.
 - `public_size_retry.rs::retry_attempts_use_send_ordinals_and_reject_duplicate_headers`. It withholds a request id equal to the key, refuses duplicate headers, drops a forbidden header, and runs the observer on the caller's thread.
-- `public_batches/splits.rs` `named_group_refused_parent_and_halves_keep_request_identity` and `a_failed_left_half_prevents_a_right_send_and_row`, and `details.rs::split_record_details_name_the_refused_parent_and_the_answering_half`. They pin library request identity, the cancellation of the right half, and the details view.
+- `public_batches/splits.rs` `a_refused_request_and_both_halves_keep_exact_send_shares` and `a_failed_left_half_prevents_a_right_send_and_row`, and `details.rs::split_record_details_keep_one_question_key_each`. They pin each row's question key and send share after a split, the cancellation of the right half, and the details view. 3a replaced `named_group_refused_parent_and_halves_keep_request_identity` and `split_record_details_name_the_refused_parent_and_the_answering_half` with the first and third.
 - `relate_edge::relate_reads_the_names_recognize_found`. It keeps the name-versus-text regression. Slice 1 rewrites it to pass the `--kind` list as fixed arguments instead of parsing demo 44's README.
 
 No parser, secrecy, cancellation, cache-miss, invalid-input or conflict regression goes before its replacement lands.
