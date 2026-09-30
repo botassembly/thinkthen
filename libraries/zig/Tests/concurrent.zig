@@ -206,8 +206,10 @@ fn factsLifetime(alloc: Allocator, dir: []const u8) !void {
         .ok => |success| success,
         .failed => return error.SecondFactsFailed,
     };
-    try require(first.value.outcome == .yes and first.facts.records == 1 and first.facts.requests_sent == 1 and first.facts.input_tokens != null and first.facts.model != null);
-    try require(second.value.outcome == .yes and second.facts.records == 1 and second.facts.requests_sent == 1 and second.facts.input_tokens == null and second.facts.output_tokens == null and second.facts.model != null and std.mem.eql(u8, second.facts.model.?, "jev-1.13.0"));
+    const one = first.facts.value.object;
+    const two = second.facts.value.object;
+    try require(first.value.outcome == .yes and one.get("records").?.integer == 1 and one.get("requests_sent").?.integer == 1 and one.get("input_tokens") != null and one.get("model") != null);
+    try require(second.value.outcome == .yes and two.get("records").?.integer == 1 and two.get("requests_sent").?.integer == 1 and two.get("input_tokens") == null and two.get("output_tokens") == null and std.mem.eql(u8, two.get("model").?.string, "jev-1.13.0"));
     const failed = switch (try engine.decide("Is it?", "status-401", .{})) {
         .failed => |failure| failure,
         .ok => |success| {
@@ -232,7 +234,7 @@ fn factsLifetime(alloc: Allocator, dir: []const u8) !void {
     defer later.deinit(alloc);
     engine.deinit();
     closed = true;
-    try require(later.value.outcome == .yes and first.facts.input_tokens.? == 1 and second.facts.input_tokens == null and std.mem.eql(u8, failed.facts_json.?, facts_copy));
+    try require(later.value.outcome == .yes and one.get("input_tokens").?.integer == 1 and two.get("input_tokens") == null and std.mem.eql(u8, failed.facts_json.?, facts_copy));
     std.debug.print("ZIG_FACTS_LIFETIME_PASS\n", .{});
 }
 fn require(ok: bool) !void {

@@ -3,6 +3,16 @@ const tt = @import("thinkthen");
 fn require(ok: bool) !void {
     if (!ok) return error.AssertionFailed;
 }
+/// Facts are host JSON; a missing member reads as null.
+fn fact(facts: tt.Json, name: []const u8) std.json.Value {
+    return facts.value.object.get(name) orelse .null;
+}
+fn count(facts: tt.Json, name: []const u8) i64 {
+    return switch (fact(facts, name)) {
+        .integer => |value| value,
+        else => -1,
+    };
+}
 fn errorCode(engine: *tt.Engine, result: anytype, code: c_int, retryable: bool) !void {
     switch (result) {
         .ok => |value| {
@@ -52,7 +62,7 @@ pub fn main() !void {
         switch (result) {
             .ok => |a| {
                 defer a.deinit(alloc);
-                try require(a.facts.records == 1 and a.facts.requests_sent == 1 and a.facts.cache_answers == 0 and std.math.isFinite(a.facts.seconds));
+                try require(count(a.facts, "records") == 1 and count(a.facts, "requests_sent") == 1 and count(a.facts, "cache_answers") == 0 and fact(a.facts, "seconds") == .float);
                 try require(a.value.outcome == (if (i == 1) tt.Outcome.no else if (i == 2) tt.Outcome.unsure else tt.Outcome.yes) and a.value.probability == (if (i == 1) @as(f64, 0.1) else if (i == 2) @as(f64, 0.5) else @as(f64, 0.9)));
             },
             .failed => |f| {
@@ -66,7 +76,7 @@ pub fn main() !void {
         .ok => |success| {
             defer success.deinit(alloc);
             const answers = success.value;
-            try require(answers.len == 3 and success.facts.records == 3 and success.facts.requests_sent == 1 and success.facts.cache_answers == 0);
+            try require(answers.len == 3 and count(success.facts, "records") == 3 and count(success.facts, "requests_sent") == 1 and count(success.facts, "cache_answers") == 0);
             for (answers, 0..) |a, i| {
                 if (a.probability != ([_]f64{ 0.9, 0.1, 0.6 })[i]) std.debug.print("REP IN DRIFT bulk index={d} probability={d} expected={d} outcome={d}\n", .{ i, a.probability, ([_]f64{ 0.9, 0.1, 0.6 })[i], @intFromEnum(a.outcome) });
                 try require(a.probability == ([_]f64{ 0.9, 0.1, 0.6 })[i]);
@@ -80,7 +90,7 @@ pub fn main() !void {
     switch (try engine.decideMany("Is it?", &rows, .{})) {
         .ok => |success| {
             defer success.deinit(alloc);
-            try require(success.value.len == 3 and success.facts.records == 3 and success.facts.requests_sent == 0 and success.facts.cache_answers == 3);
+            try require(success.value.len == 3 and count(success.facts, "records") == 3 and count(success.facts, "requests_sent") == 0 and count(success.facts, "cache_answers") == 3);
         },
         .failed => |f| {
             defer engine.freeFailure(f);
@@ -109,7 +119,7 @@ pub fn main() !void {
         .ok => |success| {
             defer success.deinit(alloc);
             const answers = success.value;
-            try require(answers.len == 0 and success.facts.records == 0 and success.facts.model == null);
+            try require(answers.len == 0 and count(success.facts, "records") == 0 and fact(success.facts, "model") == .null);
         },
         .failed => |f| {
             defer engine.freeFailure(f);
@@ -184,7 +194,7 @@ pub fn main() !void {
             const bytes = success.value;
             const parsed = try std.json.parseFromSlice(std.json.Value, alloc, bytes, .{});
             defer parsed.deinit();
-            try require(parsed.value.object.get("entities") != null and success.facts.records > 0 and success.facts.requests_sent == 2);
+            try require(parsed.value.object.get("entities") != null and count(success.facts, "records") > 0 and count(success.facts, "requests_sent") == 2);
         },
         .failed => |f| {
             defer engine.freeFailure(f);
@@ -199,7 +209,7 @@ pub fn main() !void {
             const bytes = success.value;
             const parsed = try std.json.parseFromSlice(std.json.Value, alloc, bytes, .{});
             defer parsed.deinit();
-            try require(parsed.value.object.get("edges") != null and success.facts.records > 0 and success.facts.requests_sent == 1);
+            try require(parsed.value.object.get("edges") != null and count(success.facts, "records") > 0 and count(success.facts, "requests_sent") == 1);
         },
         .failed => |f| {
             defer engine.freeFailure(f);

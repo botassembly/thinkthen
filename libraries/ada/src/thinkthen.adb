@@ -1,12 +1,9 @@
-with Ada.Finalization;
-with Ada.Containers.Indefinite_Vectors;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 with Thinkthen_C; use Thinkthen_C;
 with System; use System;
-with Interfaces; use Interfaces;
 package body Thinkthen is
    type Owned_String is new Ada.Finalization.Limited_Controlled with record
       Pointer : aliased chars_ptr := Null_Ptr;
@@ -112,7 +109,11 @@ package body Thinkthen is
       if Raw.Outcome < 0 or Raw.Outcome > 2 then raise Program_Error with "invalid outcome"; end if;
       return (Value => Outcome'Val (Integer (Raw.Outcome)), Probability => Long_Float (Raw.Probability));
    end Converted;
-   function Decode_Run_Facts (Pointer : chars_ptr; Length : size_t) return Run_Facts;
+   function Facts_Text (Pointer : chars_ptr; Length : size_t) return Unbounded_String is
+   begin
+      if Pointer = Null_Ptr or Length = 0 then raise Constraint_Error with "missing native facts"; end if;
+      return To_Unbounded_String (Value (Pointer, Length));
+   end Facts_Text;
    procedure Native_Result_Defect (Error : out Failure) is
    begin
       Error := (Kind => Defect, Retryable => False,
@@ -120,7 +121,7 @@ package body Thinkthen is
                 Facts_JSON => Null_Unbounded_String);
    end Native_Result_Defect;
    procedure Decide (Client : in out Engine; Question, Evidence : String;
-                     Result : out Decision; Facts : out Run_Facts; Error : out Failure;
+                     Result : out Decision; Facts : out Unbounded_String; Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
                      Token : access Cancel_Token := null) is
       Q, T : Owned_String;
@@ -139,23 +140,23 @@ package body Thinkthen is
       if Code = 0 then
          declare
             Answer_Value : Decision;
-            Read : Run_Facts;
+            Read : Unbounded_String;
          begin
             Answer_Value := Converted (Raw);
-            Read := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+            Read := Facts_Text (Raw_Facts.Pointer, Facts_Length);
             Result := Answer_Value; Facts := Read;
          exception
             when Constraint_Error | Program_Error =>
                Native_Result_Defect (Error);
-               Result := (Value => Not_Sure, Probability => 0.0); Facts := (others => <>);
+               Result := (Value => Not_Sure, Probability => 0.0); Facts := Null_Unbounded_String;
          end;
       else
-         Result := (Value => Not_Sure, Probability => 0.0); Facts := (others => <>);
+         Result := (Value => Not_Sure, Probability => 0.0); Facts := Null_Unbounded_String;
       end if;
    end Decide;
    procedure Decide_Many (Client : in out Engine; Question : String;
                           Evidence : Evidence_Array; Result : out Decision_Array;
-                          Facts : out Run_Facts; Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
+                          Facts : out Unbounded_String; Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
                           Token : access Cancel_Token := null) is
       Q : Owned_String;
       type Owned_Array is array (Positive range <>) of Owned_String;
@@ -170,7 +171,7 @@ package body Thinkthen is
          Owned : Owned_Array (Evidence'Range);
          Texts : aliased Text_Array (0 .. size_t (Evidence'Length) - 1);
          Lengths : aliased Length_Array (Texts'Range);
-         Answers : aliased Answer_Array (Texts'Range) := (others => (Outcome => 123, Probability => -1.0));
+         Answers : aliased Answer_Array (Texts'Range) := [others => (Outcome => 123, Probability => -1.0)];
       begin
          Require_C_String (Question); Set (Q, Question);
          for I in Evidence'Range loop
@@ -191,7 +192,7 @@ package body Thinkthen is
                   Converted_Answers (I) := Converted (Answers (size_t (I - Result'First)));
                end loop;
                declare
-                  Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+                  Read : constant Unbounded_String := Facts_Text (Raw_Facts.Pointer, Facts_Length);
                begin
                   Result := Converted_Answers; Facts := Read;
                end;
@@ -199,11 +200,11 @@ package body Thinkthen is
                when Constraint_Error | Program_Error =>
                   Native_Result_Defect (Error);
                   for I in Result'Range loop Result (I) := (Value => Not_Sure, Probability => 0.0); end loop;
-                  Facts := (others => <>);
+                  Facts := Null_Unbounded_String;
             end;
          else
             for I in Result'Range loop Result (I) := (Value => Not_Sure, Probability => 0.0); end loop;
-            Facts := (others => <>);
+            Facts := Null_Unbounded_String;
          end if;
       end;
    end Decide_Many;
@@ -213,6 +214,8 @@ package body Thinkthen is
       for I in Names'Range loop Result (I) := (Names (I), Null_Unbounded_String); end loop;
       return Result;
    end Bare_Labels;
+   function Hex_Digit (Value : Natural) return Character is (String'("0123456789abcdef") (Value + 1));
+   -- Text as one JSON string.
    function Quoted (Text : String) return String is
       Result : Unbounded_String := To_Unbounded_String ("""");
    begin
@@ -223,8 +226,11 @@ package body Thinkthen is
             when Character'Val (13) => Append (Result, "\r");
             when Character'Val (9) => Append (Result, "\t");
             when others =>
-               if Character'Pos (C) < 32 then raise Constraint_Error with "control in label"; end if;
-               Append (Result, C);
+               if Character'Pos (C) < 32 then
+                  Append (Result, "\u00" & Hex_Digit (Character'Pos (C) / 16) & Hex_Digit (Character'Pos (C) mod 16));
+               else
+                  Append (Result, C);
+               end if;
          end case;
       end loop;
       return To_String (Result) & '"';
@@ -344,8 +350,6 @@ package body Thinkthen is
       end loop;
       return To_String (Result) & (if Described then "}" else "]");
    end Label_Descriptions;
-   function Extract (Object_Text, Name : String; Optional : Boolean := False;
-                     Facts_Only : Boolean := False) return String;
    function Unquote (Text : String) return Unbounded_String;
    function Decode_Field (Text : String) return Annotated_Field is
       Kind : Answer_Kind;
@@ -358,8 +362,8 @@ package body Thinkthen is
       elsif Text'Length > 0 and then Text (Text'First) = '[' then Kind := Label_List_Answer;
       elsif Text'Length > 0 and then Text (Text'First) = '{' then
          declare
-            Failure_Text : constant String := Extract (Text, "failed");
-            Name : constant String := To_String (Unquote (Extract (Failure_Text, "kind")));
+            Failure_Text : constant String := Member (Text, "failed");
+            Name : constant String := To_String (Unquote (Member (Failure_Text, "kind")));
          begin
             if Name = "usage" then Marker.Kind := Usage;
             elsif Name = "backend" then Marker.Kind := Backend;
@@ -369,7 +373,7 @@ package body Thinkthen is
             elsif Name = "defect" then Marker.Kind := Defect;
             else raise Constraint_Error with "unknown failed field kind";
             end if;
-            Marker.Cause := Unquote (Extract (Failure_Text, "cause"));
+            Marker.Cause := Unquote (Member (Failure_Text, "cause"));
          end;
          Kind := Failed_Answer;
       elsif Text'Length > 0 and then Text (Text'First) in '-' | '0' .. '9' then Kind := Number_Answer;
@@ -377,7 +381,7 @@ package body Thinkthen is
       end if;
       return (Kind => Kind, JSON => To_Unbounded_String (Text), Marker => Marker);
    end Decode_Field;
-   procedure Call (Client : in out Engine; Request : String; Result : out JSON_Result;
+   procedure Call (Client : in out Engine; Request : String; Result : out Unbounded_String;
                    Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
                    Token : access Cancel_Token := null) is
       Input, Output : Owned_String;
@@ -386,16 +390,15 @@ package body Thinkthen is
       Output.Pointer := Call_JSON_Opts (Client.Handle, Input.Pointer, Deadline_Ms, Raw_Token (Token));
       if Output.Pointer = Null_Ptr then
          Capture (Client.Handle, Error_Code (Client.Handle), Error);
-         Result.JSON := Null_Unbounded_String;
+         Result := Null_Unbounded_String;
       else
          Output.Native := True;
-         Validate (Value (Output.Pointer));
-         Result.JSON := To_Unbounded_String (Value (Output.Pointer));
+         Result := To_Unbounded_String (Value (Output.Pointer));
          Capture (Client.Handle, 0, Error);
       end if;
    end Call;
    procedure Recognize (Client : in out Engine; Specification, Evidence : String;
-                        Result : out JSON_Result; Facts : out Run_Facts; Error : out Failure;
+                        Result, Facts : out Unbounded_String; Error : out Failure;
                         Deadline_Ms : Interfaces.Integer_64 := -1;
                         Token : access Cancel_Token := null) is
       Spec, Text : Owned_String;
@@ -414,32 +417,19 @@ package body Thinkthen is
       Capture (Client.Handle, Code, Error);
       if Code = 0 then
          begin
-            declare
-               Data : constant String := Value (Output.Pointer, Out_Len);
-            begin
-               Validate (Data);
-               declare
-                  Shape : constant String := Extract (Data, "entities");
-               begin
-                  if Shape (Shape'First) /= '[' then raise Constraint_Error with "recognize entities must be an array"; end if;
-               end;
-               declare
-                  Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
-               begin
-                  Result.JSON := To_Unbounded_String (Data); Facts := Read;
-               end;
-            end;
+            Facts := Facts_Text (Raw_Facts.Pointer, Facts_Length);
+            Result := To_Unbounded_String (Value (Output.Pointer, Out_Len));
          exception
             when Constraint_Error | Program_Error =>
                Native_Result_Defect (Error);
-               Result.JSON := Null_Unbounded_String; Facts := (others => <>);
+               Result := Null_Unbounded_String; Facts := Null_Unbounded_String;
          end;
-      else Result.JSON := Null_Unbounded_String; Facts := (others => <>);
+      else Result := Null_Unbounded_String; Facts := Null_Unbounded_String;
       end if;
    end Recognize;
    procedure Relate (Client : in out Engine; Specification : String;
-                     Records : Evidence_Array; Result : out JSON_Result;
-                     Facts : out Run_Facts; Error : out Failure;
+                     Records : Evidence_Array; Result, Facts : out Unbounded_String;
+                     Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
                      Token : access Cancel_Token := null) is
       Spec : Owned_String;
@@ -470,38 +460,28 @@ package body Thinkthen is
          Capture (Client.Handle, Code, Error);
          if Code = 0 then
             begin
-               declare
-                  Data : constant String := Value (Output.Pointer, Out_Len);
-               begin
-                  Validate (Data);
-                  declare
-                     Shape : constant String := Extract (Data, "edges");
-                  begin
-                     if Shape (Shape'First) /= '[' then raise Constraint_Error with "relate edges must be an array"; end if;
-                  end;
-                  declare
-                     Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
-                  begin
-                     Result.JSON := To_Unbounded_String (Data); Facts := Read;
-                  end;
-               end;
+               Facts := Facts_Text (Raw_Facts.Pointer, Facts_Length);
+               Result := To_Unbounded_String (Value (Output.Pointer, Out_Len));
             exception
                when Constraint_Error | Program_Error =>
                   Native_Result_Defect (Error);
-                  Result.JSON := Null_Unbounded_String; Facts := (others => <>);
+                  Result := Null_Unbounded_String; Facts := Null_Unbounded_String;
             end;
-         else Result.JSON := Null_Unbounded_String; Facts := (others => <>);
+         else Result := Null_Unbounded_String; Facts := Null_Unbounded_String;
          end if;
       end;
    end Relate;
-   function Extract (Object_Text, Name : String; Optional : Boolean := False;
-                     Facts_Only : Boolean := False) return String is
-      P : Natural := Object_Text'First;
+   -- One tolerant reader for Member and Element: it walks one JSON object or
+   -- array and returns the text of the wanted member or element, or "".
+   function Find (JSON : String; Name : String; Index : Natural) return String is
+      P : Natural := JSON'First;
+      Opening : Character;
       Found : Unbounded_String;
       Present : Boolean := False;
+      Position : Natural := 0;
       procedure Space is
       begin
-         while P <= Object_Text'Last and then Object_Text (P) in ' ' | Character'Val (9) | Character'Val (10) | Character'Val (13) loop
+         while P <= JSON'Last and then JSON (P) in ' ' | Character'Val (9) | Character'Val (10) | Character'Val (13) loop
             P := P + 1;
          end loop;
       end Space;
@@ -509,24 +489,23 @@ package body Thinkthen is
          At_Byte : Natural := First + 1;
          Escaped : Boolean := False;
       begin
-         if Object_Text (First) /= '"' then raise Constraint_Error with "expected member name"; end if;
-         while At_Byte <= Object_Text'Last loop
+         while At_Byte <= JSON'Last loop
             if Escaped then Escaped := False;
-            elsif Object_Text (At_Byte) = '\' then Escaped := True;
-            elsif Object_Text (At_Byte) = '"' then return At_Byte;
+            elsif JSON (At_Byte) = '\' then Escaped := True;
+            elsif JSON (At_Byte) = '"' then return At_Byte;
             end if;
             At_Byte := At_Byte + 1;
          end loop;
-         raise Constraint_Error with "unterminated member name";
+         raise Constraint_Error with "unterminated JSON string";
       end String_End;
       function Value_End (First : Natural) return Natural is
          At_Byte : Natural := First;
          Depth : Natural := 0;
          In_String, Escaped : Boolean := False;
       begin
-         while At_Byte <= Object_Text'Last loop
+         while At_Byte <= JSON'Last loop
             declare
-               C : constant Character := Object_Text (At_Byte);
+               C : constant Character := JSON (At_Byte);
             begin
                if Escaped then Escaped := False;
                elsif In_String and C = '\' then Escaped := True;
@@ -542,167 +521,56 @@ package body Thinkthen is
             end;
             At_Byte := At_Byte + 1;
          end loop;
-         raise Constraint_Error with "unterminated JSON object member";
+         raise Constraint_Error with "unterminated JSON value";
       end Value_End;
    begin
-      Validate (Object_Text);
+      Validate (JSON);
       Space;
-      if P > Object_Text'Last or else Object_Text (P) /= '{' then raise Constraint_Error with "expected JSON object"; end if;
-      P := P + 1;
+      Opening := JSON (P);
+      if Opening /= (if Index = 0 then '{' else '[') then
+         raise Constraint_Error with (if Index = 0 then "expected JSON object" else "expected JSON array");
+      end if;
+      P := P + 1; Space;
+      if JSON (P) in '}' | ']' then return ""; end if;
       loop
          Space;
-         exit when P <= Object_Text'Last and then Object_Text (P) = '}';
-         if P > Object_Text'Last or else Object_Text (P) /= '"' then raise Constraint_Error with "expected member name"; end if;
          declare
-            End_Name : constant Natural := String_End (P);
-            Key : constant String := To_String (Unquote (Object_Text (P .. End_Name)));
+            Key : Unbounded_String;
             Start_Value, End_Value : Natural;
          begin
-            P := End_Name + 1; Space;
-            if P > Object_Text'Last or else Object_Text (P) /= ':' then raise Constraint_Error with "expected member colon"; end if;
-            P := P + 1; Space; Start_Value := P;
-            End_Value := Value_End (P);
-            -- specification/result.schema.json closes the facts member set.
-            if Facts_Only and then Key /= "records" and then Key /= "requests_sent" and then
-               Key /= "cache_answers" and then Key /= "seconds" and then
-               Key /= "input_tokens" and then Key /= "output_tokens" and then Key /= "model" then
-               raise Constraint_Error with "unknown facts member";
+            if Opening = '{' then
+               declare
+                  End_Name : constant Natural := String_End (P);
+               begin
+                  Key := Unquote (JSON (P .. End_Name));
+                  P := End_Name + 1; Space; P := P + 1; Space;
+               end;
             end if;
-            if Key = Name then
-               if Present then raise Constraint_Error with "duplicate result member: " & Name; end if;
-               Found := To_Unbounded_String (Ada.Strings.Fixed.Trim (Object_Text (Start_Value .. End_Value - 1), Ada.Strings.Both));
+            Position := Position + 1;
+            Start_Value := P;
+            End_Value := Value_End (P);
+            if (Opening = '{' and then To_String (Key) = Name) or else (Opening = '[' and then Position = Index) then
+               if Present then raise Constraint_Error with "duplicate JSON member: " & Name; end if;
+               Found := To_Unbounded_String (Ada.Strings.Fixed.Trim (JSON (Start_Value .. End_Value - 1), Ada.Strings.Both));
                Present := True;
             end if;
             P := End_Value;
-            if Object_Text (P) = ',' then P := P + 1;
-            else exit when Object_Text (P) = '}'; end if;
+            exit when JSON (P) /= ',';
+            P := P + 1;
          end;
       end loop;
-      if not Present then
-         if Optional then return ""; end if;
-         raise Constraint_Error with "missing result field: " & Name;
-      end if;
       return To_String (Found);
-   end Extract;
-   function Count (Text : String) return Unsigned_64 is
-   begin
-      if Text'Length = 0 then raise Constraint_Error with "missing facts count"; end if;
-      for C of Text loop
-         if C not in '0' .. '9' then raise Constraint_Error with "invalid facts count"; end if;
-      end loop;
-      return Unsigned_64'Value (Text);
-   end Count;
-   function Decode_Run_Facts (Pointer : chars_ptr; Length : size_t) return Run_Facts is
-   begin
-      if Pointer = Null_Ptr or Length = 0 then
-         raise Constraint_Error with "missing native facts";
-      end if;
-      Validate (Value (Pointer, Length));
-      declare
-         Text : constant String := Value (Pointer, Length);
-         Seconds_Text : constant String := Extract (Text, "seconds", Facts_Only => True);
-         Answer : Run_Facts;
-         Input : constant String := Extract (Text, "input_tokens", Optional => True);
-         Output : constant String := Extract (Text, "output_tokens", Optional => True);
-         Model : constant String := Extract (Text, "model", Optional => True);
-      begin
-         Answer.Records := Count (Extract (Text, "records"));
-         Answer.Requests_Sent := Count (Extract (Text, "requests_sent"));
-         Answer.Cache_Answers := Count (Extract (Text, "cache_answers"));
-         if Seconds_Text'Length = 0 or else Seconds_Text (Seconds_Text'First) not in '0' .. '9' then
-            raise Constraint_Error with "invalid facts seconds";
-         end if;
-         Answer.Seconds := Long_Float'Value (Seconds_Text);
-         if not (Answer.Seconds >= 0.0 and Answer.Seconds <= Long_Float'Last) then
-            raise Constraint_Error with "invalid facts seconds";
-         end if;
-         if Input'Length /= 0 then
-            Answer.Has_Input_Tokens := True; Answer.Input_Tokens := Count (Input);
-         end if;
-         if Output'Length /= 0 then
-            Answer.Has_Output_Tokens := True; Answer.Output_Tokens := Count (Output);
-         end if;
-         if Model'Length /= 0 then
-            if Model (Model'First) /= '"' then raise Constraint_Error with "invalid facts model"; end if;
-            Answer.Has_Model := True; Answer.Model := Unquote (Model);
-         end if;
-         return Answer;
-      end;
-   end Decode_Run_Facts;
-   function Call_Facts (Result : JSON_Result) return String is
-      Data : constant String := To_String (Result.JSON);
-      Facts : constant String := Extract (Data, "facts");
-      -- The schema requires these four; tokens/model are optional, but
-      -- the installed fixture checks all seven when the backend sends them.
-      Names : constant array (Positive range 1 .. 4) of String (1 .. 13) :=
-        ("records      ", "requests_sent", "cache_answers", "seconds      ");
-   begin
-      for Name of Names loop
-         declare
-            Field : constant String := Ada.Strings.Fixed.Trim (Name, Ada.Strings.Both);
-            Discard : constant String := Extract (Facts, Field);
-         begin
-            if Discard'Length = 0 then raise Constraint_Error with "empty facts member"; end if;
-         end;
-      end loop;
-      return Facts;
-   end Call_Facts;
-   function Call_Value (Result : JSON_Result) return String is
-      Data : constant String := To_String (Result.JSON);
-      Facts : constant String := Call_Facts (Result);
-   begin
-      if Facts'Length < 2 then raise Constraint_Error with "invalid call facts"; end if;
-      return Extract (Data, "value");
-   end Call_Value;
-   package Text_Vectors is new Ada.Containers.Indefinite_Vectors (Positive, String);
-   function Items (Array_JSON : String) return Text_Vectors.Vector is
-      Items_Out : Text_Vectors.Vector;
-      P, Start, Depth : Natural;
-      In_String, Escape : Boolean := False;
-   begin
-      Validate (Array_JSON);
-      if Array_JSON'Length < 2 or else Array_JSON (Array_JSON'First) /= '[' then
-         raise Constraint_Error with "result is not an array";
-      end if;
-      P := Array_JSON'First + 1; Start := P; Depth := 0;
-      while P < Array_JSON'Last loop
-         declare
-            C : constant Character := Array_JSON (P);
-         begin
-            if Escape then Escape := False;
-            elsif In_String and C = '\' then Escape := True;
-            elsif C = '"' then In_String := not In_String;
-            elsif not In_String then
-               if C in '{' | '[' then Depth := Depth + 1;
-               elsif C in '}' | ']' then Depth := Depth - 1;
-               elsif C = ',' and Depth = 0 then
-                  Items_Out.Append (Ada.Strings.Fixed.Trim (Array_JSON (Start .. P - 1), Ada.Strings.Both));
-                  Start := P + 1;
-               end if;
-            end if;
-         end;
-         P := P + 1;
-      end loop;
-      if Ada.Strings.Fixed.Trim (Array_JSON (Start .. P - 1), Ada.Strings.Both)'Length /= 0 then
-         Items_Out.Append (Ada.Strings.Fixed.Trim (Array_JSON (Start .. P - 1), Ada.Strings.Both));
-      end if;
-      return Items_Out;
-   end Items;
+   end Find;
+   function Member (JSON : String; Name : String) return String is (Find (JSON, Name, 0));
+   function Element (JSON : String; Index : Positive) return String is (Find (JSON, "", Index));
    function Annotation (Result_JSON : String; Question : String; Row : Positive := 1) return Annotated_Field is
       Data : constant String := Ada.Strings.Fixed.Trim (Result_JSON, Ada.Strings.Both);
+      Found : constant String :=
+        (if Data'Length > 0 and then Data (Data'First) = '[' then Element (Data, Row)
+         elsif Row = 1 then Data else "");
    begin
-      Validate (Data);
-      if Data'Length > 0 and then Data (Data'First) = '[' then
-         declare
-            Rows : constant Text_Vectors.Vector := Items (Data);
-         begin
-            if Row > Natural (Rows.Length) then raise Constraint_Error with "annotate row out of range"; end if;
-            return Decode_Field (Extract (Rows.Element (Row), Question));
-         end;
-      elsif Row = 1 then
-         return Decode_Field (Extract (Data, Question));
-      else raise Constraint_Error with "annotate row out of range";
-      end if;
+      if Found = "" then raise Constraint_Error with "annotate row out of range"; end if;
+      return Decode_Field (Member (Found, Question));
    end Annotation;
    function Unquote (Text : String) return Unbounded_String is
       Result : Unbounded_String;
@@ -786,47 +654,38 @@ package body Thinkthen is
       end loop;
       return Result;
    end Unquote;
-   function Entities (Result : JSON_Result) return Entity_Vectors.Vector is
-      Answer : Entity_Vectors.Vector;
-      Data : constant String := To_String (Result.JSON);
+   procedure Plan (Client : in out Engine; Verb, Question : String; Input : Evidence_Array;
+                   Result : out Unbounded_String; Error : out Failure;
+                   Settings_JSON : String := "") is
+      function Object (Text : String) return String is
+         Trimmed : constant String := Ada.Strings.Fixed.Trim (Text, Ada.Strings.Both);
+      begin
+         Validate (Trimmed);
+         if Trimmed (Trimmed'First) /= '{' then raise Constraint_Error with "plan settings must be a JSON object"; end if;
+         return Trimmed;
+      end Object;
+      Asked : constant String := Ada.Strings.Fixed.Trim (Question, Ada.Strings.Both);
+      Request : Unbounded_String := To_Unbounded_String ("{""verb"":" & Quoted (Verb) & ",""question"":");
+      Input_Text : Owned_String;
+      Output : aliased Owned_String;
+      Out_Len : aliased size_t := 0;
+      Code : int;
    begin
-      Validate (Data);
-      for Item of Items (Extract (Data, "entities")) loop
-         declare
-            Start_At : constant Natural := Natural'Value (Extract (Item, "start"));
-            End_At : constant Natural := Natural'Value (Extract (Item, "end"));
-            Span : constant Natural := Natural'Value (Extract (Item, "length"));
-         begin
-            if End_At < Start_At or else Span /= End_At - Start_At then
-               raise Constraint_Error with "recognize span mismatch";
-            end if;
-            Answer.Append (Entity'(Text => Unquote (Extract (Item, "text")),
-                            Kind => Unquote (Extract (Item, "kind")),
-                            Start_Offset => Start_At, End_Offset => End_At, Length => Span,
-                            Strength => Long_Float'Value (Extract (Item, "strength"))));
-         end;
+      -- As Go's Engine.Plan: text starting with '{' is a question object.
+      Append (Request, (if Asked'Length > 0 and then Asked (Asked'First) = '{' then Object (Asked) else Quoted (Question)));
+      Append (Request, ",""input"":[");
+      for I in Input'Range loop
+         if I /= Input'First then Append (Request, ','); end if;
+         Append (Request, Quoted (To_String (Input (I))));
       end loop;
-      return Answer;
-   end Entities;
-   function Edges (Result : JSON_Result) return Edge_Vectors.Vector is
-      Answer : Edge_Vectors.Vector;
-      Data : constant String := To_String (Result.JSON);
-   begin
-      Validate (Data);
-      for Item of Items (Extract (Data, "edges")) loop
-         declare
-            Source : constant String := Extract (Item, "source");
-            Target : constant String := Extract (Item, "target");
-         begin
-            Answer.Append (Relation_Edge'(
-               Relation => Unquote (Extract (Item, "relation")),
-               Source => (Name => Unquote (Extract (Source, "name")),
-                          Kind => Unquote (Extract (Source, "kind"))),
-               Target => (Name => Unquote (Extract (Target, "name")),
-                          Kind => Unquote (Extract (Target, "kind"))),
-               Probability => Long_Float'Value (Extract (Item, "probability"))));
-         end;
-      end loop;
-      return Answer;
-   end Edges;
+      Append (Request, ']');
+      if Settings_JSON /= "" then Append (Request, ",""settings"":" & Object (Settings_JSON)); end if;
+      Append (Request, '}');
+      Require_C_String (To_String (Request));
+      Set (Input_Text, To_String (Request));
+      Code := Plan_JSON (Client.Handle, Input_Text.Pointer, Output.Pointer'Access, Out_Len'Access);
+      Output.Native := True;
+      Capture (Client.Handle, Code, Error);
+      Result := (if Code = 0 then To_Unbounded_String (Value (Output.Pointer, Out_Len)) else Null_Unbounded_String);
+   end Plan;
 end Thinkthen;

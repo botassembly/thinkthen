@@ -55,52 +55,35 @@ public struct Answer: Sendable {
     }
 }
 
+// Facts, recognize and relate values stay JSON text; decode them with
+// Foundation. A reader ignores members it does not know (ADR 0112).
 public struct CallResult<Value: Sendable>: Sendable {
     public let value: Value
-    public let facts: CallFacts
+    public let facts: String
 }
 
-public struct CallFacts: Sendable, Decodable {
-    public let records: UInt64
-    public let requestsSent: UInt64
-    public let cacheAnswers: UInt64
-    public let seconds: Double
-    public let inputTokens: UInt64?
-    public let outputTokens: UInt64?
-    public let model: String?
-    enum CodingKeys: String, CodingKey {
-        case records, seconds, model
-        case requestsSent = "requests_sent", cacheAnswers = "cache_answers"
-        case inputTokens = "input_tokens", outputTokens = "output_tokens"
-    }
-    public init(from decoder: Decoder) throws {
-        let fields = try decoder.container(keyedBy: CodingKeys.self)
-        records = try fields.decode(UInt64.self, forKey: .records)
-        requestsSent = try fields.decode(UInt64.self, forKey: .requestsSent)
-        cacheAnswers = try fields.decode(UInt64.self, forKey: .cacheAnswers)
-        seconds = try fields.decode(Double.self, forKey: .seconds)
-        guard seconds.isFinite && seconds >= 0 else {
-            throw DecodingError.dataCorruptedError(forKey: .seconds, in: fields, debugDescription: "invalid seconds")
-        }
-        func optional<T: Decodable>(_ type: T.Type, _ key: CodingKeys) throws -> T? {
-            guard fields.contains(key) else { return nil }
-            return try fields.decode(T.self, forKey: key)
-        }
-        inputTokens = try optional(UInt64.self, .inputTokens)
-        outputTokens = try optional(UInt64.self, .outputTokens)
-        model = try optional(String.self, .model)
-    }
-}
-
-private func decodeFacts(_ pointer: UnsafeMutablePointer<CChar>?, _ length: Int) throws -> CallFacts {
+private func copyJSON(_ pointer: UnsafeMutablePointer<CChar>?, _ length: Int) throws -> String {
     guard let pointer, length >= 0 else {
-        throw DoorFailure(code: 6, retryable: false, message: "missing native facts")
+        throw DoorFailure(code: 6, retryable: false, message: "missing native JSON")
     }
-    do {
-        let bytes = UnsafeRawBufferPointer(start: pointer, count: length)
-        return try JSONDecoder().decode(CallFacts.self, from: Data(bytes))
-    } catch {
-        throw DoorFailure(code: 6, retryable: false, message: "invalid native facts")
+    return String(decoding: UnsafeRawBufferPointer(start: pointer, count: length), as: UTF8.self)
+}
+
+// One annotate answer member, decoded by Foundation: NSNull is unresolved,
+// {"failed": {...}} is a failure, and any other value is answered. No answered
+// value is an object, so another object is refused.
+public enum AnnotatedField {
+    case unresolved
+    case answered(Any)
+    case failed(kind: String, cause: String)
+    public static func read(_ member: Any) throws -> AnnotatedField {
+        if member is NSNull { return .unresolved }
+        guard let object = member as? [String: Any] else { return .answered(member) }
+        guard let failed = object["failed"] as? [String: Any], let kind = failed["kind"] as? String,
+              let cause = failed["cause"] as? String else {
+            throw DoorFailure(code: 6, retryable: false, message: "annotate member is an object but not a failure")
+        }
+        return .failed(kind: kind, cause: cause)
     }
 }
 
@@ -166,7 +149,7 @@ public final class Engine: @unchecked Sendable {
                     precondition(answer.outcome == 123 && answer.probability == -1 && facts == nil && factsLen == 0, "failure changed output")
                     throw error
                 }
-                return try CallResult(value: Answer(answer), facts: decodeFacts(facts, factsLen))
+                return try CallResult(value: Answer(answer), facts: copyJSON(facts, factsLen))
             }
         }
     }
@@ -200,7 +183,7 @@ public final class Engine: @unchecked Sendable {
                 precondition(answers.allSatisfy { $0.outcome == 123 && $0.probability == -1 } && facts == nil && factsLen == 0, "bulk failure changed output")
                 throw error
             }
-            return try CallResult(value: answers.map(Answer.init), facts: decodeFacts(facts, factsLen))
+            return try CallResult(value: answers.map(Answer.init), facts: copyJSON(facts, factsLen))
         }
     }
     public func call(_ request: String, deadline: Int64 = -1, token: OpaquePointer? = nil) throws -> String {
@@ -211,7 +194,8 @@ public final class Engine: @unchecked Sendable {
             return String(cString: pointer)
         }
     }
-    public func recognize(_ spec: String, _ text: String) throws -> CallResult<String> {
+    public func recognize(_ spec: String, _ text: String, deadline: Int64 = -1,
+                          token: OpaquePointer? = nil) throws -> CallResult<String> {
         let h = try open()
         return try withInput(spec) { q in
             try withEvidence(text) { bytes, count in
@@ -220,18 +204,18 @@ public final class Engine: @unchecked Sendable {
                 var facts: UnsafeMutablePointer<CChar>? = nil
                 var factsLen = 0
                 defer { thinkthen_free_string(result); thinkthen_free_string(facts) }
-                let rc = thinkthen_recognize_with_facts_opts(h, q, bytes, count, -1, nil, &result, &length, &facts, &factsLen)
+                let rc = thinkthen_recognize_with_facts_opts(h, q, bytes, count, deadline, token, &result, &length, &facts, &factsLen)
                 if rc != 0 {
                     let error = failure(h, rc)
                     precondition(result == nil && length == 991 && facts == nil && factsLen == 0, "recognize failure changed output")
                     throw error
                 }
-                guard let pointer = result else { throw DoorFailure(code: 6, retryable: false, message: "missing native result") }
-                return try CallResult(value: String(decoding: UnsafeBufferPointer(start: UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self), count: length), as: UTF8.self), facts: decodeFacts(facts, factsLen))
+                return try CallResult(value: copyJSON(result, length), facts: copyJSON(facts, factsLen))
             }
         }
     }
-    public func relate(_ spec: String, _ records: [String]) throws -> CallResult<String> {
+    public func relate(_ spec: String, _ records: [String], deadline: Int64 = -1,
+                       token: OpaquePointer? = nil) throws -> CallResult<String> {
         let h = try open()
         return try withInput(spec) { q in
             let contents = records.map { Array($0.utf8) }
@@ -250,7 +234,7 @@ public final class Engine: @unchecked Sendable {
             defer { thinkthen_free_string(result); thinkthen_free_string(facts) }
             let rc = pointers.withUnsafeMutableBufferPointer { ps in
                 lengths.withUnsafeMutableBufferPointer { ls in
-                    thinkthen_relate_with_facts_opts(h, q, ps.baseAddress, ls.baseAddress, records.count, -1, nil, &result, &length, &facts, &factsLen)
+                    thinkthen_relate_with_facts_opts(h, q, ps.baseAddress, ls.baseAddress, records.count, deadline, token, &result, &length, &facts, &factsLen)
                 }
             }
             if rc != 0 {
@@ -258,8 +242,35 @@ public final class Engine: @unchecked Sendable {
                 precondition(result == nil && length == 991 && facts == nil && factsLen == 0, "relate failure changed output")
                 throw error
             }
-            guard let pointer = result else { throw DoorFailure(code: 6, retryable: false, message: "missing native result") }
-            return try CallResult(value: String(decoding: UnsafeBufferPointer(start: UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self), count: length), as: UTF8.self), facts: decodeFacts(facts, factsLen))
+            return try CallResult(value: copyJSON(result, length), facts: copyJSON(facts, factsLen))
+        }
+    }
+    // Preview a decide, choose, score or tag call without sending it. The
+    // question is bare text, or one question object when it starts with "{",
+    // as decide reads it. settings is nil or a thinkthen.settings/1 object.
+    // Returns the result schema's plan object as JSON text. The preview
+    // needs no key, reads no cache and sends nothing.
+    public func plan(_ verb: String, _ question: String, _ input: [String], settings: String? = nil) throws -> String {
+        let h = try open()
+        func object(_ text: String) throws -> String {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard (try? JSONSerialization.jsonObject(with: Data(trimmed.utf8))) is [String: Any] else {
+                throw DoorFailure(code: 1, retryable: false, message: "plan question object or settings is not a JSON object")
+            }
+            return trimmed
+        }
+        let encoder = JSONEncoder()
+        func text<T: Encodable>(_ value: T) -> String { String(decoding: try! encoder.encode(value), as: UTF8.self) }
+        let asked = question.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") ? try object(question) : text(question)
+        let request = "{\"verb\":\(text(verb)),\"question\":\(asked),\"input\":\(text(input))"
+            + (try settings.map { ",\"settings\":" + (try object($0)) } ?? "") + "}"
+        return try withInput(request) { q in
+            var out: UnsafeMutablePointer<CChar>? = nil
+            var length = 0
+            let rc = thinkthen_plan_json(h, q, &out, &length)
+            if rc != 0 { throw failure(h, rc) }
+            defer { thinkthen_free_string(out) }
+            return try copyJSON(out, length)
         }
     }
 }

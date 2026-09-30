@@ -42,5 +42,6 @@ package Thinkthen_C is
    function Relate (E : Handle; Spec : chars_ptr; Texts : System.Address; Lengths : System.Address; Count : size_t; Result : access chars_ptr; Result_Length : access size_t) return int with Import => True, Convention => C, External_Name => "thinkthen_relate";
    function Relate_Opts (E : Handle; Spec : chars_ptr; Texts : System.Address; Lengths : System.Address; Count : size_t; Deadline : Interfaces.Integer_64; T : Handle; Result : access chars_ptr; Result_Length : access size_t) return int with Import => True, Convention => C, External_Name => "thinkthen_relate_opts";
    function Relate_Facts_Opts (E : Handle; Spec : chars_ptr; Texts : System.Address; Lengths : System.Address; Count : size_t; Deadline : Interfaces.Integer_64; T : Handle; Result : access chars_ptr; Result_Length : access size_t; Facts : access chars_ptr; Facts_Length : access size_t) return int with Import => True, Convention => C, External_Name => "thinkthen_relate_with_facts_opts";
+   function Plan_JSON (E : Handle; Plan : chars_ptr; Result : access chars_ptr; Result_Length : access size_t) return int with Import => True, Convention => C, External_Name => "thinkthen_plan_json";
    procedure Free_String (Text : chars_ptr) with Import => True, Convention => C, External_Name => "thinkthen_free_string";
 end Thinkthen_C;

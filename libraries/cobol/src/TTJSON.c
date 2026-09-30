@@ -69,7 +69,7 @@ static int append(TTJSON *n,TTJSON *child,char *key,size_t key_length){ size_t l
  if(n->type==TTJSONObject){char **q=realloc(n->keys,len*sizeof(*q));if(!q)return 0;n->keys=q;size_t *lengths=realloc(n->key_lengths,len*sizeof(*lengths));if(!lengths)return 0;n->key_lengths=lengths;}
  n->children[n->count]=child;if(n->keys){n->keys[n->count]=key;n->key_lengths[n->count]=key_length;}n->count=len;return 1; }
 static TTJSON *value(Cursor *c){ ws(c);if(c->p==c->end || ++c->depth>64)return NULL;
- TTJSON *n=calloc(1,sizeof(*n));if(!n)return NULL;char ch=*c->p;
+ TTJSON *n=calloc(1,sizeof(*n));if(!n)return NULL;char ch=*c->p;n->source=c->p;
  if(ch=='{'||ch=='['){n->type=ch=='{'?TTJSONObject:TTJSONArray;c->p++;ws(c);char close=ch=='{'?'}':']';
   if(c->p<c->end&&*c->p==close){c->p++;goto done;}
   for(;;){char *key=NULL;size_t key_length=0;if(ch=='{'){key=str(c,&key_length);if(!key)goto bad;for(size_t i=0;i<n->count;i++)if(n->key_lengths[i]==key_length&&!memcmp(n->keys[i],key,key_length)){free(key);goto bad;}ws(c);if(c->p==c->end||*c->p++!=':'){free(key);goto bad;}}
@@ -84,30 +84,9 @@ static TTJSON *value(Cursor *c){ ws(c);if(c->p==c->end || ++c->depth>64)return N
   if(c->p<c->end&&(*c->p=='e'||*c->p=='E')){c->p++;if(c->p<c->end&&(*c->p=='+'||*c->p=='-'))c->p++;if(c->p==c->end||!isdigit((unsigned char)*c->p))goto bad;while(c->p<c->end&&isdigit((unsigned char)*c->p))c->p++;}
   n->text_length=(size_t)(c->p-start);n->text=strndup(start,n->text_length);if(!n->text||!isfinite(strtod(n->text,NULL)))goto bad;
  }else{const char *lit=ch=='t'?"true":ch=='f'?"false":ch=='n'?"null":NULL;if(!lit||(size_t)(c->end-c->p)<strlen(lit)||memcmp(c->p,lit,strlen(lit)))goto bad;c->p+=strlen(lit);n->type=ch=='n'?TTJSONNull:TTJSONBoolean;if(n->type==TTJSONBoolean){n->text_length=strlen(lit);n->text=strdup(lit);if(!n->text)goto bad;}}
-done:c->depth--;return n;
+done:n->source_length=(size_t)(c->p-n->source);c->depth--;return n;
 bad:tt_json_free(n);c->depth--;return NULL;
 }
 TTJSON *tt_json_parse(const char *s,size_t len){if(!s)return NULL;Cursor c={s,s+len,0};TTJSON *n=value(&c);ws(&c);if(c.p!=c.end){tt_json_free(n);return NULL;}return n;}
 const TTJSON *tt_json_get_n(const TTJSON *n,const char *key,size_t length){if(!n||n->type!=TTJSONObject||!key)return NULL;for(size_t i=0;i<n->count;i++)if(n->key_lengths[i]==length&&!memcmp(n->keys[i],key,length))return n->children[i];return NULL;}
 const TTJSON *tt_json_get(const TTJSON *n,const char *key){return key?tt_json_get_n(n,key,strlen(key)):NULL;}
-static int has(const TTJSON *n,const char *key,TTJSONType type){const TTJSON *v=tt_json_get(n,key);return v&&v->type==type;}
-static int text_is(const TTJSON *n,const char *literal){size_t len=strlen(literal);return n->text_length==len&&!memcmp(n->text,literal,len);}
-static int failure(const TTJSON *n){
- const TTJSON *f=tt_json_get(n,"failed");if(n->type!=TTJSONObject||n->count!=1||!f||f->type!=TTJSONObject||f->count!=2||!has(f,"kind",TTJSONString)||!has(f,"cause",TTJSONString))return 0;
- const TTJSON *kind=tt_json_get(f,"kind"),*cause=tt_json_get(f,"cause");
- return text_is(kind,"backend") && (text_is(cause,"missing_answer") || text_is(cause,"wrong_kind") || text_is(cause,"missing_probability") || text_is(cause,"invalid_probability") || text_is(cause,"invalid_distribution") || text_is(cause,"unexpected_probability"));
-}
-static int field(const TTJSON *n){if(n->type==TTJSONNull||n->type==TTJSONBoolean||n->type==TTJSONString||n->type==TTJSONNumber)return 1;if(failure(n))return 1;
- if(n->type!=TTJSONArray)return 0;for(size_t i=0;i<n->count;i++)if(n->children[i]->type!=TTJSONString)return 0;return 1;}
-int tt_json_answer_shape(const TTJSON *root,const char *kind){if(!root||!kind)return 0;
- if(!strcmp(kind,"annotate")){ if(root->type!=TTJSONArray && root->type!=TTJSONObject)return 0;
-  if(root->type==TTJSONArray){for(size_t i=0;i<root->count;i++)if(!tt_json_answer_shape(root->children[i],kind))return 0;return 1;}
-  for(size_t i=0;i<root->count;i++)if(!field(root->children[i]))return 0;return 1; }
- if(root->type!=TTJSONObject)return 0;
- if(!strcmp(kind,"recognize")){const TTJSON *entities=tt_json_get(root,"entities"),*relations=tt_json_get(root,"relations");if(!entities||entities->type!=TTJSONArray)return 0;
-  for(size_t i=0;i<entities->count;i++){const TTJSON *e=entities->children[i];if(e->type!=TTJSONObject||!has(e,"text",TTJSONString)||!has(e,"kind",TTJSONString)||!has(e,"start",TTJSONNumber)||!has(e,"end",TTJSONNumber)||!has(e,"length",TTJSONNumber)||!has(e,"strength",TTJSONNumber))return 0;
-   double start=strtod(tt_json_get(e,"start")->text,NULL),end=strtod(tt_json_get(e,"end")->text,NULL),len=strtod(tt_json_get(e,"length")->text,NULL);if(start<0||end<start||len!=end-start||floor(start)!=start||floor(end)!=end)return 0;}
-  if(relations){if(relations->type!=TTJSONArray)return 0;for(size_t i=0;i<relations->count;i++){const TTJSON *e=relations->children[i],*source=tt_json_get(e,"source"),*target=tt_json_get(e,"target");if(e->type!=TTJSONObject||!has(e,"relation",TTJSONString)||!source||source->type!=TTJSONObject||!target||target->type!=TTJSONObject||!has(e,"probability",TTJSONNumber))return 0;}}return 1; }
- if(!strcmp(kind,"relate")){const TTJSON *edges=tt_json_get(root,"edges");if(!edges||edges->type!=TTJSONArray)return 0;for(size_t i=0;i<edges->count;i++){const TTJSON *e=edges->children[i];if(e->type!=TTJSONObject||!has(e,"relation",TTJSONString)||!tt_json_get(e,"source")||tt_json_get(e,"source")->type!=TTJSONObject||!tt_json_get(e,"target")||tt_json_get(e,"target")->type!=TTJSONObject||!has(tt_json_get(e,"source"),"name",TTJSONString)||!has(tt_json_get(e,"source"),"kind",TTJSONString)||!has(tt_json_get(e,"target"),"name",TTJSONString)||!has(tt_json_get(e,"target"),"kind",TTJSONString)||!has(e,"probability",TTJSONNumber))return 0;}return 1;}
- return 0;
-}

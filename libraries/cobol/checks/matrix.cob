@@ -109,7 +109,7 @@ procedure division.
     move 111 to outcome
     move "interior-nul-guard" to operation-name
     call "TT-DECIDE" using engine question-text q-len text-input text-len
-       answer-row facts-row failure-row
+       no-deadline answer-row facts-row failure-row
     if failure-code not = 1 or outcome not = 111
        perform fail-now
     end-if
@@ -305,12 +305,12 @@ procedure division.
 
 typed-case.
     call "TT-DECIDE" using engine question-text q-len text-input text-len
-       answer-row facts-row failure-row
+       no-deadline answer-row facts-row failure-row
     if failure-code not = 0 or facts-length = 0
        or facts-json = spaces perform fail-now end-if.
 expect-usage-typed.
     call "TT-DECIDE" using engine question-text q-len text-input text-len
-       answer-row facts-row failure-row
+       no-deadline answer-row facts-row failure-row
     if failure-code not = 1 or failure-retryable not = 0
        perform fail-now end-if.
 json-case.

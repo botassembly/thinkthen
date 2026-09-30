@@ -20,9 +20,42 @@ shared.check_schema(corpus["cases"], checks)
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
 backend, port = shared.start_backend()
 run = HERE / "zig-out/bin/type-case"
+native = str(HERE.parent / "target/native/lib")
 count = 0
+FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
+                                   "severity": "answered", "topics": "answered"}]}
+
+
+def door(args, env, name):
+    result = subprocess.run([str(run), *args], env=env, capture_output=True, text=True, timeout=40)
+    assert result.returncode == 0 and not result.stderr, (name, result.returncode, result.stderr)
+    return json.loads(result.stdout)
+
+
+def sent():
+    backend.stdin.write("count\n")
+    backend.stdin.flush()
+    return int(backend.stdout.readline())
+
+
 try:
     with tempfile.TemporaryDirectory(prefix="thinkthen-zig-types-") as cache:
+        # Ticket 0291, before any case sends: P1 and one invalid plan run with
+        # no key through the public plan; the zero budgets and the zero cap
+        # refuse; the backend has read no request.
+        env = {"PATH": os.environ["PATH"], "HOME": cache, "XDG_CACHE_HOME": cache, "LD_LIBRARY_PATH": native,
+               "THINKTHEN_BASE_URL": f"http://127.0.0.1:{port}/generic/v1", "THINKTHEN_CACHE": str(Path(cache) / "plan")}
+        p1 = next(case for case in corpus["cases"] if case["name"] == "plan-p1")
+        given = p1["plan_input"]
+        plan = ["plan", given["verb"], given["question"]]
+        actual = door([*plan, json.dumps(given["settings"]), *given["input"]], env, "plan-p1")
+        assert actual == p1["response"] and checks["plan"].is_valid(actual), actual
+        invalid = door([*plan, json.dumps({"batch": 0}), *given["input"]], env, "plan-batch-0")
+        assert invalid["failed"] == {"kind": "usage", "code": 1}, invalid
+        assert door(["helper"], env, "helper") == {"helper": "pass"}
+        env["THINKTHEN_API_KEY"] = "sk-type-contract-loopback"
+        assert door(["limits"], env, "limits") == {"limits": "pass"}
+        assert sent() == 0, "a plan or a refused call sent a request"
         for index, case in enumerate(corpus["cases"]):
             if "request" not in case or case.get("schema_only", False):
                 continue
@@ -32,13 +65,15 @@ try:
             env = os.environ.copy()
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/{'generic' if route == 'generic' else 'case/' + route}/v1",
                        THINKTHEN_API_KEY="sk-type-contract-loopback", THINKTHEN_CACHE=str(Path(cache) / str(index)),
-                       LD_LIBRARY_PATH=str(HERE.parent / "target/native/lib"))
+                       LD_LIBRARY_PATH=native)
             request = json.dumps(case["request"], ensure_ascii=False, separators=(",", ":"))
-            result = subprocess.run([str(run), request], env=env, capture_output=True, text=True, timeout=40)
-            assert result.returncode == 0, (case["name"], result.stderr)
-            actual = json.loads(result.stdout)
+            actual = door([request], env, case["name"])
+            if case["name"] in FIELDS:
+                # The shared null and failed annotate members, read through readField.
+                env["THINKTHEN_CACHE"] = str(Path(cache) / f"{index}-fields")
+                assert door(["fields", request], env, case["name"]) == FIELDS[case["name"]], case["name"]
             if "expected_error" in case:
-                assert actual["error"] == "usage", (case["name"], actual)
+                assert actual["failed"] == {"kind": "usage", "code": 1}, (case["name"], actual)
                 count += 1
                 continue
             if case["definition"] != "usage":
@@ -60,4 +95,4 @@ try:
             count += 1
 finally:
     shared.stop_backend(backend)
-print(f"Zig J1 public binding: {len(corpus['cases'])} schema cases, {count} runtime cases passed")
+print(f"Zig J1 public binding: {len(corpus['cases'])} schema cases, {count} runtime cases, plan P1, limits and annotate fields passed")

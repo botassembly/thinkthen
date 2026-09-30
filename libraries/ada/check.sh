@@ -11,8 +11,11 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   for tool in tar cmp ldd; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
   [ -f "$THINKTHEN_ARTIFACT" ] && [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Ada installed: wrapper or C archive missing' >&2; exit 1; }
 fi
-if [ "${TT_ADA_LOCKED:-0}" != 1 ]; then
-  TT_ADA_LOCKED=1 exec flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" env TT_ADA_LOCKED=1 "$0" "$@"
+# A caller that already holds this lock, such as the surfaces rung, exports
+# THINKTHEN_HEAVY_LOCK_HELD; waiting on it again would only time out.
+lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}
+if [ "${TT_ADA_LOCKED:-0}" != 1 ] && [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
+  TT_ADA_LOCKED=1 exec flock -w 180 -E 75 -o "$lock" env TT_ADA_LOCKED=1 "$0" "$@"
 fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$REPO/sdlc/scripts/scratch.sh"

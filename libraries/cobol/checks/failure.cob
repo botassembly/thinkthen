@@ -19,21 +19,21 @@ procedure division.
     move "failure-two" to evidence-text
     move 11 to evidence-length
     call "TT-DECIDE" using engine question-text question-length
-       evidence-text evidence-length tt-answer tt-facts tt-failure
+       evidence-text evidence-length tt-deadline-ms tt-answer tt-facts tt-failure
     if not failure-backend or tt-failure-facts-length = 0
        or tt-failure-message = spaces perform fail-now end-if
     move tt-failure-facts-json to saved-facts
     move tt-failure-facts-length to saved-length
     move tt-failure-message to saved-message
     call "TT-DECIDE" using engine question-text question-length
-       evidence-text evidence-length tt-answer tt-facts tt-failure
+       evidence-text evidence-length tt-deadline-ms tt-answer tt-facts tt-failure
     if not failure-backend or tt-failure-facts-length = 0
        or saved-facts(1:saved-length) = spaces
        or saved-message = spaces perform fail-now end-if
     move "first" to evidence-text
     move 5 to evidence-length
     call "TT-DECIDE" using engine question-text question-length
-       evidence-text evidence-length tt-answer tt-facts tt-failure
+       evidence-text evidence-length tt-deadline-ms tt-answer tt-facts tt-failure
     if tt-failure-code not = 0 or tt-failure-facts-length not = 0
        or not outcome-yes or tt-probability not = 0.9
        or tt-facts-length = 0 or tt-facts-json = spaces

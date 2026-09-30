@@ -11,8 +11,11 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   for tool in tar cmp ldd; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
   [ -f "$THINKTHEN_ARTIFACT" ] && [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'COBOL installed: wrapper or C archive missing' >&2; exit 1; }
 fi
-if [ "${TT_COBOL_LOCKED:-0}" != 1 ]; then
-  TT_COBOL_LOCKED=1 exec flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" env TT_COBOL_LOCKED=1 "$0" "$@"
+# A caller that already holds this lock, such as the surfaces rung, exports
+# THINKTHEN_HEAVY_LOCK_HELD; waiting on it again would only time out.
+lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}
+if [ "${TT_COBOL_LOCKED:-0}" != 1 ] && [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
+  TT_COBOL_LOCKED=1 exec flock -w 180 -E 75 -o "$lock" env TT_COBOL_LOCKED=1 "$0" "$@"
 fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$REPO/sdlc/scripts/scratch.sh"
@@ -68,6 +71,7 @@ cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/direct" "$ROOT/example
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/settings" "$ROOT/examples/settings.cob" "$ROOT/src/tt_engine.cob" "$ROOT/src/tt_error.cob" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/types" "$ROOT/examples/types.cob" "$ROOT/src/tt_validate.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/door" "$ROOT/checks/door.cob" "$ROOT/src/tt_engine.cob" "$ROOT/src/tt_call.cob" "$ROOT/src/tt_error.cob" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c
+cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/proofs" "$ROOT/checks/proofs.cob" "$ROOT/src/tt_engine.cob" "$ROOT/src/tt_call.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_plan.cob" "$ROOT/src/tt_validate.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/failure" "$ROOT/checks/failure.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/matrix" "$ROOT/checks/matrix.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
 python3 "$ROOT/checks/public_types.py"
