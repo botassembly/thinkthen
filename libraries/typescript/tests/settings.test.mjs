@@ -2,7 +2,7 @@
 // starts from the environment, and each given option overrides one setting.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, readdirSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { ask, child, sleep, startBackend } from './backend.mjs';
@@ -25,7 +25,10 @@ test('an engine starts from the environment: THINKTHEN_CACHE holds its answers',
   assert.equal(await backend.count(), 1);
   assert.equal((await ask(backend, `return new tt.Engine({ cache: false }).usage();`)).value.retries, 0);
   assert.equal(files(folderA).length, 1, 'the answer lands in folder A');
-  assert.deepEqual(readdirSync(scratch), [], 'nothing lands under the scratch cache home');
+  // ADR 0113: the scratch cache home holds only the count-only usage totals.
+  const written = readdirSync(scratch, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => join(entry.parentPath, entry.name));
+  assert.ok(written.length > 0 && written.every((path) => path.split('/').includes('thinkthen-usage')), `only usage totals land under the scratch cache home: ${written}`);
+  assert.ok(!written.some((path) => readFileSync(path, 'utf8').includes('Refund')), 'the usage totals hold no question text');
 });
 
 test('baseUrl and a named cache override their setting', async (t) => {

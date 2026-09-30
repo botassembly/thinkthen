@@ -15,14 +15,15 @@ class TestInterruptBatch < Minitest::Test
   RUBY
 
   # After release: the worker has ended, nothing more was sent, and the
-  # next call answers at once.
+  # next call answers at once. ADR 0113: the first send starts the engine's
+  # one usage writer, which lives as long as the engine.
   def after_release(backend, child)
     sleep 0.3
     assert_equal 8, backend.count, "the stopped batch sent past its eight held requests"
     backend.release
     child.tell
     now_threads, before = child.hear
-    assert_equal before, now_threads, "the detached worker did not end within 2 s"
+    assert_equal before + 1, now_threads, "the detached worker did not end within 2 s"
     assert_equal 8, backend.count, "the released worker sent again"
     child.tell
     assert_operator child.hear, :<, 1000, "the following decide waited on held throttle slots"
@@ -33,7 +34,7 @@ class TestInterruptBatch < Minitest::Test
   def follow
     <<~RUBY
       hear
-      say [settled(before), before]
+      say [settled(before + 1), before]
       hear
       start = now
       engine.decide("Is it urgent?", "after the batch")
