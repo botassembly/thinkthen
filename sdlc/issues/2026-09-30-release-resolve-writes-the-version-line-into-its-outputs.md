@@ -10,7 +10,7 @@ Keeping it stops every rehearsal and release at its first job, so no runner buil
 
 ## The problem
 
-The `resolve` job of `.github/workflows/release.yml` runs `sdlc/scripts/release-workflow resolve "$MODE" "$REF" >> "$GITHUB_OUTPUT"`. The `resolve` branch of `release-workflow` (line 283) calls `sdlc/scripts/versions` without a redirect. On success, `versions` prints `versions: 59 places read 0.0.1` to standard output (line 223 of `versions`). That line lands in `$GITHUB_OUTPUT`. GitHub reads each output line as `name=value` and refuses it.
+The `resolve` job of `.github/workflows/release.yml` runs `sdlc/scripts/release-workflow resolve "$MODE" "$REF" >> "$GITHUB_OUTPUT"`. The `resolve` branch of `release-workflow` (line 283) calls `sdlc/scripts/versions` without a redirect. On success, `versions` prints `versions: 59 places read 0.0.1` to standard output (built at line 223 of `versions` and printed at line 331). That line lands in `$GITHUB_OUTPUT`. GitHub reads each output line as `name=value` and refuses it.
 
 The run's log shows:
 
