@@ -2,9 +2,10 @@
 //! Polars on 2026-09-21, applied to Rust.
 //!
 //! The throttle is process-wide (0077), so the routine test reruns itself
-//! alone in a fresh process, and the stress test runs alone by name. Each run gets its own backend, cache folder, and
-//! engine at throttle 2. Each backend is the one the caller's `base_url`
-//! names, so a door that built its own engine would count nothing here.
+//! alone in a fresh process, and the stress test runs alone by name. Each
+//! run gets its own backend, cache folder, and engine at throttle 2. Each
+//! backend is the one the caller's `base_url` names, so a door that built
+//! its own engine would count nothing here.
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 

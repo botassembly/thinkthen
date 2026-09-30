@@ -264,6 +264,10 @@ fn a_held_response_has_one_visible_in_flight_attempt() {
         assert_eq!(counts.snapshot().retries, 0);
         assert_eq!(server.finish(), (1, false));
         let _finished = sending.join().expect("sending thread");
+        // `finish` no longer waits for a stray connection, so the counts
+        // prove the released call sent no retry.
+        assert_eq!(counts.snapshot().requests_sent, 1);
+        assert_eq!(counts.snapshot().retries, 0);
     });
 }
 
