@@ -157,7 +157,7 @@ fn lazy_matches_eager_values_bodies_and_shared_tally() {
                 r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Please refund this\". Does this ask for a refund?"}}}"#.as_bytes().to_vec(),
             ];
             expected.sort();
-            assert_eq!(actual, expected, "batch one gives exact quoted singleton bodies");
+            assert_eq!(actual, expected, "batch one gives quoted singleton bodies");
         } else {
             assert_eq!(requests.len(), 1);
             assert_eq!(
