@@ -19,11 +19,11 @@ CANONICAL = (
     '{"verb":"tag","text":"Which topics?","labels":{"billing":"Charges","shipping":null},"threshold":0.5}',
 )
 EXPECTED = (
-    '{"state":"charged twice","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which team?","criteria":{"billing":"Handles charges","shipping":null}}}}',
-    '{"state":"strong claim","model":"jev-1.13.0","questions":{"q1":{"type":"score","instructions":"How strong?","criteria":[{},"Strong evidence"]}}}',
-    json.dumps({"state": "charged twice", "model": "jev-1.13.0", "questions": {
-        "q1": {"type": "noul", "instructions": 'Which topics?\n\nDetermine whether the label "billing" applies to this item.', "criteria": {"true": "Charges"}},
-        "q2": {"type": "noul", "instructions": 'Which topics?\n\nDetermine whether the label "shipping" applies to this item.'},
+    '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \\"charged twice\\". Which team?","criteria":{"billing":"Handles charges","shipping":null}}}}',
+    '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"score","instructions":"The text is \\"strong claim\\". How strong?","criteria":[{},"Strong evidence"]}}}',
+    json.dumps({"state": "Each question quotes the text it asks about.", "model": "jev-1.13.0", "questions": {
+        "q1": {"type": "noul", "instructions": 'The text is "charged twice". Which topics?\n\nDetermine whether the label "billing" applies to this item.', "criteria": {"true": "Charges"}},
+        "q2": {"type": "noul", "instructions": 'The text is "charged twice". Which topics?\n\nDetermine whether the label "shipping" applies to this item.'},
     }}, separators=(",", ":")),
 )
 

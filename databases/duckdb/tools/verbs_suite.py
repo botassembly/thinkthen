@@ -329,7 +329,7 @@ def b13c_try_details_members():
         expect(len(backend.bodies), 2, "one packed and one independent attempt")
         expected = [
             b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"},"q3":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}',
-            b'{"state":"delta","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
+            b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
         ]
         expect(set(backend.bodies), set(expected), "full first-seen request bodies")
         digests = [hashlib.sha256(b"systemone\n" + backend.base.encode() + b"/systemone\n" + body).hexdigest()
@@ -407,8 +407,8 @@ def b13c_context_and_batch_one_wire_identity():
         expect(len(backend.bodies), 3, "one packed and two bare requests")
         expected = {
             b'{"state":"shared","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}',
-            b'{"state":"gamma","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
-            b'{"state":"delta","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
+            b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}',
+            b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
         }
         expect(set(backend.bodies), expected, "context and batch-one full request bytes")
         details = [json.loads(value) for value in column(got[2])]

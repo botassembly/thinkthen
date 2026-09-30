@@ -92,7 +92,7 @@ def keyed_decide_preserves_key_body_and_one_send():
         expect(rows(got[0]), [["7", True, 0.9]], "keyed row")
         expect(backend.count(), 1, "one keyed request")
         expect(backend.capture(), [
-            '{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}'
+            '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"Refund me please.\\". asks for a refund"}}}'
         ], "independent one-record body")
 
 
