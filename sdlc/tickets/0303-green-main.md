@@ -1,6 +1,6 @@
 # 0303: Green main
 
-Status: built, awaiting code review. Lane claude-1. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
+Status: landed. Lane claude-1. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
 
 ## Outcome
 
