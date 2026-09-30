@@ -2,7 +2,7 @@
 
 use crate::core::adapters::built_in;
 use crate::core::recording::{Digest, Exchange as Recorded};
-use crate::core::{Backend, BackendProfile, PairPlan, Plan, Reply};
+use crate::core::{Backend, BackendProfile, Plan, Reply};
 
 use crate::engine::error::Error;
 
@@ -15,12 +15,6 @@ pub(crate) struct PreparedRequest {
 pub(crate) struct PreparedChunk {
     pub(crate) plan: Plan,
     pub(crate) request: PreparedRequest,
-}
-
-#[cfg(test)]
-thread_local! {
-    /// How many plans this thread has prepared, so a test can catch a second preparation.
-    pub(crate) static PREPARATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 /// Every chunk prepared and checked before execution starts.
@@ -37,8 +31,6 @@ impl PreparedRequests {
         profile: Option<&BackendProfile>,
         ceiling: Option<usize>,
     ) -> Result<Self, Error> {
-        #[cfg(test)]
-        PREPARATIONS.with(|count| count.set(count.get() + 1));
         let mut chunks = Vec::new();
         let mut consumed = 0;
         while consumed < plan.questions().len() {
@@ -56,44 +48,6 @@ impl PreparedRequests {
     pub(crate) fn into_chunks(self) -> Vec<PreparedChunk> {
         self.chunks
     }
-}
-
-/// The smaller request-byte limit a relation request splits under.
-pub(crate) fn relation_ceiling(
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-) -> Option<usize> {
-    Some(
-        profile
-            .and_then(|profile| profile.max_request_bytes)
-            .map_or(backend.ceiling(), |limit| limit.min(backend.ceiling())),
-    )
-}
-
-/// Prepare the ordered pair questions under the shared 400-question bound and
-/// the request-size and backend-profile limits.
-pub(crate) fn pair_chunks(
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-    planned: &PairPlan,
-) -> Result<Vec<PreparedChunk>, Error> {
-    let most = profile
-        .and_then(|profile| profile.max_questions)
-        .map_or(400, |limit| limit.min(400));
-    let ceiling = relation_ceiling(backend, profile);
-    let mut chunks = Vec::new();
-    for questions in planned.questions.chunks(most) {
-        let plan = Plan::new(
-            planned.evidence.clone(),
-            backend.model().clone(),
-            questions.to_vec(),
-        )
-        .map_err(|_| Error::Defect("relation planned no questions"))?;
-        chunks.extend(
-            PreparedRequests::with_profile(backend, &plan, profile, ceiling)?.into_chunks(),
-        );
-    }
-    Ok(chunks)
 }
 
 type Candidate = (Plan, Vec<u8>);
@@ -156,6 +110,7 @@ impl PreparedRequest {
         Self::with_profile(backend, plan, None)
     }
 
+    #[cfg(test)]
     pub(crate) fn with_profile(
         backend: &Backend,
         plan: &Plan,

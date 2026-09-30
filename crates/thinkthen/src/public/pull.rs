@@ -23,7 +23,6 @@ use super::batch::{Batch, Source};
 const TICK: Duration = Duration::from_millis(50);
 
 pub(crate) type Row<A> = Result<<A as Asker>::Row, Failed<<A as Asker>::Error>>;
-type PortOf<A> = Port<<A as Asker>::Input, <A as Asker>::Error>;
 
 enum Event<A: Asker> {
     Port(Port<A::Input, A::Error>),
@@ -302,37 +301,6 @@ impl<A: Asker, I: Iterator, T> Drop for Pull<'_, A, I, T> {
     }
 }
 
-/// A host whose records are all in hand: each ask sends the next at once,
-/// and each row goes to `take` on the coordinator's thread.
-pub(crate) struct Eager<A: Asker, F> {
-    port: Port<A::Input, A::Error>,
-    inputs: std::vec::IntoIter<A::Input>,
-    take: F,
-}
-
-impl<A: Asker, F: FnMut(Row<A>) -> Flow> Host<A> for Eager<A, F> {
-    fn ask(&mut self) -> bool {
-        let input = self.inputs.next().map_or(Input::End, Input::Item);
-        self.port.send(input).is_ok()
-    }
-
-    fn row(&mut self, _place: usize, row: Row<A>) -> Flow {
-        (self.take)(row)
-    }
-}
-
-/// Start an eager host over `inputs`.
-pub(crate) fn eager<A: Asker, F: FnMut(Row<A>) -> Flow>(
-    inputs: Vec<A::Input>,
-    take: F,
-) -> impl FnOnce(PortOf<A>) -> Eager<A, F> {
-    move |port| Eager {
-        port,
-        inputs: inputs.into_iter(),
-        take,
-    }
-}
-
 /// The packing one public call asks for.
 pub(crate) fn packing(setting: crate::core::Setting, context: bool, continues: bool) -> Packing {
     Packing {
@@ -340,6 +308,8 @@ pub(crate) fn packing(setting: crate::core::Setting, context: bool, continues: b
             crate::core::Setting::Records(most) => Some(most.get()),
             crate::core::Setting::Max => None,
         },
+        questions: None,
+        sized: true,
         context,
         detailed: false,
         continues,

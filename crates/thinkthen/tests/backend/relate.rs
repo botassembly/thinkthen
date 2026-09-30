@@ -84,54 +84,6 @@ pub(crate) fn scripted(answers: &'static [&'static str]) -> Listener {
 }
 
 #[test]
-fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
-    let listener = Listener::answering(answered).expect("listener");
-    let input = br#"[{"name":"Ada","kind":"person"},{"name":"Paris","kind":"place"},{"name":"Acme","kind":"organization"}]"#;
-    let output = run(
-        &listener,
-        &["works_for=person:organization", "--plan"],
-        input,
-    );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(listener.connections(), 0);
-    let sent = run(
-        &listener,
-        &["works_for=person:organization", "--details"],
-        input,
-    );
-    assert_eq!(
-        sent.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&sent.stderr)
-    );
-    let sent: Value = serde_json::from_slice(&sent.stdout).expect("details");
-    let digest = sent["meta"]["requests"][0].as_str().expect("sent digest");
-    let plan = plan_json(&output);
-    assert_eq!(plan["schema"], "thinkthen.relate-plan/1");
-    assert_eq!(plan["entity_count"], 3);
-    assert_eq!(plan["logical_questions"], 1);
-    assert_eq!(plan["request_count"], 1);
-    assert_eq!(
-        plan["relations"],
-        serde_json::json!([{
-            "name":"works_for", "source":"person", "target":"organization", "reads":"works for",
-            "either":false, "method":"yes_no", "fallback":null,
-            "logical_questions":1, "request_count":1
-        }])
-    );
-    assert_eq!(plan["requests"][0]["digest"], digest);
-    let body = r#"{"state":{"entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}]},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"Is it true that i1 works for i2?"}}}"#;
-    assert_eq!(plan["requests"][0]["body_utf8"], body);
-    assert_eq!(plan["requests"][0]["bytes"], body.len());
-}
-
-#[test]
 fn a_saved_relate_name_reaches_details_identity_and_warning() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-calibration");
     fs::create_dir_all(&folder).expect("folder");

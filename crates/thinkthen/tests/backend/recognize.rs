@@ -378,9 +378,17 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     assert_eq!(listener.connections(), 0);
     let result = json(&run(&listener, &[&KINDS[..], &["--details"]].concat(), ADA));
     let planned = &plan["requests"][0];
-    assert_eq!(planned["digest"], result["meta"]["requests"][0]);
     let sent = listener.requests();
     assert_eq!(sent.len(), 2);
+    assert_eq!(
+        planned["digest"],
+        crate::support::digest(&url, &sent[0].body)
+    );
+    let keys: Vec<String> = sent
+        .iter()
+        .flat_map(|request| crate::support::keys(&url, &request.body))
+        .collect();
+    assert_eq!(result["meta"]["requests"], Value::from(keys));
     assert_eq!(
         planned["body_utf8"],
         Value::from(String::from_utf8_lossy(&sent[0].body))

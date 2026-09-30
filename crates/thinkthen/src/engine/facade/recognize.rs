@@ -3,7 +3,8 @@
 
 use serde::Serialize;
 
-use super::{Answered, Engine};
+use super::each::Models;
+use super::{Answered, Asks, Bound, Engine, Request};
 use crate::core::relation::count_pairs;
 use crate::core::{
     Answer, AnswerOutcome, Asked, Backend, BackendProfile, Evidence, Lead, ModelName, NameOdds,
@@ -13,7 +14,6 @@ use crate::core::{
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::prepared_request::{PreparedChunk, PreparedRequests, pair_chunks};
 
 /// The default limit on one text's UTF-8 bytes, which caps spending.
 pub(crate) const MAX_TEXT_BYTES: usize = 600_000;
@@ -70,6 +70,7 @@ impl Place {
 #[derive(Debug, Default)]
 pub(crate) struct Aggregate {
     pub(crate) model: Option<ModelName>,
+    models: Models,
     pub(crate) usage: Option<Usage>,
     pub(crate) live: bool,
     pub(crate) requests_sent: u64,
@@ -108,16 +109,17 @@ impl Engine {
         self.recognize_observed(spec, text, limit, cancel, |_, _, _| Ok(()))
     }
 
-    /// The same call with each actual answered request plan handed to its caller.
+    /// The same call with each answered question handed to `observe` with
+    /// its stage and logical question.
     pub(crate) fn recognize_observed(
         &self,
         spec: &RecognizeSpec,
         text: &str,
         limit: usize,
         cancel: &Cancel,
-        mut observe: impl FnMut(&[&'static str], &Plan, &Answered) -> Result<(), Error>,
+        mut observe: impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
     ) -> Result<Recognition, Error> {
-        let (pieces, prepared) = step_one(&self.backend, self.profile.as_ref(), spec, text, limit)?;
+        let (pieces, asks, _) = step_one(&self.backend, self.profile.as_ref(), spec, text, limit)?;
         let mut meta = Aggregate::default();
         let mut details = Probabilities::default();
         if pieces.is_empty() {
@@ -130,14 +132,14 @@ impl Engine {
                 meta,
             });
         }
-        let stages = vec![
-            "boundary";
-            prepared
-                .iter()
-                .map(|chunk| chunk.plan.questions().len())
-                .sum()
-        ];
-        let answers = self.execute(prepared, stages, &mut meta, cancel, &mut observe)?;
+        let stages = vec!["boundary"; asks.len()];
+        let answers = self.execute(
+            &asks,
+            Bound::WHOLE,
+            &stages,
+            (&mut meta, &mut observe),
+            cancel,
+        )?;
         let rows = answers.iter().map(tag_row).collect::<Result<Vec<_>, _>>()?;
         details.pieces = pieces
             .iter()
@@ -145,30 +147,14 @@ impl Engine {
             .map(|(piece, row)| PieceOdds::new(piece, row))
             .collect();
         let stretches = found_names(&rows);
-        let mut prepared = Vec::new();
-        let mut asked: Vec<Asked> = Vec::new();
-        let mut stages = Vec::new();
-        for group in name_groups(&stretches) {
-            let (questions, held) =
-                step_two_questions(text, &pieces, &stretches, group.clone(), &spec.kinds)
-                    .map_err(|_| Error::Defect("a step-two question has invalid labels"))?;
-            stages.extend(asked_stages(&held));
-            asked.extend(held);
-            let first = stretches.get(group.start).map_or(0, |name| name.0);
-            let last = stretches
-                .get(group.end.saturating_sub(1))
-                .map_or(first, |name| name.1);
-            if !questions.is_empty() {
-                prepared.extend(prepare(
-                    &self.backend,
-                    self.profile.as_ref(),
-                    (text, &pieces),
-                    (first, last),
-                    questions,
-                )?);
-            }
-        }
-        let answers = self.execute(prepared, stages, &mut meta, cancel, &mut observe)?;
+        let (asks, asked, stages) = step_two(&self.backend, (text, &pieces), &stretches, spec)?;
+        let answers = self.execute(
+            &asks,
+            Bound::WHOLE,
+            &stages,
+            (&mut meta, &mut observe),
+            cancel,
+        )?;
         let mut answers = answers.iter();
         let mut read = || answers.next().ok_or(Error::RecognizeLogical).and_then(odds);
         let mut settled = Vec::with_capacity(stretches.len());
@@ -194,6 +180,7 @@ impl Engine {
             (&mut meta, &mut details, &mut observe),
             cancel,
         )?;
+        meta.model = meta.models.model().cloned();
         Ok(Recognition {
             value: Recognized {
                 entities,
@@ -213,7 +200,7 @@ impl Engine {
         held: (
             &mut Aggregate,
             &mut Probabilities,
-            &mut impl FnMut(&[&'static str], &Plan, &Answered) -> Result<(), Error>,
+            &mut impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
         ),
         cancel: &Cancel,
     ) -> Result<Option<Vec<RelationEdge<RecognizedName>>>, Error> {
@@ -245,16 +232,18 @@ impl Engine {
         else {
             return Ok(Some(Vec::new()));
         };
-        let prepared = pair_chunks(&self.backend, self.profile.as_ref(), &planned)?;
+        let bound = Bound::pairs(self.profile.as_ref());
+        let mut asks = Asks::default();
+        let plan = Plan::new(
+            planned.evidence.clone(),
+            self.backend.model().clone(),
+            planned.questions.clone(),
+        )
+        .map_err(|_| Error::Defect("relation planned no questions"))?;
+        asks.add(&self.backend, &plan)?;
         let (meta, details, observe) = held;
-        let stages = vec![
-            "relation";
-            prepared
-                .iter()
-                .map(|chunk| chunk.plan.questions().len())
-                .sum()
-        ];
-        let answers = self.execute(prepared, stages, meta, cancel, observe)?;
+        let stages = vec!["relation"; asks.len()];
+        let answers = self.execute(&asks, bound, &stages, (meta, observe), cancel)?;
         let cut = spec.relation_threshold.cut_value().unwrap_or(0.5);
         for (pair, answer) in planned.pairs.iter().zip(&answers) {
             let (Some(rule), Some(source), Some(target)) = (
@@ -280,24 +269,28 @@ impl Engine {
         )))
     }
 
-    /// Send requests prepared earlier; one failed question fails the text.
+    /// Ask one step's questions; one failed question fails the text.
     fn execute(
         &self,
-        prepared: Vec<PreparedChunk>,
-        stages: Vec<&'static str>,
-        meta: &mut Aggregate,
+        asks: &Asks,
+        bound: Bound,
+        stages: &[&'static str],
+        (meta, observe): (
+            &mut Aggregate,
+            &mut impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
+        ),
         cancel: &Cancel,
-        observe: &mut impl FnMut(&[&'static str], &Plan, &Answered) -> Result<(), Error>,
     ) -> Result<Vec<Answer>, Error> {
-        let mut answers = Vec::new();
-        let mut stages = stages.into_iter();
-        self.ask_chunks_with_plan(prepared, cancel, |plan, answered| {
-            let chunk_stages = plan
-                .questions()
-                .iter()
-                .map(|_| stages.next().ok_or(Error::RecognizeLogical))
-                .collect::<Result<Vec<_>, _>>()?;
-            observe(&chunk_stages, plan, &answered)?;
+        if stages.len() != asks.len() {
+            return Err(Error::RecognizeLogical);
+        }
+        let mut answers = Vec::with_capacity(asks.len());
+        self.ask_each(asks, bound, cancel, |place, answered| {
+            let (Some(stage), Some(question)) = (stages.get(place), asks.questions().get(place))
+            else {
+                return Err(Error::RecognizeLogical);
+            };
+            observe(stage, question, &answered)?;
             for outcome in answered.reply.outcomes() {
                 match outcome {
                     AnswerOutcome::Answered(answer) => answers.push(answer.clone()),
@@ -306,18 +299,16 @@ impl Engine {
             }
             meta.add_answered(&answered, self.backend.model())
         })?;
-        if stages.next().is_some() {
-            return Err(Error::RecognizeLogical);
-        }
         Ok(answers)
     }
 }
 
-/// A text's pieces and its prepared step-1 requests.
-pub(crate) type StepOne = (Vec<Piece>, Vec<PreparedChunk>);
+/// A text's pieces, its step-1 questions, and the requests they make with
+/// nothing cached.
+pub(crate) type StepOne = (Vec<Piece>, Asks, Vec<Request>);
 
-/// Refuse a text over `limit` bytes, then split it into pieces and prepare
-/// every step-1 request. A kind question the profile refuses stops the text
+/// Refuse a text over `limit` bytes, then split it into pieces and pack
+/// every step-1 question. A kind question the profile refuses stops the text
 /// here, before any request.
 pub(crate) fn step_one(
     backend: &Backend,
@@ -334,46 +325,82 @@ pub(crate) fn step_one(
     }
     let pieces = pieces(text);
     if pieces.is_empty() {
-        return Ok((pieces, Vec::new()));
+        return Ok((pieces, Asks::default(), Vec::new()));
     }
     let kinds: Vec<&str> = spec.kinds.iter().map(|(kind, _)| kind.as_str()).collect();
     if !kinds.is_empty() {
         let probe =
             kind_question(text, &pieces, (0, 0), &spec.kinds).map_err(|_| Error::RecognizeKinds)?;
-        prepare(backend, profile, (text, &pieces), (0, 0), vec![probe])?;
+        let mut alone = Asks::default();
+        alone.add(
+            backend,
+            &window_plan(backend, (text, &pieces), (0, 0), vec![probe])?,
+        )?;
+        alone.requests(backend, profile, Bound::WHOLE)?;
     }
-    let mut prepared = Vec::new();
+    let mut asks = Asks::default();
     for group in step_one_groups(pieces.len()) {
         let last = group.end.saturating_sub(1);
         let questions = step_one_questions(text, &pieces, group.clone(), &kinds)
             .map_err(|_| Error::Defect("fixed boundary questions are invalid"))?;
-        prepared.extend(prepare(
+        asks.add(
             backend,
-            profile,
-            (text, &pieces),
-            (group.start, last),
-            questions,
-        )?);
+            &window_plan(backend, (text, &pieces), (group.start, last), questions)?,
+        )?;
     }
-    Ok((pieces, prepared))
+    let requests = asks.requests(backend, profile, Bound::WHOLE)?;
+    Ok((pieces, asks, requests))
 }
 
-/// Prepare one step-1 or step-2 request over the window of pieces `first` to `last`.
-fn prepare(
+/// Step 2's questions, what each name asked, and each question's stage.
+type StepTwo = (Asks, Vec<Asked>, Vec<&'static str>);
+
+/// Step 2's questions over the names step 1 found: each name group's kind
+/// and edge questions in one window, beside what each name asked and each
+/// question's stage.
+fn step_two(
     backend: &Backend,
-    profile: Option<&BackendProfile>,
+    (text, pieces): (&str, &[Piece]),
+    stretches: &[(usize, usize)],
+    spec: &RecognizeSpec,
+) -> Result<StepTwo, Error> {
+    let mut asks = Asks::default();
+    let mut asked: Vec<Asked> = Vec::new();
+    let mut stages = Vec::new();
+    for group in name_groups(stretches) {
+        let (questions, held) =
+            step_two_questions(text, pieces, stretches, group.clone(), &spec.kinds)
+                .map_err(|_| Error::Defect("a step-two question has invalid labels"))?;
+        stages.extend(asked_stages(&held));
+        asked.extend(held);
+        let first = stretches.get(group.start).map_or(0, |name| name.0);
+        let last = stretches
+            .get(group.end.saturating_sub(1))
+            .map_or(first, |name| name.1);
+        if !questions.is_empty() {
+            asks.add(
+                backend,
+                &window_plan(backend, (text, pieces), (first, last), questions)?,
+            )?;
+        }
+    }
+    Ok((asks, asked, stages))
+}
+
+/// The plan of one step-1 or step-2 window over the pieces `first` to `last`.
+fn window_plan(
+    backend: &Backend,
     source: (&str, &[Piece]),
     stretch: (usize, usize),
     questions: Vec<Question>,
-) -> Result<Vec<PreparedChunk>, Error> {
+) -> Result<Plan, Error> {
     let (text, pieces) = source;
     let evidence = text
         .get(window(pieces, stretch.0, stretch.1))
         .and_then(|part| Evidence::new(part).ok())
         .ok_or(Error::Defect("a recognize window is blank"))?;
-    let plan = Plan::new(evidence, backend.model().clone(), questions)
-        .map_err(|_| Error::Defect("a recognize request asks nothing"))?;
-    Ok(PreparedRequests::with_profile(backend, &plan, profile, None)?.into_chunks())
+    Plan::new(evidence, backend.model().clone(), questions)
+        .map_err(|_| Error::Defect("a recognize request asks nothing"))
 }
 
 /// One piece's five tag probabilities, in table order.
@@ -408,14 +435,10 @@ impl Aggregate {
     /// Keep the first model the replies named and refuse a second, naming
     /// both only when each is safe to print, as `annotate` does.
     fn add_answered(&mut self, answered: &Answered, requested: &ModelName) -> Result<(), Error> {
-        super::annotate::check_model(&mut self.model, answered.reply.model(), requested)?;
-        self.usage = match (self.usage, answered.reply.usage()) {
-            (Some(left), Some(right)) => left
-                .checked_plus(right)
-                .ok_or(Error::UsageOverflow)
-                .map(Some)?,
-            (None, held) | (held, None) => held,
-        };
+        self.models.take(answered, |held, model| {
+            super::annotate::check_model(held, model, requested)
+        })?;
+        self.usage = super::each::summed(self.usage, answered.reply.usage())?;
         self.live |= !answered.replayed;
         self.requests_sent = self
             .requests_sent
@@ -425,6 +448,3 @@ impl Aggregate {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests;

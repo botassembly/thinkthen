@@ -59,7 +59,7 @@ Each relation is one rule as given. It carries `name`, `source`, `target`, `read
 
 `--details` prints one `thinkthen.result/1` object with keys `schema`, `value`, `question`, `answer`, `meta`. `value` is the accepted edge list. `question` carries `verb`, nullable `fields`, ordered resolved `relations`, `threshold`, and optional saved `profile`.
 
-`answer.questions` preserves every logical pair question. A successful entry carries relation identity, `method:"yes_no"`, source, target, probability, inclusive accepted marker, and request digest. A failed entry preserves that identity and carries `failure`, but omits probability and accepted.
+`answer.questions` preserves every logical pair question. A successful entry carries relation identity, `method:"yes_no"`, source, target, probability, inclusive accepted marker, and question key. A failed entry preserves that identity and carries `failure`, but omits probability and accepted.
 
 `meta.failed_questions` is always present. One or more valid logical answers beside one or more recoverable failed answers prints the complete buffered result and exits 6. Bare output prints only successful edges and exits 6. If no valid logical answer remains, the command prints nothing and exits 4. Transport, status, reply size, replay, local, output, cancellation, and defect failures never become partial success.
 
@@ -69,4 +69,4 @@ The canonical question has keys `verb`, `fields`, `relations`, `threshold`, then
 
 ## Record and replay
 
-Every exact request uses the ordinary recording digest and folder rules. Replay opens no connection and requires no key. It inspects an optional configured key for an exact address collision before reading the recording folder. A recorded partial reply reproduces the same successful edges, failed entries, failure count, and exit 6. Recordings and caches contain the request evidence; protect them as the input itself.
+Each pair question is stored alone under its question key, by ADR 0111: the address, the model, the entity state and the question. A rerun under `--cache` sends only the questions no earlier run answered, and a new rule sends only its own pairs. Replay opens no connection and requires no key. It inspects an optional configured key for an exact address collision before reading the recording folder. A failed answer is never stored. A live partial reply keeps its good answers and exits 6, and replaying that run misses the failed question and exits 5. Recordings and caches contain the request evidence; protect them as the input itself.

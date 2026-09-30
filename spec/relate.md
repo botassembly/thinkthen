@@ -27,22 +27,23 @@ printf '%s' '[{"name":"gateway","kind":"service"},{"name":"billing","kind":"serv
   | mustmatch '{"relation":"calls","source":{"name":"gateway","kind":"service"},"target":{"name":"billing","kind":"service"},"probability":0.91}'
 ```
 
-Mixed logical failure preserves good paid answers, marks the failed question, and exits 6.
+A replay keeps only good answers, by ADR 0111 section 6. A live run that gets one wrong-kind answer keeps the good one and exits 6. Replaying that run misses the failed question, names its key, and exits 5.
 
 ```bash
 set -uo pipefail
 root=$(git rev-parse --show-toplevel)
 out=$(mktemp)
-trap 'rm -f "$out"' EXIT
+err=$(mktemp)
+trap 'rm -f "$out" "$err"' EXIT
 status=0
 
 printf '%s' '[{"name":"gateway","kind":"service"},{"name":"billing","kind":"service"}]' \
   | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
     thinkthen relate calls=service:service --url https://api.typesafe.ai/v1 \
     --model local-1 --no-cache --details --replay "$root/spec/fixtures/relate-partial" \
-    >"$out" || status=$?
-jq -c --argjson status "$status" '{status:$status,value,questions:.answer.questions,failed:.meta.failed_questions}' "$out" \
-  | mustmatch '{"status":6,"value":[{"relation":"calls","source":{"name":"gateway","kind":"service"},"target":{"name":"billing","kind":"service"},"probability":0.91}],"questions":[{"relation":"calls","reads":"calls","method":"yes_no","direction":"source_to_target","source":{"name":"gateway","kind":"service"},"target":{"name":"billing","kind":"service"},"probability":0.91,"accepted":true,"request":"d59f50a27d4d029d91daf3d3132ebe7341ab84302882158d44aa9d65cb9ed262"},{"relation":"calls","reads":"calls","method":"yes_no","direction":"source_to_target","source":{"name":"billing","kind":"service"},"target":{"name":"gateway","kind":"service"},"failure":{"kind":"backend","cause":"wrong_kind"},"request":"d59f50a27d4d029d91daf3d3132ebe7341ab84302882158d44aa9d65cb9ed262"}],"failed":1}'
+    >"$out" 2>"$err" || status=$?
+printf '%s %s\n' "$status" "$(wc -c <"$out")" | mustmatch '5 0'
+cat "$err" | mustmatch 'thinkthen: the relate request: the replay folder holds no answer for question `f7cbd089e3add33ba1b0ebbaf35595df0a1cfa6c3612b60150d096fc57452949`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent'
 ```
 
 The public command exposes no method control. A malformed relation stops as usage before any key is read.

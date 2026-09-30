@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use rusqlite::{Connection, OpenFlags, params_from_iter};
@@ -22,7 +23,7 @@ use crate::engine::error::Error;
 mod convert;
 mod fixture;
 pub(crate) use convert::convert;
-pub(crate) use fixture::{Answer, Entries};
+pub(crate) use fixture::{Answer, Entries, Replayed};
 
 /// The live container's file name.
 pub(crate) const SQLITE: &str = "thinkthen.sqlite";
@@ -93,6 +94,7 @@ pub(crate) struct Store {
     mode: Mode,
     private: bool,
     connection: Option<Connection>,
+    replayed: Option<Arc<Replayed>>,
     busy_limit: Duration,
 }
 
@@ -112,7 +114,15 @@ impl Store {
     /// use fails before any key is read or request sent. It opens the file
     /// when it exists, importing a fixture into a new file, when a lookup or
     /// a write first needs it, so a run that stores nothing creates nothing.
-    pub(crate) fn open(folder: &Path, mode: Mode, private: bool) -> Result<Self, Error> {
+    ///
+    /// A replay uses `replayed`, the engine's copy of the fixture, when
+    /// given, rather than reading the file again.
+    pub(crate) fn open(
+        folder: &Path,
+        mode: Mode,
+        private: bool,
+        replayed: Option<Arc<Replayed>>,
+    ) -> Result<Self, Error> {
         if fs::metadata(folder).is_ok_and(|metadata| metadata.is_file()) {
             return Err(Error::RecordingPathIsFile);
         }
@@ -121,17 +131,21 @@ impl Store {
             mode,
             private,
             connection: None,
+            replayed: None,
             busy_limit: Duration::from_secs(30),
         };
         let (sqlite, jsonl) = (folder.join(SQLITE), folder.join(JSONL));
         let (has_sqlite, has_jsonl) = (exists(&sqlite)?, exists(&jsonl)?);
         if mode == Mode::Replay {
-            store.connection = match (has_sqlite, has_jsonl) {
+            match (has_sqlite, has_jsonl) {
                 (true, true) => return Err(Error::StoreAmbiguous),
-                (false, true) => Some(fixture::load_into(memory()?, &jsonl)?),
-                (true, false) => Some(read_only(&sqlite)?),
-                (false, false) => None,
-            };
+                (false, true) => {
+                    let read = replayed.map_or_else(|| Replayed::read(&jsonl).map(Arc::new), Ok);
+                    store.replayed = Some(read?);
+                }
+                (true, false) => store.connection = Some(read_only(&sqlite)?),
+                (false, false) => {}
+            }
         } else if fs::symlink_metadata(folder).is_ok() {
             // A dangling link, or a folder another user can read.
             fs::metadata(folder).map_err(|_| Error::RecordingStorage)?;
@@ -174,6 +188,9 @@ impl Store {
             && (exists(&self.folder.join(SQLITE))? || exists(&self.folder.join(JSONL))?)
         {
             self.connect(cancel)?;
+        }
+        if let Some(replayed) = &self.replayed {
+            return Ok(keys.iter().map(|key| replayed.get(key)).collect());
         }
         let Some(connection) = self.connection.as_ref() else {
             return Ok(vec![None; keys.len()]);
@@ -382,12 +399,6 @@ fn insert(connection: &Connection, rows: &[Row<'_>]) -> rusqlite::Result<()> {
         ])?;
     }
     Ok(())
-}
-
-fn memory() -> Result<Connection, Error> {
-    let connection = Connection::open_in_memory().map_err(storage)?;
-    connection.execute_batch(SCHEMA).map_err(storage)?;
-    Ok(connection)
 }
 
 fn read_only(path: &Path) -> Result<Connection, Error> {

@@ -68,19 +68,16 @@ run_case <- function(case, served) {
   tt_engine(batch = if (legacy_batch_one) 1L else "max")
   exchanges <- case$exchanges
   renamed <- list()
-  # A record function's row lists question keys by ADR 0111, so its digests
-  # become the keys of the request each digest named. `find`, `recognize`
-  # and `relate` keep request digests until slice 4.
-  keyed <- !(case$verb %in% c("find", "recognize", "relate"))
+  # Every row lists question keys by ADR 0111, so each digest becomes the
+  # keys of the request it named.
   for (exchange in exchanges) {
-    renamed[[sha(canonical, exchange$request)]] <-
-      if (keyed) as.list(question_keys(served, exchange$request)) else sha(served, exchange$request)
+    renamed[[sha(canonical, exchange$request)]] <- as.list(question_keys(served, exchange$request))
   }
   swap <- function(value) {
     if (is.list(value)) {
       swapped <- lapply(value, swap)
       # A list of digests becomes the flat list of their keys.
-      if (keyed && is.null(names(value)) && length(value) && all(vapply(value, is.character, TRUE))) {
+      if (is.null(names(value)) && length(value) && all(vapply(value, is.character, TRUE))) {
         return(do.call(c, lapply(swapped, as.list)))
       }
       return(swapped)

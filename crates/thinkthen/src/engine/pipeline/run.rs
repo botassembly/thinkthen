@@ -40,6 +40,9 @@ pub(super) struct Call {
 pub(super) struct Bounds {
     pub(super) window: usize,
     pub(super) jobs: usize,
+    /// Whether the host takes rows past a failure. When it does not, a
+    /// failed request sends nothing further, as one job would.
+    pub(super) continues: bool,
 }
 
 pub(super) struct Run<'a, A: Asker> {
@@ -50,6 +53,7 @@ pub(super) struct Run<'a, A: Asker> {
     counts: Counts<'a>,
     window: usize,
     jobs: usize,
+    continues: bool,
     slots: VecDeque<Slot<A>>,
     /// The place of the window's first input.
     first: usize,
@@ -83,6 +87,7 @@ impl<'a, A: Asker> Run<'a, A> {
             counts,
             window: bounds.window.max(1),
             jobs: bounds.jobs,
+            continues: bounds.continues,
             slots: VecDeque::new(),
             first: 0,
             waiting: HashMap::new(),
@@ -389,7 +394,15 @@ impl<'a, A: Asker> Run<'a, A> {
             });
         let split = match done.result {
             Ok(split) => split,
-            Err(error) => return self.fail_all(&done.asks, &error, span),
+            Err(error) => {
+                // Every earlier input's questions went out before this
+                // request, so their rows and this failure still print.
+                if !self.continues && self.stopping.is_none() {
+                    self.stopping = Some(error.clone());
+                    self.closed.clear();
+                }
+                return self.fail_all(&done.asks, &error, span);
+            }
         };
         if split.answers.len() != done.asks.len() {
             let error = Error::Defect("a reply answered the wrong number of questions");

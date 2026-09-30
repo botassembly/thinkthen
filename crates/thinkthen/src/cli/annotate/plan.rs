@@ -25,6 +25,8 @@ pub(super) fn dry_run(
     let engine = judging.engine();
     let backend = engine.backend();
     let limits = engine.pack_limits(Packing {
+        questions: None,
+        sized: true,
         inputs: inputs_cap,
         context: false,
         detailed: false,

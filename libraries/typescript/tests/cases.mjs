@@ -114,10 +114,9 @@ async function check(tt, one, origin, folder) {
   }
   const success = one.expect.success;
   const served = `${base}/systemone`;
-  // A record function's row lists question keys; find, recognize and relate keep digests until slice 4.
-  const keyed = !['find', 'recognize', 'relate'].includes(one.verb);
+  // Every row lists question keys, by ADR 0111.
   const renamed = new Map(one.exchanges.map(({ request }) => [digest(CANONICAL, request),
-    keyed ? questionKeys(served, request) : [digest(served, request)]]));
+    questionKeys(served, request)]));
   const texts = one.exchanges.map((exchange) => exchange.evidence);
   const want = (at) => success.answers.find((answer) => answer.exchange === at);
   switch (success.kind) {

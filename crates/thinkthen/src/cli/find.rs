@@ -119,14 +119,16 @@ fn planned(
     records: usize,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let prepared = facade::split(backend, profile, find.plan())?;
+    let mut asks = facade::Asks::default();
+    asks.add(backend, find.plan())?;
+    let prepared = asks.requests(backend, profile, facade::Bound::WHOLE)?;
     let mut summary = PlanSummary::new(false);
     summary
         .records_added(records)
         .map_err(|_| Failure::Defect("a plan is too large"))?;
-    for chunk in prepared {
+    for request in prepared {
         summary
-            .request(&chunk.request.body)
+            .request(&request.body)
             .map_err(|_| Failure::Defect("a plan is too large"))?;
     }
     let document = PlanDocument::of(backend, find.plan())

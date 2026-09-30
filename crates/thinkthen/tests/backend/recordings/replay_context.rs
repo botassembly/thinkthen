@@ -75,15 +75,9 @@ fn missing_entries_name_only_proved_sources_and_keep_replay_local() {
     );
 }
 
-/// The sentence end a miss prints: a question key under ADR 0111 for the
-/// record functions, and an entry name for the commands still on the old store.
-fn miss(name: &str) -> &'static str {
-    match name {
-        "complete find set" | "recognize command fallback" | "relate command fallback" => ".json`",
-        _ => {
-            "; the key is the SHA-256 of the adapter, address, model, shared state and question as sent"
-        }
-    }
+/// The sentence end every miss prints: a question key under ADR 0111.
+fn miss(_name: &str) -> &'static str {
+    "; the key is the SHA-256 of the adapter, address, model, shared state and question as sent"
 }
 
 fn cases<'a>(base: &'a str, folder: &'a str, set: &'a str) -> [Case<'a>; 7] {
@@ -116,19 +110,19 @@ fn cases<'a>(base: &'a str, folder: &'a str, set: &'a str) -> [Case<'a>; 7] {
             "complete find set",
             vec!["find", "private-question", "--url", base, "--replay", folder],
             b"private-evidence\nsecond private-evidence\n",
-            "the complete find set of 2 units: the replay folder holds no entry",
+            "the complete find set of 2 units: the replay folder holds no answer",
         ),
         (
             "recognize command fallback",
             vec!["recognize", "person", "--url", base, "--replay", folder],
             b"private-evidence",
-            "the recognize request: the replay folder holds no entry",
+            "the recognize request: the replay folder holds no answer",
         ),
         (
             "relate command fallback",
             vec!["relate", "works_for=person:organization", "--url", base, "--replay", folder],
             br#"[{"name":"private-evidence","kind":"person"},{"name":"Acme","kind":"organization"}]"#,
-            "the relate request: the replay folder holds no entry",
+            "the relate request: the replay folder holds no answer",
         ),
     ]
 }

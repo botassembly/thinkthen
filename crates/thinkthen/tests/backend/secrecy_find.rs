@@ -1,12 +1,11 @@
 //! The aggregate `find` command over every shared backend and recording route.
 
-use std::fs;
 use std::io;
 
 use crate::harness::{Listener, spawn};
 use crate::secrecy::{
-    CLOSED, EVIDENCE, HOSTILE, HOSTILE_SCHEMA_MARKER, PATHS, QUESTION, Route, environment, folder,
-    nothing_leaked, written,
+    CLOSED, EVIDENCE, HOSTILE, HOSTILE_SCHEMA_MARKER, PATHS, QUESTION, Route, damage_fixture,
+    environment, folder, nothing_leaked,
 };
 
 const ANSWER: &str = concat!(
@@ -51,17 +50,15 @@ fn sweep(route: &Route, details: bool) -> io::Result<()> {
         let first = spawn(&priming, &environment(true), evidence.as_bytes())?;
         assert_eq!(first.status.code(), Some(0), "{case}: priming");
     }
-    if let Some(damage) = route.damage {
-        let entries = written(&dir);
-        assert!(!entries.is_empty(), "{case}: entry to damage");
-        for entry in entries.into_iter().filter(|entry| {
-            entry
-                .file_name()
-                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
-        }) {
-            fs::write(entry, damage)?;
+    // `find` keeps its answers in the question store, so damage reaches the
+    // fixture a replay reads.
+    let says = match route.damage {
+        Some(damage) => {
+            damage_fixture(&dir, damage)?;
+            route.fixture_says
         }
-    }
+        None => route.says,
+    };
 
     let arguments: Vec<&str> = asked.iter().map(String::as_str).collect();
     let output = spawn(&arguments, &environment(route.keyed), evidence.as_bytes())?;
@@ -76,7 +73,7 @@ fn sweep(route: &Route, details: bool) -> io::Result<()> {
         route.requests,
         "{case}: requests"
     );
-    if let Some(says) = route.says {
+    if let Some(says) = says {
         let diagnostic = String::from_utf8_lossy(&output.stderr);
         assert!(diagnostic.contains(says), "{case}: {diagnostic}");
     }

@@ -16,22 +16,6 @@ mod wait;
 
 pub(crate) use wait::finish;
 
-/// Whether this Linux process has the expected inode open.
-#[cfg(target_os = "linux")]
-pub(crate) fn process_has_file(process: u32, expected: &std::fs::Metadata) -> io::Result<bool> {
-    use std::os::unix::fs::MetadataExt as _;
-
-    let expected = (expected.dev(), expected.ino());
-    for descriptor in std::fs::read_dir(format!("/proc/{process}/fd"))? {
-        if std::fs::metadata(descriptor?.path())
-            .is_ok_and(|metadata| (metadata.dev(), metadata.ino()) == expected)
-        {
-            return Ok(true);
-        }
-    }
-    Ok(false)
-}
-
 /// Run the compiled binary with no environment but what the case names.
 ///
 /// Every case on this binary drives the tool as a process, so the spawning,

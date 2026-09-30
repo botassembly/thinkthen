@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use crate::core::adapters::built_in;
-use crate::core::{Backend, BackendProfile, Plan};
+use crate::core::{Backend, Plan};
 use crate::engine::error::Error;
 use crate::engine::http::{Client, Exchange, HttpAnswer, Key};
 use crate::engine::prepared_request::{Answered, PreparedRequest};
@@ -39,6 +39,9 @@ pub(crate) struct Transport<'a> {
     pub(crate) send_budget: Option<crate::engine::send_budget::ProcessBudget>,
 }
 
+/// Only tests send one plan this way; every function asks through the
+/// question pipeline.
+#[cfg(test)]
 #[expect(
     clippy::too_many_arguments,
     reason = "one request carries explicit cancellation, transport, storage, and key boundaries"
@@ -46,7 +49,7 @@ pub(crate) struct Transport<'a> {
 pub(crate) fn ask_profile<E>(
     backend: &Backend,
     plan: &Plan,
-    profile: Option<&BackendProfile>,
+    profile: Option<&crate::core::BackendProfile>,
     recorder: &Recorder,
     cancel: &crate::engine::Cancel,
     transport: Transport<'_>,

@@ -68,9 +68,9 @@ pub(super) fn write(
     summary
         .records_added(context.entity_count)
         .map_err(|_| Failure::Defect("a plan is too large"))?;
-    for chunk in &prepared.chunks {
+    for request in &prepared.requests {
         summary
-            .request(&chunk.request.body)
+            .request(&request.body)
             .map_err(|_| Failure::Defect("a plan is too large"))?;
     }
     let relations = prepared
@@ -91,13 +91,13 @@ pub(super) fn write(
         })
         .collect::<Vec<_>>();
     let requests = prepared
-        .chunks
+        .requests
         .iter()
-        .map(|chunk| {
+        .map(|request| {
             Ok(Request {
-                digest: chunk.request.digest.as_str(),
-                bytes: chunk.request.body.len(),
-                body_utf8: str::from_utf8(&chunk.request.body)
+                digest: request.digest.as_str(),
+                bytes: request.body.len(),
+                body_utf8: str::from_utf8(&request.body)
                     .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
             })
         })

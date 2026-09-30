@@ -20,7 +20,8 @@ pub(crate) struct PackLimits {
     /// The request size a request closes at.
     pub(crate) ceiling: usize,
     pub(crate) profile: Option<BackendProfile>,
-    /// The inputs one request may answer: `--batch N`, or 4,096.
+    /// The inputs one request may answer: `--batch N`, a question step's
+    /// full count, or 4,096.
     pub(crate) inputs: usize,
     /// A further cap on questions per request, as relate's 400.
     pub(crate) questions: Option<usize>,

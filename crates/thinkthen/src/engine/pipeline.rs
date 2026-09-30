@@ -95,8 +95,14 @@ pub(crate) enum Flow {
 /// What closes a request beyond the backend's own limits.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Packing {
-    /// `--batch N`, or `None` for the 4,096-input cap.
+    /// `--batch N`, a question step's full count, or `None` for the
+    /// 4,096-input cap.
     pub(crate) inputs: Option<usize>,
+    /// A further cap on questions per request, as relate's 400.
+    pub(crate) questions: Option<usize>,
+    /// Whether a request closes at the backend's request size. The first two
+    /// `recognize` steps keep each window whole and obey only a profile.
+    pub(crate) sized: bool,
     /// Whether the state is a context.
     pub(crate) context: bool,
     /// Whether rows show each request's attempts.
@@ -146,6 +152,43 @@ pub(crate) fn reader<I, E, F>(
     }
 }
 
+/// One input's row, or why it has none.
+pub(crate) type Row<A> = Result<<A as Asker>::Row, Failed<<A as Asker>::Error>>;
+
+/// The port of an asker's inputs.
+type PortOf<A> = Port<<A as Asker>::Input, <A as Asker>::Error>;
+
+/// A host whose inputs are all in hand: each ask sends the next at once,
+/// and each row goes to `take` on the coordinator's thread.
+pub(crate) struct Eager<A: Asker, F> {
+    port: Port<A::Input, A::Error>,
+    inputs: std::vec::IntoIter<A::Input>,
+    take: F,
+}
+
+impl<A: Asker, F: FnMut(Row<A>) -> Flow> Host<A> for Eager<A, F> {
+    fn ask(&mut self) -> bool {
+        let input = self.inputs.next().map_or(Input::End, Input::Item);
+        self.port.send(input).is_ok()
+    }
+
+    fn row(&mut self, _place: usize, row: Row<A>) -> Flow {
+        (self.take)(row)
+    }
+}
+
+/// Start an eager host over `inputs`.
+pub(crate) fn eager<A: Asker, F: FnMut(Row<A>) -> Flow>(
+    inputs: Vec<A::Input>,
+    take: F,
+) -> impl FnOnce(PortOf<A>) -> Eager<A, F> {
+    move |port| Eager {
+        port,
+        inputs: inputs.into_iter(),
+        take,
+    }
+}
+
 /// The host side of the input bridge: one input, failure or end per ask.
 pub(crate) struct Port<I, E>(Sender<Event<I, E>>);
 
@@ -177,7 +220,7 @@ impl Engine {
         cancel: &Cancel,
     ) -> Result<(), Error> {
         let state = self.state(cancel)?;
-        let store = self.store()?;
+        let store = self.store(&state)?;
         let model = pack::model_json(self.backend().model().as_str())
             .map_err(|_| Error::Defect("a model could not be written as JSON"))?;
         let limits = self.pack_limits(packing);
@@ -201,6 +244,7 @@ impl Engine {
                 let bounds = run::Bounds {
                     window,
                     jobs: state.width,
+                    continues: packing.continues,
                 };
                 let packer = Packer::new(limits, model);
                 run::Run::new(asker, call, store, packer, bounds, counts)
@@ -213,17 +257,21 @@ impl Engine {
     /// The limits a request of this call closes at.
     pub(crate) fn pack_limits(&self, packing: Packing) -> PackLimits {
         PackLimits {
-            ceiling: self.backend().ceiling(),
+            ceiling: if packing.sized {
+                self.backend().ceiling()
+            } else {
+                usize::MAX
+            },
             profile: self.profile().cloned(),
             inputs: packing.inputs.unwrap_or(MOST_INPUTS).max(1),
-            questions: None,
+            questions: packing.questions,
             context: packing.context,
         }
     }
 
     /// The call's store, by the modes table of ADR 0111 section 3, or `None`
     /// under `--no-cache`.
-    fn store(&self) -> Result<Option<Store>, Error> {
+    fn store(&self, state: &super::facade::State) -> Result<Option<Store>, Error> {
         let storage = self.storage();
         let refresh = storage.refresh_cache
             || crate::core::adapters::built_in::is_mutable_alias(self.backend().model());
@@ -234,7 +282,13 @@ impl Engine {
             (None, Some(folder)) => (folder, Mode::Replay),
             (None, None) => return Ok(None),
         };
-        Store::open(folder, mode, storage.private_default).map(Some)
+        Store::open(
+            folder,
+            mode,
+            storage.private_default,
+            state.replayed.clone(),
+        )
+        .map(Some)
     }
 }
 

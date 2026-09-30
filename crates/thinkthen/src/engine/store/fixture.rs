@@ -2,16 +2,17 @@
 //! sorted by key, one JSON object per line, with the store's columns. The
 //! bytes are a function of the entries, so a review reads them as text.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
-use super::{JSONL, storage};
+use super::{Found, JSONL, SQLITE, exists, storage};
 use crate::core::pack::{QuestionKey, model_json};
-use crate::core::{Url, bytes_sha256, hex};
+use crate::core::{Url, Usage, bytes_sha256, hex};
 use crate::engine::error::Error;
 
 /// One state line.
@@ -179,19 +180,6 @@ impl Entries {
         Ok(entries)
     }
 
-    /// Insert every entry into a database that holds the schema.
-    pub(crate) fn insert(&self, connection: &Connection) -> Result<(), Error> {
-        connection.execute_batch("BEGIN").map_err(storage)?;
-        let inserted = self.insert_all(connection).map_err(storage);
-        let ended = if inserted.is_ok() {
-            "COMMIT"
-        } else {
-            "ROLLBACK"
-        };
-        connection.execute_batch(ended).map_err(storage)?;
-        inserted
-    }
-
     /// Insert every entry inside the caller's transaction. An answer already
     /// held under a key stays, because a store's own writes are newer. A digest
     /// that is not hex, or an answer naming a state the entries lack, fails
@@ -243,10 +231,40 @@ pub(super) fn read(path: &Path) -> Result<Entries, Error> {
     Entries::parse(&fs::read_to_string(path).map_err(|_| Error::RecordingStorage)?)
 }
 
-/// Load a fixture file into a database that holds the schema.
-pub(super) fn load_into(connection: Connection, path: &Path) -> Result<Connection, Error> {
-    read(path)?.insert(&connection)?;
-    Ok(connection)
+/// A replay fixture's answers by key. One engine reads its fixture once per
+/// process, so a call that asks one line of many does not read it again.
+#[derive(Debug)]
+pub(crate) struct Replayed(HashMap<[u8; 32], Found>);
+
+impl Replayed {
+    /// The fixture a replay folder holds alone, read and checked. A folder
+    /// without one, or with a live file beside it, gives `None`, and opening
+    /// the store says why when that matters.
+    pub(crate) fn of(folder: &Path) -> Result<Option<Arc<Self>>, Error> {
+        let (sqlite, jsonl) = (folder.join(SQLITE), folder.join(JSONL));
+        if !folder.is_dir() || !exists(&jsonl).unwrap_or(false) || exists(&sqlite).unwrap_or(true) {
+            return Ok(None);
+        }
+        Self::read(&jsonl).map(|read| Some(Arc::new(read)))
+    }
+
+    pub(super) fn read(path: &Path) -> Result<Self, Error> {
+        let answers = read(path)?.answers.into_values().map(|answer| {
+            let key = bytes_of(&answer.key).ok_or(Error::Defect("a checked key was not hex"))?;
+            let usage = answer.input_tokens.zip(answer.output_tokens);
+            let found = Found {
+                answer: answer.answer,
+                answered_by: answer.answered_by,
+                usage: usage.map(|(input, output)| Usage::new(input, output)),
+            };
+            Ok((key, found))
+        });
+        answers.collect::<Result<_, Error>>().map(Self)
+    }
+
+    pub(super) fn get(&self, key: &QuestionKey) -> Option<Found> {
+        self.0.get(key.bytes()).cloned()
+    }
 }
 
 /// The key an answer line's parts hash to.

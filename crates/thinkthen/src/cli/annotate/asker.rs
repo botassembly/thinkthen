@@ -172,6 +172,8 @@ where
         downstream: crate::edge::Downstream::default(),
     };
     let packing = Packing {
+        questions: None,
+        sized: true,
         inputs: inputs_cap,
         context: false,
         detailed: false,

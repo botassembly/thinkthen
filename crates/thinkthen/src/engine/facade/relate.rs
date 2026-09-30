@@ -1,19 +1,21 @@
 //! Relations between given entities, planned as one ordered set of pair questions.
 
-use super::{Answered, Chunk, Engine};
+use super::each::{Models, summed};
+use super::{Answered, Asks, Bound, Engine, Request};
 use crate::core::{
-    AnswerOutcome, Backend, BackendProfile, Lead, ModelName, Pair, RelateSpec, RelationEdge,
-    RelationEntity, RelationRule, Usage, pair_edges, plan_pairs,
+    AnswerOutcome, Backend, BackendProfile, Lead, ModelName, Pair, Plan, Question, RelateSpec,
+    RelationEdge, RelationEntity, RelationRule, Usage, pair_edges, plan_pairs,
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::prepared_request::pair_chunks;
 
-/// All rules share these prepared requests, in question order.
+/// All rules share these questions, in order, and the requests they make
+/// with nothing cached.
 pub(crate) struct PreparedRelations {
     pub(crate) rules: Vec<RelationRule>,
     pub(crate) pairs: Vec<Pair>,
-    pub(crate) chunks: Vec<Chunk>,
+    pub(crate) asks: Asks,
+    pub(crate) requests: Vec<Request>,
     pub(crate) questions_per_rule: Vec<usize>,
     pub(crate) requests_per_rule: Vec<usize>,
 }
@@ -56,10 +58,15 @@ pub(crate) fn relations(
             requests_per_rule: vec![0; rules.len()],
             rules,
             pairs: Vec::new(),
-            chunks: Vec::new(),
+            asks: Asks::default(),
+            requests: Vec::new(),
         });
     };
-    let chunks = pair_chunks(backend, profile, &planned)?;
+    let mut asks = Asks::default();
+    let plan = Plan::new(planned.evidence, backend.model().clone(), planned.questions)
+        .map_err(|_| Error::Defect("relation planned no questions"))?;
+    asks.add(backend, &plan)?;
+    let requests = asks.requests(backend, profile, Bound::pairs(profile))?;
     let mut questions_per_rule = vec![0; rules.len()];
     for pair in &planned.pairs {
         *questions_per_rule
@@ -67,15 +74,13 @@ pub(crate) fn relations(
             .ok_or(Error::Defect("a pair names no rule"))? += 1;
     }
     let mut requests_per_rule = vec![0; rules.len()];
-    let mut start = 0;
-    for chunk in &chunks {
-        let end = start + chunk.plan.questions().len();
+    for request in &requests {
         let mut previous = None;
-        for pair in planned
-            .pairs
-            .get(start..end)
-            .ok_or(Error::Defect("a chunk exceeds its pairs"))?
-        {
+        for place in &request.places {
+            let pair = planned
+                .pairs
+                .get(*place)
+                .ok_or(Error::Defect("a request exceeds its pairs"))?;
             if previous != Some(pair.rule) {
                 *requests_per_rule
                     .get_mut(pair.rule)
@@ -83,15 +88,12 @@ pub(crate) fn relations(
                 previous = Some(pair.rule);
             }
         }
-        start = end;
-    }
-    if start != planned.pairs.len() {
-        return Err(Error::Defect("a pair has no prepared request"));
     }
     Ok(PreparedRelations {
         rules,
         pairs: planned.pairs,
-        chunks,
+        asks,
+        requests,
         questions_per_rule,
         requests_per_rule,
     })
@@ -109,37 +111,49 @@ impl Engine {
         self.relate_observed(prepared, entities, threshold, cancel, |_, _| Ok(()))
     }
 
-    /// The same ordered relation execution with its actual request plans.
+    /// The same ordered relation execution, each answered question handed
+    /// to `observe` with its logical question.
     pub(crate) fn relate_observed(
         &self,
         prepared: PreparedRelations,
         entities: &[RelationEntity],
         threshold: f64,
         cancel: &Cancel,
-        mut observe: impl FnMut(&crate::core::Plan, &Answered) -> Result<(), Error>,
+        mut observe: impl FnMut(&Question, &Answered) -> Result<(), Error>,
     ) -> Result<Execution, Error> {
         let mut execution = Execution {
             replayed: true,
             ..Execution::default()
         };
-        if prepared.chunks.is_empty() {
-            return Ok(execution);
-        }
-        let mut pairs = prepared.pairs.into_iter();
-        self.ask_chunks_with_plan(prepared.chunks, cancel, |plan, answered| {
-            observe(plan, &answered)?;
+        let mut models = Models::default();
+        let bound = Bound::pairs(self.profile());
+        let questions = prepared.asks.questions();
+        self.ask_each(&prepared.asks, bound, cancel, |place, answered| {
+            let question = questions
+                .get(place)
+                .ok_or(Error::Defect("a relation reply exceeds its pairs"))?;
+            observe(question, &answered)?;
+            models.take(&answered, |held, model| match held {
+                Some(held) if held != model => Err(Error::ModelsDiffer(None)),
+                Some(_) => Ok(()),
+                None => {
+                    *held = Some(model.clone());
+                    Ok(())
+                }
+            })?;
             add_meta(&mut execution, &answered)?;
+            let pair = prepared
+                .pairs
+                .get(place)
+                .ok_or(Error::Defect("a relation reply exceeds its pairs"))?;
+            let relation = prepared
+                .rules
+                .get(pair.rule)
+                .ok_or(Error::Defect("a pair names no rule"))?;
             for outcome in answered.reply.outcomes() {
-                let pair = pairs
-                    .next()
-                    .ok_or(Error::Defect("a relation reply exceeds its pairs"))?;
-                let relation = prepared
-                    .rules
-                    .get(pair.rule)
-                    .ok_or(Error::Defect("a pair names no rule"))?;
                 let logical = Logical {
                     relation: relation.clone(),
-                    pair,
+                    pair: *pair,
                     outcome: outcome.clone(),
                     request: answered.request.as_str().to_owned(),
                 };
@@ -151,11 +165,9 @@ impl Engine {
                     threshold,
                 );
             }
-            Ok::<(), Error>(())
+            Ok(())
         })?;
-        if pairs.next().is_some() {
-            return Err(Error::Defect("a relation reply did not cover its pairs"));
-        }
+        execution.model = models.model().cloned();
         Ok(execution)
     }
 }
@@ -183,15 +195,7 @@ fn add_logical(
 }
 
 fn add_meta(execution: &mut Execution, answered: &Answered) -> Result<(), Error> {
-    let model = answered.reply.model();
-    if execution.model.as_ref().is_some_and(|held| held != model) {
-        return Err(Error::ModelsDiffer(None));
-    }
-    execution.model.get_or_insert_with(|| model.clone());
-    execution.usage = match (execution.usage, answered.reply.usage()) {
-        (Some(left), Some(right)) => Some(left.checked_plus(right).ok_or(Error::UsageOverflow)?),
-        (None, held) | (held, None) => held,
-    };
+    execution.usage = summed(execution.usage, answered.reply.usage())?;
     execution.replayed &= answered.replayed;
     execution.requests_sent = execution
         .requests_sent

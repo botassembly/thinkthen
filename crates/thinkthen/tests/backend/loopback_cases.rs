@@ -109,18 +109,14 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     }
     let base = format!("{}/case/{id}/v1", backend.origin());
     let served = format!("{base}/systemone");
-    // A record function's row lists question keys by ADR 0111; `find`,
-    // `recognize` and `relate` keep request digests until slice 4.
-    let keyed = !matches!(text(&case["verb"]), "find" | "recognize" | "relate");
+    // Every row lists question keys by ADR 0111.
     let mut renamed = BTreeMap::new();
     for exchange in list(&case["exchanges"]) {
         let request = text(&exchange["request"]).as_bytes();
-        let now = if keyed {
-            Value::from(keys(&served, request))
-        } else {
-            Value::from(digest(&served, request))
-        };
-        renamed.insert(digest(CANONICAL, request), now);
+        renamed.insert(
+            digest(CANONICAL, request),
+            Value::from(keys(&served, request)),
+        );
     }
     let success = &case["expect"]["success"];
     let answers = recomputed(&success["answers"], &renamed);
@@ -334,7 +330,7 @@ fn whole(rows: &[Value], answers: &[Value]) -> Checked {
         &row["meta"]["question_sha256"],
         &want["details"]["question_sha256"],
     )?;
-    meta(row, want)
+    every_key(row, want)
 }
 
 /// One annotated row per record, each answer under its name.
@@ -386,7 +382,18 @@ fn found(rows: &[Value], answers: &[Value], case: &Value) -> Checked {
         &row["meta"]["question_sha256"],
         &want["details"]["question_sha256"],
     )?;
-    meta(row, want)
+    every_key(row, want)
+}
+
+/// The model of a whole-call row, and every question key of every request
+/// the case recorded, in order.
+fn every_key(row: &Value, want: &Value) -> Checked {
+    same("model", &row["meta"]["model"], &want["details"]["model"])?;
+    let keys: Vec<Value> = list(&want["details"]["requests"])
+        .iter()
+        .flat_map(|request| list(request).iter().cloned())
+        .collect();
+    same("requests", &row["meta"]["requests"], &Value::from(keys))
 }
 
 /// The model and the recomputed request names a row carries. A record

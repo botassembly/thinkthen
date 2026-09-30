@@ -157,10 +157,8 @@ def check(case: dict, backend: Backend) -> None:
     arm = f"case/{case['id']}" + ("/capture" if relations or case["verb"] == "find" else "")
     served = backend.base(arm) + "/systemone"
     exchanges = case.get("exchanges", [])
-    # Find, recognize and relate keep request digests until slice 4 of ticket 0304.
-    keyed = case["verb"] not in ("find", "recognize", "relate")
-    renamed = {digest(CANONICAL, one["request"]): question_keys(served, one["request"]) if keyed
-               else digest(served, one["request"]) for one in exchanges}
+    # Every row lists question keys, by ADR 0111.
+    renamed = {digest(CANONICAL, one["request"]): question_keys(served, one["request"]) for one in exchanges}
     success = swap(case["expect"]["success"], renamed)
     texts = [one["evidence"] for one in exchanges]
     env = environment(backend, arm)
@@ -256,10 +254,9 @@ def check(case: dict, backend: Backend) -> None:
         same("result", edges, answers[0]["bare"])
     else:
         raise AssertionError(f"no SQL form is written for the {kind} kind")
-    if keyed:
-        # ADR 0111: the case ran on the question store, one row per good answer.
-        keys = {key for one in exchanges for key in question_keys(served, one["request"])}
-        same("stored answers", stored(env["THINKTHEN_CACHE"]), len(keys) - success.get("failed_questions", 0))
+    # ADR 0111: the case ran on the question store, one row per good answer.
+    keys = {key for one in exchanges for key in question_keys(served, one["request"])}
+    same("stored answers", stored(env["THINKTHEN_CACHE"]), len(keys) - success.get("failed_questions", 0))
     return None
 
 

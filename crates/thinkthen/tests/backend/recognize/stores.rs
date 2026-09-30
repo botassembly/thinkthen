@@ -65,18 +65,21 @@ fn split_recognition_mixes_cache_and_live_then_replays_without_a_key() {
     let options = [&KINDS[..], &["--profile", &one, "--cache", &cache]].concat();
     let first = local(&listener, &options, Some("key"), ADA);
     assert_eq!(first.status.code(), Some(0));
-    let _filled = listener.requests();
-    let missing = fs::read_dir(&root)
-        .unwrap()
-        .filter_map(Result::ok)
-        .find(|entry| {
-            entry.path().extension().is_some_and(|ext| ext == "json")
-                && !entry.file_name().to_string_lossy().starts_with('.')
-        })
-        .expect("entry");
-    fs::remove_file(missing.path()).expect("remove one answer");
+    let filled = listener.requests().len();
+    let store = rusqlite::Connection::open(root.join("thinkthen.sqlite")).expect("the store");
+    let forgotten = store
+        .execute(
+            "DELETE FROM answers WHERE id = (SELECT MIN(id) FROM answers)",
+            [],
+        )
+        .expect("remove one answer");
+    assert_eq!(forgotten, 1);
+    drop(store);
     let mixed = local(&listener, &options, Some("key"), ADA);
-    assert_eq!(listener.requests().len(), 1);
+    let asked = listener.requests();
+    assert!(filled > 1, "{filled} requests filled the cache");
+    assert_eq!(asked.len(), 1);
+    assert_eq!(questions(&asked[0].body).len(), 1);
     let replay = local(&listener, &options, None, ADA);
     assert_eq!(
         (stdout(&mixed), stdout(&replay)),
@@ -115,15 +118,19 @@ fn relation_identity_drives_recording_replay_and_cache_without_changing_recognit
         .map(|request| request.body.clone())
         .collect();
     assert_eq!(bodies, recognition);
-    let digest = crate::support::digest(
+    let relation = crate::support::keys(
         listener.url(),
         &requests.last().expect("relation request").body,
     );
-    assert!(
-        root.join("recording")
-            .join(format!("{digest}.json"))
-            .is_file()
-    );
+    let holds = |folder: &std::path::Path| {
+        let stored: Vec<String> = crate::support::stored(folder)
+            .expect("stored answers")
+            .iter()
+            .filter_map(|line| line["key"].as_str().map(str::to_owned))
+            .collect();
+        relation.iter().all(|key| stored.contains(key))
+    };
+    assert!(holds(&root.join("recording")));
     let replayed = local(
         &listener,
         &[&WORKS[..], &["--replay", &recording, "--no-cache"]].concat(),
@@ -142,21 +149,21 @@ fn relation_identity_drives_recording_replay_and_cache_without_changing_recognit
         stdout(&filled)
     );
     assert!(listener.requests().is_empty());
-    assert!(cache.join(format!("{digest}.json")).is_file());
+    assert!(holds(&cache));
 }
 
 #[test]
 fn details_carry_every_probability_and_request_metadata() {
     let listener = Listener::answering(automatic).expect("listener");
     let output = run(&listener, &[&WORKS[..], &["--details"]].concat(), ADA);
-    let mut expected =
-        include_str!("../../fixtures/recognize-detailed.json").replace("$URL", listener.url());
-    for (place, request) in listener.requests().iter().enumerate() {
-        expected = expected.replace(
-            &format!("$REQUEST{}", place + 1),
-            &crate::support::digest(listener.url(), &request.body),
-        );
-    }
+    let keys: Vec<String> = listener
+        .requests()
+        .iter()
+        .flat_map(|request| crate::support::keys(listener.url(), &request.body))
+        .collect();
+    let expected = include_str!("../../fixtures/recognize-detailed.json")
+        .replace("$URL", listener.url())
+        .replace("$REQUESTS", &Value::from(keys).to_string());
     assert_eq!(stdout(&output), expected);
 }
 

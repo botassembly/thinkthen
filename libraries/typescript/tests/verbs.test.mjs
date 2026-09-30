@@ -13,7 +13,6 @@ import { createRequire } from 'node:module';
 import { FAKE_KEY, ask, startBackend } from './backend.mjs';
 import { questionKeys } from './cases.mjs';
 const keysOf = (base, body) => questionKeys(`${base}/systemone`, body);
-const recordingDigest = (base, body) => createHash('sha256').update(`systemone\n${base}/systemone\n${body}`).digest('hex');
 const native = createRequire(import.meta.url)('../loader.js');
 
 test('named recognition and relation plans retain source, model and bounded answers', async (t) => {
@@ -245,7 +244,8 @@ test('runtime-label many calls preserve ordered descriptions and bare versus nul
   assert.deepEqual(Object.values(meaning.questions)[0].criteria, { false: { nested: ['no', true] } });
   assert.deepEqual(value.choices.details.map((row) => row.requests), keysOf(backend.base(), backend.bodies[0]).map((key) => [key]));
   assert.equal(Object.values(JSON.parse(backend.bodies[7]).questions)[0].type, 'choice');
-  assert.ok(value.recognized.details.some((row) => row.requests.includes(recordingDigest(backend.base(), backend.bodies[7]))));
+  const probed = keysOf(backend.base(), backend.bodies[7]);
+  assert.ok(value.recognized.details.some((row) => probed.every((key) => row.requests.includes(key))));
 });
 
 test('each verb resolves its host shape, on the module and on an engine', async (t) => {

@@ -111,7 +111,17 @@ fn every_case_crosses_the_private_facade_under_replay() {
                 .unwrap_or_else(|error| panic!("{}: {error:?}", case.id));
             assert!(answered.replayed, "{}", case.id);
             assert_eq!(answered.requests_sent, 0, "{}", case.id);
-            assert_eq!(answered.request.as_str(), requests[place], "{}", case.id);
+            let request_name = if case.verb == "find" {
+                let [key] = <[String; 1]>::try_from(command::question_keys(
+                    backend.url(),
+                    &exchange.request,
+                ))
+                .expect("one find question");
+                key
+            } else {
+                requests[place].clone()
+            };
+            assert_eq!(answered.request.as_str(), request_name, "{}", case.id);
             assert_eq!(
                 answered.reply.outcomes().len(),
                 request.names.len(),

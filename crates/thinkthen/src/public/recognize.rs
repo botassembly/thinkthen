@@ -13,7 +13,7 @@ use crate::public::question::{self, Description};
 use crate::public::results::Written;
 
 mod observation;
-use crate::public::results::observe_chunk;
+use crate::public::results::observe_question;
 use observation::observe_row;
 
 fn nonblank(value: &str, what: &str) -> Result<String, Error> {
@@ -431,13 +431,12 @@ impl Engine {
                     evidence,
                     MAX_TEXT_BYTES,
                     cancel,
-                    |stages, plan, answered| {
-                        observe_chunk(
+                    |stage, question, answered| {
+                        observe_question(
                             &stop,
                             engine.backend(),
-                            plan,
+                            (stage, question),
                             answered,
-                            stages.iter().copied(),
                             &mut positions,
                         )
                     },

@@ -127,7 +127,7 @@ fn planned(
     for record in records {
         let record = record?;
         let text = reading.evidence(&record)?.as_text()?.into_owned();
-        let (pieces, prepared) = facade::step_one(backend, profile, spec, &text, limit)?;
+        let (pieces, _, prepared) = facade::step_one(backend, profile, spec, &text, limit)?;
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
@@ -140,15 +140,15 @@ fn planned(
             .checked_mul(questions_per_name)
             .ok_or(Failure::Defect("a plan is too large"))?;
         let mut requests = Vec::new();
-        for chunk in prepared {
+        for request in prepared {
             summary
-                .request(&chunk.request.body)
+                .request(&request.body)
                 .map_err(|_| Failure::Defect("a plan is too large"))?;
             if first.is_none() {
                 requests.push(Request {
-                    digest: chunk.request.digest.as_str().to_owned(),
-                    bytes: chunk.request.body.len(),
-                    body_utf8: String::from_utf8(chunk.request.body)
+                    digest: request.digest.as_str().to_owned(),
+                    bytes: request.body.len(),
+                    body_utf8: String::from_utf8(request.body)
                         .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
                 });
             }

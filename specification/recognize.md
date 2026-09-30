@@ -91,7 +91,7 @@ A text over 600,000 UTF-8 bytes exits 2 before any request, at every address: `t
 
 ## Records and details
 
-Record modes print `{"input":INPUT,"value":OBJECT}` in input order. `--details` prints `thinkthen.result/1`, keeps the same object under `value`, lists every request digest in send order, and sums send counts and usage. `answer.pieces` lists each piece's offsets and its five tag probabilities. `answer.names` lists each found name's span as found, its kind probabilities, and its edge option probabilities or null. `answer.pairs` lists each pair's probability.
+Record modes print `{"input":INPUT,"value":OBJECT}` in input order. `--details` prints `thinkthen.result/1`, keeps the same object under `value`, lists every question key in question order, and sums send counts and usage. `answer.pieces` lists each piece's offsets and its five tag probabilities. `answer.names` lists each found name's span as found, its kind probabilities, and its edge option probabilities or null. `answer.pairs` lists each pair's probability.
 
 A failed step-1, step-2 or relation request fails that input. It prints no partial name or edge object for that input. Earlier completed record rows remain printed.
 

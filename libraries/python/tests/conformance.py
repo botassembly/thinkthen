@@ -140,11 +140,8 @@ def succeeded(port, case):
     base = f"http://127.0.0.1:{port}/case/{case['id']}/v1"
     served = base + "/systemone"
     exchanges = case.get("exchanges", [])
-    # A record function's row lists question keys by ADR 0111; find,
-    # recognize and relate keep request digests until slice 4.
-    keyed = case["verb"] not in ("find", "recognize", "relate")
-    renamed = {digest(CANONICAL, e["request"]): question_keys(served, e["request"]) if keyed
-               else digest(served, e["request"]) for e in exchanges}
+    # Every row lists question keys, by ADR 0111.
+    renamed = {digest(CANONICAL, e["request"]): question_keys(served, e["request"]) for e in exchanges}
     success = swap(case["expect"]["success"], renamed)
     texts = [exchange["evidence"] for exchange in exchanges]
     engine = tt.Engine(base_url=base, cache=False)
