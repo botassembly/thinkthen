@@ -169,7 +169,7 @@ The engine part only. The SQL hosts' own limit copies wait for 3b and land as a 
   - `engine/budget.rs` `a_forked_child_counts_from_zero` replaces `inherited_budget_and_reset_marker_do_not_block_a_child`. A parent marker left behind is the `process/tests.rs` row "a child replaces the parent's rebuild".
   - `conformance/consumer/fork-probe` `an_inherited_engine_and_a_child_engine_share_one_request_total`: after a real fork, an engine the parent built and one the child built share one `max_requests_total(Some(1))`; the second is refused before its first send and the backend counts one request. It failed on the first 3d build.
   - Kept unchanged and passing: `cli/schedule/width_tests.rs` `every_live_path_and_every_engine_share_one_cap`; `engine/width_tests.rs`; `engine/process/tests.rs`; `engine/facade/fork_tests.rs`; `engine/backoff.rs` `paced_starts_from_many_threads_keep_one_interval_apart`; the send budget and token cap denials in `engine/http/tests.rs`, `engine/send_budget.rs` and `tests/public_env`; the six other real-fork probe tests.
-  - CHECKS_PLACEHOLDER
+  - After rebasing onto slice 3c, each passes, run one at a time: `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets`, `lint` in a clean checkout, the fork probe, and the C door, Polars, Rust, Python, TypeScript, Go, C#, SQLite, DuckDB and PostgreSQL surface checks against one loopback backend. Python, TypeScript, PostgreSQL and DuckDB pin the "already active for this process" sentence.
 - Defers:
   - The SQL hosts' copies: PostgreSQL's `ACTIVE_THROTTLE` and early refusal (`call/settings.rs`) and `SEND_BUDGET`, and DuckDB's `SEND_BUDGET`. They touch the SQL host files 3b reruns, so they wait for 3b and land as slice 3e. That slice needs a public way to reach the process total.
   - `default_engine`, to ticket 0314's binding pass, as 3a recorded.
@@ -248,3 +248,10 @@ What the second review found:
 - The question key names the backend address. A replay under another base URL than the recording finds nothing, so a measurement must replay against the recorded address.
 - A slice placed before the expression limits what it asks, so a sliced lazy frame asks only the rows it keeps. The test does not show whether Polars pushes a later slice below the expression. The streaming engine, which the feature no longer compiles, is the only way to bound the frame's own memory.
 - Replay speed is the engine's: about 50 microseconds per answered question under load, the same with or without Polars.
+
+### Slice 3d
+
+- The prep note said the request total did not reset in a forked child. `SendBudget` already reset itself with its own spin loop. Reading the code before building found the duplicate, and the budget now reuses the shared fork-safe cell.
+- An engine that saves a piece of process state when it is built keeps the parent's copy after a fork. The first build saved the total that way, and review caught it. A simulated fork cannot show the bug, because both engines are built as the child. The real-fork probe can, and its new test failed on that build.
+- The surface checks take a loopback port as their argument. `check.sh 0` fails the Rust and Python checks falsely. `heavy-lock` re-runs its caller with the arguments left when it is sourced and only the environment names in `allow-list`, so a wrapper that shifts first or passes its own variables loses them.
+- SQLite's `test_one_cached_call_leaves_no_thread` failed once under load 24 with fewer threads after the calls than before, then passed alone. The test counts the process's threads, which other finishing work can change.
