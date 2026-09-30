@@ -338,3 +338,4 @@ What the review fixes found:
 - DuckDB kept two counts of the same thing: `SEND_BUDGET` for sends and the engines' usage totals for the row cut. Both now read the engine's one total.
 - The held arm keeps its reply until release, so a PostgreSQL cancel check that releases after the wait already proves order. Only the latency needed the wall clock.
 - Running the fork probe from its own folder left `conformance/consumer/target`, and `policy.py` then counted generated bindings against the 500-line cap. The test rung builds it under `target/consumer`.
+- The review's first runs shared the machine with each other. PostgreSQL's `find_proxy_cases` failed once on a refused proxy connection, and DuckDB's `sixteen_held_plans_refuse_without_eviction` failed once and then passed 20 of 20 alone. Neither touches the request total. Both passed in full when run alone.
