@@ -61,8 +61,8 @@ pub(crate) struct Judged {
 impl Judged {
     /// One record's row, as the scheduler counts it.
     pub(crate) fn completed<E>(self) -> Completed<Self, E> {
-        let (replayed, partial) = (self.replayed, self.partial_failure);
-        Completed::one(self, replayed, partial)
+        let replayed = self.replayed;
+        Completed::one(self, replayed)
     }
 }
 

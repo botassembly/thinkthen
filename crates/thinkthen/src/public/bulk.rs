@@ -8,13 +8,12 @@ mod annotate_observation;
 mod details;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
 mod annotation;
-pub(crate) use annotation::{record as annotation_record, rendered as render_annotation};
 
 use crate::core::{self, Find, Value, ranking};
 use crate::public::annotated::AnnotatedRecord;
 use crate::engine::pipeline::Failed;
 use crate::public::asking::{self, Decisions, Miss};
-use crate::public::batch::{self, Batch};
+use crate::public::batch::Batch;
 use crate::public::pull;
 use crate::public::choice::Choice;
 use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evidence, only};
@@ -436,7 +435,33 @@ impl Engine {
             let setting = selected_set_batch(questions, &options, self.batch)?;
             let stop = Stop::begin(options)?.with_prices(self.prices);
             let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
-            batch::start_annotation(engine, set, records.into_iter(), stop, self.most, setting)
+            let asker = annotation::Annotating::new(&engine, set.clone());
+            let call = pull::Call {
+                packing: pull::packing(setting, false, false),
+                engine: Arc::clone(&engine),
+                stop,
+                most: self.most,
+            };
+            Ok(pull::start(
+                call,
+                asker,
+                records.into_iter(),
+                Box::new(move |stop, index, item, row| {
+                    let annotation = row.map_err(annotation::failure)?;
+                    let all_failed = annotation
+                        .values
+                        .iter()
+                        .all(|(_, value)| matches!(value, core::AnnotatedValue::Failed(_)));
+                    let value = annotation::rendered(&set, &engine, annotation, stop.observing())?;
+                    if all_failed {
+                        observe_annotated_questions(&value, index, stop)?;
+                        return Err(asking::backend_failed());
+                    }
+                    observe_annotated(&value, index, stop)?;
+                    let item = item.ok_or_else(|| Error::defect("a row arrived with no record"))?;
+                    Ok(Some(AnnotatedRecord::new(item, value.values, value.json)))
+                }),
+            ))
         })())
     }
 

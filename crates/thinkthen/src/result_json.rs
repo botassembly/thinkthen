@@ -2,7 +2,7 @@
 //! and the library's `Details::to_json` both write it here, so their bytes agree.
 
 use crate::core::{
-    Backend, BatchMeta, BatchWarning, DecisionResult, Meta, ProfileName, ProfileWarning, Question,
+    Backend, BatchWarning, DecisionResult, Meta, ProfileName, ProfileWarning, Question,
     Record, RenderError, RequestMeta, Threshold, Value, json_line, question_sha256_with_profile,
 };
 use crate::engine::facade::Judgment;
@@ -41,7 +41,6 @@ pub(crate) fn decision(
         shown,
         input,
         None,
-        None,
         &digest,
         Vec::new(),
     )?;
@@ -71,26 +70,24 @@ pub(crate) fn decision_row(
         threshold,
         shown,
         input,
-        None,
         Some(requests),
         &digest,
         attempts,
     )
 }
 
-/// A batch member can name both the refused parent and its answering split request.
+/// One row that lists its question keys in `meta.requests`, by ADR 0111.
 #[expect(
     clippy::too_many_arguments,
     reason = "the request list belongs to this member's result metadata"
 )]
-pub(crate) fn decision_with_batch_requests(
+pub(crate) fn decision_with_requests(
     run: Run<'_>,
     judged: &Judgment,
     question: Question,
     threshold: Option<Threshold>,
     shown: Value,
     input: Option<Record>,
-    batch: Option<BatchMeta>,
     requests: Vec<String>,
 ) -> Result<String, RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
@@ -101,7 +98,6 @@ pub(crate) fn decision_with_batch_requests(
         threshold,
         shown,
         input,
-        batch,
         Some(requests),
         &digest,
         Vec::new(),
@@ -119,7 +115,6 @@ fn decision_with_digest(
     threshold: Option<Threshold>,
     shown: Value,
     input: Option<Record>,
-    batch: Option<BatchMeta>,
     requests: Option<Vec<String>>,
     digest: &str,
     attempts: Vec<crate::public::AttemptObservation>,
@@ -137,7 +132,6 @@ fn decision_with_digest(
             requests.unwrap_or_else(|| vec![answered.request.as_str().to_owned()]),
         )
         .with_profile_warning(run.warning)
-        .with_batch(batch)
         .with_batch_warning(run.batch_warning)
         .with_context_sha256(run.context_sha256),
     )

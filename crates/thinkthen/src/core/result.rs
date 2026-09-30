@@ -3,8 +3,6 @@
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
-use crate::core::batch::{Closed, Setting};
-
 use crate::core::answer::{Answer, Value};
 use crate::core::question::Question;
 use crate::core::records::Record;
@@ -91,7 +89,6 @@ pub(crate) struct RequestMeta {
     requests: Vec<String>,
     failed_questions: usize,
     profile_warning: Option<ProfileWarning>,
-    batch: Option<BatchMeta>,
     batch_warning: Option<BatchWarning>,
     context_sha256: Option<String>,
 }
@@ -106,7 +103,6 @@ impl RequestMeta {
             requests,
             failed_questions: 0,
             profile_warning: None,
-            batch: None,
             batch_warning: None,
             context_sha256: None,
         }
@@ -125,11 +121,6 @@ impl RequestMeta {
         self
     }
 
-    pub(crate) fn with_batch(mut self, batch: Option<BatchMeta>) -> Self {
-        self.batch = batch;
-        self
-    }
-
     pub(crate) fn with_batch_warning(mut self, warning: Option<BatchWarning>) -> Self {
         self.batch_warning = warning;
         self
@@ -138,85 +129,6 @@ impl RequestMeta {
     pub(crate) fn with_context_sha256(mut self, digest: Option<String>) -> Self {
         self.context_sha256 = digest;
         self
-    }
-}
-
-/// The whole request a detailed batched row rode in.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "batchMeta"))]
-pub(crate) struct BatchMeta {
-    setting: BatchSetting,
-    records: usize,
-    #[cfg_attr(test, schemars(range(min = 1)))]
-    position: usize,
-    closed: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    usage: Option<Usage>,
-    requests_sent: u64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    split: Option<bool>,
-}
-
-impl BatchMeta {
-    pub(crate) fn new(
-        setting: Setting,
-        records: usize,
-        position: usize,
-        closed: Closed,
-        usage: Option<Usage>,
-        requests_sent: u64,
-    ) -> Self {
-        let setting = setting.into();
-        let closed = match closed {
-            Closed::Content => "content",
-            Closed::Size => "size",
-            Closed::Limit => "limit",
-            Closed::Pause => "pause",
-            Closed::End => "end",
-        };
-        Self {
-            setting,
-            records,
-            position,
-            closed,
-            usage,
-            requests_sent,
-            split: None,
-        }
-    }
-
-    pub(crate) fn with_split(mut self) -> Self {
-        self.split = Some(true);
-        self
-    }
-
-    pub(crate) fn active(&self) -> bool {
-        self.records > 1 || self.split.is_some()
-    }
-}
-
-/// One annotate request's group and whole-request batch facts.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-#[cfg_attr(test, schemars(rename = "annotateBatchMeta"))]
-pub(crate) struct AnnotateBatchMeta {
-    group: usize,
-    request: String,
-    #[serde(flatten)]
-    batch: BatchMeta,
-}
-
-impl AnnotateBatchMeta {
-    pub(crate) fn new(group: usize, request: String, batch: BatchMeta) -> Self {
-        Self {
-            group,
-            request,
-            batch,
-        }
-    }
-
-    pub(crate) fn active(&self) -> bool {
-        self.batch.active()
     }
 }
 
@@ -337,8 +249,6 @@ pub(crate) struct AnnotateMeta {
     requests_sent: u64,
     cached: bool,
     requests: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    batches: Option<Vec<AnnotateBatchMeta>>,
     failed_questions: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     profile_warning: Option<ProfileWarning>,
@@ -361,7 +271,6 @@ impl AnnotateMeta {
             requests,
             failed_questions,
             profile_warning,
-            batch: _,
             batch_warning: _,
             context_sha256: _,
         } = request_meta;
@@ -374,17 +283,9 @@ impl AnnotateMeta {
             requests_sent,
             cached: replayed,
             requests,
-            batches: None,
             failed_questions,
             profile_warning,
         }
-    }
-
-    pub(crate) fn with_batches(mut self, batches: Vec<AnnotateBatchMeta>) -> Self {
-        if batches.iter().any(AnnotateBatchMeta::active) {
-            self.batches = Some(batches);
-        }
-        self
     }
 }
 

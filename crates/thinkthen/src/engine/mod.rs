@@ -544,7 +544,6 @@ pub(crate) fn client_width(process: &'static Widths) -> &'static Widths {
     process
 }
 
-pub(crate) mod annotate_batching;
 pub(crate) mod backoff;
 pub(crate) mod cache_lock;
 pub(crate) mod cache_prune;

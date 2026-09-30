@@ -95,7 +95,7 @@ fn cancelled_batch_leaves_no_send(engine: &Engine, loopback: &conformance_backen
                     thread::spawn(move || feed(&requests, &events));
                 },
                 &|text: &&str| {
-                    ask(text, &each).map(|judged| Completed::one(judged.answer.yes(), false, false))
+                    ask(text, &each).map(|judged| Completed::one(judged.answer.yes(), false))
                 },
                 |row| {
                     rows.push(row);

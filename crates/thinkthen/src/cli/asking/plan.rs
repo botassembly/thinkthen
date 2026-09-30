@@ -11,7 +11,7 @@ use super::judged::{Planner, Records};
 use crate::core::pack::{self, Entry, PackLimits, Packer};
 use crate::core::{Backend, Evidence, PlanDocument, PlanSummary, Reading, Sources, json_line};
 use crate::edge;
-use crate::engine::pipeline::{MOST_INPUTS, Packing};
+use crate::engine::pipeline::{self, MOST_INPUTS, Packing};
 use crate::failure::Failure;
 use crate::failure::context::Limits;
 use crate::profile::Mismatch;
@@ -71,7 +71,7 @@ pub(super) fn packed(
             .map(|ask| Entry {
                 state: ask.state.clone(),
                 question: Arc::clone(&ask.question),
-                options: 0,
+                options: pipeline::options(&ask),
                 item: (),
             })
             .collect();

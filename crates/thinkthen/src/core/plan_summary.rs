@@ -3,8 +3,6 @@
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::core::batch::Batch;
-
 /// No estimate may wrap into a smaller apparent cost.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 #[error("the planned input is too large to count")]
@@ -29,10 +27,6 @@ impl PlanSummary {
             .checked_mul(908)?
             .checked_add(999)
             .map(|scaled| scaled / 1000)
-    }
-
-    pub(crate) const fn records(&self) -> usize {
-        self.records
     }
 
     pub(crate) fn new(upper_bound: bool) -> Self {
@@ -64,10 +58,6 @@ impl PlanSummary {
         self.requests = requests;
         self.estimated_bytes = bytes;
         Ok(())
-    }
-
-    pub(crate) fn batch(&mut self, batch: &Batch) -> Result<(), PlanTooLarge> {
-        self.request(&batch.body)
     }
 
     /// Staged work may need this many later requests after answers arrive;

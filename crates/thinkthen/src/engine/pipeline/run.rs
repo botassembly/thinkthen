@@ -119,7 +119,7 @@ impl<'a, A: Asker> Run<'a, A> {
 
     /// Emit what is ready and take in a stop. False once the call is over.
     fn settle(&mut self, host: &mut impl Host<A>, cancel: &Cancel) -> bool {
-        self.emit_ready(host, cancel);
+        self.emit_ready(host);
         self.halted |= self.asker.gone();
         if !self.halted
             && self.stopping.is_none()
@@ -205,7 +205,7 @@ impl<'a, A: Asker> Run<'a, A> {
     }
 
     /// Emit every finished input at the head of the window, in order.
-    fn emit_ready(&mut self, host: &mut impl Host<A>, cancel: &Cancel) {
+    fn emit_ready(&mut self, host: &mut impl Host<A>) {
         while !self.halted && self.slots.front().is_some_and(Slot::ready) {
             let Some(slot) = self.slots.pop_front() else {
                 return;
@@ -475,7 +475,7 @@ impl<'a, A: Asker> Run<'a, A> {
 }
 
 /// The options a pick carries, which a profile may limit.
-fn options(ask: &Ask) -> usize {
+pub(crate) fn options(ask: &Ask) -> usize {
     match &ask.decoder {
         crate::core::Question::Choose { options, .. } => options.count(),
         _ => 0,

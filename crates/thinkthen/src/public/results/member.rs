@@ -3,12 +3,11 @@
 use serde::Serialize;
 use std::fmt;
 
-use crate::core::{self, AnswerOutcome, BatchMeta, BatchWarning, Framing, ProfileWarning, Reading};
+use crate::core::{self, BatchWarning, Framing, ProfileWarning, Reading};
 use crate::engine::facade;
-use crate::engine::prepared_request::Answered;
 use crate::public::error::Error;
 use crate::public::question::Question;
-use crate::result_json::{Run, decision_with_batch_requests};
+use crate::result_json::{Run, decision_with_requests};
 
 use super::{Details, Written};
 
@@ -36,16 +35,7 @@ impl fmt::Debug for Details {
 
 pub(crate) struct Member {
     judged: facade::Judgment,
-    batch: Option<BatchMeta>,
     requests: Vec<String>,
-}
-
-pub(crate) struct ParentReceipt<'a> {
-    pub(crate) digest: &'a str,
-    pub(crate) sent: u64,
-    pub(crate) total: usize,
-    pub(crate) offset: usize,
-    pub(crate) closed: core::batch::Closed,
 }
 
 impl Member {
@@ -53,88 +43,11 @@ impl Member {
     pub(crate) fn new(judged: facade::Judgment, requests: Vec<String>) -> Self {
         Self {
             judged,
-            batch: None,
             requests,
         }
-    }
-
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "one answered member carries its source batch and optional refused parent"
-    )]
-    pub(crate) fn from_batch(
-        batch: &core::Batch,
-        whole: &Answered,
-        answer: &core::Answer,
-        value: core::Value,
-        outcome: core::Outcome,
-        position: usize,
-        setting: core::Setting,
-        context: bool,
-        parent: Option<ParentReceipt<'_>>,
-    ) -> Result<Self, Error> {
-        let records = batch.outcomes.len();
-        let own_sent = core::share(whole.requests_sent, records, position);
-        let parent_sent = parent.as_ref().map_or(0, |parent| {
-            core::share(parent.sent, parent.total, parent.offset + position)
-        });
-        let sent = own_sent
-            .checked_add(parent_sent)
-            .ok_or_else(|| Error::defect("a batch request share overflowed"))?;
-        let half_parent = parent.as_ref().map_or(0, |parent| {
-            (0..records)
-                .map(|place| core::share(parent.sent, parent.total, parent.offset + place))
-                .sum::<u64>()
-        });
-        let whole_sent = whole
-            .requests_sent
-            .checked_add(half_parent)
-            .ok_or_else(|| Error::defect("batch attempts overflowed"))?;
-        let batch_meta = (records > 1 || parent.is_some() || context).then(|| {
-            let meta = BatchMeta::new(
-                setting,
-                records,
-                position + 1,
-                parent.as_ref().map_or(batch.closed, |parent| parent.closed),
-                whole.reply.usage(),
-                whole_sent,
-            );
-            if parent.is_some() {
-                meta.with_split()
-            } else {
-                meta
-            }
-        });
-        let mut requests = Vec::with_capacity(1 + usize::from(parent.is_some()));
-        if let Some(parent) = parent {
-            requests.push(parent.digest.to_owned());
-        }
-        requests.push(whole.request.as_str().to_owned());
-        let own = Answered {
-            reply: core::Reply::new(
-                whole.reply.model().clone(),
-                vec![AnswerOutcome::Answered(answer.clone())],
-                whole
-                    .reply
-                    .usage()
-                    .map(|usage| usage.share(records, position)),
-            ),
-            replayed: whole.replayed,
-            request: whole.request.clone(),
-            requests_sent: sent,
-        };
-        Ok(Self {
-            judged: facade::Judgment {
-                answer: answer.clone(),
-                value,
-                outcome,
-                answered: own,
-            },
-            batch: batch_meta,
-            requests,
-        })
     }
 }
+
 
 impl Details {
     /// The same detailed result as a scalar SQL value, without a record input.
@@ -232,27 +145,25 @@ impl Details {
         let scalar_json = input
             .as_ref()
             .map(|_| {
-                decision_with_batch_requests(
+                decision_with_requests(
                     run.clone(),
                     &member.judged,
                     question.core.clone(),
                     question.threshold,
                     member.judged.value.clone(),
                     None,
-                    member.batch.clone(),
                     member.requests.clone(),
                 )
                 .map_err(|_| Error::defect("a scalar result could not be written as JSON"))
             })
             .transpose()?;
-        let json = decision_with_batch_requests(
+        let json = decision_with_requests(
             run,
             &member.judged,
             question.core.clone(),
             question.threshold,
             member.judged.value.clone(),
             input,
-            member.batch,
             member.requests.clone(),
         )
         .map_err(|_| Error::defect("a result could not be written as JSON"))?;

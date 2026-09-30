@@ -9,7 +9,7 @@ pub use call::{Call, DoorReply, Facts};
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;
-pub(crate) use member::{Member, ParentReceipt};
+pub(crate) use member::Member;
 mod observation;
 #[cfg(test)]
 pub(crate) use observation::QuestionJson;

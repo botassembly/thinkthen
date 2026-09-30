@@ -19,6 +19,7 @@ use crate::core::AttemptObservation;
 use crate::engine::{Cancel, workers};
 
 mod run;
+pub(crate) use run::options;
 mod send;
 
 /// The inputs one request answers when no `--batch N` is set.

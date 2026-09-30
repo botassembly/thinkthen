@@ -8,17 +8,18 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use crate::core::{
-    Answer, AnswerOutcome, Backend, BackendProfile, Batch, BatchError, Evidence, Find, FindAnswer,
-    ModelName, Outcome, Plan, Question, Threshold, Value, quoted_plan,
+    Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Outcome, Plan,
+    Value,
 };
+#[cfg(test)]
+use crate::core::{BatchError, Evidence, Question, Threshold, quoted_plan};
 use crate::engine::error::Error;
 use crate::engine::http::Client;
-use crate::engine::prepared_request::{PreparedRequest, PreparedRequests};
+use crate::engine::prepared_request::PreparedRequests;
 use crate::engine::process::Guarded;
 use crate::engine::recorder::Recorder;
 use crate::engine::request::{self, Transport};
@@ -26,16 +27,13 @@ use crate::engine::schedule;
 use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
 
-pub(crate) use crate::engine::annotate_batching::{
-    GroupPlanError, GroupPlanner, GroupRequest, GroupWork,
-};
 pub(crate) use crate::engine::http::{Key, Roots};
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
 pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::schedule::{
     Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
 };
-pub(crate) use annotate::{Annotation, GroupAnswer, PreparedGroup, QuestionAnswer, assemble};
+pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
@@ -44,11 +42,8 @@ mod finish;
 #[cfg(test)]
 #[cfg(feature = "cli")]
 mod fork_tests;
-mod native_batch;
 mod recognize;
 mod relate;
-mod split;
-pub(crate) use split::{OneSplit, SplitDecision, SplitParent};
 
 /// The folders replies are replayed from and recorded to.
 #[derive(Clone, Debug, Default)]
@@ -287,6 +282,8 @@ impl Engine {
     }
 
     /// Ask one question of one evidence and read the answer under the rule.
+    /// Only tests call it; the public calls go through `ask_all`.
+    #[cfg(test)]
     pub(crate) fn judge(
         &self,
         question: &Question,
@@ -314,51 +311,6 @@ impl Engine {
             outcome,
             answered,
         })
-    }
-
-    /// Send one batch's exact body as one request, through the same replay,
-    /// retries, recording, cache, and counters as every other request.
-    pub(crate) fn ask_batch(&self, batch: &Batch, cancel: &Cancel) -> Result<Answered, Error> {
-        self.ask_batch_with_attempts(batch, cancel, None)
-    }
-
-    /// Attribute actual marked attempts to one prepared batch, including a 413.
-    pub(crate) fn ask_batch_with_attempts(
-        &self,
-        batch: &Batch,
-        cancel: &Cancel,
-        attempts: Option<&AtomicU64>,
-    ) -> Result<Answered, Error> {
-        let state = self.state(cancel)?;
-        let prepared = PreparedRequest {
-            body: batch.body.clone(),
-            digest: batch.digest.clone(),
-        };
-        request::ask_sent_observed(
-            &self.backend,
-            &batch.plan,
-            prepared,
-            &state.recorder,
-            cancel,
-            self.transport(&state),
-            || (self.key)(),
-            || {
-                if let Some(attempts) = attempts {
-                    attempts.fetch_add(1, Ordering::Relaxed);
-                }
-            },
-        )
-    }
-
-    pub(crate) fn ask_record_batch_with_one_split(
-        &self,
-        batch: &Batch,
-        records: impl FnOnce() -> Result<Vec<(crate::core::BatchRecord, Question)>, Error>,
-        context: Option<&crate::core::Evidence>,
-        cancel: &Cancel,
-        after_left: impl FnOnce(&Batch, &Result<Answered, Error>) -> SplitDecision,
-    ) -> Result<OneSplit, Error> {
-        split::ask(self, batch, records, context, cancel, after_left)
     }
 
     /// Ask one aggregate question over a bounded set and select one unit.
