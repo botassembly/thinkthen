@@ -8,7 +8,7 @@ if (Environment.GetEnvironmentVariable("TT_PORTABLE_BATCH") == "1") {
     string[] texts = ["alpha", "café-5544", "omega", "line 2907", "tail"];
     var bulkResult = bulk.DecideMany("Is it relevant?", texts);
     Answer[] rows = bulkResult.Value;
-    if (bulkResult.Facts.Records != 5 || bulkResult.Facts.RequestsSent != 3) throw new Exception("portable bulk facts");
+    if (bulkResult.Facts.GetProperty("records").GetInt64() != 5 || bulkResult.Facts.GetProperty("requests_sent").GetInt64() != 3) throw new Exception("portable bulk facts");
     if (rows.Length != 5 || rows.Any(row => row.Outcome != 1 || row.Probability != .9))
         throw new Exception("portable bulk answers");
     Console.WriteLine("PORTABLE_BATCH_CSHARP_PASS");
@@ -16,8 +16,8 @@ if (Environment.GetEnvironmentVariable("TT_PORTABLE_BATCH") == "1") {
 }
 using var engine = Engine.Open();
 var typed = engine.Decide("Is it?", "consumer-csharp");
-if (typed.Value.Outcome != 1 || typed.Facts.Records != 1 || typed.Facts.RequestsSent != 1 ||
-    typed.Facts.InputTokens != 1 || typed.Facts.Model != "jev-1.13.0") throw new Exception("typed scalar facts");
+if (typed.Value.Outcome != 1 || typed.Facts.GetProperty("records").GetInt64() != 1 || typed.Facts.GetProperty("requests_sent").GetInt64() != 1 ||
+    typed.Facts.GetProperty("input_tokens").GetInt64() != 1 || typed.Facts.GetProperty("model").GetString() != "jev-1.13.0") throw new Exception("typed scalar facts");
 using var json = JsonDocument.Parse(engine.Call("{\"decide\":\"Is it?\",\"evidence\":\"consumer-json\"}"));
 JsonElement result = json.RootElement;
 if (result.ValueKind != JsonValueKind.Object || result.EnumerateObject().Select(p => p.Name).OrderBy(n => n).SequenceEqual(new[] {"facts", "value"}) == false) throw new Exception("JSON result field set");
