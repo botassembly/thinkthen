@@ -105,5 +105,8 @@ fn a_run_reading_a_file_is_told_nothing_even_at_a_terminal() {
     let (out, err) = through_a_terminal(&asked, "", &into).expect("a pseudo-terminal");
 
     assert_eq!(err, "");
-    assert!(out.contains(r#""state":"Refund me please.\n""#), "{out}");
+    assert!(
+        out.contains(r#""instructions":"The text is \"Refund me please.\\n\". asks for a refund""#),
+        "{out}"
+    );
 }

@@ -87,8 +87,8 @@ fn the_two_texts_travel_with_the_question_and_come_from_either_home() {
     assert_eq!(
         text(typed.clone()),
         concat!(
-            r#"{"state":"Refund me please.","model":"local-1","#,
-            r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund","#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"local-1","#,
+            r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me please.\". asks for a refund","#,
             r#""criteria":{"true":"The writer asks for money back.","#,
             r#""false":"The writer asks for anything else."}}}}"#,
         )
@@ -122,8 +122,8 @@ fn a_question_with_no_new_option_sends_the_request_it_always_sent() {
     assert_eq!(
         text(typed.clone()),
         concat!(
-            r#"{"state":"Refund me please.","model":"local-1","#,
-            r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}"#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"local-1","#,
+            r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me please.\". asks for a refund"}}}"#,
         )
     );
     assert_eq!(typed, sent(&["decide", &file], DECIDED));
@@ -153,8 +153,8 @@ fn a_description_per_option_travels_and_comes_from_either_home() {
     assert_eq!(
         text(typed.clone()),
         concat!(
-            r#"{"state":"Refund me please.","model":"local-1","#,
-            r#""questions":{"q1":{"type":"choice","instructions":"which team owns this","#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"local-1","#,
+            r#""questions":{"q1":{"type":"choice","instructions":"The text is \"Refund me please.\". which team owns this","#,
             r#""criteria":{"billing":"Money and invoices.","#,
             r#""shipping":"Parcels and dates."}}}}"#,
         )
@@ -247,8 +247,8 @@ fn a_score_map_sends_descriptions_in_order_and_reports_the_names() {
     assert_eq!(
         String::from_utf8_lossy(&requests[0].body),
         concat!(
-            r#"{"state":"Refund me please.","model":"local-1","questions":{"q1":{"type":"score","#,
-            r#""instructions":"how much disruption","#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"score","#,
+            r#""instructions":"The text is \"Refund me please.\". how much disruption","#,
             r#""criteria":[{"what":"No impact."},"Partial.",{}]}}}"#,
         )
     );

@@ -40,7 +40,10 @@ fn profile(name: &str, limits: &str) -> PathBuf {
 
 #[test]
 fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
-    let exact_evidence = profile("edge-evidence", r#""max_evidence_bytes":4"#);
+    // The evidence is the request's state. Under ADR 0111 a record travels
+    // quoted in its question, so the state of a run with no context is the
+    // fixed 44-byte sentence "Each question quotes the text it asks about.".
+    let exact_evidence = profile("edge-evidence", r#""max_evidence_bytes":44"#);
     let passed = spawn(
         &[
             "decide",
@@ -55,22 +58,23 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
     .expect("command");
     assert_eq!(passed.status.code(), Some(0));
 
+    let small_evidence = profile("edge-evidence", r#""max_evidence_bytes":43"#);
     let failed = spawn(
         &[
             "decide",
             "Is this relevant?",
             "--plan",
             "--profile",
-            &exact_evidence.to_string_lossy(),
+            &small_evidence.to_string_lossy(),
         ],
         &[],
-        b"five!",
+        b"four",
     )
     .expect("command");
     assert_eq!(failed.status.code(), Some(2));
     assert_eq!(
         String::from_utf8_lossy(&failed.stderr),
-        "thinkthen: profile edge-evidence allows at most 4 evidence bytes; this request has 5\n"
+        "thinkthen: profile edge-evidence allows at most 43 evidence bytes; this request has 44\n"
     );
     assert!(failed.stdout.is_empty());
 
@@ -475,7 +479,7 @@ fn over_limit_precedes_replay_and_cache_answers() {
         assert_eq!(output.status.code(), Some(2), "{option}");
         assert_eq!(
             String::from_utf8_lossy(&output.stderr),
-            "thinkthen: profile stored-tiny allows at most 1 evidence bytes; this request has 4\n",
+            "thinkthen: profile stored-tiny allows at most 1 evidence bytes; this request has 44\n",
             "{option}"
         );
         assert!(output.stdout.is_empty(), "{option}");

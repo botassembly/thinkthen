@@ -17,17 +17,25 @@ fn ask(line: &[&str], base: &str, input: &str) -> io::Result<Output> {
     spawn(&[line, &at[..]].concat(), &key, input.as_bytes())
 }
 
-/// The `state` of every request the listener read, sorted, because requests
-/// run in parallel and arrive in any order.
+/// The text each request quotes in its one question, sorted, because
+/// requests run in parallel and arrive in any order.
 fn sent(listener: &Listener) -> Vec<String> {
     let mut states: Vec<String> = listener
         .requests()
         .iter()
-        // A body with no text state reads as empty and fails the comparison.
+        // A body under another state or with no quote reads as empty and
+        // fails the comparison.
         .map(|request| {
-            serde_json::from_slice::<serde_json::Value>(&request.body)
-                .ok()
-                .and_then(|body| Some(body.get("state")?.as_str()?.to_owned()))
+            let body = serde_json::from_slice::<serde_json::Value>(&request.body).ok();
+            body.as_ref()
+                .filter(|body| body["state"] == "Each question quotes the text it asks about.")
+                .and_then(|body| body["questions"]["q1"]["instructions"].as_str())
+                .and_then(|asked| asked.strip_prefix("The text is "))
+                .and_then(|asked| {
+                    let mut quoted = serde_json::Deserializer::from_str(asked).into_iter();
+                    quoted.next()?.ok()
+                })
+                .and_then(|quoted: serde_json::Value| quoted.as_str().map(str::to_owned))
                 .unwrap_or_default()
         })
         .collect();
@@ -91,7 +99,7 @@ fn a_pointer_with_no_framing_reads_json_lines() -> io::Result<()> {
                 "The payout failed again.",
                 "The refund never arrived.",
             ],
-            "{row:?}: each request sends the body alone"
+            "{row:?}: each request quotes the body alone"
         );
     }
     Ok(())
@@ -103,7 +111,7 @@ fn the_plan_names_a_framing_the_default_chose() -> io::Result<()> {
     let base = listener.base();
     let plan = |input: &str, counts: &str| {
         format!(
-            r#"{{"url":"{base}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","input":{input},"request":{{"state":"The payout failed again.","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"{QUESTION}"}}}}}}}}"#
+            r#"{{"url":"{base}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","input":{input},"request":{{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"The text is \"The payout failed again.\". {QUESTION}"}}}}}}}}"#
         ) + "\n"
             + counts
             + "\n"
@@ -114,7 +122,7 @@ fn the_plan_names_a_framing_the_default_chose() -> io::Result<()> {
             LINES,
             plan(
                 r#"{"framing":"lines","field":[],"from":"default"}"#,
-                r#"{"records":3,"requests":3,"estimated_bytes":436,"estimated_input_tokens":{"lower":224,"upper":396},"upper_bound":false}"#,
+                r#"{"records":3,"requests":3,"estimated_bytes":622,"estimated_input_tokens":{"lower":320,"upper":565},"upper_bound":false}"#,
             ),
         ),
         (
@@ -122,7 +130,7 @@ fn the_plan_names_a_framing_the_default_chose() -> io::Result<()> {
             RECORDS,
             plan(
                 r#"{"framing":"jsonl","field":["/body"],"from":"default"}"#,
-                r#"{"records":4,"requests":4,"estimated_bytes":579,"estimated_input_tokens":{"lower":298,"upper":526},"upper_bound":false}"#,
+                r#"{"records":4,"requests":4,"estimated_bytes":827,"estimated_input_tokens":{"lower":426,"upper":751},"upper_bound":false}"#,
             ),
         ),
     ];
