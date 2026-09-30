@@ -2,6 +2,12 @@
 
 Status: open. A dependency bug noted for Ian. Found by ticket 0329.
 
+Kind: debt
+
+Pay when: a Zig release fixes its ELF linker's constant alignment.
+
+Keeping it ties static Zig builds to LLVM and LLD, and a later Zig may drop or change those switches.
+
 ## The problem
 
 Zig 0.15.2's own ELF linker merges every `.rodata.cst4/8/16/32` input into one `.rodata.cst` output section with entry size 4. It loses each constant's 16-byte alignment. A static Debug consumer of `libthinkthen.a` then put a Rust constant at an 8-byte address, and an aligned SSE load in `Instant::duration_since` faulted.

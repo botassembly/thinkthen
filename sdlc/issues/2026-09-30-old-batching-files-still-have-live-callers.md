@@ -2,6 +2,12 @@
 
 Status: open. Found by reading main at `ec130d3ee`. Owner: ticket 0304 slice 5, which deletes these files; slice 4 takes the first two if it removes `ask_chunks` and moves `recognize`. Source: `sdlc/planning/after-slice-3-prep.md`, section 1 (slice 4 items 3 and 4, slice 5 item 2) and section 4 items 7 and 8. `cache prune` and `status` are in `2026-09-30-cache-prune-and-status-miss-the-question-store.md`.
 
+Kind: debt
+
+Pay when: 0304 slice 5 lands.
+
+Keeping it leaves two batching paths, so a fix to one can miss the other.
+
 ## The problem
 
 ADR 0111 step 4 removes `ask_chunks`, and step 5 deletes `engine/schedule.rs`, `core/batch.rs` and the old recorder. Neither step names a new home for these callers:

@@ -1,5 +1,11 @@
 Status: Open. Filed 2026-09-30 by ticket 0304 slice 3a. Ticket 0304 slice 3b fixes it.
 
+Kind: debt
+
+Pay when: before 0.1; ticket 0304 slice 3b pays it.
+
+Keeping it ships static libraries that clash with a consumer's own SQLite, and the inverted test passes while the leak stays.
+
 # The static libraries export the bundled SQLite's symbols
 
 ## What happens
