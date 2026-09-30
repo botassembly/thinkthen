@@ -28,6 +28,8 @@ Python and Ruby calls now raise cancellation when the caller's token fires befor
 
 `diff` compares two `recognize` or `relate` runs, or two cuts on one. Each changed record lists the names or edges it gained, lost, or changed in kind, and a key runs McNemar on the key names or edges only one side matched. `--match strict|overlap` pairs names as `audit` does (ticket 0165).
 
+Every surface refuses an API key holding any control character, not only a line break, and says `the API key contains a control character` (ticket 0321).
+
 ### Breaking changes
 
 None. This is the first release.

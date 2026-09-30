@@ -228,13 +228,15 @@ fn a_missing_key_leaves_an_unbound_folder_for_the_next_address() {
 }
 
 #[test]
-fn a_line_break_key_leaves_an_unbound_folder_for_the_next_address() {
-    const REFUSAL: &str = "thinkthen: the API key contains a line break\n";
+fn a_control_character_key_leaves_an_unbound_folder_for_the_next_address() {
+    const REFUSAL: &str = "thinkthen: the API key contains a control character\n";
     let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
     for (row, named, present, key) in [
         ("default-lf", false, false, "first\nsecond"),
         ("named-cr", true, true, "first\rsecond"),
+        ("default-esc", false, false, "first\u{1b}second"),
+        ("named-del", true, true, "first\u{7f}second"),
     ] {
         let home = folder(&format!("line-break-{row}-home"));
         let cache = if named {
@@ -245,7 +247,6 @@ fn a_line_break_key_leaves_an_unbound_folder_for_the_next_address() {
         if present {
             fs::create_dir_all(&cache).expect("empty folder");
         }
-        let before = present.then(|| files(&cache).expect("empty folder snapshot"));
         let mut arguments = vec![
             "decide",
             QUESTION,
@@ -264,14 +265,13 @@ fn a_line_break_key_leaves_an_unbound_folder_for_the_next_address() {
             &[("HOME", home_text), ("THINKTHEN_API_KEY", key)],
             EVIDENCE.as_bytes(),
         )
-        .expect("line-break-key run");
+        .expect("control-character-key run");
         assert_eq!(failed.status.code(), Some(2), "{row}");
         assert!(failed.stdout.is_empty(), "{row}");
         assert_eq!(String::from_utf8_lossy(&failed.stderr), REFUSAL, "{row}");
         assert_eq!(cache.exists(), present, "{row}: folder presence");
-        if let Some(before) = before {
-            assert_eq!(files(&cache).expect("unchanged empty folder"), before);
-            assert_eq!(fs::read_dir(&cache).expect("folder").count(), 0);
+        if present {
+            assert_eq!(fs::read_dir(&cache).expect("folder").count(), 0, "{row}");
         }
         arguments[3] = second.base();
         let answered = spawn(
@@ -287,11 +287,11 @@ fn a_line_break_key_leaves_an_unbound_folder_for_the_next_address() {
             &[("HOME", home_text), ("THINKTHEN_API_KEY", key)],
             EVIDENCE.as_bytes(),
         )
-        .expect("bound hit with line-break key");
+        .expect("bound hit with control-character key");
         assert_eq!(hit.status.code(), Some(0), "{row}");
     }
     assert_eq!(first.requests().len(), 0);
-    assert_eq!(second.requests().len(), 2);
+    assert_eq!(second.requests().len(), 4);
 }
 
 #[cfg(unix)]

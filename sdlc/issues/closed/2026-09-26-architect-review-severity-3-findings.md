@@ -1,8 +1,8 @@
 # Architect review severity 3 findings
 
-Status: Open until ticket 0321 lands, then closed. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 and 03 to 12. Triaged against `origin/main` at `267efff53` on 2026-09-30.
+Status: closed 2026-09-30. Ticket 0321 widened the key check to every control character; every other finding carries its disposition below. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 and 03 to 12. Triaged against `origin/main` at `267efff53` on 2026-09-30.
 
-Every line below carries its disposition. Fixed names the landed work or the page that now says it. Obsolete names the ADR that removes the cause. Tracked names an open issue that carries it. Won't fix follows Ian's ruling 8 of 2026-09-29 or ADR 0005's rule that a feature waits for a demo. Ticket 0321 carries the one small fix left. Nothing else stays open here.
+Every line below carries its disposition. Fixed names the landed work or the page that now says it. Obsolete names the ADR that removes the cause. Tracked names an open issue that carries it. Won't fix follows Ian's ruling 8 of 2026-09-29 or ADR 0005's rule that a feature waits for a demo. Ticket 0321 carried the one small fix left.
 
 ## Report 01, `filter` and streams
 
@@ -29,7 +29,7 @@ Every line below carries its disposition. Fixed names the landed work or the pag
 - I5. One failing SQL row fails the statement. Fixed: `thinkthen_try_details` on DuckDB, SQLite and PostgreSQL returns a per-row failure.
 - I6. A deadline bounds one call, not a query. Fixed: the DuckDB query-hook issue closed under 0201 and 0231.
 - I7. SQLite and PostgreSQL hold one request in flight. Deferred to ADR 0111 slice 3, SQL hosts on the one batching path.
-- I8. DuckDB's warm pass ignores session settings. Fixed: `thinkthen_warm` is removed.
+- I8. DuckDB's warm pass ignores session settings. Fixed: `thinkthen_warm` remains only as a stub that refuses with a pointer to `thinkthen_decide_many` (`databases/duckdb/cpp/src/warm.cpp`).
 - I9. DuckDB refuses calls after 16 engines. Fixed: the least recently used idle engine retires (`databases/duckdb/src/engines.rs`).
 - I10. The throttle belongs to the process. Fixed in part by 0308's per-process, per-address pacer. The rest is the design.
 - I11. Libraries cannot set timeout, retries, profile or replay. Fixed by 0148, 0149 and 0157.
@@ -79,7 +79,7 @@ Every line below carries its disposition. Fixed names the landed work or the pag
 - 10. Default cache binds to one address. Obsolete under ADR 0111.
 - 11. `Engine::builder()` ignores `cache: false`. Fixed: documented; `EngineBuilder::from_env` honors it.
 - 12. Crashed writes leave temporary files. Obsolete under ADR 0111 slice 5: SQLite commits replace them.
-- 13. DuckDB warm pass ignores `SET thinkthen_cache`. Fixed: the warm pass is removed.
+- 13. DuckDB warm pass ignores `SET thinkthen_cache`. Fixed: the warm pass is a refusing stub.
 
 ## Report 09, record, replay and testing
 
@@ -118,7 +118,7 @@ Every line below carries its disposition. Fixed names the landed work or the pag
 ## Report 12, security and the data boundary
 
 - 3.1. No private TLS roots. Fixed: `THINKTHEN_CA_BUNDLE` and its own certificate sentence.
-- 3.2. Local faults read as network faults. In 0321: a key holding a control character fails in the HTTP layer as unreachable. The 302 half is fixed.
+- 3.2. Local faults read as network faults. Fixed: 0250 refused CR and LF in the key, and 0321 refuses every control character. The 302 half is fixed.
 - 3.3. Configuration file trusted whatever its mode. Fixed by qf-config-owner-warning (`53ba4edb`).
 - 3.4. Planted-text guidance too narrow. Fixed: `specification/decide.md` bounds the claim.
 - 3.5. Ruby result values print caller text. Fixed; closed issue.

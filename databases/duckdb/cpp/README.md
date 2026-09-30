@@ -1,6 +1,6 @@
 # DuckDB C++ extension
 
-The Linux x86-64, Linux ARM64, Apple Silicon and Intel macOS release packages use this extension. It calls the public `thinkthen` engine through `bridge/` and registers all ten scalars, `thinkthen_usage()`, `thinkthen_warm`, and `thinkthen_relate`. The Intel package has focused installed proof under Rosetta on macOS 26. Native Intel hardware, macOS 15 and release-runner qualification remain open.
+The Linux x86-64, Linux ARM64, Apple Silicon and Intel macOS release packages use this extension. It calls the public `thinkthen` engine through `bridge/` and registers all ten scalars, `thinkthen_usage()`, and `thinkthen_relate`. `thinkthen_warm` stays registered only to refuse with a pointer to `thinkthen_decide_many`. The Intel package has focused installed proof under Rosetta on macOS 26. Native Intel hardware, macOS 15 and release-runner qualification remain open.
 
 The source is DuckDB v1.5.5 at `d8cdaa33fda8df955cc76ef58a280f68f4cd43fa`. The official [v1.5.5 Linux static release ZIP](https://github.com/duckdb/duckdb/releases/download/v1.5.5/static-libs-linux-amd64.zip) has SHA-256 `deb47c5300f3c99725e84cdb14d214c3b12bbd748b613b1698b938c894cb68eb`. The four target-specific archive manifests fix every extracted `.a`; CMake rejects a changed source commit, missing archive, added archive, or hash mismatch. The source and archives are DuckDB MIT inputs. The Rust bridge depends on the repository's public engine and its pinned Cargo lock. The C++ file follows the separately accepted 0201 proof; no template code is copied into it.
 
