@@ -1,6 +1,6 @@
 # The Zig check skips its facts lifetime and allocation modes
 
-Status: open. Found while building ticket 0314 slice 4d on branch `ticket/0314-s4-remaining-ports`. Owner: none yet.
+Status: Closed by the quick fix on branch `ticket/quick-fix-zig-flutter-checks`. Found while building ticket 0314 slice 4d on branch `ticket/0314-s4-remaining-ports`. Paid: 2026-09-30. Resolution: `libraries/zig/check.sh` now runs `run_matrix.py facts` and `run_matrix.py facts-allocation` after the full matrix, so every Zig check runs both modes.
 
 Kind: debt
 
