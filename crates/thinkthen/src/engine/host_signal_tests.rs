@@ -88,7 +88,8 @@ fn host_signal_child() {
             .expect("a no-op host handler");
     let (url, held, release, server) = held_reply();
     let widths: &'static Widths = Box::leak(Box::default());
-    let client = Client::new(SECOND * 5, false, crate::engine::process_width()).gated(widths);
+    let client =
+        Client::new(SECOND * 5, false, &crate::engine::limits::process().widths).gated(widths);
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
         url: &url,

@@ -24,7 +24,7 @@ use crate::core::{Backend, Evidence, Plan, Question, QuestionText};
 use crate::engine::cache_lock;
 use crate::engine::error::Error;
 use crate::engine::usage::{self, Counters};
-use crate::engine::{Cancel, Width, process_width, request};
+use crate::engine::{Cancel, Width, limits, request};
 
 /// A process ID this test process does not have.
 fn parent_pid() -> u32 {
@@ -217,7 +217,7 @@ fn child_width_child() {
     for (row, engine, follows, selected) in rows {
         assert_eq!(width(engine).expect("the child's state"), follows, "{row}");
         assert_eq!(
-            process_width().selected(),
+            limits::process().widths.selected(),
             selected.and_then(|width| Width::new(width).ok()),
             "{row}"
         );

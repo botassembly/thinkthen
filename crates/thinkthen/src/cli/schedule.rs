@@ -280,7 +280,7 @@ pub(crate) fn jobs_of(asked: Option<u8>, streams: bool) -> Result<usize, Failure
 /// Register this command's `--jobs` with the process and return the width
 /// its calls follow.
 pub(crate) fn width(asked: Option<u8>) -> Result<usize, Failure> {
-    width_in(crate::engine::process_width(), asked)
+    width_in(&crate::engine::limits::process().widths, asked)
 }
 
 /// `--jobs N` selects N. An omitted `--jobs` selects nothing and follows the

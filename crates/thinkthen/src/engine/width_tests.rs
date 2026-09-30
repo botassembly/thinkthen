@@ -13,7 +13,6 @@ use std::{fs, io};
 use conformance_backend::{Canned, Listener};
 
 use crate::core::{Backend, Evidence, ModelName, Plan, Question, QuestionText};
-use crate::engine::backoff;
 use crate::engine::error::{Budget, Error, Kind};
 use crate::engine::http::{Client, Exchange, HttpAnswer, Key};
 use crate::engine::recorder::Recorder;
@@ -265,7 +264,7 @@ fn post(
         max_retries: 2,
         retry_wait: Duration::from_millis(10),
     };
-    Client::new(SECOND * 2, false, crate::engine::process_width())
+    Client::new(SECOND * 2, false, &crate::engine::limits::process().widths)
         .gated(widths)
         .post_observed(&exchange, cancel, || {
             attempts.fetch_add(1, Ordering::SeqCst);
@@ -348,7 +347,7 @@ fn a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one() {
                 max_retries: 1,
                 retry_wait: Duration::from_millis(10),
             };
-            Client::new(SECOND * 2, false, crate::engine::process_width())
+            Client::new(SECOND * 2, false, &crate::engine::limits::process().widths)
                 .gated(widths)
                 .post_observed(&exchange, &Cancel::default(), || {
                     attempts.fetch_add(1, Ordering::SeqCst);
@@ -385,8 +384,8 @@ fn a_gate_closed_while_the_send_slot_is_full_is_rechecked_before_sending() {
     let result = thread::scope(|scope| {
         let waiting = scope.spawn(|| post(widths, &url, &cancel, &attempts));
         blocked(&blocked_on, 1);
-        backoff::process_gates(&Cancel::default())
-            .expect("process gate")
+        crate::engine::limits::process()
+            .gates
             .close(&url, Duration::from_millis(200), true);
         drop(full);
         waiting.join().expect("waiter")
@@ -418,7 +417,8 @@ fn ask(
     cancel: &Cancel,
 ) -> Result<bool, Error> {
     let backend = Backend::resolve(Some(url), None, "jev-latest").expect("backend");
-    let client = Client::new(SECOND * 2, false, crate::engine::process_width()).gated(widths);
+    let client =
+        Client::new(SECOND * 2, false, &crate::engine::limits::process().widths).gated(widths);
     let usage = Counters::default();
     let transport = Transport {
         client: &client,

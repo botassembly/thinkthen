@@ -132,7 +132,7 @@ impl Engine {
         estimated_limit: Option<u64>,
     ) -> Self {
         self.send_budget = Some(crate::engine::send_budget::ProcessBudget {
-            budget: crate::engine::budget::process_budget(),
+            budget: crate::engine::limits::process().total.clone(),
             requests: limit,
             estimated: estimated_limit,
         });
@@ -177,11 +177,12 @@ impl Engine {
             state: Arc::new(Guarded::empty()),
         };
         let (usage, cancel) = (settings.usage, Cancel::default());
-        let state = engine
-            .state
-            .current(pid, crate::engine::rebuild_wait(&cancel), || {
-                engine.fresh(pid, usage, &cancel)
-            })?;
+        let state =
+            engine
+                .state
+                .current(pid, crate::engine::limits::rebuild_wait(&cancel), || {
+                    engine.fresh(pid, usage, &cancel)
+                })?;
         engine.recording = state.recorder.reported();
         Ok(engine)
     }
@@ -196,7 +197,7 @@ impl Engine {
             storage.cache_answers,
         )?
         .with_refresh(storage.refresh_cache);
-        let widths = crate::engine::process_width_of(pid, cancel)?;
+        let widths = &crate::engine::limits::of(pid, cancel)?.widths;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
         let secure = self.backend.is_secure();
         let client = match self.roots.as_ref() {
@@ -217,7 +218,7 @@ impl Engine {
     pub(super) fn state(&self, cancel: &Cancel) -> Result<Arc<State>, Error> {
         let pid = std::process::id();
         self.state
-            .current(pid, crate::engine::rebuild_wait(cancel), || {
+            .current(pid, crate::engine::limits::rebuild_wait(cancel), || {
                 let usage = Arc::new(Counters::new(self.usage_path.clone()));
                 self.fresh(pid, usage, cancel)
             })

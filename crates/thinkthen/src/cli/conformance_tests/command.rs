@@ -418,7 +418,7 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
     let client = Client::new(
         Duration::from_secs(5),
         false,
-        crate::engine::process_width(),
+        &crate::engine::limits::process().widths,
     );
     let process = usage::Counters::new(Some(totals.clone()));
     let before = usage::read(&totals, &month_now())

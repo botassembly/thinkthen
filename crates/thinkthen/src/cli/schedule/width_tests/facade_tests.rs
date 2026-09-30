@@ -12,7 +12,7 @@ use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{
     Completed, Engine, Input as FacadeInput, InputPort, Key, RunOutcome, Settings, Storage,
 };
-use crate::engine::{Cancel, Width, process_width};
+use crate::engine::{Cancel, Width, limits};
 
 #[test]
 fn the_facade_registers_its_width_and_stops_a_cancelled_batch() {
@@ -40,7 +40,7 @@ fn facade_width_child() {
         usage: Arc::default(),
     };
     let engine = Engine::new(settings(1)).expect("the first explicit width");
-    assert_eq!(process_width().selected(), Width::new(1).ok());
+    assert_eq!(limits::process().widths.selected(), Width::new(1).ok());
     let Err(refused) = Engine::new(settings(2)) else {
         panic!("a conflicting width is refused")
     };
@@ -49,7 +49,7 @@ fn facade_width_child() {
         "{refused:?}"
     );
     assert_eq!(refused.kind().as_str(), "usage");
-    assert_eq!(process_width().selected(), Width::new(1).ok());
+    assert_eq!(limits::process().widths.selected(), Width::new(1).ok());
     assert_eq!(loopback.count(), 0, "the refusal sent nothing");
 
     cancelled_batch_leaves_no_send(&engine, &loopback);
