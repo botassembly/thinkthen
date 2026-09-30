@@ -42,8 +42,8 @@ Work outside the lanes:
 | `2026-09-25-public-library-api-gaps.md` (Debt 018) | items 1, 2, 3, 9, 10 | batch | B4, 0347; items 6 and 7 after 0.1 |
 | `2026-09-30-sql-host-store-proofs-are-partial.md` (Debt 010) | yes | batch | B4, 0348 |
 | `2026-09-30-static-library-exports-sqlite-symbols.md` (Debt 001) | yes | batch | B5, 0351 |
-| `2026-09-30-zig-check-skips-its-facts-lifetime-modes.md` (debt) | no | batch | B6 Quick Fix |
-| `2026-09-30-flutter-strict-consumer-copies-dart-bravo.md` (Debt 021) | yes, by its trigger | batch | B6 Quick Fix |
+| `closed/2026-09-30-zig-check-skips-its-facts-lifetime-modes.md` (debt) | no | closed | B6 Quick Fix landed |
+| `closed/2026-09-30-flutter-strict-consumer-copies-dart-bravo.md` (Debt 021) | yes, by its trigger | closed | B6 Quick Fix landed |
 | `2026-09-30-dart-check-never-runs-under-the-surfaces-rung.md` (Debt 022) | yes | running | lane claude-1, 0335 slice 2 |
 | `2026-09-30-r-check-rebuilds-every-dependency.md` (Debt 019) | no | running | lane claude-1, 0335 slice 2 |
 | `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` | yes | running, then outside | lane claude-2, 0344, for the shape; then R1 |

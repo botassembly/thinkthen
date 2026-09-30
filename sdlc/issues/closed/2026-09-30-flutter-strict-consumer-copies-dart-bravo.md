@@ -1,6 +1,6 @@
 # The Flutter strict consumer is a copy of Dart consumer bravo
 
-Status: Closed by the quick fix on branch `ticket/quick-fix-zig-flutter-checks`. Found while building ticket 0314 slice 4c on main at `88649ec0d`. Resolution: `flutter/example/lib/strict.dart` is gone. The Flutter host test `facade_test.dart` makes only the facade call, and `run.py`, `expected-requests.json` and the two planted negatives (`wrong-probability`, `extra-post`) count that one call. Dart consumer bravo keeps the strict behaviors under plain Dart, including the swapped bulk plant.
+Status: Closed by the quick fix landed as `Land quick fix: the Zig check runs its facts modes and the Flutter host test drops its Dart copy`. Found while building ticket 0314 slice 4c on main at `88649ec0d`. Resolution: `flutter/example/lib/strict.dart` is gone. The Flutter host test `facade_test.dart` makes only the facade call, and `run.py`, `expected-requests.json` and the two planted negatives (`wrong-probability`, `extra-post`) count that one call. Dart consumer bravo keeps the strict behaviors under plain Dart, including the swapped bulk plant. `libraries/dart/check.sh` passed on the branch: the positive `run.py` run counted one facade arrival with a matching body, both planted negatives failed for their named cause, and the embedder passed.
 
 Kind: debt
 
