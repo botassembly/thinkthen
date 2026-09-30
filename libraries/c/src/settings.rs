@@ -12,7 +12,8 @@ fn apply(
     mut builder: EngineBuilder,
     values: &Map<String, Value>,
 ) -> Result<EngineBuilder, Failure> {
-    if values.contains_key("usd_per_million_input") || values.contains_key("usd_per_million_output") {
+    if values.contains_key("usd_per_million_input") || values.contains_key("usd_per_million_output")
+    {
         let input = values
             .get("usd_per_million_input")
             .and_then(Value::as_str)

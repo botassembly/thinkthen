@@ -31,7 +31,7 @@ pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
-pub use error::{CallError, Error, ErrorDetail, ErrorKind};
+pub use error::{Error, ErrorDetail, ErrorKind};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use native_batch::RecoverableDetails;

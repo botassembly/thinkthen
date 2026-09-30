@@ -67,28 +67,6 @@ impl ErrorKind {
     }
 }
 
-/// One failed call as a JSON reader sees it: its kind, the retry signal, and
-/// a message safe to log.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "callError"))]
-pub struct CallError {
-    kind: ErrorKind,
-    retryable: bool,
-    message: String,
-}
-
-impl CallError {
-    /// Take the kind, the retry signal, and a message safe to log.
-    #[must_use]
-    pub fn new(kind: ErrorKind, retryable: bool, message: impl Into<String>) -> Self {
-        Self {
-            kind,
-            retryable,
-            message: message.into(),
-        }
-    }
-}
-
 /// The safe message behind one [`Error`] and whether the same call may succeed later.
 pub struct ErrorDetail {
     message: String,

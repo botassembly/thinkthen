@@ -17,7 +17,22 @@ use crate::core::{
     RelationEntity, Value as Bare,
 };
 use crate::engine::facade::Recognized;
-use crate::public::{CallError, Counters, DoorReply};
+use crate::public::{Counters, DoorReply, ErrorKind};
+
+/// One failed call as a JSON reader would see it: its kind, the retry signal,
+/// and a message safe to log. No surface prints it yet, so it lives only in
+/// the schema.
+#[derive(schemars::JsonSchema)]
+#[schemars(rename = "callError")]
+#[expect(
+    dead_code,
+    reason = "the schema reads the fields; no surface builds one"
+)]
+struct CallError {
+    kind: ErrorKind,
+    retryable: bool,
+    message: String,
+}
 
 const FILE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
