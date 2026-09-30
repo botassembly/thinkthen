@@ -151,12 +151,10 @@ def check(one)
 
   base = "#{ORIGIN}/case/#{id}/v1"
   exchanges = one["exchanges"]
-  # find, recognize and relate keep request digests until slice 4.
-  keyed = !%w[find recognize relate].include?(one["verb"])
+  # Every row lists question keys, by ADR 0111.
   renamed = exchanges.to_h do |exchange|
     request = exchange["request"]
-    served = "#{base}/systemone"
-    [digest(CANONICAL, request), keyed ? QuestionKeys.of(served, request) : digest(served, request)]
+    [digest(CANONICAL, request), QuestionKeys.of("#{base}/systemone", request)]
   end
   success = swap(one["expect"]["success"], renamed)
   texts = exchanges.map { |exchange| exchange["evidence"] }

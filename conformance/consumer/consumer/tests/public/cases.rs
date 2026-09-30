@@ -170,20 +170,11 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let base = format!("{}/case/{id}/v1", backend.origin());
     let served = format!("{base}/systemone");
     let exchanges = case["exchanges"].as_array().cloned().unwrap_or_default();
-    // `find`, `recognize` and `relate` keep request digests until slice 4.
-    let keyed = !matches!(
-        case["verb"].as_str().unwrap_or_default(),
-        "find" | "recognize" | "relate"
-    );
+    // Every row lists question keys, by ADR 0111.
     let mut renamed = BTreeMap::new();
     for exchange in &exchanges {
         let request = exchange["request"].as_str().unwrap_or_default().as_bytes();
-        let now = if keyed {
-            json!(keys(&served, request)?)
-        } else {
-            json!(digest(&served, request))
-        };
-        renamed.insert(digest(CANONICAL, request), now);
+        renamed.insert(digest(CANONICAL, request), json!(keys(&served, request)?));
     }
     let success = swap(&case["expect"]["success"], &renamed);
     let texts: Vec<&str> = exchanges

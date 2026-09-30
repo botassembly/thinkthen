@@ -95,7 +95,8 @@ pub(crate) enum Flow {
 /// What closes a request beyond the backend's own limits.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Packing {
-    /// `--batch N`, or `None` for the 4,096-input cap.
+    /// `--batch N`, a question step's full count, or `None` for the
+    /// 4,096-input cap.
     pub(crate) inputs: Option<usize>,
     /// A further cap on questions per request, as relate's 400.
     pub(crate) questions: Option<usize>,

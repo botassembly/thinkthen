@@ -139,17 +139,11 @@ def url(case):
 
 
 def served(case):
-    """Each recorded request digest, renamed for the served URL. A record
-    function's row lists its question keys (ADR 0111 section 2), so its
-    digest maps to its request's keys. Find, recognize and relate keep
-    request digests until slice 4 of ticket 0304."""
-    keyed = case["verb"] not in ("find", "recognize", "relate")
-    renamed = {}
-    for exchange in case.get("exchanges", []):
-        request = exchange["request"]
-        renamed[digest(CANONICAL, request)] = (question_keys(url(case), request) if keyed
-                                               else digest(url(case), request))
-    return renamed
+    """Each recorded request digest, renamed for the served URL. Every row
+    lists its question keys (ADR 0111 section 2), so a digest maps to its
+    request's keys."""
+    return {digest(CANONICAL, exchange["request"]): question_keys(url(case), exchange["request"])
+            for exchange in case.get("exchanges", [])}
 
 
 def swap(value, renamed):
