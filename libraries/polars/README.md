@@ -6,9 +6,9 @@ Ask `thinkthen` questions of a Polars `Series` or `DataFrame` from Rust. The doo
 thinkthen = { version = "0.1", features = ["polars"] }
 ```
 
-The feature adds `thinkthen::PolarsEngine` to your own `thinkthen::Engine`. Eager methods read one column in one call. Lazy expressions make one call for each evaluated morsel. Both take the same batch path as a slice of strings, at the same throttle, and return answers in input order. The trait's rustdoc holds a full eager example.
+The feature adds `thinkthen::PolarsEngine` to your own `thinkthen::Engine`. Eager methods read one column in one call. Lazy expressions make one call per collect on the default engine. Both take the same batch path as a slice of strings, at the same throttle, and return answers in input order. The trait's rustdoc holds a full eager example.
 
-The feature turns on Polars' lazy API and not its streaming engine. The streaming engine brings Polars' cloud storage stack, about 140 more crates. To collect with `polars::prelude::Engine::Streaming`, add `polars = { version = "0.55", default-features = false, features = ["streaming"] }` to your own manifest. The expressions are ordinary column functions, so either engine runs them.
+The feature turns on Polars' lazy API and not its streaming engine. The streaming engine brings Polars' cloud storage stack, about 140 more crates. To collect with `polars::prelude::Engine::Streaming`, add `polars = { version = "0.55", default-features = false, features = ["streaming"] }` to your own manifest. The expressions are ordinary column functions, so either engine runs them. The default engine holds the whole frame in memory and judges the column in one call. Bounded memory needs the streaming opt-in or a batched read.
 
 Build that engine with `max_request_bytes`, `max_requests_total`, `timeout`, `max_retries`, `profile`, `record`, or strict `replay` before passing it to Polars.
 
@@ -54,7 +54,7 @@ let judgment = engine.decide_expr(
 let judged = frame.lazy().with_columns([judgment.alias("decision")]).collect()?;
 ```
 
-Apply cheap filters first, then add the judgment with `with_columns` and filter its result. Polars may push a judged `filter` into the scan, so `filter` or a later `head` does not bound requests to the first matching rows. A streaming source that stops reading is required when only the first matches should be judged. Collection errors from the UDF are Polars compute errors; an internal panic stays inside that boundary. No expression stores call facts on its output, so retain the explicit tally when facts matter.
+Apply cheap filters first, then add the judgment with `with_columns` and filter its result. Polars may push a judged `filter` into the scan, so `filter` or a later `head` does not bound requests to the first matching rows. Judge only the first matches through a batched or sliced read that stops once it has them. Collection errors from the UDF are Polars compute errors; an internal panic stays inside that boundary. No expression stores call facts on its output, so retain the explicit tally when facts matter.
 
 In a frame, a decide column is nullable `Boolean`, a choose column `String`, a score column nullable `Float64`, and a tag column `List(String)`. These dtypes stay fixed when a question fails. A failed answer is null in its question column; the final `failed` column holds a nullable Struct with one field per question and the full nested `failed: {kind, cause}` marker. A row with no failures has a null outer `failed` cell. A not-sure `decide` or `choose` has a null answer without a marker. Your own columns come back unchanged. A failed row in a series call ends the call with the engine's `Backend` error.
 

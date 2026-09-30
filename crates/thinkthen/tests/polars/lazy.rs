@@ -299,14 +299,14 @@ fn a_shared_token_stops_a_later_evaluation_without_a_send() {
         .lazy()
         .with_columns([expression.clone().alias("judged")])
         .collect()
-        .expect("first morsel");
+        .expect("first collect");
     assert_eq!(listener.count(), 1);
     token.cancel();
     let error = source
         .lazy()
         .with_columns([expression.alias("judged")])
         .collect()
-        .expect_err("cancelled next morsel");
+        .expect_err("cancelled second collect");
     assert!(error.to_string().contains("cancel"), "{error}");
     assert_eq!(listener.count(), 1, "no later request was admitted");
     assert_eq!(tally.facts().requests_sent(), 1);
