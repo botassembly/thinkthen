@@ -29,7 +29,8 @@ unreachable <- c(
   "20-usage-fault" = "an injection point inside the engine, which no R call reaches",
   "22-local-fault" = "an injection point inside the engine, which no R call reaches",
   "23-cancelled-fault" = "R raises its own interrupt; tests/interrupt.R proves the batch stop",
-  "25-defect-fault" = "an injection point inside the engine, which no R call reaches"
+  "25-defect-fault" = "an injection point inside the engine, which no R call reaches",
+  "18-annotate-two-groups" = "one recorded request per group; ADR 0111 section 5 packs a record's groups into one"
 )
 
 sha <- function(url, request) {
@@ -67,9 +68,23 @@ run_case <- function(case, served) {
   tt_engine(batch = if (legacy_batch_one) 1L else "max")
   exchanges <- case$exchanges
   renamed <- list()
-  for (exchange in exchanges) renamed[[sha(canonical, exchange$request)]] <- sha(served, exchange$request)
+  # A record function's row lists question keys by ADR 0111, so its digests
+  # become the keys of the request each digest named. `find`, `recognize`
+  # and `relate` keep request digests until slice 4.
+  keyed <- !(case$verb %in% c("find", "recognize", "relate"))
+  for (exchange in exchanges) {
+    renamed[[sha(canonical, exchange$request)]] <-
+      if (keyed) as.list(question_keys(served, exchange$request)) else sha(served, exchange$request)
+  }
   swap <- function(value) {
-    if (is.list(value)) return(lapply(value, swap))
+    if (is.list(value)) {
+      swapped <- lapply(value, swap)
+      # A list of digests becomes the flat list of their keys.
+      if (keyed && is.null(names(value)) && length(value) && all(vapply(value, is.character, TRUE))) {
+        return(do.call(c, lapply(swapped, as.list)))
+      }
+      return(swapped)
+    }
     if (is.character(value) && length(value) == 1L && !is.null(renamed[[value]])) renamed[[value]] else value
   }
   answers <- swap(case$expect$success$answers)

@@ -45,7 +45,10 @@ for (case in corpus$cases) {
     } else check(paste(case$id, "value"), isTRUE(got$value))
     check(paste(case$id, "count"), backend_count() - before == step$count)
   }
+  # A recording keeps its answers in one question store by ADR 0111. R reads
+  # no SQLite without an extra package, so it checks the store and no old entry.
   if (!is.null(case$entries)) check(paste(case$id, "entries"),
-    length(list.files(folder, pattern = "[.]json$")) == case$entries)
+    file.exists(file.path(folder, "thinkthen.sqlite")) &&
+      !length(list.files(folder, pattern = "^[[:xdigit:]]{64}[.]json$")))
 }
 finish("settings-cases", backend_count())

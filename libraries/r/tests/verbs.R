@@ -110,12 +110,11 @@ seeded <- sent_by(seed <- child(c(
   sprintf('tt_engine(record = "%s", cache = FALSE)', recording),
   'invisible(tt_decide("Q?", "recording read proof"))'
 )))
-entry <- list.files(recording, pattern = "^[[:xdigit:]]{64}\\.json$", full.names = TRUE)
-check("one recorded decide exchange was seeded", seed$status == 0L && seeded == 1L && length(entry) == 1L)
-if (length(entry) == 1L) {
-  unlink(entry)
-  dir.create(entry)
-}
+# The recording is one question store by ADR 0111; overwriting it with text
+# makes the replay read fail.
+entry <- file.path(recording, "thinkthen.sqlite")
+check("one recorded decide exchange was seeded", seed$status == 0L && seeded == 1L && file.exists(entry))
+writeLines("not a question store", entry)
 replayed <- sent_by(read_result <- child(c(
   sprintf('tt_engine(replay = "%s")', recording),
   'e <- tryCatch(tt_decide("Q?", "recording read proof"), thinkthen_error = function(e) e)',
