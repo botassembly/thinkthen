@@ -70,6 +70,7 @@ fn dynamic_details_keep_original_input_and_one_request() {
             json["meta"].get("batch").is_none(),
             "ADR 0111 drops meta.batch"
         );
+        assert_eq!(json["meta"]["batch_setting"], 2, "ticket 0349");
         let scalar: serde_json::Value =
             serde_json::from_str(&row.value().to_scalar_json()).expect("scalar detail JSON");
         assert!(

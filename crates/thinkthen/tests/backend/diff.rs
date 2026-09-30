@@ -6,6 +6,8 @@ use crate::measure_support;
 
 use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, ported};
 
+/// Older saved rows name their setting in `meta.batch.setting`; the command's
+/// own rows are read in `batching/audited.rs`.
 #[test]
 fn diff_warns_at_different_batch_settings_and_not_at_an_unknown_one() {
     let unknown = fixture("small/decide.jsonl");

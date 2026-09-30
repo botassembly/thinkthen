@@ -196,7 +196,7 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
     let batch_settings = BatchSetting::in_results(&results)
-        .map_err(|line| refusal("results", Cause::BatchSetting(line)))?;
+        .map_err(|(line, member)| refusal("results", Cause::BatchSetting(line, member)))?;
     let mut key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
     key.1 = arguments.matching.into();
     let by = match &arguments.by {

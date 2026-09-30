@@ -148,7 +148,8 @@ fn compare_all(arguments: &DiffArguments) -> Result<Compared, Refusal> {
     let run = |role, path: &Path| {
         lines(path)
             .and_then(|read| {
-                let settings = BatchSetting::in_results(&read).map_err(Cause::BatchSetting)?;
+                let settings = BatchSetting::in_results(&read)
+                    .map_err(|(line, member)| Cause::BatchSetting(line, member))?;
                 answer::read(&read, &pointer, Identity::Answer)
                     .map(|answers| (answers, settings))
                     .map_err(Cause::Measure)

@@ -1,6 +1,6 @@
 # 0349: `audit` and `diff` see the batch setting again
 
-Status: ready. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B2. Pays Debt 008, `sdlc/issues/2026-09-30-audit-and-diff-lost-the-batch-setting.md`. Starts after ticket 0344 lands, because both edit `specification/result.schema.json`.
+Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B2. Pays Debt 008, `sdlc/issues/closed/2026-09-30-audit-and-diff-lost-the-batch-setting.md`. Starts after ticket 0344 lands, because both edit `specification/result.schema.json`.
 
 ## Outcome
 
@@ -15,3 +15,10 @@ Each detailed row of `decide`, `filter`, `rank`, `choose`, `tag` and `score` car
 - Defers: a batch setting in `annotate`, `find`, `recognize` and `relate` rows, which ADR 0085 does not cover.
 
 ## What the build taught us
+
+- The premise held on main `8bb32e59a`, after 0344: no Rust writer builds `meta.batch`, `BatchSetting::in_results` still read only `meta.batch.setting`, and the two tests planted that member by hand. 0344 changed only relate edges, so nothing here moved.
+- `meta.batch_setting` rides the shared `Run` beside `batch_warning`. The command takes it from the same resolved setting the warning compares, so a structured JSON question names 1, as it runs. The library's batch rows (`Details::of_member` and `of_native_member`) take the call's setting, so the C door's record details and the SQL hosts' batch rows carry it too. A one-document row names none on every surface, because one document has no batch setting; audit then counts it as unknown, as before.
+- No conformance case, type corpus entry or binding type pins every `meta` member of a record row, so no runner changed. The schema adds one optional member. The TypeScript `Details` type lists no `batch_warning` either, so it gains nothing.
+- An invalid setting now names its member: `results line 2 has invalid meta.batch_setting`, or `meta.batch.setting` for an older row. The old sentence named a member the command no longer writes.
+- `audit` refuses a record repeated for one question, so the mixed-setting proof asks the `max` run over other lines. `diff` needs the same lines on both sides, so it compares the `--batch 1` and `--batch max` runs of lines 1 to 4.
+- Source grew by 193 lines: the outside-in test (about 120), the invalid-member table in `audit_write.rs`, one library assertion in `public_batches/details.rs`, and about 40 lines of source. The ratchet is 106286.

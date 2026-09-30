@@ -17,6 +17,7 @@ use serde_json::{Map, Value, json};
 
 use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
+mod audited;
 mod ceiling;
 mod choose;
 mod context;

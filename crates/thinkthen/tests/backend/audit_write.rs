@@ -17,7 +17,8 @@ use measure_support::{
     audit, fixture, fixtures, found, payment_rows, ranked, replay, repository, with_ids,
 };
 
-/// Give every saved row one explicit batch setting, or make every row unbatched.
+/// Give every saved row one explicit batch setting, or make every row an
+/// older saved row that names none.
 fn at_batch(rows: &str, setting: Option<serde_json::Value>) -> String {
     rows.lines()
         .map(|line| {
@@ -28,10 +29,10 @@ fn at_batch(rows: &str, setting: Option<serde_json::Value>) -> String {
                 .expect("result metadata");
             match &setting {
                 Some(setting) => {
-                    meta.insert("batch".to_owned(), serde_json::json!({"setting":setting}));
+                    meta.insert("batch_setting".to_owned(), setting.clone());
                 }
                 None => {
-                    meta.remove("batch");
+                    meta.remove("batch_setting");
                 }
             }
             format!("{row}\n")
@@ -109,35 +110,47 @@ fn audit_reads_and_writes_the_batch_setting() {
 fn audit_refuses_an_invalid_saved_batch_without_writing() {
     let scratch = Scratch::new("invalid-batch-setting");
     let file = scratch.write("decide.json", &fixture("write/decide.json"));
-    let rows = at_batch(
-        &payment_rows(&scratch.0, "decide.json"),
-        Some(serde_json::json!("max")),
-    );
-    let mut changed = false;
-    let invalid: String = rows
-        .lines()
-        .enumerate()
-        .map(|(at, line)| {
-            let line = if at == 1 {
-                changed = true;
-                line.replacen("\"setting\":\"max\"", "\"setting\":\"bogus\"", 1)
-            } else {
-                line.to_owned()
-            };
-            format!("{line}\n")
-        })
-        .collect();
-    assert!(changed && invalid.contains("\"setting\":\"bogus\""));
-    let results = scratch.write("invalid.jsonl", &invalid);
-    let before = scratch.read("decide.json");
-    let (code, stdout, stderr) = audit(&[&results, &key(), "--write", &file], b"");
-    assert_eq!(code, 2);
-    assert!(stdout.is_empty());
-    assert_eq!(
-        stderr,
-        "thinkthen: audit: results line 2 has invalid meta.batch.setting; expected max or a whole number of at least 1\n"
-    );
-    assert_eq!(scratch.read("decide.json"), before);
+    let rows = payment_rows(&scratch.0, "decide.json");
+    // Row: how line 2 names its setting, and the member the refusal names.
+    // An older saved row names it in `meta.batch.setting`.
+    for (from, to, member) in [
+        (
+            "\"batch_setting\":1",
+            "\"batch_setting\":\"bogus\"",
+            "meta.batch_setting",
+        ),
+        (
+            "\"batch_setting\":1",
+            "\"batch\":{\"setting\":\"bogus\"}",
+            "meta.batch.setting",
+        ),
+    ] {
+        let invalid: String = rows
+            .lines()
+            .enumerate()
+            .map(|(at, line)| {
+                let line = if at == 1 {
+                    line.replacen(from, to, 1)
+                } else {
+                    line.to_owned()
+                };
+                format!("{line}\n")
+            })
+            .collect();
+        assert!(invalid.contains(to), "the fixture must hold {from}");
+        let results = scratch.write("invalid.jsonl", &invalid);
+        let before = scratch.read("decide.json");
+        let (code, stdout, stderr) = audit(&[&results, &key(), "--write", &file], b"");
+        assert_eq!(code, 2);
+        assert!(stdout.is_empty());
+        assert_eq!(
+            stderr,
+            format!(
+                "thinkthen: audit: results line 2 has invalid {member}; expected max or a whole number of at least 1\n"
+            )
+        );
+        assert_eq!(scratch.read("decide.json"), before);
+    }
 }
 
 /// The payment question of `transforms/rows`, pretty-printed with CRLF line

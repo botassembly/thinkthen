@@ -70,7 +70,7 @@ The PostgreSQL and DuckDB extensions count `max_requests_total` against the engi
 
 Every surface refuses an API key holding any control character, not only a line break, and says `the API key contains a control character` (ticket 0321).
 
-`audit` and `diff` treat results whose lines name no `meta.batch.setting` as an unknown setting. `audit --write` then leaves a question file's `batch` member alone and reports nothing about it, and neither command warns about mixed settings because of such a run. Rows from the command's record functions carry no setting (ticket 0304).
+Each detailed record row of `decide`, `filter`, `rank`, `choose`, `tag` and `score` names the run's batch setting in `meta.batch_setting`, on the command and in every library. `audit` and `diff` read it, so they warn about mixed settings and `audit --write` records or removes a question file's `batch` again. They still read `meta.batch.setting` from older saved rows. A line naming neither is an unknown setting (tickets 0304 and 0349).
 
 `thinkthen cache prune` trims `thinkthen.sqlite`: it removes the selected and then the oldest answers, drops the states no answer uses, and gives the freed pages back, so the file shrinks. `cache unused` names unused question keys from a fixture or the live store. `thinkthen status` counts the store's answers and bytes and the old entries beside it (ticket 0304 slice 5).
 

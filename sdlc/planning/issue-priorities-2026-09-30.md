@@ -35,7 +35,7 @@ Work outside the lanes:
 | `2026-09-30-demo-record-scripts-write-beside-their-fixture.md` (Debt 024) | yes | batch | B1, 0350 |
 | `2026-09-25-docs-how-tos-and-spec-claims-owed.md` | page 11 only | batch for page 11 | B1, 0350; pages 12 to 24 after 0.1; page 23 marketing |
 | `2026-09-20-new-user-stumble-register.md` | rows 9, 18, 19 | batch for row 9 | B1 for row 9; ticket 0128 phase 4 for row 18; marketing for row 19 |
-| `2026-09-30-audit-and-diff-lost-the-batch-setting.md` (Debt 008) | yes | batch | B2, 0349 |
+| `closed/2026-09-30-audit-and-diff-lost-the-batch-setting.md` (Debt 008) | yes | closed | B2, 0349 landed |
 | `2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` (Debt 011) | yes | batch | B3, 0345 |
 | `2026-09-30-c-door-relate-rows-have-no-owner.md` (Debt 012) | yes | batch | B3, 0346 |
 | `2026-09-30-c-door-tests-race-under-nextest.md` (Debt 025) | no | batch | B3, 0346 |

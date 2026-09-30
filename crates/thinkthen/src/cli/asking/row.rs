@@ -38,6 +38,7 @@ impl Judging<'_> {
                     backend: self.engine.backend(),
                     tuned_for: self.tuned_for_profile(),
                     warning: self.mismatch.warning(),
+                    batch_setting: self.mismatch.batch_setting(),
                     batch_warning: self.mismatch.batch_warning(),
                     context_sha256: self
                         .context

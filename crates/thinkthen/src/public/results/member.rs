@@ -141,6 +141,7 @@ impl Details {
                 question.profile.as_ref(),
                 profile.map(core::BackendProfile::name),
             ),
+            batch_setting: Some(setting.into()),
             batch_warning: file_batch.and_then(|saved| BatchWarning::between(saved, setting)),
             context_sha256: context_sha256.map(str::to_owned),
         };
