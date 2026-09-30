@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel};
 
 use crate::engine::Cancel;
-use crate::engine::workers;
+use crate::engine::facade::scoped_workers;
 
 /// One event from the reader thread.
 pub(crate) enum Input<T, E> {
@@ -171,7 +171,7 @@ where
     let (events, received) = channel();
     let (ask, asked) = channel();
     start_reader(asked, Port(events.clone()));
-    workers::scoped(
+    scoped_workers(
         jobs,
         events,
         &|(place, value)| {

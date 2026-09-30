@@ -16,7 +16,7 @@ thinkthen choose 'Which team owns this request?' billing shipping account other 
 
 ## Input
 
-`ticket.txt` is one message about a renewal charge that bounced, and `inbox/` holds five short meeting notes for the closing section. `recording/` holds the six live exchanges this page replays, and `record.sh` made them once through `sdlc/scripts/live`.
+`ticket.txt` is one message about a renewal charge that bounced, and `inbox/` holds five short meeting notes for the closing section. `recording/thinkthen.jsonl` holds the answers of the six live exchanges this page replays, and `record.sh` made them once through `sdlc/scripts/live`.
 
 The fourth option is typed by hand: nothing adds a catch-all, and the sent list is the list on the command line. Without `--raw` the answer is the JSON string `"billing"`, which no `case` matches.
 

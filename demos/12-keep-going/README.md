@@ -6,7 +6,7 @@ Verbs: `decide`
 
 Use this when a nightly job judges a queue and one record ends the run. `queue.jsonl` holds four support messages, and a stray exporter left the third one's text under `note` instead of `body`. `--cache DIR` points `--record` and `--replay` at one folder, so the rerun pays for the records that never finished.
 
-`recording/` holds the four exchanges this page replays. `record.sh` made them once through `sdlc/scripts/live`, and every number here is what the model answered on 2026-09-19. A cache writes `thinkthen.sqlite` in its folder, and the repository commits only the `thinkthen.jsonl` fixture. So each block copies the fixture into a scratch folder and caches there.
+`recording/thinkthen.jsonl` holds the answers of the four exchanges this page replays. `record.sh` made them once through `sdlc/scripts/live`, and every number here is what the model answered on 2026-09-19. A cache writes `thinkthen.sqlite` in its folder, and the repository commits only the `thinkthen.jsonl` fixture. So each block copies the fixture into a scratch folder and caches there.
 
 ## Step 1: the run stops where the record is
 

@@ -19,7 +19,7 @@ The notice never mentions the length. `window.json` counts an unsettled length a
 
 `notices/` holds three made-up maintenance notices about one upgrade window. `longer.txt` says the window runs longer than the plan announced before, `same.txt` says it runs no longer, and `silent.txt` never raises the length at all.
 
-`recording/` holds the six live exchanges this page replays, and `record.sh` made them through `sdlc/scripts/live`.
+`recording/thinkthen.jsonl` holds the answers of the six live exchanges this page replays, and `record.sh` made them through `sdlc/scripts/live`.
 
 ## Step 1: watch the plain question call silence a denial
 

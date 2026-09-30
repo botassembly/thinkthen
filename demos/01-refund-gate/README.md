@@ -26,7 +26,7 @@ fi | mustmatch "refunds"
 
 `message.txt` is one customer message that asks for a refund in plain words. `question.txt` is one customer message that asks a product question and mentions no money.
 
-`recording/` holds the two exchanges this page replays, so every command here runs with no network and no key. `record.sh` made them once through `sdlc/scripts/live`. Every probability on this page is illustrative.
+`recording/thinkthen.jsonl` holds the answers of the two exchanges this page replays, so every command here runs with no network and no key. `record.sh` made them once through `sdlc/scripts/live`. Every probability on this page is illustrative.
 
 ## The other branch
 

@@ -22,7 +22,7 @@ The page about replica lag came first, ahead of the runbook whose name is `login
 
 ## Input
 
-`hits.jsonl` holds six made-up wiki hits, one JSON object each, with `id`, `path`, and `body`. `recording/` holds the six live exchanges the page replays, and `record.sh` made them through `sdlc/scripts/live`.
+`hits.jsonl` holds six made-up wiki hits, one JSON object each, with `id`, `path`, and `body`. `recording/thinkthen.jsonl` holds the answers of the six live exchanges the page replays, and `record.sh` made them through `sdlc/scripts/live`.
 
 ## Step 1: put the query in every record
 

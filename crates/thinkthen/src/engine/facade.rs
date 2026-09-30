@@ -26,6 +26,8 @@ use crate::engine::{Cancel, Width};
 
 pub(crate) use crate::engine::http::{Key, Roots};
 pub(crate) use crate::engine::roots::Error as RootsError;
+/// The scoped workers the command's ordered `recognize` runner answers on.
+pub(crate) use crate::engine::workers::scoped as scoped_workers;
 pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};

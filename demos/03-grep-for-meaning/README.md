@@ -20,7 +20,7 @@ Two of the five reports pass. The feature request, the vague one, and the how-to
 
 ## Input
 
-`issues.csv` holds five made-up issue reports under the `id`, `opened`, `reporter`, and `body` headers. Every CSV cell becomes a JSON string before the command reads `/body`. `recording/` holds the five live exchanges the page replays, and `record.sh` made them through `sdlc/scripts/live`.
+`issues.csv` holds five made-up issue reports under the `id`, `opened`, `reporter`, and `body` headers. Every CSV cell becomes a JSON string before the command reads `/body`. `recording/thinkthen.jsonl` holds the answers of the five live exchanges the page replays, and `record.sh` made them through `sdlc/scripts/live`.
 
 ## Step 1: see what leaves the machine
 

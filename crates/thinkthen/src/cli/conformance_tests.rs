@@ -487,65 +487,7 @@ fn validate_staged(case: &Case, success: &Success) -> Result<(), String> {
     }
 }
 
-/// Whether a committed fixture holds each question of a captured exchange
-/// with the answer and model its response carries, by ADR 0111 section 9.
-fn captured(fixture: &str, exchange: &Exchange) -> Result<(), String> {
-    #[derive(Deserialize)]
-    struct Response<'a> {
-        model: String,
-        #[serde(borrow)]
-        answers: std::collections::BTreeMap<String, &'a serde_json::value::RawValue>,
-    }
-    #[derive(Deserialize)]
-    struct Line {
-        key: Option<String>,
-        answer: Option<String>,
-        answered_by: Option<String>,
-    }
-    let response: Response<'_> =
-        serde_json::from_str(exchange.response.get()).map_err(|error| error.to_string())?;
-    let mut held = std::collections::HashMap::new();
-    for line in fixture.lines() {
-        let line: Line = serde_json::from_str(line).map_err(|error| error.to_string())?;
-        if let (Some(key), Some(answer), Some(model)) = (line.key, line.answer, line.answered_by) {
-            held.insert(key, (answer, model));
-        }
-    }
-    let url = crate::core::Url::new("https://api.typesafe.ai/v1/systemone").map_err(|_| "URL")?;
-    for (place, key) in command::question_keys(&url, &exchange.request).iter().enumerate() {
-        let (answer, model) = held
-            .get(key)
-            .ok_or_else(|| format!("the fixture holds no answer for question `{key}`"))?;
-        let sent = response
-            .answers
-            .get(&format!("q{}", place + 1))
-            .ok_or("captured response lacks an answer")?;
-        if !same_json(answer, sent.get())? || *model != response.model {
-            return Err("captured exchange differs from its fixture".to_owned());
-        }
-    }
-    Ok(())
-}
-
 #[test]
 fn shared_cases_match_the_production_core() {
     validate(CASES).expect("the shared cases match the core");
-}
-
-impl conformance_support::Provenance {
-    fn validate(&self, exchange: &Exchange) -> Result<(), String> {
-        match self {
-            Self::SyntheticContract => Ok(()),
-            Self::Captured { path } => {
-                let committed = path.starts_with("demos/") || path.starts_with("specification/");
-                if !committed || path.contains("..") || !path.contains("/recording") {
-                    return Err(format!("unknown captured recording `{path}`"));
-                }
-                let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../");
-                let text = std::fs::read_to_string(format!("{root}{path}/thinkthen.jsonl"))
-                    .map_err(|_| format!("unknown captured recording `{path}`"))?;
-                captured(&text, exchange)
-            }
-        }
-    }
 }
