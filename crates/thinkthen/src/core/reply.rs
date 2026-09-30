@@ -45,14 +45,6 @@ impl Reply {
     pub(crate) const fn usage(&self) -> Option<Usage> {
         self.usage
     }
-
-    /// Whether the backend failed any question of this reply.
-    #[must_use]
-    pub(crate) fn failed_any(&self) -> bool {
-        self.outcomes
-            .iter()
-            .any(|outcome| matches!(outcome, AnswerOutcome::Failed(_)))
-    }
 }
 
 /// One logical question decoded from a backend reply.

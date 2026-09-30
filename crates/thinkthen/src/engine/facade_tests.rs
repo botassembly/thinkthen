@@ -7,7 +7,7 @@
 use conformance_backend::Rendezvous;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::sync::mpsc::{Receiver, channel};
+use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
 use std::{fs, path::PathBuf};
@@ -16,14 +16,17 @@ use conformance_backend::{Backend as Loopback, Canned, Listener};
 use nix::sys::pthread::{pthread_kill, pthread_self};
 use nix::sys::signal::Signal;
 
+use crate::core::adapters::built_in::DecodeError;
+use crate::core::pack::{self, Ask};
 use crate::core::{
-    Backend, BackendProfile, DEFAULT_MODEL, Evidence, Find, ModelName, Plan, Question,
-    QuestionText, RecognizeSpec, RelateSpec,
+    AnswerOutcome, Backend, BackendProfile, DEFAULT_MODEL, Evidence, Find, ModelName, Plan,
+    Question, QuestionText, RecognizeSpec, RelateSpec,
 };
 use crate::engine::error::{Error, Kind, TransportKind};
 use crate::engine::facade::{
-    Completed, Engine, Execution, Input, InputPort, Key, RunOutcome, Settings, Storage, relations,
+    Asks, Bound, Engine, Execution, Key, Settings, Storage, relations,
 };
+use crate::engine::pipeline::{self, Answered, Asker, Failed, Flow, Packing};
 use crate::engine::{Cancel, Deadline};
 
 mod contract_tests;
@@ -124,7 +127,8 @@ fn relate_limited(
     engine.relate(prepared, &entities, 0.5, cancel)
 }
 
-/// Ask a two-question group through the split-request path annotate uses.
+/// Ask a two-question plan in one request, as the pipeline packs one
+/// record's annotate questions.
 fn annotate(engine: &Engine, cancel: &Cancel) -> Result<usize, Error> {
     let plan = Plan::authored(
         evidence("Refund the card."),
@@ -132,62 +136,88 @@ fn annotate(engine: &Engine, cancel: &Cancel) -> Result<usize, Error> {
         vec![decide("Is this a refund?"), decide("Is this urgent?")],
     )
     .expect("plan");
+    let mut asks = Asks::default();
+    asks.add(engine.backend(), &plan)?;
     let mut answered = 0;
-    engine.ask_chunks(engine.split(&plan)?, cancel, |reply| {
+    engine.ask_each(&asks, Bound::WHOLE, cancel, |_, reply| {
         answered += reply.reply.outcomes().len();
-        Ok::<(), Error>(())
+        Ok(())
     })?;
     Ok(answered)
 }
 
-/// A bulk run's outcome and the rows it emitted, in emission order.
-type Bulk = (Result<RunOutcome<Error>, Error>, Vec<Option<f64>>);
+/// Each text's yes probability, asked one text a request.
+struct OneEach<'a>(&'a Engine);
 
-/// One facade call a table row makes.
-type Call<'a> = &'a dyn Fn() -> Result<(), Error>;
+impl Asker for OneEach<'_> {
+    type Input = &'static str;
+    type Row = Option<f64>;
+    type Error = Error;
 
-/// Judge each text over the record scheduler; each item asks under `each`.
-fn bulk(engine: &Engine, texts: &[&'static str], batch: &Cancel, each: &Cancel) -> Bulk {
-    let mut rows = Vec::new();
-    let outcome = engine.records(
-        crate::engine::schedule::RecordFlow::Streaming,
-        batch,
-        reader(texts.to_vec()),
-        &|text: &&str| ask(engine, text, each).map(|yes| Completed::one(yes, false)),
-        |row| {
-            rows.push(row);
-            Ok(true)
-        },
-    );
-    (outcome, rows)
-}
-
-/// Start a reader that hands one item per request, then the end.
-fn reader<T: Send + 'static, R: Send + 'static>(
-    items: Vec<T>,
-) -> impl FnOnce(Receiver<()>, InputPort<T, R, Error>) {
-    move |requests, events| {
-        thread::spawn(move || feed(items, &requests, |input| events.send(input)));
+    fn label(&self, _text: &&'static str) -> usize {
+        1
     }
-}
 
-/// Hand one item per request through `send`, then the end.
-fn feed<T>(
-    items: Vec<T>,
-    requests: &Receiver<()>,
-    send: impl Fn(Input<T, Error>) -> Result<(), ()>,
-) {
-    let mut inputs = items
-        .into_iter()
-        .map(Input::Item)
-        .chain(std::iter::once(Input::End));
-    while requests.recv().is_ok() {
-        let Some(input) = inputs.next() else { return };
-        if send(input).is_err() {
-            return;
+    fn asks(&self, text: &&'static str) -> Result<Vec<Ask>, Error> {
+        let model = self.0.backend().model().clone();
+        let plan = Plan::authored(evidence(text), model, vec![decide("Is this a refund?")])
+            .map_err(|_| Error::Defect("a plan of one question"))?;
+        pack::asks(self.0.backend().url(), &plan).map_err(|_| Error::Defect("an unwritable plan"))
+    }
+
+    fn row(&self, _text: &'static str, answers: Vec<Answered>) -> Result<Option<f64>, Error> {
+        let [answered] = answers.as_slice() else {
+            return Err(Error::Defect("one answer"));
+        };
+        let stored = [answered.answer.as_deref().map_err(DecodeError::cause)];
+        let question = [decide("Is this a refund?")];
+        match pack::read(&question, &stored, &answered.answered_by)?.as_slice() {
+            [AnswerOutcome::Answered(answer)] => Ok(answer.yes()),
+            _ => Err(Error::Defect("a failed answer")),
         }
     }
 }
+
+/// Ask each text in its own request over the question pipeline and keep
+/// the rows it emits in input order, and the failure it stopped at.
+fn bulk(
+    engine: &Engine,
+    texts: &[&'static str],
+    cancel: &Cancel,
+) -> (Vec<Option<f64>>, Option<Error>) {
+    let (mut rows, mut failure) = (Vec::new(), None);
+    let packing = Packing {
+        inputs: Some(1),
+        questions: None,
+        sized: true,
+        context: false,
+        detailed: false,
+        continues: false,
+    };
+    let host = pipeline::eager(texts.to_vec(), |row| match row {
+        Ok(row) => {
+            rows.push(row);
+            Flow::Continue
+        }
+        Err(
+            Failed::Asker(error) | Failed::Engine { error, .. } | Failed::Stopped(error),
+        ) => {
+            failure = Some(error);
+            Flow::Stop
+        }
+        Err(Failed::Pack { .. }) => {
+            failure = Some(Error::Defect("a question passed a limit"));
+            Flow::Stop
+        }
+    });
+    if let Err(error) = engine.ask_all(&OneEach(engine), packing, host, cancel) {
+        failure = Some(error);
+    }
+    (rows, failure)
+}
+
+/// One facade call a table row makes.
+type Call<'a> = &'a dyn Fn() -> Result<(), Error>;
 
 /// A folder that is removed when the test ends.
 struct Scratch(PathBuf);
@@ -200,7 +230,7 @@ impl Scratch {
         Self(path)
     }
 
-    /// The text of every file under the folder.
+    /// The text of every file under the folder, read lossily.
     fn files(&self) -> Vec<String> {
         let mut folders = vec![self.0.clone()];
         let mut files = Vec::new();
@@ -215,7 +245,8 @@ impl Scratch {
             files.extend(
                 plain
                     .into_iter()
-                    .map(|path| fs::read_to_string(path).expect("file")),
+                    // The live store is binary; a key in it is still ASCII.
+                    .map(|path| String::from_utf8_lossy(&fs::read(path).expect("file")).into_owned()),
             );
         }
         files
@@ -284,10 +315,7 @@ fn a_close_after_the_body_is_never_resent_on_any_path() {
         ("relate", &|| relate(&engine, &base, &cancel).map(drop)),
         (
             "records",
-            &|| match bulk(&engine, &["Refund me."], &cancel, &cancel).0? {
-                RunOutcome::Stopped { cause, .. } => Err(cause),
-                RunOutcome::Complete => Ok(()),
-            },
+            &|| bulk(&engine, &["Refund me."], &cancel).1.map_or(Ok(()), Err),
         ),
     ];
 
@@ -394,8 +422,8 @@ fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
     let engine = engine(listener.base());
     let cancel = Cancel::default();
 
-    let (outcome, rows) = thread::scope(|scope| {
-        let run = scope.spawn(|| bulk(&engine, &["first", "unsure", "broken"], &cancel, &cancel));
+    let (rows, failure) = thread::scope(|scope| {
+        let run = scope.spawn(|| bulk(&engine, &["first", "unsure", "broken"], &cancel));
         for _ in 0..2 {
             later.recv().expect("a later item answered first");
         }
@@ -404,13 +432,8 @@ fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
     });
 
     assert_eq!(rows, [Some(0.9), Some(0.5)], "good outcomes in input order");
-    let Ok(RunOutcome::Stopped {
-        finished, cause, ..
-    }) = outcome
-    else {
-        panic!("{outcome:?}")
-    };
-    assert_eq!((finished, cause.kind()), (2, Kind::Backend), "{cause:?}");
+    let cause = failure.expect("the broken reply stops the run");
+    assert_eq!(cause.kind(), Kind::Backend, "{cause:?}");
     let sent = listener.count();
     let usage = engine.usage().expect("usage");
     assert_eq!((sent, usage.requests_sent), (3, 3));

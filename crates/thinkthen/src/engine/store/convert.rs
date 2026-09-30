@@ -129,7 +129,7 @@ fn old_entries(folder: &Path, quote: bool, summary: &mut Summary) -> Result<Entr
 }
 
 /// A name the old recorder gave an entry: 64 lowercase hex figures and `.json`.
-fn digest_named(name: &str) -> bool {
+pub(super) fn digest_named(name: &str) -> bool {
     name.strip_suffix(".json").is_some_and(|digest| {
         digest.len() == 64
             && digest

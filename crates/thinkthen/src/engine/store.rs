@@ -22,6 +22,8 @@ use crate::engine::error::Error;
 
 mod convert;
 mod fixture;
+mod prune;
+pub(crate) use prune::{Prune, counts, preview, run as prune, unused};
 pub(crate) use convert::convert;
 pub(crate) use fixture::{Answer, Entries, Replayed};
 
@@ -150,7 +152,7 @@ impl Store {
             // A dangling link, or a folder another user can read.
             fs::metadata(folder).map_err(|_| Error::RecordingStorage)?;
             if private {
-                crate::engine::recorder::require_private(folder)?;
+                require_private(folder)?;
             }
         }
         Ok(store)
@@ -242,7 +244,7 @@ impl Store {
     fn connect(&mut self, cancel: &Cancel) -> Result<(), Error> {
         let sqlite = self.folder.join(SQLITE);
         if self.private && self.folder.exists() {
-            crate::engine::recorder::require_private(&self.folder)?;
+            require_private(&self.folder)?;
         }
         make_folder(&self.folder)?;
         create_private(&sqlite)?;
@@ -434,6 +436,24 @@ fn create_private(path: &Path) -> Result<bool, Error> {
         Err(error) if error.kind() == io::ErrorKind::AlreadyExists => Ok(false),
         Err(_) => Err(Error::RecordingStorage),
     }
+}
+
+/// Refuse a platform default cache folder anyone but its owner may use.
+#[cfg(unix)]
+fn require_private(folder: &Path) -> Result<(), Error> {
+    use std::os::unix::fs::PermissionsExt as _;
+    let metadata = fs::metadata(folder).map_err(|_| Error::RecordingStorage)?;
+    if metadata.permissions().mode() & 0o777 == 0o700 {
+        Ok(())
+    } else {
+        Err(Error::DefaultCachePrivate)
+    }
+}
+
+#[cfg(not(unix))]
+#[expect(clippy::unnecessary_wraps, reason = "Unix checks the folder's mode")]
+const fn require_private(_folder: &Path) -> Result<(), Error> {
+    Ok(())
 }
 
 pub(crate) fn make_folder(folder: &Path) -> Result<(), Error> {

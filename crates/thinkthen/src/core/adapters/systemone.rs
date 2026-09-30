@@ -22,8 +22,10 @@ pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::{
     drops_any, drops_detail, drops_detail_of, encode_raw, join, parts,
 };
+#[cfg(test)]
+pub(crate) use crate::core::adapters::systemone::response::decode;
 pub(crate) use crate::core::adapters::systemone::response::{
-    decode, decode_answers, decode_observed, decode_questions,
+    decode_answers, decode_observed, decode_questions,
 };
 
 /// The name this adapter answers to, in the recording key and the entry.

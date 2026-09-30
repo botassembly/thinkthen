@@ -1,15 +1,15 @@
-//! One recorded exchange, filed under the digest of what was sent.
+//! The digest of one request, and the old request-level entry `cache
+//! convert` reads, by ADR 0111 section 9.
 
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::value::RawValue;
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 use crate::core::adapters::built_in;
 use crate::core::digest::hex;
-use crate::core::recording_identity::BackendIdentity;
 use crate::core::text::{Url, Withheld};
 
 mod convert;
@@ -18,7 +18,7 @@ pub(crate) use convert::{Converting, convert};
 /// The schema string a version one recording entry carries.
 const SCHEMA: &str = "thinkthen.recording/1";
 
-/// Why a file under a recording folder is not the entry that was asked for.
+/// Why a file under a folder is not an old entry this version reads.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub(crate) enum EntryError {
     /// The bytes are not a recording entry.
@@ -38,19 +38,9 @@ pub(crate) enum EntryError {
              and this version reads `{SCHEMA}`"
     )]
     Schema,
-    /// The entry records another exchange, so the file was damaged or edited.
+    /// The entry names an address this version refuses.
     #[error("the entry records a different exchange, so the file was damaged or hand-edited")]
     Mismatched,
-    /// The entry could not be written as JSON.
-    ///
-    /// The message names no cause, for the reason [`Self::Malformed`] gives.
-    /// An entry of strings and raw JSON always writes, so this never fires.
-    /// It stays because removing it needs an `expect`, which the crate denies.
-    #[error("the entry could not be written as JSON")]
-    Unwritable,
-    /// A cache entry cannot support model-based maintenance.
-    #[error("the recorded response does not name a nonblank model")]
-    MissingModel,
 }
 
 /// The name one exchange is filed under: its SHA-256 in lowercase hex.
@@ -62,12 +52,6 @@ impl Digest {
     #[must_use]
     pub(crate) const fn named(hex: String) -> Self {
         Self(hex)
-    }
-
-    /// The name of the file one exchange is recorded in.
-    #[must_use]
-    pub(crate) fn file_name(&self) -> String {
-        format!("{}.json", self.0)
     }
 
     /// Read the lowercase hexadecimal digest without its file suffix.
@@ -117,22 +101,10 @@ impl<'a> Exchange<'a> {
         hasher.update(self.request);
         Digest(hex(&hasher.finalize()))
     }
-
-    /// Name the backend interface and address independently of request bytes.
-    #[must_use]
-    pub(crate) fn backend_identity(&self) -> BackendIdentity {
-        BackendIdentity::new(self.url)
-    }
-
-    /// The endpoint the exchange goes to.
-    #[must_use]
-    pub(crate) const fn url(&self) -> &Url {
-        self.url
-    }
 }
 
 /// One recorded exchange, in the five fields a recording file holds.
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 pub(crate) struct Entry {
     schema: String,
     adapter: String,
@@ -140,7 +112,7 @@ pub(crate) struct Entry {
     request: Box<RawValue>,
     response: Box<RawValue>,
     /// Slice 1 of ADR 0111 rewrote this exchange into the quoted form.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     quoted: bool,
 }
 
@@ -154,97 +126,15 @@ impl fmt::Debug for Entry {
     }
 }
 
-impl Entry {
-    /// Record one exchange the backend answered and the adapter read.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EntryError::Malformed`] when either body is not JSON.
-    pub(crate) fn of(exchange: &Exchange<'_>, response: &[u8]) -> Result<Self, EntryError> {
-        Ok(Self {
-            schema: SCHEMA.to_owned(),
-            adapter: built_in::NAME.to_owned(),
-            url: exchange.url.as_str().to_owned(),
-            request: json(exchange.request)?,
-            response: json(response)?,
-            quoted: false,
-        })
-    }
-
-    /// Write the entry as the text one file under a recording folder holds.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EntryError::Unwritable`] when the entry cannot be written as JSON.
-    pub(crate) fn written(&self) -> Result<String, EntryError> {
-        let mut text = serde_json::to_string_pretty(self).map_err(|_| EntryError::Unwritable)?;
-        text.push('\n');
-        Ok(text)
-    }
-
-    /// Read back the response this file recorded for the exchange being replayed.
-    ///
-    /// A digest names the file, so a file that holds another exchange was damaged
-    /// or edited by hand and is refused rather than answered from.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EntryError`] when the file is not an entry, when it names
-    /// another schema, or when it records another exchange.
-    pub(crate) fn replayed(bytes: &[u8], exchange: &Exchange<'_>) -> Result<Vec<u8>, EntryError> {
-        let entry: Self = serde_json::from_slice(bytes).map_err(place)?;
-        if entry.schema != SCHEMA {
-            return Err(EntryError::Schema);
-        }
-        if entry.adapter != built_in::NAME
-            || entry.url != exchange.url.as_str()
-            || entry.request.get().as_bytes() != exchange.request
-        {
-            return Err(EntryError::Mismatched);
-        }
-        Ok(entry.response.get().as_bytes().to_owned())
-    }
-
-    /// Validate one final cache entry and return its digest, reply model, and request model.
-    pub(crate) fn inspected(bytes: &[u8]) -> Result<(Digest, String, Option<String>), EntryError> {
-        #[derive(Deserialize)]
-        struct StoredResponse {
-            model: String,
-        }
-        #[derive(Deserialize)]
-        struct StoredRequest {
-            model: Option<String>,
-        }
-        let entry: Self = serde_json::from_slice(bytes).map_err(place)?;
-        if entry.schema != SCHEMA || entry.adapter != built_in::NAME {
-            return Err(EntryError::Schema);
-        }
-        let url = Url::new(&entry.url).map_err(|_| EntryError::Mismatched)?;
-        let exchange = Exchange::new(&url, entry.request.get().as_bytes());
-        let response: StoredResponse = serde_json::from_str(entry.response.get()).map_err(place)?;
-        if response.model.trim().is_empty() {
-            return Err(EntryError::MissingModel);
-        }
-        let requested = serde_json::from_str::<StoredRequest>(entry.request.get())
-            .ok()
-            .and_then(|request| request.model);
-        Ok((exchange.digest(), response.model, requested))
-    }
-}
-
-/// Take bytes that are JSON as one value to embed, never as a string.
-fn json(bytes: &[u8]) -> Result<Box<RawValue>, EntryError> {
-    serde_json::from_slice(bytes).map_err(place)
-}
-
 /// Where a JSON reader stopped, with nothing of what it stopped on.
 fn place(error: serde_json::Error) -> EntryError {
     EntryError::Malformed(error.line(), error.column())
 }
 
+
 #[cfg(test)]
 mod tests {
-    use super::{Entry, EntryError, Exchange, SCHEMA};
+    use super::{Converting, EntryError, Exchange, SCHEMA, convert};
     use crate::core::adapters::built_in;
     use crate::core::plan::Plan;
     use crate::core::question::Question;
@@ -253,32 +143,9 @@ mod tests {
     /// The digest of the `decide-urgent` fixture request against the built-in URL.
     ///
     /// The value is the SHA-256 of `systemone`, a newline, the URL, a newline,
-    /// and the request bytes, taken outside this program. Pinning it holds the
-    /// file name still, so a recording made today is found tomorrow. Ticket
-    /// 0007 removed the adapter type and left the digest untouched.
-    const PINNED: &str = "bd370a64f0a785a6ee73bab801eb4e1ae01ebbda8aacc51bc288ef400b2a4a78.json";
-
-    /// One response as a backend sends it, on the one line it crossed the wire on.
-    const RESPONSE: &str = concat!(
-        r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.92}},"#,
-        r#""usage":{"input_tokens":312,"output_tokens":48}}"#,
-    );
-
-    /// The file one recorded exchange is written into, field by field.
-    const FILE: &str = concat!(
-        "{\n",
-        "  \"schema\": \"thinkthen.recording/1\",\n",
-        "  \"adapter\": \"systemone\",\n",
-        "  \"url\": \"https://api.typesafe.ai/v1/systemone\",\n",
-        r#"  "request": {"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}},"#,
-        "\n",
-        r#"  "response": {"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":312,"output_tokens":48}}"#,
-        "\n}\n",
-    );
-
-    fn url() -> Url {
-        Url::new("https://api.typesafe.ai/v1/systemone").expect("not blank")
-    }
+    /// and the request bytes, taken outside this program. Dry runs and
+    /// attempt observations still name a request by it.
+    const PINNED: &str = "bd370a64f0a785a6ee73bab801eb4e1ae01ebbda8aacc51bc288ef400b2a4a78";
 
     fn plan() -> Plan {
         Plan::authored(
@@ -293,83 +160,28 @@ mod tests {
         .expect("a plan of one question")
     }
 
-    fn request() -> Vec<u8> {
-        built_in::encode(&plan()).expect("a plan is writable")
-    }
-
-    #[test]
-    fn the_digest_of_the_fixture_request_is_the_name_the_entry_keeps() {
-        let url = url();
-        let request = request();
-        let exchange = Exchange::new(&url, &request);
-        assert_eq!(exchange.digest().file_name(), PINNED);
-    }
-
-    #[test]
-    fn an_entry_carries_the_two_bodies_and_nothing_a_request_header_held() {
-        let url = url();
-        let request = request();
-        let exchange = Exchange::new(&url, &request);
-        let entry = Entry::of(&exchange, RESPONSE.as_bytes()).expect("both bodies are JSON");
-        let written = entry.written().expect("an entry is writable");
-
-        assert_eq!(written, FILE);
-        for shown in [
-            "authorization",
-            "Authorization",
-            "Bearer",
-            "THINKTHEN_API_KEY",
-        ] {
-            assert!(!written.contains(shown), "{written}");
+    /// Why `convert` refused an entry as unreadable.
+    fn unreadable(entry: &str) -> EntryError {
+        match convert(entry.as_bytes(), false) {
+            Err(Converting::Unreadable(error)) => error,
+            other => panic!("an unreadable entry, not {other:?}"),
         }
-
-        let replayed =
-            Entry::replayed(written.as_bytes(), &exchange).expect("the entry answers its own url");
-        let reply = built_in::decode(&plan(), &replayed).expect("a systemone response");
-        assert_eq!(reply.model().as_str(), "jev-latest");
     }
 
     #[test]
-    fn an_entry_that_records_another_exchange_is_refused() {
-        let url = url();
-        let request = request();
-        let exchange = Exchange::new(&url, &request);
-        let written = Entry::of(&exchange, RESPONSE.as_bytes())
-            .expect("both bodies are JSON")
-            .written()
-            .expect("an entry is writable");
-
-        let elsewhere = Url::new("http://127.0.0.1:1/v1").expect("not blank");
-        assert_eq!(
-            Entry::replayed(written.as_bytes(), &Exchange::new(&elsewhere, &request)),
-            Err(EntryError::Mismatched)
-        );
-        let other = br#"{"state":"something else"}"#;
-        assert_eq!(
-            Entry::replayed(written.as_bytes(), &Exchange::new(&url, other)),
-            Err(EntryError::Mismatched)
-        );
-
-        let stale = written.replace("thinkthen.recording/1", "thinkthen.recording/0");
-        assert_eq!(
-            Entry::replayed(stale.as_bytes(), &exchange),
-            Err(EntryError::Schema)
-        );
-        assert!(matches!(
-            Entry::replayed(b"not an entry at all", &exchange),
-            Err(EntryError::Malformed(..))
-        ));
+    fn the_digest_of_the_fixture_request_is_pinned() {
+        let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("not blank");
+        let request = built_in::encode(&plan()).expect("a plan is writable");
+        assert_eq!(Exchange::new(&url, &request).digest().as_str(), PINNED);
     }
 
-    /// A file in a recording folder is untrusted, and no message repeats a field.
+    /// A file in a converted folder is untrusted, and no message repeats a field.
     ///
     /// Every field of an entry comes out of a file. A file that parses and
     /// names another schema would otherwise print whatever that field held:
     /// unbounded text, control bytes, and whatever the evidence was.
     #[test]
     fn no_refusal_of_a_parseable_entry_repeats_a_field_it_read() {
-        let url = Url::new("http://127.0.0.1:9/v1/systemone").expect("an address");
-        let exchange = Exchange::new(&url, br#"{"asked":1}"#);
         // The escape is written the way JSON writes it, so the file is a file a
         // reader takes and the field carries a control byte all the same.
         let hostile = r"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5";
@@ -378,9 +190,9 @@ mod tests {
              \"url\":\"{hostile}\",\"request\":{{}},\"response\":{{}}}}"
         );
 
-        let error = Entry::replayed(entry.as_bytes(), &exchange)
-            .expect_err("an entry naming another schema is refused");
+        let error = unreadable(&entry);
 
+        assert_eq!(error, EntryError::Schema);
         assert_eq!(
             error.to_string(),
             "the entry names a schema this version does not read, \
@@ -396,16 +208,13 @@ mod tests {
     /// message says where the file broke and never what it held.
     #[test]
     fn no_refusal_of_a_damaged_entry_quotes_the_evidence_inside_it() {
-        let url = Url::new("http://127.0.0.1:9/v1/systemone").expect("an address");
-        let exchange = Exchange::new(&url, br#"{"asked":1}"#);
         let evidence = "marker-evidence-7b3ac5";
         let damaged = format!(
             "{{\"schema\":\"{SCHEMA}\",\"adapter\":\"systemone\",\
              \"request\":{{\"evidence\":\"{evidence}\"}} \"response\":{{}}}}"
         );
 
-        let error =
-            Entry::replayed(damaged.as_bytes(), &exchange).expect_err("a damaged entry is refused");
+        let error = unreadable(&damaged);
 
         assert!(!error.to_string().contains(evidence), "{error}");
         assert_eq!(

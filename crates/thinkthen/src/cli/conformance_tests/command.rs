@@ -3,13 +3,12 @@
 use super::conformance_support::{Case, Counters, Document, QuestionForm, Success};
 use super::{CASES, asked, same_json};
 use crate::args::{Cli, Command};
-use crate::core::recording::{Entry, Exchange as Recorded};
+use crate::core::recording::Exchange as Recorded;
 use crate::core::{Backend, DEFAULT_MODEL, ModelName, Url};
 use crate::edge::Environment;
-use crate::engine::error::Error as EngineError;
-use crate::engine::http::{Client, Key};
-use crate::engine::recorder::Recorder;
-use crate::engine::request::{Transport, ask_profile};
+use crate::engine::Cancel;
+use crate::engine::facade::{Asks, Bound, Engine, Settings, Storage};
+use crate::engine::http::Key;
 use crate::engine::usage::{self, month_now};
 use crate::failure::{Failure, report};
 use clap::Parser as _;
@@ -108,13 +107,27 @@ pub(super) fn replay(case: &Case) -> (Scratch, PathBuf) {
     let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
     for exchange in &case.exchanges {
         let recorded = Recorded::new(&url, exchange.request.as_bytes());
-        let entry = Entry::of(&recorded, exchange.response.get().as_bytes()).expect("entry");
-        let text = entry.written().expect("entry text");
-        fs::write(replay.join(recorded.digest().file_name()), text).expect("replay entry");
+        // The old entry's five fields, the request and response kept byte
+        // for byte, since a question key reads the state's exact JSON.
+        let entry = format!(
+            r#"{{"schema":"thinkthen.recording/1","adapter":{},"url":{},"request":{},"response":{}}}"#,
+            serde_json::to_string(crate::core::adapters::built_in::NAME).expect("adapter"),
+            serde_json::to_string(url.as_str()).expect("address"),
+            exchange.request,
+            exchange.response.get(),
+        );
+        let name = format!("{}.json", recorded.digest().as_str());
+        fs::write(replay.join(name), entry).expect("old entry");
     }
-    // The question store's fixture beside the old entries, as slice 2 of
-    // ticket 0304 converted every committed folder.
+    // The shared cases hold whole exchanges, so `cache convert` turns them
+    // into the question store's fixture, as it does a committed old folder.
     crate::engine::store::convert(&replay, false).expect("converted replay");
+    for item in fs::read_dir(&replay).expect("replay folder") {
+        let path = item.expect("replay item").path();
+        if path.file_name().is_some_and(|name| name != crate::engine::store::JSONL) {
+            fs::remove_file(path).expect("old entry removed");
+        }
+    }
     (scratch, replay)
 }
 
@@ -456,30 +469,36 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
         Url::new(format!("http://{address}/v1/systemone")).expect("loopback URL"),
         ModelName::new(DEFAULT_MODEL).expect("model"),
     );
-    let recorder = Recorder::of_private(Some(&cache), Some(&cache), false, true).expect("cache");
-    let client = Client::new(
-        Duration::from_secs(5),
-        false,
-        &crate::engine::limits::process().widths,
-    );
-    let process = usage::Counters::new(Some(totals.clone()));
+    let process = std::sync::Arc::new(usage::Counters::new(Some(totals.clone())));
+    let engine = Engine::new(Settings {
+        backend,
+        profile: None,
+        timeout: Duration::from_secs(5),
+        max_retries: 0,
+        retry_wait: Duration::ZERO,
+        width: None,
+        per_minute: None,
+        storage: Storage {
+            record: Some(cache.clone()),
+            replay: Some(cache),
+            private_default: true,
+            cache_answers: true,
+            refresh_cache: false,
+        },
+        key: std::sync::Arc::new(|| Ok(Key::of("offline"))),
+        usage: std::sync::Arc::clone(&process),
+    })
+    .expect("a caching engine");
     let before = usage::read(&totals, &month_now())
         .expect("totals before")
         .total;
     let plan = asked(case, 0, exchange).expect("case plan").plan;
+    let mut asks = Asks::default();
+    asks.add(engine.backend(), &plan).expect("case questions");
     for _ in 0..expected.calls {
-        let transport = Transport {
-            client: &client,
-            max_retries: 0,
-            retry_wait: Duration::ZERO,
-            usage: &process,
-            send_budget: None,
-        };
-        let cancel = crate::engine::Cancel::default();
-        ask_profile::<EngineError>(&backend, &plan, None, &recorder, &cancel, transport, || {
-            Ok(Key::of("offline"))
-        })
-        .expect("counted call");
+        engine
+            .ask_each(&asks, Bound::WHOLE, &Cancel::default(), |_, _| Ok(()))
+            .expect("counted call");
     }
     server.join().expect("loopback server");
     process.finish();

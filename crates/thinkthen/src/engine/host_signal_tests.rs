@@ -14,10 +14,10 @@ use nix::sys::pthread::{pthread_kill, pthread_self};
 use nix::sys::signal::{SigSet, Signal};
 
 use crate::core::Url;
-use crate::core::recording::Exchange as Recorded;
+use crate::core::pack::{QuestionKey, State};
 use crate::engine::error::Error;
 use crate::engine::http::{Client, Exchange, Key};
-use crate::engine::recorder::{PreparedRecording, Recorder};
+use crate::engine::store::{Mode, Row, Store};
 use crate::engine::{Cancel, Widths, workers};
 
 const SECOND: Duration = Duration::from_secs(1);
@@ -139,7 +139,6 @@ fn host_signal_child() {
         .expect("one result")
         .expect("the normal answer");
     assert_eq!(answer.body, b"{}");
-    assert_eq!(answer.requests_sent, 1);
     let listener = server.join().expect("listener");
     listener.set_nonblocking(true).expect("nonblocking");
     assert!(
@@ -201,26 +200,33 @@ fn file_size_child() {
                 .expect("host action");
     }
     let folder = std::env::temp_dir().join(format!("thinkthen-host-xfsz-{}", std::process::id()));
-    let recorder = Recorder::of(Some(&folder), None).expect("recorder");
     let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("url");
-    let exchange = Recorded::new(&url, b"{}");
-    let digest = exchange.digest();
-    let Ok(PreparedRecording::Live(permit)) = recorder.prepare(&exchange, &digest) else {
-        panic!("a live write permit")
+    let state = State::new(r#""The text is short.""#.to_owned(), 0);
+    let question = r#"{"type":"noul","instructions":"Is it?"}"#;
+    let answer = format!(r#"{{"type":"noul","noul":0.5,"pad":"{}"}}"#, "x".repeat(8_192));
+    let row = Row {
+        key: QuestionKey::of(&url, r#""jev-1""#, state.json(), question),
+        url: url.as_str(),
+        model: "jev-1",
+        state: &state,
+        question,
+        answer: &answer,
+        answered_by: "jev-1",
+        usage: None,
+        taken_at: 1,
+        origin: "live",
     };
-    let response = format!("{{\"pad\":\"{}\"}}", "x".repeat(8_192));
-
-    let name = digest.file_name();
     let (results, finished) = channel();
     // The write runs on an engine worker, whose mask must leave SIGXFSZ open.
     workers::scoped_observed(
         1,
         results,
-        &|permit: crate::engine::recorder::WritePermit| {
-            permit.finish(&exchange, response.as_bytes(), &name)
+        &|()| {
+            Store::open(&folder, Mode::Record, false, None)
+                .and_then(|mut store| store.write(std::slice::from_ref(&row), &Cancel::default()))
         },
         &|| (),
-        |work| work.send(permit).expect("write queued"),
+        |work| work.send(()).expect("write queued"),
     );
     let result = finished.recv().expect("one write");
 
@@ -231,14 +237,6 @@ fn file_size_child() {
         ran.load(Ordering::SeqCst),
         "the host action is still installed"
     );
-    let left: Vec<_> = std::fs::read_dir(&folder)
-        .expect("folder")
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_file()))
-        .map(|entry| entry.file_name())
-        .filter(|name| name != ".thinkthen-backend.json")
-        .collect();
-    assert!(left.is_empty(), "no final or temporary entry: {left:?}");
     std::fs::remove_dir_all(&folder).expect("cleanup");
     let mut stdout = std::io::stdout().lock();
     writeln!(stdout, "storage failure; host action ran; still installed").expect("announce");

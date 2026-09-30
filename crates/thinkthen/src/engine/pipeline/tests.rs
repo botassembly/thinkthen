@@ -13,7 +13,7 @@ use super::{Answered, Asker, Failed, Flow, Packing, Port, reader as host};
 use crate::core::pack::{self, Ask};
 use crate::core::{Evidence, ModelName, Question, QuestionText, Url, quoted_plan};
 use crate::engine::error::Error;
-use crate::engine::schedule::Input;
+use crate::engine::pipeline::Input;
 use crate::engine::{Cancel, Deadline};
 
 /// Asks one decide question about `line N` for each number it reads.

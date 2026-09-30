@@ -11,9 +11,10 @@ use std::time::Duration;
 use crate::cli::args::CheckArguments;
 use crate::cli::edge::{self, Environment};
 use crate::core::check::{self, Probe, Report};
+use crate::core::adapters::built_in;
 use crate::core::{NAME, PlanSummary, json_line};
 use crate::engine::error::Error;
-use crate::engine::facade::{Chunk, Engine, Settings, Storage};
+use crate::engine::facade::{Engine, Settings, Storage};
 use crate::failure::{self, Failure};
 
 /// The check sends only to an address the user named, never the built-in one.
@@ -71,26 +72,19 @@ pub(crate) fn run(
     let mut report = Report::new(&probes);
     let mut summary = PlanSummary::new(false);
     for probe in &probes {
-        // The one request a probe makes, from the split every command uses.
-        let Ok([chunk]) = <[Chunk; 1]>::try_from(engine.split(&probe.plan)?) else {
-            return Err(Failure::Defect("a check probe split into several requests"));
-        };
         if arguments.dry_run {
+            // The one request a probe makes, from the encoder every command uses.
+            let body = built_in::encode(&probe.plan)
+                .map_err(|_| Failure::Defect("a check probe could not be written as JSON"))?;
             summary
                 .record()
                 .map_err(|_| Failure::Defect("a plan is too large"))?;
             summary
-                .request(&chunk.request.body)
+                .request(&body)
                 .map_err(|_| Failure::Defect("a plan is too large"))?;
-            let body = String::from_utf8_lossy(&chunk.request.body);
+            let body = String::from_utf8_lossy(&body);
             lines.push(format!("request {} {body}", probe.name));
-        } else if !send(
-            &engine,
-            environment,
-            probe,
-            chunk,
-            (&mut report, &mut lines),
-        )? {
+        } else if !send(&engine, environment, probe, (&mut report, &mut lines))? {
             break;
         }
     }
@@ -133,23 +127,16 @@ fn send(
     engine: &Engine,
     environment: &Environment,
     probe: &Probe,
-    chunk: Chunk,
     (report, lines): (&mut Report, &mut Vec<String>),
 ) -> Result<bool, Failure> {
-    let mut reply = None;
-    let sent = engine.ask_chunks(vec![chunk], environment.cancel(), |answered| {
-        reply = Some(answered.reply);
-        Ok::<(), Error>(())
-    });
-    let error = match (sent, reply) {
-        (Ok(()), Some(reply)) => {
+    let error = match engine.send_plan(&probe.plan, environment.cancel()) {
+        Ok(reply) => {
             let line = check::reply_line(probe, &reply);
             lines.push(line.ok_or(Failure::Defect("a check reply did not render"))?);
             report.replied(probe, &reply);
             return Ok(true);
         }
-        (Ok(()), None) => return Err(Failure::Defect("a sent check probe had no reply")),
-        (Err(error), _) => error,
+        Err(error) => error,
     };
     let gate = match &error {
         Error::Transport(_) => Some("connection"),

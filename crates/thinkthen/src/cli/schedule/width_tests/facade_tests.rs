@@ -9,9 +9,8 @@ use std::time::Duration;
 use super::{child, in_child};
 use crate::core::{Backend, Evidence, Question, QuestionText};
 use crate::engine::error::Error as EngineError;
-use crate::engine::facade::{
-    Completed, Engine, Input as FacadeInput, InputPort, Key, RunOutcome, Settings, Storage,
-};
+use crate::cli::schedule::ordered::{self, Outcome, Port};
+use crate::engine::facade::{Engine, Key, Settings, Storage};
 use crate::engine::{Cancel, Width, limits};
 
 #[test]
@@ -56,9 +55,9 @@ fn facade_width_child() {
 }
 
 /// Hand the batch its three items, one per request.
-fn feed(requests: &Receiver<()>, events: &InputPort<&'static str, Option<f64>, EngineError>) {
+fn feed(requests: &Receiver<()>, events: &Port<&'static str, Option<f64>, EngineError>) {
     for text in ["one", "two", "three"] {
-        if requests.recv().is_err() || events.send(FacadeInput::Item(text)).is_err() {
+        if requests.recv().is_err() || events.send(ordered::Input::Item(text)).is_err() {
             return;
         }
     }
@@ -82,25 +81,30 @@ fn cancelled_batch_leaves_no_send(engine: &Engine, loopback: &conformance_backen
     };
     let batch = Cancel::default();
     // Each item asks under a token the batch cancel does not reach, so only
-    // the scheduler's stop keeps a later item from sending.
+    // the ordered runner's stop keeps a later item from sending.
     let each = Cancel::default();
     let mut rows = Vec::new();
 
     let outcome = thread::scope(|scope| {
         let run = scope.spawn(|| {
-            engine.records(
-                crate::engine::schedule::RecordFlow::Streaming,
+            ordered::run(
+                1,
                 &batch,
                 |requests, events| {
                     thread::spawn(move || feed(&requests, &events));
                 },
-                &|text: &&str| {
-                    ask(text, &each).map(|judged| Completed::one(judged.answer.yes(), false))
+                &|text: &str| {
+                    ask(text, &each).map(|judged| ordered::Row {
+                        value: judged.answer.yes(),
+                        replayed: false,
+                    })
                 },
                 |row| {
                     rows.push(row);
                     Ok::<_, EngineError>(true)
                 },
+                &|stop| stop,
+                || EngineError::Defect("the reader ended early"),
             )
         });
         assert_eq!(loopback.wait(1), 1, "the first item is held");
@@ -113,7 +117,7 @@ fn cancelled_batch_leaves_no_send(engine: &Engine, loopback: &conformance_backen
     assert!(
         matches!(
             outcome,
-            Ok(RunOutcome::Stopped {
+            Ok(Outcome::Stopped {
                 cause: EngineError::Cancelled,
                 ..
             })

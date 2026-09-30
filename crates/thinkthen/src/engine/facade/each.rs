@@ -49,11 +49,13 @@ impl Bound {
 }
 
 /// The wire questions of some plans, in order, beside the logical question
-/// that reads each answer.
+/// that reads them. A tag question asks once per label.
 #[derive(Default)]
 pub(crate) struct Asks {
     asks: Vec<Ask>,
     questions: Vec<Question>,
+    /// The first wire question of each logical question, and its count.
+    spans: Vec<(usize, usize)>,
 }
 
 /// One request a plan shows before any send, as the pipeline packs it with
@@ -61,29 +63,45 @@ pub(crate) struct Asks {
 pub(crate) struct Request {
     pub(crate) body: Vec<u8>,
     pub(crate) digest: Digest,
-    /// The place of each question it holds.
+    /// The place of each logical question it holds, once per wire question.
     pub(crate) places: Vec<usize>,
 }
 
 impl Asks {
-    /// Add every question of `plan`. Each asks exactly one wire question.
+    /// Add every question of `plan`, each with its wire questions.
     pub(crate) fn add(&mut self, backend: &Backend, plan: &Plan) -> Result<(), Error> {
         let asks = pack::asks(backend.url(), plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
-        if asks.len() != plan.questions().len() {
-            return Err(Error::Defect("a planned question asks more than once"));
+        let mut start = self.asks.len();
+        for question in plan.questions() {
+            let count = match question {
+                Question::Tag { labels, .. } => labels.count(),
+                _ => 1,
+            };
+            self.spans.push((start, count));
+            start += count;
+        }
+        if start != self.asks.len() + asks.len() {
+            return Err(Error::Defect("a plan's wire questions do not match its questions"));
         }
         self.asks.extend(asks);
         self.questions.extend(plan.questions().iter().cloned());
         Ok(())
     }
 
+    /// The number of logical questions.
     pub(crate) const fn len(&self) -> usize {
-        self.asks.len()
+        self.questions.len()
     }
 
     pub(crate) const fn is_empty(&self) -> bool {
-        self.asks.is_empty()
+        self.questions.is_empty()
+    }
+
+    /// The wire questions of the logical question at `place`.
+    fn wire(&self, place: usize) -> Option<&[Ask]> {
+        let (start, count) = *self.spans.get(place)?;
+        self.asks.get(start..start + count)
     }
 
     pub(crate) fn questions(&self) -> &[Question] {
@@ -94,7 +112,7 @@ impl Asks {
     /// is every question, so the pipeline's window, a multiple of it, holds
     /// them all and never closes a request early.
     fn inputs(&self) -> usize {
-        self.len().max(1)
+        self.asks.len().max(1)
     }
 
     /// The requests these questions make with nothing cached. A question
@@ -107,10 +125,10 @@ impl Asks {
     ) -> Result<Vec<Request>, Error> {
         let mut packer = packer(backend, profile, bound, self.inputs())?;
         let mut closed = Vec::new();
-        for (place, ask) in self.asks.iter().enumerate() {
-            packer
-                .add(vec![entry(ask, place)], &mut closed)
-                .map_err(packed)?;
+        for place in 0..self.len() {
+            let wire = self.wire(place).ok_or(Error::Defect("a place asks nothing"))?;
+            let entries = wire.iter().map(|ask| entry(ask, place)).collect();
+            packer.add(entries, &mut closed).map_err(packed)?;
         }
         closed.extend(packer.close());
         Ok(closed
@@ -177,27 +195,31 @@ impl Asker for Each<'_> {
     }
 
     fn asks(&self, place: &usize) -> Result<Vec<Ask>, Error> {
-        let ask = self.0.asks.get(*place);
-        Ok(vec![
-            ask.ok_or(Error::Defect("a place asks nothing"))?.clone(),
-        ])
+        let wire = self.0.wire(*place);
+        Ok(wire.ok_or(Error::Defect("a place asks nothing"))?.to_vec())
     }
 
     fn row(&self, place: usize, answers: Vec<pipeline::Answered>) -> Result<Answered, Error> {
         let question = self.0.questions.get(place);
-        let (Some(question), [answered]) = (question, answers.as_slice()) else {
-            return Err(Error::Defect("a place has no single answer"));
+        let (Some(question), Some(first)) = (question, answers.first()) else {
+            return Err(Error::Defect("a place has no answer"));
         };
-        let stored = [answered.answer.as_deref().map_err(DecodeError::cause)];
-        let model = &*answered.answered_by;
+        let stored: Vec<_> = answers
+            .iter()
+            .map(|answered| answered.answer.as_deref().map_err(DecodeError::cause))
+            .collect();
+        let model = &*first.answered_by;
         let outcomes = pack::read(std::slice::from_ref(question), &stored, model)?;
         let model =
             ModelName::reported(model).map_err(|_| Error::Defect("a reply named no model"))?;
+        let usage = answers
+            .iter()
+            .try_fold(None, |total, answered| summed(total, answered.usage))?;
         Ok(Answered {
-            reply: Reply::new(model, outcomes, answered.usage),
-            replayed: answered.cached,
-            request: Digest::named(answered.key.hex()),
-            requests_sent: answered.requests_sent,
+            reply: Reply::new(model, outcomes, usage),
+            replayed: answers.iter().all(|answered| answered.cached),
+            request: Digest::named(first.key.hex()),
+            requests_sent: answers.iter().map(|answered| answered.requests_sent).sum(),
         })
     }
 }

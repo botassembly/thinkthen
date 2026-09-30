@@ -2,7 +2,6 @@
 //! a database server. Ticket 0318.
 
 use super::EngineBuilder;
-use crate::engine::cache_lock;
 use crate::engine::facade::Storage;
 use crate::public::error::Error;
 
@@ -36,9 +35,10 @@ impl EngineBuilder {
             return Ok(storage);
         }
         for folder in [&storage.record, &storage.replay].into_iter().flatten() {
-            let metadata = cache_lock::create_private(folder)
-                .and_then(|()| std::fs::metadata(folder))
-                .map_err(|_| Error::local(NOT_READY))?;
+            let metadata = crate::engine::store::make_folder(folder)
+                .ok()
+                .and_then(|()| std::fs::metadata(folder).ok())
+                .ok_or_else(|| Error::local(NOT_READY))?;
             if crate::config::writable_by_another(&metadata) {
                 return Err(Error::usage(NOT_PRIVATE));
             }

@@ -27,17 +27,3 @@ pub(crate) fn park_for_signal() -> ! {
         SIGNAL_DEADLINE.as_secs()
     );
 }
-
-/// Wait until `path` exists, and fail after `SIGNAL_DEADLINE`.
-pub(crate) fn wait_for_file(path: &std::path::Path) {
-    let end = Instant::now() + SIGNAL_DEADLINE;
-    while !path.exists() {
-        assert!(
-            Instant::now() < end,
-            "{} did not appear within {} seconds",
-            path.display(),
-            SIGNAL_DEADLINE.as_secs()
-        );
-        std::thread::sleep(Duration::from_millis(5));
-    }
-}

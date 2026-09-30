@@ -1,4 +1,5 @@
-//! Command output around the engine-owned ordinary-record scheduler.
+//! Command output, the command's width, and the ordered runner under the
+//! many-line `recognize`.
 
 use std::fmt;
 use std::io::Write;
@@ -9,7 +10,7 @@ use std::thread;
 use crate::core::{ModelName, Outcome, Withheld, ranking};
 use crate::edge;
 use crate::engine::error::Error as EngineError;
-use crate::engine::facade::{Completed, Engine, Input, InputPort, RecordFlow, RunOutcome};
+use crate::engine::facade::Engine;
 use crate::engine::usage::Counters;
 use crate::engine::{Width, Widths};
 use crate::failure::Failure;
@@ -56,14 +57,6 @@ pub(crate) struct Judged {
     pub(crate) order_value: Option<f64>,
     pub(crate) partial_failure: bool,
     pub(crate) profile_mismatch: Option<Mismatch>,
-}
-
-impl Judged {
-    /// One record's row, as the scheduler counts it.
-    pub(crate) fn completed<E>(self) -> Completed<Self, E> {
-        let replayed = self.replayed;
-        Completed::one(self, replayed)
-    }
 }
 
 impl fmt::Debug for Judged {
@@ -260,14 +253,6 @@ impl Output<'_> {
             Mode::Streaming(writer) | Mode::Ordered { writer, .. } => *writer,
         }
     }
-
-    pub(crate) const fn flow(&self) -> RecordFlow {
-        match self.mode {
-            Mode::Streaming(_) => RecordFlow::Streaming,
-            Mode::Ordered { top: None, .. } => RecordFlow::HeldAll,
-            Mode::Ordered { top: Some(_), .. } => RecordFlow::HeldWindowed,
-        }
-    }
 }
 
 pub(crate) fn jobs_of(asked: Option<u8>, streams: bool) -> Result<usize, Failure> {
@@ -295,6 +280,9 @@ pub(crate) fn width_in(widths: &Widths, asked: Option<u8>) -> Result<usize, Fail
         .map_err(Failure::WidthActive)
 }
 
+/// Answer each record of `chunks` with `row` over the engine's width and
+/// print the rows in input order. Only the many-line `recognize` runs this
+/// way; every record function asks through the question pipeline.
 pub(crate) fn over_records<T, I>(
     engine: &Engine,
     row: &Asking<'_, T>,
@@ -306,46 +294,39 @@ where
     T: Send + 'static,
     I: Iterator<Item = Result<(usize, T), Placed>> + Send + 'static,
 {
-    let recording = engine.recording();
-    let flow = output.flow();
-    let outcome = engine.records(
-        flow,
+    let outcome = ordered::run(
+        engine.width(cancel)?,
         cancel,
         |requests, events| {
             thread::spawn(move || read_records(chunks, &requests, &events));
         },
-        &|(at, value)| {
-            row(value)
-                .map(Judged::completed)
-                .map_err(|error| Placed::at(error, *at))
+        &|(at, value): (usize, T)| {
+            row(&value)
+                .map(|judged| ordered::Row {
+                    replayed: judged.replayed,
+                    value: judged,
+                })
+                .map_err(|error| Placed::at(error, at))
         },
         |judged| output.take(judged).map_err(Placed::from),
+        &|error: EngineError| Placed::from(error),
+        || Placed::from(Failure::Defect("the record reader ended early")),
     )?;
-    ended(outcome, recording, output)
-}
-
-/// The exit code of a run that completed, or the failure that stopped it.
-pub(crate) fn ended(
-    outcome: RunOutcome<Placed>,
-    recording: bool,
-    output: &mut Output<'_>,
-) -> Result<ExitCode, Failure> {
     match outcome {
-        RunOutcome::Complete => {
+        ordered::Outcome::Complete => {
             output.ended()?;
             Ok(ExitCode::SUCCESS)
         }
-        RunOutcome::Stopped {
+        ordered::Outcome::Stopped {
             finished,
             replayed,
-            held,
             cause,
         } => Err(Failure::Stopped {
             at: cause.at.unwrap_or(finished + 1),
             finished,
             replayed,
-            recording,
-            held,
+            recording: engine.recording(),
+            held: false,
             cause: Box::new(cause.cause),
         }),
     }
@@ -354,15 +335,15 @@ pub(crate) fn ended(
 fn read_records<T, I>(
     mut chunks: I,
     requests: &Receiver<()>,
-    events: &InputPort<(usize, T), Judged, Placed>,
+    events: &ordered::Port<(usize, T), Judged, Placed>,
 ) where
     I: Iterator<Item = Result<(usize, T), Placed>>,
 {
     while requests.recv().is_ok() {
         let event = match chunks.next() {
-            None => Input::End,
-            Some(Ok(value)) => Input::Item(value),
-            Some(Err(error)) => Input::Failed(error),
+            None => ordered::Input::End,
+            Some(Ok(value)) => ordered::Input::Item(value),
+            Some(Err(error)) => ordered::Input::Failed(error),
         };
         if events.send(event).is_err() {
             return;
@@ -370,6 +351,7 @@ fn read_records<T, I>(
     }
 }
 
+pub(super) mod ordered;
 #[cfg(test)]
 mod top_tests;
 #[cfg(test)]

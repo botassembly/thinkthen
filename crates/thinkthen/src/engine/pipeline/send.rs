@@ -12,7 +12,7 @@ use crate::core::recording::Exchange as Recorded;
 use crate::engine::error::Error;
 use crate::engine::facade::{Engine, Key};
 use crate::engine::http::Exchange;
-use crate::engine::request::Transport;
+use crate::engine::facade::Transport;
 use crate::engine::store;
 use crate::engine::{AttemptSink, Cancel};
 

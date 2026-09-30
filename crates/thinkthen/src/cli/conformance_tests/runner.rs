@@ -5,8 +5,8 @@ use super::{
 use crate::core::{Backend, DEFAULT_MODEL, Evidence, ModelName, Url, Value};
 use crate::engine::Cancel;
 use crate::engine::error::Error as EngineError;
-use crate::engine::facade::{Answered, Completed, Engine, Input, RunOutcome, Settings, Storage};
-use crate::engine::request::{Injection, inject};
+use crate::cli::schedule::ordered::{self, Input, Outcome};
+use crate::engine::facade::{Answered, Asks, Bound, Engine, Settings, Storage};
 use crate::failure::{Failure, report};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -46,14 +46,29 @@ fn facade_answer(
             .find(&finding(case).expect("find"), &cancel)?
             .answered),
         "annotate" => {
+            let mut asks = Asks::default();
+            asks.add(engine.backend(), &request.plan)?;
             let mut answers = Vec::new();
-            engine.ask_chunks(engine.split(&request.plan)?, &cancel, |answered| {
+            engine.ask_each(&asks, Bound::WHOLE, &cancel, |_, answered| {
                 answers.push(answered);
-                Ok::<(), EngineError>(())
+                Ok(())
             })?;
-            let [answered] = <[Answered; 1]>::try_from(answers)
-                .map_err(|_| EngineError::Defect("one annotate group is one request"))?;
-            Ok(answered)
+            let first = answers
+                .first()
+                .ok_or(EngineError::Defect("an annotate group had no answer"))?;
+            Ok(Answered {
+                reply: crate::core::Reply::new(
+                    first.reply.model().clone(),
+                    answers
+                        .iter()
+                        .flat_map(|answered| answered.reply.outcomes().iter().cloned())
+                        .collect(),
+                    None,
+                ),
+                replayed: answers.iter().all(|answered| answered.replayed),
+                request: first.request.clone(),
+                requests_sent: answers.iter().map(|answered| answered.requests_sent).sum(),
+            })
         }
         _ => Ok(engine
             .judge(
@@ -76,7 +91,7 @@ fn every_case_crosses_the_private_facade_under_replay() {
     let document: Document = serde_json::from_str(CASES).expect("shared document");
     let backend_url = Url::new(&document.backend_url).expect("canonical URL");
     let backend = Backend::from_parts(backend_url, ModelName::new(DEFAULT_MODEL).expect("model"));
-    for case in &document.cases {
+    'cases: for case in &document.cases {
         if let Some(expected) = &case.expect.error {
             run_fault(case, &expected.kind);
             continue;
@@ -107,20 +122,23 @@ fn every_case_crosses_the_private_facade_under_replay() {
             } else {
                 asked(case, place, exchange).expect("case plan")
             };
-            let answered = facade_answer(&engine, case, &request, &exchange.evidence)
-                .unwrap_or_else(|error| panic!("{}: {error:?}", case.id));
+            let answered = match facade_answer(&engine, case, &request, &exchange.evidence) {
+                Ok(answered) => answered,
+                // The store keeps no failed answer, by ADR 0111 section 6,
+                // so replay misses the question a backend failed. The
+                // decoding check reads that failure from the recorded body.
+                Err(EngineError::QuestionMiss(_)) if success.failed_questions > 0 => {
+                    continue 'cases;
+                }
+                Err(error) => panic!("{}: {error:?}", case.id),
+            };
             assert!(answered.replayed, "{}", case.id);
             assert_eq!(answered.requests_sent, 0, "{}", case.id);
-            let request_name = if case.verb == "find" {
-                let [key] = <[String; 1]>::try_from(command::question_keys(
-                    backend.url(),
-                    &exchange.request,
-                ))
-                .expect("one find question");
-                key
-            } else {
-                requests[place].clone()
-            };
+            // A reply names its first question's key, by ADR 0111 section 2.
+            let request_name = command::question_keys(backend.url(), &exchange.request)
+                .into_iter()
+                .next()
+                .expect("one question");
             assert_eq!(answered.request.as_str(), request_name, "{}", case.id);
             assert_eq!(
                 answered.reply.outcomes().len(),
@@ -185,25 +203,24 @@ fn run_fault(case: &super::Case, expected: &str) {
         return;
     }
     let injection = &case.operation.as_ref().expect("fault injection").injection;
-    let backend = Backend::resolve(None, None, DEFAULT_MODEL).expect("backend");
-    let engine = replaying(&backend, std::env::temp_dir());
-    let outcome = engine
-        .records(
-            crate::engine::schedule::RecordFlow::Streaming,
-            &Cancel::default(),
-            |requests, events| {
-                thread::spawn(move || {
-                    requests.recv().expect("one injected input");
-                    events
-                        .send(Input::Item(()))
-                        .expect("scheduler receives input");
-                });
-            },
-            &|()| Err::<Completed<(), _>, _>(injected(injection)),
-            |()| Ok(true),
-        )
-        .expect("scheduler itself remains sound");
-    let RunOutcome::Stopped { cause, .. } = outcome else {
+    let outcome = ordered::run(
+        1,
+        &Cancel::default(),
+        |requests, events| {
+            thread::spawn(move || {
+                requests.recv().expect("one injected input");
+                events
+                    .send(Input::Item(()))
+                    .expect("the runner receives input");
+            });
+        },
+        &|()| Err::<ordered::Row<()>, _>(injected(injection)),
+        |()| Ok(true),
+        &|error| error,
+        || EngineError::Defect("the reader ended"),
+    )
+    .expect("the runner itself remains sound");
+    let Outcome::Stopped { cause, .. } = outcome else {
         panic!("{} did not stop", case.id);
     };
     assert_eq!(cause.kind().as_str(), expected, "{}", case.id);
@@ -227,11 +244,13 @@ fn run_fault(case: &super::Case, expected: &str) {
 fn injected(name: &str) -> EngineError {
     match name {
         "invalid_arguments" => EngineError::Usage("injected invalid arguments"),
-        "response_refusal" => inject(Injection::Backend),
-        "recording_read_failure" => inject(Injection::Local),
-        "cancel_token" => inject(Injection::Cancelled),
-        "expired_deadline" => inject(Injection::Deadline),
-        "internal_invariant_failure" => inject(Injection::Defect),
+        "response_refusal" => EngineError::Status(422),
+        "recording_read_failure" => EngineError::RecordingStorage,
+        "cancel_token" => EngineError::Cancelled,
+        "expired_deadline" => {
+            EngineError::Deadline(crate::engine::error::Budget(Duration::ZERO))
+        }
+        "internal_invariant_failure" => EngineError::Defect("injected invariant failure"),
         other => panic!("unknown injection {other}"),
     }
 }
