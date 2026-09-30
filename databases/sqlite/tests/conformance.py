@@ -23,7 +23,7 @@ import re
 import sqlite3
 import sys
 
-from helper import ROOT, Backend, child, environment
+from helper import ROOT, Backend, Child, child, environment, expect
 from portable import question_keys
 
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
@@ -105,10 +105,18 @@ def same(what: str, held: object, wanted: object) -> None:
         raise AssertionError(f"{what}: got {json.dumps(held)}, expected {json.dumps(wanted)}")
 
 
-def asked(steps: list, env: dict, setup: str = "") -> list:
-    """Run each (sql, parameters) step on one connection; rows or error text."""
+def asked(steps: list, env: dict, setup: str = "", held: Backend | None = None) -> list:
+    """Run each (sql, parameters) step on one connection; rows or error text.
+
+    With `held`, the child reads its standard-input line once that backend
+    counts one request, so a setup can act on a send it knows is held."""
     code = f"db = connect()\n{setup}\nsay(results=[run(db, sql, tuple(parameters)) for sql, parameters in {steps!r}])\n"
-    return child(code, env)["results"]
+    if held is None:
+        return child(code, env)["results"]
+    running = Child(code, env)
+    expect(held.wait(1), 1, "the held request")
+    running.send()
+    return running.result()["results"]
 
 
 def rows_table(texts: list[str]) -> str:
@@ -129,7 +137,8 @@ def refused(case: dict, backend: Backend) -> None:
         setup = "open(os.environ['SCRATCH'] + '/not-a-folder', 'w').write('not a folder')"
     elif ident == "23-cancelled-fault":
         arm = "arm/held"
-        setup = "threading.Timer(0.3, db.interrupt).start()"
+        # The interrupt goes once the send is held, not after a guessed delay (ticket 0352).
+        setup = "threading.Thread(target=lambda: (sys.stdin.readline(), db.interrupt()), daemon=True).start()"
     elif ident == "24-deadline-fault":
         steps = [["SELECT thinkthen_decide(?, ?, ?)", [question, evidence, '{"deadline_ms":0}']]]
     elif ident == "31-usage-rank-blank-question":
@@ -141,7 +150,7 @@ def refused(case: dict, backend: Backend) -> None:
         raise AssertionError(f"no SQL boundary is written for {ident}")
     env = environment(backend, arm)
     steps = json.loads(json.dumps(steps).replace("__SCRATCH__", env["SCRATCH"]))
-    results = asked(steps, env, setup)
+    results = asked(steps, env, setup, backend if ident == "23-cancelled-fault" else None)
     backend.release()
     error = next((one for one in results if isinstance(one, str)), None)
     kind, retryable = failure(error)

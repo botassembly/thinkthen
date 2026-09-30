@@ -38,7 +38,7 @@ impl Acknowledgment {
     }
 
     fn wait(&self) -> io::Result<()> {
-        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
         while std::time::Instant::now() < deadline {
             if matches!(fs::read(&self.0), Ok(byte) if byte == b"1") {
                 return Ok(());
@@ -116,7 +116,7 @@ fn held_with_signal(
     let child = spawn(&[arguments, &fixed].concat(), input, &acknowledgment)?;
     for _ in 0..count {
         assert!(matches!(
-            events.recv_timeout(Duration::from_secs(5)),
+            events.recv_timeout(Duration::from_secs(30)),
             Ok(Observed::Request)
         ));
     }
@@ -146,7 +146,7 @@ fn held_with_signal(
 }
 
 fn finish_promptly(mut child: Child, what: &str) -> io::Result<Output> {
-    let deadline = std::time::Instant::now() + Duration::from_secs(4);
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
     loop {
         if child.try_wait()?.is_some() {
             return finish(child, what);
@@ -178,7 +178,7 @@ fn signal_before_timeout(
     let fixed = ["--url", listener.base(), "--model", "local-1"];
     let child = spawn(&[arguments, &fixed].concat(), input, &acknowledgment)?;
     assert!(matches!(
-        events.recv_timeout(Duration::from_secs(5)),
+        events.recv_timeout(Duration::from_secs(30)),
         Ok(Observed::Request)
     ));
     assert!(

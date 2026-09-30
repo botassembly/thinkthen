@@ -1,6 +1,6 @@
 # Two specification lines the site shows readers in their draft form
 
-Status: open. Filed 2026-09-30 by the marketing lead from mktg ticket 0031. Owner: the queue owner.
+Status: open. Filed 2026-09-30 by the marketing lead. Owner: the queue owner.
 Kind: bug
 
 The site's Settings page renders `specification/settings.md` at build time. Two lines there and in `recording.md` read as working notes to a site reader.

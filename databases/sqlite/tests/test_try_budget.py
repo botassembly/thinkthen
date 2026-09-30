@@ -2,6 +2,7 @@
 """SQL row values and the explicit connection budget (ADR 0080)."""
 
 import json
+import os
 import sys
 import threading
 from pathlib import Path
@@ -9,6 +10,9 @@ from pathlib import Path
 from conditional_backend import ConditionalBackend
 
 from helper import Backend, Child, child, environment, expect, main
+
+# Ticket 0352: the stress profile alone checks how fast a budget returns.
+STRESS = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
 
 
 def test_bad_row_returns_a_value_and_later_row_answers() -> None:
@@ -105,20 +109,23 @@ say(unresolved=unresolved, spent=spent)
 
 def test_budget_ends_a_held_send_without_erasing_it() -> None:
     backend = Backend()
-    release = threading.Timer(2, backend.release)
-    release.start()
-    try:
-        held = Child("""
+    held = Child("""
 db = connect()
 db.execute('SELECT thinkthen_budget_ms(150)')
 started = time.monotonic()
 error = run(db, "SELECT thinkthen_try_details('Is it red?', 'a red door')")
 say(error=error, took=time.monotonic()-started)
-""", environment(backend, "arm/held")).result()
+""", environment(backend, "arm/held"))
+    expect(backend.wait(1), 1, "the held send")
+    # A guard, armed once the send is held: a budget that never ends the send fails in 30 s.
+    release = threading.Timer(30, backend.release)
+    release.start()
+    try:
+        held = held.result()
     finally:
         release.cancel()
     expect(held["error"], "thinkthen deadline: the connection's ThinkThen budget passed (retryable: no)", "deadline remains fatal")
-    expect(held["took"] < 0.4, True, "prompt return")
+    expect(held["took"] < (0.4 if STRESS else 10), True, "prompt return")
     expect(backend.close(), 1, "sent attempt remains counted")
 
 
@@ -137,7 +144,7 @@ say(result=result, took=time.monotonic()-started)
         expect(backend.wait(2), 2, "second row sent under the same budget")
         result = held.result()
         expect(result["result"], "thinkthen deadline: the connection's ThinkThen budget passed (retryable: no)", "second held row expires")
-        expect(result["took"] < 1.2, True, "original budget bounds both rows")
+        expect(result["took"] < (1.2 if STRESS else 10), True, "original budget bounds both rows")
     finally:
         backend.release()
     expect(backend.close(), 2, "both attempts remain counted")

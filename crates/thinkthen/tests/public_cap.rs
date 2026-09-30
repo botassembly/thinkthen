@@ -44,7 +44,7 @@ fn held_request_exhausts_one_limit_while_raised_and_unset_engines_keep_counting(
         .cut();
     thread::scope(|scope| {
         let first = scope.spawn(|| low.decide(&question, "first"));
-        let until = Instant::now() + Duration::from_secs(3);
+        let until = Instant::now() + Duration::from_secs(30);
         while held_listener.count() == 0 {
             assert!(Instant::now() < until, "first request did not arrive");
             thread::sleep(Duration::from_millis(5));

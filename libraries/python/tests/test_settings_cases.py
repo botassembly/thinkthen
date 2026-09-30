@@ -47,7 +47,7 @@ except tt.ThinkThenError as error:
     result = {{'error': error.kind}}
 print(json.dumps(result))
 """
-        got = json.loads(run(code, child_env(backend, tmp_path, case["arm"].removesuffix("/v1")), timeout=8))
+        got = json.loads(run(code, child_env(backend, tmp_path, case["arm"].removesuffix("/v1")), timeout=60))
         if "error" in step:
             assert got["error"] == step["error"]
         elif step.get("verb") == "relate":

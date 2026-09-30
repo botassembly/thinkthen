@@ -7,14 +7,13 @@ pair yes with probability 0.9, so each person works for the organization.
 
 from __future__ import annotations
 
-import os
 import sys
 import tempfile
 import threading
 import time
 from pathlib import Path
 
-from harness import CASES, Backend, case, expect, main, rows, run, said
+from harness import STRESS, Backend, case, expect, main, rows, run, said, select, timed, within
 
 TABLE = (
     "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization'),"
@@ -104,7 +103,7 @@ def r3_7_statements_that_write_or_attach_refuse():
         expect(backend.count(), 0, "counted sends")
 
 
-@case
+@timed
 def r2_6_a_nested_relate_refuses_at_once():
     with Backend() as backend:
         inner = "SELECT * FROM thinkthen_relate(''SELECT id, name, kind FROM t'', [''works_for=person:organization''])"
@@ -115,8 +114,9 @@ def r2_6_a_nested_relate_refuses_at_once():
         )
         expect(said(got[2]).split(";")[0], "thinkthen usage: the relate query failed: Invalid Input Error: thinkthen usage: the relate query calls thinkthen_relate while its own query is running", "a nested relate keeps the host-query context")
         expect(said(got[2]).endswith("(retryable: no)"), True, "a nested relate stays nonretryable")
+        # The refusal text is the routine proof; the stress profile times it (ticket 0352).
         took = rows(got[3])[0][0] - rows(got[1])[0][0]
-        expect(took < 1000, True, f"refused in {took} ms")
+        expect(not STRESS or took < 1000, True, f"refused in {took} ms")
 
 
 def more_than_255_rows_refuses_under_the_cap(count: int, time_limit: int | None):
@@ -159,7 +159,7 @@ def r5_22_the_time_limit_stops_a_slow_query():
         expect(elapsed < 10, True, f"stopped in {elapsed:.1f}s")
 
 
-@case
+@timed
 def the_plan_guard_refuses_a_large_grouping_before_it_runs():
     """Decision 4: the plan-size guard reads DuckDB's estimate and refuses a
     grouping over ten million rows before any row is read. A sort under the
@@ -169,8 +169,8 @@ def the_plan_guard_refuses_a_large_grouping_before_it_runs():
         started = time.monotonic()
         got = run([f"SELECT * FROM thinkthen_relate('{big}', ['near'])"], backend.base(), timeout=30)
         expect(said(got[0]), "thinkthen usage: the relate query feeds about 10000000 rows into the HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows (retryable: no)", "a large grouping")
-        expect(time.monotonic() - started < 2, True, "refused before it ran")
         expect(backend.count(), 0, "counted sends")
+        within(started, 2, "the plan guard's refusal")
 
 
 @case
@@ -297,6 +297,5 @@ def a_second_relate_over_the_same_rows_reads_the_cache():
 
 if __name__ == "__main__":
     stress = {"r3_12_more_than_255_rows_refuses_under_the_cap"}
-    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
-    CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
+    select(stress)
     sys.exit(main())

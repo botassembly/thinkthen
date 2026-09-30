@@ -89,7 +89,7 @@ fn host_signal_child() {
     let (url, held, release, server) = held_reply();
     let widths: &'static Widths = Box::leak(Box::default());
     let client =
-        Client::new(SECOND * 5, false, &crate::engine::limits::process().widths).gated(widths);
+        Client::new(SECOND * 30, false, &crate::engine::limits::process().widths).gated(widths);
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
         url: &url,
@@ -115,9 +115,9 @@ fn host_signal_child() {
         },
         |work| {
             work.send(()).expect("work queued");
-            let (worker, mask) = worker.recv_timeout(SECOND * 2).expect("worker thread");
+            let (worker, mask) = worker.recv_timeout(SECOND * 30).expect("worker thread");
             assert!(mask.contains(Signal::SIGUSR1), "the worker masks SIGUSR1");
-            held.recv_timeout(SECOND * 2).expect("the send is held");
+            held.recv_timeout(SECOND * 30).expect("the send is held");
             pthread_kill(worker, Signal::SIGUSR1).expect("signal delivered");
             release.send(()).expect("reply released");
         },

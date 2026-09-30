@@ -99,10 +99,33 @@ fn rows_keep_input_order_when_replies_finish_out_of_order() {
     let _serial = serial();
     let number = |record: &str| -> usize { record["record ".len()..].parse().expect("a number") };
     let odd = move |record: &str| number(record) % 2 == 1;
+    // Each slow reply waits until the fast one beside it has answered, so the
+    // order holds however loaded the machine is (ticket 0352).
+    let behind = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let (answered, fast) = std::sync::mpsc::channel();
+    let _releaser = {
+        let behind = std::sync::Arc::clone(&behind);
+        thread::spawn(move || {
+            for _ in 0..2 {
+                let _answered = fast.recv_timeout(Duration::from_secs(30));
+                behind.wait();
+            }
+        })
+    };
+    // Each pair in flight also meets before either answers, so the fast
+    // reply cannot finish before the slow request arrives. A request with no
+    // partner gives up after 25 s, under the 30 s request timeout, and the
+    // test then fails on its order and peak checks.
+    let pair = Pair::default();
     let listener = Listener::answering(move |body| {
+        pair.meet();
         let slow = quoted(body).iter().any(|record| number(record) % 4 == 1);
         let reply = every(body, |record| if odd(record) { 0.9 } else { 0.1 });
-        if slow { reply.after(120) } else { reply }
+        if slow {
+            reply.after_release(std::sync::Arc::clone(&behind))
+        } else {
+            reply.notifying(answered.clone())
+        }
     })
     .expect("listener");
     let engine = engine(listener.base());
@@ -126,4 +149,28 @@ fn rows_keep_input_order_when_replies_finish_out_of_order() {
     assert_eq!(rows, expected);
     assert_eq!(listener.count(), 4);
     assert_eq!(listener.peak(), usize::from(THROTTLE));
+}
+
+/// Two requests meet here before either answers, one pair at a time.
+#[derive(Default)]
+struct Pair {
+    state: Mutex<(usize, usize)>,
+    met: std::sync::Condvar,
+}
+
+impl Pair {
+    fn meet(&self) {
+        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        let round = state.1;
+        state.0 += 1;
+        if state.0 == 2 {
+            *state = (0, round + 1);
+            self.met.notify_all();
+            return;
+        }
+        let _state = self
+            .met
+            .wait_timeout_while(state, Duration::from_secs(25), |state| state.1 == round)
+            .unwrap_or_else(PoisonError::into_inner);
+    }
 }

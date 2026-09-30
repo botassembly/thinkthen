@@ -88,7 +88,7 @@ export TRIAGE_MOVE_LOG="$work/moves.log"
 
 wait_for() {
 	path=$1
-	for _ in $(seq 1 200); do
+	for _ in $(seq 1 3000); do
 		test -e "$path" && return 0
 		sleep 0.01
 	done

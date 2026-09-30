@@ -128,7 +128,7 @@ def b13c_try_details_denied_retry_keeps_later_answer():
 
     def respond(body, questions):
         if b'alpha' in body:
-            if not later_answered.wait(5):
+            if not later_answered.wait(60):
                 return 500, {}, b"later packed request did not complete"
             return 503, {"retry-after-ms": "0"}, b""
         reply = answer(questions)

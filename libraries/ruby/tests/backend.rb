@@ -66,7 +66,7 @@ module TestBackend
       JSON.parse(@out.gets).fetch("bodies")
     end
 
-    # The count once it reads at least n, or at 5 s.
+    # The count once it reads at least n, or at 30 s.
     def wait(count)
       order("wait #{count}")
       line = @out.gets until line&.start_with?("wait ")

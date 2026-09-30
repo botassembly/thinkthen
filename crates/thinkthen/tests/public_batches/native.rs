@@ -319,7 +319,7 @@ fn native_denied_retry_keeps_a_later_request_answered_first() {
         let mut done = done.lock().expect("flag");
         if String::from_utf8_lossy(body).contains("alpha") {
             let _waited = signal
-                .wait_timeout_while(done, std::time::Duration::from_secs(5), |done| !*done)
+                .wait_timeout_while(done, std::time::Duration::from_secs(30), |done| !*done)
                 .expect("wait");
             return Canned::status(503, "busy").asking("retry-after-ms", "0");
         }

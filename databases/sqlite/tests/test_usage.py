@@ -17,6 +17,7 @@ from helper import ROOT, Backend, Child, child, environment, expect, main
 
 COMMAND = os.environ.get("THINKTHEN_COMMAND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "thinkthen"))
 HOLD = 0.3
+STRESS = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
 
 
 def usage_environment(backend: Backend) -> dict[str, str]:
@@ -116,7 +117,9 @@ os.waitpid(pid, 0)
 say(answer=answer, child_exit=time.monotonic() - started)
 """, env)
     expect(held["answer"], [[1]], "the parent's answer")
-    expect(held["child_exit"] < 0.25, True, f"the child exited in {held['child_exit']:.3f} s, inside the held lock")
+    # The parent holds the lock until this child prints, so a fork that waited for
+    # the lock would hang the read. The stress profile also times it (ticket 0352).
+    expect(not STRESS or held["child_exit"] < 0.25, True, f"the child exited in {held['child_exit']:.3f} s, inside the held lock")
     expect(backend.count(), 1, "one send")
     expect(totals(env)["requests_sent"], 1, "the parent's send counted once")
 

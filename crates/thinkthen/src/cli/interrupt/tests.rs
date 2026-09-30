@@ -360,7 +360,7 @@ mod unix {
             })
             .expect("active");
         announce("ready");
-        let deadline = Instant::now() + Duration::from_secs(5);
+        let deadline = Instant::now() + Duration::from_secs(30);
         while !state.default_armed.load(Ordering::SeqCst) {
             assert!(Instant::now() < deadline, "SIGINT was not handled");
             std::thread::yield_now();

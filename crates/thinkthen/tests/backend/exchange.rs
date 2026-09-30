@@ -298,7 +298,32 @@ fn a_server_retry_floor_can_exceed_the_attempt_timeout() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 2);
     assert!(took >= Duration::from_millis(1200), "{took:?}");
-    assert!(took < Duration::from_secs(3), "{took:?}");
+}
+
+/// The same floor, timed: the retry goes out soon after the 1.2 s floor, not
+/// after a second wait on top of it. Stress only (ticket 0352).
+#[test]
+#[ignore = "a wall-clock bound on the retry floor; run sdlc/scripts/test-stress --run"]
+fn a_server_retry_floor_is_waited_once() {
+    let listener = Listener::serving(vec![
+        Canned::status(429, "slow down").asking("retry-after-ms", "1200"),
+        Canned::ok(ANSWERED),
+    ])
+    .expect("a loopback listener");
+    let started = Instant::now();
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "1", "--timeout", "1"],
+        KEY,
+        "Refund me.",
+    )
+    .expect("the compiled binary runs");
+    let took = started.elapsed();
+    assert_eq!(output.status.code(), Some(0));
+    assert!(
+        took >= Duration::from_millis(1200) && took < Duration::from_secs(3),
+        "{took:?}"
+    );
 }
 
 #[test]
@@ -317,7 +342,8 @@ fn zero_retries_never_sleeps_after_the_only_attempt() {
     )
     .expect("the compiled binary runs");
 
-    assert!(started.elapsed() < Duration::from_secs(1));
+    // A sleep on the header would take 30 s; the bound is a hang guard (ticket 0352).
+    assert!(started.elapsed() < Duration::from_secs(10));
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(output.status.code(), Some(4));
 }
@@ -446,13 +472,14 @@ fn a_backend_that_closes_before_headers_fails_promptly() {
 
     let output = decide(
         listener.base(),
-        &["--max-retries", "0", "--timeout", "4"],
+        &["--max-retries", "0", "--timeout", "30"],
         KEY,
         "private evidence",
     )
     .expect("the compiled binary runs");
 
-    assert!(started.elapsed() < Duration::from_secs(1));
+    // Waiting for the 30 s timeout would fail the hang guard (ticket 0352).
+    assert!(started.elapsed() < Duration::from_secs(10));
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
@@ -465,8 +492,9 @@ fn a_backend_that_closes_before_headers_fails_promptly() {
 
 #[test]
 fn an_open_peer_that_sends_no_reply_reaches_the_timeout_diagnostic() {
+    // The reply waits a minute, so only the 1 s timeout can end the call (ticket 0352).
     let listener =
-        Listener::answering(|_| Canned::ok(ANSWERED).after(2_000)).expect("a loopback listener");
+        Listener::answering(|_| Canned::ok(ANSWERED).after(60_000)).expect("a loopback listener");
     let started = Instant::now();
 
     let output = decide(
@@ -477,7 +505,7 @@ fn an_open_peer_that_sends_no_reply_reaches_the_timeout_diagnostic() {
     )
     .expect("the compiled binary runs");
 
-    assert!(started.elapsed() < Duration::from_secs(3));
+    assert!(started.elapsed() < Duration::from_secs(30));
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
@@ -502,20 +530,20 @@ fn a_close_before_headers_is_not_sent_again() {
 #[test]
 fn a_refused_port_fails_before_the_first_default_retry_wait() {
     // Port zero can never listen, so the connection is refused at once. The
-    // wait variable restores the one-second default: a retried refusal would
-    // sit through three seconds of waits.
+    // wait variable sets a ten-second doubling wait: a retried refusal would
+    // sit through thirty seconds of waits.
     let base = "http://127.0.0.1:0/v1";
     let started = Instant::now();
     let output = spawn(
         &["decide", "asks for a refund", "--url", base],
         &[
             ("THINKTHEN_API_KEY", "sk-secret"),
-            ("THINKTHEN_TEST_RETRY_WAIT_MS", "1000"),
+            ("THINKTHEN_TEST_RETRY_WAIT_MS", "10000"),
         ],
         b"private evidence",
     )
     .expect("the compiled binary runs");
-    assert!(started.elapsed() < Duration::from_secs(2)); // only rules the waits out
+    assert!(started.elapsed() < Duration::from_secs(10)); // only rules the waits out
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
     assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED_DIAGNOSTIC);

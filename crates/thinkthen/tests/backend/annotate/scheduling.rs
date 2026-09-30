@@ -10,8 +10,11 @@ use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
+
+use conformance_backend::Rendezvous;
 
 use super::{one_question, set};
 use crate::harness::{Canned, Gathering, Listener, finish, spawn};
@@ -162,9 +165,13 @@ fn an_observed_failure_starts_nothing_else_and_keeps_paid_completions() {
     let cache = folder("annotate-global-stop");
     let named = cache.to_string_lossy();
     let failed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    // Records 1 and 2 are both in flight before record 1 fails, however
+    // loaded the machine is (ticket 0352).
+    let both = Gathering::new(2);
     let listener = Listener::answering({
         let failed = std::sync::Arc::clone(&failed);
         move |body| {
+            both.hold();
             let text = String::from_utf8_lossy(body);
             if text.contains("record 1 group 0")
                 && !failed.swap(true, std::sync::atomic::Ordering::SeqCst)
@@ -271,7 +278,10 @@ fn annotate_equal_records_share_one_request() {
     let named = cache.to_string_lossy();
     let file = grouped("one-shared-group", 1);
     let answer = yes("local-1", 10, 2);
-    let listener = Listener::answering(move |_| Canned::ok(&answer).after(30)).expect("a listener");
+    // The reply waits a full second, a wide margin for the second record to
+    // be read from the already written pipe and join the request (ticket 0352).
+    let listener =
+        Listener::answering(move |_| Canned::ok(&answer).after(1_000)).expect("a listener");
     let input = format!("{}\n{}\n", grouped_input(1, 1), grouped_input(1, 1));
     let output = spawn(
         &[
@@ -353,7 +363,7 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
     assert!(first.contains(r#""record":1"#), "{first}");
     drop(output);
 
-    let deadline = Instant::now() + Duration::from_secs(2);
+    let deadline = Instant::now() + Duration::from_secs(30);
     let status = loop {
         if let Some(status) = child.try_wait().expect("status") {
             break status;
@@ -377,14 +387,18 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
 fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     let cache = folder("annotate-closed-pipe-failure");
     let named = cache.to_string_lossy();
-    let listener = Listener::answering(|body| {
+    // Records 2 and 3 answer only once the test has closed the output pipe,
+    // so the order holds on a loaded machine (ticket 0352).
+    let closed = Arc::new(Rendezvous::new(3));
+    let held = Arc::clone(&closed);
+    let listener = Listener::answering(move |body| {
         let body = String::from_utf8_lossy(body);
         if body.contains("record 1") {
             Canned::ok(&yes("local-1", 1, 1))
         } else if body.contains("record 2") {
-            Canned::ok(&yes("local-1", 1, 1)).after(40)
+            Canned::ok(&yes("local-1", 1, 1)).after_release(Arc::clone(&held))
         } else {
-            Canned::status(500, "{}").after(500)
+            Canned::status(500, "{}").after_release(Arc::clone(&held))
         }
     })
     .expect("a listener");
@@ -429,7 +443,13 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     let mut first = String::new();
     output.read_line(&mut first).expect("first row");
     assert!(first.contains(r#""record":1"#), "{first}");
+    let guard = Instant::now() + Duration::from_secs(30);
+    while listener.count() < 3 {
+        assert!(Instant::now() < guard, "all three records were sent");
+        thread::yield_now();
+    }
     drop(output);
+    assert!(closed.wait(), "the held replies were released");
 
     let result = finish(child, "annotate").expect("the command ends");
     assert_eq!(result.status.code(), Some(0));

@@ -15,7 +15,7 @@ REFUSED = "thinkthen local: the question file '{}' did not read: it must be a re
 QUESTION = json.dumps({"decide": "Is it red?"})
 
 
-def asked(argument: str, timeout: float = 5) -> tuple[object, int]:
+def asked(argument: str, timeout: float = 30) -> tuple[object, int]:
     backend = Backend()
     held = child(f"""
 db = connect()
@@ -32,7 +32,7 @@ def test_the_door_refuses_what_is_not_a_bounded_regular_file() -> None:
     (folder / "big.json").write_text(" " * 1_048_577)
     for name in (folder / "fifo", folder / "fifo-link", "/dev/zero", folder / "big.json"):
         argument = f"@{name}"
-        expect(asked(argument, timeout=5), (REFUSED.format(argument), 0), f"{name}")
+        expect(asked(argument), (REFUSED.format(argument), 0), f"{name}")
     backend = Backend()
     held = child("""
 db = connect()

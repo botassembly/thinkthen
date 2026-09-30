@@ -134,9 +134,9 @@ fn serve(replies: Vec<Reply>) -> (Server, Receiver<()>) {
             stream.write_all(written.as_bytes()).expect("response");
         }
         // `finish` sends one release. A held reply took it, so the test is
-        // finishing now; waiting again would only spend the 2 s bound.
+        // finishing now; waiting again would only spend the 30 s bound.
         if !released_once {
-            let _released = released.recv_timeout(SECOND * 2);
+            let _released = released.recv_timeout(SECOND * 30);
         }
         listener.set_nonblocking(true).expect("nonblocking");
         let later =
@@ -230,7 +230,8 @@ fn accounting_that_outlasts_the_budget_sends_nothing() {
         );
 
     assert_eq!(deadline_of(result), Duration::from_millis(200));
-    assert!(started.elapsed() < SECOND, "the call returned promptly");
+    // A hang guard, never a speed claim; the accept below proves no attempt went out.
+    assert!(started.elapsed() < SECOND * 10, "the call returned");
     assert!(matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock));
     assert_eq!(counts.snapshot().requests_sent, 0);
     assert_eq!(counts.snapshot().retries, 0);
@@ -254,12 +255,14 @@ fn a_held_response_has_one_visible_in_flight_attempt() {
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
     };
-    let client = Client::new(SECOND * 2, false, &crate::engine::limits::process().widths);
+    let client = Client::new(SECOND * 30, false, &crate::engine::limits::process().widths);
     thread::scope(|scope| {
         let sending = scope.spawn(|| {
             client.post_observed_with_retry(&exchange, &Cancel::default(), &counts, |_| ())
         });
-        received.recv_timeout(SECOND).expect("the request arrived");
+        received
+            .recv_timeout(SECOND * 30)
+            .expect("the request arrived");
         assert_eq!(counts.snapshot().requests_sent, 1);
         assert_eq!(counts.snapshot().retries, 0);
         assert_eq!(server.finish(), (1, false));

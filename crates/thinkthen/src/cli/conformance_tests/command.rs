@@ -476,7 +476,7 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
     let engine = Engine::new(Settings {
         backend,
         profile: None,
-        timeout: Duration::from_secs(5),
+        timeout: Duration::from_secs(30),
         max_retries: 0,
         retry_wait: Duration::ZERO,
         width: None,

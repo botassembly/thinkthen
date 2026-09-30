@@ -10,9 +10,11 @@ use std::io;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
+
+use conformance_backend::Rendezvous;
 
 use crate::harness::{Canned, Gathering, Listener, finish, spawn_one as spawn};
 
@@ -65,11 +67,6 @@ fn stopping_at_three(body: &[u8]) -> Canned {
         return Canned::status(500, "{}").after(10);
     }
     later_sooner(body)
-}
-
-/// A listener that answers each record, later records sooner than earlier ones.
-fn out_of_order() -> io::Result<Listener> {
-    Listener::answering(later_sooner)
 }
 
 /// Run `decide` against one URL over the records on standard input.
@@ -141,7 +138,14 @@ fn entries(folder: &Path) -> usize {
 
 #[test]
 fn a_backend_that_answers_out_of_order_still_prints_in_input_order() {
-    let listener = out_of_order().expect("a loopback listener");
+    // The first four requests wait until all are in flight, so the peak
+    // passes one however loaded the machine is (ticket 0352).
+    let gathering = Gathering::new(4);
+    let listener = Listener::answering(move |body| {
+        gathering.hold();
+        later_sooner(body)
+    })
+    .expect("a loopback listener");
     let output = decide(
         listener.base(),
         &["--jsonl", "--field", "/body", "--details", "--jobs", "4"],
@@ -166,8 +170,15 @@ fn a_backend_that_answers_out_of_order_still_prints_in_input_order() {
 #[test]
 fn no_more_requests_are_in_flight_than_the_jobs_asked_for() {
     for jobs in ["1", "2", "4"] {
-        let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))).after(40))
-            .expect("a loopback listener");
+        let asked: usize = jobs.parse().expect("a number of jobs");
+        // The first `asked` requests wait until all are in flight, so the peak
+        // reaches the bound however loaded the machine is (ticket 0352).
+        let gathering = Gathering::new(asked);
+        let listener = Listener::answering(move |body| {
+            gathering.hold();
+            Canned::ok(&answered(ordinal(body)))
+        })
+        .expect("a loopback listener");
         let output = decide(
             listener.base(),
             &["--jsonl", "--field", "/body", "--jobs", jobs],
@@ -178,14 +189,7 @@ fn no_more_requests_are_in_flight_than_the_jobs_asked_for() {
         assert_eq!(output.status.code(), Some(0), "{jobs} jobs");
         assert_eq!(printed(&output).lines().count(), 8, "{jobs} jobs");
         let peak = listener.peak();
-        let asked: usize = jobs.parse().expect("a number of jobs");
-        // The bound is the claim. A loaded machine can fall short of it, so
-        // the run asks for the bound and for more than one where one is due.
-        assert!(peak <= asked, "{jobs} jobs reached {peak} in flight");
-        assert!(
-            asked == 1 || peak > 1,
-            "{jobs} jobs reached {peak} in flight"
-        );
+        assert_eq!(peak, asked, "{jobs} jobs reached {peak} in flight");
     }
 }
 
@@ -234,15 +238,25 @@ fn a_stop_keeps_what_finished_after_it_and_a_rerun_pays_for_the_rest_alone() {
     let named = cache.to_string_lossy().into_owned();
     // One listener answers both runs, because a recording entry is named by
     // the URL it was taken at. The third record fails once and answers after.
+    // The first run's four replies wait until all four requests are in, so
+    // record 4 is always sent before record 3 fails (ticket 0352).
     let failed = Arc::new(AtomicBool::new(false));
+    let first_run = Arc::new(Rendezvous::new(4));
+    let seen = Arc::new(AtomicUsize::new(0));
     let listener = Listener::answering({
         let failed = Arc::clone(&failed);
         move |body| {
             let place = ordinal(body);
-            if place == 3 && !failed.swap(true, Ordering::SeqCst) {
-                return Canned::status(500, "{}").after(30);
+            let reply = if place == 3 && !failed.swap(true, Ordering::SeqCst) {
+                Canned::status(500, "{}")
+            } else {
+                Canned::ok(&answered(place))
+            };
+            if seen.fetch_add(1, Ordering::SeqCst) < 4 {
+                reply.after_release(Arc::clone(&first_run))
+            } else {
+                reply
             }
-            Canned::ok(&answered(place))
         }
     })
     .expect("a loopback listener");
@@ -347,7 +361,7 @@ fn a_run_opens_one_connection_for_each_job_and_reuses_it() {
             .expect("round one");
         for _ in 0..jobs {
             answers
-                .recv_timeout(Duration::from_secs(10))
+                .recv_timeout(Duration::from_secs(30))
                 .expect("the first round is answered");
         }
         // Every connection now sits idle in the pool, where a small pool trims it.

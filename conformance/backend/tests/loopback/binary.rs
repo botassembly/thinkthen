@@ -13,6 +13,9 @@ use std::time::{Duration, Instant};
 
 use conformance_backend::{Backend, run};
 
+#[path = "binary/held.rs"]
+mod held;
+
 type Tested = Result<(), Box<dyn Error>>;
 
 /// One decide question in the wire shape the engine sends.
@@ -26,8 +29,13 @@ const HELD: &str = "/arm/held/v1/systemone";
 const WHOLE: &str = "the delay arm needs a whole number of milliseconds";
 const CEILING: &str = "the delay arm allows at most 10000 milliseconds";
 
-/// How long any one output line may take before the test fails.
-const LINE: Duration = Duration::from_secs(7);
+/// How long any one output line may take before the test fails: a hang
+/// guard past the 30 s `wait` bound, never a speed claim (ticket 0352).
+const LINE: Duration = Duration::from_secs(40);
+
+/// A bound that rules out a wait on the 30 s `wait` bound, far above any
+/// honest step on a loaded machine.
+const PROMPT: Duration = Duration::from_secs(10);
 
 /// A started backend: its process, its input, its output lines, and its port.
 struct Started(Child, ChildStdin, Receiver<String>, u16);
@@ -116,7 +124,7 @@ fn an_input_or_output_error_retires_a_pending_wait_before_returning() -> Tested 
         let started = Instant::now();
         assert!(run(input, output).is_err());
         assert!(
-            started.elapsed() < Duration::from_secs(1),
+            started.elapsed() < PROMPT,
             "pending wait delayed error return"
         );
         let text = String::from_utf8(bytes.lock().map_err(|_| "capture poisoned")?.clone())?;
@@ -125,7 +133,7 @@ fn an_input_or_output_error_retires_a_pending_wait_before_returning() -> Tested 
         // moment. Between its fork and its exec the child holds a copy of the
         // closed listener, so a connect can land there until the exec. Nextest
         // runs each test alone and never sees this.
-        let closed = Instant::now() + Duration::from_secs(1);
+        let closed = Instant::now() + PROMPT;
         while TcpStream::connect(("127.0.0.1", port)).is_ok() {
             assert!(Instant::now() < closed, "listener survived error return");
             thread::sleep(Duration::from_millis(10));
@@ -157,7 +165,7 @@ fn finish(Started(mut child, input, lines, _): Started) -> Result<Vec<String>, B
             Err(RecvTimeoutError::Timeout) => return Err("the output never ended".into()),
         }
     }
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + LINE;
     while child.try_wait()?.is_none() {
         if Instant::now() > deadline {
             child.kill()?;
@@ -222,11 +230,9 @@ fn still_held(answer: &Receiver<Answer>) {
     assert_eq!(early, Err(RecvTimeoutError::Timeout), "a reply went early");
 }
 
-/// Require the generic answer within 1 s.
+/// Require the generic answer.
 fn answered(answer: &Receiver<Answer>) -> Tested {
-    let (status, body) = answer
-        .recv_timeout(Duration::from_secs(1))?
-        .ok_or("the request failed")?;
+    let (status, body) = answer.recv_timeout(LINE)?.ok_or("the request failed")?;
     assert_eq!((status.as_str(), body.as_str()), ("HTTP/1.1 200 X", ANSWER));
     Ok(())
 }
@@ -278,18 +284,6 @@ fn full_and_find_case_capture_keep_only_opted_in_bodies() -> Tested {
 }
 
 #[test]
-fn a_held_reply_waits_for_a_release_line() -> Tested {
-    let mut backend = start()?;
-    let answer = posting(backend.3, HELD);
-    assert_eq!(ask(&mut backend, "wait 1")?, "wait 1");
-    still_held(&answer);
-    send(&mut backend, "release")?;
-    answered(&answer)?;
-    assert_eq!(finish(backend)?, ["1"]);
-    Ok(())
-}
-
-#[test]
 fn the_delay_arm_answers_after_its_delay() -> Tested {
     let backend = start()?;
     let began = Instant::now();
@@ -303,6 +297,7 @@ fn the_delay_arm_answers_after_its_delay() -> Tested {
 }
 
 #[test]
+#[ignore = "a wall-clock bound on eight delays; run sdlc/scripts/test-stress --run"]
 fn eight_delayed_replies_wait_in_parallel() -> Tested {
     let backend = start()?;
     let began = Instant::now();
@@ -333,7 +328,7 @@ fn the_delay_arm_refuses_a_bad_value_and_one_above_its_ceiling_at_once() -> Test
     for (value, sentence) in refusals {
         let path = format!("/arm/delay/{value}/v1/systemone").replace("//", "/");
         let (status, body) = posting(backend.3, &path)
-            .recv_timeout(Duration::from_secs(1))?
+            .recv_timeout(LINE)?
             .ok_or("the request failed")?;
         assert_eq!(
             (status.as_str(), body.as_str()),
@@ -342,23 +337,6 @@ fn the_delay_arm_refuses_a_bad_value_and_one_above_its_ceiling_at_once() -> Test
         );
     }
     still_held(&posting(backend.3, "/arm/delay/10000/v1/systemone"));
-    Ok(())
-}
-
-#[test]
-fn four_rounds_on_one_backend_each_let_go_only_the_reply_held_then() -> Tested {
-    let mut backend = start()?;
-    for round in 1..=4 {
-        let answer = posting(backend.3, HELD);
-        assert_eq!(
-            ask(&mut backend, &format!("wait {round}"))?,
-            format!("wait {round}")
-        );
-        still_held(&answer);
-        send(&mut backend, "round")?;
-        answered(&answer)?;
-    }
-    assert_eq!(last(backend)?, "4");
     Ok(())
 }
 
@@ -385,28 +363,8 @@ fn fifty_rounds_back_to_back_each_let_go_the_reply_they_counted() -> Tested {
 }
 
 #[test]
-fn a_release_stays_open_for_later_held_replies() -> Tested {
-    let mut backend = start()?;
-    send(&mut backend, "release")?;
-    answered(&posting(backend.3, HELD))?;
-    assert_eq!(last(backend)?, "1");
-    Ok(())
-}
-
-#[test]
-fn a_wait_line_answers_once_the_count_reaches_it() -> Tested {
-    let mut backend = start()?;
-    send(&mut backend, "wait 1")?;
-    thread::sleep(Duration::from_millis(200));
-    let _held = posting(backend.3, HELD);
-    assert_eq!(backend.2.recv_timeout(Duration::from_secs(1))?, "wait 1");
-    assert_eq!(last(backend)?, "1");
-    Ok(())
-}
-
-#[test]
-#[ignore = "waits out the fixed 5 s bound; sdlc/scripts/test-stress --run"]
-fn a_wait_line_gives_up_at_5_s_and_holds_up_no_line_behind_it() -> Tested {
+#[ignore = "waits out the fixed 30 s bound; sdlc/scripts/test-stress --run"]
+fn a_wait_line_gives_up_at_30_s_and_holds_up_no_line_behind_it() -> Tested {
     let mut backend = start()?;
     let began = Instant::now();
     send(&mut backend, "wait 1")?;
@@ -415,7 +373,7 @@ fn a_wait_line_gives_up_at_5_s_and_holds_up_no_line_behind_it() -> Tested {
     assert_eq!(backend.2.recv_timeout(LINE)?, "wait 0");
     let waited = began.elapsed();
     assert!(
-        waited >= Duration::from_secs(5) && waited < Duration::from_secs(6),
+        waited >= Duration::from_secs(30) && waited < Duration::from_secs(31),
         "{waited:?}"
     );
     assert_eq!(finish(backend)?, ["0"]);
@@ -472,7 +430,7 @@ fn closing_the_input_exits_without_waiting_for_a_pending_wait() -> Tested {
     let began = Instant::now();
     send(&mut backend, "wait 1")?;
     assert_eq!(finish(backend)?, ["0"]);
-    assert!(began.elapsed() < Duration::from_secs(1), "the exit waited");
+    assert!(began.elapsed() < PROMPT, "the exit waited");
     Ok(())
 }
 

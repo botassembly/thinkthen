@@ -304,7 +304,7 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     let mut child =
         start(&arguments, &environment, records.as_bytes()).expect("the command starts");
 
-    let arrived = Instant::now() + Duration::from_secs(10);
+    let arrived = Instant::now() + Duration::from_secs(30);
     while listener.count() < 16 && Instant::now() < arrived {
         thread::sleep(Duration::from_millis(10));
     }

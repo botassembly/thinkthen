@@ -248,7 +248,8 @@ db.executemany("INSERT INTO t VALUES (?,?)", [(at, f'row {at}') for at in range(
 db.execute("CREATE TEMP TABLE packed AS SELECT json_group_object(id,body) AS payload FROM t")
 sql = "SELECT count(d.key) FROM t LEFT JOIN thinkthen_decide_many('Is it red?', (SELECT payload FROM packed)) AS d ON d.key = CAST(t.id AS TEXT)"
 say(plan=run(db, 'EXPLAIN QUERY PLAN ' + sql), rows=run(db, sql))
-""", environment(backend, "generic"), timeout=60)
+""", environment(backend, "generic"), timeout=300)
+    # A hang guard: the 100,000-row join ran past 60 s under load (ticket 0352).
     expect(held["rows"], [[100000]], "all original keys joined")
     expect(any("SCAN t" in row[-1] for row in held["plan"]), True, "outer table scan")
     expect(any("VIRTUAL TABLE INDEX" in row[-1] for row in held["plan"]), True, "keyed virtual lookup")

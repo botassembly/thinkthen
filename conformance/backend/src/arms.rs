@@ -27,8 +27,9 @@ pub(crate) const DRIFT: u16 = 500;
 /// The longest delay the delay arm serves, under the engine's request timeout.
 const MOST_DELAY: u64 = 10_000;
 
-/// How long a `wait` line waits for its count.
-const WAIT_BOUND: Duration = Duration::from_secs(5);
+/// How long a `wait` line waits for its count. It is a hang guard, far past
+/// any honest wait on a loaded machine (ticket 0352).
+const WAIT_BOUND: Duration = Duration::from_secs(30);
 
 /// Only three requests from an opted-in relation case or full-answer arm are retained.
 const CAPTURE_BODIES: usize = 3;
@@ -200,7 +201,7 @@ impl Backend {
         self.gate.next_round();
     }
 
-    /// The count once it reads at least `least`, or at 5 s, whichever comes first.
+    /// The count once it reads at least `least`, or at 30 s, whichever comes first.
     pub fn wait(&self, least: usize) -> usize {
         self.wait_until(least, &AtomicBool::new(false))
             .unwrap_or_else(|| self.count())

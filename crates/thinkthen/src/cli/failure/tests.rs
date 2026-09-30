@@ -217,7 +217,7 @@ fn loopback_engine(
     let engine = crate::engine::facade::Engine::new(crate::engine::facade::Settings {
         backend: backend.clone(),
         profile: None,
-        timeout: Duration::from_secs(5),
+        timeout: Duration::from_secs(30),
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
         width: None,

@@ -189,7 +189,7 @@ fn held_race(charge: u64, first: u64, question: &Question) {
             });
         }
         start.wait();
-        let until = Instant::now() + Duration::from_secs(3);
+        let until = Instant::now() + Duration::from_secs(30);
         while listeners.iter().map(Listener::count).sum::<usize>() == 0 {
             assert!(
                 Instant::now() < until,
@@ -198,7 +198,7 @@ fn held_race(charge: u64, first: u64, question: &Question) {
             thread::sleep(Duration::from_millis(5));
         }
         let (loser, refusal) = receive
-            .recv_timeout(Duration::from_secs(3))
+            .recv_timeout(Duration::from_secs(30))
             .expect("other contender reaches admission");
         let refusal = refusal.expect_err("one of two contenders loses the only charge");
         assert_eq!(
@@ -209,7 +209,7 @@ fn held_race(charge: u64, first: u64, question: &Question) {
         assert_eq!(listeners.iter().map(Listener::count).sum::<usize>(), 1);
         gate.wait();
         receive
-            .recv_timeout(Duration::from_secs(3))
+            .recv_timeout(Duration::from_secs(30))
             .expect("held winner completed")
             .1
             .expect("held answer");
@@ -340,7 +340,7 @@ fn mixed_settings(charge: u64, first: u64, question: &Question) {
     let b = build(b_listener.base(), Some(charge * 9));
     thread::scope(|scope| {
         let worker = scope.spawn(|| a.decide(question, "item one"));
-        let until = Instant::now() + Duration::from_secs(3);
+        let until = Instant::now() + Duration::from_secs(30);
         while a_listener.count() == 0 {
             assert!(Instant::now() < until, "A did not arrive");
             thread::sleep(Duration::from_millis(5));

@@ -224,7 +224,7 @@ pid=$!
 count=0
 while [ ! -e "$killed/started" ]; do
 	count=$((count + 1))
-	[ "$count" -lt 200 ] || fail 'waiting job did not start'
+	[ "$count" -lt 3000 ] || fail 'waiting job did not start'
 	sleep 0.01
 done
 kill -KILL "$pid"

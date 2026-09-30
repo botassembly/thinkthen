@@ -29,7 +29,7 @@ fn facade_width_child() {
     let settings = |width| Settings {
         backend: Backend::resolve(Some(&base), None, "local-1").expect("backend"),
         profile: None,
-        timeout: Duration::from_secs(5),
+        timeout: Duration::from_secs(30),
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
         width: Width::new(width).ok(),

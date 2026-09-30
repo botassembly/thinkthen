@@ -32,13 +32,13 @@ fn parent_pid() -> u32 {
     std::process::id() + 1
 }
 
-const BOUND: Duration = Duration::from_secs(5);
+const BOUND: Duration = Duration::from_secs(30);
 
 fn settings(base: &str, width: Option<u64>, usage: Arc<Counters>) -> Settings {
     Settings {
         backend: Backend::resolve(Some(base), None, "local-1").expect("backend"),
         profile: None,
-        timeout: Duration::from_secs(5),
+        timeout: Duration::from_secs(30),
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
         width: width.and_then(|width| Width::new(width).ok()),

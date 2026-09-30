@@ -44,7 +44,7 @@ fn a_foreign_usage_lock_loses_only_advisory_counts_before_exit() {
         b"one record",
     )
     .expect("compiled command");
-    let until = Instant::now() + Duration::from_secs(3);
+    let until = Instant::now() + Duration::from_secs(30);
     let exited = loop {
         if child.try_wait().expect("child state").is_some() {
             break true;

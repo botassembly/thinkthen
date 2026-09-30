@@ -123,13 +123,13 @@ fn a_held_first_answer_bounds_top_dispatch_until_release() -> io::Result<()> {
     // The unemitted window holds (jobs + 1) x --batch inputs, which is three.
     for _ in 0..3 {
         assert!(matches!(
-            events_recv.recv_timeout(Duration::from_secs(2)),
+            events_recv.recv_timeout(Duration::from_secs(30)),
             Ok(Observed::Request)
         ));
     }
     for _ in 0..2 {
         answered_recv
-            .recv_timeout(Duration::from_secs(2))
+            .recv_timeout(Duration::from_secs(30))
             .expect("second and third answers completed");
     }
     let next = events_recv.recv_timeout(Duration::from_millis(200));

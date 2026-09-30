@@ -51,7 +51,7 @@ class Backend:
         return int(self.process.stdout.readline())
 
     def wait(self, least):
-        """The count once it reads at least ``least``, or at 5 s."""
+        """The count once it reads at least ``least``, or at 30 s."""
         self.say(f"wait {least}")
         line = self.process.stdout.readline()
         assert line.startswith("wait "), line
@@ -60,11 +60,15 @@ class Backend:
     def release(self):
         self.say("release")
 
+    def round(self):
+        """Let go every reply held now; a later one holds again."""
+        self.say("round")
+
     def close(self):
         if self.process.poll() is None:
             self.process.stdin.close()
             self.process.stdout.read()
-            self.process.wait(timeout=10)
+            self.process.wait(timeout=60)
 
 
 @pytest.fixture

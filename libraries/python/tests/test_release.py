@@ -43,7 +43,62 @@ def no_core():
 
 
 def released_after_cancel(backend, tmp_path, calls):
-    """Run each producer in one real child and inspect its released batches."""
+    """Run each producer in one real child and inspect its released batches.
+
+    Each call's send waits on the held arm. The parent cancels the call once
+    the backend counts that send, then lets the held reply go, so every call
+    ends by its token and no timer races a reply (ticket 0352)."""
+    code = SETUP + """
+    engine = tt.Engine(throttle=8, cache=False)
+    token = object()
+    base = sys.getrefcount(token)
+    for kind in ("ctypes", "raw"):
+        cancelled = 0
+        for _ in range(int(os.environ["CALLS"])):
+            stop = tt.CancelToken()
+            def go(stop=stop):
+                sys.stdin.readline()
+                stop.cancel()
+            threading.Thread(target=go, daemon=True).start()
+            try:
+                engine.decide(late, Stream(3) if kind == "ctypes" else Raw(3, token), token=stop).value
+            except tt.Cancelled:
+                cancelled += 1
+            print("ended", flush=True)
+        assert cancelled == int(os.environ["CALLS"]), (kind, cancelled)
+        ended = time.monotonic() + 60
+        while (HELD or tt._thinkthen._live_workers()) and time.monotonic() < ended:
+            time.sleep(0.01)
+        print(kind, len(HELD), tt._thinkthen._live_workers(), sys.getrefcount(token) == base, flush=True)
+    """
+    child = subprocess.Popen([sys.executable, "-c", textwrap.dedent(code)], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1,
+                             preexec_fn=no_core,
+                             env=child_env(backend, tmp_path, "arm/held", CALLS=str(calls)))
+    # A hang guard, not a speed claim: a call that never ends stops the child.
+    guard = threading.Timer(120 if calls == 1 else 600, child.kill)
+    guard.start()
+    try:
+        sent, printed = 0, []
+        for _ in range(2):
+            for _ in range(calls):
+                expected = sent + 1
+                sent = backend.wait(expected)
+                assert sent == expected, (sent, expected)
+                child.stdin.write("stop\n")
+                child.stdin.flush()
+                assert child.stdout.readline() == "ended\n", child.stderr.read()
+                backend.round()
+            printed.append(child.stdout.readline().strip())
+        assert child.wait() == 0, child.stderr.read()
+    finally:
+        guard.cancel()
+    assert printed == ["ctypes 0 0 True", "raw 0 0 True"]
+
+
+def released_after_timed_cancel(backend, tmp_path, calls):
+    """Run each producer in one real child whose 5 ms timer races a 30 ms
+    reply, so a cancel may land before or after its send. Stress only."""
     code = SETUP + """
     engine = tt.Engine(throttle=8, cache=False)
     token = object()
@@ -78,7 +133,7 @@ def test_one_cancelled_call_releases_each_producer(backend, tmp_path):
 @pytest.mark.stress
 def test_callers_that_leave_still_get_every_batch_released(backend, tmp_path):
     """Each of 200 calls per producer raises ``Cancelled`` while its worker
-    waits on a 30 ms reply. Every worker then releases all its batches, so
+    waits on a held reply. Every worker then releases all its batches, so
     ``HELD`` empties and the token's references come back. Regression: a
     release without attaching aborts on the raw producer."""
     released_after_cancel(backend, tmp_path, 200)
@@ -205,3 +260,11 @@ def test_no_worker_freezes_at_exit(tmp_path):
     print(f"{python}: {windows} window runs of {runs}; outcomes {sorted(outcomes)}")
     assert windows >= 100, f"{python}: only {windows} of {runs} runs fell in the exit window"
     assert outcomes == {"released", "leaked"}, (python, outcomes)
+
+
+@pytest.mark.stress
+def test_cancels_that_race_their_sends_still_get_every_batch_released(backend, tmp_path):
+    """The timer form of ``test_callers_that_leave_still_get_every_batch_released``:
+    a cancel may land before its send
+    goes out. Every worker still releases all its batches (ticket 0352)."""
+    released_after_timed_cancel(backend, tmp_path, 200)

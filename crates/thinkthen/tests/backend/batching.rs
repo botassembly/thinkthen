@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
 
-use crate::harness::{Canned, Gathering, Listener, finish, spawn};
+use crate::harness::{Canned, Gathering, Listener, Tally, finish, spawn};
 
 mod audited;
 mod ceiling;
@@ -316,11 +316,14 @@ fn a_pause_sends_the_open_batch() {
             .write_all(lines(1..=3).as_bytes())
             .expect("three records are written");
         writer.flush().expect("the records reach the pipe");
-        let deadline = Instant::now() + Duration::from_secs(5);
-        while listener.count() == 0 && Instant::now() < deadline {
+        // The count moves before the body is recorded, so wait on the
+        // recorded request itself (ticket 0352).
+        let deadline = Instant::now() + Duration::from_secs(30);
+        let mut sent = listener.requests();
+        while sent.is_empty() && Instant::now() < deadline {
             thread::sleep(Duration::from_millis(10));
+            sent = listener.requests();
         }
-        let sent = listener.requests();
         drop(writer);
         let output = finish(child, name).expect("the command ends");
         assert_eq!(sent.len(), 1, "{name}: a request while the pipe stays open");
@@ -470,11 +473,16 @@ fn each_row_carries_its_share() {
 /// later record's request goes (ticket 0304 slice 4).
 #[test]
 fn a_failed_request_sends_no_later_request() {
-    let listener = Listener::answering(|body| {
+    // Line 1's request answers a full second after line 2's failure is
+    // written, a wide margin for the run to read the failure first. The
+    // margin counts from the failure, not from line 1's send (ticket 0352).
+    let failed = Tally::new();
+    let listener = Listener::answering(move |body| {
         if first(body) == 2 {
-            Canned::status(500, "{}")
+            Canned::status(500, "{}").notifying(failed.sender())
         } else {
-            answering(body).after(200)
+            failed.wait_for(1);
+            answering(body).after(1_000)
         }
     })
     .expect("a loopback listener");

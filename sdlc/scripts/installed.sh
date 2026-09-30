@@ -36,7 +36,7 @@ backend_start() {
 	tries=0
 	until [ -s "$backend/out" ]; do
 		tries=$((tries + 1))
-		[ "$tries" -le 100 ] || { echo "${0##*/}: the loopback backend printed no port" >&2; exit 1; }
+		[ "$tries" -le 300 ] || { echo "${0##*/}: the loopback backend printed no port" >&2; exit 1; }
 		sleep 0.1
 	done
 	port=$(head -n 1 "$backend/out")
