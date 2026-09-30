@@ -99,6 +99,18 @@ impl BackendProfile {
         &self.name
     }
 
+    /// Check one record's text against the evidence limit. A quoted request
+    /// carries its records inside its questions, so checking its state alone
+    /// would leave them unbounded.
+    pub(crate) fn check_record(&self, text: &str) -> Result<(), ProfileLimit> {
+        check_limit(
+            &self.name,
+            LimitKind::EvidenceBytes,
+            self.max_evidence_bytes,
+            text.len(),
+        )
+    }
+
     /// Check the exact production values behind one encoded request: the
     /// evidence in its compact text form, and the body as encoded.
     pub(crate) fn check(
@@ -107,12 +119,7 @@ impl BackendProfile {
         evidence: &str,
         body: &[u8],
     ) -> Result<(), ProfileLimit> {
-        check_limit(
-            &self.name,
-            LimitKind::EvidenceBytes,
-            self.max_evidence_bytes,
-            evidence.len(),
-        )?;
+        self.check_record(evidence)?;
         check_limit(
             &self.name,
             LimitKind::Options,

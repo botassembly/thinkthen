@@ -134,8 +134,12 @@ impl GroupPlanner {
                         selected.evidence.clone(),
                         None,
                         group.questions.clone(),
+                        engine.profile(),
                     )
-                    .map_err(|_| GroupPlanError::Defect("an annotate group asks nothing"))?;
+                    .map_err(|error| match error {
+                        BatchError::Profile(_) => GroupPlanError::Batch(error),
+                        _ => GroupPlanError::Defect("an annotate group asks nothing"),
+                    })?;
                     let prepared = engine
                         .prepare_group(&plan, group.places.clone())
                         .map_err(GroupPlanError::Engine)?;

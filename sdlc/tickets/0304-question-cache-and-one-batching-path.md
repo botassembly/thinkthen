@@ -57,10 +57,10 @@ Cache clearing and expiry.
 
 ### Slice 1
 
-- `max_evidence_bytes` now measures only the shared state. That state is the 44-byte fixed sentence or the context. The setting no longer bounds a record, and a value below 44 refuses every quoted request. `max_request_bytes` is now the only bound on a record's size. The profile cases and the spec examples moved to request limits.
-- A question written as JSON cannot carry a quote. That record still goes as the state with its question unquoted, and a context with such a question still refuses. The ADR does not name this case.
-- A structured tag description puts its questions in an array. The quote goes inside array element 0. The ADR does not cover this either.
-- Two paths quote a JSON record differently. An annotate root group quotes the record's compact text as a JSON string. The batcher quotes the object itself. Both are stable, and slice 2's question key should pick one.
+- `max_evidence_bytes` bounds each quoted record's evidence bytes, as before. It now also counts the shared state, which is the 44-byte fixed sentence or the context. A value below 44 therefore refuses every quoted request. The batcher and the single-record plan each check the record.
+- A question written as JSON cannot carry a quote. That record still goes as the state with its question unquoted, and a context with such a question still refuses, as ADR 0111 section 1 says.
+- A structured tag description puts its questions in an array. The quote goes at the head of array element 0. The ADR does not cover this, and `specification/tag.md` now says it.
+- Two paths quote a JSON record differently. An annotate root group quotes the record's compact text as a JSON string. The batcher quotes the object itself. Slice 2 must pick one form for its question key.
 - The annotate slice path hands its questions to a group batcher, which quotes them. Quoting them earlier quoted them twice. The conformance runner hit the same trap through the facade. One quoting point per path avoids it.
 - `recognize`, `find` and `relate` keep their own states. The requote script skipped them by their state shape.
 - The requote script needed three rules. It parses a string state that looks like JSON as the object the batcher would quote. It treats an instruction as quoted only when a JSON value and ". " follow "The text is ", because some questions start with those words. It merges recordings that collide once the string and structured forms of one record meet, as in demo 06.

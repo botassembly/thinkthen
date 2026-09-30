@@ -192,7 +192,7 @@ printf 'x' | thinkthen decide if 'asks for a refund' --plan >/dev/null 2>&1 || s
 echo "$status" | mustmatch "2"
 ```
 
-An explicit profile refuses an oversized request before a key or connection. The request limit counts the UTF-8 bytes of the whole body, and the record rides inside its question. The evidence limit counts only the state, which is the fixed sentence or the context.
+An explicit profile refuses an oversized request before a key or connection. The request limit counts the UTF-8 bytes of the whole body, and the record rides inside its question. The evidence limit counts each record's UTF-8 bytes after selection. It also counts the state, which is the fixed sentence or the context.
 
 ```bash
 cat > profile.json <<'JSON'

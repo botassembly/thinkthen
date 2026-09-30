@@ -384,6 +384,26 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
         matches!(run(below, three()), Err(BatchError::Profile(limit)) if limit.kind == LimitKind::EvidenceBytes),
         "an evidence limit below the fixed sentence refuses every request"
     );
+    let bounded = |bytes: usize| {
+        let batcher = Batcher::new(
+            loopback(),
+            profile(&format!(r#""max_evidence_bytes":{state}"#)),
+            decide(SONG),
+            Setting::Max,
+            None,
+        )
+        .expect("batcher");
+        run(batcher, sized(bytes))
+    };
+    assert!(
+        bounded(state).is_ok(),
+        "a record at the evidence limit passes"
+    );
+    assert!(
+        matches!(bounded(state + 1), Err(BatchError::Profile(limit))
+            if limit.kind == LimitKind::EvidenceBytes && limit.actual == state + 1),
+        "the evidence limit bounds each quoted record as well as the state"
+    );
 }
 
 /// Plan each case at `Max` and compare its batches' sizes and reasons.

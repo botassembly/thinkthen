@@ -42,6 +42,7 @@ fn a_later_group_over_the_profile_sends_nothing() {
             set.group_evidence(places, &record).expect("a part"),
             None,
             questions.collect(),
+            None,
         )
         .expect("plan"))
     };

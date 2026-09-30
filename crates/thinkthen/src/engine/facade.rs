@@ -13,8 +13,8 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use crate::core::{
-    Answer, AnswerOutcome, Backend, BackendProfile, Batch, Evidence, Find, FindAnswer, ModelName,
-    Outcome, Plan, Question, Threshold, Value, quoted_plan,
+    Answer, AnswerOutcome, Backend, BackendProfile, Batch, BatchError, Evidence, Find, FindAnswer,
+    ModelName, Outcome, Plan, Question, Threshold, Value, quoted_plan,
 };
 use crate::engine::annotate_schedule;
 use crate::engine::error::Error;
@@ -297,8 +297,12 @@ impl Engine {
             evidence,
             None,
             vec![question.clone()],
+            self.profile.as_ref(),
         )
-        .map_err(|_| Error::Defect("a plan of one question could not be quoted"))?;
+        .map_err(|error| match error {
+            BatchError::Profile(limit) => Error::ProfileLimit(limit),
+            _ => Error::Defect("a plan of one question could not be quoted"),
+        })?;
         let answered = self.ask(&plan, cancel)?;
         let answer = only_answer(&answered)?;
         let (value, outcome) = answer.read(threshold);

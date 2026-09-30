@@ -44,6 +44,8 @@ type CheckedAnswers = (Vec<(Value, f64)>, String, usize);
 
 struct Asked {
     plan: Plan,
+    /// The record the plan quotes.
+    record: Evidence,
     /// The questions as asked, before the record is quoted into them.
     questions: Vec<Question>,
     names: Vec<String>,
@@ -91,15 +93,18 @@ fn asked(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, String
         .ok_or_else(|| format!("{} resolved no question", case.id))?;
     let threshold = resolved.threshold();
     let digest = question_sha256(&question, threshold).map_err(|error| error.to_string())?;
+    let record = Evidence::new(&exchange.evidence).map_err(|error| error.to_string())?;
     let plan = quoted_plan(
         resolved.model().clone(),
-        Evidence::new(&exchange.evidence).map_err(|error| error.to_string())?,
+        record.clone(),
         None,
         vec![question.clone()],
+        None,
     )
     .map_err(|error| error.to_string())?;
     Ok(Asked {
         plan,
+        record,
         questions: vec![question],
         names: vec!["q1".to_owned()],
         thresholds: vec![threshold],
@@ -147,13 +152,15 @@ fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, Str
     }
     let plan = quoted_plan(
         ModelName::new(DEFAULT_MODEL).map_err(|error| error.to_string())?,
-        evidence,
+        evidence.clone(),
         None,
         questions.clone(),
+        None,
     )
     .map_err(|error| error.to_string())?;
     Ok(Asked {
         plan,
+        record: evidence,
         questions,
         names,
         thresholds,
@@ -193,6 +200,7 @@ fn find_asked(case: &Case) -> Result<Asked, String> {
     let find = finding(case)?;
     Ok(Asked {
         plan: find.plan().clone(),
+        record: find.plan().evidence().clone(),
         questions: find.plan().questions().to_vec(),
         names: vec!["q1".to_owned()],
         thresholds: vec![None],

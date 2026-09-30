@@ -73,6 +73,9 @@ impl Batcher {
         base: Vec<Question>,
     ) -> Result<Joined, BatchError> {
         let question = quote(line, &base)?;
+        if question.is_some() {
+            bounded(self.profile.as_ref(), &record.evidence)?;
+        }
         let (wire, alone) = match &question {
             Some(asked) => self.measured(&[asked])?,
             None => (base.len(), self.skeleton),
@@ -103,25 +106,38 @@ pub(super) fn quote(line: &str, base: &[Question]) -> Result<Option<Vec<Question
     Ok(Some(questions))
 }
 
+/// Check a quoted record's text against the profile's evidence limit. The
+/// request's state is checked when the request is encoded.
+fn bounded(profile: Option<&BackendProfile>, record: &Evidence) -> Result<(), BatchError> {
+    let Some(profile) = profile else {
+        return Ok(());
+    };
+    let text = record.as_text().map_err(|_| defect())?;
+    profile.check_record(&text).map_err(BatchError::Profile)
+}
+
 /// The plan one record sends outside a batch, in the same quoted form a
 /// batch sends, by ADR 0111 section 1: the context or `QUOTED` as the state,
 /// and the record quoted in each question. A question written as JSON takes
-/// the record as its state and goes unquoted.
+/// the record as its state and goes unquoted. A quoted record over the
+/// profile's evidence limit is refused.
 pub(crate) fn quoted_plan(
     model: ModelName,
     record: Evidence,
     context: Option<&Evidence>,
     base: Vec<Question>,
+    profile: Option<&BackendProfile>,
 ) -> Result<Plan, BatchError> {
     let line = json_line(&record.as_json()).map_err(|_| defect())?;
     let (evidence, questions) = match quote(&line, &base)? {
-        Some(quoted) => (
-            match context {
+        Some(quoted) => {
+            bounded(profile, &record)?;
+            let state = match context {
                 Some(context) => context.clone(),
                 None => Evidence::new(QUOTED).map_err(|_| defect())?,
-            },
-            quoted,
-        ),
+            };
+            (state, quoted)
+        }
         None if context.is_some() => return Err(BatchError::StructuredQuestionWithContext),
         None => (record, base),
     };

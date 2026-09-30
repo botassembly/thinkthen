@@ -1,8 +1,8 @@
 {
   "schema": "thinkthen.backend-profile-conformance/1",
   "cases": [
-    {"id":"evidence-at","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":44},"expect":"pass"},
-    {"id":"evidence-over","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":43},"expect":{"kind":"evidence bytes","limit":43,"actual":44}},
+    {"id":"evidence-at","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":189},"expect":"pass"},
+    {"id":"evidence-over","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":188},"expect":{"kind":"evidence bytes","limit":188,"actual":189}},
     {"id":"request-at","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":388},"expect":"pass"},
     {"id":"request-over","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":387},"expect":{"kind":"request bytes","limit":387,"actual":388}},
     {"id":"tag-at","source_case":"09-tag-two","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_questions":3},"expect":"pass"},

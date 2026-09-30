@@ -5,8 +5,8 @@ use std::process::ExitCode;
 
 use super::{Asks, JudgingInput, asked_of};
 use crate::core::{
-    Backend, BackendProfile, Plan, PlanDocument, PlanSummary, Reading, Record, Sources, json_line,
-    quoted_plan,
+    Backend, BackendProfile, BatchError, Plan, PlanDocument, PlanSummary, Reading, Record, Sources,
+    json_line, quoted_plan,
 };
 use crate::edge;
 use crate::engine::facade;
@@ -80,8 +80,12 @@ pub(super) fn plan_record(
             sending.evidence,
             None,
             vec![sending.question],
+            profile,
         )
-        .map_err(|_| Failure::Defect("a plan of one question could not be quoted"))?;
+        .map_err(|error| match error {
+            BatchError::Profile(limit) => Failure::ProfileLimit(limit),
+            _ => Failure::Defect("a plan of one question could not be quoted"),
+        })?;
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
