@@ -3,27 +3,28 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
-with Interfaces; use Interfaces;
 with Thinkthen; use Thinkthen;
 procedure Consumer is
    Client : Thinkthen.Engine;
    Answer : Thinkthen.Decision;
-   Facts : Thinkthen.Run_Facts;
+   Facts : Unbounded_String;
    Error : Thinkthen.Failure;
-   JSON : Thinkthen.JSON_Result;
+   JSON : Unbounded_String;
    Data : constant String := Ada.Environment_Variables.Value ("TT_CONSUMER_EVIDENCE", "consumer-ada");
 begin
    Thinkthen.Decide (Client, "Is it?", Data, Answer, Facts, Error);
    if Error.Kind /= Thinkthen.None or Answer.Value /= Thinkthen.Yes or
-      Facts.Records /= 1 or Facts.Requests_Sent /= 1 or not Facts.Has_Model then
+      Thinkthen.Member (To_String (Facts), "records") /= "1" or
+      Thinkthen.Member (To_String (Facts), "requests_sent") /= "1" or
+      Thinkthen.Member (To_String (Facts), "model") = "" then
       raise Program_Error with "scalar consumer failure: " & Thinkthen.Message (Error);
    end if;
    Thinkthen.Call (Client, "{""choose"":""Which?"",""options"":{ ""first"":{ ""what"":""A first choice"", ""not_for"":""other choices"", ""examples"":[""sample""] }, ""second"":""Second choice"" }, ""evidence"":""consumer-ada-json""}", JSON, Error);
-   if Error.Kind /= Thinkthen.None or else Thinkthen.Call_Value (JSON) /= """first""" or else
-      Ada.Strings.Fixed.Index (Thinkthen.Call_Facts (JSON), """records"":1") = 0 then
+   if Error.Kind /= Thinkthen.None or else Thinkthen.Member (To_String (JSON), "value") /= """first""" or else
+      Thinkthen.Member (Thinkthen.Member (To_String (JSON), "facts"), "records") /= "1" then
       raise Program_Error with "JSON consumer failure: " & Thinkthen.Message (Error);
    end if;
-   Put_Line ("ADA_CALL_ENVELOPE=" & To_String (JSON.JSON));
+   Put_Line ("ADA_CALL_ENVELOPE=" & To_String (JSON));
    declare
       Null_Field : constant Annotated_Field := Decode_Field ("null");
       Failed_Field : constant Annotated_Field := Decode_Field ("{""failed"":{""kind"":""backend"",""cause"":""fixture""}}");

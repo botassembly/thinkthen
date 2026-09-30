@@ -1,5 +1,4 @@
 with Ada.Finalization;
-with Ada.Containers.Indefinite_Vectors;
 with Ada.Strings.Unbounded;
 with Interfaces; use Interfaces;
 with Thinkthen_C;
@@ -20,32 +19,23 @@ package Thinkthen is
       Value : Outcome := Not_Sure;
       Probability : Long_Float := 0.0;
    end record;
-   type Run_Facts is record
-      Records : Unsigned_64 := 0;
-      Requests_Sent : Unsigned_64 := 0;
-      Cache_Answers : Unsigned_64 := 0;
-      Seconds : Long_Float := 0.0;
-      Has_Input_Tokens : Boolean := False;
-      Input_Tokens : Unsigned_64 := 0;
-      Has_Output_Tokens : Boolean := False;
-      Output_Tokens : Unsigned_64 := 0;
-      Has_Model : Boolean := False;
-      Model : Ada.Strings.Unbounded.Unbounded_String;
-   end record;
+   -- Facts, recognize and relate values and plans are the engine's JSON text,
+   -- as specification/result.schema.json describes. Read members with Member
+   -- and Element, which ignore members they are not asked for.
    type Engine is new Ada.Finalization.Limited_Controlled with private;
    procedure Configure (Client : in out Engine; Settings_JSON : String; Error : out Failure);
    type Cancel_Token is limited private;
    procedure Cancel (Token : in out Cancel_Token);
    -- Owners must outlive all callers. Join Ada tasks before leaving their scope.
    procedure Decide (Client : in out Engine; Question, Evidence : String;
-                     Result : out Decision; Facts : out Run_Facts; Error : out Failure;
+                     Result : out Decision; Facts : out Ada.Strings.Unbounded.Unbounded_String; Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
                      Token : access Cancel_Token := null);
    type Evidence_Array is array (Positive range <>) of Ada.Strings.Unbounded.Unbounded_String;
    type Decision_Array is array (Positive range <>) of Decision;
    procedure Decide_Many (Client : in out Engine; Question : String;
                           Evidence : Evidence_Array; Result : out Decision_Array;
-                          Facts : out Run_Facts; Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
+                          Facts : out Ada.Strings.Unbounded.Unbounded_String; Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
                           Token : access Cancel_Token := null);
    type Label is record
       Name : Ada.Strings.Unbounded.Unbounded_String;
@@ -72,48 +62,32 @@ package Thinkthen is
    end record;
    function Decode_Field (Text : String) return Annotated_Field;
    function Annotation (Result_JSON : String; Question : String; Row : Positive := 1) return Annotated_Field;
-   type JSON_Result is record
-      JSON : Ada.Strings.Unbounded.Unbounded_String;
-   end record;
+   -- The text of one member of a JSON object, or of the Index-th element of a
+   -- JSON array, counted from 1. Absent members and elements return "".
+   function Member (JSON : String; Name : String) return String;
+   function Element (JSON : String; Index : Positive) return String;
    -- The generic C JSON door returns {"value":VALUE,"facts":FACTS}.
-   -- These accessors validate the envelope before extracting either member.
-   function Call_Value (Result : JSON_Result) return String;
-   function Call_Facts (Result : JSON_Result) return String;
-   type Entity is record
-      Text : Ada.Strings.Unbounded.Unbounded_String;
-      Kind : Ada.Strings.Unbounded.Unbounded_String;
-      Start_Offset : Natural := 0;
-      End_Offset : Natural := 0;
-      Length : Natural := 0;
-      Strength : Long_Float := 0.0;
-   end record;
-   package Entity_Vectors is new Ada.Containers.Indefinite_Vectors (Positive, Entity);
-   type Relation_Endpoint is record
-      Name : Ada.Strings.Unbounded.Unbounded_String;
-      Kind : Ada.Strings.Unbounded.Unbounded_String;
-   end record;
-   type Relation_Edge is record
-      Relation : Ada.Strings.Unbounded.Unbounded_String;
-      Source : Relation_Endpoint;
-      Target : Relation_Endpoint;
-      Probability : Long_Float := 0.0;
-   end record;
-   package Edge_Vectors is new Ada.Containers.Indefinite_Vectors (Positive, Relation_Edge);
-   function Entities (Result : JSON_Result) return Entity_Vectors.Vector;
-   function Edges (Result : JSON_Result) return Edge_Vectors.Vector;
-   procedure Call (Client : in out Engine; Request : String; Result : out JSON_Result;
+   procedure Call (Client : in out Engine; Request : String; Result : out Ada.Strings.Unbounded.Unbounded_String;
                    Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
                    Token : access Cancel_Token := null);
    -- Recognize offsets are zero-based Unicode code points, end exclusive.
    procedure Recognize (Client : in out Engine; Specification, Evidence : String;
-                        Result : out JSON_Result; Facts : out Run_Facts; Error : out Failure;
+                        Result, Facts : out Ada.Strings.Unbounded.Unbounded_String; Error : out Failure;
                         Deadline_Ms : Interfaces.Integer_64 := -1;
                         Token : access Cancel_Token := null);
    procedure Relate (Client : in out Engine; Specification : String;
-                     Records : Evidence_Array; Result : out JSON_Result;
-                     Facts : out Run_Facts; Error : out Failure;
+                     Records : Evidence_Array; Result, Facts : out Ada.Strings.Unbounded.Unbounded_String;
+                     Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
                      Token : access Cancel_Token := null);
+   -- Preview a judgment call without sending it: thinkthen_plan_json over one
+   -- thinkthen.plan-input/1 object. Verb is decide, choose, score or tag. A
+   -- Question starting with '{' is a question object and is sent as written;
+   -- other text is the bare question. Settings_JSON is empty or one
+   -- thinkthen.settings/1 object. Result is the result schema's plan object.
+   procedure Plan (Client : in out Engine; Verb, Question : String; Input : Evidence_Array;
+                   Result : out Ada.Strings.Unbounded.Unbounded_String; Error : out Failure;
+                   Settings_JSON : String := "");
 private
    type Engine is new Ada.Finalization.Limited_Controlled with record
       Handle : Thinkthen_C.Handle := Thinkthen_C.Null_Handle;

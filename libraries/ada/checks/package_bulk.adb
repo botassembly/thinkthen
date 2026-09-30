@@ -27,19 +27,21 @@ procedure Package_Bulk is
    end Release;
    Basic : constant Evidence_Array := (To_Unbounded_String ("first"), To_Unbounded_String ("second"), To_Unbounded_String ("third"));
    Answers : Decision_Array (1 .. 3);
-   Facts : Run_Facts;
+   Facts : Unbounded_String;
    Error : Failure;
+   -- Facts are JSON text; the matrix reads each member it checks.
+   function Fact (Name : String) return String is (Member (To_String (Facts), Name));
 begin
    Decide_Many (Client, "Is it?", Basic, Answers, Facts, Error);
    Require (Error.Kind = None and Answers (1).Value = Yes and Answers (2).Value = No and
             Answers (3).Value = Yes and Answers (1).Probability = 0.9 and
             Answers (2).Probability = 0.1 and Answers (3).Probability = 0.6 and
-            Facts.Records = 3 and Facts.Requests_Sent = 1 and Facts.Cache_Answers = 0 and
-            Facts.Has_Model and Facts.Has_Input_Tokens and Facts.Input_Tokens = 1,
+            Fact ("records") = "3" and Fact ("requests_sent") = "1" and Fact ("cache_answers") = "0" and
+            Fact ("model") /= "" and Fact ("input_tokens") = "1",
             "typed bulk result order");
    Decide_Many (Client, "Is it?", Basic, Answers, Facts, Error);
-   Require (Error.Kind = None and Answers (3).Probability = 0.6 and Facts.Records = 3 and
-            Facts.Requests_Sent = 0 and Facts.Cache_Answers = 3,
+   Require (Error.Kind = None and Answers (3).Probability = 0.6 and Fact ("records") = "3" and
+            Fact ("requests_sent") = "0" and Fact ("cache_answers") = "3",
             "identical bulk answers each question from the cache");
    declare
       Empty : Evidence_Array (1 .. 0);
@@ -107,23 +109,23 @@ begin
       Require (Caller'Terminated and Kind = Deadline, "typed held deadline");
    end;
    Decide (Client, "Is it?", "recovery-package", Answers (1), Facts, Error);
-   Require (Error.Kind = None and Answers (1).Value = Yes and Facts.Requests_Sent = 1,
+   Require (Error.Kind = None and Answers (1).Value = Yes and Fact ("requests_sent") = "1",
             "fresh-token recovery");
    declare
-      Structured : JSON_Result;
+      Structured : Unbounded_String;
       Pair : constant Evidence_Array :=
         (To_Unbounded_String ("{""name"":""Third"",""kind"":""alert""}"),
          To_Unbounded_String ("{""name"":""Fourth"",""kind"":""alert""}"));
    begin
       Recognize (Client, "{""version"":1,""recognize"":{""kinds"":{""person"":""A person's name.""}}}",
                  "John Smith", Structured, Facts, Error);
-      Require (Error.Kind = None and Facts.Requests_Sent = 2 and Facts.Has_Model and
-               Ada.Strings.Fixed.Index (To_String (Structured.JSON), """entities""") > 0,
+      Require (Error.Kind = None and Fact ("requests_sent") = "2" and Fact ("model") /= "" and
+               Member (To_String (Structured), "entities") /= "",
                "typed recognize facts and value");
       Relate (Client, "{""version"":1,""relate"":{""relations"":[{""name"":""caused_by"",""source"":""alert"",""target"":""alert""}]}}",
               Pair, Structured, Facts, Error);
-      Require (Error.Kind = None and Facts.Requests_Sent = 1 and Facts.Records = 1 and
-               Ada.Strings.Fixed.Index (To_String (Structured.JSON), """edges""") > 0,
+      Require (Error.Kind = None and Fact ("requests_sent") = "1" and Fact ("records") = "1" and
+               Member (To_String (Structured), "edges") /= "",
                "typed relate facts and value");
    end;
    declare
