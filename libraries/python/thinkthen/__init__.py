@@ -1,9 +1,10 @@
 """ThinkThen from Python: ``import thinkthen as tt``.
 
-Ten verbs, ``decide_many``, ``details``, ``question``, and ``usage``. A call
-takes one ``str`` or a list, tuple, or other iterable of ``str``. ``None``
-means "not sure". ``decide``, ``choose``, ``score``, ``tag``, and
-``decide_many`` also take a Polars or pandas ``Series`` and give one back, and
+Ten verbs, ``details``, ``question``, ``plan``, and ``usage``. Omitting an input
+captures an immutable Judge. Applying it to an ordered collection is eager;
+only a true iterator returns a lazy Stream. ``None`` means "not sure".
+``decide``, ``choose``, ``score``, and ``tag`` also take a Polars or pandas
+``Series`` and give one back, and
 ``annotate`` and ``recognize`` take a Polars or pandas ``DataFrame`` with
 ``on=``. The engine makes one call over a column. A pandas answer keeps the
 caller's index and name, and a pandas frame gets new columns: one per question
@@ -47,14 +48,17 @@ from ._thinkthen import (
     Relation,
     ThinkThenError,
     UsageError,
+    Tally,
 )
+from .judge import Judge, make as _make_judge
+from .stream import Stream
 
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
-    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Facts", "LocalError", "Question", "Recognized",
+    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Facts", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
-    "annotate", "choose", "choose_many", "decide", "decide_many", "details", "filter",
-    "find", "question", "rank", "recognize", "relate", "score", "score_many", "tag", "tag_many",
+    "annotate", "choose", "decide", "details", "filter",
+    "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",
     "usage",
 ]
 
@@ -133,11 +137,6 @@ def _configured(verb, asked, keywords):
     if "descriptions" in keywords:
         raise UsageError("put descriptions inside options, levels, or labels")
     fields = dict(keywords)
-    if "threshold" in fields:
-        fields["threshold"] = _threshold(fields["threshold"])
-    for key in ("options", "levels", "labels"):
-        if key in fields:
-            fields[key] = _labels(fields[key], bare_level_names=key == "levels")
     if not isinstance(asked, str):
         if not isinstance(asked, Question):
             raise UsageError(f"{verb} takes a question text or tt.question(), not a {type(asked).__name__}")
@@ -146,6 +145,11 @@ def _configured(verb, asked, keywords):
         repeated = _QUESTION_KEYS.intersection(fields)
         if repeated:
             raise UsageError(f"settings repeats `{sorted(repeated)[0]}` from the question or named arguments")
+    if "threshold" in fields:
+        fields["threshold"] = _threshold(fields["threshold"])
+    for key in ("options", "levels", "labels"):
+        if key in fields:
+            fields[key] = _labels(fields[key], bare_level_names=key == "levels")
     try:
         encoded = json.dumps(fields, allow_nan=False)
     except (TypeError, ValueError) as source:
@@ -351,7 +355,12 @@ class Engine:
     takes ``labels``.
     """
 
-    __slots__ = ("_engine",)
+    __slots__ = ("_engine", "_settings_json")
+
+    def __setattr__(self, name, value):
+        if hasattr(self, name):
+            raise AttributeError("an Engine's validated settings cannot be changed")
+        object.__setattr__(self, name, value)
 
     def __init__(self, *, base_url=None, model=None, throttle=None,
                  batch=None,
@@ -364,67 +373,31 @@ class Engine:
             max_request_bytes=max_request_bytes,
             cache=cache, timeout=timeout,
             max_retries=max_retries, record=record, replay=replay, profile=profile)
+        given = dict(base_url=base_url, model=model, throttle=throttle, batch=batch,
+                     max_requests=max_requests, max_requests_total=max_requests_total,
+                     max_request_bytes=max_request_bytes, cache=cache, timeout=timeout,
+                     max_retries=max_retries, record=record, replay=replay, profile=profile)
+        self._settings_json = json.dumps({key: value for key, value in given.items()
+                                          if value is not None}, default=os.fspath)
 
     def __repr__(self):
         return "Engine()"
 
-    def decide(self, question, text, *, token=None, **keywords):
-        """``True``, ``False``, or ``None`` when the rule says "not sure"."""
-        asked, batch, context, deadline_ms = _configured("decide", question, keywords)
-        call = _column(lambda verb, asked, value, due, held:
-                       self._engine.ask(verb, asked, value, due, held, batch, context),
-                       "decide", asked, text, deadline_ms, token)
-        return _paired(call, "decide", not isinstance(text, str))
+    def decide(self, question, text=_MISSING, *, token=None, **keywords):
+        """Build a judge, or answer one text, ordered input, or column."""
+        return self._judged("decide", question, text, token, keywords)
 
-    def decide_many(self, question, records, *, token=None, **keywords):
-        """One ``decide`` answer per record, in input order."""
-        asked, batch, context, deadline_ms = _configured("decide", question, keywords)
-        kind = _pandas(records)
-        if kind is not None and kind != "Series":
-            raise UsageError(f"thinkthen reads a pandas Series, not a pandas {kind}; "
-                             "pass a pandas Series")
-        if _pandas(records) == "Series" or (hasattr(records, "__arrow_c_stream__")
-                                                   and _pandas(records) is None):
-            return _paired(_column(lambda verb, ask, value, due, held:
-                           self._engine.many(verb, ask, value, batch, context, due, held),
-                           "decide_many", asked, records, deadline_ms, token), "decide", True)
-        return _paired(self._engine.many("decide_many", asked, records, batch, context,
-                                         deadline_ms, token), "decide", True)
+    def choose(self, question, text=_MISSING, *, token=None, **keywords):
+        """Build a judge, or pick one option from an input."""
+        return self._judged("choose", question, text, token, keywords)
 
-    def choose(self, question, text, *, token=None, **keywords):
-        """The option picked, or ``None`` when the rule says "not sure"."""
-        asked, batch, context, deadline_ms = _configured("choose", question, keywords)
-        call = _column(lambda verb, asked, value, due, held:
-                       self._engine.ask(verb, asked, value, due, held, batch, context),
-                       "choose", asked, text, deadline_ms, token)
-        return _paired(call, "choose", not isinstance(text, str))
+    def score(self, question, text=_MISSING, *, token=None, **keywords):
+        """Build a judge, or score an input."""
+        return self._judged("score", question, text, token, keywords)
 
-    def score(self, question, text, *, token=None, **keywords):
-        """The position on the question's levels, from 0 to K-1."""
-        asked, batch, context, deadline_ms = _configured("score", question, keywords)
-        return _column(lambda verb, asked, value, due, held:
-                       self._engine.ask(verb, asked, value, due, held, batch, context),
-                       "score", asked, text, deadline_ms, token)
-
-    def tag(self, question, text, *, token=None, **keywords):
-        """The labels that reach the cut."""
-        asked, batch, context, deadline_ms = _configured("tag", question, keywords)
-        return _column(lambda verb, asked, value, due, held:
-                       self._engine.ask(verb, asked, value, due, held, batch, context),
-                       "tag", asked, text, deadline_ms, token)
-
-    def choose_many(self, question, records, *, token=None, **keywords):
-        asked, batch, context, deadline_ms = _configured("choose", question, keywords)
-        return _paired(self._engine.label_many("choose", asked, records, batch, context,
-                                               deadline_ms, token), "choose", True)
-
-    def score_many(self, question, records, *, token=None, **keywords):
-        asked, batch, context, deadline_ms = _configured("score", question, keywords)
-        return self._engine.label_many("score", asked, records, batch, context, deadline_ms, token)
-
-    def tag_many(self, question, records, *, token=None, **keywords):
-        asked, batch, context, deadline_ms = _configured("tag", question, keywords)
-        return self._engine.label_many("tag", asked, records, batch, context, deadline_ms, token)
+    def tag(self, question, text=_MISSING, *, token=None, **keywords):
+        """Build a judge, or tag an input."""
+        return self._judged("tag", question, text, token, keywords)
 
     def details(self, question, text, *, deadline_ms=_MISSING, token=None, **legacy):
         """The command's ``--details`` document, as a ``dict``."""
@@ -432,11 +405,41 @@ class Engine:
         return _mapped(self._engine.ask("details", _asked(question, "details"), text,
                                         deadline_ms, token), json.loads)
 
-    def filter(self, question, records, *, token=None, **keywords):
-        """The records the ``decide`` question passes, in input order."""
-        asked, batch, context, deadline_ms = _configured("decide", question, keywords)
-        return self._engine.many("filter", asked, records,
-                                 batch, context, deadline_ms, token)
+    def filter(self, question, records=_MISSING, *, token=None, **keywords):
+        """Build a judge, or keep matching records in input order."""
+        return self._judged("filter", question, records, token, keywords)
+
+    def _judged(self, verb, question, value, token, keywords):
+        fields = dict(keywords)
+        deadline_ms = fields.pop("deadline_ms", _MISSING)
+        if value is _MISSING and (deadline_ms is not _MISSING or token is not None):
+            raise UsageError("deadline_ms and token belong when the judge is applied")
+        judge = _make_judge(verb, question, self, fields)
+        if value is _MISSING:
+            return judge
+        return judge(value, deadline_ms=None if deadline_ms is _MISSING else deadline_ms,
+                     token=token)
+
+    def plan(self, judge, records):
+        """Preview a judge on a complete input without a key or send."""
+        if not isinstance(judge, Judge):
+            raise UsageError("plan takes a ThinkThen Judge")
+        if judge._engine is not None and judge._engine is not self:
+            raise UsageError("the judge belongs to another engine")
+        if isinstance(records, (set, frozenset)):
+            raise UsageError("an unordered set cannot align records with answers")
+        kind = _pandas(records)
+        if kind == "Series":
+            records = _marked(records, kind)
+        elif kind == "DataFrame":
+            raise UsageError("plan reads a complete list or text column, not a data frame")
+        elif kind is not None:
+            records = list(records)
+        elif hasattr(records, "__arrow_c_stream__") or hasattr(records, "__arrow_c_array__"):
+            pass
+        elif iter(records) is records:
+            raise UsageError("plan reads a complete list or column, not an iterator")
+        return self._engine.plan(judge._asked, records, judge._batch, judge._context)
 
     def rank(self, question, records, *, top=None, batch=None, context=None,
              deadline_ms=_MISSING, token=None, **legacy):
@@ -576,6 +579,11 @@ class Engine:
         """This engine's totals: requests sent, cache answers, and tokens."""
         return self._engine.usage()
 
+    def __getattr__(self, name):
+        if name in ("decide_many", "choose_many", "score_many", "tag_many"):
+            raise AttributeError(f"thinkthen: {name} was removed; apply the judge to a list: tt.decide(q)(rows)")
+        raise AttributeError(name)
+
 
 _process = None
 
@@ -585,48 +593,57 @@ def _engine():
     if _process is None:
         engine = Engine.__new__(Engine)
         engine._engine = _thinkthen._Engine._process()
+        engine._settings_json = None
         _process = engine
     return _process
 
 
-def decide(question, text, *, token=None, **keywords):
-    return _engine().decide(question, text, token=token, **keywords)
+def decide(question, text=_MISSING, *, token=None, **keywords):
+    return _module_judged("decide", question, text, token, keywords)
 
 
-def decide_many(question, records, *, token=None, **keywords):
-    return _engine().decide_many(question, records, token=token, **keywords)
+def choose(question, text=_MISSING, *, token=None, **keywords):
+    return _module_judged("choose", question, text, token, keywords)
 
 
-def choose_many(question, records, *, token=None, **keywords):
-    return _engine().choose_many(question, records, token=token, **keywords)
+def score(question, text=_MISSING, *, token=None, **keywords):
+    return _module_judged("score", question, text, token, keywords)
 
 
-def score_many(question, records, *, token=None, **keywords):
-    return _engine().score_many(question, records, token=token, **keywords)
-
-
-def tag_many(question, records, *, token=None, **keywords):
-    return _engine().tag_many(question, records, token=token, **keywords)
-
-
-def choose(question, text, *, token=None, **keywords):
-    return _engine().choose(question, text, token=token, **keywords)
-
-
-def score(question, text, *, token=None, **keywords):
-    return _engine().score(question, text, token=token, **keywords)
-
-
-def tag(question, text, *, token=None, **keywords):
-    return _engine().tag(question, text, token=token, **keywords)
+def tag(question, text=_MISSING, *, token=None, **keywords):
+    return _module_judged("tag", question, text, token, keywords)
 
 
 def details(question, text, **keywords):
     return _engine().details(question, text, **keywords)
 
 
-def filter(question, records, **keywords):
-    return _engine().filter(question, records, **keywords)
+def filter(question, records=_MISSING, *, token=None, **keywords):
+    return _module_judged("filter", question, records, token, keywords)
+
+
+def _module_judged(verb, question, value, token, keywords):
+    fields = dict(keywords)
+    deadline_ms = fields.pop("deadline_ms", _MISSING)
+    if value is _MISSING and (deadline_ms is not _MISSING or token is not None):
+        raise UsageError("deadline_ms and token belong when the judge is applied")
+    judge = _make_judge(verb, question, None, fields)
+    if value is _MISSING:
+        return judge
+    return judge(value, deadline_ms=None if deadline_ms is _MISSING else deadline_ms,
+                 token=token)
+
+
+def plan(judge, records):
+    if not isinstance(judge, Judge):
+        raise UsageError("plan takes a ThinkThen Judge")
+    return (judge._engine if judge._engine is not None else _engine()).plan(judge, records)
+
+
+def __getattr__(name):
+    if name in ("decide_many", "choose_many", "score_many", "tag_many"):
+        raise AttributeError(f"thinkthen: {name} was removed; apply the judge to a list: tt.decide(q)(rows)")
+    raise AttributeError(name)
 
 
 def rank(question, records, **keywords):
@@ -661,8 +678,7 @@ def usage():
     return _engine().usage()
 
 
-for _name in ("decide", "decide_many", "choose", "choose_many", "score", "score_many",
-              "tag", "tag_many", "details", "filter",
+for _name in ("decide", "choose", "score", "tag", "details", "filter",
               "rank", "find", "annotate", "recognize", "relate"):
     globals()[_name].__doc__ = getattr(Engine, _name).__doc__
 del _name

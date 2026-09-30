@@ -95,7 +95,7 @@ def test_a_token_cancelled_before_the_call_sends_nothing(backend, tmp_path):
     child = start(HOLD + """
     token.cancel()
     try:
-        engine.decide_many(late, texts, token=token).value
+        engine.decide(late, texts, token=token).value
     except tt.Cancelled as error:
         print("cancelled", time.monotonic(), error)
     """, child_env(backend, tmp_path, "arm/held"))
@@ -109,7 +109,7 @@ def test_a_token_stops_a_held_batch_before_next_request(backend, tmp_path):
     tick, and no send follows the first held request."""
     child = start(HOLD + STOP + """
     try:
-        engine.decide_many(late, texts, token=token).value
+        engine.decide(late, texts, token=token).value
     except tt.Cancelled as error:
         print("cancelled", time.monotonic(), error, flush=True)
     settle()
@@ -177,7 +177,7 @@ def test_ctrl_c_stops_a_held_batch_at_once(backend, tmp_path):
     After release the worker ends without another send."""
     child = start(HOLD + """
     try:
-        engine.decide_many(late, texts).value
+        engine.decide(late, texts).value
     except KeyboardInterrupt as error:
         print("cancelled", time.monotonic(), type(error).__name__, error, flush=True)
     settle()
@@ -193,7 +193,7 @@ def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path):
     child = start(HOLD + """
     signal.signal(signal.SIGINT, lambda *_: sys.exit(3))
     try:
-        engine.decide_many(late, texts).value
+        engine.decide(late, texts).value
     except tt.Cancelled:
         print("cancelled", time.monotonic(), flush=True)
     except SystemExit as leaving:

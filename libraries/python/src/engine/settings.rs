@@ -82,7 +82,7 @@ pub(crate) fn batch(value: Arg<'_, '_>) -> PyResult<Option<BatchSetting>> {
     Ok(Some(BatchSetting::Records(count)))
 }
 
-pub(super) fn context(value: Arg<'_, '_>) -> PyResult<Option<String>> {
+pub(crate) fn context(value: Arg<'_, '_>) -> PyResult<Option<String>> {
     value
         .map(|value| {
             let text = value

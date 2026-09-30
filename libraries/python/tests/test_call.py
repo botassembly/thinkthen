@@ -80,7 +80,7 @@ def test_default_pack_and_explicit_batch_one_keep_their_distinct_bodies(backend,
         engine = tt.Engine(cache=False)
         rows = ["one", "two", "three"]
         for setting in ({}, {"batch": 1}):
-            call = engine.decide_many("Is it late?", rows, **setting)
+            call = engine.decide("Is it late?", rows, **setting)
             print(call.value, call.probability, call.facts.requests_sent)
         """, env)
         assert printed.splitlines() == [
@@ -88,6 +88,35 @@ def test_default_pack_and_explicit_batch_one_keep_their_distinct_bodies(backend,
             "[False, True, True] [0.1, 0.9, 0.9] 3",
         ]
         assert bodies == [packed, *single]
+    assert backend.count() == 0
+
+
+def test_partial_judge_plan_and_execution_share_immutable_question(backend, tmp_path):
+    """A partial works, and later mutation of its original options cannot
+    make the planned body disagree with the one sent by that Judge."""
+    with capturing_filter_listener(lambda question: {
+        "type": "choice", "probabilities": {"billing": 0.9, "shipping": 0.1}
+    }) as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import functools, thinkthen as tt
+        options = ["billing", "shipping"]
+        judge = functools.partial(tt.choose, "Which team?", options=options)()
+        options.append("changed")
+        plan = tt.plan(judge, ["one", "two"])
+        call = judge(["one", "two"])
+        print(plan["records"], plan["requests"],
+              call.value, call.facts.requests_sent)
+        print(plan["first_body"].decode())
+        try: tt.plan(lambda rows: rows, ["one"])
+        except tt.UsageError as error: print(error.kind)
+        """, env)
+        account, planned, refusal = printed.splitlines()
+        assert account == "2 1 ['billing', 'billing'] 1"
+        assert refusal == "usage"
+        assert bodies == [planned.encode()]
+        assert b"changed" not in bodies[0]
     assert backend.count() == 0
 
 
@@ -278,7 +307,7 @@ def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path,
             rows = {corpus['texts']!r}
             if {shape!r} == 'polars_series':
                 rows = pl.Series('body', rows)
-            call = tt.Engine(cache=False, throttle=1).decide_many({corpus['question']!r}, rows)
+            call = tt.Engine(cache=False, throttle=1).decide({corpus['question']!r}, rows)
             value = call.value.to_list() if hasattr(call.value, 'to_list') else call.value
             print(json.dumps([value, [call.facts.records, call.facts.requests_sent],
                               [[row['index'], list(row['request_digests'])] for row in call.details]]))
@@ -294,7 +323,7 @@ def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path,
 
 
 @contextmanager
-def capturing_filter_listener(answer=None):
+def capturing_filter_listener(answer=None, usage=True):
     """Keep wire bodies; a callback's None retains the normal decision answer."""
     bodies = []
 
@@ -313,8 +342,10 @@ def capturing_filter_listener(answer=None):
                     continue
                 first = request["state"] == "one" or 'The text is "one"' in question["instructions"]
                 answers[name] = {"type": "noul", "noul": 0.1 if first else 0.9}
-            reply = json.dumps({"model": "jev-latest", "answers": answers,
-                                "usage": {"input_tokens": 6, "output_tokens": 3}},
+            reply_fields = {"model": "jev-latest", "answers": answers}
+            if usage:
+                reply_fields["usage"] = {"input_tokens": 6, "output_tokens": 3}
+            reply = json.dumps(reply_fields,
                                separators=(",", ":")).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -336,14 +367,108 @@ def capturing_filter_listener(answer=None):
         thread.join(timeout=5)
 
 
+def test_judge_eager_and_stream_share_exact_distinct_record_bodies(backend, tmp_path):
+    """Equivalent content cuts have identical wire bytes; a stream's
+    probability comes from that reply and adds no second operation."""
+    expected = (b'{"state":"Each question quotes the text it asks about.",'
+                b'"model":"jev-1.13.0","questions":{'
+                b'"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"},'
+                b'"q2":{"type":"noul","instructions":"The text is \\"two\\". Is it late?"},'
+                b'"q3":{"type":"noul","instructions":"The text is \\"three\\". Is it late?"}}}')
+    with capturing_filter_listener() as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        rows = ["one", "two", "three"]
+        eager = engine.decide("Is it late?", rows)
+        lazy = engine.decide("Is it late?", probability=True)(iter(rows))
+        print(eager.value, eager.probability, eager.facts.requests_sent)
+        print(list(lazy), lazy.facts.records, lazy.facts.requests_sent)
+        """, env)
+        assert printed.splitlines() == [
+            "[False, True, True] [0.1, 0.9, 0.9] 1",
+            "[(False, 0.1), (True, 0.9), (True, 0.9)] 3 1",
+        ]
+        assert bodies == [expected, expected]
+    assert backend.count() == 0
+
+
+def test_explicit_tally_counts_completed_calls_cache_and_missing_usage(backend, tmp_path):
+    """Two simultaneously started calls, one identical cached replay, and a
+    no-usage reply use the core tally without a mutable last-call slot."""
+    with capturing_filter_listener() as (url, first), \
+         capturing_filter_listener(usage=False) as (other, second):
+        env = child_env(backend, tmp_path, OWNED_CACHE=str(tmp_path / "owned-cache"),
+                        OTHER_URL=other.removesuffix("/systemone"))
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import os, threading, concurrent.futures, thinkthen as tt
+        tally = tt.Tally()
+        engine = tt.Engine(cache=os.environ["OWNED_CACHE"])
+        judge = engine.decide("Is it late?", tally=tally)
+        gate = threading.Barrier(2)
+        def ask(text):
+            gate.wait(timeout=5)
+            return judge(text).value
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            done = list(pool.map(ask, ["one", "two"]))
+        print(done, tally.facts.records, tally.facts.requests_sent,
+              tally.facts.cache_answers, tally.facts.input_tokens is not None,
+              tally.facts.seconds >= 0)
+        print(judge("one").value, tally.facts.records, tally.facts.requests_sent,
+              tally.facts.cache_answers)
+        no_usage = tt.Engine(base_url=os.environ["OTHER_URL"], cache=False).decide(
+            "Is it late?", tally=tally)
+        print(no_usage("three").value, tally.facts.records, tally.facts.requests_sent,
+              tally.facts.cache_answers, tally.facts.input_tokens,
+              tally.facts.output_tokens, tally.facts.model)
+        """, env)
+        assert printed.splitlines() == [
+            "[False, True] 2 2 0 True True",
+            "False 3 2 1",
+            "True 4 3 1 None None jev-latest",
+        ]
+        assert len(first) == 2
+        assert len(second) == 1
+    assert backend.count() == 0
+
+
+def test_filter_stream_selective_take_stops_before_remaining_input(backend, tmp_path):
+    """A finite take consumes the required false row and only three later
+    matches; closing bills started requests and never reads the tail."""
+    with capturing_filter_listener() as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import itertools, thinkthen as tt
+        read = []
+        def source():
+            for text in ["one", "two", "three", "four", "five", "six"]:
+                read.append(text)
+                yield text
+        stream = tt.filter("Is it late?", batch=1)(source())
+        with stream:
+            print(list(itertools.islice(stream, 3)))
+        print(read, stream.facts.records, stream.facts.requests_sent)
+        """, env)
+        assert printed.splitlines() == [
+            "['two', 'three', 'four']",
+            "['one', 'two', 'three', 'four'] 4 4",
+        ]
+        assert len(bodies) == 4
+    assert backend.count() == 0
+
+
 def test_batches_labels_and_owned_details(backend, tmp_path):
     printed = run("""
     import thinkthen as tt
     engine = tt.Engine(cache=False)
     decide = tt.question(decide="Is it late?")
     rows = ["one", "two", "three"]
-    packed = engine.decide_many(decide, rows)
-    separate = engine.decide_many(decide, rows, batch=1)
+    packed = engine.decide(decide, rows)
+    separate = engine.decide(decide, rows, batch=1)
     assert packed.value == separate.value == [True, True, True]
     assert (packed.facts.records, packed.facts.requests_sent) == (3, 1)
     assert (separate.facts.records, separate.facts.requests_sent) == (3, 3)
@@ -356,17 +481,17 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         pass
     else:
         raise AssertionError("an observation was mutable")
-    choice = engine.choose_many("Which team?", rows, options=["billing", "shipping"])
-    score = tt.score_many("How urgent?", rows, levels=["Routine.", "Soon.", "Now."])
-    tags = engine.tag_many("Which kinds?", rows, labels=["bill", "ship"])
+    choice = engine.choose("Which team?", rows, options=["billing", "shipping"])
+    score = tt.score("How urgent?", rows, levels=["Routine.", "Soon.", "Now."])
+    tags = engine.tag("Which kinds?", rows, labels=["bill", "ship"])
     assert choice.value == ["billing"] * 3
     assert score.value == [0.15] * 3
     assert tags.value == [["bill", "ship"]] * 3
     assert all(item.facts.records == 3 and len(item.details) == 3
                for item in (choice, score, tags))
     before = engine.usage()["requests_sent"]
-    for call in (lambda: engine.decide_many(decide, rows, batch=0),
-                 lambda: engine.decide_many(decide, rows, context="  "),
+    for call in (lambda: engine.decide(decide, rows, batch=0),
+                 lambda: engine.decide(decide, rows, context="  "),
                  lambda: engine.annotate({"version": 1, "questions": {"late": {"decide": "Late?"}}},
                                          rows, context="reference")):
         try:
@@ -376,7 +501,7 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         else:
             raise AssertionError("unsupported control was accepted")
     assert engine.usage()["requests_sent"] == before
-    shared = engine.decide_many(decide, rows, batch=1, context="reference")
+    shared = engine.decide(decide, rows, batch=1, context="reference")
     assert shared.value == packed.value
     assert shared.details[0]["request_digests"] != separate.details[0]["request_digests"]
     print("calls", packed.facts.requests_sent, separate.facts.requests_sent,
@@ -428,7 +553,7 @@ def test_returned_failure_keeps_its_final_account(backend, tmp_path):
     printed = run("""
     import thinkthen as tt
     try:
-        tt.Engine(cache=False).decide_many(tt.question(decide="Q?"), ["a", "b"], batch=1)
+        tt.Engine(cache=False).decide(tt.question(decide="Q?"), ["a", "b"], batch=1)
     except tt.BackendError as error:
         assert (error.facts.records, error.facts.requests_sent) == (0, 1)
         assert error.details == ()

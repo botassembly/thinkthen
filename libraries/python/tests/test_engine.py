@@ -9,9 +9,9 @@ from conftest import Backend, child_env, run, start
 SETTINGS = """
     import os, thinkthen as tt
     late = tt.question(decide="Is it late?")
-    def said(verb="decide_many", **settings):
+    def said(verb="decide", **settings):
         try:
-            asked = late if verb == "decide_many" else "Which is late?"
+            asked = late if verb == "decide" else "Which is late?"
             getattr(tt.Engine(**settings), verb)(asked, ["one", "two", "three"])
         except tt.ThinkThenError as error:
             print(type(error).__name__, error)
@@ -23,7 +23,7 @@ def test_held_request_does_not_pull_ahead(backend, tmp_path):
     release still lets all 20 records finish."""
     child = start("""
         import thinkthen as tt
-        tt.Engine(throttle=8, batch=1, cache=False).decide_many(
+        tt.Engine(throttle=8, batch=1, cache=False).decide(
             tt.question(decide="Is it late?"), [f"note {n}" for n in range(20)]).value
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1

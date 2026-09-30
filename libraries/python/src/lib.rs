@@ -14,6 +14,8 @@ mod engine;
 mod frame;
 mod input;
 mod result;
+mod stream;
+mod tally;
 mod worker;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -180,6 +182,8 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<engine::Engine>()?;
     module.add_class::<result::PyCall>()?;
     module.add_class::<result::PyFacts>()?;
+    module.add_class::<tally::PyTally>()?;
+    module.add_class::<stream::PyStream>()?;
     module.add_class::<worker::Token>()?;
     module.add_class::<worker::Receipt>()?;
     module.add_class::<worker::Completion>()?;

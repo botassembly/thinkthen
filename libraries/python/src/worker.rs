@@ -18,6 +18,9 @@ use pyo3::prelude::*;
 use pyo3::types::PyBool;
 use thinkthen::{CallOptions, CancelToken, Error, ErrorKind, RecordObservation};
 
+mod stream_receipt;
+pub(crate) use stream_receipt::{finish_stream_receipt, stream_receipt};
+
 use crate::result::{Completed, Observations, python_details};
 use crate::result::{OwnedFacts, python_owned_facts};
 use crate::{caught, defect, raise, raised};
@@ -120,7 +123,7 @@ struct Terminal {
 }
 
 #[derive(Default)]
-struct ReceiptState(Mutex<Option<Terminal>>, Condvar);
+pub(crate) struct ReceiptState(Mutex<Option<Terminal>>, Condvar);
 
 impl ReceiptState {
     fn finish(&self, result: Terminal) {
@@ -237,7 +240,7 @@ impl Receipt {
     }
 }
 
-fn attach_receipt(py: Python<'_>, error: &PyErr, receipt: Option<&Arc<ReceiptState>>) {
+pub(crate) fn attach_receipt(py: Python<'_>, error: &PyErr, receipt: Option<&Arc<ReceiptState>>) {
     if let Some(receipt) = receipt
         && let Ok(value) = Py::new(py, Receipt(Arc::clone(receipt)))
     {
@@ -303,6 +306,22 @@ where
     E: WorkerError,
     F: FnOnce(CallOptions<'_>) -> Result<Completed<T>, E> + Send + 'static,
 {
+    run_tallied(py, controls, None, job)
+}
+
+/// Observe one call and add its complete or partial core facts to the
+/// caller's explicit tally, without rebuilding counts in the host.
+pub(crate) fn run_tallied<T, E, F>(
+    py: Python<'_>,
+    controls: Controls,
+    tally: Option<thinkthen::Tally>,
+    job: F,
+) -> PyResult<Completed<T>>
+where
+    T: Send + 'static,
+    E: WorkerError,
+    F: FnOnce(CallOptions<'_>) -> Result<Completed<T>, E> + Send + 'static,
+{
     let observations = Observations::default();
     let on_worker = observations.clone();
     let state = Arc::new(ReceiptState::default());
@@ -312,8 +331,19 @@ where
         py,
         controls,
         move |options| {
+            let started = tally.as_ref().map(thinkthen::Tally::start);
             let observer = |event: RecordObservation<'_>| on_worker.push(event);
-            job(options.observe(&observer))
+            let result = job(options.observe(&observer));
+            if let Some(started) = started {
+                let facts = match &result {
+                    Ok(done) => done.facts.core.clone(),
+                    Err(error) => error.facts().and_then(|facts| facts.core),
+                };
+                if let Some(facts) = facts.as_ref() {
+                    started.finish(facts).map_err(E::from)?;
+                }
+            }
+            result
         },
         move |outcome| {
             let details = final_observations.snapshot();

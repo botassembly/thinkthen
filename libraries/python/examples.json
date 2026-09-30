@@ -13,7 +13,7 @@
       "expected": "None"
     },
     "decide_many": {
-      "python": "tt.decide_many(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"]).value",
+      "python": "tt.decide(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"]).value",
       "expected": "[True, True]"
     },
     "choose": {

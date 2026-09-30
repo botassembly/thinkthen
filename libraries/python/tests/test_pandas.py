@@ -37,7 +37,7 @@ def test_portable_max_content_cuts_in_public_column_and_frame_shapes(backend, tm
             engine = tt.Engine(cache=False, throttle=1)
             if shape == 'pandas_series':
                 source = pd.Series(texts, index=[9, 5, 7, 3, 1], name='body', dtype='string[pyarrow]')
-                call = engine.decide_many({corpus['question']!r}, source)
+                call = engine.decide({corpus['question']!r}, source)
                 values = call.value.to_list()
                 order = call.value.index.to_list()
             else:
@@ -91,8 +91,6 @@ SETUP = f"""
     def plain(values):
         return [None if value is pd.NA else value for value in values]
     def listed(verb, asked, rows):
-        if verb == "decide_many":
-            return engine.decide_many(asked, rows).value
         return [getattr(engine, verb)(asked, text).value for text in rows]
     def names(rows):
         return [[{{"text": one.text, "start": one.start, "end": one.end, "length": one.length,
@@ -220,7 +218,7 @@ def test_each_verb_answers_a_series_as_its_list_does(backend, tmp_path):
         "string[pyarrow]", "object", "category"]
     for dtype in offered:
         series = pd.Series(texts, dtype=dtype, name="body")
-        for verb, asked, want in VERBS + (("decide_many", late, "boolean"),):
+        for verb, asked, want in VERBS:
             before = sent()
             got = getattr(engine, verb)(asked, series).value
             sends = sent() - before
@@ -230,8 +228,7 @@ def test_each_verb_answers_a_series_as_its_list_does(backend, tmp_path):
     offered = (["str"] if THREE else []) + ["string[pyarrow]", "object", "category"]
     assert printed.splitlines() == [
         f"{dtype} {verb} True body True True {sends}" for dtype in offered
-        for verb, sends in (("decide", 3), ("choose", 3), ("score", 3), ("tag", 3),
-                            ("decide_many", 3))]
+        for verb, sends in (("decide", 3), ("choose", 3), ("score", 3), ("tag", 3))]
 
 
 def test_a_failed_question_keeps_its_dtype_and_a_separate_marker(backend, tmp_path):
@@ -290,7 +287,7 @@ def test_the_callers_index_survives(backend, tmp_path):
     refund = tt.question(**case["question"])
     records = pd.Series([one["evidence"] for one in case["exchanges"]], index=[50, 40, 30, 20, 10])
     base = os.environ["THINKTHEN_BASE_URL"].replace("/generic/", "/case/27-decide-many/")
-    for verb in ("decide", "decide_many"):
+    for verb in ("decide",):
         got = getattr(tt.Engine(base_url=base, batch=1, cache=False), verb)(refund, records).value
         print("case 27", verb, got.index.equals(records.index), got.tolist())
     indexes = {"labels": [5, 7, 9], "rows": pd.MultiIndex.from_tuples(
@@ -300,7 +297,7 @@ def test_the_callers_index_survives(backend, tmp_path):
         series = pd.Series(rows, index=index, name="body", dtype=object)
         frame = series.to_frame()
         joins = kind in ("labels", "rows")
-        for verb, asked, _ in VERBS + (("decide_many", late, "boolean"),):
+        for verb, asked, _ in VERBS:
             got = getattr(engine, verb)(asked, series).value
             joined = frame.join(got.rename("x"))["x"].notna().all() if joins else "-"
             print(kind, verb, got.index.equals(series.index), got.name,
@@ -316,9 +313,9 @@ def test_the_callers_index_survives(backend, tmp_path):
         print(kind, "recognize", found.index.equals(frame.index),
               found["names"].tolist() == names(rows), sent() - before > 0)
     """, child_env(backend, tmp_path))
-    verbs = ("decide", "choose", "score", "tag", "decide_many")
+    verbs = ("decide", "choose", "score", "tag")
     wanted = [f"case 27 {verb} True [True, False, True, True, False]"
-              for verb in ("decide", "decide_many")]
+              for verb in ("decide",)]
     for kind in ("labels", "rows", "repeated", "empty"):
         joined = "True" if kind in ("labels", "rows") else "-"
         wanted += [f"{kind} {verb} True body True {joined}" for verb in verbs]
@@ -388,7 +385,6 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
     said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body").value)
     said(lambda: engine.annotate(form, frame, on=["body"]).value)
     said(lambda: engine.recognize(frame.assign(names=1), kinds=["x"], on="body").value)
-    said(lambda: engine.decide_many(late, pd.Index(texts)).value)
     said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body").value)
     """, child_env(backend, tmp_path))
     route = ["UsageError the column's Arrow format is 'l', not text 0"] if THREE else [
@@ -408,7 +404,6 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
         "UsageError recognize with on= takes no relations; ask them of one text 0",
         "UsageError on= takes one column label, such as \"body\" 0",
         "UsageError the frame already has a column named 'names'; rename it first 0",
-        "UsageError thinkthen reads a pandas Series, not a pandas Index; pass a pandas Series 0",
         "UsageError annotate with on= takes a Polars or pandas DataFrame; "
         "a list of str takes no on= 0",
     ]
@@ -428,7 +423,7 @@ def test_a_series_runs_at_the_lists_throttle(backend, tmp_path):
     rows = [f"note {{n}}" for n in range(200)]
     def timed(records):
         began = time.monotonic()
-        answers = engine.decide_many(late, records).value
+        answers = engine.decide(late, records).value
         return time.monotonic() - began, plain(list(answers))
     wall, answers = timed(rows)
     print(wall)
@@ -454,7 +449,7 @@ def test_a_series_stops_at_the_held_request(tmp_path):
         try:
             child = start(SETUP + "    engine = tt.Engine(throttle=8, batch=1, cache=False)\n"
                           "    rows = [f'note {n}' for n in range(20)]\n"
-                          f"    engine.decide_many(late, {records}).value\n",
+                          f"    engine.decide(late, {records}).value\n",
                           child_env(backend, tmp_path, "arm/held"))
             assert backend.wait(1) == 1
             time.sleep(0.3)

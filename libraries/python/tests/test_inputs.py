@@ -37,20 +37,20 @@ def test_containers_are_refused_before_any_send(backend, tmp_path):
     assert backend.count() == 0
 
 
-def test_every_record_is_read_before_the_first_send(backend, tmp_path):
-    """Decision 7: a bad item names its index, and a generator is read whole,
-    so a bad last item stops the call before its first record is sent."""
+def test_eager_records_are_read_before_the_first_send(backend, tmp_path):
+    """A bad item in an eager ordered input names its index before sending.
+    A true iterator is lazy and has a separate stream boundary proof."""
     printed = run(REFUSED + """
-    said(lambda: tt.decide_many(late, (text for text in ["a", "b", 3])).value)
-    said(lambda: tt.decide_many(late, ["a", "\\ud800"]).value)
-    said(lambda: tt.decide_many(late, "one text").value)
+    said(lambda: tt.decide(late, ["a", "b", 3]).value)
+    said(lambda: tt.decide(late, ["a", "\\ud800"]).value)
+    said(lambda: tt.filter(late, "one text").value)
     said(lambda: tt.decide(late, b"bytes").value)
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         "UsageError record 2 is not a str",
         "UsageError record 1 holds a lone surrogate, which is not Unicode text",
-        "UsageError the records are a list of str, not one str",
-        "UsageError the evidence is a str",
+        "UsageError filter reads records; pass a list or iterator",
+        "UsageError the input is text, an ordered collection, a column, or an iterator",
     ]
     assert backend.count() == 0
 

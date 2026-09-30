@@ -82,7 +82,7 @@ def test_a_column_runs_at_the_lists_throttle(backend, tmp_path):
     printed = run(SETUP + """
     def timed(records):
         began = time.monotonic()
-        answers = engine.decide_many(late, records).value
+        answers = engine.decide(late, records).value
         return time.monotonic() - began, list(answers)
     listed, series = timed(texts), timed(pl.Series(texts))
     print(listed[0], series[0], listed[1] == series[1])
@@ -106,7 +106,7 @@ def test_a_column_holds_the_throttle_in_flight(tmp_path):
     answers = []
     def ask(group):
         rows = pl.Series(group) if {shape!r} == "series" else group
-        call = engine.decide_many(late, rows)
+        call = engine.decide(late, rows)
         values = call.value.to_list() if hasattr(call.value, "to_list") else call.value
         answers.append((values, call.facts.requests_sent))
     held = [threading.Thread(target=ask, args=(group,)) for group in groups]

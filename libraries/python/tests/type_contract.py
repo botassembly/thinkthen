@@ -1,6 +1,6 @@
 """A bounded mypy fixture for the installed public stub."""
 
-from typing import assert_type
+from typing import Any, assert_type
 from enum import Enum
 from typing import Literal
 
@@ -22,9 +22,12 @@ def check(engine: tt.Engine, question: tt.Question, error: tt.ThinkThenError,
                            ["one"])
     assert_type(call, tt.Call[list[AnnotatedRow]])
     assert_type(call.value[0]["open"], tt.AnnotatedValue)
-    assert_type(tt.choose("Which?", "one", options=["a", "b"]),
-                tt.Call[str | None | tt.Column])
-    assert_type(engine.choose_many("Which?", ["one"], options=Labels),
+    assert_type(tt.choose("Which?", "one", options=["a", "b"]), tt.Call[str | None])
+    assert_type(engine.choose("Which?", ["one"], options=Labels),
                 tt.Call[list[str | None]])
-    assert_type(engine.choose_many("Which?", ["one"], options=Literal["first", "second"]),
+    assert_type(engine.choose("Which?", ["one"], options=Literal["first", "second"]),
                 tt.Call[list[str | None]])
+    judge = engine.decide("Ready?")
+    assert_type(judge, tt.Judge[bool | None])
+    assert_type(judge(iter(["one"])), tt.Stream[bool | None])
+    assert_type(tt.plan(judge, ["one"]), dict[str, Any])

@@ -555,3 +555,8 @@ The [2026-09-29 source preparation](../records/2026-09-29-sql-usability-preparat
 ## Remaining SQL error-format acceptance
 
 Review of DuckDB0286 at2463436c2 found ordinary ThinkThen usage errors without ADR0105 section8’s `(retryable: yes|no)` suffix. The accepted ADR governs this change; its exact plain removal messages remain exceptions. DuckDB0286's reviewed correction is landed. The [SQLite error-format Quick Fix](../records/qf-sqlite-error-format.md) is now accepted at `148a6ae07b7f55b060e0da452a75ccc0bd26ff4f`, including strict shared retryability parsing and installed proof against landed core0302. PostgreSQL0285 retains its existing suffix under its own installed-host record. Host-native SQL syntax and binding errors remain the host’s errors. The shared error catalog, final SQL examples and combined qualification remain separate work; this SQLite landing does not close the umbrella issue.
+
+
+## Functional Python stage completed
+
+Tickets0292/0293/0294 are jointly landed after final High ACCEPT `86ae7dce3fb98163d6fdbed7acff0affd74880e6`. The [build record](../records/0292-python-judges-build.md) maps immutable judges, caller-fed native streams and the core Tally to their selected source/installed proof and corrections. Python frame namespaces/accessors0295/0296, the remaining door rollout and shared examples remain separate; this stage does not close the umbrella issue.

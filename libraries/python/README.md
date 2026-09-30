@@ -14,12 +14,12 @@ complaints = tt.filter("Is this a complaint?", reviews).value
 rows = tt.annotate("form.json", reviews).value  # one dict per review
 
 engine = tt.Engine(throttle=8, batch="max", cache=False)
-engine.decide_many(refund, reviews).value
-engine.decide_many(refund, reviews, batch=1).value  # old one-record requests
-engine.choose_many("Which team?", reviews, options=["billing", "shipping"]).value
+engine.decide(refund, reviews).value
+engine.decide(refund, reviews, batch=1).value  # one-record requests
+engine.choose("Which team?", reviews, options=["billing", "shipping"]).value
 ```
 
-`None` means "not sure". A call reads one `str`, or a list, tuple, or other iterable of `str`, whole before its first request. `examples.json` holds one checked example for each function.
+`None` means "not sure". Omit the input to capture an immutable `Judge`, then apply it to text, an ordered eager collection, a column, or a true iterator (`iter(x) is x`) for a lazy `Stream`. An eager call reads the whole input before its first request. A stream pulls its source on the calling thread; `close()` or a context exit stops scheduling. A slow half-full iterator can wait for a packed request; set `batch=1` for a live source. `Stream` has no `.value`; iterate it. `tt.plan(judge, rows)` reports the request plan without a key or network. Pass `deadline_ms` and `token` when applying a judge. `tt.Tally()` combines finished call facts explicitly through `tally=`, separately from process `tt.usage()`. `examples.json` holds one checked example for each function.
 
 ### Typed labels and annotation rows
 
@@ -44,7 +44,7 @@ The stub types an annotation row as `dict[str, AnnotatedValue]`, where a value m
 
 `thinkthen[pydantic]` is optional. Import `thinkthen.pydantic` only to use a `BaseModel` class with ordered `Field(description=...)` labels or question fields, `Annotated[Literal[...], Field(...)]` labels, or `row_model(question_set)`. A question-set model field uses `bool | None`, `Literal[...] | None`, `float`, or `list[Literal[...]]`; its Field description is the question text, and `json_schema_extra` carries existing question-file settings. `row_model` accepts a validated model, version-one dict, or file and returns a strict Pydantic model for explicit `Row.model_validate(call.value[0])`. It does not alter the returned row. Ordinary `import thinkthen` and core calls import no Pydantic package.
 
-`decide`, `decide_many`, `choose`, `score`, and `tag` also read a Polars `Series` or another Arrow column in place, with no copy, in one engine call. A null input stays null in its original place and sends no request. A `Series` gets a `Series` back, and any other column gets a list. `annotate` and `recognize` read a Polars `DataFrame` with `on=`, the name of the text column:
+`decide`, `choose`, `score`, and `tag` also read a Polars `Series` or another Arrow column in place, with no copy, in one engine call. A null input stays null in its original place and sends no request. A `Series` gets a `Series` back, and any other column gets a list. `annotate` and `recognize` read a Polars `DataFrame` with `on=`, the name of the text column:
 
 ```python
 df = tt.annotate("form.json", df, on="body").value  # one new column per question
@@ -53,7 +53,7 @@ names = tt.recognize(df, kinds=["product"], on="body").value  # row, text, start
 
 In a Polars or pandas frame, each answer column keeps its question type: nullable boolean for `decide`, string for `choose`, float for `score`, and a list of strings for `tag`. The last column, `failed`, is null when every question answered. A partial row holds a map from each failed question to its full `{"failed":{"kind":"backend","cause":...}}` marker. pandas uses a sparse dict; Polars uses a fixed-field Struct with null sibling fields. A null answer with no marker means not sure for `decide` or `choose`. A successful empty tag is `[]`. A question named `failed` or an input frame with that column is refused before any request.
 
-A pandas `Series` works in the same five verbs and comes back as a pandas `Series` with the caller's index and name. `decide` and `decide_many` give `boolean`, `score` gives `Float64`, `choose` gives `string`, and `tag` gives `object` with one list of labels per row. "Not sure" is `pd.NA`, or `None` in `tag`. A pandas `DataFrame` with `on=` comes back from `annotate` with one new column per question and `failed`, and from `recognize` with a new `names` column: one list per row of `dict` with `text`, `start`, `end`, `length`, `kind`, and `strength`. The index stays the caller's. A null in the text column yields null answer cells without a request for that row. A repeated or missing `on` label, `MultiIndex` columns, and a question named as a column are refused before any request. The answer keeps the input's name, so rename it to add it as a column:
+A pandas `Series` works in the same four verbs and comes back as a pandas `Series` with the caller's index and name. `decide` gives `boolean`, `score` gives `Float64`, `choose` gives `string`, and `tag` gives `object` with one list of labels per row. "Not sure" is `pd.NA`, or `None` in `tag`. A pandas `DataFrame` with `on=` comes back from `annotate` with one new column per question and `failed`, and from `recognize` with a new `names` column: one list per row of `dict` with `text`, `start`, `end`, `length`, `kind`, and `strength`. The index stays the caller's. A null in the text column yields null answer cells without a request for that row. A repeated or missing `on` label, `MultiIndex` columns, and a question named as a column are refused before any request. The answer keeps the input's name, so rename it to add it as a column:
 
 ```python
 df = df.join(tt.decide("Is it late?", df["body"]).value.rename("late"))
@@ -61,7 +61,7 @@ df = df.join(tt.decide("Is it late?", df["body"]).value.rename("late"))
 
 What is fast: a pandas 2 column crosses at list speed and still makes one engine call at the full throttle. A pandas 3 `str` or `string[pyarrow]` column crosses zero-copy. A categorical column crosses at list speed on both versions. `astype("string[pyarrow]")` makes a pandas 3 object column zero-copy, and it gives pandas 2 no fast path. The gate runs pandas 3.0.6 and 2.3.3. The oldest pandas the 2026-09-21 checks ran is 2.2.3. The package never imports pandas.
 
-`filter`, `rank`, `find`, and `relate` read lists only. `decide_many`, `filter`, `rank`, `choose_many`, `score_many`, and `tag_many` accept `batch=` and shared nonblank `context=`. Eligible column calls accept `batch=`; `decide` over a text column also accepts `context=`. `annotate` accepts `batch=` for lists and frames but no shared context. A scalar text, `find`, `recognize`, and `relate` do not take shared context. The optional extra `thinkthen[polars]` names the tested Polars floor. The package never imports Polars itself. A warm Polars pool hangs a forked child, so start children with `spawn`.
+`filter`, `rank`, `find`, and `relate` read lists only. `decide`, `filter`, `rank`, `choose`, `score`, and `tag` accept `batch=` and shared nonblank `context=`. Eligible column calls accept `batch=`; `decide` over a text column also accepts `context=`. `annotate` accepts `batch=` for lists and frames but no shared context. A scalar text, `find`, `recognize`, and `relate` do not take shared context. The four old `*_many` names are removed with a migration message. The optional extra `thinkthen[polars]` names the tested Polars floor. The package never imports Polars itself. A warm Polars pool hangs a forked child, so start children with `spawn`.
 
 The module functions use one engine that the environment configures: `THINKTHEN_BASE_URL`, `THINKTHEN_CACHE`, `THINKTHEN_BATCH`, and the rest. `tt.Engine` takes `base_url`, `model`, `throttle`, `batch`, `max_requests`, `max_requests_total`, `max_request_bytes`, `cache`, `timeout`, `max_retries`, `profile`, `record`, and `replay` as keywords and reads the environment for the rest. The key comes only from `THINKTHEN_API_KEY`. The throttle is the number of requests in flight. It is one per loaded copy of this package: the first explicit throttle sets it, and a second, different one raises `UsageError`.
 
