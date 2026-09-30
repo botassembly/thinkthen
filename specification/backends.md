@@ -39,7 +39,7 @@ The key is read from `THINKTHEN_API_KEY`. No option names another variable.
 
 - A key variable that is absent or empty is exit code 4. An empty variable counts as absent. The message names the variable and never a value.
 - No key appears in a plan, a result, a recording, a log line, or an error.
-- A key with a carriage return or line feed is a usage error before any send. The fixed message repeats no part of the key.
+- A key holding a control character, such as a line feed, a tab, an escape, or DEL, is a usage error before any send. It says `the API key contains a control character` and repeats no part of the key.
 - **The key goes to the address the user named.** A nonblank effective key that occurs verbatim anywhere in the resolved posting URL is refused first with `the backend address contains the API key; keep the key out of the address`. The check compares exact UTF-8 bytes without decoding or rewriting the URL. Otherwise a run pointed at another address carries the key of `THINKTHEN_API_KEY` and nothing else.
 
 ## The address

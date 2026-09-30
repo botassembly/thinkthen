@@ -276,7 +276,7 @@ where
         }
     };
     if !cancel.has_zero_send_limit() {
-        if let Err(error) = key.check_line_break()
+        if let Err(error) = key.check_control()
             && recorder.unbound_empty().map_err(E::from)?
         {
             if let Some(stop) = cancel.stop() {

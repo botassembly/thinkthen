@@ -34,9 +34,9 @@ impl Key {
         &self.0
     }
 
-    pub(crate) fn check_line_break(&self) -> Result<(), Error> {
-        if self.0.bytes().any(|byte| byte == b'\n' || byte == b'\r') {
-            Err(Error::Usage("the API key contains a line break"))
+    pub(crate) fn check_control(&self) -> Result<(), Error> {
+        if self.0.chars().any(char::is_control) {
+            Err(Error::Usage("the API key contains a control character"))
         } else {
             Ok(())
         }
@@ -254,7 +254,7 @@ impl Client {
         hooks: (impl Fn(bool), impl Fn(), impl Fn()),
     ) -> Result<HttpAnswer, Error> {
         let (before_attempt, after_reservation, marked) = hooks;
-        exchange.key.check_line_break()?;
+        exchange.key.check_control()?;
         let gates = backoff::process_gates(cancel)?;
         let mut wait = exchange.retry_wait;
         let mut retries = 0;

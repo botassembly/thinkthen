@@ -65,7 +65,10 @@ fn a_line_break_in_the_key_fails_locally_without_a_send() {
     assert_eq!(output.status.code(), Some(2));
     assert!(listener.requests().is_empty());
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("API key contains a line break"), "{stderr}");
+    assert!(
+        stderr.contains("API key contains a control character"),
+        "{stderr}"
+    );
     assert!(!stderr.contains("first"));
     assert!(!stderr.contains("second"));
 }
