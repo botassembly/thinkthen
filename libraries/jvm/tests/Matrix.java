@@ -1,16 +1,19 @@
-import thinkthen.ResultEnvelope;
+import thinkthen.Json;
 import thinkthen.Door;
 import thinkthen.ProbeDoor;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Matrix {
     static byte[] b(String value) { return value.getBytes(StandardCharsets.UTF_8); }
     static void check(boolean truth,String message) { if(!truth) throw new AssertionError(message); }
+    static long n(Map<String,Object> facts,String name) { return ((Number)facts.get(name)).longValue(); }
     static Door.NativeFailure failed(Runnable action,int code) {
         try { action.run(); } catch(Door.NativeFailure ex) {
             check(ex.failure.code()==code,"code " +ex.failure);
@@ -55,17 +58,17 @@ public class Matrix {
                 catch(Door.NativeFailure ex) {check(ex.failure.code()==2||ex.failure.code()==3,"backend failure code "+ex.failure);}
             }
             Door.TypedResult<Door.Answer> noUsage=engine.decide("Is it?",b("post-failure-recovery"));
-            check(noUsage.value().outcome()==1 && noUsage.facts().records()==1 && noUsage.facts().requestsSent()==1 &&
-                noUsage.facts().inputTokens()==null && noUsage.facts().outputTokens()==null && "jev-1.13.0".equals(noUsage.facts().model()),"reported model without usage");
+            check(noUsage.value().outcome()==1 && n(noUsage.facts(),"records")==1 && n(noUsage.facts(),"requests_sent")==1 &&
+                !noUsage.facts().containsKey("input_tokens") && !noUsage.facts().containsKey("output_tokens") && "jev-1.13.0".equals(noUsage.facts().get("model")),"reported model without usage");
             check(engine.decide("Is it?",b("maximum-deadline"),4294967295000L,null).value().outcome()==1,"maximum deadline");
             Door.TypedResult<Door.Answer[]> empty=engine.decideMany("Is it?",new byte[0][], -1,null);
-            check(empty.value().length==0 && empty.facts().records()==0 && empty.facts().requestsSent()==0 && empty.facts().model()==null,"empty bulk facts");
+            check(empty.value().length==0 && n(empty.facts(),"records")==0 && n(empty.facts(),"requests_sent")==0 && empty.facts().get("model")==null,"empty bulk facts");
             Door.TypedResult<Door.Answer[]> bulk=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("third")},-1,null);
             Door.Answer[] rows=bulk.value();
-            check(bulk.facts().records()==3 && bulk.facts().requestsSent()>=1,"typed bulk facts");
+            check(n(bulk.facts(),"records")==3 && n(bulk.facts(),"requests_sent")>=1,"typed bulk facts");
             check(rows.length==3 && rows[0].probability()==.9 && rows[1].probability()==.1 && rows[2].probability()==.6,"reordered bulk "+Arrays.toString(rows));
             Door.TypedResult<Door.Answer[]> cached=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("third")},-1,null);
-            check(cached.facts().records()==3 && cached.facts().cacheAnswers()==3 && cached.facts().requestsSent()==0 &&
+            check(n(cached.facts(),"records")==3 && n(cached.facts(),"cache_answers")==3 && n(cached.facts(),"requests_sent")==0 &&
                 cached.value().length==3 && cached.value()[0].probability()==.9 && cached.value()[1].probability()==.1 && cached.value()[2].probability()==.6,
                 "identical bulk answers each question from the cache");
             Door.Answer[] repeated=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("first")},-1,null).value();
@@ -73,32 +76,34 @@ public class Matrix {
             for(int i=0;i<requests.length;i++) {
                 String raw=engine.call(requests[i]);
                 if(i==1) System.out.println("REPIN_RESULT_ENVELOPE_SAMPLE " + raw);
-                String answer=ResultEnvelope.value(raw);
+                Map<String,Object> envelope=Json.parseObject(raw);
+                check(envelope.get("facts") instanceof Map,"facts object "+raw);
+                Object value=envelope.get("value");
+                String answer=String.valueOf(value);
                 switch(i) {
-                    case 0 -> check(answer.contains("\"schema\":\"thinkthen.result/1\"") && answer.contains("\"value\":true"),"details "+answer);
-                    case 1 -> check(answer.equals("\"first\""),"choose "+answer);
-                    case 2 -> check(answer.equals("[\"first\",\"second\"]"),"tag "+answer);
-                    case 3 -> check(Double.parseDouble(answer)==.1,"score "+answer);
+                    case 0 -> check(value instanceof Map<?,?> row && "thinkthen.result/1".equals(row.get("schema")) && Boolean.TRUE.equals(row.get("value")),"details "+answer);
+                    case 1 -> check("first".equals(value),"choose "+answer);
+                    case 2 -> check(List.of("first","second").equals(value),"tag "+answer);
+                    case 3 -> check(((Number)value).doubleValue()==.1,"score "+answer);
                     case 4 -> check(answer.contains("filter-one") && answer.contains("filter-two"),"filter "+answer);
                     case 5 -> check(answer.contains("rank-one") && answer.contains("rank-two"),"rank "+answer);
                     case 6 -> check(answer.contains("find-one"),"find "+answer);
-                    case 7,11 -> check(answer.contains("\"check\":true"),"annotate "+answer);
-                    case 8 -> check(answer.contains("\"length\"") && answer.contains("\"text\""),"recognize shape "+answer);
-                    case 9 -> check(answer.contains("\"edges\""),"relate "+answer);
-                    case 10 -> check(answer.equals("null"),"find none "+answer);
+                    case 7,11 -> check(value instanceof List<?> list && list.get(0) instanceof Map<?,?> row && Boolean.TRUE.equals(row.get("check")),"annotate "+answer);
+                    case 8 -> check(answer.contains("length=") && answer.contains("text="),"recognize shape "+answer);
+                    case 9 -> check(value instanceof Map<?,?> edges && edges.containsKey("edges"),"relate "+answer);
+                    case 10 -> check(value==null,"find none "+answer);
                     default -> throw new AssertionError("unmapped JSON case "+i);
                 }
             }
-            Door.TypedResult<String> namedCall=engine.recognize("{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}",b("John Smith"));
-            String named=namedCall.value();
-            check(namedCall.facts().records()==1 && namedCall.facts().requestsSent()>=1,"typed recognize facts");
-            check(named.contains("\"length\""),"typed recognize shape "+named);
-            String defaultKind=engine.recognize("{\"version\":1,\"recognize\":{}}",b("Ada Lovelace")).value();
-            check(defaultKind.contains("\"kind\":\"ENTITY\""),"default ENTITY kind "+defaultKind);
-            Door.TypedResult<String> edgesCall=engine.relate("{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}",new byte[][]{b("{\"name\":\"Third\",\"kind\":\"alert\"}"),b("{\"name\":\"Fourth\",\"kind\":\"alert\"}")});
-            String edges=edgesCall.value();
-            check(edgesCall.facts().records()==1 && edgesCall.facts().requestsSent()>=1,"typed relate facts");
-            check(edges.contains("\"edges\""),"typed relate");
+            Door.TypedResult<Map<String,Object>> namedCall=engine.recognize("{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}",b("John Smith"));
+            String named=String.valueOf(namedCall.value());
+            check(n(namedCall.facts(),"records")==1 && n(namedCall.facts(),"requests_sent")>=1,"typed recognize facts");
+            check(named.contains("length="),"typed recognize shape "+named);
+            String defaultKind=String.valueOf(engine.recognize("{\"version\":1,\"recognize\":{}}",b("Ada Lovelace")).value());
+            check(defaultKind.contains("kind=ENTITY"),"default ENTITY kind "+defaultKind);
+            Door.TypedResult<Map<String,Object>> edgesCall=engine.relate("{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}",new byte[][]{b("{\"name\":\"Third\",\"kind\":\"alert\"}"),b("{\"name\":\"Fourth\",\"kind\":\"alert\"}")});
+            check(n(edgesCall.facts(),"records")==1 && n(edgesCall.facts(),"requests_sent")>=1,"typed relate facts");
+            check(edgesCall.value().containsKey("edges"),"typed relate");
             String usage=engine.call("{\"usage\":true}"); check(usage.contains("requests_sent"),"usage");
             try {engine.decide("Is it?\0rest",b("x"));throw new AssertionError("NUL accepted");} catch(IllegalArgumentException expected) {}
             try {engine.call("{}\0rest");throw new AssertionError("NUL accepted");} catch(IllegalArgumentException expected) {}

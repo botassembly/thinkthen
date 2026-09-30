@@ -44,6 +44,10 @@ Branch `ticket/0314-s4-remaining-ports`. `thinkthen_plan_json` and `libraries/BI
 
 Branch `ticket/0314-s4-remaining-ports`. Go gains `Engine.Plan`, and C++ gains `tt::plan`, both over `thinkthen_plan_json`. C++ `call`, `recognize` and `relate` now take a deadline and cancel token through their `_opts` twins; Go's context deadline already reached every `_opts` call. Both constructors already passed `max_requests_total` through unchanged, and a zero cap refuses before sending. Neither port offers a probability option on score or tag, so the refusal is vacuous for both. Ticket 0314's slice 4b section holds the evidence.
 
+## C#, JVM and Dart build (0314 slice 4c)
+
+Branch `ticket/0314-s4-remaining-ports`. C# gains `Engine.Plan`, the JVM gains `Door.plan` and Dart gains `plan`, each over `thinkthen_plan_json`. C# `RelateWithOptions`, JVM `recognize` and `relate` overloads and Dart's `call`, `recognize` and `relate` now take a deadline and cancel token; the other sending calls already did. All three constructors already passed `max_requests_total` through unchanged, and a zero cap refuses before sending. None offers a probability option on score or tag, so the refusal is vacuous for all three. Ticket 0314's slice 4c section holds the evidence.
+
 ## What the build taught us
 
 - The C door already had most of this ticket's per-call surface. `deadline_ms` rides every `_opts` export, and `max_requests_total` is an engine key of `thinkthen_engine_new_with`. So the C bridge adds only the plan export. The port families still add deadlines where a wrapper hard-codes `THINKTHEN_NO_DEADLINE`, and pass the cap through their constructor settings.

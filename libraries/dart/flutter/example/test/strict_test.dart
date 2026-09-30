@@ -14,8 +14,8 @@ void main() {
     final answer = ThinkThenFlutter(library).decide('Is it?', 'flutter-facade');
     expect(answer.value.outcome, Outcome.yes);
     expect(answer.value.probability, .9);
-    expect(answer.facts.records, 1);
-    expect(answer.facts.requestsSent, 1);
+    expect(answer.facts['records'], 1);
+    expect(answer.facts['requests_sent'], 1);
     print('FLUTTER_FACADE_PASS');
     await tester.runAsync(() async => strict.main([library]));
   });

@@ -9,20 +9,22 @@ export 'package:thinkthen_dart/thinkthen_dart.dart'
         Door,
         DoorFailure,
         AnswerValue,
-        CallFacts,
-        CallResult,
         Outcome,
         ErrorKind,
-        Annotation,
+        AnnotatedField,
+        UnresolvedField,
         AnswerField,
-        Recognition,
-        Relations;
+        FailedField,
+        readField;
 
 class ThinkThenFlutter {
   final Door door;
   ThinkThenFlutter(String nativeLibraryPath) : door = Door(nativeLibraryPath);
 
-  CallResult<AnswerValue> decide(String question, String text) {
+  ({AnswerValue value, Map<String, Object?> facts}) decide(
+    String question,
+    String text,
+  ) {
     final Pointer<Void> engine = door.create();
     try {
       return door.decide(engine, question, text);

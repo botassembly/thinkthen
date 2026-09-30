@@ -62,94 +62,44 @@ void ownedWorker(List<Object> args) {
   final engine = Pointer<Void>.fromAddress(args[2] as int);
   final bulk = args[3] as bool;
   try {
-    final CallResult<dynamic> result = bulk
-        ? door.many(engine, 'Is it?', [
-            'hold-owned-bulk-first',
-            'hold-owned-bulk-second',
-          ])
-        : door.decide(engine, 'Is it?', 'hold-owned-scalar');
-    send.send(
-        [result.facts, bulk ? (result.value as List<AnswerValue>).length : 1]);
+    final (facts, count) = bulk
+        ? (
+            door.many(engine, 'Is it?', [
+              'hold-owned-bulk-first',
+              'hold-owned-bulk-second',
+            ]).facts,
+            2
+          )
+        : (door.decide(engine, 'Is it?', 'hold-owned-scalar').facts, 1);
+    send.send([facts, count]);
   } catch (e) {
     send.send(['failure', '$e']);
   }
 }
 
-void strictFactsDecoder() {
-  final valid = CallFacts.parse({
-    'records': 1,
-    'requests_sent': 1,
-    'cache_answers': 0,
-    'seconds': 0.25,
-    'model': 'fixture',
-  });
-  require(
-      valid.records == 1 &&
-          valid.requestsSent == 1 &&
-          valid.seconds == 0.25 &&
-          valid.model == 'fixture' &&
-          valid.inputTokens == null &&
-          valid.outputTokens == null,
-      'facts optional usage absent with model retained');
-  for (final bad in <Map<String, Object?>>[
-    {'requests_sent': 1, 'cache_answers': 0, 'seconds': 0},
-    {'records': null, 'requests_sent': 1, 'cache_answers': 0, 'seconds': 0},
-    {
-      'records': 1,
-      'requests_sent': 1,
-      'cache_answers': 0,
-      'seconds': 0,
-      'input_tokens': null
-    },
-    {
-      'records': 1,
-      'requests_sent': 1,
-      'cache_answers': 0,
-      'seconds': 0,
-      'model': null
-    },
-    {'records': -1, 'requests_sent': 1, 'cache_answers': 0, 'seconds': 0},
-    {'records': 1.5, 'requests_sent': 1, 'cache_answers': 0, 'seconds': 0},
-    {'records': 1, 'requests_sent': 1, 'cache_answers': 0, 'seconds': -0.1},
-    {
-      'records': 1,
-      'requests_sent': 1,
-      'cache_answers': 0,
-      'seconds': double.infinity
-    },
-  ]) {
-    try {
-      CallFacts.parse(bad);
-      throw StateError('invalid facts accepted');
-    } on FormatException {/* expected */}
-  }
-  print('CALL_FACTS_STRICT_DECODER_PASS');
-}
-
 Future<void> ownedFactsCase(Door door, String library) async {
   final engine = door.create();
-  CallFacts? retainedNoUsage, retainedScalar, retainedBulk;
+  Map? retainedNoUsage, retainedScalar, retainedBulk;
   try {
-    strictFactsDecoder();
     final noUsage = door.decide(engine, 'Is it?', 'without-usage');
     retainedNoUsage = noUsage.facts;
     require(
         noUsage.value.outcome == Outcome.yes &&
-            noUsage.facts.records == 1 &&
-            noUsage.facts.requestsSent == 1 &&
-            noUsage.facts.model == 'jev-1.13.0' &&
-            noUsage.facts.inputTokens == null &&
-            noUsage.facts.outputTokens == null,
+            noUsage.facts['records'] == 1 &&
+            noUsage.facts['requests_sent'] == 1 &&
+            noUsage.facts['model'] == 'jev-1.13.0' &&
+            !noUsage.facts.containsKey('input_tokens') &&
+            !noUsage.facts.containsKey('output_tokens'),
         'typed valid reply without usage retains model');
     final empty = door.many(engine, 'Is it?', []);
     require(
         empty.value.isEmpty &&
-            empty.facts.records == 0 &&
-            empty.facts.requestsSent == 0 &&
-            empty.facts.cacheAnswers == 0 &&
-            empty.facts.model == null &&
-            empty.facts.inputTokens == null &&
-            empty.facts.outputTokens == null,
+            empty.facts['records'] == 0 &&
+            empty.facts['requests_sent'] == 0 &&
+            empty.facts['cache_answers'] == 0 &&
+            !empty.facts.containsKey('model') &&
+            !empty.facts.containsKey('input_tokens') &&
+            !empty.facts.containsKey('output_tokens'),
         'empty bulk owned zero facts and no model');
     final scalarPort = ReceivePort(), bulkPort = ReceivePort();
     final scalarExit = ReceivePort(), bulkExit = ReceivePort();
@@ -171,14 +121,14 @@ Future<void> ownedFactsCase(Door door, String library) async {
           await scalarReceived.timeout(const Duration(seconds: 18)) as List;
       final bulkResult =
           await bulkReceived.timeout(const Duration(seconds: 18)) as List;
-      retainedScalar = scalarResult[0] as CallFacts;
-      retainedBulk = bulkResult[0] as CallFacts;
+      retainedScalar = scalarResult[0] as Map;
+      retainedBulk = bulkResult[0] as Map;
       require(
-          retainedScalar.records == 1 &&
-              retainedScalar.requestsSent == 1 &&
+          retainedScalar['records'] == 1 &&
+              retainedScalar['requests_sent'] == 1 &&
               scalarResult[1] == 1 &&
-              retainedBulk.records == 2 &&
-              retainedBulk.requestsSent == 1 &&
+              retainedBulk['records'] == 2 &&
+              retainedBulk['requests_sent'] == 1 &&
               bulkResult[1] == 2,
           'both held requests arrived before release and returned distinct facts');
     } finally {
@@ -199,17 +149,17 @@ Future<void> ownedFactsCase(Door door, String library) async {
     }
     final later = door.decide(engine, 'Is it?', 'without-usage');
     require(
-        later.facts.cacheAnswers == 1 &&
-            noUsage.facts.records == 1 &&
-            noUsage.facts.model == 'jev-1.13.0',
+        later.facts['cache_answers'] == 1 &&
+            noUsage.facts['records'] == 1 &&
+            noUsage.facts['model'] == 'jev-1.13.0',
         'owned facts survive later call');
   } finally {
     if (engineCanBeFreed) door.engineFree(engine);
   }
   require(
-      retainedNoUsage.model == 'jev-1.13.0' &&
-          retainedScalar.records == 1 &&
-          retainedBulk.records == 2,
+      retainedNoUsage['model'] == 'jev-1.13.0' &&
+          retainedScalar['records'] == 1 &&
+          retainedBulk['records'] == 2,
       'distinct owned facts survive engine close');
   print('DART_OWNED_FACTS_PASS');
 }
@@ -490,8 +440,8 @@ Future<void> main(List<String> args) async {
           batch.value[0].probability == .9 &&
           batch.value[1].outcome == Outcome.no &&
           batch.value[1].probability == .1 &&
-          batch.facts.records == 2 &&
-          batch.facts.requestsSent == 1,
+          batch.facts['records'] == 2 &&
+          batch.facts['requests_sent'] == 1,
       'bulk ordered answers .9 then .1',
     );
     final decide = door.call(
@@ -513,10 +463,11 @@ Future<void> main(List<String> args) async {
           (annotate['facts'] as Map)['records'] == 1,
       'annotate JSON exact field identity',
     );
-    final parsedAnnotation = Annotation.parse(annotate['value']);
+    final checked =
+        readField(((annotate['value'] as List).single as Map)['check']);
     require(
-      (parsedAnnotation.rows.single['check'] as AnswerField).value == true,
-      'typed annotate success',
+      checked is AnswerField && checked.value == true,
+      'annotate field read through readField',
     );
     final spec =
         '{"version":1,"recognize":{"kinds":{"person":"A person name."}}}';
@@ -529,19 +480,15 @@ Future<void> main(List<String> args) async {
       'recognize JSON exact entity identity',
     );
     require(
-        structuredRecognition.facts.records == 1 &&
-            structuredRecognition.facts.requestsSent == 2,
+        structuredRecognition.facts['records'] == 1 &&
+            structuredRecognition.facts['requests_sent'] == 2,
         'structured recognize final facts');
-    final typedRecognition = door.recognize(engine, spec, 'John Smith');
+    final cachedRecognition = door.recognize(engine, spec, 'John Smith');
     require(
-        typedRecognition.value.entities.single.text == 'John Smith' &&
-            typedRecognition.facts.records == 1 &&
-            typedRecognition.facts.cacheAnswers >= 1,
-        'typed recognize retained value and owned cached facts');
-    require(
-      Recognition.parse(recognized).entities.single.end == 10,
-      'typed scalar offsets',
-    );
+        jsonEncode(cachedRecognition.value) == jsonEncode(recognized) &&
+            cachedRecognition.facts['records'] == 1 &&
+            (cachedRecognition.facts['cache_answers'] as int) >= 1,
+        'recognize retained value and owned cached facts');
     final relSpec =
         '{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]} }';
     final structuredRelation = door.structured(
@@ -562,20 +509,19 @@ Future<void> main(List<String> args) async {
               '{"relation":"caused_by","source":{"name":"Second","kind":"alert"},"target":{"name":"First","kind":"alert"},"probability":0.9}',
       'relate JSON exact edges and order',
     );
-    require(Relations.parse(related).edges.length == 2, 'typed edges');
     require(
-        structuredRelation.facts.records == 1 &&
-            structuredRelation.facts.requestsSent == 1,
+        structuredRelation.facts['records'] == 1 &&
+            structuredRelation.facts['requests_sent'] == 1,
         'structured relate one logical question');
-    final typedRelation = door.relate(engine, relSpec, [
+    final cachedRelation = door.relate(engine, relSpec, [
       '{"name":"First","kind":"alert"}',
       '{"name":"Second","kind":"alert"}',
     ]);
     require(
-        typedRelation.value.edges.length == 2 &&
-            typedRelation.facts.records == 1 &&
-            typedRelation.facts.cacheAnswers >= 1,
-        'typed relate owned cached facts');
+        jsonEncode(cachedRelation.value) == jsonEncode(related) &&
+            cachedRelation.facts['records'] == 1 &&
+            (cachedRelation.facts['cache_answers'] as int) >= 1,
+        'relate owned cached facts');
     door.plainAliases(engine);
     print('PLAIN_ENTRYPOINTS_PASS five non-opts aliases');
     try {

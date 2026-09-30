@@ -6,13 +6,8 @@ export 'src/typed.dart'
     show
         Outcome,
         ErrorKind,
-        CallFacts,
-        CallResult,
-        Entity,
-        Edge,
-        Recognition,
-        Relations,
-        Annotation,
         AnnotatedField,
+        UnresolvedField,
         AnswerField,
-        FailedField;
+        FailedField,
+        readField;

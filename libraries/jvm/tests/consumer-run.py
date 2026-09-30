@@ -138,14 +138,14 @@ if len(sys.argv) == 2:
 
 try:
     execute('consumer-javac',['/opt/jdk/bin/javac','--enable-preview','--release','21','-cp',CP,'-d',str(CLASSES),
-      'Direct.java','Matrix.java','StrictScalar.java','Concurrent.java','BoundedString.java','ResultEnvelopeTest.java','thinkthen/ProbeDoor.java'])
+      'Direct.java','Matrix.java','StrictScalar.java','Concurrent.java','BoundedString.java','JsonTest.java','thinkthen/ProbeDoor.java'])
     execute('consumer-kotlinc',['/opt/kotlin/bin/kotlinc','-J-XX:ActiveProcessorCount=2','-jvm-target','21',
       '-classpath',CP,'KotlinCaller.kt','-d',str(CLASSES)],timeout=240)
     execute('consumer-scalac',['/opt/scala/bin/scalac','-J-XX:ActiveProcessorCount=2',
       '-classpath',CP,'-d',str(CLASSES),'ScalaCaller.scala'],timeout=240)
     execute('example-java',JAVA+['-cp',CP,'Direct'])
-    negative=execute('result-envelope-negative',JAVA+['-cp',CP,'ResultEnvelopeTest'])
-    assert 'REPIN_RESULT_ENVELOPE_NEGATIVES_PASS four cases' in negative
+    reader=execute('json-reader',JAVA+['-cp',CP,'JsonTest'])
+    assert 'JSON_READER_AND_FIELD_PASS' in reader
     matrix=execute('matrix-java',JAVA+['-cp',CP,'Matrix'],timeout=180)
     assert 'JAVA_HELD_SCALAR_CANCELLED_PASS' in matrix and 'KNOWN NATIVE CONTRACT FINDING' not in matrix
     kotlin=execute('kotlin',JAVA+['-cp',CP+':'+KOTLIN,'KotlinCallerKt'])

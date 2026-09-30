@@ -4,7 +4,7 @@ This source folder holds `thinkthen_flutter`, a small Flutter-facing wrapper aro
 
 The Flutter package is private (`publish_to: none`) and its source path dependency points at the sibling Dart package. Linux x86_64 is the checked host. Other Flutter targets need their own native artifact and installation proof. No binary is downloaded at runtime.
 
-`ThinkThenFlutter.decide` returns `CallResult<AnswerValue>` with the judgment in `.value` and independent owned per-call facts in `.facts`; the facade closes its temporary engine before returning. The underlying Dart `Door` exposes the same result for `many`, `recognize`, and `relate`.
+`ThinkThenFlutter.decide` returns a record with the judgment in `.value` and that call's facts object in `.facts`, a JSON map; the facade closes its temporary engine before returning. The underlying Dart `Door` returns the same record shape from `many`, `recognize`, and `relate`.
 
 From the repository root, run `libraries/dart/check.sh` with a populated offline pub cache. It checks the Dart binding, Flutter host test, planted negatives, and real Linux embedder. `TT_FLUTTER` can name the installed Flutter executable.
 

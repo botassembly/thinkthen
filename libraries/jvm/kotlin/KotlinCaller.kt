@@ -1,5 +1,5 @@
 import thinkthen.Door
-import thinkthen.ResultEnvelope
+import thinkthen.Json
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -37,7 +37,7 @@ fun main() {
             try { engine.decide("Is it?", "kotlin-never-sent".toByteArray(), -1, token); error("fired token worked") }
             catch (ex: Door.NativeFailure) { check(ex.failure.code() == 5) }
         }
-        check(ResultEnvelope.value(facade.call("{\"decide\":\"Is it?\",\"evidence\":\"kotlin-json\"}")) == "true")
+        check(Json.parseObject(facade.call("{\"decide\":\"Is it?\",\"evidence\":\"kotlin-json\"}"))["value"] == true)
         val barrier = Path.of(System.getenv("TT_BARRIER_DIR"))
         facade.decideAsync("Is it?", "hold-kotlin").use { running ->
             try {

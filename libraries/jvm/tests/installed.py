@@ -60,7 +60,7 @@ for index, lang in enumerate(("java", "kotlin", "scala")):
     names = ("consumer-run.py", "backend.py", "process_group.py")
     if RELEASE: names += (f"Installed{lang.capitalize()}.{dict(java='java',kotlin='kt',scala='scala')[lang]}",)
     else: names += ("Matrix.java", "Direct.java", "StrictScalar.java", "Concurrent.java",
-                   "BoundedString.java", "ResultEnvelopeTest.java")
+                   "BoundedString.java", "JsonTest.java")
     for name in names:
         shutil.copyfile(ROOT / "tests" / name, trial / "project" / name)
     if not RELEASE:

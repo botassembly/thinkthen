@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using System.Linq;
 
 namespace ThinkThen;
 
@@ -15,10 +14,31 @@ public struct Answer {
     public double Probability;
     public Outcome OutcomeKind => Outcome switch { 0 => global::ThinkThen.Outcome.No, 1 => global::ThinkThen.Outcome.Yes, 2 => global::ThinkThen.Outcome.NotSure, _ => throw new InvalidOperationException("invalid native outcome") };
 }
-public sealed record CallResult(JsonElement Value, JsonElement Facts);
-public sealed record Facts(ulong Records, ulong RequestsSent, ulong CacheAnswers, double Seconds,
-    ulong? InputTokens, ulong? OutputTokens, string? Model);
-public sealed record TypedResult<T>(T Value, Facts Facts);
+/// <summary>A call's value and its facts object. The result schema describes the facts.</summary>
+public sealed record TypedResult<T>(T Value, JsonElement Facts);
+
+/// <summary>One member of an annotate row's value or answers (ADR 0112 section 4).</summary>
+public abstract record AnnotatedField
+{
+    private AnnotatedField() { }
+    /// <summary>JSON null: the question was not sure.</summary>
+    public sealed record Unresolved : AnnotatedField;
+    public sealed record Answered(JsonElement Value) : AnnotatedField;
+    /// <summary>The one-member object {"failed": {...}}.</summary>
+    public sealed record Failed(string Kind, string Cause) : AnnotatedField;
+
+    /// <summary>No answered value is an object, so an object that is not a failure is an error.</summary>
+    public static AnnotatedField Read(JsonElement member)
+    {
+        if (member.ValueKind == JsonValueKind.Null) return new Unresolved();
+        if (member.ValueKind != JsonValueKind.Object) return new Answered(member.Clone());
+        if (!member.TryGetProperty("failed", out JsonElement failed) || failed.ValueKind != JsonValueKind.Object)
+            throw new InvalidOperationException("annotate member is an object but not a failure");
+        static string Text(JsonElement failed, string name) =>
+            failed.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String ? value.GetString()! : "";
+        return new Failed(Text(failed, "kind"), Text(failed, "cause"));
+    }
+}
 
 public static class Native
 {
@@ -42,6 +62,7 @@ public static class Native
     [DllImport(Library)] public static extern int thinkthen_recognize_with_facts_opts(IntPtr engine, byte[] spec, byte[] text, nuint length, long deadlineMs, IntPtr token, ref IntPtr output, ref nuint outputLength, ref IntPtr facts, ref nuint factsLength);
     [DllImport(Library)] public static extern int thinkthen_relate_opts(IntPtr engine, byte[] spec, IntPtr texts, IntPtr lengths, nuint count, long deadlineMs, IntPtr token, ref IntPtr output, ref nuint outputLength);
     [DllImport(Library)] public static extern int thinkthen_relate_with_facts_opts(IntPtr engine, byte[] spec, IntPtr texts, IntPtr lengths, nuint count, long deadlineMs, IntPtr token, ref IntPtr output, ref nuint outputLength, ref IntPtr facts, ref nuint factsLength);
+    [DllImport(Library)] public static extern int thinkthen_plan_json(IntPtr engine, byte[] planJson, ref IntPtr output, ref nuint outputLength);
     [DllImport(Library)] public static extern void thinkthen_free_string(IntPtr value);
 }
 
@@ -94,52 +115,34 @@ public sealed class Engine : IDisposable
         Marshal.Copy(pointer, bytes, 0, bytes.Length);
         return bytes;
     }
-    private static Facts ReadFacts(IntPtr pointer, nuint length)
+    private static JsonElement ReadJson(IntPtr pointer, nuint length)
     {
         using JsonDocument document = JsonDocument.Parse(CopyBytes(pointer, length));
-        JsonElement root = document.RootElement;
-        if (root.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("invalid native facts");
-        static ulong Required(JsonElement root, string name)
-        {
-            if (!root.TryGetProperty(name, out JsonElement value) || value.ValueKind != JsonValueKind.Number || !value.TryGetUInt64(out ulong number))
-                throw new InvalidOperationException("invalid native facts: " + name);
-            return number;
-        }
-        static ulong? Optional(JsonElement root, string name)
-        {
-            if (!root.TryGetProperty(name, out JsonElement value)) return null;
-            if (value.ValueKind != JsonValueKind.Number || !value.TryGetUInt64(out ulong number))
-                throw new InvalidOperationException("invalid native facts: " + name);
-            return number;
-        }
-        if (!root.TryGetProperty("seconds", out JsonElement elapsed) || elapsed.ValueKind != JsonValueKind.Number ||
-            !elapsed.TryGetDouble(out double seconds) || !double.IsFinite(seconds) || seconds < 0)
-            throw new InvalidOperationException("invalid native facts: seconds");
-        string? model = null;
-        if (root.TryGetProperty("model", out JsonElement named))
-            model = named.ValueKind == JsonValueKind.String ? named.GetString() : throw new InvalidOperationException("invalid native facts: model");
-        return new Facts(Required(root, "records"), Required(root, "requests_sent"), Required(root, "cache_answers"),
-            seconds, Optional(root, "input_tokens"), Optional(root, "output_tokens"), model);
+        return document.RootElement.Clone();
     }
-    private TResult Invoke<TResult>(TimeSpan? budget, CancellationToken cancellation, Func<IntPtr, long, IntPtr, TResult> body)
+    private TResult Live<TResult>(Func<IntPtr, TResult> body)
     {
         lifetime.EnterReadLock();
         try
         {
             if (engine == IntPtr.Zero) throw new ObjectDisposedException(nameof(Engine));
-            long deadline = budget.HasValue ? (long)Math.Max(0, Math.Ceiling(budget.Value.TotalMilliseconds)) : -1;
-            IntPtr token = Native.thinkthen_cancel_token_new();
-            if (token == IntPtr.Zero) throw new OutOfMemoryException("native token allocation failed");
-            try
-            {
-                // Dispose waits for any running callback; native token remains live until the call returns.
-                using (cancellation.Register(() => Native.thinkthen_cancel(token)))
-                    return body(engine, deadline, token);
-            }
-            finally { Native.thinkthen_cancel_token_free(token); }
+            return body(engine);
         }
         finally { lifetime.ExitReadLock(); }
     }
+    private TResult Invoke<TResult>(TimeSpan? budget, CancellationToken cancellation, Func<IntPtr, long, IntPtr, TResult> body) => Live(ptr =>
+    {
+        long deadline = budget.HasValue ? (long)Math.Max(0, Math.Ceiling(budget.Value.TotalMilliseconds)) : -1;
+        IntPtr token = Native.thinkthen_cancel_token_new();
+        if (token == IntPtr.Zero) throw new OutOfMemoryException("native token allocation failed");
+        try
+        {
+            // Dispose waits for any running callback; native token remains live until the call returns.
+            using (cancellation.Register(() => Native.thinkthen_cancel(token)))
+                return body(ptr, deadline, token);
+        }
+        finally { Native.thinkthen_cancel_token_free(token); }
+    });
     public TypedResult<Answer> Decide(string question, string text, TimeSpan? budget = null, CancellationToken cancellation = default)
     {
         byte[] q = CString(question), t = Text(text);
@@ -148,7 +151,7 @@ public sealed class Engine : IDisposable
             IntPtr facts = IntPtr.Zero; nuint factsLength = 123;
             int rc = Native.thinkthen_decide_with_facts_opts(ptr, q, t, (nuint)t.Length, deadline, token, ref answer, ref facts, ref factsLength);
             if (rc != 0) { if (answer.Outcome != 123 || answer.Probability != -1.0 || facts != IntPtr.Zero || factsLength != 123) throw new InvalidOperationException("failed scalar changed output"); throw ReadFailure(ptr, rc); }
-            try { return new TypedResult<Answer>(answer, ReadFacts(facts, factsLength)); }
+            try { return new TypedResult<Answer>(answer, ReadJson(facts, factsLength)); }
             finally { Native.thinkthen_free_string(facts); }
         });
     }
@@ -185,7 +188,7 @@ public sealed class Engine : IDisposable
                     if (Array.Exists(result, item => item.Outcome != 123 || item.Probability != -1) || facts != IntPtr.Zero || factsLength != 123) throw new InvalidOperationException("failed bulk changed output");
                     throw ReadFailure(ptr, rc);
                 }
-                return new TypedResult<Answer[]>(result, ReadFacts(facts, factsLength));
+                return new TypedResult<Answer[]>(result, ReadJson(facts, factsLength));
             }
             finally
             {
@@ -207,31 +210,62 @@ public sealed class Engine : IDisposable
             finally { Native.thinkthen_free_string(output); }
         });
     }
-    public CallResult CallTyped(string request, TimeSpan? budget = null, CancellationToken cancellation = default)
+    /// <summary>The JSON door's reply read as its value and facts; other members are ignored.</summary>
+    public TypedResult<JsonElement> CallTyped(string request, TimeSpan? budget = null, CancellationToken cancellation = default)
     {
         using JsonDocument document = JsonDocument.Parse(Call(request, budget, cancellation));
         JsonElement root = document.RootElement;
-        if (!root.TryGetProperty("value", out JsonElement value) || !root.TryGetProperty("facts", out JsonElement facts)
-            || root.EnumerateObject().Count() != 2 || facts.ValueKind != JsonValueKind.Object)
-            throw new InvalidOperationException("invalid native result envelope");
-        return new CallResult(value.Clone(), facts.Clone());
+        return new TypedResult<JsonElement>(root.GetProperty("value").Clone(), root.GetProperty("facts").Clone());
     }
-    public TypedResult<string> Recognize(string spec, string text, TimeSpan? budget = null, CancellationToken cancellation = default)
+    /// <summary>
+    /// Preview a judgment call through thinkthen_plan_json and return the result schema's plan object.
+    /// verb is decide, choose, score or tag. question is bare question text, or one question object
+    /// when it starts with "{", as Decide reads it. settingsJson is null or a thinkthen.settings/1 object.
+    /// The preview needs no key, reads no cache and sends nothing.
+    /// </summary>
+    public JsonElement Plan(string verb, string question, string[] input, string? settingsJson = null)
+    {
+        var buffer = new System.IO.MemoryStream();
+        try
+        {
+            using var writer = new Utf8JsonWriter(buffer);
+            writer.WriteStartObject();
+            writer.WriteString("verb", verb);
+            writer.WritePropertyName("question");
+            if (question.TrimStart().StartsWith('{')) writer.WriteRawValue(question); else writer.WriteStringValue(question);
+            writer.WriteStartArray("input");
+            foreach (string text in input) writer.WriteStringValue(text);
+            writer.WriteEndArray();
+            if (settingsJson is not null) { writer.WritePropertyName("settings"); writer.WriteRawValue(settingsJson); }
+            writer.WriteEndObject();
+        }
+        catch (JsonException error) { throw new Failure((int)FailureKind.Usage, false, error.Message, null); }
+        byte[] request = CString(Encoding.UTF8.GetString(buffer.ToArray()));
+        return Live(ptr => {
+            IntPtr output = IntPtr.Zero; nuint length = 0;
+            int rc = Native.thinkthen_plan_json(ptr, request, ref output, ref length);
+            if (rc != 0) throw ReadFailure(ptr, rc);
+            try { return ReadJson(output, length); }
+            finally { Native.thinkthen_free_string(output); }
+        });
+    }
+    public TypedResult<JsonElement> Recognize(string spec, string text, TimeSpan? budget = null, CancellationToken cancellation = default)
     {
         byte[] q = CString(spec), t = Text(text);
         return Invoke(budget, cancellation, (ptr, deadline, token) => {
             IntPtr output = IntPtr.Zero, facts = IntPtr.Zero; nuint length = 123, factsLength = 123;
             int rc = Native.thinkthen_recognize_with_facts_opts(ptr, q, t, (nuint)t.Length, deadline, token, ref output, ref length, ref facts, ref factsLength);
             if (rc != 0) { if (output != IntPtr.Zero || length != 123 || facts != IntPtr.Zero || factsLength != 123) throw new InvalidOperationException("failed recognize changed output"); throw ReadFailure(ptr, rc); }
-            try { return new TypedResult<string>(StrictUtf8.GetString(CopyBytes(output, length)), ReadFacts(facts, factsLength)); }
+            try { return new TypedResult<JsonElement>(ReadJson(output, length), ReadJson(facts, factsLength)); }
             finally { try { Native.thinkthen_free_string(output); } finally { Native.thinkthen_free_string(facts); } }
         });
     }
-    public TypedResult<string> Relate(string spec, params string[] records)
+    public TypedResult<JsonElement> Relate(string spec, params string[] records) => RelateWithOptions(spec, records, null, default);
+    public TypedResult<JsonElement> RelateWithOptions(string spec, string[] records, TimeSpan? budget, CancellationToken cancellation)
     {
         byte[] q = CString(spec);
         byte[][] encoded = Array.ConvertAll(records, Text);
-        return Invoke(null, default, (ptr, deadline, token) => {
+        return Invoke(budget, cancellation, (ptr, deadline, token) => {
             IntPtr pointers = IntPtr.Zero, lengths = IntPtr.Zero, output = IntPtr.Zero, facts = IntPtr.Zero;
             nuint outputLength = 123, factsLength = 123;
             IntPtr[] entries = new IntPtr[encoded.Length];
@@ -249,7 +283,7 @@ public sealed class Engine : IDisposable
                 }
                 int rc = Native.thinkthen_relate_with_facts_opts(ptr, q, pointers, lengths, (nuint)entries.Length, deadline, token, ref output, ref outputLength, ref facts, ref factsLength);
                 if (rc != 0) { if (output != IntPtr.Zero || outputLength != 123 || facts != IntPtr.Zero || factsLength != 123) throw new InvalidOperationException("failed relate changed output"); throw ReadFailure(ptr, rc); }
-                return new TypedResult<string>(StrictUtf8.GetString(CopyBytes(output, outputLength)), ReadFacts(facts, factsLength));
+                return new TypedResult<JsonElement>(ReadJson(output, outputLength), ReadJson(facts, factsLength));
             }
             finally
             {

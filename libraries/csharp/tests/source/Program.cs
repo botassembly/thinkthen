@@ -17,6 +17,9 @@ static class Program
         catch (Failure f) { Check(f.Code == code && f.Kind == (FailureKind)code && !f.Retryable && f.Message.Length > 0, $"error {code}: {f.Code} {f.Message}"); return f; }
         throw new Exception($"expected error {code}");
     }
+    static long N(JsonElement facts, string name) => facts.GetProperty(name).GetInt64();
+    static string? Model(JsonElement facts) => facts.TryGetProperty("model", out JsonElement model) ? model.GetString() : null;
+    static bool Has(JsonElement facts, string name) => facts.TryGetProperty(name, out _);
     static void AnswerIs(Answer answer, int outcome, double probability) => Check(answer.Outcome == outcome && (int)answer.OutcomeKind == outcome && answer.Probability == probability, $"answer {answer.Outcome}/{answer.Probability}");
     static void Marker(string name)
     {
@@ -79,19 +82,19 @@ static class Program
             AnswerIs(engine.Decide(text == "unsure" ? "{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}" : "Is it?", text).Value, outcome, p);
         var scalar = engine.Decide("Is it?", "no-usage");
         AnswerIs(scalar.Value, 1, .9);
-        Check(scalar.Facts.Records == 1 && scalar.Facts.RequestsSent == 1 && scalar.Facts.Model == "jev-1.13.0" &&
-            scalar.Facts.InputTokens is null && scalar.Facts.OutputTokens is null, "reported model without usage");
+        Check(N(scalar.Facts, "records") == 1 && N(scalar.Facts, "requests_sent") == 1 && Model(scalar.Facts) == "jev-1.13.0" &&
+            !Has(scalar.Facts, "input_tokens") && !Has(scalar.Facts, "output_tokens"), "reported model without usage");
         var firstBulk = engine.DecideMany("Is it?", "first", "second", "third");
         Answer[] rows = firstBulk.Value;
-        Check(firstBulk.Facts.Records == 3 && firstBulk.Facts.RequestsSent >= 1 && firstBulk.Facts.Model == "jev-1.13.0", "typed bulk facts");
+        Check(N(firstBulk.Facts, "records") == 3 && N(firstBulk.Facts, "requests_sent") >= 1 && Model(firstBulk.Facts) == "jev-1.13.0", "typed bulk facts");
         for (int i = 0; i < rows.Length; i++) AnswerIs(rows[i], new[] {1,0,1}[i], new[] {.9,.1,.6}[i]);
         var cachedBulk = engine.DecideMany("Is it?", "first", "second", "third");
-        Check(cachedBulk.Facts.Records == 3 && cachedBulk.Facts.CacheAnswers == 3 && cachedBulk.Facts.RequestsSent == 0 &&
+        Check(N(cachedBulk.Facts, "records") == 3 && N(cachedBulk.Facts, "cache_answers") == 3 && N(cachedBulk.Facts, "requests_sent") == 0 &&
             cachedBulk.Value.Select(a => a.Probability).SequenceEqual(new[] {.9,.1,.6}), "identical bulk answers each question from the cache");
         rows = engine.DecideMany("Is it?", "first", "second", "first", "second").Value;
         Check(rows.Select(a => a.Probability).SequenceEqual(new[] {.9,.1,.9,.1}), "bulk cache/order");
         var empty = engine.DecideMany("Is it?");
-        Check(empty.Value.Length == 0 && empty.Facts.Records == 0 && empty.Facts.RequestsSent == 0 && empty.Facts.Model is null && empty.Facts.InputTokens is null, "zero bulk facts");
+        Check(empty.Value.Length == 0 && N(empty.Facts, "records") == 0 && N(empty.Facts, "requests_sent") == 0 && Model(empty.Facts) is null && !Has(empty.Facts, "input_tokens"), "zero bulk facts");
         try { engine.Decide("Is it?", "\ud800"); throw new Exception("invalid UTF-8 accepted"); }
         catch (EncoderFallbackException) { }
         var requests = new[] {
@@ -130,13 +133,11 @@ static class Program
             }
         }
         var recognized = engine.Recognize("{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}", "John Smith");
-        Check(recognized.Facts.Records == 1 && recognized.Facts.RequestsSent >= 1, "typed recognize facts");
-        using (JsonDocument json = JsonDocument.Parse(recognized.Value))
-            Check(json.RootElement.GetProperty("entities").GetArrayLength() == 1, "recognize");
+        Check(N(recognized.Facts, "records") == 1 && N(recognized.Facts, "requests_sent") >= 1, "typed recognize facts");
+        Check(recognized.Value.GetProperty("entities").GetArrayLength() == 1, "recognize");
         var related = engine.Relate("{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}", "{\"name\":\"Third\",\"kind\":\"alert\"}", "{\"name\":\"Fourth\",\"kind\":\"alert\"}");
-        Check(related.Facts.Records == 1 && related.Facts.RequestsSent >= 1, "typed relate facts");
-        using (JsonDocument json = JsonDocument.Parse(related.Value))
-            Check(json.RootElement.GetProperty("edges").GetArrayLength() == 2, "relate");
+        Check(N(related.Facts, "records") == 1 && N(related.Facts, "requests_sent") >= 1, "typed relate facts");
+        Check(related.Value.GetProperty("edges").GetArrayLength() == 2, "relate");
         using (JsonDocument json = JsonDocument.Parse(engine.Call("{\"usage\":true}"))) Check(json.RootElement.TryGetProperty("requests_sent", out _), "usage");
         foreach (Action check in new Action[] { () => engine.Decide("Is it?\0suffix", "x"), () => engine.DecideMany("Is it?\0suffix", "x"), () => engine.Call("{}\0suffix"), () => engine.Recognize("{}\0suffix", "x"), () => engine.Relate("{}\0suffix") })
         { try { check(); throw new Exception("NUL accepted"); } catch (ArgumentException ex) when (ex.Message.Contains("NUL")) { } }
@@ -159,8 +160,8 @@ static class Program
         finally { Release("hold-facts-one"); Release("hold-facts-two"); }
         var ownedOne = heldOne.GetAwaiter().GetResult();
         var ownedTwo = heldTwo.GetAwaiter().GetResult();
-        Check(!ReferenceEquals(ownedOne.Facts, ownedTwo.Facts) && ownedOne.Facts.RequestsSent == 1 && ownedTwo.Facts.RequestsSent == 1 &&
-            ownedOne.Facts.Seconds > 0 && ownedTwo.Facts.Seconds > 0,
+        Check(N(ownedOne.Facts, "requests_sent") == 1 && N(ownedTwo.Facts, "requests_sent") == 1 &&
+            ownedOne.Facts.GetProperty("seconds").GetDouble() > 0 && ownedTwo.Facts.GetProperty("seconds").GetDouble() > 0,
             "two overlapping owned call facts");
         Held(engine, "hold-deadline", 3);
         Held(engine, "hold-bulk-1", 5, true);
@@ -170,7 +171,7 @@ static class Program
         string copiedError = saved.Message;
         engine.Dispose();
         Check(saved.Message == copiedError, "copied error changed after engine teardown");
-        Check(backend.FactsJson == copiedBackendFacts && ownedOne.Facts.Model == "jev-1.13.0" && ownedTwo.Facts.Model == "jev-1.13.0", "owned facts survived later call and close");
+        Check(backend.FactsJson == copiedBackendFacts && Model(ownedOne.Facts) == "jev-1.13.0" && Model(ownedTwo.Facts) == "jev-1.13.0", "owned facts survived later call and close");
         try { engine.Call("{\"usage\":true}"); throw new Exception("closed engine accepted call"); }
         catch (ObjectDisposedException) { }
         Console.WriteLine("MATRIX_PASS");
