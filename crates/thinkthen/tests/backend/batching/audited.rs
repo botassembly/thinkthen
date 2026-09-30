@@ -72,7 +72,25 @@ fn audit_and_diff_read_the_setting_the_command_writes() {
         digests(&max_rows),
         "the setting keeps the digest"
     );
+    audit_reads_the_runs(&place, [&one, &max, &later]);
 
+    // Row: the two runs, and the diff warning. Two cuts on one run print none.
+    for (a, b, warned) in [
+        (
+            &one,
+            &max,
+            "thinkthen: diff: warning: the runs used different batch settings (1 and max); batching moves answers, so some changes may come from it\n",
+        ),
+        (&max, &max, ""),
+    ] {
+        let (code, _, stderr) = measure(&["diff", a, b, "--id", ""], b"");
+        assert_eq!((code, stderr.as_str()), (0, warned), "{a} {b}");
+    }
+}
+
+/// `audit` over the saved `--batch 1` run, the `max` run, and the `--batch 1`
+/// run joined with a `max` run over other lines.
+fn audit_reads_the_runs(place: &str, [one, max, later]: [&String; 3]) {
     let key = format!("{place}/key.jsonl");
     let labels: String = (1..=8)
         .map(|at| format!("{{\"id\":\"line {at}\",\"value\":{}}}\n", at % 2 == 0))
@@ -81,11 +99,7 @@ fn audit_and_diff_read_the_setting_the_command_writes() {
     let both = format!("{place}/both.jsonl");
     fs::write(
         &both,
-        [
-            fs::read(&one).expect("one"),
-            fs::read(&later).expect("later"),
-        ]
-        .concat(),
+        [fs::read(one).expect("one"), fs::read(later).expect("later")].concat(),
     )
     .expect("both runs");
     let audit = |results: &str, extra: &[&str]| {
@@ -96,8 +110,8 @@ fn audit_and_diff_read_the_setting_the_command_writes() {
     };
     // Row: the results, and the warning audit prints first. One setting prints none.
     for (results, warned) in [
-        (&one, ""),
-        (&max, ""),
+        (one, ""),
+        (max, ""),
         (
             &both,
             "thinkthen: audit: warning: the results ran at more than one batch setting (1 and max); a bar tuned over both may fit neither\n",
@@ -111,7 +125,7 @@ fn audit_and_diff_read_the_setting_the_command_writes() {
     let tuned = format!("{place}/tuned.json");
     let tuned_text = format!(r#"{{"decide":"{QUESTION}","threshold":0.7,"batch":"max"}}"#);
     fs::write(&tuned, &tuned_text).expect("tuned file");
-    let (code, _, stderr) = audit(&one, &["--write", &tuned]);
+    let (code, _, stderr) = audit(one, &["--write", &tuned]);
     assert_eq!(code, 0, "{stderr}");
     assert!(
         stderr.ends_with(
@@ -135,17 +149,4 @@ fn audit_and_diff_read_the_setting_the_command_writes() {
             .expect("tuned")
             .contains(r#""batch":"max""#)
     );
-
-    // Row: the two runs, and the diff warning. Two cuts on one run print none.
-    for (a, b, warned) in [
-        (
-            &one,
-            &max,
-            "thinkthen: diff: warning: the runs used different batch settings (1 and max); batching moves answers, so some changes may come from it\n",
-        ),
-        (&max, &max, ""),
-    ] {
-        let (code, _, stderr) = measure(&["diff", a, b, "--id", ""], b"");
-        assert_eq!((code, stderr.as_str()), (0, warned), "{a} {b}");
-    }
 }
