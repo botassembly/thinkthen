@@ -168,7 +168,7 @@ say([freed, edges(a), edges(b), refused])
         freed, a_edges, b_edges, refused = got[0]
         expect([freed, a_edges, b_edges], [0, 4, 11], "freed, A's edges, B's edges")
         said_text = refused.split("thinkthen ", 1)[1]
-        expect(said_text.replace(said_text.split(" ")[4], "PATH", 1), "local: the rules file PATH was not read: this database's file settings refuse it", "the rules file with access off")
+        expect(said_text.replace(said_text.split(" ")[4], "PATH", 1), "local: the rules file PATH was not read: this database's file settings refuse it (retryable: no)", "the rules file with access off")
 
 
 @case

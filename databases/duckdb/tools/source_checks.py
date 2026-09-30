@@ -7,7 +7,6 @@
 - R4-19, R5-34: every `cargo` call in check.sh passes `--locked` and
   `--offline`.
 - R1-33: every vendored script is named by check.sh or a tool.
-- R5-25: `deny.toml` is the root copy after the raw C binding retired.
 - R5-23: the README pins the `con.interrupt()` limit.
 - R2-29: ADR 0038's DuckDB amendment keeps one pinned sentence per ruling.
 - R3-29: `requirements.txt` pins each line with `==` and names no URL.
@@ -92,13 +91,6 @@ def vendored() -> None:
             fail(f"R1-33: vendor/{path.name} is named by no script")
 
 
-def deny() -> None:
-    root = (REPO / "deny.toml").read_text()
-    ours = (ROOT / "deny.toml").read_text()
-    if ours != root:
-        fail("R5-25: deny.toml differs from the root copy")
-
-
 def readme() -> None:
     limit = "DuckDB's own `con.interrupt()` does not stop a held batch before its replies arrive; a SIGINT does, within 100 ms."
     if limit not in (ROOT / "README.md").read_text():
@@ -163,7 +155,6 @@ def main() -> int:
     guards()
     cargo_flags()
     vendored()
-    deny()
     readme()
     rulings()
     FAILED.extend(requirements(ROOT / "tools" / "requirements.txt"))

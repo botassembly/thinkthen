@@ -14,18 +14,22 @@ use super::{
 };
 use crate::engines;
 
-fn prepare_try(argument: &str, from_file: bool, raw: &str) -> Result<(String, Settings), RowError> {
-    let question = super::question_typed(argument, from_file)?;
-    let kind = match &question {
+/// The portable keyed kind of an asking question, for the calls that take any of them.
+pub(super) fn asking_kind(argument: &str, from_file: bool, call: &str) -> Result<i32, RowError> {
+    Ok(match super::question_typed(argument, from_file)? {
         LoadedQuestion::Banded(_) => 0,
         LoadedQuestion::Question(value) => match value.kind() {
             QuestionKind::Decide => 0,
             QuestionKind::Choose => 4,
             QuestionKind::Score => 5,
             QuestionKind::Tag => 6,
-            _ => return Err(RowError::usage("try_details needs an asking question")),
+            _ => return Err(RowError::usage(&format!("{call} needs an asking question"))),
         },
-    };
+    })
+}
+
+fn prepare_try(argument: &str, from_file: bool, raw: &str) -> Result<(String, Settings), RowError> {
+    let kind = asking_kind(argument, from_file, "try_details")?;
     super::portable_many::parse(argument, from_file, raw, kind)
         .map(|(written, _, call)| (written, call))
         .map_err(|error| RowError::usage(error.strip_prefix("thinkthen usage: ").unwrap_or(&error)))

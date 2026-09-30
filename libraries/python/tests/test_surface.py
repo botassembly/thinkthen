@@ -91,7 +91,7 @@ def test_wrong_questions_are_usage_errors_that_name_the_verb(backend, tmp_path):
         "usage False decide takes a question text or tt.question(), not a int",
         "usage False decide takes a question text or tt.question(), not a dict",
         "usage False choose does not take a score question",
-        "score takes levels only beside a question text",
+        "usage False settings repeats `levels` from the question or named arguments",
         "usage False none is True or False",
     ]
     assert backend.count() == 0

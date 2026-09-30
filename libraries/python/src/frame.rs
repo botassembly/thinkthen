@@ -498,8 +498,8 @@ pub(crate) fn _recognize_column(
 #[cfg(feature = "probe")]
 #[pyfunction]
 pub(crate) fn _arrow_probe(series: &Bound<'_, PyAny>) -> PyResult<Vec<usize>> {
-    let (source, controls) = (Source::Door(Imported::column(series)?), Controls::default());
-    over_texts(series.py(), controls, None, source, |texts, rows, _options| {
+    let (py, source) = (series.py(), Source::Door(Imported::column(series)?));
+    over_texts(py, Controls::default(), None, source, |texts, rows, _| {
         nullable::aligned(
             rows,
             Completed {
