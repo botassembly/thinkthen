@@ -10,11 +10,11 @@
 //! then ends. That worker is the known exception to ADR 0017's "no thread
 //! outlives a call".
 
-use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use rusqlite::ffi::sqlite3;
+use thinkthen::fork_safe::{Receiver, RecvTimeoutError, channel};
 use thinkthen::{BatchSetting, CallOptions, CancelToken, Engine, ErrorKind, Settings};
 
 use crate::{Failure, budget, ffi, guard, settings};
@@ -153,9 +153,9 @@ fn wait<T>(
 #[cfg(test)]
 mod tests {
     use std::io::Write;
-    use std::sync::mpsc::channel;
     use std::thread;
     use std::time::Duration;
+    use thinkthen::fork_safe::channel;
 
     use thinkthen::{CancelToken, ErrorKind};
 

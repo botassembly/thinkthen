@@ -29,6 +29,10 @@ mod set;
 mod settings;
 
 pub use crate::core::settings::{For, Settings, SettingsError};
+/// The channel every ThinkThen binding waits on, so a forked child on macOS
+/// can wait too (ticket 0365). It is for the bindings, not a documented API.
+#[doc(hidden)]
+pub use crate::engine::fork_safe;
 pub use annotated::{Annotated, AnnotatedRecord, Failed, FailureCause, NamedAnnotation};
 pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};

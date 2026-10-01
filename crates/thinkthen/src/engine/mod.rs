@@ -363,6 +363,7 @@ pub(crate) mod error;
 pub(crate) mod facade;
 #[cfg(test)]
 mod facade_tests;
+pub mod fork_safe;
 #[cfg(test)]
 #[cfg(unix)]
 mod host_signal_tests;

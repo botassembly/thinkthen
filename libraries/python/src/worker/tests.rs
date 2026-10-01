@@ -1,7 +1,8 @@
-use std::{sync::atomic::Ordering, sync::mpsc::sync_channel, time::Duration, time::Instant};
+use std::{sync::atomic::Ordering, time::Duration, time::Instant};
 
 use pyo3::prelude::*;
 use thinkthen::CancelToken;
+use thinkthen::fork_safe::channel;
 
 use super::{Controls, LIVE, Outcome, run, wait};
 
@@ -40,7 +41,7 @@ fn a_worker_outlives_a_caller_that_left() {
 #[test]
 fn a_closed_channel_with_no_result_is_a_defect() {
     Python::initialize();
-    let (sender, receiver) = sync_channel::<Outcome<u8>>(1);
+    let (sender, receiver) = channel::<Outcome<u8>>();
     drop(sender);
     Python::attach(|py| {
         let error = wait(py, receiver, &CancelToken::new(), None, None).err();
@@ -55,7 +56,7 @@ fn a_closed_channel_with_no_result_is_a_defect() {
 #[test]
 fn a_fired_token_beats_an_answer_already_waiting() {
     Python::initialize();
-    let (sender, receiver) = sync_channel::<Outcome<u8>>(1);
+    let (sender, receiver) = channel::<Outcome<u8>>();
     assert!(sender.send(Some(Ok(3))).is_ok());
     let caller = CancelToken::new();
     caller.cancel();

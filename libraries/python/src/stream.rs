@@ -3,13 +3,13 @@
 //! Only `__next__` advances Python. The worker receives owned text through a
 //! zero-slot handoff, and the core planner owns its bounded request window.
 
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, sync_channel};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use pyo3::exceptions::{PyKeyboardInterrupt, PyStopIteration};
 use pyo3::prelude::*;
+use thinkthen::fork_safe::{Receiver, RecvTimeoutError, Sender, channel};
 use thinkthen::{
     Answer, BatchSetting, CallOptions, CancelToken, Error, Facts, Judgment, Probabilities,
     contained,
@@ -214,7 +214,7 @@ fn run(job: Run) {
 #[pyclass(name = "_Stream", module = "thinkthen._thinkthen")]
 pub(crate) struct PyStream {
     source: Py<PyAny>,
-    input: Option<SyncSender<Option<String>>>,
+    input: Option<Sender<Option<String>>>,
     events: Mutex<Receiver<Event>>,
     worker: Option<JoinHandle<()>>,
     stop: CancelToken,
@@ -308,7 +308,7 @@ impl PyStream {
             }
         };
         if let Some(input) = &self.input {
-            let _ = py.detach(|| input.send(next));
+            let _ = input.send(next);
         }
         Ok(())
     }
@@ -434,7 +434,7 @@ pub(crate) fn prepare(
     if verb == "filter" {
         only(py, &asked, verb, "decide")?;
     }
-    let (incoming, source_rx) = sync_channel(0);
+    let (incoming, source_rx) = channel();
     let (events_tx, events_rx) = channel();
     let stop = CancelToken::new();
     let receipt = stream_receipt();
