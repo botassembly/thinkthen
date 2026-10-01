@@ -699,7 +699,7 @@ export const SURFACES = [
     unsureWord: '`.unsure`',
     facts: 'An `.ok` holds a `CallResult`. `.value` holds the answer, and `.facts` holds this call\'s run facts as parsed JSON. Free it with `deinit`.',
     errors: 'A `.failed` holds one of six `kind` values and a message. Free it with `engine.freeFailure`.',
-    settings: '`Engine.initWithSettings(allocator, settings)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    settings: '`Engine.initWithSettings` takes an allocator and the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [
       ['thinkthen-zig-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
       C_ARCHIVE,
