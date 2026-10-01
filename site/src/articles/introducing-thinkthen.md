@@ -3,7 +3,6 @@ title: "Introducing ThinkThen"
 slug: introducing-thinkthen
 author: Ian Maurer
 date: "2026-10-01"
-draft: true
 goal: "Introduce ThinkThen: code asks a model one bounded question about text, gets a typed answer back, and acts on it."
 blurb: "ThinkThen lets code act on what text means. Ask one bounded question, get yes, no, one option or a number, and branch on it. Ten functions, 24 bindings, MIT."
 card: /og/introducing-thinkthen.png
