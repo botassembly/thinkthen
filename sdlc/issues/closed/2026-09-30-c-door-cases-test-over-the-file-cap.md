@@ -1,12 +1,14 @@
 # The C door's cases test is over the 500-line file cap
 
-Status: closed by a quick fix. Found in the ticket 0346 code review.
+Status: closed by the quick fix on branch `ticket/qf-file-cap-bindings`. Found in the ticket 0346 code review.
 
 Kind: debt
 
 Pay when: the next ticket that edits `libraries/c/tests/door/cases.rs`, or before 0.1.
 
 Debt: 027
+
+Paid: 2026-09-30
 
 Severity: low
 
