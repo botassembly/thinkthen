@@ -40,6 +40,7 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     )]
 }
 
+#[cfg(unix)]
 #[cfg(feature = "cli")]
 /// The command's own `status --json` under this home's state folder.
 fn status(home: &Path) -> serde_json::Value {
@@ -57,6 +58,7 @@ fn status(home: &Path) -> serde_json::Value {
         .clone()
 }
 
+#[cfg(unix)]
 #[cfg(feature = "cli")]
 /// A listener that answers `503` to the arrivals named, and `ANSWERED` otherwise.
 fn failing_at(busy: &'static [usize]) -> Listener {

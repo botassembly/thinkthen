@@ -42,8 +42,6 @@ fn usage(status: &Output, name: &str) -> Option<u64> {
         .as_u64()
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
 #[test]
 fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
     let root = folder("default-cache-home");
@@ -138,8 +136,6 @@ fn cache_prune_removes_every_answer_under_a_one_byte_target() {
     );
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
 #[test]
 fn an_enabled_default_cache_without_a_home_has_the_fixed_local_failure() {
     let relative_home = Path::new("ticket-0062-relative-home");

@@ -87,8 +87,6 @@ fn answers(folder: &str) -> io::Result<usize> {
 /// The arm drops the last answer of every request. The first run's request
 /// asks both questions and stores the decide answer. The rerun asks the
 /// choice alone, whose reply then holds no answer at all, so it is refused.
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
 #[test]
 fn a_cache_stores_the_good_answers_and_asks_only_the_failed_question_again() -> io::Result<()> {
     let runs = Runs::new("keeps")?;

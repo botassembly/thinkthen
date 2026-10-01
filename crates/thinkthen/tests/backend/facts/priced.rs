@@ -33,8 +33,6 @@ fn run(root: &Path, listener: &Listener, input: &[u8], extra: &[&str]) -> std::p
     .expect("priced command")
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
 #[test]
 fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
     let root = configuration(
@@ -95,8 +93,6 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
     assert!(facts.get("estimated_cost_usd").is_none());
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
 #[test]
 fn caller_price_config_rejects_invalid_pair_without_a_send() {
     let root = configuration(
@@ -113,8 +109,6 @@ fn caller_price_config_rejects_invalid_pair_without_a_send() {
     );
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
 #[test]
 fn complete_replies_with_an_overflowed_sum_hide_tokens_and_cost_then_a_new_run_recovers() {
     let root = configuration(

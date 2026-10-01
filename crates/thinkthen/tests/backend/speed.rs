@@ -49,8 +49,6 @@ fn planted(function: &str, from: &str, to: &str) -> io::Result<PathBuf> {
     Ok(path)
 }
 
-// The probe starts its children with only PATH and HOME, which a Windows child cannot run under.
-#[cfg(unix)]
 #[test]
 fn the_speed_gate_holds_and_names_each_fault() {
     let backend = Backend::start().expect("backend");

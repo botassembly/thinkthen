@@ -67,13 +67,11 @@ fn each_loader_reads_one_mib_and_refuses_more_invalid_utf8_or_a_missing_file() {
             &format!("{role}-invalid"),
             b"{\"decide\":\"\xff\"}",
         );
+        let absent = folder.join("absent.json");
         let mut cases: Vec<(&Path, String)> = vec![
             (&over, format!("the {role} is too large")),
             (&invalid, format!("the {role} could not be read")),
-            (
-                &folder.join("absent.json"),
-                format!("the {role} could not be read"),
-            ),
+            (&absent, format!("the {role} could not be read")),
         ];
         // Windows has no endless file like `/dev/zero`.
         if cfg!(unix) {

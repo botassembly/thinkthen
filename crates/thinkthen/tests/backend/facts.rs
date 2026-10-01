@@ -9,6 +9,8 @@ use serde_json::{Map, Value, json};
 use crate::batching::{self, KEY, QUESTION};
 use crate::harness::{Canned, Listener, spawn};
 
+// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 mod priced;
 #[cfg(unix)]
 mod usage_lock;

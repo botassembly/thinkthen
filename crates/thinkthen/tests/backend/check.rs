@@ -284,6 +284,7 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
 }
 
 /// One canned reply per probe, each naming `other-1` whatever model was sent.
+#[cfg(unix)]
 fn other_model() -> Listener {
     let answers = [
         r#""q1":{"type":"noul","noul":0.9}"#,
@@ -297,6 +298,7 @@ fn other_model() -> Listener {
 }
 
 /// The header lines and the model each reply line names.
+#[cfg(unix)]
 fn models(output: &Output) -> (Vec<String>, Vec<String>) {
     let printed = text(&output.stdout);
     let header = printed.lines().skip(1).take(3).map(str::to_owned).collect();

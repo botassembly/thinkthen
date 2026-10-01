@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+#[cfg(unix)]
 use std::{fs, path::Path};
 
 use crate::harness::{Canned, Listener, spawn, spawn_one};

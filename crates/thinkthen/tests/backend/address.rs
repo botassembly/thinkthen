@@ -1,6 +1,7 @@
 //! The two variables at the edge: where a request goes, and the key it carries.
 
 use std::io;
+#[cfg(unix)]
 use std::net::{TcpListener, ToSocketAddrs};
 use std::process::Output;
 

@@ -21,8 +21,7 @@ mod shared_host;
 #[path = "public_env/usage_totals.rs"]
 mod usage_totals;
 
-use crate::child::ChildEnvironment as _;
-use crate::run;
+use crate::{child::ChildEnvironment as _, run};
 
 use std::fs;
 use std::io::Write as _;
@@ -415,8 +414,7 @@ fn r4_24_the_engine_base_url_outranks_the_environment_base() {
     assert_eq!((first.count(), second.count()), (0, 1));
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
+#[cfg(unix)] // It names the XDG folders (sdlc/planning/windows.md).
 #[test]
 fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
     let served = listener();

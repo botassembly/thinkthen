@@ -2,6 +2,7 @@
 #![cfg(feature = "cli")]
 
 use crate::child::ChildEnvironment as _;
+#[cfg(unix)]
 use std::fs;
 use std::process::Command;
 

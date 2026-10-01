@@ -2,7 +2,9 @@
 
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, spawn};
+#[cfg(unix)]
+use crate::harness::spawn;
+use crate::harness::{Canned, Listener};
 use crate::support::{decide, digest, encoded_decide, keys};
 
 /// The response a backend gives when it answers the one question that was asked.
@@ -25,6 +27,7 @@ fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
 const KEY: Option<&str> = Some("sk-test-value");
 
 /// The diagnostic a refused connection earns.
+#[cfg(unix)]
 const REFUSED_DIAGNOSTIC: &str = "thinkthen: the backend refused the connection; check that it is running and that --url is correct\n";
 
 #[test]
