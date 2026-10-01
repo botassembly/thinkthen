@@ -65,8 +65,14 @@ pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
     held.merge(old_entries(folder, quote, &mut summary)?);
     summary.answers = held.answers.len();
     replace(folder, &jsonl, held.written()?.as_bytes())?;
-    if live.is_some() {
+    if let Some(connection) = live {
+        // Windows cannot remove an open file, so the store closes first there.
+        // Unix removes it while the lock is held (ticket 0373).
+        #[cfg(windows)]
+        drop(connection);
         fs::remove_file(&sqlite).map_err(|_| Error::RecordingStorage)?;
+        #[cfg(not(windows))]
+        drop(connection);
     }
     Ok(summary)
 }

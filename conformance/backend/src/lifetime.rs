@@ -93,7 +93,13 @@ impl Lifetime {
                 return None;
             }
             match listener.accept() {
-                Ok((stream, _)) => return Some(stream),
+                Ok((stream, _)) => {
+                    // Windows hands the listener's nonblocking mode to each
+                    // accepted socket, and Linux and macOS do not. Every
+                    // connection reads blocking (ticket 0373).
+                    let _blocking = stream.set_nonblocking(false);
+                    return Some(stream);
+                }
                 Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
                     let state = self.state.lock().unwrap_or_else(|error| error.into_inner());
                     if state.stopped {

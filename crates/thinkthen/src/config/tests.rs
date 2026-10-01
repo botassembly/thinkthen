@@ -79,6 +79,8 @@ fn each_refusal_names_its_field_and_never_its_value() {
     }
 }
 
+// The Linux and macOS rows use Unix absolute paths, which Windows reads as relative.
+#[cfg(unix)]
 #[test]
 fn linux_and_macos_resolve_config_and_cache_independently() {
     let cases = [
@@ -144,6 +146,7 @@ fn linux_and_macos_resolve_config_and_cache_independently() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn usage_lives_in_the_state_folder_and_never_follows_the_cache() {
     let home = Some("/home/person");
