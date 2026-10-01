@@ -4,7 +4,7 @@ Kind: debt
 
 Pay when: a binding's surface check fails once under load, or before 0.1.
 
-Debt: 027
+Debt: 029
 
 Severity: low
 

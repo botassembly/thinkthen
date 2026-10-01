@@ -82,7 +82,7 @@ pub(crate) fn prune(
     environment: &Environment,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let max_size = positive(arguments.max_size.as_deref(), "--max-size")?
+    let max_size = max_size(arguments.max_size.as_deref())?
         .unwrap_or_else(|| environment.cache_bytes());
     let older_than = arguments.older_than.as_deref().map(duration).transpose()?;
     if arguments
@@ -128,35 +128,37 @@ pub(crate) fn prune(
     Ok(ExitCode::SUCCESS)
 }
 
-fn positive(value: Option<&str>, option: &'static str) -> Result<Option<u64>, Failure> {
+fn max_size(value: Option<&str>) -> Result<Option<u64>, Failure> {
     value
         .map(|text| {
             text.parse::<u64>()
                 .ok()
                 .filter(|number| *number > 0)
-                .ok_or(Failure::Usage(match option {
-                    "--max-size" => "--max-size takes a positive base-ten integer",
-                    _ => "the option takes a positive base-ten integer",
-                }))
+                .ok_or(Failure::Usage("--max-size takes a positive base-ten integer"))
         })
         .transpose()
 }
 
 fn duration(text: &str) -> Result<Duration, Failure> {
-    let (count, unit) = text.split_at(text.len().saturating_sub(1));
-    let count = positive(Some(count), "--older-than")?.ok_or(Failure::Usage(
-        "--older-than takes a positive integer and one lowercase unit",
-    ))?;
+    let usage = Failure::Usage("--older-than takes a positive integer and one lowercase unit");
+    let mut characters = text.chars();
+    let unit = characters.next_back();
+    let Some(count) = characters
+        .as_str()
+        .parse::<u64>()
+        .ok()
+        .filter(|count| *count > 0)
+    else {
+        return Err(usage);
+    };
     let seconds = match unit {
-        "s" => Some(count),
-        "m" => count.checked_mul(60),
-        "h" => count.checked_mul(3_600),
-        "d" => count.checked_mul(86_400),
+        Some('s') => Some(count),
+        Some('m') => count.checked_mul(60),
+        Some('h') => count.checked_mul(3_600),
+        Some('d') => count.checked_mul(86_400),
         _ => None,
     }
-    .ok_or(Failure::Usage(
-        "--older-than takes a positive integer and one lowercase unit",
-    ))?;
+    .ok_or(usage)?;
     Ok(Duration::from_secs(seconds))
 }
 
@@ -165,6 +167,7 @@ mod tests {
     use std::time::Duration;
 
     use super::duration;
+    use crate::failure::Failure;
 
     #[test]
     fn duration_takes_one_positive_decimal_count_and_one_lowercase_unit() {
@@ -184,8 +187,21 @@ mod tests {
             "1S",
             "1ss",
             "18446744073709551615d",
+            "5\u{e9}",
+            "\u{e9}",
+            "\u{e9}5s",
+            "5\u{1f600}",
+            "\u{663}s",
         ] {
-            assert!(duration(text).is_err(), "{text}");
+            assert!(
+                matches!(
+                    duration(text),
+                    Err(Failure::Usage(
+                        "--older-than takes a positive integer and one lowercase unit"
+                    ))
+                ),
+                "{text}"
+            );
         }
     }
 }
