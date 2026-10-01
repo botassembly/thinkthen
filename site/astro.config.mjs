@@ -30,6 +30,8 @@ export default defineConfig({
     // The talk cut its what-jev-knows slide. The strings page compares Jev with search.
     '/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
     '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
+    // The talk merged its bench-run slide into the bench-field slide.
+    '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
   },
   // Articles place examples with <!-- example: --> and <!-- file: -->.
   // src/lib/code.mjs draws them. scripts/check-code.mjs refuses a raw fence.
