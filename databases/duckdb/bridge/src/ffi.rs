@@ -326,6 +326,8 @@ impl BridgeStop {
 /// forked child cannot use, and the child of a host that asked once crashes.
 struct Answer<T>(Mutex<Option<Result<T, String>>>, Condvar);
 
+const NO_ANSWER: &str = "thinkthen defect: the engine worker ended with no answer";
+
 /// Gives the answer, or a defect when the worker ends without one.
 struct Giver<T>(Arc<Answer<T>>);
 
@@ -339,7 +341,7 @@ impl<T> Giver<T> {
 
 impl<T> Drop for Giver<T> {
     fn drop(&mut self) {
-        self.give(Err("thinkthen defect: the engine worker ended with no answer".to_owned()));
+        self.give(Err(NO_ANSWER.to_owned()));
     }
 }
 
