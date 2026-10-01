@@ -3,7 +3,8 @@
 // and every code block in the articles. The build runs it.
 //
 //   - No line over 60 characters, apart from the exempt lines below.
-//   - A library sample asserts. It never prints.
+//   - A library or SQL sample that examples/REPLAY lists has its saved
+//     output beside it as <sample>.out. A library sample prints its answer.
 //   - No example asks for --details, except on the annotate edge-case page
 //     under examples/reference/annotate/ (checklist ruling of 2026-09-30).
 //   - Each function page opens with one command example of 10 to 25
@@ -24,6 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { namedAnswerProblems } from './named-answers.mjs';
 import { CODE_FUNCTIONS } from '../src/data/catalog.mjs';
+import { readReplayList, replayLine } from './binding-proofs.mjs';
 
 const here = fileURLToPath(import.meta.url);
 const site = path.resolve(path.dirname(here), '..');
@@ -105,8 +107,6 @@ const COMMENT = {
   '.dart': /^\s*(\/\/|\/\*)/,
   '.sql': /^\s*--/,
 };
-const PRINT = /\b(print\(|console\.log\(|puts\b|println!|printf\(|cat\(|NSLog\(|Put_Line\b|System\.out\.print|Console\.Write|fmt\.Print|var_dump\()|std::cout\b|^\s*(display|echo)\b/i;
-const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c', '.cpp', '.m', '.cob', '.adb', '.java', '.kt', '.scala', '.cs', '.go', '.swift', '.zig', '.php', '.dart']);
 
 // Named answers (Ian, 2026-09-26). An example keeps each ThinkThen answer
 // in a variable named for its meaning, then asserts on that name. The rule
@@ -156,7 +156,6 @@ function checkLines(label, rel, lines, ext) {
       else found.push(`${at}: ${[...line].length} characters, over ${WIDTH}`);
     }
     if (COMMENT[ext]?.test(line)) found.push(`${at}: a comment. The sentence above the block says it.`);
-    if (LIBRARY.has(ext) && PRINT.test(line)) found.push(`${at}: a print. Assert the answer instead.`);
   });
   return found;
 }
@@ -188,7 +187,6 @@ export function articleProblems(name, text) {
           found.push(`src/articles/${name}:${start + j + 1}: ${[...l].length} characters, over ${WIDTH}`);
         }
         if (COMMENT[ext]?.test(l)) found.push(`src/articles/${name}:${start + j + 1}: a comment in a code block`);
-        if (LIBRARY.has(ext) && PRINT.test(l)) found.push(`src/articles/${name}:${start + j + 1}: a print. Assert the answer instead.`);
       });
       found.push(...namedAnswers(`src/articles/${name}`, block.join('\n'), tag, tag, start));
       if (ext === '.c') found.push(...cAssertProblems(`src/articles/${name}`, block.join('\n'), start));
@@ -209,6 +207,10 @@ function main() {
     problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
     if (ext === '.c') problems.push(...cAssertProblems(`examples/${rel}`, text));
     if (ext === '.sh' && /--details\b/.test(text) && !rel.startsWith(DETAILS_PAGE)) problems.push(`examples/${rel}: asks for --details. Only examples under examples/${DETAILS_PAGE} may.`);
+  }
+
+  for (const rel of new Set(readReplayList(root).map((line) => replayLine(line).rel))) {
+    if (!fs.existsSync(path.join(root, `${rel}.out`))) problems.push(`examples/${rel}: no saved output. Every replayed sample prints its answer, and its page shows examples/${rel}.out under it.`);
   }
 
   const lineCount = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\n+$/, '').split('\n').length : 0);

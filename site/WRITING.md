@@ -126,29 +126,32 @@ An example asks what a sensible user would ask, and it shows the tool's real out
 
 The page shows the output in its own block after the script, then the exit code. A JSON document is pretty-printed with `jq .`. A stream of short records may keep one record per line.
 
-### Asserts, not prints
+### Print the answer
 
-Library examples assert the answer. They never print it. Pick the form below for each language and use it everywhere.
+Every example shows its output (Ian, 2026-10-01). A library sample prints its answer to standard output with the language's ordinary print. The page shows what it printed in its own block under the sample, as it does for Bash and SQL. Print a value a reader understands: the answer list, or a small table of each input beside its answer. Keep each printed line to 60 characters.
 
 | Language | Form |
 | --- | --- |
-| Bash | `test "$team" = "account"` |
-| Python | `assert is_refund is True` after reading `.value` |
-| TypeScript | `assert.equal(isRefund, true);` after reading `.value` and importing `node:assert/strict` |
-| Ruby | `raise unless is_refund == true` after reading `.value` |
-| R | `stopifnot(identical(is_refund, TRUE))` after reading `$value` |
-| Rust | `assert_eq!(is_refund, Answer::Yes);` after taking `.into_value()` |
-| C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
+| Bash | the command prints its answer, or `test "$team" = "account"` after capturing it |
+| Python, pandas, Polars | `print(is_refund)` after reading `.value` |
+| TypeScript | `console.log(isRefund);` after reading `.value` |
+| Ruby | `p is_refund` after reading `.value` |
+| R | `print(is_refund)` after reading `$value` |
+| Rust | `println!("{is_refund:?}");` after taking `.into_value()` |
+| C | `printf("%s\n", ...);` after `#include <stdio.h>` |
+| SQL | the query's rows, as the database prints them |
 
-A C sample never calls a function inside `assert` when it uses the result or the side effect later. `assert` drops its whole expression when `NDEBUG` is set. Assign the call first, as in `json_bool has_value = json_object_object_get_ex(result, "value", &value);`, then write `assert(has_value);`. `check-samples` fails a C assert that passes an address with `&`. A C function page sample asserts the engine with `assert(tt);` after `thinkthen_engine_new()` and ends with `thinkthen_engine_free(tt);`.
+Other languages use their own line print to standard output, such as `System.out.println`, `Console.WriteLine`, `fmt.Println`, or `DISPLAY`.
 
-Ruby has no built-in assert, so `raise unless` stands in for one. SQL has no assert. A SQL example shows the query and then what the database printed.
+The replay runners compare what a sample printed with `<sample>.out` beside it, byte for byte, so the saved output stands in for an assert. `node scripts/smoke-bindings.mjs --update <path>` or `node scripts/smoke-sql.mjs --update <path>` writes the file. Read it before the commit. `check-samples` and `check-binding-proofs` fail a replayed sample with no `.out`.
 
-A Bash example that captures an answer in a variable ends with its `test` lines. The smoke run fails when a `test` line fails. The check fails a library sample that calls `print(`, `console.log(`, `puts`, `println!`, `printf(`, or `cat(`.
+A C sample checks each call's status with `assert`, since C has no exceptions. It never calls a function inside `assert` when it uses the result or the side effect later. `assert` drops its whole expression when `NDEBUG` is set. Assign the call first, as in `int rc = thinkthen_decide(...);`, then write `assert(rc == THINKTHEN_OK);`. `check-samples` fails a C assert that passes an address with `&`. A C function page sample asserts the engine with `assert(tt);` after `thinkthen_engine_new()` and ends with `thinkthen_engine_free(tt);`.
+
+A Bash example that captures an answer in a variable ends with its `test` lines. The smoke run fails when a `test` line fails.
 
 ### Name each answer
 
-Store each ThinkThen answer in a variable named for its meaning, then assert on that name (Ian, 2026-09-26). Write `is_spam = engine.decide(question, message)`, then `assert is_spam`, `assert not is_spam`, or `assert is_spam is None` for not sure. Take the name from the question, such as `is_refund`, `owners`, or `urgency`, and never `result` or `answer`. Bash captures with `is_spam=$(...)` and tests `"$is_spam"`. Where the exit code is the lesson, Bash names it first with `refund_code=$?`, or wraps the call in a function named for its meaning, such as `asks_for_refund`. SQL gives each call an alias, such as `AS is_refund`, and filters or sorts on that alias. A Bash transcript whose output block shows the command's own answer needs no variable. `check-samples` fails an assert, print, `if`, or `while` that acts on a call, a SQL call with no alias, a bare `$?` in `case` or `test`, and a generic name. The rule lives in `scripts/named-answers.mjs`. The builder's lint rung imports it too. Its table test runs in the build. Each example file and each fence tag must name a code language or a kind in the `NO_CALL` list in `check-samples`, such as `json`, `text`, `console`, or `output`. A mistyped fence tag fails the build.
+Store each ThinkThen answer in a variable named for its meaning, then print or test that name (Ian, 2026-09-26). Write `is_spam = engine.decide(question, message).value`, then `print(is_spam)`. Take the name from the question, such as `is_refund`, `owners`, or `urgency`, and never `result` or `answer`. Bash captures with `is_spam=$(...)` and tests `"$is_spam"`. Where the exit code is the lesson, Bash names it first with `refund_code=$?`, or wraps the call in a function named for its meaning, such as `asks_for_refund`. SQL gives each call an alias, such as `AS is_refund`, and filters or sorts on that alias. A Bash transcript whose output block shows the command's own answer needs no variable. `check-samples` fails an assert, print, `if`, or `while` that acts on a call, a SQL call with no alias, a bare `$?` in `case` or `test`, and a generic name. The rule lives in `scripts/named-answers.mjs`. The builder's lint rung imports it too. Its table test runs in the build. Each example file and each fence tag must name a code language or a kind in the `NO_CALL` list in `check-samples`, such as `json`, `text`, `console`, or `output`. A mistyped fence tag fails the build.
 
 ### No comments
 
@@ -168,7 +171,7 @@ Every example on the site is a file under `examples/`, and every page reads its 
 | Files the scripts read | `examples/<page>/files/` |
 | A library sample | `examples/functions/<fn>/<surface>.<ext>` |
 | A first call | `examples/install/<surface>/first-call.<ext>` |
-| What a database printed | the sample's name plus `.out` |
+| What a library sample or a database printed | the sample's name plus `.out` |
 | The caption for a script | `see` in `src/data/catalog.mjs` or `src/data/beatles.mjs`, keyed by script name |
 
 `src/data/samples.mjs` reads these files for the pages. An article includes an example with `<!-- example: functions/decide/3-one -->`, or a file with `<!-- file: functions/question-file/files/refund.json -->`. `src/lib/remark-examples.mjs` turns the comment into the script, its output, and its exit code.

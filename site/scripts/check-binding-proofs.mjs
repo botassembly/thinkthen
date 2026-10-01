@@ -15,7 +15,7 @@
 // each published checkpoint tag.
 //
 // It fails when a library or SQL sample under examples/ has no REPLAY
-// line.
+// line, or a listed sample has no saved output beside it as <sample>.out.
 //
 // It also fails when an install line does not name the package that the
 // binding's own metadata names.
@@ -45,6 +45,7 @@ const runner = (rel) => (rel.endsWith('.sql') ? 'smoke-sql.mjs' : 'smoke-binding
 for (const line of listed) {
   const { rel } = replayLine(line);
   if (!fs.existsSync(path.join(examples, rel))) { problems.push(`examples/REPLAY names ${rel}, which does not exist.`); continue; }
+  if (!fs.existsSync(path.join(examples, `${rel}.out`))) problems.push(`examples/${rel} has no saved output. Run node scripts/${runner(rel)} --update ${rel}, then read examples/${rel}.out.`);
   const entry = proof[line];
   if (!entry) { problems.push(`${line} has no proof. Run node scripts/${runner(rel)} ${rel}.`); continue; }
   const now = sampleHashes(examples, rel);

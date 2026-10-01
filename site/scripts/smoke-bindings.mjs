@@ -7,11 +7,15 @@
 //   node scripts/smoke-bindings.mjs                  replay every listed sample
 //   node scripts/smoke-bindings.mjs PATTERN          only the samples whose path holds PATTERN
 //   node scripts/smoke-bindings.mjs --allow-missing  pass when a toolchain is missing
+//   node scripts/smoke-bindings.mjs --update         write each sample's <sample>.out
 //
 // A sample runs in a fresh folder that starts with a copy of its page's
 // files/. THINKTHEN_CACHE names a fresh copy of recordings/thinkthen.jsonl.
 // The run sets no key and no address, so a missed answer fails with no
-// request sent. A sample passes when it exits 0, so every assert held.
+// request sent. A sample prints its answer. It passes when it exits 0 and
+// prints its <sample>.out byte for byte, as a SQL sample does. --update
+// writes that file from the run. A sample with no saved output fails
+// without --update.
 //
 // A REPLAY line that ends with backend=NAME runs its sample with
 // THINKTHEN_BACKEND set to that name, and with THINKTHEN_BASE_URL set to
@@ -26,8 +30,7 @@
 //
 // A sample on a function page, functions/<fn>/<surface>.<ext>, runs on
 // its surface's binding under the name sample.<ext>, so no sample shadows
-// a package. Its page shows no output for a library tab, so it fails when
-// it writes to standard output. It skips a line that ends in .sql.
+// a package. It skips a line that ends in .sql.
 //
 // A sample whose toolchain is missing reports "not run" and keeps its old
 // entry, and the run exits 1. With --allow-missing, the run prints how many
@@ -53,6 +56,7 @@ const repo = path.resolve(site, '..');
 const examples = path.join(site, 'examples');
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const allowMissing = process.argv.includes('--allow-missing');
+const update = process.argv.includes('--update');
 
 // No key, address, backend or setting from the shell may reach a sample.
 const leaked = leakedVariables(process.env);
@@ -423,9 +427,17 @@ for (const line of list) {
   }
   const whole = attempt(rel, binding, fixture.filter((l) => l.key), named);
   if (!whole.ok) { failed.push(`${line}: failed against the whole recording\n${whole.output}`); continue; }
-  if (rel.startsWith('functions/') && whole.stdout.trim()) { failed.push(`${line}: printed output, and its page shows none for a library tab\n${whole.stdout.trim()}`); continue; }
+  const saved = path.join(examples, `${rel}.out`);
+  if (update) fs.writeFileSync(saved, whole.stdout);
+  if (!fs.existsSync(saved)) { failed.push(`${line}: no saved output at examples/${rel}.out. Run node scripts/smoke-bindings.mjs --update ${rel}, then read the file.`); continue; }
+  const expected = fs.readFileSync(saved, 'utf8');
+  if (whole.stdout !== expected) { failed.push(`${line}: printed other output than examples/${rel}.out\n--- saved\n${expected}--- printed\n${whole.stdout}`); continue; }
+  if (!expected.trim()) { failed.push(`${line}: printed nothing. A sample prints its answer.`); continue; }
 
-  const narrowed = narrow(fixture, fs.readFileSync(path.join(examples, rel), 'utf8'), (answers) => attempt(rel, binding, answers, named).ok);
+  const narrowed = narrow(fixture, fs.readFileSync(path.join(examples, rel), 'utf8'), (answers) => {
+    const tried = attempt(rel, binding, answers, named);
+    return tried.ok && tried.stdout === expected;
+  });
   if (narrowed.reason) { failed.push(`${line}: ${narrowed.reason}`); continue; }
   const { kept } = narrowed;
 
