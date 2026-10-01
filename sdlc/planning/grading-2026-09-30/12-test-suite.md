@@ -27,7 +27,7 @@ All paths below are under `sdlc/scripts/` unless they start with `crates/` or `c
 | Surfaces touched | 5 | All 22. `surfaces` runs each landed binding's `check.sh` and `--stress` and `--full-functional` profiles (`surfaces:26-45`) |
 | Settings | 1 | No `settings.md` row. `THINKTHEN_TEST_PROFILE` and `THINKTHEN_HEAVY_LOCK` are script variables |
 | Contract weight | 2 | No spec page. Three ADRs with sections (0111, 0113, 0047): 3 |
-| Churn and debt | 5 | 114 commits since 2026-09-23 on the scripts and harness. 14 flake or under-load issues filed and closed in the same 7 days. Two open issues (`2026-09-30-c-door-cases-test-over-the-file-cap.md`, `2026-09-30-crate-job-library-tests-start-a-command-never-built.md`). Ticket 0352 in flight |
+| Churn and debt | 5 | 114 commits since 2026-09-23 on the scripts and harness. 14 flake or under-load issues filed and closed in the same 7 days. Two open issues (`closed/2026-09-30-c-door-cases-test-over-the-file-cap.md`, `2026-09-30-crate-job-library-tests-start-a-command-never-built.md`). Ticket 0352 in flight |
 
 Mean 3.6, rounded to 4.
 

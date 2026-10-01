@@ -41,7 +41,7 @@ Work outside the lanes:
 | `closed/2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` (Debt 011) | yes | closed | ticket 0345 landed |
 | `closed/2026-09-30-c-door-relate-rows-have-no-owner.md` (Debt 012) | yes | closed | ticket 0346 landed |
 | `closed/2026-09-30-c-door-tests-race-under-nextest.md` (Debt 025) | no | closed | ticket 0346 landed |
-| `2026-09-30-c-door-cases-test-over-the-file-cap.md` (Debt 027) | no | waits | the next ticket that edits `libraries/c/tests/door/cases.rs`, or before 0.1 |
+| `closed/2026-09-30-c-door-cases-test-over-the-file-cap.md` (Debt 027) | no | closed | quick fix landed: the cap covers `libraries/` and `databases/` |
 | `2026-09-25-public-library-api-gaps.md` (Debt 018) | items 1, 2, 3, 9, 10 | waits | 0347 landed items 1, 2, 3, 9 and 10; items 6 and 7 after 0.1 |
 | `closed/2026-09-30-sql-host-store-proofs-are-partial.md` (Debt 010) | yes | closed | ticket 0348 landed |
 | `closed/2026-09-30-static-library-exports-sqlite-symbols.md` (Debt 001) | yes | closed | ticket 0351 landed |
