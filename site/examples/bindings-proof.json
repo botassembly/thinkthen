@@ -547,7 +547,9 @@
     "page": "/functions/recognize/",
     "sample": "90966054e9123f191c39f5d7d6d487c960276f877bd2df8ecfd45dabe0d93ea0",
     "output": null,
-    "files": {},
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
     "answers": {
       "07c746dc8aad22f54dc266f9567432129b25d739cc62b1d4aa2654694a422496": "74d96e9b7ebe67afefb8fa2b182fb27a8489bc4ceb7904d03f1c23f3937436f8",
       "371f979c48617ddeb9c3b9c35868baa30cc77089f828605bea768490fa167e42": "9cb3cac3bbacda5e3feb39bb69ef10bf0e8f7b2fe6e87ab5aa881ca0d53a2e33",
@@ -580,7 +582,9 @@
     "page": "/functions/recognize/",
     "sample": "61201747c52bbaffb07a4ef1e72c88ebe0c77f34991e8bf0be559205b5b91734",
     "output": null,
-    "files": {},
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
     "answers": {
       "038467eedbe64182770dbfe591817581a2e4ab2d640ad8401c493698ce27bf0a": "a4b28b88eaadce8782ddc82c9510ef3ed5c5edcffa701c1c4c84bf8decc49102",
       "1064a86286cff28361cdb90773d26d4c726975e0f5155cb48e8d6ae58e459651": "cb81b47cae9fc19296792cd1c3d918e7de9d99df3531873057e95652bb4202c0",
@@ -618,7 +622,9 @@
     "page": "/functions/recognize/",
     "sample": "156922ea7eb320ca40be00c803f30ce0af9a6aa2a8e43fcdf0f071de41dd2ab9",
     "output": null,
-    "files": {},
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
     "answers": {
       "038467eedbe64182770dbfe591817581a2e4ab2d640ad8401c493698ce27bf0a": "a4b28b88eaadce8782ddc82c9510ef3ed5c5edcffa701c1c4c84bf8decc49102",
       "1064a86286cff28361cdb90773d26d4c726975e0f5155cb48e8d6ae58e459651": "cb81b47cae9fc19296792cd1c3d918e7de9d99df3531873057e95652bb4202c0",
@@ -655,7 +661,9 @@
     "page": "/functions/recognize/",
     "sample": "16f4dd2db58ae488cd2d0bd434e08e1c4bda2ede09b44183e9f340d4fb371182",
     "output": null,
-    "files": {},
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
     "answers": {
       "038467eedbe64182770dbfe591817581a2e4ab2d640ad8401c493698ce27bf0a": "a4b28b88eaadce8782ddc82c9510ef3ed5c5edcffa701c1c4c84bf8decc49102",
       "1064a86286cff28361cdb90773d26d4c726975e0f5155cb48e8d6ae58e459651": "cb81b47cae9fc19296792cd1c3d918e7de9d99df3531873057e95652bb4202c0",

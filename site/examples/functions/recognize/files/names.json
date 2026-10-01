@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "recognize": {
+    "kinds": {
+      "person": null,
+      "organization": null,
+      "place": null
+    },
+    "relations": [
+      {
+        "name": "works_for",
+        "source": "person",
+        "target": "organization"
+      },
+      {
+        "name": "based_in",
+        "source": "organization",
+        "target": "place"
+      }
+    ]
+  }
+}
