@@ -84,10 +84,14 @@ const COMMENT = {
   '.ts': /^\s*(\/\/|\/\*)/,
   '.rs': /^\s*(\/\/|\/\*)/,
   '.c': /^\s*(\/\/|\/\*)/,
+  '.cpp': /^\s*(\/\/|\/\*)/,
+  '.m': /^\s*(\/\/|\/\*)/,
+  '.cob': /^\s*\*>/,
+  '.adb': /^\s*--/,
   '.sql': /^\s*--/,
 };
-const PRINT = /\b(print\(|console\.log\(|puts\b|println!|printf\(|cat\()/;
-const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c']);
+const PRINT = /\b(print\(|console\.log\(|puts\b|println!|printf\(|cat\(|NSLog\(|Put_Line\b)|std::cout\b|^\s*display\b/i;
+const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c', '.cpp', '.m', '.cob', '.adb']);
 
 // Named answers (Ian, 2026-09-26). An example keeps each ThinkThen answer
 // in a variable named for its meaning, then asserts on that name. The rule
@@ -102,8 +106,8 @@ export const NO_CALL = new Set([
   '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq',
   'text', 'json', 'console', 'output',
 ]);
-const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.sql': 'sql' };
-const FENCE_EXT = { bash: '.sh', sh: '.sh', python: '.py', ts: '.ts', typescript: '.ts', ruby: '.rb', r: '.R', rust: '.rs', c: '.c', sql: '.sql', json: '.json' };
+const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.cpp': 'cpp', '.m': 'objective-c', '.cob': 'cobol', '.adb': 'ada', '.sql': 'sql' };
+const FENCE_EXT = { bash: '.sh', sh: '.sh', python: '.py', ts: '.ts', typescript: '.ts', ruby: '.rb', r: '.R', rust: '.rs', c: '.c', cpp: '.cpp', 'objective-c': '.m', objc: '.m', cobol: '.cob', ada: '.adb', sql: '.sql', json: '.json' };
 
 function namedAnswers(label, text, kind, language, offset = 0) {
   if (NO_CALL.has(kind)) return [];
