@@ -207,6 +207,8 @@ csharp)
 			--source "$folder/feed" -o "$folder" -v quiet
 		[ -f "$folder/Botassembly.ThinkThen.$V.nupkg" ] || { echo 'release-pack: C# nupkg missing' >&2; exit 1; }
 		rmdir "$folder/feed"
+		# The release workflow's managed pair packs the same four files (ticket 0375).
+		cp libraries/csharp/LICENSE libraries/csharp/README.md "$folder/"
 		;;
 jvm)
 		scratch_dir jvm_out

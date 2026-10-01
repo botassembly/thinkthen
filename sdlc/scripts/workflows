@@ -369,7 +369,7 @@ def check(folder, lint_text=None):
     return out
 
 
-def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)"):
+def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
     """Run the real setup branch while a temporary PATH records its host calls.
 
     A stray uv sits on PATH and fails if run, as on a runner image with its own uv.
@@ -393,6 +393,7 @@ maturin) echo 'maturin 1.15.0' ;;
 python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
   case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
 python3.14) exit 1 ;;
+bash) echo bash-check >> "$FAKE_LOG"; [ -z "$FAKE_OLD_BASH" ] ;;
 python3.13) [ "$1" != --version ] || {
   touch "$FAKE_PY313_READY"; echo py313-ready >> "$FAKE_LOG"; echo 'Python 3.13.0';
 } ;;
@@ -425,7 +426,7 @@ esac
         sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
         sqlite_python.chmod(0o755)
         for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "xcrun", "brew", "shasum",
-                     "python3", "python3.12", "python3.13", "python3.14"):
+                     "python3", "python3.12", "python3.13", "python3.14", "bash"):
             (bin_dir / name).symlink_to(route.name)
         (root / "pinned").mkdir()
         (root / "pinned/uv").symlink_to(route)
@@ -434,7 +435,7 @@ esac
         env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
                    TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
-                   FAKE_UV_LINE=uv_line, GITHUB_PATH=str(root / "github-path"),
+                   FAKE_UV_LINE=uv_line, FAKE_OLD_BASH="1" if old_bash else "", GITHUB_PATH=str(root / "github-path"),
                    GITHUB_ENV=str(root / "github-env"),
                    RELEASE_SMOKE="1" if smoke else "0")
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
@@ -761,6 +762,13 @@ def self_test():
         bad += 1
         print(f"workflows self-test uv-pin: exit {result.returncode}, calls {calls}, stderr {result.stderr}",
               file=sys.stderr)
+    # Ticket 0375: macOS's own bash 3.2 stops the smoke's host setup by name.
+    result, calls = host_setup_calls("aarch64-apple-darwin", True, old_bash=True)
+    if (result.returncode != 1 or calls != ["py313-ready", "uv-install", "uv-check", "bash-check", "path $ROOT/pinned"]
+            or not result.stderr.endswith("the PostgreSQL check needs bash 5 on PATH\n")):
+        bad += 1
+        print(f"workflows self-test old-bash: exit {result.returncode}, calls {calls}, stderr {result.stderr}",
+              file=sys.stderr)
     host_cases = [(target, smoke) for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
                                                  "aarch64-apple-darwin", "x86_64-apple-darwin")
                   for smoke in (False, True)]
@@ -768,9 +776,11 @@ def self_test():
         result, calls = host_setup_calls(target, smoke)
         # Ticket 0369: the smoke seeds uv for the check's Python, Linux fetches the SQLite and
         # PostgreSQL pins, and macOS hands the SQLite check a Python that loads extensions.
+        # Ticket 0375: the macOS smoke checks for bash 5 after its Homebrew installs.
         seed = ["seed $ROOT/bin/python3.13"] if smoke else []
         if "apple" in target:
-            wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
+            wanted = ["py313-ready", "uv-install", "uv-check", *(["bash-check"] if smoke else []),
+                      "libraries/ruby/setup-ruby.sh ",
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
                       *(["sqlite-python-check"] if smoke else []), *seed,
                       'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned",

@@ -12,7 +12,9 @@ if bool(release_package) != bool(release_c): raise AssertionError('installed rel
 package=pathlib.Path(release_package) if release_package else R/'target/scratch/managed/Botassembly.ThinkThen.0.0.1.nupkg'
 if release_package:
  assert {item.name for item in package.parent.iterdir()} == {
-  'Botassembly.ThinkThen.0.0.1.nupkg','THINKTHEN-PACKAGE-INPUTS'},'C# wrapper inventory'
+  'Botassembly.ThinkThen.0.0.1.nupkg','LICENSE','README.md','THINKTHEN-PACKAGE-INPUTS'},'C# wrapper inventory'
+ for name in ('LICENSE','README.md'):
+  assert (package.parent/name).read_bytes()==(R/name).read_bytes(),f'C# wrapper {name} differs'
  with zipfile.ZipFile(package) as bundle:
   names=set(bundle.namelist())
   assert {'Botassembly.ThinkThen.nuspec','lib/net8.0/ThinkThen.dll','README.md','LICENSE'} <= names,names
