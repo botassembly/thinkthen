@@ -131,7 +131,7 @@
   },
   "functions/annotate/dart.dart": {
     "page": "/functions/annotate/",
-    "sample": "ecad692250efa9a9bab840fb9b7285d564bbecdcf87a97eba25f797f6eec01f6",
+    "sample": "11fc9b488a4e2b8c5165ccaf632bca3aa8100c8e9fa40eaa543f9cf392fc1167",
     "output": null,
     "files": {
       "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
@@ -3823,7 +3823,7 @@
   },
   "functions/recognize/ada.adb": {
     "page": "/functions/recognize/",
-    "sample": "68dcb5a90f799fc31414c3cba9d54012034ffbd207ad62444a03f4621af007bf",
+    "sample": "16a9809fa79f44032c889f3909c502feea5866a5acd0acce899653bcf803f994",
     "output": null,
     "files": {
       "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
@@ -3901,7 +3901,7 @@
   },
   "functions/recognize/cobol.cob": {
     "page": "/functions/recognize/",
-    "sample": "d4cdfee56e4a1ba21034cc0ff05a8badf1a01b64cbea7b8661aea292f9c9c5fb",
+    "sample": "79c512035331d07bfdd464fef23c00512d6b2b7c887b5dbbecffd6590e3ca754",
     "output": null,
     "files": {
       "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
@@ -4018,7 +4018,7 @@
   },
   "functions/recognize/dart.dart": {
     "page": "/functions/recognize/",
-    "sample": "899b1e722b133fcdb664e48c245564da41e6b313cbdc690343791a0931ff3f6c",
+    "sample": "d0d215380f8b88ddd4b182f49649684dd73d78bcb51ab559243f97262f317ee6",
     "output": null,
     "files": {
       "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
