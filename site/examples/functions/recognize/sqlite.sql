@@ -1,3 +1,5 @@
+.load ./thinkthen
+
 CREATE TABLE tickets(id INTEGER, body TEXT);
 INSERT INTO tickets VALUES (
     1,
@@ -13,7 +15,15 @@ FROM
         'person,organization,place'
     ) entity;
 
-SELECT *
+WITH found AS (
+    SELECT
+        id,
+        thinkthen_relations(body, '@names.json')
+            AS links_found
+    FROM tickets)
+SELECT found.id, link.value ->> 'relation' AS relation,
+    link.value ->> '$.source.text' AS source,
+    link.value ->> '$.target.text' AS target
 FROM
-    tickets t,
-    thinkthen_relations(t.body, '@names.json') AS link;
+    found,
+    json_each(found.links_found, '$.relations') AS link;

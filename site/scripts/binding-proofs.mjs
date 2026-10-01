@@ -113,6 +113,15 @@ export function librarySamples(examples) {
   return found.sort();
 }
 
+// The Cargo workspace members a binding builds on, from cargo metadata.
+export function cargoFolders(repo, manifest) {
+  const done = spawnSync('cargo', ['metadata', '--format-version', '1', '--locked', '--offline', '--manifest-path', path.join(repo, manifest)], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  if (done.status !== 0) throw new Error(`cargo metadata failed for ${manifest}\n${done.stderr}`);
+  return JSON.parse(done.stdout).packages
+    .filter((p) => p.source === null)
+    .map((p) => path.relative(repo, path.dirname(p.manifest_path)));
+}
+
 // One hash over every tracked file under the folders, as the working tree
 // holds it.
 export function sourceTree(repo, folders) {

@@ -46,7 +46,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage } from './binding-proofs.mjs';
+import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, cargoFolders } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -72,15 +72,6 @@ const firstLine = (cmd, args) => {
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-bindings-'));
 const home = path.join(tmp, 'home');
 fs.mkdirSync(home);
-
-// The Cargo workspace members a binding builds on, from cargo metadata.
-function cargoFolders(manifest) {
-  const done = run('cargo', ['metadata', '--format-version', '1', '--locked', '--offline', '--manifest-path', path.join(repo, manifest)]);
-  if (done.status !== 0) throw new Error(`cargo metadata failed for ${manifest}\n${done.stderr}`);
-  return JSON.parse(done.stdout).packages
-    .filter((p) => p.source === null)
-    .map((p) => path.relative(repo, path.dirname(p.manifest_path)));
-}
 
 // The C door, built once and laid out as an install would.
 let door = null;
@@ -448,7 +439,7 @@ for (const line of list) {
     if (gaps.length) { failed.push(`${line}: ${gaps.join('. It ')}. A backends sample must ask every backend.`); continue; }
   }
 
-  const folders = [...new Set([spec.folder, ...cargoFolders(spec.manifest)])].sort();
+  const folders = [...new Set([spec.folder, ...cargoFolders(repo, spec.manifest)])].sort();
   proof[line] = {
     page: samplePage(rel),
     ...sampleHashes(examples, rel),

@@ -6,8 +6,8 @@
 // entry has no listed line. A line is a sample path, and a backend=NAME
 // when the run names a backend. It fails when a sample, its saved output, a
 // file it reads, or a recorded answer it read no longer matches its entry.
-// Run scripts/smoke-bindings.mjs on a host with the toolchains to prove the
-// sample again.
+// Run scripts/smoke-bindings.mjs, or scripts/smoke-sql.mjs for a SQL
+// sample, on a host with the toolchains to prove the sample again.
 //
 // A change in a binding's folder or in a Cargo workspace member it builds
 // on only warns, and names each page to prove again. Another queue's commit
@@ -39,15 +39,17 @@ const proofPath = path.join(examples, PROOF_FILE);
 const proof = fs.existsSync(proofPath) ? JSON.parse(fs.readFileSync(proofPath, 'utf8')) : {};
 const answers = new Map(fixtureLines(path.join(site, 'recordings', 'thinkthen.jsonl')).filter((l) => l.key).map((l) => [l.key, sha256(l.text)]));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// smoke-sql.mjs proves the SQL samples, and smoke-bindings.mjs the rest.
+const runner = (rel) => (rel.endsWith('.sql') ? 'smoke-sql.mjs' : 'smoke-bindings.mjs');
 
 // A REPLAY line keys its entry. Its sample path names the files.
 for (const line of listed) {
   const { rel } = replayLine(line);
   if (!fs.existsSync(path.join(examples, rel))) { problems.push(`examples/REPLAY names ${rel}, which does not exist.`); continue; }
   const entry = proof[line];
-  if (!entry) { problems.push(`${line} has no proof. Run node scripts/smoke-bindings.mjs ${rel}.`); continue; }
+  if (!entry) { problems.push(`${line} has no proof. Run node scripts/${runner(rel)} ${rel}.`); continue; }
   const now = sampleHashes(examples, rel);
-  if (now.sample !== entry.sample) problems.push(`${line}: ${rel} changed after its proof. Run node scripts/smoke-bindings.mjs ${rel}.`);
+  if (now.sample !== entry.sample) problems.push(`${line}: ${rel} changed after its proof. Run node scripts/${runner(rel)} ${rel}.`);
   if (now.output !== entry.output) problems.push(`${line}: the saved output changed after its proof.`);
   if (!same(now.files, entry.files)) problems.push(`${line}: a file the sample reads changed after its proof.`);
   for (const [key, hash] of Object.entries(entry.answers)) {
@@ -67,36 +69,26 @@ for (const line of Object.keys(proof)) {
 const PENDING = new Set([
   'functions/annotate/duckdb.sql',
   'functions/annotate/postgresql.sql',
-  'functions/annotate/sqlite.sql',
   'functions/choose/postgresql.sql',
-  'functions/choose/sqlite.sql',
-  'functions/decide/sqlite.sql',
   'functions/filter/postgresql.sql',
-  'functions/filter/sqlite.sql',
   'functions/find/postgresql.sql',
-  'functions/find/sqlite.sql',
   'functions/question-file/duckdb.sql',
-  'functions/question-file/sqlite.sql',
   'functions/rank/duckdb.sql',
   'functions/rank/postgresql.sql',
   'functions/recognize/duckdb.sql',
   'functions/recognize/postgresql.sql',
-  'functions/recognize/sqlite.sql',
   'functions/relate/duckdb.sql',
   'functions/relate/postgresql.sql',
-  'functions/relate/sqlite.sql',
   'functions/score/duckdb.sql',
   'functions/score/postgresql.sql',
-  'functions/score/sqlite.sql',
   'functions/tag/duckdb.sql',
   'functions/tag/postgresql.sql',
   'install/duckdb/first-call.sql',
   'install/postgresql/first-call.sql',
-  'install/sqlite/first-call.sql',
 ]);
 const replayed = new Set(listed.map((line) => replayLine(line).rel));
 for (const rel of librarySamples(examples)) {
-  if (!replayed.has(rel) && !PENDING.has(rel)) problems.push(`examples/${rel} has no line in examples/REPLAY. Add one and run node scripts/smoke-bindings.mjs ${rel}.`);
+  if (!replayed.has(rel) && !PENDING.has(rel)) problems.push(`examples/${rel} has no line in examples/REPLAY. Add one and run node scripts/${runner(rel)} ${rel}.`);
   if (replayed.has(rel) && PENDING.has(rel)) problems.push(`examples/${rel} replays. Remove it from PENDING in scripts/check-binding-proofs.mjs.`);
 }
 

@@ -1,37 +1,45 @@
-# The library samples scripts/smoke-bindings.mjs replays, one path a line,
-# relative to examples/. A line that ends with backend=NAME runs its sample
-# with that backend named in the environment. scripts/check-binding-proofs.mjs
-# checks each line's entry in bindings-proof.json in every build, and fails
-# when a sample under examples/ has no line here.
+# The library and SQL samples the replay runners prove, one path a line,
+# relative to examples/. scripts/smoke-bindings.mjs runs the library
+# samples, and scripts/smoke-sql.mjs runs the lines that end in .sql. A line
+# that ends with backend=NAME runs its sample with that backend named in the
+# environment. scripts/check-binding-proofs.mjs checks each line's entry in
+# bindings-proof.json in every build, and fails when a sample under
+# examples/ has no line here.
 functions/annotate/c.c
 functions/annotate/r.R
 functions/annotate/ruby.rb
 functions/annotate/rust.rs
+functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/c.c
 functions/choose/python.py
 functions/choose/ruby.rb
+functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/c.c
 functions/decide/polars.py
 functions/decide/r.R
 functions/decide/ruby.rb
 functions/decide/rust.rs
+functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/c.c
 functions/filter/python.py
 functions/filter/r.R
 functions/filter/ruby.rb
 functions/filter/rust.rs
+functions/filter/sqlite.sql
 functions/find/c.c
 functions/find/python.py
 functions/find/r.R
 functions/find/rust.rs
+functions/find/sqlite.sql
 functions/find/typescript.ts
 functions/question-file/polars.py
 functions/question-file/r.R
 functions/question-file/ruby.rb
 functions/question-file/rust.rs
+functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/c.c
 functions/rank/python.py
@@ -43,18 +51,21 @@ functions/recognize/python.py
 functions/recognize/r.R
 functions/recognize/ruby.rb
 functions/recognize/rust.rs
+functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/c.c
 functions/relate/python.py
 functions/relate/r.R
 functions/relate/ruby.rb
 functions/relate/rust.rs
+functions/relate/sqlite.sql
 functions/relate/typescript.ts
 functions/score/polars.py
 functions/score/python.py
 functions/score/r.R
 functions/score/ruby.rb
 functions/score/rust.rs
+functions/score/sqlite.sql
 functions/tag/c.c
 functions/tag/python.py
 functions/tag/r.R
@@ -129,6 +140,7 @@ install/scala/Backends.scala backend=liquid
 install/scala/Backends.scala backend=ollama
 install/scala/Backends.scala backend=typesafe
 install/scala/FirstCall.scala
+install/sqlite/first-call.sql
 install/swift/backends/backends.swift backend=liquid
 install/swift/backends/backends.swift backend=ollama
 install/swift/backends/backends.swift backend=typesafe
