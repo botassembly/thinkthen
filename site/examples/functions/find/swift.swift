@@ -1,15 +1,20 @@
 import Foundation
 import ThinkThen
 
+struct Find: Encodable {
+    let find: String
+    let units: [String]
+}
+
+struct Unit: Decodable {
+    let unit: String
+}
+
 struct Reply<Value: Decodable>: Decodable {
     let value: Value
 }
 
 let tt = try Engine()
-struct Unit: Decodable {
-    let unit: String
-}
-
 let question = "Which line gives the refund deadline?"
 let policy = [
     "Returns need the original receipt.",
@@ -17,12 +22,12 @@ let policy = [
     "Shipping is free on orders over $50.",
     "Gift cards cannot be exchanged for cash.",
 ]
-let units = policy.map { "\"\($0)\"" }
-let find = """
-    {"find": "\(question)",
-     "units": [\(units.joined(separator: ", "))]}
-    """
-let located = try tt.call(find)
+let find = try JSONEncoder().encode(
+    Find(find: question, units: policy)
+)
+let located = try tt.call(
+    String(decoding: find, as: UTF8.self)
+)
 let refundDeadline = try JSONDecoder().decode(
     Reply<Unit>.self,
     from: Data(located.utf8)

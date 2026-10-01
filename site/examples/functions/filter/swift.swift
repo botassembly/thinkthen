@@ -1,6 +1,11 @@
 import Foundation
 import ThinkThen
 
+struct Filter: Encodable {
+    let filter: String
+    let records: [String]
+}
+
 struct Reply<Value: Decodable>: Decodable {
     let value: Value
 }
@@ -13,12 +18,12 @@ let reviews = [
     "Does this come in blue?",
     "The strap snapped on day two.",
 ]
-let records = reviews.map { "\"\($0)\"" }
-let filter = """
-    {"filter": "\(question)",
-     "records": [\(records.joined(separator: ", "))]}
-    """
-let filtered = try tt.call(filter)
+let filter = try JSONEncoder().encode(
+    Filter(filter: question, records: reviews)
+)
+let filtered = try tt.call(
+    String(decoding: filter, as: UTF8.self)
+)
 let complaints = try JSONDecoder().decode(
     Reply<[String]>.self,
     from: Data(filtered.utf8)

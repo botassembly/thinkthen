@@ -5,15 +5,23 @@ struct Reply<Value: Decodable>: Decodable {
     let value: Value
 }
 
+func json(_ value: some Encodable) throws -> String {
+    let data = try JSONEncoder().encode(value)
+    return String(decoding: data, as: UTF8.self)
+}
+
 let tt = try Engine()
+let question = "Which team owns this?"
+let teams = """
+    {"billing": "Invoices, fees, and refunds.",
+     "shipping": "Parcels and delivery.",
+     "account": "Logins and passwords."}
+    """
+let text = "Please refund the extra fee on my invoice."
 let choose = """
-    {"choose": "Which team owns this?",
-     "options": {
-      "billing": "Invoices, fees, and refunds.",
-      "shipping": "Parcels and delivery.",
-      "account": "Logins and passwords."},
-     "evidence": "Please refund the extra fee on my \
-    invoice."}
+    {"choose": \(try json(question)),
+     "options": \(teams),
+     "evidence": \(try json(text))}
     """
 let team = try tt.call(choose)
 let owner = try JSONDecoder().decode(
