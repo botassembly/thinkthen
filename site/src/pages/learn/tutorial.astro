@@ -68,7 +68,7 @@ const triageForm = files(triagePage)[0];
   <p>Put them in a pipe and the second question reads only what the first kept. <a href="/how-tos/rank-the-inbound-leads/">See the leads how-to</a> for <code>filter</code>, <code>rank</code>, and <code>choose</code> in one pipeline.</p>
 
   <h2>7. Ask many questions at once</h2>
-  <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file.</p>
+  <p><code>annotate</code> answers a question set for every record. A question set is any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file.</p>
   <Code code={triageForm.text} file={triageForm.name} caption={`${triageForm.name}, the question set`} />
   {triage.map((step) => <Terminal run={step} caption={step.see} />)}
   <p><code>filter</code> drops the thank-you note. Each message left comes back with one field per question.</p>

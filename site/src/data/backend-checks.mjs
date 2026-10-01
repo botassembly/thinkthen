@@ -9,7 +9,7 @@ export const CHECKS = {
   liquid: [
     {
       model: 'd1:free', date: '2026-09-30', commit: 'e8f2804fe',
-      said: 'On 2026-09-30, thinkthen check on build e8f2804fe sent its four requests to d1:free and printed no report within five minutes, so it was stopped.',
+      said: 'On 2026-09-30, thinkthen check on build e8f2804fe sent its four requests to d1:free and printed no report within five minutes. The check was stopped.',
     },
   ],
   ollama: [

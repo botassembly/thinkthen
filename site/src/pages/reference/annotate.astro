@@ -21,7 +21,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
   <Code code={form.text} file={form.name} caption={`${form.name}, three questions`} />
 
   <h2 id="flat-fields">Flat fields</h2>
-  <p>An object record gains one top-level field per question, named for the question. Every field it already held rides through unchanged. CSV and TSV rows are objects of strings, so they stay flat too.</p>
+  <p>An object record gains one top-level field per question, named for the question. Every field it already held rides through unchanged. CSV and TSV rows are objects of strings. They stay flat too.</p>
   <Terminal run={flat} caption={flatSee} />
 
   <h2 id="the-wrapper">The wrapper</h2>
@@ -31,7 +31,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
   <h2 id="a-name-clash">A name clash</h2>
   <p>A question name the record already holds would overwrite the record's own value. <code>annotate</code> refuses that record at exit 2, before any request for it.</p>
   <Terminal run={clash} caption={clash.see} />
-  <p><code>--plan</code> checks records in order and stops at the first clash. It sends nothing, so a plan finds a clash at no cost. It names only the first clash it meets.</p>
+  <p><code>--plan</code> checks records in order and stops at the first clash. It sends nothing. A plan finds a clash at no cost. It names only the first clash it meets.</p>
   <Terminal run={plan} caption={plan.see} />
 
   <h2 id="details">--details keeps the record under input</h2>

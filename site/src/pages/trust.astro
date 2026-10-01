@@ -23,7 +23,7 @@ const audit = run('beatles/audit', '2-default');
   <h2>The threshold is yours</h2>
   <p>The model reports a probability. Your threshold turns it into an answer. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
   <Terminal run={lines} caption="Under the band 0.2:0.8, the refund request is yes and the thank-you is no. The send-back line could mean an exchange or money back. It lands in the band as null." />
-  <p>A band hands a person the calls a pipeline should not make alone. A question the backend could not answer is different. It is marked failed and counted, and it never turns into <code>null</code>.</p>
+  <p>A band hands a person the calls a pipeline should not make alone. The backend may fail to answer a question. ThinkThen marks that question failed and counts it. A failure never turns into <code>null</code>.</p>
 
   <h2>Four outcomes, four colors</h2>
   <p>The same four colors run through this site and the terminal.</p>
@@ -39,7 +39,7 @@ const audit = run('beatles/audit', '2-default');
   <h2>The words for the numbers</h2>
   <table>
     <tr><th>Word</th><th>What it is</th></tr>
-    <tr><td>probability</td><td>A number the model reported, passed through unchanged. For yes or no, the chance the answer is yes. For pick one and place on a scale, the share given to each option or level.</td></tr>
+    <tr><td>probability</td><td>A number the model reported, passed through unchanged. For yes or no, the chance the answer is yes. For <code>choose</code> and <code>score</code>, the share given to each option or level.</td></tr>
     <tr><td>probabilities</td><td>The model's full list, one number per option or level, adding to 1.</td></tr>
     <tr><td>threshold</td><td>Your bar on a probability. An input.</td></tr>
     <tr><td>band</td><td>A low bar and a high bar. The middle goes to a person.</td></tr>

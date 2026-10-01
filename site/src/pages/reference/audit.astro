@@ -13,7 +13,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
 ---
 <SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'What audit prints for each question, how it counts not-sure and tied answers apart, and that it sends no request.' }} name="Reference">
   <h1><code>audit</code></h1>
-  <p class="lede"><code>thinkthen audit RESULTS KEY</code> grades saved answers against answers you already know. It sends no request and reads no key.</p>
+  <p class="lede"><code>thinkthen audit RESULTS KEY</code> grades saved answers against answers you already know. It sends no request and reads no API key.</p>
 
   <h2 id="what-it-reads">What it reads</h2>
   <p><code>RESULTS</code> holds saved result lines, as <code>--details</code> writes them, from any of the ten functions. <code>KEY</code> holds the right answer for some of the records, matched by <code>id</code>. <code>--id POINTER</code> names another field. <code>RESULTS</code> may be <code>-</code> for standard input.</p>
@@ -26,13 +26,13 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
     <li><code>threshold</code>: the rule the answers were read under.</li>
     <li><code>right</code> and <code>wrong</code>: the labeled answers that match the key, and those that do not.</li>
     <li><code>unsure</code>: the labeled answers that were not sure under the rule. They count as neither right nor wrong.</li>
-    <li><code>tied</code>: the labeled <code>choose</code> or <code>find</code> answers where two or more options share the top. A <code>find</code> answer counts as tied only when <code>none</code> is among them. A tie is tied under every rule, so it stays apart from <code>unsure</code>. <code>tied_holding_key</code> counts the ties where the right answer was one of the tied options.</li>
+    <li><code>tied</code>: the labeled <code>choose</code> or <code>find</code> answers where two or more options share the top. A <code>find</code> answer counts as tied only when <code>none</code> is among them. A tie is tied under every rule. It stays apart from <code>unsure</code>. <code>tied_holding_key</code> counts the ties where the right answer was one of the tied options.</li>
   </ul>
-  <p>Further measures follow, then <code>suggested</code>, a bar tuned on one part of the records and checked on the other. The <a href={spec}>audit specification</a> defines every member. <code>--table</code> prints the same results for a person.</p>
+  <p>Further measures follow, then <code>suggested</code>, a threshold tuned on one part of the records and checked on the other. The <a href={spec}>audit specification</a> defines every member. <code>--table</code> prints the same results for a person.</p>
   <Terminal run={counts} caption={counts.see} />
 
   <h2 id="any-bar">Any bar, at no cost</h2>
-  <p><code>--threshold</code> reads the saved probabilities under another cut or band. No request is sent, because the probabilities are already saved. The <a href={bench.route}>Beatles audit page</a> grades the same ten songs at three bars. <code>--write FILE</code> puts a steady suggested bar into the question file the answers came from.</p>
+  <p><code>--threshold</code> reads the saved probabilities under another cut or band. No request is sent, because the probabilities are already saved. The <a href={bench.route}>Beatles audit page</a> grades the same ten songs at three bars. <code>--write FILE</code> writes the suggested threshold into the question file the answers came from.</p>
 
   <p class="pagelinks"><a href="/reference/diff/">diff</a> · <a href="/trust/">Test it before you trust it</a> · <a href={spec}>The audit specification</a></p>
 </SidePage>

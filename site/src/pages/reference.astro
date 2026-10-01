@@ -23,14 +23,14 @@ const THROTTLE = setting('Throttle');
 
 const GLOBAL = [
   ['--plan', 'none', 'Checks the whole input, prints the first request it would send and a summary line, and sends nothing. It needs no key.', dflt('Plan preview')],
-  ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
+  ['--url BASE', 'an address', 'The server\'s base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
   ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
   ['--timeout SECONDS', takes('Timeout').split(';')[0].replace(/^command: /, ''), 'Covers one attempt from connect to last byte. Other values exit 2.', setting('Timeout').number],
   ['--max-retries N', takes('Retries'), 'How many times a retried status is sent again. A transport failure is never sent again.', setting('Retries').default],
   ['--record DIR', takes('Recording'), 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', dflt('Recording')],
   ['--replay DIR', takes('Recording'), 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', dflt('Recording')],
   ['--cache DIR', takes('Recording'), 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', dflt('Recording')],
-  ['--no-cache', 'none', 'Turns off the platform cache for one run, both lookup and writing. It never turns off usage counting.', dflt('Answer cache')],
+  ['--no-cache', 'none', 'Turns off the answer cache for one run, both lookup and writing. It never turns off usage counting.', dflt('Answer cache')],
   ['--profile FILE', takes('Backend profile'), 'Applies local byte and question limits before a request leaves, and names the profile in use. It selects neither address nor model.', dflt('Backend profile')],
   ['--input FILE', takes('Input file'), 'Reads the evidence from a file instead of standard input. It names a path. It never names a framing.', dflt('Input file')],
 ];
@@ -79,8 +79,8 @@ const COUNTS = [
   ['tag', count('Labels', 'labels'), 'A cut only, applied to each label on its own. A band is refused.', cutOn('tag')],
   ['score', `${count('Levels', 'levels')}, lowest first`, 'None. score has no threshold.', noCut('score')],
   ['filter', 'none', 'A cut only. A band is exit 2 from the command line and exit 5 from a question file.', cutOn('filter')],
-  ['rank', 'none', 'None. A threshold is refused in both homes.', noCut('rank')],
-  ['find', '2 to 255 units, or 2 to 254 with --none', 'None.', 'n/a'],
+  ['rank', 'none', 'None. rank refuses a threshold on the command line and in a question file.', noCut('rank')],
+  ['find', '2 to 255 lines or records, or 2 to 254 with --none', 'None.', 'n/a'],
   ['annotate', 'a question set file', 'Each question carries its own. A top-level threshold applies to every decide question that names none.', 'per question'],
   ['recognize', 'optional kinds', 'A cut on printed name strength; a separate relation cut applies to edges.', cutOn('recognize')],
   ['relate', 'relation rules', 'A cut on each edge’s probability of yes.', cutOn('relate')],
@@ -92,7 +92,7 @@ const COUNTS = [
 
   <h2>The ten functions</h2>
   <table>
-    <tr><th>Function</th><th>What it does</th><th>Primitive</th><th>Requests</th></tr>
+    <tr><th>Function</th><th>What it does</th><th>Kind of answer</th><th>Requests</th></tr>
     {CODE_FUNCTIONS.map((fn) => (
       <tr>
         <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></td>
@@ -130,7 +130,7 @@ const COUNTS = [
     ))}
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
-  <p>The vendor documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to the vendor. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Lower <code>--jobs</code> when replies come back fast.</p>
+  <p>TypeSafe documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In one measured run, the default sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Set <code>requests_per_minute</code> on the backend, or <code>THINKTHEN_REQUESTS_PER_MINUTE</code>, to stay under the limit.</p>
   <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
@@ -162,7 +162,7 @@ const COUNTS = [
   <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
 
   <h2>Limits</h2>
-  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. The vendor published both numbers on 2026-09-19 for its hosted service. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> lists them. They belong to the backend and not to the tool.</p>
+  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. TypeSafe published both numbers on 2026-09-19 for its hosted service. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> lists them. They belong to the backend and not to the tool.</p>
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>
@@ -180,18 +180,18 @@ const COUNTS = [
       <tr><td><span class={`exit ${outcome}`}>{code}</span></td><td>{what}</td></tr>
     ))}
   </table>
-  <p>Code 8 is reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6 or 7. A valid answer on standard output can sit beside exit 1, 3, 6, or 7.</p>
+  <p>Code 8 is reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6 or 7, or <code>relate</code> exits 6. A valid answer on standard output can sit beside exit 1, 3, 6, or 7.</p>
 
   <h2>The environment</h2>
   <p>The <a href="/install/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads.</p>
 
   <h2 id="the-cache">The cache</h2>
-  <p><a href="/reference/recording/">Recording and the cache</a> covers the cache, the answer key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page.</p>
+  <p><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, the cache key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page.</p>
 
   <h2>The configuration file</h2>
   <p>The <a href="/install/configuration/#configuration-file">Configuration page</a> gives its path, its fields, and the rules ThinkThen reads it by.</p>
 
-  <p>A typed list replaces a question file's whole list and never merges. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>
+  <p>A list given on the command line replaces the file's whole list. The two never merge. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>
 
   <h2>Question files</h2>
   <p>A question file holds one saved question. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> holds many questions. The <a href="/functions/question-file/">question file page</a> carries the keys and the exit codes.</p>
