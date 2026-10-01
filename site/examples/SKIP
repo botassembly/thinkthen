@@ -14,6 +14,10 @@
 **/*.scala    Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.cs       Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.csproj   The project file a C# sample builds with.
+**/*.go       Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.swift    Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.zig      Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.zon      The package file a Zig sample builds with.
 **/*.sql      SQL sample; check against the matching installed extension.
 **/*.sql.out  Saved output from a checked database sample.
 REPLAY        The samples smoke-bindings.mjs replays.

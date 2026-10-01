@@ -99,6 +99,30 @@ export const BUILD_LINES = {
       'firstCall',
     ],
   }),
+  go: ({ sample }) => ({
+    archive: 'thinkthen-go',
+    lines: [
+      ['go mod init first-call'],
+      ['go mod edit', '-replace=github.com/botassembly/thinkthen/libraries/go=./thinkthen-go'],
+      ['go mod tidy'],
+      ['PKG_CONFIG_PATH="$PWD/thinkthen-c/lib/pkgconfig"', `go build -o ${program(sample)} .`],
+    ],
+    run: ['LD_LIBRARY_PATH="$PWD/thinkthen-c/lib"', `./${program(sample)}`],
+  }),
+  swift: () => ({
+    archive: 'thinkthen-swift',
+    lines: [[
+      'swift build',
+      '-Xlinker -L -Xlinker "$PWD/thinkthen-c/lib"',
+      '-Xlinker -rpath -Xlinker "$PWD/thinkthen-c/lib"',
+    ]],
+    run: ['.build/debug/FirstCall'],
+  }),
+  zig: () => ({
+    archive: 'thinkthen-zig',
+    lines: [['zig build', '-Dnative="$PWD/thinkthen-c"']],
+    run: ['./zig-out/bin/first-call'],
+  }),
   csharp: () => ({
     archive: 'thinkthen-csharp',
     lines: [['dotnet build -o bin', '--source "$PWD/thinkthen-csharp"']],

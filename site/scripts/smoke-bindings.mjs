@@ -112,13 +112,19 @@ function csharpFeed() {
 }
 
 // What each binding's archive holds, laid out in the build folder.
+const sourceArchive = (slug) => (dir) => fs.cpSync(path.join(repo, 'libraries', slug), path.join(dir, `thinkthen-${slug}`), { recursive: true });
 const ARCHIVE = {
   java: (dir) => fs.cpSync(jvmJars(), path.join(dir, 'thinkthen-jvm'), { recursive: true }),
   csharp: (dir) => fs.cpSync(csharpFeed(), path.join(dir, 'thinkthen-csharp'), { recursive: true }),
 };
+// The Swift archive carries the C header in its system library folder.
+ARCHIVE.swift = (dir) => {
+  sourceArchive('swift')(dir);
+  fs.mkdirSync(path.join(dir, 'thinkthen-swift/Sources/CThinkThen/include'), { recursive: true });
+  fs.copyFileSync(path.join(cDoor(), 'include', 'thinkthen.h'), path.join(dir, 'thinkthen-swift/Sources/CThinkThen/include/thinkthen.h'));
+};
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
-const sourceArchive = (slug) => (dir) => fs.cpSync(path.join(repo, 'libraries', slug), path.join(dir, `thinkthen-${slug}`), { recursive: true });
 
 // A binding with a build step. The runner lays out the folder a reader
 // would have, with thinkthen-c/ and the binding's archive beside the
@@ -225,6 +231,11 @@ const BINDINGS = {
   java: withBuild({ slug: 'java', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion()] }),
   kotlin: withBuild({ slug: 'kotlin', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('kotlinc', ['-version'])] }),
   scala: withBuild({ slug: 'scala', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('scalac', ['-version'])], env: () => ({ SCALA_HOME: SCALA_HOME() }) }),
+  go: withBuild({ slug: 'go', tools: ['go', 'pkg-config'], versions: () => [firstLine('go', ['version'])], buildEnv: {
+    GOCACHE: path.join(tmp, 'go-cache'), GOMODCACHE: path.join(tmp, 'go-mod'), GOPROXY: 'off', GOTOOLCHAIN: 'local', GOFLAGS: '-mod=mod -buildvcs=false', CGO_ENABLED: '1',
+  } }),
+  swift: withBuild({ slug: 'swift', tools: ['swift'], versions: () => [firstLine('swift', ['--version'])], buildEnv: { XDG_CACHE_HOME: path.join(tmp, 'swift-cache') } }),
+  zig: withBuild({ slug: 'zig', tools: ['zig'], versions: () => [`Zig ${firstLine('zig', ['version'])}`], buildEnv: { ZIG_GLOBAL_CACHE_DIR: path.join(tmp, 'zig-cache') } }),
   csharp: withBuild({ slug: 'csharp', tools: ['dotnet'], versions: () => [`.NET SDK ${firstLine('dotnet', ['--version'])}`], buildEnv: DOTNET_ENV }),
 };
 

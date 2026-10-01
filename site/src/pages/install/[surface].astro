@@ -45,7 +45,7 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
   <h2>A first call</h2>
   {first ? (
     <>
-      {inputs.map((file) => <Code code={file.text} file={file.name} caption={file.name.endsWith('.csproj') ? `${file.name}, the project file beside the sample` : `${file.name}, a file the sample reads`} />)}
+      {inputs.map((file) => <Code code={file.text} file={file.name} caption={/\.csproj$|^Package\.swift$|^build\.zig(\.zon)?$/.test(file.name) ? `${file.name}, a project file beside the sample` : `${file.name}, a file the sample reads`} />)}
       <Code code={first.code} file={first.file} label={`Copy the ${surface.name} sample`} />
       {build && <Code code={buildText} lang="bash" caption={`Build and run it beside the unpacked archives, thinkthen-c/ and ${build.archive}/`} label={`Copy the ${surface.name} build lines`} />}
       {first.output && <Code code={first.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}

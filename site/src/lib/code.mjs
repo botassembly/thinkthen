@@ -17,14 +17,15 @@ const BY_EXT = {
   '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.r': 'r', '.rs': 'rust',
   '.c': 'c', '.cpp': 'cpp', '.m': 'objective-c', '.cob': 'cobol',
   '.adb': 'ada', '.java': 'java', '.kt': 'kotlin', '.scala': 'scala',
-  '.cs': 'csharp', '.csproj': 'xml', '.sql': 'sql', '.txt': 'text',
+  '.cs': 'csharp', '.csproj': 'xml', '.go': 'go', '.swift': 'swift',
+  '.zig': 'zig', '.zon': 'zig', '.sql': 'sql', '.txt': 'text',
 };
 
 // One highlighter for the whole build. It loads every language the site
 // uses, once.
 const highlighter = await createHighlighter({
   themes: [CODE_THEME],
-  langs: ['bash', 'json', 'jsonl', 'diff', 'python', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'xml', 'sql', JQ_GRAMMAR],
+  langs: ['bash', 'json', 'jsonl', 'diff', 'python', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'xml', 'go', 'swift', 'zig', 'sql', JQ_GRAMMAR],
 });
 
 export const esc = (s) => String(s)

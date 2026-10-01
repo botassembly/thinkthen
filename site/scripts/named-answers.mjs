@@ -26,7 +26,7 @@
 //
 // Accepted languages: bash, sh, python, typescript, ts, ruby, r, rust, c,
 // cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs,
-// and sql. sh is bash, ts is typescript, objc is objective-c, and cs is
+// go, swift, zig, and sql. sh is bash, ts is typescript, objc is objective-c, and cs is
 // csharp. An unknown language throws a
 // TypeError. Its message names the bad language and lists the accepted
 // names. A name that every JavaScript object inherits, such as constructor
@@ -47,7 +47,8 @@ const LANGUAGE = {
   ts: 'typescript', ruby: 'ruby', r: 'r', rust: 'rust', c: 'c',
   cpp: 'cpp', 'objective-c': 'objc', objc: 'objc', cobol: 'cobol',
   ada: 'ada', java: 'java', kotlin: 'kotlin', scala: 'scala',
-  csharp: 'csharp', cs: 'csharp', sql: 'sql',
+  csharp: 'csharp', cs: 'csharp', go: 'go', swift: 'swift', zig: 'zig',
+  sql: 'sql',
 };
 const CALL = {
   python: new RegExp(`\\btt\\s*\\.(${FNS})\\(`),
@@ -64,6 +65,9 @@ const CALL = {
   kotlin: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many|Async)?\\(`),
   scala: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many|Async)?\\(`),
   csharp: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`, 'i'),
+  go: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`, 'i'),
+  swift: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`),
+  zig: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`),
   bash: new RegExp(`\\bthinkthen\\s+(${FNS})\\b`),
 };
 const SQL_CALL = new RegExp(`\\bthinkthen_(${FNS}|probability|relations)\\s*\\(`, 'g');
@@ -81,6 +85,7 @@ const LANGUAGE_PRINT = {
   ada: /\bPut_Line\b/i,
   java: /\bSystem\.(out|err)\.print/,
   csharp: /\bConsole\.Write/,
+  go: /\bfmt\.Print/,
 };
 const ASSIGN = {
   python: /^\s*([A-Za-z_]\w*)\s*=(?!=)/,
@@ -97,6 +102,9 @@ const ASSIGN = {
   kotlin: /^\s*(?:(?:val|var)\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
   scala: /^\s*(?:(?:val|var)\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
   csharp: /^\s*(?:(?:const|using)\s+)?(?:[A-Za-z_][\w.<>,?\[\] ]*\s+)?([A-Za-z_]\w*)\s*=(?!=)/,
+  go: /^\s*(?:var\s+)?([A-Za-z_][\w, ]*?)\s*:?=(?!=)/,
+  swift: /^\s*(?:(?:let|var)\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
+  zig: /^\s*(?:const|var)\s+([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
 };
 const ASSERT = {
   python: /^\s*assert\b/,
@@ -113,6 +121,9 @@ const ASSERT = {
   kotlin: /^\s*(assert|check|require)\(/,
   scala: /^\s*(assert|require)\(/,
   csharp: /^\s*(Trace|Debug)\.Assert\(/,
+  go: /(?!)/,
+  swift: /^\s*(precondition|assert)\(/,
+  zig: /^\s*std\.debug\.assert\(/,
 };
 const SQL_WORDS = new Set(['from', 'where', 'order', 'group', 'is', 'and', 'or', 'not', 'in', 'desc', 'asc', 'limit', 'on', 'join', 'union', 'having', 'select', 'with', 'case', 'when', 'then', 'else', 'end']);
 
@@ -132,7 +143,7 @@ function unquote(text, lang) {
       else if (c === '\n') out += c;
       continue;
     }
-    if (c === '"' || (single && c === "'")) quote = c;
+    if (c === '"' || (single && c === "'") || (lang === 'go' && c === '`')) quote = c;
     out += c;
   }
   return out;
@@ -153,7 +164,7 @@ function statement(lines, start, lang) {
     depth += (line.match(/[([]/g) || []).length - (line.match(/[)\]]/g) || []).length;
     if (lang === 'ruby') depth += (line.match(/\bdo\b/g) || []).length - (line.match(/^\s*end\b/g) || []).length;
     const tail = line.trimEnd();
-    const more = ['typescript', 'rust', 'c', 'cpp', 'objc', 'ada', 'java', 'csharp'].includes(lang)
+    const more = ['typescript', 'rust', 'c', 'cpp', 'objc', 'ada', 'java', 'csharp', 'zig'].includes(lang)
       ? !tail.endsWith(';') && !tail.endsWith('{') && !tail.endsWith('}')
       : /(\\|[+,=.]|<-|\|\||&&)$/.test(tail);
     const opens = lang === 'ada' && /\b(then|loop)$/i.test(tail);
