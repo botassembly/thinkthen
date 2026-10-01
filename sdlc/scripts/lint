@@ -68,12 +68,13 @@ fi
 # The same check always runs on the workstation terms below. They name a home
 # folder, the workspace layout, the build host, the key file, and the private
 # record and QA repositories, and no customer, so they may live here. Marketing
-# owns site/. This file holds the terms. The privacy guards under libraries/
-# look for `/home/` and `/Users/` alone, which no term matches.
+# owns site/. Each pattern brackets one letter, so this file never matches its
+# own list or the external one. The privacy guards under libraries/ look for
+# `/home/` and `/Users/` alone, which no term matches.
 status=0
-hits=$(git grep -n -I -i -F -e '/home/ian' -e '/Users/ian' -e '~/workspace' -e '$HOME/workspace' \
-    -e 'imaurer-m5' -e 'zshenv' -e 'botassembly/sdlc' -e 'repos/sdlc' -e 'mktg' -e 'thinkthen-qa' \
-    -- . ':!site/' ':!sdlc/scripts/lint') || status=$?
+hits=$(git grep -n -I -i -E -e '/home/[i]an' -e '/Users/[i]an' -e '~/[w]orkspace' -e '[$]HOME/[w]orkspace' \
+    -e '[i]maurer-m5' -e '[z]shenv' -e 'botassembly/[s]dlc' -e 'repos/[s]dlc' -e '[m]ktg' -e 'thinkthen-[q]a' \
+    -- . ':!site/') || status=$?
 if [ "$status" -gt 1 ]; then
     echo "lint: the workstation-term check failed (git grep exit $status)" >&2
     exit 1
@@ -110,12 +111,12 @@ seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=
     RUSTC_WRAPPER=/nonexistent/RUSTC_WRAPPER SCCACHE_CONF=/nonexistent/SCCACHE_CONF R_LIBS_USER=/nonexistent/R_LIBS_USER \
     THINKTHEN_HEAVY_LOCK=/nonexistent/lock THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock \
     THINKTHEN_TOOLCHAINS=/nonexistent/THINKTHEN_TOOLCHAINS THINKTHEN_DUCKDB_CLI=/nonexistent/THINKTHEN_DUCKDB_CLI \
-    SQLITE_AMALGAMATION=/nonexistent/SQLITE_AMALGAMATION THINKTHEN_PRIVATE_NAMES=/nonexistent/THINKTHEN_PRIVATE_NAMES FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
+    SQLITE_AMALGAMATION=/nonexistent/SQLITE_AMALGAMATION THINKTHEN_PRIVATE_NAMES=/nonexistent/THINKTHEN_PRIVATE_NAMES THINKTHEN_PUBLISH_ROOT=/nonexistent/THINKTHEN_PUBLISH_ROOT FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
     CARGO_TARGET_DIR=/nonexistent/CARGO_TARGET_DIR FAKE.SERVICE_TOKEN=planted \
     sh -c '. sdlc/scripts/heavy-lock; exec awk "BEGIN { for (n in ENVIRON) if (n !~ /^AWK(LIB)?PATH\$/) print n }"' \
     sdlc/scripts/lint | LC_ALL=C sort | tr '\n' ' ')
 allowed="CARGO_HOME HOME LANG LC_ALL PATH PWD RUSTC_WRAPPER RUSTUP_HOME RUSTUP_TOOLCHAIN R_LIBS_USER SCCACHE_CONF SQLITE_AMALGAMATION"
-allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_PRIVATE_NAMES THINKTHEN_TOOLCHAINS TMPDIR XDG_CACHE_HOME XDG_RUNTIME_DIR XDG_STATE_HOME "
+allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_PRIVATE_NAMES THINKTHEN_PUBLISH_ROOT THINKTHEN_TOOLCHAINS TMPDIR XDG_CACHE_HOME XDG_RUNTIME_DIR XDG_STATE_HOME "
 listed=$(sed -n 's/^[[:space:]]*\([A-Z_ |]*\)) ;;$/\1/p' sdlc/scripts/allow-list | tr -d ' ' | tr '|' '\n' |
     LC_ALL=C sort | tr '\n' ' ')
 if [ "$seen" != "$allowed" ] || [ "$listed" != "$allowed" ]; then
