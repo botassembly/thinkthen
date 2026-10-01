@@ -20,7 +20,7 @@ Status: in progress. Lane claude-3. Branch `ticket/0373-windows-stage-0`. Plan: 
   - `engine/facade_tests.rs` imports `nix` without a guard. Several tests assume `sh`, `script`, `/dev/zero`, `mkfifo`, `ulimit` or Unix modes. The harnesses call `env_clear()` in 57 places in the crate and 9 more in `libraries/c` and `conformance`. Windows sockets fail to start without `SystemRoot`.
   - `policy.py` and `deny.toml` know only the `cfg(unix)` dependency tables.
 - Keeps: every Linux and macOS behavior, path, exit code and test. `release.yml`, the ladder scripts and their network rule. The dependency graph: stage 0 adds no crate, so `policy.py`, `deny.toml`'s license list and both locks stay as they are.
-- Changes:
+- Changes: product fixes behind Windows guards, test guards, two test helpers, one workflow and one plan page.
   - The three known behavior bugs are fixed if each fix is small and uses the standard library only:
     - `config.rs` gains `Platform::Windows`. On Windows the configuration file is `%APPDATA%\thinkthen\config.json`, the cache is `%LOCALAPPDATA%\thinkthen\cache` and usage is `%LOCALAPPDATA%\thinkthen\usage`. A relative or empty value gives no default folder, as on Linux. The resolver table test gains the Windows rows and runs on every platform.
     - The usage store opens its folder with `FILE_FLAG_BACKUP_SEMANTICS` through `std::os::windows::fs::OpenOptionsExt`, and skips the folder sync on Windows. Windows cannot flush a folder handle. `engine/store/convert.rs` already skips it the same way.
@@ -30,12 +30,12 @@ Status: in progress. Lane claude-3. Branch `ticket/0373-windows-stage-0`. Plan: 
   - `src/test_deadline/child.rs`, which the unit tests and both test binaries share, gains the environment and home helpers. The harnesses use them in place of `env_clear()` and `.env("HOME", …)`.
   - `deny.toml`'s comment that Windows crates are never built is corrected.
   - `sdlc/planning/windows.md` is new.
-- Proof:
+- Proof: the Windows workflow and the Linux checks.
   - The `windows` workflow passes on this branch. The run URL goes in the record.
   - On Linux: the focused unit and integration tests for each touched file, `sdlc/scripts/lint`, and `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`.
   - A Windows-target `cargo clippy` type check on Linux (`--target x86_64-pc-windows-msvc`, with a stub C compiler, since check never links) finds the compile errors before each runner push.
   - The M5 runs only if the change reaches code macOS compiles in a way Linux does not. The builder records the call.
-- Defers:
+- Defers: everything that ships on Windows.
   - Stage 1 and later: shipping anything on Windows. The command, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM bindings are assigned to 0.2. Ian may pull stage 1 into 0.1. `windows.md` sizes it.
   - The other bindings and the three SQL extensions on Windows.
   - Specification and site pages: stage 0 promises users nothing, so `specification/recording.md` keeps its Linux and macOS folders only. Stage 1 adds the Windows lines.
