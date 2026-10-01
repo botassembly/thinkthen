@@ -31,6 +31,7 @@ case " $* " in
 		source_commit=$(git -C "$REPO" rev-parse HEAD)
 		[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
 	else
+		[ -z "$reuse" ] || { echo 'release-pack: archived source does not permit --reuse' >&2; exit 1; }
 		case " $* " in *' go '* | *' cpp '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' ada '* | *' objective-c '* | *' cobol '*) ;; *) echo 'release-pack: archived source permits only selected source wrappers' >&2; exit 1 ;; esac
 		for part in "$@"; do
 			case $part in c | go | cpp | swift | zig | php | dart | ada | objective-c | cobol | sqlite | duckdb | postgresql | python | typescript | ruby) ;;

@@ -40,7 +40,7 @@ surface_of() {
 		printf 'libraries/%s\tsource package from release-pack, paired with the debug C archive, tarred\n' "$surface" ;;
 	thinkthen-csharp-*) printf 'libraries/csharp\tnupkg from dotnet pack in release-pack, paired with the debug C archive, tarred\n' ;;
 	thinkthen-jvm-*) printf 'libraries/jvm\tJava, Kotlin and Scala jars from build.sh in release-pack, paired with the debug C archive, tarred\n' ;;
-	thinkthen-*.crate) printf 'libraries/rust\tcargo package of the thinkthen crate; its polars feature is libraries/polars; installed by the R check, not by release-smoke\n' ;;
+	thinkthen-*.crate) printf 'libraries/rust\tcargo package of the thinkthen crate; its polars feature is libraries/polars; installed without that feature by the R check, not smoked by release-smoke\n' ;;
 	thinkthen_*.tar.gz) printf 'libraries/r\tR source package with its crates vendored, from make-tarball.sh; installed by the R check, not by release-smoke\n' ;;
 	thinkthen-[0-9]*.tar.gz) printf 'command\tthis host'"'"'s debug thinkthen binary from the rung builds, tarred and renamed\n' ;;
 	*) return 1 ;;
