@@ -1,0 +1,5 @@
+{
+  "url": "http://localhost:8080/v1/systemone",
+  "url_source": "environment",
+  "key_variable": "THINKTHEN_API_KEY"
+}

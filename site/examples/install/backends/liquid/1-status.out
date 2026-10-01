@@ -1,0 +1,4 @@
+backend liquid
+url https://api.liquid.ai/decisions/v1/systemone
+model d1:free
+key_variable LIQUIDAI_API_KEY

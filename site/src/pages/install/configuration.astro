@@ -1,0 +1,87 @@
+---
+// Goal: say which value wins, every environment variable ThinkThen reads, and where its configuration file, cache and usage totals live on Linux and macOS.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { CONFIGURATION_SEE } from '../../data/catalog.mjs';
+import { captioned, files } from '../../data/samples.mjs';
+import { parseSettings, inlineHtml, setting } from '../../lib/settings-table.mjs';
+import { backends } from '../../lib/backends-table.mjs';
+import table from '../../../../specification/settings.md?raw';
+
+const dir = 'install/configuration';
+const [first] = parseSettings(table).precedence;
+const [paths, moved, relative, file] = captioned(dir, CONFIGURATION_SEE);
+const [config] = files(dir);
+const card = (name) => setting(name).href;
+const PRUNE = setting('Prune target');
+
+const ENV = [
+  ['THINKTHEN_API_KEY', 'The key when no backend is named.', card('Key')],
+  ['THINKTHEN_BASE_URL', 'The server address. --url outranks it.', card('Address')],
+  ['THINKTHEN_BACKEND', 'A built-in backend, or an entry of the configuration file. --backend outranks it.', card('Backend')],
+  ...backends().map((b) => [b.keys.join(', then '), `The key of the ${b.name} backend.`, card('Backend key')]),
+  ['THINKTHEN_CACHE', 'Another folder for the answer cache. It turns the cache on, and it never moves the usage totals.', card('Answer cache')],
+  ['THINKTHEN_BATCH', 'The most records one request carries.', card('Batch')],
+  ['THINKTHEN_CA_BUNDLE', 'An absolute PEM file of certificates that replaces the built-in roots.', card('Private TLS roots')],
+  ['THINKTHEN_REQUESTS_PER_MINUTE', 'The most requests one process starts each minute. It outranks the configuration file.', card('Requests a minute')],
+  ['THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL', 'The most estimated input tokens one process admits on the asking commands.', card('Estimated input admission total')],
+  ['THINKTHEN_MAX_REQUEST_BYTES', 'The most bytes one batched request holds.', card('Request size')],
+  ['XDG_CONFIG_HOME', 'The folder above the configuration file, on Linux. It counts only when absolute.', '#locations'],
+  ['XDG_CACHE_HOME', 'The folder above the cache and the usage totals, on Linux. It counts only when absolute.', '#locations'],
+  ['HOME', 'The folder every location falls back to. It counts only when absolute.', '#locations'],
+  ['ALL_PROXY, HTTPS_PROXY, HTTP_PROXY, NO_PROXY', 'Read in upper and lower case. A proxy carries https requests. Under http every proxy is ignored.', null],
+];
+---
+<Base title="Configuration" description="Which value wins, every environment variable ThinkThen reads, and where the configuration file, the cache and the usage totals live on Linux and macOS.">
+  <h1>Configuration</h1>
+  <p class="lede">ThinkThen reads flags, environment variables, question files and one configuration file. It never writes the configuration file.</p>
+
+  <h2 id="which-value-wins">Which value wins</h2>
+  <p set:html={inlineHtml(first.text)}></p>
+  <p>The <a href="/install/settings/#which-value-wins">Settings page</a> gives the order for each setting, and every default.</p>
+  <Code code={config.text} caption={`${config.name}, a configuration file`} />
+  <Terminal run={file} caption={file.see} />
+
+  <h2 id="environment">The environment</h2>
+  <table>
+    <tr><th>Variable</th><th>What it does</th></tr>
+    {ENV.map(([name, what, href]) => (
+      <tr><td>{href ? <a href={href}><code>{name}</code></a> : <code>{name}</code>}</td><td>{what}</td></tr>
+    ))}
+  </table>
+  <p>A blank variable counts as unset. <code>SSL_CERT_FILE</code> is not read.</p>
+
+  <h2 id="locations">Where the files live</h2>
+  <table>
+    <tr><th>File</th><th>Linux</th><th>macOS</th></tr>
+    <tr><td>Configuration file</td><td><code>$XDG_CONFIG_HOME/thinkthen/config.json</code>, else <code>$HOME/.config/thinkthen/config.json</code></td><td><code>$HOME/Library/Application Support/thinkthen/config.json</code></td></tr>
+    <tr><td>Answer cache</td><td><code>$XDG_CACHE_HOME/thinkthen</code>, else <code>$HOME/.cache/thinkthen</code></td><td><code>$HOME/Library/Caches/thinkthen</code></td></tr>
+    <tr><td>Usage totals</td><td><code>$XDG_CACHE_HOME/thinkthen-usage</code>, else <code>$HOME/.cache/thinkthen-usage</code></td><td><code>$HOME/Library/Caches/thinkthen-usage</code></td></tr>
+  </table>
+  <p>ThinkThen has no home-folder variable of its own. <code>HOME</code> and the two XDG variables decide every location.</p>
+  <Terminal run={paths} caption={paths.see} />
+  <p>On Linux, set <code>XDG_CONFIG_HOME</code> or <code>XDG_CACHE_HOME</code> to move the files. Each counts only when it is an absolute path. A relative path is ignored, and the location falls back to <code>HOME</code>. macOS ignores both XDG variables.</p>
+  <Terminal run={moved} caption={moved.see} />
+  <Terminal run={relative} caption={relative.see} />
+  <p><code>THINKTHEN_CACHE</code> moves only the answer cache. The usage totals stay beside the platform cache folder.</p>
+
+  <h2 id="configuration-file">The configuration file</h2>
+  <p>The file is optional. It holds one JSON object with <code>"schema": "thinkthen.config/1"</code>. ThinkThen never creates it and never edits it.</p>
+  <ul>
+    <li><code>url</code> and <code>model</code> name the default address and model.</li>
+    <li><code>backend</code> names the default backend, and <code>backends</code> adds named servers or paces the built-ins. The <a href="/install/backends/system-one/">System One page</a> shows an entry.</li>
+    <li><code>cache</code> turns the platform cache on or off. <code>{PRUNE.surface('Configuration file')}</code> sets the size <a href={PRUNE.href}><code>cache prune</code></a> trims to.</li>
+    <li><code>usd_per_million_input</code> and <code>usd_per_million_output</code> together price the reported tokens. The price is your own estimate, never a bill.</li>
+  </ul>
+  <p>Any other field is refused. The file never holds a key. <code>key_env</code> in a <code>backends</code> entry names the variable that holds one.</p>
+  <p>Whoever can write the file decides where the key and the evidence go. On Linux and macOS ThinkThen warns when another user owns the file, or when every user may write it. A file only its group may write gets no warning. A file that draws the warning and holds <code>backends</code> is refused with exit 5. Keep the file writable by its owner alone.</p>
+
+  <h2 id="usage-totals">The usage totals</h2>
+  <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and cache answers. It holds no request, no reply, no address, no model, no price and no key. <code>--no-cache</code> never turns it off. It counts what this machine saw, and your provider's bill is the real cost.</p>
+
+  <h2 id="status">See it all</h2>
+  <p><code>thinkthen status</code> prints the resolved configuration path, backend, address, model and key variable, and where each value came from. It also prints whether a key is set, the cache path and size, the usage path, and the usage this month and in all. It opens no connection. <code>status --json</code> prints the same facts as one object.</p>
+
+  <p class="pagelinks"><a href="/install/settings/">Every setting and its default</a> · <a href="/install/backends/">Backends</a> · <a href="/reference/">Reference</a></p>
+</Base>

@@ -55,6 +55,11 @@ const EXEMPT = [
     why: 'thinkthen diff prints its warning as one line.',
     test: (line, file) => file.startsWith('beatles/diff/') && file.endsWith('.out') && line.startsWith('thinkthen: diff: warning:'),
   },
+  {
+    name: 'a backend diagnostic',
+    why: 'thinkthen prints each warning or refusal as one line on standard error.',
+    test: (line, file) => file.startsWith('install/backends/') && file.endsWith('.out') && line.startsWith('thinkthen: '),
+  },
 ];
 
 const COMMENT = {

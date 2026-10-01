@@ -1,0 +1,41 @@
+---
+// Goal: show how to point ThinkThen at any server that speaks System One, by address or by a named entry in the configuration file, and how to check it.
+import SidePage from '../../../layouts/SidePage.astro';
+import Terminal from '../../../components/Terminal.astro';
+import Code from '../../../components/Code.astro';
+import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog.mjs';
+import { captioned, files } from '../../../data/samples.mjs';
+import { setting } from '../../../lib/settings-table.mjs';
+
+const dir = 'install/backends/system-one';
+const page = BACKEND_PAGES.find((p) => p.slug === 'system-one');
+const [environment, entry, badRate, plan] = captioned(dir, BACKENDS_SEE['system-one']);
+const [bad, good] = files(dir);
+const rate = setting('Requests a minute');
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Point ThinkThen at any server that speaks System One, by address or by a named entry in the configuration file, and check it.' }} name="Backends">
+  <h1>Any System One server</h1>
+  <p class="lede">ThinkThen posts every question to <code>BASE/systemone</code>. Any server that answers there in the System One shape can be a backend.</p>
+
+  <h2>By address</h2>
+  <p>Set <code>THINKTHEN_BASE_URL</code> to the server's base, or pass <code>--url</code> on one command. The key comes from <code>{KEY_VARIABLE}</code>. The model is the default unless you pass <code>--model</code>.</p>
+  <Terminal run={environment} caption={environment.see} />
+
+  <h2>By name</h2>
+  <p>The configuration file can name a server under <code>backends</code>. An entry gives the server's <code>url</code>, the name of the variable that holds its key in <code>key_env</code>, and its <code>model</code>. The file never holds the key itself. Then <code>--backend NAME</code> or <code>THINKTHEN_BACKEND</code> picks the entry, and <code>backend</code> in the file makes it the default.</p>
+  <Code code={good.text} caption={`${good.name}, the configuration file`} />
+  <Terminal run={entry} caption={entry.see} />
+  <p>A name uses 1 to 32 lowercase letters, digits, and hyphens, and may not reuse a built-in name. The <a href="/install/configuration/">Configuration page</a> says where the file lives.</p>
+
+  <h2>Pace the requests</h2>
+  <p>ThinkThen sets no pace of its own. <code>requests_per_minute</code> on an entry caps how many requests one process starts each minute, retries included. It takes {rate.allowed.toLowerCase()}. A built-in's name may appear under <code>backends</code> with a rate and nothing else. <code>THINKTHEN_REQUESTS_PER_MINUTE</code> outranks the file. The limit holds within one process, so two processes can each send the full rate.</p>
+  <Code code={bad.text} caption={`${bad.name}, a rate out of range`} />
+  <Terminal run={badRate} caption={badRate.see} />
+
+  <h2>Check the server</h2>
+  <p><code>thinkthen check --url BASE</code> sends four fixed questions that cover every question shape ThinkThen asks. It prints one row each for the connection, the key, the endpoint, the four questions, and the usage counts. A row reads <code>ok</code>, <code>warning</code> or <code>critical</code>. It exits 0 only when no row is critical. Every request is real, so a hosted server may charge for it.</p>
+  <Terminal run={plan} caption={plan.see} />
+  <p>A threshold tuned on one model does not carry to another. Grade the new model on your own labeled records with <a href="/trust/">audit</a> before you trust it.</p>
+
+  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/backends/other-servers/">Servers without System One</a> · <a href="/learn/beatles-bench/backends/">Bring your own backend</a></p>
+</SidePage>

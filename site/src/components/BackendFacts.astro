@@ -1,0 +1,19 @@
+---
+// The facts of one built-in backend, read from specification/backends.md:
+// its name, address, key variables, and default model. `notes` adds a few
+// words after the key variables or the model.
+import { backend } from '../lib/backends-table.mjs';
+
+const { name, notes = {} } = Astro.props;
+const b = backend(name);
+const code = (s) => `<code>${s}</code>`;
+const rows = [
+  ['Backend name', code(b.name)],
+  ['Address', code(b.base)],
+  [b.keys.length > 1 ? 'Key variables' : 'Key variable', b.keys.map(code).join(', then ') + (notes.key ? `, ${notes.key}` : '')],
+  ['Default model', code(b.model) + (notes.model ? `. ${notes.model}` : '')],
+];
+---
+<table class="backend-facts">
+  {rows.map(([label, html]) => <tr><th>{label}</th><td set:html={html} /></tr>)}
+</table>
