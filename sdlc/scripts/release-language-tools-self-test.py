@@ -299,5 +299,42 @@ def acquisition_cli(root):
         assert ("metadata" in log.read_text()) == (label in ("good", "foreign-snapshot"))
 
 
+def fetch_retries():
+    """A 503 or a lost connection retries twice; a 404 fails at once."""
+    import io
+    import urllib.error
+
+    def opener_for(failures):
+        def opener(url, timeout):
+            if failures:
+                raise failures.pop(0)
+            return io.BytesIO(b"archive")
+        return opener
+
+    unavailable = lambda: urllib.error.HTTPError("u", 503, "Service Unavailable", None, None)
+    with tempfile.TemporaryDirectory(prefix="thinkthen-fetch-test-") as folder:
+        root = Path(folder)
+        pauses = []
+        tools.fetch("u", root / "a", opener_for([unavailable(), urllib.error.URLError("dns")]), pauses.append)
+        assert (root / "a").read_bytes() == b"archive" and pauses == [10, 20], pauses
+        pauses = []
+        try:
+            tools.fetch("u", root / "b", opener_for([unavailable()] * 3), pauses.append)
+        except urllib.error.HTTPError as error:
+            assert error.code == 503 and pauses == [10, 20], pauses
+        else:
+            raise AssertionError("three 503 replies must fail")
+        pauses = []
+        try:
+            tools.fetch("u", root / "c", opener_for([urllib.error.HTTPError("u", 404, "Not Found", None, None)]),
+                        pauses.append)
+        except urllib.error.HTTPError as error:
+            assert error.code == 404 and pauses == [], pauses
+        else:
+            raise AssertionError("a 404 must fail at once")
+        assert not (root / "b").exists() and not (root / "c").exists()
+
+
 if __name__ == "__main__":
     main()
+    fetch_retries()
