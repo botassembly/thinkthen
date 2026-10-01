@@ -1,15 +1,16 @@
 //! Caller-fed native stream over the core's one lazy Batch.
 //!
-//! Only `__next__` advances Python. The worker receives owned text through a
-//! zero-slot handoff, and the core planner owns its bounded request window.
+//! Only `__next__` advances Python. The worker asks for each record with
+//! `Need`, the stream sends one record per ask, and the core planner owns its
+//! bounded request window.
 
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, sync_channel};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use pyo3::exceptions::{PyKeyboardInterrupt, PyStopIteration};
 use pyo3::prelude::*;
+use thinkthen::fork_safe::{Receiver, RecvTimeoutError, Sender, channel};
 use thinkthen::{
     Answer, BatchSetting, CallOptions, CancelToken, Error, Facts, Judgment, Probabilities,
     contained,
@@ -214,8 +215,8 @@ fn run(job: Run) {
 #[pyclass(name = "_Stream", module = "thinkthen._thinkthen")]
 pub(crate) struct PyStream {
     source: Py<PyAny>,
-    input: Option<SyncSender<Option<String>>>,
-    events: Mutex<Receiver<Event>>,
+    input: Option<Sender<Option<String>>>,
+    events: Receiver<Event>,
     worker: Option<JoinHandle<()>>,
     stop: CancelToken,
     receipt: Arc<ReceiptState>,
@@ -273,12 +274,7 @@ impl PyStream {
             return Ok(None);
         }
         loop {
-            let event = py.detach(|| {
-                self.events
-                    .lock()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner)
-                    .recv_timeout(TICK)
-            });
+            let event = py.detach(|| self.events.recv_timeout(TICK));
             match self.advance(py, event)? {
                 Step::Continue => {}
                 Step::Item(value) => return Ok(Some(value)),
@@ -308,7 +304,7 @@ impl PyStream {
             }
         };
         if let Some(input) = &self.input {
-            let _ = py.detach(|| input.send(next));
+            let _ = input.send(next);
         }
         Ok(())
     }
@@ -393,12 +389,7 @@ impl PyStream {
             return;
         }
         loop {
-            match py.detach(|| {
-                self.events
-                    .lock()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner)
-                    .recv_timeout(TICK)
-            }) {
+            match py.detach(|| self.events.recv_timeout(TICK)) {
                 Ok(Event::End(facts)) => {
                     self.facts = facts;
                     break;
@@ -434,7 +425,7 @@ pub(crate) fn prepare(
     if verb == "filter" {
         only(py, &asked, verb, "decide")?;
     }
-    let (incoming, source_rx) = sync_channel(0);
+    let (incoming, source_rx) = channel();
     let (events_tx, events_rx) = channel();
     let stop = CancelToken::new();
     let receipt = stream_receipt();
@@ -478,7 +469,7 @@ pub(crate) fn prepare(
         PyStream {
             source,
             input: Some(incoming),
-            events: Mutex::new(events_rx),
+            events: events_rx,
             worker: Some(worker),
             stop,
             receipt,

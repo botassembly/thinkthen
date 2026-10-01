@@ -1,4 +1,4 @@
-Status: open. Found on the M5 on 2026-10-01 by the quick fix that closed `closed/2026-09-30-duckdb-check-fails-four-tests-on-macos.md`. Owner: the queue owner.
+Status: closed 2026-10-01 by ticket 0365 "Land 0365: a forked child on macOS answers on every calling-thread wait". Found on the M5 on 2026-10-01 by the quick fix that closed `closed/2026-09-30-duckdb-check-fails-four-tests-on-macos.md`. PostgreSQL stays on its std channel, because no backend forks after a call; the ticket defers it.
 
 Kind: bug
 

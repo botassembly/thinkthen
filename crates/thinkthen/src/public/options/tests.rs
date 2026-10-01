@@ -70,7 +70,7 @@ fn diagnostic_boundary_child() {
     );
 
     let scoped: Result<(), Error> = guarded(|| {
-        let (results, _received) = mpsc::channel::<()>();
+        let (results, _received) = crate::engine::fork_safe::channel::<()>();
         workers::scoped_observed(
             1,
             results,

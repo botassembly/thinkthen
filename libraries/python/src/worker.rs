@@ -8,7 +8,6 @@
 //! already sent ends on its own. An interrupt never fires the caller's token.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, sync_channel};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
@@ -16,6 +15,7 @@ use crate::diagnostics::{host, host_error};
 use pyo3::exceptions::{PyKeyboardInterrupt, PyTimeoutError};
 use pyo3::prelude::*;
 use pyo3::types::PyBool;
+use thinkthen::fork_safe::{Receiver, RecvTimeoutError, channel};
 use thinkthen::{
     CallOptions, CancelToken, Error, ErrorKind, Facts, RecordObservation, Tally, contained,
 };
@@ -283,7 +283,7 @@ where
     }
     let internal = CancelToken::new();
     let stop = internal.clone();
-    let (sender, receiver) = sync_channel(1);
+    let (sender, receiver) = channel();
     LIVE.fetch_add(1, Ordering::SeqCst);
     let spawned = std::thread::Builder::new()
         .name("thinkthen-call".to_owned())
@@ -461,11 +461,8 @@ fn wait<T: Send, E: WorkerError>(
     caller: Option<&CancelToken>,
     receipt: Option<&Arc<ReceiptState>>,
 ) -> PyResult<T> {
-    let mut receiver = receiver;
     loop {
-        // `Receiver` is not `Sync`, so it moves into the detached closure and back.
-        let (waited, back) = py.detach(move || (receiver.recv_timeout(TICK), receiver));
-        receiver = back;
+        let waited = py.detach(|| receiver.recv_timeout(TICK));
         if caller.is_some_and(CancelToken::is_cancelled) {
             internal.cancel();
             let error = raise(py, ErrorKind::Cancelled, CANCELLED, false);

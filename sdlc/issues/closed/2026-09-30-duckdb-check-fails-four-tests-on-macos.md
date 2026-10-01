@@ -44,4 +44,4 @@ Proof at `f8c47856a`, before the review simplified the answer handoff and raised
 
 At the reviewed `f1c59eb79`, the full check passed again on Linux (128 cases) and on the M5 (127 cases and the `strace` skip), and the fork case passed 20 of 20 runs on the M5. `lint` passed in a clean checkout.
 
-Other surfaces wait on channels on the calling thread too. `../2026-10-01-macos-forked-children-crash-on-a-channel-wait.md` owns them.
+Other surfaces wait on channels on the calling thread too. `2026-10-01-macos-forked-children-crash-on-a-channel-wait.md` owned them; ticket 0365 closed it.

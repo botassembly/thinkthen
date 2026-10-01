@@ -5,11 +5,11 @@
 
 use std::collections::VecDeque;
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use crate::engine::facade;
+use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender, channel};
 use crate::engine::pipeline::{Asker, Failed, Flow, Host, Input, Packing, Port};
 use crate::public::asking::Text;
 use crate::public::engine::Evidence;

@@ -6,7 +6,7 @@
 //! workers, stores each reply's good answers, and emits rows in input order.
 
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc;
 use std::time::Duration;
 
 use crate::core::AttemptObservation;
@@ -16,7 +16,7 @@ use crate::core::pack::{self, Ask, PackError, PackLimits, Packer, QuestionKey};
 use crate::engine::error::Error;
 use crate::engine::facade::Engine;
 use crate::engine::store::{Mode, Store};
-use crate::engine::{Cancel, workers};
+use crate::engine::{Cancel, fork_safe, workers};
 
 mod receipt;
 pub(crate) use receipt::{RowUsage, read, receipt};
@@ -140,7 +140,7 @@ pub(crate) trait Host<A: Asker> {
 /// A host whose reader runs on its own thread and answers each ask sent
 /// down `asks`, and whose rows go to `emit`.
 pub(crate) struct Reader<F> {
-    asks: std::sync::mpsc::Sender<()>,
+    asks: mpsc::Sender<()>,
     emit: F,
     /// A test's pause, which outlasts a stalled reader thread (Debt 030).
     pause: Option<Duration>,
@@ -164,11 +164,11 @@ impl<A: Asker, F: FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow> Host<A
 /// `emit`. A `pause` replaces the engine's pause; only tests set one.
 pub(crate) fn reader<I, E, F>(
     pause: Option<Duration>,
-    start_reader: impl FnOnce(Receiver<()>, Port<I, E>),
+    start_reader: impl FnOnce(mpsc::Receiver<()>, Port<I, E>),
     emit: F,
 ) -> impl FnOnce(Port<I, E>) -> Reader<F> {
     move |port| {
-        let (asks, asked) = channel();
+        let (asks, asked) = mpsc::channel();
         start_reader(asked, port);
         Reader { asks, emit, pause }
     }
@@ -212,7 +212,7 @@ pub(crate) fn eager<A: Asker, F: FnMut(Row<A>) -> Flow>(
 }
 
 /// The host side of the input bridge: one input, failure or end per ask.
-pub(crate) struct Port<I, E>(Sender<Event<I, E>>);
+pub(crate) struct Port<I, E>(fork_safe::Sender<Event<I, E>>);
 
 impl<I, E> Port<I, E> {
     pub(crate) fn send(&self, input: Input<I, E>) -> Result<(), ()> {
@@ -248,7 +248,7 @@ impl Engine {
         let limits = self.pack_limits(packing);
         let window = (state.width + 1).saturating_mul(limits.inputs);
         let sender = send::Sender::new(self, &state, model.clone(), packing);
-        let (events, received) = channel();
+        let (events, received) = fork_safe::channel();
         let mut host = start(Port(events.clone()));
         let counts = run::Counts {
             usage: &state.usage,

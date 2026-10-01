@@ -1,11 +1,11 @@
 //! Scoped request workers shared by the schedulers and the single calls.
 
 use std::cell::Cell;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, sync_channel};
-use std::sync::{Mutex, Once};
-use std::thread;
+use std::sync::Once;
+use std::thread::{self, ScopedJoinHandle};
 
 use crate::engine::Cancel;
+use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender, channel};
 
 thread_local! {
     /// Whether this thread is an engine worker with host signals masked.
@@ -69,7 +69,7 @@ pub(crate) fn on_worker<T: Send>(cancel: &Cancel<'_>, send: impl FnOnce() -> T +
     if ENGINE_WORKER.get() {
         return with_engine_diagnostics(send);
     }
-    let (done, finished) = sync_channel(1);
+    let (done, finished) = channel();
     thread::scope(|scope| {
         let worker = scope.spawn(move || {
             with_engine_diagnostics(|| {
@@ -79,12 +79,18 @@ pub(crate) fn on_worker<T: Send>(cancel: &Cancel<'_>, send: impl FnOnce() -> T +
                 sent
             })
         });
-        while let Err(RecvTimeoutError::Timeout) = finished.recv_timeout(Cancel::poll()) {
-            let _stop = cancel.stop_between_sends();
+        // A host check that panics still joins the worker first, so the scope
+        // never parks the calling thread (ticket 0365).
+        let polled = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            while let Err(RecvTimeoutError::Timeout) = finished.recv_timeout(Cancel::poll()) {
+                let _stop = cancel.stop_between_sends();
+            }
+        }));
+        let sent = worker.join();
+        if let Err(panic) = polled {
+            std::panic::resume_unwind(panic);
         }
-        worker
-            .join()
-            .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+        sent.unwrap_or_else(|panic| std::panic::resume_unwind(panic))
     })
 }
 
@@ -102,7 +108,7 @@ pub(crate) fn scoped<W, R, T>(
     jobs: usize,
     results: Sender<R>,
     work: &(impl Fn(W) -> R + Sync),
-    body: impl FnOnce(SyncSender<W>) -> T,
+    body: impl FnOnce(Sender<W>) -> T,
 ) -> T
 where
     W: Send,
@@ -116,28 +122,61 @@ pub(crate) fn scoped_observed<W, R, T, G>(
     results: Sender<R>,
     work: &(impl Fn(W) -> R + Sync),
     begin: &(impl Fn() -> G + Sync),
-    body: impl FnOnce(SyncSender<W>) -> T,
+    body: impl FnOnce(Sender<W>) -> T,
 ) -> T
 where
     W: Send,
     R: Send,
     G: Send,
 {
-    let (send, receive) = sync_channel(jobs);
-    let queue = Mutex::new(receive);
+    let (send, queue) = channel();
     thread::scope(|scope| {
-        for _ in 0..jobs {
-            let results = results.clone();
-            let queue = &queue;
-            scope.spawn(move || observed_worker(queue, &results, work, begin));
-        }
+        let workers = Joined(
+            (0..jobs)
+                .map(|_| {
+                    let results = results.clone();
+                    let queue = &queue;
+                    scope.spawn(move || observed_worker(queue, &results, work, begin))
+                })
+                .collect(),
+        );
         drop(results);
-        body(send)
+        let value = body(send);
+        workers.join();
+        value
     })
 }
 
+/// Scoped workers joined before their scope closes, also while the body
+/// unwinds. A scope that still has running threads parks the calling thread,
+/// which a forked child on macOS cannot do (ticket 0365).
+struct Joined<'scope>(Vec<ScopedJoinHandle<'scope, ()>>);
+
+impl Joined<'_> {
+    /// Join every worker, then resume the first worker's panic.
+    fn join(mut self) {
+        let mut panicked = None;
+        for worker in self.0.drain(..) {
+            if let Err(panic) = worker.join() {
+                panicked.get_or_insert(panic);
+            }
+        }
+        if let Some(panic) = panicked {
+            std::panic::resume_unwind(panic);
+        }
+    }
+}
+
+impl Drop for Joined<'_> {
+    fn drop(&mut self) {
+        for worker in self.0.drain(..) {
+            let _joined = worker.join();
+        }
+    }
+}
+
 fn observed_worker<W, R, G>(
-    queue: &Mutex<Receiver<W>>,
+    queue: &Receiver<W>,
     results: &Sender<R>,
     work: &(impl Fn(W) -> R + Sync),
     begin: &(impl Fn() -> G + Sync),
@@ -149,8 +188,8 @@ fn observed_worker<W, R, G>(
     });
 }
 
-fn worker<W, R>(queue: &Mutex<Receiver<W>>, results: &Sender<R>, work: &(impl Fn(W) -> R + Sync)) {
-    while let Ok(Ok(item)) = queue.lock().map(|receiver| receiver.recv()) {
+fn worker<W, R>(queue: &Receiver<W>, results: &Sender<R>, work: &(impl Fn(W) -> R + Sync)) {
+    while let Ok(item) = queue.recv() {
         if results.send(work(item)).is_err() {
             return;
         }

@@ -99,7 +99,7 @@ fn host_signal_child() {
         retry_wait: Duration::from_millis(10),
     };
     let (published, worker) = channel();
-    let (results, answers) = channel();
+    let (results, answers) = crate::engine::fork_safe::channel();
 
     workers::scoped_observed(
         1,
@@ -219,7 +219,7 @@ fn file_size_child() {
         taken_at: 1,
         origin: "live",
     };
-    let (results, finished) = channel();
+    let (results, finished) = crate::engine::fork_safe::channel();
     // The write runs on an engine worker, whose mask must leave SIGXFSZ open.
     workers::scoped_observed(
         1,

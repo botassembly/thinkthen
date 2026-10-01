@@ -1,10 +1,11 @@
 //! The R caller's interrupt-safe worker and one owned completion path.
 
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
+
 use std::thread;
 use std::time::{Duration, Instant};
 
+use thinkthen::fork_safe::{Receiver, RecvTimeoutError, channel};
 use thinkthen::{CallOptions, CancelToken, Engine, Error};
 
 use super::account::{Account, Completed};

@@ -8,7 +8,9 @@
 //! slice 5 moved it here from the engine's old record scheduler.
 
 use std::collections::BTreeMap;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel};
+use std::sync::mpsc::{self, Receiver};
+
+use crate::engine::fork_safe::{RecvTimeoutError, Sender, channel};
 
 use crate::engine::Cancel;
 use crate::engine::facade::scoped_workers;
@@ -68,7 +70,7 @@ struct Run<R, E> {
 
 impl<R, E> Run<R, E> {
     /// Ask for one more line while fewer than `jobs` wait to be handed on.
-    fn request(&mut self, ask: &Sender<()>, jobs: usize, ended: fn() -> E) {
+    fn request(&mut self, ask: &mpsc::Sender<()>, jobs: usize, ended: fn() -> E) {
         if !self.reading && !self.halted && !self.exhausted && self.dispatched - self.next < jobs {
             self.reading = ask.send(()).is_ok();
             if !self.reading {
@@ -77,12 +79,7 @@ impl<R, E> Run<R, E> {
         }
     }
 
-    fn accept<T>(
-        &mut self,
-        event: Event<T, R, E>,
-        work: &SyncSender<(usize, T)>,
-        ended: fn() -> E,
-    ) {
+    fn accept<T>(&mut self, event: Event<T, R, E>, work: &Sender<(usize, T)>, ended: fn() -> E) {
         match event {
             Event::Input(input) => {
                 self.reading = false;
@@ -103,7 +100,7 @@ impl<R, E> Run<R, E> {
         }
     }
 
-    fn dispatch<T>(&mut self, value: T, work: &SyncSender<(usize, T)>, ended: fn() -> E) {
+    fn dispatch<T>(&mut self, value: T, work: &Sender<(usize, T)>, ended: fn() -> E) {
         if work.send((self.dispatched, value)).is_err() {
             self.refuse(ended());
             return;
@@ -175,7 +172,7 @@ where
     E: Send,
 {
     let (events, received) = channel();
-    let (ask, asked) = channel();
+    let (ask, asked) = mpsc::channel();
     start_reader(asked, Port(events.clone()));
     scoped_workers(
         jobs,

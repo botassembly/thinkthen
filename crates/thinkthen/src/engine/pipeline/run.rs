@@ -3,7 +3,6 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender};
 use std::time::{Duration, Instant};
 
 use super::send::{Done, Job};
@@ -12,6 +11,7 @@ use crate::core::ModelName;
 use crate::core::pack::{self, Ask, Entry, Packer, QuestionKey};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
+use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender};
 use crate::engine::pipeline::Input;
 use crate::engine::store::{Found, JSONL, Row, Store};
 use crate::engine::usage::Counters;
@@ -111,7 +111,7 @@ impl<'a, A: Asker> Run<'a, A> {
         mut self,
         host: &mut impl Host<A>,
         received: &Receiver<Event<A::Input, A::Error>>,
-        work: &SyncSender<Job>,
+        work: &Sender<Job>,
         cancel: &Cancel,
     ) {
         loop {
@@ -155,7 +155,7 @@ impl<'a, A: Asker> Run<'a, A> {
 
     /// Close a full window, hand closed requests to free workers, and ask
     /// for one more input while the window has room.
-    fn dispatch(&mut self, host: &mut impl Host<A>, work: &SyncSender<Job>) {
+    fn dispatch(&mut self, host: &mut impl Host<A>, work: &Sender<Job>) {
         if self.slots.len() >= self.window || self.exhausted {
             self.close();
         }
