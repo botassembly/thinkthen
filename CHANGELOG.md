@@ -72,8 +72,8 @@ The C++, C#, Go, Java, Kotlin, Scala, Swift, Zig, PHP, Dart, Ada, Objective-C an
 
 ### Backends
 
-- The default backend is TypeSafe's Jev, pinned to model `jev-1.13.0`. It reads the key from `THINKTHEN_API_KEY`.
-- Two more backends are built in. `liquid` reads `LIQUIDAI_API_KEY`. `ollama` reaches Ollama on the local machine and sends no key there.
+- A run that names no backend asks TypeSafe's Jev, pinned to model `jev-1.13.0`. It reads the key from `THINKTHEN_API_KEY`.
+- Three backends are built in, and each reads only its own key variables. `typesafe` reads `TYPESAFE_API_KEY`. `liquid` reads `LIQUIDAI_API_KEY`, then `LIQUID_API_KEY`. `ollama` reaches Ollama on the local machine and sends no key there.
 - `--backend NAME`, `THINKTHEN_BACKEND` or the configuration file selects a backend. The configuration file's `backends` adds more servers by address, key variable and model.
 - Each backend sends only its own key.
 
