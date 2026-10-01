@@ -2,7 +2,7 @@
 #![allow(unsafe_code, reason = "the bridge copies caller-owned byte ranges")]
 
 use std::ffi::c_void;
-use std::sync::mpsc::{RecvTimeoutError, channel};
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::Duration;
 
 use crate::{engines, errors, signal};
@@ -321,6 +321,28 @@ impl BridgeStop {
     }
 }
 
+/// One worker's answer. The caller waits on a mutex and condition variable,
+/// never on a channel: on macOS a channel wait parks on a semaphore that a
+/// forked child cannot use, and the child of a host that asked once crashes.
+struct Answer<T>(Mutex<Option<Result<T, String>>>, Condvar);
+
+/// Gives the answer, or a defect when the worker ends without one.
+struct Giver<T>(Arc<Answer<T>>);
+
+impl<T> Giver<T> {
+    fn give(&self, result: Result<T, String>) {
+        let mut slot = self.0.0.lock().unwrap_or_else(PoisonError::into_inner);
+        slot.get_or_insert(result);
+        self.0.1.notify_one();
+    }
+}
+
+impl<T> Drop for Giver<T> {
+    fn drop(&mut self) {
+        self.give(Err("thinkthen defect: the engine worker ended with no answer".to_owned()));
+    }
+}
+
 /// Keep DuckDB's callback on its calling thread while a blocking model send
 /// runs on an owned worker. A stopped query detaches only that worker; its
 /// cancel token prevents new sends or retries after the held attempt ends.
@@ -334,13 +356,14 @@ pub(crate) fn run_detached<T: Send + 'static>(
     }
     let token = CancelToken::new();
     let owned = token.clone();
-    let (sender, receiver) = channel();
+    let answer = Arc::new(Answer(Mutex::new(None), Condvar::new()));
+    let giver = Giver(Arc::clone(&answer));
     std::thread::Builder::new()
         .name("thinkthen-duckdb-call".to_owned())
         .spawn(move || {
             let result = panic::caught(|| work(owned))
                 .unwrap_or_else(|_| Err("thinkthen defect: the engine worker panicked".to_owned()));
-            let _ = sender.send(result);
+            giver.give(result);
         })
         .map_err(|_| "thinkthen defect: the engine worker could not start".to_owned())?;
     loop {
@@ -348,18 +371,18 @@ pub(crate) fn run_detached<T: Send + 'static>(
             token.cancel();
             return Err(cancelled());
         }
-        match receiver.recv_timeout(Duration::from_millis(10)) {
-            Ok(result) => {
-                if stop.stopped() {
-                    token.cancel();
-                    return Err(cancelled());
-                }
-                return result;
+        let slot = answer.0.lock().unwrap_or_else(PoisonError::into_inner);
+        let (mut slot, _) = answer
+            .1
+            .wait_timeout_while(slot, Duration::from_millis(10), |slot| slot.is_none())
+            .unwrap_or_else(PoisonError::into_inner);
+        if let Some(result) = slot.take() {
+            drop(slot);
+            if stop.stopped() {
+                token.cancel();
+                return Err(cancelled());
             }
-            Err(RecvTimeoutError::Timeout) => {}
-            Err(RecvTimeoutError::Disconnected) => {
-                return Err("thinkthen defect: the engine worker ended with no answer".to_owned());
-            }
+            return result;
         }
     }
 }
