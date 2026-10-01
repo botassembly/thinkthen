@@ -4,10 +4,9 @@
 //! Each keeps its own state and wire form, so its answers are cached by
 //! address, model, state and question, as the record functions' are.
 
-use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, Entry, PackError, PackLimits, Packer};
 use crate::core::recording::{Digest, Exchange as Recorded};
-use crate::core::{Backend, BackendProfile, ModelName, Plan, Question, Reply, Usage};
+use crate::core::{Backend, BackendProfile, ModelName, Plan, Question};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 use crate::engine::pipeline::{self, Asker, Failed, Flow, Packing};
@@ -204,27 +203,11 @@ impl Asker for Each<'_> {
     }
 
     fn row(&self, place: usize, answers: Vec<pipeline::Answered>) -> Result<Answered, Error> {
-        let question = self.0.questions.get(place);
-        let (Some(question), Some(first)) = (question, answers.first()) else {
+        let Some(question) = self.0.questions.get(place).filter(|_| !answers.is_empty()) else {
             return Err(Error::Defect("a place has no answer"));
         };
-        let stored: Vec<_> = answers
-            .iter()
-            .map(|answered| answered.answer.as_deref().map_err(DecodeError::cause))
-            .collect();
-        let model = &*first.answered_by;
-        let outcomes = pack::read(std::slice::from_ref(question), &stored, model)?;
-        let model =
-            ModelName::reported(model).map_err(|_| Error::Defect("a reply named no model"))?;
-        let usage = answers
-            .iter()
-            .try_fold(None, |total, answered| summed(total, answered.usage))?;
-        Ok(Answered {
-            reply: Reply::new(model, outcomes, usage),
-            replayed: answers.iter().all(|answered| answered.cached),
-            request: Digest::named(first.key.hex()),
-            requests_sent: answers.iter().map(|answered| answered.requests_sent).sum(),
-        })
+        let outcomes = pipeline::read(question, &answers)?;
+        pipeline::receipt(&answers, outcomes)
     }
 }
 
@@ -289,17 +272,6 @@ fn failure_of(failed: Failed<Error>) -> Error {
     match failed {
         Failed::Asker(error) | Failed::Engine { error, .. } | Failed::Stopped(error) => error,
         Failed::Pack { error, .. } => packed(error),
-    }
-}
-
-/// The sum of two usages, absent when either is.
-pub(crate) fn summed(total: Option<Usage>, more: Option<Usage>) -> Result<Option<Usage>, Error> {
-    match (total, more) {
-        (Some(left), Some(right)) => left
-            .checked_plus(right)
-            .ok_or(Error::UsageOverflow)
-            .map(Some),
-        (None, held) | (held, None) => Ok(held),
     }
 }
 

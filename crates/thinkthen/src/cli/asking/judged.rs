@@ -8,14 +8,13 @@ use std::sync::mpsc::Receiver;
 use std::thread;
 
 use super::{Asks, Judging, JudgingInput, RowContext, table_kind};
-use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, PackError};
 use crate::core::{
     AnswerOutcome, BackendProfile, BatchError, Descriptions, Evidence, ModelName, Plan, Reading,
-    Record, Reply, Setting, Url, Usage, quoted_plan, quoted_plan_of,
+    Record, Setting, Url, quoted_plan, quoted_plan_of,
 };
 use crate::edge;
-use crate::engine::facade::{self, Judgment};
+use crate::engine::facade::Judgment;
 use crate::engine::pipeline::{self, Answered, Asker, Failed, Flow, Input, Packing, Port};
 use crate::failure::Failure;
 use crate::failure::context::Limits;
@@ -166,14 +165,7 @@ impl Asker for JudgeAsker<'_> {
 impl JudgeAsker<'_> {
     fn judged(&self, held: Held, answers: &[Answered]) -> Result<Judged, Failure> {
         let question = self.judging.asks.of(&held.record)?;
-        let model = answers
-            .first()
-            .map_or("", |answered| &*answered.answered_by);
-        let stored: Vec<_> = answers
-            .iter()
-            .map(|answered| answered.answer.as_deref().map_err(DecodeError::cause))
-            .collect();
-        let outcomes = pack::read(std::slice::from_ref(&question), &stored, model)
+        let outcomes = pipeline::read(&question, answers)
             .map_err(|error| Failure::from(crate::engine::error::Error::from(error)))?;
         let [AnswerOutcome::Answered(answer)] = outcomes.as_slice() else {
             let failed = answers.iter().find_map(|answered| {
@@ -196,30 +188,13 @@ impl JudgeAsker<'_> {
                 },
             });
         };
+        let answer = answer.clone();
         let (value, outcome) = answer.read(self.judging.threshold);
-        let usage = answers
-            .iter()
-            .try_fold(Usage::new(0, 0), |total, answered| {
-                total.checked_plus(answered.usage?)
-            });
-        let cached = answers.iter().all(|answered| answered.cached);
-        let model =
-            ModelName::reported(model).map_err(|_| Failure::Defect("a reply named no model"))?;
         let judgment = Judgment {
-            answer: answer.clone(),
+            answered: pipeline::receipt(answers, outcomes).map_err(Failure::from)?,
+            answer,
             value,
             outcome,
-            answered: facade::Answered {
-                reply: Reply::new(model, vec![AnswerOutcome::Answered(answer.clone())], usage),
-                replayed: cached,
-                request: crate::core::recording::Digest::named(
-                    answers
-                        .first()
-                        .map(|answered| answered.key.hex())
-                        .unwrap_or_default(),
-                ),
-                requests_sent: answers.iter().map(|answered| answered.requests_sent).sum(),
-            },
         };
         let mut attempts: Vec<_> = answers
             .iter()
@@ -238,7 +213,7 @@ impl JudgeAsker<'_> {
                 attempts,
             },
         )?;
-        if cached {
+        if judgment.answered.replayed {
             judged.model = None;
         }
         Ok(judged)

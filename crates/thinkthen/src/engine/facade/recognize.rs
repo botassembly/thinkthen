@@ -14,6 +14,7 @@ use crate::core::{
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
+use crate::engine::pipeline::RowUsage;
 
 /// The default limit on one text's UTF-8 bytes, which caps spending.
 pub(crate) const MAX_TEXT_BYTES: usize = 600_000;
@@ -71,6 +72,7 @@ impl Place {
 pub(crate) struct Aggregate {
     pub(crate) model: Option<ModelName>,
     models: Models,
+    shares: RowUsage,
     pub(crate) usage: Option<Usage>,
     pub(crate) live: bool,
     pub(crate) requests_sent: u64,
@@ -181,6 +183,7 @@ impl Engine {
             cancel,
         )?;
         meta.model = meta.models.model().cloned();
+        meta.usage = meta.shares.total()?;
         Ok(Recognition {
             value: Recognized {
                 entities,
@@ -444,7 +447,7 @@ impl Aggregate {
         self.models.take(answered, |held, model| {
             super::annotate::check_model(held, model, requested)
         })?;
-        self.usage = super::each::summed(self.usage, answered.reply.usage())?;
+        self.shares.add(answered.reply.usage());
         self.live |= !answered.replayed;
         self.requests_sent = self
             .requests_sent
