@@ -147,15 +147,15 @@ ARCHIVE.rust = (dir) => {
 // on top. Rust builds with the Rust install page's Cargo.toml.
 const declaresMain = (code) => /^\s*(int|void|fn)\s+main\s*\(/m.test(code);
 const FRAGMENT = {
-  c(dir, rel) {
-    const file = path.join(dir, path.basename(rel));
+  c(dir, name) {
+    const file = path.join(dir, name);
     const lines = fs.readFileSync(file, 'utf8').trimEnd().split('\n');
     if (declaresMain(lines.join('\n'))) throw new Error('declares its own main. The runner wraps each function page fragment in main.');
     const cut = lines.findIndex((l) => l.trim() && !l.startsWith('#include'));
     fs.writeFileSync(file, [...lines.slice(0, cut), 'int main(void) {', ...lines.slice(cut), 'return 0;', '}', ''].join('\n'));
   },
-  rust(dir, rel) {
-    const file = path.join(dir, path.basename(rel));
+  rust(dir, name) {
+    const file = path.join(dir, name);
     const code = fs.readFileSync(file, 'utf8').trimEnd();
     if (declaresMain(code)) throw new Error('declares its own main. The runner wraps each function page fragment in main.');
     fs.writeFileSync(file, `fn main() -> Result<(), Box<dyn std::error::Error>> {\n${code}\nOk(())\n}\n`);
@@ -168,27 +168,31 @@ FRAGMENT.csharp = (dir) => fs.copyFileSync(path.join(examples, 'install/csharp/f
 // A Java, Kotlin or Scala sample on a function page names its class or its
 // main for the function, such as Rank, so it builds under that name.
 const JVM = new Set(['java', 'kotlin', 'scala']);
-const programName = (slug, rel) => (rel.startsWith('functions/') && JVM.has(slug)
-  ? `${rel.split('/')[1].replace(/(^|-)(.)/g, (m, dash, c) => c.toUpperCase())}${path.extname(rel)}`
-  : path.basename(rel));
-// A function page's Go, Swift or Zig sample builds as a reader would build
-// it in a project of its own. Go names its module after the file, and
-// `go mod init go` fails, so the sample builds as sample.go. Swift and Zig
-// take the install page's project files, which name the first call, so the
-// sample builds under that name.
+const programName = (rel) => `${rel.split('/')[1].replace(/(^|-)(.)/g, (m, dash, c) => c.toUpperCase())}${path.extname(rel)}`;
+// A function page's sample builds as a reader would build it in a project
+// of its own. Each entry lays out the install page's project files and
+// returns the name the sample builds under. Swift and Zig take the install
+// page's project files, which name the first call. Dart takes the install
+// page's pubspec.yaml. Every other sample builds as sample.<ext>, which
+// also keeps Go from naming its module after the language.
 const projectFiles = (slug, file) => (dir) => {
   fs.cpSync(path.join(examples, 'install', slug, 'files'), dir, { recursive: true });
   return file;
 };
 const PROJECT = {
-  go: () => 'sample.go',
   swift: projectFiles('swift', 'main.swift'),
   zig: projectFiles('zig', 'first-call.zig'),
+  dart: (dir, rel) => {
+    fs.copyFileSync(path.join(examples, 'install/dart/files/pubspec.yaml'), path.join(dir, 'pubspec.yaml'));
+    return runName(rel);
+  },
 };
-const functionSampleName = (slug, rel, dir) => {
+// The name a built sample takes: the JVM program name, then the project's
+// name, then the name every sample runs under.
+const buildName = (slug, rel, dir) => {
   if (!rel.startsWith('functions/')) return path.basename(rel);
-  if (JVM.has(slug)) return programName(slug, rel);
-  return PROJECT[slug] ? PROJECT[slug](dir) : path.basename(rel);
+  if (JVM.has(slug)) return programName(rel);
+  return PROJECT[slug] ? PROJECT[slug](dir, rel) : runName(rel);
 };
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
@@ -217,9 +221,9 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
         fs.mkdirSync(dir, { recursive: true });
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
         layout(dir);
-        const name = functionSampleName(slug, rel, dir);
+        const name = buildName(slug, rel, dir);
         fs.copyFileSync(path.join(examples, rel), path.join(dir, name));
-        if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, rel);
+        if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, name);
         const lines = buildLines(slug, name, true);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
