@@ -1,6 +1,6 @@
 # Specification lines the site shows readers in their draft form
 
-Status: open. Filed 2026-09-30 by the marketing lead. Owner: the queue owner, as batch C2 in `../planning/issue-priorities-2026-09-30.md`, after ticket 0360 lands.
+Status: closed 2026-09-30 by ticket 0363 (`ff58cf4ae`). Filed 2026-09-30 by the marketing lead. Resolution: all five items landed in the specification. The site must drop its `LEFT_OUT` entry for the old row name "Portable call settings (`thinkthen.settings/1`)" and the "planned cached exchange" `ALLOWED` entry; the mailroom answer tells the marketing lead.
 Kind: bug
 
 The site's Settings page renders `specification/settings.md` at build time. Three lines there and in `recording.md` read as working notes to a site reader.
