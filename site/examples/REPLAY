@@ -1,7 +1,11 @@
 # The library samples scripts/smoke-bindings.mjs replays, one path a line,
-# relative to examples/. scripts/check-binding-proofs.mjs checks each one's
-# entry in bindings-proof.json in every build.
+# relative to examples/. A line that ends with backend=NAME runs its sample
+# with that backend named in the environment. scripts/check-binding-proofs.mjs
+# checks each line's entry in bindings-proof.json in every build.
 install/ada/first_call.adb
+install/c/backends.c backend=liquid
+install/c/backends.c backend=ollama
+install/c/backends.c backend=typesafe
 install/c/first-call.c
 install/cobol/first-call.cob
 install/cpp/first-call.cpp
@@ -14,12 +18,25 @@ install/objective-c/first-call.m
 install/pandas/first-call.py
 install/php/first-call.php
 install/polars/first-call.py
+install/python/backends.py backend=liquid
+install/python/backends.py backend=ollama
+install/python/backends.py backend=typesafe
 install/python/first-call.py
+install/r/backends.R backend=liquid
+install/r/backends.R backend=ollama
+install/r/backends.R backend=typesafe
 install/r/data-frames.R
 install/r/first-call.R
+install/ruby/backends.rb backend=liquid
+install/ruby/backends.rb backend=ollama
+install/ruby/backends.rb backend=typesafe
 install/ruby/first-call.rb
+install/rust/backends.rs
 install/rust/first-call.rs
 install/scala/FirstCall.scala
 install/swift/main.swift
+install/typescript/backends.ts backend=liquid
+install/typescript/backends.ts backend=ollama
+install/typescript/backends.ts backend=typesafe
 install/typescript/first-call.ts
 install/zig/first-call.zig

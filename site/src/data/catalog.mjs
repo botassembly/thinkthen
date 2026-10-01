@@ -13,6 +13,7 @@ export const KEY_VARIABLE = 'THINKTHEN_API_KEY';
 
 export { REPO } from './repo.mjs';
 import { setting } from '../lib/settings-table.mjs';
+import { backend } from '../lib/backends-table.mjs';
 
 // The four outcomes. One color each, everywhere a number or an answer shows.
 export const OUTCOMES = [
@@ -392,6 +393,7 @@ const C_ARCHIVE = ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls,
 export const SURFACES = [
   {
     slug: 'shell', name: 'Bash', deckHeading: null,
+    backends: 'cli',
     lang: 'bash', tab: 'Bash',
     blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
     unsureWord: '`null`, and exit code 3',
@@ -409,6 +411,7 @@ export const SURFACES = [
   },
   {
     slug: 'python', name: 'Python', deckHeading: 'Python',
+    backends: 'env',
     lang: 'python', tab: 'Python',
     blurb: 'Pass a string or a list. Read the answer from `Call.value`.',
     unsureWord: '`None`',
@@ -423,6 +426,7 @@ export const SURFACES = [
   },
   {
     slug: 'polars', name: 'Polars', deckHeading: 'Polars',
+    backends: 'python',
     lang: 'python', tab: 'Python',
     blurb: 'A Polars frame goes in. Read the frame with its new columns from `Call.value`.',
     unsureWord: '`None`',
@@ -437,6 +441,7 @@ export const SURFACES = [
   },
   {
     slug: 'pandas', name: 'pandas', deckHeading: null,
+    backends: 'python',
     lang: 'python', tab: 'Python',
     blurb: 'A pandas Series goes in, and a Series with the same index comes back in `Call.value`.',
     unsureWord: '`pd.NA`',
@@ -452,6 +457,7 @@ export const SURFACES = [
   },
   {
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
+    backends: 'env',
     lang: 'ts', tab: 'TypeScript',
     blurb: 'Pass the question and the text. Await the call, then read its `.value`.',
     unsureWord: '`null`',
@@ -466,6 +472,7 @@ export const SURFACES = [
   },
   {
     slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
+    backends: 'env',
     lang: 'ruby', tab: 'Ruby',
     blurb: 'Any Enumerable goes in. Read the answer from `Call#value`.',
     unsureWord: '`nil`',
@@ -477,6 +484,7 @@ export const SURFACES = [
   },
   {
     slug: 'r', name: 'R', deckHeading: 'R',
+    backends: 'env',
     lang: 'r', tab: 'R',
     blurb: 'The ten functions work inside dplyr pipelines. Read the answer from `$value`.',
     unsureWord: '`NA`',
@@ -491,6 +499,7 @@ export const SURFACES = [
   },
   {
     slug: 'rust', name: 'Rust', deckHeading: 'Rust',
+    backends: 'builder',
     lang: 'rust', tab: 'Rust',
     blurb: 'Call the engine directly. The compiler makes you handle not sure.',
     unsureWord: '`Answer::Unsure` from `decide`, and `None` from `choose`',
@@ -504,6 +513,7 @@ export const SURFACES = [
   },
   {
     slug: 'c', name: 'C', deckHeading: 'C',
+    backends: 'env',
     lang: 'c', tab: 'Rust',
     blurb: 'One header over a shared or a static library. Bind ThinkThen to any language that can call C.',
     unsureWord: 'the outcome `THINKTHEN_UNSURE`',
@@ -822,6 +832,7 @@ for (const s of SURFACES) {
   for (const field of s.slug === 'shell' ? ['facts'] : ['facts', 'errors', 'settings']) {
     if (!s[field]) throw new Error(`catalog: the surface ${s.slug} has no ${field}`);
   }
+  if (s.backends && !['env', 'builder', 'cli', 'python'].includes(s.backends)) throw new Error(`catalog: the surface ${s.slug} has the backends route ${s.backends}`);
 }
 
 // The tabs on the home page sample, and on every code block that has variants.
@@ -859,6 +870,29 @@ export const BACKEND_PAGES = [
   { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
   { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Announced' },
 ].map((p) => ({ ...p, route: `/install/backends/${p.slug ? `${p.slug}/` : ''}` }));
+
+// The three built-in backends each language page shows, in this order. The
+// key variables repeat the "Named backends" table in
+// specification/backends.md so the pages can name them, and the check
+// below fails the build when they differ. Ollama's address is the second
+// port its recordings sit at, as the Ollama page explains.
+export const BACKEND_ROUTES = [
+  { name: 'typesafe', keys: ['TYPESAFE_API_KEY'] },
+  { name: 'liquid', keys: ['LIQUIDAI_API_KEY', 'LIQUID_API_KEY'] },
+  { name: 'ollama', keys: ['OLLAMA_API_KEY'], address: 'http://localhost:11535/v1' },
+].map((r) => {
+  const page = BACKEND_PAGES.find((p) => p.slug === r.name);
+  if (!page) throw new Error(`catalog: BACKEND_ROUTES names ${r.name}, which has no BACKEND_PAGES entry`);
+  const row = backend(r.name);
+  if (row.keys.join(', ') !== r.keys.join(', ')) {
+    throw new Error(`catalog: BACKEND_ROUTES gives ${r.name} the key variables ${r.keys.join(', ')}, and specification/backends.md gives ${row.keys.join(', ')}`);
+  }
+  return { ...r, title: page.title, route: page.route, base: r.address ?? row.base };
+});
+
+// What each language page says about OpenAI's Decisions API. It states the
+// announcement and nothing more.
+export const OPENAI_ANNOUNCED = 'OpenAI announced its Decisions API on 2026-09-29 in its <a href="https://openai.com/index/devday-2026-recap/">DevDay 2026 recap</a>. OpenAI has published no address, schema or price, so ThinkThen cannot call it. The <a href="/install/backends/openai/">OpenAI Decisions API</a> page says what ThinkThen knows.';
 
 export const BACKENDS_SEE = {
   typesafe: {

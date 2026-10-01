@@ -22,6 +22,75 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/c/backends.c backend=liquid": {
+    "page": "/install/c/",
+    "sample": "c14355c9b070a7f430957db6a5417a2a65a000c2705d59214ef7cd840604803d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "f54bee2463aef8b9a17861bb6336bae8317bbb854c0041426384738263ac735f"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/c/backends.c backend=ollama": {
+    "page": "/install/c/",
+    "sample": "c14355c9b070a7f430957db6a5417a2a65a000c2705d59214ef7cd840604803d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "f54bee2463aef8b9a17861bb6336bae8317bbb854c0041426384738263ac735f"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/c/backends.c backend=typesafe": {
+    "page": "/install/c/",
+    "sample": "c14355c9b070a7f430957db6a5417a2a65a000c2705d59214ef7cd840604803d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "f54bee2463aef8b9a17861bb6336bae8317bbb854c0041426384738263ac735f"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/c/first-call.c": {
     "page": "/install/c/",
     "sample": "7093b2e97de40fd1eec585005d8d4088274793a272682a54425dafde583fc04d",
@@ -309,6 +378,78 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/python/backends.py backend=liquid": {
+    "page": "/install/python/",
+    "sample": "59a28afadba9bfb1f2432c0e59f73659aed8595953591818ed89c8402e642ee1",
+    "output": null,
+    "files": {
+      "install/python/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "9d9826ecf293f404a5039cae5fb06d904b1bfb29a0769da480092fae67ed3226"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/python/backends.py backend=ollama": {
+    "page": "/install/python/",
+    "sample": "59a28afadba9bfb1f2432c0e59f73659aed8595953591818ed89c8402e642ee1",
+    "output": null,
+    "files": {
+      "install/python/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "9d9826ecf293f404a5039cae5fb06d904b1bfb29a0769da480092fae67ed3226"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/python/backends.py backend=typesafe": {
+    "page": "/install/python/",
+    "sample": "59a28afadba9bfb1f2432c0e59f73659aed8595953591818ed89c8402e642ee1",
+    "output": null,
+    "files": {
+      "install/python/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "9d9826ecf293f404a5039cae5fb06d904b1bfb29a0769da480092fae67ed3226"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/python/first-call.py": {
     "page": "/install/python/",
     "sample": "c0940a1e0faf6055c026aa90cb55f2a5fe41db577067111909b39d7a5f8eaf00",
@@ -339,6 +480,72 @@
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
       "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/r/backends.R backend=liquid": {
+    "page": "/install/r/",
+    "sample": "469affffdb32bf6533ccb81695b9b87dee47299a4ac6957eaefdeab0606535cd",
+    "output": null,
+    "files": {},
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/r",
+        "libraries/r/thinkthen/src/rust"
+      ],
+      "tree": "fbf19b72f1df89410e67ccf1a1e7798b4bba06d520bf4981767c0462ceb3d213"
+    },
+    "toolchain": [
+      "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/r/backends.R backend=ollama": {
+    "page": "/install/r/",
+    "sample": "469affffdb32bf6533ccb81695b9b87dee47299a4ac6957eaefdeab0606535cd",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/r",
+        "libraries/r/thinkthen/src/rust"
+      ],
+      "tree": "fbf19b72f1df89410e67ccf1a1e7798b4bba06d520bf4981767c0462ceb3d213"
+    },
+    "toolchain": [
+      "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/r/backends.R backend=typesafe": {
+    "page": "/install/r/",
+    "sample": "469affffdb32bf6533ccb81695b9b87dee47299a4ac6957eaefdeab0606535cd",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/r",
+        "libraries/r/thinkthen/src/rust"
+      ],
+      "tree": "fbf19b72f1df89410e67ccf1a1e7798b4bba06d520bf4981767c0462ceb3d213"
+    },
+    "toolchain": [
+      "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -386,6 +593,69 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/ruby/backends.rb backend=liquid": {
+    "page": "/install/ruby/",
+    "sample": "6b78d52026e742fdf231b4a1c10d7bd46d20bff8d006b9641563019fad563441",
+    "output": null,
+    "files": {},
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/ruby"
+      ],
+      "tree": "b4b156170787614b6a841aa02a2a516094eb371bd0be3ccb0ccbdc2007dfdbf2"
+    },
+    "toolchain": [
+      "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/ruby/backends.rb backend=ollama": {
+    "page": "/install/ruby/",
+    "sample": "6b78d52026e742fdf231b4a1c10d7bd46d20bff8d006b9641563019fad563441",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/ruby"
+      ],
+      "tree": "b4b156170787614b6a841aa02a2a516094eb371bd0be3ccb0ccbdc2007dfdbf2"
+    },
+    "toolchain": [
+      "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/ruby/backends.rb backend=typesafe": {
+    "page": "/install/ruby/",
+    "sample": "6b78d52026e742fdf231b4a1c10d7bd46d20bff8d006b9641563019fad563441",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/ruby"
+      ],
+      "tree": "b4b156170787614b6a841aa02a2a516094eb371bd0be3ccb0ccbdc2007dfdbf2"
+    },
+    "toolchain": [
+      "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/ruby/first-call.rb": {
     "page": "/install/ruby/",
     "sample": "7b7ac4c9d83e4cc0701be2894447a29199aea1998da1d87fdb592a6694746018",
@@ -406,6 +676,33 @@
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/rust/backends.rs": {
+    "page": "/install/rust/",
+    "sample": "405417bfc673134412181656f87542235e2b499957519894e5d7041742c26e35",
+    "output": null,
+    "files": {
+      "install/rust/files/Cargo.toml": "90d4c57f6646f09b7942fa33a15e51cb52ead48a5f107c1d103dbf6116751c0d"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1",
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "cb18a87a534c7f1a2b615137175cc25c00a59c4a93a946e02b11fe9370417768"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -479,6 +776,69 @@
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/typescript/backends.ts backend=liquid": {
+    "page": "/install/typescript/",
+    "sample": "856767e3633c8fbe8660f8648429b902893fdfd4278cc1f7af3e95b65754a005",
+    "output": null,
+    "files": {},
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/typescript"
+      ],
+      "tree": "2f04c84516d088421fbdf2e755f9cd1db27d8effa67f7a179284530d3b36e600"
+    },
+    "toolchain": [
+      "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/typescript/backends.ts backend=ollama": {
+    "page": "/install/typescript/",
+    "sample": "856767e3633c8fbe8660f8648429b902893fdfd4278cc1f7af3e95b65754a005",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/typescript"
+      ],
+      "tree": "2f04c84516d088421fbdf2e755f9cd1db27d8effa67f7a179284530d3b36e600"
+    },
+    "toolchain": [
+      "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/typescript/backends.ts backend=typesafe": {
+    "page": "/install/typescript/",
+    "sample": "856767e3633c8fbe8660f8648429b902893fdfd4278cc1f7af3e95b65754a005",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/typescript"
+      ],
+      "tree": "2f04c84516d088421fbdf2e755f9cd1db27d8effa67f7a179284530d3b36e600"
+    },
+    "toolchain": [
+      "Node v22.22.3",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },

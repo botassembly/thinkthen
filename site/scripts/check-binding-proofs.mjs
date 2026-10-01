@@ -2,8 +2,9 @@
 // Check examples/bindings-proof.json against the site's own files. The build
 // runs it, and it needs only Node and git.
 //
-// It fails when a sample that examples/REPLAY lists has no entry, or an
-// entry has no listed sample. It fails when a sample, its saved output, a
+// It fails when a line that examples/REPLAY lists has no entry, or an
+// entry has no listed line. A line is a sample path, and a backend=NAME
+// when the run names a backend. It fails when a sample, its saved output, a
 // file it reads, or a recorded answer it read no longer matches its entry.
 // Run scripts/smoke-bindings.mjs on a host with the toolchains to prove the
 // sample again.
@@ -19,7 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { SURFACES } from '../src/data/catalog.mjs';
-import { readReplayList, sampleHashes, fixtureLines, sourceTree, sha256, PROOF_FILE } from './binding-proofs.mjs';
+import { readReplayList, replayLine, sampleHashes, fixtureLines, sourceTree, sha256, PROOF_FILE } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -35,25 +36,27 @@ const proof = fs.existsSync(proofPath) ? JSON.parse(fs.readFileSync(proofPath, '
 const answers = new Map(fixtureLines(path.join(site, 'recordings', 'thinkthen.jsonl')).filter((l) => l.key).map((l) => [l.key, sha256(l.text)]));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-for (const rel of listed) {
+// A REPLAY line keys its entry. Its sample path names the files.
+for (const line of listed) {
+  const { rel } = replayLine(line);
   if (!fs.existsSync(path.join(examples, rel))) { problems.push(`examples/REPLAY names ${rel}, which does not exist.`); continue; }
-  const entry = proof[rel];
-  if (!entry) { problems.push(`${rel} has no proof. Run node scripts/smoke-bindings.mjs ${rel}.`); continue; }
+  const entry = proof[line];
+  if (!entry) { problems.push(`${line} has no proof. Run node scripts/smoke-bindings.mjs ${rel}.`); continue; }
   const now = sampleHashes(examples, rel);
-  if (now.sample !== entry.sample) problems.push(`${rel} changed after its proof. Run node scripts/smoke-bindings.mjs ${rel}.`);
-  if (now.output !== entry.output) problems.push(`${rel}'s saved output changed after its proof.`);
-  if (!same(now.files, entry.files)) problems.push(`a file ${rel} reads changed after its proof.`);
+  if (now.sample !== entry.sample) problems.push(`${line}: ${rel} changed after its proof. Run node scripts/smoke-bindings.mjs ${rel}.`);
+  if (now.output !== entry.output) problems.push(`${line}: the saved output changed after its proof.`);
+  if (!same(now.files, entry.files)) problems.push(`${line}: a file the sample reads changed after its proof.`);
   for (const [key, hash] of Object.entries(entry.answers)) {
-    if (!answers.has(key)) problems.push(`${rel} read the recorded answer ${key}, which recordings/ no longer holds.`);
-    else if (answers.get(key) !== hash) problems.push(`${rel} read the recorded answer ${key}, which changed after its proof.`);
+    if (!answers.has(key)) problems.push(`${line} read the recorded answer ${key}, which recordings/ no longer holds.`);
+    else if (answers.get(key) !== hash) problems.push(`${line} read the recorded answer ${key}, which changed after its proof.`);
   }
   if (sourceTree(repo, entry.sources.folders) !== entry.sources.tree) {
     stalePages.add(entry.page);
-    warnings.push(`${entry.page}: ${entry.sources.folders.join(', ')} changed after the proof of ${rel}. Prove the page again.`);
+    warnings.push(`${entry.page}: ${entry.sources.folders.join(', ')} changed after the proof of ${line}. Prove the page again.`);
   }
 }
-for (const rel of Object.keys(proof)) {
-  if (!listed.includes(rel)) problems.push(`${PROOF_FILE} holds ${rel}, which examples/REPLAY does not list.`);
+for (const line of Object.keys(proof)) {
+  if (!listed.includes(line)) problems.push(`${PROOF_FILE} holds ${line}, which examples/REPLAY does not list.`);
 }
 
 // Each registry install line names the package its binding's metadata
