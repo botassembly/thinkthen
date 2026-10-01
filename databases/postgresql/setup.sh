@@ -7,11 +7,12 @@ set -eu
 cd -- "$(dirname -- "$0")"
 [ "$(uname -s)" = Linux ] || { echo 'setup: Linux only; macOS uses the bottle runtime-darwin.env pins' >&2; exit 2; }
 . ../../sdlc/scripts/scratch.sh
+. ../../sdlc/scripts/fetch.sh
 . ./runtime.sh
 [ -n "$PINNED" ] && [ -n "$PACKAGE_URL" ] || { echo "setup: no pinned server package for $(uname -m)" >&2; exit 1; }
 if [ ! -f "$PACKAGE" ]; then
 	scratch_dir work
-	curl --proto '=https' --tlsv1.2 -fsSL --retry 3 -o "$work/${PACKAGE##*/}" "$PACKAGE_URL"
+	fetch_url "$work/${PACKAGE##*/}" "$PACKAGE_URL" --proto '=https' --tlsv1.2
 	[ "$(sha256sum "$work/${PACKAGE##*/}" | cut -d' ' -f1)" = "$PINNED" ] ||
 		{ echo "setup: $PACKAGE_URL does not match its pinned SHA256" >&2; exit 1; }
 	mkdir -p -- "$TOOLCHAIN"

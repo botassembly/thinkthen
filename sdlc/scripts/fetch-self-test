@@ -1,0 +1,53 @@
+#!/bin/sh
+# fetch_url against a fake curl that plays a list of replies, one per call, and a fake sleep.
+# Each case pins the result, the number of curl calls, the pauses, and whether the file stays.
+set -eu
+repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+. "$repo/sdlc/scripts/scratch.sh"
+. "$repo/sdlc/scripts/fetch.sh"
+scratch_dir work
+mkdir -p -- "$work/bin"
+# A reply is CURL_EXIT:HTTP_CODE. Exit 0 writes the file named after -o.
+cat >"$work/bin/curl" <<'EOF'
+#!/bin/sh
+n=$(($(cat "$FAKE_DIR/calls") + 1))
+echo "$n" >"$FAKE_DIR/calls"
+reply=$(sed -n "${n}p" "$FAKE_DIR/replies")
+while [ $# -gt 0 ]; do [ "$1" != -o ] || out=$2; shift; done
+printf 'partial' >"$out"
+printf '%s' "${reply#*:}"
+[ "${reply%%:*}" != 0 ] || printf 'whole' >"$out"
+exit "${reply%%:*}"
+EOF
+printf '#!/bin/sh\nprintf "%%s " "$1" >>"$FAKE_DIR/pauses"\n' >"$work/bin/sleep"
+chmod +x "$work/bin/curl" "$work/bin/sleep"
+PATH=$work/bin:$PATH FAKE_DIR=$work
+export PATH FAKE_DIR
+failed=0
+# check NAME REPLIES WANT_STATUS WANT_CALLS WANT_PAUSES WANT_FILE
+check() {
+	printf '%s\n' $2 >"$work/replies"
+	echo 0 >"$work/calls"
+	: >"$work/pauses"
+	rm -f -- "$work/out"
+	status=0
+	fetch_url "$work/out" https://example.invalid/file 2>"$work/err" || status=$?
+	file=$(cat "$work/out" 2>/dev/null || echo none)
+	got="$status $(cat "$work/calls") [$(cat "$work/pauses")] $file"
+	want="$3 $4 [$5] $6"
+	if [ "$got" = "$want" ]; then
+		echo "fetch self-test: $1 passed"
+	else
+		echo "fetch self-test: $1 gave '$got', wanted '$want'" >&2
+		sed 's/^/  /' "$work/err" >&2
+		failed=1
+	fi
+}
+check 'first try' '0:200' 0 1 '' whole
+check 'two 504s then success' '22:504 22:504 0:200' 0 3 '10 20 ' whole
+check '404 fails at once' '22:404' 1 1 '' none
+check 'lost DNS then success' '6:000 0:200' 0 2 '10 ' whole
+check 'connection reset then success' '56:200 0:200' 0 2 '10 ' whole
+check 'three 503s fail' '22:503 22:503 22:503' 1 3 '10 20 ' none
+check '502 then 403 fails' '22:502 22:403' 1 2 '10 ' none
+exit "$failed"

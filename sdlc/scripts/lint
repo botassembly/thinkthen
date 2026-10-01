@@ -116,6 +116,8 @@ python3 sdlc/scripts/installer-test
 sh sdlc/scripts/release-smoke-source-packages-test
 # Ticket 0319: the command-only smoke refuses each planted fault by name and passes a good folder.
 sh sdlc/scripts/release-smoke-command-test
+# Rehearsal run 36864015235: a release download retries a 5xx reply or lost connection and stops on a 4xx.
+sh sdlc/scripts/fetch-self-test
 python3 sdlc/scripts/pages --self-test
 python3 sdlc/scripts/pages
 node sdlc/scripts/named-answers.mjs --self-test

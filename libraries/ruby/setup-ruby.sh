@@ -6,6 +6,7 @@ set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$here/toolchain.env"
 . "$here/../../sdlc/scripts/scratch.sh"
+. "$here/../../sdlc/scripts/fetch.sh"
 tools=$HOME/.cache/thinkthen-toolchains
 archives=$tools/ruby/archives
 host=$(uname -s)
@@ -16,14 +17,9 @@ if [ -e "$prefix/thinkthen-toolchain.stamp" ]; then
 fi
 mkdir -p "$archives"
 fetch() {
-	# Rehearsal run 36817514201 lost DNS for cache.ruby-lang.org. curl's --retry skips that error.
-	# The release container's curl lacks --retry-all-errors. This loop retries instead.
+	# Rehearsal run 36817514201 lost DNS for cache.ruby-lang.org. fetch_url retries that error.
 	[ ! -s "$archives/$2" ] || return 0
-	for pause in 10 20 0; do
-		curl -fsSL -o "$archives/$2" "$1" && return 0
-		[ "$pause" != 0 ] || return 1
-		sleep "$pause"
-	done
+	fetch_url "$archives/$2" "$1"
 }
 fetch "$RUBY_URL" "ruby-$RUBY_VERSION.tar.xz"
 fetch "$YAML_URL" yaml-0.2.5.tar.gz

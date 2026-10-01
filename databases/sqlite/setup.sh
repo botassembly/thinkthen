@@ -14,11 +14,12 @@ else
 	hash_check() { sha256sum --check --quiet "$1"; }
 fi
 . "$here/../../sdlc/scripts/scratch.sh"
+. "$here/../../sdlc/scripts/fetch.sh"
 scratch_dir work
 if [ $# -ge 1 ]; then
 	from=$1
 else
-	curl -fsSL -o "$work/amalgamation.zip" https://sqlite.org/2025/sqlite-amalgamation-3500000.zip
+	fetch_url "$work/amalgamation.zip" https://sqlite.org/2025/sqlite-amalgamation-3500000.zip
 	unzip -q "$work/amalgamation.zip" -d "$work"
 	from=$work/sqlite-amalgamation-3500000
 fi
@@ -36,7 +37,7 @@ if [ "$(uname -s)" = Darwin ]; then
 	elif [ -f "$old_target/sqlite3.c" ] && [ -f "$old_target/shell.c" ]; then
 		old_from=$old_target
 	else
-		curl -fsSL -o "$work/old-amalgamation.zip" https://sqlite.org/2025/sqlite-amalgamation-3490000.zip
+		fetch_url "$work/old-amalgamation.zip" https://sqlite.org/2025/sqlite-amalgamation-3490000.zip
 		unzip -q "$work/old-amalgamation.zip" -d "$work"
 		old_from=$work/sqlite-amalgamation-3490000
 	fi

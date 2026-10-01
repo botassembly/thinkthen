@@ -7,6 +7,7 @@ set -eu
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$repo"
 . "$repo/sdlc/scripts/scratch.sh"
+. "$repo/sdlc/scripts/fetch.sh"
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
 fail() { echo "release-workflow: $*" >&2; exit 1; }
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
@@ -93,8 +94,8 @@ managed_names() {
 }
 install_dart() {
 	dart_archive=$1/dartsdk-linux-x64-release.zip
-	curl --proto '=https' --tlsv1.2 -fsSL -o "$dart_archive" \
-		https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.4/sdk/dartsdk-linux-x64-release.zip
+	fetch_url "$dart_archive" \
+		https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.4/sdk/dartsdk-linux-x64-release.zip --proto '=https' --tlsv1.2
 	printf '%s  %s\n' 6487a10df5eab890d746d14a55f4c70bec3c1c0633f51804eb504cbc0fc395bb "$dart_archive" |
 		sha256sum -c --quiet || fail 'Dart 3.13.4 SDK differs from official checksum'
 	unzip -q "$dart_archive" -d "$1"
@@ -543,8 +544,8 @@ Target: x86_64-unknown-linux-gnu' ] || fail 'Swift compiler differs from 6.4 rel
 	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Zig setup output already exists'
 	mkdir -p -- "$3"
 	zig_archive=$3/zig-x86_64-linux-0.15.2.tar.xz
-	curl --proto '=https' --tlsv1.2 -fsSL -o "$zig_archive" \
-		https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+	fetch_url "$zig_archive" \
+		https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz --proto '=https' --tlsv1.2
 	printf '%s  %s\n' 02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239 "$zig_archive" |
 		sha256sum -c --quiet || fail 'Zig 0.15.2 archive differs from official checksum'
 	tar -xJf "$zig_archive" -C "$3"
@@ -572,8 +573,8 @@ PY
 	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Go setup output already exists'
 	mkdir -p -- "$3"
 	go_archive=$3/go1.27.1.linux-amd64.tar.gz
-	curl --proto '=https' --tlsv1.2 -fsSL -o "$go_archive" \
-		https://go.dev/dl/go1.27.1.linux-amd64.tar.gz
+	fetch_url "$go_archive" \
+		https://go.dev/dl/go1.27.1.linux-amd64.tar.gz --proto '=https' --tlsv1.2
 	printf '%s  %s\n' 63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445 "$go_archive" |
 		sha256sum -c --quiet || fail 'Go 1.27.1 archive differs from official checksum'
 	tar -xzf "$go_archive" -C "$3"

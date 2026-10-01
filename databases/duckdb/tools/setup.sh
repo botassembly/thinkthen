@@ -4,6 +4,7 @@
 set -eu
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 . "$HERE/version.env"
+. "$HERE/../../../sdlc/scripts/fetch.sh"
 case $(uname -s):$(uname -m) in
 Linux:x86_64)
 	target=x86_64-unknown-linux-gnu platform=linux_amd64
@@ -60,23 +61,23 @@ verify() {
 }
 if [ "${1:-}" = --fetch ]; then
 	zip="$HOME_DIR/$cli_asset"
-	[ -f "$zip" ] || curl -fsSL -o "$zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/$cli_asset"
+	[ -f "$zip" ] || fetch_url "$zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/$cli_asset"
 	verify "$cli_zip_hash" "$zip"
 	unzip -o -q "$zip" duckdb -d "$HOME_DIR"
 	[ -d "$HOME_DIR/source" ] || git clone --quiet --depth 1 --branch "$DUCKDB_VERSION" https://github.com/duckdb/duckdb.git "$HOME_DIR/source"
 	static_zip="$HOME_DIR/$static_asset"
-	[ -f "$static_zip" ] || curl -fsSL -o "$static_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/$static_asset"
+	[ -f "$static_zip" ] || fetch_url "$static_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/$static_asset"
 	verify "$static_hash" "$static_zip"
 	mkdir -p "$HOME_DIR/static-libs"
 	unzip -o -q "$static_zip" -d "$HOME_DIR/static-libs"
 	older_zip="$HOME_DIR/duckdb_cli-$DUCKDB_OLDER_VERSION-$target.zip"
-	[ -f "$older_zip" ] || curl -fsSL -o "$older_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_OLDER_VERSION/$older_asset"
+	[ -f "$older_zip" ] || fetch_url "$older_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_OLDER_VERSION/$older_asset"
 	verify "$older_zip_hash" "$older_zip"
 	mkdir -p "$HOME_DIR/older-host"
 	unzip -o -q "$older_zip" duckdb -d "$HOME_DIR/older-host"
 	case $target in *-apple-darwin)
 		wheel=${DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL##*/}
-		[ -f "$HOME_DIR/$wheel" ] || curl -fsSL -o "$HOME_DIR/$wheel" "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL"
+		[ -f "$HOME_DIR/$wheel" ] || fetch_url "$HOME_DIR/$wheel" "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL"
 		verify "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_SHA256" "$HOME_DIR/$wheel"
 	;; esac
 fi
