@@ -157,7 +157,10 @@ def findings(path, text):
     if language != "TypeScript" or "child_process" in text:
         for hit in SPAWNS[language].finditer(text):
             if language == "Rust":
-                passed = ".env_clear()" in rust_window(text, hit.start())
+                # `clear_environment()` is the child helper's `env_clear()` that keeps
+                # what a Windows child needs to start (ticket 0373).
+                window = rust_window(text, hit.start())
+                passed = ".env_clear()" in window or ".clear_environment()" in window
             else:
                 passed = PASSES[language](call_text(text, hit.end() - (text[hit.end() - 1] == "(")))
             if not passed:
@@ -220,6 +223,7 @@ CASES = [
     ("a.rs", 'fn f() { Command::new("sh").arg("-c").output(); }\n', [rust_msg("a.rs", 1)]),
     ("a.rs", 'fn f() { Command::new("sh").env_clear().arg("-c").output(); }\n', []),
     ("a.rs", "fn f() {\n    let mut c = Command::new(x);\n    c.env_clear();\n    c.spawn();\n}\n", []),
+    ("a.rs", 'fn f() { Command::new("sh").clear_environment().arg("-c").output(); }\n', []),
     ("a.rs", "fn f() {\n    run::output(Command::new(x).arg(\"--version\"));\n}\n", [rust_msg("a.rs", 2)]),
     ("a.rs", "fn f() {\n    // Command::new(x) in a comment\n}\n", []),
     ("tests/a.rs", "fn f() { Command::new(x).env_clear().envs(std::env::vars()); }\n",
