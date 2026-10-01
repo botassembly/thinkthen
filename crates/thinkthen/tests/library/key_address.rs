@@ -4,8 +4,8 @@
     reason = "a failed fixture must stop the boundary proof"
 )]
 
-#[cfg(feature = "cli")]
 use crate::child::ChildEnvironment as _;
+#[cfg(feature = "cli")]
 use std::fs;
 use std::process::Command;
 

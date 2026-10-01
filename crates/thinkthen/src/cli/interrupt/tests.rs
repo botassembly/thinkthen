@@ -1,7 +1,6 @@
 use super::{ACTIONS, Action, Routing, StartError, State};
 use crate::cli::edge::Environment;
 use crate::cli::failure::{Failure, report};
-use crate::test_deadline::child::ChildEnvironment as _;
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
@@ -160,6 +159,7 @@ fn a_cancelled_run_on_windows_returns_130_without_a_re_raise() {
 mod unix {
     use super::*;
     use crate::cli::interrupt::{Acknowledgment, UnixRouting, carrier, sigint_set};
+    use crate::test_deadline::child::ChildEnvironment as _;
     use nix::sys::signal::{SigSet, Signal};
     use std::fs;
     use std::io::{BufRead, BufReader, Write as _};

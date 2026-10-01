@@ -9,6 +9,11 @@
 //! `include/thinkthen.h`, `-lthinkthen`, and the soname, under
 //! AddressSanitizer with leak checking. Each runs in its own process with a
 //! cleared environment, a loopback address, a fake key, and a fresh cache.
+//!
+//! It builds each program with a Unix `cc` under AddressSanitizer, against a
+//! `.so` or `.dylib` laid out with its soname link, so it runs only on Unix.
+//! Windows stage 1 adds the MSVC path (ticket 0373, `sdlc/planning/windows.md`).
+#![cfg(unix)]
 
 mod bytes;
 mod cases;

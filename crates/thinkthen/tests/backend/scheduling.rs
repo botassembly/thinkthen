@@ -1,7 +1,7 @@
 //! The bounds between record input and ordered output.
 
-#[cfg(unix)]
 use crate::child::ChildEnvironment as _;
+#[cfg(unix)]
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 use std::io::{self, BufRead, BufReader, Write};
 #[cfg(unix)]

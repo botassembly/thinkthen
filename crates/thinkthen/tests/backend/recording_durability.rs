@@ -1,8 +1,6 @@
 //! Recording preflight, repair, concurrency, and file-size failures.
 
-use crate::child::ChildEnvironment as _;
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::thread;
 
@@ -23,7 +21,7 @@ fn folder(name: &str) -> PathBuf {
 }
 
 #[cfg(unix)]
-fn entries(folder: &Path) -> io::Result<Vec<PathBuf>> {
+fn entries(folder: &Path) -> std::io::Result<Vec<PathBuf>> {
     Ok(fs::read_dir(folder)?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
@@ -115,6 +113,7 @@ fn concurrent_record_only_processes_each_send_and_the_later_write_wins() {
 #[cfg(unix)]
 #[test]
 fn a_file_size_limit_returns_the_fixed_failure_and_removes_the_temporary_entry() {
+    use crate::child::ChildEnvironment as _;
     use crate::harness::finish;
     use std::io::Write as _;
     use std::process::{Command, Stdio};

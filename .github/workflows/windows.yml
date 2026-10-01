@@ -40,8 +40,11 @@ jobs:
       - name: Install the toolchain that rust-toolchain.toml pins
         run: rustup show active-toolchain || rustup toolchain install
 
-      - name: Cache the cargo registry and the build directories
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      # Restore and save are separate steps, so a failed run still saves its
+      # build for the next run.
+      - name: Restore the cargo registry and the build directories
+        id: cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             ~/.cargo/registry/index
@@ -87,3 +90,15 @@ jobs:
         if: ${{ !cancelled() }}
         working-directory: libraries/c
         run: cargo test --locked --offline --no-fail-fast
+
+      - name: Save the cargo registry and the build directories
+        if: ${{ always() && steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+            libraries/c/target
+          key: ${{ steps.cache.outputs.cache-primary-key }}
