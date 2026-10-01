@@ -8,12 +8,23 @@ generic conformance backend. No user key is forwarded.
 
 from __future__ import annotations
 
+import socketserver
 import sys
 import threading
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
+
+
+class LoopbackServer(ThreadingHTTPServer):
+    """HTTPServer names itself through socket.getfqdn, a reverse lookup that stalls
+    about 35 s on a macOS runner (ticket 0386). This server names itself from its
+    bound address."""
+
+    def server_bind(self) -> None:
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 class ConditionalBackend:
@@ -66,7 +77,7 @@ class ConditionalBackend:
             def log_message(self, _format: str, *_args: object) -> None:
                 pass
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.server = LoopbackServer(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever)
         self.thread.start()
 

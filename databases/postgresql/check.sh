@@ -117,6 +117,30 @@ timed() {
 	q -c "DO \$t\$ DECLARE s timestamptz := clock_timestamp(); n bigint; BEGIN $1; RAISE NOTICE 'elapsed %', round(extract(epoch FROM clock_timestamp() - s) * 1000); END \$t\$;" |
 		sed -n 's/.*elapsed \([0-9]*\).*/\1/p'
 }
+# proxy_start NAME COMMAND...: a loopback proxy that prints its port, then reads `quit`
+# from a FIFO and prints its count. Its port lands in PROXYPORT. A proxy that prints no
+# port in 5 s fails the step with its error output, never silently (ticket 0386).
+proxy_start() {
+	PROXYNAME=$1
+	shift
+	rm -f "$RUN/$PROXYNAME.in" && mkfifo "$RUN/$PROXYNAME.in"
+	"$@" <"$RUN/$PROXYNAME.in" >"$RUN/$PROXYNAME.out" 2>"$RUN/$PROXYNAME.err" &
+	PROXYPID=$!
+	exec {PROXYFD}>"$RUN/$PROXYNAME.in"
+	trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
+	for _ in $(seq 100); do [ -s "$RUN/$PROXYNAME.out" ] && break; sleep 0.05; done
+	PROXYPORT=$(head -1 "$RUN/$PROXYNAME.out")
+	[ -n "$PROXYPORT" ] || { echo "the $PROXYNAME printed no port in 5 s" >&2; cat "$RUN/$PROXYNAME.err" >&2; return 1; }
+}
+# proxy_stop: send `quit`, wait, and put the proxy's count in PROXYCOUNT. It sets
+# variables, so a step calls it directly, never inside $(...).
+proxy_stop() {
+	printf 'quit\n' >&"$PROXYFD"
+	wait "$PROXYPID" || { PROXYPID=; echo "the $PROXYNAME failed" >&2; cat "$RUN/$PROXYNAME.err" >&2; return 1; }
+	PROXYPID=
+	exec {PROXYFD}>&-
+	PROXYCOUNT=$(tail -1 "$RUN/$PROXYNAME.out")
+}
 # The pid of the backend running a thinkthen call.
 victim() { q -c "SELECT pid FROM pg_stat_activity WHERE query LIKE '%thinkthen_%' AND pid <> pg_backend_pid() LIMIT 1"; }
 
@@ -905,27 +929,16 @@ check try_details_keeps_later_rows
 try_details_keeps_good_after_backend_failure() {
     fresh generic
     pg_stop
-    mkfifo "$RUN/proxy.in"
-    python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence' \
-        <"$RUN/proxy.in" >"$RUN/proxy.out" 2>"$RUN/proxy.err" &
-    PROXYPID=$!
-    exec {PROXYFD}>"$RUN/proxy.in"
-    trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
-    for _ in $(seq 100); do [ -s "$RUN/proxy.out" ] && break; sleep 0.05; done
-    proxyport=$(head -1 "$RUN/proxy.out")
-    [ -n "$proxyport" ]
-    pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+    proxy_start proxy python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence'
+    pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
     out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '$Q', 'private evidence'), (3, '$Q', 'last')),
         measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
         SELECT i::text || ':' || (v->>'status') || ':' || coalesce(v->'error'->>'kind','ok') || ':' ||
             CASE WHEN v::text LIKE '%private evidence%' THEN 'leaked' ELSE 'safe' END FROM measured ORDER BY i")
     same "$out" "$(printf '1:answered:ok:safe\n2:failed:backend:safe\n3:answered:ok:safe')"
     same "$(bcount)" 2
-    printf 'quit\n' >&"$PROXYFD"
-    wait "$PROXYPID"
-    PROXYPID=
-    exec {PROXYFD}>&-
-    same "$(tail -1 "$RUN/proxy.out")" 3
+    proxy_stop
+    same "$PROXYCOUNT" 3
 }
 check try_details_keeps_good_after_backend_failure
 try_details_null_skips_settings() {
@@ -1246,23 +1259,11 @@ find_proxy_cases() {
 	for mode in duplicate real_tie none_tie max_units max_none; do
 		fresh generic
 		pg_stop
-		rm -f "$RUN/find-proxy.in"
-		mkfifo "$RUN/find-proxy.in"
-		python3 tests/find_cases.py proxy "http://127.0.0.1:$BPORT/generic/v1" "$mode" \
-			<"$RUN/find-proxy.in" >"$RUN/find-proxy.out" 2>"$RUN/find-proxy.err" &
-		PROXYPID=$!
-		exec {PROXYFD}>"$RUN/find-proxy.in"
-		trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
-		for _ in $(seq 100); do [ -s "$RUN/find-proxy.out" ] && break; sleep 0.05; done
-		proxyport=$(head -1 "$RUN/find-proxy.out")
-		[ -n "$proxyport" ]
-		pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+		proxy_start find-proxy python3 tests/find_cases.py proxy "http://127.0.0.1:$BPORT/generic/v1" "$mode"
+		pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
 		python3 tests/find_cases.py verify "$SOCK" "$mode"
-		printf 'quit\n' >&"$PROXYFD"
-		wait "$PROXYPID"
-		PROXYPID=
-		exec {PROXYFD}>&-
-		same "$(tail -1 "$RUN/find-proxy.out")" 1
+		proxy_stop
+		same "$PROXYCOUNT" 1
 	done
 }
 check find_proxy_cases
