@@ -89,6 +89,16 @@ const CASES = [
   ['direct', 'zig', 'pass', 'const asked = try tt.decide(q, m, .{});\nstd.debug.assert(is_refund.value.outcome == .yes);', []],
   ['direct', 'zig', 'fail', 'std.debug.assert((try tt.decide(q, m, .{})).ok.value.outcome == .yes);', [[1, 'direct']]],
   ['generic', 'zig', 'fail', 'const result = try tt.decide(\n    q,\n    m,\n    .{},\n);', [[1, 'generic']]],
+  ['direct', 'php', 'pass', "$isRefund = $tt->decide(\n    $question,\n    $text,\n);\nassert($isRefund['value']['outcome'] === ThinkThen::YES);", []],
+  ['direct', 'php', 'fail', "assert($tt->decide($q, $m)['value']['outcome'] === 1);", [[1, 'direct']]],
+  ['direct', 'php', 'fail', 'echo json_encode($tt->decide($q, $m));', [[1, 'direct']]],
+  ['generic', 'php', 'fail', '$result = $tt->decide(\n    $q,\n    $m,\n);', [[1, 'generic']]],
+  ['generic', 'php', 'pass', "$refund = '{\"decide\": \"$tt->decide(x)\"}';", []],
+  ['direct', 'dart', 'pass', 'final isRefund = tt.decide(\n  engine,\n  q,\n  m,\n);\nassert(isRefund.value.outcome == Outcome.yes);', []],
+  ['direct', 'dart', 'fail', 'assert(tt.decide(engine, q, m).value.outcome == Outcome.yes);', [[1, 'direct']]],
+  ['direct', 'dart', 'fail', 'print(tt.many(engine, q, texts).value);', [[1, 'direct']]],
+  ['generic', 'dart', 'fail', 'final answer = tt.decide(\n  engine,\n  q,\n  m,\n);', [[1, 'generic']]],
+  ['generic', 'dart', 'pass', "const refund = '{\"decide\": \"tt.decide(x)\"}';", []],
 
   ['direct', 'bash', 'pass', 'is_spam=$(thinkthen decide "$q" < mail.txt)\nif [ "$is_spam" = yes ]; then\n  echo spam\nfi', []],
   ['direct', 'bash', 'fail', 'if thinkthen decide "$q" < mail.txt; then\n  echo spam\nfi', [[1, 'direct']]],
@@ -129,7 +139,7 @@ const CASES = [
 
 // An unknown language throws a TypeError that names it and lists the
 // accepted names. The expected value is the name the message must quote.
-const ACCEPTED = 'Accepted names: bash, sh, python, typescript, ts, ruby, r, rust, c, cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs, go, swift, zig, sql.';
+const ACCEPTED = 'Accepted names: bash, sh, python, typescript, ts, ruby, r, rust, c, cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs, go, swift, zig, php, dart, sql.';
 function thrown(code, language) {
   try {
     namedAnswerProblems(code, language);

@@ -96,10 +96,12 @@ const COMMENT = {
   '.go': /^\s*(\/\/|\/\*)/,
   '.swift': /^\s*(\/\/(?! swift-tools-version)|\/\*)/,
   '.zig': /^\s*\/\//,
+  '.php': /^\s*(\/\/|#(?!\[)|\/\*)/,
+  '.dart': /^\s*(\/\/|\/\*)/,
   '.sql': /^\s*--/,
 };
-const PRINT = /\b(print\(|console\.log\(|puts\b|println!|printf\(|cat\(|NSLog\(|Put_Line\b|System\.out\.print|Console\.Write|fmt\.Print)|std::cout\b|^\s*display\b/i;
-const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c', '.cpp', '.m', '.cob', '.adb', '.java', '.kt', '.scala', '.cs', '.go', '.swift', '.zig']);
+const PRINT = /\b(print\(|console\.log\(|puts\b|println!|printf\(|cat\(|NSLog\(|Put_Line\b|System\.out\.print|Console\.Write|fmt\.Print|var_dump\()|std::cout\b|^\s*(display|echo)\b/i;
+const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c', '.cpp', '.m', '.cob', '.adb', '.java', '.kt', '.scala', '.cs', '.go', '.swift', '.zig', '.php', '.dart']);
 
 // Named answers (Ian, 2026-09-26). An example keeps each ThinkThen answer
 // in a variable named for its meaning, then asserts on that name. The rule
@@ -111,11 +113,11 @@ const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c', '.cpp', '.m', '
 // does not accept. That throw fails the build, so a mistyped fence tag or
 // a new kind of file never passes unread.
 export const NO_CALL = new Set([
-  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq', '.csproj', '.zon',
+  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq', '.csproj', '.zon', '.yaml',
   'text', 'json', 'console', 'output',
 ]);
-const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.cpp': 'cpp', '.m': 'objective-c', '.cob': 'cobol', '.adb': 'ada', '.java': 'java', '.kt': 'kotlin', '.scala': 'scala', '.cs': 'csharp', '.go': 'go', '.swift': 'swift', '.zig': 'zig', '.sql': 'sql' };
-const FENCE_EXT = { bash: '.sh', sh: '.sh', python: '.py', ts: '.ts', typescript: '.ts', ruby: '.rb', r: '.R', rust: '.rs', c: '.c', cpp: '.cpp', 'objective-c': '.m', objc: '.m', cobol: '.cob', ada: '.adb', java: '.java', kotlin: '.kt', scala: '.scala', csharp: '.cs', cs: '.cs', go: '.go', swift: '.swift', zig: '.zig', sql: '.sql', json: '.json' };
+const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.cpp': 'cpp', '.m': 'objective-c', '.cob': 'cobol', '.adb': 'ada', '.java': 'java', '.kt': 'kotlin', '.scala': 'scala', '.cs': 'csharp', '.go': 'go', '.swift': 'swift', '.zig': 'zig', '.php': 'php', '.dart': 'dart', '.sql': 'sql' };
+const FENCE_EXT = { bash: '.sh', sh: '.sh', python: '.py', ts: '.ts', typescript: '.ts', ruby: '.rb', r: '.R', rust: '.rs', c: '.c', cpp: '.cpp', 'objective-c': '.m', objc: '.m', cobol: '.cob', ada: '.adb', java: '.java', kotlin: '.kt', scala: '.scala', csharp: '.cs', cs: '.cs', go: '.go', swift: '.swift', zig: '.zig', php: '.php', dart: '.dart', sql: '.sql', json: '.json' };
 
 function namedAnswers(label, text, kind, language, offset = 0) {
   if (NO_CALL.has(kind)) return [];

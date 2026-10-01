@@ -29,9 +29,7 @@ const problems = [];
 // Each migration note the parse drops from a surface cell prints here. A
 // drop this list does not name fails, so a new one reaches review. Remove an
 // entry when the table drops the note itself.
-const EXPECTED_DROPS = [
-  { setting: 'Deadline and cancel', surface: 'Rust', clause: 'until ticket 0291' },
-];
+const EXPECTED_DROPS = [];
 for (const d of parsed.dropped) {
   const expected = EXPECTED_DROPS.some((e) => e.setting === d.setting && e.surface === d.surface && e.clause === d.clause);
   console.log(`check-settings: dropped "${d.clause}" from ${d.setting}, ${d.surface}${expected ? '' : ', which EXPECTED_DROPS does not name'}`);

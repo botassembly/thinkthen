@@ -5,11 +5,13 @@ install/ada/first_call.adb
 install/cobol/first-call.cob
 install/cpp/first-call.cpp
 install/csharp/FirstCall.cs
+install/dart/first_call.dart
 install/go/first-call.go
 install/java/FirstCall.java
 install/kotlin/FirstCall.kt
 install/objective-c/first-call.m
 install/pandas/first-call.py
+install/php/first-call.php
 install/python/first-call.py
 install/r/data-frames.R
 install/r/first-call.R
