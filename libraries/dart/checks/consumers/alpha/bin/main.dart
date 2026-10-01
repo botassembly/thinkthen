@@ -316,12 +316,16 @@ Future<void> held(
       );
       release(state);
       if (mode == 'bulk') release('hold-bulk-second');
-    } else {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    // A fired token lets the sent request finish, so a cancelled call answers
+    // after the release. A deadline ends the call while the reply is held, so
+    // the release waits for that answer (ticket 0356).
+    final answered = receiver.first;
+    if (wanted == 3) {
+      await answered.timeout(const Duration(seconds: 30));
       release(state);
     }
-    final result =
-        await receiver.first.timeout(const Duration(seconds: 30)) as List;
+    final result = await answered.timeout(const Duration(seconds: 30)) as List;
     require(
       result[0] == 'failure' &&
           result[1] == wanted &&
