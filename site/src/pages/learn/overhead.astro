@@ -4,6 +4,7 @@
 import Base from '../../layouts/Base.astro';
 import { BINDINGS } from '../../data/catalog.mjs';
 import data from '../../data/overhead.json';
+import { REPO } from '../../data/repo.mjs';
 
 // A time under 10 ms keeps one decimal. A longer time rounds to a whole millisecond.
 const ms = (x) => (x == null ? 'none' : Math.abs(x) < 10 ? x.toFixed(1) : String(Math.round(x)));
@@ -24,6 +25,7 @@ const httpAll = Object.entries(data.http_functions).filter(([, fns]) => fns.leng
 const httpButDecide = Object.entries(data.http_functions).filter(([, fns]) => fns.length === data.cases.length - 1 && !fns.includes('decide'));
 const cmd = data.command;
 const sp = data.spend;
+const priceRecord = `${REPO}/blob/main/sdlc/records/qf-readme-first-run.md`;
 const cents = (usd) => (usd * 100).toFixed(1);
 const t = data.batches;
 const time = (iso) => iso.slice(11, 16);
@@ -60,7 +62,7 @@ const cliCell = (id) => byId[id];
   <h2>The spend</h2>
   <p>A counting run against the test server came first. It counted {big(data.plan.requests)} requests, {big(data.plan.questions)} questions and {big(data.plan.bytes)} request bytes. The paid run sent the same requests. It held a reservation of 2,000,000 tokens under a cap of one dollar.</p>
   <p>The replies reported {big(sp.reported[0])} input tokens and {big(sp.reported[1])} output tokens. Some bindings report no token counts, and some skip the count on a few calls. Each of those bindings sent the same request bytes as a binding that counts every call. Filling in its share from that binding gives about {big(sp.estimate[0])} input tokens and {big(sp.estimate[1])} output tokens.</p>
-  <p>This page prices tokens at ${sp.price.input} a million input tokens and ${sp.price.output} a million output tokens. At those prices the run cost about {cents(sp.estimate_usd)} cents. The reported tokens alone come to {cents(sp.reported_usd)} cents. The backend's bill is the real cost.</p>
+  <p>TypeSafe publishes a Jev price of ${sp.input_price} a million input tokens, as <a href={priceRecord}>this record</a> notes. TypeSafe publishes no output price. So the full cost of this run is not known exactly. The input tokens alone cost about {cents(sp.estimate_input_usd)} cents, or {cents(sp.reported_input_usd)} cents for the reported input tokens. The backend's bill is the real cost.</p>
 
   <h2>Each binding</h2>
   <p>A binding's added time is its median over the core across nine functions. The <code>recognize</code> function sends two requests one after the other. The medians leave it out. The core's own one-request calls spread from {ms(h.core.p10)} to {ms(h.core.p90)} ms. So a gap of a millisecond between two bindings is inside the noise, and the table lists bindings by name.</p>
@@ -89,7 +91,7 @@ const cliCell = (id) => byId[id];
     <tr><td>A <code>thinkthen --version</code> run</td><td>{ms(cmd.debug.version_ms.median)}</td><td>{range(cmd.debug.version_ms)}</td><td>{ms(cmd.release.version_ms.median)}</td><td>{range(cmd.release.version_ms)}</td></tr>
     <tr><td>Time inside fsync and fdatasync during a <code>decide</code> run</td><td>{ms(cmd.debug.sync_ms.median)}</td><td>{range(cmd.debug.sync_ms)}</td><td>{ms(cmd.release.sync_ms.median)}</td><td>{range(cmd.release.sync_ms)}</td></tr>
   </table>
-  <p>Each row is {cmd.debug.decide_ms.n} runs. strace measured the time inside fsync and fdatasync. Across the nine one-request functions, the debug command adds a median of {ms(cliCell('cli').added)} ms over the core, and the release command adds {ms(cliCell('cli-release').added)} ms.</p>
+  <p>Each row is {cmd.debug.decide_ms.n} runs. The load average was {cmd.load_start[0]} when they started and {cmd.load_end[0]} when they ended. strace measured the time inside fsync and fdatasync. Across the nine one-request functions, the debug command adds a median of {ms(cliCell('cli').added)} ms over the core, and the release command adds {ms(cliCell('cli-release').added)} ms.</p>
   <p>Live, a command run took a median of {ms(byId.cli.live.median)} ms. A call through a library took {ms(h.live.median)} ms. Each command run opens a new connection to Jev, and a library keeps its connection open between calls. The new connection is the likely cause of the difference. This run did not time the connection itself.</p>
 
   <h2>Large inputs</h2>
