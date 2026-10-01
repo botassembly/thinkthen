@@ -675,16 +675,17 @@ installer-smoke)
 	esac
 	file=thinkthen-$version-$target.tar.gz
 	cp "$files/$file" "$files/$file.sha256" "$work/www/botassembly/thinkthen/releases/download/v$version/"
-	python3 - "$work/www" "$work/port" <<'PY' &
-import functools, http.server, pathlib, sys
-handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=sys.argv[1])
-server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
-pathlib.Path(sys.argv[2]).write_text(str(server.server_port))
-server.serve_forever()
-PY
+	python3 sdlc/scripts/loopback_server.py "$work/www" "$work/port" &
 	server=$!
-	for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -s "$work/port" ] || break; sleep 1; done
-	[ -s "$work/port" ] || fail 'loopback install server did not start'
+	for _ in 1 2 3 4 5 6 7 8 9 10; do
+		[ ! -s "$work/port" ] && kill -0 "$server" 2>/dev/null || break
+		sleep 1
+	done
+	if [ ! -s "$work/port" ]; then
+		kill -0 "$server" 2>/dev/null && fail 'loopback install server wrote no port in 10 s'
+		wait "$server" && code=0 || code=$?
+		fail "loopback install server exited $code before it wrote its port"
+	fi
 	THINKTHEN_INSTALL_BASE="http://127.0.0.1:$(cat "$work/port")" THINKTHEN_INSTALL_DIR="$work/bin" \
 		sh install.sh --version "$version"
 	[ "$("$work/bin/thinkthen" --version)" = "thinkthen $version" ] || fail 'loopback installed command reports another version'

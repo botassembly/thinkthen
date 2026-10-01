@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 
 from harness import case, expect, rows, run
+
+# Ticket 0386: the shared server class skips the reverse lookup that stalls a macOS runner.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "sdlc" / "scripts"))
+from loopback_server import LoopbackServer  # noqa: E402
 
 PACKED_PAIR_BODIES = {
     b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}',
@@ -60,7 +66,7 @@ class PackedReplies:
             def log_message(self, _format, *_args):
                 pass
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.server = LoopbackServer(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever)
         self.thread.start()
 
