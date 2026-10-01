@@ -1,10 +1,8 @@
 require "thinkthen"
 
-question = "Does the customer ask for a refund?"
-refund = ThinkThen.question(
-  decide: question,
-  threshold: 0.2..0.8
-)
-send_back = "I want to send this back."
-is_refund = ThinkThen.decide(refund, send_back).value
-raise unless is_refund.nil?
+refund = ThinkThen.question(file: "refund.json")
+money_back =
+  "I would like to return this and get my money back." \
+  "\n"
+is_refund = ThinkThen.decide(refund, money_back).value
+raise unless is_refund == true

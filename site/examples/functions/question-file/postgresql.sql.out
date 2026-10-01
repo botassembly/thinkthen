@@ -1,6 +1,5 @@
- id | is_refund 
-----+-----------
-  1 | t
-  2 | 
-(2 rows)
+ is_refund 
+-----------
+ t
+(1 row)
 

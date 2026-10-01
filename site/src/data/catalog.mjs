@@ -350,6 +350,9 @@ export const FUNCTIONS = [
       '1-yes': "The saved question answers true for a plain request for money back.",
       '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure. decide prints null and exits 3.",
     },
+    moreSee: {
+      duckdb: 'Two messages as rows of a table, asked with refund.json. The money-back message gets true. The send-back message lands inside the band and gets NULL.',
+    },
     notAFunction: true,
   },
 ];

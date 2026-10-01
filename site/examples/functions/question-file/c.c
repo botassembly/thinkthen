@@ -13,8 +13,7 @@ assert(loaded == THINKTHEN_OK);
 
 const char *money_back =
     "I would like to return this and get "
-    "my money back."
-    "\n";
+    "my money back.\n";
 thinkthen_answer is_refund;
 int rc = thinkthen_decide(
     tt,
@@ -25,19 +24,5 @@ int rc = thinkthen_decide(
 );
 assert(rc == THINKTHEN_OK);
 assert(is_refund.outcome == THINKTHEN_YES);
-
-const char *send_back =
-    "I want to send this back."
-    "\n";
-thinkthen_answer send_back_is_refund;
-rc = thinkthen_decide(
-    tt,
-    refund,
-    send_back,
-    strlen(send_back),
-    &send_back_is_refund
-);
-assert(rc == THINKTHEN_OK);
-assert(send_back_is_refund.outcome == THINKTHEN_UNSURE);
 thinkthen_free_string(refund);
 thinkthen_engine_free(tt);

@@ -65,6 +65,7 @@ functions/find/rust.rs
 functions/find/sqlite.sql
 functions/find/typescript.ts
 functions/question-file/c.c
+functions/question-file/more/duckdb.sql
 functions/question-file/duckdb.sql
 functions/question-file/pandas.py
 functions/question-file/polars.py

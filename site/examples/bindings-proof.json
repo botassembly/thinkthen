@@ -1331,13 +1331,12 @@
   },
   "functions/question-file/c.c": {
     "page": "/functions/question-file/",
-    "sample": "415a0c900eaebaa9081677225a6b044255e8b0be3c36755cc2505c171f94c5d5",
+    "sample": "b427075a25f90d756becc654c96ba49dd68428f72347717a84a9c28c25d3119a",
     "output": null,
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "7881717010bc4130df0115a68d30ff3996c9ac2263d1827d3e0848f0c9b8d5d0": "c46337a2be2760822ba19bb22821598be2f2e682fc5d8100bf92e0d4b0ad5d93",
       "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
@@ -1356,11 +1355,33 @@
   },
   "functions/question-file/duckdb.sql": {
     "page": "/functions/question-file/",
-    "sample": "74f09083ea5951c26a46824a87f98e5e61fc65acd3ec2be864105b06a65cd7e9",
-    "output": "02725f2d28d8d5f0276eb770958e5bb53af1f454339e8c94baf5dc1ab8a311d6",
+    "sample": "31a988c2b238f3022f8a3dd0c1724321b749dca3b09fd73ad6dee35c8a33dff6",
+    "output": "d54f6a5d763d26742065317cce321a5b705c176b72a0af35cc49575275eeed42",
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
+    "answers": {
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/duckdb",
+        "databases/duckdb/bridge"
+      ],
+      "tree": "de562b2bd6f9047ae68050f00afff7b9a830eac2aa3cdad8e64004d4e8b49ff9"
+    },
+    "toolchain": [
+      "DuckDB v1.5.5",
+      "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/question-file/more/duckdb.sql": {
+    "page": "/functions/question-file/",
+    "sample": "74f09083ea5951c26a46824a87f98e5e61fc65acd3ec2be864105b06a65cd7e9",
+    "output": "02725f2d28d8d5f0276eb770958e5bb53af1f454339e8c94baf5dc1ab8a311d6",
+    "files": {},
     "answers": {
       "7881717010bc4130df0115a68d30ff3996c9ac2263d1827d3e0848f0c9b8d5d0": "c46337a2be2760822ba19bb22821598be2f2e682fc5d8100bf92e0d4b0ad5d93",
       "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
@@ -1381,13 +1402,12 @@
   },
   "functions/question-file/pandas.py": {
     "page": "/functions/question-file/",
-    "sample": "35ac5b82613d88293ae1176d0673194d075a5f482346e2cdc4475a10ba28eabd",
-    "output": "44657d7c795232efcde1a660681be86c6bfbe26a14f9b44e05898efda4a6a003",
+    "sample": "876c34d490e3a36cff71f18b5d59ad868f03f5d94d5e17062a16267aac086009",
+    "output": null,
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "7881717010bc4130df0115a68d30ff3996c9ac2263d1827d3e0848f0c9b8d5d0": "c46337a2be2760822ba19bb22821598be2f2e682fc5d8100bf92e0d4b0ad5d93",
       "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
@@ -1405,15 +1425,13 @@
   },
   "functions/question-file/polars.py": {
     "page": "/functions/question-file/",
-    "sample": "efc3c95fd14751843b1f6fd90c4fe8c5c1cb02f7b92ebd21b7f40930df4c0331",
-    "output": "8b8b069ddf323155429b64101ea94ac8c6c3a27585d15a62ec05f9a6772e5dd5",
+    "sample": "83e98d71d2f601198dc02377e90f46ece4a7431255c4d4688e113e45a608d745",
+    "output": null,
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
-      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d",
-      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
       "folders": [
@@ -1430,13 +1448,12 @@
   },
   "functions/question-file/postgresql.sql": {
     "page": "/functions/question-file/",
-    "sample": "c4e1e80a1022aa40b2404e3de425d4b2c07f3d139bd8206bc3a42ded95f3df25",
-    "output": "586fa3975511ecff8f5515c4581d19b67c792060de9d7e6c1ee26acef40676c1",
+    "sample": "1b868834692fd1e7e2383441e00ed44c94410482dce152c87f5036e92fbdb8f6",
+    "output": "6f59a76766656734949e37d2bc60921be1bc50716f9182a68c6c44956a9e96da",
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "7881717010bc4130df0115a68d30ff3996c9ac2263d1827d3e0848f0c9b8d5d0": "c46337a2be2760822ba19bb22821598be2f2e682fc5d8100bf92e0d4b0ad5d93",
       "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
@@ -1454,13 +1471,12 @@
   },
   "functions/question-file/python.py": {
     "page": "/functions/question-file/",
-    "sample": "beb4def6c37d1ccd6d299f4f2c3febf5b08e3e119c0da641f4fc737a69af7d52",
+    "sample": "2b2682cb500414b4a36e54c60dd394af7809bff783b30451362860a1ede5049f",
     "output": null,
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "7881717010bc4130df0115a68d30ff3996c9ac2263d1827d3e0848f0c9b8d5d0": "c46337a2be2760822ba19bb22821598be2f2e682fc5d8100bf92e0d4b0ad5d93",
       "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
@@ -1478,15 +1494,13 @@
   },
   "functions/question-file/r.R": {
     "page": "/functions/question-file/",
-    "sample": "da3d7a0cf10f3651138d988e2ca982af37a59899d9e881d54191100459104736",
+    "sample": "7731373687b9c2270f275a032320bef5e8473115793a3edd323e0501d860b0f4",
     "output": null,
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
-      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d",
-      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
       "folders": [
@@ -1503,13 +1517,13 @@
   },
   "functions/question-file/ruby.rb": {
     "page": "/functions/question-file/",
-    "sample": "d92a6f3570e2a83b17a88ff19e5f7541849af5fc99920ab183a1653a83a95fc6",
+    "sample": "0d78e4696601b68732d257a4f0436a27647a1c327818fc4327cd9e67b5963c93",
     "output": null,
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
       "folders": [
@@ -1525,13 +1539,13 @@
   },
   "functions/question-file/rust.rs": {
     "page": "/functions/question-file/",
-    "sample": "e2cd7891918d5dfd905ecde5e57dd591715af86e87772b3c984f70b17a79048f",
+    "sample": "8cff6d345ee5748e03157d521999395ddb3b2957a15d59a71494ff03a8dc351b",
     "output": null,
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
       "folders": [
@@ -1547,13 +1561,12 @@
   },
   "functions/question-file/sqlite.sql": {
     "page": "/functions/question-file/",
-    "sample": "a00e64b88afd92fe3f0263d787bd39367ea475f5b8f938de69b87459aad0b14f",
-    "output": "193ffd6635eee68fbb01a5f186517e7b3c7da2ce86b72ab5a6562ce4dbb85f85",
+    "sample": "12291887f8f99bd2945498d2a66f722ec06b2fb780722186ca914c9d49c771bb",
+    "output": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "7881717010bc4130df0115a68d30ff3996c9ac2263d1827d3e0848f0c9b8d5d0": "c46337a2be2760822ba19bb22821598be2f2e682fc5d8100bf92e0d4b0ad5d93",
       "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
@@ -1570,13 +1583,13 @@
   },
   "functions/question-file/typescript.ts": {
     "page": "/functions/question-file/",
-    "sample": "fe13a111c492cc690e864414916e63d12b44580b1a61a3a34d073eae3caf44d8",
+    "sample": "1c22949f3d072339b1374c792bfa71fe10a93c0691f2d46be9be5c81b9b429d7",
     "output": null,
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
     "answers": {
-      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
     },
     "sources": {
       "folders": [

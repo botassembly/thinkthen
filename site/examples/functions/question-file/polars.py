@@ -1,15 +1,12 @@
 import polars as pl
 import thinkthen as tt
 
-question = "Does the customer ask for a refund?"
-refund = tt.question(decide=question, threshold=(0.2, 0.8))
-tickets = pl.DataFrame({
-    "body": [
-        "Please refund my order. It arrived broken.",
-        "Thanks for the quick help yesterday!",
-        "I want to send this back.",
-    ],
-})
-is_refund = tt.decide(refund, tickets["body"]).value
-tickets = tickets.with_columns(is_refund=is_refund)
-print(tickets)
+refund = tt.question(file="refund.json")
+messages = pl.Series([
+    (
+        "I would like to return this and get my money back."
+        "\n"
+    ),
+])
+is_refund = tt.decide(refund, messages).value
+assert is_refund.to_list() == [True]
