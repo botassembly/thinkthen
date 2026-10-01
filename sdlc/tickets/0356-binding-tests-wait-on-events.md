@@ -38,5 +38,6 @@ The held deadline case on every C-door binding now uses a 1 s deadline instead o
 - A count that stays still for 100 ms is not an event. R's old `settled` let the bulk-verb rows stop at two sends under load; waiting for the eight held sends the throttle allows fixed it. Main had the same race.
 - A rate test measured from the launch has a lower bound that load cannot break, because the pacer's first slot comes after the launch.
 - Comment lines count toward each binding's line ratchet, so a change across 14 bindings moves 21 ratchet files.
+- Three loaded rounds ran, each peaking at a one-minute load near 40. Round 1 failed R's bulk rows and round 2 failed Go's 25 ms deadline; both are fixed above. Round 3 passed the rate tests and the Ruby, TypeScript, Go, R and JVM checks.
 - Code review caught the Dart alpha consumer, a copy of bravo that kept the old 100 ms pause.
 
