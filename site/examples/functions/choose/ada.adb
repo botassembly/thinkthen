@@ -12,18 +12,15 @@ procedure Sample is
      & """billing"": ""Invoices, fees, and refunds."", "
      & """shipping"": ""Parcels and delivery."", "
      & """account"": ""Logins and passwords.""}, "
-     & """records"": ["
-     & """Please refund the extra fee on my invoice."", "
-     & """My parcel went to the wrong address."", "
-     & """I cannot reset my password.""]}";
+     & """evidence"": "
+     & """My parcel went to the wrong address.""}";
 begin
    Call (Client, Which_Team, Owners, Error);
    pragma Assert (Error.Kind = None);
    declare
-      Teams : constant String :=
+      Team : constant String :=
         Member (To_String (Owners), "value");
    begin
-      pragma Assert
-        (Teams = "[""billing"",""shipping"",""account""]");
+      pragma Assert (Team = """shipping""");
    end;
 end Sample;

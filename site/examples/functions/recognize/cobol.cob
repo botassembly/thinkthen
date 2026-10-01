@@ -27,31 +27,23 @@ copy "thinkthen.cpy".
 01 row pic 9.
 01 expected-names.
    02 filler pic x(20) value '"Maria Chen"'.
-   02 filler pic x(8) value '"PER"'.
+   02 filler pic x(16) value '"person"'.
    02 filler pic x(20) value '"Northwind Freight"'.
-   02 filler pic x(8) value '"ORG"'.
+   02 filler pic x(16) value '"organization"'.
    02 filler pic x(20) value '"Chicago"'.
-   02 filler pic x(8) value '"LOC"'.
+   02 filler pic x(16) value '"place"'.
 01 expected-table redefines expected-names.
    02 expected-entity occurs 3 times.
       03 expected-name pic x(20).
-      03 expected-kind pic x(8).
+      03 expected-kind pic x(16).
 procedure division.
     call "thinkthen_engine_new" returning engine
 
     move '{"version": 1, "recognize": {"kinds": {'
-        & '"PER": "Part of a person''s name.", '
-        & '"ORG": "Part of the name of an organization: '
-        & 'a company, band, team, agency, government '
-        & 'body, or media outlet.", '
-        & '"LOC": "Part of the name of a place: '
-        & 'a country, region, city, or geographic '
-        & 'feature.", '
-        & '"MISC": "Part of another named entity: a '
-        & 'nationality, an event, a product, or the '
-        & 'name of a creative work."}}, '
-        & '"evidence": "Maria Chen joined Northwind '
-        & 'Freight in Chicago last spring."}'
+        & '"person": null, "organization": null, '
+        & '"place": null}}, "evidence": "'
+        & 'Maria Chen joined Northwind Freight, '
+        & 'a company in Chicago."}'
         to kinds
     move length(trim(kinds trailing)) to kinds-length
     call "TT-CALL" using engine
