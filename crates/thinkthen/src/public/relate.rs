@@ -5,7 +5,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::core::{self, ModelName, RelateSpec, RelationEntityView, Withheld};
+use crate::core::{self, Json, JsonError, ModelName, RelateSpec, RelationEntityView, Withheld};
 use crate::engine::facade;
 use crate::public::engine::Engine;
 use crate::public::error::{Error, ErrorKind};
@@ -179,6 +179,32 @@ impl Entity {
     #[must_use]
     pub fn kind(&self) -> &str {
         &self.kind
+    }
+
+    /// One relate record for a host surface: a JSON object with a string
+    /// `name` and `kind`, read through the one record parser. A name
+    /// `recognize` found carries `text` in place of `name`, and is read by it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for text that is not JSON, for a record the
+    /// parser refuses, and for a record without a string name and kind.
+    #[doc(hidden)]
+    pub fn from_record(record: &str) -> Result<Self, Error> {
+        let value = Json::parse(record).map_err(|error| match error {
+            JsonError::Syntax { .. } => Error::usage("a relate record is not JSON"),
+            refused => Error::refused(refused),
+        })?;
+        let name = value.member("name").or_else(|| value.member("text"));
+        match (
+            name.and_then(Json::as_str),
+            value.member("kind").and_then(Json::as_str),
+        ) {
+            (Some(name), Some(kind)) => Self::new(name, kind),
+            _ => Err(Error::usage(
+                "a relate record is a JSON object with a string name and a string kind",
+            )),
+        }
     }
 
     fn of(held: &impl RelationEntityView) -> Self {

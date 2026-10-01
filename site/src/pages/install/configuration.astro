@@ -50,7 +50,7 @@ const ENV = [
       <tr><td>{href ? <a href={href}><code>{name}</code></a> : <code>{name}</code>}</td><td>{what}</td></tr>
     ))}
   </table>
-  <p>A blank variable counts as unset, with one exception: a blank <code>THINKTHEN_MAX_REQUEST_BYTES</code> exits 2 on the commands that read it. <code>SSL_CERT_FILE</code> is not read.</p>
+  <p>A blank variable counts as unset. A blank <code>THINKTHEN_MAX_REQUEST_BYTES</code> is the one exception. It exits 2 on the commands that read it. <code>SSL_CERT_FILE</code> is not read.</p>
 
   <h2 id="locations">Where the files live</h2>
   <table>
@@ -64,21 +64,21 @@ const ENV = [
   <p>On Linux, set <code>XDG_CONFIG_HOME</code> or <code>XDG_CACHE_HOME</code> to move the files. Each counts only when it is an absolute path. A relative path is ignored, and the location falls back to <code>HOME</code>. macOS ignores both XDG variables.</p>
   <Terminal run={moved} caption={moved.see} />
   <Terminal run={relative} caption={relative.see} />
-  <p><code>THINKTHEN_CACHE</code> moves only the answer cache. The usage totals stay beside the platform cache folder.</p>
+  <p><code>THINKTHEN_CACHE</code> moves only the answer cache. The usage totals stay beside the default answer cache.</p>
 
   <h2 id="configuration-file">The configuration file</h2>
   <p>The file is optional. It holds one JSON object with <code>"schema": "thinkthen.config/1"</code>. ThinkThen never creates it and never edits it.</p>
   <ul>
     <li><code>url</code> and <code>model</code> name the default address and model.</li>
     <li><code>backend</code> names the default backend, and <code>backends</code> adds named servers or paces the built-ins. The <a href="/install/backends/system-one/">System One page</a> shows an entry.</li>
-    <li><code>cache</code> turns the platform cache on or off. <code>{PRUNE.surface('Configuration file')}</code> sets the size <a href={PRUNE.href}><code>cache prune</code></a> trims to.</li>
+    <li><code>cache</code> turns the answer cache on or off. <code>{PRUNE.surface('Configuration file')}</code> sets the size <a href={PRUNE.href}><code>cache prune</code></a> trims to.</li>
     <li><code>usd_per_million_input</code> and <code>usd_per_million_output</code> together price the reported tokens. The price is your own estimate, never a bill.</li>
   </ul>
   <p>Any other field is refused. The file never holds a key. <code>key_env</code> in a <code>backends</code> entry names the variable that holds one.</p>
   <p>Whoever can write the file decides where the key and the evidence go. On Linux and macOS ThinkThen warns when another user owns the file, or when every user may write it. A group-write bit alone draws no warning. A file that draws the warning and holds <code>backends</code> is refused with exit 5. Keep the file writable by its owner alone.</p>
 
   <h2 id="usage-totals">The usage totals</h2>
-  <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and cache answers. It holds no request, no reply, no address, no model, no price and no key. <code>--no-cache</code> never turns it off. It counts what this machine saw, and your provider's bill is the real cost.</p>
+  <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and cache answers. It holds no request, no reply, no address, no model, no price and no key. <code>--no-cache</code> never turns it off. It counts what this machine saw, and the backend's bill is the real cost.</p>
 
   <h2 id="status">See it all</h2>
   <p><code>thinkthen status</code> prints the resolved configuration path, backend, address, model and key variable, and where each value came from. It also prints whether a key is set, the cache path and size, the usage path, and the usage this month and in all. It opens no connection. <code>status --json</code> prints the same facts as one object.</p>

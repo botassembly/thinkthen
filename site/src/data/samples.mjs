@@ -6,7 +6,7 @@
 // and <name>.exit its exit code when that is not 0. examples/<page>/files/
 // holds the files the scripts read. A library sample sits beside the
 // scripts as <surface>.<ext>, and a first-call sample as
-// examples/install/<surface>/first-call.<ext>.
+// examples/install/<surface>/first-call.<ext> (first_call.adb for Ada).
 
 const raw = import.meta.glob(
   ['/examples/**/*', '!/examples/beatles/bench/**'],
@@ -82,15 +82,19 @@ export function captioned(page, see, optional = false) {
 
 const EXT = {
   python: 'py', polars: 'py', pandas: 'py', typescript: 'ts', ruby: 'rb', r: 'R',
-  rust: 'rs', c: 'c', duckdb: 'sql', sqlite: 'sql', postgresql: 'sql',
+  rust: 'rs', c: 'c', cpp: 'cpp', 'objective-c': 'm', cobol: 'cob', ada: 'adb',
+  duckdb: 'sql', sqlite: 'sql', postgresql: 'sql',
 };
+
+// GNAT names a unit after its file, so Ada's first call is first_call.
+const FIRST = { ada: 'first_call' };
 
 // The first-call sample for a surface, with the output a database printed.
 export function firstCall(surface) {
-  const ext = EXT[surface];
-  const code = text(`install/${surface}/first-call.${ext}`);
-  if (code === undefined) throw new Error(`samples: examples/install/${surface}/first-call.${ext} is missing`);
-  return { file: `first-call.${ext}`, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/first-call.${ext}.out`)?.replace(/\n+$/, '') ?? null };
+  const file = `${FIRST[surface] ?? 'first-call'}.${EXT[surface]}`;
+  const code = text(`install/${surface}/${file}`);
+  if (code === undefined) throw new Error(`samples: examples/install/${surface}/${file} is missing`);
+  return { file, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/${file}.out`)?.replace(/\n+$/, '') ?? null };
 }
 
 // Another install sample on a surface's page, such as R's data frames.

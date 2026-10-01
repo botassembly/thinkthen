@@ -6,6 +6,7 @@ import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
 import { SURFACES, FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
 import { captioned, files, firstCall, installSample, sample } from '../../data/samples.mjs';
+import { nativeBuild } from '../../data/native-builds.mjs';
 
 export function getStaticPaths() {
   return SURFACES.map((s) => ({ params: { surface: s.slug }, props: { surface: s } }));
@@ -15,6 +16,8 @@ const { surface } = Astro.props;
 const shell = surface.slug === 'shell';
 const notes = surface.install.some(([, note]) => note);
 const first = shell ? null : firstCall(surface.slug);
+const build = first ? nativeBuild(surface.slug, first.file) : null;
+const buildText = build && [...build.lines.map((parts) => parts.join(' \\\n    ')), `./${build.program}`].join('\n');
 const inputs = shell ? [] : files(`install/${surface.slug}`);
 const frames = surface.frames ? installSample(surface.slug, 'data-frames') : null;
 const onFunctionPages = !shell && CODE_FUNCTIONS.some((fn) => sample(fn.name, surface.slug));
@@ -44,6 +47,7 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
     <>
       {inputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the sample reads`} />)}
       <Code code={first.code} file={first.file} label={`Copy the ${surface.name} sample`} />
+      {build && <Code code={buildText} lang="bash" caption={`Build and run it beside the unpacked archives, thinkthen-c/ and thinkthen-${surface.slug}/`} label={`Copy the ${surface.name} build lines`} />}
       {first.output && <Code code={first.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
     </>
   ) : (

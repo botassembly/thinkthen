@@ -11,6 +11,17 @@ Follow these rules when you write or edit any page or code example on this site.
 - Write no dash glosses. Do not end a sentence with a trailing clause such as "which is" or "so that". Do not write clefts such as "It is X that".
 - Use plain words. Write "not sure", "context", "wrong yes", and "missed yes". Do not write "false positive" or "false negative". Command output keeps its own words.
 - Write no status words. A page never says planned, drawn, preview, coming soon, or "Plan for 0.1". The site goes up after the release it describes.
+- `scripts/check-words.mjs` fails the build when page prose says "unsure", "unresolved", "false positive", "false negative", "coming soon", "alpha", "beta", "planned", "preview" or "Plan for 0.1". Code and output pass. "Plan preview" and "Prune preview" pass as setting names. Its `ALLOWED` list gives each exception a reason.
+- Give each thing one name on every page. The specification's word wins.
+
+  | Thing | Name in prose |
+  | --- | --- |
+  | The third answer | not sure |
+  | The folder normal commands read and write | answer cache |
+  | A folder `--record` writes | recording |
+  | Showing a request without sending it | `--plan`; "Plan preview" only as the setting's name |
+  | A named way to reach a model, such as `typesafe` | backend |
+  | The program at an address | server |
 - Show every binding as part of the product (Ian, 2026-09-28). "Bindings" names the languages and databases together. A binding carries no status, date, readiness note, or caveat, including none about 0.1 or alpha. Where a page counts them, it says "10 functions, 1 CLI, 24 bindings" from `COUNTS` in `src/data/catalog.mjs`.
 - Link every binding to its install page, even before that page exists (Ian, 2026-09-28). `BINDINGS` in `src/data/catalog.mjs` holds the list. The link check allows exactly the install paths of the bindings with no page yet.
 - Teach the idea. Do not walk the reader through repository files, JSONL files, pins, or run folders.
@@ -196,4 +207,4 @@ After a change to the command or to a script, run `node scripts/smoke.mjs --upda
 
 ### What runs on each change
 
-`npm run build` runs `check-samples`, then the slide check, then the smoke run, then the Astro build, the Markdown twins, the settings check, the link check, and the card check. `npm run check` runs `check-samples`, the slide check, the smoke run, the settings check, the link check, and the card check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.
+`npm run build` runs `check-samples`, then the slide check, then the smoke run, then the Astro build, the Markdown twins, the code check, the word check, the settings check, the link check, and the card check. `npm run check` runs `check-samples`, the slide check, the smoke run, the code check, the word check, the settings check, the link check, and the card check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.

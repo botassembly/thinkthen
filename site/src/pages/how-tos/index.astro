@@ -2,7 +2,7 @@
 // Goal: let a reader find the job they have, or the shell form they want
 // to learn.
 import Base from '../../layouts/Base.astro';
-import { HOWTOS, TECHNIQUES } from '../../data/catalog.mjs';
+import { HOWTOS, TECHNIQUES, RECIPES } from '../../data/catalog.mjs';
 ---
 <Base title="How-tos" description="Business jobs done with ThinkThen, each shown with a real run.">
   <h1>How-tos</h1>
@@ -13,16 +13,16 @@ import { HOWTOS, TECHNIQUES } from '../../data/catalog.mjs';
     {HOWTOS.map((h) => (
       <tr>
         <td><a href={`/how-tos/${h.slug}/`}>{h.title}</a></td>
-        <td>{h.reader}</td>
+        <td>{h.reader.replace(/^for /, "")}</td>
         <td>{h.functions.map((f, i) => (<Fragment>{i > 0 ? ', ' : ''}<a href={`/functions/${f}/`}><code>{f}</code></a></Fragment>))}</td>
       </tr>
     ))}
   </table>
 
   <h2><a href="/how-tos/bash/">Bash techniques</a></h2>
-  <p>One shell form a page, and recipes for small jobs.</p>
+  <p>Each Bash page teaches one shell form. The recipes do small jobs.</p>
   <div class="grid">
-    {TECHNIQUES.map((t) => (
+    {[...TECHNIQUES, ...RECIPES].map((t) => (
       <a class="tile" href={`/how-tos/bash/${t.slug}/`}><b>{t.title}</b><span>{t.label}</span></a>
     ))}
   </div>

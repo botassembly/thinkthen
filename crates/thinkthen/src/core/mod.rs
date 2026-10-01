@@ -72,7 +72,6 @@ pub(crate) use crate::core::find::Find;
 #[cfg(test)]
 pub(crate) use crate::core::find::FindResult;
 pub(crate) use crate::core::json::Json;
-#[cfg(feature = "cli")]
 pub(crate) use crate::core::json::JsonError;
 pub(crate) use crate::core::order::ranking;
 pub(crate) use crate::core::plan::{Descriptions, Plan};

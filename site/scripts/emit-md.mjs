@@ -99,8 +99,11 @@ function raw(node) {
   return (node.kids || []).map(raw).join('');
 }
 
+// Pull a space before punctuation in prose, and leave code spans alone.
 function tidy(s) {
-  return s.replace(/[ \t]+/g, ' ').replace(/ ([,.;:)])/g, '$1').replace(/\( /g, '(').trim();
+  return s.replace(/[ \t]+/g, ' ').split(/(`[^`]*`)/)
+    .map((part, i) => (i % 2 ? part : part.replace(/ ([,.;:)])/g, '$1').replace(/\( /g, '(')))
+    .join('').trim();
 }
 
 function blocks(node, out) {

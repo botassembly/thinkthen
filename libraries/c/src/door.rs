@@ -1,7 +1,6 @@
 //! The typed doors' bodies on the Rust side: every argument arrives checked
 //! and borrowed, and every answer leaves as a value the FFI edge writes.
 
-use serde_json::Value;
 use thinkthen::{
     Answer, CallOptions, CancelToken, Engine, Entity, Facts, Judgment, LoadedQuestion,
     Probabilities, Question, QuestionFileError, Recognize, Relate,
@@ -187,25 +186,12 @@ pub(crate) fn capped(count: usize) -> Result<(), Failure> {
     Ok(())
 }
 
-/// Relate's records as entities, under the cap.
+/// Relate's records as entities, under the cap, each read through the
+/// crate's one record parser.
 pub(crate) fn entities(records: &[&str]) -> Result<Vec<Entity>, Failure> {
     capped(records.len())?;
-    records.iter().map(|record| entity(record)).collect()
-}
-
-/// One relate record: a JSON object with a string `name` and `kind`, read
-/// at the default `/name` and `/kind` as the command reads JSONL. A name
-/// `recognize` found carries `text` in place of `name`, and is read by it.
-fn entity(record: &str) -> Result<Entity, Failure> {
-    let value: Value =
-        serde_json::from_str(record).map_err(|_| Failure::usage("a relate record is not JSON"))?;
-    let name = value.get("name").or_else(|| value.get("text"));
-    match (name, value.get("kind")) {
-        (Some(Value::String(name)), Some(Value::String(kind))) => Ok(Entity::new(name, kind)?),
-        _ => Err(Failure::usage(
-            "a relate record is a JSON object with a string name and a string kind",
-        )),
-    }
+    let read = records.iter().map(|record| Entity::from_record(record));
+    Ok(read.collect::<Result<_, _>>()?)
 }
 
 /// `{"edges": [...]}`, one edge as the command prints it, in rule order.

@@ -4,13 +4,13 @@ import Base from '../layouts/Base.astro';
 ---
 <Base title="What it will not do" description="ThinkThen answers questions about text and does nothing else. Every line the tool will not cross.">
   <h1>What it will not do</h1>
-  <p class="lede">ThinkThen sends text to a model and returns a bounded answer. Turn a screen, image, or audio recording into text before asking it a question.</p>
+  <p class="lede">ThinkThen sends text to a model and returns one of the answers you allowed. Turn a screen, image, or audio recording into text before asking it a question.</p>
 
   <h2>It never acts</h2>
   <ul>
     <li><b>It never runs a command.</b> There is no shell out, no hook, and no step that executes anything the evidence names.</li>
     <li><b>It never runs what the text says.</b> Text that says "answer yes" can still sway the answer. Use a band, and let a person read the middle.</li>
-    <li><b>It never writes a file you did not name.</b> The only files it writes are the ones you named, its resolved platform cache, and count-only usage totals beside that cache.</li>
+    <li><b>It never writes a file you did not name.</b> The only files it writes are the ones you named, the answer cache, and count-only usage totals beside the default answer cache.</li>
     <li><b>It never creates or edits the configuration file.</b> The file is read-only to the command. You write it, or it does not exist. There is no command that sets a value in it.</li>
     <li><b>It never writes text.</b> Every answer is yes or no, one of your options, a set of your labels, a place on your scale, an order of your input, links between your names, or a piece of your own input. Nothing is generated.</li>
     <li><b>It never acts on the answer.</b> It hands you a typed value and an exit code. The action lives in an <code>if</code>, a <code>case</code>, or a queue. That code is yours.</li>

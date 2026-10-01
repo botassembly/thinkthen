@@ -24,18 +24,19 @@ npm run build
 6. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
 7. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
 8. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
-9. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
-10. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
-11. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
-12. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
-13. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
-14. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
+9. `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
+10. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
+11. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
+12. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
+13. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
+14. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
+15. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
 
 The Backends pages read each built-in backend's name, address, key variables and model with `backend('name')` from `src/lib/backends-table.mjs`, which parses the "Named backends" table in `../specification/backends.md`. A name the table lacks fails the build, and `scripts/check-settings.mjs` fails when the built overview disagrees with the table. A live `thinkthen check` cannot replay, so `src/data/backend-checks.mjs` holds each live check a page states, with its date, build and record.
 
 A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
-`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the binding proof check, the code check, the settings check, the link check, the card check and the head check on the last build.
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the binding proof check, the code check, the word check, the settings check, the link check, the card check and the head check on the last build.
 
 ## Writing a page
 
@@ -57,9 +58,9 @@ The CLI smoke run cannot run a library sample, because each needs its language's
 
 The runner finds the recorded answers each sample read, and writes `examples/bindings-proof.json`. Each entry holds the hashes of the sample, its saved output, its `files/`, and each answer it read. It also holds a tree hash of the binding's folder and of each Cargo workspace member it builds on, and the toolchain versions.
 
-`scripts/check-binding-proofs.mjs` runs in every build with Node and git alone. It fails when a listed sample has no entry, or a sample, its saved output, a file it reads, or an answer it read changed after its proof. A change in a binding or the engine only warns, and names each page to prove again, so another queue's commit never turns the site build red. The marketing lead reruns `npm run smoke-bindings` at each published checkpoint tag and commits the new proof file. The build cannot check that a run happened, so trust rests on review: the code reviewer reruns `npm run smoke-bindings` and diffs the proof file. The same check fails an install line that does not name the package its binding's metadata names.
+`scripts/check-binding-proofs.mjs` runs in every build with Node and git alone. It fails when a listed sample has no entry, or a sample, its saved output, a file it reads, or an answer it read changed after its proof. A change in a binding or the engine only warns, and names each page to prove again, so another queue's commit never turns the site build red. The marketing lead reruns `npm run smoke-bindings` at each published checkpoint tag and commits the new proof file. The build cannot check that a run happened, so trust rests on review: the code reviewer reruns `npm run smoke-bindings` and diffs the proof file. The same check fails an install line that does not name the package its binding's metadata names. It also fails a release archive name that `sdlc/scripts/release-pack` does not make.
 
-The replay needs Rust with the offline Cargo cache, a stable Python 3.12 or later with uv and maturin for the Python and pandas samples, and R 4.2 or later with dplyr for the R samples. A missing toolchain reports "not run" and keeps the old entry.
+The replay needs Rust with the offline Cargo cache, a stable Python 3.12 or later with uv and maturin for the Python and pandas samples, and R 4.2 or later with dplyr for the R samples. The C++, Objective-C, COBOL and Ada samples need g++, gcc with Objective-C, GnuCOBOL and GNAT. They link the C library that `sdlc/scripts/installed.sh` lays out, and the runner compiles each sample once. A missing toolchain reports "not run" and keeps the old entry.
 
 ## Where the Beatles Bench pages come from
 
