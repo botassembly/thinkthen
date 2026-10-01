@@ -6,7 +6,7 @@ The earlier investigation below is historical. The [closure reconciliation](../.
 
 Historical status before the C++ migration: Ticket 0110 landed on 2026-09-25 (`sdlc/records/0110-port-the-duckdb-surface.md`) and works around this page without fixing it. The extension registers each scalar through the raw C API with an init callback and no bind callback. `SET thinkthen_max_requests` caps one chunk's call, and `databases/duckdb/README.md` names this page as the lever for a per-query cap. The bind path stays broken, and the decision below stays Ian's.
 
-Found by experiment 207 (`experiments/207-thinkthen-db/duckdb/NOTES.md`, entry on the round-one build, isolated step by step). Nobody opens an issue upstream. Ian decides.
+Found by experiment 207 (local experiment 207's `duckdb/NOTES.md`, entry on the round-one build, isolated step by step). Nobody opens an issue upstream. Ian decides.
 
 ## What breaks
 

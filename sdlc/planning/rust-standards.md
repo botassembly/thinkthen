@@ -96,4 +96,4 @@ The complete `sdlc/scripts/package` validation is a separate explicit packaging 
 - No tool checks that parsing happens only at the edge or that a validated value has its own type. The reviewing agent checks both and says so in its review.
 - No tool requires a second reviewer before the ceiling rises, the public surface widens, or a dependency lands. The rule is written in `AGENTS.md` only.
 - Minimal environments are not yet enforced for every package gate and child. The [package verification issue](../issues/closed/2026-09-29-nine-package-gates-fail-from-clean-checkouts.md) owns the remaining runner checks, including the release families introduced by 0269–0272. Each correction must prove the intended case executes under the declared environment.
-- The five factory scripts under `sdlc/project/` are absent. Factory 2 runs one pilot repository and this is not it. Copy them when this repository registers.
+- The five factory scripts under `sdlc/project/` are absent. Copy them when this repository registers with the factory.

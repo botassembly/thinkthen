@@ -6,7 +6,7 @@ Ticket 0249 landed a Linux GNU Objective-C source package under `libraries/objec
 
 ## Evidence
 
-Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 295 at `experiments/295-thinkthen-objective-c-c-interface/`. Stage one pinned main `5b90c13b`; stage two pinned `0d8a7df4`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (Plain Objective-C over pthreads; strict cancellation in-language). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).
+Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 295. Stage one pinned main `5b90c13b`; stage two pinned `0d8a7df4`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (Plain Objective-C over pthreads; strict cancellation in-language). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).
 
 Package: GNU Objective-C facade, no Foundation dependency.
 

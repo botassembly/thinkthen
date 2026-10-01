@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/request.r
 
 # 0250: Refuse a line-break key before first cache binding
 
-Status: fresh independent High design review accepted `25939814`. Fresh High code review accepted the [build](../records/0250-cache-binding-build.md) at `0e3f5fa7`, and the coordinator integrated it. Register 10 remains open for its separate disposition. This is a bounded remainder of register 10 (`experiments/284-issue-register/10-d5-default-cache-binds-address.md`) after accepted [0228](0228-cache-first-use-binding.md) and [0246](0246-cache-binding-before-send.md). The [preflight](../records/0250-cache-remainder-preflight.md) records the source trace. ADR 0035, ADR 0099, ticket 0065 and the version-one marker remain authoritative; no new ADR is needed for moving this existing deterministic refusal earlier.
+Status: fresh independent High design review accepted `25939814`. Fresh High code review accepted the [build](../records/0250-cache-binding-build.md) at `0e3f5fa7`, and the coordinator integrated it. Register 10 remains open for its separate disposition. This is a bounded remainder of register 10 (local experiment 284's `10-d5-default-cache-binds-address.md`) after accepted [0228](0228-cache-first-use-binding.md) and [0246](0246-cache-binding-before-send.md). The [preflight](../records/0250-cache-remainder-preflight.md) records the source trace. ADR 0035, ADR 0099, ticket 0065 and the version-one marker remain authoritative; no new ADR is needed for moving this existing deterministic refusal earlier.
 
 ## Outcome and exact limit
 

@@ -262,7 +262,7 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 
 Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
 
-- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds the package in `libraries/r/thinkthen/` (`R/thinkthen.R`, `src/rust/src/lib.rs`, `NAMESPACE`, `DESCRIPTION`, `configure`, `Makevars.in`, `entrypoint.c`) and `libraries/r/check.sh`, `tools/make-tarball.sh`, `examples.R`, and `slide.R`. Its 16 test and interrupt scripts sit in `libraries/r/`. `experiments/205-thinkthen-libs/FINDINGS.md` found that R leaks a receiver per interrupt, leaves 16 threads parked, adds 16 to 21 µs a call, and needs no Arrow door. A private experiment repository: none found.
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds the package in `libraries/r/thinkthen/` (`R/thinkthen.R`, `src/rust/src/lib.rs`, `NAMESPACE`, `DESCRIPTION`, `configure`, `Makevars.in`, `entrypoint.c`) and `libraries/r/check.sh`, `tools/make-tarball.sh`, `examples.R`, and `slide.R`. Its 16 test and interrupt scripts sit in `libraries/r/`. Local experiment 205's `FINDINGS.md` found that R leaks a receiver per interrupt, leaves 16 threads parked, adds 16 to 21 µs a call, and needs no Arrow door. A private experiment repository: none found.
 - Keeps: The 13 exports, `NA` for unsure, a column in and a column out, the six kinds as conditions with a retry signal, and the ported test assertions.
 - Changes: `tt_engine` holds settings, the crate becomes `thinkthen-r`, `lib.rs` splits into five files, and every call runs on a worker. Column choose, score, and tag make one `annotate_with` call. The global active-call state retires, and R gets its own `deny.toml`.
 - Proof: The interrupt tests under ADR 0042, an offline tarball install into a scratch library, the deny plant, and the extendr lint probe.
@@ -272,7 +272,7 @@ Amended 2026-09-24 and applied in place 2026-09-25: the ADR 0017 amendment of 20
 
 ## Spike finding (2026-09-24)
 
-Experiment 256 on beelink (the workspace's `experiments/256-thinkthen-ts-ruby-r-spike/`, `REPORT.md`) built crate `thinkthen-r` on extendr-api 0.8.2 over `crates/thinkthen` at main `e7696ca8`, installed it into a scratch library, and ran R children with a scratch home. It confirms decisions 10, 15 and 18 and fixes two details.
+Experiment 256 on beelink (local experiment 256, `REPORT.md`) built crate `thinkthen-r` on extendr-api 0.8.2 over `crates/thinkthen` at main `e7696ca8`, installed it into a scratch library, and ran R children with a scratch home. It confirms decisions 10, 15 and 18 and fixes two details.
 
 - **Pin.** `jsonlite_2.0.0.tar.gz` sha256 is `75eb910c82b350ec33f094779da0f87bff154c232e4ae39c9896a9b89f3ac82d`. CRAN's MD5 `3e54e6fbc0c9063936e3d01e91419c14` agrees. `tools/setup.sh` can pin it.
 - **Deny config.** Root `deny.toml` already holds `ignore = []`. The binding copy must replace that line. A second `ignore` key is a parse error, and it reads as a deny failure.

@@ -2,7 +2,7 @@
 
 Status: built; ladder run once after the merge of `origin/main`; ready for code review. Owner: Claude.
 
-Branch `ticket/0137-lines-by-default`, in `worktrees/thinkthen-0137`, outside the lanes because all four were busy. The ticket is `sdlc/tickets/0137-lines-by-default.md`. Two fresh read-only design reviews ran on 2026-09-26. The first returned four findings, and the second accepted. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
+Branch `ticket/0137-lines-by-default`, in `thinkthen-0137`, outside the lanes because all four were busy. The ticket is `sdlc/tickets/0137-lines-by-default.md`. Two fresh read-only design reviews ran on 2026-09-26. The first returned four findings, and the second accepted. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
 
 ## Result
 

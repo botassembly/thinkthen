@@ -2,7 +2,7 @@
 
 Status: Proposed by the marketing side on 2026-09-21, which holds the product and library shape job by Ian's word. Ian ruled the same day that `recognize` is the ninth function. The build team reviews this page before any ticket. It authorizes no build and no paid run.
 
-The method is settled elsewhere and this page does not reopen it: `experiments/RECOGNIZE-PRODUCT-SPEC.md` holds the three steps, the confidence formula, and the measured limits. `experiments/222-recognize-demo/` holds the first output in the final shape. This page rules what a user types and what comes back, on every surface.
+The method is settled elsewhere and this page does not reopen it: the local experiment note `RECOGNIZE-PRODUCT-SPEC.md` holds the three steps, the confidence formula, and the measured limits. Local experiment 222 holds the first output in the final shape. This page rules what a user types and what comes back, on every surface.
 
 ## The one line
 
@@ -169,7 +169,7 @@ The marketing repository's `decks/2026-09-21-thinkthen-semantic-commands/surface
 
 ## Ruled 2026-09-21: where the design page and the method page disagree, this page wins on what a user sees
 
-An audit of `experiments/RECOGNIZE-PRODUCT-SPEC.md` against this page found five differences. The method page is older. `experiments/225-recognize-harvest-package/` already follows this page, and it is what a builder reads first.
+An audit of the local experiment note `RECOGNIZE-PRODUCT-SPEC.md` against this page found five differences. The method page is older. Local experiment 225 already follows this page, and it is what a builder reads first.
 
 | The method page says | The ruling |
 | --- | --- |
@@ -179,7 +179,7 @@ An audit of `experiments/RECOGNIZE-PRODUCT-SPEC.md` against this page found five
 | Word positions in the main object | Under `--details` only |
 | A margin term in the confidence formula | The harvest package's formula, the least of the word probabilities times the mean of the kind probabilities, with connector words left out. It is what every recorded case used |
 
-The internal rules stay internal and have no option. The trailing possessive rule remains. Ian ruled on 2026-09-21 that the connector word list is deleted, at a measured price of 0.93 F1 on one corpus and nothing on the other (`experiments/229-listless/`). The pipeline now holds no word list, no dictionary, and no template, so every member word counts toward a name's strength. A name joined by a lowercase connector may come back in two parts, and the manual says so in one sentence.
+The internal rules stay internal and have no option. The trailing possessive rule remains. Ian ruled on 2026-09-21 that the connector word list is deleted, at a measured price of 0.93 F1 on one corpus and nothing on the other (local experiment 229). The pipeline now holds no word list, no dictionary, and no template, so every member word counts toward a name's strength. A name joined by a lowercase connector may come back in two parts, and the manual says so in one sentence.
 
 ## Ruled 2026-09-23: ship the measured maximal-run baseline
 

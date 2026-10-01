@@ -2,7 +2,7 @@
 
 Status: Closed on 2026-09-25 as superseded by `2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md`, which carries its numbers and the open design question. Earlier status: Open for the design question. The numbers are in. The live-launcher defect is closed by ticket 0101 (`sdlc/records/0101-live-refuses-non-shell-jobs.md`).
 
-Public projects that put Jev inside PostgreSQL and DuckDB pack many rows into one request. That is where their speed comes from. `closed/2026-09-20-database-extensions-ruled-in-as-a-fast-follow.md` raised the question, and this page answers it with our own run. A builder ran it as experiment 208 in the workspace, at `experiments/208-thinkthen-row-packing/`, under Ian's standing go-ahead of 2026-09-20. The arms, the layout, and the label hashes were fixed in `PREREGISTRATION.md` before the first paid call, and every arm that ran is reported. That folder can rot. This page is the record.
+Public projects that put Jev inside PostgreSQL and DuckDB pack many rows into one request. That is where their speed comes from. `closed/2026-09-20-database-extensions-ruled-in-as-a-fast-follow.md` raised the question, and this page answers it with our own run. A builder ran it as local experiment 208, under Ian's standing go-ahead of 2026-09-20. The arms, the layout, and the label hashes were fixed in `PREREGISTRATION.md` before the first paid call, and every arm that ran is reported. That folder can rot. This page is the record.
 
 Both datasets are old and public, so the model may have seen them. That flatters every arm, the baselines included. One model answered: `jev-1.13.0`.
 

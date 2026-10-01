@@ -16,7 +16,7 @@ Two things would make it serve as the page the README, the talk, and the site le
 ## The transforms
 
 1. **Comparison: a change inside the model's own play is noise.** `2026-09-21-the-same-request-answers-differently-twice-measured.md` has the measurement: one request sent twice moved by up to 0.08, 63 of 100 probabilities differed, and four answers flipped at a 0.5 cut, all within 0.08 of it. A `changes` list that reports every differing value will be long on two honest live runs of one question file. Each entry can carry both probabilities, and the how-to can say which changes to read past. A tolerance argument is the builder's call. The page also says that two runs compare fairly when both are live or both replay one recording.
-2. **Repeated trials: a real fixture exists and costs nothing.** `experiments/212-thinkthen-repeat/` holds 100 public SMS messages judged three times with one question: two runs minutes apart, and the 2026-09-20 run. The builder decides whether the text may be committed. The rows serve as an outside check either way.
+2. **Repeated trials: a real fixture exists and costs nothing.** Local experiment 212 holds 100 public SMS messages judged three times with one question: two runs minutes apart, and the 2026-09-20 run. The builder decides whether the text may be committed. The rows serve as an outside check either way.
 3. **Sweep: the probabilities have two decimals.** Ticket 0038 found the vendor rounds to hundredths. The 19-cut grid is safe. The page can say that a cut finer than 0.01 means nothing, and that many rows tie.
 4. **`transforms/cost/cost.jq:32` while the folder is open.** `$row.input.id` fails on a row whose input is a string, and the accuracy round hit it live. It belongs with this work more than with any later pass.
 5. **The monitor.** `reviewed_action` reads well, and one word now serves the page and the transform.
@@ -26,15 +26,15 @@ Two things would make it serve as the page the README, the talk, and the site le
 
 `2026-09-21-triage-of-the-open-issues-by-layer.md` sorts every open issue by the layer that owns it and suggests an order. Six stale issues were closed with their evidence on 2026-09-21. Nothing in it interrupts the transforms. One front-door item is worth knowing now: `README.md` opens with "puts a decider model in the shell", and its section on what the tool is not for says a library comes "after version one". Ian ruled the pitch as semantic commands and ruled the libraries in. The wording ticket in the triage page covers both.
 
-The blocking-engine run is in `experiments/211-thinkthen-blocking-engine/`. Its engine lane matched the bench at 9.666 s and held 32 in flight, and its two binding lanes were running on 2026-09-21. Its report has not landed.
+The blocking-engine run is in local experiment 211. Its engine lane matched the bench at 9.666 s and held 32 in flight, and its two binding lanes were running on 2026-09-21. Its report has not landed.
 
 ## Added 2026-09-21, after ticket 0042
 
-The marketing side ran the landed `compare.jq` over the two runs in `experiments/212-thinkthen-repeat/`. It reported 96 the same, four flips, 59 small movements summarized, and `probability_delta_over_tolerance: false` on every flip. That one field is what lets a reader tell wobble at the cut from a real change. The per-question comparison inside `annotate` rows is the right next ticket.
+The marketing side ran the landed `compare.jq` over the two runs in local experiment 212. It reported 96 the same, four flips, 59 small movements summarized, and `probability_delta_over_tolerance: false` on every flip. That one field is what lets a reader tell wobble at the cut from a real change. The per-question comparison inside `annotate` rows is the right next ticket.
 
 One stumble from that run. The first try used `jq -s` where the header says `jq -n`. The transform did not fail. It printed a tidy report with zero rows in the later run and all 100 ids under `only_in_before`. A reader who skims sees a report and trusts it. Every transform that takes `--slurpfile` shares the trap. A first line that refuses any input other than `null`, with a sentence naming `-n`, closes it for all of them.
 
-The blocking-engine report landed on 2026-09-21 in `experiments/211-thinkthen-blocking-engine/FINDINGS.md`, and the experiment team now drafts the ADR 0017 rewrite first. The transforms go on until that draft arrives for review.
+The blocking-engine report landed on 2026-09-21 in local experiment 211's `FINDINGS.md`, and the experiment team now drafts the ADR 0017 rewrite first. The transforms go on until that draft arrives for review.
 
 ## What Ian can overturn
 

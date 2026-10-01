@@ -2,7 +2,7 @@
 
 Status: Closed on 2026-09-22. The experiment team closed the brief, and the marketing side checked the closing commits and accepted them.
 
-Ian asked on 2026-09-20 whether the team behind `experiments/205-thinkthen-libs/` and `experiments/207-thinkthen-db/` should wait for the build team. Mostly yes. Three pieces of work do not wait, and the first is worth more than the rest. This page sits beside the plan in `2026-09-20-what-the-two-experiments-ask-of-the-engine-and-the-order-to-build-it.md`.
+Ian asked on 2026-09-20 whether the team behind local experiment 205 and local experiment 207 should wait for the build team. Mostly yes. Three pieces of work do not wait, and the first is worth more than the rest. This page sits beside the plan in `2026-09-20-what-the-two-experiments-ask-of-the-engine-and-the-order-to-build-it.md`.
 
 The work was good. Two experiments found the same missing layer from two directions, checked their own results by command, and named what they faked. The fork hang, the width finding, and the cancel numbers changed the build order.
 
@@ -27,7 +27,7 @@ The ADR 0017 rewrite waits for these four answers and for nothing else.
 
 ## Added 2026-09-21, while job 1 runs
 
-Job 1 runs in `experiments/211-thinkthen-blocking-engine/`. Its engine lane reported 9.666 s on the bench, 32 in flight on 33 connections for 100 calls at once, and a forked child that answers. Two finds already belong to the real engine: the connection pool is sized to the width gate, because the default of ten idle connections churned 488 connections where 33 serve, and a wait loop must end after a cancel. Five more checks fit this run, and none widens it past the two hosts:
+Job 1 runs in local experiment 211. Its engine lane reported 9.666 s on the bench, 32 in flight on 33 connections for 100 calls at once, and a forked child that answers. Two finds already belong to the real engine: the connection pool is sized to the width gate, because the default of ten idle connections churned 488 connections where 33 serve, and a wait loop must end after a cancel. Five more checks fit this run, and none widens it past the two hosts:
 
 1. **Fork during a batch, as well as after a call.** A child forked while 32 threads run inherits the gate and the pool in whatever state they held, and none of those threads. The process-ID check must replace that state without taking an inherited lock. Test it on the wire, in Python.
 2. **What the engine holds between calls.** After a batch of 100,000 records: the thread count, the open connections and how long they stay open, and the resident memory against the start. A host that sleeps for an hour then calls again must not meet a dead pooled connection as an error.
@@ -65,7 +65,7 @@ Everything that needs the real engine waits: a third round of bindings, packagin
 
 All of it. Skipping item 1 is the cheap overturn. The cost is that the build team learns at step 3 of the plan whether blocking holds.
 
-2026-09-21: job 1 has landed. The four answers and the five checks added today are in `experiments/211-thinkthen-blocking-engine/FINDINGS.md`, with the commands and output in that folder's lane notes. Blocking holds; the ADR 0017 rewrite can be drafted from it.
+2026-09-21: job 1 has landed. The four answers and the five checks added today are in local experiment 211's `FINDINGS.md`, with the commands and output in that folder's lane notes. Blocking holds; the ADR 0017 rewrite can be drafted from it.
 
 ## Added 2026-09-21, after the ADR 0017 rewrite and the foyer verdict
 
@@ -103,7 +103,7 @@ The manual sentence, confirmed with one correction from the measurements: "Think
 
 Job 3 runs now with Ian's condition: the twenty cases land in one data file every surface reads.
 
-2026-09-21, closing: the brief's whole arc has landed. Job 1's report is above and in `experiments/211-thinkthen-blocking-engine/FINDINGS.md`, with the five added checks answered, the deadline ruling implemented as the sixth error kind, the 83 threads named, the retried send counted, and the cache compared across four stores including foyer. The ADR 0017 rewrite carries the ruling and the ten picks (`49fb7ad`). Job 3 delivered the twenty cases as one conformance file, `experiments/207-thinkthen-db/engine/cases2/conformance.json`, validated offline, with the divergence table recorded (`2dbdd2f2`'s lane; the file is the record). Job 2 proved the DuckDB interrupt inside Python and the page carries the three sentences (`2c9b831`). The hand-off landed as five commits: `019af68` and `462a36e` apply the goals-page changes with their evidence, `635034a` files the two dependency problems with smallest reproductions, `264b503` records the literal lines for all six languages and three databases, and `38cdbd4` checks the five parked answers, all confirmed. Nothing is left open on this brief. The build team's gate is the ADR review; Ian's word accepts it.
+2026-09-21, closing: the brief's whole arc has landed. Job 1's report is above and in local experiment 211's `FINDINGS.md`, with the five added checks answered, the deadline ruling implemented as the sixth error kind, the 83 threads named, the retried send counted, and the cache compared across four stores including foyer. The ADR 0017 rewrite carries the ruling and the ten picks (`49fb7ad`). Job 3 delivered the twenty cases as one conformance file, local experiment 207's `engine/cases2/conformance.json`, validated offline, with the divergence table recorded (`2dbdd2f2`'s lane; the file is the record). Job 2 proved the DuckDB interrupt inside Python and the page carries the three sentences (`2c9b831`). The hand-off landed as five commits: `019af68` and `462a36e` apply the goals-page changes with their evidence, `635034a` files the two dependency problems with smallest reproductions, `264b503` records the literal lines for all six languages and three databases, and `38cdbd4` checks the five parked answers, all confirmed. Nothing is left open on this brief. The build team's gate is the ADR review; Ian's word accepts it.
 
 ## Added 2026-09-21, after the experiment team closed its brief
 

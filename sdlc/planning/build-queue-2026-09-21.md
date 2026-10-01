@@ -107,7 +107,7 @@ Tickets 0061 through 0063 complete recording durability, the bounded default cac
 
 **A5. The probability tolerance, and shared instructions packed once per request.** Proposed ticket 8. It changes request bytes and the cost record, so it lands before `recognize` makes any cost claim.
 
-**A6. `recognize` and `relate`.** Proposed ticket 9. The method is final. Read `experiments/225-recognize-harvest-package/README.md`, then its rules and words files, then `recognize-design.md` and `relate-design.md`. Settled: `source` and `target`, `strength` on a name, `probability` on a relation, no word list of any kind, forty recorded cases that replay with no key. The vendor's `confidence` field is never used.
+**A6. `recognize` and `relate`.** Proposed ticket 9. The method is final. Read local experiment 225's `README.md`, then its rules and words files, then `recognize-design.md` and `relate-design.md`. Settled: `source` and `target`, `strength` on a name, `probability` on a relation, no word list of any kind, forty recorded cases that replay with no key. The vendor's `confidence` field is never used.
 
 **A7. The public Rust library over all ten functions.** Proposed ticket 10.
 

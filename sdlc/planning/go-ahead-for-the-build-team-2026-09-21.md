@@ -34,7 +34,7 @@ From `sdlc/issues/closed/2026-09-21-the-product-sides-reply-to-the-build-teams-r
 
 ## What to read when `recognize` and `relate` come up
 
-`experiments/225-recognize-harvest-package/` first: the exact words, the rules with tests, and forty recorded cases in the ruled shape. Its keys still say `from` and `to`, and the rename to `source` and `target` is mechanical. The library team is building both functions on the `surfaces` branch against the stand-in now, and its conformance cases will be ready to share.
+Local experiment 225 first: the exact words, the rules with tests, and forty recorded cases in the ruled shape. Its keys still say `from` and `to`, and the rename to `source` and `target` is mechanical. The library team is building both functions on the `surfaces` branch against the stand-in now, and its conformance cases will be ready to share.
 
 ## Not now
 

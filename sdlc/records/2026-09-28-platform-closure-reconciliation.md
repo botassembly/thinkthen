@@ -1,6 +1,6 @@
 # Platform closure reconciliation
 
-Read-only comparison at main `ef91dc75`. This record recommends dispositions; it changes no register, ticket, issue, source, package, or release state. The original criteria in `experiments/284-issue-register/` govern the defect rows. Ticket 0231 adds a separate, explicit native installed-package criterion for each DuckDB target. Ticket 0128 owns the final release-runner rehearsal and outward release.
+Read-only comparison at main `ef91dc75`. This record recommends dispositions; it changes no register, ticket, issue, source, package, or release state. The original criteria in local experiment 284 govern the defect rows. Ticket 0231 adds a separate, explicit native installed-package criterion for each DuckDB target. Ticket 0128 owns the final release-runner rehearsal and outward release.
 
 ## Recommended dispositions
 

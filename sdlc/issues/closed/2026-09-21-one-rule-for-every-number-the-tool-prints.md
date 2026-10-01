@@ -32,7 +32,7 @@ The vendor defines its `confidence` as a number "computed from how `probabilitie
 
 ## The comparison came back, 2026-09-21: the computed number stays, and its name is `strength`
 
-The recognize team ran the free comparison on both full corpora from recordings (`experiments/227-name-number/report.md`). How well each number separates right names from wrong ones:
+The recognize team ran the free comparison on both full corpora from recordings (local experiment 227's `report.md`). How well each number separates right names from wrong ones:
 
 | Number | WikiGold | CoNLL04 |
 | --- | --- | --- |

@@ -2,7 +2,7 @@
 
 Status: built 2026-09-26, awaiting code review. Owner: Claude.
 
-Branch `ticket/0151-one-set-of-details`, in lane `worktrees/thinkthen-lane-1`. The ticket is `sdlc/tickets/0151-one-set-of-details.md`, accepted at `61f0541e`. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback backend.
+Branch `ticket/0151-one-set-of-details`, in lane `thinkthen-lane-1`. The ticket is `sdlc/tickets/0151-one-set-of-details.md`, accepted at `61f0541e`. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback backend.
 
 ## Result
 

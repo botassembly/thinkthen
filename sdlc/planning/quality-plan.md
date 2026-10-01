@@ -58,7 +58,7 @@ A pinning row lands with its fix, red-green: a row that guards an open issue is 
 
 ## Part 1a: pinned by the repository's own ladder
 
-The ticket catalog of 2026-09-22 (`experiments/218-thinkthen-release-qa/wave2/ticket-coverage.md`) maps all 68 landed tickets to rows. Eight are pinned by committed repo tests the ladder already runs rather than by rows here (0017 option equivalence, 0022 and 0030 refusal sentences, 0026 entry immutability, 0029 lazy replay, 0031 digest case folding, 0033 threshold validation, 0039 one-send-per-digest): the ladder is the guard, and the exploring tester's rotation re-checks them by hand once a cycle.
+The ticket catalog of 2026-09-22 (local experiment 218's `wave2/ticket-coverage.md`) maps all 68 landed tickets to rows. Eight are pinned by committed repo tests the ladder already runs rather than by rows here (0017 option equivalence, 0022 and 0030 refusal sentences, 0026 entry immutability, 0029 lazy replay, 0031 digest case folding, 0033 threshold validation, 0039 one-send-per-digest): the ladder is the guard, and the exploring tester's rotation re-checks them by hand once a cycle.
 
 ## Part 2: the release checklist
 
@@ -146,7 +146,7 @@ A printed speed, cost, or memory number names the script, the machine, and the b
 
 ### The performance matrix
 
-The deliverable is `experiments/218-thinkthen-release-qa/wave2/perf-matrix.md`: one row per public surface, one group per runtime — Rust CLI per-process, Rust CLI batched or streaming, Python library holding one warm engine, database extension answering in-query — crossed with storage backends (no cache, SQLite cache, memory cache, column files). Each cell carries the median and 95th-percentile per call, rows per second for streams, peak RAM, and the crash-set result. The matrix names the fastest and slowest surface per runtime and overall, and explains or files every gap wider than an order of magnitude. Wave-1 baselines seed the first rows: 1.17 ms dry-run, 19.4 ms loopback full call, 4,660 records/s stand-in ceiling, 5.7 µs cache hit, 1.2 ms process cold-start. The matrix is checklist item 19, so 0.1 ships with the comparison measured, not promised.
+The deliverable is local experiment 218's `wave2/perf-matrix.md`: one row per public surface, one group per runtime — Rust CLI per-process, Rust CLI batched or streaming, Python library holding one warm engine, database extension answering in-query — crossed with storage backends (no cache, SQLite cache, memory cache, column files). Each cell carries the median and 95th-percentile per call, rows per second for streams, peak RAM, and the crash-set result. The matrix names the fastest and slowest surface per runtime and overall, and explains or files every gap wider than an order of magnitude. Wave-1 baselines seed the first rows: 1.17 ms dry-run, 19.4 ms loopback full call, 4,660 records/s stand-in ceiling, 5.7 µs cache hit, 1.2 ms process cold-start. The matrix is checklist item 19, so 0.1 ships with the comparison measured, not promised.
 
 ## The two reviews, both gates
 

@@ -1,6 +1,6 @@
 # Current command contract pages
 
-Status: complete after fresh independent Medium review accepted `782b0aea`. Base main `8a7321d3`. This Quick Fix completes the public contract handoff from the accepted [0223 build](0223-graded-rank-build.md) and meets register 52's cache and recording page criteria from `experiments/284-issue-register/52-d17-byte-exact-keys-fragile.md`. The accepted product source and result schema do not change.
+Status: complete after fresh independent Medium review accepted `782b0aea`. Base main `8a7321d3`. This Quick Fix completes the public contract handoff from the accepted [0223 build](0223-graded-rank-build.md) and meets register 52's cache and recording page criteria from local experiment 284's `52-d17-byte-exact-keys-fragile.md`. The accepted product source and result schema do not change.
 
 ## Contract reconciliation
 

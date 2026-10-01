@@ -6,7 +6,7 @@ Reviewer: a fresh, read-only Claude session that did not write the ticket. Date:
 
 Read: the ticket at `8cd17f9d` on `ticket/0117-backend-arms-for-surfaces`. Also read, on main: `AGENTS.md` (the `CLAUDE.md` target), `sdlc/README.md`, `sdlc/ratchet.json`, the shared rules in `sdlc/planning/surfaces-port-guide.md`, `conformance/backend/src/{arms,listener,lib,main}.rs`, `conformance/backend/tests/binary.rs`, the 0092 ticket and build record, the listener issue, `crates/thinkthen/src/cli/edge/deadline_tests.rs`, and the four motivating reviews in `/tmp/claude-1000/`.
 
-Observed by command: 20 starts of 0092's debug binary, all kept alive until every port was read, took 112 ms with 20 distinct ports at a load average near 13 (`worktrees/thinkthen-0092/target/debug/conformance-backend`). `binary.rs` on main has 131 nonblank lines. Its `line` helper calls `read_line` with no timeout. `sdlc/ratchet.json` counts only `.rs` files.
+Observed by command: 20 starts of 0092's debug binary, all kept alive until every port was read, took 112 ms with 20 distinct ports at a load average near 13 (`target/debug/conformance-backend` in the `thinkthen-0092` worktree). `binary.rs` on main has 131 nonblank lines. Its `line` helper calls `read_line` with no timeout. `sdlc/ratchet.json` counts only `.rs` files.
 
 ## What holds
 

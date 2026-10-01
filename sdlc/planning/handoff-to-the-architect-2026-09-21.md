@@ -4,11 +4,11 @@ Written 2026-09-21 by the product side for the architect Ian is standing up. Unt
 
 ## The one rule for your first day
 
-Ticket 0055 is done. The move to one package passed independent review after repairing the rejected first pass. The architect can now coordinate the next queue. The library team remains mid-wave on the `surfaces` branch (`worktrees/thinkthen-surfaces`); let that wave finish before merging it.
+Ticket 0055 is done. The move to one package passed independent review after repairing the rejected first pass. The architect can now coordinate the next queue. The library team remains mid-wave on the `surfaces` branch (`thinkthen-surfaces`); let that wave finish before merging it.
 
 ## What ThinkThen is, in four lines
 
-Ten functions ask a classifier model (Jev, from TypeSafe) a bounded question about a text and return an answer with a probability: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize`, `relate`. One Rust engine does all the work. It is reached through a command, six libraries (Rust, Python, TypeScript, Ruby, R, C), Polars and pandas through Python, and three database extensions (DuckDB, SQLite, PostgreSQL). Ian ruled that the first release is 0.1.0 on every one of those at once. The lens for all of it is `notes/ideal-state/thinkthen.md` in the workspace.
+Ten functions ask a classifier model (Jev, from TypeSafe) a bounded question about a text and return an answer with a probability: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize`, `relate`. One Rust engine does all the work. It is reached through a command, six libraries (Rust, Python, TypeScript, Ruby, R, C), Polars and pandas through Python, and three database extensions (DuckDB, SQLite, PostgreSQL). Ian ruled that the first release is 0.1.0 on every one of those at once. The lens for all of it is the thinkthen ideal state in Ian's workspace.
 
 ## Read in this order
 
@@ -17,7 +17,7 @@ Ten functions ask a classifier model (Jev, from TypeSafe) a bounded question abo
 3. `sdlc/planning/build-team-response-to-handoff-2026-09-21.md` and `go-ahead-for-the-build-team-2026-09-21.md`. The sixteen proposed tickets and their approval.
 4. `sdlc/planning/adr/0017` (one engine, many surfaces) and `sdlc/planning/polars-plan.md`.
 5. `sdlc/planning/recognize-design.md` and `relate-design.md`. The public shapes of the two special functions.
-6. `sdlc/planning/quality-plan.md` and `experiments/218-thinkthen-release-qa/wave1.5/FINDINGS.md`.
+6. `sdlc/planning/quality-plan.md` and local experiment 218's `wave1.5/FINDINGS.md`.
 7. `sdlc/issues/closed/2026-09-21-triage-of-the-open-issues-by-layer.md`. About ninety issues are open. This is the map of them.
 
 ## Where things stand, observed 2026-09-21
@@ -29,7 +29,7 @@ Ten functions ask a classifier model (Jev, from TypeSafe) a bounded question abo
 
 ## The two special functions: what you inherit
 
-The method is final and measured. The recognize team's package is `experiments/225-recognize-harvest-package/` (start at its README, then `rules/rules.md`, then the words files). The master report is `experiments/THINKTHEN-RECOGNIZE-MASTER-REPORT.md`.
+The method is final and measured. The recognize team's package is local experiment 225 (start at its README, then `rules/rules.md`, then the words files). The master report is the local experiment note `THINKTHEN-RECOGNIZE-MASTER-REPORT.md`.
 
 - **How it works.** Code splits the text into words. The model answers one small pick-one question per word (is it part of a name) and one for its kind, in the same request. Code joins the yes-words into names. For relations, code lists the legal pairs from the caller's rule table and the model answers one pick-one question per pair, with "no relation" always an option.
 - **The exact question wordings are the product.** Seven attempts to improve them failed. A port that rewords them is a new, unmeasured method.

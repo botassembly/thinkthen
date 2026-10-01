@@ -47,7 +47,7 @@ Date: 2026-09-22. Source: an external code review of branch `surfaces` at `a4251
 - Main moved: 189 commits ahead, thinkthen-core folded into crates/thinkthen, policy script allows only that crate; nothing on main implements contract/. Trial merge conflicts in two issue files only.
 - "Change one dependency line per surface" is wrong as coded: surfaces name `thinkthen_standin::BlockingEngine` directly; the contract trait has no constructor. Fix: a connector/factory owned by the contract.
 - None of the new code is checked by main's gate (lint, size ratchet, cargo deny, CI) across 11 Rust workspaces (~18,800 lines); only 5 workspaces carry strict lints; three toolchain versions in use.
-- Gate depends on things outside the repo: the wire stub in experiments/205; a private marketing repository's deck (DuckDB check fails without it); unpinned npm/uv installs; floating Docker tags; a /root/.rustup path. Skipped wire suites still print "all landed checks green."
+- Gate depends on things outside the repo: the wire stub in local experiment 205; a private marketing repository's deck (DuckDB check fails without it); unpinned npm/uv installs; floating Docker tags; a /root/.rustup path. Skipped wire suites still print "all landed checks green."
 
 ## Group 6 — Hygiene, layout, packaging
 

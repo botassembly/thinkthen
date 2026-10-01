@@ -12,7 +12,7 @@ Does the System One endpoint accept multiple states (texts) in one request, at w
 
 Two launches through `sdlc/scripts/live`, which serializes paid work and precharges the declared maximum: a smoke launch of one control request at a declared 5,000 tokens, then eight requests at a declared 60,000. Every request went to `https://api.typesafe.ai/v1/systemone` with `model: jev-latest`, one at a time with half a second between calls. No burst was attempted, so the rate question is not tested by design. Every 200 reply named `jev-1.13.0`.
 
-The job, the exact request bodies, and the raw rows sit in the workspace's `experiments/thinkthen-wire-probe-2026-09-22/` (`post.py`, `job.sh`, `out/run-smoke.jsonl`, `out/run-full.jsonl`). The harness read the key from the environment; it was never printed, logged, or written. No response header value was kept. A search of the job and the two rows files for `bearer` and `authorization` in any case finds only the two header-name strings in `post.py`, and no value anywhere.
+The job, the exact request bodies, and the raw rows sit in the local experiment folder `thinkthen-wire-probe-2026-09-22` (`post.py`, `job.sh`, `out/run-smoke.jsonl`, `out/run-full.jsonl`). The harness read the key from the environment; it was never printed, logged, or written. No response header value was kept. A search of the job and the two rows files for `bearer` and `authorization` in any case finds only the two header-name strings in `post.py`, and no value anywhere.
 
 Three made-up classification texts: T1 (business), T2 (sport), T3 (business). The single-state question was "Is this text about business or finance?". The packed shapes asked one condition, "The text is about business or finance.", with one row question per state.
 
@@ -54,7 +54,7 @@ The ~256-token floor is paid once per request, not once per state.
 | three states, one request each | 3 | 857 | $0.000036 |
 | three states as rows in one request | 1 | 416 | $0.000017 |
 
-Two rows in one request cost 35 percent fewer input tokens than two single-state requests, a factor of 1.54. Three rows cost 52 percent fewer, a factor of 2.06. The marginal packed row bills 87 tokens for the second and 44 for the third, against about 285 for a one-state request. The per-row bill falls from 285.7 tokens at one row a request to 186.0 at two, 138.7 at three, and 86.4 at ten rows on experiment 208's short rows (`experiments/208-thinkthen-row-packing/RESULTS.md`).
+Two rows in one request cost 35 percent fewer input tokens than two single-state requests, a factor of 1.54. Three rows cost 52 percent fewer, a factor of 2.06. The marginal packed row bills 87 tokens for the second and 44 for the third, against about 285 for a one-state request. The per-row bill falls from 285.7 tokens at one row a request to 186.0 at two, 138.7 at three, and 86.4 at ten rows on experiment 208's short rows (local experiment 208's `RESULTS.md`).
 
 The spend: declared 65,000 tokens across the two launches, billed 2,234 input tokens and 198 output tokens, which is $0.000094 at the recorded input price. The ledger moved by the two declarations, from 408,953,418 to 409,018,418 charged tokens. The smoke launch carried the T1 control once more; its 285 tokens are inside the total and not in the table above.
 

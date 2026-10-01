@@ -1,6 +1,6 @@
 # 0221 replay-miss source preflight
 
-Accepted-design source refresh at main `73a9fa84` after 0220 and 0210, with no runtime edit. The local register is `experiments/284-issue-register/102-replay-miss-does-not-say-why.md`; the historical experiment's report 09 predates landed batching and stopped-run facts. No tests, builds, or paid calls ran for this design preparation.
+Accepted-design source refresh at main `73a9fa84` after 0220 and 0210, with no runtime edit. The local register is local experiment 284's `102-replay-miss-does-not-say-why.md`; the historical experiment's report 09 predates landed batching and stopped-run facts. No tests, builds, or paid calls ran for this design preparation.
 
 | Path | Current behavior | Design consequence |
 | --- | --- | --- |

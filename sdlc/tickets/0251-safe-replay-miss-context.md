@@ -14,7 +14,7 @@ Preserve 0221's safe strict-replay diagnostic: the stopped record or packed requ
 
 ## Evidence
 
-- **Starts from:** original register 102 in `$WORKSPACE/experiments/284-issue-register/102-replay-miss-does-not-say-why.md` asks for record N, question-set name when a file named it, and exact digest. The current plan row retracts the later invented component-by-component digest criterion.
+- **Starts from:** original register 102 in local experiment 284's `102-replay-miss-does-not-say-why.md` asks for record N, question-set name when a file named it, and exact digest. The current plan row retracts the later invented component-by-component digest criterion.
 - **Keeps:** accepted 0221 at reviewed `4a740fdc`, `Failure::ReplayMiss` and its `Stopped`/`BatchFailed` wrappers, command-owned closed source labels, exact digest, Local/exit 5, no send, replay-folder immutability and credential/path/evidence secrecy.
 - **Changes:** the coordinator proposes to decline the unsafe literal set-name output while retaining 0221's useful safe context. `QuestionSet::parse` has named members but no top-level set name; that fact does **not** fulfill the original name criterion. No source, test, schema, public API or page change is proposed.
 - **Proof:** retained `tests/backend/recordings/replay_context.rs` executes seven request shapes and an exact existing-folder miss. Its first-request cases have empty stdout, exit 5 and zero sends; streaming after a completed record may retain its ordered stdout prefix. No new runtime check, provider call or broad suite is needed for this disposition.

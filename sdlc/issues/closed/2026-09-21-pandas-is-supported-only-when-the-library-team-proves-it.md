@@ -6,7 +6,7 @@ Written 2026-09-21 by the product side. Ian ruled the same day: "I'm good with s
 
 ## The claim to prove
 
-The library team says pandas needs no new code, because the door reads the Arrow stream form and imports neither library. The record behind that claim is `sdlc/planning/libraries/python.md:45` and `experiments/205-thinkthen-libs/FINDINGS.md:31`. No run has shown it on the current surface. Until the five checks below pass, no public page says pandas works.
+The library team says pandas needs no new code, because the door reads the Arrow stream form and imports neither library. The record behind that claim is `sdlc/planning/libraries/python.md:45` and local experiment 205's `FINDINGS.md:31`. No run has shown it on the current surface. Until the five checks below pass, no public page says pandas works.
 
 ## The five checks
 

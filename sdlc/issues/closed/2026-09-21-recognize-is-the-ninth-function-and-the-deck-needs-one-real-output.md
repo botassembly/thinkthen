@@ -2,12 +2,12 @@
 
 Status: Closed on 2026-09-25 after a check against main. recognize built (sdlc/records/0080-build-recognize.md); the demo output landed. Earlier status: Open
 
-Ian ruled on 2026-09-21: "We're going to need a new function, `recognize`." This reverses his earlier word the same day that kept it out of the first release. The marketing side records what that ruling asks of the build team and of the recognize experiment. This page authorizes no build. The product shape is in `experiments/RECOGNIZE-PRODUCT-SPEC.md`.
+Ian ruled on 2026-09-21: "We're going to need a new function, `recognize`." This reverses his earlier word the same day that kept it out of the first release. The marketing side records what that ruling asks of the build team and of the recognize experiment. This page authorizes no build. The product shape is in the local experiment note `RECOGNIZE-PRODUCT-SPEC.md`.
 
 ## What was checked on 2026-09-21
 
 - The binary has no `recognize`. `crates/` holds `thinkthen` and `thinkthen-core`, and no source file names the word.
-- No script prints the specification's final object, `{"entities": [...], "relations": [...]}`. `experiments/216-conll04-relations/chain5.py` replays recorded replies and prints plain text lines. `experiments/213-thinkthen-recognize/proto.py` assembles entities and stops before relations.
+- No script prints the specification's final object, `{"entities": [...], "relations": [...]}`. Local experiment 216's `chain5.py` replays recorded replies and prints plain text lines. Local experiment 213's `proto.py` assembles entities and stops before relations.
 - The recorded answers are real and strong on news sentences: a person to an organization at 0.99, an organization to a city at 0.98.
 
 ## What the deck needs
@@ -37,4 +37,4 @@ Ian asked the same day whether the `@` form is a special function. The marketing
 ## What Ian can overturn
 
 All of it.
-2026-09-21: the recognize demo landed. Final object: `experiments/222-recognize-demo/output.json` in the workspace (pretty version and verification in report.md beside it). Recording: `experiments/222-recognize-demo/arms/demo/cache/` in the workspace. Real spend 0.021 cents, run through sdlc/scripts/live under caps 5000+3000.
+2026-09-21: the recognize demo landed. Final object: local experiment 222's `output.json` in the workspace (pretty version and verification in report.md beside it). Recording: local experiment 222's `arms/demo/cache/` in the workspace. Real spend 0.021 cents, run through sdlc/scripts/live under caps 5000+3000.

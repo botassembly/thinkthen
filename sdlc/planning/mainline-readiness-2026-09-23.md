@@ -15,8 +15,8 @@ The review started on clean main `2b63c872925c7237ded0491dc13f69247cf6f142`, equ
 | Checkout | Observed state | Meaning |
 | --- | --- | --- |
 | `repos/thinkthen` | Clean main at `2b63c87` | Production core, engine, and CLI live under `crates/thinkthen/src/{core,engine,cli}` |
-| `worktrees/thinkthen-0074` | `ticket/0074-cli-sigint` at `b3d9133`; 11 tracked modifications and 4 untracked paths | Active draft, including its untracked ticket. No 0074 code commit or remote branch existed. Main was three documentation commits ahead |
-| `worktrees/thinkthen-surfaces` | Clean `surfaces` at `f942e06`, equal to its remote | Language/database adapters, contract, and stand-in engine remain separate. Comparison with main found 266 main-only and 246 surfaces-only commits |
+| `thinkthen-0074` | `ticket/0074-cli-sigint` at `b3d9133`; 11 tracked modifications and 4 untracked paths | Active draft, including its untracked ticket. No 0074 code commit or remote branch existed. Main was three documentation commits ahead |
+| `thinkthen-surfaces` | Clean `surfaces` at `f942e06`, equal to its remote | Language/database adapters, contract, and stand-in engine remain separate. Comparison with main found 266 main-only and 246 surfaces-only commits |
 
 Git listed 87 worktrees. `surfaces` was the only local branch with commits outside main. Existing worktrees and unrelated site edits were preserved.
 

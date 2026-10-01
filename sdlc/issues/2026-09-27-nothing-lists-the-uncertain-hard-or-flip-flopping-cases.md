@@ -1,6 +1,6 @@
 # Tuning loop asks: cases to label, repeated runs, and cost beside the score
 
-Status: open, deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement. After 0.1 it waits on Ian thinking through the evaluation flow. Ian said on 2026-09-30 that `audit` and `diff` already give much of the value. A first version would rank only by distance from the cut, plus a seeded random share. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297 (`experiments/296-gepa-question-tuning/`, `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md` in the workspace). Merged on 2026-09-30 from three issues; the repeat and cost issues are in `closed/`.
+Status: open, deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement. After 0.1 it waits on Ian thinking through the evaluation flow. Ian said on 2026-09-30 that `audit` and `diff` already give much of the value. A first version would rank only by distance from the cut, plus a seeded random share. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297 (local experiments 296 and 297; the full write-up is `notes/2026-09-27-optimization-lessons.md` in the workspace). Merged on 2026-09-30 from three issues; the repeat and cost issues are in `closed/`.
 
 Owner: a future ticket after 0.1 for each part. They serve the ideal state's tuning loop, where ThinkThen supplies rows for Optimizer, and no phase goal. Part 3 depends on the run facts shape in `2026-09-26-every-surface-should-give-back-run-facts.md`.
 
@@ -48,7 +48,7 @@ The follow-up reading adds three selection signals beyond distance from the cut.
 - **The criterion, not only the record.** A decision model grades a whole rubric in one request (AutoRubric), and ThinkThen's `tag` and `annotate` return a probability for each label or each named question. The unit to select is the uncertain criterion as well as the uncertain record.
 - **The shortlist.** The truth sits in Jev's top two on 70% of the chained album-year cases against 37% for the top pick, and 95% on the single-hop song-to-album question. A second-position answer is a case worth a label or a stronger judge.
 
-Evidence: `experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13.
+Evidence: local experiment 297's `LESSONS.md` sections 11 to 13.
 
 ### Factual preparation refresh, 2026-09-28
 

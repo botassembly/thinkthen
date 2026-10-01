@@ -1,6 +1,6 @@
 # 0143: Build relate and split requests run at once
 
-Status: built 2026-09-26 in lane `worktrees/thinkthen-lane-4`. Owner: Claude.
+Status: built 2026-09-26 in lane `thinkthen-lane-4`. Owner: Claude.
 
 Branch `ticket/0143-relate-runs-at-once`. The ticket is `sdlc/tickets/0143-relate-runs-at-once.md`. A fresh read-only design review accepted it on 2026-09-26. The change raises the ceiling and widens `relate`'s command surface, so a fresh read-only Claude session reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
 

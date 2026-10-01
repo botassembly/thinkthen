@@ -1,6 +1,6 @@
 # 0141: Build usage writes stop serializing requests
 
-Status: built 2026-09-26 in lane `worktrees/thinkthen-lane-2`. The code review's fixes are in. Owner: Claude.
+Status: built 2026-09-26 in lane `thinkthen-lane-2`. The code review's fixes are in. Owner: Claude.
 
 Branch `ticket/0141-usage-writes-stop-serializing`. The ticket is `sdlc/tickets/0141-usage-writes-stop-serializing.md`. A fresh read-only design review accepted it on 2026-09-26. The change raises the ceiling and moves a Settled guarantee, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
 

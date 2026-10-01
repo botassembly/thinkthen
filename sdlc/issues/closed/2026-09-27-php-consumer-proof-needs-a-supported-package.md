@@ -4,7 +4,7 @@ Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-r
 
 ## Evidence
 
-Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 291 at `experiments/291-thinkthen-php-c-interface/`. Stage one pinned main `5b90c13b`; stage two pinned `2b08154b`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (FFI::cdef; list-or-dict kinds/options/labels/levels already idiomatic). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).
+Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 291. Stage one pinned main `5b90c13b`; stage two pinned `2b08154b`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (FFI::cdef; list-or-dict kinds/options/labels/levels already idiomatic). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).
 
 Package: Composer-shaped with php >=8.3 + ext-ffi and an absolute-library-path native contract.
 

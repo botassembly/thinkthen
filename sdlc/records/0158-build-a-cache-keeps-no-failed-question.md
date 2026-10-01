@@ -2,7 +2,7 @@
 
 Status: built 2026-09-26, awaiting code review. Owner: Claude.
 
-Branch `ticket/0158-a-cache-keeps-no-failed-question`, in the worktree `worktrees/thinkthen-0158`. The ticket is `sdlc/tickets/0158-a-cache-keeps-no-failed-question.md`, accepted at `24a9c406`, and the build started from `dc19a923`, merged with main. ADR 0053 item 6 and its amendment rule the behavior. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback conformance backend.
+Branch `ticket/0158-a-cache-keeps-no-failed-question`, in the worktree `thinkthen-0158`. The ticket is `sdlc/tickets/0158-a-cache-keeps-no-failed-question.md`, accepted at `24a9c406`, and the build started from `dc19a923`, merged with main. ADR 0053 item 6 and its amendment rule the behavior. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback conformance backend.
 
 ## Result
 

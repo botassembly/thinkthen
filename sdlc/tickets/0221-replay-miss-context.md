@@ -29,7 +29,7 @@ The refreshed small mutation is `cli/failure/{recording,convert}.rs` plus a priv
 
 ## Evidence
 
-- Starts from: local register `experiments/284-issue-register/102-replay-miss-does-not-say-why.md`, its experiment 273 report 09, and current main `0685cfaa`.
+- Starts from: local register local experiment 284's `102-replay-miss-does-not-say-why.md`, its experiment 273 report 09, and current main `0685cfaa`.
 - Keeps: `ReplayMiss` entry digest, exit 5, zero sends under strict replay, read-only folder handling, current `Stopped`/`BatchFailed` placement, and safe fixed diagnostics.
 - Changes: only proven command/source context for a missing entry, with no raw request contents and no false unique-row claim.
 - Proof: existing replay listener and exact diagnostic helpers, with one small outside-in table over genuinely different request shapes.

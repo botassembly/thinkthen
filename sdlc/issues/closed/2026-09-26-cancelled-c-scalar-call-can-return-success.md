@@ -21,7 +21,7 @@ The delayed completion and successful result need separate treatment. A design t
 - Source: landed main `e0a6150a0325d92b93ac8f4e504ffbfc3792fba9`.
 - Host: Ubuntu 24.04.3, Linux x86_64, glibc 2.39.
 - Native release library SHA-256: `08527edfe9f80034c129072423bb18c898108b9002fe2262ed640ce1fe3feffc`.
-- Parent reproduction: `experiments/273-thinkthen-zig-c-interface/verification-stage2/cancel_c_api.py`.
+- Parent reproduction: local experiment 273's `verification-stage2/cancel_c_api.py`.
 - Evidence: `verification-stage2/cancel-c-api-attempt-2.log`, exit 1. It records arrival, cancellation return, reply release and call return in monotonic order for every trial.
 - Earlier Zig failures: `stage2/logs/concurrent-run-1.log` and `concurrent-run-2.log`.
 

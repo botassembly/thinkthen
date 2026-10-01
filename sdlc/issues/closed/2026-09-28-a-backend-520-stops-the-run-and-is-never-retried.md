@@ -17,7 +17,7 @@ The timeout arm carries the same gap from the other side. A batched request that
 
 ## Evidence
 
-Local experiment 345, sections 5 and 6. `RETRIED` at `crates/thinkthen/src/engine/error.rs:89`. The recorded stderr lines are in `experiments/345-live-verification-2026-09-28/raw/speed2.err` and `raw/d.err` on the machine that ran them.
+Local experiment 345, sections 5 and 6. `RETRIED` at `crates/thinkthen/src/engine/error.rs:89`. The recorded stderr lines are in local experiment 345's `raw/speed2.err` and `raw/d.err` on the machine that ran them.
 
 ## Direction
 

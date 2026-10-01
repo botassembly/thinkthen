@@ -1,6 +1,6 @@
 # Register 45: ordered wait disposition
 
-Source pin: main `fe59c3a2`, 2026-09-29. This is a design disposition for original register `experiments/284-issue-register/45-d10-ordered-output-stalls.md`, not a product change. The prior [readiness snapshot](2026-09-29-engine-command-cache-readiness.md) at reviewed `aaf7afaa` proposed a position-only wait fact; this pass checks that proposal against the current command contract.
+Source pin: main `fe59c3a2`, 2026-09-29. This is a design disposition for original register local experiment 284's `45-d10-ordered-output-stalls.md`, not a product change. The prior [readiness snapshot](2026-09-29-engine-command-cache-readiness.md) at reviewed `aaf7afaa` proposed a position-only wait fact; this pass checks that proposal against the current command contract.
 
 ## What is already fulfilled
 

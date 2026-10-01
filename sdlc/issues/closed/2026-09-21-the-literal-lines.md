@@ -8,7 +8,7 @@ The talk and the site copy these lines, so each is complete enough to paste: imp
 
 ## Python
 
-From `experiments/205-thinkthen-libs/python/bench_width.py`:
+From local experiment 205's `python/bench_width.py`:
 
 ```python
 import thinkthen as tt
@@ -19,7 +19,7 @@ kept = tt.filter(Q, records, jobs=32)
 
 ## Rust
 
-From `experiments/205-thinkthen-libs/shared/engine/examples/bench.rs`:
+From local experiment 205's `shared/engine/examples/bench.rs`:
 
 ```rust
 let question = standin_engine::Question::from_json(QUESTION).expect("the question parses");
@@ -34,7 +34,7 @@ let kept = question.filter(&records, 32).expect("the filter runs");
 
 ## Ruby
 
-From `experiments/205-thinkthen-libs/ruby/bench.rb`:
+From local experiment 205's `ruby/bench.rb`:
 
 ```ruby
 require "thinkthen"
@@ -44,7 +44,7 @@ kept = ThinkThen.filter(question, records, jobs: 32)
 
 ## R
 
-From `experiments/205-thinkthen-libs/r/bench_width.R`:
+From local experiment 205's `r/bench_width.R`:
 
 ```r
 library(thinkthen)
@@ -56,7 +56,7 @@ kept <- tt_filter(q, records, jobs = 32)
 
 ## JavaScript and TypeScript
 
-From `experiments/205-thinkthen-libs/javascript/bench/width.mjs`:
+From local experiment 205's `javascript/bench/width.mjs`:
 
 ```js
 import * as tt from "thinkthen";
@@ -66,7 +66,7 @@ for await (const record of tt.filter(question, records, { jobs: 32 })) kept.push
 
 ## C
 
-From `experiments/205-thinkthen-libs/c/bench.c`, the bulk form beside the JSON door:
+From local experiment 205's `c/bench.c`, the bulk form beside the JSON door:
 
 ```c
 #include <thinkthen.h>
@@ -83,7 +83,7 @@ char *answer = thinkthen_call(request, strlen(request), &len);
 
 ## DuckDB
 
-From the 207 run, the shape the width and interrupt benches used (`experiments/207-thinkthen-db/duckdb/NOTES.md`):
+From the 207 run, the shape the width and interrupt benches used (local experiment 207's `duckdb/NOTES.md`):
 
 ```sql
 INSTALL thinkthen FROM community;
@@ -94,7 +94,7 @@ SELECT count(thinkthen_decide('The reviewer asks for a refund.', body)) FROM ran
 
 ## SQLite
 
-From the 207 container run (`experiments/207-thinkthen-db/sqlite/NOTES.md`):
+From the 207 container run (local experiment 207's `sqlite/NOTES.md`):
 
 ```sql
 .load ./libthinkthen0.so
@@ -106,7 +106,7 @@ SELECT count(*) FROM t WHERE thinkthen_decide('The message asks for a refund.', 
 
 ## PostgreSQL
 
-From the 207 width run (`experiments/207-thinkthen-db/postgres/NOTES.md`):
+From the 207 width run (local experiment 207's `postgres/NOTES.md`):
 
 ```sql
 CREATE EXTENSION thinkthen;

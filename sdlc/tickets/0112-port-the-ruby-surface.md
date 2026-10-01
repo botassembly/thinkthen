@@ -227,7 +227,7 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 
 Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
 
-- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `libraries/ruby/lib/thinkthen.rb`, `lib/thinkthen/version.rb`, `src/lib.rs`, `thinkthen.gemspec`, `.cargo/config.toml`, `build.sh`, `check.sh`, and `Dockerfile`. Its tests sit in `libraries/ruby/tests/`, 19 Ruby files and one fixture. `experiments/205-thinkthen-libs/FINDINGS.md` found the fork hang and a batch that no one could cancel. `experiments/241-beatles-surfaces/README.md` ran the tag only in Docker. A private experiment repository: none found.
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `libraries/ruby/lib/thinkthen.rb`, `lib/thinkthen/version.rb`, `src/lib.rs`, `thinkthen.gemspec`, `.cargo/config.toml`, `build.sh`, `check.sh`, and `Dockerfile`. Its tests sit in `libraries/ruby/tests/`, 19 Ruby files and one fixture. Local experiment 205's `FINDINGS.md` found the fork hang and a batch that no one could cancel. Local experiment 241's `README.md` ran the tag only in Docker. A private experiment repository: none found.
 - Keeps: The module methods, `with_tick` and its watchdog, the error hierarchy, `ThinkThen::Cancel`, and the `cross`, `wait_for`, and `wake` helpers.
 - Changes: `ThinkThen::Engine` holds settings, calls run on a detachable worker, and JSON methods replace hand-built values. A source-built Ruby 3.4.11 replaces Docker. The interrupt tests regroup into two files on the held arm.
 - Proof: The `check.sh` steps for gem content, slide, and conformance, the `file://` deny plant, and the "not run" probe.
@@ -237,7 +237,7 @@ Amended 2026-09-24 and applied in place 2026-09-25: the ADR 0017 amendment of 20
 
 ## Spike finding (2026-09-24)
 
-Experiment 256 on beelink (the workspace's `experiments/256-thinkthen-ts-ruby-r-spike/`, `REPORT.md`) built the pinned Ruby and a magnus extension over `crates/thinkthen` at main `e7696ca8`. It settles the pins and changes four points of the plan.
+Experiment 256 on beelink (local experiment 256, `REPORT.md`) built the pinned Ruby and a magnus extension over `crates/thinkthen` at main `e7696ca8`. It settles the pins and changes four points of the plan.
 
 - **libyaml pin verified.** `yaml-0.2.5.tar.gz` sha256 `c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4` matches buildroot's `libyaml.hash`, and its sha512 `dadd7d8e0d88b5ebab005e5d521d56d541580198aa497370966b98c904586e642a1cd4f3881094eb57624f218d50db77417bbfd0ffdce50340f011e35e8c4c02` matches Alpine's `APKBUILD`. The Ruby sha256 matches ruby-lang.org's `index.txt`. The "Defers" line on the libyaml checksum no longer applies.
 - **Contradiction with R5-35.** This machine now has `/usr/bin/ruby` 3.2.3 from a system package. Any `PATH` holding `/usr/bin` finds it, so the guard "`command -v ruby` finds nothing" fails. The lint block needs a `PATH` built from named tools without `/usr/bin`, or a guard aimed at the pinned prefix. The plant still turns red, because rb-sys finds Ruby 3.2 and stops on a missing `ruby.h`.

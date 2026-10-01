@@ -68,7 +68,7 @@ These numbers are proposals until a bench measures them. A bench runs against a 
 
 ## One set of tests
 
-- **The cases are data.** A `conformance/` folder holds one data file that every surface reads, so a pick that changes in review is one edit (ADR 0017 section 7, Ian's condition of 2026-09-21). Each case carries the verb, the arguments, the evidence, the recorded exchange, the expected bare answer, the expected details, and the expected failure kind. The recording format already exists and already replays with no network and no key. The one file exists today at `experiments/207-thinkthen-db/engine/cases2/conformance.json`, twenty cases, validated offline.
+- **The cases are data.** A `conformance/` folder holds one data file that every surface reads, so a pick that changes in review is one edit (ADR 0017 section 7, Ian's condition of 2026-09-21). Each case carries the verb, the arguments, the evidence, the recorded exchange, the expected bare answer, the expected details, and the expected failure kind. The recording format already exists and already replays with no network and no key. The one file exists today at local experiment 207's `engine/cases2/conformance.json`, twenty cases, validated offline.
 - **Every surface runs every case.** The command runs them too, so it is held to the same suite as the libraries. A runner is about a hundred lines per language.
 - **A new verb adds its cases once.** No language writes a test for a rule. A rule lives in the core, and its cases live in `conformance/`.
 - **A language tests only its shim**: the conversion of types, the mapping of errors, an interrupt from the keyboard while Rust waits, the release of the language's lock, and safety across threads and forks.

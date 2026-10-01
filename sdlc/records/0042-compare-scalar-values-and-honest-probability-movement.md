@@ -14,7 +14,7 @@ Valid yes-or-no pairs also carry their before and after probabilities, their abs
 
 The focused test first failed when the old transform rejected a string value. It now covers all four scalar kinds, all six boolean-or-null directions, lexical ordering, exact partitions, tolerance boundaries and overrides, legacy rows, malformed yes-or-no answers, and invalid scalar values. Fixed diagnostics repeat no hostile id, body, or answer marker.
 
-The read-only check over `experiments/212-thinkthen-repeat/` compared 100 pairs. Ninety-six values stayed the same and four flipped. Sixty-three probabilities moved; 59 same-value movements were summarized, the largest was 0.08, and none exceeded the default. All four visible flips say their probability delta did not exceed the tolerance. No network or paid call ran.
+The read-only check over local experiment 212 compared 100 pairs. Ninety-six values stayed the same and four flipped. Sixty-three probabilities moved; 59 same-value movements were summarized, the largest was 0.08, and none exceeded the default. All four visible flips say their probability delta did not exceed the tolerance. No network or paid call ran.
 
 How-to 41 is 119 lines and 870 words. It states the fair-pair rule and describes 0.08 as the observed maximum of one limited run rather than a regression boundary. Both active plans put per-question comparison inside `annotate` result objects next, before monitors, without creating that ticket early.
 

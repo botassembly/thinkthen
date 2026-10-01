@@ -4,7 +4,7 @@ Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-r
 
 ## Evidence
 
-Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 290 at `experiments/290-thinkthen-csharp-c-interface/`. Stage one pinned main `2b08154b`; stage two pinned `5aec6402`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (P/Invoke; strict cancellation native via CancellationToken). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).
+Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 290. Stage one pinned main `2b08154b`; stage two pinned `5aec6402`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (P/Invoke; strict cancellation native via CancellationToken). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).
 
 Package: NuGet-shaped ThinkThen.C 0.0.1, linux-x64, no bundled native bits; the versioned native archive is a documented separate contract.
 

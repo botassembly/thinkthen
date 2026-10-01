@@ -2,7 +2,7 @@
 
 Status: built 2026-09-26, awaiting a fresh code review. It lands after 0141 and 0143. Owner: Claude.
 
-Branch `ticket/0144-engine-plans-batches`, in lane `worktrees/thinkthen-lane-3`. The ticket is `sdlc/tickets/0144-engine-plans-batches.md`. A fresh read-only design review accepted it on 2026-09-26 in its third round. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
+Branch `ticket/0144-engine-plans-batches`, in lane `thinkthen-lane-3`. The ticket is `sdlc/tickets/0144-engine-plans-batches.md`. A fresh read-only design review accepted it on 2026-09-26 in its third round. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
 
 ## Result
 

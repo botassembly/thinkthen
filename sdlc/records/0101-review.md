@@ -2,7 +2,7 @@ FINDINGS
 
 # Review of ThinkThen Quick Fix 0101 at dae009ad
 
-Reviewer: fresh read-only Claude session. Branch `ticket/0101-live-refuses-non-shell-jobs`, worktree `worktrees/thinkthen-0101`. No real ledger, key, or backend was touched. All live runs used temporary ledgers under the scratchpad.
+Reviewer: fresh read-only Claude session. Branch `ticket/0101-live-refuses-non-shell-jobs`, worktree `thinkthen-0101`. No real ledger, key, or backend was touched. All live runs used temporary ledgers under the scratchpad.
 
 ## Findings
 

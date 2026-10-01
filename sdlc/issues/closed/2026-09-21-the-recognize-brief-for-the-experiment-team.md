@@ -28,7 +28,7 @@ The marketing repository's `decks/2026-09-21-thinkthen-semantic-commands/recogni
 
 ## `relate`, added the same day
 
-Ian ruled that `relate` is built with `recognize`. The shape is `sdlc/planning/relate-design.md`, and the first real output is `experiments/225-relate-demo/`.
+Ian ruled that `relate` is built with `recognize`. The shape is `sdlc/planning/relate-design.md`, and the first real output is local experiment 225.
 
 1. The recognize experiment builds the stand-in `relate` on the same pair-asking code as step three of `recognize`. One path, two commands.
 2. Test the four rule forms, `--either`, `--kind-field`, the 255-record refusal, and the pair count under `--dry-run`.

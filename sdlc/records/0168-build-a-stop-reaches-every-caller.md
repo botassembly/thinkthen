@@ -1,6 +1,6 @@
 # 0168: Build a stop that reaches every caller
 
-Status: done 2026-09-27. Fresh read-only code review accepted commit `91096c8a`, and the combined full ladder passed. Owner: Codex. Ticket: `sdlc/tickets/0168-a-stop-reaches-every-caller.md`. Branch: `ticket/0168-a-stop-reaches-every-caller`, lane: `worktrees/thinkthen-codex-2`.
+Status: done 2026-09-27. Fresh read-only code review accepted commit `91096c8a`, and the combined full ladder passed. Owner: Codex. Ticket: `sdlc/tickets/0168-a-stop-reaches-every-caller.md`. Branch: `ticket/0168-a-stop-reaches-every-caller`, lane: `thinkthen-codex-2`.
 
 ## Result
 

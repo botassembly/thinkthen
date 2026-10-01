@@ -10,4 +10,4 @@ The tool's behavior is right. It computes the score from the probabilities it re
 
 Replace "so the two agree" with a sentence that says the two can differ by a few hundredths and names the tool's number as the one to trust. Check whether the spec's tests assert agreement anywhere.
 
-Severity: minor, spec wording only. Found by the product side. Evidence: `experiments/235-beatles-judgment/runs/` (the score run and its full details).
+Severity: minor, spec wording only. Found by the product side. Evidence: local experiment 235's `runs/` (the score run and its full details).

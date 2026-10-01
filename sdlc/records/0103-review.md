@@ -2,7 +2,7 @@ ACCEPT
 
 # 0103 code review: exact empty-output checks
 
-Reviewer: fresh read-only Claude session (Opus 5.5). Branch `ticket/0103-exact-empty-output-checks` at 7d64bbfc, worktree `worktrees/thinkthen-0103` in the workspace. All planting ran in scratch copies, since deleted.
+Reviewer: fresh read-only Claude session (Opus 5.5). Branch `ticket/0103-exact-empty-output-checks` at 7d64bbfc, worktree `thinkthen-0103` in the workspace. All planting ran in scratch copies, since deleted.
 
 ## What was checked, by command
 

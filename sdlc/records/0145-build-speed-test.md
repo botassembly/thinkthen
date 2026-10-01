@@ -2,7 +2,7 @@
 
 Status: built 2026-09-26, awaiting code review. Owner: Claude.
 
-Branch `ticket/0145-speed-test`, in lane `worktrees/thinkthen-lane-2`. The ticket is `sdlc/tickets/0145-speed-test.md`. Two fresh read-only design reviews accepted it after the coordinator's rulings of 2026-09-26. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
+Branch `ticket/0145-speed-test`, in lane `thinkthen-lane-2`. The ticket is `sdlc/tickets/0145-speed-test.md`. Two fresh read-only design reviews accepted it after the coordinator's rulings of 2026-09-26. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
 
 No live call ran. The builder never ran `sdlc/scripts/live`, the live mode or `job.sh`. It ran `plan` with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset.
 

@@ -1,6 +1,6 @@
 # 0214 High code review and correction
 
-Status: The same High reviewer **ACCEPTED** corrected source `82e359af`; independent integration ACCEPT at `dfc1b5fb` and main landing complete. Full first report: `$WORKSPACE/worktrees/thinkthen-codex-4/target/codex-builds/0214/code-review/result.txt`. Acceptance: `$WORKSPACE/worktrees/thinkthen-codex-4/target/codex-builds/0214/code-review/followup-result.txt`.
+Status: The same High reviewer **ACCEPTED** corrected source `82e359af`; independent integration ACCEPT at `dfc1b5fb` and main landing complete. Full first report: `target/codex-builds/0214/code-review/result.txt` in the `thinkthen-codex-4` worktree. Acceptance: `target/codex-builds/0214/code-review/followup-result.txt` in the `thinkthen-codex-4` worktree.
 
 1. Worker-side Arrow `Series` validation returned a zero-send `UsageError` without final facts/details. The existing numeric-column refusal case now checks final zero-send facts, empty detail and zero loopback sends. `frame::on_worker` supplies the account only after the worker starts and returns `Stop::Said`; a pre-worker refusal and caught panic still carry no invented account.
 2. The completion receipt dropped the returned error's six-kind identity. `WorkerError` now transfers safe kind, message and retryable metadata into the one terminal receipt. The held returned-error case checks exact `cancelled`, `the call was cancelled`, `False` after the single worker releases.

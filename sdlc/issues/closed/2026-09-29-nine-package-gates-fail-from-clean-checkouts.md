@@ -34,7 +34,7 @@ The [Quick Fix build record](../../records/2026-09-29-clean-package-gates-quick-
 
 ## Evidence
 
-Local experiment 302 `experiments/302-polyglot-package-verification/`: one folder per surface with REPORT.md and logs; `FINDINGS.md` consolidates; `waves.log` is the run record. Inputs sealed at the pin.
+Local experiment 302: one folder per surface with REPORT.md and logs; `FINDINGS.md` consolidates; `waves.log` is the run record. Inputs sealed at the pin.
 
 ## Final full-24 re-verification (2026-09-29, pin 4c0ef210)
 

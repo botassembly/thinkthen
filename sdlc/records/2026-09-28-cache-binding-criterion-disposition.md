@@ -1,6 +1,6 @@
 # Register 10 cache-binding criterion disposition
 
-Status: fresh High review accepted `0327a13d`; the coordinator adopts the stated register-10 disposition. Source read at `3918bba2`. Original: `$WORKSPACE/experiments/284-issue-register/10-d5-default-cache-binds-address.md`. Its literal success test asks that **every zero-send run leave the default folder untouched** and that a mismatch name **both** bound and requested addresses with a cure on command and library surfaces.
+Status: fresh High review accepted `0327a13d`; the coordinator adopts the stated register-10 disposition. Source read at `3918bba2`. Original: local experiment 284's `10-d5-default-cache-binds-address.md`. Its literal success test asks that **every zero-send run leave the default folder untouched** and that a mismatch name **both** bound and requested addresses with a cure on command and library surfaces.
 
 ## Reconciliation
 

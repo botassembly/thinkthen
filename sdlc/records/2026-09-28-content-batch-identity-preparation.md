@@ -1,6 +1,6 @@
 # Register 64: content-batch identity preparation
 
-Notes only, source `origin/main` `f1b0acac0d1df3d24bfa6ad0f4b584f3209e561d` (2026-09-28). Original criterion: `experiments/284-issue-register/64-cross-language-batch-identity.md` asks for record-spelling rules and a shared fixture hashed on every applicable surface, so two implementations agreeing on spelling yield the same digest. The hazard is **a moved content cut**: a different spelling of one record can change batch membership before request encoding and cache lookup. The accepted [remaining-queue reconciliation](2026-09-28-remaining-queue-reconciliation.md) corrected its earlier single-batch-digest mistake. This note changes no contract, source, page, issue or status. Codex-6 currently owns specification-page edits.
+Notes only, source `origin/main` `f1b0acac0d1df3d24bfa6ad0f4b584f3209e561d` (2026-09-28). Original criterion: local experiment 284's `64-cross-language-batch-identity.md` asks for record-spelling rules and a shared fixture hashed on every applicable surface, so two implementations agreeing on spelling yield the same digest. The hazard is **a moved content cut**: a different spelling of one record can change batch membership before request encoding and cache lookup. The accepted [remaining-queue reconciliation](2026-09-28-remaining-queue-reconciliation.md) corrected its earlier single-batch-digest mistake. This note changes no contract, source, page, issue or status. Codex-6 currently owns specification-page edits.
 
 ## Current path and actual input domains
 

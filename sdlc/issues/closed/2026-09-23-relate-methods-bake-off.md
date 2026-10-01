@@ -1,6 +1,6 @@
 # relate: the methods bake-off and the recommended algorithm
 
-Status: Closed on 2026-09-25 as superseded. The landed relate design (0081, 0088, relate-design.md) uses a choice across kinds and yes/no within one kind. Earlier status: Open, for the build team and for Ian's ruling. Filed 2026-09-23 by the product side at Ian's request. Evidence: `experiments/237-relate-methods/` (live, recorded, $0.058 charged in caps, $0.027 of reported input). `scripts/rerun.sh` there replays every call with no key and rebuilds every table. `relate-design.md` is unchanged. Ian rules on any change to it.
+Status: Closed on 2026-09-25 as superseded. The landed relate design (0081, 0088, relate-design.md) uses a choice across kinds and yes/no within one kind. Earlier status: Open, for the build team and for Ian's ruling. Filed 2026-09-23 by the product side at Ian's request. Evidence: local experiment 237 (live, recorded, $0.058 charged in caps, $0.027 of reported input). `scripts/rerun.sh` there replays every call with no key and rebuilds every table. `relate-design.md` is unchanged. Ian rules on any change to it.
 
 ## The recommendation
 

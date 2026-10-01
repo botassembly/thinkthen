@@ -2,7 +2,7 @@
 
 Status: built; checks run once after the merge of `origin/main` `b2d03a6f`; ready for review. Owner: Claude.
 
-Branch `ticket/0139-batching-adr`, in `worktrees/thinkthen-0139`. B0 writes documents only, so the coordinator had it built in its source-only worktree, outside the lanes. The ticket is `sdlc/tickets/0139-batching-adr.md`. The coordinator accepted it on 2026-09-26 after two fresh read-only reviews. Ian can overturn every decision the ticket lists.
+Branch `ticket/0139-batching-adr`, in `thinkthen-0139`. B0 writes documents only, so the coordinator had it built in its source-only worktree, outside the lanes. The ticket is `sdlc/tickets/0139-batching-adr.md`. The coordinator accepted it on 2026-09-26 after two fresh read-only reviews. Ian can overturn every decision the ticket lists.
 
 ## Result
 

@@ -2,7 +2,7 @@
 
 Status: built 2026-09-26, awaiting code review. Owner: Claude.
 
-Branch `ticket/0150-find-none-and-annotate-parts`, in lane `worktrees/thinkthen-lane-1`. The ticket is `sdlc/tickets/0150-find-none-and-annotate-parts.md`. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback backend.
+Branch `ticket/0150-find-none-and-annotate-parts`, in lane `thinkthen-lane-1`. The ticket is `sdlc/tickets/0150-find-none-and-annotate-parts.md`. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback backend.
 
 ## Result
 

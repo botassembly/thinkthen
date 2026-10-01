@@ -1,6 +1,6 @@
 # Cache and replay remainder: six original criteria
 
-Notes-only preparation on `origin/main` `ff673422`, following the accepted cache survey `31fc345a` and landed 0228, 0229, 0238 and 0221. The six source findings are `experiments/284-issue-register/{10,105,101,102,52,85}-*.md`; their Success criteria below take precedence over later shorthand in `remaining-batches-2026-09-28.md`. This note changes no issue status, product contract, fixture or runtime. No provider or new test was run.
+Notes-only preparation on `origin/main` `ff673422`, following the accepted cache survey `31fc345a` and landed 0228, 0229, 0238 and 0221. The six source findings are local experiment 284's `{10,105,101,102,52,85}-*.md`; their Success criteria below take precedence over later shorthand in `remaining-batches-2026-09-28.md`. This note changes no issue status, product contract, fixture or runtime. No provider or new test was run.
 
 ## Binding and vintage (10, 105)
 

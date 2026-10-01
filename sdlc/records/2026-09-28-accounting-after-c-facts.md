@@ -1,6 +1,6 @@
 # Accounting after typed C facts, 2026-09-28
 
-Source pin: main `23371cc9` (0255 integrated from `558e6ef3`, High ACCEPT `41114d20`). This refresh covers three repository issues and read-only register 61 at `experiments/284-issue-register/61-even-token-shares.md`. It makes no product, contract, status or count decision. Reuse `2026-09-28-run-accounting-remainder-preparation.md`, ADRs 0048/0089/0101, and the retained 0170, 0212, 0230 and 0255 build proofs. No build, paid call or new measurement ran here.
+Source pin: main `23371cc9` (0255 integrated from `558e6ef3`, High ACCEPT `41114d20`). This refresh covers three repository issues and read-only register 61 at local experiment 284's `61-even-token-shares.md`. It makes no product, contract, status or count decision. Reuse `2026-09-28-run-accounting-remainder-preparation.md`, ADRs 0048/0089/0101, and the retained 0170, 0212, 0230 and 0255 build proofs. No build, paid call or new measurement ran here.
 
 Path shorthand below: `public/`, `engine/`, `cli/` and `core/` are under `crates/thinkthen/src/`; a named language's `src/` is under `libraries/<language>/`; R's `rust/src/` is under `libraries/r/thinkthen/src/`. Database paths name their host.
 

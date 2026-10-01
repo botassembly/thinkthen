@@ -1,6 +1,6 @@
 # relate and recognize: the call math, the waste, and the real jobs
 
-Status: Closed on 2026-09-25 as superseded. Absorbed by request splitting (0079), relate with kinds (0081, 0088), the option-limit fix (0087), and relate-design.md. Blocking before pairing moved to the relate issue. Earlier status: Open, for the build team. Filed 2026-09-23 by the product side from Ian's deep-dive request. Evidence: `experiments/236-relate-deep-dive/` (live, recorded, $0.0014 charged) and `experiments/225-recognize-harvest-package/relate/measurements/`. Ian can overturn every recommendation here.
+Status: Closed on 2026-09-25 as superseded. Absorbed by request splitting (0079), relate with kinds (0081, 0088), the option-limit fix (0087), and relate-design.md. Blocking before pairing moved to the relate issue. Earlier status: Open, for the build team. Filed 2026-09-23 by the product side from Ian's deep-dive request. Evidence: local experiment 236 (live, recorded, $0.0014 charged) and local experiment 225's `relate/measurements/`. Ian can overturn every recommendation here.
 
 ## What exists today, by command
 

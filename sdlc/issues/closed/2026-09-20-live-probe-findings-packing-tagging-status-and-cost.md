@@ -4,7 +4,7 @@ Status: Closed on 2026-09-22. The four measurements are folded into the plan.
 
 Ian gave the direct go-ahead on 2026-09-20 with a ceiling of 50 US cents. A builder ran the four measurements from `2026-09-20-a-live-probe-plan-for-tagging-many-questions-and-status.md` as a spike outside this repository. Every launch went through `sdlc/scripts/live`. Every case is made-up text, and every trusted answer was fixed and hashed before the first paid call. One model answered everything: `jev-1.13.0` behind the alias `jev-latest`.
 
-The raw requests, answers, scoring scripts, and the full write-up sit in the workspace at `experiments/thinkthen-probes-2026-09-20/`. `FINDINGS.md` there is the long form and `ledger-notes.md` holds the hashes and the ledger line for each launch. That folder is a spike and can rot. This page is the record.
+The raw requests, answers, scoring scripts, and the full write-up sit in the local experiment folder `thinkthen-probes-2026-09-20`. `FINDINGS.md` there is the long form and `ledger-notes.md` holds the hashes and the ledger line for each launch. That folder is a spike and can rot. This page is the record.
 
 ## The spend
 

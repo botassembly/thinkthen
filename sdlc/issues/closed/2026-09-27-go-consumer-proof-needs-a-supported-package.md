@@ -8,7 +8,7 @@ The ideal state makes the C interface the route to additional languages. Experim
 
 ## Evidence
 
-Experiment `experiments/274-thinkthen-go-c-interface/` covers two accepted stages on Go 1.22.2, Linux x86_64 glibc, cgo, standard library only.
+Local experiment 274 covers two accepted stages on Go 1.22.2, Linux x86_64 glibc, cgo, standard library only.
 
 Stage one pinned main `48fd034f` and answered the Go-specific risk: goroutines move between OS threads across cgo calls, and thread-local C error metadata does not follow. A failing call reported code 1 on its calling thread and a different code after migration. The wrapper pins with `runtime.LockOSThread` around the call and error copy. A one-shot C helper is the untested alternative. This lesson applies to the deferred JVM experiment.
 

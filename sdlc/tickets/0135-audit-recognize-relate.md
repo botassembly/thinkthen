@@ -30,7 +30,7 @@ This ticket reuses their machinery and adds no second copy of it:
 
 ## Prior evidence
 
-- Workspace experiment 214 (`experiments/214-wikigold-audit/`) graded recognize output three ways: strict span and type F1 (0.755 to 0.801), kind accuracy given an exact boundary (0.918 to 0.955), and boundary-only F1 (0.802 to 0.854). It counted 93 partial-overlap predictions and 37 split or truncated names as errors. A text-only match would have hidden them.
+- Local experiment 214 graded recognize output three ways: strict span and type F1 (0.755 to 0.801), kind accuracy given an exact boundary (0.918 to 0.955), and boundary-only F1 (0.802 to 0.854). It counted 93 partial-overlap predictions and 37 split or truncated names as errors. A text-only match would have hidden them.
 - The demo replays. Demo 44 at `--threshold 0.01` prints the same three names as at 0.5 (Maria Chen 0.98, Northwind Freight 1.0, Chicago 0.6693), since the recording answers requests and the cut is local. Demo 45 at `--threshold 0.01` prints two edges, `gateway calls billing` at 0.91 and `billing calls gateway` at 0.08. A recognize question file with demo 44's kinds replays the same recording, and a record-mode run with `--jsonl --field /text` prints `input`. Measured on this branch's build before any change.
 - Both commands refuse a cut of 0: "recognize thresholds are single cuts above zero and at most one" (`core/recognize_file.rs`) and "the relate threshold is one cut above zero and at most one" (`core/relate_file.rs`).
 - Name candidates do not depend on the cut. `core/recognize.rs::assemble` forms runs from each token's detection answer and then drops a name whose strength is below the cut. A run at a low cut therefore shows every name a higher cut could keep.

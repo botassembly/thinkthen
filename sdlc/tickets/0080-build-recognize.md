@@ -47,7 +47,7 @@ No names is a successful answer with an empty `entities` list. A single text pri
 
 ## Recognition design
 
-Port the measured baseline from `experiments/225-recognize-harvest-package/`, not a new natural-language implementation.
+Port the measured baseline from local experiment 225, not a new natural-language implementation.
 
 1. Tokenize, window, detect, assign kinds, assemble spans, and compute strength by the rules in `rules/rules.md`. Use the canonical lineage-B words in `words/` byte for byte. Ask detection and kind for every token as the recorded main pass does. Every member token counts. `strength` is the lowest detection probability times the mean probability of the winning kind, rounded to four decimals. Keep names at or above the cut.
 2. Keep all recognition policy internal. Add no depth, word-threshold, repair, connector, formula, overlap, possessive, or policy option in the command, question file, environment, config, or public metadata. The connector list stays deleted. The fixed trailing-possessive rule remains. One maximal contiguous run of `IN` words is one candidate, so candidates are disjoint and no overlap resolver runs.

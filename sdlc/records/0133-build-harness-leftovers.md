@@ -1,6 +1,6 @@
 # 0133 build: the rung allow list and three harness leftovers
 
-Built 2026-09-26 by Claude in `worktrees/thinkthen-lane-1` on `ticket/0133-harness-leftovers`. No key was used, and no request left the machine. `THINKTHEN_API_KEY` was unset for every command.
+Built 2026-09-26 by Claude in `thinkthen-lane-1` on `ticket/0133-harness-leftovers`. No key was used, and no request left the machine. `THINKTHEN_API_KEY` was unset for every command.
 
 ## Outcome
 

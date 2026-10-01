@@ -8,7 +8,7 @@ The ideal state makes the C interface the route to additional languages. Experim
 
 ## Final evidence
 
-Beelink experiment `experiments/273-thinkthen-zig-c-interface/stage2/` uses Zig 0.15.2 on Linux x86_64 with glibc. Its immutable source is landed main `e0a6150a0325d92b93ac8f4e504ffbfc3792fba9`; the parent verified all 4,761 exported blobs. No ThinkThen implementation, C header or compiler upgrade was needed. The local native archive uses a release build with remapped builder paths, not the first stage's debug library.
+Beelink experiment local experiment 273's `stage2/` uses Zig 0.15.2 on Linux x86_64 with glibc. Its immutable source is landed main `e0a6150a0325d92b93ac8f4e504ffbfc3792fba9`; the parent verified all 4,761 exported blobs. No ThinkThen implementation, C header or compiler upgrade was needed. The local native archive uses a release build with remapped builder paths, not the first stage's debug library.
 
 The six-file `package/` exports a real Zig module. It wraps typed scalar/bulk decisions, recognize, relate and the generic JSON door for all ten functions. Rust retains judgment, grammar and scheduling. Zig owns copies of results and error metadata. The package rejects interior NUL in C strings and preserves counted evidence bytes. Its documentation covers blocking calls, thread-safe allocators, engine/token lifetime, one-shot cancellation and the known native limitation.
 

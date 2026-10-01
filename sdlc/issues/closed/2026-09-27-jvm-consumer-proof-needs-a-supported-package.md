@@ -8,7 +8,7 @@ The ideal state makes the C interface the route to additional languages. Experim
 
 ## Evidence
 
-Experiment `experiments/289-thinkthen-jvm-c-interface/` covers two accepted stages on JDK 21.0.12.1 (preview FFM), Kotlin 2.4.20, and Scala 3.9.0, Linux x86_64 glibc, direct compiler invocations only. Ian installed the JDK; the Kotlin and Scala archives are recorded with hashes under `~/.local/opt`.
+Local experiment 289 covers two accepted stages on JDK 21.0.12.1 (preview FFM), Kotlin 2.4.20, and Scala 3.9.0, Linux x86_64 glibc, direct compiler invocations only. Ian installed the JDK; the Kotlin and Scala archives are recorded with hashes under `~/.local/opt`.
 
 Stage one pinned main `a057c594` and answered the JVM-specific risk: platform threads keep thread-local C errors across a split call/read, but virtual threads do not. Retained runs record a carrier change and wrong error slots both with and without carrier identity changing. The door pins with a monitor on the calling thread from before the downcall through the error copy; a 32-virtual-thread mixed-failure check passes. Pinning consumes carrier capacity; a one-entry native helper returning status and copied error data is the unbuilt production alternative. Go needed the same class of fix in experiment 274.
 

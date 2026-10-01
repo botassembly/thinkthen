@@ -7,7 +7,7 @@ Ian approved settling every open detail across all languages on 2026-09-21, appr
 | # | Settlement | Where it landed |
 | --- | --- | --- |
 | 1 | The Polars Series door ships: Python's `decide` and `score` take a column and return a column through the Arrow capsule door (no Polars import); Rust gains the Series door behind an off-by-default `polars` feature | `8a33578`, `6287075` |
-| 2 | The plugin expression does not ship now; it returns only with the column-owning shape, the in-body budget rule, and a documented support window | experiments/228, the plan |
+| 2 | The plugin expression does not ship now; it returns only with the column-owning shape, the in-body budget rule, and a documented support window | local experiment 228, the plan |
 | 3 | `Details.nearest` carries the nearest level on score answers, wired on all nine surfaces | `1fe8173` + the settle wave |
 | 4 | `find` and `rank` return the ruled pair: the place and the probability, everywhere | the settle wave |
 | 5 | A deadline at or past zero is spent, never refused | `8a33578` and the aligned hosts |

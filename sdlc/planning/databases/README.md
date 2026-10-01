@@ -86,7 +86,7 @@ So packing keeps the totals and loses the single answers. It also breaks replay,
 
 DuckDB first. Its vectors fit the engine's width, its community repository signs and ships the binary, and it is where the public interest is. SQLite second, because nobody has done it and it is the smallest. PostgreSQL third. It is the hardest: each connection is its own forked process, managed services allow only approved extensions, and the realistic first user runs their own server or a Docker image.
 
-The experiments run as `experiments/207-thinkthen-db/` in the workspace, after experiment 205 on the libraries, and they bind the same stand-in engine and stub.
+The experiments run as local experiment 207 in the workspace, after experiment 205 on the libraries, and they bind the same stand-in engine and stub.
 
 ## What Ian can overturn
 

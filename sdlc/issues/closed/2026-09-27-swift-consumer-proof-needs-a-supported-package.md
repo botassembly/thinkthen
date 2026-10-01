@@ -4,7 +4,7 @@ Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-r
 
 ## Evidence
 
-Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 294 at `experiments/294-thinkthen-swift-c-interface/`. Stage one pinned main `5b90c13b`; stage two pinned `7a1ba6cc`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (Module-map import; strict cancellation from a separate Thread). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).
+Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 294. Stage one pinned main `5b90c13b`; stage two pinned `7a1ba6cc`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (Module-map import; strict cancellation from a separate Thread). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).
 
 Package: SwiftPM with a system-library target and vendored module map.
 

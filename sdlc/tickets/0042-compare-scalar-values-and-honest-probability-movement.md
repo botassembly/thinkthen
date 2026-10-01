@@ -14,7 +14,7 @@ Status: landed
 
 ## Current facts and decisions
 
-ADR 0014 item 6 requires `compare` to read any scalar `value` before the project judges whether a report command earns its cost. The transform currently refuses strings and numbers. The repeat measurement in `experiments/212-thinkthen-repeat/` compared one yes-or-no question over 100 public messages twice under model `jev-1.13.0`: 63 probabilities moved, by at most 0.08, and four answers flipped. That evidence covers one question kind, model, set, and day. It does not set a probability rule for choice or score.
+ADR 0014 item 6 requires `compare` to read any scalar `value` before the project judges whether a report command earns its cost. The transform currently refuses strings and numbers. The repeat measurement in local experiment 212 compared one yes-or-no question over 100 public messages twice under model `jev-1.13.0`: 63 probabilities moved, by at most 0.08, and four answers flipped. That evidence covers one question kind, model, set, and day. It does not set a probability rule for choice or score.
 
 This ticket makes these decisions. Ian can overturn them:
 

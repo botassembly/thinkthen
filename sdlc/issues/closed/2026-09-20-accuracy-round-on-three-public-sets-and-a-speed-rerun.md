@@ -2,7 +2,7 @@
 
 Status: Closed. Ticket 0044 fixed the `cost.jq` defect in `ce96895b`. The transform now reads the id only when `input` is an object. The open default-width question and the missing `--jobs` page numbers moved to `2026-09-24-the-default-jobs-width-runs-past-the-documented-limit.md`.
 
-Ian gave a standing go-ahead on 2026-09-20 for paid marketing measurements up to one US dollar. `2026-09-20-launch-gaps-found-in-marketing-prep.md` records it. This is the first round under it. A builder ran it as experiment 206 in the workspace, at `experiments/206-thinkthen-accuracy/`. `PREREGISTRATION.md` there fixed the samples, the question wording, the options, and a hash of each labels file before the first paid call. No wording was tuned against a test sample, and every arm that ran is reported. `RESULTS.md` there is the long form. That folder can rot. This page is the record.
+Ian gave a standing go-ahead on 2026-09-20 for paid marketing measurements up to one US dollar. `2026-09-20-launch-gaps-found-in-marketing-prep.md` records it. This is the first round under it. A builder ran it as local experiment 206. `PREREGISTRATION.md` there fixed the samples, the question wording, the options, and a hash of each labels file before the first paid call. No wording was tuned against a test sample, and every arm that ran is reported. `RESULTS.md` there is the long form. That folder can rot. This page is the record.
 
 Every dataset here is old and public, so the model may have seen it in training. Say so wherever a number is printed. One model answered everything: `jev-1.13.0` behind `jev-latest`.
 

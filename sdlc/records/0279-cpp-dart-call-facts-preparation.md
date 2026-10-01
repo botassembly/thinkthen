@@ -1,6 +1,6 @@
 # 0279 C++/Dart call-facts preparation
 
-Date: 2026-09-29. Read-only source pin: `origin/main` `a4de0ab02`. The local handoff at `worktrees/thinkthen-codex-4/target/codex-builds/next-wrapper-facts-brief.txt` pointed to the current direct routes; source inspection confirmed them. [Ticket 0279](../tickets/0279-cpp-dart-call-facts.md) is a build brief, not completed product work.
+Date: 2026-09-29. Read-only source pin: `origin/main` `a4de0ab02`. The local handoff at `target/codex-builds/next-wrapper-facts-brief.txt` in the `thinkthen-codex-4` worktree pointed to the current direct routes; source inspection confirmed them. [Ticket 0279](../tickets/0279-cpp-dart-call-facts.md) is a build brief, not completed product work.
 
 ## What remains and where
 

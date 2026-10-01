@@ -31,9 +31,9 @@ B may run beside C where a change sits in the pure core. The build team knows th
 | --- | --- |
 | `sdlc/planning/recognize-design.md` | The command, the kinds, the relation rule, the output object, size and cost duties, the call on all nine surfaces, the database join rule |
 | `sdlc/planning/relate-design.md` | The command, how it asks by choices over legal pairs, the edge output, the first real result, the call on all nine surfaces |
-| `experiments/RECOGNIZE-PRODUCT-SPEC.md` | The method, final: three passes, each a pick-one question. The confidence formula, the dials, the measured limits |
-| `experiments/THINKTHEN-RECOGNIZE-MASTER-REPORT.md` | The record of sixteen experiments, every number confirmed on a full corpus or marked |
-| `experiments/222-recognize-demo/`, `225-relate-demo/`, `226-graph-demo/` | Real outputs with recordings, ready to become fixtures |
+| The local experiment note `RECOGNIZE-PRODUCT-SPEC.md` | The method, final: three passes, each a pick-one question. The confidence formula, the dials, the measured limits |
+| The local experiment note `THINKTHEN-RECOGNIZE-MASTER-REPORT.md` | The record of sixteen experiments, every number confirmed on a full corpus or marked |
+| Local experiment 222, `225-relate-demo/`, `226-graph-demo/` | Real outputs with recordings, ready to become fixtures |
 | the marketing repository's `decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md` | The acceptance test for the libraries and extensions: every call written out |
 
 Four things the design pages rule that the method page does not: the output carries the user's kind word and never a code, a relation rule says `from`, `to`, and `either`, word positions show only under `--details`, and `--dry-run` prints the request count and the pair count. One engine path asks the pairs for both functions.
@@ -59,7 +59,7 @@ Three rulings taken now for a build that waits: a spend ledger row holds counts 
 
 ## 5. The first quality wave
 
-The one page is `experiments/218-thinkthen-release-qa/wave1/FOR-IAN.md`. The proposed gates are `sdlc/planning/quality-plan.md`. Each finding is one issue file dated 2026-09-21 with a reproduction.
+The one page is local experiment 218's `wave1/FOR-IAN.md`. The proposed gates are `sdlc/planning/quality-plan.md`. Each finding is one issue file dated 2026-09-21 with a reproduction.
 
 | Severity | Finding (issue file, without the date) |
 | --- | --- |
@@ -97,7 +97,7 @@ Earlier the same day, from the limit probes and the second backend: `a-refused-r
 | `filter` with a band and a choice of pile | `two-function-flows-lose-the-record-between-stages` |
 | A `recognize` that takes names the user already found | `candidates-for-a-tenth-function-relate-and-find-in` |
 | The `chat-logprobs` adapter and the subprocess adapter | ADR 0004. No second adapter was needed to reach a second backend |
-| More open models | `experiments/220-thinkthen-second-backend/README.md` |
+| More open models | local experiment 220's `README.md` |
 | The how-tos that chain functions, and the incident map with `recognize` and `relate` | `how-to-candidates-where-one-answer-feeds-the-next` |
 | Windows | Ian's ruling: Linux and macOS first |
 

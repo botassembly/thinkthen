@@ -6,7 +6,7 @@ Updated 2026-09-23 after the [mainline assessment](mainline-readiness-2026-09-23
 
 ## Current next work
 
-Main `2b63c87` contains the one-package engine, backend profiles, returned records, default cache/counts, structured questions/evidence, fast refused connections, and private cooperative cancellation. Ticket 0074 is the next engine ticket. Its Ctrl-C implementation and amended ticket are uncommitted in `worktrees/thinkthen-0074`; the [completion checklist](mainline-readiness-2026-09-23.md#complete-ticket-0074-next) names the missing test split, deterministic signal acknowledgment, failure proofs, review, and landing gates.
+Main `2b63c87` contains the one-package engine, backend profiles, returned records, default cache/counts, structured questions/evidence, fast refused connections, and private cooperative cancellation. Ticket 0074 is the next engine ticket. Its Ctrl-C implementation and amended ticket are uncommitted in `thinkthen-0074`; the [completion checklist](mainline-readiness-2026-09-23.md#complete-ticket-0074-next) names the missing test split, deterministic signal acknowledgment, failure proofs, review, and landing gates.
 
 After 0074, finish private width/deadline/fork/signal controls, settle and build the two new functions, expose the Rust API, integrate C and the separately owned `surfaces` branch, then complete installed-artifact and release checks. The command source builds today; the public API and release installers are unfinished. Main contains review records about `surfaces`, not its adapter code. GitHub Actions remains paused and full sequential local gates remain authoritative.
 
@@ -94,4 +94,4 @@ The measured rows in this table total 932,128 input tokens. Ticket 0038's unknow
 - **The public release.** Ian ruled MIT and ruled that no talk with the vendor is owed. He ruled on 2026-09-19 that the timing is his alone. No agent raises it, asks about it, or lists it as open.
 - **Ideas carried from the design captures.** `sdlc/issues/closed/2026-09-19-ideas-carried-from-the-design-captures.md` lists advice, transform material, and small input rules, each with the slice that picks it up.
 - **The review leftovers** in `sdlc/issues/closed/2026-09-19-review-leftovers-from-the-core-tickets.md`. Seven still wait, with reasons in `sdlc/records/0005-reshape-decide-to-the-flat-surface.md`.
-- Registration with Factory 2, and the five `sdlc/project/` scripts that come with it.
+- Registration with the factory, and the five `sdlc/project/` scripts that come with it.

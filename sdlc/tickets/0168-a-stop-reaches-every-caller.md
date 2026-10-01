@@ -167,7 +167,7 @@ Excluded: the four host-interrupt loops, a detached-work counter, a cancellable 
 
 ## Routing
 
-Builder: Codex in `worktrees/thinkthen-codex-2`. Reviewer: a fresh read-only Codex session for the code. The accepted design's Claude review stands.
+Builder: Codex in `thinkthen-codex-2`. Reviewer: a fresh read-only Codex session for the code. The accepted design's Claude review stands.
 
 ## Complexity
 

@@ -1,6 +1,6 @@
 # 0251 replay miss context preflight
 
-Status: design preparation only on `3918bba242ce2d1da221987d3fabfa35cc33acb9`; no source or public page changed. Original: `$WORKSPACE/experiments/284-issue-register/102-replay-miss-does-not-say-why.md`. Its success test asks for **record N, the question set's name when a file named it, and the exact-match digest** so fixture repair takes one read. It does not ask for a breakdown of which digest component changed. The older 0221 ticket and cache-replay preparation inflated that last idea; the current plan row correctly withdraws it.
+Status: design preparation only on `3918bba242ce2d1da221987d3fabfa35cc33acb9`; no source or public page changed. Original: local experiment 284's `102-replay-miss-does-not-say-why.md`. Its success test asks for **record N, the question set's name when a file named it, and the exact-match digest** so fixture repair takes one read. It does not ask for a breakdown of which digest component changed. The older 0221 ticket and cache-replay preparation inflated that last idea; the current plan row correctly withdraws it.
 
 ## Current carriers and unmet literal criterion
 

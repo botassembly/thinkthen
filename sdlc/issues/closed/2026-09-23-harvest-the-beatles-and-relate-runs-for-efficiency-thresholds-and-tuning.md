@@ -6,8 +6,8 @@ Ian asked on 2026-09-23 for a note to the build team. The team should mine our r
 
 ## What to harvest
 
-- `experiments/235-beatles-judgment/`: 22 runs over 70 Beatles titles, all ten functions, 730 requests, 302,306 input and 42,569 output tokens. Each run folder holds `cmd.sh`, `requests.jsonl`, `answers.jsonl`, the recording, and a scored `output.txt` against the answer key in `dataset/`. R20 (recognize) and R21 (relate) went to Jev directly because no command build has either function. R22 sent R21's requests through `annotate`.
-- `experiments/236-relate-deep-dive/`: relate sizing by dry-run (`sizing.txt`), duplicates, travel-policy contradictions, and ticket-to-incident matching with `choose`.
+- Local experiment 235: 22 runs over 70 Beatles titles, all ten functions, 730 requests, 302,306 input and 42,569 output tokens. Each run folder holds `cmd.sh`, `requests.jsonl`, `answers.jsonl`, the recording, and a scored `output.txt` against the answer key in `dataset/`. R20 (recognize) and R21 (relate) went to Jev directly because no command build has either function. R22 sent R21's requests through `annotate`.
+- Local experiment 236: relate sizing by dry-run (`sizing.txt`), duplicates, travel-policy contradictions, and ticket-to-incident matching with `choose`.
 
 ## Efficiency: what the requests show
 

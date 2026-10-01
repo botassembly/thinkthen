@@ -115,7 +115,7 @@ Settled by ticket 0127. `databases/sqlite/tests/test_interrupt.py` records Ian's
 
 Kind: cleanup. The ruling is Ian's.
 
-Found by experiment 207 (`experiments/207-thinkthen-db/sqlite/NOTES.md`). rusqlite 0.40.2 with `loadable_extension` routes SQLite calls through `libsqlite3-sys`, whose API table ends at SQLite 3.34. `sqlite3_is_interrupted` arrived in 3.41.0. The SQLite surface polls it every 50 ms while a call waits (`databases/sqlite/src/worker.rs:7`).
+Found by experiment 207 (local experiment 207's `sqlite/NOTES.md`). rusqlite 0.40.2 with `loadable_extension` routes SQLite calls through `libsqlite3-sys`, whose API table ends at SQLite 3.34. `sqlite3_is_interrupted` arrived in 3.41.0. The SQLite surface polls it every 50 ms while a call waits (`databases/sqlite/src/worker.rs:7`).
 
 The landed surface does not link the host library, which the old issue expected. `databases/sqlite/src/ffi.rs:21` to `:30` extends the API table by hand with thirteen opaque tail pointers and reads `is_interrupted` from the host's own table. The floor is SQLite 3.50.0 (`ffi.rs:37`). Every later call needs the same hand extension, and a wrong tail count reads the wrong pointer.
 
@@ -163,7 +163,7 @@ Done when: `PENDING` names no landed ticket, and `children` stays green.
 
 Status: fixed by Quick Fix `qf/isolate-host-signal-tests` on 2026-09-27. At HEAD `22332a38` with the uncommitted 0169 command changes, `cargo test --locked -p thinkthen --lib signal -- --nocapture` selected six tests: four passed, one failed, and one was ignored. `engine::host_signal_tests::a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole` failed at its `host_signal_tests.rs:98` assertion with `the worker kept SIGUSR1 blocked`. Running that exact test once in isolation passed in 0.10 seconds. No engine or worker source had changed in that lane.
 
-Neither run redirected a raw log. The builder transcribed the tool results and their provenance into `worktrees/thinkthen-codex-1/target/codex-builds/0169/host-signal-observation.md`; the 0169 build record also names the observation. At that point, it was not a clean-main reproduction and the isolated pass did not establish a root cause. Parallel signal interference and a timing-sensitive assertion remained hypotheses.
+Neither run redirected a raw log. The builder transcribed the tool results and their provenance into `target/codex-builds/0169/host-signal-observation.md` in the `thinkthen-codex-1` worktree; the 0169 build record also names the observation. At that point, it was not a clean-main reproduction and the isolated pass did not establish a root cause. Parallel signal interference and a timing-sensitive assertion remained hypotheses.
 
 Source inspection identified a concrete interference path: `engine/facade_tests.rs::a_host_signal_on_the_calling_thread_never_fails_a_single_send` registers a process-wide SIGUSR1 flag and sends SIGUSR1 to an unblocked calling thread. `engine/host_signal_tests.rs::a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole` registers another process-wide flag for the same signal, then asserts its flag stayed false because its own worker blocked SIGUSR1. The installed signal-hook 0.4.4 `flag::register` registers a callback that sets the flag whenever that signal is handled; it does not filter by sending test or target thread. If these tests overlap, the caller test can set the worker test's flag even when the worker mask is correct. The bounded proof below confirmed that interference path.
 

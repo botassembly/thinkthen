@@ -75,7 +75,7 @@ Ticket 0118 originally routed `thinkthen_relate(query, rules)` through a random 
 3. Answered by 207: the annotate return type is fixed at registration, so the member names are part of the function's declared type — a fixed struct per installed set — or annotate waits for a bind step the C API cannot spell. The experiment shipped the fixed `struct(a, b)` and `a.*` works.
 4. Answered by 207: stay on `vscalar`. Arrow measured the same at 10k rows.
 5. Answered by 207: the key stays in the environment. No secret call and no setting registration exist on this API, and a `SET` puts the key in SQL text anyway.
-6. Answered on 2026-09-21, in the Python section below and `experiments/207-thinkthen-db/duckdb/NOTES.md`: Ctrl-C stops the query inside one round, DuckDB Python surfaces its own `Query interrupted`, and a host handler survives with the worker-thread-plus-`thinkthen_cancel` shape.
+6. Answered on 2026-09-21, in the Python section below and local experiment 207's `duckdb/NOTES.md`: Ctrl-C stops the query inside one round, DuckDB Python surfaces its own `Query interrupted`, and a host handler survives with the worker-thread-plus-`thinkthen_cancel` shape.
 7. Does the extension ship signed through the community repository first, or unsigned from its own releases while the pull request waits?
 8. Answered by 207 and ADR 0017 pick 10: `thinkthen_warm` exists, costs little, buys nothing on distinct data and 4x on repeats when the cache is absent, and stays for the shared name on all three databases. DuckDB's chunk already carries the throttle.
 
@@ -87,4 +87,4 @@ Job 2 of the experiment team proved the SIGINT-at-LOAD handler inside Python (du
 - A host that installs its own SIGINT handler after `LOAD` keeps it — the extension's chaining does not break it — but the install replaces the extension's handler at the OS level, so the automatic stop is lost, and a Python handler cannot run while the main thread is blocked in the query. Measured deaf: 16.42 s of paid work past the signal.
 - The working shape for a host with its own handler: run long queries on a worker thread, keep the main thread free, and call `thinkthen_cancel()` from a second connection when the handler fires. Measured 0.05 s from signal to stop, requests frozen, and the engine's `cancelled` kind carries in DuckDB's error message.
 
-The full commands and output are in `experiments/207-thinkthen-db/duckdb/NOTES.md` under "Job 2, 2026-09-21".
+The full commands and output are in local experiment 207's `duckdb/NOTES.md` under "Job 2, 2026-09-21".

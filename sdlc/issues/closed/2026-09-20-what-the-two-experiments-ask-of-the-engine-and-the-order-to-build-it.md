@@ -2,7 +2,7 @@
 
 Status: Closed on 2026-09-22. The plan became the ADR 0017 rewrite and the engine tickets, and all five parked answers were checked against the evidence.
 
-Ian asked on 2026-09-20 for a plan to finish the command and the Rust code under it. Two experiments finished the same day. `experiments/205-thinkthen-libs/FINDINGS.md` covers six library bindings. `experiments/207-thinkthen-db/FINDINGS.md` covers three database extensions. Both ran on a stand-in engine against a local stub, and the stand-in wraps the real `thinkthen-core` by path. This page turns their findings into an order of work. It authorizes nothing. It steers `sdlc/planning/prospective-bash-rust-python-plan.md`, and the builder writes the tickets.
+Ian asked on 2026-09-20 for a plan to finish the command and the Rust code under it. Two experiments finished the same day. Local experiment 205's `FINDINGS.md` covers six library bindings. Local experiment 207's `FINDINGS.md` covers three database extensions. Both ran on a stand-in engine against a local stub, and the stand-in wraps the real `thinkthen-core` by path. This page turns their findings into an order of work. It authorizes nothing. It steers `sdlc/planning/prospective-bash-rust-python-plan.md`, and the builder writes the tickets.
 
 ## The main finding
 
@@ -31,14 +31,14 @@ Two changes:
 
 **Step 1. Fold to one crate and move the machinery down.** This step only moves code. `core` becomes a module with the purity lint held over its path. The five files above move into `engine` and stop returning `Failure`. The engine gets one public error with a small set of kinds: usage, backend, local, cancelled, defect. The command's `Failure` wraps it and keeps the exit codes. The step is proven when every gate is green and no page changes.
 
-**Step 2. The public functions.** Take the stand-in's completion layer as the draft list, because three extensions and six bindings already called it: `experiments/207-thinkthen-db/engine/src/lib.rs`. The surface is an engine value built from settings, a question built from parts, the eight verbs, `details`, and `usage`. Four points come from the findings:
+**Step 2. The public functions.** Take the stand-in's completion layer as the draft list, because three extensions and six bindings already called it: local experiment 207's `engine/src/lib.rs`. The surface is an engine value built from settings, a question built from parts, the eight verbs, `details`, and `usage`. Four points come from the findings:
 
 - The batch spine returns every judgment. `filter` returns only what it kept, and a banded answer over a column had no bulk path. Both experiments hit this, and shims in both hand-rolled a scheduler against the anti-goals. `schedule.rs` already takes an iterator and returns results in order. Make it the spine. `decide_many` over a slice is a thin wrapper.
 - A question is built from parts: text, threshold, model, options, levels. Every binding formatted question-file JSON by hand. `Threshold::cut`, `Threshold::band`, `Plan::evidence`, and `Plan::model` are `pub(crate)` today and become public. A judgment exposes its model and its digest.
 - The engine exports no C symbol. The stand-in's two exports leaked into every shared library built over it. The C binding owns every exported name.
 - The stand-in's `score` maps a probability to a named band. `specification/score.md` says a position on the levels. The real function follows the specification.
 
-The twenty shared cases in `experiments/205-thinkthen-libs/shared/cases/` and `experiments/207-thinkthen-db/engine/cases2/` are data. Replayed against the real engine, they start the conformance suite every later surface reuses.
+The twenty shared cases in local experiment 205's `shared/cases/` and local experiment 207's `engine/cases2/` are data. Replayed against the real engine, they start the conformance suite every later surface reuses.
 
 **Step 3. Four things a host needs and a command never did.** A command lives for one run and dies on Ctrl-C. A library lives inside someone else's process. Each need gets a test on the stub's wire. The null backend hid the fork hang in both experiments, and no test of these four runs on it.
 

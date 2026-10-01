@@ -2,7 +2,7 @@
 
 Status: landed 2026-09-27 after a fresh code review accepted it. Owner: Claude.
 
-Branch `ticket/0146-command-batches-decide-filter-rank`, in the worktree `worktrees/thinkthen-0146`. The ticket is `sdlc/tickets/0146-command-batches-decide-filter-rank.md`. The build merged `origin/main` at `18f0381e` first. ADR 0048, ADR 0053 and ADR 0055 rule the behavior. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback backend.
+Branch `ticket/0146-command-batches-decide-filter-rank`, in the worktree `thinkthen-0146`. The ticket is `sdlc/tickets/0146-command-batches-decide-filter-rank.md`. The build merged `origin/main` at `18f0381e` first. ADR 0048, ADR 0053 and ADR 0055 rule the behavior. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback backend.
 
 ## Baseline
 

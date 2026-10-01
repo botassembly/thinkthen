@@ -16,8 +16,8 @@ Ian replaced the Beatles Bench history on 2026-09-26 with one commit, `2cdb6445`
 
 ## Evidence
 
-- `git -C repos/beatles-bench log --oneline` prints one commit, `2cdb6445 Publish Beatles Bench`.
-- `git -C repos/beatles-bench cat-file -t be7cea2e` fails.
+- `git -C beatles-bench log --oneline` prints one commit, `2cdb6445 Publish Beatles Bench`.
+- `git -C beatles-bench cat-file -t be7cea2e` fails.
 - The fixture README gives each file's checksum, so the files themselves stay verifiable.
 
 ## Proposed fix

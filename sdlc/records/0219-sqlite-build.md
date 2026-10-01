@@ -42,7 +42,7 @@ The preparation error was treating one sentence about warm-to-scalar reuse as if
 Source commit `3d0ff886ee58b1445f3e7092b7b1d45204fc3fdd` is the complete SQLite source/docs/test/ratchet slice after merging main `fcf7bbef`. The isolated packaging command exited 0:
 
 ```sh
-flock -o /run/user/1000/thinkthen-codex-3.lock env CARGO_NET_OFFLINE=true CARGO_TARGET_DIR=$WORKSPACE/worktrees/thinkthen-codex-3/databases/sqlite/build/0219-target sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu databases/sqlite/build/0219-package sqlite
+flock -o /run/user/1000/thinkthen-codex-3.lock env CARGO_NET_OFFLINE=true CARGO_TARGET_DIR=databases/sqlite/build/0219-target sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu databases/sqlite/build/0219-package sqlite
 ```
 
 The built archive is now retained at `/tmp/thinkthen-0219-build-3d0ff886/0219-package/thinkthen-sqlite-0.0.1-x86_64-unknown-linux-gnu.tar.gz`, SHA-256 `711bd261391ea7a1d6fa7449d6c4e533dbde0f351f5da6500d6c6c479a660809`. Its only payload is `libthinkthen0.so`; the extracted and release library SHA-256 is `a73e8c22a57c90cc034680bb056c790156eb6a019b31d082e9abf80062b77339`. It is ELF x86-64 and exports only `sqlite3_thinkthen_init`; a raw-byte search of the release library for the builder's home path found no match. Host: Linux x86-64 kernel `6.17.0-35-generic`, Rust `1.95.0`, pinned SQLite CLI `3.50.0` SHA-256 `caa0d9979864cff3ceac9c4df7bf4949f28644f42943c2ae67a83e1c031c2c07`, pinned `libsqlite3.so.0` SHA-256 `a01c056fd78b5e22701f18ae8b57fbdf2f2d0e225503a8d4a9ce9ce2cedd5bc3`, and stock Python SQLite `3.45.1` for genuine below-floor refusal.

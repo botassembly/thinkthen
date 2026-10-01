@@ -14,7 +14,7 @@ A user can concatenate repeated detailed runs, average each case's stored probab
 
 ## Current facts and decisions
 
-ADR 0008 says rows with one id are repeated trials and metrics average within a case first. The roadmap says a shell loop produces the trials and a transform averages them. The open review item from ticket 0008 names five transforms that currently count duplicate ids twice: `counts`, `score`, `sweep`, `band`, and `calibration`. The read-only fixture in `experiments/212-thinkthen-repeat/` has two 100-row runs over public SMS cases. The matching 100-row subset of `experiments/206-thinkthen-accuracy/M1/arm1.jsonl` is the third run with the same question. Its answers differ enough to prove that averaging is real work.
+ADR 0008 says rows with one id are repeated trials and metrics average within a case first. The roadmap says a shell loop produces the trials and a transform averages them. The open review item from ticket 0008 names five transforms that currently count duplicate ids twice: `counts`, `score`, `sweep`, `band`, and `calibration`. The read-only fixture in local experiment 212 has two 100-row runs over public SMS cases. The matching 100-row subset of local experiment 206's `M1/arm1.jsonl` is the third run with the same question. Its answers differ enough to prove that averaging is real work.
 
 This ticket makes these decisions. Ian can overturn them:
 

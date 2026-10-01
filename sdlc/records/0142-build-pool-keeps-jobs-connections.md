@@ -2,7 +2,7 @@
 
 Status: landed 2026-09-26 after a fresh code review. Owner: Claude.
 
-Branch `ticket/0142-pool-keeps-jobs-connections`, in lane `worktrees/thinkthen-lane-2`. The ticket is `sdlc/tickets/0142-pool-keeps-jobs-connections.md`. A fresh read-only design review accepted it on 2026-09-26. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
+Branch `ticket/0142-pool-keeps-jobs-connections`, in lane `thinkthen-lane-2`. The ticket is `sdlc/tickets/0142-pool-keeps-jobs-connections.md`. A fresh read-only design review accepted it on 2026-09-26. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
 
 ## Result
 
