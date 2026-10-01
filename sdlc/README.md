@@ -26,4 +26,4 @@ Follow [ticket-preparation.md](planning/ticket-preparation.md) when preparing an
 
 ## Repository map
 
-`crates/thinkthen` holds `core`, `engine`, `cli`, and the binary. `specification/` is the contract; `spec/` holds `mustmatch` pages. `demos/` holds how-tos; each green one is an ADR 0016 test. `transforms/` holds `jq` over saved rows. Marketing owns `site/` under [ownership.md](planning/ownership.md). `probes/` holds ruled live measurements. `sdlc/` holds the records mapped above; the root `README.md` defines terms.
+`crates/thinkthen` holds `core`, `engine`, `cli`, and the binary. `specification/` is the contract; `spec/` holds `mustmatch` pages. `demos/` holds how-tos; each green one is an ADR 0016 test. `transforms/` holds `jq` over saved rows. Marketing owns `site/` under [ownership.md](planning/ownership.md). `probes/` holds ruled live measurements. `sdlc/` holds the records mapped above; `CONTRIBUTING.md` defines terms.

@@ -16,7 +16,7 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 
 Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence. Ordinary code does the policies, the metrics, the comparisons, and the presentation. ADR 0016 cut this section from fifteen pages to eight, and ADR 0018 cut it to four, because the rest taught half an idea each or repeated a neighbour. Each eval how-to is also a transform folder under `transforms/` where it has `jq` in it, as ADR 0012 proposes.
 
-The four eval how-tos are 14, 13, 25 and 28, listed under "Evals" in `demos/README.md`.
+The four eval how-tos are 14, 13, 25 and 28. In `demos/README.md`, 14 sits under "Start with these" and the other three sit under "Evals".
 
 ### Ian's six capabilities, and the how-tos that teach each
 

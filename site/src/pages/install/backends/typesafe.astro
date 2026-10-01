@@ -19,6 +19,7 @@ const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.t
 
   <BackendFacts name="typesafe" />
   <p>The default model is a pinned version. TypeSafe can move an alias to a new model, and the pinned version stays the same. Name another version with <code>--model</code> only when you mean to change the model behind a run.</p>
+  <p>On 2026-09-29, <a href="https://typesafe.ai/">TypeSafe's public site</a> advertised Jev input at $42 per billion tokens. Check your account terms for the rate you will pay.</p>
 
   <h2>Two ways to reach it</h2>
   <p>With no backend named, ThinkThen posts to the same address with the same model and reads the key from <code>{KEY_VARIABLE}</code>. With <code>--backend {b.name}</code>, it reads the key from <code>{b.keys[0]}</code>. Both reach the same model, and both share the answer cache.</p>

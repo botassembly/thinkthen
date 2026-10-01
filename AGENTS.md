@@ -30,4 +30,4 @@ Read the key from `THINKTHEN_API_KEY`, or from a named backend's own key variabl
 
 ## Where decisions live
 
-`README.md` defines terms; `sdlc/README.md` maps the repo. Marketing owns `site/` per `sdlc/planning/ownership.md`. Decisions live in `sdlc/`: ADRs, issues, tickets. An unfindable decision was not made. Name what Ian can overturn.
+`CONTRIBUTING.md` defines terms; `sdlc/README.md` maps the repo. Marketing owns `site/` per `sdlc/planning/ownership.md`. Decisions live in `sdlc/`: ADRs, issues, tickets. An unfindable decision was not made. Name what Ian can overturn.
