@@ -1,8 +1,6 @@
 # 0374: The installed-file checks prove panic isolation and the token cap
 
-Status: in progress. Lane claude-1. Branch `ticket/0374-installed-panic-and-cap-checks`. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
-
-Milestone: 0.1
+Status: landed. Lane claude-1. Branch `ticket/0374-installed-panic-and-cap-checks`. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
 
 ## Outcome
 
@@ -55,3 +53,20 @@ Tickets 0226 and 0227 proved their Linux packages the same way. The 0227 build r
   - R's two cases on the other targets. The release workflow packs no R file; R-universe builds it from source. A target R proof needs an R step in the release workflow.
   - macOS runs of `own_panic_hook` first happen on the rehearsal. This host cannot run `otool`. The first risk is the DuckDB macOS extension: `strip_macos.py` runs `strip -S -x` and appends DuckDB's 534-byte footer after `__LINKEDIT`. Apple's `strip` refuses to write such a file; `otool -L` and `nm` read through load commands and should not mind the trailing bytes, but no run has shown it. `strip -x` removes local symbols only, so imports and exports stay readable. The local `std::panicking::HOOK` that 0226 saw on Linux cannot be seen in that stripped file, which is why the check reads dependencies, imports and exports.
   - The source wrappers over C (Go, C++, C#, JVM, Swift, Zig, PHP, Dart, Ada, Objective-C, COBOL). They load the same C library, which the C case checks. Ticket 0299 rules out repeating the case per wrapper.
+
+## Build result
+
+- Packed fresh Linux x86-64 release files from the branch with `release-pack x86_64-unknown-linux-gnu` (the Ruby part with the pinned Ruby 3.4.11 and the host libclang, as `release-container` supplies them). `release-smoke` on that folder passed C, SQLite, DuckDB, PostgreSQL, Python, TypeScript, Ruby and the command. Each log shows the new cases: `keeps its own panic hook` for `libthinkthen.so`, `libthinkthen0.so`, `thinkthen.duckdb_extension`, `_thinkthen.abi3.so`, `thinkthen-linux-x64.node` and `thinkthen.so`; `libraries/c: the token cap refused before sending, installed`; pytest `1 passed`; minitest `1 runs, 3 assertions`; TAP `ok 1 - the token cap variable refuses a call before any request`; DuckDB `ok environment_token_cap_refuses_before_any_send`; PostgreSQL `ok token_variable_refuses_before_sending`; `release-smoke: the token cap refused with exit 2 and sent 0 requests`. The overall run exited 1 only for the C driver build described below, then the C file passed alone.
+- `release-smoke --command` passed on the packed command archive and the first-run sample.
+- `libraries/r/check.sh` passed. Its tarball step printed `thinkthen.so keeps its own panic hook` and `facts: 25 checks passed` with 11 requests.
+- Plants, each reverted: four tiny libraries fail `own_panic_hook` with their own lines (`links a Rust standard library`, `imports a panic symbol`, `exports a panic symbol`, `names no libc.so.6`) and a plain Rust `cdylib` passes; a missing file prints `cannot be read`; a one-word change to SQLite's pinned sentence fails the SQLite installed mode; a C limit of 100000 fails with `the token cap did not refuse with code 1 and its sentence`; renaming the Ruby and TypeScript token tests fails each installed mode; the command self-test's fake that ignores the variable fails with `the token cap exited 4 with ''`.
+- `sdlc/scripts/lint` in full and `sdlc/scripts/tickets` pass. No Rust changed, so `policy.py` was not needed.
+- Reviews: the ticket review returned seven findings, all answered, then ACCEPT. The code review returned three (a name filter that matches nothing passes in Node, a failed backend start hidden by `&&`, and `readelf`'s status lost in a pipe), all fixed, then ACCEPT.
+
+## What the build taught us
+
+- An installed release build cannot show a caught panic. Every trigger is test-only, and `release-smoke` fails a file that carries a probe. Linkage is the property an installed file can show: its own C library, no Rust standard library, and no panic symbol imported or exported.
+- The installed C driver needs `-D_GNU_SOURCE` for `setenv` and `strdup`, as the door tests already pass it.
+- Node's `--test-name-pattern` exits 0 and reports a pass when nothing matches. A filtered test needs its own result line pinned. This Ruby's minitest exits non-zero for a missing `-n` name, but the one-run pin keeps that guard if minitest changes.
+- Calling a shell function inside an `&&` list turns `set -e` off inside it, so a failed `cargo build` in `backend_start` would have surfaced as a 30-second wait.
+- R ships no release-workflow file, so the rehearsal proves nothing for R on the other targets.

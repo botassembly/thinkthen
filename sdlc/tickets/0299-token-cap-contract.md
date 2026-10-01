@@ -1,6 +1,6 @@
 # 0299 — Estimated input admission total
 
-Status: in progress; waits on proof. Core, CLI and C stage landed after fresh independent High ACCEPT of `bb1d1f65c98229fef9ab2ab6ab1645e181b833fa`. Design review accepted `f49eaccf2`. The code is done: ticket 0311 (`6f62e74fa`) put the token cap on every surface, and ticket 0364 (`4a1cb5cf7`) made `check` honor it. The installed-file checks run no token-cap case yet. Ticket 0374 adds those cases, and the rehearsal in ticket 0128 phase 3b runs them on each release target. That completes the proof.
+Status: in progress; waits on proof. Core, CLI and C stage landed after fresh independent High ACCEPT of `bb1d1f65c98229fef9ab2ab6ab1645e181b833fa`. Design review accepted `f49eaccf2`. The code is done: ticket 0311 (`6f62e74fa`) put the token cap on every surface, and ticket 0364 (`4a1cb5cf7`) made `check` honor it. Ticket 0374 added a token-cap case to every installed-file check (C, SQLite, DuckDB, PostgreSQL, Python, TypeScript, Ruby, the command, and R's tarball step). The rehearsal in ticket 0128 phase 3b runs them on each release target. That completes the proof.
 
 Milestone: 0.1
 

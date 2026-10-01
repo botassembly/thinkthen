@@ -18,15 +18,14 @@ Exit criteria:
 Blockers:
 
 - The rehearsal has not yet passed. Ticket 0128 phase 3b records each attempt.
-- The installed-file checks run no panic or token-cap case. Ticket 0374, in progress in another lane, adds them.
 - Registry setup belongs to the docs team, and Ian approves each outward step.
 - The README overhead line waits on marketing's overhead benchmark.
 
-Most DuckDB, language workflow and runner tool tickets below keep open only proofs on the release targets. A clean rehearsal on all four targets supplies those proofs. The rehearsal cannot supply the panic and token-cap proofs alone, because the installed-file checks it runs have no such cases. Tickets 0226, 0227 and 0299 stay in 0.1. Their proof comes from ticket 0374 plus the rehearsal.
+Most DuckDB, language workflow and runner tool tickets below keep open only proofs on the release targets. A clean rehearsal on all four targets supplies those proofs. Ticket 0374 added panic-isolation and token-cap cases to the installed-file checks the rehearsal runs. Tickets 0226, 0227 and 0299 stay in 0.1. Their proof comes from ticket 0374 plus the rehearsal.
 
 Path to 0.1:
 
-1. Ticket 0374 lands the panic and token-cap cases in the installed-file checks.
+1. Done: ticket 0374 landed the panic and token-cap cases in the installed-file checks.
 2. A clean rehearsal passes on all four targets (ticket 0128 phase 3b).
 3. A fresh checkpoint, the fourth, follows the clean rehearsal. Release QA runs its final round on it.
 4. The release candidate: the coordinator tags it and cuts `release/0.1` (ADR 0116, release-process.md section 5). The release commit lands at that cut, as ticket 0128 phase 4 step 3: `versions --set 0.1.0`, the publish flags dropped, the `CHANGELOG.md` date, the README "Install" section and the site's install lines.
@@ -49,7 +48,6 @@ Open items:
 - [0272: Prepare C# and JVM managed archives for the Linux x86 release workflow](../tickets/0272-csharp-jvm-linux-workflow.md)
 - [0273: Select and verify Linux x86 language runner tools](../tickets/0273-linux-language-runner-tools.md)
 - [0299 — Estimated input admission total](../tickets/0299-token-cap-contract.md)
-- [0374: The installed-file checks prove panic isolation and the token cap](../tickets/0374-installed-panic-and-cap-checks.md)
 - [Release and install for 0.1](../issues/2026-09-25-release-and-install-for-0-1.md)
 - [README: where to get a key, how to change the backend, and the overhead line](../issues/2026-09-29-readme-key-backend-and-overhead-lines.md)
 
