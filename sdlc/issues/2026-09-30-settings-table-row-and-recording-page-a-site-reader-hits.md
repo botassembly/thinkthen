@@ -1,11 +1,12 @@
-# Two specification lines the site shows readers in their draft form
+# Three specification lines the site shows readers in their draft form
 
-Status: open. Filed 2026-09-30 by the marketing lead. Owner: the queue owner.
+Status: open. Filed 2026-09-30 by the marketing lead. Owner: the queue owner, as batch C2 in `../planning/issue-priorities-2026-09-30.md`, after ticket 0360 lands.
 Kind: bug
 
-The site's Settings page renders `specification/settings.md` at build time. Two lines there and in `recording.md` read as working notes to a site reader.
+The site's Settings page renders `specification/settings.md` at build time. Three lines there and in `recording.md` read as working notes to a site reader.
 
 1. **The "Portable call settings" row** (`specification/settings.md:67`). Its name cell holds code marks, `(`thinkthen.settings/1`)`, which the page prints raw. Its description cites "tickets 0284–0298" and its cells say "later". A reader cannot act on a ticket number or on "later". Until this row reads as user text, the site leaves it off the Settings page, and the site's settings check names it as the one skipped row.
 2. **"Dry runs"** (`specification/recording.md:30`). The flag is `--plan` since 674a82041, and the Settings row is "Plan preview". The sentence should say "Plan previews".
+3. **The "Deadline and cancel" row's Rust cell** (`specification/settings.md`). It ends "remain for source callers until ticket 0291". Ticket 0291 has landed. The site drops a cell clause that cites a ticket. Rewrite the clause for a reader. Merged on 2026-09-30 from `closed/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md`.
 
 Asked: rewrite the row for a reader with no ticket numbers or "later", and change the one word. Tell the marketing lead when it lands, so the site drops its skip.

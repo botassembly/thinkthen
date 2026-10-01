@@ -72,7 +72,7 @@ Ranked by value against size, across the whole repo. Blocking items come first, 
 - The wall-clock waits in routine tests (area 2 item 3, area 4 item 2, area 12 item 1, area 20 item 8): ticket 0352 landed at `9e33cd639`. Area 3's rate-spacing tests (`tests/backend/backoff.rs`, `named_backends/rate.rs`) were not changed, so area 3 item 1 stays open. The ticket filed Debt 029 (binding tests) and Debt 030 (the piped batching pause) for what remains.
 - The relate decision run (R1) and docs page 11 were done before the graded commit.
 
-Two queue-owner issues from marketing's site ticket are open and do not block 0.1. `sdlc/issues/2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` asks to rewrite two draft-form lines the site shows, in `settings.md:67` and `recording.md:30`. `sdlc/issues/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md` is a note recording parts 1 and 2 of the site issue as done.
+One queue-owner issue from marketing's site ticket is open and does not block 0.1. `sdlc/issues/2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` asks to rewrite three draft-form lines the site shows, in `settings.md` and `recording.md`. The note recording parts 1 and 2 of the site issue as done is closed: `sdlc/issues/closed/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md`.
 
 ## Unconfirmed claims, rechecked
 

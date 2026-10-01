@@ -1,6 +1,6 @@
 # Public library API gaps
 
-Status: open for items 6 and 7. Items 4 (ticket 0148), 5 (ticket 0150) and 8 (ticket 0136) are settled, and git history holds their text.
+Status: open for items 6 and 7, both after 0.1. Every pre-0.1 item has landed: items 1, 2, 3, 9 and 10 by ticket 0347, item 4 by ticket 0148, item 5 by ticket 0150 and item 8 by ticket 0136. Git history holds their text.
 
 Resolution: items 1, 2, 3, 9 and 10 paid by ticket 0347. `Engine::usage` says it counts one engine and its clones, and PostgreSQL and DuckDB add their engines with `Sum` for `Counters`. PostgreSQL parses inline relate rules with `RelationRule::parse_inline` and raises its refusals as `thinkthen::Error` built with `Error::new`; its `Refusal` copy is gone. `LoadedQuestion` implements `DecisionQuestion` and `DetailQuestion` and has `kind`, so no SQL host asks both arms by hand. SQLite and PostgreSQL write `thinkthen_plan` by serializing `PlanEstimate`, pinned byte for byte by their checks. Git history holds the paid items' text.
 

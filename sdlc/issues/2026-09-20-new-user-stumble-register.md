@@ -1,6 +1,6 @@
 # The new-user stumble register
 
-Status: open until launch. Shortened 2026-09-30: rows 1 to 17 are closed, row 9 by ticket 0350 (`8f397e963`), and git history holds their record. Add a row when a stumble is seen. Close a row when its fix lands, and name the commit.
+Status: open until launch. Shortened 2026-09-30: rows 1 to 17 are closed, row 9 by ticket 0350 (`8f397e963`), and git history holds their record. Row 18 belongs to the release ticket 0128. Row 19 belongs to marketing. The register holds no pre-0.1 work for the queue owner. Add a row when a stumble is seen. Close a row when its fix lands, and name the commit.
 
 Ian asked on 2026-09-20 for one list of every place a new user stumbles in the first hour with no clear next step, so that the documents and the tool fix each one before the public push.
 
