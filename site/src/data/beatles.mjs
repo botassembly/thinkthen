@@ -284,7 +284,7 @@ const ARTICLES = {
     },
     headings: { '2-bar': "Change the bar" },
     lesson: "One of the nine edges is wrong. Jev puts Octopus's Garden on Revolver at 0.91. It first appeared on Abbey Road. No edge says who sings Taxman. George sings it, and Jev's answer fell under the bar. At 0.8, Yesterday on Help! drops out at 0.62, and it is right. The wrong edge stays.",
-    takeaway: "A menu gives each song one album. A higher bar cannot remove a confident wrong answer.",
+    takeaway: "A menu gives each song one album. A bar of 0.8 keeps the confident wrong answer.",
     link: tree('relate'),
   },
 
