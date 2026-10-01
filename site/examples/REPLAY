@@ -6,6 +6,7 @@
 # bindings-proof.json in every build, and fails when a sample under
 # examples/ has no line here.
 functions/annotate/c.c
+functions/annotate/csharp.cs
 functions/annotate/duckdb.sql
 functions/annotate/java.java
 functions/annotate/kotlin.kt
@@ -17,6 +18,7 @@ functions/annotate/scala.scala
 functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/c.c
+functions/choose/csharp.cs
 functions/choose/java.java
 functions/choose/kotlin.kt
 functions/choose/postgresql.sql
@@ -26,6 +28,7 @@ functions/choose/scala.scala
 functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/c.c
+functions/decide/csharp.cs
 functions/decide/java.java
 functions/decide/kotlin.kt
 functions/decide/polars.py
@@ -36,6 +39,7 @@ functions/decide/scala.scala
 functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/c.c
+functions/filter/csharp.cs
 functions/filter/java.java
 functions/filter/kotlin.kt
 functions/filter/postgresql.sql
@@ -46,6 +50,7 @@ functions/filter/rust.rs
 functions/filter/scala.scala
 functions/filter/sqlite.sql
 functions/find/c.c
+functions/find/csharp.cs
 functions/find/java.java
 functions/find/kotlin.kt
 functions/find/postgresql.sql
@@ -55,6 +60,7 @@ functions/find/rust.rs
 functions/find/scala.scala
 functions/find/sqlite.sql
 functions/find/typescript.ts
+functions/question-file/csharp.cs
 functions/question-file/duckdb.sql
 functions/question-file/java.java
 functions/question-file/kotlin.kt
@@ -66,6 +72,7 @@ functions/question-file/scala.scala
 functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/c.c
+functions/rank/csharp.cs
 functions/rank/duckdb.sql
 functions/rank/java.java
 functions/rank/kotlin.kt
@@ -76,6 +83,7 @@ functions/rank/rust.rs
 functions/rank/scala.scala
 functions/rank/typescript.ts
 functions/recognize/c.c
+functions/recognize/csharp.cs
 functions/recognize/duckdb.sql
 functions/recognize/java.java
 functions/recognize/kotlin.kt
@@ -88,6 +96,7 @@ functions/recognize/scala.scala
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/c.c
+functions/relate/csharp.cs
 functions/relate/duckdb.sql
 functions/relate/java.java
 functions/relate/kotlin.kt
@@ -99,6 +108,7 @@ functions/relate/rust.rs
 functions/relate/scala.scala
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
+functions/score/csharp.cs
 functions/score/duckdb.sql
 functions/score/java.java
 functions/score/kotlin.kt
@@ -111,6 +121,7 @@ functions/score/rust.rs
 functions/score/scala.scala
 functions/score/sqlite.sql
 functions/tag/c.c
+functions/tag/csharp.cs
 functions/tag/duckdb.sql
 functions/tag/java.java
 functions/tag/kotlin.kt
