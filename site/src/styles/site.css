@@ -198,8 +198,11 @@ table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: .85rem; }
 
-/* A flag, a key name, an address or a file name in a table stays whole. */
+/* A flag, a key name, an address or a file name in a table stays whole. A
+   path or an address may break after a slash, where src/lib/path.mjs puts a
+   <wbr>. */
 td code { white-space: nowrap; }
+td code.path { white-space: normal; }
 
 /* On a phone or a tablet each table row stacks into a card, and the page
    never scrolls sideways. The first cell leads the card. In a table of three
@@ -374,6 +377,11 @@ ol.talk li { text-wrap: pretty; }
 
 
 p code, li code { white-space: nowrap; }
+/* On a screen narrower than 375 px, a code span in prose too long for the
+   line may wrap. Wider screens keep it whole. */
+@media (max-width: 374px) {
+  p code, li code { white-space: normal; overflow-wrap: anywhere; }
+}
 
 /* --------------------------------------------------------------- settings */
 /* The settings page renders the specification's text, whose code spans can

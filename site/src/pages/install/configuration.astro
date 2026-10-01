@@ -7,6 +7,7 @@ import { CONFIGURATION_SEE } from '../../data/catalog.mjs';
 import { captioned, files } from '../../data/samples.mjs';
 import { parseSettings, inlineHtml, setting } from '../../lib/settings-table.mjs';
 import { backends } from '../../lib/backends-table.mjs';
+import { pathHtml } from '../../lib/path.mjs';
 import table from '../../../../specification/settings.md?raw';
 
 const dir = 'install/configuration';
@@ -18,6 +19,11 @@ const PRUNE = setting('Prune target');
 
 // A backend's key variables come as a list, read in order. Every other
 // name is one variable, or several that ThinkThen reads alike.
+const LOCATIONS = [
+  ['Configuration file', ['$XDG_CONFIG_HOME/thinkthen/config.json', '$HOME/.config/thinkthen/config.json'], '$HOME/Library/Application Support/thinkthen/config.json'],
+  ['Answer cache', ['$XDG_CACHE_HOME/thinkthen', '$HOME/.cache/thinkthen'], '$HOME/Library/Caches/thinkthen'],
+  ['Usage totals', ['$XDG_STATE_HOME/thinkthen', '$HOME/.local/state/thinkthen'], '$HOME/Library/Application Support/thinkthen/usage'],
+];
 const ENV = [
   ['THINKTHEN_API_KEY', 'The key when no backend is named.', card('Key')],
   ['THINKTHEN_BASE_URL', 'The server address. --url outranks it.', card('Address')],
@@ -58,9 +64,9 @@ const ENV = [
   <h2 id="locations">Where the files live</h2>
   <table>
     <tr><th>File</th><th>Linux</th><th>macOS</th></tr>
-    <tr><td>Configuration file</td><td><code>$XDG_CONFIG_HOME/thinkthen/config.json</code>, else <code>$HOME/.config/thinkthen/config.json</code></td><td><code>$HOME/Library/Application Support/thinkthen/config.json</code></td></tr>
-    <tr><td>Answer cache</td><td><code>$XDG_CACHE_HOME/thinkthen</code>, else <code>$HOME/.cache/thinkthen</code></td><td><code>$HOME/Library/Caches/thinkthen</code></td></tr>
-    <tr><td>Usage totals</td><td><code>$XDG_STATE_HOME/thinkthen</code>, else <code>$HOME/.local/state/thinkthen</code></td><td><code>$HOME/Library/Application Support/thinkthen/usage</code></td></tr>
+    {LOCATIONS.map(([file, linux, mac]) => (
+      <tr><td>{file}</td><td>{linux.map((p, i) => <>{i > 0 && ', else '}<code class="path" set:html={pathHtml(p)} /></>)}</td><td><code class="path" set:html={pathHtml(mac)} /></td></tr>
+    ))}
   </table>
   <p>ThinkThen has no home-folder variable of its own. <code>HOME</code> and the three XDG variables decide every location.</p>
   <Terminal run={paths} caption={paths.see} />

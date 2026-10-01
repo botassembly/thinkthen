@@ -28,10 +28,11 @@ const THROTTLE = setting('Throttle');
 const [statusRun] = captioned('reference/status', STATUS_SEE);
 // A default shows as code when it is one value. Words after a semicolon,
 // and a default that is a sentence, stay in the prose font.
-const value = (text) => {
+const escape = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const valueHtml = (text) => {
   const [head, ...tail] = String(text).split('; ');
-  if (/\s/.test(head)) return { rest: String(text) };
-  return { code: head, rest: tail.length > 0 ? `; ${tail.join('; ')}` : '' };
+  if (/\s/.test(head)) return escape(text);
+  return `<code>${escape(head)}</code>${tail.map((t) => `; ${escape(t)}`).join('')}`;
 };
 
 const GLOBAL = [
@@ -121,7 +122,7 @@ const COUNTS = [
   <table>
     <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
     {COUNTS.map(([fn, args, rule, dflt]) => (
-      <tr><td><code>{fn}</code></td><td>{args}</td><td>{rule}</td><td>{(({ code, rest }) => <>{code && <code>{code}</code>}{rest}</>)(value(dflt))}</td></tr>
+      <tr><td><code>{fn}</code></td><td>{args}</td><td>{rule}</td><td set:html={valueHtml(dflt)} /></tr>
     ))}
   </table>
   <p>With p as the probability of yes:</p>
@@ -139,7 +140,7 @@ const COUNTS = [
   <table>
     <tr><th>Flag</th><th>Takes</th><th>What it does</th><th>Default</th></tr>
     {GLOBAL.map(([flag, takes, does, dflt]) => (
-      <tr><td><code>{flag}</code></td><td>{takes}</td><td>{does}</td><td>{(({ code, rest }) => <>{code && <code>{code}</code>}{rest}</>)(value(dflt))}</td></tr>
+      <tr><td><code>{flag}</code></td><td>{takes}</td><td>{does}</td><td set:html={valueHtml(dflt)} /></tr>
     ))}
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>

@@ -4,7 +4,7 @@
 // column heading. This step copies the heading into a data-label attribute on
 // every such cell of every built page, and site.css prints it. It runs after
 // astro build. A table whose first row is not all headings, or that has two
-// columns, gets no labels.
+// columns, gets no labels, and neither does a cell that spans columns.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -31,8 +31,9 @@ function label(table) {
     let col = 0;
     const labelled = row.replace(/<td\b([^>]*)>/g, (tag, rest) => {
       const at = col;
-      col += Number((/colspan="(\d+)"/.exec(rest) || [0, 1])[1]);
-      if (at === 0 || !heads[at] || /data-label=/.test(rest)) return tag;
+      const span = Number((/colspan="(\d+)"/.exec(rest) || [0, 1])[1]);
+      col += span;
+      if (at === 0 || span > 1 || !heads[at] || /data-label=/.test(rest)) return tag;
       return `<td${rest} data-label="${attr(heads[at])}">`;
     });
     out = out.replace(row, () => labelled);

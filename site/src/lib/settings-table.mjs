@@ -91,7 +91,10 @@ function cellsOf(line) {
 // 0128", "Ticket 0139, ADR 0048, records ...".
 const TICKETS = String.raw`tickets? \d+(?:(?:,| and|, and) \d+)*`;
 const CITES_TICKET = new RegExp(String.raw`\b${TICKETS}\b`, 'i');
-const CITE_SENTENCE = /^(ADR \d+\.|The batching design\b|Ian's ruling)/i;
+const CITE_SENTENCE = /^(ADR \d+(?: item \d+)?\.|The batching design\b|Ian's ruling)/i;
+// A sentence that is only a link to an ADR or a specification file, with or
+// without an ADR after it, cites the record and goes too.
+const CITE_LINK = /^\[(?:ADR \d+|[^\]]+\.md)\]\([^)]*\)(?:,\s*ADR \d+)?\.$/;
 const CITE_CLAUSE = /,\s*(by|as) ADR \d+( states)?(?=[.,])/g;
 // A setting's meaning drops a record cited in brackets, such as "(ticket 0143)",
 // or after a final comma, such as ", ticket 0208" or ", ADR 0087".
@@ -99,8 +102,8 @@ const CITE_BRACKET = new RegExp(String.raw`\s*\((?:ADR \d+(?:(?:,| and|, and) \d
 const CITE_TAIL = new RegExp(String.raw`,\s*(?:ADR \d+|${TICKETS})$`, 'i');
 
 function uncited(text) {
-  return text.split(/(?<=\.)\s+(?=[A-Z`'])/)
-    .filter((s) => !CITE_SENTENCE.test(s.trim()) && !CITES_TICKET.test(s))
+  return text.split(/(?<=\.)\s+(?=[A-Z`'[])/)
+    .filter((s) => !CITE_SENTENCE.test(s.trim()) && !CITE_LINK.test(s.trim()) && !CITES_TICKET.test(s))
     .join(' ')
     .replace(CITE_CLAUSE, '')
     .replace(/\s+(?:\[ADR \d+\]\([^)]+\)|ADR \d+(?: item \d+)?)(?=\.|$)/g, '')
