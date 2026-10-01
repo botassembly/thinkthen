@@ -2,22 +2,27 @@
 // Goal: let a reader find the job they have, or the shell form they want
 // to learn.
 import Base from '../../layouts/Base.astro';
-import { HOWTOS, TECHNIQUES, RECIPES } from '../../data/catalog.mjs';
+import { HOWTO_GROUPS, HOWTOS, TECHNIQUES, RECIPES } from '../../data/catalog.mjs';
+
+const reader = (h) => h.reader.replace(/^for /, '').replace(/^./, (c) => c.toUpperCase());
+const sections = HOWTO_GROUPS
+  .map((name) => ({ name, pages: HOWTOS.filter((h) => h.group === name) }))
+  .filter((s) => s.pages.length > 0);
 ---
-<Base title="How-tos" description="Business jobs done with ThinkThen, each shown with a real run.">
+<Base title="How-tos" description="Jobs done with ThinkThen, each shown with a real run.">
   <h1>How-tos</h1>
   <p class="lede">Pick your job. Each page shows the commands and what came out.</p>
 
-  <table>
-    <tr><th>How-to</th><th>Who it is for</th><th>Functions</th></tr>
-    {HOWTOS.map((h) => (
-      <tr>
-        <td><a href={`/how-tos/${h.slug}/`}>{h.title}</a></td>
-        <td>{h.reader.replace(/^for /, "")}</td>
-        <td>{h.functions.map((f, i) => (<Fragment>{i > 0 ? ', ' : ''}<a href={`/functions/${f}/`}><code>{f}</code></a></Fragment>))}</td>
-      </tr>
-    ))}
-  </table>
+  {sections.map((s) => (
+    <Fragment>
+      <h2>{s.name}</h2>
+      <div class="grid">
+        {s.pages.map((h) => (
+          <a class="tile" href={`/how-tos/${h.slug}/`}><b>{h.title}</b><span>{reader(h)} · {h.functions.join(', ')}</span></a>
+        ))}
+      </div>
+    </Fragment>
+  ))}
 
   <h2><a href="/how-tos/bash/">Bash techniques</a></h2>
   <p>Each Bash page teaches one shell form. The recipes do small jobs.</p>
