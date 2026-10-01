@@ -43,7 +43,6 @@ impl ReadFailure {
     pub(crate) fn category(&self) -> &'static str {
         match self.source.kind() {
             io::ErrorKind::InvalidData => "invalid contents",
-            io::ErrorKind::TimedOut => "a lock another process holds",
             _ => "unsafe or unreadable state",
         }
     }

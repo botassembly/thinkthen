@@ -81,8 +81,8 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
         let environment = [
             ("THINKTHEN_API_KEY", "sk-test-value"),
             (
-                "XDG_CACHE_HOME",
-                usage_home.to_str().expect("usage cache home"),
+                "XDG_STATE_HOME",
+                usage_home.to_str().expect("usage state home"),
             ),
         ];
         let gathering = Gathering::new(jobs.min(6));

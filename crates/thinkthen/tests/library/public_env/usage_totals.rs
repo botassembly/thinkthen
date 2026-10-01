@@ -155,31 +155,49 @@ fn an_engine_built_by_hand_writes_no_usage() {
     assert!(!state.join("thinkthen").exists());
 }
 
-/// Main answered over a shared usage folder and lost the count without a
-/// word. The engine now refuses its first send, and again on a second call,
-/// with the sentence that names no path (ticket 0360).
+/// Main answered over a shared usage folder or a malformed month and lost
+/// the count without a word. The engine now refuses its first send, and again
+/// on a second call, with a sentence that names no path (ticket 0360).
 #[cfg(unix)]
 #[test]
-fn a_shared_usage_folder_refuses_every_send_and_names_no_path() {
+fn an_unreadable_usage_folder_refuses_every_send_and_names_no_path() {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let listener = listener();
-    let home = folder("usage-shared-folder");
-    let usage = home.join("state/thinkthen");
-    fs::create_dir_all(&usage).expect("usage folder");
-    fs::set_permissions(&usage, fs::Permissions::from_mode(0o755)).expect("shared mode");
-    let refused = in_child(
-        "usage-refused",
-        &[
-            (
-                "XDG_STATE_HOME",
-                home.join("state").to_str().expect("state"),
-            ),
-            ("THINKTHEN_BASE_URL", listener.base()),
-        ],
-    );
-    let sentence = "Local: cannot read the usage totals: the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.";
-    assert_eq!(refused, format!("{sentence}\n{sentence}"));
-    assert_eq!(listener.count(), 0);
-    assert_eq!(entries(&usage), 0);
+    let shared = "the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.";
+    let malformed = "2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.";
+    for (label, mode, month, problem) in [
+        ("usage-shared-folder", 0o755, None, shared),
+        ("usage-malformed-month", 0o700, Some(&b"{"[..]), malformed),
+    ] {
+        let listener = listener();
+        let home = folder(label);
+        let usage = home.join("state/thinkthen");
+        fs::create_dir_all(&usage).expect("usage folder");
+        fs::set_permissions(&usage, fs::Permissions::from_mode(mode)).expect("folder mode");
+        if let Some(bytes) = month {
+            for (name, contents) in [(".lock", &b""[..]), ("2026-08.json", bytes)] {
+                fs::write(usage.join(name), contents).expect("usage file");
+                fs::set_permissions(usage.join(name), fs::Permissions::from_mode(0o600))
+                    .expect("private file");
+            }
+        }
+        let before = entries(&usage);
+        let refused = in_child(
+            "usage-refused",
+            &[
+                (
+                    "XDG_STATE_HOME",
+                    home.join("state").to_str().expect("state"),
+                ),
+                ("THINKTHEN_BASE_URL", listener.base()),
+            ],
+        );
+        let sentence = format!("Local: cannot read the usage totals: {problem}");
+        assert_eq!(refused, format!("{sentence}\n{sentence}"), "{label}");
+        assert_eq!(listener.count(), 0, "{label}");
+        assert_eq!(entries(&usage), before, "{label}");
+        if let Some(bytes) = month {
+            assert_eq!(fs::read(usage.join("2026-08.json")).expect("month"), bytes);
+        }
+    }
 }

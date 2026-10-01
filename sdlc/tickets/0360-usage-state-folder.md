@@ -79,13 +79,13 @@ Status: in progress. Lane claude-2. Branch `ticket/0360-usage-state-folder`. Pla
   - A write that fails after a good check still stops counting quietly on the libraries and SQL extensions. Examples: a full disk, permissions changed mid-run, or another program writing a bad file. A cache answer that comes before any send is also not checked. Filed as a debt issue with `Pay when:` a binding gains a warning channel or a monthly limit lands.
   - `site/` pages and example outputs that show `thinkthen-usage` belong to marketing. They are noted in the debt issue for marketing to update.
   - Windows has no build. If one is added, the equivalent is `%LOCALAPPDATA%\thinkthen\usage`.
-  - No lint checks that tests setting `XDG_CACHE_HOME` also set `XDG_STATE_HOME`. The gates run under `usage_home` with its decoy guard, which catches a leak into a shared folder.
+  - No lint checks that tests setting `XDG_CACHE_HOME` also set `XDG_STATE_HOME`. The gates run under `usage_home` with its decoy guard. The guard catches a check that skips its own scratch folder. It cannot see a test child that clears its environment and keeps the real `HOME`. The code review found two such children, and both now keep `XDG_STATE_HOME`.
 
 ## Decisions
 
 Ian can overturn each.
 
-1. **State, not cache.** The XDG Base Directory specification defines `XDG_STATE_HOME` for data that should persist between runs but is not portable or important enough for the data home. A spend count fits that definition, and a cache is safe to delete.
+1. **The count is state.** The XDG Base Directory specification defines `XDG_STATE_HOME` for data that should persist between runs but is not portable or important enough for the data home. A spend count fits that definition, and a cache is safe to delete.
    - macOS has no state folder. Its `Library/Caches` may be purged by the system. `Library/Application Support` holds files an application makes that must persist.
    - On macOS the usage folder sits one level down, in `thinkthen/usage`. `Application Support/thinkthen` also holds the read-only configuration file, often in a folder the person made at mode 0755. The usage reader needs a private 0700 folder of its own. thinkthen creates `Application Support/thinkthen` only when it is absent, as the parent of `usage`, and never changes its mode or the configuration.
    - On Linux the state home holds no configuration, so `$XDG_STATE_HOME/thinkthen` is the usage folder itself, as Ian asked.
@@ -100,3 +100,9 @@ Ian can overturn each.
 
 ## What the build taught us
 
+- Two premises held before the refusal was chosen. No limit reads the durable totals: the request and estimated-token caps live in memory for one process. The old folder sat under the cache home, so removing the cache home reset the count. A test now removes the cache home and reads the count back.
+- An older build already wrote `retries` into the month file, which is how QA's two files disagreed. One file per month leaves nothing to reconcile. The sidecar's tests covered the two-file read, migration and the contamination refusal. That code is gone. `one_month_file_holds_every_count_and_an_old_retries_file_is_ignored`, `an_invalid_older_month_refuses_the_update_before_any_write` and the status QA case cover what remains.
+- `sdlc/scripts/allow-list` strips every variable a rung does not name. Without `XDG_STATE_HOME` in it, every rung would have dropped the scratch state folder and counted into the real one.
+- The decoy guard watches only the outer scratch folder. The Polars children and the public-controls children clear their environment and keep the real `HOME`, so on Linux they would have written `~/.local/state/thinkthen`. Both keep lists now carry `XDG_STATE_HOME`. The Ruby children now get a scratch state folder, and the settings test proves one month file lands there.
+- rustfmt's line breaks added 90 lines after the first ratchet. With the tests the code review asked for, 0360 adds 98 lines to the root total. The sidecar code it removed offsets part of the new regressions.
+- The full run hit a race already on main: five relate menu tests write one rule file. Filed as `../issues/2026-09-30-relate-menu-tests-share-one-rule-file.md`.

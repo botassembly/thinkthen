@@ -298,8 +298,7 @@ pub(crate) fn cache_path() -> Option<PathBuf> {
     )
 }
 
-/// The usage totals are state, not cache, so clearing the cache keeps them
-/// (ticket 0360).
+/// The usage totals are state. Clearing the cache keeps them (ticket 0360).
 pub(crate) fn usage_path() -> Option<PathBuf> {
     resolve_usage(
         current_platform(),

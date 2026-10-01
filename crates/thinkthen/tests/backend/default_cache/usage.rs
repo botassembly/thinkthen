@@ -279,6 +279,30 @@ fn a_malformed_month_refuses_the_run_and_keeps_its_bytes() {
     );
 }
 
+#[cfg(unix)]
+#[test]
+fn a_month_other_users_can_read_refuses_the_run_and_names_the_unsafe_fix() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let root = folder("usage-shared-month");
+    let usage_folder = root.join("thinkthen");
+    fs::create_dir_all(&usage_folder).expect("usage folder");
+    fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o700)).expect("private folder");
+    let lock = usage_folder.join(".lock");
+    let month = usage_folder.join("2026-08.json");
+    fs::write(&lock, b"").expect("stable lock");
+    fs::write(&month, b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n").expect("month");
+    fs::set_permissions(&lock, fs::Permissions::from_mode(0o600)).expect("private lock");
+    fs::set_permissions(&month, fs::Permissions::from_mode(0o644)).expect("shared month");
+    let (output, requests) = refused_before_any_send(&root, "secret-shared-month-key");
+    assert_eq!((output.status.code(), requests), (Some(5), 0));
+    assert_eq!(output.stdout, b"");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: cannot read the usage totals: 2026-08.json has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it out of the usage folder that thinkthen status names.\nthinkthen: stopped at record 1; 0 records finished\n"
+    );
+}
+
 /// Another process holding the usage lock stops no request: all 16 jobs reach
 /// the listener while the lock is held, and the totals land once it lets go.
 #[cfg(unix)]
@@ -353,8 +377,8 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     assert_eq!(usage(&status, "cache_answers"), Some(0));
 }
 
-/// The totals are state, not cache: removing the cache home keeps them, and
-/// one month file holds all five counts with no `retries-` file (ticket 0360).
+/// The totals are state. Removing the cache home keeps them. One month file
+/// holds all five counts, and no `retries-` file appears (ticket 0360).
 #[test]
 fn removing_the_cache_home_keeps_the_count_in_one_month_file() {
     let root = folder("usage-survives-the-cache");

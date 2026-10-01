@@ -327,6 +327,33 @@ fn a_malformed_usage_month_reports_unavailable_counts_and_the_fix() {
     assert!(!usage.join(".update.tmp").exists());
 }
 
+/// Another process holding the usage lock makes status wait at most one
+/// second, then report the busy sentence and exit 0 (ticket 0360).
+#[cfg(unix)]
+#[test]
+fn a_held_usage_lock_reports_busy_within_a_second_and_exits_zero() {
+    let month = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
+    let (home, usage) = planted("busy", &[(".lock", b""), ("2026-09.json", month)]);
+    let held = fs::File::open(usage.join(".lock")).expect("lock file");
+    held.lock().expect("hold the lock");
+    let started = std::time::Instant::now();
+    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
+    let elapsed = started.elapsed();
+    drop(held);
+    assert_eq!(output.status.code(), Some(0));
+    assert!(elapsed < std::time::Duration::from_secs(3), "{elapsed:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        format!(
+            "thinkthen: cannot read the usage totals: {} is locked by another process. Try again when it finishes.\n",
+            usage.join(".lock").display()
+        )
+    );
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
+    assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
+    assert_eq!(value["usage"]["total"], serde_json::Value::Null);
+}
+
 /// QA's case: an older build wrote retries into the month file and a newer
 /// one wrote a `retries-` file with another value. Main refused to choose
 /// (exit 5, "retry totals differ"). The month file alone holds the counts.

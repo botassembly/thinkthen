@@ -25,6 +25,9 @@ class TestEngineSettings < Minitest::Test
       assert_equal 1, backend.count
       refute_empty entries(File.join(root, "cache")), "the answer is not in THINKTHEN_CACHE"
       assert_empty entries(File.join(root, "home")) + entries(File.join(root, "xdg-cache"))
+      counts = entries(File.join(root, "xdg-state"))
+      assert_equal 1, counts.size, counts.inspect
+      assert_match %r{\Athinkthen/\d{4}-\d{2}\.json\z}, counts.first
     end
   end
 
