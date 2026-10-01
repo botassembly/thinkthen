@@ -43,6 +43,8 @@ fn line(output: &std::process::Output) -> Value {
     facts
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn the_facts_line_counts_filtered_records_and_matches_status() {
     let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("facts-filter-home");
@@ -462,6 +464,8 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
     assert_eq!(line(&refused)["requests_sent"], 1);
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn dry_run_and_early_setup_failures_report_zero_work() {
     let dry =

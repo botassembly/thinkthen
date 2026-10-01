@@ -17,6 +17,14 @@ pub(crate) use conformance_backend::Observed;
 
 pub(crate) use crate::wait::finish;
 
+/// A recording folder no command can make. Unix cannot make a folder under a
+/// device file, and Windows refuses `|` in a name.
+pub(crate) const UNMAKEABLE: &str = if cfg!(windows) {
+    "recording|folder"
+} else {
+    "/dev/null/recording"
+};
+
 /// Run the compiled binary with no environment but what the case names.
 ///
 /// Every case on this binary drives the tool as a process, so the spawning,

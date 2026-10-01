@@ -122,6 +122,8 @@ mod streaming;
 mod support;
 mod table;
 mod tag;
+// It gives the binary a pseudo-terminal through the Unix `script` tool.
+#[cfg(unix)]
 mod terminal;
 mod threshold_args;
 mod timeout;
@@ -139,6 +141,8 @@ mod audit_write;
 mod cache_convert;
 mod choose_and_score_edge;
 mod decide_edge;
+// The demo runner is a shell script that needs `sh`, `mustmatch` and a `:` PATH.
+#[cfg(unix)]
 mod demo_runner;
 mod diff;
 mod dry_run_terminal;

@@ -248,6 +248,8 @@ fn every_question_of_every_group_is_preflighted_before_the_first_send() {
     );
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn mixed_cache_and_retry_accounting_keeps_logical_order() {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("split-mixed-cache");

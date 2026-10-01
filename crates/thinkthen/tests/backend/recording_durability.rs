@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::thread;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, UNMAKEABLE, spawn};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -67,7 +67,7 @@ fn every_command_refuses_recording_storage_before_key_lookup_or_a_request() {
             "--model",
             "local-1",
             "--record",
-            "/dev/null/recording",
+            UNMAKEABLE,
         ];
         let output = spawn(&[command, &options].concat(), &[], input).expect("command runs");
         assert_eq!(output.status.code(), Some(5), "{command:?}");

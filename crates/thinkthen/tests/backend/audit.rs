@@ -64,11 +64,14 @@ fn every_fixture_keeps_its_checksum() {
                     .iter()
                     .map(|b| format!("{b:02x}"))
                     .collect();
+                // The list names each file with `/`, which Windows writes as `\`.
                 let name = path
                     .strip_prefix(fixtures())
                     .expect("inside")
-                    .to_string_lossy()
-                    .into_owned();
+                    .components()
+                    .map(|part| part.as_os_str().to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join("/");
                 found.push((name, digest));
             }
         }

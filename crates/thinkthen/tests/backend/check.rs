@@ -312,6 +312,8 @@ fn models(output: &Output) -> (Vec<String>, Vec<String>) {
     (header, named.collect())
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_names() {
     let other = ["other-1"; 4].map(str::to_owned).to_vec();

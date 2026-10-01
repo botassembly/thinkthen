@@ -349,6 +349,8 @@ fn probe() {
 }
 
 /// The runner, started under a planted key and address, hides both from its child.
+// Its probe needs the short spelling `127.1`, which Windows does not resolve.
+#[cfg(unix)]
 #[test]
 fn the_runner_hides_a_key_and_an_address_from_its_children() {
     let (url, listener) = quiet();

@@ -34,6 +34,8 @@ fn reply(body: &[u8]) -> Canned {
     Canned::ok(&json!({"model": "jev-1.13.0", "answers": answers}).to_string()).after(20)
 }
 
+// Windows does not tell the command that its output reader closed (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
     let input = [
@@ -78,6 +80,8 @@ fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
     }
 }
 
+// Windows does not tell the command that its output reader closed (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_closed_reader_ends_filter_while_its_input_remains_open() {
     let listener = Listener::answering(reply).expect("a loopback listener");

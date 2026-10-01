@@ -204,6 +204,8 @@ fn a_retried_status_is_still_sent_again() {
     assert!(printed.contains(r#""requests_sent":2,"#), "{printed}");
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_reset_adds_one_request_and_no_cache_answer_to_status() {
     let root = folder("resend-status");

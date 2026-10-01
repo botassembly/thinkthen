@@ -273,6 +273,11 @@ fn a_context_refuses_invalid_file_and_question_shapes_before_a_send() {
     fs::write(&valid, b"Shared evidence\n").expect("valid context");
     fs::write(&empty, b" \n").expect("empty context");
     fs::write(&invalid, b"\xff").expect("invalid context");
+    // The host words its own error; Windows says "The system cannot find the file specified."
+    let unopened = format!(
+        "thinkthen: --context could not be opened: {}\n",
+        std::io::Error::from_raw_os_error(2)
+    );
     fs::write(&structured, r#"{"decide":{"rule":"names a place"}}"#).expect("structured question");
     let question = format!("@{structured}");
     let cases = [
@@ -290,7 +295,7 @@ fn a_context_refuses_invalid_file_and_question_shapes_before_a_send() {
             missing.as_str(),
             true,
             5,
-            "thinkthen: --context could not be opened: No such file or directory (os error 2)\n",
+            unopened.as_str(),
         ),
         (
             "utf8",

@@ -1,7 +1,7 @@
 //! The backend and recording routes every command is driven over.
 
 use super::{DAMAGED, EVIDENCE, HOSTILE};
-use crate::harness::Canned;
+use crate::harness::{Canned, UNMAKEABLE};
 
 /// A good reply giving `answer` to each question the verb asked. `recognize`
 /// asks one question for each of the evidence's five pieces.
@@ -187,7 +187,7 @@ pub(crate) const PATHS: [Route; 17] = [
     // Recording preflight refuses an unusable folder before a key or request.
     route(
         "a recording folder that cannot be made",
-        &["--record", "/dev/null/x"],
+        &["--record", UNMAKEABLE],
         Answers::Nothing,
         0,
         5,

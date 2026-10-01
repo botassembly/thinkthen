@@ -73,6 +73,8 @@ fn a_line_break_in_the_key_fails_locally_without_a_send() {
     assert!(!stderr.contains("second"));
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn status_counts_retries_as_a_subset_of_actual_sends() {
     let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("backoff-status");

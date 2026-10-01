@@ -374,28 +374,28 @@ fn verify_private_file(path: &Path, file: &File) -> io::Result<()> {
 }
 
 fn open_verified(path: &Path, directory: bool, mode: u32) -> io::Result<File> {
-    let file = open_read(path, directory)?;
+    let file = open_read(path)?;
     verify_identity(path, &file, directory)?;
     verify_mode(&file, mode)?;
     Ok(file)
 }
 
+/// Open a file or a folder for reading.
 #[cfg(not(windows))]
-fn open_read(path: &Path, _directory: bool) -> io::Result<File> {
+pub(crate) fn open_read(path: &Path) -> io::Result<File> {
     File::open(path)
 }
 
-/// Windows opens a folder only with `FILE_FLAG_BACKUP_SEMANTICS` (ticket 0373).
+/// Windows opens a folder only with `FILE_FLAG_BACKUP_SEMANTICS`, and the flag
+/// opens a file as before (ticket 0373).
 #[cfg(windows)]
-fn open_read(path: &Path, directory: bool) -> io::Result<File> {
+pub(crate) fn open_read(path: &Path) -> io::Result<File> {
     use std::os::windows::fs::OpenOptionsExt as _;
     const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
-    let mut options = OpenOptions::new();
-    options.read(true);
-    if directory {
-        options.custom_flags(FILE_FLAG_BACKUP_SEMANTICS);
-    }
-    options.open(path)
+    OpenOptions::new()
+        .read(true)
+        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+        .open(path)
 }
 
 #[cfg(unix)]

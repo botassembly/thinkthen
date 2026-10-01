@@ -67,15 +67,18 @@ fn each_loader_reads_one_mib_and_refuses_more_invalid_utf8_or_a_missing_file() {
             &format!("{role}-invalid"),
             b"{\"decide\":\"\xff\"}",
         );
-        let cases: [(&Path, String); 4] = [
+        let mut cases: Vec<(&Path, String)> = vec![
             (&over, format!("the {role} is too large")),
-            (Path::new("/dev/zero"), format!("the {role} is too large")),
             (&invalid, format!("the {role} could not be read")),
             (
                 &folder.join("absent.json"),
                 format!("the {role} could not be read"),
             ),
         ];
+        // Windows has no endless file like `/dev/zero`.
+        if cfg!(unix) {
+            cases.push((Path::new("/dev/zero"), format!("the {role} is too large")));
+        }
         for (path, sentence) in cases {
             let error = load(path).expect_err("a refusal");
             assert_eq!(
@@ -98,10 +101,13 @@ fn the_reader_names_each_reason() {
         thinkthen::read_question_file(&text).ok().as_deref(),
         Some("hello")
     );
-    assert!(matches!(
-        thinkthen::read_question_file("/dev/zero"),
-        Err(QuestionFileError::TooLarge)
-    ));
+    // Windows has no endless file like `/dev/zero`.
+    if cfg!(unix) {
+        assert!(matches!(
+            thinkthen::read_question_file("/dev/zero"),
+            Err(QuestionFileError::TooLarge)
+        ));
+    }
     assert!(matches!(
         thinkthen::read_question_file(&invalid),
         Err(QuestionFileError::NotUtf8)

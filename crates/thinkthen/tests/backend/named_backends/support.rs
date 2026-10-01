@@ -148,6 +148,12 @@ impl Home {
                 "10000".to_owned(),
             ),
         ];
+        // Windows reads the configuration under APPDATA and the cache under
+        // LOCALAPPDATA, each in a `thinkthen` folder as on Linux.
+        if cfg!(windows) {
+            environment.push(("APPDATA".to_owned(), self.path("config")));
+            environment.push(("LOCALAPPDATA".to_owned(), self.path("cache")));
+        }
         environment.extend(
             MARKERS
                 .iter()

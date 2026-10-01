@@ -394,6 +394,8 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
 }
 
 /// Port zero can never listen, so the refusal is deterministic.
+// Windows reports a refused loopback port as unreachable (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
     let key = Key::of("sk-test-value");

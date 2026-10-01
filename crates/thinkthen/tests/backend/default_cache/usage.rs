@@ -1,5 +1,7 @@
 use super::*;
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_live_reply_counts_valid_usage_when_its_only_answer_is_refused() {
     let root = folder("refused-answer-usage");
@@ -23,6 +25,8 @@ fn a_live_reply_counts_valid_usage_when_its_only_answer_is_refused() {
     assert_eq!(value["usage"]["this_month"]["output_tokens"], 3);
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn retries_terminal_failures_and_explicit_replay_have_the_ruled_counts() {
     let root = folder("retry-failure-replay-usage");
@@ -91,6 +95,8 @@ fn retries_terminal_failures_and_explicit_replay_have_the_ruled_counts() {
     assert_eq!(usage(&status, "cache_answers"), Some(0));
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn two_processes_update_one_month_without_losing_a_cache_answer() {
     let root = folder("two-process-usage");
@@ -141,6 +147,8 @@ fn two_processes_update_one_month_without_losing_a_cache_answer() {
     assert_eq!(listener.requests().len(), 0);
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn packed_annotate_counts_one_exchange_and_one_usage_object() {
     let root = folder("packed-annotate-usage");
@@ -409,6 +417,8 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
 
 /// The totals are state. Removing the cache home keeps them. One month file
 /// holds all five counts, and no `retries-` file appears (ticket 0360).
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn removing_the_cache_home_keeps_the_count_in_one_month_file() {
     let root = folder("usage-survives-the-cache");

@@ -40,6 +40,8 @@ fn families(set: &Path) -> [Vec<String>; 8] {
     ]
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
     let root = folder("configuration");
@@ -65,6 +67,8 @@ fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
     }
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
     let root = folder("dry-run-disabled-refresh");
@@ -100,6 +104,8 @@ fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
     assert!(!root.join("cache").exists());
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn command_and_environment_precedence_crosses_all_eight_command_families() {
     let root = folder("configuration-precedence");

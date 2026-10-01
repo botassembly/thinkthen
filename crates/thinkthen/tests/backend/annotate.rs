@@ -510,6 +510,9 @@ fn a_question_set_named_with_at_is_the_same_file() {
     assert_eq!(absent.status.code(), Some(5));
     assert_eq!(
         String::from_utf8_lossy(&absent.stderr),
-        "thinkthen: the question set could not be opened: No such file or directory (os error 2)\n"
+        format!(
+            "thinkthen: the question set could not be opened: {}\n",
+            std::io::Error::from_raw_os_error(2)
+        )
     );
 }
