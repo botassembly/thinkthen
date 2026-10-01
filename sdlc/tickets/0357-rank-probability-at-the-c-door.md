@@ -41,3 +41,10 @@ fn Ranked::row(&self) -> RankedRow<'_>
 impl Serialize for RankedRow
 struct RankedRow<'a>
 ```
+
+## What the build taught us
+
+- The C door dropped the `rank` place and probability; no port did. The C-door port folders read the door value as host JSON, so no binding source file changed. Their own matrix tests pinned the old strings and needed updating, and the shared type corpus now pins the rows for all of them.
+- `Engine::rank_with` already held each row's input place: rows arrive in input order before the sort. The fix kept the place on `Ranked` instead of wrapping records, as Python and Ruby still do.
+- A port's rank check that grows by a line moves that port's line ceiling. Seven ceilings moved, and the ticket first named four; the code review measured all of them.
+- Two port checks shared one branch between `filter` and `rank` (Zig and Objective-C), and PHP shared one case line. Each split in two so the `filter` check stays as it was.
