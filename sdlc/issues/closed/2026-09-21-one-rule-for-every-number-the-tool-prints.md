@@ -6,7 +6,7 @@ Written 2026-09-21 by the product side. Ian's instruction: the words must match 
 
 ## What the model reports
 
-From the vendor's own documents (`notes/jev/docs/primitives.md` and the three pages under it):
+From the vendor's own documents (its primitives page and the three pages under it, kept in Ian's notes):
 
 | Question kind | The model returns |
 | --- | --- |

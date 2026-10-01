@@ -1,6 +1,6 @@
 # Audit writes the tuned bar in place, so a search cannot keep the incumbent
 
-Status: closed by ticket 0256 after fresh Medium code review accepted `d49bb42c`. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in local experiment 296; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: closed by ticket 0256 after fresh Medium code review accepted `d49bb42c`. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in local experiment 296; the full write-up is in Ian's notes.
 
 ## What happens today
 

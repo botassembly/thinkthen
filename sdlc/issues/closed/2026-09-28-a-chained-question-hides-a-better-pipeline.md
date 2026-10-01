@@ -1,6 +1,6 @@
 # A chained question hides a better pipeline
 
-Status: closed after fresh Medium code review accepted `b9f1ccf7`. Filed 2026-09-28 from the GEPA tuning experiments 296 and 297. Evidence lives in local experiment 297, `pipeline.py` and `runs/pipeline/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: closed after fresh Medium code review accepted `b9f1ccf7`. Filed 2026-09-28 from the GEPA tuning experiments 296 and 297. Evidence lives in local experiment 297, `pipeline.py` and `runs/pipeline/`; the full write-up is in Ian's notes.
 
 ## What happens today
 

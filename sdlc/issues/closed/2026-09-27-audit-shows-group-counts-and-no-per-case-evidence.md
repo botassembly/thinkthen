@@ -1,6 +1,6 @@
 # Audit shows group counts and no per-case evidence
 
-Status: closed by ticket0257 after fresh Medium code review accepted `5ce3d270`. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in local experiment 296 and local experiment 297; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: closed by ticket0257 after fresh Medium code review accepted `5ce3d270`. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in local experiment 296 and local experiment 297; the full write-up is in Ian's notes.
 
 ## What happens today
 
@@ -31,7 +31,7 @@ At main `e58aceae`, `cli/audit.rs::grade_all` reads details and a separate key, 
 
 ## Added 2026-09-28: the reading, and what the case row must carry
 
-The follow-up work after `notes/Autorubric cookbook.md` and `~/foss/awesome-evals` showed that a loop needs the shape of each miss, not only right or wrong. Two free measurements from saved answers, in local experiment 297:
+The follow-up work after an Autorubric cookbook in Ian's notes and `~/foss/awesome-evals` showed that a loop needs the shape of each miss, not only right or wrong. Two free measurements from saved answers, in local experiment 297:
 
 - The chained album-year question misses 38 of 60 cases. The model is one year off on fifteen and two years off on eleven, in both directions, and the song's own year equals the album's year on every case. The shape is noisy recall, not a wording problem.
 - On the lead-set questions for John, accuracy reads 0.462 while the true positive rate is 0.368: the question holds nineteen yeses in twenty-six, and the model misses most of them.

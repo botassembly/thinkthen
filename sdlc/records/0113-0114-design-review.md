@@ -29,7 +29,7 @@ The design is sound, and the math matches the prototype. The findings are a priv
    - (b) Land now, with an `sdlc/issues/` entry that blocks the release build until the repo is public.
    - (c) Describe the source generically and drop the repository name.
 
-   Put the choice in a `notes/todos/` item for Ian.
+   Put the choice in a to-do in Ian's notes.
 2. **High. Four planted bugs survive the named tests. A fifth is caught only by accident.** Bugs 5, 9, 10, and 13 turn nothing red. Bug 8 turns only `audit-annotate` red, through its 3-id `kind` group. The 249 key has 272 ids, which is even, and its control file is already in code point order. Name these tests in the ticket now. Each value below comes from the prototype, and each mutation turns it red:
    - Bug 5: calibration error over `[(1.0, no), (0.0, no)]` is 0.5. The bug gives 0.
    - Bug 9: audit `small/decide.jsonl` with its lines reversed and its key parts stripped, at seed 0. The suggested cut is 0.71. The bug gives 0.45.

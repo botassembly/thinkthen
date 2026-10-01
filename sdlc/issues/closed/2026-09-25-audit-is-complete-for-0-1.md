@@ -16,7 +16,7 @@ This overturns two earlier limits:
 
 Its other three needs stay after 0.1: cost per row, repeated samples, and run identity.
 
-The comparison with DSPy 3.4's ReAnchor optimizer is Ian's inbox report `notes/reports/2026-09-25-dspy-jev-support-vs-audit-and-diff.md` in the workspace. ReAnchor tunes only the bars: a yes/no cut, the cuts between `score` levels, and a weight for each `choose` option. It maximizes a measure the user writes. It keeps the current bar unless another bar scores strictly better on up to five splits of the data.
+The comparison with DSPy 3.4's ReAnchor optimizer is a 2026-09-25 report in Ian's notes. ReAnchor tunes only the bars: a yes/no cut, the cuts between `score` levels, and a weight for each `choose` option. It maximizes a measure the user writes. It keeps the current bar unless another bar scores strictly better on up to five splits of the data.
 
 ## The loop Ian expects
 

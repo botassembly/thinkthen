@@ -66,7 +66,7 @@ Launch waits on the queue. The engineering gates are 0088, the release build, pu
 
 1. Ian accepted this plan on 2026-09-24, including main as the spine.
 2. Claim the package names, the Homebrew tap, and thinkthen.dev DNS. The site deploys through GitHub Actions, which Ian paused, so the site needs a deploy path he approves.
-3. Whether arXiv endorsement is held or pending: `notes/todos/2026-09-09-arxiv-endorsement-status.md` and the marketing repository's `products/thinkthen/go-live.md` disagree.
+3. Whether arXiv endorsement is held or pending: a 2026-09-09 to-do in Ian's notes and the marketing repository's `products/thinkthen/go-live.md` disagree.
 
 ## Ian's rulings, afternoon of 2026-09-24
 

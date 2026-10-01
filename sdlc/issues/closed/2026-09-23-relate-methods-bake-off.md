@@ -8,7 +8,7 @@ Use one algorithm for `relate` and for the relation step of `recognize`:
 
 1. The rules and the kinds give the legal pairs, as the design says today.
 2. **Ask one yes/no (`noul`) question per legal pair per relation.** A both-ways relation asks each unordered pair once. A one-way relation asks each direction as its own question, so a pair can hold both directions.
-3. **Put the shared wording in the state, not in each question.** The state carries the numbered records plus one preface line: what the list is, and any note such as "count only a direct cause". Each question carries only the statement, for example `Does this hold: Item 3 and Item 7 describe the same problem?`. The vendor reads the state once per request and bills each question by its own tokens (`notes/jev/docs/models.md`, `primitives.md`).
+3. **Put the shared wording in the state, not in each question.** The state carries the numbered records plus one preface line: what the list is, and any note such as "count only a direct cause". Each question carries only the statement, for example `Does this hold: Item 3 and Item 7 describe the same problem?`. The vendor reads the state once per request and bills each question by its own tokens (the vendor's models and primitives pages, kept in Ian's notes).
 4. An edge is a yes probability at or above `--threshold`, default 0.5. The printed number is that probability.
 5. Split requests under the size budget. This is already required.
 

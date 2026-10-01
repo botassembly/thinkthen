@@ -17,7 +17,7 @@ New follow-ups (non-blocking):
 
 # Contract re-review: 0084, 0095, 0097, ADR 0047
 
-Reviewer: fresh read-only Claude session, 2026-09-24. Read: workspace `CLAUDE.md` (Tickets), repo `CLAUDE.md`, main `860086d2` (one-line plan, port guide, ADR 0017, ADR 0037, `Cargo.toml`, `sdlc/ratchet.json`, `sdlc/scripts/ratchet.mjs`, `sdlc/scripts/policy.py`, `engine/*.rs`), 0084 `de9087ce`, 0095 `a68b9fee`, 0097 `c83d4c3c`, 0093 with ADR 0047 `1e911ae1`, 0085 `950d6cbb` and 0096 as input, `notes/todos/2026-09-24-thinkthen-width-cap-with-two-library-copies.md`, and the two prior reviews. All four branches match origin. Nothing was built or tested. One observation ran `rustfmt` on scratch copies of the two contract blocks.
+Reviewer: fresh read-only Claude session, 2026-09-24. Read: workspace `CLAUDE.md` (Tickets), repo `CLAUDE.md`, main `860086d2` (one-line plan, port guide, ADR 0017, ADR 0037, `Cargo.toml`, `sdlc/ratchet.json`, `sdlc/scripts/ratchet.mjs`, `sdlc/scripts/policy.py`, `engine/*.rs`), 0084 `de9087ce`, 0095 `a68b9fee`, 0097 `c83d4c3c`, 0093 with ADR 0047 `1e911ae1`, 0085 `950d6cbb` and 0096 as input, Ian's to-do on the width cap with two library copies, and the two prior reviews. All four branches match origin. Nothing was built or tested. One observation ran `rustfmt` on scratch copies of the two contract blocks.
 
 - 0084: REJECT. Two small fixes (C1, C2). Both shorten the ticket.
 - 0095: REJECT. One small fix (C3), shared with C4.

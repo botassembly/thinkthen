@@ -10,7 +10,7 @@ Status: Closed on 2026-09-25 as superseded. Absorbed by request splitting (0079)
 
 ## The backend
 
-Every step uses the one System One endpoint with typed questions (`notes/jev/docs/api.md`, `primitives.md`).
+Every step uses the one System One endpoint with typed questions (the vendor's API and primitives pages, kept in Ian's notes).
 
 | Step | Question type | Options |
 | --- | --- | --- |
