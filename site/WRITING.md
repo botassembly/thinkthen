@@ -169,6 +169,7 @@ Every example on the site is a file under `examples/`, and every page reads its 
 | Its exit code | `<name>.exit` beside it, only when the code is not 0 |
 | Files the scripts read | `examples/<page>/files/` |
 | A library sample | `examples/functions/<fn>/<surface>.<ext>` |
+| A bigger library sample, shown under Reference | `examples/functions/<fn>/more/<surface>.<ext>`, with its caption in the function's `moreSee` |
 | A first call | `examples/install/<surface>/first-call.<ext>` |
 | What a database, or a library sample that prints, printed | the sample's name plus `.out` |
 | The caption for a script | `see` in `src/data/catalog.mjs` or `src/data/beatles.mjs`, keyed by script name |
