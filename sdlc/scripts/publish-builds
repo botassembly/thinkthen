@@ -34,6 +34,14 @@ surface_of() {
 	thinkthen-*.whl) printf 'libraries/python\twheel from the Python check, copied\n' ;;
 	thinkthen-*.tgz) printf 'libraries/typescript\tnpm pack from the TypeScript check, copied\n' ;;
 	thinkthen-*.gem) printf 'libraries/ruby\tgem from the Ruby check, copied\n' ;;
+	thinkthen-go-* | thinkthen-cpp-* | thinkthen-swift-* | thinkthen-zig-* | thinkthen-php-* | thinkthen-dart-* | \
+		thinkthen-ada-* | thinkthen-objective-c-* | thinkthen-cobol-*)
+		surface=${1#thinkthen-} surface=${surface%%-[0-9]*}
+		printf 'libraries/%s\tsource package from release-pack, paired with the debug C archive, tarred\n' "$surface" ;;
+	thinkthen-csharp-*) printf 'libraries/csharp\tnupkg from dotnet pack in release-pack, paired with the debug C archive, tarred\n' ;;
+	thinkthen-jvm-*) printf 'libraries/jvm\tJava, Kotlin and Scala jars from build.sh in release-pack, paired with the debug C archive, tarred\n' ;;
+	thinkthen-*.crate) printf 'libraries/rust\tcargo package of the thinkthen crate; its polars feature is libraries/polars; installed without that feature by the R check, not smoked by release-smoke\n' ;;
+	thinkthen_*.tar.gz) printf 'libraries/r\tR source package with its crates vendored, from make-tarball.sh; installed by the R check, not by release-smoke\n' ;;
 	thinkthen-[0-9]*.tar.gz) printf 'command\tthis host'"'"'s debug thinkthen binary from the rung builds, tarred and renamed\n' ;;
 	*) return 1 ;;
 	esac
@@ -67,7 +75,7 @@ done
 jq -s --arg made_by "$made_by" --arg commit "$COMMIT" --arg tag "$TAG" \
 	--arg published "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
 	'{made_by: $made_by, commit: $commit, tag: $tag, published: $published,
-	  built_by: "sdlc/scripts/surfaces, packed by release-pack --reuse and smoked by release-smoke", files: .}' \
+	  built_by: "sdlc/scripts/surfaces, packed by release-pack --reuse and smoked by release-smoke, except where how_built says otherwise", files: .}' \
 	"$lines" >"$stage/manifest.json"
 rm -f -- "$lines"
 chmod 755 "$stage"
