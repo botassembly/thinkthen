@@ -23,11 +23,11 @@ const EFFECTS = [
   <p class="lede"><code>thinkthen diff A B</code> prints only the saved answers that changed between two runs. It sends no request.</p>
 
   <h2 id="two-runs-or-two-cuts">Two runs, or two cuts</h2>
-  <p>With two files, <code>diff</code> pairs each answer in <code>A</code> with the answer in <code>B</code> for the same record and question. With one file and <code>--compare-threshold</code>, it reads the same run under two rules. <code>A</code> reads under <code>--threshold</code>, and <code>B</code> under <code>--compare-threshold</code>. It warns when two paired answers came from different questions.</p>
+  <p>With two files, <code>diff</code> pairs each answer in <code>A</code> with the answer in <code>B</code> for the same record and answer name. With one file and <code>--compare-threshold</code>, it reads the same run under two rules. <code>A</code> reads under <code>--threshold</code>, and <code>B</code> under <code>--compare-threshold</code>. It warns when two paired answers came from different questions.</p>
   <Terminal run={cuts} caption={cuts.see} />
 
   <h2 id="what-it-prints">What it prints</h2>
-  <p>One line for each changed answer, in the order of <code>A</code>. A line holds <code>id</code>, <code>name</code>, <code>from</code>, <code>to</code>, the two probabilities, <code>key</code>, and <code>effect</code>. A summary line comes last. It counts the records, the changes, each move, and the right answers on each side.</p>
+  <p>One line for each changed answer, in the order of <code>A</code>. For <code>decide</code> and <code>choose</code>, a line holds <code>id</code>, <code>name</code>, <code>from</code>, <code>to</code>, the two probabilities, <code>key</code>, and <code>effect</code>. For <code>recognize</code> and <code>relate</code>, diff prints one line for each changed record. That line holds <code>lost</code>, <code>gained</code>, and <code>changed_kind</code>. A summary line comes last. It counts the records, the changes, each move, and the right answers on each side.</p>
   <p>With <code>--key</code>, each change gets an effect:</p>
   <table>
     <tr><th>Effect</th><th>From</th><th>To</th></tr>

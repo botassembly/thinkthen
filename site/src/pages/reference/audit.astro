@@ -26,7 +26,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
     <li><code>threshold</code>: the rule the answers were read under.</li>
     <li><code>right</code> and <code>wrong</code>: the labeled answers that match the key, and those that do not.</li>
     <li><code>unsure</code>: the labeled answers that were not sure under the rule. They count as neither right nor wrong.</li>
-    <li><code>tied</code>: the labeled <code>choose</code> or <code>find</code> answers whose top two options tied exactly. A tie is tied under every rule, so it stays apart from <code>unsure</code>. <code>tied_holding_key</code> counts the ties where the right answer was one of the tied options.</li>
+    <li><code>tied</code>: the labeled <code>choose</code> or <code>find</code> answers where two or more options share the top. A <code>find</code> answer counts as tied only when <code>none</code> is among them. A tie is tied under every rule, so it stays apart from <code>unsure</code>. <code>tied_holding_key</code> counts the ties where the right answer was one of the tied options.</li>
   </ul>
   <p>Further measures follow, then <code>suggested</code>, a bar tuned on one part of the records and checked on the other. The <a href={spec}>audit specification</a> defines every member. <code>--table</code> prints the same results for a person.</p>
   <Terminal run={counts} caption={counts.see} />
