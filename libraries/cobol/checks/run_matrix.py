@@ -77,7 +77,8 @@ def verify_json_shapes():
         and values["tag"] == ["first", "second"]
         and values["score"] == .1
         and values["filter"] == ["filter-one", "filter-two"]
-        and values["rank"] == ["rank-one", "rank-two"]
+        and values["rank"] == [{"index": 0, "record": "rank-one", "probability": .9},
+                               {"index": 1, "record": "rank-two", "probability": .9}]
         and values["find"] == {"index": 0, "unit": "find-one", "probability": .9}
         and values["annotate"] == [{"check": True}]
         and values["recognize"]["entities"][0]["text"] == "Maria Chen"
