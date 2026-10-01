@@ -1,0 +1,38 @@
+# 0375: The release smoke's last three failures pass
+
+Status: in progress. Lane claude-2. Branch `ticket/0375-smoke-last-three`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
+
+Milestone: 0.1
+
+## Outcome
+
+The three smoke failures of rehearsal run 36864015235 are gone:
+
+1. The x86 Linux smoke passes `libraries/csharp` on the C# wrapper archive that the release workflow builds. Both packers of that archive, `release-pack csharp` and `release-managed-pair.py assemble`, write the same four files: the nupkg, `LICENSE`, `README.md` and `THINKTHEN-PACKAGE-INPUTS`. The installed check holds the folder to exactly those four.
+2. On both Macs, `databases/postgresql/check.sh` runs under bash 5 outside POSIX mode. The release smoke's macOS host setup installs Homebrew's bash and fails by name when the `bash` on `PATH` is older than 5. A host whose `bash` is older than 5 gets "not run" with the reason, never a syntax error.
+
+## Evidence
+
+- Starts from: rehearsal run 36864015235 at main `1437ae845`. Every build and package job passed, and the ARM Linux smoke passed entirely. Three smoke jobs failed:
+  - x86 Linux (job 110406696982): every surface passed except `libraries/csharp`. `libraries/csharp/tests/isolated_consumer.py` line 14 failed with `AssertionError: C# wrapper inventory`. The run's `thinkthen-csharp-0.0.1-x86_64-unknown-linux-gnu.tar.gz` holds `Botassembly.ThinkThen.0.0.1.nupkg`, `LICENSE`, `README.md` and `THINKTHEN-PACKAGE-INPUTS`. The check expects only the nupkg and the manifest. The release workflow builds this archive with `release-managed-pair.py assemble`, whose `source_paths` adds `LICENSE` and `README.md` for C#, and whose own verify step requires them. The checkpoint path builds it with `release-pack csharp`, which copies only the nupkg, so the check passes there. Every other wrapper archive carries `LICENSE` and `README.md`, including `release-pack jvm`, and `libraries/jvm/tests/installed.py` expects them. So `release-pack csharp` and the C# check carry the stale shape.
+  - macOS ARM and Intel (jobs 110406697085, 110406697148): `databases/postgresql/check.sh: line 97: / 1000: syntax error: operand expected`. Line 97 is `now_ms() { echo $((${EPOCHREALTIME/./} / 1000)); }`. `release-smoke` runs `sh "$surface/check.sh"`. On macOS `/bin/sh` is bash 3.2 in POSIX mode, so the guard `[ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"` never re-runs the script, and bash 3.2 has no `EPOCHREALTIME`. The steps before the first timed one passed on the runner. No run has reached the steps after it on macOS. On ARM Mac SQLite then passed.
+  - The same check holds two more features that bash 3.2 lacks: `exec {HOLD}>` and `exec {PROXYFD}>` (automatic file descriptors, bash 4.1) at lines 786, 902 and 1244, and the process substitution at line 786, which bash before 5.1 refuses in POSIX mode.
+  - A search of every tracked shell file for bash 4 and 5 features (`EPOCHREALTIME`, `EPOCHSECONDS`, `${var@Q}`, `mapfile`, `readarray`, `declare -A`, `declare -n`, `wait -n`, `${var,,}`, `${var^^}`, `exec {fd}`, `[[ -v`, `|&`, `&>>`, `coproc`, `shopt`) finds them only in `databases/postgresql/check.sh`. The other scripts the macOS smoke runs are `#!/bin/sh` and already pass there. `libraries/r/check.sh` has the same `BASH_VERSION` guard but none of these features, and the release smoke does not run it.
+  - The M5's `/bin/bash` is 3.2.57 and its `PATH` holds no bash 5, so it reproduces the runner's shell.
+  - Intel Mac also failed `libraries/python`: shared case `47-recognize-C18-relations` stopped with `BackendError: the backend closed the connection before a reply`. The ARM Mac and both Linux jobs passed the same case. This ticket records it and does not change it.
+- Keeps: the C# check's exact-inventory assertion and every nupkg check below it; `release-managed-pair.py`'s archive layout and verify step; the C# smoke and portable modes; every PostgreSQL step, its timings and limits; `sh check.sh` as the way the surfaces rung and `release-smoke` call every check; the other macOS host-setup installs and their order.
+- Changes:
+  - `sdlc/scripts/release-pack`, `csharp`: copy `libraries/csharp/LICENSE` and `README.md` beside the nupkg, as `jvm` does.
+  - `libraries/csharp/tests/isolated_consumer.py`: the installed inventory is the four files, and `LICENSE` and `README.md` match the checkout's copies.
+  - `databases/postgresql/check.sh`: the guard re-runs the script with `bash` from `PATH` when the running shell is not bash 5 or runs in POSIX mode. If the re-run shell is still not bash 5, the check prints `not run: databases/postgresql/check.sh needs bash 5 on PATH, found VERSION` and exits 77. One environment marker stops a second re-run, and the script clears it, so its own nested `bash ./check.sh` run still works.
+  - `sdlc/scripts/release-workflow host-setup`, macOS smoke only: install `bash` with `coreutils` and `python@3.14`, then fail with `the PostgreSQL check needs bash 5 on PATH` unless `bash` reports major version 5 or later.
+  - The `workflows` self-test's fake host learns `bash`, and its macOS smoke row expects the bash check.
+- Proof:
+  - On run 36864015235's x86 Linux files: main's C# check fails with `C# wrapper inventory`; the branch passes `release-smoke` for the C# and JVM pair. A local `release-pack csharp` archive lists the same four files as the run's archive. A planted extra file in the unpacked folder still fails the inventory.
+  - On this host: `sh check.sh` (dash) and `bash --posix check.sh` both reach the steps under bash 5. The full PostgreSQL installed-file check passes on run 36864015235's x86 PostgreSQL archive.
+  - On the M5, in a scratch folder removed by exact path afterwards: main's guard under `/bin/sh` runs `now_ms` in bash 3.2 and prints the runner's syntax error. The branch's guard under `/bin/sh` with only bash 3.2 on `PATH` prints the "not run" line and exits 77. With a bash 5 built in the scratch folder first on `PATH`, it re-runs under bash 5 and the timed and file-descriptor steps run. As far as the M5's zerobrew PostgreSQL 16.14 allows, the installed-file check runs on run 36864015235's macOS ARM PostgreSQL archive.
+  - `workflows --self-test`, `sdlc/scripts/lint` in full, `release-archive-self-test.py`, `release-managed-pair-self-test.py`, `release-registry-self-test.py`, `release-language-tools-self-test.py`, `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` and `sdlc/scripts/tickets`.
+  - No GitHub Actions run is dispatched. Ian's next rehearsal proves the runner side.
+- Defers: the Intel Mac Python case 47 failure, one transport close that the other three jobs did not see. If the next rehearsal repeats it, it gets its own ticket. The PostgreSQL check's macOS steps after the first timed step run first on the next rehearsal; the M5 lacks Homebrew's 16.15 server.
+
+## What the build taught us
