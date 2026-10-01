@@ -247,7 +247,8 @@ impl Engine {
             .map_err(|_| Error::Defect("a model could not be written as JSON"))?;
         let limits = self.pack_limits(packing);
         let window = (state.width + 1).saturating_mul(limits.inputs);
-        let sender = send::Sender::new(self, &state, model.clone(), packing);
+        let probe = store.as_ref().and_then(Store::probe);
+        let sender = send::Sender::new(self, &state, model.clone(), packing, probe);
         let (events, received) = fork_safe::channel();
         let mut host = start(Port(events.clone()));
         let counts = run::Counts {

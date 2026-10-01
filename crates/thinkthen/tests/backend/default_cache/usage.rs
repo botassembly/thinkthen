@@ -279,6 +279,36 @@ fn a_malformed_month_refuses_the_run_and_keeps_its_bytes() {
     );
 }
 
+/// Release QA put `garbage` or zero bytes in this month's file of a folder
+/// without `.lock`. Main read that folder as zero, sent, answered, and exited
+/// 1 when the writer met the file. Now the first send refuses (ticket 0367).
+#[cfg(unix)]
+#[test]
+fn a_malformed_month_without_a_lock_refuses_the_run_before_any_send() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    for (label, bytes) in [("garbage", &b"garbage\n"[..]), ("zero", &b""[..])] {
+        let root = folder(&format!("usage-no-lock-{label}"));
+        let usage_folder = root.join("thinkthen");
+        fs::create_dir_all(&usage_folder).expect("usage folder");
+        fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o700))
+            .expect("private folder");
+        let month = usage_folder.join("2026-08.json");
+        fs::write(&month, bytes).expect("malformed month");
+        fs::set_permissions(&month, fs::Permissions::from_mode(0o600)).expect("private file");
+        let (output, requests) = refused_before_any_send(&root, "secret-no-lock-key");
+        assert_eq!((output.status.code(), requests), (Some(5), 0), "{label}");
+        assert_eq!(output.stdout, b"", "{label}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            "thinkthen: cannot read the usage totals: 2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.\nthinkthen: stopped at record 1; 0 records finished\n",
+            "{label}"
+        );
+        assert_eq!(fs::read(&month).expect("unchanged month"), bytes, "{label}");
+        assert!(!usage_folder.join(".lock").exists(), "{label}");
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn a_month_other_users_can_read_refuses_the_run_and_names_the_unsafe_fix() {

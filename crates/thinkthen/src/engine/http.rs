@@ -20,7 +20,7 @@ use crate::engine::{Permit, Width, Widths, backoff};
 mod observation;
 mod retry;
 use observation::{ResponseInfo, observed_result};
-use retry::{MAX_RETRY_WAIT, bounded_wait, draw, honored};
+use retry::{bounded_wait, draw, floor, honored, longest, too_long};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
 pub(crate) struct Key(String);
@@ -118,7 +118,7 @@ impl Client {
         cancel: &crate::engine::Cancel,
     ) -> Result<Permit<'a>, Error> {
         loop {
-            let _open = gates.wait_open(url, cap, cancel)?;
+            let _open = gates.wait_open(url, (cap, longest(self.timeout)), cancel)?;
             if let Some(every) = self.every {
                 gates.pace(url, every, cancel)?;
             }
@@ -263,7 +263,7 @@ impl Client {
         let mut last_status = None;
         loop {
             let now = Instant::now();
-            let cap = now + self.timeout.min(MAX_RETRY_WAIT);
+            let cap = now + longest(self.timeout);
             // A gate wait owns no send slot. Recheck after acquiring one, since
             // another in-flight reply could have closed the gate meanwhile.
             let permit = self.acquire_open(gates, exchange.url, cap, cancel)?;
@@ -302,7 +302,7 @@ impl Client {
                     gates,
                     exchange.url,
                     bounded_wait(attempt.asked, wait, self.timeout, draw()),
-                    attempt.asked.is_some(),
+                    floor(attempt.asked, &attempt.failure),
                 );
             } else {
                 drop(permit);
@@ -319,7 +319,10 @@ impl Client {
             {
                 return Err(passed);
             }
-            if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
+            if retries >= exchange.max_retries
+                || !is_retried(&attempt.failure)
+                || too_long(attempt.asked, self.timeout)
+            {
                 return Err(attempt.failure);
             }
             last_status = match attempt.failure {

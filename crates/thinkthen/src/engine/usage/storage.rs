@@ -104,13 +104,16 @@ const ZERO: Totals = Totals {
     total: Counts::ZERO,
 };
 
-/// Read the month and all-month totals under a shared lock that waits at
-/// most one second. A missing folder or a folder without `.lock` holds no
-/// count thinkthen wrote, because the writer makes `.lock` before any month.
 fn at(name: &'static str) -> impl Fn(io::Error) -> ReadFailure {
     move |error| ReadFailure::at(name, error)
 }
 
+/// Read the month and all-month totals under a shared lock that waits at
+/// most one second. A missing folder holds no count. A folder without
+/// `.lock` holds no month thinkthen wrote, because the writer makes `.lock`
+/// first, so its months are read without the lock: a writer installs a month
+/// only by rename, and a malformed one refuses as it would under the lock.
+/// A scan that fails after a writer made `.lock` reads again under it.
 pub(crate) fn read(path: &Path, month: &str) -> Result<Totals, ReadFailure> {
     match fs::symlink_metadata(path) {
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(ZERO),
@@ -119,18 +122,28 @@ pub(crate) fn read(path: &Path, month: &str) -> Result<Totals, ReadFailure> {
     }
     let directory = open_verified(path, true, 0o700).map_err(at(DIRECTORY))?;
     let lock_path = path.join(".lock");
-    match fs::symlink_metadata(&lock_path) {
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(ZERO),
+    let held = match fs::symlink_metadata(&lock_path) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => None,
         Err(error) => return Err(ReadFailure::at(".lock", error)),
-        Ok(_) => {}
-    }
-    let lock = open_verified(&lock_path, false, 0o600).map_err(at(".lock"))?;
-    super::lock::shared(&lock).map_err(at(".lock"))?;
+        Ok(_) => {
+            let lock = open_verified(&lock_path, false, 0o600).map_err(at(".lock"))?;
+            super::lock::shared(&lock).map_err(at(".lock"))?;
+            verify_identity(&lock_path, &lock, false).map_err(at(".lock"))?;
+            Some(lock)
+        }
+    };
     verify_identity(path, &directory, true).map_err(at(DIRECTORY))?;
-    verify_identity(&lock_path, &lock, false).map_err(at(".lock"))?;
+    let months = match scan(path) {
+        // A first writer made `.lock` and replaced a month while the scan
+        // ran unlocked, so read again under the lock it now holds.
+        Err(_) if held.is_none() && fs::symlink_metadata(&lock_path).is_ok() => {
+            return read(path, month);
+        }
+        scanned => scanned?,
+    };
     let mut current = Counts::default();
     let mut total = Counts::default();
-    for (name, counts) in scan(path)? {
+    for (name, counts) in months {
         total = total
             .checked_add(counts)
             .ok_or_else(|| ReadFailure::at(&name, overflow()))?;

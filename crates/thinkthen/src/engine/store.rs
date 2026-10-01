@@ -22,9 +22,11 @@ use crate::engine::error::Error;
 
 mod convert;
 mod fixture;
+mod probe;
 mod prune;
 pub(crate) use convert::convert;
 pub(crate) use fixture::{Answer, Entries, Replayed};
+pub(crate) use probe::Probe;
 pub(crate) use prune::{Prune, counts, preview, run as prune, unused};
 
 /// The live container's file name.
@@ -115,7 +117,8 @@ impl Store {
     /// refused. A writing mode checks the folder now, so a folder it cannot
     /// use fails before any key is read or request sent. It opens the file
     /// when it exists, importing a fixture into a new file, when a lookup or
-    /// a write first needs it, so a run that stores nothing creates nothing.
+    /// a write first needs it. The call's first send proves the folder
+    /// writable first (`Probe`), so a run that sends nothing creates nothing.
     ///
     /// A replay uses `replayed`, the engine's copy of the fixture, when
     /// given, rather than reading the file again.
@@ -177,6 +180,13 @@ impl Store {
     pub(crate) const fn with_busy_limit(mut self, limit: Duration) -> Self {
         self.busy_limit = limit;
         self
+    }
+
+    /// What a send worker needs to prove this store can be written, or
+    /// `None` for a replay, which writes nothing.
+    pub(crate) fn probe(&self) -> Option<Probe> {
+        self.writes()
+            .then(|| Probe::new(self.folder.clone(), self.private))
     }
 
     /// Each key's stored answer, in key order, or `None` for a miss.

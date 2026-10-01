@@ -193,7 +193,7 @@ impl Permit<'_> {
         gates: &Gates,
         url: &str,
         wait: Duration,
-        server_floor: bool,
+        server_floor: Option<u16>,
     ) {
         let mut state = self.0.lock();
         gates.close(url, wait, server_floor);

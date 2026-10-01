@@ -402,24 +402,6 @@ fn one_month_file_holds_every_count_and_an_old_retries_file_is_ignored() {
     assert_eq!((total.requests_sent, total.retries), (5, 3));
 }
 
-/// The writer makes `.lock` before any month, so a folder without one holds
-/// nothing thinkthen wrote. Main refused it, so two runs that started
-/// together on a new folder could refuse each other.
-#[cfg(unix)]
-#[test]
-fn a_folder_without_a_lock_reads_as_zero() {
-    use std::os::unix::fs::DirBuilderExt as _;
-
-    let folder = folder("no-lock");
-    fs::DirBuilder::new()
-        .mode(0o700)
-        .create(&folder)
-        .expect("private folder");
-    let totals = read(&folder, "2026-09").expect("zero");
-    assert_eq!(totals.total, Counts::default());
-    assert!(Counters::new(Some(folder)).check_readable().is_ok());
-}
-
 /// Main waited without end for a held lock. The read now gives up after one
 /// second; status names the lock as busy, and the send check passes.
 #[test]
@@ -494,3 +476,6 @@ fn each_unsafe_sentence_names_the_fix() {
         "cannot read the usage totals: the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside."
     );
 }
+
+#[path = "no_lock_tests.rs"]
+mod no_lock;

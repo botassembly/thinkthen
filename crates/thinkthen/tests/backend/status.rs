@@ -276,18 +276,20 @@ fn planted(label: &str, files: &[(&str, &[u8])]) -> (std::path::PathBuf, std::pa
     (home, usage)
 }
 
-/// Main refused a folder without `.lock` with exit 5. The writer makes
-/// `.lock` before any month, so such a folder reads as zero (ticket 0360).
+/// Main refused a folder without `.lock` with exit 5 until ticket 0360 read
+/// it as zero. Ticket 0367 reads its months without the lock, so a month
+/// counts and status still creates and changes nothing.
 #[cfg(unix)]
 #[test]
-fn a_missing_usage_lock_reads_as_zero_without_creating_or_changing_state() {
+fn a_missing_usage_lock_reads_its_months_without_creating_or_changing_state() {
     let bytes = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":2,\"output_tokens\":3,\"cache_answers\":0}\n";
     let (home, usage) = planted("no-lock", &[("2026-09.json", bytes)]);
     let output = run::output(command(&home).args(["status", "--json"])).expect("status");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stderr, b"");
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
-    assert_eq!(value["usage"]["total"]["requests_sent"], 0);
+    assert_eq!(value["usage"]["total"]["requests_sent"], 1);
+    assert_eq!(value["usage"]["total"]["output_tokens"], 3);
     assert_eq!(
         fs::read(usage.join("2026-09.json")).expect("unchanged month"),
         bytes
@@ -300,31 +302,43 @@ fn a_missing_usage_lock_reads_as_zero_without_creating_or_changing_state() {
 
 /// Main failed with exit 5 and printed no report. Status now reports the
 /// rest, shows the counts as unavailable, and names the file and the fix.
+/// A folder without `.lock` read as zero before ticket 0367; it reports the
+/// same way.
 #[cfg(unix)]
 #[test]
 fn a_malformed_usage_month_reports_unavailable_counts_and_the_fix() {
-    let (home, usage) = planted("strict", &[(".lock", b""), ("2026-09.json", b"")]);
-    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
-    assert_eq!(output.status.code(), Some(0));
-    let sentence = format!(
-        "thinkthen: cannot read the usage totals: {} has invalid contents. Move it aside, and counting starts again.\n",
-        usage.join("2026-09.json").display()
-    );
-    assert_eq!(String::from_utf8_lossy(&output.stderr), sentence);
-    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
-    assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
-    assert_eq!(value["usage"]["total"], serde_json::Value::Null);
-    assert_eq!(
-        value["cache"]["path"],
-        home.join(".cache/thinkthen").to_string_lossy().as_ref()
-    );
-    let human = run::output(command(&home).arg("status")).expect("human status");
-    assert_eq!(human.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&human.stderr), sentence);
-    let text = String::from_utf8(human.stdout).expect("text");
-    assert!(text.ends_with("month_requests_sent unavailable\nmonth_retries unavailable\nmonth_input_tokens unavailable\nmonth_output_tokens unavailable\nmonth_cache_answers unavailable\ntotal_requests_sent unavailable\ntotal_retries unavailable\ntotal_input_tokens unavailable\ntotal_output_tokens unavailable\ntotal_cache_answers unavailable\n"), "{text}");
-    assert_eq!(fs::read(usage.join("2026-09.json")).expect("after"), b"");
-    assert!(!usage.join(".update.tmp").exists());
+    let with_lock: &[(&str, &[u8])] = &[(".lock", b""), ("2026-09.json", b"")];
+    let without_lock: &[(&str, &[u8])] = &[("2026-09.json", b"garbage\n")];
+    for (label, files) in [("strict", with_lock), ("strict-no-lock", without_lock)] {
+        let (home, usage) = planted(label, files);
+        let month = files.last().map(|(_, bytes)| *bytes).unwrap_or_default();
+        let output = run::output(command(&home).args(["status", "--json"])).expect("status");
+        assert_eq!(output.status.code(), Some(0), "{label}");
+        let sentence = format!(
+            "thinkthen: cannot read the usage totals: {} has invalid contents. Move it aside, and counting starts again.\n",
+            usage.join("2026-09.json").display()
+        );
+        assert_eq!(String::from_utf8_lossy(&output.stderr), sentence, "{label}");
+        let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
+        assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
+        assert_eq!(value["usage"]["total"], serde_json::Value::Null);
+        assert_eq!(
+            value["cache"]["path"],
+            home.join(".cache/thinkthen").to_string_lossy().as_ref()
+        );
+        let human = run::output(command(&home).arg("status")).expect("human status");
+        assert_eq!(human.status.code(), Some(0));
+        assert_eq!(String::from_utf8_lossy(&human.stderr), sentence);
+        let text = String::from_utf8(human.stdout).expect("text");
+        assert!(text.ends_with("month_requests_sent unavailable\nmonth_retries unavailable\nmonth_input_tokens unavailable\nmonth_output_tokens unavailable\nmonth_cache_answers unavailable\ntotal_requests_sent unavailable\ntotal_retries unavailable\ntotal_input_tokens unavailable\ntotal_output_tokens unavailable\ntotal_cache_answers unavailable\n"), "{text}");
+        assert_eq!(fs::read(usage.join("2026-09.json")).expect("after"), month);
+        assert!(!usage.join(".update.tmp").exists());
+        assert_eq!(
+            usage.join(".lock").exists(),
+            files.iter().any(|(name, _)| *name == ".lock"),
+            "{label}: status made a lock"
+        );
+    }
 }
 
 /// Another process holding the usage lock makes status wait at most one
