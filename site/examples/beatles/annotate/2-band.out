@@ -5,7 +5,7 @@
     "love song",
     "sad"
   ],
-  "abbey_road": false,
+  "abbey_road": null,
   "big_hit": true
 }
 {
@@ -16,6 +16,6 @@
     "about a place",
     "about the sea"
   ],
-  "abbey_road": true,
-  "big_hit": false
+  "abbey_road": null,
+  "big_hit": null
 }

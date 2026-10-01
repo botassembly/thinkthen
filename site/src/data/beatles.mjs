@@ -28,8 +28,8 @@ const record = (name) => ({ text: `the bench's record for this slide`, href: tre
 
 export const GROUPS = [
   ['Start', ['strings', 'jev', 'runs-in']],
-  ['The ten functions', ['decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']],
-  ['Scripts', ['question-file', 'bash']],
+  ['The ten functions', ['decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'recognize', 'relate', 'question-file', 'annotate']],
+  ['Scripts', ['bash']],
   ['Bindings', ['languages', 'data']],
   ['What Jev knows', ['blind-spots', 'rad']],
   ['Tune your bar', ['audit', 'diff']],
@@ -230,19 +230,20 @@ const ARTICLES = {
 
   annotate: {
     title: "annotate fills in a form.",
-    goal: "Each question in an annotate form carries its own bar, and a low bar lets weak guesses through.",
+    goal: "annotate asks a set of questions about each record in one run, and each question carries its own bar.",
     idea: [
-      "`annotate` answers a saved set of questions about each record. Each question in the set carries its own threshold. This set asks for the lead singer, the first album, and the year, each at 0.8.",
+      "`annotate` answers many questions at once. The question set holds four questions you have already seen. choose asks who sings the lead vocal. tag asks which labels fit. Two decide questions ask whether the song is on Abbey Road and whether it is one of the biggest hits.",
+      "One run asks all four about each song. `--field /title` sends only the title. Each record comes back with one field for each question.",
     ],
-    files: { 'annotate-cold-card.json': "annotate-cold-card.json, the question set" },
+    files: { 'questions.json': "questions.json, the question set" },
     see: {
-      '1-card': "At 0.8, Octopus's Garden leaves the album and the year not sure.",
-      '2-bar': "`jq` sets every bar to 0.5. At 0.5, every field fills.",
+      '1-card': "Every question uses the default bar of 0.5.",
+      '2-band': "`jq` sets the band 0.2:0.8 on the two decide questions. Three answers turn not sure.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "At 0.5, Octopus's Garden gains White Album and 1968. Both are wrong. The song came out on Abbey Road in 1969.",
-    takeaway: "A lower bar fills every field, and it lets weak guesses through.",
-    link: tree('annotate'),
+    headings: { '2-band': "Set a band" },
+    lesson: "At the default bar, every field fills. Paul sings Yesterday, and Ringo sings Octopus's Garden. Octopus's Garden is on Abbey Road, and Yesterday is not. Under the band, Yesterday's Abbey Road answer and both of Octopus's Garden's answers fall inside it. A person checks them.",
+    takeaway: "One question set fills every field of a record, and each question keeps its own bar.",
+    link: REPO,
   },
 
   recognize: {
