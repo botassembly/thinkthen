@@ -7,5 +7,5 @@ printf 'aside:\n'
 cat aside.jsonl
 printf 'judged:\n'
 thinkthen decide 'Is this a complaint?' \
-  --jsonl --field /body --batch 1 < good.jsonl |
+  --jsonl --field /body < good.jsonl |
   jq -c '{id:.input.id, complaint:.value}'

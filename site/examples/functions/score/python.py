@@ -2,13 +2,8 @@ import thinkthen as tt
 
 question = "How urgent is this?"
 levels = ["Routine.", "Soon.", "Immediate."]
-texts = [
-    "Please update my mailing address when you can.",
-    "Can you send the signed contract by Friday?",
-    "Nobody can log in to the site right now.",
-]
-urgency = [
-    tt.score(question, text, levels=levels).value
-    for text in texts
-]
-assert urgency == [0.06, 0.99, 2.0]
+outage = (
+    "Our checkout page is down and customers cannot pay.\n"
+)
+urgency = tt.score(question, outage, levels=levels).value
+assert urgency == 2.0

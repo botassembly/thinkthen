@@ -61,10 +61,16 @@ export function fixtureLines(file) {
   }));
 }
 
-// A sample on a function page sits at functions/<fn>/<surface>.<ext>. Every
-// other sample sits at <section>/<surface>/<name>.<ext>.
+// A sample on a function page sits at functions/<fn>/<surface>.<ext>, or at
+// functions/<fn>/more/<surface>.<ext> when the page shows it under
+// Reference. Every other sample sits at <section>/<surface>/<name>.<ext>.
 export function sampleSurface(rel) {
   return rel.startsWith('functions/') ? path.basename(rel).replace(/\..*$/, '') : rel.split('/')[1];
+}
+// The files/ folder a sample reads: its page's, beside the sample or one
+// folder up for a sample under more/.
+export function sampleFiles(examples, rel) {
+  return path.join(examples, path.dirname(rel).replace(/\/more$/, ''), 'files');
 }
 export function samplePage(rel) {
   return rel.startsWith('functions/') ? `/functions/${rel.split('/')[1]}/` : `/install/${rel.split('/')[1]}/`;

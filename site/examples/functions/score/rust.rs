@@ -7,16 +7,9 @@ let urgency_scale = Question::score(question)?
     .level("Soon.", None)?
     .level("Immediate.", None)?
     .build()?;
-let texts = [
-    "Please update my mailing address when you can.",
-    "Can you send the signed contract by Friday?",
-    "Nobody can log in to the site right now.",
-];
-let urgency = texts
-    .iter()
-    .map(|text| {
-        tt.score(&urgency_scale, text)
-            .map(|call| call.into_value())
-    })
-    .collect::<Result<Vec<_>, _>>()?;
-assert_eq!(urgency, [0.06, 0.99, 2.0]);
+let outage =
+    "Our checkout page is down and customers cannot pay.\n";
+let urgency = tt
+    .score(&urgency_scale, outage)?
+    .into_value();
+assert_eq!(urgency, 2.0);

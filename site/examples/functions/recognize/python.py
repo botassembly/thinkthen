@@ -1,31 +1,14 @@
 import thinkthen as tt
 
+kinds = ["person", "organization", "place"]
 text = (
-    "Maria Chen joined Northwind Freight "
-    "in Chicago last spring."
+    "Maria Chen joined Northwind Freight, "
+    "a company in Chicago."
 )
-kinds = {
-    "PER": "Part of a person's name.",
-    "ORG": (
-        "Part of the name of an organization: a company, "
-        "band, team, agency, government body, "
-        "or media outlet."
-    ),
-    "LOC": "Part of the name of a place: a country, "
-           "region, city, or geographic feature.",
-    "MISC": (
-        "Part of another named entity: a nationality, "
-        "an event, a product, or the name of a "
-        "creative work."
-    ),
-}
-facts = tt.recognize(
-    text,
-    kinds=kinds,
-).value
+facts = tt.recognize(text, kinds=kinds).value
 names = [(one.text, one.kind) for one in facts.entities]
 assert names == [
-    ("Maria Chen", "PER"),
-    ("Northwind Freight", "ORG"),
-    ("Chicago", "LOC"),
+    ("Maria Chen", "person"),
+    ("Northwind Freight", "organization"),
+    ("Chicago", "place"),
 ]

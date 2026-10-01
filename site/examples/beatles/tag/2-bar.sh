@@ -14,7 +14,6 @@ Penny Lane
 Octopus's Garden
 EOF
 thinkthen tag "$question" "${labels[@]}" \
-  --batch 1 \
   --lines \
   --threshold 0.7 \
   --replay recording |

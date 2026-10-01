@@ -1,53 +1,53 @@
 #include <assert.h>
-#include <stdio.h>
+#include <json-c/json.h>
 #include <string.h>
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
 assert(tt);
 
-const char *rules[] = {
-    "Book economy class for every flight under six hours.",
-    "Submit receipts within 30 days of the trip.",
-    "Hotel stays are capped at 200 dollars a night.",
-    "Employees may book business class on any flight.",
-    "Rental cars need a manager's approval.",
-    "Receipts may be submitted at any time, "
-        "with no deadline.",
-    "Meals are reimbursed up to 60 dollars a day.",
-    "Use the company travel portal for all bookings.",
+const char *names[] = {
+    "{\"name\": \"Paul McCartney\", \"kind\": \"singer\"}",
+    "{\"name\": \"Ringo Starr\", \"kind\": \"singer\"}",
+    "{\"name\": \"Yesterday\", \"kind\": \"song\"}",
+    "{\"name\": \"Octopus's Garden\", \"kind\": \"song\"}",
 };
-char records[8][96];
-const char *texts[8];
-size_t lengths[8];
-for (int i = 0; i < 8; i++) {
-    snprintf(
-        records[i],
-        sizeof records[i],
-        "{\"name\": \"%s\", \"kind\": \"rule\"}",
-        rules[i]
-    );
-    texts[i] = records[i];
-    lengths[i] = strlen(records[i]);
-}
-const char *spec =
+size_t lengths[4];
+for (int i = 0; i < 4; i++) lengths[i] = strlen(names[i]);
+const char *sings =
     "{\"version\": 1, \"relate\": {\"relations\": [{"
-    "\"name\": \"contradicts\", \"source\": \"*\", "
-    "\"target\": \"*\", \"either\": true}]}, "
-    "\"threshold\": 0.5}";
-char *contradictions;
-size_t contradictions_len;
+    "\"name\": \"sings\", \"source\": \"singer\", "
+    "\"target\": \"song\"}]}}";
+char *who_sings;
+size_t who_sings_len;
 int rc = thinkthen_relate(
     tt,
-    spec,
-    texts,
+    sings,
+    names,
     lengths,
-    8,
-    &contradictions,
-    &contradictions_len
+    4,
+    &who_sings,
+    &who_sings_len
 );
 assert(rc == THINKTHEN_OK);
-assert(strstr(contradictions, "\"probability\":0.83"));
-assert(strstr(contradictions, "\"probability\":0.97"));
-thinkthen_free_string(contradictions);
+const char *expected =
+    "{\"edges\": ["
+    "{\"relation\": \"sings\", "
+    "\"source\": {\"name\": \"Paul McCartney\", "
+    "\"kind\": \"singer\"}, "
+    "\"target\": {\"name\": \"Yesterday\", "
+    "\"kind\": \"song\"}, \"probability\": 0.81}, "
+    "{\"relation\": \"sings\", "
+    "\"source\": {\"name\": \"Ringo Starr\", "
+    "\"kind\": \"singer\"}, "
+    "\"target\": {\"name\": \"Octopus's Garden\", "
+    "\"kind\": \"song\"}, \"probability\": 0.88}]}";
+struct json_object *edges = json_tokener_parse(who_sings);
+struct json_object *wanted = json_tokener_parse(expected);
+assert(edges && wanted);
+json_bool same = json_object_equal(edges, wanted);
+assert(same);
+json_object_put(wanted);
+json_object_put(edges);
+thinkthen_free_string(who_sings);
 thinkthen_engine_free(tt);

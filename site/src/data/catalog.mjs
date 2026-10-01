@@ -92,6 +92,7 @@ export const FUNCTIONS = [
     unsure: 'On one piece of evidence, a probability inside the band prints null and exits 3. In a stream, that record prints null and the run exits 0.',
     howtos: ['screen-studies-for-a-review', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
     see: {
+      '0-refund': "The customer asks for money back. decide prints true and exits 0.",
       '1-lines': "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8 as null.",
       '2-case': "The send-back line lands in the band. decide exits 3, and the case sends it to a person. The script then exits 0.",
       '3-one': "The ticket asks for a refund. decide prints true and exits 0.",
@@ -120,7 +121,12 @@ export const FUNCTIONS = [
     unsure: 'On one piece of evidence, a pick under the threshold or an exact tie at the top prints null and exits 3. In a stream, the run exits 0. choose never exits 1.',
     howtos: ['rank-the-inbound-leads', 'split-a-scanned-packet-into-documents'],
     see: {
+      '0-one': 'A parcel sent to the wrong address belongs to shipping. choose prints "shipping" and exits 0.',
       '1-lines': "Each of the first three messages names one team: billing, shipping, and account. The fourth names a parcel and a login. No team reaches 0.9, and it comes back null.",
+    },
+    moreSee: {
+      pandas: 'A Series of four tickets gets one team each at 0.9. The fourth names two teams, and it comes back as a missing value.',
+      duckdb: 'The same four tickets as rows of a table. The fourth row gets NULL at 0.9.',
     },
   },
   {
@@ -163,6 +169,10 @@ export const FUNCTIONS = [
     see: {
       '1-one': "The outage scores 2.0, and 2 is Immediate on this scale.",
       '3-lines': "The address change lands near 0, the Friday deadline near 1, and the login outage at 2.",
+    },
+    moreSee: {
+      polars: 'A data frame of three messages gets an urgency column. Each message lands on the scale.',
+      duckdb: 'The same three messages as rows of a table, each with its urgency.',
     },
   },
   {
@@ -261,6 +271,10 @@ export const FUNCTIONS = [
       '0-json': "One JSON document goes in. The same document comes back with three answers added: steps, area, and impact. The nested report rides through unchanged.",
       '1-jsonl': "Each report keeps its id and lands in its own area: login, billing, and export. The two with steps say true, and the blue button blocks nothing.",
     },
+    moreSee: {
+      pandas: 'A data frame of three reports gets one new column for each question in form.json.',
+      duckdb: 'The same three reports as rows of a table. Each row gets its answers as one JSON object.',
+    },
   },
   {
     name: 'recognize',
@@ -283,7 +297,12 @@ export const FUNCTIONS = [
     unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
     see: {
-      '1-names': 'recognize finds three names. Each comes back with its kind and its strength.',
+      '0-kinds': 'recognize finds three names and gives each one of the three kinds: a person, an organization, and a place.',
+      '1-names': 'Each --kind gives a kind a description. recognize finds three names. Each comes back with its kind and its strength.',
+    },
+    moreSee: {
+      typescript: 'Two relation rules ask how the names connect. Maria Chen works for Northwind Freight, and Northwind Freight is based in Chicago.',
+      duckdb: 'The same text as a row of a table. The first query lists the names. The second reads the relation rules from names.json and lists the links.',
     },
   },
   {
@@ -308,6 +327,10 @@ export const FUNCTIONS = [
     howtos: [],
     see: {
       '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default threshold.',
+    },
+    moreSee: {
+      r: 'Eight travel rules in a data frame. One both-ways rule, contradicts, finds the two pairs of rules that disagree, at a bar of 0.5.',
+      duckdb: 'The same eight rules as rows of a table. relate reads them through a query and returns the contradicting pairs by id.',
     },
   },
   {
@@ -335,6 +358,9 @@ export const FUNCTIONS = [
     see: {
       '1-yes': "The saved question answers true for a plain request for money back.",
       '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure. decide prints null and exits 3.",
+    },
+    moreSee: {
+      duckdb: 'Two messages as rows of a table, asked with refund.json. The money-back message gets true. The send-back message lands inside the band and gets NULL.',
     },
     notAFunction: true,
   },
@@ -865,6 +891,34 @@ export const TAB_SURFACE = {
   Bash: 'shell', Python: 'python', TypeScript: 'typescript',
   Ruby: 'ruby', R: 'r', Rust: 'rust', SQL: 'duckdb',
 };
+
+// A function page groups its language tabs, so a reader finds one of 24
+// quickly on a phone or a desktop. Every surface sits in one group. A tab
+// shows when its sample file exists, or when the function names it in
+// `cannot`.
+export const TAB_GROUPS = [
+  { name: 'Command line', slugs: ['shell'] },
+  { name: 'Python and data', slugs: ['python', 'pandas', 'polars', 'r'] },
+  { name: 'Web and scripting', slugs: ['typescript', 'ruby', 'php', 'dart'] },
+  { name: 'JVM and .NET', slugs: ['java', 'kotlin', 'scala', 'csharp'] },
+  { name: 'Systems', slugs: ['c', 'cpp', 'objective-c', 'rust', 'go', 'swift', 'zig', 'ada', 'cobol'] },
+  { name: 'Databases', slugs: ['duckdb', 'sqlite', 'postgresql'] },
+];
+
+for (const s of SURFACES) {
+  const homes = TAB_GROUPS.filter((g) => g.slugs.includes(s.slug));
+  if (homes.length !== 1) throw new Error(`catalog: the surface ${s.slug} sits in ${homes.length} tab groups`);
+}
+for (const g of TAB_GROUPS) {
+  for (const slug of g.slugs) {
+    if (!SURFACES.some((s) => s.slug === slug)) throw new Error(`catalog: the tab group ${g.name} names ${slug}, which is not a surface`);
+  }
+}
+for (const f of FUNCTIONS) {
+  for (const slug of Object.keys(f.cannot || {})) {
+    if (!SURFACES.some((s) => s.slug === slug)) throw new Error(`catalog: ${f.name} names ${slug} in cannot, which is not a surface`);
+  }
+}
 
 // Captions for the tutorial's own examples, keyed by script name.
 export const TUTORIAL_SEE = {

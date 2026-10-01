@@ -17,8 +17,8 @@ The app crashes when I upload a file.
 Reports take a full minute to load.
 Everything works and the reports are quick.
 EOF
-thinkthen score "$mood" "${moods[@]}" --batch 1 --lines |
+thinkthen score "$mood" "${moods[@]}" --lines |
 jq -r 'select(.value < 1) | .input' |
 thinkthen tag "$problem" "${problems[@]}" \
-  --batch 1 --lines |
+  --lines |
 jq .
