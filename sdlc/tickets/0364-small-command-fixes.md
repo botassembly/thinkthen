@@ -35,3 +35,10 @@ Status: in progress. Lane claude-2. Branch `ticket/0364-small-command-fixes`. Pl
 - Defers: a cap set by flag on `check` (it has no flag); `--timeout` bounding the whole check run, which the issue rules not a bug.
 
 ## What the build taught us
+
+- The check's second refusal reads "would be exceeded before another request in this call". The four probes share one cancel token, so the process sees one call. The test pins both sentences.
+- One named default fixed two drifts. `find`'s parser had its own `--max-retries` default of 2 beside `check`'s constant of 2, while every page said 3.
+- The issue's narrower quoted test would have quoted a context exchange twice, because its questions quote their own records under the context's state. Old entries cannot tell every case apart, so two rare cases are named in `recording.md` and pinned in the edge table.
+- serde_json reads `42.` as a broken number, so a stream parse cannot find where a quoted value ends. The test tries each `. ` and takes the first prefix that is one whole value.
+- Each transform ships twice: `transforms/` and the `include_bytes!` copies `transform show` prints. `catalog.py` keeps them equal.
+- Source grew by 268 nonblank lines: about 40 in product code, and the rest in the edge table and the regressions.
