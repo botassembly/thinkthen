@@ -484,7 +484,7 @@
   },
   "install/typescript/first-call.ts": {
     "page": "/install/typescript/",
-    "sample": "f9f32036949a03b2b21babdea657792450f112596c342494d7584c4934e4b69d",
+    "sample": "95990ee84b6d47813911f6d70fdf32e1862da52a30df8d0a869f938b734ad2bb",
     "output": null,
     "files": {},
     "answers": {
@@ -498,7 +498,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "c7c519b536b7d2f10c6c4903f4ad0fe92a738162845048980b3ae36e1f7622cb"
+      "tree": "a1475057cc6359684b71d163dfd124de5c21be00e4ce41dabb3782f4b95f99db"
     },
     "toolchain": [
       "Node v22.22.3",
