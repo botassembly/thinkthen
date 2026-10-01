@@ -10,8 +10,10 @@
 // The examples live in examples/beatles/<slug>/. Each runs in the Beatles
 // Bench folder examples/beatles/folders.json names for its page, and answers
 // from a saved recording. A page with no bench folder runs from its own
-// files/, and its recordings come from the talk's deck. `see` gives the
-// caption for each example and `headings` the heading above it. `source`
+// files/, and its recordings come from the talk's deck or a recorded run. `see` gives the
+// caption for each example and `headings` the heading above it. `slideNote`
+// names the build behind a slide whose printed output differs from what the
+// current thinkthen prints in the page's example. `source`
 // links the bench record behind a number in the prose. Prose marks code with
 // backticks and a link as [text](/route/).
 //
@@ -286,7 +288,7 @@ const ARTICLES = {
   },
 
   "question-file": {
-    title: "A question file is a recipe.",
+    title: "Store and reuse questions.",
     label: "Question files",
     goal: "A question file says what yes and no mean, when to answer not sure, and which fields to read, and decide runs it on one song.",
     idea: [
@@ -306,7 +308,7 @@ const ARTICLES = {
   },
 
   bash: {
-    title: "Answers drive a Bash script.",
+    title: "Bash runs on judgment.",
     label: "Bash scripts",
     goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
     idea: [
@@ -344,8 +346,8 @@ const ARTICLES = {
     label: "Tables and frames",
     goal: "One question adds an answer column to a database table or a data frame.",
     idea: [
-      "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey_road`. The question and the band 0.3:0.7 go in as JSON.",
-      "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
+      "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey`. The question and the band 0.3:0.7 sit inside the query as one JSON string.",
+      "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Penny Lane and Hey Jude fall inside the band. Both come back not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
       "DuckDB and PostgreSQL ask questions inside SQL too. Polars, pandas, and R take a column and give a column back.",
       "To set one up, start at [Install](/install/).",
     ],
@@ -358,7 +360,7 @@ const ARTICLES = {
     goal: "audit grades saved answers against answers you already know, at any bar, and sends no request.",
     idea: [
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any bar. It sends no request.",
-      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's red label reads (without context). The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The console under the table shows `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
+      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's column reads no context. The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The first example below runs `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 3 are right, 2 are wrong, and 5 are not sure.",
@@ -376,7 +378,7 @@ const ARTICLES = {
     goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
       "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
-      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's green label reads (with context). The warning is right. The two runs asked different questions.",
+      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's last column reads with context. The warning is right. The two runs asked different questions.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 7 of the 10 answers changed, and all 10 end right.",
@@ -484,6 +486,7 @@ const ARTICLES = {
     see: {
       '1-check': "The check names the address and the model it would ask.",
     },
+    slideNote: "The slide's console follows the check specification at thinkthen d0aa1b0b. It records no run.",
     source: { text: 'the check specification', href: 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md' },
     lesson: "A bar tuned on one model does not carry to another. Run `audit` again on your labeled records before you trust a new backend.",
     takeaway: "A new model needs its own bar.",
