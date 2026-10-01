@@ -6,7 +6,8 @@
 // and <name>.exit its exit code when that is not 0. examples/<page>/files/
 // holds the files the scripts read. A library sample sits beside the
 // scripts as <surface>.<ext>, and a first-call sample as
-// examples/install/<surface>/first-call.<ext> (first_call.adb for Ada).
+// examples/install/<surface>/first-call.<ext>. FIRST names the
+// exceptions.
 
 const raw = import.meta.glob(
   ['/examples/**/*', '!/examples/beatles/bench/**'],
@@ -83,11 +84,13 @@ export function captioned(page, see, optional = false) {
 const EXT = {
   python: 'py', polars: 'py', pandas: 'py', typescript: 'ts', ruby: 'rb', r: 'R',
   rust: 'rs', c: 'c', cpp: 'cpp', 'objective-c': 'm', cobol: 'cob', ada: 'adb',
+  java: 'java', kotlin: 'kt', scala: 'scala', csharp: 'cs',
   duckdb: 'sql', sqlite: 'sql', postgresql: 'sql',
 };
 
 // GNAT names a unit after its file, so Ada's first call is first_call.
-const FIRST = { ada: 'first_call' };
+// Java names a class after its file, and the JVM and .NET pages follow it.
+const FIRST = { ada: 'first_call', java: 'FirstCall', kotlin: 'FirstCall', scala: 'FirstCall', csharp: 'FirstCall' };
 
 // The first-call sample for a surface, with the output a database printed.
 export function firstCall(surface) {
