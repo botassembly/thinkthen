@@ -9,6 +9,7 @@ functions/annotate/ada.adb
 functions/annotate/c.c
 functions/annotate/dart.dart
 functions/annotate/duckdb.sql
+functions/annotate/objective-c.m
 functions/annotate/php.php
 functions/annotate/postgresql.sql
 functions/annotate/r.R
@@ -19,6 +20,7 @@ functions/annotate/typescript.ts
 functions/choose/ada.adb
 functions/choose/c.c
 functions/choose/dart.dart
+functions/choose/objective-c.m
 functions/choose/php.php
 functions/choose/postgresql.sql
 functions/choose/python.py
@@ -28,6 +30,7 @@ functions/choose/typescript.ts
 functions/decide/ada.adb
 functions/decide/c.c
 functions/decide/dart.dart
+functions/decide/objective-c.m
 functions/decide/php.php
 functions/decide/polars.py
 functions/decide/r.R
@@ -38,6 +41,7 @@ functions/decide/typescript.ts
 functions/filter/ada.adb
 functions/filter/c.c
 functions/filter/dart.dart
+functions/filter/objective-c.m
 functions/filter/php.php
 functions/filter/postgresql.sql
 functions/filter/python.py
@@ -48,6 +52,7 @@ functions/filter/sqlite.sql
 functions/find/ada.adb
 functions/find/c.c
 functions/find/dart.dart
+functions/find/objective-c.m
 functions/find/php.php
 functions/find/postgresql.sql
 functions/find/python.py
@@ -66,6 +71,7 @@ functions/rank/ada.adb
 functions/rank/c.c
 functions/rank/dart.dart
 functions/rank/duckdb.sql
+functions/rank/objective-c.m
 functions/rank/php.php
 functions/rank/postgresql.sql
 functions/rank/python.py
@@ -76,6 +82,7 @@ functions/recognize/ada.adb
 functions/recognize/c.c
 functions/recognize/dart.dart
 functions/recognize/duckdb.sql
+functions/recognize/objective-c.m
 functions/recognize/php.php
 functions/recognize/postgresql.sql
 functions/recognize/python.py
@@ -88,6 +95,7 @@ functions/relate/ada.adb
 functions/relate/c.c
 functions/relate/dart.dart
 functions/relate/duckdb.sql
+functions/relate/objective-c.m
 functions/relate/php.php
 functions/relate/postgresql.sql
 functions/relate/python.py
@@ -99,6 +107,7 @@ functions/relate/typescript.ts
 functions/score/ada.adb
 functions/score/dart.dart
 functions/score/duckdb.sql
+functions/score/objective-c.m
 functions/score/php.php
 functions/score/polars.py
 functions/score/postgresql.sql
@@ -111,6 +120,7 @@ functions/tag/ada.adb
 functions/tag/c.c
 functions/tag/dart.dart
 functions/tag/duckdb.sql
+functions/tag/objective-c.m
 functions/tag/php.php
 functions/tag/postgresql.sql
 functions/tag/python.py
