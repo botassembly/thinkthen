@@ -4,6 +4,9 @@
 import Base from '../../layouts/Base.astro';
 import { HOWTO_GROUPS, HOWTOS, TECHNIQUES, RECIPES } from '../../data/catalog.mjs';
 
+// A how-to with no known group would drop off this page without a sound.
+const stray = HOWTOS.filter((h) => !HOWTO_GROUPS.includes(h.group));
+if (stray.length) throw new Error(`how-tos: no group for ${stray.map((h) => h.slug).join(', ')}`);
 const reader = (h) => h.reader.replace(/^for /, '').replace(/^./, (c) => c.toUpperCase());
 const sections = HOWTO_GROUPS
   .map((name) => ({ name, pages: HOWTOS.filter((h) => h.group === name) }))
