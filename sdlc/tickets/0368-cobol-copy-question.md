@@ -1,6 +1,6 @@
 # 0368: COBOL calls never write into the caller's text
 
-Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2. Reported by the site owner.
+Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2. Reported by the site owner.
 
 ## Outcome
 
@@ -19,3 +19,11 @@ Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2.
   - `libraries/cobol/README.md` says the called programs copy text and never write into caller storage.
 - Proof: `sh libraries/cobol/check.sh` on Linux x86_64. The new rows in `checks/failure.cob` fail on main's `src/` (the second `TT-DECIDE` and the second `TT-CALL` refuse with their interior-NUL messages, and the settings and full question guards lose their first byte) and pass on the branch. `sdlc/scripts/lint` and `sdlc/scripts/tickets`. No Rust changes, so `policy.py` is not needed.
 - Defers: the site's COBOL page line that tells callers to reset the question belongs to the site owner, who removes it after this lands. Thread safety of the working-storage copies: the COBOL package already keeps per-call state in working storage and documents single-threaded use.
+
+## What the build taught us
+
+- Each new row in `checks/failure.cob` failed alone against main's `src/`, built in a scratch folder with the guard checks before it turned off one at a time. On main the settings guard's first byte became NUL, the second `TT-DECIDE` refused with "interior NUL in C-string question", the full 200-byte question's guard lost its first byte, and the second `TT-CALL` refused with "interior NUL in request". All pass on the branch.
+- The answer cache would have hidden the repeats from the backend's arrival count. The check's settings turn the cache off, so the counts stay exact.
+- `checks/installed.py` compiles the same `failure.cob` from a copied package, so it needed the two new programs and the five new arrivals too.
+- `sh libraries/cobol/check.sh`, `sdlc/scripts/smoke libraries/cobol` and `sdlc/scripts/lint` passed. No Rust changed.
+- The code review asked for two changes: the README now names the text the programs never write, and the check runs in the ticket's order. It then accepted.
