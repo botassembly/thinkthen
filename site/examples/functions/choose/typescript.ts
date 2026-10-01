@@ -20,10 +20,10 @@ const texts = [
   "My parcel never came, and now " +
     "I cannot log in to track it.",
 ];
-const owners = await Promise.all(
-  texts.map(async (text) =>
-    (await tt.choose(teamQuestion, text)).value),
-);
+const owners = [];
+for (const text of texts) {
+  owners.push((await tt.choose(teamQuestion, text)).value);
+}
 assert.deepEqual(owners, [
   "billing",
   "shipping",

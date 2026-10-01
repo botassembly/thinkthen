@@ -30,7 +30,8 @@
 // unpacks into ~/.cache/thinkthen-toolchains/postgresql, /usr/bin/pg_config,
 // psql and cargo-pgrx 0.17.0. pgrx-package-locked.sh packages the extension
 // offline. Each attempt runs its own server on a socket with no TCP port, and
-// the cache folder belongs to the server's user. A database
+// the cache folder belongs to the server's user. The sample runs as an
+// ordinary role, apart from a page that names a file. A database
 // whose toolchain is missing reports "not run" and keeps its old entries,
 // and the run exits 1 unless --allow-missing is given.
 
@@ -130,27 +131,47 @@ const DATABASES = {
       const template = path.join(tmp, 'pg-template');
       const init = run(path.join(bin, 'initdb'), ['-D', template, '--auth=trust', '-U', 'postgres'], { env: { PATH: process.env.PATH, LC_ALL: 'C.UTF-8' } });
       if (init.status !== 0) throw new Error(`initdb failed\n${init.stdout}${init.stderr}`);
+      // The attempt's setup, run as the superuser: the install page's
+      // CREATE EXTENSION, an ordinary role with the extension's documented
+      // grant, and that role's thinkthen.file_directory set to the page's
+      // files folder, which psql passes in as :'files'.
+      const setup = path.join(tmp, 'pg-setup.sql');
+      const grant = fs.readFileSync(path.join(repo, this.folder, 'fixtures', 'grant.sql'), 'utf8');
+      fs.writeFileSync(setup, [
+        'CREATE EXTENSION thinkthen;',
+        'CREATE ROLE reader LOGIN;',
+        'GRANT CREATE ON SCHEMA public TO reader;',
+        "ALTER ROLE reader SET thinkthen.file_directory = :'files';",
+        grant.replace("'the_app_role'", "'reader'"),
+      ].join('\n'));
       // Each attempt starts the server with the run's THINKTHEN_CACHE, on a
-      // socket with no TCP port. The server reads a relative @ name from its
-      // data folder, so the page's files/ go there. The attempt runs CREATE
-      // EXTENSION as the install page shows, then the sample in psql's
-      // aligned output, and stops the server.
+      // socket with no TCP port, and stops it on exit or interrupt. The
+      // sample runs in psql as the ordinary role, from the files folder.
+      // The extension resolves a relative @ name against the server's data
+      // folder before it checks thinkthen.file_directory, so the role cannot
+      // read the first call's '@refund.json'. Until the extension resolves
+      // it inside file_directory, a page with files/ runs as the superuser
+      // with those files copied into the data folder.
+      const pgCtl = JSON.stringify(path.join(bin, 'pg_ctl'));
       const script = [
         'd="$HOME/pg"',
         'mkdir -m 700 "$d" "$d/sock"',
         `cp -a ${JSON.stringify(template)} "$d/data"`,
-        'cp -R . "$d/data/"',
         'printf "listen_addresses = \'\'\\nunix_socket_directories = \'%s\'\\n" "$d/sock" >>"$d/data/postgresql.conf"',
-        `${JSON.stringify(path.join(bin, 'pg_ctl'))} -D "$d/data" -l "$d/server.log" -w -t 20 start >/dev/null || { cat "$d/server.log" >&2; exit 1; }`,
-        'psql -X -q -v ON_ERROR_STOP=1 -h "$d/sock" -U postgres -d postgres -c "CREATE EXTENSION thinkthen;" -f -',
-        'code=$?',
-        `${JSON.stringify(path.join(bin, 'pg_ctl'))} -D "$d/data" -m immediate -w stop >/dev/null`,
-        'exit $code',
+        `${pgCtl} -D "$d/data" -l "$d/server.log" -w -t 20 start >/dev/null || { cat "$d/server.log" >&2; exit 1; }`,
+        `trap '${pgCtl} -D "$d/data" -m immediate -w stop >/dev/null' EXIT`,
+        "trap 'exit 130' HUP INT TERM",
+        `psql -X -q -v ON_ERROR_STOP=1 -h "$d/sock" -U postgres -d postgres -v files="$PWD" -f ${JSON.stringify(setup)} >/dev/null || exit 1`,
+        'if [ -n "$superuser" ]; then cp -R . "$d/data/"; role=postgres; else role=reader; fi',
+        'psql -X -q -v ON_ERROR_STOP=1 -h "$d/sock" -U "$role" -d postgres -f -',
       ].join('\n');
       return {
         toolchain: [`PostgreSQL ${run(path.join(bin, 'postgres'), ['-V']).stdout.trim().split(' ')[2]}`, 'cargo-pgrx 0.17.0', run('rustc', ['--version']).stdout.trim()],
         lay: () => {},
-        command: (sample) => ['sh', ['-c', `${script}\n`], fs.readFileSync(sample, 'utf8')],
+        command: (sample) => {
+          const superuser = fs.existsSync(path.join(path.dirname(sample), 'files')) ? 'superuser=1\n' : '';
+          return ['sh', ['-c', `${superuser}${script}\n`], fs.readFileSync(sample, 'utf8')];
+        },
         env: {},
       };
     },
