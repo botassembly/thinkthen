@@ -23,13 +23,21 @@ copy "thinkthen.cpy".
 01 singer-length usage binary-double unsigned.
 01 singer-name pic x(8192).
 01 singer-name-length usage binary-double unsigned.
+01 song pic x(8192).
+01 song-length usage binary-double unsigned.
+01 song-name pic x(8192).
+01 song-name-length usage binary-double unsigned.
 01 member-status usage binary-long signed.
 01 row pic 9.
-01 expected-singers.
+01 expected-pairs.
    02 filler pic x(20) value '"Paul McCartney"'.
+   02 filler pic x(20) value '"Yesterday"'.
    02 filler pic x(20) value '"Ringo Starr"'.
-01 expected-table redefines expected-singers.
-   02 expected-singer pic x(20) occurs 2 times.
+   02 filler pic x(20) value '"Octopus''s Garden"'.
+01 expected-table redefines expected-pairs.
+   02 expected-pair occurs 2 times.
+      03 expected-singer pic x(20).
+      03 expected-song pic x(20).
 procedure division.
     call "thinkthen_engine_new" returning engine
 
@@ -71,6 +79,17 @@ procedure division.
             member-status
         if singer-name(1:singer-name-length)
             not = trim(expected-singer(row))
+            stop run returning 1
+        end-if
+        move "target" to member-name
+        call "TT-JSON-MEMBER" using edge edge-length
+            member-name song song-length member-status
+        move "name" to member-name
+        call "TT-JSON-MEMBER" using song song-length
+            member-name song-name song-name-length
+            member-status
+        if song-name(1:song-name-length)
+            not = trim(expected-song(row))
             stop run returning 1
         end-if
     end-perform

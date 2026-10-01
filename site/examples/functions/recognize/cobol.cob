@@ -21,14 +21,21 @@ copy "thinkthen.cpy".
 01 entity-length usage binary-double unsigned.
 01 entity-text pic x(8192).
 01 entity-text-length usage binary-double unsigned.
+01 entity-kind pic x(8192).
+01 entity-kind-length usage binary-double unsigned.
 01 member-status usage binary-long signed.
 01 row pic 9.
 01 expected-names.
    02 filler pic x(20) value '"Maria Chen"'.
+   02 filler pic x(8) value '"PER"'.
    02 filler pic x(20) value '"Northwind Freight"'.
+   02 filler pic x(8) value '"ORG"'.
    02 filler pic x(20) value '"Chicago"'.
+   02 filler pic x(8) value '"LOC"'.
 01 expected-table redefines expected-names.
-   02 expected-name pic x(20) occurs 3 times.
+   02 expected-entity occurs 3 times.
+      03 expected-name pic x(20).
+      03 expected-kind pic x(8).
 procedure division.
     call "thinkthen_engine_new" returning engine
 
@@ -73,6 +80,14 @@ procedure division.
             member-status
         if entity-text(1:entity-text-length)
             not = trim(expected-name(row))
+            stop run returning 1
+        end-if
+        move "kind" to member-name
+        call "TT-JSON-MEMBER" using entity entity-length
+            member-name entity-kind entity-kind-length
+            member-status
+        if entity-kind(1:entity-kind-length)
+            not = trim(expected-kind(row))
             stop run returning 1
         end-if
     end-perform

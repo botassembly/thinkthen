@@ -2008,7 +2008,7 @@
   },
   "functions/recognize/cobol.cob": {
     "page": "/functions/recognize/",
-    "sample": "2357cf6c259a518dcfef8e2c39eae1f79db2342c2f1b20cae3d9e462f28d7a66",
+    "sample": "2cb439a47aa57acf820542041c454d1028a15fd97dae101d010723ad8a6ccb4c",
     "output": null,
     "files": {
       "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
@@ -2538,7 +2538,7 @@
   },
   "functions/relate/cobol.cob": {
     "page": "/functions/relate/",
-    "sample": "c53e2c7d5e5bf93ea58d3d881470eb34bd90090369a1733a13dd41fb450cdd84",
+    "sample": "f2e31941443e28b7a3f17d2e310ac1073c831580565eb5cc9d88b6c5b05ebc8a",
     "output": null,
     "files": {},
     "answers": {
