@@ -69,7 +69,7 @@ Ranked by value against size, across the whole repo. Blocking items come first, 
 - Area 9 item 3, SQL hosts copying engine code: 0347 (`efc6a6a99`). It did not block 0.1.
 - Area 20 item 1, the site's fifteen replay folders, and the five `--dry-run` examples: marketing converted them in its site ticket (`ebe9bb7a2`). The site smoke passes 97 of 97. Parts 3 and 4 of the site issue remain.
 - The reference page, in part: the same site ticket added exit 7, reserved only 8, and named `thinkthen.status/2` (`ebe9bb7a2`). Exits 130 and 143, the local and named-backend key rules, and three moved links remain.
-- The wall-clock waits in routine tests (area 2 item 3, area 4 item 2, area 12 item 1, area 20 item 8): ticket 0352 landed at `9e33cd639`. Area 3's rate-spacing tests (`tests/backend/backoff.rs`, `named_backends/rate.rs`) were not changed, so area 3 item 1 stays open. The ticket filed Debt 029 (binding tests) and Debt 030 (the piped batching pause) for what remains.
+- The wall-clock waits in routine tests (area 2 item 3, area 4 item 2, area 12 item 1, area 20 item 8): ticket 0352 landed at `9e33cd639`. Area 3's rate-spacing tests (`tests/backend/backoff.rs`, `named_backends/rate.rs`) were not changed, so area 3 item 1 stayed open until ticket 0356 measured them from the launch. The ticket filed Debt 029 (binding tests) and Debt 030 (the piped batching pause) for what remains.
 - The relate decision run (R1) and docs page 11 were done before the graded commit.
 
 Two queue-owner issues from marketing's site ticket are open and do not block 0.1. `sdlc/issues/2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` asks to rewrite two draft-form lines the site shows, in `settings.md:67` and `recording.md:30`. `sdlc/issues/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md` is a note recording parts 1 and 2 of the site issue as done.
@@ -108,6 +108,6 @@ This merges the reports' blocking items, the open issues that `sdlc/planning/iss
 | 17 | Set up the registry accounts and trusted publishing (NuGet, Packagist, Maven Central, pub.dev, R-universe, crates.io, PyPI, npm, RubyGems), the `release` environment, and tag rulesets, which need GitHub Pro or a public repository | release issue items 2 and 5; ticket 0128 | Ian | M | no |
 | 18 | Phase 4, the release run: 0.1.0 everywhere, the README install commit (closes stumble row 18), publishing, the tap, the history reset, and the public install checks | ticket 0128 phase 4; release issue item 2 | Ian | L | no |
 | 19 | Fix the GitHub account billing, which stopped the third rehearsal before any job started | ticket 0128 phase 3b, third attempt | Ian | S | no |
-| 20 | Replace the timed stops and short waits left in the binding tests (Debt 029) | ticket 0352; `sdlc/issues/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` | queue owner | M | no |
+| 20 | Replace the timed stops and short waits left in the binding tests (Debt 029) | ticket 0352; `sdlc/issues/closed/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` | queue owner | M | done, ticket 0356 |
 
 Counts: 20 items. By owner: queue owner 12, marketing 5, Ian 3. By size: S 7, M 11, L 2. A lane is on 1 of them now (item 6). Item 3 blocks only if the run shows a panic, and item 10 only if the rehearsal shows a name.

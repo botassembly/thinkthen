@@ -121,7 +121,8 @@ bulk <- c(choose = 'tt_choose("Which?", paste("c", 1:50), c("a", "b"), batch = 2
 for (verb in names(bulk)) {
   base <- backend_count()
   job <- spawn(c('tt_engine(throttle = 8L)', bulk[[verb]]))
-  check(paste("R2-23:", verb, "puts more than one request on the wire"), backend_wait(base + 2L) - base > 1L)
+  # Throttle 8 holds eight sends; the file's total counts all eight before the kill.
+  check(paste("R2-23:", verb, "puts more than one request on the wire"), backend_wait(base + 8L) - base > 1L)
   tools::pskill(job$pid, 9L)
   ended(job)
   backend_say("round")
