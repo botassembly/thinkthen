@@ -8,6 +8,10 @@ export const REFERENCE_PAGES = [
   { slug: 'annotate', title: "annotate's edge cases", label: "annotate's edge cases", group: 'annotate' },
   { slug: 'question-sets', title: 'Question sets', label: 'Question sets', group: 'annotate' },
   { slug: 'recording', title: 'Recording and the cache', label: 'Recording and the cache', group: 'Saved answers' },
+  { slug: 'audit', title: 'audit', label: 'audit', group: 'Tools', command: true },
+  { slug: 'diff', title: 'diff', label: 'diff', group: 'Tools', command: true },
+  { slug: 'check', title: 'check', label: 'check', group: 'Tools', command: true },
+  { slug: 'transform', title: 'transform', label: 'transform', group: 'Tools', command: true },
 ].map((p) => ({ ...p, route: p.slug ? `/reference/${p.slug}/` : '/reference/' }));
 
 export const referencePage = (slug) => {
@@ -38,4 +42,21 @@ export const RECORDING_SEE = {
   '2-dry-run': 'The old flag is refused at exit 2, and the message names the new one.',
   '3-miss': 'The folder holds one answer, and this question is not it. The run exits 5 and names the missing key.',
   '4-facts': 'The answer came from the folder. The facts line counts one record and no request sent. jq drops seconds, which changes on every run.',
+};
+
+// Captions for the four tool pages, keyed by page and script name.
+export const TOOLS_SEE = {
+  audit: {
+    '1-counts': 'Ten songs at the band 0.2:0.8: 3 right, 2 wrong, 5 not sure, and no ties.',
+  },
+  diff: {
+    '1-cuts': 'One saved run, read at 0.5 and then at the band 0.2:0.8. Five answers become not sure, and each is withdrawn. No request is sent.',
+  },
+  check: {
+    '1-probes': 'The plan names the four probes in the order a live check sends them.',
+  },
+  transform: {
+    '1-list': 'The ten transforms, in name order.',
+    '2-show': 'counts reads a saved run and counts its answers. jq runs it. thinkthen does not.',
+  },
 };

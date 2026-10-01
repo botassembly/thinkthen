@@ -1,0 +1,46 @@
+---
+// Goal: say what thinkthen check sends, what each report row means, and when it exits 4.
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import { BACKENDS_SEE } from '../../data/catalog.mjs';
+import { REFERENCE_PAGES, referencePage, TOOLS_SEE } from '../../data/reference.mjs';
+import { captioned, run } from '../../data/samples.mjs';
+
+const page = referencePage('check');
+const [probes] = captioned('reference/check', TOOLS_SEE.check);
+const plan = run('install/backends/system-one', '4-check-plan');
+const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md';
+const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed', 'usage'];
+---
+<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'What thinkthen check sends, what each report row means, and when it exits 4.' }} name="Reference">
+  <h1><code>check</code></h1>
+  <p class="lede"><code>thinkthen check</code> tests whether a backend works with ThinkThen. It sends four fixed requests, one after another. Every request is real, so a hosted server may charge for it.</p>
+
+  <h2 id="plan">See it first</h2>
+  <p><code>--plan</code> prints the address and the model, then the four request bodies and a count. It sends nothing and needs no key.</p>
+  <Terminal run={plan} caption={BACKENDS_SEE['system-one']['4-check-plan']} />
+
+  <h2 id="probes">The four probes</h2>
+  <p>Each probe asks about the same parcel delivery, and each covers the question shapes some functions send.</p>
+  <ul>
+    <li><code>noul</code>: a yes or no question, for <code>decide</code>, <code>filter</code>, <code>rank</code>, and the yes or no questions of <code>recognize</code> and <code>relate</code>.</li>
+    <li><code>choice</code>: a pick, for <code>choose</code>, <code>find</code>, and the kind question of <code>recognize</code>.</li>
+    <li><code>score</code>: a scale, for <code>score</code>.</li>
+    <li><code>mixed</code>: five questions of three kinds in one request, for <code>tag</code>, <code>annotate</code>, and any request that carries many questions.</li>
+  </ul>
+  <Terminal run={probes} caption={probes.see} />
+
+  <h2 id="the-report">The report</h2>
+  <p>A live check prints one <code>reply</code> line for each probe it decoded, then eight rows in this order: {ROWS.map((r, i) => <>{i ? (i === ROWS.length - 1 ? ' and ' : ', ') : ''}<code>{r}</code></>)}. A row reads <code>ok</code>, <code>warning</code> or <code>critical</code>. It reads <code>unchecked</code> when the check stopped before reaching it. A last line counts the critical and warning lines.</p>
+  <p>A transport failure, or status 401, 402, 403 or 404, stops the check, because every later request would meet it too. Any other failure belongs to its probe, and the check goes on. A finding never quotes the reply.</p>
+
+  <h2 id="exit-codes">Exit codes</h2>
+  <ul>
+    <li>0: no row is critical. Warnings may stand.</li>
+    <li>2: a usage error, such as no address or an unknown option. Nothing is sent.</li>
+    <li>4: a row is critical, or the key is unset at an address other than this machine.</li>
+  </ul>
+  <p><code>check</code> reads no input, cache, recording or profile. <code>--cache</code>, <code>--no-cache</code>, <code>--record</code>, <code>--replay</code> and <code>--profile</code> are refused at exit 2. It takes no <code>--max-retries</code>, and four probes send at most sixteen attempts.</p>
+
+  <p class="pagelinks"><a href="/install/backends/system-one/">Any System One server</a> · <a href={spec}>The check specification</a> · <a href="/reference/#exit-codes">Every exit code</a></p>
+</SidePage>
