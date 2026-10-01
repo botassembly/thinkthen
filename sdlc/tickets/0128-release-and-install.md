@@ -200,7 +200,7 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 
     The quick fix `Land quick fix: the fifth rehearsal's stop test race, JDK pick and macOS pgrx home` answers all four. The stop test's second half holds its own reply on its own backend. With a 200 ms pause before the second engine asks, the old test fails and the new one passes. `check_jdk` uses `THINKTHEN_JDK_HOME` or the pinned package's tree and never searches PATH. Host setup on macOS writes `~/.pgrx/config.toml` when it is missing, as the Linux container does.
 
-    **Sixth rehearsal attempt, 2026-10-01.** The agent dispatched the last run the approval allowed. The run is [36812401623](https://github.com/botassembly/thinkthen/actions/runs/36812401623) at main `9b3f33b76`.
+    **Sixth rehearsal attempt, 2026-09-30.** The agent dispatched the last run the approval allowed. The run is [36812401623](https://github.com/botassembly/thinkthen/actions/runs/36812401623) at main `9b3f33b76`.
 
     | Job | Result | Cause |
     | --- | --- | --- |
