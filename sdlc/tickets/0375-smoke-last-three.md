@@ -1,8 +1,6 @@
 # 0375: The release smoke's last three failures pass
 
-Status: in progress. Lane claude-2. Branch `ticket/0375-smoke-last-three`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
-
-Milestone: 0.1
+Status: landed. Lane claude-2. Branch `ticket/0375-smoke-last-three`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
 
 ## Outcome
 
@@ -37,3 +35,10 @@ The three smoke failures of rehearsal run 36864015235 are gone:
 - Defers: the Intel Mac Python case 47 failure, one transport close that the other three jobs did not see. If the next rehearsal repeats it, it gets its own ticket. The PostgreSQL check's macOS steps after the first timed step run first on the next rehearsal; the M5 lacks Homebrew's 16.15 server.
 
 ## What the build taught us
+
+- The checkpoint and the release workflow had two packers for one C# archive, and the check followed the checkpoint's. Run 36864015235's archive holds the nupkg, `LICENSE`, `README.md` and the manifest. A fresh `release-pack c csharp` archive now lists the same four files, and its `README.md` matches the checkout's C# readme. With the branch, `release-smoke` on the run's x86 C, C# and JVM files passes `libraries/csharp` ("C# installed release PASS: two exact calls from package files") and `libraries/jvm`, and `release-go-cpp-pair DIR csharp-jvm` passes. The other surfaces report "DIR holds no file" by design. The same archive with a planted `EXTRA` file fails with `C# wrapper inventory`.
+- A set `BASH_VERSION` does not mean a usable bash. On the M5, a copy of main's guard and `now_ms` under `/bin/sh` printed the runner's exact `/ 1000: syntax error`. The branch's guard under `/bin/sh` with only `/usr/bin:/bin` on `PATH` prints `not run: databases/postgresql/check.sh needs bash 5 on PATH outside POSIX mode, found 3.2.57(1)-release` and exits 77. With a bash 5.2.37 built in the scratch folder first on `PATH`, the steps run under bash 5 outside POSIX mode. On this host the guard re-runs from `sh` (dash), `bash --posix` and `POSIXLY_CORRECT=1 bash`, and each ends outside POSIX mode.
+- The bash fix uncovered a second macOS failure. The M5 has no Homebrew, so a scratch PostgreSQL 16.15 source build stood in for the keg through a scratch-only `runtime.sh` change that skipped the Homebrew checks. The installed-file check on run 36864015235's macOS ARM PostgreSQL archive then failed `conformance` with `want: 55` and `got:       55`. With the count read through arithmetic it passed 12 of 12 steps, with 52 shared cases passing and 3 not run by design. These steps include the timed and file-descriptor steps, which no runner has reached on macOS. The Homebrew checks themselves run first on the next rehearsal.
+- On this host, `sh databases/postgresql/check.sh` passed run 36864015235's x86 PostgreSQL archive 12 of 12, with 52 of 55 cases passing and 3 not run.
+- `lint` in full, the four release self-tests, `workflows --self-test` (68 of 68), `policy.py` and `tickets` pass. `lint` asked for the C# test ratchet to go from 602 to 604 lines, for the two-line readme and license comparison. `lint`'s one `Killed` line comes from the planted time-limit test.
+- Review: the ticket review returned four findings, all fixed before code, then ACCEPT. Proof named the exact C# command; the fake host got its own `bash` and a 3.2 row; the re-run unsets `POSIXLY_CORRECT`; the Outcome says the release smoke counts "not run" as failure. The code review returned ACCEPT.
