@@ -113,7 +113,7 @@ const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c', '.cpp', '.m', '
 // does not accept. That throw fails the build, so a mistyped fence tag or
 // a new kind of file never passes unread.
 export const NO_CALL = new Set([
-  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq', '.csproj', '.zon', '.yaml',
+  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq', '.csproj', '.zon', '.yaml', '.toml',
   'text', 'json', 'console', 'output',
 ]);
 const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.cpp': 'cpp', '.m': 'objective-c', '.cob': 'cobol', '.adb': 'ada', '.java': 'java', '.kt': 'kotlin', '.scala': 'scala', '.cs': 'csharp', '.go': 'go', '.swift': 'swift', '.zig': 'zig', '.php': 'php', '.dart': 'dart', '.sql': 'sql' };

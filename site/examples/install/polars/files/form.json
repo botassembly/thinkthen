@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "questions": {
+    "steps": {
+      "decide": "Does the report give steps to reproduce?"
+    },
+    "area": {
+      "choose": "Which part of the app is this?",
+      "options": [
+        "export",
+        "login",
+        "billing"
+      ]
+    },
+    "impact": {
+      "score": "How much does this block the user?",
+      "levels": [
+        "None.",
+        "Slows them.",
+        "Blocks work."
+      ]
+    }
+  }
+}

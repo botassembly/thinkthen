@@ -1,10 +1,10 @@
 # Files outside the CLI smoke runner: a glob, then the reason.
 **/*.py       Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
-**/*.ts       Host library sample; check against the TypeScript package.
-**/*.rb       Host library sample; check against the Ruby package.
+**/*.ts       Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.rb       Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.R        Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
-**/*.rs       Host library sample; check against the Rust crate.
-**/*.c        Native sample; compile against the current C header.
+**/*.rs       Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.c        Native sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.cpp      Native sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.m        Native sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.cob      Native sample; smoke-bindings.mjs replays the ones REPLAY lists.
@@ -21,6 +21,7 @@
 **/*.php      Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.dart     Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.yaml     The package file a Dart sample builds with.
+**/*.toml     The package file a Rust sample builds with.
 **/*.sql      SQL sample; check against the matching installed extension.
 **/*.sql.out  Saved output from a checked database sample.
 REPLAY        The samples smoke-bindings.mjs replays.

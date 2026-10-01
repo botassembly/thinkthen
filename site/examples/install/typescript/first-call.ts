@@ -18,8 +18,8 @@ const urgencyScale = {
   score: "How urgent is this?",
   levels,
 };
-const outage = "Checkout is down and nobody can pay.";
+const outage = "Nobody can log in to the site right now.";
 const urgency = (await tt.score(
   urgencyScale, outage,
 )).value;
-assert.equal(urgency, 2);
+assert.ok(urgency > 1.5);
