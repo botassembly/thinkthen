@@ -58,7 +58,7 @@ const MODES = [
   <h2 id="batching">Batching</h2>
   <p>A stream of records packs many questions into each request. The default batch is <code>{batch.default}</code>, which fills each request to the backend's limits. <code>--batch 1</code> sends one record a request. The batch does not change a key, so an answer saved under one batch setting replays under another.</p>
   <p>Batching may change an answer slightly. Do not batch when you want steadier answers. ThinkThen measured the effect on <code>annotate</code>, where questions share one request. Other questions joined six borderline questions in that request, and one answer moved from no to not sure. The largest change in a probability was 0.04. The <a href={spec('annotate', '#cautions')}>annotate specification</a> records it.</p>
-  <p>The same request sent twice can also return another probability. A borderline answer, between 0.33 and 0.67, moved by up to 0.08 in ThinkThen's measurement. <code>--batch 1</code> does not remove that. A saved answer does: replay and the cache return the same answer every time. The <a href={spec('recording', '#the-question-store')}>recording specification</a> records the measurement.</p>
+  <p>The same request sent twice can also return another probability. A borderline answer, between 0.33 and 0.67, moved by up to 0.08 in ThinkThen's measurement. <code>--batch 1</code> does not remove that. A saved answer does. Replay, or a cache with a pinned model, returns the same answer every time. The <a href={spec('recording', '#the-question-store')}>recording specification</a> records the measurement.</p>
 
   <h2 id="pruning">Pruning</h2>
   <ul>
