@@ -31,6 +31,32 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/annotate/csharp.cs": {
+    "page": "/functions/annotate/",
+    "sample": "d5c8578bba49d0967e61901b8334207f2af81d9690f938b07b2e786488522612",
+    "output": null,
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/annotate/duckdb.sql": {
     "page": "/functions/annotate/",
     "sample": "f2a06106d75081dce2c8e92669903cb472b0db39528772bb318ded07e585153f",
@@ -60,6 +86,59 @@
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/annotate/java.java": {
+    "page": "/functions/annotate/",
+    "sample": "e5da9281e270c1a3002a2e2dfcd1ea6d12ec29107d1b7b15864d4f1ef7edabc6",
+    "output": null,
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/annotate/kotlin.kt": {
+    "page": "/functions/annotate/",
+    "sample": "3ad7685d16bee9e7fab998050a058d76450627f02e9e5293f60f7a453fa05c47",
+    "output": null,
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -118,7 +197,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -148,7 +227,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -182,6 +261,33 @@
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/annotate/scala.scala": {
+    "page": "/functions/annotate/",
+    "sample": "3e1f6a8f12cda8ee49b338b2223d71623993848b2305dcec863ea47f1bab7e8c",
+    "output": null,
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -238,7 +344,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -267,6 +373,73 @@
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
       "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/csharp.cs": {
+    "page": "/functions/choose/",
+    "sample": "f9156411625d248521ddf59fe7c6ce6fbc6d3b118d415287f31b09fcaec9ed51",
+    "output": null,
+    "files": {},
+    "answers": {
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/java.java": {
+    "page": "/functions/choose/",
+    "sample": "164048883653c94720d0b5d0f0c9491b64dc2d4960ed11b65cd364a102fb1e2a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/kotlin.kt": {
+    "page": "/functions/choose/",
+    "sample": "8059b3bdfefc2aa2898b7ed97fc42d5fd42bbcb3176f335bc3182663847810c2",
+    "output": null,
+    "files": {},
+    "answers": {
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -310,7 +483,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -334,10 +507,33 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/scala.scala": {
+    "page": "/functions/choose/",
+    "sample": "8c002713f91ea1523375702a8d361cc4d60f0d0b0f0d8a9e83dc8efaf7a5fbe0",
+    "output": null,
+    "files": {},
+    "answers": {
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -380,7 +576,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -409,6 +605,73 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/decide/csharp.cs": {
+    "page": "/functions/decide/",
+    "sample": "9d612ed75db0ce23b1bd1c67383e8bbea6097cbba825269f6a6110eb68dc255e",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/decide/java.java": {
+    "page": "/functions/decide/",
+    "sample": "98721894e4c1744a7a2abec29e6fcf036570b3e9e8b026b8e01fec8e0884c398",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/decide/kotlin.kt": {
+    "page": "/functions/decide/",
+    "sample": "fc56a9eff2b23dcbd7247e6737f3e75cebf78fe2806728c6d059d1533cc10973",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/decide/polars.py": {
     "page": "/functions/decide/",
     "sample": "4c09314bbbbdc7bb64daef87b2a64698de96aeb99e673925bd9d337c391aef10",
@@ -423,7 +686,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -446,7 +709,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -467,7 +730,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -492,6 +755,29 @@
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/decide/scala.scala": {
+    "page": "/functions/decide/",
+    "sample": "e93a0721046e2f15ca42e80e4a158ab1b58c5b4ae709630a31344ea4510ace62",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -530,7 +816,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -559,6 +845,82 @@
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
       "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/filter/csharp.cs": {
+    "page": "/functions/filter/",
+    "sample": "5bad897b3aa89e099a2623f1e8e18525dad57bd3bc963e972d90d977ed413bce",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/filter/java.java": {
+    "page": "/functions/filter/",
+    "sample": "bc2f7a5fe333dde1b6ff60eb34336c4a4a3d41fd9428f9189a62110db2376266",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/filter/kotlin.kt": {
+    "page": "/functions/filter/",
+    "sample": "8b95ffe27758f2993f9274a7080a6e47e02b1ee081165e65c7b397828c934aa0",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -602,7 +964,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -627,7 +989,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -650,7 +1012,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -677,6 +1039,32 @@
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/filter/scala.scala": {
+    "page": "/functions/filter/",
+    "sample": "b4683ce4987359d6488240a167ac9c2c1b634d66b17575c391a3953b57cb1ada",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -725,6 +1113,73 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/find/csharp.cs": {
+    "page": "/functions/find/",
+    "sample": "357fd03ffb84f245b2d41a1eb8788632c13c8ba5ee2ecd4b070d046706ca9f5a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/find/java.java": {
+    "page": "/functions/find/",
+    "sample": "b84fd9600d51146856cbf5bec5838b406d7a37d9fbb6bb4ecb92f3ef331f4250",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/find/kotlin.kt": {
+    "page": "/functions/find/",
+    "sample": "d2228fef873775429eb386b72968e1a83adeee3309999e491f7b059c9de58b8c",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/find/postgresql.sql": {
     "page": "/functions/find/",
     "sample": "3b2d5fa8dc44a6b8fd82c67f165c8cd2ad724f00428bc2f06dd4f6c583d44ace",
@@ -759,7 +1214,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -781,7 +1236,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -805,6 +1260,29 @@
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/find/scala.scala": {
+    "page": "/functions/find/",
+    "sample": "c68ca65c4df8479ed6731d3aff475c239f898a7ca8046d20dafa9ebfea1496f9",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -841,10 +1319,34 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/question-file/csharp.cs": {
+    "page": "/functions/question-file/",
+    "sample": "f6da1f5ca975b345588111c0a64206cec1be80786fcb01490688f88fed552441",
+    "output": null,
+    "files": {
+      "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
+    },
+    "answers": {
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -873,6 +1375,55 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/question-file/java.java": {
+    "page": "/functions/question-file/",
+    "sample": "972851cd28ffad570f990b068d3a3f4f287d1a9d43c76d08fe5c5d52ac37e7c0",
+    "output": null,
+    "files": {
+      "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
+    },
+    "answers": {
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/question-file/kotlin.kt": {
+    "page": "/functions/question-file/",
+    "sample": "868c0f32768275d1b8d4c256adc092ba6e703047c458c916d4c005660ea920b9",
+    "output": null,
+    "files": {
+      "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
+    },
+    "answers": {
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/question-file/polars.py": {
     "page": "/functions/question-file/",
     "sample": "e9d3dc590a8591a95c38930f8daa82ac6d7e3cd2ce5729d99e8fb7403967b45c",
@@ -890,7 +1441,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -916,7 +1467,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -938,7 +1489,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -964,6 +1515,31 @@
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/question-file/scala.scala": {
+    "page": "/functions/question-file/",
+    "sample": "d99e0cce63356cf161a77b72331a6c9cb63de24aa2760a93061142a3a43db8fd",
+    "output": null,
+    "files": {
+      "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
+    },
+    "answers": {
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1005,7 +1581,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1037,6 +1613,31 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/rank/csharp.cs": {
+    "page": "/functions/rank/",
+    "sample": "d570593ff685e5705e6f643e3f8599bbc0c99fbd703b3b4cbf9ee237708f6fda",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/rank/duckdb.sql": {
     "page": "/functions/rank/",
     "sample": "880c8daaf1ea31829993d3985a8023a56d941305b33b48a5e4854f2bc3d654a8",
@@ -1059,6 +1660,57 @@
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/rank/java.java": {
+    "page": "/functions/rank/",
+    "sample": "af302a1e1767a8584eb99918d5c98a3a9a1e512b99756580e3c3404befe4923f",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/rank/kotlin.kt": {
+    "page": "/functions/rank/",
+    "sample": "66e7f93b4df9b57c4596f92b380a790ee4ab3f6b1441116ad1ddf7fabcfad048",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1102,7 +1754,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1126,7 +1778,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1156,6 +1808,32 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/rank/scala.scala": {
+    "page": "/functions/rank/",
+    "sample": "d46bd2a67a2ae68c0810c0f9e5d74f9a131ca549b898247ec09af9deee997458",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/rank/typescript.ts": {
     "page": "/functions/rank/",
     "sample": "a066bb6ff22099bdc40f9ef88edc5ff2959e07eca700ccdca452e60117d75f03",
@@ -1172,7 +1850,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1220,6 +1898,42 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/recognize/csharp.cs": {
+    "page": "/functions/recognize/",
+    "sample": "b2cbea271dfec0a63d90550cd3e5c4ac919baa5b2ab5918e9eea22bcca110615",
+    "output": null,
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "07c746dc8aad22f54dc266f9567432129b25d739cc62b1d4aa2654694a422496": "74d96e9b7ebe67afefb8fa2b182fb27a8489bc4ceb7904d03f1c23f3937436f8",
+      "371f979c48617ddeb9c3b9c35868baa30cc77089f828605bea768490fa167e42": "9cb3cac3bbacda5e3feb39bb69ef10bf0e8f7b2fe6e87ab5aa881ca0d53a2e33",
+      "41681f460a7ea7eb9a4ea3b89ef48c213cc18313d61fc831d3aa01a648d65d8d": "b586a97274389d4a886bbc8e9e705438752713941984642b2328fc0b262a3bc2",
+      "6c6db3297e6e3a89d45b5da3c4fed7788fc1c007861ee28137fc681eee6c3082": "dc712d0f198f731dce2023d22d4ec3c13f2dd2db4b04704ee21e084da29890c4",
+      "76024b07d9a96026e061e8af4a92df7131b731475bb412c6fa51ecb970e6d2fa": "843c1d50f5196b9e31e92da2099490223af7865e3aa0b5d8f8ff01aef83492fd",
+      "77df7ce284b718f23231669742ee93d31489a0674fdfad8bf9a3dd975d6a9caf": "1d55a11fb6dcd7020d3f05b970f59d2cdb31559d6ec38c18e1983dd42f1b1ed5",
+      "790fd598133fd31cf580c1260b871f2c92e0e481ac6d52852040962bc0f8175b": "7383283f7ed06be7acdfdf722792e487df2c7a086508851368fa11b54a101607",
+      "8dc7673338321c8d7a26858e647c68aab3862eefe5f32a603da01bdab8077fd5": "3a23e00c7854f2442a7732e7d1a78cb29784cffed2ae9c364bf2ae475684735f",
+      "9521e43de62d8a1ed271f7fb41e55c66d174572189bf8ee60beff499b4b0a395": "e030c0d55a1a613e275692942acb0f9570ed7873e84b3465db053ca2454d38c5",
+      "d10474d6eef7e802dca2715e9be969477779bf41e8d2ccb023b39431c8f43609": "5c5db805de231db694268d321986641deae7fa5f61e05c773f58de5ef715edad",
+      "e5d8d47f1c36e1078b876304aa35a6c553ac0cdf5752f2df07360569492f1258": "3a70a96260680b6372a1f62dd7a34b93ae9a6af5f95d395c24c92c2270a01b1f",
+      "f14ef6dbd823b33a95b18bf7ea1e5dbb3324847870b77ae8f69ded9b7fc043b4": "4133f7f952def3fb0c934708ff3c63c1f17d0e2077818d50dd3fb7209c5dba14",
+      "f743969fcbf67c81f44c7ce083d5b4f1662560ae66b03b309aebe2e67c40c79f": "79f076e1bd5b0ff9865ad616bc6eb9ddc7830d2b9709100c6ab1322190b5b8d4"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/recognize/duckdb.sql": {
     "page": "/functions/recognize/",
     "sample": "b39ebb2fc2c7e3b53d7f96434acf3417ac6675b956155891d9730bc0c9f48016",
@@ -1258,6 +1972,79 @@
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/recognize/java.java": {
+    "page": "/functions/recognize/",
+    "sample": "2121675c1852f125e5181de2abc76eb7931a5429f48d322f39dbad05452bc19a",
+    "output": null,
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "07c746dc8aad22f54dc266f9567432129b25d739cc62b1d4aa2654694a422496": "74d96e9b7ebe67afefb8fa2b182fb27a8489bc4ceb7904d03f1c23f3937436f8",
+      "371f979c48617ddeb9c3b9c35868baa30cc77089f828605bea768490fa167e42": "9cb3cac3bbacda5e3feb39bb69ef10bf0e8f7b2fe6e87ab5aa881ca0d53a2e33",
+      "41681f460a7ea7eb9a4ea3b89ef48c213cc18313d61fc831d3aa01a648d65d8d": "b586a97274389d4a886bbc8e9e705438752713941984642b2328fc0b262a3bc2",
+      "6c6db3297e6e3a89d45b5da3c4fed7788fc1c007861ee28137fc681eee6c3082": "dc712d0f198f731dce2023d22d4ec3c13f2dd2db4b04704ee21e084da29890c4",
+      "76024b07d9a96026e061e8af4a92df7131b731475bb412c6fa51ecb970e6d2fa": "843c1d50f5196b9e31e92da2099490223af7865e3aa0b5d8f8ff01aef83492fd",
+      "77df7ce284b718f23231669742ee93d31489a0674fdfad8bf9a3dd975d6a9caf": "1d55a11fb6dcd7020d3f05b970f59d2cdb31559d6ec38c18e1983dd42f1b1ed5",
+      "790fd598133fd31cf580c1260b871f2c92e0e481ac6d52852040962bc0f8175b": "7383283f7ed06be7acdfdf722792e487df2c7a086508851368fa11b54a101607",
+      "8dc7673338321c8d7a26858e647c68aab3862eefe5f32a603da01bdab8077fd5": "3a23e00c7854f2442a7732e7d1a78cb29784cffed2ae9c364bf2ae475684735f",
+      "9521e43de62d8a1ed271f7fb41e55c66d174572189bf8ee60beff499b4b0a395": "e030c0d55a1a613e275692942acb0f9570ed7873e84b3465db053ca2454d38c5",
+      "d10474d6eef7e802dca2715e9be969477779bf41e8d2ccb023b39431c8f43609": "5c5db805de231db694268d321986641deae7fa5f61e05c773f58de5ef715edad",
+      "e5d8d47f1c36e1078b876304aa35a6c553ac0cdf5752f2df07360569492f1258": "3a70a96260680b6372a1f62dd7a34b93ae9a6af5f95d395c24c92c2270a01b1f",
+      "f14ef6dbd823b33a95b18bf7ea1e5dbb3324847870b77ae8f69ded9b7fc043b4": "4133f7f952def3fb0c934708ff3c63c1f17d0e2077818d50dd3fb7209c5dba14",
+      "f743969fcbf67c81f44c7ce083d5b4f1662560ae66b03b309aebe2e67c40c79f": "79f076e1bd5b0ff9865ad616bc6eb9ddc7830d2b9709100c6ab1322190b5b8d4"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/recognize/kotlin.kt": {
+    "page": "/functions/recognize/",
+    "sample": "8e4214f3c21df1ef122fc4f3012814c0b1ea1587b776c0cb3a7f69ebe731fa25",
+    "output": null,
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "07c746dc8aad22f54dc266f9567432129b25d739cc62b1d4aa2654694a422496": "74d96e9b7ebe67afefb8fa2b182fb27a8489bc4ceb7904d03f1c23f3937436f8",
+      "371f979c48617ddeb9c3b9c35868baa30cc77089f828605bea768490fa167e42": "9cb3cac3bbacda5e3feb39bb69ef10bf0e8f7b2fe6e87ab5aa881ca0d53a2e33",
+      "41681f460a7ea7eb9a4ea3b89ef48c213cc18313d61fc831d3aa01a648d65d8d": "b586a97274389d4a886bbc8e9e705438752713941984642b2328fc0b262a3bc2",
+      "6c6db3297e6e3a89d45b5da3c4fed7788fc1c007861ee28137fc681eee6c3082": "dc712d0f198f731dce2023d22d4ec3c13f2dd2db4b04704ee21e084da29890c4",
+      "76024b07d9a96026e061e8af4a92df7131b731475bb412c6fa51ecb970e6d2fa": "843c1d50f5196b9e31e92da2099490223af7865e3aa0b5d8f8ff01aef83492fd",
+      "77df7ce284b718f23231669742ee93d31489a0674fdfad8bf9a3dd975d6a9caf": "1d55a11fb6dcd7020d3f05b970f59d2cdb31559d6ec38c18e1983dd42f1b1ed5",
+      "790fd598133fd31cf580c1260b871f2c92e0e481ac6d52852040962bc0f8175b": "7383283f7ed06be7acdfdf722792e487df2c7a086508851368fa11b54a101607",
+      "8dc7673338321c8d7a26858e647c68aab3862eefe5f32a603da01bdab8077fd5": "3a23e00c7854f2442a7732e7d1a78cb29784cffed2ae9c364bf2ae475684735f",
+      "9521e43de62d8a1ed271f7fb41e55c66d174572189bf8ee60beff499b4b0a395": "e030c0d55a1a613e275692942acb0f9570ed7873e84b3465db053ca2454d38c5",
+      "d10474d6eef7e802dca2715e9be969477779bf41e8d2ccb023b39431c8f43609": "5c5db805de231db694268d321986641deae7fa5f61e05c773f58de5ef715edad",
+      "e5d8d47f1c36e1078b876304aa35a6c553ac0cdf5752f2df07360569492f1258": "3a70a96260680b6372a1f62dd7a34b93ae9a6af5f95d395c24c92c2270a01b1f",
+      "f14ef6dbd823b33a95b18bf7ea1e5dbb3324847870b77ae8f69ded9b7fc043b4": "4133f7f952def3fb0c934708ff3c63c1f17d0e2077818d50dd3fb7209c5dba14",
+      "f743969fcbf67c81f44c7ce083d5b4f1662560ae66b03b309aebe2e67c40c79f": "79f076e1bd5b0ff9865ad616bc6eb9ddc7830d2b9709100c6ab1322190b5b8d4"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1328,7 +2115,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1369,7 +2156,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -1408,7 +2195,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1451,6 +2238,43 @@
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/recognize/scala.scala": {
+    "page": "/functions/recognize/",
+    "sample": "665838db35d395d802798c8fbdcb589beb9f0ed877d9e5dc81481992aec66408",
+    "output": null,
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "07c746dc8aad22f54dc266f9567432129b25d739cc62b1d4aa2654694a422496": "74d96e9b7ebe67afefb8fa2b182fb27a8489bc4ceb7904d03f1c23f3937436f8",
+      "371f979c48617ddeb9c3b9c35868baa30cc77089f828605bea768490fa167e42": "9cb3cac3bbacda5e3feb39bb69ef10bf0e8f7b2fe6e87ab5aa881ca0d53a2e33",
+      "41681f460a7ea7eb9a4ea3b89ef48c213cc18313d61fc831d3aa01a648d65d8d": "b586a97274389d4a886bbc8e9e705438752713941984642b2328fc0b262a3bc2",
+      "6c6db3297e6e3a89d45b5da3c4fed7788fc1c007861ee28137fc681eee6c3082": "dc712d0f198f731dce2023d22d4ec3c13f2dd2db4b04704ee21e084da29890c4",
+      "76024b07d9a96026e061e8af4a92df7131b731475bb412c6fa51ecb970e6d2fa": "843c1d50f5196b9e31e92da2099490223af7865e3aa0b5d8f8ff01aef83492fd",
+      "77df7ce284b718f23231669742ee93d31489a0674fdfad8bf9a3dd975d6a9caf": "1d55a11fb6dcd7020d3f05b970f59d2cdb31559d6ec38c18e1983dd42f1b1ed5",
+      "790fd598133fd31cf580c1260b871f2c92e0e481ac6d52852040962bc0f8175b": "7383283f7ed06be7acdfdf722792e487df2c7a086508851368fa11b54a101607",
+      "8dc7673338321c8d7a26858e647c68aab3862eefe5f32a603da01bdab8077fd5": "3a23e00c7854f2442a7732e7d1a78cb29784cffed2ae9c364bf2ae475684735f",
+      "9521e43de62d8a1ed271f7fb41e55c66d174572189bf8ee60beff499b4b0a395": "e030c0d55a1a613e275692942acb0f9570ed7873e84b3465db053ca2454d38c5",
+      "d10474d6eef7e802dca2715e9be969477779bf41e8d2ccb023b39431c8f43609": "5c5db805de231db694268d321986641deae7fa5f61e05c773f58de5ef715edad",
+      "e5d8d47f1c36e1078b876304aa35a6c553ac0cdf5752f2df07360569492f1258": "3a70a96260680b6372a1f62dd7a34b93ae9a6af5f95d395c24c92c2270a01b1f",
+      "f14ef6dbd823b33a95b18bf7ea1e5dbb3324847870b77ae8f69ded9b7fc043b4": "4133f7f952def3fb0c934708ff3c63c1f17d0e2077818d50dd3fb7209c5dba14",
+      "f743969fcbf67c81f44c7ce083d5b4f1662560ae66b03b309aebe2e67c40c79f": "79f076e1bd5b0ff9865ad616bc6eb9ddc7830d2b9709100c6ab1322190b5b8d4"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1525,7 +2349,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1581,6 +2405,31 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/relate/csharp.cs": {
+    "page": "/functions/relate/",
+    "sample": "45b3b3cbb2c8a16ba6e29ce9aae91bb8b789e4c119c4309b7c939f37e15d2099",
+    "output": null,
+    "files": {},
+    "answers": {
+      "4524b9df16b2d794720f417428f1a5882b51171b80e396eb7a9962e8d1b9d9ed": "004ef3640cd152f6b19c3cf9aca936ad211c55bab050eaa5442ec74f4998201a",
+      "4ab6910965935e004b7f59e3336462a163fc04bbbd8fa5e1494b81c7cb8bdc64": "0718dfd86331b42c546f4c918ebfcc166086fa216bbc1893e0f19a559134758c",
+      "4d219a70a8d130ff6f966eff8faf22d824283beae783a5bed8f5fccb6520ec14": "6b0de78bc8e1bdc3cdc3a28d1f52c00e976651293385ed0198ccb87f9a90b70c",
+      "edf4c5394709b4d434036ae483b452f6714261e368ea2adb4c19538e0b67e70a": "a6a5ecfbe705363b5f8d22b2e01441c6dae591c75cb6c3e1820311a8a6b068b1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/relate/duckdb.sql": {
     "page": "/functions/relate/",
     "sample": "905684c31522f05cb373d6af56ea9f7946e33d6e579fce3c69141851202dc242",
@@ -1627,6 +2476,57 @@
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/relate/java.java": {
+    "page": "/functions/relate/",
+    "sample": "d35e78d820e3c7fe60a856e309118175f204d0bde0b139a28d42f1ea6c556c9c",
+    "output": null,
+    "files": {},
+    "answers": {
+      "4524b9df16b2d794720f417428f1a5882b51171b80e396eb7a9962e8d1b9d9ed": "004ef3640cd152f6b19c3cf9aca936ad211c55bab050eaa5442ec74f4998201a",
+      "4ab6910965935e004b7f59e3336462a163fc04bbbd8fa5e1494b81c7cb8bdc64": "0718dfd86331b42c546f4c918ebfcc166086fa216bbc1893e0f19a559134758c",
+      "4d219a70a8d130ff6f966eff8faf22d824283beae783a5bed8f5fccb6520ec14": "6b0de78bc8e1bdc3cdc3a28d1f52c00e976651293385ed0198ccb87f9a90b70c",
+      "edf4c5394709b4d434036ae483b452f6714261e368ea2adb4c19538e0b67e70a": "a6a5ecfbe705363b5f8d22b2e01441c6dae591c75cb6c3e1820311a8a6b068b1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/relate/kotlin.kt": {
+    "page": "/functions/relate/",
+    "sample": "1421f893d354f25b7e5f14a66c85363d9c106c2bfd8ddf2afa29d56bc52ce714",
+    "output": null,
+    "files": {},
+    "answers": {
+      "4524b9df16b2d794720f417428f1a5882b51171b80e396eb7a9962e8d1b9d9ed": "004ef3640cd152f6b19c3cf9aca936ad211c55bab050eaa5442ec74f4998201a",
+      "4ab6910965935e004b7f59e3336462a163fc04bbbd8fa5e1494b81c7cb8bdc64": "0718dfd86331b42c546f4c918ebfcc166086fa216bbc1893e0f19a559134758c",
+      "4d219a70a8d130ff6f966eff8faf22d824283beae783a5bed8f5fccb6520ec14": "6b0de78bc8e1bdc3cdc3a28d1f52c00e976651293385ed0198ccb87f9a90b70c",
+      "edf4c5394709b4d434036ae483b452f6714261e368ea2adb4c19538e0b67e70a": "a6a5ecfbe705363b5f8d22b2e01441c6dae591c75cb6c3e1820311a8a6b068b1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1694,7 +2594,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1743,7 +2643,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -1790,7 +2690,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1841,6 +2741,32 @@
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/relate/scala.scala": {
+    "page": "/functions/relate/",
+    "sample": "77044bc05a2d5096d70bfc03ad1fbec4f4cc4084e0f41fba52d29615dcdc6d5a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "4524b9df16b2d794720f417428f1a5882b51171b80e396eb7a9962e8d1b9d9ed": "004ef3640cd152f6b19c3cf9aca936ad211c55bab050eaa5442ec74f4998201a",
+      "4ab6910965935e004b7f59e3336462a163fc04bbbd8fa5e1494b81c7cb8bdc64": "0718dfd86331b42c546f4c918ebfcc166086fa216bbc1893e0f19a559134758c",
+      "4d219a70a8d130ff6f966eff8faf22d824283beae783a5bed8f5fccb6520ec14": "6b0de78bc8e1bdc3cdc3a28d1f52c00e976651293385ed0198ccb87f9a90b70c",
+      "edf4c5394709b4d434036ae483b452f6714261e368ea2adb4c19538e0b67e70a": "a6a5ecfbe705363b5f8d22b2e01441c6dae591c75cb6c3e1820311a8a6b068b1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1931,10 +2857,32 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/csharp.cs": {
+    "page": "/functions/score/",
+    "sample": "1c1136a34bb2aaba10b5f01acf3cb38f45bb8d3b48ce3c6237150365be97f9e8",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1962,6 +2910,51 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/score/java.java": {
+    "page": "/functions/score/",
+    "sample": "1f5e5f0ece9c05c456ddf60fb7d057d2f9c4b0e944949df731a7a5390ed6c443",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/kotlin.kt": {
+    "page": "/functions/score/",
+    "sample": "ffcbebf53c20c56f50a120c317eb0695d1a789a75dd322ba16ff143bd6a57be0",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/score/polars.py": {
     "page": "/functions/score/",
     "sample": "fd6514a4e4b68a86b23463f779d680c9392060a56e2d8cf0668b47ca6d9a6524",
@@ -1977,7 +2970,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -2023,7 +3016,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -2047,7 +3040,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -2069,7 +3062,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -2095,6 +3088,29 @@
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/scala.scala": {
+    "page": "/functions/score/",
+    "sample": "5c7ecb27f2bc3a3936fc34800c642ade8cbdea390ed5203e18765e23a8b82cc9",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -2144,6 +3160,30 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/tag/csharp.cs": {
+    "page": "/functions/tag/",
+    "sample": "c1d64044fb637836b540a93f15bd1fe77ff47a1b9550fb44497d2a4a2cfb57ee",
+    "output": null,
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/tag/duckdb.sql": {
     "page": "/functions/tag/",
     "sample": "53d3c8be82c2ab06d1454859a1abdf6c2112b63761b2e52259d49181a92ca030",
@@ -2165,6 +3205,55 @@
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/tag/java.java": {
+    "page": "/functions/tag/",
+    "sample": "a002b3fb5da587bf7b4b29206057fe040a88691e2ed7fde5184d88bdfb0b3eaf",
+    "output": null,
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/tag/kotlin.kt": {
+    "page": "/functions/tag/",
+    "sample": "ae1da3a6d2910ee5b5543818815945f0ae9c502ea8fa4cf72bdfed0cbf68c1ba",
+    "output": null,
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -2206,7 +3295,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -2230,7 +3319,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -2259,6 +3348,31 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/tag/scala.scala": {
+    "page": "/functions/tag/",
+    "sample": "39db8ff899fbcb88b3616326252dbf4f7665f13247366aabcdedacaf02222499",
+    "output": null,
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/tag/typescript.ts": {
     "page": "/functions/tag/",
     "sample": "ec98a651b9fb998118d5f6f24c6248d6ad5a47beacd48c4e52d530c3c2c5aab4",
@@ -2274,7 +3388,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -2297,7 +3411,7 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "23922ea2f5233fb49a4a6eb5d360b82cb77527470ca32d371428287a475d7bba"
+      "tree": "b89eef2e69c63902000eed09dba371d738db1faa006324e54e825acd1629647c"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
@@ -2320,7 +3434,7 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "23922ea2f5233fb49a4a6eb5d360b82cb77527470ca32d371428287a475d7bba"
+      "tree": "b89eef2e69c63902000eed09dba371d738db1faa006324e54e825acd1629647c"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
@@ -2343,7 +3457,7 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "23922ea2f5233fb49a4a6eb5d360b82cb77527470ca32d371428287a475d7bba"
+      "tree": "b89eef2e69c63902000eed09dba371d738db1faa006324e54e825acd1629647c"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
@@ -2366,7 +3480,7 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "23922ea2f5233fb49a4a6eb5d360b82cb77527470ca32d371428287a475d7bba"
+      "tree": "b89eef2e69c63902000eed09dba371d738db1faa006324e54e825acd1629647c"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
@@ -2480,7 +3594,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "bddacc870161f8fcf84f23b0809dcc16e0e3190feae2d8f4083b0423d2b6f069"
+      "tree": "79fa4cef7f164cc6814025fa882c793acfb8cb983ed6146bc67348677274eee6"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -2503,7 +3617,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "bddacc870161f8fcf84f23b0809dcc16e0e3190feae2d8f4083b0423d2b6f069"
+      "tree": "79fa4cef7f164cc6814025fa882c793acfb8cb983ed6146bc67348677274eee6"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -2526,7 +3640,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "bddacc870161f8fcf84f23b0809dcc16e0e3190feae2d8f4083b0423d2b6f069"
+      "tree": "79fa4cef7f164cc6814025fa882c793acfb8cb983ed6146bc67348677274eee6"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -2549,7 +3663,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "bddacc870161f8fcf84f23b0809dcc16e0e3190feae2d8f4083b0423d2b6f069"
+      "tree": "79fa4cef7f164cc6814025fa882c793acfb8cb983ed6146bc67348677274eee6"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -2572,7 +3686,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "bc36cf0a6fed11d0e52e22c838d6868e5ccf4998ed5cf0585b70680d34da35a5"
+      "tree": "5b1a3f55f055392a70f371c4bdaf8d9b103450fda54b9d49895660a2aa549419"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2595,7 +3709,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "bc36cf0a6fed11d0e52e22c838d6868e5ccf4998ed5cf0585b70680d34da35a5"
+      "tree": "5b1a3f55f055392a70f371c4bdaf8d9b103450fda54b9d49895660a2aa549419"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2618,7 +3732,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "bc36cf0a6fed11d0e52e22c838d6868e5ccf4998ed5cf0585b70680d34da35a5"
+      "tree": "5b1a3f55f055392a70f371c4bdaf8d9b103450fda54b9d49895660a2aa549419"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2641,7 +3755,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "bc36cf0a6fed11d0e52e22c838d6868e5ccf4998ed5cf0585b70680d34da35a5"
+      "tree": "5b1a3f55f055392a70f371c4bdaf8d9b103450fda54b9d49895660a2aa549419"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2666,7 +3780,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "3b6035d5aa6d01b3c44d797b48b05563dd211cf75e0e4e6c1235d78878cf84e2"
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -2691,7 +3805,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "3b6035d5aa6d01b3c44d797b48b05563dd211cf75e0e4e6c1235d78878cf84e2"
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -2716,7 +3830,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "3b6035d5aa6d01b3c44d797b48b05563dd211cf75e0e4e6c1235d78878cf84e2"
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -2741,7 +3855,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "3b6035d5aa6d01b3c44d797b48b05563dd211cf75e0e4e6c1235d78878cf84e2"
+      "tree": "c1e58278d69db746c22086bf0d9a93050159e302668af435aca001d34f3b49f1"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -2766,7 +3880,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "c8da55df9382ad4ac5e73384e6931971814f98d43c71e4f82a9786de1e7563e2"
+      "tree": "875eb3d219db409c2bd33264a1aeb261977bd3719c449e6772df05168f9770d5"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -2791,7 +3905,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "c8da55df9382ad4ac5e73384e6931971814f98d43c71e4f82a9786de1e7563e2"
+      "tree": "875eb3d219db409c2bd33264a1aeb261977bd3719c449e6772df05168f9770d5"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -2816,7 +3930,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "c8da55df9382ad4ac5e73384e6931971814f98d43c71e4f82a9786de1e7563e2"
+      "tree": "875eb3d219db409c2bd33264a1aeb261977bd3719c449e6772df05168f9770d5"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -2841,7 +3955,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "c8da55df9382ad4ac5e73384e6931971814f98d43c71e4f82a9786de1e7563e2"
+      "tree": "875eb3d219db409c2bd33264a1aeb261977bd3719c449e6772df05168f9770d5"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -2892,7 +4006,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "bc2c0d39ca5402ab490786270694825a723c3757640b58d9f97fd1dcbed24361"
+      "tree": "00d06e16a9cb828ca3561c03fcfab2b1b51b893b8a7dade53122239e4d9a8a9f"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -2915,7 +4029,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "bc2c0d39ca5402ab490786270694825a723c3757640b58d9f97fd1dcbed24361"
+      "tree": "00d06e16a9cb828ca3561c03fcfab2b1b51b893b8a7dade53122239e4d9a8a9f"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -2938,7 +4052,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "bc2c0d39ca5402ab490786270694825a723c3757640b58d9f97fd1dcbed24361"
+      "tree": "00d06e16a9cb828ca3561c03fcfab2b1b51b893b8a7dade53122239e4d9a8a9f"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -2961,7 +4075,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "bc2c0d39ca5402ab490786270694825a723c3757640b58d9f97fd1dcbed24361"
+      "tree": "00d06e16a9cb828ca3561c03fcfab2b1b51b893b8a7dade53122239e4d9a8a9f"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -2984,7 +4098,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3007,7 +4121,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3030,7 +4144,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3053,7 +4167,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3076,7 +4190,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3100,7 +4214,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3124,7 +4238,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3148,7 +4262,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3172,7 +4286,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "cca67a9244351a904a4b57fc7d43a4159bf5d7f08878d2e0dc6bd15462acdbc6"
+      "tree": "2896654bf181d7da64278fa586e0c70e798912da3486ef0f8062d68cf87caf5d"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -3195,7 +4309,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "cca67a9244351a904a4b57fc7d43a4159bf5d7f08878d2e0dc6bd15462acdbc6"
+      "tree": "2896654bf181d7da64278fa586e0c70e798912da3486ef0f8062d68cf87caf5d"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -3218,7 +4332,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "cca67a9244351a904a4b57fc7d43a4159bf5d7f08878d2e0dc6bd15462acdbc6"
+      "tree": "2896654bf181d7da64278fa586e0c70e798912da3486ef0f8062d68cf87caf5d"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -3241,7 +4355,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "cca67a9244351a904a4b57fc7d43a4159bf5d7f08878d2e0dc6bd15462acdbc6"
+      "tree": "2896654bf181d7da64278fa586e0c70e798912da3486ef0f8062d68cf87caf5d"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -3262,7 +4376,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3286,7 +4400,7 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "115c08dead512ff57dd15928399ac0eb2bd54368fa5846b0019bc3f4b60b86d1"
+      "tree": "0c2c58217a54b886e097f0a50d77adbff43798ee6a69ab54b4a93276271d6557"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
@@ -3309,7 +4423,7 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "115c08dead512ff57dd15928399ac0eb2bd54368fa5846b0019bc3f4b60b86d1"
+      "tree": "0c2c58217a54b886e097f0a50d77adbff43798ee6a69ab54b4a93276271d6557"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
@@ -3332,7 +4446,7 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "115c08dead512ff57dd15928399ac0eb2bd54368fa5846b0019bc3f4b60b86d1"
+      "tree": "0c2c58217a54b886e097f0a50d77adbff43798ee6a69ab54b4a93276271d6557"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
@@ -3355,7 +4469,7 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "115c08dead512ff57dd15928399ac0eb2bd54368fa5846b0019bc3f4b60b86d1"
+      "tree": "0c2c58217a54b886e097f0a50d77adbff43798ee6a69ab54b4a93276271d6557"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
@@ -3385,7 +4499,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3434,7 +4548,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3458,7 +4572,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3482,7 +4596,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3515,7 +4629,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3539,7 +4653,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3561,7 +4675,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3585,7 +4699,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3608,7 +4722,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3630,7 +4744,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3652,7 +4766,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3674,7 +4788,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3696,7 +4810,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3718,7 +4832,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3739,7 +4853,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3760,7 +4874,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3781,7 +4895,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3804,7 +4918,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3878,7 +4992,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3902,7 +5016,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3926,7 +5040,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3950,7 +5064,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
+      "tree": "e76bb093f7893a443cc01ae4145f1b7d8caa06223bd62cda2e34327969d057ad"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3998,7 +5112,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "7c6f25610752ef9739eee1754378c2b5dc936741c45d32716c817866047a7bfd"
+      "tree": "223d45711f136cd1435b1ecec610f249459b5ba23cf23115a2387e1fb8acc66c"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -4023,7 +5137,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "7c6f25610752ef9739eee1754378c2b5dc936741c45d32716c817866047a7bfd"
+      "tree": "223d45711f136cd1435b1ecec610f249459b5ba23cf23115a2387e1fb8acc66c"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -4048,7 +5162,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "7c6f25610752ef9739eee1754378c2b5dc936741c45d32716c817866047a7bfd"
+      "tree": "223d45711f136cd1435b1ecec610f249459b5ba23cf23115a2387e1fb8acc66c"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -4073,7 +5187,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "7c6f25610752ef9739eee1754378c2b5dc936741c45d32716c817866047a7bfd"
+      "tree": "223d45711f136cd1435b1ecec610f249459b5ba23cf23115a2387e1fb8acc66c"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -4094,7 +5208,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -4115,7 +5229,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -4136,7 +5250,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -4159,7 +5273,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -4185,7 +5299,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "f319b908222102c434ca97c887cfd88215284c7a703c36c9ebefc7af9d8dffca"
+      "tree": "dcdcd5dc93a511e776143b41e9fb5ff5de9585de5cbcf01c8b687465e12aff69"
     },
     "toolchain": [
       "Zig 0.15.2",
@@ -4211,7 +5325,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "f319b908222102c434ca97c887cfd88215284c7a703c36c9ebefc7af9d8dffca"
+      "tree": "dcdcd5dc93a511e776143b41e9fb5ff5de9585de5cbcf01c8b687465e12aff69"
     },
     "toolchain": [
       "Zig 0.15.2",
@@ -4237,7 +5351,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "f319b908222102c434ca97c887cfd88215284c7a703c36c9ebefc7af9d8dffca"
+      "tree": "dcdcd5dc93a511e776143b41e9fb5ff5de9585de5cbcf01c8b687465e12aff69"
     },
     "toolchain": [
       "Zig 0.15.2",
@@ -4263,7 +5377,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "f319b908222102c434ca97c887cfd88215284c7a703c36c9ebefc7af9d8dffca"
+      "tree": "dcdcd5dc93a511e776143b41e9fb5ff5de9585de5cbcf01c8b687465e12aff69"
     },
     "toolchain": [
       "Zig 0.15.2",
