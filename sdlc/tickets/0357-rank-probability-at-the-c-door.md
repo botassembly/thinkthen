@@ -1,6 +1,6 @@
 # 0357: `rank` returns each record's place and probability at the C door
 
-Status: in progress. Lane claude-3. Branch `ticket/0357-rank-probability-at-the-c-door`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves `../issues/2026-09-30-rank-returns-no-probability-at-the-c-door.md`. Mirrors ticket 0354 slice B, which did the same for `find` (landing `11294af2d`).
+Status: in progress. Lane claude-3. A fresh ticket review found four gaps, all fixed; the build began during that review, so the code review treats all of it as new. Branch `ticket/0357-rank-probability-at-the-c-door`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves `../issues/2026-09-30-rank-returns-no-probability-at-the-c-door.md`. Mirrors ticket 0354 slice B, which did the same for `find` (landing `11294af2d`).
 
 ## Outcome
 
@@ -23,8 +23,9 @@ The C door's `rank` value is an array of `{"index":N,"record":TEXT,"probability"
   - `schema_tests.rs` derives the `rank` definition from that type, so `specification/result.schema.json` is rewritten by the test.
   - `specification/fixtures/types/corpus.json` case `15-rank-records` expects the three rows with indexes 1, 2, 0 and probabilities 0.9, 0.5, 0.2. A new invalid case `rank-without-probability` keeps the bare string array refused by the schema.
   - `libraries/c/tests/door/cases.rs` builds each expected row from `operation.ranking`. `tests/door/bytes.rs` compares the door rows' records with the command's `--jsonl` lines. `tests/door/golden.rs` pins the new `rank` reply bytes. `examples/functions.txt` shows the rows.
-  - Each port's own matrix test checks the rank rows' records and a numeric probability in place of the bare strings. Only the rank check lines change. No binding source file changes; the build names any exception here with its reason.
-  - `libraries/c/include/thinkthen.h`, `specification/types.md` and `libraries/BINDING-AUTHOR.md` name the new value. `CHANGELOG.md` gains one line.
+  - Each port's own matrix test checks the rank rows' records and a numeric probability in place of the bare strings: `libraries/go/thinkthen_test.go`, `libraries/csharp/tests/source/Program.cs`, `libraries/jvm/tests/Matrix.java`, `libraries/php/fixtures/matrix.php`, `libraries/swift/Tests/fixtures/matrix.swift`, `libraries/zig/Tests/matrix.zig`, `libraries/ada/checks/legacy/main.adb`, `libraries/cobol/checks/run_matrix.py` (the COBOL program prints the value; the runner checks it) and `libraries/objective-c/checks/matrix.m`, whose shared filter and rank branch splits in two. Only the rank checks change. The `run_matrix.py` and `expected_requests.json` lines that name `rank-one` pin request bodies, which do not change. No binding source file changes; the build names any exception here with its reason.
+  - `libraries/c/ratchet.json`, `libraries/objective-c/ratchet.m.json`, `libraries/swift/ratchet.swift.json` and `sdlc/ratchet.json` move only as far as `policy.py` and each port's ratchet check measure.
+  - `libraries/c/include/thinkthen.h`, `libraries/c/DESIGN.md`, `specification/types.md` and `libraries/BINDING-AUTHOR.md` name the new value. `CHANGELOG.md` gains one line.
   - The issue moves to `sdlc/issues/closed/` with a `Resolution:` line.
 - Proof: conformance cases, pinned bytes and every C-door port check.
   - The C door's conformance runner passes `15-rank-records` and `16-rank-stable-tie` with each row's index and probability. `tests/door/bytes.rs` and `golden.rs` pin the rows. `specification/fixtures/types/self-test` passes against the real door. The schema drift test passes on the rewritten schema.

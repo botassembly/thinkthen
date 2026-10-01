@@ -8,6 +8,8 @@ mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome};
 pub use call::{Call, DoorReply, Facts};
 pub use found::{Candidate, Found, Picked};
+mod ranked;
+pub use ranked::{Ranked, RankedRow};
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;
@@ -449,37 +451,4 @@ impl<T> Row<T, Answer> {
     }
 }
 
-/// One ranked record and its probability of yes.
-#[derive(Clone, PartialEq)]
-pub struct Ranked<T> {
-    input: T,
-    probability: f64,
-}
-
 pub(super) use withheld_debug;
-
-withheld_debug!(Ranked<T> { probability });
-
-impl<T> Ranked<T> {
-    pub(crate) const fn new(input: T, probability: f64) -> Self {
-        Self { input, probability }
-    }
-
-    /// The record as given.
-    #[must_use]
-    pub fn input(&self) -> &T {
-        &self.input
-    }
-
-    /// Its probability of yes.
-    #[must_use]
-    pub fn probability(&self) -> f64 {
-        self.probability
-    }
-
-    /// The record.
-    #[must_use]
-    pub fn into_input(self) -> T {
-        self.input
-    }
-}
