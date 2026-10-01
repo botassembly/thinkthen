@@ -162,6 +162,15 @@ const FRAGMENT = {
     fs.copyFileSync(path.join(examples, 'install/rust/files/Cargo.toml'), path.join(dir, 'Cargo.toml'));
   },
 };
+// C# runs a function page sample as top-level statements, in the project
+// the C# install page shows.
+FRAGMENT.csharp = (dir) => fs.copyFileSync(path.join(examples, 'install/csharp/files/first-call.csproj'), path.join(dir, 'first-call.csproj'));
+// A Java, Kotlin or Scala sample on a function page names its class or its
+// main for the function, such as Rank, so it builds under that name.
+const JVM = new Set(['java', 'kotlin', 'scala']);
+const programName = (slug, rel) => (rel.startsWith('functions/') && JVM.has(slug)
+  ? `${rel.split('/')[1].replace(/(^|-)(.)/g, (m, dash, c) => c.toUpperCase())}${path.extname(rel)}`
+  : path.basename(rel));
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
 
@@ -189,9 +198,10 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
         fs.mkdirSync(dir, { recursive: true });
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
         layout(dir);
-        fs.copyFileSync(path.join(examples, rel), path.join(dir, path.basename(rel)));
+        const name = programName(slug, rel);
+        fs.copyFileSync(path.join(examples, rel), path.join(dir, name));
         if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, rel);
-        const lines = buildLines(slug, path.basename(rel), true);
+        const lines = buildLines(slug, name, true);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
