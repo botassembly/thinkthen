@@ -17,7 +17,7 @@ npm run build
 `npm run build` does these things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
-2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, saved output for each replayed sample, whole details, no comments, and a goal on every page.
+2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, saved output for each SQL sample, whole details, no comments, and a goal on every page.
 3. `scripts/check-slides.mjs` checks that the Beatles Bench slides come from a deck that quotes the pinned bench.
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
 5. `scripts/check-binding-proofs.mjs` checks each replayed library sample against its proof. See "The binding replay" below.
@@ -55,7 +55,7 @@ The names, the order, the captions, the one line for each function, and the opti
 
 ## The binding replay
 
-The CLI smoke run cannot run a library sample, because each needs its language's toolchain. `examples/REPLAY` lists the library samples that replay. `npm run smoke-bindings` runs `scripts/smoke-bindings.mjs`, which builds each sample's binding from this working tree and runs the sample. The sample runs in a fresh folder with a copy of its page's `files/`. `THINKTHEN_CACHE` names a fresh copy of `recordings/thinkthen.jsonl`, and no key or address is set, so a missed answer fails with no request sent. The runner refuses to start when the shell holds any `THINKTHEN_` variable or a named backend's key. Every sample prints its answer. It passes when it exits 0 and prints `<sample>.out` byte for byte, and the page shows that file under the sample. `--update` writes the file from the run. A sample with no saved output fails.
+The CLI smoke run cannot run a library sample, because each needs its language's toolchain. `examples/REPLAY` lists the library samples that replay. `npm run smoke-bindings` runs `scripts/smoke-bindings.mjs`, which builds each sample's binding from this working tree and runs the sample. The sample runs in a fresh folder with a copy of its page's `files/`. `THINKTHEN_CACHE` names a fresh copy of `recordings/thinkthen.jsonl`, and no key or address is set, so a missed answer fails with no request sent. The runner refuses to start when the shell holds any `THINKTHEN_` variable or a named backend's key. A sample passes when it exits 0. A sample that prints, such as a stream or a table, must print its `<sample>.out` byte for byte, and the page shows that file under the sample. A sample that prints with no `.out` fails. `--update` writes the file from the run.
 
 A `REPLAY` line may end with `backend=NAME`, as in `install/ruby/backends.rb backend=liquid`. The runner then sets `THINKTHEN_BACKEND` to that name for the run. For `ollama` it also sets `THINKTHEN_BASE_URL` to the second port the Ollama recordings sit at. `BACKEND_ROUTES` in `src/data/catalog.mjs` holds each name and address. Each answer such a run reads must sit at that backend's address, so a sample that falls back to another backend fails. A backends sample on a line with no backend names every backend in its own code, as the Rust one does. It must read answers at each backend's address and at no other. The whole line keys the sample's proof entry, so one sample has one entry for each backend it runs on.
 

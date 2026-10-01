@@ -7,15 +7,17 @@
 //   node scripts/smoke-bindings.mjs                  replay every listed sample
 //   node scripts/smoke-bindings.mjs PATTERN          only the samples whose path holds PATTERN
 //   node scripts/smoke-bindings.mjs --allow-missing  pass when a toolchain is missing
-//   node scripts/smoke-bindings.mjs --update         write each sample's <sample>.out
+//   node scripts/smoke-bindings.mjs --update         write <sample>.out for each sample that prints
 //
 // A sample runs in a fresh folder that starts with a copy of its page's
 // files/. THINKTHEN_CACHE names a fresh copy of recordings/thinkthen.jsonl.
 // The run sets no key and no address, so a missed answer fails with no
-// request sent. A sample prints its answer. It passes when it exits 0 and
-// prints its <sample>.out byte for byte, as a SQL sample does. --update
-// writes that file from the run. A sample with no saved output fails
-// without --update.
+// request sent. A sample passes when it exits 0, so every assert held. A
+// sample prints only when the printed form is the point, such as a stream
+// or a table. Then it must print its <sample>.out byte for byte, as a SQL
+// sample does. A sample that prints with no <sample>.out fails, and so
+// does one with a <sample>.out that prints something else. --update writes
+// the file from the run, and removes it when the sample prints nothing.
 //
 // A REPLAY line that ends with backend=NAME runs its sample with
 // THINKTHEN_BACKEND set to that name, and with THINKTHEN_BASE_URL set to
@@ -428,11 +430,11 @@ for (const line of list) {
   const whole = attempt(rel, binding, fixture.filter((l) => l.key), named);
   if (!whole.ok) { failed.push(`${line}: failed against the whole recording\n${whole.output}`); continue; }
   const saved = path.join(examples, `${rel}.out`);
-  if (update) fs.writeFileSync(saved, whole.stdout);
-  if (!fs.existsSync(saved)) { failed.push(`${line}: no saved output at examples/${rel}.out. Run node scripts/smoke-bindings.mjs --update ${rel}, then read the file.`); continue; }
-  const expected = fs.readFileSync(saved, 'utf8');
+  if (update && whole.stdout) fs.writeFileSync(saved, whole.stdout);
+  if (update && !whole.stdout) fs.rmSync(saved, { force: true });
+  const expected = fs.existsSync(saved) ? fs.readFileSync(saved, 'utf8') : '';
+  if (whole.stdout && !fs.existsSync(saved)) { failed.push(`${line}: printed output, and examples/${rel}.out does not exist. Run node scripts/smoke-bindings.mjs --update ${rel}, then read the file.\n${whole.stdout}`); continue; }
   if (whole.stdout !== expected) { failed.push(`${line}: printed other output than examples/${rel}.out\n--- saved\n${expected}--- printed\n${whole.stdout}`); continue; }
-  if (!expected.trim()) { failed.push(`${line}: printed nothing. A sample prints its answer.`); continue; }
 
   const narrowed = narrow(fixture, fs.readFileSync(path.join(examples, rel), 'utf8'), (answers) => {
     const tried = attempt(rel, binding, answers, named);
