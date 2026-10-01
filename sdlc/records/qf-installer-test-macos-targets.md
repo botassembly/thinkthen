@@ -21,3 +21,7 @@ Release rehearsal run 36916614435 passed every surface on both Mac smoke jobs. B
 - Mutation: changing `install.sh`'s `Darwin/x86_64` target to the Linux musl name fails both shells' `Darwin x86_64` case (48/50).
 - `sdlc/scripts/lint` exit 0. `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` exit 0.
 - Not run: the release workflow. The next rehearsal shows the Mac smoke jobs.
+
+## Deferred gap
+
+No case covers a home folder under a linked parent folder. `install.sh` compares the `pwd -P` path of the install folder with PATH. A user whose `~/.local/bin` sits under such a link and is already on PATH still sees the "Add thinkthen to PATH" hint. The hint is advisory. The installer is unchanged here.
