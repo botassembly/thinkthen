@@ -154,7 +154,7 @@ def test_a_frame_keeps_types_and_nested_failures():
     seen = []
     class Listener(http.server.BaseHTTPRequestHandler):
         # Debt 020: ureq may reuse an HTTP/1.0 connection the server closes;
-        # sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+        # sdlc/issues/closed/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
         def end_headers(self):
             self.send_header("Connection", "close")
             super().end_headers()

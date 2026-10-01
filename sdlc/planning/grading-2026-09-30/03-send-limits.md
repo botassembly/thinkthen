@@ -26,7 +26,7 @@ All paths below are under `crates/thinkthen/src/` unless they start with `crates
 | Surfaces touched | 5 | 22 of 22. Every live attempt of the command, the Rust API, Polars, the C door, every language over it and the three SQL hosts goes through `engine/http.rs:251-332` |
 | Settings | 4 | Seven rows: Retries, Timeout, Throttle, Requests a minute, Process request total, Estimated input admission total, Named backends (for the per-backend rate) |
 | Contract weight | 3 | Four spec pages (`backends.md`, `settings.md`, `records.md`, `result.md`) and three ADRs (0052, 0111 section 8, 0114), with ruling 14 |
-| Churn and debt | 5 | `engine/limits.rs` was written at 08:49 on 2026-09-30 and changed again at 09:00 (`2038f4c11`, `adf809a60`). 36 commits on the seven owner files since 2026-09-23 and 70 with `http.rs` and `config/backends.rs`. One open issue on the send path (`sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`) |
+| Churn and debt | 5 | `engine/limits.rs` was written at 08:49 on 2026-09-30 and changed again at 09:00 (`2038f4c11`, `adf809a60`). 36 commits on the seven owner files since 2026-09-23 and 70 with `http.rs` and `config/backends.rs`. One open issue on the send path (`sdlc/issues/closed/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`) |
 
 Mean 4.1, rounded to 4.
 

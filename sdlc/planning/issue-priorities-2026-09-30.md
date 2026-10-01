@@ -43,7 +43,7 @@ Work outside the lanes:
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
 | `closed/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | closed | closed by ticket 0356 |
-| `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | waits | the test servers are done (ticket 0361); the product fix waits on upstream and Ian's resend choice |
+| `closed/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | closed | closed by Ian's ruling of 2026-10-01: the test-server workaround stays, no upstream report, no resend |
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |
 | `closed/2026-09-30-duckdb-check-fails-four-tests-on-macos.md` | no | closed | closed by the DuckDB macOS fork quick fix |
 | `closed/2026-10-01-macos-forked-children-crash-on-a-channel-wait.md` | no | closed | closed by ticket 0365 |

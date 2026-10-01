@@ -1,6 +1,4 @@
-# ureq reuses a connection after an HTTP/1.0 reply
-
-Status: open. A dependency bug noted for Ian. Found by ticket 0340. Owner: upstream (ureq-proto); then a Quick Fix removes the workaround, or a ticket changes `engine/http.rs`. Ticket 0361 (batch C1) extended the workaround to every Python loopback test server, and `policy.py` holds it. The issue stays open for the upstream fix and Ian's resend choice below. No upstream ureq-proto issue is filed yet; filing one is an external change, so it waits for Ian. Remove the workaround when ureq-proto treats an HTTP/1.0 reply without `keep-alive` as closing.
+Status: closed on 2026-10-01 by Ian's ruling. The bug touches only our own HTTP/1.0 test servers, and they send `Connection: close`, which `policy.py` enforces. No real backend replies over HTTP/1.0. No upstream report is filed. The never-resend rule stays, which was option 1 below. The workaround stays in place.
 
 Kind: debt
 
@@ -9,6 +7,8 @@ Pay when: ureq-proto treats an HTTP/1.0 reply without `keep-alive` as closing, o
 Debt: 020
 
 Severity: medium
+
+Resolution: accepted. The workaround stays; nothing more is owed.
 
 Keeping it lets one send fail as "the backend did not answer" when a server closes after each reply and says nothing.
 

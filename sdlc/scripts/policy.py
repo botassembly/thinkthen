@@ -2237,7 +2237,7 @@ def check_markers() -> None:
 # name is split so this file never matches its own search.
 HANDLER = "BaseHTTP" + "RequestHandler"
 CLOSES = '"Connection", "close"'
-DEBT_020 = "sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md"
+DEBT_020 = "sdlc/issues/closed/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md"
 
 
 def loopback_server_failures(sources: dict[str, str]) -> list[str]:

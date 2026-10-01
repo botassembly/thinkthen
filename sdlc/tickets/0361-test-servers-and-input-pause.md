@@ -1,6 +1,6 @@
 # 0361: loopback test servers close each reply, and tests hold the input pause
 
-Status: landed. Lane claude-4. A fresh code review accepted with four optional nits; two were fixed, and two left the historical grading count and the closed issue's layout as they were. Batch C1 in `../planning/issue-priorities-2026-09-30.md`. Starts after ticket 0356 lands, because both edit binding test fixtures and their Python ratchets. Branch `ticket/0361-test-servers-and-input-pause`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 030, `../issues/closed/2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md`. Extends Debt 020's workaround, `../issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`. A fresh ticket review found eight gaps, all fixed below.
+Status: landed. Lane claude-4. A fresh code review accepted with four optional nits; two were fixed, and two left the historical grading count and the closed issue's layout as they were. Batch C1 in `../planning/issue-priorities-2026-09-30.md`. Starts after ticket 0356 lands, because both edit binding test fixtures and their Python ratchets. Branch `ticket/0361-test-servers-and-input-pause`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 030, `../issues/closed/2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md`. Extends Debt 020's workaround, `../issues/closed/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`. A fresh ticket review found eight gaps, all fixed below.
 
 ## Outcome
 
