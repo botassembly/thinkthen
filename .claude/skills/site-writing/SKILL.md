@@ -29,7 +29,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Pipe the input in with a heredoc, or `printf` for one short record.
 - No line over 60 characters. One option per line with a trailing backslash. One array item per line. Python uses bracket indenting. Other languages use their own line breaks and string joining.
 - Examples leave out `--details`. Only the annotate edge-case examples under `site/examples/reference/annotate/` may ask for it. A page may name it. Show plain values. Show where a probability sits with a bar or a band.
-- A function page's example runs 10 to 25 lines, script and output together. Trim output with `jq`.
+- A function page's opening example runs 3 to 25 lines, script and output together. In every language it is one plain call and its answer, with no batching and no option the call does not need. Trim output with `jq`.
 - Examples are honest: a sensible question and Jev's real output. Nothing fake or deliberately false.
 - Output goes in its own block. JSON is pretty-printed with `jq .`.
 - Name each answer for its meaning before you use it: `is_spam = ...`, then `assert is_spam`. Never assert on the call, and never name an answer `result` or `answer`. Bash uses `is_spam=$(...)` or `refund_code=$?`. SQL uses an alias such as `AS is_refund`.
