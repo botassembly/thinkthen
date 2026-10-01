@@ -62,6 +62,13 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
     ))}
   </table>
   <p>Set <code>{KEY_VARIABLE}</code> in the environment.</p>
+  {surface.uninstall && (
+    <>
+      <h3>Uninstall</h3>
+      <p>{parts(surface.uninstall.text).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+      <Code code={surface.uninstall.code} lang="bash" label="Copy the uninstall command" />
+    </>
+  )}
 
   <h2>A first call</h2>
   {first ? (

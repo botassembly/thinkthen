@@ -434,6 +434,10 @@ export const SURFACES = [
       ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
       ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
     ],
+    uninstall: {
+      text: 'To remove the download, delete the binary and its receipt. If you set `THINKTHEN_INSTALL_DIR`, delete the same two files there. With Homebrew, run `brew uninstall thinkthen`.',
+      code: 'rm ~/.local/bin/thinkthen \\\n  ~/.local/bin/thinkthen.install.json',
+    },
     particular: [
       'Standard input carries the evidence. Standard output carries the answer and nothing else.',
       'On one piece of evidence, the exit code is the answer. `if` and `case` read it directly.',
