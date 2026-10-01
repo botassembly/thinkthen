@@ -1,6 +1,6 @@
 # 0361: loopback test servers close each reply, and tests hold the input pause
 
-Status: ready. Batch C1 in `../planning/issue-priorities-2026-09-30.md`. Starts after ticket 0356 lands, because both edit binding test fixtures and their Python ratchets. Branch `ticket/0361-test-servers-and-input-pause`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 030, `../issues/closed/2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md`. Extends Debt 020's workaround, `../issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`. A fresh ticket review found eight gaps, all fixed below.
+Status: in progress. Lane claude-4. Batch C1 in `../planning/issue-priorities-2026-09-30.md`. Starts after ticket 0356 lands, because both edit binding test fixtures and their Python ratchets. Branch `ticket/0361-test-servers-and-input-pause`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 030, `../issues/closed/2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md`. Extends Debt 020's workaround, `../issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`. A fresh ticket review found eight gaps, all fixed below.
 
 ## Outcome
 
@@ -48,4 +48,8 @@ Every tracked file that defines a `BaseHTTPRequestHandler` sends `Connection: cl
 
 ## What the build taught us
 
-(Added before landing.)
+- The scan of tests that build their own command found none past the three helpers that both end their input and pin a batch. The others run at `--batch 1`, assert an upper bound or a first row, or hold their input open on purpose.
+- Moving the pause test needed one shared start helper, because the new test holds the pipe the same way. The pause test is unchanged in behavior.
+- With the setting ignored, the new test sees one request after 300 ms where it expects zero. With the setting read, the 117 focused backend tests run in about 4 s, so the 10 s pause costs nothing when input ends.
+- The tag-score probe's local plan fails on main, before this change, with `(219, 291739, 876)` against its pinned `(219, 255964, 876)`: the quoted wire form of ADR 0111 slice 1 grew the bytes, and no rung runs that plan. Its loopback server answered all 219 requests with the new header. The annotate-batching probe's local plan refuses any binary but its reviewed one, so it only compiles. Both probes are historical measurements; refreshing their pins belongs to whoever reruns them.
+- `json.dumps` reformats a ratchet file that holds a folder list. Raise a ceiling by editing the number alone.
