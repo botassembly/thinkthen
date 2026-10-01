@@ -26,6 +26,6 @@ const pairs = contradictions.map((edge) => [
   edge.probability,
 ]);
 assert.deepEqual(pairs, [
-  [rules[0], rules[3], 0.84],
-  [rules[1], rules[5], 0.99],
+  [rules[0], rules[3], 0.83],
+  [rules[1], rules[5], 0.97],
 ]);

@@ -3,17 +3,44 @@
 # with that backend named in the environment. scripts/check-binding-proofs.mjs
 # checks each line's entry in bindings-proof.json in every build, and fails
 # when a sample under examples/ has no line here.
+functions/annotate/r.R
+functions/annotate/ruby.rb
+functions/annotate/typescript.ts
 functions/choose/python.py
+functions/choose/ruby.rb
+functions/choose/typescript.ts
 functions/decide/polars.py
+functions/decide/r.R
+functions/decide/ruby.rb
+functions/decide/typescript.ts
 functions/filter/python.py
+functions/filter/r.R
+functions/filter/ruby.rb
 functions/find/python.py
+functions/find/r.R
+functions/find/typescript.ts
 functions/question-file/polars.py
+functions/question-file/r.R
+functions/question-file/ruby.rb
+functions/question-file/typescript.ts
 functions/rank/python.py
+functions/rank/ruby.rb
+functions/rank/typescript.ts
 functions/recognize/python.py
+functions/recognize/r.R
+functions/recognize/ruby.rb
+functions/recognize/typescript.ts
 functions/relate/python.py
+functions/relate/r.R
+functions/relate/ruby.rb
+functions/relate/typescript.ts
 functions/score/polars.py
 functions/score/python.py
+functions/score/r.R
+functions/score/ruby.rb
 functions/tag/python.py
+functions/tag/r.R
+functions/tag/typescript.ts
 install/ada/backends.adb backend=liquid
 install/ada/backends.adb backend=ollama
 install/ada/backends.adb backend=typesafe

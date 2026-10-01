@@ -23,5 +23,5 @@ stopifnot(identical(contradictions$source, rules[c(1, 2)]))
 stopifnot(identical(contradictions$target, rules[c(4, 6)]))
 stopifnot(identical(
   contradictions$probability,
-  c(0.84, 0.99)
+  c(0.83, 0.97)
 ))

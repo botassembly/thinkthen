@@ -14,13 +14,13 @@ form = ThinkThen.set(
   }
 )
 reports = [
-  "CSV export fails. Steps: click Export.",
-  "The login page spins and nobody can sign in.",
-  "The Pay button on the billing page is too blue."
+  "Steps: click Export. It is very slow.",
+  "Steps: click Log in. Nobody gets in.",
+  "The Pay button on billing is too blue."
 ]
 triage = ThinkThen.annotate(form, reports).value
 raise unless triage == [
-  { steps: true, area: "export", impact: 1.94 },
-  { steps: false, area: "login", impact: 2.0 },
-  { steps: false, area: "billing", impact: 0.06 }
+  { steps: true, area: "export", impact: 1.04 },
+  { steps: true, area: "login", impact: 1.98 },
+  { steps: false, area: "billing", impact: 0.09 }
 ]
