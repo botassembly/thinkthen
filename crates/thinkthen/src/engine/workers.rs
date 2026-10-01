@@ -79,12 +79,18 @@ pub(crate) fn on_worker<T: Send>(cancel: &Cancel<'_>, send: impl FnOnce() -> T +
                 sent
             })
         });
-        while let Err(RecvTimeoutError::Timeout) = finished.recv_timeout(Cancel::poll()) {
-            let _stop = cancel.stop_between_sends();
+        // A host check that panics still joins the worker first, so the scope
+        // never parks the calling thread (ticket 0365).
+        let polled = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            while let Err(RecvTimeoutError::Timeout) = finished.recv_timeout(Cancel::poll()) {
+                let _stop = cancel.stop_between_sends();
+            }
+        }));
+        let sent = worker.join();
+        if let Err(panic) = polled {
+            std::panic::resume_unwind(panic);
         }
-        worker
-            .join()
-            .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+        sent.unwrap_or_else(|panic| std::panic::resume_unwind(panic))
     })
 }
 

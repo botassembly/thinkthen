@@ -1,9 +1,10 @@
 //! Caller-fed native stream over the core's one lazy Batch.
 //!
-//! Only `__next__` advances Python. The worker receives owned text through a
-//! zero-slot handoff, and the core planner owns its bounded request window.
+//! Only `__next__` advances Python. The worker asks for each record with
+//! `Need`, the stream sends one record per ask, and the core planner owns its
+//! bounded request window.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -215,7 +216,7 @@ fn run(job: Run) {
 pub(crate) struct PyStream {
     source: Py<PyAny>,
     input: Option<Sender<Option<String>>>,
-    events: Mutex<Receiver<Event>>,
+    events: Receiver<Event>,
     worker: Option<JoinHandle<()>>,
     stop: CancelToken,
     receipt: Arc<ReceiptState>,
@@ -273,12 +274,7 @@ impl PyStream {
             return Ok(None);
         }
         loop {
-            let event = py.detach(|| {
-                self.events
-                    .lock()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner)
-                    .recv_timeout(TICK)
-            });
+            let event = py.detach(|| self.events.recv_timeout(TICK));
             match self.advance(py, event)? {
                 Step::Continue => {}
                 Step::Item(value) => return Ok(Some(value)),
@@ -393,12 +389,7 @@ impl PyStream {
             return;
         }
         loop {
-            match py.detach(|| {
-                self.events
-                    .lock()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner)
-                    .recv_timeout(TICK)
-            }) {
+            match py.detach(|| self.events.recv_timeout(TICK)) {
                 Ok(Event::End(facts)) => {
                     self.facts = facts;
                     break;
@@ -478,7 +469,7 @@ pub(crate) fn prepare(
         PyStream {
             source,
             input: Some(incoming),
-            events: Mutex::new(events_rx),
+            events: events_rx,
             worker: Some(worker),
             stop,
             receipt,
