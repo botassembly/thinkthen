@@ -167,6 +167,25 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 
     No runner ran a step, so this run tests none of the four fixes, proves no target, and does not close R5-37. It does not check Debt 026. The failure is not ours, so no issue was filed. The agent did not dispatch again, because every run fails the same way until the account's billing is fixed. The run published nothing, created no release, draft, or tag, and changed no setting or secret. No secret was read. Phase 3b stays open. The next dispatch waits for Ian to fix the account's payment method or spending limit under "Billing & plans" in the account settings.
 
+    **Fourth rehearsal attempt, 2026-09-30.** Ian approved rehearse-mode dispatches from `refs/heads/main` on 2026-09-30, with use of the M5 for macOS reproduction. Billing works again. The agent dispatched `gh workflow run release.yml --ref main -f mode=rehearse`. The run is [36804404259](https://github.com/botassembly/thinkthen/actions/runs/36804404259) at main `91878c233`.
+
+    | Job | Result | Cause |
+    | --- | --- | --- |
+    | `resolve` | Success | |
+    | `crate` | Success | The earlier fix holds |
+    | `build` (`x86_64-unknown-linux-gnu`) | Failure in the managed language tools step | Ours: `selected_plan` refused apt's `Inst` line for a version that two archives hold, written `noble-updates, noble-security` |
+    | `build` (`x86_64-apple-darwin`, `macos-15-intel`) | Failure in `host-setup` | Ours: the runner's Homebrew offered OpenSSL 3.6.3, and the pin named the patch 3.6.4 |
+    | `build` (`aarch64-apple-darwin`, `macos-15`) | Failure after the DuckDB link | Ours: `strip_macos.py` matched the runner home `/Users/runner` inside DuckDB's own prebuilt path `/Users/runner/work/duckdb/duckdb/...` |
+    | `build` (`aarch64-unknown-linux-gnu`) | Failure packing the command | Ours: no step installs the musl Rust target, and clang compiles the bundled SQLite against glibc's `*64` names, which musl no longer exports |
+    | `registries`, `wheels`, `gems`, `npm-pack`, `smoke`, `draft` | Skipped, since `build` failed | |
+    | Release-only jobs | Skipped, as rehearse mode requires | |
+
+    The quick fix `Land quick fix: the fourth rehearsal's build failures and the macOS DuckDB SQLite exports` answers all four. `selected_plan` accepts apt's archive list and broken-package tail and names any line it refuses. The OpenSSL check matches the 3.6 series, because Homebrew offers only its newest patch and OpenSSL 3 keeps one ABI within a series. `strip_macos.py` and `release-smoke` allow only DuckDB's upstream prefix under the home folder. `host-setup` adds the musl target on Linux, and `release-pack` compiles SQLite for the static command with `SQLITE_DISABLE_LFS`, using clang when no musl gcc exists. Ticket 0319 said a GitHub runner was unaffected by the musl compiler gap; this run disproves it.
+
+    The M5 reproduced the DuckDB failure at `91878c233`: the old check fails with `HOME=/Users/runner`, the new one passes, and a home path outside DuckDB's prefix still fails. It also settled Debt 026: the macOS ARM extension exported 285 `_sqlite3_` names. The fix hides them, and `build.sh` now refuses any; see `sdlc/issues/closed/2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md`. On the M5 the patched extension passed every DuckDB suite except four tests that fail the same way without the fix, filed as `sdlc/issues/2026-09-30-duckdb-check-fails-four-tests-on-macos.md`. The release smoke runs none of the four.
+
+    No runner finished a build, so this run proves no target and does not close R5-37. It published nothing, created no release, draft or tag, and read no secret. Phase 3b stays open.
+
 ## Phase 4: Ian's release run
 
 The agent writes this checklist into `sdlc/records/0128-release-0-1.md` and follows it beside Ian. Every step marked Ian is his. The run happens in one cycle, and nobody edits `release.yml` inside it. A change to `release.yml` restarts the checklist at step 2.
