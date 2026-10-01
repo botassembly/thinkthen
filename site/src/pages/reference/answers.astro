@@ -27,7 +27,7 @@ const spec = (name) => `https://github.com/botassembly/thinkthen/blob/main/speci
   <p class="lede">The model gives a probability for each choice. ThinkThen turns those probabilities into the answer it prints. Each function does this its own way.</p>
 
   <h2 id="not-sure">Not sure</h2>
-  <p>When the answer is not sure, ThinkThen prints <code>null</code> and exits 3. A <code>null</code> never means a failure. A failure prints no answer and exits with its own <a href="/reference/#exit-codes">exit code</a>. In <code>annotate</code>, a question that failed carries a <code>failed</code> marker instead of a value.</p>
+  <p>When <code>decide</code> or <code>choose</code> is not sure, it prints <code>null</code> and exits 3. When <code>find --none</code> finds nothing, it prints nothing and exits 3. A <code>null</code> never means a failure. A failure never prints <code>null</code> as its answer, and it exits with its own <a href="/reference/#exit-codes">exit code</a>. In <code>annotate</code>, a question that failed carries a <code>failed</code> marker instead of a value. Under exit 6, <code>relate</code> prints only the edges that succeeded.</p>
   <p>An answer is not sure in three ways:</p>
   <ul>
     <li>A <code>decide</code> probability falls inside a band.</li>
@@ -53,11 +53,11 @@ const spec = (name) => `https://github.com/botassembly/thinkthen/blob/main/speci
   <Terminal run={names.run} caption={names.caption} />
 
   <h2 id="score">score</h2>
-  <p><code>score</code> has no threshold and no not-sure answer. You name {levels.min} to {levels.max} levels, lowest first. The number it prints is a position on those levels, counted from 0. ThinkThen multiplies each level's probability by its position and adds the results. A number between two positions means the probability is spread over more than one level. In a question file, <code>levels</code> may be a map from each level's name to its description. The model then reads the descriptions, and the positions stay the same. The <a href={spec('score')}>score specification</a> works one example through.</p>
+  <p><code>score</code> has no threshold and no not-sure answer. You name {levels.min} to {levels.max} levels, lowest first. The number it prints is a position on those levels, counted from 0. ThinkThen multiplies each level's probability by its position, adds the results, and divides by the total of the probabilities it accepted. The number is a weighted average of the positions. A number between two positions means the probability is spread over more than one level. In a question file, <code>levels</code> may be a map from each level's name to its description. The model then reads the descriptions, and the positions stay the same. The <a href={spec('score')}>score specification</a> works one example through.</p>
   <Terminal run={scale.run} caption={scale.caption} />
 
   <h2 id="rank">rank</h2>
-  <p><code>rank</code> takes no threshold and prints every record. It sorts by the probability of yes, most likely first. With a saved <code>score</code> question, <code>rank @FILE</code> sorts by the score's position instead, highest first. Records with exactly equal values keep their input order. <code>rank</code> asks about each record on its own and sorts on this machine. It never asks the model to compare two records.</p>
+  <p><code>rank</code> takes no threshold and prints every record, unless <code>--top N</code> asks for the first N. It sorts by the probability of yes, most likely first. With a saved <code>score</code> question, <code>rank @FILE</code> sorts by the score's position instead, highest first. Records with exactly equal values keep their input order. <code>rank</code> asks about each record on its own and sorts on this machine. It never asks the model to compare two records.</p>
 
   <p class="pagelinks"><a href="/reference/#exit-codes">Every exit code</a> · <a href="/how-tos/bash/not-sure/">Handle not sure in Bash</a> · <a href="/trust/">Test it before you trust it</a></p>
 </SidePage>
