@@ -41,5 +41,6 @@ if wrong:
     sys.exit(f"{wheel}: " + "; ".join(wrong))
 print(f"{wheel.rsplit('/', 1)[-1]}: stub, marker, license, no home path, no test hook")
 PY
-# release-pack takes the wheel from here (ticket 0128).
-mkdir -p target/wheels && cp -- "$out"/thinkthen-*.whl target/wheels/
+# release-pack takes the wheel from here (ticket 0128). maturin writes its own builds and editable
+# wheels to target/wheels, so this checked wheel gets a folder nothing else writes.
+mkdir -p target/release-wheel && cp -- "$out"/thinkthen-*.whl target/release-wheel/

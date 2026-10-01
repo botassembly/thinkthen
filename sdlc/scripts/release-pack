@@ -394,7 +394,7 @@ part_postgresql() {
 
 part_python() {
 	[ -n "$reuse" ] || sh libraries/python/build-wheel.sh
-	for wheel in libraries/python/target/wheels/thinkthen-"$V"-*.whl; do keep "$wheel"; done
+	for wheel in libraries/python/target/release-wheel/thinkthen-"$V"-*.whl; do keep "$wheel"; done
 }
 
 part_typescript() {
