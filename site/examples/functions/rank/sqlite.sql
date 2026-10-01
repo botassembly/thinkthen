@@ -9,8 +9,8 @@ WITH t(id, body) AS (VALUES
     ('4', 'Please send the signed quote by 5 pm today'))
 SELECT t.body
 FROM t
-JOIN thinkthen_decide_many(
+JOIN thinkthen_rank(
     'Is this urgent?',
     (SELECT json_group_object(id, body) FROM t)
 ) AS urgency ON urgency.key = t.id
-ORDER BY urgency.probability DESC;
+ORDER BY urgency.rank;
