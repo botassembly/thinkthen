@@ -19,7 +19,7 @@ export const OUTCOMES = [
   { key: 'yes', code: 0, label: 'yes', prints: 'true' },
   { key: 'no', code: 1, label: 'no', prints: 'false' },
   { key: 'unsure', code: 3, label: 'not sure', prints: 'null' },
-  { key: 'broken', code: '2, 4, 5, 6, 70', label: 'broken', prints: 'nothing' },
+  { key: 'broken', code: '2, 4, 5, 6, 7, 70', label: 'broken', prints: 'nothing' },
 ];
 
 export function outcomeOf(exit) {

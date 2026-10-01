@@ -1,9 +1,10 @@
 ---
 // Goal: list everything the command takes and prints, for a reader or an agent
 // writing a pipeline.
-import Base from '../layouts/Base.astro';
+import SidePage from '../layouts/SidePage.astro';
 import { CODE_FUNCTIONS } from '../data/catalog.mjs';
 import { setting } from '../lib/settings-table.mjs';
+import { REFERENCE_PAGES } from '../data/reference.mjs';
 
 // Every row on this page comes from specification/. Nothing
 // here is an example. The runs live on the function pages and the tutorial.
@@ -53,11 +54,12 @@ const EXITS = [
   [1, 'no', 'A single piece of evidence under decide answers no. No other function exits 1.'],
   [2, 'broken', 'A usage error or an input error. The failing record sent nothing.'],
   [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
-  [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, and evidence past the token limit.'],
+  [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, evidence past the token limit, and a critical line in a check report.'],
   [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
   [6, 'broken', 'annotate or relate only. The run finished with at least one valid and one failed question. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
-  [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row.'],
-  [70, 'broken', 'A defect in the tool.'],
+  [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row. When a run has both failed questions and such rows, 7 wins over 6.'],
+  [70, 'broken', 'A defect in the tool. Its message begins "defect:".'],
+  ['130, 143', 'broken', 'SIGINT or SIGTERM stopped the command. It ends by that signal, and the shell reports 128 plus the signal number.'],
 ];
 
 const BARE = [
@@ -84,9 +86,9 @@ const COUNTS = [
   ['relate', 'relation rules', 'A cut on each edge’s probability of yes.', cutOn('relate')],
 ];
 ---
-<Base title="Reference" description="Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.">
+<SidePage pages={REFERENCE_PAGES} page={{ ...REFERENCE_PAGES[0], description: 'Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.' }} name="Reference">
   <h1>Reference</h1>
-  <p class="lede">Everything the <code>thinkthen</code> command takes and prints. Read this page before you write a pipeline, and hand it to an agent.</p>
+  <p class="lede">Everything the <code>thinkthen</code> command takes and prints. Read this page before you write a pipeline, and hand it to an agent. <a href="/reference/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number.</p>
 
   <h2>The ten functions</h2>
   <table>
@@ -101,7 +103,7 @@ const COUNTS = [
     ))}
   </table>
 
-  <h2>Arguments and thresholds</h2>
+  <h2 id="arguments-and-thresholds">Arguments and thresholds</h2>
   <p>A threshold is a cut on the quantity each function names. You set it; the tool never reports one. A cut is one number. Only <code>decide</code> takes a band, written <code>LOW:HIGH</code>. A recognized name’s printed strength is a computed product, not a probability.</p>
   <table>
     <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
@@ -171,7 +173,7 @@ const COUNTS = [
   <p>In record mode, a <code>decide</code>, <code>choose</code>, <code>tag</code>, or <code>score</code> row is <code>{'{"input":RECORD,"value":ANSWER}'}</code>, in that key order. <code>filter</code>, <code>rank</code>, and <code>find</code> keep returning records. Every result is compact and sits on one line.</p>
   <p><code>annotate</code> in record mode adds one top-level field per question to an object record. A line, a JSON scalar, or a JSON array keeps its parsed record under <code>input</code> and its named answers under <code>value</code>. CSV and TSV rows are objects, and they stay flat.</p>
 
-  <h2>Exit codes</h2>
+  <h2 id="exit-codes">Exit codes</h2>
   <table>
     <tr><th>Code</th><th>What it means</th></tr>
     {EXITS.map(([code, outcome, what]) => (
@@ -207,4 +209,4 @@ const COUNTS = [
   <p>A question file holds one saved question. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> holds many questions. The <a href="/functions/question-file/">question file page</a> carries the keys and the exit codes.</p>
 
   <p class="pagelinks"><a href="/learn/tutorial/">Take the tutorial</a> · <a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
-</Base>
+</SidePage>

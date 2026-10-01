@@ -1,0 +1,63 @@
+---
+// Goal: show how each function turns the model's probabilities into an answer, when the answer is not sure, and why null never means a failure.
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import { FUNCTIONS } from '../../data/catalog.mjs';
+import { REFERENCE_PAGES, referencePage } from '../../data/reference.mjs';
+import { run } from '../../data/samples.mjs';
+import { setting } from '../../lib/settings-table.mjs';
+
+const page = referencePage('answers');
+const shown = (fn, name) => ({
+  run: run(`functions/${fn}`, name),
+  caption: FUNCTIONS.find((f) => f.name === fn).see[name],
+});
+const band = shown('decide', '1-lines');
+const pick = shown('choose', '1-lines');
+const none = shown('find', '3-none');
+const names = shown('recognize', '1-names');
+const scale = shown('score', '3-lines');
+const nameCut = setting('Threshold').defaultOn('recognize');
+const edgeCut = setting('Relation threshold').number;
+const levels = setting('Levels').range;
+const spec = (name) => `https://github.com/botassembly/thinkthen/blob/main/specification/${name}.md`;
+---
+<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'How each function turns probabilities into an answer, when the answer is not sure, and why null never means a failure.' }} name="Reference">
+  <h1>How answers work</h1>
+  <p class="lede">The model gives a probability for each choice. ThinkThen turns those probabilities into the answer it prints. Each function does this its own way.</p>
+
+  <h2 id="not-sure">Not sure</h2>
+  <p>When <code>decide</code> or <code>choose</code> is not sure, it prints <code>null</code> and exits 3. When <code>find --none</code> finds nothing, it prints nothing and exits 3. A <code>null</code> never means a failure. A failure never prints <code>null</code> as its answer, and it exits with its own <a href="/reference/#exit-codes">exit code</a>. In <code>annotate</code>, a question that failed carries a <code>failed</code> marker instead of a value. Under exit 6, <code>relate</code> prints only the edges that succeeded.</p>
+  <p>An answer is not sure in three ways:</p>
+  <ul>
+    <li>A <code>decide</code> probability falls inside a band.</li>
+    <li>A <code>choose</code> winner falls under its cut, or the top two options tie exactly.</li>
+    <li><code>find --none</code> finds that nothing fits.</li>
+  </ul>
+  <p>In a stream of records, each not-sure record prints <code>null</code> in its row. The run itself exits 0 when it finishes.</p>
+
+  <h2 id="bands-and-cuts">Bands and cuts</h2>
+  <p>Only <code>decide</code> takes a band, written <code>LOW:HIGH</code>. A probability of yes at or above <code>HIGH</code> is yes. A probability under <code>LOW</code> is no. Anything between is not sure. Every other function that takes a threshold takes one number, a cut. The <a href="/reference/#arguments-and-thresholds">reference</a> gives every boundary, and <a href="/how-tos/bash/threshold-band/">Set a cut or a band</a> runs both on one message.</p>
+  <Terminal run={band.run} caption={band.caption} />
+
+  <h2 id="choose">choose</h2>
+  <p><code>choose</code> takes a cut and never a band. When the winning option's probability falls under the cut, the answer is not sure. When the top two options tie exactly, the answer is also not sure, with or without a cut. The order of your options does not break a tie. <code>choose</code> never exits 1. The <a href={spec('choose')}>choose specification</a> holds the rule.</p>
+  <Terminal run={pick.run} caption={pick.caption} />
+
+  <h2 id="find">find</h2>
+  <p><code>find</code> has no threshold. It reads every line together and prints the line with the highest probability. When two lines tie at the top, the first line wins. <code>--none</code> adds one more choice: nothing fits. When that choice leads, or ties for the lead, <code>find</code> prints nothing and exits 3.</p>
+  <Terminal run={none.run} caption={none.caption} />
+
+  <h2 id="recognize">recognize</h2>
+  <p><code>recognize</code> keeps a name when its strength reaches <code>--threshold</code>. The cut defaults to {nameCut} and must be above 0. Strength is the probability of the name's kind times the probability of its span, rounded to four places. It ranks names, and it is not a probability. <code>--relation-threshold</code> is a separate cut on each relation edge's probability, and it defaults to {edgeCut}. <code>recognize</code> never exits 1 or 3. A text with no names is a good answer.</p>
+  <Terminal run={names.run} caption={names.caption} />
+
+  <h2 id="score">score</h2>
+  <p><code>score</code> has no threshold and no not-sure answer. You name {levels.min} to {levels.max} levels, lowest first. The number it prints is a position on those levels, counted from 0. ThinkThen multiplies each level's probability by its position, adds the results, and divides by the total of the probabilities it accepted. The number is a weighted average of the positions. A number between two positions means the probability is spread over more than one level. In a question file, <code>levels</code> may be a map from each level's name to its description. The model then reads the descriptions, and the positions stay the same. The <a href={spec('score')}>score specification</a> works one example through.</p>
+  <Terminal run={scale.run} caption={scale.caption} />
+
+  <h2 id="rank">rank</h2>
+  <p><code>rank</code> takes no threshold and prints every record, unless <code>--top N</code> asks for the first N. It sorts by the probability of yes, most likely first. With a saved <code>score</code> question, <code>rank @FILE</code> sorts by the score's position instead, highest first. Records with exactly equal values keep their input order. <code>rank</code> asks about each record on its own and sorts on this machine. It never asks the model to compare two records.</p>
+
+  <p class="pagelinks"><a href="/reference/#exit-codes">Every exit code</a> · <a href="/how-tos/bash/not-sure/">Handle not sure in Bash</a> · <a href="/trust/">Test it before you trust it</a></p>
+</SidePage>
