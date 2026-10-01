@@ -143,11 +143,7 @@ const NO_EFFECT = /\bno effect\b|^not on this surface\b/;
 // The settings the site leaves out. The docs leave out the Details flag for now
 // (Ian, 2026-09-28). The annotate record failure policy works only with
 // the Details flag, so it stays out with it.
-// Portable call settings is a JSON schema the SQL and frame surfaces read,
-// not a setting a reader changes. Its cells cite tickets and say "later".
-// ThinkThen issue 2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md
-// asks for that row to change; show it again once it does.
-export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy', 'Portable call settings']);
+export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy']);
 
 export function parseSettings(text) {
   const parts = sections(text);
