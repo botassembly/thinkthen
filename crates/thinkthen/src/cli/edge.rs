@@ -408,7 +408,7 @@ mod deadline_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::{Chunks, Environment, opened, write_line};
+    use super::{Chunks, Environment, open_read, opened, write_line};
     use crate::failure::Failure;
     use std::fs::{self, File};
     use std::io::{Error, ErrorKind, Read as _, Write};
