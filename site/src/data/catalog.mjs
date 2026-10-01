@@ -297,7 +297,12 @@ export const FUNCTIONS = [
     unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
     see: {
-      '1-names': 'recognize finds three names. Each comes back with its kind and its strength.',
+      '0-kinds': 'recognize finds three names and gives each one of the three kinds: a person, an organization, and a place.',
+      '1-names': 'Each --kind gives a kind a description. recognize finds three names. Each comes back with its kind and its strength.',
+    },
+    moreSee: {
+      typescript: 'Two relation rules ask how the names connect. Maria Chen works for Northwind Freight, and Northwind Freight is based in Chicago.',
+      duckdb: 'The same text as a row of a table. The first query lists the names. The second reads the relation rules from names.json and lists the links.',
     },
   },
   {

@@ -88,6 +88,8 @@ functions/rank/rust.rs
 functions/rank/sqlite.sql
 functions/rank/typescript.ts
 functions/recognize/c.c
+functions/recognize/more/duckdb.sql
+functions/recognize/more/typescript.ts
 functions/recognize/duckdb.sql
 functions/recognize/pandas.py
 functions/recognize/polars.py
