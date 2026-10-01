@@ -1,6 +1,6 @@
 # Quick Fix qf-mac-loopback-servers: the Mac release smoke starts its loopback servers at once
 
-Status: built in lane claude-3. Ian can overturn the shared server class.
+Status: built in lane claude-3; fresh review accepted. Ian can overturn the shared server class.
 
 ## Why
 
