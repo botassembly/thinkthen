@@ -18,6 +18,8 @@ export default defineConfig({
       .map((slug) => [`/how-tos/${slug}`, `/how-tos/bash/${slug}/`])),
     ...Object.fromEntries(['shell', 'python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'duckdb', 'sqlite', 'postgresql']
       .map((slug) => [`/${slug}`, `/install/${slug}/`])),
+    // The launch article replaced the first article on 2026-10-01.
+    '/blog/code-that-understands': '/blog/introducing-thinkthen/',
     // The earlier preview kept the bench pages at /beatles-bench/.
     '/beatles-bench': '/learn/beatles-bench/',
     '/beatles-bench/the-data': '/learn/beatles-bench/',
