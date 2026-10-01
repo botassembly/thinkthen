@@ -2,6 +2,7 @@
 // Goal: tell a reader who searches for the OpenAI Decisions API what OpenAI announced, and what ThinkThen knows about it.
 import SidePage from '../../../layouts/SidePage.astro';
 import { BACKEND_PAGES } from '../../../data/catalog.mjs';
+import FromYourLanguage from '../../../components/FromYourLanguage.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'openai');
 ---
@@ -14,6 +15,8 @@ const page = BACKEND_PAGES.find((p) => p.slug === 'openai');
 
   <h2>What ThinkThen knows</h2>
   <p>ThinkThen has not tested the Decisions API. Nobody knows yet whether it speaks System One, the wire shape ThinkThen speaks. This page will gain setup steps when OpenAI releases the API.</p>
+
+  <FromYourLanguage />
 
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/backends/system-one/">Any System One server</a></p>
 </SidePage>
