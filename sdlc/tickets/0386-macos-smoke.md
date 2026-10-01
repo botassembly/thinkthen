@@ -1,9 +1,6 @@
 # 0386: The macOS release smoke passes PostgreSQL find
 
-Status: in progress
-Milestone: 0.1
-
-Lane claude-4. Branch `ticket/0386-macos-smoke`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
+Status: landed. Lane claude-4. Branch `ticket/0386-macos-smoke`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
 
 ## Outcome
 
@@ -38,4 +35,9 @@ Lane claude-4. Branch `ticket/0386-macos-smoke`. Plan: `sdlc/planning/cleanup-20
 
 ## What the build taught us
 
-(added before landing)
+- A silent step failure hides its cause. `find_proxy_cases` sent the proxy's errors to a file and checked the port with a bare `[ -n ... ]`, so the runner log showed only `FAILED` and a time. The time, 36 s against Linux's 6 s, and the SQLite step's matching 36 s led to the cause. Each PostgreSQL proxy step now names a missing port or a failed proxy and prints the proxy's error output.
+- A local stand-in reproduced the runner. On this host, a `sitecustomize.py` that made `socket.getfqdn` sleep 35 s made main fail `find_proxy_cases` and `try_details_keeps_good_after_backend_failure` with no message, as on the runner. The branch passed both under the same shim, and the full installed PostgreSQL check passed 13 of 13 on run 36889643043's x86 Linux archive. Under the shim the SQLite installed check passed in 13.6 s.
+- A 1 in an assertion is not always seconds. `backend.wait(1)` waits for a count of 1 under a 30 s bound, so the Intel Mac DuckDB failure was no timing margin. The ticket review traced it and case 47 to the conformance backend's nonblocking accepted sockets on macOS, which ticket 0373 slice B fixed in `c0abe6a8c` before this ticket. On the M5, a client that waited 0.2 s between connecting and sending got an empty reply and no count from a backend built with `39f3b99fa`'s `lifetime.rs`, and a reply and a count from main's.
+- Planted proxies proved both new messages: an 8 s stall at every Python start printed `the find-proxy printed no port in 5 s` and `the proxy printed no port in 5 s`, and a proxy that exited 3 after its count printed `the ... failed` with the planted error line.
+- `lint` asked for the SQLite Python test ratchet to go from 2422 to 2441 lines, for the server class and its regression. `lint` in full, the four release self-tests, `workflows --self-test` (68 of 68), `policy.py` and `tickets` pass. `lint`'s one `Killed` line comes from the planted time-limit test.
+- Review: the ticket review returned six findings, all answered before the code was final, then ACCEPT. The largest was the 0373 cause for both Intel Mac failures, which removed this ticket's planned DuckDB message change. The code review returned ACCEPT. It noted that a proxy that dies before printing its port ends the step with 141, not 1, because the trap writes to a FIFO with no reader. The step still fails with its message first, and the old trap did the same.
