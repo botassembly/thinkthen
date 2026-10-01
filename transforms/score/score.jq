@@ -27,7 +27,7 @@ def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 
 def verdict($p):
   if ($cut | type) == "array" then
-    if $p >= $cut[1] then "yes" elif $p <= $cut[0] then "no" else "unsure" end
+    if $p >= $cut[1] then "yes" elif $p < $cut[0] then "no" else "unsure" end
   elif ($cut | type) == "number" then
     if $p >= $cut then "yes" else "no" end
   else error("cut is a number, or a pair [low, high]")

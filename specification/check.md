@@ -18,6 +18,7 @@ thinkthen check [--url BASE] [--backend NAME] [--model NAME] [--timeout SECONDS]
 - `--timeout` works as it does everywhere. `--max-retries` keeps its default of 3 and is not accepted. Four probes send at most sixteen attempts.
 - The check reads no standard input and no cache, recording, replay, or profile. `--cache`, `--no-cache`, `--record`, `--replay`, and `--profile` are unknown options and exit 2.
 - Its attempts and reported tokens count in the usage totals, as every live request does.
+- `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` binds each probe as it binds every live request, by [backends.md](backends.md). `check` has no flag for it. A probe the cap cannot admit stops the check before that probe is sent: the command prints the asking commands' sentence, such as `thinkthen usage: max_estimated_input_tokens_total=1 (encoded-body-bytes-908-v1) would be exceeded before this call's first request`, prints no report, and exits 2.
 
 ## The four probes
 
