@@ -162,6 +162,20 @@ const FRAGMENT = {
     fs.copyFileSync(path.join(examples, 'install/rust/files/Cargo.toml'), path.join(dir, 'Cargo.toml'));
   },
 };
+// A function page's Go, Swift or Zig sample builds as a reader would build
+// it in a project of its own. Go names its module after the file, and
+// `go mod init go` fails, so the sample builds as sample.go. Swift and Zig
+// take the install page's project files, which name the first call, so the
+// sample builds under that name.
+const projectFiles = (slug, file) => (dir) => {
+  fs.cpSync(path.join(examples, 'install', slug, 'files'), dir, { recursive: true });
+  return file;
+};
+const PROJECT = {
+  go: () => 'sample.go',
+  swift: projectFiles('swift', 'main.swift'),
+  zig: projectFiles('zig', 'first-call.zig'),
+};
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
 
@@ -189,9 +203,10 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
         fs.mkdirSync(dir, { recursive: true });
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
         layout(dir);
-        fs.copyFileSync(path.join(examples, rel), path.join(dir, path.basename(rel)));
+        const name = rel.startsWith('functions/') && PROJECT[slug] ? PROJECT[slug](dir) : path.basename(rel);
+        fs.copyFileSync(path.join(examples, rel), path.join(dir, name));
         if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, rel);
-        const lines = buildLines(slug, path.basename(rel), true);
+        const lines = buildLines(slug, name, true);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);

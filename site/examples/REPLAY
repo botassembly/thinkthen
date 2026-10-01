@@ -8,6 +8,7 @@
 functions/annotate/c.c
 functions/annotate/cpp.cpp
 functions/annotate/duckdb.sql
+functions/annotate/go.go
 functions/annotate/postgresql.sql
 functions/annotate/r.R
 functions/annotate/ruby.rb
@@ -16,6 +17,7 @@ functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/c.c
 functions/choose/cpp.cpp
+functions/choose/go.go
 functions/choose/postgresql.sql
 functions/choose/python.py
 functions/choose/ruby.rb
@@ -23,6 +25,7 @@ functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/c.c
 functions/decide/cpp.cpp
+functions/decide/go.go
 functions/decide/polars.py
 functions/decide/r.R
 functions/decide/ruby.rb
@@ -31,6 +34,7 @@ functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/c.c
 functions/filter/cpp.cpp
+functions/filter/go.go
 functions/filter/postgresql.sql
 functions/filter/python.py
 functions/filter/r.R
@@ -39,6 +43,7 @@ functions/filter/rust.rs
 functions/filter/sqlite.sql
 functions/find/c.c
 functions/find/cpp.cpp
+functions/find/go.go
 functions/find/postgresql.sql
 functions/find/python.py
 functions/find/r.R
@@ -55,6 +60,7 @@ functions/question-file/typescript.ts
 functions/rank/c.c
 functions/rank/cpp.cpp
 functions/rank/duckdb.sql
+functions/rank/go.go
 functions/rank/postgresql.sql
 functions/rank/python.py
 functions/rank/ruby.rb
@@ -63,6 +69,7 @@ functions/rank/typescript.ts
 functions/recognize/c.c
 functions/recognize/cpp.cpp
 functions/recognize/duckdb.sql
+functions/recognize/go.go
 functions/recognize/postgresql.sql
 functions/recognize/python.py
 functions/recognize/r.R
@@ -73,6 +80,7 @@ functions/recognize/typescript.ts
 functions/relate/c.c
 functions/relate/cpp.cpp
 functions/relate/duckdb.sql
+functions/relate/go.go
 functions/relate/postgresql.sql
 functions/relate/python.py
 functions/relate/r.R
@@ -82,6 +90,7 @@ functions/relate/sqlite.sql
 functions/relate/typescript.ts
 functions/score/cpp.cpp
 functions/score/duckdb.sql
+functions/score/go.go
 functions/score/polars.py
 functions/score/postgresql.sql
 functions/score/python.py
@@ -92,6 +101,7 @@ functions/score/sqlite.sql
 functions/tag/c.c
 functions/tag/cpp.cpp
 functions/tag/duckdb.sql
+functions/tag/go.go
 functions/tag/postgresql.sql
 functions/tag/python.py
 functions/tag/r.R
