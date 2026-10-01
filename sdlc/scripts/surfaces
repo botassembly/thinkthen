@@ -17,7 +17,7 @@ mode=plain
 profile=routine
 registry_only=0
 # `--publish TAG` copies the release files this run packs to ROOT/TAG through publish-builds.
-# ROOT is `--publish-root`, else $HOME/workspace/builds/thinkthen. Only the coordinator asks for it.
+# ROOT is `--publish-root`, else THINKTHEN_PUBLISH_ROOT; with neither, it refuses. Only the coordinator asks for it.
 publish_tag= publish_root=
 while [ "$#" -gt 0 ]; do
     case $1 in
@@ -36,7 +36,8 @@ if [ -n "$publish_root" ] && [ -z "$publish_tag" ]; then
 fi
 if [ -n "$publish_tag" ]; then
     [ "$registry_only" -eq 0 ] || { echo 'surfaces: --registry does not publish' >&2; exit 2; }
-    publish_root=${publish_root:-$HOME/workspace/builds/thinkthen}
+    publish_root=${publish_root:-${THINKTHEN_PUBLISH_ROOT:-}}
+    [ -n "$publish_root" ] || { echo 'surfaces: --publish needs --publish-root or THINKTHEN_PUBLISH_ROOT' >&2; exit 2; }
 fi
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)

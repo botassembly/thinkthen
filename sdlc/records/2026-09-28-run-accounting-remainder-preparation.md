@@ -1,6 +1,6 @@
 # Batch 5 run accounting remainder preparation
 
-Read-only preparation on `730c9145307bd6bbdfddbb2ceb4d363c209cee35` (2026-09-28). This is eight original rows, not eight new tickets. The original register is `$HOME/workspace/experiments/284-issue-register/`; the other three rows are the named `sdlc/issues/` files below. `sdlc/planning/remaining-batches-2026-09-28.md` schedules the family, and `sdlc/planning/ticket-preparation.md` plus `sdlc/records/2026-09-27-ticket-friction-since-1300.md` supply the preparation checks. Source observations below are pinned to that base, not a future marketing or runtime branch. No build, provider call, or public contract change was made for this note.
+Read-only preparation on `730c9145307bd6bbdfddbb2ceb4d363c209cee35` (2026-09-28). This is eight original rows, not eight new tickets. The original register is `$WORKSPACE/experiments/284-issue-register/`; the other three rows are the named `sdlc/issues/` files below. `sdlc/planning/remaining-batches-2026-09-28.md` schedules the family, and `sdlc/planning/ticket-preparation.md` plus `sdlc/records/2026-09-27-ticket-friction-since-1300.md` supply the preparation checks. Source observations below are pinned to that base, not a future marketing or runtime branch. No build, provider call, or public contract change was made for this note.
 
 ## First actionable clusters
 

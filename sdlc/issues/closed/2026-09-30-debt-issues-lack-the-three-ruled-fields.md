@@ -4,7 +4,7 @@ Status: closed 2026-09-30 by the pm adoption Quick Fix. All 22 debt issues, 14 o
 
 Ian ruled on 2026-09-30 that debt keeps both severity and trigger. The convention landed in this repository's issue README carries `Kind: debt` and `Pay when:` but is missing the other three ruled fields, and so are all nine debt issues.
 
-The missing fields, per the model in botassembly/sdlc ADR 0006 (amended 2026-09-30) and pm ticket 0012:
+The missing fields, per the model in the process ADR on debt fields (ADR 0006, amended 2026-09-30) and pm ticket 0012:
 
 1. `Severity: high | medium | low` — the cost of keeping the debt.
 2. `Debt: NNN` — a sequential number assigned at capture, so items can be named and counted.

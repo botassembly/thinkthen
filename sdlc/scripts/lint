@@ -65,6 +65,23 @@ else
     fi
     echo "private names: $(grep -c -v '^[[:space:]]*$' "$list") checked in paths and files, none found"
 fi
+# The same check always runs on the workstation terms below. They name a home
+# folder, the workspace layout, the build host, the key file, and the private
+# record and QA repositories, and no customer, so they may live here. Marketing
+# owns site/. This file holds the terms. The privacy guards under libraries/
+# look for `/home/` and `/Users/` alone, which no term matches.
+status=0
+hits=$(git grep -n -I -i -F -e '/home/ian' -e '/Users/ian' -e '~/workspace' -e '$HOME/workspace' \
+    -e 'imaurer-m5' -e 'zshenv' -e 'botassembly/sdlc' -e 'repos/sdlc' -e 'mktg' -e 'thinkthen-qa' \
+    -- . ':!site/' ':!sdlc/scripts/lint') || status=$?
+if [ "$status" -gt 1 ]; then
+    echo "lint: the workstation-term check failed (git grep exit $status)" >&2
+    exit 1
+elif [ -n "$hits" ]; then
+    printf 'lint: a tracked file outside site/ names a workstation term at\n%s\n' "$(printf '%s\n' "$hits" | cut -d: -f1,2)" >&2
+    exit 1
+fi
+echo "workstation terms: 10 checked outside site/, none found"
 
 # The workspace caps an agents file at 5,000 characters. CLAUDE.md links to AGENTS.md.
 python3 -c '

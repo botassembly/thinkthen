@@ -1,6 +1,6 @@
 # 0208 design review handoff
 
-Status: corrected design `3a1edbbe` passed independent design-quality review. Ian approved the reviewed preview, status and explicit cleanup behavior at main `a2c9057a`; code review of the subsequent build remains separate. The original design base was main `13febe404838a7bd6a6ab2bfcd83fdffd72ffcd2`. The first frozen draft `debf215934cf6a524f844c5c7d725cdc98a33d24` received REVISE in `$HOME/workspace/worktrees/thinkthen-codex-4/target/codex-builds/0208/review/result.txt`. The correction changed no runtime source, test, specification or plan file.
+Status: corrected design `3a1edbbe` passed independent design-quality review. Ian approved the reviewed preview, status and explicit cleanup behavior at main `a2c9057a`; code review of the subsequent build remains separate. The original design base was main `13febe404838a7bd6a6ab2bfcd83fdffd72ffcd2`. The first frozen draft `debf215934cf6a524f844c5c7d725cdc98a33d24` received REVISE in `$WORKSPACE/worktrees/thinkthen-codex-4/target/codex-builds/0208/review/result.txt`. The correction changed no runtime source, test, specification or plan file.
 
 First-draft preparation checks: `python3 sdlc/scripts/tickets` reported 0 evidence failures from ticket 0120 on; `git diff --cached --check` passed for the three design files. The correction's `git diff --check` also passed. No build, runtime test, provider call or full gate ran.
 
