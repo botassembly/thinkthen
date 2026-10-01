@@ -1,6 +1,6 @@
 # 0358: One rule for a row's usage
 
-Status: in progress. Lane claude-1. Branch `ticket/0358-one-row-usage-rule`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves top-ten cleanup item 4 of `sdlc/planning/grading-2026-09-30/README.md` and cleanup item 3 of its batching report `01-batching.md`.
+Status: landed. Lane claude-1. Branch `ticket/0358-one-row-usage-rule`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves top-ten cleanup item 4 of `sdlc/planning/grading-2026-09-30/README.md` and cleanup item 3 of its batching report `01-batching.md`.
 
 ## Outcome
 
@@ -46,3 +46,11 @@ The command's one-question rows, the public Rust API, the C door and the hosts o
   - Each regression pins the whole standard error. A real overflow also stops the usage counters, so the overflow cases expect the fixed `usage counters could not be updated` warning after any diagnostic, as `usage_overflow_fails_safely` does.
   - Checks before landing: `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets`, lint in a clean checkout, and the C door tests. No binding's numbers change: no binding reports `relate` or `recognize` usage, and every other binding row keeps its sum when every share is present. Only the overflow outcomes above change, and no surface check pins them. The build confirms that by searching each binding's tests for overflow and missing-usage cases, and runs any surface check that has one.
 - Defers: a library `tag` row with one failed label share and an overflow among the others returns the overflow error, while the command reports the failed share first; both orders follow the ticket's check order, and the case needs a hostile backend. Cleanup item 4 of the batching report (one dry-run planner) and top-ten item 10. The run totals keep their own per-reply sum in `engine/call_facts.rs`, because they count live replies, not rows.
+
+## What the build taught us
+
+- The copies disagreed in three ways, and the grading named only one. `each.rs` kept a partial sum. The three `checked_plus(usage?)` folds dropped an overflow silently. `annotate`'s `assemble` gave an answer that depended on answer order. `relate` and `recognize` inherited `each.rs`'s partial sum through `summed`, and those two rows showed the defect to users.
+- An order-free rule needs the total at the end. A fold that fails fast on overflow cannot also let a later missing share win, so `RowUsage` keeps flags and decides once.
+- A real overflow also stops the usage counters, so every overflow test pins the fixed usage warning. A finished `tag` stream adds its stop line between the cause and the warning.
+- Clippy over the whole workspace caught test lints that a crate-only clippy run before the tests existed did not. The code review caught a temporary-file race that nextest hides and `cargo test` shows: a process id alone does not make a name unique across test threads.
+- Source code lost 119 lines and gained one 85-line helper. The ratchet grew by 298 lines, most of them regression tests.
