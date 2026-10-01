@@ -102,4 +102,3 @@ Open items:
 - [About a third of the spec's "no calls" edges show only after a real send, and the spec lags the build in places](../issues/2026-09-30-spec-no-calls-edges-need-a-real-send.md)
 - [The systemone adapter sends criteria descriptions as JSON objects that Ollama refuses](../issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md)
 - [Zig 0.15.2's linker drops constant alignment](../issues/2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md)
-- [The CA bundle library test needs OpenSSL 3 on PATH](../issues/2026-10-01-ca-bundle-test-needs-openssl-3.md)

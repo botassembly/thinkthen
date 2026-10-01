@@ -48,6 +48,8 @@ workspace = true
 [dev-dependencies]
 conformance-backend = { path = "../../conformance/backend" }
 proptest = { version = "1.11.0", default-features = false, features = ["std"] }
+# Ticket 0372: the CA bundle test serves its own TLS. Already in the lock.
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std"] }
 # ADR 0112: derives the result schema in a unit test only. Never `preserve_order`.
 schemars = { version = "=1.2.2", features = ["raw_value"] }
 signal-hook = "0.3.18"
