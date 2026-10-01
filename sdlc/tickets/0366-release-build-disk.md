@@ -1,6 +1,6 @@
 # 0366: The x86 Linux release build keeps at least 3 GB of disk spare
 
-Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2. Parent: ticket 0128, phase 3b.
+Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2. Parent: ticket 0128, phase 3b.
 
 ## Outcome
 
@@ -29,7 +29,7 @@ The x86 Linux `build` job writes less, so its fullest point leaves at least 3 GB
 
   Two ideas were measured and dropped. The PostgreSQL part alone, built cold with `CARGO_INCREMENTAL=0`, still filled 1.2 GB. Adding `CARGO_PROFILE_DEV_DEBUG=0` for pgrx's debug-mode SQL generator saved 19 MB. A shared build folder for all parts cannot peak below the largest part's 1.2 GB, so it cannot beat removing each part's folder once packed. The parts also build with different features, so a shared folder would share little.
 - Keeps: every release file's name, archive members and checksum layout, with no local path inside; `release-pack --reuse`, which packs the lanes' surface builds and builds nothing new; a caller's `CARGO_TARGET_DIR`, which `release-pack` keeps using and never removes (the archive self-test sets one); the container's offline build and its run folder; `setup-ruby.sh`'s log folder, which it keeps after success and after failure; the Linux smoke job's host Ruby; the macOS build jobs' host Ruby.
-- Changes: three scripts write less, and the workflow logs disk use.
+- Changes: four scripts write less or keep their writes in the run folder, and the workflow logs disk use.
   - `sdlc/scripts/release-pack`: in build mode, when the caller sets no `CARGO_TARGET_DIR`, each part builds in its own `scratch_dir` folder. `release-pack` points `CARGO_TARGET_DIR` and DuckDB's `THINKTHEN_DUCKDB_CPP_BUILD` at it and removes it with `scratch_remove` once the part is packed. It adds a remap of that folder to `/build/target` in `RUSTFLAGS`, `CFLAGS` and `CXXFLAGS`, after its other remaps, since the folder no longer sits under the remapped checkout. Each build script appends its own `HOME` remap after it, so a `TMPDIR` under `HOME` would show the scratch name under `/build/home`; no release job has one. After each part is packed, and before its folder is removed, it prints one line: the part, its build folder's size, and the free space where the output goes.
   - `sdlc/scripts/release-container`: the container gets `TMPDIR=/work/tmp`, a folder inside its run folder. The part build folders then stay on the disk `linux-work` chose, and out of `HOME`.
   - `libraries/ruby/setup-ruby.sh`: the source trees unpack and build in a `scratch_dir` folder, which the run removes at exit. The configure, make and install logs go to the kept `build.XXXX` folder as now. Ruby's own `config.log` and each `ext/*/mkmf.log` are copied there too, after success and after a failed step, since an extension that configure skips leaves its reason only in `mkmf.log`.
