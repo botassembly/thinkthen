@@ -295,8 +295,8 @@ def maven_upload(bundle):
     require(found == 404, f"Maven Central already holds {ARTIFACT} {v}" if found == 200
             else f"Maven Central answered {found} for the version check")
     body, kind = multipart("bundle", bundle.name, bundle.read_bytes())
-    central = "https://central.sonatype.com/api/v1/publisher"
-    request = urllib.request.Request(f"{central}/upload?name={ARTIFACT}-{v}&publishingType=AUTOMATIC", data=body,
+    portal = "https://central.sonatype.com/api/v1/publisher"
+    request = urllib.request.Request(f"{portal}/upload?name={ARTIFACT}-{v}&publishingType=AUTOMATIC", data=body,
                                      method="POST", headers={"Authorization": f"Bearer {token}", "Content-Type": kind})
     deployment = central(request, 300).strip()
     require(re.fullmatch(r"[0-9a-fA-F-]{36}", deployment), "Central returned no deployment id")
@@ -304,7 +304,7 @@ def maven_upload(bundle):
     misses = 0
     for _ in range(180):
         time.sleep(10)
-        request = urllib.request.Request(f"{central}/status?id={deployment}", data=b"", method="POST",
+        request = urllib.request.Request(f"{portal}/status?id={deployment}", data=b"", method="POST",
                                          headers={"Authorization": f"Bearer {token}"})
         try:
             state = json.loads(central(request, 60)).get("deploymentState")
@@ -312,6 +312,7 @@ def maven_upload(bundle):
             misses += 1
             require(misses < 5, f"Maven deployment {deployment} status failed five times: {error}")
             continue
+        misses = 0
         print(f"release-registry: Maven deployment {deployment} is {state}")
         if state in ("PUBLISHING", "PUBLISHED"):
             return

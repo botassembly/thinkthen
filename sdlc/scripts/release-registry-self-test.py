@@ -5,7 +5,10 @@ Each case copies the operations into a small Git tree, plants one fault, and
 checks the exit code and the refusal sentence. Signing cases need gpg.
 """
 
+import base64
+import contextlib
 import hashlib
+import json
 import io
 import os
 import pathlib
@@ -148,6 +151,59 @@ def go_tag_cases():
     return out
 
 
+class Reply(io.BytesIO):
+    status = 201
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+
+def upload_cases(bundle):
+    """Drive maven_upload against stubbed replies: version check, upload, then status polls."""
+    import importlib.util
+    import urllib.error
+    spec = importlib.util.spec_from_file_location("registry", REPO / "sdlc/scripts/release-registry.py")
+    registry = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(registry)
+    registry.time.sleep = lambda _: None
+    out = []
+    for name, states, wanted in (
+            ("upload-published", ["PENDING", "boom", "VALIDATED", "PUBLISHED"], None),
+            ("upload-failed", ["VALIDATING", "FAILED"], "failed validation; see the Central Portal"),
+            ("upload-unknown", [None], "has unknown state None"),
+            ("upload-flaky", ["boom"] * 5, "status failed five times")):
+        calls = []
+
+        def urlopen(request, timeout, states=list(states)):
+            url = request.full_url
+            calls.append(url.split("?")[0].rsplit("/", 1)[-1])
+            if url.endswith(".pom"):
+                raise urllib.error.HTTPError(url, 404, "missing", {}, None)
+            assert request.get_header("Authorization") == "Bearer " + base64.b64encode(b"u:p").decode()
+            if "/upload?" in url:
+                return Reply(b"0123abcd-0123-0123-0123-0123456789ab")
+            state = states.pop(0)
+            if state == "boom":
+                raise urllib.error.HTTPError(url, 502, "bad gateway", {}, io.BytesIO(b"gateway"))
+            return Reply(json.dumps({"deploymentState": state}).encode())
+        registry.urllib.request.urlopen = urlopen
+        os.environ.update(MAVEN_CENTRAL_USERNAME="u", MAVEN_CENTRAL_PASSWORD="p")
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                registry.maven_upload(bundle)
+            got = None
+        except registry.Refusal as refusal:
+            got = next((w for w in [wanted] if w and w in str(refusal)), str(refusal))
+        finally:
+            for key in ("MAVEN_CENTRAL_USERNAME", "MAVEN_CENTRAL_PASSWORD"):
+                os.environ.pop(key, None)
+        out.append((name, got, wanted))
+    return out
+
+
 def main():
     v = version()
     bad = 0
@@ -230,6 +286,8 @@ def main():
         else:
             checks.append(("rehearse-sign", "gpg missing", "gpg present"))
         checks += go_tag_cases()
+        (root / "bundle.zip").write_bytes(b"zip")
+        checks += upload_cases(root / "bundle.zip")
         for name, got, wanted in checks:
             if got != wanted:
                 bad += 1
