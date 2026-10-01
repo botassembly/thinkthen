@@ -1,0 +1,1069 @@
+{
+ "cases": [
+  "decide",
+  "choose",
+  "tag",
+  "score",
+  "filter",
+  "rank",
+  "find",
+  "annotate",
+  "recognize",
+  "relate"
+ ],
+ "head": {
+  "live": {
+   "median": 138.0,
+   "p10": 116.8,
+   "p90": 172.9,
+   "n": 412
+  },
+  "http": {
+   "median": 138.0,
+   "p10": 116.0,
+   "p90": 178.7,
+   "n": 242
+  },
+  "gap_raw": {
+   "median": 1.1,
+   "p10": 0.4,
+   "p90": 2.4,
+   "n": 242
+  },
+  "gap_fixed": {
+   "median": 1.6,
+   "p10": 0.9,
+   "p90": 2.9,
+   "n": 242
+  },
+  "core": {
+   "median": 1.74,
+   "p10": 1.04,
+   "p90": 3.63,
+   "n": 1800
+  }
+ },
+ "worst": [
+  "pandas",
+  "annotate",
+  6.7
+ ],
+ "surfaces": [
+  {
+   "id": "ada",
+   "label": "Ada",
+   "absent": [],
+   "added": 1.1,
+   "worst": [
+    "recognize",
+    3.6
+   ],
+   "own": 3.0,
+   "live": {
+    "median": 156.0,
+    "p10": 135.1,
+    "p90": 243.9,
+    "n": 18
+   }
+  },
+  {
+   "id": "c",
+   "label": "C (debug library)",
+   "absent": [],
+   "added": 1.4,
+   "worst": [
+    "recognize",
+    3.6
+   ],
+   "own": 3.1,
+   "live": {
+    "median": 128.5,
+    "p10": 114.4,
+    "p90": 281.6,
+    "n": 18
+   }
+  },
+  {
+   "id": "c-release",
+   "label": "C (release library)",
+   "absent": [],
+   "added": -0.1,
+   "worst": [
+    "recognize",
+    0.1
+   ],
+   "own": 1.7,
+   "live": null
+  },
+  {
+   "id": "cli",
+   "label": "Command (debug)",
+   "absent": [],
+   "added": 17.4,
+   "worst": [
+    "recognize",
+    31.7
+   ],
+   "own": 19.1,
+   "live": {
+    "median": 219.2,
+    "p10": 174.7,
+    "p90": 356.9,
+    "n": 18
+   }
+  },
+  {
+   "id": "cli-release",
+   "label": "Command (release)",
+   "absent": [],
+   "added": 14.5,
+   "worst": [
+    "recognize",
+    27.3
+   ],
+   "own": 16.3,
+   "live": null
+  },
+  {
+   "id": "cobol",
+   "label": "COBOL",
+   "absent": [],
+   "added": 1.1,
+   "worst": [
+    "recognize",
+    2.9
+   ],
+   "own": 2.8,
+   "live": {
+    "median": 134.5,
+    "p10": 120.2,
+    "p90": 147.8,
+    "n": 18
+   }
+  },
+  {
+   "id": "cpp",
+   "label": "C++",
+   "absent": [],
+   "added": 1.2,
+   "worst": [
+    "recognize",
+    3.4
+   ],
+   "own": 3.0,
+   "live": {
+    "median": 144.9,
+    "p10": 125.8,
+    "p90": 189.7,
+    "n": 18
+   }
+  },
+  {
+   "id": "csharp",
+   "label": "C#",
+   "absent": [],
+   "added": 1.4,
+   "worst": [
+    "recognize",
+    3.8
+   ],
+   "own": 3.1,
+   "live": {
+    "median": 136.7,
+    "p10": 122.8,
+    "p90": 163.9,
+    "n": 18
+   }
+  },
+  {
+   "id": "dart",
+   "label": "Dart",
+   "absent": [],
+   "added": 1.3,
+   "worst": [
+    "recognize",
+    3.1
+   ],
+   "own": 3.1,
+   "live": {
+    "median": 123.9,
+    "p10": 109.8,
+    "p90": 153.4,
+    "n": 18
+   }
+  },
+  {
+   "id": "duckdb",
+   "label": "DuckDB",
+   "absent": [],
+   "added": 1.8,
+   "worst": [
+    "relate",
+    5.2
+   ],
+   "own": 3.4,
+   "live": {
+    "median": 137.5,
+    "p10": 120.4,
+    "p90": 171.4,
+    "n": 18
+   }
+  },
+  {
+   "id": "go",
+   "label": "Go",
+   "absent": [],
+   "added": 1.4,
+   "worst": [
+    "recognize",
+    2.8
+   ],
+   "own": 3.1,
+   "live": {
+    "median": 129.8,
+    "p10": 117.1,
+    "p90": 150.1,
+    "n": 18
+   }
+  },
+  {
+   "id": "java",
+   "label": "Java",
+   "absent": [],
+   "added": 0.9,
+   "worst": [
+    "recognize",
+    2.6
+   ],
+   "own": 2.7,
+   "live": {
+    "median": 147.7,
+    "p10": 119.3,
+    "p90": 185.2,
+    "n": 18
+   }
+  },
+  {
+   "id": "kotlin",
+   "label": "Kotlin",
+   "absent": [],
+   "added": 1.3,
+   "worst": [
+    "recognize",
+    3.8
+   ],
+   "own": 2.9,
+   "live": {
+    "median": 133.8,
+    "p10": 112.7,
+    "p90": 189.6,
+    "n": 18
+   }
+  },
+  {
+   "id": "objective-c",
+   "label": "Objective-C",
+   "absent": [],
+   "added": 1.1,
+   "worst": [
+    "recognize",
+    3.8
+   ],
+   "own": 2.8,
+   "live": {
+    "median": 134.6,
+    "p10": 115.5,
+    "p90": 172.0,
+    "n": 18
+   }
+  },
+  {
+   "id": "pandas",
+   "label": "pandas",
+   "absent": [
+    "filter",
+    "find",
+    "rank",
+    "relate"
+   ],
+   "added": 3.0,
+   "worst": [
+    "annotate",
+    6.7
+   ],
+   "own": 4.7,
+   "live": {
+    "median": 137.5,
+    "p10": 124.4,
+    "p90": 177.8,
+    "n": 10
+   }
+  },
+  {
+   "id": "php",
+   "label": "PHP",
+   "absent": [],
+   "added": 0.7,
+   "worst": [
+    "recognize",
+    2.3
+   ],
+   "own": 2.5,
+   "live": {
+    "median": 166.9,
+    "p10": 146.0,
+    "p90": 220.4,
+    "n": 18
+   }
+  },
+  {
+   "id": "polars",
+   "label": "Polars",
+   "absent": [
+    "filter",
+    "find",
+    "rank",
+    "relate"
+   ],
+   "added": 1.0,
+   "worst": [
+    "recognize",
+    1.6
+   ],
+   "own": 2.7,
+   "live": {
+    "median": 129.7,
+    "p10": 109.6,
+    "p90": 157.3,
+    "n": 10
+   }
+  },
+  {
+   "id": "postgresql",
+   "label": "PostgreSQL",
+   "absent": [],
+   "added": 0.2,
+   "worst": [
+    "filter",
+    1.8
+   ],
+   "own": 1.9,
+   "live": {
+    "median": 127.3,
+    "p10": 102.3,
+    "p90": 136.3,
+    "n": 16
+   }
+  },
+  {
+   "id": "python",
+   "label": "Python",
+   "absent": [],
+   "added": 0.2,
+   "worst": [
+    "recognize",
+    0.4
+   ],
+   "own": 1.9,
+   "live": {
+    "median": 138.0,
+    "p10": 111.8,
+    "p90": 177.5,
+    "n": 18
+   }
+  },
+  {
+   "id": "r",
+   "label": "R",
+   "absent": [],
+   "added": 0.9,
+   "worst": [
+    "recognize",
+    3.0
+   ],
+   "own": 2.7,
+   "live": {
+    "median": 138.9,
+    "p10": 119.0,
+    "p90": 184.3,
+    "n": 18
+   }
+  },
+  {
+   "id": "ruby",
+   "label": "Ruby",
+   "absent": [],
+   "added": 0.1,
+   "worst": [
+    "recognize",
+    0.4
+   ],
+   "own": 1.8,
+   "live": {
+    "median": 144.1,
+    "p10": 117.0,
+    "p90": 181.1,
+    "n": 18
+   }
+  },
+  {
+   "id": "rust",
+   "label": "Rust (the core)",
+   "absent": [],
+   "added": 0.0,
+   "worst": [
+    "decide",
+    0.0
+   ],
+   "own": 1.7,
+   "live": {
+    "median": 120.1,
+    "p10": 108.3,
+    "p90": 177.5,
+    "n": 18
+   }
+  },
+  {
+   "id": "scala",
+   "label": "Scala",
+   "absent": [],
+   "added": 1.7,
+   "worst": [
+    "recognize",
+    4.2
+   ],
+   "own": 3.4,
+   "live": {
+    "median": 128.5,
+    "p10": 114.9,
+    "p90": 159.2,
+    "n": 18
+   }
+  },
+  {
+   "id": "sqlite",
+   "label": "SQLite",
+   "absent": [],
+   "added": -0.1,
+   "worst": [
+    "filter",
+    1.3
+   ],
+   "own": 1.6,
+   "live": {
+    "median": 131.8,
+    "p10": 114.2,
+    "p90": 161.6,
+    "n": 16
+   }
+  },
+  {
+   "id": "swift",
+   "label": "Swift",
+   "absent": [],
+   "added": 0.8,
+   "worst": [
+    "recognize",
+    2.6
+   ],
+   "own": 2.4,
+   "live": {
+    "median": 147.8,
+    "p10": 131.2,
+    "p90": 171.1,
+    "n": 18
+   }
+  },
+  {
+   "id": "typescript",
+   "label": "TypeScript",
+   "absent": [],
+   "added": 0.2,
+   "worst": [
+    "relate",
+    0.4
+   ],
+   "own": 1.9,
+   "live": {
+    "median": 138.0,
+    "p10": 114.9,
+    "p90": 151.9,
+    "n": 18
+   }
+  },
+  {
+   "id": "zig",
+   "label": "Zig",
+   "absent": [],
+   "added": 0.8,
+   "worst": [
+    "recognize",
+    2.4
+   ],
+   "own": 2.4,
+   "live": {
+    "median": 142.1,
+    "p10": 119.6,
+    "p90": 202.5,
+    "n": 18
+   }
+  }
+ ],
+ "batches": {
+  "rank-306": {
+   "live_ms": 321.8,
+   "live_facts": {
+    "schema": "thinkthen.run/1",
+    "records": 306,
+    "requests_sent": 1,
+    "retries": 0,
+    "cache_answers": 0,
+    "input_tokens": 11468,
+    "output_tokens": 5710,
+    "seconds": 0.318,
+    "model": "jev-1.13.0"
+   },
+   "live_http_ms": [
+    267
+   ],
+   "loopback": {
+    "cli": {
+     "each_ms": [
+      66.7,
+      62.3,
+      53.6,
+      56.2,
+      58.3,
+      54.3,
+      72.0,
+      62.7,
+      58.6,
+      59.0
+     ],
+     "median_ms": 58.8,
+     "p10_ms": 53.7,
+     "p90_ms": 71.5
+    },
+    "cli-release": {
+     "each_ms": [
+      56.7,
+      23.6,
+      18.8,
+      22.8,
+      20.4,
+      18.5,
+      24.1,
+      26.8,
+      26.7,
+      22.9
+     ],
+     "median_ms": 23.2,
+     "p10_ms": 18.5,
+     "p90_ms": 53.7
+    }
+   }
+  },
+  "lines-1000": {
+   "live_ms": 491.6,
+   "live_facts": {
+    "schema": "thinkthen.run/1",
+    "records": 1000,
+    "requests_sent": 2,
+    "retries": 0,
+    "cache_answers": 0,
+    "input_tokens": 39786,
+    "output_tokens": 18792,
+    "seconds": 0.487,
+    "model": "jev-1.13.0"
+   },
+   "live_http_ms": [
+    353,
+    304
+   ],
+   "loopback": {
+    "cli": {
+     "each_ms": [
+      167.8,
+      218.5,
+      193.2,
+      186.6,
+      232.3,
+      362.1,
+      235.6,
+      235.6,
+      292.6,
+      318.2
+     ],
+     "median_ms": 233.9,
+     "p10_ms": 169.7,
+     "p90_ms": 357.7
+    },
+    "cli-release": {
+     "each_ms": [
+      51.5,
+      49.7,
+      45.6,
+      73.7,
+      85.5,
+      40.9,
+      65.3,
+      45.8,
+      51.1,
+      53.3
+     ],
+     "median_ms": 51.3,
+     "p10_ms": 41.4,
+     "p90_ms": 84.3
+    }
+   }
+  }
+ },
+ "plan": {
+  "requests": 566,
+  "questions": 2357,
+  "bytes": 551337
+ },
+ "spend": {
+  "reported": [
+   206154,
+   47054
+  ],
+  "estimate": [
+   286012,
+   57331
+  ],
+  "reported_input_usd": 0.0087,
+  "estimate_input_usd": 0.012,
+  "input_price": 0.042,
+  "estimated_bindings": [
+   "ada",
+   "c",
+   "cobol",
+   "cpp",
+   "csharp",
+   "dart",
+   "duckdb",
+   "go",
+   "java",
+   "kotlin",
+   "objective-c",
+   "php",
+   "postgresql",
+   "r",
+   "ruby",
+   "rust",
+   "scala",
+   "sqlite",
+   "swift",
+   "typescript",
+   "zig"
+  ]
+ },
+ "live_window": [
+  "2026-10-01T09:56:20-0400",
+  "2026-10-01T09:57:50-0400"
+ ],
+ "live_load": [
+  25.1,
+  20.7
+ ],
+ "local_load": [
+  21.3,
+  26.6
+ ],
+ "local_cpus": [
+  12,
+  13,
+  14,
+  15
+ ],
+ "passes": 5,
+ "per_pass": 40,
+ "command": {
+  "load_start": [
+   32.54,
+   28.82,
+   26.31
+  ],
+  "cpus": [
+   12,
+   13,
+   14,
+   15
+  ],
+  "debug": {
+   "version_ms": {
+    "median": 7.26,
+    "p10": 6.41,
+    "p90": 11.95,
+    "n": 40
+   },
+   "decide_ms": {
+    "median": 21.61,
+    "p10": 16.41,
+    "p90": 32.5,
+    "n": 40
+   },
+   "sync_ms": {
+    "median": 5.8,
+    "p10": 3.31,
+    "p90": 8.26,
+    "n": 40
+   },
+   "sync_calls": [
+    0,
+    1,
+    2
+   ]
+  },
+  "release": {
+   "version_ms": {
+    "median": 3.75,
+    "p10": 3.36,
+    "p90": 6.01,
+    "n": 40
+   },
+   "decide_ms": {
+    "median": 17.71,
+    "p10": 13.26,
+    "p90": 20.64,
+    "n": 40
+   },
+   "sync_ms": {
+    "median": 6.93,
+    "p10": 3.63,
+    "p90": 11.19,
+    "n": 40
+   },
+   "sync_calls": [
+    1,
+    2
+   ]
+  },
+  "load_end": [
+   32.26,
+   28.83,
+   26.32
+  ]
+ },
+ "http_functions": {
+  "ada": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "c": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "cobol": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "cpp": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "csharp": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "dart": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "go": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "java": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "kotlin": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "objective-c": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "php": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "rust": [
+   "annotate",
+   "choose",
+   "decide",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "scala": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "swift": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "zig": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ]
+ },
+ "functions": [
+  {
+   "name": "decide",
+   "core": [
+    1.75,
+    0.8,
+    3.86
+   ],
+   "added": 0.6,
+   "live": {
+    "median": 139.5,
+    "p10": 115.9,
+    "p90": 171.0,
+    "n": 48
+   }
+  },
+  {
+   "name": "choose",
+   "core": [
+    1.72,
+    0.79,
+    2.96
+   ],
+   "added": 1.0,
+   "live": {
+    "median": 140.6,
+    "p10": 115.4,
+    "p90": 170.3,
+    "n": 48
+   }
+  },
+  {
+   "name": "tag",
+   "core": [
+    1.66,
+    1.18,
+    4.4
+   ],
+   "added": 1.1,
+   "live": {
+    "median": 140.4,
+    "p10": 117.0,
+    "p90": 183.2,
+    "n": 48
+   }
+  },
+  {
+   "name": "score",
+   "core": [
+    1.6,
+    0.99,
+    4.48
+   ],
+   "added": 1.0,
+   "live": {
+    "median": 134.0,
+    "p10": 118.7,
+    "p90": 156.2,
+    "n": 48
+   }
+  },
+  {
+   "name": "filter",
+   "core": [
+    1.78,
+    1.09,
+    3.55
+   ],
+   "added": 1.2,
+   "live": {
+    "median": 141.3,
+    "p10": 116.2,
+    "p90": 178.2,
+    "n": 40
+   }
+  },
+  {
+   "name": "rank",
+   "core": [
+    1.91,
+    1.56,
+    4.85
+   ],
+   "added": 0.9,
+   "live": {
+    "median": 137.2,
+    "p10": 115.1,
+    "p90": 187.4,
+    "n": 44
+   }
+  },
+  {
+   "name": "find",
+   "core": [
+    1.64,
+    1.27,
+    2.81
+   ],
+   "added": 1.1,
+   "live": {
+    "median": 136.9,
+    "p10": 118.3,
+    "p90": 170.0,
+    "n": 44
+   }
+  },
+  {
+   "name": "annotate",
+   "core": [
+    1.87,
+    1.03,
+    4.05
+   ],
+   "added": 1.3,
+   "live": {
+    "median": 138.9,
+    "p10": 116.8,
+    "p90": 171.5,
+    "n": 48
+   }
+  },
+  {
+   "name": "recognize",
+   "core": [
+    3.39,
+    2.15,
+    4.86
+   ],
+   "added": 2.8,
+   "live": {
+    "median": 279.6,
+    "p10": 249.6,
+    "p90": 316.7,
+    "n": 48
+   }
+  },
+  {
+   "name": "relate",
+   "core": [
+    1.63,
+    0.88,
+    2.3
+   ],
+   "added": 1.1,
+   "live": {
+    "median": 134.4,
+    "p10": 117.1,
+    "p90": 178.1,
+    "n": 44
+   }
+  }
+ ]
+}
