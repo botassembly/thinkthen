@@ -39,8 +39,8 @@ const [first, ...rest] = page.title.split(' ');
   <div class="eyebrow">Beatles Bench · {page.group}</div>
   <h1>{page.command ? <><code>{first}</code> {rest.join(' ')}</> : page.title}</h1>
   <figure class="slide">
-    <img src={page.slide} alt={`The talk's slide: ${page.title}`} width="1600" height={slides.slides[page.slug]?.height || 900} loading="eager" />
-    {(page.credit || page.slideNote) && <figcaption>{[page.slideNote, page.credit].filter(Boolean).join(' ')}</figcaption>}
+    <a href={page.slide}><img src={page.slide} alt={`The talk's slide: ${page.title}`} width="1600" height={slides.slides[page.slug]?.height || 900} loading="eager" /></a>
+    <figcaption>{[page.slideNote, page.credit].filter(Boolean).join(' ')}{(page.slideNote || page.credit) && ' '}<a href={page.slide}>Open the slide at full size.</a></figcaption>
   </figure>
   {page.idea.map((para) => <p>{parts(para).map((p) => p.code !== undefined ? <code>{p.code}</code> : p.href ? <a href={p.href}>{p.text}</a> : p.text)}</p>)}
   {page.source && <p>The numbers come from {[page.source].flat().map((s, i, all) => <Fragment>{i > 0 && (i === all.length - 1 ? ' and ' : ', ')}<a href={s.href}>{s.text}</a></Fragment>)}.</p>}

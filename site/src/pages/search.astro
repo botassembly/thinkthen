@@ -4,9 +4,11 @@ import Base from '../layouts/Base.astro';
 ---
 <Base title="Search" description="Search every page of the ThinkThen site." noindex>
   <h1>Search</h1>
+  <p class="lede">Type a function, a flag or a few words. The results list every page that holds them.</p>
   <div id="search" class="search-page">
     <noscript><p>Search needs JavaScript. The <a href="/functions/">Functions</a> and <a href="/reference/">Reference</a> pages list everything else.</p></noscript>
   </div>
+  <p class="search-browse">To browse instead, start from <a href="/functions/">Functions</a>, <a href="/how-tos/">How-tos</a> or the <a href="/reference/">Reference</a>.</p>
   <p class="search-failed" hidden>Search could not load. The <a href="/functions/">Functions</a> and <a href="/reference/">Reference</a> pages list everything else.</p>
   <link rel="stylesheet" href="/pagefind/pagefind-ui.css">
   <script is:inline src="/pagefind/pagefind-ui.js"></script>
@@ -19,7 +21,7 @@ import Base from '../layouts/Base.astro';
         document.querySelector('.search-failed').hidden = false;
         return;
       }
-      var ui = new PagefindUI({ element: '#search', showImages: false, autofocus: !q, resetStyles: false });
+      var ui = new PagefindUI({ element: '#search', showImages: false, autofocus: !q, resetStyles: false, translations: { placeholder: 'Search the site' } });
       if (q) ui.triggerSearch(q);
     })();
   </script>

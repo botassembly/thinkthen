@@ -26,6 +26,13 @@ const CUT = setting('Threshold').bounds;
 const count = (name, noun) => `${setting(name).range.min} to ${setting(name).range.max} ${noun}`;
 const THROTTLE = setting('Throttle');
 const [statusRun] = captioned('reference/status', STATUS_SEE);
+// A default shows as code when it is one value. Words after a semicolon,
+// and a default that is a sentence, stay in the prose font.
+const value = (text) => {
+  const [head, ...tail] = String(text).split('; ');
+  if (/\s/.test(head)) return { rest: String(text) };
+  return { code: head, rest: tail.length > 0 ? `; ${tail.join('; ')}` : '' };
+};
 
 const GLOBAL = [
   ['--plan', 'none', 'Checks the whole input, prints the first request it would send and a summary line, and sends nothing. It needs no key.', dflt('Plan preview')],
@@ -114,7 +121,7 @@ const COUNTS = [
   <table>
     <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
     {COUNTS.map(([fn, args, rule, dflt]) => (
-      <tr><td><code>{fn}</code></td><td>{args}</td><td>{rule}</td><td><code>{dflt}</code></td></tr>
+      <tr><td><code>{fn}</code></td><td>{args}</td><td>{rule}</td><td>{(({ code, rest }) => <>{code && <code>{code}</code>}{rest}</>)(value(dflt))}</td></tr>
     ))}
   </table>
   <p>With p as the probability of yes:</p>
@@ -132,7 +139,7 @@ const COUNTS = [
   <table>
     <tr><th>Flag</th><th>Takes</th><th>What it does</th><th>Default</th></tr>
     {GLOBAL.map(([flag, takes, does, dflt]) => (
-      <tr><td><code>{flag}</code></td><td>{takes}</td><td>{does}</td><td><code>{dflt}</code></td></tr>
+      <tr><td><code>{flag}</code></td><td>{takes}</td><td>{does}</td><td>{(({ code, rest }) => <>{code && <code>{code}</code>}{rest}</>)(value(dflt))}</td></tr>
     ))}
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
@@ -147,7 +154,7 @@ const COUNTS = [
   </table>
   <table>
     <tr><th>Function</th><th>What it accepts</th></tr>
-    {FRAMING_BY_FN.map(([fn, what]) => (<tr><td><code>{fn}</code></td><td>{what}</td></tr>))}
+    {FRAMING_BY_FN.map(([fns, what]) => (<tr><td>{fns.split(', ').map((fn, i) => <>{i > 0 && ', '}<code>{fn}</code></>)}</td><td>{what}</td></tr>))}
   </table>
 
   <h3><code>--field POINTER</code></h3>

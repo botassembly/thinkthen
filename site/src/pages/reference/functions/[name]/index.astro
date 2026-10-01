@@ -17,14 +17,19 @@ const { fn } = Astro.props;
 const edges = REFERENCE_PAGES.find((p) => p.slug === fn.name);
 const runs = captioned(`functions/${fn.name}`, fn.see, true);
 const extra = runs.slice(1);
+// Each argument in the signature is code. The words between stay prose, so
+// a phone can break the line between arguments.
+const signature = fn.args.split(/( or |, then )/).map((part, i) => ({ code: i % 2 === 0, part }));
+// A note marks code with backticks.
+const note = (fn.argsNote || '').split('`').map((part, i) => ({ code: i % 2 === 1, part }));
 ---
 <Base title={`${fn.name} options`} description={`Arguments and options for ${fn.name}.`}>
   <h1><code>{fn.name}</code> options</h1>
-  <p class="lede">The command takes <code>{fn.args}</code>{fn.args.endsWith('.') ? '' : '.'} <a href={`/functions/${fn.name}/`}>Start with its value and exit code</a>.</p>
+  <p class="lede">The command takes {signature.map((x) => x.code ? <code>{x.part}</code> : x.part)}. {fn.argsNote && <>{note.map((x) => x.code ? <code>{x.part}</code> : x.part)}{' '}</>}<a href={`/functions/${fn.name}/`}>Start with its value and exit code</a>.</p>
   <table>
     <tr><th>Option</th><th>What it does</th></tr>
-    {fn.options.map(([opt, what]) => (
-      <tr><td><code>{opt}</code></td><td>{what}</td></tr>
+    {fn.options.map(([opts, what]) => (
+      <tr><td>{opts.split(', ').map((opt, i) => <>{i > 0 && ', '}<code>{opt}</code></>)}</td><td>{what}</td></tr>
     ))}
   </table>
   {extra.length > 0 && <h2>More examples</h2>}

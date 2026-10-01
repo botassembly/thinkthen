@@ -19,7 +19,7 @@ const talk = PAGES.slice(1);
 
   <h2>Beatles Bench</h2>
   <ol class="talk">
-    {talk.map((p) => <li><a href={p.route}>{p.command ? <><code>{p.title.split(' ')[0]}</code> {p.title.split(' ').slice(1).join(' ')}</> : p.title}</a></li>)}
+    {talk.map((p) => <li><a href={p.route}>{p.command ? <><code>{p.title.split(' ')[0]}</code>{'\u00a0'}{p.title.split(' ').slice(1).join(' ')}</> : p.title}</a></li>)}
   </ol>
 
   <h2>Reference</h2>

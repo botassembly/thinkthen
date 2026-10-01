@@ -13,11 +13,11 @@ const prune = setting('Prune target');
 const spec = (name, anchor = '') => `https://github.com/botassembly/thinkthen/blob/main/specification/${name}.md${anchor}`;
 
 const MODES = [
-  ['--replay DIR', 'yes', 'nothing; a miss exits 5', 'no'],
-  ['--record DIR', 'no', 'every question', 'yes, replacing a held answer'],
-  ['--cache DIR, THINKTHEN_CACHE, or the default cache', 'yes', 'the questions it misses', 'yes'],
-  ['a cache with --refresh-cache, or the model jev-latest', 'no', 'every question', 'yes, replacing a held answer'],
-  ['--no-cache', 'no', 'every question', 'no'],
+  ['`--replay DIR`', 'yes', 'nothing; a miss exits 5', 'no'],
+  ['`--record DIR`', 'no', 'every question', 'yes, replacing a held answer'],
+  ['`--cache DIR`, `THINKTHEN_CACHE`, or the default cache', 'yes', 'the questions it misses', 'yes'],
+  ['a cache with `--refresh-cache`, or the model `jev-latest`', 'no', 'every question', 'yes, replacing a held answer'],
+  ['`--no-cache`', 'no', 'every question', 'no'],
 ];
 ---
 <SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'How ThinkThen saves and reuses answers, what makes two questions the same, what --plan and --facts report, and why batching can change an answer.' }} name="Reference">
@@ -42,7 +42,7 @@ const MODES = [
   <table>
     <tr><th>Mode</th><th>Looks up</th><th>Sends</th><th>Saves</th></tr>
     {MODES.map(([mode, look, send, save]) => (
-      <tr><td><code>{mode}</code></td><td>{look}</td><td>{send}</td><td>{save}</td></tr>
+      <tr><td>{mode.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</td><td>{look}</td><td>{send}</td><td>{save}</td></tr>
     ))}
   </table>
   <p><code>--record</code> sends every question, even one the folder already holds, and may charge for it again. Use <code>--cache DIR</code> to reuse what a folder holds. An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run. The <a href={spec('recording', '#the-question-store')}>recording specification</a> holds the full table.</p>

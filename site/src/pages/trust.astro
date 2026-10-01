@@ -31,7 +31,8 @@ const audit = run('beatles/audit', '2-default');
     {OUTCOMES.map((o) => (
       <div class={`outcome ${o.key}`}>
         <b>{o.label}</b>
-        <span>exit {o.code} · prints <code>{o.prints}</code></span>
+        <span>exit {o.code}</span>
+        <span>{o.prints ? <>prints <code>{o.prints}</code></> : 'prints nothing'}</span>
       </div>
     ))}
   </div>

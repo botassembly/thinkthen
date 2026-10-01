@@ -16,11 +16,13 @@ const [config] = files(dir);
 const card = (name) => setting(name).href;
 const PRUNE = setting('Prune target');
 
+// A backend's key variables come as a list, read in order. Every other
+// name is one variable, or several that ThinkThen reads alike.
 const ENV = [
   ['THINKTHEN_API_KEY', 'The key when no backend is named.', card('Key')],
   ['THINKTHEN_BASE_URL', 'The server address. --url outranks it.', card('Address')],
   ['THINKTHEN_BACKEND', 'A built-in backend, or an entry of the configuration file. --backend outranks it.', card('Backend')],
-  ...backends().map((b) => [b.keys.join(', then '), `The key of the ${b.name} backend.`, card('Backend key')]),
+  ...backends().map((b) => [b.keys, `The key of the ${b.name} backend.`, card('Backend key')]),
   ['THINKTHEN_CACHE', 'Another folder for the answer cache. It turns the cache on, and it never moves the usage totals.', card('Answer cache')],
   ['THINKTHEN_BATCH', 'The most records one request carries.', card('Batch')],
   ['THINKTHEN_CA_BUNDLE', 'An absolute PEM file of certificates that replaces the built-in roots.', card('Private TLS roots')],
@@ -48,7 +50,7 @@ const ENV = [
   <table>
     <tr><th>Variable</th><th>What it does</th></tr>
     {ENV.map(([name, what, href]) => (
-      <tr><td>{href ? <a href={href}><code>{name}</code></a> : <code>{name}</code>}</td><td>{what}</td></tr>
+      <tr><td>{(Array.isArray(name) ? name : name.split(', ')).map((n, i) => <>{i > 0 && (Array.isArray(name) ? ', then ' : ', ')}{href ? <a href={href}><code>{n}</code></a> : <code>{n}</code>}</>)}</td><td>{what}</td></tr>
     ))}
   </table>
   <p>A blank variable counts as unset. <code>SSL_CERT_FILE</code> is not read.</p>
