@@ -62,6 +62,12 @@ else
 fi
 cargo $runner --locked --offline --workspace --all-targets
 cargo test --locked --offline --workspace --doc
+# Debt 028: the library-only tests, in their own target folder, so a test that
+# starts the command without `#[cfg(feature = "cli")]` fails here and not first
+# in the release `crate` job. `sdlc/scripts/package` runs the same build.
+CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/library-only" \
+    cargo $runner --locked --offline --package thinkthen --no-default-features \
+    --features bundled-sqlite --tests
 cargo $runner --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer --workspace
 sh specification/fixtures/question-file/self-test
