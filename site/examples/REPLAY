@@ -13,6 +13,7 @@ functions/annotate/postgresql.sql
 functions/annotate/r.R
 functions/annotate/ruby.rb
 functions/annotate/rust.rs
+functions/annotate/scala.scala
 functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/c.c
@@ -21,6 +22,7 @@ functions/choose/kotlin.kt
 functions/choose/postgresql.sql
 functions/choose/python.py
 functions/choose/ruby.rb
+functions/choose/scala.scala
 functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/c.c
@@ -30,6 +32,7 @@ functions/decide/polars.py
 functions/decide/r.R
 functions/decide/ruby.rb
 functions/decide/rust.rs
+functions/decide/scala.scala
 functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/c.c
@@ -40,6 +43,7 @@ functions/filter/python.py
 functions/filter/r.R
 functions/filter/ruby.rb
 functions/filter/rust.rs
+functions/filter/scala.scala
 functions/filter/sqlite.sql
 functions/find/c.c
 functions/find/java.java
@@ -48,6 +52,7 @@ functions/find/postgresql.sql
 functions/find/python.py
 functions/find/r.R
 functions/find/rust.rs
+functions/find/scala.scala
 functions/find/sqlite.sql
 functions/find/typescript.ts
 functions/question-file/duckdb.sql
@@ -57,6 +62,7 @@ functions/question-file/polars.py
 functions/question-file/r.R
 functions/question-file/ruby.rb
 functions/question-file/rust.rs
+functions/question-file/scala.scala
 functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/c.c
@@ -67,6 +73,7 @@ functions/rank/postgresql.sql
 functions/rank/python.py
 functions/rank/ruby.rb
 functions/rank/rust.rs
+functions/rank/scala.scala
 functions/rank/typescript.ts
 functions/recognize/c.c
 functions/recognize/duckdb.sql
@@ -77,6 +84,7 @@ functions/recognize/python.py
 functions/recognize/r.R
 functions/recognize/ruby.rb
 functions/recognize/rust.rs
+functions/recognize/scala.scala
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/c.c
@@ -88,6 +96,7 @@ functions/relate/python.py
 functions/relate/r.R
 functions/relate/ruby.rb
 functions/relate/rust.rs
+functions/relate/scala.scala
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
 functions/score/duckdb.sql
@@ -99,6 +108,7 @@ functions/score/python.py
 functions/score/r.R
 functions/score/ruby.rb
 functions/score/rust.rs
+functions/score/scala.scala
 functions/score/sqlite.sql
 functions/tag/c.c
 functions/tag/duckdb.sql
@@ -108,6 +118,7 @@ functions/tag/postgresql.sql
 functions/tag/python.py
 functions/tag/r.R
 functions/tag/rust.rs
+functions/tag/scala.scala
 functions/tag/typescript.ts
 install/ada/backends.adb backend=liquid
 install/ada/backends.adb backend=ollama
