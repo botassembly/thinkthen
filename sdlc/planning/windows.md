@@ -81,7 +81,7 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 - Files: `release.yml`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-pack` (471 lines of shell; it knows only `darwin` and `linux-gnu` and makes only `.tar.gz`), `release-registry.py`, `release-managed-pair.py`, a new PowerShell installer beside the 206-line `install.sh`, `README.md`, and the checks for each. The findings add `cli/interrupt.rs` (W1), the usage store and `config.rs` privacy checks (W2), and the guarded XDG cases (W6). W1 and W2 need `windows-sys`, so `policy.py` and `deny.toml` change too.
 - Lines: 700 to 1,200.
 - Specification: `specification/recording.md` (the cache, usage and configuration folders), `specification/settings.md` (the configuration home and the Unix-only warning), `specification/question-file.md` (the `XDG_CONFIG_HOME` example). The site pages that name platforms belong to marketing and get a message in `sdlc/inbox`.
-- Release workflow: a fifth matrix target on `windows-2025`, a `.zip` pack, the count of four in each job above, and the installer upload.
+- Release workflow: a fifth matrix target on `windows-2025`, a `.zip` pack, the target lists where the command ships, the Windows skips named above, and the installer upload.
 - New tests: the W6 helper and the ported XDG cases; a Windows Ctrl-C end-to-end case (W1); the Windows privacy refusals (W2); a release-pack case for the `.zip`; an installer smoke on the runner.
 - Linux and macOS risk: **medium**. The release scripts and the count of four are shared, so a mistake there breaks the Unix release.
 - Unknowns: code signing for the `.exe` (SmartScreen warns on unsigned downloads), the installer's home (a `.ps1` script, winget or Scoop), and whether `managed-build` must cover Windows.
@@ -114,7 +114,7 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 - Files: `build-wheel.sh` (it expects a `.so`), the package's loader and classifiers, the tests that use `fork`, `SIGINT` and `resource`, `release.yml`'s wheel count.
 - Lines: 150 to 350.
 - Specification: no page changes. `libraries/python/README.md` names the Windows wheel.
-- Release workflow: a `win_amd64` wheel; the PyPI job's count rises to five.
+- Release workflow: a `win_amd64` wheel; `verify-family`'s wheel count and the PyPI job's count rise to five.
 - New tests: wheel install and smoke on the runner; `cfg`-style skips for the Unix-only cases.
 - Linux and macOS risk: **low to medium**. The wheel script and the count are shared.
 - Unknowns: whether `cibuildwheel` or the present script builds the Windows wheel more simply.
