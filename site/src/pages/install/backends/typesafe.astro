@@ -18,10 +18,10 @@ const checks = checkLines('typesafe');
   <p class="lede">Jev is a System One model from TypeSafe. ThinkThen asks it when you name no backend.</p>
 
   <BackendFacts name="typesafe" />
-  <p>The default model is a pinned version, so a vendor's move of an alias moves no answer. Name another version with <code>--model</code> only when you mean to change the model behind a run.</p>
+  <p>The default model is a pinned version. TypeSafe can move an alias to a new model, and the pinned version stays the same. Name another version with <code>--model</code> only when you mean to change the model behind a run.</p>
 
   <h2>Two ways to reach it</h2>
-  <p>With no backend named, ThinkThen posts to the same address with the same model and reads the key from <code>{KEY_VARIABLE}</code>. With <code>--backend {b.name}</code>, it reads the key from <code>{b.keys[0]}</code>. Both reach the same model, and both share saved answers.</p>
+  <p>With no backend named, ThinkThen posts to the same address with the same model and reads the key from <code>{KEY_VARIABLE}</code>. With <code>--backend {b.name}</code>, it reads the key from <code>{b.keys[0]}</code>. Both reach the same model, and both share the answer cache.</p>
   <Terminal run={one} caption={one.see} />
   <Terminal run={lines} caption={lines.see} />
 

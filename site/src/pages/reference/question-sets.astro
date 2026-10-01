@@ -36,7 +36,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
   <h2 id="on">on</h2>
   <p><code>on</code> picks the part of the record a question reads. It is one JSON Pointer or a list of them, read inside the record or inside what <code>--field</code> selected. Several pointers send one object, keyed by the last part of each pointer. Two pointers that end in the same name are an error in the file. A question with no <code>on</code> reads the whole record, or what <code>--field</code> selected.</p>
   <Terminal run={plan} caption={plan.see} />
-  <p>A text record has no parts, so a question with <code>on</code> refuses it at exit 2. Under <code>--lines</code>, such a set is refused before any input is read.</p>
+  <p>A text record has no parts. A question with <code>on</code> refuses it at exit 2. Under <code>--lines</code>, such a set is refused before any input is read.</p>
 
   <h2 id="refusals">What the file refuses</h2>
   <p>An unknown key anywhere in the file, a missing <code>questions</code> object, a wrong <code>version</code> and a bad name each stop the run at exit 5, before any request. The message names the key at fault.</p>

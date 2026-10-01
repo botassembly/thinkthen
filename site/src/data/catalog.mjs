@@ -37,13 +37,13 @@ const cutOn = (fn) => setting('Threshold').defaultOn(fn);
 
 const BACKEND_OPTIONS = [
   ['--model NAME', `The model the request carries. Name a version to pin a run. The default is ${setting('Model').default}.`],
-  ['--url BASE', 'The backend base address. It outranks THINKTHEN_BASE_URL.'],
+  ['--url BASE', 'The server\'s base address. It outranks THINKTHEN_BASE_URL.'],
   ['--timeout SECONDS', `How long one attempt may take. The default is ${setting('Timeout').number}.`],
   ['--max-retries N', `How many times a retried status is sent again. A transport failure is never sent again. The default is ${setting('Retries').default}.`],
   ['--record DIR', 'Calls the backend and saves each exchange in DIR.'],
   ['--replay DIR', 'Answers from DIR alone, with no key and no network.'],
   ['--cache DIR', 'Answers from DIR when it can and saves new exchanges there.'],
-  ['--no-cache', 'Turns off the saved answers for one run.'],
+  ['--no-cache', 'Turns off the answer cache for one run.'],
   ['--profile FILE', 'Applies local backend limits and names the calibration profile in use.'],
 ];
 
@@ -88,7 +88,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'yes'], [1, 'no'], [3, 'not sure'], ...COMMON_EXITS],
-    unsure: 'The probability landed inside the band. The tool prints null and exits 3.',
+    unsure: 'On one piece of evidence, a probability inside the band prints null and exits 3. In a stream, that record prints null and the run exits 0.',
     howtos: ['screen-studies-for-a-review', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
     see: {
       '1-lines': "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8 as null.",
@@ -112,11 +112,11 @@ export const FUNCTIONS = [
       ['--option LABEL=DESCRIPTION', 'One option and what it means. It may repeat, and it replaces the positional options.'],
       ['--options POINTER', 'Takes the options from each record. It needs --jsonl.'],
       ['--raw', 'Prints the label without quotation marks.'],
-      ['--quiet', 'Prints nothing. The exit code carries the run.'],
+      ['--quiet', 'Prints nothing. The exit code says whether an option came back.'],
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'an option came back'], [3, 'not sure'], ...COMMON_EXITS],
-    unsure: 'No option reached the threshold. The tool prints null and exits 3. choose never exits 1.',
+    unsure: 'On one piece of evidence, a pick under the threshold or an exact tie at the top prints null and exits 3. In a stream, the run exits 0. choose never exits 1.',
     howtos: ['rank-the-inbound-leads', 'split-a-scanned-packet-into-documents'],
     see: {
       '1-lines': "Each of the first three messages names one team: billing, shipping, and account. The fourth names a parcel and a login. No team reaches 0.9, and it comes back null.",
@@ -137,7 +137,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'A label under the bar is left out. An empty list is a good answer and exits 0.',
+    unsure: 'A label under the threshold is left out. An empty list is a good answer and exits 0.',
     howtos: ['code-open-ended-survey-answers'],
     see: {
       '1-one': "The message praises the dashboard, reports a crash, and names a double charge. It gets praise, bug, and billing.",
@@ -157,7 +157,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads. Do not use it as a gate.',
+    unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads. Do not use it to decide yes or no.',
     howtos: ['code-open-ended-survey-answers'],
     see: {
       '1-one': "The outage scores 2.0, and 2 is Immediate on this scale.",
@@ -180,7 +180,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'No record sets the exit code. A record under the bar is dropped.',
+    unsure: 'No record sets the exit code. A record under the threshold is dropped.',
     howtos: ['triage-a-support-inbox', 'join-two-tables-by-meaning', 'rank-the-inbound-leads'],
     see: {
       '1-lines': "filter keeps the two complaints: the broken zipper and the snapped strap.",
@@ -275,7 +275,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'The model only picks from options. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
+    unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
     see: {
       '1-names': 'recognize finds three names. Each comes back with its kind and its strength.',
@@ -284,9 +284,9 @@ export const FUNCTIONS = [
   {
     name: 'relate',
     goal: 'relate asks the model about named entities, one possible edge per pair and rule, or one menu per source for a single rule.',
-    primitive: 'Yes or no per allowed entity pair and rule, or a choice per source for a single rule',
+    primitive: 'Yes or no for each pair of names, or one choice for each source under a single rule',
     line: 'Find relationships among named entities.',
-    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. A rule asks one yes or no question for each pair. In a rules file, a rule marked <code>"single": true</code> asks one menu for each source instead, and gives that source at most one edge. For the links a text states, use <code>recognize --relation</code>.',
+    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. A rule asks one yes or no question for each pair. In a rules file, a rule marked <code>"single": true</code> asks one choice for each source instead, and gives that source at most one edge. For the links a text states, use <code>recognize --relation</code>.',
     takes: 'one set of named entities and relation rules',
     gives: 'one edge for each related pair, with a probability, and at most one edge per source for a single rule',
     requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. A single rule asks one choice per source instead, with none of these as an option. --plan prints the first request it would send.',
@@ -301,7 +301,7 @@ export const FUNCTIONS = [
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
     see: {
-      '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default bar.',
+      '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default threshold.',
     },
   },
   {
@@ -309,7 +309,7 @@ export const FUNCTIONS = [
     title: '@question',
     goal: 'A question file saves one question with its threshold, and every command that reads it asks the same question.',
     primitive: 'Not a function',
-    line: 'A saved question every function accepts.',
+    line: 'A saved question that six functions accept.',
     lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. Every command that reads the file then asks the same question.',
     requests: 'None of its own. The function that reads it sends the requests.',
     args: '@FILE in place of the question words, on decide, choose, tag, score, filter, and rank.',
@@ -323,11 +323,11 @@ export const FUNCTIONS = [
       ['model, profile', 'The model to ask and the calibration profile to apply.'],
     ],
     exits: [[5, 'the file could not be read, is not one JSON object, or breaks a rule'], [2, 'the command names the wrong verb for the file']],
-    unsure: 'A band in the file sends the not-sure answers to a person.',
+    unsure: 'A band in the file marks the middle answers not sure. Send those to a person.',
     howtos: [],
     see: {
       '1-yes': "The saved question answers true for a plain request for money back.",
-      '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure: null and exit 3.",
+      '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure. decide prints null and exits 3.",
     },
     notAFunction: true,
   },
@@ -604,7 +604,7 @@ export const TUTORIAL_SEE = {
 };
 
 // The tutorial's caption for functions/decide/1-lines in its stream step.
-export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 4.";
+export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 3.";
 
 // Captions for the Settings page's examples, keyed by script name.
 export const SETTINGS_SEE = {
@@ -646,7 +646,7 @@ export const BACKENDS_SEE = {
     '1-environment': 'THINKTHEN_BASE_URL names the server. The address came from the environment, and the key will come from THINKTHEN_API_KEY.',
     '2-entry': 'The entry local-d1 brings its own address, model, and key variable.',
     '3-bad-rate': 'A rate of 0 is out of range. The command names the field, exits 5, and sends nothing.',
-    '4-check-plan': "The check would post its four probes to the server's systemone endpoint.",
+    '4-check-plan': "The check would post its four fixed questions to the server's systemone address.",
   },
   'other-servers': {
     '1-request': 'The plan prints the exact body a server receives at BASE/systemone.',
@@ -676,7 +676,7 @@ export const HOWTOS = [
     goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
     functions: ['decide'],
-    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it comes back null for a person.' },
+    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it is not sure. It prints null, and a person reads it.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
@@ -763,10 +763,10 @@ export const TECHNIQUES = [
   {
     slug: 'threshold-band', title: 'Set a cut or a band', label: 'cut or band',
     goal: 'One number is a cut, and two numbers make a band with a not-sure middle.',
-    said: 'One number is a cut. Two numbers are a band, and the middle comes back as null.',
+    said: 'One number is a cut. Two numbers are a band. An answer inside the band is not sure, and it prints null.',
     see: {
       '1-cut': 'At a cut of 0.5, the send-back line counts as a refund.',
-      '2-band': 'With a band from 0.2 to 0.8, the same line comes back null for a person.',
+      '2-band': 'With a band from 0.2 to 0.8, the same line is not sure, and it goes to a person.',
     },
   },
   {
@@ -799,7 +799,7 @@ export const TECHNIQUES = [
   {
     slug: 'long-lived-loop', title: 'Keep one process for a step loop', label: 'one process',
     goal: 'A coproc sends each step to one choose process and reads its answer before the next step.',
-    said: '`coproc` holds one `choose` process open. `--batch 1` releases each answer while the input remains open; strict replay needs no key or network. A library is the route when the loop needs lower call overhead.',
+    said: '`coproc` holds one `choose` process open. `--batch 1` prints each answer while the input stays open. The example replays a recording. It needs no key and no network. Use a library binding when each call must cost less time.',
     see: { '1-loop': 'Three changing action lists produce three answers from one process.' },
   },
   {
@@ -811,7 +811,7 @@ export const TECHNIQUES = [
   {
     slug: 'agent-tool-guard', title: 'Guard a coding agent tool call', label: 'tool guard',
     goal: 'Map a bounded decide answer to one coding agent host hook contract.',
-    said: 'This Claude Code `PreToolUse` hook reads a proposed Bash command as text. It runs none of the proposals. A yes gives `allow`, a no gives `deny`, and not sure gives `ask`. A failed judge also gives `deny`. The hook answers in JSON. In ThinkThen, exit 2 means an input error. In a hook, exit 2 blocks the tool call.',
+    said: 'This Claude Code `PreToolUse` hook reads a proposed Bash command as text. It runs none of the proposals. A yes gives `allow`, a no gives `deny`, and not sure gives `ask`. A failed call also gives `deny`. The hook answers in JSON. In ThinkThen, exit 2 means a usage or input error. In a hook, exit 2 blocks the tool call.',
     source: ['Claude Code hooks reference, checked 2026-09-28', 'https://code.claude.com/docs/en/hooks#pretooluse-decision-control'],
     see: { '1-guard': 'One recorded proposal is allowed, one asks a person, and one is denied.' },
   },
@@ -821,7 +821,7 @@ export const RECIPES = [
   {
     slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
     goal: 'annotate labels a JSON array and keeps every other field, and a second run costs nothing.',
-    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date ride through. Run it again, and the saved answers come back at no cost.',
+    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date stay in each record. Run it again, and the answers come from the answer cache with no request sent.',
     see: {
       '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
     },
@@ -829,7 +829,7 @@ export const RECIPES = [
   {
     slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does', label: 'Review a diff',
     goal: 'decide separates the hunks of a diff that change behavior from those that do not.',
-    said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does, and the file and hunk header ride through.',
+    said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does. The file name and the hunk header stay in each record.',
     see: { '1-diff': 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
   },
   {
@@ -848,7 +848,7 @@ export const RECIPES = [
     slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'Set aside bad records',
     goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
     said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
-    see: { '1-split': 'The malformed line and numeric body stay aside; three text records are judged.' },
+    see: { '1-split': 'The malformed line and the numeric body stay aside. decide judges the three text records.' },
   },
 ];
 
