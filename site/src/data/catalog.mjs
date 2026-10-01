@@ -112,7 +112,7 @@ export const FUNCTIONS = [
       ['--option LABEL=DESCRIPTION', 'One option and what it means. It may repeat, and it replaces the positional options.'],
       ['--options POINTER', 'Takes the options from each record. It needs --jsonl.'],
       ['--raw', 'Prints the label without quotation marks.'],
-      ['--quiet', 'Prints nothing. The exit code carries the answer.'],
+      ['--quiet', 'Prints nothing. The exit code says whether an option came back.'],
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'an option came back'], [3, 'not sure'], ...COMMON_EXITS],
