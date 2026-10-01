@@ -24,7 +24,6 @@ class TestEngineSettings < Minitest::Test
       assert status.success?, errors
       assert_equal 1, backend.count
       refute_empty entries(File.join(root, "cache")), "the answer is not in THINKTHEN_CACHE"
-      # Usage totals live in the home's hidden state folder (ticket 0360).
       assert_empty entries(File.join(root, "home")) + entries(File.join(root, "xdg-cache"))
     end
   end

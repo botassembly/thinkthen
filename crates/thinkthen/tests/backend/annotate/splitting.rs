@@ -274,7 +274,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
         &["--cache", cache.to_str().expect("cache")],
         &[
             ("THINKTHEN_API_KEY", "key"),
-            ("XDG_CACHE_HOME", seed_home.to_str().expect("seed usage")),
+            ("XDG_STATE_HOME", seed_home.to_str().expect("seed usage")),
         ],
     );
     assert_eq!(seeded.status.code(), Some(0));
@@ -288,7 +288,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
         &[
             ("THINKTHEN_API_KEY", "key"),
             ("THINKTHEN_TEST_RETRY_WAIT_MS", "1"),
-            ("XDG_CACHE_HOME", root_name.as_str()),
+            ("XDG_STATE_HOME", root_name.as_str()),
         ],
     );
     assert_eq!(
@@ -307,7 +307,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
         &two,
         &listener,
         &["--cache", cache.to_str().expect("cache")],
-        &[("XDG_CACHE_HOME", root_name.as_str())],
+        &[("XDG_STATE_HOME", root_name.as_str())],
     );
     assert_eq!(replayed.status.code(), Some(0));
     let replayed: serde_json::Value =
@@ -318,7 +318,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
 
     let status = spawn(
         &["status", "--json"],
-        &[("XDG_CACHE_HOME", root_name.as_str())],
+        &[("XDG_STATE_HOME", root_name.as_str())],
         b"",
     )
     .expect("status");
