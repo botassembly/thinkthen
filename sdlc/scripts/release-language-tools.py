@@ -102,7 +102,7 @@ def fetch(url, path, opener=urllib.request.urlopen, pause=time.sleep):
         except urllib.error.HTTPError as error:
             if attempt == 2 or (error.code < 500 and error.code != 429):
                 raise
-        except urllib.error.URLError:
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
             if attempt == 2:
                 raise
         pause(10 * (attempt + 1))

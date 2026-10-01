@@ -93,6 +93,7 @@ def must_fail(action, phrase):
 
 
 def main():
+    fetch_retries()
     with tempfile.TemporaryDirectory(prefix="thinkthen-language-tools-test-") as folder:
         root = Path(folder)
         github_env, github_path = fixture(root)
@@ -300,7 +301,7 @@ def acquisition_cli(root):
 
 
 def fetch_retries():
-    """A 503 or a lost connection retries twice; a 404 fails at once."""
+    """A 503, a timeout or a lost connection retries twice; a 404 fails at once."""
     import io
     import urllib.error
 
@@ -317,6 +318,10 @@ def fetch_retries():
         pauses = []
         tools.fetch("u", root / "a", opener_for([unavailable(), urllib.error.URLError("dns")]), pauses.append)
         assert (root / "a").read_bytes() == b"archive" and pauses == [10, 20], pauses
+        pauses = []
+        tools.fetch("u", root / "d", opener_for([TimeoutError("read"), ConnectionResetError("hung up")]),
+                    pauses.append)
+        assert (root / "d").read_bytes() == b"archive" and pauses == [10, 20], pauses
         pauses = []
         try:
             tools.fetch("u", root / "b", opener_for([unavailable()] * 3), pauses.append)
@@ -337,4 +342,3 @@ def fetch_retries():
 
 if __name__ == "__main__":
     main()
-    fetch_retries()
