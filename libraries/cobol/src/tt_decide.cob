@@ -10,6 +10,8 @@ working-storage section.
 01 dyn-memcpy pic x(16) value "memcpy".
 01 native-code usage binary-long signed.
 01 idx usage binary-long unsigned.
+*> The caller's text is copied here before the NUL; caller storage is never written.
+01 question-copy pic x(256).
 01 no-token usage pointer.
 01 facts-ptr usage pointer.
 01 native-facts-length usage binary-double unsigned.
@@ -57,11 +59,14 @@ procedure division using engine question-text question-length
           goback
        end-if
     end-perform
-    move x"00" to question-text(question-length + 1:1)
+    if question-length > 0
+       move question-text(1:question-length) to question-copy(1:question-length)
+    end-if
+    move x"00" to question-copy(question-length + 1:1)
     set facts-ptr to null
     move 0 to native-facts-length
     call "thinkthen_decide_with_facts_opts" using by value engine
-       by reference question-text evidence-text
+       by reference question-copy evidence-text
        by value size is 8 evidence-length deadline-ms no-token
        by reference native-answer facts-ptr native-facts-length
        returning native-code

@@ -4,6 +4,8 @@ program-id. TT-ENGINE-NEW.
 data division.
 working-storage section.
 01 idx usage binary-double unsigned.
+*> The caller's text is copied here before the NUL; caller storage is never written.
+01 settings-copy pic x(8192).
 linkage section.
 01 settings-text pic x(8192).
 01 settings-length usage binary-double unsigned.
@@ -30,8 +32,9 @@ procedure division using settings-text settings-length engine failure-row.
           goback
        end-if
     end-perform
-    move x"00" to settings-text(settings-length + 1:1)
-    call "thinkthen_engine_new_with" using by reference settings-text
+    move settings-text(1:settings-length) to settings-copy(1:settings-length)
+    move x"00" to settings-copy(settings-length + 1:1)
+    call "thinkthen_engine_new_with" using by reference settings-copy
        returning engine
     if engine = null
        call "TT-CAPTURE-ERROR" using engine failure-row

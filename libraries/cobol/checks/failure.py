@@ -1,4 +1,4 @@
-"""Check copied started-failure facts after repeated public COBOL calls."""
+"""Check copied started-failure facts after repeated public COBOL calls, and that reused caller buffers stay whole."""
 import collections
 import json
 import os
@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cobol-failure-") as name:
         assert lines[-1] == "COBOL_FAILURE_OWNERSHIP_PASS", lines
         facts = json.loads(next(line[6:] for line in lines if line.startswith("FACTS ")))
         assert isinstance(facts, dict) and facts["requests_sent"] == 1, facts
-        assert collections.Counter(server.arrivals) == collections.Counter({"failure-two": 2, "first": 1}), server.arrivals
-        print("COBOL copied failure facts and repeated public calls: 3 exact arrivals")
+        assert collections.Counter(server.arrivals) == collections.Counter({"failure-two": 2, "first": 1, "decide-again": 2, "call-again": 2, "decide-full": 1}), server.arrivals
+        print("COBOL copied failure facts and reused caller buffers: 8 exact arrivals")
     finally:
         server.close()

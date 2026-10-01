@@ -10,6 +10,8 @@ working-storage section.
 01 native-length usage binary-double unsigned.
 01 idx usage binary-double unsigned.
 01 no-token usage pointer.
+*> The caller's text is copied here before the NUL; caller storage is never written.
+01 request-copy pic x(8192).
 linkage section.
 01 engine usage pointer.
 01 request-text pic x(8192).
@@ -40,10 +42,11 @@ procedure division using engine request-text request-length deadline-ms
           goback
        end-if
     end-perform
-    move x"00" to request-text(request-length + 1:1)
+    move request-text(1:request-length) to request-copy(1:request-length)
+    move x"00" to request-copy(request-length + 1:1)
     set no-token to null
     call "thinkthen_call_opts" using by value engine
-       by reference request-text by value size is 8 deadline-ms no-token
+       by reference request-copy by value size is 8 deadline-ms no-token
        returning result-ptr
     if result-ptr = null
        call "TT-CAPTURE-ERROR" using engine failure-row
