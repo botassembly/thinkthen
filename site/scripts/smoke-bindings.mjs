@@ -17,7 +17,9 @@
 // THINKTHEN_BACKEND set to that name, and with THINKTHEN_BASE_URL set to
 // Ollama's second port for ollama. Every answer that run read must sit at
 // that backend's address, so a sample that falls back to another backend
-// fails. The whole line keys the proof entry.
+// fails. A backends sample on a line with no backend names every backend
+// in its own code. It must read answers at each backend's address and at
+// no other. The whole line keys the proof entry.
 //
 // The store loads the whole fixture, so it cannot say which answers a
 // sample read. The runner finds them in three steps. It keeps the answers
@@ -419,6 +421,13 @@ for (const line of list) {
 
   const stray = route ? kept.filter((l) => !l.url?.startsWith(`${route.base}/`)) : [];
   if (stray.length) { failed.push(`${line}: read ${stray.length} answers recorded away from ${route.base}: ${[...new Set(stray.map((l) => l.url))].join(', ')}. The backend setting did not reach the sample.`); continue; }
+  if (!backend && path.basename(rel).startsWith('backends.')) {
+    const at = (r) => kept.filter((l) => l.url?.startsWith(`${r.base}/`));
+    const unread = BACKEND_ROUTES.filter((r) => !at(r).length).map((r) => r.base);
+    const elsewhere = kept.filter((l) => !BACKEND_ROUTES.some((r) => l.url?.startsWith(`${r.base}/`)));
+    const gaps = [...unread.map((b) => `read no answer at ${b}`), ...(elsewhere.length ? [`read ${elsewhere.length} answers at no backend's address`] : [])];
+    if (gaps.length) { failed.push(`${line}: ${gaps.join('. It ')}. A backends sample must ask every backend.`); continue; }
+  }
 
   const folders = [...new Set([spec.folder, ...cargoFolders(spec.manifest)])].sort();
   proof[line] = {

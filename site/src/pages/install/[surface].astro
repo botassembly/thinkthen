@@ -31,7 +31,7 @@ const route = surface.backends ?? null;
 const named = route && route !== 'python';
 const title = named ? `Jev and System One API from ${surface.name}` : surface.name;
 const description = named
-  ? `Call Jev and any System One API from ${surface.name} with ThinkThen. Liquid d1 and Ollama work the same way. The OpenAI Decisions API is announced, not released.`
+  ? `Call Jev and any System One API from ${surface.name} with ThinkThen. OpenAI has announced the OpenAI Decisions API. It is not released yet.`
   : surface.blurb.replace(/`/g, '');
 if (description.length > 160) throw new Error(`/install/${surface.slug}/: the description runs ${description.length} characters, over 160`);
 const backendSample = route === 'env' || route === 'builder' ? installSample(surface.slug, 'backends') : null;
@@ -114,12 +114,12 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
       {route !== 'cli' && (
         <>
           {route === 'env'
-            ? <p>{surface.name} reads its backend from the environment. Set <code>THINKTHEN_BACKEND</code> and the backend's key variable in the shell, and the same sample asks that backend.</p>
+            ? <p>{surface.name} reads its backend from the environment. Set <code>THINKTHEN_BACKEND</code> to the name below. Set the backend's key variable in the shell, and the same sample asks that backend.</p>
             : <p><code>EngineBuilder::backend</code> names the backend in code, and it outranks the environment. The sample builds one engine for each backend and asks each the same question.</p>}
           <table class="backend-routes">
             <tr><th>Backend</th><th>Name</th><th>Key variable</th></tr>
             {BACKEND_ROUTES.map((r) => (
-              <tr><td><a href={r.route}>{r.title}</a></td><td><code>{r.name}</code></td><td>{r.keys.map((k, i) => <>{i > 0 && ', then '}<code>{k}</code></>)}{r.address && ', not needed on this machine'}</td></tr>
+              <tr><td><a href={r.route}>{r.title}</a></td><td><code>{r.name}</code></td><td>{r.keys.map((k, i) => <>{i > 0 && ', then '}<code>{k}</code></>)}{r.address && '. A local address needs no key.'}</td></tr>
             ))}
           </table>
           {route === 'env' && BACKEND_ROUTES.map((r) => (
