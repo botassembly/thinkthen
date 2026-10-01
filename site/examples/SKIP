@@ -22,7 +22,7 @@
 **/*.dart     Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.yaml     The package file a Dart sample builds with.
 **/*.toml     The package file a Rust sample builds with.
-**/*.sql      SQL sample; check against the matching installed extension.
-**/*.sql.out  Saved output from a checked database sample.
-REPLAY        The samples smoke-bindings.mjs replays.
-bindings-proof.json  What smoke-bindings.mjs proved; check-binding-proofs.mjs reads it.
+**/*.sql      SQL sample; smoke-sql.mjs replays the ones REPLAY lists.
+**/*.sql.out  What a SQL sample printed; smoke-sql.mjs compares it.
+REPLAY        The samples smoke-bindings.mjs and smoke-sql.mjs replay.
+bindings-proof.json  What the replay runners proved; check-binding-proofs.mjs reads it.

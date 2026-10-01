@@ -11,7 +11,8 @@ FROM tickets t, LATERAL thinkthen_recognize(
     ARRAY['person', 'organization', 'place']
 ) entity;
 
-SELECT link.*
+SELECT t.id, link.relation, link.source_text,
+    link.target_text
 FROM tickets t, LATERAL thinkthen_relations(
     t.body,
     '@names.json'

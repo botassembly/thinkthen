@@ -25,7 +25,13 @@
 // databases/duckdb/tools/setup.sh --fetch puts in
 // ~/.cache/thinkthen-toolchains/duckdb/v1.5.5, CMake, a C++ compiler and
 // Rust. cpp/build.sh builds the extension offline, and the CLI runs as
-// duckdb -unsigned -list. A database
+// duckdb -unsigned -list.
+// PostgreSQL needs the pinned 16.15 server that databases/postgresql/check.sh
+// unpacks into ~/.cache/thinkthen-toolchains/postgresql, /usr/bin/pg_config,
+// psql and cargo-pgrx 0.17.0. pgrx-package-locked.sh packages the extension
+// offline. Each attempt runs its own server on a socket with no TCP port, and
+// the cache folder belongs to the server's user. The sample runs as an
+// ordinary role, apart from a page that names a file. A database
 // whose toolchain is missing reports "not run" and keeps its old entries,
 // and the run exits 1 unless --allow-missing is given.
 
@@ -49,8 +55,23 @@ if (leaked.length) {
   process.exit(2);
 }
 
-const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 26, ...opts });
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-sql-'));
+// An interrupt ends the run and removes the temp folder. Node runs no signal
+// handler while a child runs, so run() also stops when a child ended by
+// SIGINT or SIGTERM. An attempt's shell stops its server first and exits
+// 128 plus the signal's number.
+const STOPS = ['SIGINT', 'SIGTERM'];
+const stop = (signal) => {
+  fs.rmSync(tmp, { recursive: true, force: true });
+  process.exit(128 + os.constants.signals[signal]);
+};
+for (const signal of STOPS) process.on(signal, () => stop(signal));
+const run = (cmd, args, opts = {}) => {
+  const done = spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 26, ...opts });
+  const signal = done.signal ?? STOPS.find((one) => done.status === 128 + os.constants.signals[one]);
+  if (STOPS.includes(signal)) stop(signal);
+  return done;
+};
 const TOOLCHAINS = path.join(os.homedir(), '.cache', 'thinkthen-toolchains');
 
 // Each database: the folder its extension builds from, the Cargo manifest
@@ -97,6 +118,78 @@ const DATABASES = {
         // The install page loads the extension as ./thinkthen.duckdb_extension.
         lay: (dir) => fs.copyFileSync(extension, path.join(dir, 'thinkthen.duckdb_extension')),
         command: (sample) => [cli, ['-unsigned', '-list'], fs.readFileSync(sample, 'utf8')],
+        env: {},
+      };
+    },
+  },
+  postgresql: {
+    folder: 'databases/postgresql',
+    manifest: 'databases/postgresql/Cargo.toml',
+    build() {
+      const pgConfig = '/usr/bin/pg_config';
+      const extracted = path.join(TOOLCHAINS, 'postgresql', '16.15-0ubuntu0.24.04.1');
+      if (!fs.existsSync(path.join(extracted, 'usr/lib/postgresql/16/bin/postgres'))) return { missing: 'the pinned PostgreSQL 16.15 server that databases/postgresql/check.sh unpacks' };
+      if (!fs.existsSync(pgConfig)) return { missing: 'the PostgreSQL 16 pg_config' };
+      for (const tool of ['cargo', 'psql']) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
+      if (run('cargo', ['pgrx', '--version']).stdout.trim() !== 'cargo-pgrx 0.17.0') return { missing: 'cargo-pgrx 0.17.0' };
+      const target = path.join(repo, 'target', 'site-postgresql');
+      const done = run('bash', ['./pgrx-package-locked.sh', '--pg-config', pgConfig], { cwd: path.join(repo, this.folder), env: { ...process.env, CARGO_TARGET_DIR: target } });
+      if (done.status !== 0) throw new Error(`pgrx-package-locked.sh failed in ${this.folder}\n${done.stdout}${done.stderr}`);
+      // A private copy of the server with the extension installed, and one
+      // cluster that each attempt copies.
+      const tree = path.join(tmp, 'pg-tree');
+      fs.cpSync(extracted, tree, { recursive: true, verbatimSymlinks: true });
+      const built = path.join(target, 'release', 'thinkthen-pg16');
+      fs.cpSync(path.join(built, 'usr/lib/postgresql/16/lib'), path.join(tree, 'usr/lib/postgresql/16/lib'), { recursive: true });
+      fs.cpSync(path.join(built, 'usr/share/postgresql/16/extension'), path.join(tree, 'usr/share/postgresql/16/extension'), { recursive: true });
+      const bin = path.join(tree, 'usr/lib/postgresql/16/bin');
+      const template = path.join(tmp, 'pg-template');
+      const init = run(path.join(bin, 'initdb'), ['-D', template, '--auth=trust', '-U', 'postgres'], { env: { PATH: process.env.PATH, LC_ALL: 'C.UTF-8' } });
+      if (init.status !== 0) throw new Error(`initdb failed\n${init.stdout}${init.stderr}`);
+      // The attempt's setup, run as the superuser: the install page's
+      // CREATE EXTENSION, an ordinary role with the extension's documented
+      // grant, and that role's thinkthen.file_directory set to the page's
+      // files folder, which psql passes in as :'files'.
+      const setup = path.join(tmp, 'pg-setup.sql');
+      const grant = fs.readFileSync(path.join(repo, this.folder, 'fixtures', 'grant.sql'), 'utf8');
+      fs.writeFileSync(setup, [
+        'CREATE EXTENSION thinkthen;',
+        'CREATE ROLE reader LOGIN;',
+        'GRANT CREATE ON SCHEMA public TO reader;',
+        "ALTER ROLE reader SET thinkthen.file_directory = :'files';",
+        grant.replace("'the_app_role'", "'reader'"),
+      ].join('\n'));
+      // Each attempt starts the server with the run's THINKTHEN_CACHE, on a
+      // socket with no TCP port, and stops it on exit or interrupt. The
+      // sample runs in psql as the ordinary role, from the files folder.
+      // The extension resolves a relative @ name against the server's data
+      // folder before it checks thinkthen.file_directory, so the role cannot
+      // read a page's files. Until the extension resolves the name inside
+      // file_directory, a page with files/ runs as the superuser with those
+      // files copied into the data folder: annotate, recognize and the
+      // install page's first call.
+      const pgCtl = JSON.stringify(path.join(bin, 'pg_ctl'));
+      const script = [
+        'd="$HOME/pg"',
+        'mkdir -m 700 "$d" "$d/sock"',
+        `cp -a ${JSON.stringify(template)} "$d/data"`,
+        'printf "listen_addresses = \'\'\\nunix_socket_directories = \'%s\'\\n" "$d/sock" >>"$d/data/postgresql.conf"',
+        `${pgCtl} -D "$d/data" -l "$d/server.log" -w -t 20 start >/dev/null || { cat "$d/server.log" >&2; exit 1; }`,
+        `trap '${pgCtl} -D "$d/data" -m immediate -w stop >/dev/null' EXIT`,
+        "trap 'exit 129' HUP",
+        "trap 'exit 130' INT",
+        "trap 'exit 143' TERM",
+        `psql -X -q -v ON_ERROR_STOP=1 -h "$d/sock" -U postgres -d postgres -v files="$PWD" -f ${JSON.stringify(setup)} >/dev/null || exit 1`,
+        'if [ -n "$superuser" ]; then cp -R . "$d/data/"; role=postgres; else role=reader; fi',
+        'psql -X -q -v ON_ERROR_STOP=1 -h "$d/sock" -U "$role" -d postgres -f -',
+      ].join('\n');
+      return {
+        toolchain: [`PostgreSQL ${run(path.join(bin, 'postgres'), ['-V']).stdout.trim().split(' ')[2]}`, 'cargo-pgrx 0.17.0', run('rustc', ['--version']).stdout.trim()],
+        lay: () => {},
+        command: (sample) => {
+          const superuser = fs.existsSync(path.join(path.dirname(sample), 'files')) ? 'superuser=1\n' : '';
+          return ['sh', ['-c', `${superuser}${script}\n`], fs.readFileSync(sample, 'utf8')];
+        },
         env: {},
       };
     },

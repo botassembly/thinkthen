@@ -1,0 +1,6 @@
+  relation   | source | target | probability | either 
+-------------+--------+--------+-------------+--------
+ contradicts |      1 |      4 |        0.83 | t
+ contradicts |      2 |      6 |        0.97 | t
+(2 rows)
+
