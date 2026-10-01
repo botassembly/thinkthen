@@ -1,0 +1,42 @@
+---
+// Goal: show that ThinkThen answers a repeated question from a saved
+// answer, and that a test can replay saved answers with no key.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { CACHING_SEE } from '../../data/catalog.mjs';
+import { captioned, files } from '../../data/samples.mjs';
+import { REPO } from '../../data/repo.mjs';
+
+const [replay, batchOne, unused] = captioned('learn/caching', CACHING_SEE);
+const [used] = files('learn/caching');
+const spec = `${REPO}/blob/main/specification/recording.md#pruning-a-cache`;
+---
+<Base title="Caching and replay" description="ThinkThen saves each answer under its question. A later run, or a test with no key, reads the saved answer and sends nothing.">
+  <h1>Caching and replay</h1>
+  <p class="lede">ThinkThen saves each answer under its question. Ask the same question again, and it reads the saved answer. Nothing is sent, and nothing is charged.</p>
+
+  <h2>Ask once</h2>
+  <p>The answer cache is on by default. A second run of the same question over the same text reads the cache. <a href="/reference/recording/#the-key">What makes two questions the same</a> says which changes make a new question. The <a href="/install/configuration/#locations">Configuration page</a> says where the cache lives.</p>
+
+  <h2>Replay in a test</h2>
+  <p>A folder of saved answers can sit beside your tests. <code>--replay</code> reads that folder alone. A test that names it runs with no key and no network. Every run on this page replays one small folder.</p>
+  <Terminal run={replay} caption={replay.see} />
+  <p>The <a href="/reference/recording/#modes">modes table</a> says what each folder option reads, sends and saves.</p>
+
+  <h2>The batch keeps the key</h2>
+  <p>ThinkThen packs many records into one request. Each record still has its own question and its own key. So an answer saved under one batch setting replays under another.</p>
+  <Terminal run={batchOne} caption={batchOne.see} />
+  <p>Batching can still change a fresh answer. The <a href="/reference/recording/#batching">recording reference</a> gives the measurement.</p>
+
+  <h2>A missing answer fails</h2>
+  <p>A replay never sends. A question the folder lacks stops the run with exit 5. <a href="/reference/recording/#a-replay-miss">A replay miss</a> shows one. Change the test to a question the folder holds, or save the new answer with a run that has a key.</p>
+
+  <h2>Find answers no run reads</h2>
+  <p>A folder can keep answers its tests no longer ask. <code>thinkthen cache unused</code> compares the folder with a list of the question keys your tests used. Here the list holds the keys of the four reviews.</p>
+  <Code code={used.text} file={used.name} caption="One question key a line." copy={false} />
+  <Terminal run={unused} caption={unused.see} />
+  <p><code>decide --details</code> prints the keys of each record in <code>meta.requests</code>. <code>filter --details</code> leaves out the records it drops. Its keys make an incomplete list. An incomplete list reports answers as unused that a test still reads. The <a href={spec}>recording specification</a> gives the rules. <a href="/reference/recording/#pruning">Pruning</a> removes answers.</p>
+
+  <p class="pagelinks"><a href="/reference/recording/">Recording and the answer cache</a> · <a href="/install/configuration/">Configuration</a> · <a href="/learn/functional/">Functional patterns</a></p>
+</Base>

@@ -20,6 +20,7 @@ const build = first ? buildLines(surface.slug, first.file) : null;
 const buildText = build && [...build.lines, build.run].map((parts) => parts.join(' \\\n    ')).join('\n');
 const inputs = shell ? [] : files(`install/${surface.slug}`);
 const frames = surface.frames ? installSample(surface.slug, 'data-frames') : null;
+const functional = ['python', 'r'].includes(surface.slug);
 const onFunctionPages = !shell && CODE_FUNCTIONS.some((fn) => sample(fn.name, surface.slug));
 const decideOne = shell ? captioned('functions/decide', FUNCTIONS[0].see).find((r) => r.name === '3-one') : null;
 const headline = shell
@@ -74,6 +75,8 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
     <Terminal run={decideOne} caption={decideOne.see} />
   )}
   <p>Not sure comes back as {parts(surface.unsureWord).map((x) => x.code ? <code>{x.part}</code> : x.part)}. Branch on it and send those cases to a person.{onFunctionPages && <> Each <a href="/functions/">function page</a> shows its {surface.name} call.</>}</p>
+
+  {functional && <p>To apply one question to a list or a stream, read <a href="/learn/functional/">Functional patterns</a>.</p>}
 
   {frames && (
     <>
