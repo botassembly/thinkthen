@@ -43,7 +43,7 @@ Add a band, and the middle gets its own answer. Here the band runs from 0.2 to 0
 
 <!-- example: functions/decide/2-case -->
 
-Not sure exits 3, so a person reads it. A failure gets its own exit code, such as 4 when the backend fails. A failure never looks like an answer.
+Not sure exits 3, so a person reads it. A failure gets its own [exit code](/reference/#exit-codes), such as 4 when the backend fails. A failure never looks like an answer.
 
 ## No training data to start
 
@@ -61,7 +61,7 @@ The bindings include [DuckDB](/install/duckdb/), [SQLite](/install/sqlite/) and 
 
 On Beatles Bench, 1,000 Jev answers cost about $0.016. That's from the bench's [cost table](https://github.com/botassembly/beatles-bench/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/results/tables/cost.tsv).
 
-A live call through a library binding took a median of 138 ms on 2026-10-01. ThinkThen's own work was about 1 to 2 ms of it. The command-line tool adds 15 to 17 ms. Each run starts a new process. The [overhead page](/learn/overhead/) has every measurement.
+A live call through a library binding took a median of 138 ms on 2026-10-01. ThinkThen's own work was about 1 to 2 ms of it. From the command line, each run starts a new process and opens a new connection. There a live call took a median of 219 ms. The [overhead page](/learn/overhead/) has every measurement.
 
 ## An open standard
 
@@ -81,7 +81,7 @@ That's how this site works. Every example on it is a replayed test, and the buil
 
 **Planted facts move answers.** In one [probe](https://github.com/botassembly/thinkthen/tree/2be1777e43c9b31a170107ece00e4587faf00ea7/probes/06-hostile-text), a false claim added to a customer message moved the probability of yes by 0.57. Jev reads a planted claim as evidence. Use a band, and send the middle to a person.
 
-**`tag` misses part of the set.** On Beatles Bench it names every lead singer of a song only 56% of the time. That's from the bench's [function table](https://github.com/botassembly/beatles-bench/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/results/tables/functions.tsv). Use `tag` to fill a queue a person reads.
+**`tag` misses part of the set.** On Beatles Bench it names exactly the right set of lead singers only 56% of the time. That's from the bench's [function table](https://github.com/botassembly/beatles-bench/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/results/tables/functions.tsv). Use `tag` to fill a queue a person reads.
 
 **It only answers.** ThinkThen writes no text and takes no action. Your code acts.
 
@@ -93,10 +93,10 @@ Jev gets 70.5% of them right from memory. The [model report](https://github.com/
 
 ## Open source
 
-ThinkThen is [MIT licensed](https://github.com/botassembly/thinkthen/blob/2be1777e43c9b31a170107ece00e4587faf00ea7/LICENSE). GenomOncology builds it, and the code is on [GitHub](https://github.com/botassembly/thinkthen).
+ThinkThen is [MIT licensed](https://github.com/botassembly/thinkthen/blob/2be1777e43c9b31a170107ece00e4587faf00ea7/LICENSE). I build it at GenomOncology, and the code is on [GitHub](https://github.com/botassembly/thinkthen).
 
 One line installs it:
 
-`curl -fsSL https://thinkthen.dev/install.sh | sh`
+<!-- install: shell -->
 
 The [tutorial](/learn/tutorial/) asks your first question.
