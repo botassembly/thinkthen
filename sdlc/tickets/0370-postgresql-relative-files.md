@@ -1,6 +1,6 @@
 # 0370: PostgreSQL resolves a relative named file inside thinkthen.file_directory
 
-Status: in progress
+Status: landed
 
 Lane: `worktrees/thinkthen-claude-3`. Branch: `ticket/0370-postgresql-relative-files`.
 
@@ -18,4 +18,8 @@ When `thinkthen.file_directory` is set, a relative `'@name'` in the PostgreSQL e
 
 ## What the build taught us
 
-To be written before landing.
+- The fix is one join before the existing confined read. The read already judged every path by spelling, then opened beneath the folder, so the join needed no new safety check. A planted build that passes no folder to the join fails `the_file_gate` with the site owner's exact message: "the question file '@refund.json' did not read".
+- The edge table and the `resolve` helper add 42 nonblank lines to `databases/postgresql/src`, so its ratchet rises from 2964 to 3006. Ten lines are code; the rest is the six-row table. The existing confined-read tests cover other rules (fifo, device, cap, hard link, refusal before open) and none could absorb the new rows without losing its own rule.
+- Ticket review found that the site's smoke runner works around this defect. That runner sits in `site/`, which the site owner owns, so the change there waits for the site owner.
+- Reviews: ticket review returned four findings, then one; all were fixed, then ACCEPT. Code review asked for the ratchet growth to be explained in a commit; the landing commit says it, then ACCEPT.
+- Proof run: `policy.py`, the six PostgreSQL named-file and grant steps, the unit tests, and `sdlc/scripts/lint` passed on this lane.
