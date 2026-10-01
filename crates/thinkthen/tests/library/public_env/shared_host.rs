@@ -85,10 +85,13 @@ fn a_shared_host_caches_only_in_a_private_named_folder() {
         );
         assert_eq!(sends.is_none(), lines == REFUSED, "{name}: {lines}");
     }
+    // The folder the cache variable names: the XDG cache home on Linux,
+    // `Library/Caches` on macOS.
     let platform = crate::child::Folder::Cache.under(Path::new(&xdg));
+    let home = platform.parent().expect("a cache home");
     assert!(
-        !platform.exists(),
-        "the platform cache folder stays absent; usage totals live in the state folder: {platform:?}"
+        fs::read_dir(home).map_or(true, |mut entries| entries.next().is_none()),
+        "the cache home stays empty; usage totals live in the state folder: {home:?}"
     );
 }
 

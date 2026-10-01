@@ -64,5 +64,5 @@ Milestone: 0.2
 - Unexplained skip: `default_cache_storage` was guarded `target_os = "linux"` with no reason, so its 4 cases never ran on macOS. They now block the folder that holds the default cache, run on every Unix, and carry the reason (Unix folder modes).
 - Vacuous passes ported, so macOS now tests them: `default_cache::...rejected_input`, the library's hand-built engine in `usage_totals`, `shared_host`, `check`'s scan of the cache, and the cache cases in `scheduling` and `annotate::scheduling`.
 - `Folder::configure` writes a case's configuration file and returns its variable. Three cases share it, and it keeps `public_env.rs` under its 500-line cap.
-- The ratchet rises by 144 lines to 109409 for the helper and the ports.
+- The ratchet rises by 146 lines to 109411 for the helper and the ports.
 - No case added `--no-cache`. The shared macOS home changed no Linux count.

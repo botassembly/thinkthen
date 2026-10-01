@@ -15,7 +15,8 @@ fn the_role_hint_uses_stderr_only_when_stdout_is_a_terminal() {
     // The parent keeps its own terminal side open until the child exits:
     // macOS drops unread terminal output when the last such side closes, and
     // Linux keeps it (ticket 0379). The child has exited before the read, so
-    // reading stops when nothing more is waiting.
+    // reading stops once half a second passes with nothing waiting. Linux
+    // hands the output across in the background, and the wait covers that.
     let script = r#"
 import errno
 import json
@@ -41,7 +42,7 @@ def run(stdout_terminal, stderr_terminal, argv=args, evidence=b'Refund me please
                                  env=environment)
         stdout, stderr = child.communicate(evidence, timeout=10)
         chunks = []
-        while select.select([master], [], [], 0)[0]:
+        while select.select([master], [], [], 0.5)[0]:
             try:
                 chunk = os.read(master, 4096)
             except OSError as error:

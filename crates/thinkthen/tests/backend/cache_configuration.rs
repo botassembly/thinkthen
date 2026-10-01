@@ -27,10 +27,8 @@ fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
 /// Write `text` as the configuration file of a case's root, and return its path.
 #[allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 fn configure(root: &Path, text: &str) -> PathBuf {
-    let path = Folder::Config.under(root).join("config.json");
-    fs::create_dir_all(Folder::Config.under(root)).expect("configuration directory");
-    fs::write(&path, text).expect("configuration");
-    path
+    Folder::configure(root, text).expect("configuration");
+    Folder::Config.under(root).join("config.json")
 }
 
 fn command(words: &[&str]) -> Vec<String> {
