@@ -335,8 +335,9 @@ fn resolve_usage(platform: Platform, xdg: Option<String>, home: Option<String>) 
     match platform {
         // macOS has no state folder. The configuration file shares
         // `Application Support/thinkthen`, so usage takes a private folder below it.
-        Platform::Macos => absolute(home)
-            .map(|home| home.join("Library/Application Support/thinkthen/usage")),
+        Platform::Macos => {
+            absolute(home).map(|home| home.join("Library/Application Support/thinkthen/usage"))
+        }
         Platform::Linux => absolute(xdg)
             .map(|home| home.join("thinkthen"))
             .or_else(|| absolute(home).map(|home| home.join(".local/state/thinkthen"))),
@@ -513,10 +514,30 @@ mod tests {
     fn usage_lives_in_the_state_folder_and_never_follows_the_cache() {
         let home = Some("/home/person");
         for (platform, state, home, expected) in [
-            (Platform::Linux, Some("/state"), home, Some("/state/thinkthen")),
-            (Platform::Linux, None, home, Some("/home/person/.local/state/thinkthen")),
-            (Platform::Linux, Some("relative"), home, Some("/home/person/.local/state/thinkthen")),
-            (Platform::Linux, Some("/state"), None, Some("/state/thinkthen")),
+            (
+                Platform::Linux,
+                Some("/state"),
+                home,
+                Some("/state/thinkthen"),
+            ),
+            (
+                Platform::Linux,
+                None,
+                home,
+                Some("/home/person/.local/state/thinkthen"),
+            ),
+            (
+                Platform::Linux,
+                Some("relative"),
+                home,
+                Some("/home/person/.local/state/thinkthen"),
+            ),
+            (
+                Platform::Linux,
+                Some("/state"),
+                None,
+                Some("/state/thinkthen"),
+            ),
             (Platform::Linux, None, None, None),
             (Platform::Linux, Some(""), Some("relative"), None),
             (

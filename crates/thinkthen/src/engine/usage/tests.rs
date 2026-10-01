@@ -121,7 +121,10 @@ fn concurrent_updates_keep_every_count_in_one_monthly_aggregate() {
     let row: Counts = serde_json::from_slice(&bytes).expect("closed row");
     assert_eq!(row.requests_sent, 40);
     assert_eq!(row.retries, 0);
-    assert!(String::from_utf8_lossy(&bytes).contains("\"retries\":0"), "one file holds every count");
+    assert!(
+        String::from_utf8_lossy(&bytes).contains("\"retries\":0"),
+        "one file holds every count"
+    );
     fs::remove_dir_all(folder).expect("cleanup");
 }
 
@@ -376,7 +379,11 @@ fn one_month_file_holds_every_count_and_an_old_retries_file_is_ignored() {
     let month = folder.join("2026-09.json");
     fs::write(&month, b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":4,\"retries\":2,\"input_tokens\":7,\"output_tokens\":3,\"cache_answers\":1}\n").expect("month");
     let old = folder.join("retries-2026-09.json");
-    fs::write(&old, b"{\"schema\":\"thinkthen.usage.retries/1\",\"retries\":5}\n").expect("old");
+    fs::write(
+        &old,
+        b"{\"schema\":\"thinkthen.usage.retries/1\",\"retries\":5}\n",
+    )
+    .expect("old");
     fs::set_permissions(&old, fs::Permissions::from_mode(0o600)).expect("private");
     let totals = read(&folder, "2026-09").expect("the month file alone");
     assert_eq!((totals.month.requests_sent, totals.month.retries), (4, 2));
@@ -404,7 +411,10 @@ fn a_folder_without_a_lock_reads_as_zero() {
     use std::os::unix::fs::DirBuilderExt as _;
 
     let folder = folder("no-lock");
-    fs::DirBuilder::new().mode(0o700).create(&folder).expect("private folder");
+    fs::DirBuilder::new()
+        .mode(0o700)
+        .create(&folder)
+        .expect("private folder");
     let totals = read(&folder, "2026-09").expect("zero");
     assert_eq!(totals.total, Counts::default());
     assert!(Counters::new(Some(folder)).check_readable().is_ok());

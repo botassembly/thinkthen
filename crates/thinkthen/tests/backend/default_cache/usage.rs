@@ -196,9 +196,22 @@ fn packed_annotate_counts_one_exchange_and_one_usage_object() {
 #[cfg(unix)]
 fn refused_before_any_send(root: &std::path::Path, key: &str) -> (std::process::Output, usize) {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
-    let records: String = (1..=6).map(|place| format!("{{\"body\":\"record {place}\"}}\n")).collect();
+    let records: String = (1..=6)
+        .map(|place| format!("{{\"body\":\"record {place}\"}}\n"))
+        .collect();
     let output = crate::harness::spawn(
-        &["decide", "asks for a refund", "--jsonl", "--field", "/body", "--jobs", "4", "--batch", "1", "--no-cache"],
+        &[
+            "decide",
+            "asks for a refund",
+            "--jsonl",
+            "--field",
+            "/body",
+            "--jobs",
+            "4",
+            "--batch",
+            "1",
+            "--no-cache",
+        ],
         &[
             ("THINKTHEN_BASE_URL", listener.base()),
             ("THINKTHEN_API_KEY", key),
@@ -258,7 +271,11 @@ fn a_malformed_month_refuses_the_run_and_keeps_its_bytes() {
         b"evidence",
     )
     .expect("plan");
-    assert_eq!(planned.status.code(), Some(0), "a plan sends nothing, so it never refuses");
+    assert_eq!(
+        planned.status.code(),
+        Some(0),
+        "a plan sends nothing, so it never refuses"
+    );
 }
 
 /// Another process holding the usage lock stops no request: all 16 jobs reach
@@ -357,7 +374,13 @@ fn removing_the_cache_home_keeps_the_count_in_one_month_file() {
     assert_eq!(usage(&status, "input_tokens"), Some(312));
     let mut names: Vec<String> = fs::read_dir(state.join("thinkthen"))
         .expect("usage folder")
-        .map(|entry| entry.expect("entry").file_name().to_string_lossy().into_owned())
+        .map(|entry| {
+            entry
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
         .collect();
     names.sort();
     assert_eq!(names.len(), 2, "{names:?}");
@@ -366,7 +389,18 @@ fn removing_the_cache_home_keeps_the_count_in_one_month_file() {
         serde_json::from_slice(&fs::read(state.join("thinkthen").join(&names[1])).expect("month"))
             .expect("month JSON");
     assert_eq!(
-        row.as_object().expect("object").keys().cloned().collect::<Vec<_>>(),
-        ["cache_answers", "input_tokens", "output_tokens", "requests_sent", "retries", "schema"]
+        row.as_object()
+            .expect("object")
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>(),
+        [
+            "cache_answers",
+            "input_tokens",
+            "output_tokens",
+            "requests_sent",
+            "retries",
+            "schema"
+        ]
     );
 }

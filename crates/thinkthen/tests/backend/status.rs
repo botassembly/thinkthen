@@ -262,7 +262,8 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
 fn planted(label: &str, files: &[(&str, &[u8])]) -> (std::path::PathBuf, std::path::PathBuf) {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let home = std::env::temp_dir().join(format!("thinkthen-status-{label}-{}", std::process::id()));
+    let home =
+        std::env::temp_dir().join(format!("thinkthen-status-{label}-{}", std::process::id()));
     let _absent = fs::remove_dir_all(&home);
     let usage = home.join(".local/state/thinkthen");
     fs::create_dir_all(&usage).expect("usage folder");
@@ -286,8 +287,14 @@ fn a_missing_usage_lock_reads_as_zero_without_creating_or_changing_state() {
     assert_eq!(output.stderr, b"");
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
     assert_eq!(value["usage"]["total"]["requests_sent"], 0);
-    assert_eq!(fs::read(usage.join("2026-09.json")).expect("unchanged month"), bytes);
-    assert_eq!(fs::read_dir(&usage).expect("unchanged directory").count(), 1);
+    assert_eq!(
+        fs::read(usage.join("2026-09.json")).expect("unchanged month"),
+        bytes
+    );
+    assert_eq!(
+        fs::read_dir(&usage).expect("unchanged directory").count(),
+        1
+    );
 }
 
 /// Main failed with exit 5 and printed no report. Status now reports the
@@ -306,7 +313,10 @@ fn a_malformed_usage_month_reports_unavailable_counts_and_the_fix() {
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
     assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
     assert_eq!(value["usage"]["total"], serde_json::Value::Null);
-    assert_eq!(value["cache"]["path"], home.join(".cache/thinkthen").to_string_lossy().as_ref());
+    assert_eq!(
+        value["cache"]["path"],
+        home.join(".cache/thinkthen").to_string_lossy().as_ref()
+    );
     let human = run::output(command(&home).arg("status")).expect("human status");
     assert_eq!(human.status.code(), Some(0));
     assert_eq!(String::from_utf8_lossy(&human.stderr), sentence);
@@ -331,7 +341,12 @@ fn an_old_retries_file_beside_a_month_with_retries_is_ignored() {
         ],
     );
     let output = run::output(command(&home).args(["status", "--json"])).expect("status");
-    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     assert_eq!(output.stderr, b"");
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
     assert_eq!(value["usage"]["total"]["requests_sent"], 4);
@@ -346,7 +361,11 @@ fn an_unsafe_usage_month_names_the_unsafe_fix() {
 
     let month = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
     let (home, usage) = planted("unsafe", &[(".lock", b""), ("2026-09.json", month)]);
-    fs::set_permissions(usage.join("2026-09.json"), fs::Permissions::from_mode(0o644)).expect("mode");
+    fs::set_permissions(
+        usage.join("2026-09.json"),
+        fs::Permissions::from_mode(0o644),
+    )
+    .expect("mode");
     let output = run::output(command(&home).args(["status"])).expect("status");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(

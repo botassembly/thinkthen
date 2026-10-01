@@ -11,7 +11,9 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
             let engine = EngineBuilder::from_env()
                 .and_then(|seed| seed.no_cache().build())
                 .expect("the engine builds; the check waits for a send");
-            let question = Question::decide("asks for a refund").expect("a question").cut();
+            let question = Question::decide("asks for a refund")
+                .expect("a question")
+                .cut();
             return (0..2)
                 .map(|_| match engine.decide(&question, EVIDENCE) {
                     Err(error) => format!("{:?}: {error}", error.kind()),
@@ -169,7 +171,10 @@ fn a_shared_usage_folder_refuses_every_send_and_names_no_path() {
     let refused = in_child(
         "usage-refused",
         &[
-            ("XDG_STATE_HOME", home.join("state").to_str().expect("state")),
+            (
+                "XDG_STATE_HOME",
+                home.join("state").to_str().expect("state"),
+            ),
             ("THINKTHEN_BASE_URL", listener.base()),
         ],
     );

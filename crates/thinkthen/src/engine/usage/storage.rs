@@ -207,7 +207,8 @@ fn scan(path: &Path) -> Result<Vec<(String, Counts)>, ReadFailure> {
 fn read_counts(file: &mut File) -> io::Result<Counts> {
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes)?;
-    serde_json::from_slice(&bytes).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+    serde_json::from_slice(&bytes)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
 }
 
 fn replace(path: &Path, directory: &File, name: &str, counts: Counts) -> io::Result<()> {
