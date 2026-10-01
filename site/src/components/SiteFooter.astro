@@ -1,0 +1,67 @@
+---
+// The footer on every page: a short sitemap in three columns, the exit-code
+// legend, and a band with the mark, the maker and the license.
+//
+// The legend stays here because coloured exit codes show on most pages, and
+// WRITING.md asks for a legend beside every coloured mark.
+// `mdHref` is this page's Markdown twin. An unlisted page has none.
+import Icon from './Icon.astro';
+import { TAGLINE, REPO } from '../data/catalog.mjs';
+import { COMPANY, LICENSE, AUTHOR } from '../data/about.mjs';
+
+const { mdHref } = Astro.props;
+const year = new Date().getFullYear();
+const columns = [
+  ['Product', [
+    ['/install/', 'Install'],
+    ['/functions/', 'Functions'],
+    ['/reference/', 'Reference'],
+    ['/how-tos/', 'How-tos'],
+    ['/learn/', 'Learn'],
+    ['/blog/', 'Blog'],
+  ]],
+  ['Project', [
+    [REPO, 'GitHub repository', 'github'],
+    ['/about/', 'About'],
+    ['/trust/', 'Trust'],
+    ['/refusals/', 'What it will not do'],
+    ['/version.json', 'Build proof'],
+  ]],
+  ['For machines', [
+    ['/llms.txt', 'llms.txt', 'doc'],
+    ['/llms-full.txt', 'llms-full.txt', 'doc'],
+    ['/sitemap.xml', 'Sitemap', 'doc'],
+    ...(mdHref ? [[mdHref, 'This page as Markdown', 'doc']] : []),
+  ]],
+];
+---
+<footer class="bottom">
+  <div class="wrap">
+    <div class="foot-cols">
+      {columns.map(([name, links]) => (
+        <nav aria-label={name}>
+          <p class="foot-head">{name}</p>
+          <ul>
+            {links.map(([href, label, icon]) => (
+              <li><a href={href}>{icon && <Icon name={icon} size={14} />}{label}</a></li>
+            ))}
+          </ul>
+        </nav>
+      ))}
+    </div>
+    <p class="legend">Exit codes: <span class="exit yes">0 yes</span><span class="exit no">1 no</span><span class="exit unsure">3 not sure</span><span class="exit broken">other broken</span><span class="exit plain">0 the run finished</span></p>
+    <div class="foot-band">
+      <a class="foot-mark" href="/">
+        <img src="/brand/thinkthen-mark-dark.svg" alt="" class="on-dark" width="24" height="24">
+        <img src="/brand/thinkthen-mark-light.svg" alt="" class="on-light" width="24" height="24">
+        <span>{TAGLINE}</span>
+      </a>
+      <a class="foot-maker" href={COMPANY.url}>
+        <span>Made by</span>
+        <img src={COMPANY.logoLight} alt={COMPANY.name} class="on-light" width={COMPANY.logoWidth / 2} height={COMPANY.logoHeight / 2}>
+        <img src={COMPANY.logoDark} alt={COMPANY.name} class="on-dark" width={COMPANY.logoWidth / 2} height={COMPANY.logoHeight / 2}>
+      </a>
+      <span><a href={LICENSE.href}>{LICENSE.name}</a> · © {year} {AUTHOR.name}</span>
+    </div>
+  </div>
+</footer>
