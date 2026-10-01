@@ -1,6 +1,6 @@
 # 0360: Usage totals live in the state folder, and an unreadable count is never dropped quietly
 
-Status: in progress. Lane claude-2. Branch `ticket/0360-usage-state-folder`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian on 2026-09-30 after a QA finding on a published checkpoint build.
+Status: landed. Lane claude-2. A fresh ticket review found four blocking gaps and five minor ones, all fixed, and then accepted. The code review found one blocking gap, a test child that would have counted into the real state folder, and six minor ones, all fixed. A fresh re-review found three minor gaps, fixed, and then accepted. Branch `ticket/0360-usage-state-folder`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian on 2026-09-30 after a QA finding on a published checkpoint build. Files Debt 032, `../issues/2026-09-30-a-usage-write-that-fails-after-a-good-start-is-silent-on-the-libraries.md`.
 
 ## Outcome
 
