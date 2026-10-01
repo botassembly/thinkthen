@@ -336,7 +336,7 @@
   },
   "install/zig/first-call.zig": {
     "page": "/install/zig/",
-    "sample": "4b4681f2fad6075cab7846e6042504683f8ce90c1222b1565d0fb631347f00fe",
+    "sample": "cdf9c17933cd63266adb2a5a2e78176b146c3ba2334703af8c6f66c501b96294",
     "output": null,
     "files": {
       "install/zig/files/build.zig": "6477d431d6b1806670fcff3c82e8c7f4b12c792c922da93e5ba2254a32b1b274",
