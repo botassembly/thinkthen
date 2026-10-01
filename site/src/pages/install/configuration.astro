@@ -40,7 +40,7 @@ const ENV = [
   <h2 id="which-value-wins">Which value wins</h2>
   <p set:html={inlineHtml(first.text)}></p>
   <p>The <a href="/install/settings/#which-value-wins">Settings page</a> gives the order for each setting, and every default.</p>
-  <Code code={config.text} caption={`${config.name}, a configuration file`} />
+  <Code code={config.text} file={config.name} caption={`${config.name}, a configuration file`} />
   <Terminal run={file} caption={file.see} />
 
   <h2 id="environment">The environment</h2>

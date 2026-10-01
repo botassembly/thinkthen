@@ -23,13 +23,13 @@ const rate = setting('Requests a minute');
 
   <h2>By name</h2>
   <p>The configuration file can name a server under <code>backends</code>. An entry gives the server's <code>url</code>, the name of the variable that holds its key in <code>key_env</code>, and its <code>model</code>. The file never holds the key itself. Then <code>--backend NAME</code> or <code>THINKTHEN_BACKEND</code> picks the entry, and <code>backend</code> in the file makes it the default.</p>
-  <Code code={good.text} caption={`${good.name}, the configuration file`} />
+  <Code code={good.text} file={good.name} caption={`${good.name}, the configuration file`} />
   <Terminal run={entry} caption={entry.see} />
   <p>A name uses 1 to 32 lowercase letters, digits, and hyphens, and may not reuse a built-in name. The <a href="/install/configuration/">Configuration page</a> says where the file lives.</p>
 
   <h2>Pace the requests</h2>
   <p>ThinkThen sets no pace of its own. <code>requests_per_minute</code> on an entry caps how many requests one process starts each minute, retries included. It takes {rate.allowed.toLowerCase()}. A built-in's name may appear under <code>backends</code> with a rate and nothing else. <code>THINKTHEN_REQUESTS_PER_MINUTE</code> outranks the file. The limit holds within one process, so two processes can each send the full rate.</p>
-  <Code code={bad.text} caption={`${bad.name}, a rate out of range`} />
+  <Code code={bad.text} file={bad.name} caption={`${bad.name}, a rate out of range`} />
   <Terminal run={badRate} caption={badRate.see} />
 
   <h2>Check the server</h2>
