@@ -237,7 +237,7 @@ def managed_env(jdk):
 
 def check_jdk(run=command):
     # The runner's PATH javac belongs to the image's own JDK. Only the pinned package's
-    # tree passes the owner check below, so PATH is never searched.
+    # tree passes the owner check below. This check never searches PATH.
     home = sdk_home("THINKTHEN_JDK_HOME", "javac") if os.environ.get("THINKTHEN_JDK_HOME") else APT_JDK
     for tool in ("java", "javac", "jar"):
         if selected_executable(home / "bin" / tool) is None:

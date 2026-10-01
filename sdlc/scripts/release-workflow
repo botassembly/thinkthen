@@ -282,8 +282,8 @@ host-setup)
 		. libraries/ruby/toolchain.env
 		case $("$(brew --prefix openssl@3)/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) fail 'OpenSSL host version differs from pin' ;; esac
 		cargo install --locked --version 0.17.0 cargo-pgrx
-		# cargo pgrx package needs PGRX_HOME, ~/.pgrx by default, as the Linux container writes it.
-		# A host that already has one keeps it; package.sh passes --pg-config either way.
+		# cargo pgrx package needs PGRX_HOME. It defaults to ~/.pgrx. The Linux container writes the same file.
+		# A host that already has one keeps it. package.sh passes --pg-config either way.
 		if [ ! -e "$HOME/.pgrx/config.toml" ]; then
 			mkdir -p "$HOME/.pgrx"
 			printf '[configs]\npg16 = "%s"\n' "$(brew --prefix postgresql@16)/bin/pg_config" >"$HOME/.pgrx/config.toml"
