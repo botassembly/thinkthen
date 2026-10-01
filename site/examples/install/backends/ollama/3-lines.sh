@@ -1,5 +1,4 @@
 question="Does the customer ask for a refund?"
-export OLLAMA_API_KEY=ollama
 
 cat <<'EOF' |
 Please refund my order. It arrived broken.

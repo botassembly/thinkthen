@@ -50,7 +50,7 @@ const ENV = [
       <tr><td>{href ? <a href={href}><code>{name}</code></a> : <code>{name}</code>}</td><td>{what}</td></tr>
     ))}
   </table>
-  <p>A blank variable counts as unset. <code>SSL_CERT_FILE</code> is not read.</p>
+  <p>A blank variable counts as unset, with one exception: a blank <code>THINKTHEN_MAX_REQUEST_BYTES</code> exits 2 on the commands that read it. <code>SSL_CERT_FILE</code> is not read.</p>
 
   <h2 id="locations">Where the files live</h2>
   <table>
@@ -75,7 +75,7 @@ const ENV = [
     <li><code>usd_per_million_input</code> and <code>usd_per_million_output</code> together price the reported tokens. The price is your own estimate, never a bill.</li>
   </ul>
   <p>Any other field is refused. The file never holds a key. <code>key_env</code> in a <code>backends</code> entry names the variable that holds one.</p>
-  <p>Whoever can write the file decides where the key and the evidence go. On Linux and macOS ThinkThen warns when another user owns the file, or when every user may write it. A file only its group may write gets no warning. A file that draws the warning and holds <code>backends</code> is refused with exit 5. Keep the file writable by its owner alone.</p>
+  <p>Whoever can write the file decides where the key and the evidence go. On Linux and macOS ThinkThen warns when another user owns the file, or when every user may write it. A group-write bit alone draws no warning. A file that draws the warning and holds <code>backends</code> is refused with exit 5. Keep the file writable by its owner alone.</p>
 
   <h2 id="usage-totals">The usage totals</h2>
   <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and cache answers. It holds no request, no reply, no address, no model, no price and no key. <code>--no-cache</code> never turns it off. It counts what this machine saw, and your provider's bill is the real cost.</p>

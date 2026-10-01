@@ -42,7 +42,7 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
   <h2>The key</h2>
   <p>A named backend reads only its own key variables, and the first one that is not blank wins. With no backend named, the key comes from <code>{KEY_VARIABLE}</code>. The command takes no flag and no file for a key. A missing key exits 4, and the message names the variable and never a value.</p>
   <p>The key goes only to the address you named. It never shows in a plan, a result, a saved answer, a log line, or an error. An address that holds the key is refused before anything is sent.</p>
-  <p>A plain <code>http://</code> address may reach only <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code>. Any other <code>http://</code> host is a usage error, because the key would cross the network in clear text. With no backend named, a request to one of those three hosts goes out with no key when the key is unset. Under <code>http://</code> the tool ignores every proxy variable.</p>
+  <p>A plain <code>http://</code> address may reach only <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code>. Any other <code>http://</code> host is a usage error, because the key would cross the network in clear text. At those three hosts a request goes out with no key when the key variable is unset, whichever backend is named. Under <code>http://</code> the tool ignores every proxy variable.</p>
   <p>An address with a user name, a query, or a fragment is a usage error. The plan prints the address, and a saved answer keeps it.</p>
 
   <h2>Where your text goes</h2>

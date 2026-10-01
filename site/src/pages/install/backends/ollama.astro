@@ -19,15 +19,15 @@ const checks = checkLines('ollama');
   <h1>Ollama</h1>
   <p class="lede">Ollama 0.35 and later serve System One on your own machine. ThinkThen asks them with <code>--backend {b.name}</code>, with no key and no hosted service.</p>
 
-  <BackendFacts name="ollama" notes={{ key: 'optional on this machine', model: 'Name <code>tev1</code> with <code>--model tev1</code>.' }} />
+  <BackendFacts name="ollama" notes={{ key: 'not needed on this machine', model: 'Name <code>tev1</code> with <code>--model tev1</code>.' }} />
 
   <h2>Set it up</h2>
   <ol>
     <li>Install Ollama 0.35 or later from <a href="https://ollama.com/download">ollama.com</a>.</li>
     <li>Run <code>ollama pull {b.model}</code>, and <code>ollama pull tev1</code> for the smaller model.</li>
-    <li>Ask with <code>--backend {b.name}</code>. At the default address ThinkThen sends no key.</li>
+    <li>Ask with <code>--backend {b.name}</code>. On this machine ThinkThen sends no key.</li>
   </ol>
-  <p>The examples below run Ollama on a second port, 11535, beside another Ollama on the same machine. So each one names the port with <code>--url</code>. Each also sets <code>{b.keys[0]}</code> to a placeholder, which a local Ollama ignores. On the default port, leave out both.</p>
+  <p>The examples below run Ollama on a second port, 11535, beside another Ollama on the same machine. So each one names the port with <code>--url</code>. On the default port, leave it out. A local Ollama needs no key at any port.</p>
 
   <h2>Descriptions travel as text</h2>
   <p>Ollama refuses a description written as an object. So this backend alone sends each description as its text. An object's <code>what</code> goes, and its other fields stay behind. The plan says so on its first line.</p>
