@@ -438,7 +438,7 @@ const ARTICLES = {
       "These are ideas for Jev inside an agent harness. Many come from [a post by Diogo Almeida](https://x.com/completeskeptic/status/2101894250401271876). Diogo works at TypeSafe, the maker of Jev. Each card names a job, the question Jev would answer, what the harness does with the answer, and the function that asks.",
       "Permission asks \"Should this command run?\" If Jev is not sure, the harness asks a person. Tool choice ranks the tools for a step, and the harness loads only the top few. Context asks what should happen to a chunk. `choose` picks load, summarize, or hide.",
       "Model choice asks \"Is this step easy?\" An easy step goes to a smaller model. Parallel work asks whether tasks can run at once, and the harness splits them. Data safety asks \"Could this touch secrets?\" Such a task runs on an approved model.",
-      "Off track asks whether the agent is going in circles. The harness stops it and asks a person. Done check asks whether the task is done as asked. The harness stops, or sends the work back. Evaluation asks which of two answers is better, and the winning prompt wins. A Jev pick comes back with a probability. You can check it against cases a person labeled.",
+      "Off track asks whether the agent is going in circles. The harness stops it and asks a person. Done check asks whether the task is done as asked. The harness stops, or sends the work back. Evaluation asks which of two answers is better. The harness counts the wins and picks the winning prompt. A Jev pick comes back with a probability. You can check it against cases a person labeled.",
     ],
     credit: "Many ideas from Diogo Almeida.",
     takeaway: "Each decision is one small question with a probability.",
@@ -448,7 +448,7 @@ const ARTICLES = {
   "shell-uses": {
     title: "Ops/Security",
     label: "Ops and security",
-    goal: "Each answer drives a shell script, as nine ops and security jobs show.",
+    goal: "Each answer drives a shell script. Nine ops and security jobs show how.",
     idea: [
       "Each card names a job, the question ThinkThen asks, what the script does with the answer, and the function that asks.",
       "`decide` answers in its exit code: 0 for yes and 1 for no. With a band such as `--threshold 0.1:0.9`, not sure exits 3. Alert triage uses all three. The script pages a person, logs the alert, or queues it. Flaky test retries a flaky failure and fails the build on any other.",
@@ -499,7 +499,7 @@ const ARTICLES = {
       "Liquid released d1 on 2026-09-29. Liquid calls it the first decision foundation model, and Liquid AI is a spin-off from MIT. d1 speaks the System One API, so ThinkThen runs on it. See [Liquid d1](/install/backends/liquid/).",
       "Ollama 0.35 shipped on 2026-09-30. It serves the nimble and tev1 models on your own machine through the same API. See [Ollama](/install/backends/ollama/).",
       "On 2026-09-30, Benchmark Heaven's JevBench board ranked 106 systems. Three days earlier it listed 62 open models. Cygnet tops its composite score, and Jev is third.",
-      "OpenAI announced a Decisions API at DevDay on 2026-09-29. Its model, Luna, answers predefined questions over text or images. See [OpenAI Decisions API](/install/backends/openai/).",
+      "OpenAI announced a Decisions API at DevDay on 2026-09-29. Its model, Luna, answers questions a developer defines, from a fixed set of answers, over text or images. See [OpenAI Decisions API](/install/backends/openai/).",
       "The slide's last line names the aim: ThinkThen is one SDK for every decision API.",
     ],
     source: [
@@ -523,7 +523,7 @@ const ARTICLES = {
       "OpenAI announced its Decisions API on 2026-09-29. The bench has not run it, so it has no row.",
       "The bench is open source. The repository holds the songs, the questions and their right answers, and a saved recording of every answer. The data is CC BY-SA 4.0.",
     ],
-    source: { text: "the bench's five-model report", href: `${REPO}/blob/main/reports/models.md` },
+    source: { text: "the bench's accuracy table", href: `${REPO}/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/results/tables/accuracy.tsv` },
     blocks: [
       { caption: "Get the bench.", code: `git clone ${REPO}\ncd beatles-bench` },
       { caption: "Replay the Jev run. It is free and needs no key.", code: "./run.sh" },
