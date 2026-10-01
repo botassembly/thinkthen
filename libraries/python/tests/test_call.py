@@ -357,6 +357,12 @@ def capturing_filter_listener(answer=None, usage=True):
     bodies = []
 
     class Handler(BaseHTTPRequestHandler):
+        # Debt 020: this HTTP/1.1 listener closes too, so policy.py needs no exemption;
+        # sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+        def end_headers(self):
+            self.send_header("Connection", "close")
+            super().end_headers()
+
         protocol_version = "HTTP/1.1"
 
         def do_POST(self):

@@ -29,6 +29,12 @@ class ConditionalBackend:
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
+            # Debt 020: ureq may reuse an HTTP/1.0 connection the server closes;
+            # sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+            def end_headers(self):
+                self.send_header("Connection", "close")
+                super().end_headers()
+
             def do_POST(self) -> None:
                 if not self.path.startswith("/v1/"):
                     self.send_error(404)

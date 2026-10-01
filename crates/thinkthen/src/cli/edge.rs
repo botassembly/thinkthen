@@ -75,6 +75,7 @@ pub(crate) struct Environment {
     config: Config,
     config_path: Option<PathBuf>,
     retry_wait_ms: Option<u64>,
+    input_pause_ms: Option<u64>,
     pub(super) sigint_ack: Option<PathBuf>,
     pub(super) cancel: crate::engine::Cancel<'static>,
     usage: std::sync::Arc<Counters>,
@@ -120,6 +121,8 @@ impl Environment {
             config,
             config_path,
             retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS")
+                .and_then(|text| text.parse().ok()),
+            input_pause_ms: test_only("THINKTHEN_TEST_INPUT_PAUSE_MS")
                 .and_then(|text| text.parse().ok()),
             sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
             cancel: crate::engine::Cancel::default(),
@@ -212,6 +215,12 @@ impl Environment {
     /// How long the first retry waits before the wait doubles.
     pub(crate) fn retry_wait(&self) -> Duration {
         self.retry_wait_ms.map_or(RETRY_WAIT, Duration::from_millis)
+    }
+
+    /// How long piped input may pause before the open request goes out, when
+    /// a test sets it; `None` keeps the engine's pause (Debt 030).
+    pub(crate) fn input_pause(&self) -> Option<Duration> {
+        self.input_pause_ms.map(Duration::from_millis)
     }
 
     pub(crate) const fn cancel(&self) -> &crate::engine::Cancel<'static> {

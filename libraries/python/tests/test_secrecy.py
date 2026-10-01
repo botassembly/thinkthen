@@ -31,6 +31,12 @@ def test_the_fake_key_arrives_at_a_loopback_listener(backend, tmp_path):
         import http.server, threading, thinkthen as tt
         seen = []
         class Listener(http.server.BaseHTTPRequestHandler):
+            # Debt 020: ureq may reuse an HTTP/1.0 connection the server closes;
+            # sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+            def end_headers(self):
+                self.send_header("Connection", "close")
+                super().end_headers()
+
             def do_POST(self):
                 seen.append((self.path, self.headers["Authorization"]))
                 self.send_response(400)

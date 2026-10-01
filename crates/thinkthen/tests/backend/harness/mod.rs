@@ -87,6 +87,8 @@ fn command(arguments: &[&str], environment: &[(&str, &str)]) -> Command {
         .env_clear()
         .env("HOME", home)
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
+        // A stalled reader thread never closes a batch early (Debt 030).
+        .env("THINKTHEN_TEST_INPUT_PAUSE_MS", "10000")
         .args(arguments)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());

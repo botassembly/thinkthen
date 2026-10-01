@@ -169,6 +169,12 @@ def local_plan(bench, binary):
     guard = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
+        # Debt 020: ureq may reuse an HTTP/1.0 connection the server closes;
+        # sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+        def end_headers(self):
+            self.send_header("Connection", "close")
+            super().end_headers()
+
         def do_POST(self):
             body = self.rfile.read(int(self.headers['Content-Length']))
             request = json.loads(body)

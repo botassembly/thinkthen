@@ -25,7 +25,7 @@ Each batch is one lane's work in one area of files. Landers take `CHANGELOG.md` 
 
 | Order | Batch | Work | Starts |
 | ---: | --- | --- | --- |
-| 1 | C1 test servers and input pause | One ticket. Every Python loopback test server sends `Connection: close`: Debt 020's workaround list, found with `grep -rl BaseHTTPRequestHandler`. The 50 ms piped input pause becomes settable for tests (Debt 030). | when 0356 lands (Debt 029) |
+| 1 | C1 test servers and input pause | One ticket. Every Python loopback test server sends `Connection: close`: Debt 020's workaround list, found with `grep -rl BaseHTTPRequestHandler`. The 50 ms piped input pause becomes settable for tests (Debt 030). | landed by ticket 0361 |
 | 2 | C2 spec lines | The lines in `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md`: the "Portable call settings" row, "Dry runs" in `recording.md`, the Rust cell that cites ticket 0291, the settings table's wording for a site reader (item 4), and the `cache_answers` sentences in `recording.md` and `result.md` (item 5). Files: `specification/settings.md`, `specification/recording.md`, `specification/result.md`. Medium. | when 0360 lands |
 | 3 | C3 small command fixes | One ticket, four small issues from the mailroom triage of 2026-09-30. `2026-09-30-check-ignores-the-estimated-token-cap.md` (blocks 0.1): `crates/thinkthen/src/cli/check.rs`, `specification/check.md`, a loopback test. `2026-09-30-blank-max-request-bytes-exits-2.md`: `crates/thinkthen/src/cli/edge.rs`, `specification/settings.md`. `2026-09-30-transforms-score-the-band-low-edge-as-no.md`: `transforms/band/band.jq`, `transforms/score/score.jq`, `transforms/sweep/sweep.jq`, `transforms/trials/trials.jq`, `transforms/trials/test.sh`. `2026-09-30-cache-convert-quote-skips-questions-that-start-the-text-is.md`: `crates/thinkthen/src/core/recording/convert.rs`, `crates/thinkthen/src/engine/store/convert.rs`, `crates/thinkthen/src/engine/store.rs`, `crates/thinkthen/src/cli/cache.rs`, `specification/recording.md`. Each small. | after C2, which edits `settings.md` and `recording.md` |
 | 4 | C4 checkpoint packages | `2026-09-30-checkpoints-publish-no-source-wrapper-packages.md`: a checkpoint publish packs the 16 source-wrapper, crate and R packages QA asked for. Files: `sdlc/scripts/surfaces`, `sdlc/scripts/release-pack`, `sdlc/scripts/publish-builds`. Medium. | any free lane; it touches no file C1 to C3 touch |
@@ -38,13 +38,12 @@ Work outside the lanes:
 
 ## Every open issue
 
-32 open. Class: **running**, **batch** (C1 to C4), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
+31 open. Class: **running**, **batch** (C1 to C4), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
 | `closed/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | closed | closed by ticket 0356 |
-| `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | batch | C1 for the test servers; the product fix waits on upstream |
-| `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | batch | C1 |
+| `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | waits | the test servers are done (ticket 0361); the product fix waits on upstream and Ian's resend choice |
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |
 | `2026-09-30-duckdb-check-fails-four-tests-on-macos.md` | yes, the macOS DuckDB proof | batch | a lane with the M5 |
 | `2026-09-30-check-ignores-the-estimated-token-cap.md` | yes | batch | C3 |
