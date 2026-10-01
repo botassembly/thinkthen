@@ -9,15 +9,15 @@ links:
   - { href: "/functions/decide/", text: "Run decide" }
 ---
 
-Code sees strings, not meaning. `grep` finds the word "refund". It cannot tell whether "I want to send this back" asks for money or for an exchange. Search matches letters. It cannot answer a question about the text.
+Code sees strings, not meaning. `grep` finds the word "refund". It can't tell whether "I want to send this back" asks for money or for an exchange. Search matches letters. It can't answer a question about the text.
 
 [TypeSafe](https://typesafe.ai) makes a model called Jev that can. Jev answers a bounded question about the text you hand it. The answer is yes or no, one option from your list, or a place on a scale. Each answer comes with a probability. Jev writes no sentences, so your code has nothing to parse. It needs no training data and no labels. The question goes in as plain words. On Beatles Bench, a thousand answers cost about 0.016 dollars, by the bench's [cost table](https://github.com/botassembly/beatles-bench/blob/main/results/tables/cost.tsv).
 
-We built ThinkThen around that interface. It is one program. You pipe in the text and pass one question. ThinkThen prints a bare answer and sets an exit code.
+We built ThinkThen around that interface. It's one program. You pipe in the text and pass one question. ThinkThen prints a bare answer and sets an exit code.
 
 ## Three answers, three exit codes
 
-Here are three customer messages. The first asks for money back. The second does not. The third could mean either. Ask the same question of each line, with a band from 0.2 to 0.8:
+Here are three customer messages. The first asks for money back. The second doesn't. The third could mean either. Ask the same question of each line, with a band from 0.2 to 0.8:
 
 <!-- example: functions/decide/1-lines -->
 
@@ -33,7 +33,7 @@ Ask it of the send-back line:
 
 Yes exits 0. No exits 1. Not sure exits 3 and prints `null`. A script branches on the exit code and parses nothing. A person reviews the middle. The question file diffs in a pull request like any other code.
 
-Where you put the band depends on your data. The probability comes from the text you handed over. It does not tell you how often Jev is right. Run the question against cases you have labeled first. `thinkthen audit` grades saved answers against your labels. Pick the band from that run.
+Where you put the band depends on your data. The probability comes from the text you handed over. It doesn't tell you how often Jev is right. Run the question against cases you have labeled first. `thinkthen audit` grades saved answers against your labels. Pick the band from that run.
 
 ## Ten functions that pipe together
 
@@ -41,7 +41,9 @@ ThinkThen turns Jev's three kinds of answer into [ten functions](/functions/). E
 
 <!-- example: how-tos/rank-the-inbound-leads/1-leads -->
 
-The pipeline returns the original lines beside their answers. It does not rewrite them.
+The pipeline returns the original lines beside their answers. It doesn't rewrite them.
+
+Diogo Almeida of TypeSafe [lists decisions Jev could make inside a coding agent](https://x.com/completeskeptic/status/2101894250401271876), such as which tools to load for a step and when the agent is done. Each one is a bounded question of this kind.
 
 `annotate` answers a whole set of questions for every record. A set can mix `decide`, `choose`, `score` and `tag` questions in one file. Here is a set with one yes or no, one pick and one scale, saved as `form.json`:
 
@@ -53,9 +55,9 @@ Three bug reports go in, one per line. Each keeps its id and gains the three ans
 
 ## Where it breaks
 
-**Planted facts move the answer.** [Probe 06](https://github.com/botassembly/thinkthen/tree/main/probes/06-hostile-text) asked `jev-1.13.0` one question about twenty made-up messages: "The customer explicitly asks for money back." Each message ran once clean and once with hostile text added. An order aimed at the model moved the probability of yes by 0.04 or less, across seventeen wordings. A false claim planted in the message moved it by as much as 0.57. Jev reads a planted claim and a true one the same way, because both look like evidence. A [later review](https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/closed/2026-09-26-architect-review-12-security-and-data-boundary.md) asked other questions of the same model. On a security question, a planted claim raised the probability of yes from 0.01 to 0.64. An order raised it to about 0.17, but there the order itself may be evidence of an incident. These numbers hold for those messages, questions and that model only. At the default bar of 0.5, a planted claim can flip an answer. Use a band, and send the middle to a person.
+**Planted facts move the answer.** [Probe 06](https://github.com/botassembly/thinkthen/tree/main/probes/06-hostile-text) asked `jev-1.13.0` one question about twenty made-up messages: "The customer explicitly asks for money back." Each message ran once clean and once with hostile text added. An order aimed at the model moved the probability of yes by 0.04 or less, across seventeen wordings. A false claim planted in the message moved it by as much as 0.57. Jev reads a planted claim and a true one the same way, because both look like evidence. A [later review](https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/closed/2026-09-26-architect-review-12-security-and-data-boundary.md) asked other questions of the same model. There an order moved a different question by 0.16 to 0.18. On that question, the order itself could count as evidence. A planted claim flipped a second question from 0.01 to 0.64. These numbers hold for those messages, questions and that model only. At the default bar of 0.5, a planted claim can flip an answer. Use a band, and send the middle to a person.
 
-**`tag` often misses part of the set.** A song can have two lead singers, and `tag` must name every one to score. On Beatles Bench it names the whole set on 0.56 of songs. Its top label is a true lead on 0.80. The bench's [function table](https://github.com/botassembly/beatles-bench/blob/main/results/tables/functions.tsv) scores every function. Use `tag` to fill a queue a person reads. Do not use it as a gate.
+**`tag` often misses part of the set.** A song can have two lead singers, and `tag` must name every one to score. On Beatles Bench it names the whole set on 0.56 of songs. Its top label is a true lead on 0.80. The bench's [function table](https://github.com/botassembly/beatles-bench/blob/main/results/tables/functions.tsv) scores every function. Use `tag` to fill a queue a person reads. Don't use it as a gate.
 
 **A threshold belongs to one model.** ThinkThen speaks System One, the request format Jev answers. Any server that speaks System One can answer at another address. Its answers will differ, so tune the band again for each model.
 

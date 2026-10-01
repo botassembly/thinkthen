@@ -16,7 +16,7 @@ The name borrows from retrieval-augmented generation, or RAG. RAG finds the righ
 
 Jev is TypeSafe's model. We built Beatles Bench to find out what it knows. A script took every right answer on the bench from Wikipedia and Wikidata. The [full results](https://github.com/botassembly/beatles-bench/blob/main/reports/results.md) give each run.
 
-Jev knows the famous facts. It misses the fine ones, such as a release date, a first album, or which of two songs runs longer. The [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md) counts the misses by topic. Ask it whether A Day in the Life is on Abbey Road. With a band of 0.1 to 0.9, Jev still says yes. That is wrong.
+Jev knows the famous facts. It misses the fine ones, such as a release date, a first album, or which of two songs runs longer. The [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md) counts the misses by topic. Ask it whether A Day in the Life is on Abbey Road. With a band of 0.1 to 0.9, Jev still says yes. That's wrong.
 
 <!-- example: beatles/rad/1-memory -->
 
