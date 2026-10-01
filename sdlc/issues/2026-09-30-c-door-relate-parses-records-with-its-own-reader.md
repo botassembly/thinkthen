@@ -2,7 +2,7 @@
 
 Status: open. Filed 2026-09-30 by ticket 0354. Owner: queue owner.
 Kind: debt
-Debt: 029
+Debt: 031
 Severity: low
 Pay when: a user sends a relate record nested past 127 levels, or the door's relate reader changes.
 

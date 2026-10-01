@@ -1,6 +1,6 @@
 # `cache prune --older-than` panics on a multi-byte unit
 
-Status: open. Filed 2026-09-30 from the system grading (`sdlc/planning/grading-2026-09-30/02-question-cache.md`, item 1), checked against main `f367545a0`. Owner: queue owner.
+Status: Closed by the quick fix landed as `Land quick fix: pre-0.1 small fixes`. Filed 2026-09-30 from the system grading (`sdlc/planning/grading-2026-09-30/02-question-cache.md`, item 1), checked against main `f367545a0`. Owner: queue owner. Resolution: `duration` in `crates/thinkthen/src/cli/cache.rs` takes the last character with `chars().next_back()`, so no split falls inside a character, and every bad value now prints "--older-than takes a positive integer and one lowercase unit", including `0s`, which used to print a generic sentence. The unit table adds five non-ASCII rows and pins the sentence on each; `default_cache/prune.rs` runs `--older-than 5é` and pins exit 2, the sentence, and an unchanged store.
 Kind: bug
 Pay when: before 0.1.
 
