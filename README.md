@@ -6,6 +6,9 @@
 
 # thinkthen
 
+> [!NOTE]
+> We are building ThinkThen 0.1 for release. The installers for the libraries and the command-line tool are still pending. They should be ready soon.
+
 ThinkThen answers typed questions about text. Ask from a shell script or from your own program, and get back `true`, `false`, a label, or a number. A failed call never looks like an answer. Use it to gate a script, label records, or grade answers in an eval.
 
 ```sh
