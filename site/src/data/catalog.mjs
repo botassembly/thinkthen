@@ -283,13 +283,13 @@ export const FUNCTIONS = [
   },
   {
     name: 'relate',
-    goal: 'relate asks the model about named entities, one possible edge per pair and rule.',
-    primitive: 'Yes or no per allowed entity pair and rule',
+    goal: 'relate asks the model about named entities, one possible edge per pair and rule, or one menu per source for a single rule.',
+    primitive: 'Yes or no per allowed entity pair and rule, or a choice per source for a single rule',
     line: 'Find relationships among named entities.',
-    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. For the links a text states, use <code>recognize --relation</code>.',
+    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. A rule asks one yes or no question for each pair. In a rules file, a rule marked <code>"single": true</code> asks one menu for each source instead, and gives that source at most one edge. For the links a text states, use <code>recognize --relation</code>.',
     takes: 'one set of named entities and relation rules',
-    gives: 'one edge for each related pair, with a probability',
-    requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. --plan prints the first request it would send.',
+    gives: 'one edge for each related pair, with a probability, and at most one edge per source for a single rule',
+    requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. A single rule asks one choice per source instead, with none of these as an option. --plan prints the first request it would send.',
     args: 'RELATION... as NAME=SOURCE_KIND:TARGET_KIND or a bare NAME, or one @FILE',
     options: [
       ['--either', 'Treats every relation as reading the same both ways.'],
