@@ -16,7 +16,7 @@ use rusqlite::vtab::{
     Context as Cell, Filters, IndexInfo, Module, VTab, VTabConfig, VTabConnection, VTabCursor,
 };
 
-use crate::many::{ChooseMany, DecideMany, ScoreMany, Store, TagMany};
+use crate::many::{ChooseMany, DecideMany, Rank, ScoreMany, Store, TagMany};
 use crate::tables::{self, Recognizer, Relater, Table};
 use crate::{budget, guard, scalars};
 
@@ -182,7 +182,8 @@ fn init(connection: Connection) -> rusqlite::Result<bool> {
         &SCORE_MANY,
         Some(Arc::clone(&store)),
     )?;
-    connection.create_module(c"thinkthen_tag_many", &TAG_MANY, Some(store))?;
+    connection.create_module(c"thinkthen_tag_many", &TAG_MANY, Some(Arc::clone(&store)))?;
+    connection.create_module(c"thinkthen_rank", &RANK, Some(store))?;
     pin();
     Ok(false)
 }
@@ -218,6 +219,7 @@ const DECIDE_MANY: Module<'static, Tab<DecideMany>> = Module::eponymous_only_mod
 const CHOOSE_MANY: Module<'static, Tab<ChooseMany>> = Module::eponymous_only_module();
 const SCORE_MANY: Module<'static, Tab<ScoreMany>> = Module::eponymous_only_module();
 const TAG_MANY: Module<'static, Tab<TagMany>> = Module::eponymous_only_module();
+const RANK: Module<'static, Tab<Rank>> = Module::eponymous_only_module();
 
 /// One table-valued function's virtual table.
 #[repr(C)]

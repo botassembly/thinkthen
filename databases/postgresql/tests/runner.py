@@ -219,18 +219,20 @@ def many(case, success):
 
 def selected_rows(case, success):
     records = [exchange["evidence"] for exchange in case["exchanges"]]
-    question = lit(json.dumps(case["question"]))
-    input_rows = f"SELECT key::int AS i, value AS decided, probability FROM thinkthen_decide_many({question}, {keyed(records)})"
     if case["verb"] == "filter":
+        question = lit(json.dumps(case["question"]))
+        input_rows = f"SELECT key::int AS i, value AS decided, probability FROM thinkthen_decide_many({question}, {keyed(records)})"
         query = (f"WITH input AS MATERIALIZED ({input_rows}), "
                  "kept AS MATERIALIZED (SELECT i FROM input WHERE decided) "
                  "SELECT coalesce(json_agg(i ORDER BY i), '[]'::json) FROM kept")
         wanted = success["operation"]["indexes"]
     else:
-        query = (f"WITH input AS MATERIALIZED ({input_rows}), "
-                 "scored AS MATERIALIZED (SELECT i, probability FROM input) "
+        # Batch 1 keeps one recorded exchange per record.
+        ranked = (f"SELECT key::int AS i, rank, probability FROM thinkthen_rank("
+                  f"{lit(case['question']['decide'])}, {keyed(records)}, '{{\"batch\":1}}'::json)")
+        query = (f"WITH ranked AS MATERIALIZED ({ranked}) "
                  "SELECT coalesce(json_agg(json_build_object('index', i, 'probability', probability) "
-                 "ORDER BY probability DESC, i), '[]'::json) FROM scored")
+                 "ORDER BY rank), '[]'::json) FROM ranked")
         wanted = success["operation"]["ranking"]
     lines = psql("SELECT requests_sent FROM thinkthen_usage()", query,
                  "SELECT requests_sent FROM thinkthen_usage()").splitlines()
@@ -316,7 +318,7 @@ def refused(case, kind):
         question = lit(f"@{path}")
     try:
         if case["id"] == "31-usage-rank-blank-question":
-            got = psql(f"SELECT count(*) FROM thinkthen_decide_many({question}, {keyed([evidence])})")
+            got = psql(f"SELECT count(*) FROM thinkthen_rank({lit(case['question']['decide'])}, {keyed([evidence])})")
         else:
             got = psql(f"SELECT thinkthen_decide({question}, {lit(evidence)})")
     except Failed as error:

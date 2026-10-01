@@ -20,8 +20,5 @@ mod signal;
 #[path = "usage/ffi.rs"]
 mod usage_ffi;
 
-#[path = "warm/ffi.rs"]
-mod warm_ffi;
-
 #[path = "relate/ffi.rs"]
 mod relate_ffi;

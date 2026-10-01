@@ -85,6 +85,7 @@ Open items:
 - [`rank --threshold P` keeps only records at or above a probability](../issues/2026-10-01-rank-keeps-only-records-over-a-threshold.md)
 - [`score --level NAME=MEANING` describes a level on the command line](../issues/2026-10-01-score-levels-described-on-the-command-line.md)
 - [SQL named forms `thinkthen_rank` and `thinkthen_filter`](../issues/2026-10-01-sql-names-for-rank-and-filter.md)
+- [SQLite `thinkthen_find` drops its `model` setting](../issues/2026-10-01-sqlite-find-drops-its-model-setting.md)
 
 ## later
 

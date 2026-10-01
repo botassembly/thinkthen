@@ -145,13 +145,16 @@ def filtered(case: dict, base: str) -> list:
     return [index for (index,) in rows(got[0])]
 
 
-def ranked(case: dict, base: str) -> list:
+def ranked(case: dict, base: str, backend: Backend) -> list:
+    """One keyed rank call at batch 1 sends one recorded request per record."""
+    keyed = json.dumps({str(index): text for index, text in enumerate(evidence(case))})
     got = run(
-        [f"SELECT i, thinkthen_probability({quoted(json.dumps(case['question']))}, x) AS p FROM {values(evidence(case))} ORDER BY p DESC, i"],
+        [f"SELECT key, probability FROM thinkthen_rank({quoted(case['question']['decide'])}, {quoted(keyed)}) ORDER BY rank"],
         base,
         extra=BATCH_ONE,
     )
-    return [{"index": index, "probability": probability} for index, probability in rows(got[0])]
+    expect(backend.count(), len(case["exchanges"]), f"{case['id']} rank requests")
+    return [{"index": int(key), "probability": probability} for key, probability in rows(got[0])]
 
 
 def record(case: dict) -> list[str]:
@@ -271,7 +274,7 @@ def fault(case: dict, backend: Backend) -> str:
             path.write_text(json.dumps(question))
             statement = ask.format(quoted("@" + str(path)))
         elif form == "text" and case["verb"] == "rank":
-            statement = f"SELECT i FROM {values(['a', 'b'])} ORDER BY thinkthen_probability({quoted(json.dumps(question))}, x) DESC"
+            statement = f"SELECT key FROM thinkthen_rank({quoted(question['decide'])}, '{{\"0\":\"a\",\"1\":\"b\"}}')"
         elif form == "text":
             statement = ask.format(quoted(json.dumps(question)))
         elif injection == "invalid_arguments":
@@ -309,7 +312,7 @@ def check(case: dict) -> str | None:
         elif kind == "filter":
             got, wanted = filtered(case, base), success["operation"]["indexes"]
         elif kind == "rank":
-            got, wanted = ranked(case, base), success["operation"]["ranking"]
+            got, wanted = ranked(case, base, backend), success["operation"]["ranking"]
         elif kind == "annotate":
             got, wanted = annotated(case, base), expected(case)
         elif kind == "decide_many":

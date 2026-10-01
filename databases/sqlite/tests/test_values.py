@@ -329,6 +329,7 @@ db = connect()
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
 db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, "Ada", "person"), (2, "Acme", "organization")])
 calls = ["SELECT thinkthen_configure('{}')", "SELECT count(*) FROM thinkthen_decide_many('Is it red?', json_object('7','a red door'))",
+         "SELECT count(*) FROM thinkthen_rank('Is it red?', json_object('7','a red door'))",
          "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
          "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
 calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_details", "thinkthen_warm") for deadline in ("", ", 0")]
@@ -351,7 +352,7 @@ def test_no_message_carries_the_key_or_the_address_credentials() -> None:
     said = json.dumps([busy, refused])
     expect([secret for secret in (SECRET_KEY, USER, PASSWORD) if secret in said], [], f"the sentinels in {said}")
     expect(sum("thinkthen backend: the backend answered with status 503 (retryable: yes)" in str(one)
-               for one in busy["said"]), 9, f"the busy errors in {busy}")
+               for one in busy["said"]), 10, f"the busy errors in {busy}")
     expect("thinkthen usage: THINKTHEN_BASE_URL: a base address carries no user information (retryable: no)" in refused["said"], True, "the refused address")
 
 

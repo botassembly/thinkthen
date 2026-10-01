@@ -1,4 +1,5 @@
-//! Four keyed judgment tables with eight connection-owned packed answer slots.
+//! Four keyed judgment tables and the keyed rank table, with eight
+//! connection-owned packed answer slots.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::ffi::{CStr, c_int};
@@ -9,7 +10,7 @@ use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::Filters;
 use serde::de::{Error as _, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use thinkthen::{For, Judgment, Probabilities};
+use thinkthen::{For, Judgment, Probabilities, Question, Settings};
 
 use crate::question::{Stamp, call_settings, question_with_settings, stamp};
 use crate::tables::{Scan, Table};
@@ -17,6 +18,9 @@ use crate::{Failure, worker};
 
 type Rows = Arc<Vec<Vec<Value>>>;
 type HeldRows = (Rows, Arc<HashMap<String, usize>>);
+
+/// The rank table's name, whose question never names a file.
+const RANK: &str = "thinkthen_rank";
 
 /// A slot owns its argument bytes; no SQLite-owned pointer escapes xFilter.
 #[derive(Debug)]
@@ -47,7 +51,7 @@ impl Store {
         settings: &[u8],
         file_stamp: Option<Stamp>,
     ) -> Option<HeldRows> {
-        if question.starts_with(b"@") && file_stamp.is_none() {
+        if kind != RANK && question.starts_with(b"@") && file_stamp.is_none() {
             return None;
         }
         let at = self
@@ -246,7 +250,12 @@ fn scan(
     // applies to malformed text, which SQLite can compare without this host
     // interpreting it as a UTF-8 key.
     let lookup = lookup(values[3]);
-    let file_stamp = stamp(question);
+    // A rank question is literal text, as find's is, so it names no file.
+    let file_stamp = if verb == For::Rank {
+        None
+    } else {
+        stamp(question)
+    };
     {
         let mut held = store
             .lock()
@@ -259,37 +268,17 @@ fn scan(
     let packed_text = string(packed, "the keyed records")?;
     string(settings, "the settings")?;
     let controls = call_settings(ValueRef::Text(settings))?;
-    let held = question_with_settings(&question_text, &controls, verb)?;
-    let records = keyed(&packed_text)?;
-    let keys: Vec<_> = records.iter().map(|(key, _)| key.clone()).collect();
-    let texts: Vec<_> = records.into_iter().map(|(_, text)| text).collect();
-    let shared = controls.context().map(str::to_owned);
-    let values = worker::run_settings(db, controls, move |engine, options| {
-        let options = if let Some(shared) = &shared {
-            options.context(shared)
-        } else {
-            options
-        };
-        engine
-            .details_many_with(&*held, texts, options)
-            .map(|row| answer_columns(&row?.into_parts().1, kind))
-            .collect::<Result<Vec<_>, Failure>>()
-    })?;
-    if keys.len() != values.len() {
-        return Err(Failure::defect("a packed call changed its row count"));
-    }
-    let mut positions = HashMap::with_capacity(keys.len());
-    let rows: Vec<_> = keys
+    let rows = if verb == For::Rank {
+        ranked(db, &question_text, &packed_text, controls)?
+    } else {
+        answered(db, &question_text, &packed_text, controls, kind, verb)?
+    };
+    let positions: HashMap<_, _> = rows
         .iter()
-        .zip(values)
         .enumerate()
-        .map(|(at, (key, (value, probability)))| {
-            positions.insert(key.clone(), at);
-            if matches!(verb, For::Decide | For::Choose) {
-                vec![Value::Text(key.clone()), value, probability]
-            } else {
-                vec![Value::Text(key.clone()), value]
-            }
+        .filter_map(|(at, row)| match row.first() {
+            Some(Value::Text(key)) => Some((key.clone(), at)),
+            _ => None,
         })
         .collect();
     let rows = Arc::new(rows);
@@ -314,6 +303,93 @@ fn scan(
     Ok(selected(rows, positions, lookup))
 }
 
+/// One packed call's `(key, value[, probability])` rows in keyed order.
+fn answered(
+    db: *mut sqlite3,
+    question: &str,
+    packed: &str,
+    controls: Settings,
+    kind: &'static str,
+    verb: For,
+) -> Result<Vec<Vec<Value>>, Failure> {
+    let held = question_with_settings(question, &controls, verb)?;
+    let records = keyed(packed)?;
+    let keys: Vec<_> = records.iter().map(|(key, _)| key.clone()).collect();
+    let texts: Vec<_> = records.into_iter().map(|(_, text)| text).collect();
+    let shared = controls.context().map(str::to_owned);
+    let values = worker::run_settings(db, controls, move |engine, options| {
+        let options = if let Some(shared) = &shared {
+            options.context(shared)
+        } else {
+            options
+        };
+        engine
+            .details_many_with(&*held, texts, options)
+            .map(|row| answer_columns(&row?.into_parts().1, kind))
+            .collect::<Result<Vec<_>, Failure>>()
+    })?;
+    if keys.len() != values.len() {
+        return Err(Failure::defect("a packed call changed its row count"));
+    }
+    Ok(keys
+        .into_iter()
+        .zip(values)
+        .map(|(key, (value, probability))| {
+            if matches!(verb, For::Decide | For::Choose) {
+                vec![Value::Text(key), value, probability]
+            } else {
+                vec![Value::Text(key), value]
+            }
+        })
+        .collect())
+}
+
+/// One rank call's `(key, rank, probability)` rows, best first. The question
+/// is literal text and takes only `model` among question fields.
+fn ranked(
+    db: *mut sqlite3,
+    question: &str,
+    packed: &str,
+    controls: Settings,
+) -> Result<Vec<Vec<Value>>, Failure> {
+    controls
+        .check(For::Rank)
+        .map_err(|error| Failure::usage(error.to_string()))?;
+    let asked = Question::rank(question)?;
+    let asked = match controls.model() {
+        Some(model) => asked.with_model(model)?,
+        None => asked,
+    };
+    let records = keyed(packed)?;
+    if records.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
+    let shared = controls.context().map(str::to_owned);
+    let ranked = worker::run_settings(db, controls, move |engine, options| {
+        let options = if let Some(shared) = &shared {
+            options.context(shared)
+        } else {
+            options
+        };
+        Ok(engine.rank_with(&asked, texts, options)?.into_value())
+    })?;
+    ranked
+        .iter()
+        .zip(1_i64..)
+        .map(|(row, place)| {
+            let key = keys
+                .get(row.index())
+                .ok_or_else(|| Failure::defect("a ranked row lost its record"))?;
+            Ok(vec![
+                Value::Text(key.clone()),
+                Value::Integer(place),
+                Value::Real(row.probability()),
+            ])
+        })
+        .collect()
+}
+
 macro_rules! many {
     ($name:ident, $sql:literal, $schema:literal, $verb:expr) => {
         #[derive(Debug)]
@@ -321,7 +397,7 @@ macro_rules! many {
         impl Table for $name {
             const NAME: &'static str = $sql;
             const SCHEMA: &'static CStr = $schema;
-            const FIRST_HIDDEN: usize = if matches!($verb, For::Decide | For::Choose) {
+            const FIRST_HIDDEN: usize = if matches!($verb, For::Decide | For::Choose | For::Rank) {
                 3
             } else {
                 2
@@ -347,3 +423,4 @@ many!(DecideMany, "thinkthen_decide_many", c"CREATE TABLE x(key TEXT, value INTE
 many!(ChooseMany, "thinkthen_choose_many", c"CREATE TABLE x(key TEXT, value TEXT, probability REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Choose);
 many!(ScoreMany, "thinkthen_score_many", c"CREATE TABLE x(key TEXT, value REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Score);
 many!(TagMany, "thinkthen_tag_many", c"CREATE TABLE x(key TEXT, value TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Tag);
+many!(Rank, "thinkthen_rank", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Rank);

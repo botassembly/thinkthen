@@ -39,9 +39,10 @@ def test_old_scalar_probability_refuses_without_a_send() -> None:
     backend = Backend()
     held = child("""
 db = connect()
-say(old=run(db, "SELECT thinkthen_probability('q','e')"))
+say(old=run(db, "SELECT thinkthen_probability('q','e')"), settings=run(db, "SELECT thinkthen_probability('q','e','{}')"))
 """, environment(backend))
-    expect(held["old"], "thinkthen usage: thinkthen_probability was removed; read probability from thinkthen_decide_many or thinkthen_choose_many", "old scalar")
+    sentence = "thinkthen usage: thinkthen_probability was removed; order records with thinkthen_rank"
+    expect((held["old"], held["settings"]), (sentence, sentence), "old scalar with two and three arguments")
     expect(backend.close(), 0, "no old scalar send")
 
 

@@ -11,7 +11,6 @@
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 
 #include <map>
-#include <cmath>
 #include <cstring>
 #include <optional>
 #include <tuple>
@@ -19,6 +18,9 @@
 
 namespace duckdb {
 namespace {
+
+// The keyed kind `thinkthen_rank` sends; the bridge reads the same number.
+constexpr int32_t RANK_KIND = 8;
 
 struct PortableBind : FunctionData {
 	weak_ptr<ClientContext> context;
@@ -145,7 +147,10 @@ void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (question.IsNull() || keyed.IsNull()) { continue; }
 		auto settings = args.data[2].GetValue(row);
 		auto kind = args.data[3].GetValue(row).GetValue<int32_t>();
-		Row call {owner->Resolve(*context, question.GetValue<string>()), keyed.GetValue<string>(),
+		// A rank question is literal text, as find's is, and never opens a file.
+		auto asked = kind == RANK_KIND ? ResolvedQuestion {question.GetValue<string>(), false}
+		                               : owner->Resolve(*context, question.GetValue<string>());
+		Row call {std::move(asked), keyed.GetValue<string>(),
 		          settings.IsNull() ? string("{}") : settings.GetValue<string>(), kind};
 		RustReply checked(thinkthen_cpp_validate_portable_many(
 		    reinterpret_cast<const uint8_t *>(call.question.text.data()), call.question.text.size(),
@@ -335,33 +340,23 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (!reply.value.bytes) { throw OrdinaryError("thinkthen defect: the bridge returned no scalar values"); }
 		size_t at = 0;
 		for (idx_t index = 0; index < texts.size(); ++index) {
-			if (group.kind == 1) {
-				if (reply.value.len - at < sizeof(double)) { throw OrdinaryError("thinkthen defect: truncated probability"); }
-				double value;
-				std::memcpy(&value, reply.value.bytes + at, sizeof(value));
-				at += sizeof(value);
-				if (!std::isfinite(value) || value < 0 || value > 1) { throw OrdinaryError("thinkthen defect: invalid probability"); }
-				values.push_back(Value::DOUBLE(value));
-			} else {
-				if (reply.value.len - at < sizeof(uint32_t)) { throw OrdinaryError("thinkthen defect: truncated details length"); }
-				uint32_t length;
-				std::memcpy(&length, reply.value.bytes + at, sizeof(length));
-				at += sizeof(length);
-				if (reply.value.len - at < length) { throw OrdinaryError("thinkthen defect: truncated details"); }
-				values.push_back(Value(string(reinterpret_cast<const char *>(reply.value.bytes + at), length)));
-				at += length;
-			}
+			if (reply.value.len - at < sizeof(uint32_t)) { throw OrdinaryError("thinkthen defect: truncated details length"); }
+			uint32_t length;
+			std::memcpy(&length, reply.value.bytes + at, sizeof(length));
+			at += sizeof(length);
+			if (reply.value.len - at < length) { throw OrdinaryError("thinkthen defect: truncated details"); }
+			values.push_back(Value(string(reinterpret_cast<const char *>(reply.value.bytes + at), length)));
+			at += length;
 		}
 		if (at != reply.value.len) { throw OrdinaryError("thinkthen defect: extra scalar bytes"); }
 		answers.push_back(std::move(values));
 	}
-	const auto kind = args.data[3].GetValue(0).GetValue<int32_t>();
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (slots[row]) {
 			auto [group, text] = *slots[row];
 			result.SetValue(row, answers.at(group).at(text));
 		} else {
-			result.SetValue(row, Value(kind == 1 ? LogicalType::DOUBLE : LogicalType::VARCHAR));
+			result.SetValue(row, Value(LogicalType::VARCHAR));
 		}
 	}
 }
@@ -431,12 +426,18 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		                      "CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE CAST(settings AS VARCHAR) END, "
 		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))");
 	}
-	for (auto kind : {1, 2, 3, 7}) {
-		const string name = kind == 1 ? "probability" : kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
+	RegisterMacro(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL) "
+	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
+	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
+	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability "
+	                      "FROM json_each(thinkthen_native_many(question, keyed_json, settings, "
+	                      + std::to_string(RANK_KIND) + ")) item ORDER BY rank");
+	for (auto kind : {2, 3, 7}) {
+		const string name = kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
 		ScalarFunction native("thinkthen_native_" + name,
 		                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                       LogicalType::INTEGER, LogicalType::VARCHAR},
-		                      kind == 1 ? LogicalType::DOUBLE : LogicalType::VARCHAR, Scalar, Bind);
+		                      LogicalType::VARCHAR, Scalar, Bind);
 		native.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 		native.SetStability(FunctionStability::VOLATILE);
 		loader.RegisterFunction(native);

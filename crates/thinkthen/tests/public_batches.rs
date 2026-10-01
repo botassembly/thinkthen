@@ -37,6 +37,9 @@ mod tiers;
 #[path = "public_batches/cache.rs"]
 mod cache;
 
+#[path = "public_batches/ranks.rs"]
+mod ranks;
+
 #[path = "../src/test_deadline/wait.rs"]
 #[allow(dead_code, reason = "only the child deadline bounds the churn here")]
 mod wait;

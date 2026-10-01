@@ -151,34 +151,42 @@ def six_song_vector_and_keyed_forms_share_one_packed_body():
 
 
 @case
-def removed_warm_forms_refuse_without_transport():
+def removed_warm_and_probability_forms_refuse_without_transport():
     with Backend() as backend:
         got = run([
             "SELECT thinkthen_warm('Is it a refund?', 'refund now')",
             "SELECT thinkthen_warm('Is it a refund?', 'refund now', 'shared')",
+            "SELECT thinkthen_probability('Is it a refund?', 'refund now')",
+            "SELECT thinkthen_probability('Is it a refund?', 'refund now', '{\"threshold\":0.7}')",
+            "SELECT thinkthen_probability('Is it a refund?', 'refund now', settings := '{}')",
+            "SELECT thinkthen_probability('Is it a refund?', 'refund now', 0)",
+            "SELECT thinkthen_probability('Is it a refund?', NULL)",
         ], backend.base())
-        for result in got:
+        for result in got[:2]:
             expect(said(result),
                    "thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many",
                    "removed warm sentence")
-        expect(backend.count(), 0, "removed warm opens no request")
+        for result in got[2:]:
+            expect(said(result),
+                   "thinkthen usage: thinkthen_probability was removed; order records with thinkthen_rank",
+                   "removed probability sentence")
+        expect(backend.count(), 0, "removed calls open no request")
 
 
 @case
-def probability_and_details_share_one_portable_request():
+def rank_and_details_share_one_portable_request():
     with Backend() as backend:
         got = run([
-            "SELECT thinkthen_probability('Is it a refund?', 'refund now', '{\"threshold\":0.7}')",
-            "SELECT thinkthen_details('Is it a refund?', 'refund now', '{\"threshold\":0.7}')",
-            "SELECT thinkthen_probability('Is it a refund?', 'refund now', 0)",
+            "SELECT key, rank, probability FROM thinkthen_rank('Is it a refund?', '{\"a\":\"refund now\"}', '{\"batch\":1}')",
+            "SELECT thinkthen_details('Is it a refund?', 'refund now', '{\"batch\":1}')",
+            "SELECT * FROM thinkthen_rank('Is it a refund?', '{\"a\":\"refund now\"}', '{\"threshold\":0.7}')",
         ], backend.base())
-        expect(rows(got[0]), [[0.9]], "probability from one answer")
+        expect(rows(got[0]), [["a", 1, 0.9]], "rank row from one answer")
         detail = json.loads(rows(got[1])[0][0])
         expect(detail["value"], True, "details retains the decision")
-        expect(said(got[2]),
-               "thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'",
-               "removed probability deadline")
-        expect(backend.count(), 1, "probability and details read one cache identity")
+        expect(said(got[2]), "thinkthen usage: the settings key `threshold` does not belong to this verb (retryable: no)",
+               "rank refuses a threshold")
+        expect(backend.count(), 1, "rank and details read one cache identity")
 
 
 @case
