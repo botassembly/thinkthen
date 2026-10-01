@@ -1,10 +1,10 @@
 .load ./thinkthen
 
 WITH t(body) AS (VALUES
-    ('Please refund my order. It arrived broken.'),
-    ('Thanks for the quick help yesterday!'),
-    ('I want to send this back.'))
+    ('I would like to return this and get ' ||
+     'my money back.' || char(10)),
+    ('I want to send this back.' || char(10)))
 SELECT
     thinkthen_decide('@refund.json', body) AS is_refund,
-    body
+    trim(body, char(10)) AS body
 FROM t;

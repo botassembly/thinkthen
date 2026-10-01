@@ -1,0 +1,5 @@
+1|Maria Chen|person
+1|Northwind Freight|organization
+1|Chicago|place
+1|works_for|Maria Chen|Northwind Freight
+1|based_in|Northwind Freight|Chicago

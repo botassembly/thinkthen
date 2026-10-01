@@ -325,6 +325,9 @@ ol.talk code { font-size: .95em; }
 p code, li code { white-space: nowrap; }
 
 /* --------------------------------------------------------------- settings */
+/* The settings page renders the specification's text, whose code spans can
+   run long. They wrap, so the page never scrolls sideways. */
+.spec-text code, .settings code { white-space: normal; overflow-wrap: anywhere; }
 
 .settings-filter { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; margin: 1rem 0; font-size: .9rem; color: var(--muted); }
 .settings-filter[hidden] { display: none; }

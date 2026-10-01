@@ -45,15 +45,15 @@ const findText = (row) => plain([
   <p>The page comes from the <a href={specUrl}>settings table</a> in the product's specification.</p>
 
   <h2>What counts as a setting</h2>
-  <Fragment set:html={blocksHtml(whatCounts)} />
+  <div class="spec-text"><Fragment set:html={blocksHtml(whatCounts)} /></div>
 
   <h2 id="which-value-wins">Which value wins</h2>
-  <Fragment set:html={blocksHtml(precedence)} />
+  <div class="spec-text"><Fragment set:html={blocksHtml(precedence)} /></div>
   {examples.map((r) => <Terminal run={r} caption={r.see} />)}
 
   <h2 id="every-setting">Every setting</h2>
   <p>Each setting below lists only the surfaces it reaches, with the spelling each one uses.</p>
-  <p set:html={inlineHtml(readNotes.join(' '))}></p>
+  <p class="spec-text" set:html={inlineHtml(readNotes.join(' '))}></p>
 
   <div class="settings-filter" data-settings-filter hidden>
     <label>Find a setting <input type="search" data-settings-find placeholder="a name, a flag, a word" /></label>

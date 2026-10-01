@@ -791,7 +791,7 @@ export const SURFACES = [
     blurb: 'Judge a whole table in one call, then join the answers back by key.',
     unsureWord: '`NULL`',
     facts: '`thinkthen_usage()` gives the totals for the process.',
-    errors: 'A failure is an error that reads `thinkthen <kind>: <message> (retryable: yes|no)`.',
+    errors: 'A failure is an error whose text starts `thinkthen <kind>: `. The message follows, and the text ends with `(retryable: yes)` or `(retryable: no)`.',
     settings: '`thinkthen_configure` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [['.load ./thinkthen', null]],
     particular: [
