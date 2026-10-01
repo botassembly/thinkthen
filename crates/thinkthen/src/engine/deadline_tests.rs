@@ -3,7 +3,7 @@
 
 use std::cell::Cell;
 use std::fs;
-use std::io::{ErrorKind, Read as _, Write as _};
+use std::io::{ErrorKind, Write as _};
 use std::net::TcpListener;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::{self, JoinHandle};
@@ -13,6 +13,7 @@ use crate::engine::error::{Budget, Error, Kind, TransportKind};
 use crate::engine::http::{Client, Exchange, HttpAnswer, Key};
 use crate::engine::usage::Counters;
 use crate::engine::{Cancel, Deadline};
+use crate::test_deadline::whole_request;
 
 const SECOND: Duration = Duration::from_secs(1);
 
@@ -115,8 +116,7 @@ fn serve(replies: Vec<Reply>) -> (Server, Receiver<()>) {
         for reply in replies {
             let (mut stream, _) = listener.accept().expect("request");
             connections += 1;
-            let mut request = [0_u8; 4096];
-            let _read = stream.read(&mut request).expect("request bytes");
+            whole_request(&mut stream);
             let _observed = received_send.send(());
             let written = match reply {
                 Reply::Busy(millis) => format!(

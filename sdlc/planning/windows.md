@@ -56,7 +56,7 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 
 ## Findings stage 0 leaves open
 
-Each finding has a test that shows it. Stage 1 owns W1 to W6 unless the stage 1 tickets say otherwise.
+Each finding has a test that shows it. Stage 1 owns W1 to W7 unless the stage 1 tickets say otherwise. W8 waits for stage 3.
 
 - **W1. Ctrl-C outside an active command exits 3.** `signal-hook`'s conditional default re-raises through the C runtime when no command holds the cancel, and the C runtime ends the process with exit 3. A cancelled command returns 130. The fix needs a console control handler, which the standard library does not expose; it needs `windows-sys` and a `policy.py` and `deny.toml` update. A Windows Ctrl-C end-to-end test needs `GenerateConsoleCtrlEvent` for the same reason.
 - **W2. No privacy checks on Windows.** The usage store's mode, owner and identity checks are `cfg(unix)`, and `config::writable_by_another` returns `false` off Unix. The usage refusal sentences say "folder 0700, files 0600", which means nothing on Windows. A Windows check reads the folder's ACL and needs `windows-sys`.
@@ -65,6 +65,7 @@ Each finding has a test that shows it. Stage 1 owns W1 to W6 unless the stage 1 
 - **W5. The short loopback spelling `127.1` does not resolve on Windows.** The command is right to refuse it without a key, but the tests that prove the refusal cannot build the address. Tests: `address::a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback` and `cli::conformance_tests::command::the_runner_hides_a_key_and_an_address_from_its_children`.
 - **W6. The XDG-folder tests do not run on Windows.** About thirty integration cases set `XDG_CONFIG_HOME`, `XDG_CACHE_HOME` or `XDG_STATE_HOME`, or pin a Linux path under `HOME`. Windows puts the cache and the usage both under `LOCALAPPDATA`, so the XDG names cannot map one to one. Stage 1 adds a test helper that names each default folder per platform and ports the cases.
 - **W7. `clippy.toml`'s disallowed Unix paths warn "not reachable" on Windows.** The lint still passes; the warning is noise.
+- **W8. The busy-parent fork proof hung on Windows.** `engine::facade::fork_tests::a_child_beside_a_busy_parent_uses_fresh_state` passed on one runner attempt and ran past its 60-second bound on two later ones. Windows has no `fork`, so the proof models a Unix case, and it carries `#[cfg(unix)]`. The cause is not known. Stage 3 looks again if a Windows binding ever builds an engine in a child process.
 
 ## Stage 1 difficulty report
 

@@ -5,9 +5,10 @@ use super::{
 };
 use crate::engine::error::{Error, TransportKind};
 use crate::engine::usage::Counters;
+use crate::test_deadline::whole_request;
 use std::cell::Cell;
 use std::io::{self, Read as _, Write as _};
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpListener;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
@@ -482,16 +483,4 @@ fn a_connection_idle_for_a_second_is_not_reused_and_nothing_is_sent_twice() {
     let seen = tally.each_ref().map(|count| count.load(Ordering::SeqCst));
     assert_eq!(seen, [2, 2, 0], "connections, requests read, dropped");
     assert_eq!(counts.snapshot().requests_sent, 2);
-}
-
-/// Read the whole `{}` request before replying. A socket closed with unread
-/// bytes resets the connection, and on Windows the reset can reach the client
-/// before the reply does.
-fn whole_request(stream: &mut TcpStream) {
-    let (mut chunk, mut whole) = ([0_u8; 1024], Vec::new());
-    while !whole.ends_with(b"\r\n\r\n{}") {
-        let read = stream.read(&mut chunk).expect("request bytes");
-        assert!(read > 0, "the whole request arrives");
-        whole.extend_from_slice(&chunk[..read]);
-    }
 }
