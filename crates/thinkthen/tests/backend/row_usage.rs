@@ -2,6 +2,12 @@
 //! share removes the usage, and otherwise a sum that does not fit fails the
 //! row, whatever order the shares arrive in.
 
+#![allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "a failed fixture setup or a missing field should stop the boundary test"
+)]
+
 use std::fs;
 use std::path::PathBuf;
 use std::process::Output;
