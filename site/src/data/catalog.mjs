@@ -563,6 +563,55 @@ export const SETTINGS_SEE = {
   '2-flag': 'The same variable is set, and --url names another address. The flag wins.',
 };
 
+// The Backends section under /install/backends/, in side-list order. Each
+// page runs the scripts in examples/install/backends/<slug>/, and `see`
+// says what to look for in each.
+export const BACKEND_PAGES = [
+  { slug: '', title: 'Backends', label: 'Overview', group: null },
+  { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Built in' },
+  { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Built in' },
+  { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
+  { slug: 'system-one', title: 'Any System One server', label: 'Any System One server', group: 'Your own' },
+  { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
+].map((p) => ({ ...p, route: `/install/backends/${p.slug ? `${p.slug}/` : ''}` }));
+
+export const BACKENDS_SEE = {
+  typesafe: {
+    '1-one': 'Jev answers yes. Sending the item back asks for a refund.',
+    '2-lines': 'One request carries all three lines. The thanks is the only no.',
+    '3-check-plan': "The check would post to TypeSafe's address with Jev's pinned model. The plan sends nothing.",
+  },
+  liquid: {
+    '1-status': 'status names the address, the model, and the variable the key comes from. It sends nothing.',
+    '2-one': 'd1 answers no and exits 1. Jev answers yes to the same line.',
+    '3-lines': 'One request carries all three lines. d1 says yes to the broken order and no to the send-back line.',
+    '4-check-plan': "The check would post to Liquid's address with d1:free. The plan sends nothing.",
+  },
+  ollama: {
+    '1-check-plan': 'The plan names the second port and nimble. The first line says descriptions travel as text.',
+    '2-one': 'The nimble model answers yes, as Jev does.',
+    '3-lines': 'One request carries all three lines. The nimble model gives the same three answers as Jev.',
+    '4-tev1': 'The smaller tev1 model also answers yes.',
+  },
+  'system-one': {
+    '1-environment': 'THINKTHEN_BASE_URL names the server. The address came from the environment, and the key will come from THINKTHEN_API_KEY.',
+    '2-entry': 'The entry local-d1 brings its own address, model, and key variable.',
+    '3-bad-rate': 'A rate of 0 is out of range. The command names the field, exits 5, and sends nothing.',
+    '4-check-plan': "The check would post its four probes to the server's systemone endpoint.",
+  },
+  'other-servers': {
+    '1-request': 'The plan prints the exact body a server receives at BASE/systemone.',
+  },
+};
+
+// Captions for the Configuration page's examples, keyed by script name.
+export const CONFIGURATION_SEE = {
+  '1-default': 'With no XDG variable, all three paths sit under HOME.',
+  '2-xdg': 'Absolute XDG variables move the configuration file, the cache, and the usage totals.',
+  '3-relative': 'A relative XDG_CONFIG_HOME does not count. The path falls back to HOME.',
+  '4-file': 'The file names liquid. THINKTHEN_BACKEND outranks the file and names ollama.',
+};
+
 // The business how-tos. Each page runs the scripts in
 // examples/how-tos/<slug>/, and `see` says what to look for in each.
 export const HOWTOS = [

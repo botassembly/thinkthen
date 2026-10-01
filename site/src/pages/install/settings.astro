@@ -47,7 +47,7 @@ const findText = (row) => plain([
   <h2>What counts as a setting</h2>
   <Fragment set:html={blocksHtml(whatCounts)} />
 
-  <h2>Which value wins</h2>
+  <h2 id="which-value-wins">Which value wins</h2>
   <Fragment set:html={blocksHtml(precedence)} />
   {examples.map((r) => <Terminal run={r} caption={r.see} />)}
 
@@ -85,7 +85,7 @@ const findText = (row) => plain([
   </div>
   <p class="settings-none" data-settings-none hidden>No setting matches.</p>
 
-  <p class="pagelinks"><a href="/install/backends/">Backends</a> · <a href="/reference/">Reference</a></p>
+  <p class="pagelinks"><a href="/install/configuration/">Configuration</a> · <a href="/install/backends/">Backends</a> · <a href="/reference/">Reference</a></p>
 
 <script is:inline>
   (function () {

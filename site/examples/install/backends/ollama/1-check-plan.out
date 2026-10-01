@@ -1,0 +1,5 @@
+thinkthen: backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out
+url http://localhost:11535/v1/systemone
+provider systemone
+model asked unspecified
+model sent nimble

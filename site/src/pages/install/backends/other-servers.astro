@@ -1,0 +1,32 @@
+---
+// Goal: say what a server must do before ThinkThen can ask it, so the reader can judge a server that does not speak System One yet.
+import SidePage from '../../../layouts/SidePage.astro';
+import Terminal from '../../../components/Terminal.astro';
+import { BACKEND_PAGES, BACKENDS_SEE } from '../../../data/catalog.mjs';
+import { captioned } from '../../../data/samples.mjs';
+
+const page = BACKEND_PAGES.find((p) => p.slug === 'other-servers');
+const [request] = captioned('install/backends/other-servers', BACKENDS_SEE['other-servers']);
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'What a server must do before ThinkThen can ask it, and how to bridge a server that does not speak System One yet.' }} name="Backends">
+  <h1>Servers without System One</h1>
+  <p class="lede">ThinkThen speaks one wire shape, System One. A server with another shape needs a small server in front of it that speaks System One.</p>
+
+  <h2>What the server must do</h2>
+  <ul>
+    <li>Accept <code>POST BASE/systemone</code> with a JSON body.</li>
+    <li>Read the body below: the text in <code>state</code>, the model in <code>model</code>, and named questions in <code>questions</code>.</li>
+    <li>Answer every question by its name, with a probability for yes, or one probability for each option or level it was sent.</li>
+    <li>Name the model that answered.</li>
+    <li>Report the tokens it used under <code>usage</code>. Without them, <code>check</code> warns and the usage totals leave them out.</li>
+    <li>Serve <code>https</code>, or plain <code>http</code> on this machine only.</li>
+    <li>Take a bearer key, or no key on this machine.</li>
+  </ul>
+  <Terminal run={request} caption={request.see} />
+  <p>The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/backends.md">backends specification</a> gives every field of the request and the reply.</p>
+
+  <h2>Test the bridge</h2>
+  <p>Point <code>thinkthen check</code> at the bridge. When no row is critical, every ThinkThen command works through it. The <a href="/install/backends/system-one/">System One page</a> shows the check.</p>
+
+  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/backends/system-one/">Any System One server</a></p>
+</SidePage>

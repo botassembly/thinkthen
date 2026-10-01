@@ -19,8 +19,6 @@ const frameOn = (fn, rest) => setting('Framing').defaultOn(fn, { rest });
 const CUT = setting('Threshold').bounds;
 const count = (name, noun) => `${setting(name).range.min} to ${setting(name).range.max} ${noun}`;
 const THROTTLE = setting('Throttle');
-const PRUNE = setting('Prune target');
-const pruneKey = PRUNE.surface('Configuration file');
 
 const GLOBAL = [
   ['--plan', 'none', 'Checks the whole input, prints the first request it would send and a summary line, and sends nothing. It needs no key.', dflt('Plan preview')],
@@ -60,16 +58,6 @@ const EXITS = [
   [6, 'broken', 'annotate or relate only. The run finished with at least one valid and one failed question. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
   [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row.'],
   [70, 'broken', 'A defect in the tool.'],
-];
-
-const ENVS = [
-  ['THINKTHEN_API_KEY', 'The key. Absent or empty is exit 4, and an empty variable counts as absent.', dflt('Key')],
-  ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', dflt('Address')],
-  ['THINKTHEN_CACHE', 'Selects another folder for the platform cache. It never moves the usage folder.', dflt('Answer cache')],
-  ['XDG_CACHE_HOME', 'The root for the cache and the usage folder. It counts only when absolute.', '$HOME/.cache on Linux'],
-  ['XDG_CONFIG_HOME', 'The root for config.json. It counts only when absolute.', '$HOME/.config on Linux'],
-  ['HOME', 'The fallback root for the cache, the usage totals, and the configuration. It counts only when absolute.', 'none'],
-  ['ALL_PROXY, HTTPS_PROXY, HTTP_PROXY, NO_PROXY', 'Read in upper and in lower case. Under https:// the named proxy carries the request and sees only the host. Under http:// every one of them is cancelled.', 'none'],
 ];
 
 const BARE = [
@@ -193,12 +181,7 @@ const COUNTS = [
   <p>Code 8 is reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6 or 7. A valid answer on standard output can sit beside exit 1, 3, 6, or 7.</p>
 
   <h2>The environment</h2>
-  <table>
-    <tr><th>Variable</th><th>What it does</th><th>Default</th></tr>
-    {ENVS.map(([name, what, dflt]) => (
-      <tr><td><code>{name}</code></td><td>{what}</td><td><code>{dflt}</code></td></tr>
-    ))}
-  </table>
+  <p>The <a href="/install/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads.</p>
 
   <h2>The cache</h2>
   <p>The cache is {dflt('Answer cache').split(',')[0]} by default. Ask the same question of the same evidence again and the tool reads the saved answer instead of sending a request.</p>
@@ -206,24 +189,18 @@ const COUNTS = [
     <li>The cache keeps one answer for each question, in <code>thinkthen.sqlite</code> in the cache folder. A question's key is the SHA-256 of the adapter, the address, the model, the shared state, and the question as sent. The same command finds the same answer.</li>
     <li>The key covers the encoded question. When the input is read as one document, <code>hello\n</code> and <code>hello\r\n</code> make two keys, and so do <code>{'{"a":1}'}</code> and <code>{'{"a":1.0}'}</code>. Record framing may strip line ends or re-encode parsed JSON first. <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> gives the full rule.</li>
     <li>An answer holds the question and the reply's answer, never a header. No key can reach it. Only a good answer is saved. A failure is never saved.</li>
-    <li>The folder is <code>$XDG_CACHE_HOME/thinkthen</code>, then <code>$HOME/.cache/thinkthen</code> on Linux and <code>$HOME/Library/Caches/thinkthen</code> on macOS. <code>THINKTHEN_CACHE</code> names another one.</li>
+    <li>The <a href="/install/configuration/#locations">Configuration page</a> says where the cache folder lives. <code>THINKTHEN_CACHE</code> names another one.</li>
     <li>A saved question holds the evidence. The tool creates <code>thinkthen.sqlite</code> with mode 0600.</li>
     <li>Answers from two addresses never mix, because the address is part of every key. A cache pointed at a new address misses and sends again.</li>
     <li>An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run.</li>
     <li><code>thinkthen cache prune DIR</code> is the only way answers are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> or a model no reply in the folder names, and deletes nothing. An empty folder accepts any model name.</li>
     <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>cache prune</code>.</li>
   </ul>
-  <p>Count-only usage totals live beside the cache, in <code>thinkthen-usage</code>. One file per UTC month holds requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key. <code>THINKTHEN_CACHE</code> never moves them and <code>--no-cache</code> never turns them off. They count what this machine saw. Your provider’s bill is the real cost.</p>
-  <p><code>thinkthen status</code> is read-only and opens no connection. It reports the version, the resolved configuration and where each value came from, whether a key is present, the cache entry count and allocated bytes, and the local usage for the current UTC month and in all. <code>status --json</code> prints the same facts as one <code>thinkthen.status/2</code> object.</p>
+  <p>The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page.</p>
 
   <h2>The configuration file</h2>
-  <p>Optional, and read-only to the command. <b>The tool never creates it and never edits it.</b> There is no command that sets a value in it.</p>
-  <ul>
-    <li>Path: <code>$XDG_CONFIG_HOME/thinkthen/config.json</code>, then <code>$HOME/.config/thinkthen/config.json</code> on Linux and <code>$HOME/Library/Application Support/thinkthen/config.json</code> on macOS.</li>
-    <li>Format: one JSON object with <code>"schema": "thinkthen.config/1"</code>.</li>
-    <li>It may set <code>url</code>, <code>model</code>, <code>cache</code>, a positive <code>{pruneKey}</code>, and the other keys <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> lists. An unknown field is refused.</li>
-    <li>The default is the cache on. <code>{pruneKey}</code> defaults to {PRUNE.number} allocated bytes. It is the size <code>cache prune</code> trims to. <code>status</code> shows it as <code>cache_prune_target_bytes</code>.</li>
-  </ul>
+  <p>The <a href="/install/configuration/#configuration-file">Configuration page</a> gives its path, its fields, and the rules ThinkThen reads it by.</p>
+
   <p>A typed list replaces a question file's whole list and never merges. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>
 
   <h2>Question files</h2>

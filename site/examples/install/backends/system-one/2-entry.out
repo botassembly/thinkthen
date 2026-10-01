@@ -1,0 +1,6 @@
+{
+  "name": "local-d1",
+  "url": "http://127.0.0.1:8080/v1/systemone",
+  "model": "d1:free",
+  "key_variable": "LOCAL_D1_KEY"
+}

@@ -1,0 +1,34 @@
+---
+// Goal: show that Jev from TypeSafe answers by default, with its address, key variable and model, and how to check it.
+import SidePage from '../../../layouts/SidePage.astro';
+import Terminal from '../../../components/Terminal.astro';
+import BackendFacts from '../../../components/BackendFacts.astro';
+import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog.mjs';
+import { captioned } from '../../../data/samples.mjs';
+import { backend } from '../../../lib/backends-table.mjs';
+import { checkLines } from '../../../data/backend-checks.mjs';
+
+const page = BACKEND_PAGES.find((p) => p.slug === 'typesafe');
+const b = backend('typesafe');
+const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.typesafe);
+const checks = checkLines('typesafe');
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Jev from TypeSafe, the backend ThinkThen asks by default: its address, key variable, model, and check.' }} name="Backends">
+  <h1>TypeSafe Jev</h1>
+  <p class="lede">Jev is a System One model from TypeSafe. ThinkThen asks it when you name no backend.</p>
+
+  <BackendFacts name="typesafe" />
+  <p>The default model is a pinned version, so a vendor's move of an alias moves no answer. Name another version with <code>--model</code> only when you mean to change the model behind a run.</p>
+
+  <h2>Two ways to reach it</h2>
+  <p>With no backend named, ThinkThen posts to the same address with the same model and reads the key from <code>{KEY_VARIABLE}</code>. With <code>--backend {b.name}</code>, it reads the key from <code>{b.keys[0]}</code>. Both reach the same model, and both share saved answers.</p>
+  <Terminal run={one} caption={one.see} />
+  <Terminal run={lines} caption={lines.see} />
+
+  <h2>Check it</h2>
+  <p><code>thinkthen check</code> sends four fixed questions and reports whether the backend answers each one the way ThinkThen needs. The plan shows where they would go.</p>
+  <Terminal run={plan} caption={plan.see} />
+  {checks.map((c) => <p>{c.said}</p>)}
+
+  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
+</SidePage>

@@ -1,0 +1,11 @@
+{
+  "schema": "thinkthen.config/1",
+  "backends": {
+    "local-d1": {
+      "url": "http://127.0.0.1:8080/v1",
+      "key_env": "LOCAL_D1_KEY",
+      "model": "d1:free",
+      "requests_per_minute": 120
+    }
+  }
+}

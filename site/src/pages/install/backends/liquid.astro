@@ -1,0 +1,54 @@
+---
+// Goal: take a reader from Liquid's console to a key and a first answer from d1.
+import SidePage from '../../../layouts/SidePage.astro';
+import Terminal from '../../../components/Terminal.astro';
+import BackendFacts from '../../../components/BackendFacts.astro';
+import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog.mjs';
+import { captioned } from '../../../data/samples.mjs';
+import { backend } from '../../../lib/backends-table.mjs';
+import { checkLines } from '../../../data/backend-checks.mjs';
+
+const page = BACKEND_PAGES.find((p) => p.slug === 'liquid');
+const b = backend('liquid');
+const runs = captioned('install/backends/liquid', BACKENDS_SEE.liquid);
+const by = (name) => runs.find((r) => r.name.endsWith(name));
+const [status, one, lines, plan] = ['status', 'one', 'lines', 'check-plan'].map(by);
+const checks = checkLines('liquid');
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: "Liquid's d1 decision model through ThinkThen: the key from Liquid's console, the address, the model, the check, and a first answer." }} name="Backends">
+  <h1>Liquid d1</h1>
+  <p class="lede">d1 is Liquid's decision model. Its server speaks System One, so ThinkThen asks it with no change but the backend name.</p>
+
+  <BackendFacts name="liquid" />
+  <p>Liquid launched d1 on 2026-09-29. Its models endpoint gives a release date of 2026-09-22. On 2026-09-30 that endpoint listed one model, <code>{b.model}</code>, and Liquid published no price for it. Its replies count input tokens only, and output tokens are always zero.</p>
+
+  <h2>Get a key</h2>
+  <ol>
+    <li>Sign in at <a href="https://console.liquid.ai">console.liquid.ai</a>.</li>
+    <li>Open Dashboard, then API Keys, and create a key. It starts with <code>liquid_</code>.</li>
+    <li>Put it in <code>{b.keys[0]}</code>. ThinkThen also reads <code>{b.keys[1]}</code> when the first is unset.</li>
+  </ol>
+  <p>These steps were checked on 2026-09-29.</p>
+  <Terminal run={status} caption={status.see} />
+
+  <h2>Check it</h2>
+  <Terminal run={plan} caption={plan.see} />
+  {checks.map((c) => <p>{c.said}</p>)}
+  <p>A ThinkThen defect about that check is filed, so this page shows the plan and no live report.</p>
+
+  {one && lines ? (
+    <Fragment>
+      <h2>A first answer</h2>
+      <p>The send-back line is ambiguous. A customer who sends an item back may want an exchange or money back.</p>
+      <Terminal run={one} caption={one.see} />
+      <Terminal run={lines} caption={lines.see} />
+    </Fragment>
+  ) : (
+    <p>This page shows no recorded d1 answer. The <a href="/install/backends/typesafe/">TypeSafe Jev page</a> asks the same two questions.</p>
+  )}
+
+  <h2>Without the backend name</h2>
+  <p>The address and a key work without the name too. Set <code>THINKTHEN_BASE_URL={b.base}</code>, put the key in <code>{KEY_VARIABLE}</code>, and pass <code>--model {b.model}</code>.</p>
+
+  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
+</SidePage>
