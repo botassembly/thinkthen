@@ -735,7 +735,7 @@ export const SURFACES = [
     blurb: 'One `Door` class over the C library, through Dart FFI. Each call returns its answer and its run facts.',
     unsureWord: '`Outcome.notSure`',
     facts: '`decide` returns a record. `.value` holds the answer, and `.facts` holds this call\'s run facts as a `Map`.',
-    errors: 'A failed call throws a `DoorFailure`. Its `kind` names one of six `ErrorKind` values, with the message and the retry flag.',
+    errors: 'A failed call throws a `DoorFailure`. Its `kind` names one of six `ErrorKind` values. It also carries the message and `retryable`.',
     settings: '`create(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [
       ['dart pub add thinkthen_dart', null],
