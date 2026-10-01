@@ -15,10 +15,32 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "699f7f42c8c34dbdfaddaed94ac57d081b15be02c93e36758ef20d52ce678427"
+      "tree": "fa5e7de6304daefc226b14a4dd13d4e6af0e2755f7d0fe3587bf76564ceeece9"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/c/first-call.c": {
+    "page": "/install/c/",
+    "sample": "7093b2e97de40fd1eec585005d8d4088274793a272682a54425dafde583fc04d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "bdc167bab3677e47179affd62342285e5ee9f50a8fc4efb42d14b1ad0a3fa64c"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -38,7 +60,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "e6242ac9761308bf0659859ccdb6a48153ac882ca2c39b6c3f9dcfdf2906fad0"
+      "tree": "abe7cc007c2a71ac7d4b500263a93520f4e1d29a89b9a989e22b0fd5b43a9e8f"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -61,7 +83,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "b0fbea5771a4a3704afd58e55ca6d05b135e3e4cf0247086228db0d0f9ae3e31"
+      "tree": "edd075ec1b68faa436202b4ffea5cb1944192226e96ae35b662c4cf59f3da64b"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -86,7 +108,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "cb1d5c5d66c8f0e09c9121a293fb5adb4769d97bea0dc3b2fc39b3d3e5b8ef0f"
+      "tree": "3257c937ff6f3968812344af4ae04ec864e504e238a2c6c4db9cd0c8a29f796a"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -111,7 +133,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "0789d624461fcf508008e90d899c8a0dd28d1a49c12684748b9162dfe362c10a"
+      "tree": "63091f02b4cf21e4f6e212b3432c673da88c74403caaa8587bdbbf3fc021dce1"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -134,7 +156,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "8723f0b6a0107f53e1e95a9691cb59e04f31362a629ada7e8c3bfb5d481b20f7"
+      "tree": "169158b7b92ce864c2115d50d6adae6eb18ed433e0576412e92c4eb11fc11dce"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -157,7 +179,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5f17383802e939883d89bc639c6da83748dfdd4b2c355f788161c2556a938236"
+      "tree": "3d945fa7c05883c020427efe6ecdec159885beac2a800b4d1a70c7a731b40679"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -180,7 +202,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5f17383802e939883d89bc639c6da83748dfdd4b2c355f788161c2556a938236"
+      "tree": "3d945fa7c05883c020427efe6ecdec159885beac2a800b4d1a70c7a731b40679"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -204,7 +226,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "69efca14dfc1c483a4b8422558f4b1e34b6935930106df92068faa463b7ab17d"
+      "tree": "35863d61b0d2527589f05cd8652325c4afa00bbe5c5aec7ec9d2baddbaaf0bda"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -225,10 +247,10 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "d493bb42e30e4015a6103f510308494101291371e829ac898eb5cb85c4b97b61"
+      "tree": "e06372a8e355553879ad4e48b05267f6ed091ddb46350d59a7442e476195b396"
     },
     "toolchain": [
-      "Python 3.12.3, pandas 3.0.6",
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
       "maturin 1.15.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
@@ -249,10 +271,41 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "cdb95b2b5868dfae061790828514da2b9ac7768e3eecacd0571710e95fef23a9"
+      "tree": "4c1f0c4f9e0d6fb8262b0cae8e46f0d4340d4fd39736cf107a1cedf52bdd7229"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/polars/first-call.py": {
+    "page": "/install/polars/",
+    "sample": "837e5a12c49dc5597b08e81c644deca6e94edf5141fc07d505ddac7c1c7fbe52",
+    "output": null,
+    "files": {
+      "install/polars/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0d62203ae694c4c635c3ac77688c50e9704a64afa66016f1b95effdbb71f6225": "bef59e4059fb49d408abae36724da46e2fafc0e44ede1d7cf53c3f8f223cec9f",
+      "36b62b6c69d7bed9bffbbdcbf2fbe79e9dea7f353fc6aec386d76d45694c6b16": "96e3365d31d812ac8065e8ae7f5b91ec1a2b9fda97adf71ffaf5f834bc9d7f9b",
+      "56251acdc69070d73f32971057de18cad66874b948070679a7a8a13fb84bab89": "9eeb3a1abc4455cb400b30b00027d3ac4efa7efc4ff78a635c9b681239d17ad6",
+      "596935ff43fa061343fd29d6a35f0c3dcb09d130efe950b8981d0e9b1ecb756a": "213e7b6cb25444a073099acd799686f86e896b5525cd9eb8089b48df055701ed",
+      "5c478c658fc6578de71c5fa7b2f19c479194d77d632f135b6b7b59d5cc7f3510": "4662ae0d4885363e0a49135f127f2a263cd7adb8c97cef3edaf16d692993d275",
+      "802ac71993ccd7c65b8fbe4642ddc9082ec8d287c573b45f0b22c40fa4dd967c": "42a7d4cf8b64c9fd6e7eb2c0de1a8c73a00796c218a82e797eae95ae7f40bc62",
+      "939f55001dd95d6d7eb1c92f695537df07e58b1a1816ea705cade5eecc05b884": "589707c37f678d3b3ae968f04b7f71a2db0d9c11d057c19cee78a15b9b42d519",
+      "aec41b4960f2573a970d5110778e201f8af801a6d587ae9b3818ac1cfa8b068b": "0cfe1437fa831438f5b06331edfc448c14a0731edc5b8283364f8d1242e1b04a",
+      "fd1935d425bd0c58c0240db13f404f14d898ce8917d9ca4c10d599e2d380cf59": "c064c19f7f4ef5ab060fc6504ad16dfb9a5714132cb85fb4841b7d3405ea6164"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "e06372a8e355553879ad4e48b05267f6ed091ddb46350d59a7442e476195b396"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -281,10 +334,10 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "d493bb42e30e4015a6103f510308494101291371e829ac898eb5cb85c4b97b61"
+      "tree": "e06372a8e355553879ad4e48b05267f6ed091ddb46350d59a7442e476195b396"
     },
     "toolchain": [
-      "Python 3.12.3, pandas 3.0.6",
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
       "maturin 1.15.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
@@ -304,7 +357,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "6af7c6400292584e52c9b7bf56ce71b4cd57433b0fc73c93f6001f454dce86d5"
+      "tree": "644ef791128e385b0d43c756dd61cf1517fb3add3c3a217f58f7d84a27692fd7"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -326,10 +379,57 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "6af7c6400292584e52c9b7bf56ce71b4cd57433b0fc73c93f6001f454dce86d5"
+      "tree": "644ef791128e385b0d43c756dd61cf1517fb3add3c3a217f58f7d84a27692fd7"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/ruby/first-call.rb": {
+    "page": "/install/ruby/",
+    "sample": "7b7ac4c9d83e4cc0701be2894447a29199aea1998da1d87fdb592a6694746018",
+    "output": null,
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/ruby"
+      ],
+      "tree": "177507892cbeafc2a789445dca7f04cbdd69491294a305e474633c8f30d15ba0"
+    },
+    "toolchain": [
+      "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/rust/first-call.rs": {
+    "page": "/install/rust/",
+    "sample": "31e10031a6d834686ff91a24d90786dd2c0025f2d9bdd4f61a8eea751a653e65",
+    "output": null,
+    "files": {
+      "install/rust/files/Cargo.toml": "90d4c57f6646f09b7942fa33a15e51cb52ead48a5f107c1d103dbf6116751c0d"
+    },
+    "answers": {
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
+      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "94945d050221196de5677504cb9c433aa8145c26ca2af5d7f1de2375111b700f"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -349,7 +449,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "5f17383802e939883d89bc639c6da83748dfdd4b2c355f788161c2556a938236"
+      "tree": "3d945fa7c05883c020427efe6ecdec159885beac2a800b4d1a70c7a731b40679"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -375,10 +475,33 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "4d6a5cf1ff92b53ab400eb80e22fff245ce83acf759b636c6278490c997e302d"
+      "tree": "901f6584cc9bce0a739f0b295a7bedd07940ebeb3f5f95b9b9fb5a9dfcfe3a3f"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/typescript/first-call.ts": {
+    "page": "/install/typescript/",
+    "sample": "95990ee84b6d47813911f6d70fdf32e1862da52a30df8d0a869f938b734ad2bb",
+    "output": null,
+    "files": {},
+    "answers": {
+      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/typescript"
+      ],
+      "tree": "a1475057cc6359684b71d163dfd124de5c21be00e4ce41dabb3782f4b95f99db"
+    },
+    "toolchain": [
+      "Node v22.22.3",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -401,7 +524,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "54191bf5d16f8f83a757ad1403d90a9dab4f0c88c9acc83217708b65fcdf385e"
+      "tree": "3f8ad36b9e3baa3ecb565f640d8c97a5bdacb39abd3cdc078d6c914866a49020"
     },
     "toolchain": [
       "Zig 0.15.2",

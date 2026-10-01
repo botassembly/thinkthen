@@ -4,7 +4,8 @@
 //
 // The lines run in a folder that holds the sample, the C archive unpacked
 // as thinkthen-c/, and the binding's archive unpacked beside it under the
-// name `archive` gives. Each line is a list of parts. The runner joins
+// name `archive` gives. `beside` names what the folder holds when that
+// differs. C needs only its own archive. Rust needs only Cargo.toml. Each line is a list of parts. The runner joins
 // them with spaces and runs the line with sh. The page puts each part on
 // its own line. The runner passes `offline`, so a package tool reads only
 // its local cache and the run sends no request.
@@ -19,6 +20,21 @@ const DOOR = 'thinkthen-jvm/thinkthen-door.jar';
 const program = (sample) => sample.replace(/\.[^.]+$/, '');
 
 export const BUILD_LINES = {
+  c: ({ sample }) => ({
+    beside: 'the unpacked archive thinkthen-c/',
+    lines: [[
+      'cc -std=c11 -I thinkthen-c/include',
+      `${sample} -o ${program(sample)}`,
+      '$(pkg-config --cflags --libs json-c)',
+      ...C_LIB,
+    ]],
+    run: [`./${program(sample)}`],
+  }),
+  rust: ({ sample }) => ({
+    beside: 'Cargo.toml',
+    lines: [['mkdir -p src/bin'], [`cp ${sample} src/bin/`]],
+    run: [`cargo run --quiet --bin ${program(sample)}`],
+  }),
   cpp: ({ sample }) => ({
     archive: 'thinkthen-cpp',
     lines: [

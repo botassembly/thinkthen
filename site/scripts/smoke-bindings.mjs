@@ -4,8 +4,9 @@
 // examples/bindings-proof.json. scripts/check-binding-proofs.mjs reads that
 // file in every build.
 //
-//   node scripts/smoke-bindings.mjs            replay every listed sample
-//   node scripts/smoke-bindings.mjs PATTERN    only the samples whose path holds PATTERN
+//   node scripts/smoke-bindings.mjs                  replay every listed sample
+//   node scripts/smoke-bindings.mjs PATTERN          only the samples whose path holds PATTERN
+//   node scripts/smoke-bindings.mjs --allow-missing  pass when a toolchain is missing
 //
 // A sample runs in a fresh folder that starts with a copy of its page's
 // files/. THINKTHEN_CACHE names a fresh copy of recordings/thinkthen.jsonl.
@@ -20,13 +21,16 @@
 // whose loss fails the sample is one the sample read. The final set must
 // pass on its own.
 //
-// A binding whose toolchain is missing reports "not run" and keeps its old
-// entry. The run needs Rust with the offline Cargo cache, and each
-// binding's own toolchain: a stable Python 3.12 or later with uv and maturin,
-// R 4.2 or later with dplyr, g++, gcc with Objective-C, GnuCOBOL, and GNAT.
-// The C++, Objective-C, COBOL and Ada samples link the C door that
-// sdlc/scripts/installed.sh lays out, and the runner compiles each sample
-// once.
+// A sample whose toolchain is missing reports "not run" and keeps its old
+// entry, and the run exits 1. With --allow-missing, the run prints how many
+// samples did not run and passes. The run needs Rust with the offline Cargo
+// cache, and each binding's own toolchain: a stable Python 3.12 or later
+// with uv and maturin, R 4.2 or later with dplyr, Node 22, the pinned Ruby
+// that libraries/ruby/setup-ruby.sh builds with libclang, a C compiler with
+// json-c, g++, gcc with Objective-C, GnuCOBOL, GNAT, JDK 21 with kotlinc and
+// scalac, .NET 8, Go, Swift, Zig, PHP with FFI and the pinned Flutter's
+// Dart. The native samples link the C door that sdlc/scripts/installed.sh
+// lays out, and the runner builds each sample once.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -39,6 +43,7 @@ const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const repo = path.resolve(site, '..');
 const examples = path.join(site, 'examples');
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const allowMissing = process.argv.includes('--allow-missing');
 
 // No key, address, backend or setting from the shell may reach a sample.
 const leaked = Object.keys(process.env).filter((n) => n.startsWith('THINKTHEN_') || ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY'].includes(n));
@@ -123,6 +128,14 @@ ARCHIVE.swift = (dir) => {
   fs.mkdirSync(path.join(dir, 'thinkthen-swift/Sources/CThinkThen/include'), { recursive: true });
   fs.copyFileSync(path.join(cDoor(), 'include', 'thinkthen.h'), path.join(dir, 'thinkthen-swift/Sources/CThinkThen/include/thinkthen.h'));
 };
+// C needs only the C archive. A Rust project takes the crate from this
+// working tree through a Cargo patch, with the locked versions.
+ARCHIVE.c = () => {};
+ARCHIVE.rust = (dir) => {
+  fs.mkdirSync(path.join(dir, '.cargo'));
+  fs.writeFileSync(path.join(dir, '.cargo/config.toml'), `[patch.crates-io]\nthinkthen = { path = ${JSON.stringify(path.join(repo, 'crates/thinkthen'))} }\n\n[net]\noffline = true\n`);
+  fs.copyFileSync(path.join(repo, 'Cargo.lock'), path.join(dir, 'Cargo.lock'));
+};
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
 
@@ -130,7 +143,7 @@ ARCHIVE.scala = ARCHIVE.java;
 // would have, with thinkthen-c/ and the binding's archive beside the
 // sample and its files/, and runs the build lines the install page shows.
 // Each sample builds once, and each attempt runs the page's run line.
-function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c/Cargo.toml', tools, versions, env = {}, buildEnv = {} }) {
+function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c/Cargo.toml', tools, needs = () => null, versions, env = {}, buildEnv = {} }) {
   const layout = ARCHIVE[slug] ?? sourceArchive(slug);
   return {
     folder,
@@ -138,6 +151,8 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
     build() {
       const runEnv = typeof env === 'function' ? env() : env;
       for (const tool of [...tools, 'cargo']) if (!has(tool, { ...process.env, ...runEnv })) return { missing: tool };
+      const missing = needs();
+      if (missing) return { missing };
       const n = cDoor();
       const dirs = new Map();
       const prepare = (rel) => {
@@ -168,6 +183,32 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
 }
 
 const javaVersion = () => firstLine('java', ['-version']);
+// json-c from ~/.local, where the toolchain step builds it with CMake.
+const LOCAL = path.join(os.homedir(), '.local');
+const JSON_C = { PKG_CONFIG_PATH: [path.join(LOCAL, 'lib/pkgconfig'), process.env.PKG_CONFIG_PATH].filter(Boolean).join(':') };
+const jsonC = () => (run('pkg-config', ['--exists', 'json-c'], { env: { ...process.env, ...JSON_C } }).status === 0 ? null : 'json-c');
+// The run's HOME is a scratch folder, so Cargo and rustup keep their own.
+const CARGO_ENV = {
+  CARGO_HOME: process.env.CARGO_HOME ?? path.join(os.homedir(), '.cargo'),
+  RUSTUP_HOME: process.env.RUSTUP_HOME ?? path.join(os.homedir(), '.rustup'),
+};
+
+// A Rust build that writes only under target/<name>, as the R build does.
+function cargoBuild(dir, name, env = {}) {
+  const target = path.join(repo, 'target', name);
+  const done = run('cargo', ['build', '--quiet', '--release', '--locked', '--offline'], { cwd: path.join(repo, dir), env: { ...process.env, ...env, CARGO_TARGET_DIR: target } });
+  if (done.status !== 0) throw new Error(`cargo build failed in ${dir}\n${done.stdout}${done.stderr}`);
+  return path.join(target, 'release');
+}
+
+// The repository's pinned Rust, which a project outside it would not pick.
+const RUST_CHANNEL = () => fs.readFileSync(path.join(repo, 'rust-toolchain.toml'), 'utf8').match(/^channel = "(.+)"/m)[1];
+
+// The pinned Ruby that libraries/ruby/setup-ruby.sh builds.
+const RUBY_PREFIX = () => {
+  const version = fs.readFileSync(path.join(repo, 'libraries/ruby/toolchain.env'), 'utf8').match(/^RUBY_VERSION=(\S+)/m)[1];
+  return path.join(os.homedir(), '.cache/thinkthen-toolchains/ruby', version);
+};
 // Dart from the pinned Flutter, as libraries/dart/check.sh finds it. Its
 // SDK folder runs no Flutter update check.
 const DART_SDK = path.join(os.homedir(), '.local/opt/flutter/bin/cache/dart-sdk/bin');
@@ -177,13 +218,59 @@ const SCALA_HOME = () => path.dirname(path.dirname(fs.realpathSync(run('sh', ['-
 // Each binding: how to build it once, how to run one sample, and what it
 // builds on. A build returns null when a tool is missing.
 const BINDINGS = {
+  // The npm package's files, with the addon under the name loader.js reads.
+  // Each run links the package into node_modules beside the sample.
+  typescript: {
+    folder: 'libraries/typescript',
+    manifest: 'libraries/typescript/Cargo.toml',
+    build() {
+      for (const tool of ['node', 'cargo']) if (!has(tool)) return { missing: tool };
+      const release = cargoBuild('libraries/typescript', 'site-typescript');
+      const modules = path.join(tmp, 'typescript', 'node_modules');
+      const pkg = path.join(modules, 'thinkthen');
+      fs.mkdirSync(pkg, { recursive: true });
+      for (const f of ['index.js', 'index.mjs', 'index.d.ts', 'loader.js', 'package.json', 'LICENSE']) fs.copyFileSync(path.join(repo, 'libraries/typescript', f), path.join(pkg, f));
+      fs.copyFileSync(path.join(release, 'libthinkthen_typescript.so'), path.join(pkg, `thinkthen-${process.platform}-${process.arch}.node`));
+      return {
+        toolchain: [`Node ${firstLine('node', ['--version'])}`, firstLine('rustc', ['--version'])],
+        command: (file) => ['sh', ['-c', `ln -s "$1" node_modules && node "$2"`, 'sh', modules, file]],
+        env: {},
+      };
+    },
+  },
+  // The gem's files, with the extension built for the pinned Ruby.
+  ruby: {
+    folder: 'libraries/ruby',
+    manifest: 'libraries/ruby/Cargo.toml',
+    build() {
+      const prefix = RUBY_PREFIX();
+      const ruby = path.join(prefix, 'bin', 'ruby');
+      if (!fs.existsSync(ruby)) return { missing: `pinned Ruby at ${prefix}` };
+      if (!has('cargo')) return { missing: 'cargo' };
+      const clang = run('sh', ['-c', 'for lib in /usr/lib/llvm-*/lib; do [ -e "$lib/libclang.so.1" ] && echo "$lib"; done | sort -V | tail -n 1']).stdout.trim();
+      if (!clang) return { missing: 'libclang' };
+      const rubyEnv = { LD_LIBRARY_PATH: path.join(prefix, 'lib') };
+      const release = cargoBuild('libraries/ruby', 'site-ruby', { ...rubyEnv, RUBY: ruby, LIBCLANG_PATH: clang, PATH: `${path.join(prefix, 'bin')}:${process.env.PATH}` });
+      const lib = path.join(tmp, 'ruby', 'lib');
+      fs.mkdirSync(path.join(lib, 'thinkthen'), { recursive: true });
+      for (const f of ['thinkthen.rb', 'thinkthen/version.rb']) fs.copyFileSync(path.join(repo, 'libraries/ruby/lib', f), path.join(lib, f));
+      fs.copyFileSync(path.join(release, 'libthinkthen_ruby.so'), path.join(lib, 'thinkthen', 'thinkthen.so'));
+      return {
+        toolchain: [run(ruby, ['-v'], { env: { ...process.env, ...rubyEnv } }).stdout.trim(), firstLine('rustc', ['--version'])],
+        command: (file) => [ruby, [file]],
+        env: { ...rubyEnv, RUBYLIB: lib },
+      };
+    },
+  },
+  c: withBuild({ slug: 'c', tools: ['cc', 'pkg-config'], needs: jsonC, versions: () => [firstLine('cc', ['--version']), `json-c ${run('pkg-config', ['--modversion', 'json-c'], { env: { ...process.env, ...JSON_C } }).stdout.trim()}`], buildEnv: JSON_C, env: { LD_LIBRARY_PATH: path.join(LOCAL, 'lib') } }),
+  rust: withBuild({ slug: 'rust', folder: 'crates/thinkthen', manifest: 'crates/thinkthen/Cargo.toml', tools: [], versions: () => [firstLine('cargo', ['--version'])], env: { ...CARGO_ENV, RUSTUP_TOOLCHAIN: RUST_CHANNEL(), CARGO_TARGET_DIR: path.join(repo, 'target', 'site-rust') } }),
   python: {
     folder: 'libraries/python',
     manifest: 'libraries/python/Cargo.toml',
     build() {
       const python = ['python3.14', 'python3.13', 'python3.12', 'python3'].map((p) => run('sh', ['-c', `command -v ${p}`]).stdout.trim())
         .find((p) => p && run(p, ['-c', 'import sys; sys.exit(sys.version_info < (3, 12) or sys.version_info.releaselevel != "final")']).status === 0);
-      if (!python) return { missing: 'a stable Python 3.12 or later' };
+      if (!python) return { missing: 'stable Python 3.12 or later' };
       for (const tool of ['uv', 'maturin', 'cargo']) if (!has(tool)) return { missing: tool };
       const out = path.join(tmp, 'python');
       const step = (cmd, args, opts) => {
@@ -193,13 +280,13 @@ const BINDINGS = {
       step('maturin', ['build', '--quiet', '--locked', '--offline', '-o', path.join(out, 'wheel')], { cwd: path.join(repo, 'libraries/python'), env: { ...process.env, PYO3_PYTHON: python } });
       step('uv', ['venv', '--quiet', '--offline', '--python', python, path.join(out, 'venv')]);
       const venvPython = path.join(out, 'venv', 'bin', 'python');
-      // pandas and what it needs, at the gate's pins.
+      // pandas, Polars and what they need, at the gate's pins.
       const pins = fs.readFileSync(path.join(repo, 'libraries/python/requirements-dev.txt'), 'utf8').split('\n')
-        .map((l) => l.match(/^(pandas|numpy|python-dateutil|six)==(\S+)/)).filter(Boolean).map((m) => `${m[1]}==${m[2]}`);
+        .map((l) => l.match(/^(pandas|numpy|python-dateutil|six|polars|polars-runtime-32)==(\S+)/)).filter(Boolean).map((m) => `${m[1]}==${m[2]}`);
       step('uv', ['pip', 'install', '--quiet', '--offline', '--python', venvPython, ...pins]);
       const wheel = fs.readdirSync(path.join(out, 'wheel')).find((n) => n.endsWith('.whl'));
       step('uv', ['pip', 'install', '--quiet', '--offline', '--no-deps', '--python', venvPython, path.join(out, 'wheel', wheel)]);
-      const versions = run(venvPython, ['-c', 'import sys, pandas; print(f"Python {sys.version.split()[0]}, pandas {pandas.__version__}")']).stdout.trim();
+      const versions = run(venvPython, ['-c', 'import sys, pandas, polars; print(f"Python {sys.version.split()[0]}, pandas {pandas.__version__}, Polars {polars.__version__}")']).stdout.trim();
       return {
         toolchain: [versions, firstLine('maturin', ['--version']), firstLine('rustc', ['--version'])],
         command: (file) => [venvPython, [file]],
@@ -217,7 +304,7 @@ const BINDINGS = {
       const user = run('Rscript', ['-e', 'cat(path.expand(strsplit(Sys.getenv("R_LIBS_USER"), ":")[[1]]), sep = "\\n")']).stdout.split('\n');
       const libs = [lib, path.join(os.homedir(), '.cache/thinkthen-toolchains/r-library'), ...user].filter((l) => l && fs.existsSync(l)).join(':');
       const ready = run('Rscript', ['-e', 'if (!requireNamespace("dplyr", quietly = TRUE)) quit(status = 1)'], { env: { ...process.env, R_LIBS: libs } });
-      if (ready.status !== 0) return { missing: 'the R package dplyr' };
+      if (ready.status !== 0) return { missing: 'R package dplyr' };
       const done = run('R', ['CMD', 'INSTALL', '-l', lib, 'thinkthen'], { cwd: path.join(repo, 'libraries/r'), env: { ...process.env, R_LIBS: libs, CARGO_TARGET_DIR: path.join(repo, 'target/r') } });
       if (done.status !== 0) throw new Error(`R CMD INSTALL failed\n${done.stdout}${done.stderr}`);
       const dplyr = run('Rscript', ['-e', 'cat(format(packageVersion("dplyr")))'], { env: { ...process.env, R_LIBS: libs } }).stdout.trim();
@@ -250,6 +337,7 @@ const BINDINGS = {
 // Which binding runs each page's samples.
 const PAGE_BINDING = Object.fromEntries(Object.keys(BINDINGS).map((b) => [b, b]));
 PAGE_BINDING.pandas = 'python';
+PAGE_BINDING.polars = 'python';
 
 const list = readReplayList(examples).filter((rel) => !only.length || only.some((o) => rel.includes(o)));
 const proofPath = path.join(examples, PROOF_FILE);
@@ -296,7 +384,7 @@ for (const rel of list) {
     }
   }
   const binding = built.get(name);
-  if (binding.missing) { notRun.push(`${rel}: not run, no ${binding.missing}`); continue; }
+  if (binding.missing) { notRun.push(`${rel}: not run: no ${binding.missing}`); continue; }
   if (binding.error) { failed.push(`${rel}: the ${name} binding did not build\n${binding.error}`); continue; }
 
   try {
@@ -338,5 +426,10 @@ if (failed.length) {
   console.error(`smoke-bindings: ${failed.length} samples failed\n\n${failed.join('\n\n')}`);
   process.exit(1);
 }
+if (notRun.length && !allowMissing) {
+  console.error(`smoke-bindings: ${notRun.length} samples did not run. Install their toolchains, or pass --allow-missing to keep their old entries.`);
+  process.exit(1);
+}
+if (notRun.length) console.log(`smoke-bindings: ${notRun.length} samples did not run, and --allow-missing lets the run pass.`);
 const tools = [...built.values()].filter((b) => b.toolchain).flatMap((b) => b.toolchain);
-console.log(`smoke-bindings: ${proved} samples replayed. Toolchains: ${[...new Set(tools)].join('; ')}.`);
+console.log(`smoke-bindings: ${proved} samples replayed.${tools.length ? ` Toolchains: ${[...new Set(tools)].join('; ')}.` : ''}`);

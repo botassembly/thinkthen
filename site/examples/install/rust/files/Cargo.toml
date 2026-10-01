@@ -1,0 +1,6 @@
+[package]
+name = "first-call"
+edition = "2024"
+
+[dependencies]
+thinkthen = "0.0.1"

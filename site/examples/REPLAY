@@ -2,6 +2,7 @@
 # relative to examples/. scripts/check-binding-proofs.mjs checks each one's
 # entry in bindings-proof.json in every build.
 install/ada/first_call.adb
+install/c/first-call.c
 install/cobol/first-call.cob
 install/cpp/first-call.cpp
 install/csharp/FirstCall.cs
@@ -12,9 +13,13 @@ install/kotlin/FirstCall.kt
 install/objective-c/first-call.m
 install/pandas/first-call.py
 install/php/first-call.php
+install/polars/first-call.py
 install/python/first-call.py
 install/r/data-frames.R
 install/r/first-call.R
+install/ruby/first-call.rb
+install/rust/first-call.rs
 install/scala/FirstCall.scala
 install/swift/main.swift
+install/typescript/first-call.ts
 install/zig/first-call.zig
