@@ -2,6 +2,8 @@
 
 Status: open. Owner: ticket 0128, whose Phase 3b (Ian's first rehearsal dispatch) and Phase 4 (Ian's release run) remain. Shortened 2026-09-30. Ian's ruling 10 of 2026-09-30: no public release before 0.1, and 0.1 waits for every surface and binding. Local and internal releases are fine. The eleven C-door language packages merged in on 2026-09-30; see "Language packages" below.
 
+Milestone: 0.1
+
 ## Rulings that govern it
 
 - 2026-09-20: the first release is 0.1 on every surface; until then versions run 0.0.1 upward. One crate, `thinkthen`. The install path is a `curl` script that downloads a GitHub release.

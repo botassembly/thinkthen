@@ -10,6 +10,8 @@ Debt: 004
 
 Severity: low
 
+Milestone: later
+
 Keeping it risks the streaming path breaking with no check, and the frame's own memory staying unbounded.
 
 ## What is missing

@@ -8,6 +8,8 @@ opens: sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-pac
 
 Status: static CODE ACCEPT `bfa7c2e3` after fresh independent High review. The [build record](../records/0272-managed-package-helper-build.md) and [final review](../records/0272-managed-workflow-code-review.md) cover the helper, workflow integration and all three early corrections. Actual SDK provisioning and runner qualification remain open. No SDK download, compilation, container execution or Actions rehearsal is claimed. Ian’s SQL/DataFrame hold remains in force.
 
+Milestone: 0.1
+
 ## One source pin and one native archive
 
 [0262](../records/0262-csharp-jvm-release-build.md) already proves a local `c csharp jvm` build, exact package inventory and installed C#/Java/Kotlin/Scala calls. The current manylinux container has no recorded .NET, JDK, Kotlin or Scala setup. The source-only wrapper transport of 0271 cannot produce the compiled nupkg/JAR members. `release-container` currently deletes its scratch Git tar after the container exits. On the x86 build job, generate one Git tar from the trusted resolved checkout into a job-owned directory outside `release-files`; immediately capture its SHA-256 in a separate read-only receipt and verify its Git tar commit header equals `resolve.outputs.sha`. Verify the tar against that stored digest **before both** the container extraction and the later managed extraction. The header alone is no integrity proof, and comparing an extraction with a modified tar would be self-consistent. Pass that exact tar path to the existing container route, with its full-tree pre-C check, then use the same bytes for an isolated Ubuntu managed build/assembly step. Reject a checkout override or unmatched source.

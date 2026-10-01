@@ -4,6 +4,8 @@ Kind: bug
 
 Severity: low
 
+Milestone: later
+
 # The CA bundle library test needs OpenSSL 3 on PATH
 
 ## The problem

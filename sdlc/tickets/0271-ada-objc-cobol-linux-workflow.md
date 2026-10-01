@@ -8,6 +8,8 @@ opens: sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-packag
 
 Status: static code accepted at `72aa3260` after fresh independent High review; actual runner qualification remains open. The design was accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). The coordinator approved the bounded design. [Preparation](../records/0271-0272-language-runner-preparation.md) and the [runner input research](../records/0271-0272-runner-toolchain-inputs.md) record the remaining tool boundaries. The [code review record](../records/0271-ada-objc-cobol-workflow-code-review.md) names the accepted scope and retained proof. No native compiler, backend, container, Actions or runner qualification is claimed. Ian’s SQL/DataFrame hold remains in force.
 
+Milestone: 0.1
+
 ## Outcome and boundaries
 
 The three source wrappers join the **same** x86 manylinux `release-pack` call and its one fresh C archive after 0270, with the checked Git tar/SHA and full extracted-tree check before C. `release-pack` already has exact copy arms and fixed C manifests. Extend only the landed archived-source part allowlist and copied-member comparison for `ada objective-c cobol`. Their archives must contain the 0265 curated members byte-for-byte from the selected archive. Preserve the legacy plus Go/C++/Swift/Zig/PHP/Dart parts, one C, non-reuse, empty selected C output and checkout clean-tree rules. No outer-host C, Apple Objective-C or new binding code enters this ticket.

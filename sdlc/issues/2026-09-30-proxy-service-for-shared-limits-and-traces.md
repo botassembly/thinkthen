@@ -3,6 +3,7 @@
 Status: open. Filed 2026-09-30 on Ian's request. Owner: none until 0.1 ships.
 Kind: idea
 When: after the 0.1 release.
+Milestone: later
 
 Ian's idea: a user stands up a thinkthen service that forwards requests to the backends. Every command, library and SQL session points its address at the service.
 

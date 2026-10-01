@@ -8,6 +8,8 @@ opens: databases/duckdb sdlc/scripts/policy.py sdlc/scripts/surfaces sdlc/script
 
 Status: accepted design, 2026-09-27. The reviewed design is `c7000a4a`; `sdlc/records/0200-0201-design-review.md` records the paired review. Owner: Codex. The staged Linux x86_64 implementation passed final High follow-up review at `493a1461` and is landed. Linux aarch64 and both macOS migrations remain open; the ticket does not claim all-platform completion.
 
+Milestone: 0.1
+
 ## Outcome and authority
 
 A DuckDB query using a ThinkThen scalar gets a usable bind step and a real query lifetime. A constant invalid question fails before any backend request. A signal that arrives after the last engine call belongs to the ending query, so the next query answers normally. Ticket 0200's DuckDB query deadline uses the same lifetime across chunks and expressions. The extension is built through DuckDB's C++ API, while the one Rust engine still makes every judgment.

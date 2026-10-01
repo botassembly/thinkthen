@@ -2,6 +2,8 @@
 
 Status: deferred until after the 0.1 release, by the queue batches Quick Fix of 2026-09-30, a coordinator default Ian can overturn. Python already judges a Polars `Series` in one engine call; the expression namespace is an additive opt-in import, so shipping it later breaks no consumer. ADR 0111 slice 3 has landed, so only the 0.1 order holds it. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
 
+Milestone: later
+
 ## Outcome
 
 Opt-in import thinkthen.polars registers Expr.tt decide/choose/score/tag via map_batches(is_elementwise=True) over the existing Arrow door. Probability Struct only on decide/choose; token and deadline_ms bind at build, deadline applies per morsel. Lead with cheap filters then with_columns; a judged filter and subsequent head can judge the full scan. Install the SIGINT sequence chain on first expression call, recheck disposition and process id, and preserve ordinary calls.

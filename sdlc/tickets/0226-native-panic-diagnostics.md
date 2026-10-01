@@ -6,6 +6,8 @@ opens: sdlc/tickets/0226-native-panic-diagnostics.md sdlc/records/0226-panic-pre
 
 Status: source correction and evidenced Linux x86-64 C/SQLite packages land after fresh independent High code review ACCEPT at `d0709b69`. Owner: Codex. The ticket and linked issue remain open for macOS C/SQLite and retained DuckDB Linux ARM64/macOS installed-package proof. [Code review](../records/0226-code-review.md) and [build record](../records/0226-build.md) distinguish source, child and package evidence. Accepted ADR 0098 preserves current loader lifetime; no all-platform completion is claimed.
 
+Milestone: 0.1
+
 ## Outcome and retained behavior
 
 A panic caught inside the C, SQLite, or retained DuckDB C API binding must return its existing defect kind, non-retryable flag and fixed safe diagnostic without copying the payload into a C message, SQL error, JSON failed row, stdout, or stderr. A later call must work. An unrelated host thread must still reach its prior hook. No panic unwinds across a native ABI. The six error kinds, ordinary texts, cancellation, deadline, host callback and C++ exception policies remain. No public fault switch, API or general framework is added.

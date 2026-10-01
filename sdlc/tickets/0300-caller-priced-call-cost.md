@@ -8,6 +8,8 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 Status: Core, CLI and C source stage landed after fresh High code ACCEPT at `a4dc0b8641b1bc0639db5c3284538d3936e3179e`, including the explicit SQLite refusal pending host adoption. Ticket0300 remains open for strict-reader and other typed-host batches. Fresh High design accepted `5bde09bb5aa1f266ae358a56df38dc293cfed724`; ADR0108 remains the approved contract. No umbrella criterion is closed by this partial stage.
 
+Milestone: later
+
 ## Outcome
 
 Let a caller who knows its own USD input and output token prices see a whole-call or whole-command **estimated** cost next to final facts. Preserve every existing value, token field, request count, failure kind, C symbol and count-only month. The opt-in pair is engine scoped; CLI gets it from the configuration file. There is no provider tariff lookup, bill guarantee, price-based admission or new paid call. Token admission 0299, backend timing/IDs and durable non-CLI status have separate owners.

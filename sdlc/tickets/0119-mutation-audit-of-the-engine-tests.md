@@ -8,6 +8,8 @@ opens: crates/thinkthen/src/engine/deadline_tests.rs crates/thinkthen/src/engine
 
 Status: amended design accepted after fresh independent review of `02dbdf08`; see the [functional preflight](../records/0119-functional-audit-preflight.md). The bounded listener subgroup was independently accepted at `30d1c597` and lands at independently reviewed source `b89c58f7`; the fresh Medium code reviewer accepted its exact two-test proof and measured reduction. The 2026-09-24 mutation-campaign design was accepted in [its review](../records/0119-design-review.md), but Ian's later functional-gate ruling supersedes its required whole-scope mutation runs, repeated timing runs, load checks, and whole ladder. No whole test deletion is justified by preparation so far. The wider test audit remains open. The listener umbrella closes with the later reviewed command proof at `dcec83f0`; its retained raw sockets have distinct functional assertions. Owner: Codex, under Ian's later build routing.
 
+Milestone: later
+
 ## Outcome and authority
 
 Keep the original outcome: remove only engine test code that a stronger routine proof makes redundant, lower `sdlc/ratchet.json` by measured deleted lines, and report exactly what changed and what remains unproved. Preserve distinct parser, secrecy, cancellation, deadline, cache-miss, invalid-input, conflict, wire-byte, digest, replay and stop-accounting regressions. A line count or a mutation score alone cannot make a test redundant. No product code or public API changes belong here.

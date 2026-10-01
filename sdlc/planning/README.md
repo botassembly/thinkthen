@@ -7,6 +7,8 @@
 - [ownership.md](ownership.md): who owns which folders. Marketing owns `site/`.
 - [worktrees.md](worktrees.md): how lanes are claimed and freed.
 - [ticket-preparation.md](ticket-preparation.md): how a ticket is prepared and reviewed.
+- [release-process.md](release-process.md): the coordinator's release process, from checkpoints to the release. The one home of that process.
+- [milestones.md](milestones.md): the 0.1, 0.2 and later milestones, their exit criteria, blockers and open items.
 - [issue-priorities-2026-09-30.md](issue-priorities-2026-09-30.md): the ranked open issues, their 0.1 blockers, owners, and the tickets ready now.
 - [test-split-2026-09-30.md](test-split-2026-09-30.md): the test inventory for ticket 0335, with times, groups, and the replay smoke per binding.
 - [bench-handoff.md](bench-handoff.md): answers for the public Beatles Bench team: the three places for tests, the `status --json` fields, the tags, and how to send a hard case as a recording.

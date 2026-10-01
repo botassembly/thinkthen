@@ -6,6 +6,8 @@ opens: sdlc/tickets/0224-sql-group-find.md sdlc/records/0224-sql-find-preflight.
 
 Status: **Linux SQLite, PostgreSQL and DuckDB slices complete; remaining target work stays open.** Fresh High reviews accepted SQLite `d482ed6a` and PostgreSQL `f59bd3d5`, and Linux DuckDB `fb9009aa`, each with independent installed cases 18/19 and host edge checks. Their product source merged unchanged. Ian already approved ADR 0096. See [SQLite review](../records/0224-sqlite-code-review.md), [PostgreSQL review](../records/0224-postgresql-code-review.md) and [current DuckDB preflight](../records/0224-duckdb-find-preflight.md). This is not whole-ticket or new-platform completion.
 
+Milestone: 0.1
+
 ## Outcome and retained behavior
 
 Make [shared cases 18 and 19](../../conformance/cases.json) executable through each installed SQLite, PostgreSQL and DuckDB extension. The function takes one complete, ordered set, sends the one existing public `find` request, and returns the selected **original** value or an explicit none choice with its probability. Generated `u001`…`u255` IDs, the strict none lead or tie rule, first-unit real tie rule, 2–255/254 bounds, one-request identity and request body remain the settled [find contract](../../specification/find.md). A duplicate string retains its own index and probability. Scalar `ORDER BY thinkthen_probability(...) LIMIT 1` and B13 packed per-row calls are different operations and remain so. Existing SQL scalars, arrays, warm aggregates, settings, error kinds and cancellation remain unchanged.

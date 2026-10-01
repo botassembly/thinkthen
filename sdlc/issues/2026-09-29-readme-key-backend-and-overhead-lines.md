@@ -1,5 +1,7 @@
 Status: Open for criterion 3 only. Owner: marketing's overhead benchmark (0.1 punch list item 8), then the queue owner writes the README sentence. Filed 2026-09-29 by the marketing lead from Ian's launch review.
 
+Milestone: 0.1
+
 Criteria 1 and 2 are met: the README names TypeSafe's site for a key, `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, `--model` and its default. Ticket 0316 rechecked them on 2026-09-30. No overhead benchmark run exists yet, so the README states no overhead number.
 
 # README: where to get a key, how to change the backend, and the overhead line

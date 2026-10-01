@@ -2,6 +2,8 @@
 
 Status: deferred until after the 0.1 release, by the queue batches Quick Fix of 2026-09-30, a coordinator default Ian can overturn. Python already takes a pandas `Series` in the four verbs and returns one with the caller's index and name (`libraries/python/README.md`); the `.tt` accessor is additive sugar, so shipping it later breaks no consumer. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
 
+Milestone: later
+
 ## Outcome
 
 Opt-in import thinkthen.pandas registers series.tt decide/choose/score/tag, returning a Series with original index/name through one packed engine call. Base import stays independent of pandas; pandas remains eager. Use chunked reader examples for bounded memory and explicit tally for facts.

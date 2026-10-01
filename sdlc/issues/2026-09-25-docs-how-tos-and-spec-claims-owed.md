@@ -1,5 +1,7 @@
 Status: open for pages 12 to 24, all after 0.1. Page 11 is done: ticket 0350 (`8f397e963`) wrote it as how-to 48. No page here blocks 0.1. Ticket 0316 rechecked every item on 2026-09-30 and cut the finished ones. The wrong spec claims, the 0.1 pages 5 to 10, the held-flag answers and the annotate help fix are done; git history holds their record.
 
+Milestone: later
+
 Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future docs ticket after 0.1; marketing for page 23.
 
 # Docs and how-tos owed

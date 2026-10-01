@@ -3,6 +3,7 @@
 Status: open. Asked by the release QA team on 2026-09-30. Owner: the queue owner, after 0.1.
 Kind: idea
 When: after the 0.1 release
+Milestone: later
 
 Refusing such a record locally would save a paid call that the backend is sure to refuse, and would let the other records still answer.
 

@@ -8,6 +8,8 @@ opens: sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-packag
 
 Status: static implementation complete and accepted by fresh independent High code review at `9c26a689`; see [the code review](../records/0273-linux-language-runner-code-review.md). This ticket supports existing release consumer issues; it creates no new issue or public surface. [Preparation](../records/0273-linux-language-runner-preparation.md) compares landed 0271 and 0272. The [build record](../records/0273-linux-language-runner-build.md) names the implemented seam and static proof. Ian holds all SQL/DataFrame work. Actual runner setup, container, consumers and Actions need their later execution checkpoint.
 
+Milestone: 0.1
+
 ## Outcome and boundary
 
 Make the `ubuntu-24.04` x86 release jobs select deterministic inputs for the five added language families and fail before compilation or installed smoke when a required version, path or integrity check fails. Preserve 0271's manylinux source-wrapper route and exact family gates. Preserve 0272's one C archive, archived source, managed receipt handoff and package preflight. The existing Go/C++, Swift/Zig, PHP/Dart, legacy host setup and manual release controls remain in their current workflow. Other targets need no Ada, GNU Objective-C, COBOL or managed setup. Draft needs archive verification only and must not acquire SDKs.

@@ -8,6 +8,8 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/optio
 
 Status: design accepted 2026-09-27 after fresh independent review of corrected `291d7532`. Owner: Codex. The independent core, SQLite and PostgreSQL slice passed fresh review at `0c987e46`. Fresh High review accepted the Linux DuckDB integration source at `984eb027`, and its installed artifact passed the selected settings and warm checks. The reviewed stage is on main; the full ticket and registers 50/51 remain open for the three retained C API release targets.
 
+Milestone: 0.1
+
 ## Outcome and authority
 
 A SQL caller can select the model, timeout, retries, backend limits profile, and record or strict replay folder through its extension's existing settings style. A replay miss sends nothing. The caller cannot set a key or address in SQL. A retry consumes the SQL process request total before it sends, including when the total runs out within one call. DuckDB `thinkthen_warm` uses the calling session's settings and fills the same cache as that session's scalar calls.

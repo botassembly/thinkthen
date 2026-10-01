@@ -10,6 +10,8 @@ Debt: 007
 
 Severity: medium
 
+Milestone: 0.1
+
 Keeping it lets the PostgreSQL tab drift from its surface with no check failing, and lets three status phrases back onto the site.
 
 ## Done

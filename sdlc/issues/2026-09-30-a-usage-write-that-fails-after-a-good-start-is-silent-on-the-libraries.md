@@ -12,6 +12,8 @@ Severity: low
 
 Pay when: a binding gains a warning channel, or a monthly spend limit reads the usage totals.
 
+Milestone: later
+
 Keeping it risks a usage count that stops partway through a long library or SQL session without a word. A status read afterwards then shows less spend than was sent.
 
 ## What happens

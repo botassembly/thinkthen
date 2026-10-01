@@ -8,6 +8,8 @@ opens: databases/duckdb/tools/setup.sh databases/duckdb/tools/version.env databa
 
 Status: design accepted after fresh independent review at `f1eafad9`; [review record](../records/0231-design-review.md). Owner: Codex. The selected macOS ARM64 slice is complete at reviewed candidate `a72e62a8`, with the installed M5 archive compiled from `bbb79e21`; see the [build record](../records/0231-macos-arm64-build.md). The same independent High reviewer accepted source and final artifact. Actual macOS 15 runner execution remains with 0128. The selected Linux ARM64 package is now complete after High acceptance at `aab8baad`; its native VM build and exact installed artifact are in [the build record](../records/0231-linux-arm64-build.md). Intel macOS remains open, and actual release-runner checks remain with0128. The Linux x86-64 implementation already landed under 0201, 0149 and 0157. This ticket changes no SQL API.
 
+Milestone: 0.1
+
 ## Outcome and authority
 
 Every advertised 0.1 DuckDB archive contains the accepted C++ extension for DuckDB v1.5.5, built from the corresponding official static inputs. An installed archive on its own target proves bind-time refusal, query lifetime, same-session warm/settings behavior and request-size behavior before that target's register 51/72 and 0149/0157 remainder closes. A target that lacks a verified archive or native installed check fails release smoke. It never falls back to the old C API package under the same release name.

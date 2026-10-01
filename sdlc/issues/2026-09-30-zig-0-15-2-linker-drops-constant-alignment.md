@@ -10,6 +10,8 @@ Debt: 002
 
 Severity: low
 
+Milestone: later
+
 Keeping it ties static Zig builds to LLVM and LLD, and a later Zig may drop or change those switches.
 
 ## The problem

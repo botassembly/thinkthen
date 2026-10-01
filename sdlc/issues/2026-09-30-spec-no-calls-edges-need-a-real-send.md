@@ -2,6 +2,8 @@
 
 Status: open. Reported by the Beatles Bench team on 2026-09-30 from the private release QA suite's first edge pass. Owner: the external release QA team, on its edge list. When that team sends a finding, the queue owner feeds it back into `specification/`.
 
+Milestone: later
+
 ## The problem
 
 The release QA suite tried to check each edge the specification marks as needing no calls. About a third of them can be seen only after a real send: the refusal or behavior appears on a reply, not before the request. In other places the specification describes behavior the build has since changed.

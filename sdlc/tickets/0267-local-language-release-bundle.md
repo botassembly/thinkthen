@@ -8,6 +8,8 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/records/0249-r
 
 Status: presence code accepted after fresh independent review of `3f22a71d`; its focused refusal fixture runs in routine lint. The coordinator lands this independent correction while keeping the ticket open for its aggregate checkpoint. See [the code review](../records/0267-local-bundle-code-review.md). A one-pin local pack produced 18 of 21 planned archives before the new SQL/DataFrame hold. The complete installed checkpoint is **held and unverified**: no `release-smoke --source-packages` run started. The [preparation](../records/0267-release-bundle-preparation.md) and [held build record](../records/0267-local-bundle-build.md) give the exact boundary. Accepted 0265 and 0266 routes have landed.
 
+Milestone: 0.1
+
 ## Concrete gap and bounded outcome
 
 The current `.github/workflows/release.yml` builds the original 0128 families only. `release-pack` makes the later binding archives only when explicitly named. `release-smoke` runs recognized binding files when present, but its final required-presence list includes only the original nine families. A local nine-family bundle can therefore pass with all eleven integrated source binding packages absent. The accepted 0261–0264 file pilots demonstrate separate, source-pinned C/wrapper installations, not one complete bundle from one commit. Ticket 0265 adds the last three binding files; ticket 0266 adds a private installed Flutter app file. This ticket makes their omission visible and runs one complete local Linux x86-64 installed-bundle check. It does not claim four-platform release or publication.

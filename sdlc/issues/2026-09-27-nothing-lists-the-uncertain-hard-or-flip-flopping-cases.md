@@ -4,6 +4,8 @@ Status: open, deferred past 0.1 by the tuning review of 2026-09-28: the need var
 
 Owner: a future ticket after 0.1 for each part. They serve the ideal state's tuning loop, where ThinkThen supplies rows for Optimizer, and no phase goal. Part 3 depends on the run facts shape in `2026-09-26-every-surface-should-give-back-run-facts.md`.
 
+Milestone: later
+
 ## 1. Nothing lists the uncertain, hard, or flip-flopping cases a person should label
 
 ### What happens today

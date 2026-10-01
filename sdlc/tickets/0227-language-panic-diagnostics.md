@@ -6,6 +6,8 @@ opens: sdlc/issues/2026-09-28-r-worker-panic-can-copy-payload-text.md sdlc/issue
 
 Status: source and evidenced Linux package subset accepted at `e52c1604` by fresh High code review and landed. Owner: Codex. Other target packages and the later 0212 Call conversion integration remain open; this is not whole-ticket closure. Source inventory pins main `dad31fd8` and the reviewed 0226 landing `fadb6c5c`, with its SQLite Python-counter correction `614471dd`. [ADR 0098](../planning/adr/0098-native-panic-diagnostics.md) and the 0226 Linux source/package subset are accepted; macOS and retained old DuckDB target-package proofs remain open.
 
+Milestone: 0.1
+
 ## Outcome and retained behavior
 
 A panic caught by the Python, Ruby, TypeScript or R binding must return its existing fixed non-retryable Defect without writing an owned synthetic payload to stderr, stdout or a host error. R also stops copying string payloads into its packed error. Each binding must work on a later call and delegate unrelated host-thread panic diagnostics. Preserve all six kinds, ordinary Python exceptions, Ruby raises and traps, Node promise and abort behavior, R conditions and interrupt handling, caller/worker ownership, detached worker shutdown, native API and package loaders. This adds no public name, fault switch, dependency or host-visible lifetime rule.

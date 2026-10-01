@@ -17,7 +17,7 @@ thinkthen's gate keeps mechanics against recordings, with no network. The public
 The convention is `worktrees.md`, "Landing commits and tags". Under it, only `phase/cleanup-2026-09-29` exists so far. Older `surfaces-wave7-*` tags predate the convention.
 
 - `checkpoint/surfaces/YYYY-MM-DD-N` marks a main commit on which every surface check passed. The first comes after the first full surface pass on one main commit, expected after 0304 slice 3b lands. Its annotated message lists each check and its result.
-- `rc/0.1.0-rc.1` marks the first release candidate. It comes when the 0.1 blockers in `issue-priorities-2026-09-30.md` clear. Ruling 10 holds every public release until 0.1.
+- `rc/0.1.0-rc.1` marks the first release candidate. [release-process.md](release-process.md) says when it comes. Ruling 10 holds every public release until 0.1.
 
 The bench can pin its per-function summaries (bench ticket 0022) to these tags.
 

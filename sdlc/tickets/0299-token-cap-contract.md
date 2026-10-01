@@ -2,6 +2,8 @@
 
 Status: Core, CLI and C stage landed after fresh independent High ACCEPT of `bb1d1f65c98229fef9ab2ab6ab1645e181b833fa`. Design review accepted `f49eaccf2`. The combined source checkpoint proves SQLite explicitly refuses the new key until its active host rollout. Other host settings, installed and release qualification, and the overall issue remain open; this ticket is not fully closed.
 
+Milestone: 0.1
+
 ## Decision proposed for review
 
 Expose **`max_estimated_input_tokens_total`** (`--max-estimated-input-tokens-total` at the command) as an optional nonnegative whole-number limit, in *estimated input tokens admitted for live transport attempts*. There is no default limit. Zero admits cache/replay work but no live attempt, subject to the independent request-cap rules. A positive setting is active, never an inert accepted key. The estimator is `encoded-body-bytes-908-v1`: for each final encoded System One request body, charge `ceil(body.len() × 908 / 1000)` with checked integer arithmetic. Sum individually rounded attempts, not logical records or the preview's total rounded once. The coefficient is the measured high end of 0289's 0.516–0.908 planning band; **it is not a tokenizer or proven upper bound on provider input tokens**. Changing coefficient/body coverage requires a new version and compatibility review. `plan` keeps its band and no-send semantics; its planned sum can differ from actual admission after cache hits, retries and splits.

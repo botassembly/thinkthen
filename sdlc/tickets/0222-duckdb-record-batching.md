@@ -8,6 +8,8 @@ opens: sdlc/planning/adr/0094-recoverable-batch-outcomes.md sdlc/tickets/0222-du
 
 Status: B13c technical design accepted at `e103c36f`; Ian approved all ten implementation choices, including the public recoverable Rust carrier, in the work plan. Owner: Codex. Linux x86-64 implementation and selected installed-package proof are complete and accepted by fresh High code review at `e7d57bc0`, landed on main `73932ef4`. A selected Apple Silicon M5 installed package from that runtime source awaits artifact review; Linux ARM64, Intel macOS, actual macOS 15 execution and the full 0128 rehearsal remain open. The [preflight](../records/0222-duckdb-batching-preflight.md) preserves its historical source audit. Rust 0212, dynamic details 0230 and offline 0216 are now on main.
 
+Milestone: 0.1
+
 Post-landing audit: [0240's confirmed issue](../issues/closed/2026-09-28-duckdb-try-details-raises-on-a-spent-request-total.md) withdraws the later review requirement that a spent request total must raise from `try_details`. ADR 0080 and 0149 retain a safe failed Usage value. The original matching test was omitted from the selected acceptance cases and fails the final artifact. The earlier “no completed vector” and fatal-budget proof statements below are historical, conflicting instructions, not the current contract. Repair must retain answered members and enforce the actual-send cap; ordinary scalar and warm errors remain. B13c stays open.
 
 ## Accepted outcome and retained behavior

@@ -8,6 +8,8 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/resul
 
 Status: staged implementation landed after fresh High review accepted source `85180c3f`. Owner: Codex. Six libraries, SQLite, PostgreSQL and Linux x86-64 DuckDB passed the focused settings integration checkpoint. Full ticket completion remains open for Linux ARM64 and both macOS DuckDB C API packages.
 
+Milestone: 0.1
+
 ## Outcome and authority
 
 A Rust, Python, TypeScript, Ruby, R or C caller can set the request-byte ceiling that the command calls `--max-request-bytes` and read how many of its actual sends were retries. Each SQL host can set the byte ceiling in its existing settings style where it affects a relation or other split plan. The size limits requests and never changes a single unsplittable question into a smaller request. `requests_sent` continues to count first sends and retries together; `retries` is its subset.

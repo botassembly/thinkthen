@@ -8,6 +8,8 @@ opens: libraries sdlc/issues sdlc/tickets
 
 Status: **source integration complete; all eleven packages reviewed and integrated; original release follow-ups remain open**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). Nothing is published and no release CI is configured. The package build records under `sdlc/records/0249-*` hold current proof and remaining host criteria.
 
+Milestone: 0.1
+
 Number corrected from 0247 during queue intake because the existing DuckDB lane holds 0247 and the usage-persistence design holds 0248. Scope is retained; the later explicit authorization above releases the start hold. This handoff consolidates existing J8 rows; it is not another independent issue.
 
 ## Evidence

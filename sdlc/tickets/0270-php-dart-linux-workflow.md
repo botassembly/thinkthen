@@ -8,6 +8,8 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/closed/
 
 Status: combined static implementation accepted at `889c7a94` after [fresh High code review](../records/0270-php-dart-workflow-code-review.md). The direct installed PHP and Dart selectors now pass on the coherent retained 0267 C/PHP/Dart trio, as recorded in [the preserved-package check](../records/0270-preserved-package-selector-check.md). This is execution on prior package bytes. Actual current-source workflow packaging and runner qualification remain open. The aggregate SQL/DataFrame hold remains in force.
 
+Milestone: 0.1
+
 ## Bounded outcome and retained route
 
 Add only PHP and Dart source archives to the Linux x86-64 manual release workflow beside the **same** manylinux C archive that 0268/0269 select. The existing direct PHP FFI and unrelated Dart path-consumer local archive proof is accepted in [0264](../records/0264-php-dart-release-build.md); this ticket adds a required x86 file/gate route before the files can reach a draft. It does not turn the private Flutter wrapper into a public Dart asset. Retain `workflow_dispatch`, the resolved source SHA, 0268's complete tar-versus-extraction comparison, one fresh C in a non-reuse invocation, the pinned manylinux image and glibc floor, historical release families, four target jobs and the release environment/`RELEASE_ARMED` publication controls. Linux ARM and both Darwin targets must reject accidental PHP/Dart assets until separately qualified.

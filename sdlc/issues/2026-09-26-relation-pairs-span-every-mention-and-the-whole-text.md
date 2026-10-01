@@ -2,6 +2,8 @@
 
 Status: open, a post-0.1 candidate. Shortened 2026-09-30. Fix 1, merging mentions, landed: `core/relation/pairs.rs::asked_names` keeps one name per text and kind at its first mention (ticket 0167; `sdlc/records/2026-09-29-recognition-release-decision.md`). Fixes 2 and 3 remain. ADR 0056 keeps the whole text as relation evidence, so a default distance limit changes the contract and needs a ruling.
 
+Milestone: later
+
 Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0.1. Coordinator default 3 keeps the whole text for 0.1, with the limit as an opt-in; Ian can overturn.
 
 ## What happens today
