@@ -5,107 +5,104 @@ import Base from '../../layouts/Base.astro';
 import { BINDINGS } from '../../data/catalog.mjs';
 import data from '../../data/overhead.json';
 
-const ms = (x, places = 1) => (x == null ? 'none' : x.toFixed(places));
-const median = (xs) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-};
-const PER_ROW = new Set(['sqlite filter', 'postgresql filter']);
-const singleLive = (s) => Object.entries(s.cells)
-  .filter(([fn, c]) => fn !== 'recognize' && !PER_ROW.has(`${s.id} ${fn}`) && c.live_each_ms)
-  .flatMap(([, c]) => c.live_each_ms);
+// A time under 10 ms keeps one decimal. A longer time rounds to a whole millisecond.
+const ms = (x) => (x == null ? 'none' : Math.abs(x) < 10 ? x.toFixed(1) : String(Math.round(x)));
+const range = (s) => `${ms(s.p10)} to ${ms(s.p90)}`;
+const big = (n) => n.toLocaleString('en-US');
 const route = (id) => {
   if (id.startsWith('cli')) return '/install/shell/';
   const slug = id === 'c-release' ? 'c' : id;
   return BINDINGS.find((b) => b.slug === slug)?.route;
 };
-const byId = Object.fromEntries(data.surfaces.map((s) => [s.id, s]));
-const core = byId.rust;
-const coreSingle = data.cases.filter((fn) => fn !== 'recognize').map((fn) => core.cells[fn].loop_ms);
-const libraries = data.surfaces.filter((s) => !s.id.startsWith('cli') && s.id !== 'rust')
-  .sort((a, b) => a.added_median_ms - b.added_median_ms);
-const cliLive = median(singleLive(byId.cli));
-const libLive = data.head.live_median_ms;
 const h = data.head;
+const byId = Object.fromEntries(data.surfaces.map((s) => [s.id, s]));
+const libraries = data.surfaces.filter((s) => !s.id.startsWith('cli'));
+const others = libraries.filter((s) => s.id !== 'rust');
+const medianAdded = Math.max(...others.map((s) => s.added));
+const [worstLabel, worstFn, worstMs] = data.worst;
+const httpAll = Object.entries(data.http_functions).filter(([, fns]) => fns.length === data.cases.length).map(([s]) => byId[s].label);
+const httpButDecide = Object.entries(data.http_functions).filter(([, fns]) => fns.length === data.cases.length - 1 && !fns.includes('decide'));
+const cmd = data.command;
+const sp = data.spend;
+const cents = (usd) => (usd * 100).toFixed(1);
 const t = data.batches;
-const tokens = { input: 285800, output: 57300 };
+const time = (iso) => iso.slice(11, 16);
+const cliCell = (id) => byId[id];
 ---
-<Base title="Overhead" description="ThinkThen spends about 2 ms of a call on its own work. Jev spends about 138 ms. A binding adds under 3 ms more.">
+<Base title="Overhead" description={`On 2026-10-01 a call to Jev took a median of ${ms(h.live.median)} ms. ThinkThen's own work took about 2 ms of it. Each binding added a median of ${ms(medianAdded)} ms or less.`}>
   <h1>Overhead</h1>
-  <p class="lede">A call to Jev took a median of {ms(h.live_median_ms)} ms on 2026-10-01. ThinkThen's own work took about 2 ms of it. A binding adds under 3 ms more.</p>
+  <p class="lede">A live call through a binding took a median of {ms(h.live.median)} ms on 2026-10-01. ThinkThen's own work took about 2 ms of it. Each binding adds a median of {ms(medianAdded)} ms or less. The slowest single function, {worstLabel} <code>{worstFn}</code>, adds {ms(worstMs)} ms.</p>
 
   <h2>The answer</h2>
   <table>
-    <tr><th>Part of a call</th><th>Median (ms)</th></tr>
-    <tr><td>A whole live call through a binding, {h.live_n} calls</td><td>{ms(h.live_median_ms)}</td></tr>
-    <tr><td>The HTTP request inside a live call, {h.http_n} calls that report it</td><td>{ms(h.http_median_ms)}</td></tr>
-    <tr><td>A live call less its HTTP request, the same {h.http_n} calls</td><td>{ms(h.gap_median_ms)}</td></tr>
-    <tr><td>The Rust core against a local server, one request</td><td>{ms(Math.min(...coreSingle), 2)} to {ms(Math.max(...coreSingle), 2)}</td></tr>
-    <tr><td>A binding over the Rust core, the slowest binding</td><td>{ms(libraries.at(-1).added_median_ms, 2)}</td></tr>
-    <tr><td>The command over the Rust core, per run, debug build</td><td>{ms(byId.cli.added_median_ms, 2)}</td></tr>
-    <tr><td>The command over the Rust core, per run, release build</td><td>{ms(byId['cli-release'].added_median_ms, 2)}</td></tr>
+    <tr><th>Part of a call</th><th>Median (ms)</th><th>10th to 90th percentile (ms)</th></tr>
+    <tr><td>A whole live call through a binding, {h.live.n} calls</td><td>{ms(h.live.median)}</td><td>{range(h.live)}</td></tr>
+    <tr><td>The HTTP request inside a live call, {h.http.n} calls</td><td>{ms(h.http.median)}</td><td>{range(h.http)}</td></tr>
+    <tr><td>A live call less its HTTP request, as recorded</td><td>{ms(h.gap_raw.median)}</td><td>{range(h.gap_raw)}</td></tr>
+    <tr><td>A live call less its HTTP request, with the rounding taken out</td><td>{ms(h.gap_fixed.median)}</td><td>{range(h.gap_fixed)}</td></tr>
+    <tr><td>The Rust core against a local test server, one request, {big(h.core.n)} calls</td><td>{ms(h.core.median)}</td><td>{range(h.core)}</td></tr>
   </table>
+  <p>ThinkThen records each HTTP request's time rounded up to a whole millisecond. The rounding adds half a millisecond to a request on average. So the recorded gap reads about half a millisecond low, and the next row adds it back.</p>
   <p>The HTTP request holds Jev's work and the network together. Jev sent no server time with any reply in this run. So this page cannot split Jev's time from the network's time.</p>
 
   <h2>How it was measured</h2>
   <ul>
     <li>The builds came from checkpoint 3, published on 2026-10-01 from commit <code>bfc180a10</code>. The published command and the published C library are debug builds. A release build of each from the same commit gives the comparison.</li>
-    <li>The machine is an AMD Ryzen 7 5825U with 8 cores, 16 threads and 27 GB of memory, on Linux for x86_64. Other jobs shared it. The load average was {data.load[0]} when the paid run started and {data.load[1]} when it ended.</li>
+    <li>The machine is an AMD Ryzen 7 5825U with 8 cores, 16 threads and 27 GB of memory, on Linux for x86_64. Other builds shared it all day. The load average stayed between {data.local_load[0]} and {data.local_load[1]} during the local runs. It was {data.live_load[0]} when the paid run started and {data.live_load[1]} when it ended. The spreads below include that noise.</li>
     <li>Each binding asked the same ten questions. Each question starts from the site's own sample for that function and keeps its input small. The answer cache was off for every timed call.</li>
     <li>Each binding timed its own calls with its language's clock. The clock wraps the call alone. The command was timed as a whole process.</li>
-    <li>A test server on the same machine answers each request at once. Against it, each binding made one warm-up call and 20 timed calls for each function, three times over. The tables give the median of those 60 calls and the median of each set of 20.</li>
-    <li>The paid run made one warm-up call for each binding. Then it made two timed calls to Jev for each function. It ran from 13:56 to 13:58 UTC.</li>
+    <li>A test server on the same machine answers each request at once. The local runs were pinned to {data.local_cpus.length} of the 16 threads. Each binding made one warm-up call and {data.per_pass} timed calls for each function, {data.passes} times over.</li>
+    <li>The paid run made one warm-up call for each binding. Then it made two timed calls to Jev for each function. It ran from {time(data.live_window[0])} to {time(data.live_window[1])} Eastern time.</li>
     <li>The Rust binding, built for release, stands for the core. "Added" is a binding's median minus the core's median for the same function. A number below zero means the two differ by less than the noise.</li>
-    <li>The C, C++, Objective-C, COBOL, Ada, Go, Zig, Swift, PHP, Java, Kotlin, Scala, C#, Dart and Rust bindings report the time of each HTTP request. The other bindings give no HTTP column.</li>
+    <li>The {httpAll.map((l) => l.replace(' (the core)', '')).join(', ')} binding reports the time of each HTTP request for all ten functions. The {httpButDecide.length} C-interface bindings report it for every function except <code>decide</code>. They call <code>decide</code> through the typed C function, which returns no request times. The other bindings report none.</li>
   </ul>
 
   <h2>The spend</h2>
-  <p>A counting run against the test server came first. It counted {data.plan.requests} requests, {data.plan.questions.toLocaleString('en-US')} questions and {data.plan.bytes.toLocaleString('en-US')} request bytes. The paid run sent the same requests. It held a reservation of 2,000,000 tokens under a cap of one dollar. The replies reported about {tokens.input.toLocaleString('en-US')} input tokens and {tokens.output.toLocaleString('en-US')} output tokens. Seven bindings report no token counts, and their share is counted as equal to the rest. The run cost about 1.4 cents.</p>
+  <p>A counting run against the test server came first. It counted {big(data.plan.requests)} requests, {big(data.plan.questions)} questions and {big(data.plan.bytes)} request bytes. The paid run sent the same requests. It held a reservation of 2,000,000 tokens under a cap of one dollar.</p>
+  <p>The replies reported {big(sp.reported[0])} input tokens and {big(sp.reported[1])} output tokens. Some bindings report no token counts, and some skip the count on a few calls. Each of those bindings sent the same request bytes as a binding that counts every call. Filling in its share from that binding gives about {big(sp.estimate[0])} input tokens and {big(sp.estimate[1])} output tokens.</p>
+  <p>This page prices tokens at ${sp.price.input} a million input tokens and ${sp.price.output} a million output tokens. At those prices the run cost about {cents(sp.estimate_usd)} cents. The reported tokens alone come to {cents(sp.reported_usd)} cents. The backend's bill is the real cost.</p>
 
   <h2>Each binding</h2>
-  <p>A binding adds its median over the core across nine functions. The <code>recognize</code> function sends two requests one after the other. It is left out of the medians, and the tables below show it. The live column gives the median of the binding's paid calls that send one request.</p>
+  <p>A binding's added time is its median over the core across nine functions. The <code>recognize</code> function sends two requests one after the other. The medians leave it out. The core's own one-request calls spread from {ms(h.core.p10)} to {ms(h.core.p90)} ms. So a gap of a millisecond between two bindings is inside the noise, and the table lists bindings by name.</p>
   <table>
-    <tr><th>Binding</th><th>Added, median (ms)</th><th>Added, largest (ms)</th><th>Live, median (ms)</th></tr>
-    <tr><td><a href={route('rust')}>{core.label}</a></td><td>{ms(0, 2)}</td><td>{ms(0, 2)}</td><td>{ms(median(singleLive(core)))}</td></tr>
+    <tr><th>Binding</th><th>Added, median (ms)</th><th>Most added, one function (ms)</th><th>Live, median (ms)</th><th>Live, 10th to 90th (ms)</th></tr>
     {libraries.map((s) => (
-      <tr><td><a href={route(s.id)}>{s.label}</a></td><td>{ms(s.added_median_ms, 2)}</td><td>{ms(s.added_max_ms, 2)}</td><td>{s.id === 'c-release' ? 'none' : ms(median(singleLive(s)))}</td></tr>
+      <tr><td><a href={route(s.id)}>{s.label}</a></td><td>{ms(s.added)}</td><td>{s.id === 'rust' ? 'none' : <>{ms(s.worst[1])} in <code>{s.worst[0]}</code></>}</td><td>{s.live ? ms(s.live.median) : 'none'}</td><td>{s.live ? range(s.live) : 'none'}</td></tr>
     ))}
   </table>
-  <p>The debug C library accounts for most of the time the C-interface bindings add. The release C library adds nothing past the noise. pandas and Polars lack <code>filter</code>, <code>rank</code>, <code>find</code> and <code>relate</code>. SQLite and PostgreSQL send one request for each row in <code>filter</code>. Their <code>filter</code> calls send two requests here.</p>
+  <p>The debug C library accounts for most of the time the C-interface bindings add. The release C library adds nothing past the noise. pandas and Polars lack <code>filter</code>, <code>rank</code>, <code>find</code> and <code>relate</code>. SQLite and PostgreSQL send one request for each row in <code>filter</code>. Their <code>filter</code> calls send two requests here, and the live medians leave them out.</p>
+
+  <h2>Each function</h2>
+  <table>
+    <tr><th>Function</th><th>Core, median (ms)</th><th>Core, 10th to 90th (ms)</th><th>Added, median binding (ms)</th><th>Live, median (ms)</th><th>Live, 10th to 90th (ms)</th></tr>
+    {data.functions.map((f) => (
+      <tr><td><a href={`/functions/${f.name}/`}><code>{f.name}</code></a></td><td>{ms(f.core[0])}</td><td>{ms(f.core[1])} to {ms(f.core[2])}</td><td>{ms(f.added)}</td><td>{ms(f.live.median)}</td><td>{range(f.live)}</td></tr>
+    ))}
+  </table>
+  <p><a href="/learn/overhead/calls.csv">calls.csv</a> holds every binding and function. Each row gives the local median and its 10th and 90th percentiles, the median of each set, the added time, both paid calls and their HTTP time.</p>
 
   <h2>The command</h2>
-  <p>Each run of the command starts a process, reads its settings and writes its usage totals to disk. Each run also opens a new connection to Jev. A library keeps its connection open between calls. So a live command run took a median of {ms(cliLive)} ms against {ms(libLive)} ms through a library.</p>
+  <p>Each run of the command starts a process, reads its settings and writes its usage totals to disk.</p>
   <table>
-    <tr><th>Build</th><th>Per run, test server (ms)</th><th>Over the core (ms)</th></tr>
-    <tr><td>Debug, as published</td><td>{ms(median(data.cases.filter((f) => f !== 'recognize').map((f) => byId.cli.cells[f].loop_ms)), 2)}</td><td>{ms(byId.cli.added_median_ms, 2)}</td></tr>
-    <tr><td>Release, same commit</td><td>{ms(median(data.cases.filter((f) => f !== 'recognize').map((f) => byId['cli-release'].cells[f].loop_ms)), 2)}</td><td>{ms(byId['cli-release'].added_median_ms, 2)}</td></tr>
+    <tr><th>Part of a run</th><th>Debug, median (ms)</th><th>Debug, 10th to 90th (ms)</th><th>Release, median (ms)</th><th>Release, 10th to 90th (ms)</th></tr>
+    <tr><td>A whole <code>decide</code> run against the test server</td><td>{ms(cmd.debug.decide_ms.median)}</td><td>{range(cmd.debug.decide_ms)}</td><td>{ms(cmd.release.decide_ms.median)}</td><td>{range(cmd.release.decide_ms)}</td></tr>
+    <tr><td>A <code>thinkthen --version</code> run</td><td>{ms(cmd.debug.version_ms.median)}</td><td>{range(cmd.debug.version_ms)}</td><td>{ms(cmd.release.version_ms.median)}</td><td>{range(cmd.release.version_ms)}</td></tr>
+    <tr><td>Time inside fsync and fdatasync during a <code>decide</code> run</td><td>{ms(cmd.debug.sync_ms.median)}</td><td>{range(cmd.debug.sync_ms)}</td><td>{ms(cmd.release.sync_ms.median)}</td><td>{range(cmd.release.sync_ms)}</td></tr>
   </table>
+  <p>Each row is {cmd.debug.decide_ms.n} runs. strace measured the time inside fsync and fdatasync. Across the nine one-request functions, the debug command adds a median of {ms(cliCell('cli').added)} ms over the core, and the release command adds {ms(cliCell('cli-release').added)} ms.</p>
+  <p>Live, a command run took a median of {ms(byId.cli.live.median)} ms. A call through a library took {ms(h.live.median)} ms. Each command run opens a new connection to Jev, and a library keeps its connection open between calls. The new connection is the likely cause of the difference. This run did not time the connection itself.</p>
 
   <h2>Large inputs</h2>
-  <p>Two runs of the command sent many records at once. One ranked 306 song titles. The other decided over 1,000 order messages. Each ran once live and three times against the test server.</p>
+  <p>Two runs of the command sent many records at once. One ranked 306 song titles. The other decided over 1,000 order messages. Each ran once live and {t['rank-306'].loopback.cli.each_ms.length} times against the test server with each build.</p>
   <table>
-    <tr><th>Input</th><th>Requests</th><th>Live (ms)</th><th>HTTP (ms)</th><th>Test server, debug (ms)</th><th>Test server, release (ms)</th></tr>
-    {[['rank-306', '306 song titles'], ['lines-1000', '1,000 messages']].map(([k, name]) => (
-      <tr><td>{name}</td><td>{t[k].live_facts.requests_sent}</td><td>{ms(t[k].live_ms)}</td><td>{t[k].live_http_ms.join(' and ')}</td><td>{t[k].loopback.cli.each_ms.map((x) => ms(x)).join(', ')}</td><td>{t[k].loopback['cli-release'].each_ms.map((x) => ms(x)).join(', ')}</td></tr>
-    ))}
+    <tr><th>Input</th><th>Requests</th><th>Live (ms)</th><th>HTTP (ms)</th><th>Debug, median and 10th to 90th (ms)</th><th>Release, median and 10th to 90th (ms)</th></tr>
+    {[['rank-306', '306 song titles'], ['lines-1000', '1,000 messages']].map(([k, name]) => {
+      const d = t[k].loopback.cli;
+      const r = t[k].loopback['cli-release'];
+      return <tr><td>{name}</td><td>{t[k].live_facts.requests_sent}</td><td>{ms(t[k].live_ms)}</td><td>{t[k].live_http_ms.join(' and ')}</td><td>{ms(d.median_ms)}, {ms(d.p10_ms)} to {ms(d.p90_ms)}</td><td>{ms(r.median_ms)}, {ms(r.p10_ms)} to {ms(r.p90_ms)}</td></tr>;
+    })}
   </table>
-  <p>The two requests for 1,000 messages ran side by side. On a large input the debug build takes about three times as long as the release build. The release build stays under 100 ms.</p>
-
-  <h2>Every call</h2>
-  <p>Each table gives one function. "Test server" is the median of 60 calls. "Sets" gives the median of each set of 20. "Live" gives both paid calls.</p>
-  {data.cases.map((fn) => (
-    <>
-      <h3><a href={`/functions/${fn}/`}><code>{fn}</code></a></h3>
-      <table>
-        <tr><th>Binding</th><th>Test server (ms)</th><th>Sets (ms)</th><th>Added (ms)</th><th>Live (ms)</th><th>HTTP (ms)</th></tr>
-        {data.surfaces.filter((s) => s.cells[fn]).map((s) => {
-          const c = s.cells[fn];
-          return <tr><td>{s.label}</td><td>{ms(c.loop_ms, 2)}</td><td>{c.loop_pass_ms.map((x) => ms(x, 2)).join(', ')}</td><td>{ms(c.added_ms, 2)}</td><td>{c.live_each_ms ? c.live_each_ms.map((x) => ms(x)).join(', ') : 'none'}</td><td>{ms(c.http_ms)}</td></tr>;
-        })}
-      </table>
-    </>
-  ))}
+  <p>The two requests for 1,000 messages ran side by side. On a large input the debug build takes several times as long as the release build.</p>
 
   <p class="pagelinks"><a href="/learn/caching/">Caching and replay</a> · <a href="/install/">Install</a> · <a href="/functions/">Functions</a></p>
 </Base>

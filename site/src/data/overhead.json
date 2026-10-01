@@ -12,2181 +12,269 @@
   "relate"
  ],
  "head": {
-  "live_n": 412,
-  "live_median_ms": 138.0,
-  "live_p10_ms": 116.8,
-  "live_p90_ms": 172.9,
-  "http_n": 242,
-  "http_median_ms": 138.0,
-  "http_p10_ms": 116.0,
-  "http_p90_ms": 178.7,
-  "gap_median_ms": 1.1
+  "live": {
+   "median": 138.0,
+   "p10": 116.8,
+   "p90": 172.9,
+   "n": 412
+  },
+  "http": {
+   "median": 138.0,
+   "p10": 116.0,
+   "p90": 178.7,
+   "n": 242
+  },
+  "gap_raw": {
+   "median": 1.1,
+   "p10": 0.4,
+   "p90": 2.4,
+   "n": 242
+  },
+  "gap_fixed": {
+   "median": 1.6,
+   "p10": 0.9,
+   "p90": 2.9,
+   "n": 242
+  },
+  "core": {
+   "median": 1.74,
+   "p10": 1.04,
+   "p90": 3.63,
+   "n": 1800
+  }
  },
+ "worst": [
+  "pandas",
+  "annotate",
+  6.7
+ ],
  "surfaces": [
   {
    "id": "ada",
    "label": "Ada",
    "absent": [],
-   "added_median_ms": 0.98,
-   "added_max_ms": 2.59,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.56,
-     "loop_pass_ms": [
-      2.69,
-      2.08,
-      3.1
-     ],
-     "added_ms": 0.79,
-     "live_each_ms": [
-      135.5,
-      140.5
-     ],
-     "live_ms": 138.0,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.85,
-     "loop_pass_ms": [
-      2.95,
-      2.48,
-      3.41
-     ],
-     "added_ms": 0.98,
-     "live_each_ms": [
-      145.4,
-      140.4
-     ],
-     "live_ms": 142.9,
-     "http_ms": 142.5
-    },
-    "tag": {
-     "loop_ms": 3.08,
-     "loop_pass_ms": [
-      3.31,
-      2.7,
-      3.25
-     ],
-     "added_ms": 1.13,
-     "live_each_ms": [
-      174.4,
-      239.4
-     ],
-     "live_ms": 206.9,
-     "http_ms": 206.5
-    },
-    "score": {
-     "loop_ms": 3.15,
-     "loop_pass_ms": [
-      3.26,
-      2.66,
-      3.97
-     ],
-     "added_ms": 1.26,
-     "live_each_ms": [
-      155.7,
-      135.6
-     ],
-     "live_ms": 145.7,
-     "http_ms": 145
-    },
-    "filter": {
-     "loop_ms": 3.3,
-     "loop_pass_ms": [
-      3.59,
-      2.65,
-      3.75
-     ],
-     "added_ms": 1.16,
-     "live_each_ms": [
-      132.0,
-      158.6
-     ],
-     "live_ms": 145.3,
-     "http_ms": 144.5
-    },
-    "rank": {
-     "loop_ms": 2.99,
-     "loop_pass_ms": [
-      2.99,
-      2.61,
-      3.76
-     ],
-     "added_ms": 0.92,
-     "live_each_ms": [
-      284.6,
-      208.0
-     ],
-     "live_ms": 246.3,
-     "http_ms": 245
-    },
-    "find": {
-     "loop_ms": 2.75,
-     "loop_pass_ms": [
-      2.53,
-      2.66,
-      3.62
-     ],
-     "added_ms": 0.46,
-     "live_each_ms": [
-      141.3,
-      156.4
-     ],
-     "live_ms": 148.8,
-     "http_ms": 145
-    },
-    "annotate": {
-     "loop_ms": 3.07,
-     "loop_pass_ms": [
-      3.07,
-      2.5,
-      5.27
-     ],
-     "added_ms": 0.99,
-     "live_each_ms": [
-      149.2,
-      164.5
-     ],
-     "live_ms": 156.8,
-     "http_ms": 155
-    },
-    "recognize": {
-     "loop_ms": 6.64,
-     "loop_pass_ms": [
-      6.73,
-      5.98,
-      9.07
-     ],
-     "added_ms": 2.59,
-     "live_each_ms": [
-      293.2,
-      283.0
-     ],
-     "live_ms": 288.1,
-     "http_ms": 284
-    },
-    "relate": {
-     "loop_ms": 2.8,
-     "loop_pass_ms": [
-      2.67,
-      2.81,
-      3.31
-     ],
-     "added_ms": 0.95,
-     "live_each_ms": [
-      202.4,
-      157.3
-     ],
-     "live_ms": 179.9,
-     "http_ms": 179
-    }
+   "added": 1.1,
+   "worst": [
+    "recognize",
+    3.6
+   ],
+   "own": 3.0,
+   "live": {
+    "median": 156.0,
+    "p10": 135.1,
+    "p90": 243.9,
+    "n": 18
    }
   },
   {
    "id": "c",
    "label": "C (debug library)",
    "absent": [],
-   "added_median_ms": 1.43,
-   "added_max_ms": 3.85,
-   "cells": {
-    "decide": {
-     "loop_ms": 3.29,
-     "loop_pass_ms": [
-      2.4,
-      3.9,
-      3.71
-     ],
-     "added_ms": 1.52,
-     "live_each_ms": [
-      167.2,
-      142.6
-     ],
-     "live_ms": 154.9,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 3.3,
-     "loop_pass_ms": [
-      2.54,
-      3.33,
-      4.78
-     ],
-     "added_ms": 1.43,
-     "live_each_ms": [
-      185.7,
-      121.2
-     ],
-     "live_ms": 153.5,
-     "http_ms": 152.5
-    },
-    "tag": {
-     "loop_ms": 3.05,
-     "loop_pass_ms": [
-      2.11,
-      3.44,
-      3.33
-     ],
-     "added_ms": 1.1,
-     "live_each_ms": [
-      133.1,
-      129.1
-     ],
-     "live_ms": 131.1,
-     "http_ms": 130
-    },
-    "score": {
-     "loop_ms": 3.19,
-     "loop_pass_ms": [
-      2.33,
-      6.55,
-      3.25
-     ],
-     "added_ms": 1.3,
-     "live_each_ms": [
-      123.9,
-      128.0
-     ],
-     "live_ms": 126.0,
-     "http_ms": 125.5
-    },
-    "filter": {
-     "loop_ms": 3.77,
-     "loop_pass_ms": [
-      2.67,
-      4.68,
-      4.42
-     ],
-     "added_ms": 1.63,
-     "live_each_ms": [
-      278.5,
-      310.4
-     ],
-     "live_ms": 294.4,
-     "http_ms": 294
-    },
-    "rank": {
-     "loop_ms": 3.37,
-     "loop_pass_ms": [
-      2.71,
-      4.92,
-      3.47
-     ],
-     "added_ms": 1.3,
-     "live_each_ms": [
-      178.9,
-      116.3
-     ],
-     "live_ms": 147.6,
-     "http_ms": 147
-    },
-    "find": {
-     "loop_ms": 3.5,
-     "loop_pass_ms": [
-      2.67,
-      4.03,
-      3.73
-     ],
-     "added_ms": 1.21,
-     "live_each_ms": [
-      117.1,
-      119.0
-     ],
-     "live_ms": 118.1,
-     "http_ms": 117
-    },
-    "annotate": {
-     "loop_ms": 4.44,
-     "loop_pass_ms": [
-      2.83,
-      5.52,
-      5.78
-     ],
-     "added_ms": 2.36,
-     "live_each_ms": [
-      187.5,
-      114.4
-     ],
-     "live_ms": 151.0,
-     "http_ms": 150
-    },
-    "recognize": {
-     "loop_ms": 7.9,
-     "loop_pass_ms": [
-      7.3,
-      8.84,
-      8.2
-     ],
-     "added_ms": 3.85,
-     "live_each_ms": [
-      290.3,
-      277.4
-     ],
-     "live_ms": 283.8,
-     "http_ms": 281.5
-    },
-    "relate": {
-     "loop_ms": 3.31,
-     "loop_pass_ms": [
-      3.44,
-      3.18,
-      2.96
-     ],
-     "added_ms": 1.46,
-     "live_each_ms": [
-      114.4,
-      122.5
-     ],
-     "live_ms": 118.4,
-     "http_ms": 117
-    }
+   "added": 1.4,
+   "worst": [
+    "recognize",
+    3.6
+   ],
+   "own": 3.1,
+   "live": {
+    "median": 128.5,
+    "p10": 114.4,
+    "p90": 281.6,
+    "n": 18
    }
   },
   {
    "id": "c-release",
    "label": "C (release library)",
    "absent": [],
-   "added_median_ms": -0.06,
-   "added_max_ms": 0.05,
-   "cells": {
-    "decide": {
-     "loop_ms": 1.74,
-     "loop_pass_ms": [
-      1.72,
-      1.0,
-      2.03
-     ],
-     "added_ms": -0.03,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 1.81,
-     "loop_pass_ms": [
-      1.75,
-      1.77,
-      2.03
-     ],
-     "added_ms": -0.06,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 1.91,
-     "loop_pass_ms": [
-      2.25,
-      1.9,
-      1.85
-     ],
-     "added_ms": -0.04,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 1.77,
-     "loop_pass_ms": [
-      1.72,
-      1.9,
-      1.8
-     ],
-     "added_ms": -0.12,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 1.67,
-     "loop_pass_ms": [
-      1.62,
-      2.09,
-      1.63
-     ],
-     "added_ms": -0.47,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 2.12,
-     "loop_pass_ms": [
-      2.44,
-      2.04,
-      1.88
-     ],
-     "added_ms": 0.05,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 1.86,
-     "loop_pass_ms": [
-      1.76,
-      1.84,
-      1.93
-     ],
-     "added_ms": -0.42,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 2.03,
-     "loop_pass_ms": [
-      1.63,
-      2.78,
-      2.08
-     ],
-     "added_ms": -0.05,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 3.81,
-     "loop_pass_ms": [
-      3.47,
-      5.46,
-      3.76
-     ],
-     "added_ms": -0.24,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 1.7,
-     "loop_pass_ms": [
-      1.55,
-      2.2,
-      1.83
-     ],
-     "added_ms": -0.15,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    }
-   }
+   "added": -0.1,
+   "worst": [
+    "recognize",
+    0.1
+   ],
+   "own": 1.7,
+   "live": null
   },
   {
    "id": "cli",
    "label": "Command (debug)",
    "absent": [],
-   "added_median_ms": 20.02,
-   "added_max_ms": 31.35,
-   "cells": {
-    "decide": {
-     "loop_ms": 25.22,
-     "loop_pass_ms": [
-      26.52,
-      26.21,
-      23.77
-     ],
-     "added_ms": 23.45,
-     "live_each_ms": [
-      257.5,
-      176.1
-     ],
-     "live_ms": 216.8,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 27.2,
-     "loop_pass_ms": [
-      28.3,
-      26.97,
-      25.73
-     ],
-     "added_ms": 25.33,
-     "live_each_ms": [
-      196.0,
-      351.9
-     ],
-     "live_ms": 274.0,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 24.54,
-     "loop_pass_ms": [
-      24.09,
-      18.1,
-      32.1
-     ],
-     "added_ms": 22.59,
-     "live_each_ms": [
-      219.4,
-      276.5
-     ],
-     "live_ms": 247.9,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 22.28,
-     "loop_pass_ms": [
-      28.76,
-      18.59,
-      22.52
-     ],
-     "added_ms": 20.39,
-     "live_each_ms": [
-      218.8,
-      227.0
-     ],
-     "live_ms": 222.9,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 18.74,
-     "loop_pass_ms": [
-      30.81,
-      17.95,
-      17.39
-     ],
-     "added_ms": 16.6,
-     "live_each_ms": [
-      401.7,
-      264.5
-     ],
-     "live_ms": 333.1,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 19.95,
-     "loop_pass_ms": [
-      28.53,
-      18.74,
-      19.73
-     ],
-     "added_ms": 17.88,
-     "live_each_ms": [
-      251.6,
-      205.9
-     ],
-     "live_ms": 228.7,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 20.62,
-     "loop_pass_ms": [
-      28.61,
-      19.0,
-      20.06
-     ],
-     "added_ms": 18.34,
-     "live_each_ms": [
-      209.3,
-      162.6
-     ],
-     "live_ms": 185.9,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 21.92,
-     "loop_pass_ms": [
-      29.26,
-      17.37,
-      21.92
-     ],
-     "added_ms": 19.84,
-     "live_each_ms": [
-      179.9,
-      218.9
-     ],
-     "live_ms": 199.4,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 35.4,
-     "loop_pass_ms": [
-      55.07,
-      34.48,
-      28.19
-     ],
-     "added_ms": 31.35,
-     "live_each_ms": [
-      379.5,
-      319.4
-     ],
-     "live_ms": 349.4,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 21.87,
-     "loop_pass_ms": [
-      26.38,
-      19.63,
-      22.11
-     ],
-     "added_ms": 20.02,
-     "live_each_ms": [
-      236.4,
-      209.7
-     ],
-     "live_ms": 223.0,
-     "http_ms": null
-    }
+   "added": 17.4,
+   "worst": [
+    "recognize",
+    31.7
+   ],
+   "own": 19.1,
+   "live": {
+    "median": 219.2,
+    "p10": 174.7,
+    "p90": 356.9,
+    "n": 18
    }
   },
   {
    "id": "cli-release",
    "label": "Command (release)",
    "absent": [],
-   "added_median_ms": 13.57,
-   "added_max_ms": 26.84,
-   "cells": {
-    "decide": {
-     "loop_ms": 19.26,
-     "loop_pass_ms": [
-      28.55,
-      14.89,
-      18.69
-     ],
-     "added_ms": 17.49,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 18.53,
-     "loop_pass_ms": [
-      27.94,
-      14.44,
-      19.01
-     ],
-     "added_ms": 16.66,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 16.98,
-     "loop_pass_ms": [
-      24.22,
-      14.45,
-      16.22
-     ],
-     "added_ms": 15.03,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 14.76,
-     "loop_pass_ms": [
-      15.03,
-      14.43,
-      15.27
-     ],
-     "added_ms": 12.87,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 14.64,
-     "loop_pass_ms": [
-      14.62,
-      14.48,
-      16.02
-     ],
-     "added_ms": 12.5,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 14.59,
-     "loop_pass_ms": [
-      14.67,
-      13.47,
-      13.82
-     ],
-     "added_ms": 12.52,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 14.64,
-     "loop_pass_ms": [
-      14.63,
-      15.26,
-      13.67
-     ],
-     "added_ms": 12.36,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 15.64,
-     "loop_pass_ms": [
-      14.93,
-      16.44,
-      16.79
-     ],
-     "added_ms": 13.57,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 30.89,
-     "loop_pass_ms": [
-      25.96,
-      29.06,
-      34.82
-     ],
-     "added_ms": 26.84,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 18.27,
-     "loop_pass_ms": [
-      15.96,
-      19.05,
-      19.23
-     ],
-     "added_ms": 16.42,
-     "live_each_ms": null,
-     "live_ms": null,
-     "http_ms": null
-    }
-   }
+   "added": 14.5,
+   "worst": [
+    "recognize",
+    27.3
+   ],
+   "own": 16.3,
+   "live": null
   },
   {
    "id": "cobol",
    "label": "COBOL",
    "absent": [],
-   "added_median_ms": 0.9,
-   "added_max_ms": 2.61,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.59,
-     "loop_pass_ms": [
-      2.54,
-      2.46,
-      2.85
-     ],
-     "added_ms": 0.82,
-     "live_each_ms": [
-      122.5,
-      121.8
-     ],
-     "live_ms": 122.2,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.81,
-     "loop_pass_ms": [
-      2.64,
-      2.63,
-      3.65
-     ],
-     "added_ms": 0.93,
-     "live_each_ms": [
-      114.4,
-      120.8
-     ],
-     "live_ms": 117.6,
-     "http_ms": 117
-    },
-    "tag": {
-     "loop_ms": 3.09,
-     "loop_pass_ms": [
-      3.07,
-      2.72,
-      3.7
-     ],
-     "added_ms": 1.14,
-     "live_each_ms": [
-      124.3,
-      125.2
-     ],
-     "live_ms": 124.7,
-     "http_ms": 124
-    },
-    "score": {
-     "loop_ms": 2.83,
-     "loop_pass_ms": [
-      2.79,
-      2.42,
-      3.27
-     ],
-     "added_ms": 0.94,
-     "live_each_ms": [
-      137.1,
-      122.0
-     ],
-     "live_ms": 129.6,
-     "http_ms": 128.5
-    },
-    "filter": {
-     "loop_ms": 2.82,
-     "loop_pass_ms": [
-      2.83,
-      2.72,
-      3.54
-     ],
-     "added_ms": 0.68,
-     "live_each_ms": [
-      122.9,
-      141.5
-     ],
-     "live_ms": 132.2,
-     "http_ms": 131.5
-    },
-    "rank": {
-     "loop_ms": 2.88,
-     "loop_pass_ms": [
-      2.79,
-      2.66,
-      3.4
-     ],
-     "added_ms": 0.81,
-     "live_each_ms": [
-      153.8,
-      140.0
-     ],
-     "live_ms": 146.9,
-     "http_ms": 146
-    },
-    "find": {
-     "loop_ms": 2.82,
-     "loop_pass_ms": [
-      2.82,
-      2.57,
-      3.73
-     ],
-     "added_ms": 0.54,
-     "live_each_ms": [
-      147.1,
-      142.7
-     ],
-     "live_ms": 144.9,
-     "http_ms": 143.5
-    },
-    "annotate": {
-     "loop_ms": 3.38,
-     "loop_pass_ms": [
-      3.32,
-      3.08,
-      4.08
-     ],
-     "added_ms": 1.3,
-     "live_each_ms": [
-      135.9,
-      147.1
-     ],
-     "live_ms": 141.5,
-     "http_ms": 140
-    },
-    "recognize": {
-     "loop_ms": 6.66,
-     "loop_pass_ms": [
-      6.48,
-      5.99,
-      9.1
-     ],
-     "added_ms": 2.61,
-     "live_each_ms": [
-      252.3,
-      316.4
-     ],
-     "live_ms": 284.4,
-     "http_ms": 282
-    },
-    "relate": {
-     "loop_ms": 2.75,
-     "loop_pass_ms": [
-      2.83,
-      2.13,
-      3.63
-     ],
-     "added_ms": 0.9,
-     "live_each_ms": [
-      133.1,
-      145.3
-     ],
-     "live_ms": 139.2,
-     "http_ms": 138
-    }
+   "added": 1.1,
+   "worst": [
+    "recognize",
+    2.9
+   ],
+   "own": 2.8,
+   "live": {
+    "median": 134.5,
+    "p10": 120.2,
+    "p90": 147.8,
+    "n": 18
    }
   },
   {
    "id": "cpp",
    "label": "C++",
    "absent": [],
-   "added_median_ms": 0.98,
-   "added_max_ms": 1.97,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.62,
-     "loop_pass_ms": [
-      1.95,
-      2.68,
-      2.86
-     ],
-     "added_ms": 0.85,
-     "live_each_ms": [
-      170.7,
-      146.0
-     ],
-     "live_ms": 158.4,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.74,
-     "loop_pass_ms": [
-      2.23,
-      2.75,
-      3.26
-     ],
-     "added_ms": 0.87,
-     "live_each_ms": [
-      126.4,
-      140.9
-     ],
-     "live_ms": 133.7,
-     "http_ms": 133
-    },
-    "tag": {
-     "loop_ms": 3.01,
-     "loop_pass_ms": [
-      2.76,
-      3.06,
-      3.4
-     ],
-     "added_ms": 1.06,
-     "live_each_ms": [
-      154.2,
-      180.7
-     ],
-     "live_ms": 167.5,
-     "http_ms": 166.5
-    },
-    "score": {
-     "loop_ms": 3.03,
-     "loop_pass_ms": [
-      2.47,
-      3.16,
-      3.44
-     ],
-     "added_ms": 1.14,
-     "live_each_ms": [
-      149.3,
-      138.6
-     ],
-     "live_ms": 143.9,
-     "http_ms": 143
-    },
-    "filter": {
-     "loop_ms": 3.54,
-     "loop_pass_ms": [
-      2.59,
-      3.78,
-      3.95
-     ],
-     "added_ms": 1.4,
-     "live_each_ms": [
-      158.7,
-      135.9
-     ],
-     "live_ms": 147.3,
-     "http_ms": 146.5
-    },
-    "rank": {
-     "loop_ms": 3.34,
-     "loop_pass_ms": [
-      2.67,
-      3.71,
-      3.53
-     ],
-     "added_ms": 1.27,
-     "live_each_ms": [
-      135.7,
-      143.9
-     ],
-     "live_ms": 139.8,
-     "http_ms": 138.5
-    },
-    "find": {
-     "loop_ms": 3.26,
-     "loop_pass_ms": [
-      2.44,
-      3.63,
-      3.55
-     ],
-     "added_ms": 0.98,
-     "live_each_ms": [
-      149.0,
-      270.5
-     ],
-     "live_ms": 209.7,
-     "http_ms": 209
-    },
-    "annotate": {
-     "loop_ms": 2.94,
-     "loop_pass_ms": [
-      2.78,
-      2.72,
-      4.33
-     ],
-     "added_ms": 0.86,
-     "live_each_ms": [
-      140.3,
-      145.8
-     ],
-     "live_ms": 143.1,
-     "http_ms": 141
-    },
-    "recognize": {
-     "loop_ms": 6.02,
-     "loop_pass_ms": [
-      5.11,
-      6.03,
-      9.33
-     ],
-     "added_ms": 1.97,
-     "live_each_ms": [
-      318.7,
-      294.8
-     ],
-     "live_ms": 306.8,
-     "http_ms": 304.5
-    },
-    "relate": {
-     "loop_ms": 2.71,
-     "loop_pass_ms": [
-      2.46,
-      2.72,
-      4.09
-     ],
-     "added_ms": 0.86,
-     "live_each_ms": [
-      120.3,
-      128.8
-     ],
-     "live_ms": 124.5,
-     "http_ms": 123.5
-    }
+   "added": 1.2,
+   "worst": [
+    "recognize",
+    3.4
+   ],
+   "own": 3.0,
+   "live": {
+    "median": 144.9,
+    "p10": 125.8,
+    "p90": 189.7,
+    "n": 18
    }
   },
   {
    "id": "csharp",
    "label": "C#",
    "absent": [],
-   "added_median_ms": 0.96,
-   "added_max_ms": 3.13,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.77,
-     "loop_pass_ms": [
-      2.24,
-      3.35,
-      2.77
-     ],
-     "added_ms": 1.0,
-     "live_each_ms": [
-      122.9,
-      174.0
-     ],
-     "live_ms": 148.5,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.79,
-     "loop_pass_ms": [
-      2.24,
-      4.68,
-      2.84
-     ],
-     "added_ms": 0.91,
-     "live_each_ms": [
-      131.2,
-      150.0
-     ],
-     "live_ms": 140.6,
-     "http_ms": 139
-    },
-    "tag": {
-     "loop_ms": 2.92,
-     "loop_pass_ms": [
-      2.38,
-      4.66,
-      2.86
-     ],
-     "added_ms": 0.97,
-     "live_each_ms": [
-      150.9,
-      129.0
-     ],
-     "live_ms": 139.9,
-     "http_ms": 139
-    },
-    "score": {
-     "loop_ms": 2.68,
-     "loop_pass_ms": [
-      2.43,
-      3.67,
-      2.79
-     ],
-     "added_ms": 0.79,
-     "live_each_ms": [
-      136.0,
-      130.5
-     ],
-     "live_ms": 133.2,
-     "http_ms": 132
-    },
-    "filter": {
-     "loop_ms": 3.04,
-     "loop_pass_ms": [
-      2.91,
-      3.23,
-      2.87
-     ],
-     "added_ms": 0.9,
-     "live_each_ms": [
-      146.5,
-      139.2
-     ],
-     "live_ms": 142.9,
-     "http_ms": 141.5
-    },
-    "rank": {
-     "loop_ms": 3.03,
-     "loop_pass_ms": [
-      2.65,
-      3.4,
-      3.03
-     ],
-     "added_ms": 0.96,
-     "live_each_ms": [
-      126.3,
-      152.9
-     ],
-     "live_ms": 139.6,
-     "http_ms": 137.5
-    },
-    "find": {
-     "loop_ms": 2.83,
-     "loop_pass_ms": [
-      2.81,
-      3.09,
-      2.78
-     ],
-     "added_ms": 0.55,
-     "live_each_ms": [
-      154.4,
-      162.8
-     ],
-     "live_ms": 158.6,
-     "http_ms": 158
-    },
-    "annotate": {
-     "loop_ms": 3.78,
-     "loop_pass_ms": [
-      3.41,
-      4.23,
-      3.78
-     ],
-     "added_ms": 1.7,
-     "live_each_ms": [
-      130.9,
-      137.4
-     ],
-     "live_ms": 134.2,
-     "http_ms": 133
-    },
-    "recognize": {
-     "loop_ms": 7.18,
-     "loop_pass_ms": [
-      6.17,
-      9.05,
-      7.25
-     ],
-     "added_ms": 3.13,
-     "live_each_ms": [
-      307.1,
-      274.4
-     ],
-     "live_ms": 290.7,
-     "http_ms": 286.5
-    },
-    "relate": {
-     "loop_ms": 2.86,
-     "loop_pass_ms": [
-      2.14,
-      4.44,
-      2.86
-     ],
-     "added_ms": 1.01,
-     "live_each_ms": [
-      134.2,
-      121.2
-     ],
-     "live_ms": 127.7,
-     "http_ms": 127
-    }
+   "added": 1.4,
+   "worst": [
+    "recognize",
+    3.8
+   ],
+   "own": 3.1,
+   "live": {
+    "median": 136.7,
+    "p10": 122.8,
+    "p90": 163.9,
+    "n": 18
    }
   },
   {
    "id": "dart",
    "label": "Dart",
    "absent": [],
-   "added_median_ms": 1.6,
-   "added_max_ms": 3.84,
-   "cells": {
-    "decide": {
-     "loop_ms": 3.01,
-     "loop_pass_ms": [
-      2.77,
-      3.82,
-      3.41
-     ],
-     "added_ms": 1.25,
-     "live_each_ms": [
-      135.2,
-      110.1
-     ],
-     "live_ms": 122.7,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 3.69,
-     "loop_pass_ms": [
-      3.12,
-      4.04,
-      5.53
-     ],
-     "added_ms": 1.81,
-     "live_each_ms": [
-      122.9,
-      116.1
-     ],
-     "live_ms": 119.5,
-     "http_ms": 117.5
-    },
-    "tag": {
-     "loop_ms": 3.78,
-     "loop_pass_ms": [
-      3.24,
-      3.99,
-      4.27
-     ],
-     "added_ms": 1.83,
-     "live_each_ms": [
-      124.9,
-      145.2
-     ],
-     "live_ms": 135.1,
-     "http_ms": 134
-    },
-    "score": {
-     "loop_ms": 3.38,
-     "loop_pass_ms": [
-      2.86,
-      4.39,
-      4.33
-     ],
-     "added_ms": 1.49,
-     "live_each_ms": [
-      121.1,
-      125.0
-     ],
-     "live_ms": 123.1,
-     "http_ms": 122
-    },
-    "filter": {
-     "loop_ms": 3.74,
-     "loop_pass_ms": [
-      2.77,
-      4.02,
-      8.51
-     ],
-     "added_ms": 1.6,
-     "live_each_ms": [
-      116.9,
-      117.6
-     ],
-     "live_ms": 117.3,
-     "http_ms": 116.5
-    },
-    "rank": {
-     "loop_ms": 4.11,
-     "loop_pass_ms": [
-      2.88,
-      4.86,
-      5.31
-     ],
-     "added_ms": 2.04,
-     "live_each_ms": [
-      121.2,
-      184.8
-     ],
-     "live_ms": 153.0,
-     "http_ms": 152
-    },
-    "find": {
-     "loop_ms": 3.42,
-     "loop_pass_ms": [
-      2.97,
-      3.7,
-      3.93
-     ],
-     "added_ms": 1.14,
-     "live_each_ms": [
-      115.9,
-      126.6
-     ],
-     "live_ms": 121.2,
-     "http_ms": 120.5
-    },
-    "annotate": {
-     "loop_ms": 4.41,
-     "loop_pass_ms": [
-      3.29,
-      5.52,
-      5.3
-     ],
-     "added_ms": 2.33,
-     "live_each_ms": [
-      135.9,
-      146.7
-     ],
-     "live_ms": 141.3,
-     "http_ms": 140.5
-    },
-    "recognize": {
-     "loop_ms": 7.89,
-     "loop_pass_ms": [
-      7.56,
-      8.24,
-      8.44
-     ],
-     "added_ms": 3.84,
-     "live_each_ms": [
-      250.3,
-      287.8
-     ],
-     "live_ms": 269.0,
-     "http_ms": 266.5
-    },
-    "relate": {
-     "loop_ms": 3.33,
-     "loop_pass_ms": [
-      2.98,
-      3.85,
-      3.41
-     ],
-     "added_ms": 1.48,
-     "live_each_ms": [
-      149.9,
-      107.2
-     ],
-     "live_ms": 128.5,
-     "http_ms": 127.5
-    }
+   "added": 1.3,
+   "worst": [
+    "recognize",
+    3.1
+   ],
+   "own": 3.1,
+   "live": {
+    "median": 123.9,
+    "p10": 109.8,
+    "p90": 153.4,
+    "n": 18
    }
   },
   {
    "id": "duckdb",
    "label": "DuckDB",
    "absent": [],
-   "added_median_ms": 1.58,
-   "added_max_ms": 5.11,
-   "cells": {
-    "decide": {
-     "loop_ms": 3.16,
-     "loop_pass_ms": [
-      2.99,
-      3.29,
-      3.25
-     ],
-     "added_ms": 1.39,
-     "live_each_ms": [
-      131.1,
-      138.8
-     ],
-     "live_ms": 134.9,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 3.27,
-     "loop_pass_ms": [
-      3.4,
-      3.4,
-      3.0
-     ],
-     "added_ms": 1.39,
-     "live_each_ms": [
-      132.1,
-      136.2
-     ],
-     "live_ms": 134.1,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 3.61,
-     "loop_pass_ms": [
-      3.46,
-      3.38,
-      3.72
-     ],
-     "added_ms": 1.66,
-     "live_each_ms": [
-      121.0,
-      132.7
-     ],
-     "live_ms": 126.8,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 3.7,
-     "loop_pass_ms": [
-      3.57,
-      3.61,
-      5.43
-     ],
-     "added_ms": 1.81,
-     "live_each_ms": [
-      130.3,
-      132.0
-     ],
-     "live_ms": 131.1,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 3.72,
-     "loop_pass_ms": [
-      3.56,
-      3.43,
-      4.62
-     ],
-     "added_ms": 1.58,
-     "live_each_ms": [
-      156.6,
-      115.5
-     ],
-     "live_ms": 136.1,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 4.48,
-     "loop_pass_ms": [
-      4.19,
-      4.15,
-      5.27
-     ],
-     "added_ms": 2.41,
-     "live_each_ms": [
-      138.7,
-      149.6
-     ],
-     "live_ms": 144.1,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 3.34,
-     "loop_pass_ms": [
-      3.21,
-      3.21,
-      3.68
-     ],
-     "added_ms": 1.06,
-     "live_each_ms": [
-      170.4,
-      150.3
-     ],
-     "live_ms": 160.4,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 3.46,
-     "loop_pass_ms": [
-      3.17,
-      3.51,
-      3.48
-     ],
-     "added_ms": 1.38,
-     "live_each_ms": [
-      143.4,
-      180.8
-     ],
-     "live_ms": 162.1,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 5.44,
-     "loop_pass_ms": [
-      4.82,
-      5.96,
-      5.47
-     ],
-     "added_ms": 1.39,
-     "live_each_ms": [
-      244.3,
-      309.0
-     ],
-     "live_ms": 276.6,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 6.97,
-     "loop_pass_ms": [
-      6.85,
-      7.39,
-      6.56
-     ],
-     "added_ms": 5.11,
-     "live_each_ms": [
-      155.4,
-      129.6
-     ],
-     "live_ms": 142.5,
-     "http_ms": null
-    }
+   "added": 1.8,
+   "worst": [
+    "relate",
+    5.2
+   ],
+   "own": 3.4,
+   "live": {
+    "median": 137.5,
+    "p10": 120.4,
+    "p90": 171.4,
+    "n": 18
    }
   },
   {
    "id": "go",
    "label": "Go",
    "absent": [],
-   "added_median_ms": 0.88,
-   "added_max_ms": 3.13,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.65,
-     "loop_pass_ms": [
-      2.48,
-      2.55,
-      3.11
-     ],
-     "added_ms": 0.88,
-     "live_each_ms": [
-      115.9,
-      147.1
-     ],
-     "live_ms": 131.5,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.93,
-     "loop_pass_ms": [
-      2.87,
-      2.84,
-      3.27
-     ],
-     "added_ms": 1.06,
-     "live_each_ms": [
-      148.5,
-      161.4
-     ],
-     "live_ms": 154.9,
-     "http_ms": 152
-    },
-    "tag": {
-     "loop_ms": 2.95,
-     "loop_pass_ms": [
-      2.87,
-      2.83,
-      3.14
-     ],
-     "added_ms": 1.0,
-     "live_each_ms": [
-      117.2,
-      148.8
-     ],
-     "live_ms": 133.0,
-     "http_ms": 132
-    },
-    "score": {
-     "loop_ms": 2.63,
-     "loop_pass_ms": [
-      2.37,
-      2.71,
-      2.93
-     ],
-     "added_ms": 0.74,
-     "live_each_ms": [
-      125.3,
-      124.2
-     ],
-     "live_ms": 124.7,
-     "http_ms": 124.5
-    },
-    "filter": {
-     "loop_ms": 2.99,
-     "loop_pass_ms": [
-      2.95,
-      2.46,
-      3.3
-     ],
-     "added_ms": 0.85,
-     "live_each_ms": [
-      146.3,
-      134.3
-     ],
-     "live_ms": 140.3,
-     "http_ms": 139
-    },
-    "rank": {
-     "loop_ms": 2.82,
-     "loop_pass_ms": [
-      2.82,
-      2.4,
-      3.72
-     ],
-     "added_ms": 0.75,
-     "live_each_ms": [
-      126.7,
-      132.9
-     ],
-     "live_ms": 129.8,
-     "http_ms": 128.5
-    },
-    "find": {
-     "loop_ms": 2.6,
-     "loop_pass_ms": [
-      2.29,
-      2.53,
-      4.14
-     ],
-     "added_ms": 0.32,
-     "live_each_ms": [
-      134.9,
-      121.5
-     ],
-     "live_ms": 128.2,
-     "http_ms": 127
-    },
-    "annotate": {
-     "loop_ms": 3.22,
-     "loop_pass_ms": [
-      2.83,
-      3.21,
-      4.52
-     ],
-     "added_ms": 1.14,
-     "live_each_ms": [
-      125.9,
-      118.4
-     ],
-     "live_ms": 122.2,
-     "http_ms": 121
-    },
-    "recognize": {
-     "loop_ms": 7.18,
-     "loop_pass_ms": [
-      5.73,
-      7.52,
-      9.04
-     ],
-     "added_ms": 3.13,
-     "live_each_ms": [
-      271.4,
-      263.0
-     ],
-     "live_ms": 267.2,
-     "http_ms": 265.5
-    },
-    "relate": {
-     "loop_ms": 2.95,
-     "loop_pass_ms": [
-      2.51,
-      3.11,
-      3.7
-     ],
-     "added_ms": 1.1,
-     "live_each_ms": [
-      123.1,
-      137.9
-     ],
-     "live_ms": 130.5,
-     "http_ms": 129.5
-    }
+   "added": 1.4,
+   "worst": [
+    "recognize",
+    2.8
+   ],
+   "own": 3.1,
+   "live": {
+    "median": 129.8,
+    "p10": 117.1,
+    "p90": 150.1,
+    "n": 18
    }
   },
   {
    "id": "java",
    "label": "Java",
    "absent": [],
-   "added_median_ms": 1.88,
-   "added_max_ms": 3.49,
-   "cells": {
-    "decide": {
-     "loop_ms": 3.52,
-     "loop_pass_ms": [
-      3.42,
-      3.22,
-      4.84
-     ],
-     "added_ms": 1.75,
-     "live_each_ms": [
-      138.4,
-      180.9
-     ],
-     "live_ms": 159.6,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 3.72,
-     "loop_pass_ms": [
-      3.07,
-      3.92,
-      4.77
-     ],
-     "added_ms": 1.84,
-     "live_each_ms": [
-      168.4,
-      139.7
-     ],
-     "live_ms": 154.0,
-     "http_ms": 151
-    },
-    "tag": {
-     "loop_ms": 4.24,
-     "loop_pass_ms": [
-      3.77,
-      4.23,
-      6.76
-     ],
-     "added_ms": 2.29,
-     "live_each_ms": [
-      223.8,
-      145.7
-     ],
-     "live_ms": 184.7,
-     "http_ms": 183
-    },
-    "score": {
-     "loop_ms": 4.09,
-     "loop_pass_ms": [
-      3.85,
-      3.38,
-      7.66
-     ],
-     "added_ms": 2.2,
-     "live_each_ms": [
-      149.8,
-      142.7
-     ],
-     "live_ms": 146.2,
-     "http_ms": 144.5
-    },
-    "filter": {
-     "loop_ms": 4.18,
-     "loop_pass_ms": [
-      4.01,
-      3.51,
-      8.54
-     ],
-     "added_ms": 2.04,
-     "live_each_ms": [
-      160.7,
-      153.2
-     ],
-     "live_ms": 156.9,
-     "http_ms": 155.5
-    },
-    "rank": {
-     "loop_ms": 4.03,
-     "loop_pass_ms": [
-      3.95,
-      3.37,
-      9.16
-     ],
-     "added_ms": 1.96,
-     "live_each_ms": [
-      117.1,
-      119.5
-     ],
-     "live_ms": 118.3,
-     "http_ms": 117
-    },
-    "find": {
-     "loop_ms": 3.56,
-     "loop_pass_ms": [
-      3.34,
-      3.29,
-      5.39
-     ],
-     "added_ms": 1.28,
-     "live_each_ms": [
-      169.6,
-      127.8
-     ],
-     "live_ms": 148.7,
-     "http_ms": 146.5
-    },
-    "annotate": {
-     "loop_ms": 3.94,
-     "loop_pass_ms": [
-      3.1,
-      3.77,
-      10.72
-     ],
-     "added_ms": 1.86,
-     "live_each_ms": [
-      135.9,
-      165.5
-     ],
-     "live_ms": 150.7,
-     "http_ms": 149
-    },
-    "recognize": {
-     "loop_ms": 7.54,
-     "loop_pass_ms": [
-      6.3,
-      7.54,
-      11.24
-     ],
-     "added_ms": 3.49,
-     "live_each_ms": [
-      307.0,
-      273.8
-     ],
-     "live_ms": 290.4,
-     "http_ms": 286.5
-    },
-    "relate": {
-     "loop_ms": 3.73,
-     "loop_pass_ms": [
-      2.99,
-      3.89,
-      4.76
-     ],
-     "added_ms": 1.88,
-     "live_each_ms": [
-      126.0,
-      150.9
-     ],
-     "live_ms": 138.4,
-     "http_ms": 137
-    }
+   "added": 0.9,
+   "worst": [
+    "recognize",
+    2.6
+   ],
+   "own": 2.7,
+   "live": {
+    "median": 147.7,
+    "p10": 119.3,
+    "p90": 185.2,
+    "n": 18
    }
   },
   {
    "id": "kotlin",
    "label": "Kotlin",
    "absent": [],
-   "added_median_ms": 2.02,
-   "added_max_ms": 4.28,
-   "cells": {
-    "decide": {
-     "loop_ms": 4.4,
-     "loop_pass_ms": [
-      3.55,
-      4.45,
-      4.48
-     ],
-     "added_ms": 2.63,
-     "live_each_ms": [
-      182.8,
-      126.1
-     ],
-     "live_ms": 154.4,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 4.07,
-     "loop_pass_ms": [
-      3.54,
-      4.13,
-      4.97
-     ],
-     "added_ms": 2.2,
-     "live_each_ms": [
-      115.5,
-      158.5
-     ],
-     "live_ms": 137.0,
-     "http_ms": 134
-    },
-    "tag": {
-     "loop_ms": 3.97,
-     "loop_pass_ms": [
-      4.08,
-      3.83,
-      4.21
-     ],
-     "added_ms": 2.02,
-     "live_each_ms": [
-      130.3,
-      113.1
-     ],
-     "live_ms": 121.7,
-     "http_ms": 120.5
-    },
-    "score": {
-     "loop_ms": 3.53,
-     "loop_pass_ms": [
-      3.13,
-      3.8,
-      4.09
-     ],
-     "added_ms": 1.64,
-     "live_each_ms": [
-      108.9,
-      189.5
-     ],
-     "live_ms": 149.2,
-     "http_ms": 147.5
-    },
-    "filter": {
-     "loop_ms": 3.73,
-     "loop_pass_ms": [
-      3.12,
-      4.08,
-      3.95
-     ],
-     "added_ms": 1.58,
-     "live_each_ms": [
-      137.2,
-      146.0
-     ],
-     "live_ms": 141.6,
-     "http_ms": 140
-    },
-    "rank": {
-     "loop_ms": 4.25,
-     "loop_pass_ms": [
-      2.8,
-      5.72,
-      5.34
-     ],
-     "added_ms": 2.18,
-     "live_each_ms": [
-      189.9,
-      113.2
-     ],
-     "live_ms": 151.6,
-     "http_ms": 150
-    },
-    "find": {
-     "loop_ms": 4.13,
-     "loop_pass_ms": [
-      3.45,
-      4.06,
-      6.91
-     ],
-     "added_ms": 1.85,
-     "live_each_ms": [
-      126.3,
-      125.4
-     ],
-     "live_ms": 125.8,
-     "http_ms": 123.5
-    },
-    "annotate": {
-     "loop_ms": 4.28,
-     "loop_pass_ms": [
-      3.91,
-      4.58,
-      4.52
-     ],
-     "added_ms": 2.2,
-     "live_each_ms": [
-      142.7,
-      152.7
-     ],
-     "live_ms": 147.7,
-     "http_ms": 145
-    },
-    "recognize": {
-     "loop_ms": 8.33,
-     "loop_pass_ms": [
-      8.58,
-      7.9,
-      9.09
-     ],
-     "added_ms": 4.28,
-     "live_each_ms": [
-      279.8,
-      266.3
-     ],
-     "live_ms": 273.0,
-     "http_ms": 267.5
-    },
-    "relate": {
-     "loop_ms": 3.64,
-     "loop_pass_ms": [
-      3.64,
-      3.97,
-      3.46
-     ],
-     "added_ms": 1.79,
-     "live_each_ms": [
-      166.3,
-      127.3
-     ],
-     "live_ms": 146.8,
-     "http_ms": 145.5
-    }
+   "added": 1.3,
+   "worst": [
+    "recognize",
+    3.8
+   ],
+   "own": 2.9,
+   "live": {
+    "median": 133.8,
+    "p10": 112.7,
+    "p90": 189.6,
+    "n": 18
    }
   },
   {
    "id": "objective-c",
    "label": "Objective-C",
    "absent": [],
-   "added_median_ms": 0.78,
-   "added_max_ms": 3.45,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.52,
-     "loop_pass_ms": [
-      2.42,
-      2.37,
-      3.16
-     ],
-     "added_ms": 0.75,
-     "live_each_ms": [
-      169.9,
-      115.9
-     ],
-     "live_ms": 142.9,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.79,
-     "loop_pass_ms": [
-      2.54,
-      2.8,
-      3.53
-     ],
-     "added_ms": 0.91,
-     "live_each_ms": [
-      114.3,
-      135.7
-     ],
-     "live_ms": 125.0,
-     "http_ms": 124
-    },
-    "tag": {
-     "loop_ms": 3.02,
-     "loop_pass_ms": [
-      2.89,
-      3.02,
-      3.45
-     ],
-     "added_ms": 1.07,
-     "live_each_ms": [
-      126.5,
-      121.4
-     ],
-     "live_ms": 123.9,
-     "http_ms": 123.5
-    },
-    "score": {
-     "loop_ms": 2.67,
-     "loop_pass_ms": [
-      2.55,
-      1.38,
-      3.48
-     ],
-     "added_ms": 0.78,
-     "live_each_ms": [
-      138.0,
-      134.7
-     ],
-     "live_ms": 136.4,
-     "http_ms": 135.5
-    },
-    "filter": {
-     "loop_ms": 2.86,
-     "loop_pass_ms": [
-      2.52,
-      2.82,
-      3.56
-     ],
-     "added_ms": 0.71,
-     "live_each_ms": [
-      139.1,
-      122.4
-     ],
-     "live_ms": 130.8,
-     "http_ms": 129
-    },
-    "rank": {
-     "loop_ms": 2.74,
-     "loop_pass_ms": [
-      2.64,
-      2.59,
-      3.29
-     ],
-     "added_ms": 0.67,
-     "live_each_ms": [
-      150.3,
-      191.0
-     ],
-     "live_ms": 170.6,
-     "http_ms": 169.5
-    },
-    "find": {
-     "loop_ms": 2.82,
-     "loop_pass_ms": [
-      2.72,
-      2.76,
-      3.15
-     ],
-     "added_ms": 0.54,
-     "live_each_ms": [
-      122.5,
-      148.6
-     ],
-     "live_ms": 135.5,
-     "http_ms": 135
-    },
-    "annotate": {
-     "loop_ms": 3.4,
-     "loop_pass_ms": [
-      3.1,
-      3.26,
-      4.24
-     ],
-     "added_ms": 1.32,
-     "live_each_ms": [
-      120.9,
-      158.2
-     ],
-     "live_ms": 139.6,
-     "http_ms": 138.5
-    },
-    "recognize": {
-     "loop_ms": 7.5,
-     "loop_pass_ms": [
-      7.66,
-      6.86,
-      7.86
-     ],
-     "added_ms": 3.45,
-     "live_each_ms": [
-      255.5,
-      270.2
-     ],
-     "live_ms": 262.8,
-     "http_ms": 260
-    },
-    "relate": {
-     "loop_ms": 3.17,
-     "loop_pass_ms": [
-      3.13,
-      3.12,
-      3.77
-     ],
-     "added_ms": 1.32,
-     "live_each_ms": [
-      134.6,
-      115.6
-     ],
-     "live_ms": 125.1,
-     "http_ms": 124.5
-    }
+   "added": 1.1,
+   "worst": [
+    "recognize",
+    3.8
+   ],
+   "own": 2.8,
+   "live": {
+    "median": 134.6,
+    "p10": 115.5,
+    "p90": 172.0,
+    "n": 18
    }
   },
   {
@@ -2198,258 +286,34 @@
     "rank",
     "relate"
    ],
-   "added_median_ms": 2.79,
-   "added_max_ms": 4.51,
-   "cells": {
-    "decide": {
-     "loop_ms": 4.55,
-     "loop_pass_ms": [
-      4.24,
-      5.33,
-      4.42
-     ],
-     "added_ms": 2.79,
-     "live_each_ms": [
-      128.5,
-      129.2
-     ],
-     "live_ms": 128.9,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 4.8,
-     "loop_pass_ms": [
-      3.86,
-      5.8,
-      5.4
-     ],
-     "added_ms": 2.93,
-     "live_each_ms": [
-      160.0,
-      179.6
-     ],
-     "live_ms": 169.8,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 4.29,
-     "loop_pass_ms": [
-      3.93,
-      5.51,
-      4.15
-     ],
-     "added_ms": 2.34,
-     "live_each_ms": [
-      141.7,
-      139.1
-     ],
-     "live_ms": 140.4,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 3.93,
-     "loop_pass_ms": [
-      3.64,
-      5.23,
-      3.78
-     ],
-     "added_ms": 2.04,
-     "live_each_ms": [
-      123.9,
-      162.3
-     ],
-     "live_ms": 143.1,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 6.59,
-     "loop_pass_ms": [
-      5.16,
-      9.32,
-      6.51
-     ],
-     "added_ms": 4.51,
-     "live_each_ms": [
-      130.3,
-      135.9
-     ],
-     "live_ms": 133.1,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 6.8,
-     "loop_pass_ms": [
-      5.92,
-      11.14,
-      6.88
-     ],
-     "added_ms": 2.75,
-     "live_each_ms": [
-      323.4,
-      293.0
-     ],
-     "live_ms": 308.2,
-     "http_ms": null
-    }
+   "added": 3.0,
+   "worst": [
+    "annotate",
+    6.7
+   ],
+   "own": 4.7,
+   "live": {
+    "median": 137.5,
+    "p10": 124.4,
+    "p90": 177.8,
+    "n": 10
    }
   },
   {
    "id": "php",
    "label": "PHP",
    "absent": [],
-   "added_median_ms": 1.78,
-   "added_max_ms": 3.87,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.9,
-     "loop_pass_ms": [
-      2.86,
-      2.79,
-      6.11
-     ],
-     "added_ms": 1.13,
-     "live_each_ms": [
-      169.8,
-      157.9
-     ],
-     "live_ms": 163.9,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 3.48,
-     "loop_pass_ms": [
-      3.45,
-      2.96,
-      6.86
-     ],
-     "added_ms": 1.61,
-     "live_each_ms": [
-      167.3,
-      169.2
-     ],
-     "live_ms": 168.3,
-     "http_ms": 162.5
-    },
-    "tag": {
-     "loop_ms": 4.31,
-     "loop_pass_ms": [
-      3.39,
-      4.32,
-      5.56
-     ],
-     "added_ms": 2.36,
-     "live_each_ms": [
-      148.3,
-      152.9
-     ],
-     "live_ms": 150.6,
-     "http_ms": 149.5
-    },
-    "score": {
-     "loop_ms": 3.79,
-     "loop_pass_ms": [
-      2.98,
-      3.82,
-      7.39
-     ],
-     "added_ms": 1.9,
-     "live_each_ms": [
-      150.9,
-      159.6
-     ],
-     "live_ms": 155.3,
-     "http_ms": 153
-    },
-    "filter": {
-     "loop_ms": 3.92,
-     "loop_pass_ms": [
-      3.04,
-      3.75,
-      10.16
-     ],
-     "added_ms": 1.78,
-     "live_each_ms": [
-      178.4,
-      179.5
-     ],
-     "live_ms": 179.0,
-     "http_ms": 177.5
-    },
-    "rank": {
-     "loop_ms": 3.69,
-     "loop_pass_ms": [
-      3.06,
-      3.65,
-      6.95
-     ],
-     "added_ms": 1.62,
-     "live_each_ms": [
-      166.6,
-      150.3
-     ],
-     "live_ms": 158.4,
-     "http_ms": 156.5
-    },
-    "find": {
-     "loop_ms": 3.65,
-     "loop_pass_ms": [
-      3.25,
-      3.5,
-      5.78
-     ],
-     "added_ms": 1.37,
-     "live_each_ms": [
-      182.0,
-      146.6
-     ],
-     "live_ms": 164.3,
-     "http_ms": 163
-    },
-    "annotate": {
-     "loop_ms": 4.21,
-     "loop_pass_ms": [
-      3.63,
-      4.2,
-      7.66
-     ],
-     "added_ms": 2.13,
-     "live_each_ms": [
-      140.7,
-      184.0
-     ],
-     "live_ms": 162.4,
-     "http_ms": 160.5
-    },
-    "recognize": {
-     "loop_ms": 7.92,
-     "loop_pass_ms": [
-      7.64,
-      7.14,
-      10.06
-     ],
-     "added_ms": 3.87,
-     "live_each_ms": [
-      279.4,
-      303.1
-     ],
-     "live_ms": 291.2,
-     "http_ms": 287
-    },
-    "relate": {
-     "loop_ms": 3.67,
-     "loop_pass_ms": [
-      3.94,
-      3.47,
-      3.69
-     ],
-     "added_ms": 1.82,
-     "live_each_ms": [
-      247.4,
-      217.4
-     ],
-     "live_ms": 232.4,
-     "http_ms": 231.5
-    }
+   "added": 0.7,
+   "worst": [
+    "recognize",
+    2.3
+   ],
+   "own": 2.5,
+   "live": {
+    "median": 166.9,
+    "p10": 146.0,
+    "p90": 220.4,
+    "n": 18
    }
   },
   {
@@ -2461,1689 +325,187 @@
     "rank",
     "relate"
    ],
-   "added_median_ms": 0.68,
-   "added_max_ms": 1.39,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.5,
-     "loop_pass_ms": [
-      2.03,
-      3.13,
-      2.72
-     ],
-     "added_ms": 0.73,
-     "live_each_ms": [
-      146.9,
-      128.8
-     ],
-     "live_ms": 137.8,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.55,
-     "loop_pass_ms": [
-      2.22,
-      3.0,
-      2.63
-     ],
-     "added_ms": 0.68,
-     "live_each_ms": [
-      109.4,
-      130.7
-     ],
-     "live_ms": 120.1,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 2.33,
-     "loop_pass_ms": [
-      2.04,
-      3.11,
-      2.37
-     ],
-     "added_ms": 0.38,
-     "live_each_ms": [
-      111.4,
-      158.4
-     ],
-     "live_ms": 134.9,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 2.19,
-     "loop_pass_ms": [
-      1.96,
-      4.2,
-      2.37
-     ],
-     "added_ms": 0.3,
-     "live_each_ms": [
-      130.6,
-      114.5
-     ],
-     "live_ms": 122.6,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 3.46,
-     "loop_pass_ms": [
-      2.1,
-      5.12,
-      3.81
-     ],
-     "added_ms": 1.39,
-     "live_each_ms": [
-      116.6,
-      137.5
-     ],
-     "live_ms": 127.1,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 4.56,
-     "loop_pass_ms": [
-      4.08,
-      5.63,
-      5.14
-     ],
-     "added_ms": 0.51,
-     "live_each_ms": [
-      251.2,
-      332.4
-     ],
-     "live_ms": 291.8,
-     "http_ms": null
-    }
+   "added": 1.0,
+   "worst": [
+    "recognize",
+    1.6
+   ],
+   "own": 2.7,
+   "live": {
+    "median": 129.7,
+    "p10": 109.6,
+    "p90": 157.3,
+    "n": 10
    }
   },
   {
    "id": "postgresql",
    "label": "PostgreSQL",
    "absent": [],
-   "added_median_ms": 0.07,
-   "added_max_ms": 1.44,
-   "cells": {
-    "decide": {
-     "loop_ms": 1.91,
-     "loop_pass_ms": [
-      1.97,
-      2.21,
-      0.77
-     ],
-     "added_ms": 0.14,
-     "live_each_ms": [
-      131.9,
-      112.6
-     ],
-     "live_ms": 122.3,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 1.94,
-     "loop_pass_ms": [
-      1.71,
-      2.17,
-      1.96
-     ],
-     "added_ms": 0.07,
-     "live_each_ms": [
-      132.6,
-      103.1
-     ],
-     "live_ms": 117.8,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 1.97,
-     "loop_pass_ms": [
-      1.7,
-      2.1,
-      2.0
-     ],
-     "added_ms": 0.02,
-     "live_each_ms": [
-      128.3,
-      128.4
-     ],
-     "live_ms": 128.3,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 1.84,
-     "loop_pass_ms": [
-      1.63,
-      2.43,
-      1.85
-     ],
-     "added_ms": -0.05,
-     "live_each_ms": [
-      140.2,
-      123.8
-     ],
-     "live_ms": 132.0,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 3.58,
-     "loop_pass_ms": [
-      3.41,
-      4.04,
-      3.6
-     ],
-     "added_ms": 1.44,
-     "live_each_ms": [
-      275.9,
-      284.4
-     ],
-     "live_ms": 280.1,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 2.14,
-     "loop_pass_ms": [
-      2.08,
-      2.24,
-      2.06
-     ],
-     "added_ms": 0.07,
-     "live_each_ms": [
-      119.5,
-      122.1
-     ],
-     "live_ms": 120.8,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 2.0,
-     "loop_pass_ms": [
-      1.88,
-      2.16,
-      2.0
-     ],
-     "added_ms": -0.28,
-     "live_each_ms": [
-      126.3,
-      131.3
-     ],
-     "live_ms": 128.8,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 2.29,
-     "loop_pass_ms": [
-      1.95,
-      2.61,
-      2.31
-     ],
-     "added_ms": 0.21,
-     "live_each_ms": [
-      100.4,
-      111.0
-     ],
-     "live_ms": 105.7,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 3.84,
-     "loop_pass_ms": [
-      3.38,
-      4.81,
-      3.86
-     ],
-     "added_ms": -0.21,
-     "live_each_ms": [
-      267.7,
-      247.9
-     ],
-     "live_ms": 257.8,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 2.53,
-     "loop_pass_ms": [
-      2.36,
-      2.94,
-      2.52
-     ],
-     "added_ms": 0.68,
-     "live_each_ms": [
-      131.1,
-      134.6
-     ],
-     "live_ms": 132.9,
-     "http_ms": null
-    }
+   "added": 0.2,
+   "worst": [
+    "filter",
+    1.8
+   ],
+   "own": 1.9,
+   "live": {
+    "median": 127.3,
+    "p10": 102.3,
+    "p90": 136.3,
+    "n": 16
    }
   },
   {
    "id": "python",
    "label": "Python",
    "absent": [],
-   "added_median_ms": 0.4,
-   "added_max_ms": 0.77,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.17,
-     "loop_pass_ms": [
-      1.79,
-      3.27,
-      2.23
-     ],
-     "added_ms": 0.4,
-     "live_each_ms": [
-      144.5,
-      141.6
-     ],
-     "live_ms": 143.0,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.15,
-     "loop_pass_ms": [
-      1.86,
-      4.66,
-      2.35
-     ],
-     "added_ms": 0.27,
-     "live_each_ms": [
-      183.4,
-      149.2
-     ],
-     "live_ms": 166.3,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 2.45,
-     "loop_pass_ms": [
-      1.78,
-      3.32,
-      3.24
-     ],
-     "added_ms": 0.5,
-     "live_each_ms": [
-      147.7,
-      112.1
-     ],
-     "live_ms": 129.9,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 2.29,
-     "loop_pass_ms": [
-      1.68,
-      3.55,
-      2.41
-     ],
-     "added_ms": 0.4,
-     "live_each_ms": [
-      155.9,
-      122.8
-     ],
-     "live_ms": 139.3,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 2.58,
-     "loop_pass_ms": [
-      1.97,
-      3.1,
-      3.45
-     ],
-     "added_ms": 0.44,
-     "live_each_ms": [
-      134.2,
-      134.3
-     ],
-     "live_ms": 134.2,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 2.27,
-     "loop_pass_ms": [
-      2.26,
-      3.21,
-      2.02
-     ],
-     "added_ms": 0.2,
-     "live_each_ms": [
-      176.8,
-      109.0
-     ],
-     "live_ms": 142.9,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 2.2,
-     "loop_pass_ms": [
-      1.94,
-      2.94,
-      2.12
-     ],
-     "added_ms": -0.08,
-     "live_each_ms": [
-      132.9,
-      133.1
-     ],
-     "live_ms": 133.0,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 2.28,
-     "loop_pass_ms": [
-      1.92,
-      3.81,
-      2.27
-     ],
-     "added_ms": 0.2,
-     "live_each_ms": [
-      160.7,
-      145.3
-     ],
-     "live_ms": 153.0,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 4.82,
-     "loop_pass_ms": [
-      3.8,
-      5.66,
-      5.52
-     ],
-     "added_ms": 0.77,
-     "live_each_ms": [
-      279.8,
-      304.9
-     ],
-     "live_ms": 292.4,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 2.39,
-     "loop_pass_ms": [
-      1.79,
-      4.67,
-      2.37
-     ],
-     "added_ms": 0.53,
-     "live_each_ms": [
-      117.5,
-      133.9
-     ],
-     "live_ms": 125.7,
-     "http_ms": null
-    }
+   "added": 0.2,
+   "worst": [
+    "recognize",
+    0.4
+   ],
+   "own": 1.9,
+   "live": {
+    "median": 138.0,
+    "p10": 111.8,
+    "p90": 177.5,
+    "n": 18
    }
   },
   {
    "id": "r",
    "label": "R",
    "absent": [],
-   "added_median_ms": 0.83,
-   "added_max_ms": 2.5,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.86,
-     "loop_pass_ms": [
-      2.22,
-      3.1,
-      2.98
-     ],
-     "added_ms": 1.09,
-     "live_each_ms": [
-      124.5,
-      119.0
-     ],
-     "live_ms": 121.7,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.83,
-     "loop_pass_ms": [
-      2.09,
-      2.96,
-      3.21
-     ],
-     "added_ms": 0.96,
-     "live_each_ms": [
-      163.7,
-      148.9
-     ],
-     "live_ms": 156.3,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 2.78,
-     "loop_pass_ms": [
-      2.12,
-      2.96,
-      3.27
-     ],
-     "added_ms": 0.83,
-     "live_each_ms": [
-      182.7,
-      199.1
-     ],
-     "live_ms": 190.9,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 2.65,
-     "loop_pass_ms": [
-      2.29,
-      4.64,
-      2.67
-     ],
-     "added_ms": 0.76,
-     "live_each_ms": [
-      123.3,
-      119.9
-     ],
-     "live_ms": 121.6,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 2.4,
-     "loop_pass_ms": [
-      2.02,
-      2.98,
-      2.44
-     ],
-     "added_ms": 0.26,
-     "live_each_ms": [
-      138.9,
-      148.0
-     ],
-     "live_ms": 143.5,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 2.95,
-     "loop_pass_ms": [
-      2.36,
-      3.19,
-      3.27
-     ],
-     "added_ms": 0.88,
-     "live_each_ms": [
-      125.4,
-      145.0
-     ],
-     "live_ms": 135.2,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 2.25,
-     "loop_pass_ms": [
-      1.93,
-      2.56,
-      2.48
-     ],
-     "added_ms": -0.04,
-     "live_each_ms": [
-      136.3,
-      118.7
-     ],
-     "live_ms": 127.5,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 2.61,
-     "loop_pass_ms": [
-      2.38,
-      2.82,
-      3.24
-     ],
-     "added_ms": 0.53,
-     "live_each_ms": [
-      165.9,
-      143.9
-     ],
-     "live_ms": 154.9,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 6.55,
-     "loop_pass_ms": [
-      5.93,
-      6.55,
-      9.41
-     ],
-     "added_ms": 2.5,
-     "live_each_ms": [
-      309.9,
-      253.6
-     ],
-     "live_ms": 281.8,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 3.54,
-     "loop_pass_ms": [
-      3.32,
-      3.03,
-      4.86
-     ],
-     "added_ms": 1.69,
-     "live_each_ms": [
-      121.2,
-      138.8
-     ],
-     "live_ms": 130.0,
-     "http_ms": null
-    }
+   "added": 0.9,
+   "worst": [
+    "recognize",
+    3.0
+   ],
+   "own": 2.7,
+   "live": {
+    "median": 138.9,
+    "p10": 119.0,
+    "p90": 184.3,
+    "n": 18
    }
   },
   {
    "id": "ruby",
    "label": "Ruby",
    "absent": [],
-   "added_median_ms": -0.01,
-   "added_max_ms": 0.25,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.02,
-     "loop_pass_ms": [
-      1.43,
-      2.06,
-      2.39
-     ],
-     "added_ms": 0.25,
-     "live_each_ms": [
-      136.7,
-      144.5
-     ],
-     "live_ms": 140.6,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.04,
-     "loop_pass_ms": [
-      1.56,
-      2.11,
-      2.31
-     ],
-     "added_ms": 0.16,
-     "live_each_ms": [
-      149.4,
-      145.5
-     ],
-     "live_ms": 147.4,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 1.98,
-     "loop_pass_ms": [
-      1.53,
-      2.13,
-      2.58
-     ],
-     "added_ms": 0.03,
-     "live_each_ms": [
-      169.3,
-      118.2
-     ],
-     "live_ms": 143.7,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 1.88,
-     "loop_pass_ms": [
-      1.58,
-      1.98,
-      2.27
-     ],
-     "added_ms": -0.01,
-     "live_each_ms": [
-      159.2,
-      139.0
-     ],
-     "live_ms": 149.1,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 2.02,
-     "loop_pass_ms": [
-      1.62,
-      2.11,
-      2.24
-     ],
-     "added_ms": -0.12,
-     "live_each_ms": [
-      143.6,
-      176.3
-     ],
-     "live_ms": 160.0,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 2.03,
-     "loop_pass_ms": [
-      1.63,
-      2.23,
-      2.2
-     ],
-     "added_ms": -0.04,
-     "live_each_ms": [
-      117.2,
-      125.3
-     ],
-     "live_ms": 121.2,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 1.77,
-     "loop_pass_ms": [
-      1.63,
-      2.02,
-      1.86
-     ],
-     "added_ms": -0.51,
-     "live_each_ms": [
-      224.3,
-      115.8
-     ],
-     "live_ms": 170.0,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 1.97,
-     "loop_pass_ms": [
-      1.73,
-      2.37,
-      1.95
-     ],
-     "added_ms": -0.11,
-     "live_each_ms": [
-      130.7,
-      130.3
-     ],
-     "live_ms": 130.5,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 3.81,
-     "loop_pass_ms": [
-      3.42,
-      4.11,
-      4.33
-     ],
-     "added_ms": -0.24,
-     "live_each_ms": [
-      282.6,
-      252.7
-     ],
-     "live_ms": 267.7,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 1.97,
-     "loop_pass_ms": [
-      1.66,
-      2.14,
-      2.11
-     ],
-     "added_ms": 0.12,
-     "live_each_ms": [
-      147.6,
-      147.6
-     ],
-     "live_ms": 147.6,
-     "http_ms": null
-    }
+   "added": 0.1,
+   "worst": [
+    "recognize",
+    0.4
+   ],
+   "own": 1.8,
+   "live": {
+    "median": 144.1,
+    "p10": 117.0,
+    "p90": 181.1,
+    "n": 18
    }
   },
   {
    "id": "rust",
    "label": "Rust (the core)",
    "absent": [],
-   "added_median_ms": 0.0,
-   "added_max_ms": 0.0,
-   "cells": {
-    "decide": {
-     "loop_ms": 1.77,
-     "loop_pass_ms": [
-      1.61,
-      1.98,
-      1.93
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      173.8,
-      119.5
-     ],
-     "live_ms": 146.7,
-     "http_ms": 147
-    },
-    "choose": {
-     "loop_ms": 1.87,
-     "loop_pass_ms": [
-      1.74,
-      1.96,
-      1.99
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      133.8,
-      119.5
-     ],
-     "live_ms": 126.7,
-     "http_ms": 127
-    },
-    "tag": {
-     "loop_ms": 1.95,
-     "loop_pass_ms": [
-      1.94,
-      2.17,
-      1.85
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      117.4,
-      160.5
-     ],
-     "live_ms": 138.9,
-     "http_ms": 139
-    },
-    "score": {
-     "loop_ms": 1.89,
-     "loop_pass_ms": [
-      1.6,
-      2.11,
-      2.19
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      133.3,
-      112.9
-     ],
-     "live_ms": 123.1,
-     "http_ms": 123
-    },
-    "filter": {
-     "loop_ms": 2.14,
-     "loop_pass_ms": [
-      1.85,
-      2.36,
-      2.54
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      103.2,
-      108.9
-     ],
-     "live_ms": 106.0,
-     "http_ms": 105.5
-    },
-    "rank": {
-     "loop_ms": 2.07,
-     "loop_pass_ms": [
-      1.82,
-      3.13,
-      2.35
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      116.7,
-      120.6
-     ],
-     "live_ms": 118.7,
-     "http_ms": 119
-    },
-    "find": {
-     "loop_ms": 2.28,
-     "loop_pass_ms": [
-      1.76,
-      2.9,
-      2.59
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      148.8,
-      117.8
-     ],
-     "live_ms": 133.3,
-     "http_ms": 133.5
-    },
-    "annotate": {
-     "loop_ms": 2.08,
-     "loop_pass_ms": [
-      2.0,
-      1.99,
-      2.3
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      124.9,
-      117.7
-     ],
-     "live_ms": 121.3,
-     "http_ms": 121.5
-    },
-    "recognize": {
-     "loop_ms": 4.05,
-     "loop_pass_ms": [
-      3.54,
-      4.28,
-      4.99
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      227.6,
-      292.1
-     ],
-     "live_ms": 259.8,
-     "http_ms": 260
-    },
-    "relate": {
-     "loop_ms": 1.85,
-     "loop_pass_ms": [
-      1.6,
-      4.84,
-      2.27
-     ],
-     "added_ms": 0.0,
-     "live_each_ms": [
-      178.9,
-      177.3
-     ],
-     "live_ms": 178.1,
-     "http_ms": 178
-    }
+   "added": 0.0,
+   "worst": [
+    "decide",
+    0.0
+   ],
+   "own": 1.7,
+   "live": {
+    "median": 120.1,
+    "p10": 108.3,
+    "p90": 177.5,
+    "n": 18
    }
   },
   {
    "id": "scala",
    "label": "Scala",
    "absent": [],
-   "added_median_ms": 1.66,
-   "added_max_ms": 3.18,
-   "cells": {
-    "decide": {
-     "loop_ms": 3.67,
-     "loop_pass_ms": [
-      3.63,
-      4.2,
-      3.42
-     ],
-     "added_ms": 1.9,
-     "live_each_ms": [
-      115.0,
-      158.0
-     ],
-     "live_ms": 136.5,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 3.71,
-     "loop_pass_ms": [
-      3.68,
-      4.56,
-      3.63
-     ],
-     "added_ms": 1.83,
-     "live_each_ms": [
-      133.4,
-      123.7
-     ],
-     "live_ms": 128.5,
-     "http_ms": 126
-    },
-    "tag": {
-     "loop_ms": 3.66,
-     "loop_pass_ms": [
-      3.68,
-      3.67,
-      3.59
-     ],
-     "added_ms": 1.71,
-     "live_each_ms": [
-      157.4,
-      169.9
-     ],
-     "live_ms": 163.7,
-     "http_ms": 162
-    },
-    "score": {
-     "loop_ms": 3.55,
-     "loop_pass_ms": [
-      3.0,
-      3.69,
-      3.5
-     ],
-     "added_ms": 1.66,
-     "live_each_ms": [
-      113.6,
-      119.2
-     ],
-     "live_ms": 116.4,
-     "http_ms": 115
-    },
-    "filter": {
-     "loop_ms": 3.57,
-     "loop_pass_ms": [
-      3.22,
-      4.13,
-      3.63
-     ],
-     "added_ms": 1.43,
-     "live_each_ms": [
-      116.2,
-      146.4
-     ],
-     "live_ms": 131.3,
-     "http_ms": 127
-    },
-    "rank": {
-     "loop_ms": 3.72,
-     "loop_pass_ms": [
-      3.4,
-      4.42,
-      3.73
-     ],
-     "added_ms": 1.66,
-     "live_each_ms": [
-      147.0,
-      115.4
-     ],
-     "live_ms": 131.2,
-     "http_ms": 130
-    },
-    "find": {
-     "loop_ms": 3.45,
-     "loop_pass_ms": [
-      2.51,
-      3.9,
-      3.67
-     ],
-     "added_ms": 1.16,
-     "live_each_ms": [
-      137.4,
-      121.8
-     ],
-     "live_ms": 129.6,
-     "http_ms": 127.5
-    },
-    "annotate": {
-     "loop_ms": 3.98,
-     "loop_pass_ms": [
-      3.21,
-      4.15,
-      4.24
-     ],
-     "added_ms": 1.9,
-     "live_each_ms": [
-      156.9,
-      117.5
-     ],
-     "live_ms": 137.2,
-     "http_ms": 135.5
-    },
-    "recognize": {
-     "loop_ms": 7.23,
-     "loop_pass_ms": [
-      6.15,
-      8.1,
-      7.52
-     ],
-     "added_ms": 3.18,
-     "live_each_ms": [
-      249.7,
-      270.1
-     ],
-     "live_ms": 259.9,
-     "http_ms": 256
-    },
-    "relate": {
-     "loop_ms": 3.23,
-     "loop_pass_ms": [
-      2.66,
-      3.5,
-      3.45
-     ],
-     "added_ms": 1.38,
-     "live_each_ms": [
-      116.7,
-      148.1
-     ],
-     "live_ms": 132.4,
-     "http_ms": 131.5
-    }
+   "added": 1.7,
+   "worst": [
+    "recognize",
+    4.2
+   ],
+   "own": 3.4,
+   "live": {
+    "median": 128.5,
+    "p10": 114.9,
+    "p90": 159.2,
+    "n": 18
    }
   },
   {
    "id": "sqlite",
    "label": "SQLite",
    "absent": [],
-   "added_median_ms": -0.14,
-   "added_max_ms": 1.44,
-   "cells": {
-    "decide": {
-     "loop_ms": 1.72,
-     "loop_pass_ms": [
-      1.71,
-      1.81,
-      1.73
-     ],
-     "added_ms": -0.05,
-     "live_each_ms": [
-      158.4,
-      149.8
-     ],
-     "live_ms": 154.1,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 1.82,
-     "loop_pass_ms": [
-      1.71,
-      1.98,
-      1.82
-     ],
-     "added_ms": -0.05,
-     "live_each_ms": [
-      132.6,
-      144.3
-     ],
-     "live_ms": 138.4,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 1.62,
-     "loop_pass_ms": [
-      1.53,
-      1.66,
-      1.79
-     ],
-     "added_ms": -0.33,
-     "live_each_ms": [
-      168.9,
-      143.0
-     ],
-     "live_ms": 156.0,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 1.75,
-     "loop_pass_ms": [
-      1.46,
-      1.82,
-      2.68
-     ],
-     "added_ms": -0.14,
-     "live_each_ms": [
-      124.1,
-      131.0
-     ],
-     "live_ms": 127.6,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 3.58,
-     "loop_pass_ms": [
-      1.8,
-      4.28,
-      3.8
-     ],
-     "added_ms": 1.44,
-     "live_each_ms": [
-      266.2,
-      257.5
-     ],
-     "live_ms": 261.8,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 1.91,
-     "loop_pass_ms": [
-      1.64,
-      2.66,
-      1.94
-     ],
-     "added_ms": -0.16,
-     "live_each_ms": [
-      108.1,
-      118.3
-     ],
-     "live_ms": 113.2,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 1.82,
-     "loop_pass_ms": [
-      1.48,
-      2.16,
-      1.88
-     ],
-     "added_ms": -0.46,
-     "live_each_ms": [
-      123.1,
-      139.0
-     ],
-     "live_ms": 131.1,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 1.84,
-     "loop_pass_ms": [
-      1.73,
-      2.33,
-      1.86
-     ],
-     "added_ms": -0.24,
-     "live_each_ms": [
-      116.8,
-      124.5
-     ],
-     "live_ms": 120.6,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 3.45,
-     "loop_pass_ms": [
-      3.31,
-      4.56,
-      3.33
-     ],
-     "added_ms": -0.6,
-     "live_each_ms": [
-      302.5,
-      274.1
-     ],
-     "live_ms": 288.3,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 1.78,
-     "loop_pass_ms": [
-      1.69,
-      2.16,
-      1.79
-     ],
-     "added_ms": -0.07,
-     "live_each_ms": [
-      129.6,
-      147.5
-     ],
-     "live_ms": 138.5,
-     "http_ms": null
-    }
+   "added": -0.1,
+   "worst": [
+    "filter",
+    1.3
+   ],
+   "own": 1.6,
+   "live": {
+    "median": 131.8,
+    "p10": 114.2,
+    "p90": 161.6,
+    "n": 16
    }
   },
   {
    "id": "swift",
    "label": "Swift",
    "absent": [],
-   "added_median_ms": 1.28,
-   "added_max_ms": 3.06,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.87,
-     "loop_pass_ms": [
-      2.53,
-      2.93,
-      3.57
-     ],
-     "added_ms": 1.11,
-     "live_each_ms": [
-      140.2,
-      145.0
-     ],
-     "live_ms": 142.6,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 3.36,
-     "loop_pass_ms": [
-      3.19,
-      3.36,
-      3.86
-     ],
-     "added_ms": 1.49,
-     "live_each_ms": [
-      129.5,
-      149.4
-     ],
-     "live_ms": 139.4,
-     "http_ms": 138.5
-    },
-    "tag": {
-     "loop_ms": 3.57,
-     "loop_pass_ms": [
-      3.31,
-      3.48,
-      4.54
-     ],
-     "added_ms": 1.62,
-     "live_each_ms": [
-      131.3,
-      135.6
-     ],
-     "live_ms": 133.4,
-     "http_ms": 132.5
-    },
-    "score": {
-     "loop_ms": 3.52,
-     "loop_pass_ms": [
-      2.64,
-      3.58,
-      5.95
-     ],
-     "added_ms": 1.63,
-     "live_each_ms": [
-      152.5,
-      150.4
-     ],
-     "live_ms": 151.5,
-     "http_ms": 151
-    },
-    "filter": {
-     "loop_ms": 3.55,
-     "loop_pass_ms": [
-      3.09,
-      3.39,
-      7.0
-     ],
-     "added_ms": 1.41,
-     "live_each_ms": [
-      152.3,
-      142.6
-     ],
-     "live_ms": 147.5,
-     "http_ms": 146.5
-    },
-    "rank": {
-     "loop_ms": 3.28,
-     "loop_pass_ms": [
-      2.84,
-      3.31,
-      5.78
-     ],
-     "added_ms": 1.21,
-     "live_each_ms": [
-      146.2,
-      177.1
-     ],
-     "live_ms": 161.7,
-     "http_ms": 160
-    },
-    "find": {
-     "loop_ms": 3.52,
-     "loop_pass_ms": [
-      2.74,
-      3.57,
-      6.38
-     ],
-     "added_ms": 1.23,
-     "live_each_ms": [
-      155.8,
-      152.5
-     ],
-     "live_ms": 154.1,
-     "http_ms": 153.5
-    },
-    "annotate": {
-     "loop_ms": 3.23,
-     "loop_pass_ms": [
-      2.57,
-      3.67,
-      7.82
-     ],
-     "added_ms": 1.15,
-     "live_each_ms": [
-      132.9,
-      170.4
-     ],
-     "live_ms": 151.7,
-     "http_ms": 150.5
-    },
-    "recognize": {
-     "loop_ms": 7.11,
-     "loop_pass_ms": [
-      5.82,
-      7.06,
-      25.04
-     ],
-     "added_ms": 3.06,
-     "live_each_ms": [
-      288.3,
-      402.1
-     ],
-     "live_ms": 345.2,
-     "http_ms": 342.5
-    },
-    "relate": {
-     "loop_ms": 3.13,
-     "loop_pass_ms": [
-      3.04,
-      2.91,
-      6.02
-     ],
-     "added_ms": 1.28,
-     "live_each_ms": [
-      132.6,
-      151.4
-     ],
-     "live_ms": 142.0,
-     "http_ms": 141.5
-    }
+   "added": 0.8,
+   "worst": [
+    "recognize",
+    2.6
+   ],
+   "own": 2.4,
+   "live": {
+    "median": 147.8,
+    "p10": 131.2,
+    "p90": 171.1,
+    "n": 18
    }
   },
   {
    "id": "typescript",
    "label": "TypeScript",
    "absent": [],
-   "added_median_ms": 0.16,
-   "added_max_ms": 0.26,
-   "cells": {
-    "decide": {
-     "loop_ms": 1.99,
-     "loop_pass_ms": [
-      1.72,
-      2.24,
-      2.12
-     ],
-     "added_ms": 0.23,
-     "live_each_ms": [
-      117.5,
-      134.7
-     ],
-     "live_ms": 126.1,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 1.99,
-     "loop_pass_ms": [
-      1.63,
-      2.14,
-      2.37
-     ],
-     "added_ms": 0.11,
-     "live_each_ms": [
-      147.1,
-      145.9
-     ],
-     "live_ms": 146.5,
-     "http_ms": null
-    },
-    "tag": {
-     "loop_ms": 1.59,
-     "loop_pass_ms": [
-      1.54,
-      2.2,
-      2.33
-     ],
-     "added_ms": -0.36,
-     "live_each_ms": [
-      124.9,
-      114.9
-     ],
-     "live_ms": 119.9,
-     "http_ms": null
-    },
-    "score": {
-     "loop_ms": 2.15,
-     "loop_pass_ms": [
-      1.58,
-      2.63,
-      2.56
-     ],
-     "added_ms": 0.26,
-     "live_each_ms": [
-      142.5,
-      151.5
-     ],
-     "live_ms": 147.0,
-     "http_ms": null
-    },
-    "filter": {
-     "loop_ms": 2.13,
-     "loop_pass_ms": [
-      1.6,
-      2.36,
-      2.48
-     ],
-     "added_ms": -0.02,
-     "live_each_ms": [
-      141.2,
-      129.0
-     ],
-     "live_ms": 135.1,
-     "http_ms": null
-    },
-    "rank": {
-     "loop_ms": 2.3,
-     "loop_pass_ms": [
-      1.61,
-      2.55,
-      3.0
-     ],
-     "added_ms": 0.23,
-     "live_each_ms": [
-      114.7,
-      149.0
-     ],
-     "live_ms": 131.9,
-     "http_ms": null
-    },
-    "find": {
-     "loop_ms": 1.58,
-     "loop_pass_ms": [
-      1.58,
-      2.28,
-      1.02
-     ],
-     "added_ms": -0.7,
-     "live_each_ms": [
-      124.7,
-      146.4
-     ],
-     "live_ms": 135.6,
-     "http_ms": null
-    },
-    "annotate": {
-     "loop_ms": 2.27,
-     "loop_pass_ms": [
-      1.75,
-      2.37,
-      2.68
-     ],
-     "added_ms": 0.19,
-     "live_each_ms": [
-      143.5,
-      155.6
-     ],
-     "live_ms": 149.6,
-     "http_ms": null
-    },
-    "recognize": {
-     "loop_ms": 4.18,
-     "loop_pass_ms": [
-      3.31,
-      4.38,
-      4.29
-     ],
-     "added_ms": 0.13,
-     "live_each_ms": [
-      270.7,
-      259.8
-     ],
-     "live_ms": 265.3,
-     "http_ms": null
-    },
-    "relate": {
-     "loop_ms": 2.01,
-     "loop_pass_ms": [
-      1.56,
-      2.07,
-      2.52
-     ],
-     "added_ms": 0.16,
-     "live_each_ms": [
-      134.9,
-      132.2
-     ],
-     "live_ms": 133.5,
-     "http_ms": null
-    }
+   "added": 0.2,
+   "worst": [
+    "relate",
+    0.4
+   ],
+   "own": 1.9,
+   "live": {
+    "median": 138.0,
+    "p10": 114.9,
+    "p90": 151.9,
+    "n": 18
    }
   },
   {
    "id": "zig",
    "label": "Zig",
    "absent": [],
-   "added_median_ms": 0.89,
-   "added_max_ms": 3.51,
-   "cells": {
-    "decide": {
-     "loop_ms": 2.88,
-     "loop_pass_ms": [
-      2.3,
-      3.46,
-      3.25
-     ],
-     "added_ms": 1.11,
-     "live_each_ms": [
-      141.7,
-      141.5
-     ],
-     "live_ms": 141.6,
-     "http_ms": null
-    },
-    "choose": {
-     "loop_ms": 2.69,
-     "loop_pass_ms": [
-      2.31,
-      2.69,
-      4.24
-     ],
-     "added_ms": 0.82,
-     "live_each_ms": [
-      161.7,
-      253.0
-     ],
-     "live_ms": 207.3,
-     "http_ms": 206.5
-    },
-    "tag": {
-     "loop_ms": 2.62,
-     "loop_pass_ms": [
-      2.47,
-      2.62,
-      4.81
-     ],
-     "added_ms": 0.67,
-     "live_each_ms": [
-      142.4,
-      188.3
-     ],
-     "live_ms": 165.4,
-     "http_ms": 164.5
-    },
-    "score": {
-     "loop_ms": 2.78,
-     "loop_pass_ms": [
-      2.39,
-      2.82,
-      3.88
-     ],
-     "added_ms": 0.89,
-     "live_each_ms": [
-      145.9,
-      141.1
-     ],
-     "live_ms": 143.5,
-     "http_ms": 142.5
-    },
-    "filter": {
-     "loop_ms": 3.08,
-     "loop_pass_ms": [
-      2.42,
-      3.61,
-      3.6
-     ],
-     "added_ms": 0.94,
-     "live_each_ms": [
-      148.7,
-      137.3
-     ],
-     "live_ms": 143.0,
-     "http_ms": 140
-    },
-    "rank": {
-     "loop_ms": 2.88,
-     "loop_pass_ms": [
-      2.46,
-      3.16,
-      3.38
-     ],
-     "added_ms": 0.82,
-     "live_each_ms": [
-      141.1,
-      125.6
-     ],
-     "live_ms": 133.3,
-     "http_ms": 132.5
-    },
-    "find": {
-     "loop_ms": 3.09,
-     "loop_pass_ms": [
-      2.27,
-      3.24,
-      3.64
-     ],
-     "added_ms": 0.81,
-     "live_each_ms": [
-      168.5,
-      121.6
-     ],
-     "live_ms": 145.1,
-     "http_ms": 144
-    },
-    "annotate": {
-     "loop_ms": 3.22,
-     "loop_pass_ms": [
-      2.9,
-      3.27,
-      5.01
-     ],
-     "added_ms": 1.14,
-     "live_each_ms": [
-      119.6,
-      196.9
-     ],
-     "live_ms": 158.3,
-     "http_ms": 154.5
-    },
-    "recognize": {
-     "loop_ms": 7.56,
-     "loop_pass_ms": [
-      6.52,
-      7.91,
-      9.82
-     ],
-     "added_ms": 3.51,
-     "live_each_ms": [
-      234.3,
-      282.5
-     ],
-     "live_ms": 258.4,
-     "http_ms": 255
-    },
-    "relate": {
-     "loop_ms": 3.15,
-     "loop_pass_ms": [
-      2.7,
-      3.12,
-      4.48
-     ],
-     "added_ms": 1.3,
-     "live_each_ms": [
-      119.3,
-      154.1
-     ],
-     "live_ms": 136.7,
-     "http_ms": 135.5
-    }
+   "added": 0.8,
+   "worst": [
+    "recognize",
+    2.4
+   ],
+   "own": 2.4,
+   "live": {
+    "median": 142.1,
+    "p10": 119.6,
+    "p90": 202.5,
+    "n": 18
    }
   }
  ],
@@ -4167,19 +529,37 @@
    "loopback": {
     "cli": {
      "each_ms": [
-      81.8,
-      90.6,
-      88.0
+      66.7,
+      62.3,
+      53.6,
+      56.2,
+      58.3,
+      54.3,
+      72.0,
+      62.7,
+      58.6,
+      59.0
      ],
-     "median_ms": 88.0
+     "median_ms": 58.8,
+     "p10_ms": 53.7,
+     "p90_ms": 71.5
     },
     "cli-release": {
      "each_ms": [
-      27.1,
-      51.8,
-      33.0
+      56.7,
+      23.6,
+      18.8,
+      22.8,
+      20.4,
+      18.5,
+      24.1,
+      26.8,
+      26.7,
+      22.9
      ],
-     "median_ms": 33.0
+     "median_ms": 23.2,
+     "p10_ms": 18.5,
+     "p90_ms": 53.7
     }
    }
   },
@@ -4203,19 +583,37 @@
    "loopback": {
     "cli": {
      "each_ms": [
-      235.9,
-      274.1,
-      288.5
+      167.8,
+      218.5,
+      193.2,
+      186.6,
+      232.3,
+      362.1,
+      235.6,
+      235.6,
+      292.6,
+      318.2
      ],
-     "median_ms": 274.1
+     "median_ms": 233.9,
+     "p10_ms": 169.7,
+     "p90_ms": 357.7
     },
     "cli-release": {
      "each_ms": [
-      83.0,
-      76.2,
-      71.2
+      51.5,
+      49.7,
+      45.6,
+      73.7,
+      85.5,
+      40.9,
+      65.3,
+      45.8,
+      51.1,
+      53.3
      ],
-     "median_ms": 76.2
+     "median_ms": 51.3,
+     "p10_ms": 41.4,
+     "p90_ms": 84.3
     }
    }
   }
@@ -4225,10 +623,449 @@
   "questions": 2357,
   "bytes": 551337
  },
- "live_started": "2026-10-01T09:56:20-0400",
- "live_ended": "2026-10-01T09:57:50-0400",
- "load": [
+ "spend": {
+  "reported": [
+   206154,
+   47054
+  ],
+  "estimate": [
+   286012,
+   57331
+  ],
+  "reported_usd": 0.0166,
+  "estimate_usd": 0.0216,
+  "price": {
+   "input": 0.042,
+   "output": 0.168
+  },
+  "estimated_bindings": [
+   "ada",
+   "c",
+   "cobol",
+   "cpp",
+   "csharp",
+   "dart",
+   "duckdb",
+   "go",
+   "java",
+   "kotlin",
+   "objective-c",
+   "php",
+   "postgresql",
+   "r",
+   "ruby",
+   "rust",
+   "scala",
+   "sqlite",
+   "swift",
+   "typescript",
+   "zig"
+  ]
+ },
+ "live_window": [
+  "2026-10-01T09:56:20-0400",
+  "2026-10-01T09:57:50-0400"
+ ],
+ "live_load": [
   25.1,
   20.7
+ ],
+ "local_load": [
+  21.3,
+  26.6
+ ],
+ "local_cpus": [
+  12,
+  13,
+  14,
+  15
+ ],
+ "passes": 5,
+ "per_pass": 40,
+ "command": {
+  "load_start": [
+   22.05,
+   23.78,
+   25.27
+  ],
+  "cpus": [
+   12,
+   13,
+   14,
+   15
+  ],
+  "debug": {
+   "version_ms": {
+    "median": 5.79,
+    "p10": 4.89,
+    "p90": 8.15,
+    "n": 40
+   },
+   "decide_ms": {
+    "median": 17.92,
+    "p10": 13.36,
+    "p90": 30.5,
+    "n": 40
+   },
+   "sync_ms": {
+    "median": 4.28,
+    "p10": 2.98,
+    "p90": 11.97,
+    "n": 40
+   },
+   "sync_calls": [
+    1,
+    2
+   ]
+  },
+  "release": {
+   "version_ms": {
+    "median": 2.97,
+    "p10": 1.97,
+    "p90": 3.61,
+    "n": 40
+   },
+   "decide_ms": {
+    "median": 15.96,
+    "p10": 11.39,
+    "p90": 21.84,
+    "n": 40
+   },
+   "sync_ms": {
+    "median": 6.87,
+    "p10": 3.63,
+    "p90": 11.65,
+    "n": 40
+   },
+   "sync_calls": [
+    1,
+    2
+   ]
+  },
+  "load_end": [
+   23.09,
+   23.96,
+   25.32
+  ]
+ },
+ "http_functions": {
+  "ada": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "c": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "cobol": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "cpp": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "csharp": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "dart": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "go": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "java": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "kotlin": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "objective-c": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "php": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "rust": [
+   "annotate",
+   "choose",
+   "decide",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "scala": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "swift": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ],
+  "zig": [
+   "annotate",
+   "choose",
+   "filter",
+   "find",
+   "rank",
+   "recognize",
+   "relate",
+   "score",
+   "tag"
+  ]
+ },
+ "functions": [
+  {
+   "name": "decide",
+   "core": [
+    1.75,
+    0.8,
+    3.86
+   ],
+   "added": 0.6,
+   "live": {
+    "median": 139.5,
+    "p10": 115.9,
+    "p90": 171.0,
+    "n": 48
+   }
+  },
+  {
+   "name": "choose",
+   "core": [
+    1.72,
+    0.79,
+    2.96
+   ],
+   "added": 1.0,
+   "live": {
+    "median": 140.6,
+    "p10": 115.4,
+    "p90": 170.3,
+    "n": 48
+   }
+  },
+  {
+   "name": "tag",
+   "core": [
+    1.66,
+    1.18,
+    4.4
+   ],
+   "added": 1.1,
+   "live": {
+    "median": 140.4,
+    "p10": 117.0,
+    "p90": 183.2,
+    "n": 48
+   }
+  },
+  {
+   "name": "score",
+   "core": [
+    1.6,
+    0.99,
+    4.48
+   ],
+   "added": 1.0,
+   "live": {
+    "median": 134.0,
+    "p10": 118.7,
+    "p90": 156.2,
+    "n": 48
+   }
+  },
+  {
+   "name": "filter",
+   "core": [
+    1.78,
+    1.09,
+    3.55
+   ],
+   "added": 1.2,
+   "live": {
+    "median": 141.3,
+    "p10": 116.2,
+    "p90": 178.2,
+    "n": 40
+   }
+  },
+  {
+   "name": "rank",
+   "core": [
+    1.91,
+    1.56,
+    4.85
+   ],
+   "added": 0.9,
+   "live": {
+    "median": 137.2,
+    "p10": 115.1,
+    "p90": 187.4,
+    "n": 44
+   }
+  },
+  {
+   "name": "find",
+   "core": [
+    1.64,
+    1.27,
+    2.81
+   ],
+   "added": 1.1,
+   "live": {
+    "median": 136.9,
+    "p10": 118.3,
+    "p90": 170.0,
+    "n": 44
+   }
+  },
+  {
+   "name": "annotate",
+   "core": [
+    1.87,
+    1.03,
+    4.05
+   ],
+   "added": 1.3,
+   "live": {
+    "median": 138.9,
+    "p10": 116.8,
+    "p90": 171.5,
+    "n": 48
+   }
+  },
+  {
+   "name": "recognize",
+   "core": [
+    3.39,
+    2.15,
+    4.86
+   ],
+   "added": 2.8,
+   "live": {
+    "median": 279.6,
+    "p10": 249.6,
+    "p90": 316.7,
+    "n": 48
+   }
+  },
+  {
+   "name": "relate",
+   "core": [
+    1.63,
+    0.88,
+    2.3
+   ],
+   "added": 1.1,
+   "live": {
+    "median": 134.4,
+    "p10": 117.1,
+    "p90": 178.1,
+    "n": 44
+   }
+  }
  ]
 }
