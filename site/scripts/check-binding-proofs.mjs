@@ -14,6 +14,10 @@
 // never turns the site build red. The marketing lead reruns the replay at
 // each published checkpoint tag.
 //
+// With --strict, that change fails instead. The Pages workflow and the code
+// release run it that way, so a release needs proof that every sample passed
+// against the code it ships.
+//
 // It fails when a library or SQL sample under examples/ has no REPLAY
 // line.
 //
@@ -29,6 +33,7 @@ const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const repo = path.resolve(site, '..');
 const examples = path.join(site, 'examples');
 
+const strict = process.argv.includes('--strict');
 const problems = [];
 const warnings = [];
 const stalePages = new Set();
@@ -57,7 +62,7 @@ for (const line of listed) {
   }
   if (sourceTree(repo, entry.sources.folders) !== entry.sources.tree) {
     stalePages.add(entry.page);
-    warnings.push(`${entry.page}: ${entry.sources.folders.join(', ')} changed after the proof of ${line}. Prove the page again.`);
+    (strict ? problems : warnings).push(`${entry.page}: ${entry.sources.folders.join(', ')} changed after the proof of ${line}. Prove the page again with npm run test-docs.`);
   }
 }
 for (const line of Object.keys(proof)) {
