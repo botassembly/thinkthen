@@ -406,8 +406,15 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
     let counts = Counters::new(None);
     let facts = crate::engine::CallFacts::new();
     let cancel = crate::engine::Cancel::default().with_facts(facts.clone());
+    // A port that was bound and then freed refuses at once. Linux also refuses
+    // port 0, but macOS answers that with "address not available".
+    let port = TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .expect("a free port")
+        .port();
+    let url = format!("http://127.0.0.1:{port}/v1/systemone");
     let exchange = Exchange {
-        url: "http://127.0.0.1:0/v1/systemone",
+        url: &url,
         body: b"{}",
         key: &key,
         max_retries: 2,

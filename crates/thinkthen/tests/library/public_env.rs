@@ -419,15 +419,14 @@ fn r4_24_the_engine_base_url_outranks_the_environment_base() {
 fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
     let served = listener();
     let (config, cache) = (folder("config"), folder("cache"));
-    fs::create_dir_all(config.join("thinkthen")).unwrap();
     let file = r#"{"schema":"thinkthen.config/1","model":"model-from-config"}"#;
-    fs::write(config.join("thinkthen/config.json"), file).unwrap();
+    let moved = crate::child::Folder::configure(&config, file).unwrap();
     let cache_text = cache.to_str().unwrap();
     let environment = [
         ("THINKTHEN_BASE_URL", served.base()),
         ("THINKTHEN_API_KEY", "sk-fake-loopback"),
         ("THINKTHEN_CACHE", cache_text),
-        ("XDG_CONFIG_HOME", config.to_str().unwrap()),
+        (moved.0, moved.1.as_str()),
     ];
     let explicit = format!(
         "{}|sk-fake-loopback|model-from-config|{cache_text}",

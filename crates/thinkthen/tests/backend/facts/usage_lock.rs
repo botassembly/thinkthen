@@ -14,7 +14,7 @@ use crate::harness::{Canned, Listener, finish, start};
 fn a_foreign_usage_lock_loses_only_advisory_counts_before_exit() {
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("facts-held-usage-lock");
     let _absent = fs::remove_dir_all(&root);
-    let usage = root.join("thinkthen");
+    let usage = crate::child::Folder::Usage.under(&root);
     fs::create_dir_all(&usage).expect("usage folder");
     fs::set_permissions(&usage, fs::Permissions::from_mode(0o700)).expect("private folder");
     let lock = fs::OpenOptions::new()
@@ -28,6 +28,7 @@ fn a_foreign_usage_lock_loses_only_advisory_counts_before_exit() {
         r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":8,"output_tokens":2}}"#,
     )])
     .expect("listener");
+    let state = crate::child::Folder::Usage.variable(&root);
     let mut child = start(
         &[
             "decide",
@@ -39,7 +40,7 @@ fn a_foreign_usage_lock_loses_only_advisory_counts_before_exit() {
         ],
         &[
             ("THINKTHEN_API_KEY", "secret-key"),
-            ("XDG_STATE_HOME", root.to_str().expect("UTF-8 root")),
+            (state.0, state.1.as_str()),
         ],
         b"one record",
     )

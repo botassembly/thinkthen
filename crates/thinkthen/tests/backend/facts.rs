@@ -7,6 +7,8 @@ use std::{fs, path::Path};
 use serde_json::{Map, Value, json};
 
 use crate::batching::{self, KEY, QUESTION};
+#[cfg(unix)]
+use crate::child::Folder;
 use crate::harness::{Canned, Listener, spawn};
 
 // Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
@@ -52,7 +54,7 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
     let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("facts-filter-home");
     let _removed = fs::remove_dir_all(&home);
     fs::create_dir_all(&home).expect("private home");
-    let home = home.to_str().expect("UTF-8 home");
+    let state = Folder::Usage.variable(&home);
     let listener = Listener::answering(answered).expect("loopback");
     let input = batching::lines(1..=25);
     let arguments = [
@@ -68,7 +70,7 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
     ];
     let output = spawn(
         &arguments,
-        &[KEY, ("XDG_STATE_HOME", home)],
+        &[KEY, (state.0, state.1.as_str())],
         input.as_bytes(),
     )
     .expect("compiled filter");
@@ -92,7 +94,7 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
     );
     assert_eq!(String::from_utf8_lossy(&output.stderr).lines().count(), 1);
     let status =
-        spawn(&["status", "--json"], &[("XDG_STATE_HOME", home)], b"").expect("compiled status");
+        spawn(&["status", "--json"], &[(state.0, &state.1)], b"").expect("compiled status");
     let status: Value = serde_json::from_slice(&status.stdout).expect("status JSON");
     for field in [
         "requests_sent",
@@ -152,17 +154,38 @@ fn top_dropped_records_still_count() {
     assert_eq!(line(&ranked)["records"], 20);
 }
 
+/// A case's empty root, made again even when an earlier run blocked it.
+#[cfg(unix)]
+pub(crate) fn fresh_root(name: &str) -> std::path::PathBuf {
+    use std::os::unix::fs::PermissionsExt as _;
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    if let Some(parent) = Folder::Usage.under(&root).parent() {
+        let _absent = fs::set_permissions(parent, fs::Permissions::from_mode(0o700));
+    }
+    let _absent = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).expect("a case root");
+    root
+}
+
+/// Make the folder that holds the usage folder read-only, so the writer
+/// cannot make the usage folder. On macOS that folder also holds the
+/// configuration file, which stays readable.
+#[cfg(unix)]
+pub(crate) fn block_usage(root: &Path) {
+    use std::os::unix::fs::PermissionsExt as _;
+    let usage = Folder::Usage.under(root);
+    let parent = usage.parent().expect("the usage folder's parent");
+    fs::create_dir_all(parent).expect("the usage folder's parent");
+    fs::set_permissions(parent, fs::Permissions::from_mode(0o500)).expect("read-only");
+}
+
 /// A usage folder the writer cannot make passes the read before the first
 /// send, since it is missing, then fails the write: the warning stays.
 #[cfg(unix)]
 pub(crate) fn unwritable_state(name: &str) -> std::path::PathBuf {
-    use std::os::unix::fs::PermissionsExt as _;
-    let blocked = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::set_permissions(&blocked, fs::Permissions::from_mode(0o700));
-    let _absent = fs::remove_dir_all(&blocked);
-    fs::create_dir_all(&blocked).expect("state home");
-    fs::set_permissions(&blocked, fs::Permissions::from_mode(0o500)).expect("read-only");
-    blocked
+    let root = fresh_root(name);
+    block_usage(&root);
+    root
 }
 
 #[cfg(unix)]
@@ -170,6 +193,7 @@ pub(crate) fn unwritable_state(name: &str) -> std::path::PathBuf {
 fn a_usage_warning_precedes_the_facts_line() {
     let listener = Listener::answering(answered).expect("warning loopback");
     let blocked = unwritable_state("facts-usage-unwritable");
+    let state = Folder::Usage.variable(&blocked);
     let warned = spawn(
         &[
             "decide",
@@ -179,10 +203,7 @@ fn a_usage_warning_precedes_the_facts_line() {
             "--url",
             listener.base(),
         ],
-        &[
-            KEY,
-            ("XDG_STATE_HOME", blocked.to_str().expect("UTF-8 path")),
-        ],
+        &[KEY, (state.0, state.1.as_str())],
         b"line 1",
     )
     .expect("usage warning command");
@@ -477,12 +498,11 @@ fn dry_run_and_early_setup_failures_report_zero_work() {
     assert_eq!(line(&dry)["requests_sent"], 0);
     assert!(line(&dry).get("stopped").is_none());
 
-    let config = Path::new(env!("CARGO_TARGET_TMPDIR")).join("facts-invalid-config");
-    fs::create_dir_all(config.join("thinkthen")).expect("configuration folder");
-    fs::write(config.join("thinkthen/config.json"), b"not JSON").expect("invalid configuration");
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("facts-invalid-config");
+    let moved = Folder::configure(&root, "not JSON").expect("invalid configuration");
     let early = spawn(
         &["decide", QUESTION, "--facts", "--plan"],
-        &[("XDG_CONFIG_HOME", config.to_str().expect("UTF-8 config"))],
+        &[(moved.0, moved.1.as_str())],
         b"line 1",
     )
     .expect("early failure command");

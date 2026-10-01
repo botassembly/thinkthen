@@ -1,6 +1,6 @@
 //! A test child's whole environment, built from nothing, and the names cargo reads.
 #![allow(dead_code, reason = "each test file uses part of the helper")]
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub(crate) const CARGO: &[&str] = &[
@@ -43,6 +43,84 @@ pub(crate) trait ChildEnvironment {
     /// Name the child's home. Windows reads its default folders from
     /// `APPDATA` and `LOCALAPPDATA`, so they go under the home there.
     fn home(&mut self, home: impl AsRef<Path>) -> &mut Self;
+}
+
+/// A default folder the command picks when no setting names one (ticket 0379).
+///
+/// Linux reads each folder from its own XDG variable, so a case's root holds
+/// one subfolder per kind. Windows reads the configuration from `APPDATA` and
+/// the other two from `LOCALAPPDATA`. macOS reads all three from `HOME`, so
+/// there the root is the home and every folder moves with it.
+#[derive(Clone, Copy)]
+pub(crate) enum Folder {
+    /// The folder that holds `config.json`.
+    Config,
+    /// The answer cache.
+    Cache,
+    /// The usage totals.
+    Usage,
+}
+
+const MACOS: bool = cfg!(target_os = "macos");
+const WINDOWS_HOST: bool = cfg!(windows);
+
+impl Folder {
+    /// The variable that puts this folder under `root`, and its value.
+    pub(crate) fn variable(self, root: &Path) -> (&'static str, String) {
+        let (name, value) = match self {
+            _ if MACOS => ("HOME", root.to_owned()),
+            Self::Config if WINDOWS_HOST => ("APPDATA", root.join("config")),
+            _ if WINDOWS_HOST => ("LOCALAPPDATA", root.join("local")),
+            Self::Config => ("XDG_CONFIG_HOME", root.join("config")),
+            Self::Cache => ("XDG_CACHE_HOME", root.join("cache")),
+            Self::Usage => ("XDG_STATE_HOME", root.join("state")),
+        };
+        (name, value.to_string_lossy().into_owned())
+    }
+
+    /// Write `text` as the configuration file under `root`, and return the
+    /// variable that points the command at it.
+    pub(crate) fn configure(root: &Path, text: &str) -> std::io::Result<(&'static str, String)> {
+        let folder = Self::Config.under(root);
+        std::fs::create_dir_all(&folder)?;
+        std::fs::write(folder.join("config.json"), text)?;
+        Ok(Self::Config.variable(root))
+    }
+
+    /// Where the command keeps this folder once `variable` names `root`.
+    pub(crate) fn under(self, root: &Path) -> PathBuf {
+        let mut folder = PathBuf::from(self.variable(root).1);
+        folder.extend(self.below());
+        folder
+    }
+
+    /// Where the command keeps this folder when only the child's home, as
+    /// `ChildEnvironment::home` sets it, names it.
+    pub(crate) fn in_home(self, home: &Path) -> PathBuf {
+        let base: &[&str] = match self {
+            _ if MACOS => &[],
+            Self::Config if WINDOWS_HOST => &["AppData", "Roaming"],
+            _ if WINDOWS_HOST => &["AppData", "Local"],
+            Self::Config => &[".config"],
+            Self::Cache => &[".cache"],
+            Self::Usage => &[".local", "state"],
+        };
+        let mut folder = home.to_owned();
+        folder.extend(base.iter().chain(self.below()));
+        folder
+    }
+
+    /// The path from the folder its variable names down to this folder.
+    fn below(self) -> &'static [&'static str] {
+        match self {
+            Self::Config if MACOS => &["Library", "Application Support", "thinkthen"],
+            Self::Cache if MACOS => &["Library", "Caches", "thinkthen"],
+            Self::Usage if MACOS => &["Library", "Application Support", "thinkthen", "usage"],
+            Self::Cache if WINDOWS_HOST => &["thinkthen", "cache"],
+            Self::Usage if WINDOWS_HOST => &["thinkthen", "usage"],
+            _ => &["thinkthen"],
+        }
+    }
 }
 
 impl ChildEnvironment for Command {

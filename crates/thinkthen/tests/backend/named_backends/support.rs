@@ -123,14 +123,20 @@ impl Home {
             HOMES.fetch_add(1, Ordering::Relaxed)
         ));
         let _absent = std::fs::remove_dir_all(&root);
-        std::fs::create_dir_all(root.join("config/thinkthen")).expect("a scratch home");
-        Self { root }
+        let home = Self { root };
+        std::fs::create_dir_all(home.config_folder()).expect("a scratch home");
+        home
+    }
+
+    /// The folder that holds the configuration file.
+    fn config_folder(&self) -> PathBuf {
+        crate::child::Folder::Config.under(&self.root)
     }
 
     /// Write the configuration file, or leave none when `text` is empty.
     pub(crate) fn config(&self, text: &str) -> &Self {
         if !text.is_empty() {
-            std::fs::write(self.root.join("config/thinkthen/config.json"), text)
+            std::fs::write(self.config_folder().join("config.json"), text)
                 .expect("a configuration file");
         }
         self
@@ -140,19 +146,17 @@ impl Home {
     pub(crate) fn environment(&self) -> Vec<(String, String)> {
         let mut environment = vec![
             ("HOME".to_owned(), self.path("home")),
-            ("XDG_CONFIG_HOME".to_owned(), self.path("config")),
-            ("XDG_CACHE_HOME".to_owned(), self.path("cache")),
             ("THINKTHEN_TEST_RETRY_WAIT_MS".to_owned(), "1".to_owned()),
             (
                 "THINKTHEN_TEST_INPUT_PAUSE_MS".to_owned(),
                 "10000".to_owned(),
             ),
         ];
-        // Windows reads the configuration under APPDATA and the cache under
-        // LOCALAPPDATA, each in a `thinkthen` folder as on Linux.
-        if cfg!(windows) {
-            environment.push(("APPDATA".to_owned(), self.path("config")));
-            environment.push(("LOCALAPPDATA".to_owned(), self.path("cache")));
+        // The configuration and cache folders go under the root. On macOS
+        // that moves `HOME` from `home` to the root.
+        for folder in [crate::child::Folder::Config, crate::child::Folder::Cache] {
+            let (name, value) = folder.variable(&self.root);
+            environment.push((name.to_owned(), value));
         }
         environment.extend(
             MARKERS

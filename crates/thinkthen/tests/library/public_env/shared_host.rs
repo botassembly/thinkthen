@@ -65,12 +65,13 @@ fn a_shared_host_caches_only_in_a_private_named_folder() {
         ("an open cache_at is refused", "", cache_at.as_str(), None),
         ("an open replay is refused", "", replay.as_str(), None),
     ];
+    let moved = crate::child::Folder::Cache.variable(Path::new(&xdg));
     for (name, cache, argument, sends) in rows {
         let before = listener.count();
         let lines = in_child(
             "shared-host",
             &[
-                ("XDG_CACHE_HOME", &xdg),
+                (moved.0, moved.1.as_str()),
                 ("THINKTHEN_BASE_URL", listener.base()),
                 ("THINKTHEN_API_KEY", "sk-test"),
                 ("THINKTHEN_CACHE", cache),
@@ -84,13 +85,13 @@ fn a_shared_host_caches_only_in_a_private_named_folder() {
         );
         assert_eq!(sends.is_none(), lines == REFUSED, "{name}: {lines}");
     }
-    let names: Vec<_> = fs::read_dir(&xdg)
-        .expect("the platform folder")
-        .map(|entry| entry.expect("an entry").file_name())
-        .collect();
+    // The folder the cache variable names: the XDG cache home on Linux,
+    // `Library/Caches` on macOS.
+    let platform = crate::child::Folder::Cache.under(Path::new(&xdg));
+    let home = platform.parent().expect("a cache home");
     assert!(
-        names.is_empty(),
-        "the platform cache folder stays empty; usage totals live in the state folder: {names:?}"
+        fs::read_dir(home).map_or(true, |mut entries| entries.next().is_none()),
+        "the cache home stays empty; usage totals live in the state folder: {home:?}"
     );
 }
 

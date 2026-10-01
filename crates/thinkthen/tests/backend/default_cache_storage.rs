@@ -4,6 +4,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
+use crate::child::Folder;
 use crate::harness::{Canned, Listener, spawn};
 
 const DEFAULT: &str = "thinkthen: the default cache folder could not be read or written; check its permissions and free space, use --no-cache, or set THINKTHEN_CACHE to another folder\n";
@@ -14,7 +15,7 @@ fn a_default_cache_that_fails_names_the_default_cache() {
     // A private default cache whose store is no database fails every run.
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("default-cache-storage");
     let _absent = fs::remove_dir_all(&root);
-    let named = root.join("thinkthen");
+    let named = Folder::Cache.under(&root);
     fs::create_dir_all(&named).expect("cache folder");
     fs::set_permissions(&named, fs::Permissions::from_mode(0o700)).expect("private folder");
     fs::write(
@@ -22,14 +23,14 @@ fn a_default_cache_that_fails_names_the_default_cache() {
         b"not a database, padded well past the length of one sqlite header",
     )
     .expect("store");
-    let root_text = root.to_str().expect("a UTF-8 path");
+    let moved = Folder::Cache.variable(&root);
     let named_text = named.to_str().expect("a UTF-8 path");
     let listener =
         Listener::answering(|_| Canned::status(500, "unused")).expect("a loopback listener");
     let base = listener.base().to_owned();
     let cases = [
-        (vec![], ("XDG_CACHE_HOME", root_text), DEFAULT),
-        (vec!["--jsonl"], ("XDG_CACHE_HOME", root_text), DEFAULT),
+        (vec![], (moved.0, moved.1.as_str()), DEFAULT),
+        (vec!["--jsonl"], (moved.0, moved.1.as_str()), DEFAULT),
         (vec![], ("THINKTHEN_CACHE", named_text), NAMED),
     ];
     for (options, folder, expected) in cases {
@@ -58,25 +59,33 @@ fn a_default_cache_that_fails_names_the_default_cache() {
 #[test]
 fn an_unwritable_cache_folder_refuses_before_the_first_send() {
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("unwritable-cache-home");
-    if root.exists() {
-        fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("writable again");
-        fs::remove_dir_all(&root).expect("old fixture");
+    // The folder that holds the default cache: the XDG cache home on Linux,
+    // `Library/Caches` on macOS.
+    let home = Folder::Cache
+        .under(&root)
+        .parent()
+        .expect("a parent")
+        .to_owned();
+    // A fixture left by an older layout blocked the root itself.
+    for folder in [&root, &home] {
+        let _absent = fs::set_permissions(folder, fs::Permissions::from_mode(0o700));
     }
-    fs::create_dir_all(&root).expect("cache home");
-    fs::set_permissions(&root, fs::Permissions::from_mode(0o500)).expect("read-only home");
-    let root_text = root.to_str().expect("a UTF-8 path");
-    let named = root.join("named");
+    let _absent = fs::remove_dir_all(&root);
+    fs::create_dir_all(&home).expect("cache home");
+    fs::set_permissions(&home, fs::Permissions::from_mode(0o500)).expect("read-only home");
+    let moved = Folder::Cache.variable(&root);
+    let named = home.join("named");
     let named_text = named.to_str().expect("a UTF-8 path");
     let listener =
         Listener::answering(|_| Canned::status(500, "unused")).expect("a loopback listener");
     let base = listener.base().to_owned();
     let cases = [
-        (vec![], ("XDG_CACHE_HOME", root_text), DEFAULT),
-        (vec!["--jsonl"], ("XDG_CACHE_HOME", root_text), DEFAULT),
+        (vec![], (moved.0, moved.1.as_str()), DEFAULT),
+        (vec!["--jsonl"], (moved.0, moved.1.as_str()), DEFAULT),
         (vec![], ("THINKTHEN_CACHE", named_text), NAMED),
         (
             vec!["--record", named_text],
-            ("XDG_CACHE_HOME", root_text),
+            (moved.0, moved.1.as_str()),
             NAMED,
         ),
     ];
@@ -99,14 +108,14 @@ fn an_unwritable_cache_folder_refuses_before_the_first_send() {
     }
     let planned = spawn(
         &["decide", "asks for a refund", "--url", &base, "--plan"],
-        &[("XDG_CACHE_HOME", root_text)],
+        &[(moved.0, moved.1.as_str())],
         b"evidence",
     )
     .expect("plan");
     assert_eq!(planned.status.code(), Some(0));
     assert_eq!(listener.connections(), 0);
-    assert_eq!(fs::read_dir(&root).expect("home").count(), 0);
-    fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).expect("writable again");
+    assert_eq!(fs::read_dir(&home).expect("home").count(), 0);
+    fs::set_permissions(&home, fs::Permissions::from_mode(0o700)).expect("writable again");
 }
 
 /// The usage check runs before the cache check, so a malformed usage month
@@ -115,12 +124,18 @@ fn an_unwritable_cache_folder_refuses_before_the_first_send() {
 #[test]
 fn an_unreadable_usage_month_outranks_the_cache_and_creates_no_cache() {
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("usage-before-cache");
+    // The folder that holds the default cache: the XDG cache home on Linux,
+    // `Library/Caches` on macOS.
+    let cache = Folder::Cache
+        .under(&root)
+        .parent()
+        .expect("a parent")
+        .to_owned();
     if root.exists() {
-        fs::set_permissions(root.join("cache"), fs::Permissions::from_mode(0o700))
-            .expect("writable again");
+        fs::set_permissions(&cache, fs::Permissions::from_mode(0o700)).expect("writable again");
         fs::remove_dir_all(&root).expect("old fixture");
     }
-    let (cache, usage) = (root.join("cache"), root.join("state/thinkthen"));
+    let usage = Folder::Usage.under(&root);
     fs::create_dir_all(&cache).expect("cache home");
     fs::create_dir_all(&usage).expect("usage folder");
     fs::set_permissions(&usage, fs::Permissions::from_mode(0o700)).expect("private folder");
@@ -130,15 +145,15 @@ fn an_unreadable_usage_month_outranks_the_cache_and_creates_no_cache() {
     let listener =
         Listener::answering(|_| Canned::status(500, "unused")).expect("a loopback listener");
     let base = listener.base().to_owned();
-    let state = root.join("state");
+    let (cache_home, state) = (Folder::Cache.variable(&root), Folder::Usage.variable(&root));
     for mode in [0o700, 0o500] {
         fs::set_permissions(&cache, fs::Permissions::from_mode(mode)).expect("cache mode");
         let output = spawn(
             &["decide", "asks for a refund", "--url", &base],
             &[
                 ("THINKTHEN_API_KEY", "sk-test-value"),
-                ("XDG_CACHE_HOME", cache.to_str().expect("a UTF-8 path")),
-                ("XDG_STATE_HOME", state.to_str().expect("a UTF-8 path")),
+                (cache_home.0, cache_home.1.as_str()),
+                (state.0, state.1.as_str()),
             ],
             b"evidence",
         )

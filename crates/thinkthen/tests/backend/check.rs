@@ -52,12 +52,18 @@ fn check(arguments: &[&str], environment: &[(&str, &str)]) -> Output {
         std::process::id(),
         RUNS.fetch_add(1, Ordering::Relaxed)
     ));
-    let cache_text = cache.to_str().expect("a UTF-8 path");
-    let environment = [environment, &[("XDG_CACHE_HOME", cache_text)]].concat();
+    // The case's own variables come last, so a case that names its own home
+    // keeps it, and the scan below reads that home too.
+    let moved = crate::child::Folder::Cache.variable(&cache);
+    let environment = [&[(moved.0, moved.1.as_str())], environment].concat();
     let output = spawn(&[&["check"], arguments].concat(), &environment, b"").expect("runs");
     let streams = [("stdout", &output.stdout), ("stderr", &output.stderr)];
     let streams = streams.map(|(name, bytes)| (name.to_owned(), bytes.clone()));
-    for (place, bytes) in streams.into_iter().chain(files(&cache)) {
+    let homes = environment
+        .iter()
+        .filter(|(name, _)| *name == "HOME")
+        .flat_map(|(_, home)| files(Path::new(home)));
+    for (place, bytes) in streams.into_iter().chain(files(&cache)).chain(homes) {
         let held = bytes
             .windows(KEY.len())
             .any(|window| window == KEY.as_bytes());
@@ -346,17 +352,16 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
 
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("check-config-{}", std::process::id()));
-    fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");
+    let config = crate::child::Folder::Config;
+    fs::create_dir_all(config.under(&root)).expect("configuration directory");
     fs::write(
-        root.join("thinkthen/config.json"),
+        config.under(&root).join("config.json"),
         r#"{"schema":"thinkthen.config/1","model":"configured-1"}"#,
     )
     .expect("configuration");
     let listener = other_model();
-    let environment = [
-        ("THINKTHEN_API_KEY", KEY),
-        ("XDG_CONFIG_HOME", root.to_str().expect("root")),
-    ];
+    let moved = config.variable(&root);
+    let environment = [("THINKTHEN_API_KEY", KEY), (moved.0, moved.1.as_str())];
     let output = check(&["--url", listener.base()], &environment);
     let header = [
         "provider systemone",

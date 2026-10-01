@@ -12,11 +12,17 @@ use std::process::Command;
 fn the_role_hint_uses_stderr_only_when_stdout_is_a_terminal() {
     // Python's standard-library PTY supplies real terminal file descriptors.
     // Keeping stdin a pipe avoids the independent waiting-for-evidence notice.
+    // The parent keeps its own terminal side open until the child exits:
+    // macOS drops unread terminal output when the last such side closes, and
+    // Linux keeps it (ticket 0379). The child has exited before the read, so
+    // reading stops once half a second passes with nothing waiting. Linux
+    // hands the output across in the background, and the wait covers that.
     let script = r#"
 import errno
 import json
 import os
 import pty
+import select
 import subprocess
 import tty
 
@@ -34,11 +40,9 @@ def run(stdout_terminal, stderr_terminal, argv=args, evidence=b'Refund me please
                                  stdout=slave if stdout_terminal else subprocess.PIPE,
                                  stderr=slave if stderr_terminal else subprocess.PIPE,
                                  env=environment)
-        os.close(slave)
-        slave = None
         stdout, stderr = child.communicate(evidence, timeout=10)
         chunks = []
-        while True:
+        while select.select([master], [], [], 0.5)[0]:
             try:
                 chunk = os.read(master, 4096)
             except OSError as error:

@@ -3,10 +3,10 @@
 use super::*;
 
 pub(super) fn run_default_cache(argument: &str) -> Vec<String> {
-    let [first, second] = argument.splitn(2, '|').collect::<Vec<_>>()[..] else {
-        panic!("two endpoint addresses");
+    let [first, second, cache] = argument.splitn(3, '|').collect::<Vec<_>>()[..] else {
+        panic!("two endpoint addresses and the default cache folder");
     };
-    let cache = Path::new(&std::env::var("XDG_CACHE_HOME").expect("cache home")).join("thinkthen");
+    let cache = Path::new(cache);
     let question = Question::decide("asks for a refund")
         .expect("question")
         .cut();
@@ -36,7 +36,7 @@ pub(super) fn run_default_cache(argument: &str) -> Vec<String> {
         denied.kind(),
         denied.send_budget_denial(),
         cache.exists(),
-        entries(&cache)
+        entries(cache)
     );
     let bound = build(second, true)
         .decide(&question, EVIDENCE)
@@ -71,7 +71,7 @@ fn zero_budget_sends_nothing_and_the_default_cache_serves_the_next_address() {
         .enumerate()
     {
         let home = folder(&format!("zero-budget-{name}"));
-        let cache = home.join("thinkthen");
+        let cache = crate::child::Folder::Cache.under(&home);
         if present {
             fs::create_dir_all(&cache).expect("empty cache");
             #[cfg(unix)]
@@ -81,13 +81,11 @@ fn zero_budget_sends_nothing_and_the_default_cache_serves_the_next_address() {
                     .expect("private default cache");
             }
         }
-        let addresses = format!("{}|{}", first.base(), second.base());
+        let addresses = format!("{}|{}|{}", first.base(), second.base(), cache.display());
+        let moved = crate::child::Folder::Cache.variable(&home);
         let lines = in_child(
             "zero-budget-default-cache",
-            &[
-                ("XDG_CACHE_HOME", home.to_str().expect("cache home")),
-                (ARGUMENT, &addresses),
-            ],
+            &[(moved.0, moved.1.as_str()), (ARGUMENT, &addresses)],
         );
         let expected = format!("Usage|Some(BeforeFirstSend)|{present}|0\n1|0|1");
         assert_eq!(lines, expected, "{name}");
