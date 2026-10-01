@@ -1,6 +1,6 @@
 # 0379: The root workspace tests pass on macOS
 
-Status: in progress. Lane claude-3. Branch `ticket/0379-macos-root-suite`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian's coordinator on 2026-10-01. It changes tests only, so it may land before the `release/0.1` cut (ADR 0116). A product bug found on macOS stops that case and goes to the coordinator; this ticket does not fix product code.
+Status: landed. Lane claude-3. Branch `ticket/0379-macos-root-suite`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian's coordinator on 2026-10-01. It changes tests only, so it may land before the `release/0.1` cut (ADR 0116). A product bug found on macOS stops that case and goes to the coordinator; this ticket does not fix product code.
 
 Milestone: 0.2
 
@@ -42,6 +42,27 @@ Milestone: 0.2
   - Linux: the touched test binaries (`thinkthen` unit tests, `backend`, `library`), `sdlc/scripts/lint` and `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`.
   - Windows: the `windows` workflow dispatched on this branch passes. Its run URL goes in the record.
 - Defers: the following.
-  - The Windows port of the XDG cases (finding W6, stage 1). `Folder` has no Windows arm until then.
+  - The Windows port of the XDG cases (finding W6, stage 1). Their `cfg(unix)` guards stay. `Folder` has a Windows arm only because three helpers that run on Windows (`check.rs`, `secrecy.rs` and the named backends' support) now name their folders through it.
   - The doctests, the library-only run and the consumer run of `sdlc/scripts/test` on macOS. This ticket covers `--all-targets` at the root, as 0373 measured.
   - A macOS release check that runs these tests. Nothing in the release path runs them today.
+
+## What the build taught us
+
+- Counts on the M5, root `cargo test --locked --offline --workspace --all-targets --no-fail-fast`:
+  - Before, at main `55db6f59f`: 62 cases failed (1 unit, 54 backend, 7 library).
+  - After, at the branch's final code: 0 failed. Unit 398, backend 749, library 66, loopback 21, public_batches 46, public_controls 23, public_cap 1, public_estimated 1 passed.
+  - Backend runs 2 fewer cases than on Linux. One is the (b) case below. The other is `interrupt.rs`'s `RLIMIT_NPROC` case, which was already Linux only with a stated reason.
+- Linux at the final code: unit 398, backend 751, library 66 passed. `sdlc/scripts/lint` and `policy.py` pass.
+- Windows: the `windows` workflow passed at `2693e7a56` (https://github.com/botassembly/thinkthen/actions/runs/36898535153) and was dispatched again at the final code (https://github.com/botassembly/thinkthen/actions/runs/36899200796).
+- Verdicts: (a) 60, (b) 1, (c) 0, (d) 1. No product bug turned up. The engine's macOS folders behaved as `config.rs` states in every case.
+  - (a), folder cases (57): every failing case in `default_cache` and its usage cases (12), `status` (11), `named_backends` (10), `facts` and its priced and lock cases (7), `cache_configuration` (3 of 4), `annotate::splitting`, `backoff`, `cache_partial`, `check`, `relate`, `resend`, `secrecy` (1 each), and the 7 library cases in `public_env`, its `batch`, `cache_budget` and `usage_totals` (the 8th library line, `child_case`, is their child half).
+  - (a), port 0 (2): `engine::http::tests::a_refused_attempt_is_observed_once_and_returned_without_a_retry` and `exchange::a_refused_port_fails_before_the_first_default_retry_wait`.
+  - (a), terminal (2): `terminal::a_terminal_is_told_what_the_command_waits_for_and_a_pipe_is_not` and `dry_run_terminal::the_role_hint_uses_stderr_only_when_stdout_is_a_terminal`.
+  - (b) (1): `cache_configuration::configuration_supplies_address_model_and_cache_switch_without_a_home`. macOS reads the configuration file from `HOME` alone, so no configuration exists there without a home.
+  - (d) (1): `demo_runner::a_page_whose_assertion_is_wrong_fails_the_run` passes once `~/.local/bin` is on `PATH`.
+- Hidden failures: `interrupt::facts_flush::a_signal_during_usage_flush_still_marks_the_final_facts_line_stopped` passed in the before run by timing alone. Run by itself on the M5 it failed 5 times in 5, because the usage lock it holds sat in an XDG folder macOS ignores. It now uses `Folder`.
+- Unexplained skip: `default_cache_storage` was guarded `target_os = "linux"` with no reason, so its 4 cases never ran on macOS. They now block the folder that holds the default cache, run on every Unix, and carry the reason (Unix folder modes).
+- Vacuous passes ported, so macOS now tests them: `default_cache::...rejected_input`, the library's hand-built engine in `usage_totals`, `shared_host`, `check`'s scan of the cache, and the cache cases in `scheduling` and `annotate::scheduling`.
+- `Folder::configure` writes a case's configuration file and returns its variable. Three cases share it, and it keeps `public_env.rs` under its 500-line cap.
+- The ratchet rises by 144 lines to 109409 for the helper and the ports.
+- No case added `--no-cache`. The shared macOS home changed no Linux count.
