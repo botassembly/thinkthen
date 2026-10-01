@@ -54,7 +54,7 @@ The 0.1 cut is one checked command plus the README, CHANGELOG and site text.
   - Rust tests: the five backend tests and `golden.rs` build the tool string from `env!("CARGO_PKG_VERSION")`. `recognize-detailed.json` gains a `$VERSION` placeholder that `stores.rs` fills. `sdlc/ratchet.json` takes the re-measured total.
   - C# and JVM Python tests and `libraries/csharp/check.sh` read the version from their own manifest. `package_check.py` builds the header macros and its plant from that version.
   - `release-managed-pair-self-test.py` reads the version from `crates/thinkthen/Cargo.toml` and builds its fixture from it.
-  - `sdlc/planning/release-process.md`: section 4's rehearsal line names the release branch. Section 5 becomes the cut checklist, in this order, each step naming its branch:
+  - `sdlc/planning/release-process.md`: section 4's rehearsal line names the release branch. Section 5 names the branch `release/0.1`, the X.Y form, and becomes the cut checklist, in this order, each step naming its branch:
     1. The release candidate conditions of ADR 0116 item 3 hold on main.
     2. On a ticket branch from main, the agent runs `sdlc/scripts/versions --set 0.1.0` and writes the text: `CHANGELOG.md`'s date, the README "Install" section, the binding READMEs and Dart CHANGELOG, and the site's held lines and Rust example with its proof re-run. The coordinator lands that commit on main.
     3. The coordinator runs the checkpoint on that main commit, and release QA runs its round on it.
@@ -62,7 +62,7 @@ The 0.1 cut is one checked command plus the README, CHANGELOG and site text.
     5. Ian dispatches `gh workflow run release.yml --ref release/0.1 -f mode=rehearse`. It passes.
     6. On Ian's go, Ian tags `v0.1.0` on the head of `release/0.1` and dispatches release mode from the tag, as ticket 0128 Phase 4 continues.
     After the cut, main carries 0.1.0 and takes 0.2 work. The 0.2 cut sets the next version. Fixes follow ADR 0116 item 5.
-  - `sdlc/planning/adr/0116-release-branches-cut-at-the-release-candidate.md`: item 7 and the Context sentence, as Outcome 1 says. Section 5's branch name reads `release/0.1`, the X.Y form.
+  - `sdlc/planning/adr/0116-release-branches-cut-at-the-release-candidate.md`: item 7 and the Context sentence, as Outcome 1 says.
   - `sdlc/tickets/0128-release-and-install.md`: the status line drops the hold on the Rust test edits, and Phase 4 step 3 says `versions --set 0.1.0` drops the publish holds and links the checklist.
 - Proof: the focused checks and a second dry run.
   - `python3 sdlc/scripts/versions --self-test` and `versions`; `python3 sdlc/scripts/workflows --self-test` and `workflows`; `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`; `sdlc/scripts/lint` once the load allows.

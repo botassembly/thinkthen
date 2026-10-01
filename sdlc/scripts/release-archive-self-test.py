@@ -24,13 +24,26 @@ def expect(result, text, success=False):
 
 def resolve_outputs(commit, version):
     # release.yml appends resolve's standard output to GITHUB_OUTPUT, which takes only name=value lines.
-    for mode, ref, name in (("rehearse", "refs/heads/main", f"v{version}-rehearsal-{commit[:7]}"),
+    rehearsal = f"v{version}-rehearsal-{commit[:7]}"
+    for mode, ref, name in (("rehearse", "refs/heads/main", rehearsal),
+                            ("rehearse", "refs/heads/release/0.1", rehearsal),
                             ("release", f"refs/tags/v{version}", f"v{version}")):
         result = run("sh", str(REPO / "sdlc/scripts/release-workflow"), "resolve", mode, ref,
                      env=os.environ | {"GITHUB_SHA": commit})
         wanted = f"sha={commit}\nversion={version}\nname={name}\n"
         if result.returncode or result.stdout != wanted or "versions: " not in result.stderr:
             raise AssertionError(("resolve outputs", mode, result.returncode, result.stdout, result.stderr))
+    # ADR 0116 item 7: rehearse runs from main or release/X.Y alone, and release only from a v* tag.
+    for mode, ref, wanted in (
+            ("rehearse", "refs/heads/feature", "rehearse must run from main or a release/X.Y branch"),
+            ("rehearse", "refs/heads/release/next", "rehearse must run from main or a release/X.Y branch"),
+            ("rehearse", "refs/heads/release/0.1/fix", "rehearse must run from main or a release/X.Y branch"),
+            ("rehearse", "refs/tags/v0.1.0", "rehearse must run from main or a release/X.Y branch"),
+            ("release", "refs/heads/release/0.1", "release must run from a v* tag")):
+        result = run("sh", str(REPO / "sdlc/scripts/release-workflow"), "resolve", mode, ref,
+                     env=os.environ | {"GITHUB_SHA": commit})
+        if result.returncode != 1 or result.stdout or result.stderr != f"release-workflow: {wanted}, got {ref}\n":
+            raise AssertionError(("resolve refusal", mode, ref, result.returncode, result.stdout, result.stderr))
 
 
 def main():
