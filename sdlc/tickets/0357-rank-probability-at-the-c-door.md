@@ -16,7 +16,7 @@ The C door's `rank` value is an array of `{"index":N,"record":TEXT,"probability"
   - The C-door port folders hold no `rank` wrapper; each passes the door value through as host JSON (ADR 0112). Their type-corpus runners check each value against the generated schema's `rank` definition and the corpus response. Their own matrix tests check `rank` as the strings `["rank-one","rank-two"]`: Go, C#, the JVM family (Java, Kotlin, Scala), PHP, Swift, Zig, Ada, Objective-C and COBOL. C++ and Dart with Flutter check `rank` only through the type corpus.
   - `conformance/cases.json` gives `operation.ranking` rows with `index` and `probability` for `15-rank-records` and `16-rank-stable-tie`. The C door's `tests/door/cases.rs` checks the record texts alone.
 - Keeps: the order and its tie rule, the command's `rank` output and its `--details` rows, every request body, every other door value, the C ABI and its symbols, and the Python, TypeScript, Ruby and R `rank` shapes. `Ranked::input`, `probability` and `into_input` keep their meaning.
-- Changes:
+- Changes: the crate type, the door arm, the schema and corpus, the door tests, the port rank checks and the docs.
   - `Ranked<T>` moves to its own file `public/results/ranked.rs` (`results.rs` is at 485 of 500 lines). It gains its zero-based input place, set in `rank_with`, read through a new `Ranked::index`.
   - The crate gains one public serialized type for one ranked row, with the index, the record's text and its probability, and one `Ranked` method that returns it. The type derives the schema under `cfg(test)`. The block below lists them for `sdlc/scripts/inventory`.
   - `libraries/c/src/call.rs` writes those rows for `rank`.
@@ -26,7 +26,7 @@ The C door's `rank` value is an array of `{"index":N,"record":TEXT,"probability"
   - Each port's own matrix test checks the rank rows' records and a numeric probability in place of the bare strings. Only the rank check lines change. No binding source file changes; the build names any exception here with its reason.
   - `libraries/c/include/thinkthen.h`, `specification/types.md` and `libraries/BINDING-AUTHOR.md` name the new value. `CHANGELOG.md` gains one line.
   - The issue moves to `sdlc/issues/closed/` with a `Resolution:` line.
-- Proof:
+- Proof: conformance cases, pinned bytes and every C-door port check.
   - The C door's conformance runner passes `15-rank-records` and `16-rank-stable-tie` with each row's index and probability. `tests/door/bytes.rs` and `golden.rs` pin the rows. `specification/fixtures/types/self-test` passes against the real door. The schema drift test passes on the rewritten schema.
   - Each C-door port surface check passes with its type-corpus runner reading the new `15-rank-records` response and its matrix test reading the new rows, with no binding source change.
   - Checks before landing: `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings` on all targets, `policy.py`, `tickets`, `inventory`, lint in a clean checkout, the C door tests, and the surface checks of the C-door port folders. Python, TypeScript, Ruby, R, Polars and the SQL extensions read `Ranked` through unchanged methods; the coordinator's sweep covers them.
