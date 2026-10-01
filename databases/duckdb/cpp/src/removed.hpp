@@ -4,6 +4,6 @@
 
 namespace duckdb {
 
-void RegisterWarm(ExtensionLoader &loader);
+void RegisterRemoved(ExtensionLoader &loader);
 
 } // namespace duckdb

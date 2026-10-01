@@ -394,3 +394,16 @@ impl ScoreBuilder {
         })
     }
 }
+
+impl Question {
+    /// This question asking this model instead of the engine's, as a host
+    /// that builds a `rank` question from text applies a call's `model`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for a blank model or a second one.
+    pub fn with_model(mut self, value: &str) -> Result<Self, Error> {
+        model_of(&mut self.model, value)?;
+        Ok(self)
+    }
+}

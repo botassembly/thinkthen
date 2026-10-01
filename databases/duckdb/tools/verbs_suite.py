@@ -48,12 +48,10 @@ def r1_1_answers_map_back_by_text():
             [
                 "SET thinkthen_batch = '1'",
                 f"SELECT thinkthen_decide('{REFUND}', x) FROM {SHUFFLED} ORDER BY i",
-                f"SELECT thinkthen_probability('{REFUND}', x) FROM {SHUFFLED} ORDER BY i",
             ],
             backend.base("case/28-decide-many-repeated-texts"),
         )
         expect(column(got[1]), [False, None, True, False, None, True], "decide rows")
-        expect(column(got[2]), [0.03, None, 0.97, 0.03, None, 0.97], "probability rows")
         expect(backend.count(), 2, "counted sends for two distinct texts")
 
 
@@ -95,16 +93,16 @@ def verbs_answer_through_the_generic_arm():
 
 
 @case
-def probability_equals_details_with_no_added_send():
+def rank_probability_equals_details_with_no_added_send():
     with Backend() as backend:
         got = run(
             [
-                "SELECT thinkthen_probability('Is it a refund?', 'refund now')",
+                "SELECT probability FROM thinkthen_rank('Is it a refund?', '{\"a\":\"refund now\"}')",
                 "SELECT CAST(thinkthen_details('Is it a refund?', 'refund now') ->> '$.answer.probability' AS DOUBLE)",
             ],
             backend.base(),
         )
-        expect(column(got[0]), column(got[1]), "probability and details")
+        expect(column(got[0]), column(got[1]), "rank probability and details")
         expect(backend.count(), 1, "one counted send for both")
 
 
@@ -249,7 +247,7 @@ SET = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?"}}}'
 NAMES = '{"version": 1, "recognize": {"kinds": {"person": "A name of a person."}}}'
 CALLS = [
     "SELECT thinkthen_decide('Is it a refund?', 'a')",
-    "SELECT thinkthen_probability('Is it a refund?', 'a')",
+    "SELECT * FROM thinkthen_rank('Is it a refund?', '{\"r\":\"a\"}')",
     "SELECT thinkthen_details('Is it a refund?', 'a')",
     "SELECT thinkthen_choose('Which?', 'a', ['x', 'y'])",
     "SELECT thinkthen_tag('Which?', 'a', ['x', 'y'])",

@@ -7,7 +7,7 @@
 #include "portable.hpp"
 #include "relate.hpp"
 #include "usage.hpp"
-#include "warm.hpp"
+#include "removed.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 
@@ -38,7 +38,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	RegisterNested(loader);
 	RegisterFind(loader);
 	RegisterUsage(loader);
-	RegisterWarm(loader);
+	RegisterRemoved(loader);
 	RegisterRelate(loader);
 }
 

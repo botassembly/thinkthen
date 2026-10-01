@@ -1,6 +1,6 @@
 # SQL named forms `thinkthen_rank` and `thinkthen_filter`
 
-Status: open. Filed 2026-10-01 from the site owner's mailroom message "SQL names for rank and filter". Owner: the queue owner, in 0.2. Ian decides.
+Status: open for `thinkthen_filter` only. Filed 2026-10-01 from the site owner's mailroom message "SQL names for rank and filter". Owner: the queue owner, in 0.2. Ian decides.
 Kind: idea
 When: 0.2 work starts on main
 Milestone: 0.2
@@ -13,4 +13,8 @@ The idea: add `thinkthen_rank` and `thinkthen_filter` to each extension as thin 
 
 The cost: two more functions in each of three extensions, each with its tests and docs. Both would duplicate what `WHERE` and `ORDER BY` already do.
 
-Until Ian decides, the docs keep teaching `WHERE` and `ORDER BY`, and use `thinkthen_decide_many`'s probability column for rank, which works in all three extensions.
+## Rank shipped in 0.1
+
+Ian approved `thinkthen_rank` for 0.1 on 2026-10-01. Ticket 0378 added it to all three extensions as a keyed table of `(key, rank, probability)` rows and retired DuckDB's `thinkthen_probability`. The rank half of this idea is done.
+
+Only `thinkthen_filter` stays a 0.2 idea for Ian. Until he decides, the docs keep teaching `WHERE` over decide for filter.

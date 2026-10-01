@@ -34,7 +34,7 @@ fn warm_context(_question: Option<&str>, _input: Option<&str>, _context: Option<
 fn probability(_question: Option<&str>, _input: Option<&str>) -> Option<f64> {
     call::guarded(|| {
         call::raise(call::usage(
-            "thinkthen_probability was removed; read the probability column of thinkthen_decide_many",
+            "thinkthen_probability was removed; order records with thinkthen_rank",
         ))
     })
 }
@@ -126,7 +126,7 @@ fn probability_context(
 ) -> Option<f64> {
     call::guarded(|| {
         call::raise(call::usage(
-            "thinkthen_probability was removed; read the probability column of thinkthen_decide_many",
+            "thinkthen_probability was removed; order records with thinkthen_rank",
         ))
     })
 }

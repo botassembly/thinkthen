@@ -318,6 +318,11 @@ impl Engine {
     {
         only(question, &[Kind::Rank], "rank")?;
         let records = self.within_limit(records)?;
+        // A rank judges every record before it orders any, so a blank record
+        // is refused before the first send.
+        for record in records.as_slice() {
+            evidence(record.evidence())?;
+        }
         let mut batch = self.decisions(question, records, options, |item, (_, yes)| {
             Ok(Some((item, yes)))
         })?;

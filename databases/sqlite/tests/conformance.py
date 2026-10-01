@@ -142,7 +142,7 @@ def refused(case: dict, backend: Backend) -> None:
     elif ident == "24-deadline-fault":
         steps = [["SELECT thinkthen_decide(?, ?, ?)", [question, evidence, '{"deadline_ms":0}']]]
     elif ident == "31-usage-rank-blank-question":
-        steps = [["SELECT thinkthen_details(?, ?)", [question, evidence]]]
+        steps = [["SELECT count(*) FROM thinkthen_rank(?, json_object('0', ?))", [case["question"]["decide"], evidence]]]
     elif ident == "30-local-question-file":
         setup = f"open(os.environ['SCRATCH'] + '/q.json', 'w').write({question!r})"
         steps = [["SELECT thinkthen_decide(?, ?)", ["@__SCRATCH__/q.json", evidence]]]
@@ -220,10 +220,10 @@ def check(case: dict, backend: Backend) -> None:
         results = asked([["SELECT i FROM r WHERE thinkthen_decide(?, t) ORDER BY i", [question]]], env, rows_table(texts))
         same("indexes", [row[0] for row in results[0]], success["operation"]["indexes"])
     elif kind == "rank":
-        sql = ("WITH scored AS MATERIALIZED (SELECT i, "
-               "json_extract(thinkthen_details(?, t), '$.answer.probability') AS p FROM r) "
-               "SELECT i, p FROM scored ORDER BY p DESC, i")
-        rows = asked([[sql, [question]]], env, rows_table(texts))[0]
+        # Batch 1 keeps one recorded exchange per record.
+        keyed = json.dumps({str(at): text for at, text in enumerate(texts)})
+        sql = "SELECT CAST(key AS INTEGER), probability FROM thinkthen_rank(?, ?, '{\"batch\":1}') ORDER BY rank"
+        rows = asked([[sql, [case["question"]["decide"], keyed]]], env)[0]
         same("ranking", [{"index": row[0], "probability": row[1]} for row in rows], success["operation"]["ranking"])
         same("judgments sent", backend.count(), len(texts))
     elif kind == "decide_many":

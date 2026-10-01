@@ -7,13 +7,13 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | SQL | Returns |
 | --- | --- |
 | `thinkthen_decide(question, text[, settings])` | `BOOLEAN`; `NULL` is "not sure" |
-| `thinkthen_probability(question, text[, settings])` | `DOUBLE`, the yes probability |
 | `thinkthen_choose(question, text[, options_or_settings[, settings]])` | `VARCHAR`, or `NULL` below the cut or at an exact tie; `options` may be `VARCHAR[]`, and settings are JSON-object `VARCHAR` |
 | `thinkthen_find(question, units[, settings])` | a struct with original `index`, `value`, `probability` and ordered `(index, probability)` candidates |
 | `thinkthen_score(question, text[, levels_or_settings[, settings]])` | `DOUBLE`, the position from 0 for the first level |
 | `thinkthen_tag(question, text[, labels_or_settings[, settings]])` | `VARCHAR[]` |
 | `thinkthen_decide_many` / `thinkthen_choose_many(question, keyed_json[, settings])` | table rows `(key, value, probability)` |
 | `thinkthen_score_many` / `thinkthen_tag_many(question, keyed_json[, settings])` | table rows `(key, value)` |
+| `thinkthen_rank(question, keyed_json[, settings])` | table rows `(key, rank, probability)` as `VARCHAR, BIGINT, DOUBLE`, best first |
 | `thinkthen_plan(question, keyed_json[, settings])` | a native struct with records, prepared requests, byte and token estimates, an upper-bound flag, and the first request body |
 | `thinkthen_annotate(set, text[, settings])` | `VARCHAR`, the record's values as JSON |
 | `thinkthen_details(question, text[, settings])` | the command's `--details` line, as JSON text |
@@ -23,7 +23,17 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | `thinkthen_relate(query, rules[, settings])` | a table of `(relation, source, target, probability, either)`, one row per edge between the query's ids; `either` is true for a both-ways rule, whose ends are then in query order |
 | `thinkthen_usage()` | rows `(metric, value)` for `requests_sent`, `cache_answers`, `input_tokens`, and `output_tokens` |
 
-`WHERE` and `ORDER BY` provide filter and rank forms. `thinkthen_find` judges one ordered list per call; build a list from rows with `list(unit ORDER BY ordinal)` to preserve caller order. It accepts 2–255 nonblank units, or 2–254 when `{"none":true}` is in settings, and at most 16 MiB of unit text. Equal units keep separate original indexes. A selected none has a non-NULL result with NULL `index` and `value`; a top-level SQL NULL or empty list returns SQL NULL without sending. The question is literal text, including text beginning with `@` or looking like JSON. The earlier four C++ target packages have installed find proof; the Intel result is translated macOS 26 proof, with native Intel and macOS 15 release-runner checks still open. Call settings are one JSON object: `threshold`, question members, `model`, `batch`, `context`, `deadline_ms`, and find's `none` where the verb permits them. `NULL` settings and `{}` mean no call settings. `deadline_ms` replaces positional deadline and context slots; `-1` means no deadline, and `0` is spent. A `NULL` question or text gives a `NULL` row. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
+`WHERE` provides the filter form. `thinkthen_find` judges one ordered list per call; build a list from rows with `list(unit ORDER BY ordinal)` to preserve caller order. It accepts 2–255 nonblank units, or 2–254 when `{"none":true}` is in settings, and at most 16 MiB of unit text. Equal units keep separate original indexes. A selected none has a non-NULL result with NULL `index` and `value`; a top-level SQL NULL or empty list returns SQL NULL without sending. The question is literal text, including text beginning with `@` or looking like JSON. The earlier four C++ target packages have installed find proof; the Intel result is translated macOS 26 proof, with native Intel and macOS 15 release-runner checks still open. Call settings are one JSON object: `threshold`, question members, `model`, `batch`, `context`, `deadline_ms`, and find's `none` where the verb permits them. `NULL` settings and `{}` mean no call settings. `deadline_ms` replaces positional deadline and context slots; `-1` means no deadline, and `0` is spent. A `NULL` question or text gives a `NULL` row. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
+
+`thinkthen_rank` orders one keyed JSON object of keys to text by the probability of yes. `rank` runs 1, 2, 3 with no gaps, and `probability` is the yes probability that orders the rows. All the records go to one engine call, which packs them as `thinkthen_decide_many` does, and `{"batch":N}` sets the records per request. The question is literal text, including text beginning with `@` or looking like JSON. Settings take `model`, `batch`, `context` and `deadline_ms`; `threshold`, `true`, `false`, `options`, `levels`, `labels` and `none` are usage errors before any send. Equal probabilities keep the keyed object's member order. An empty object gives no rows, and a `NULL` question or object gives no rows, all without sending. The input follows the `_many` rules: repeated keys and non-text values are usage errors, and blank text fails before any send. Build the object from rows with `json_group_object`, and `ORDER BY rank` again after a join:
+
+```sql
+SELECT t.id, refund.rank, refund.probability
+FROM tickets t
+JOIN thinkthen_rank('Does the writer ask for a refund?',
+                    (SELECT json_group_object(id, body) FROM tickets)) refund ON refund.key = CAST(t.id AS VARCHAR)
+ORDER BY refund.rank;
+```
 
 `thinkthen_plan` accepts a keyed JSON object of text values and the same question and settings grammar as `_many`. Its `estimated_input_tokens` struct has `lower` and `upper` members; `first_body` holds the exact first prepared request or SQL NULL for empty input. Counts describe preparation before cache answers, retries or refusals. Planning needs no API key and sends no request; its token band is an estimate, not a provider bill. A positive `thinkthen_max_requests_total` still limits later actual sends.
 
@@ -105,7 +115,7 @@ SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=p
 
 ## Files and access
 
-An `'@file'` question opens through the calling database's own file system, so `enable_external_access`, `allowed_directories`, `allowed_paths`, and `disabled_filesystems` decide every read, and the extension copies none of them. SQL cache, record and replay folders pass the same check at execution. `thinkthen_warm` now refuses with `thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many`, without sending. An `'@file'` read stops at 1 MiB and reads `thinkthen local: the question file PATH was not read: it holds more than 1 MiB`.
+An `'@file'` question opens through the calling database's own file system, so `enable_external_access`, `allowed_directories`, `allowed_paths`, and `disabled_filesystems` decide every read, and the extension copies none of them. SQL cache, record and replay folders pass the same check at execution. `thinkthen_warm` now refuses with `thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many`, and `thinkthen_probability` refuses with `thinkthen usage: thinkthen_probability was removed; order records with thinkthen_rank`, both without sending. An `'@file'` read stops at 1 MiB and reads `thinkthen local: the question file PATH was not read: it holds more than 1 MiB`.
 
 ## Interrupts
 

@@ -54,6 +54,29 @@ fn public_settings_refuse_repeated_question_and_named_fields() {
     assert_eq!(members.conflicts(&[], true), Err(SettingsError::TwoMembers));
 }
 
+#[test]
+fn rank_settings_take_model_and_call_keys_only() {
+    let settings =
+        Settings::parse(r#"{"model":"judge-b","batch":3,"context":"c","deadline_ms":5}"#)
+            .expect("rank settings");
+    settings.check(For::Rank).expect("rank takes these keys");
+    assert_eq!(settings.model(), Some("judge-b"));
+    assert_eq!(Settings::parse("{}").expect("empty").model(), None);
+    for (text, key) in [
+        (r#"{"threshold":0.7}"#, "threshold"),
+        (r#"{"true":"yes"}"#, "true"),
+        (r#"{"options":["a","b"]}"#, "options"),
+        (r#"{"none":true}"#, "none"),
+    ] {
+        let settings = Settings::parse(text).expect(text);
+        assert_eq!(
+            settings.check(For::Rank),
+            Err(SettingsError::WrongVerb(key.into())),
+            "{text}"
+        );
+    }
+}
+
 #[expect(
     clippy::panic,
     reason = "an unmapped shared case is a failed test fixture"

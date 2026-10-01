@@ -1,4 +1,4 @@
-//! Portable settings for existing probability and details result codecs.
+//! Portable settings for the details result codec.
 #![allow(
     unsafe_code,
     reason = "the existing scalar boundary copies every borrowed range"
@@ -8,24 +8,23 @@ use thinkthen::Settings;
 
 use super::{BridgeSettings, BridgeStop, BridgeText, Reply, answered, reply_boundary, text};
 
-/// Probability reads a decision; details reads any asking question (kind 2).
+/// Details reads any asking question (kind 2).
 fn prepare(
     argument: &str,
     from_file: bool,
     settings: &str,
     kind: i32,
 ) -> Result<(String, Settings), String> {
-    let asked = if kind == 2 {
-        super::portable_aux::asking_kind(argument, from_file, "details")
-            .map_err(|error| error.text)?
-    } else {
-        0
-    };
+    if kind != 2 {
+        return Err("thinkthen defect: unknown portable scalar kind".into());
+    }
+    let asked = super::portable_aux::asking_kind(argument, from_file, "details")
+        .map_err(|error| error.text)?;
     let (written, _, call) = super::portable_many::parse(argument, from_file, settings, asked)?;
     Ok((written, call))
 }
 
-/// Check one probability (kind 1) or details (kind 2) question and settings before any chunk member sends.
+/// Check one details (kind 2) question and settings before any chunk member sends.
 ///
 /// # Safety
 /// All input byte ranges remain live during this call.
@@ -65,9 +64,6 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_scalar_group(
 ) -> Reply {
     super::panic::caught(|| {
         let prepared = (|| -> Result<Reply, String> {
-            if kind != 1 && kind != 2 {
-                return Err("thinkthen defect: unknown portable scalar kind".into());
-            }
             let question = text(question, question_len)?;
             let settings = text(settings, settings_len)?;
             let (written, call) = prepare(question, from_file != 0, settings, kind)?;

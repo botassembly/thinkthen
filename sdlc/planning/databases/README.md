@@ -27,7 +27,7 @@ The question comes first and the text second, as in every other surface. The tex
 | Function | Returns | Notes |
 | --- | --- | --- |
 | `thinkthen_decide(question, text)` | A boolean, and `NULL` for "not sure" | SQL already has three-valued logic. `WHERE thinkthen_decide(...)` keeps the yes rows, and `IS NULL` finds the rows for a person |
-| `thinkthen_probability(question, text)` | A double | `ORDER BY` it and the query is `rank`. Add `LIMIT 1` and it is `find` over rows |
+| `thinkthen_rank(question, keyed_json)` | Rows of key, rank and probability, best first | The SQL form of `rank`, on all three extensions (ticket 0378). It replaced the per-row `thinkthen_probability` |
 | `thinkthen_choose(question, text, options)` | Text, and `NULL` under the threshold | |
 | `thinkthen_score(question, text, levels)` | A double — the specification's probability-weighted position from 0 to K−1. The nearest level's name rides in `thinkthen_details` (ADR 0017 pick 6) | |
 | `thinkthen_tag(question, text, labels)` | A list of text. JSON text in SQLite | One request for all the labels |

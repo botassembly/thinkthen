@@ -182,7 +182,7 @@ for thread in threads:
 
 def held_queries_stop_together(rounds: int):
     """Exercise both thread widths and keep the repeated run opt-in."""
-    queries = [PAIR, "SELECT thinkthen_decide('Is it a refund?', 'held a')", "SELECT thinkthen_details('Is it a refund?', 'held b')", "SELECT thinkthen_probability('Is it a refund?', 'held c')"]
+    queries = [PAIR, "SELECT thinkthen_decide('Is it a refund?', 'held a')", "SELECT thinkthen_details('Is it a refund?', 'held b')", "SELECT count(*) FROM thinkthen_rank('Is it a refund?', '{\"c\":\"held c\"}')"]
     for run_number in range(rounds):
         for width in (2, 4):
             with Backend() as backend, tempfile.TemporaryDirectory() as folder:

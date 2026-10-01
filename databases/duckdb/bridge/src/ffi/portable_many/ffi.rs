@@ -89,6 +89,9 @@ pub(super) fn parse(
     settings: &str,
     kind: i32,
 ) -> Result<(String, LoadedQuestion, Settings), String> {
+    if kind == RANK {
+        return ranked(question, settings);
+    }
     let verb = match kind {
         0 => For::Decide,
         4 => For::Choose,
@@ -155,6 +158,26 @@ pub(super) fn parse(
     Ok((written, parsed, settings_value))
 }
 
+/// The keyed kind `thinkthen_rank` sends; its question is literal text.
+const RANK: i32 = 8;
+
+/// A rank question is literal text, as find's is, and takes only `model`
+/// among question fields.
+fn ranked(question: &str, settings: &str) -> Result<(String, LoadedQuestion, Settings), String> {
+    let call = Settings::parse(settings)
+        .and_then(|value| {
+            value.check(For::Rank)?;
+            Ok(value)
+        })
+        .map_err(|error| RowError::usage(&error.to_string()).text)?;
+    let asked = Question::rank(question).and_then(|asked| match call.model() {
+        Some(model) => asked.with_model(model),
+        None => Ok(asked),
+    });
+    let asked = asked.map_err(|error| RowError::from(error).text)?;
+    Ok((String::new(), LoadedQuestion::Question(asked), call))
+}
+
 struct KeyedCall {
     question: LoadedQuestion,
     input: Keyed,
@@ -217,7 +240,24 @@ fn run(
             context.as_deref(),
         )?;
         let mut rows = Vec::new();
-        if kind == 0 {
+        if kind == RANK {
+            let LoadedQuestion::Question(question) = &question else {
+                return Err("thinkthen defect: a rank question was banded".into());
+            };
+            if texts.is_empty() {
+                return Ok(b"[]".to_vec());
+            }
+            let ranked = engine
+                .rank_with(question, texts, options)
+                .map_err(|error| engines::call_error(error, total).text)?;
+            for (place, row) in ranked.value().iter().enumerate() {
+                let (key, _) = input
+                    .0
+                    .get(row.index())
+                    .ok_or("thinkthen defect: a ranked row lost its record")?;
+                rows.push(json!({"key":key,"rank":place + 1,"probability":row.probability()}));
+            }
+        } else if kind == 0 {
             let decided = engine
                 .decide_many_with(&question, texts, options)
                 .collect::<Result<Vec<_>, _>>()

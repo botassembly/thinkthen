@@ -19,6 +19,19 @@ The keyed input is a JSON object of original row keys to nonblank text; repeated
 
 Each SQL call still needs the caller's judgment about whether to spend. Correlated scalar calls can send once per source row. For a large join, aggregate its keyed JSON once, then join the table result. `tests/slide.sql` is a runnable small example of that shape.
 
+## Rank a table once
+
+```sql
+SELECT s.title, abbey_road.rank, abbey_road.probability
+FROM songs AS s
+JOIN thinkthen_rank(
+  'The text is the title of a song by the Beatles. It appears on the album Abbey Road.',
+  (SELECT json_group_object(id, title) FROM songs)) AS abbey_road ON abbey_road.key = CAST(s.id AS TEXT)
+ORDER BY abbey_road.rank;
+```
+
+`thinkthen_rank(question, keyed_json[, settings])` returns `(key, rank, probability)` as `TEXT, INTEGER, REAL`, best first. `rank` runs 1, 2, 3 with no gaps, and `probability` is the yes probability that orders the rows. It takes the same keyed object as `thinkthen_decide_many`, under the same input rules, connection slots and `key =` probe, and packs the records into one engine call. `{"batch":N}` sets the records per request. The question is literal text, including text beginning with `@` or looking like JSON. Settings take `model`, `batch`, `context` and `deadline_ms`; `threshold`, `true`, `false`, `options`, `levels`, `labels` and `none` are usage errors before any send. Equal probabilities keep the keyed object's member order. An empty object gives no rows without sending, and a NULL question or object raises `thinkthen usage`, as `thinkthen_decide_many` does. `ORDER BY rank` again after a join.
+
 ## Calls and settings
 
 | Call | Return |
@@ -43,7 +56,7 @@ The optional settings slot is JSON text in the shared `thinkthen.settings/1` gra
 
 `thinkthen_configure` replaces twelve individual setters. Its closed object supports `model`, `batch`, `cache`, `throttle`, `timeout`, `max_retries`, `max_request_bytes`, `max_requests`, `max_requests_total`, `profile`, `record` and `replay`. The whole object is checked before it replaces the previous selection, and the engine must not already have built. `thinkthen_usage()` does not build it; a plan does build the engine so configure before planning. The address and key remain environment-controlled through `THINKTHEN_BASE_URL` and `THINKTHEN_API_KEY`; SQL cannot supply either. `max_requests_total` reserves each live attempt against the shared process count, including later packed requests and retries. Cache hits and plans send nothing.
 
-The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document`, individual setters and positional deadline/context forms refuse with migration guidance. Read probability from the same decide or choose `_many` row as its value. A NULL question or input returns SQL NULL; malformed types and settings raise `thinkthen usage` before a send. Ordinary errors read `thinkthen <kind>: <message> (retryable: yes|no)` with kinds `usage`, `local`, `backend`, `cancelled`, `deadline` and `defect`; removed calls keep plain migration messages. `thinkthen_try_details` returns fixed safe advice for a recoverable row failure; cancellation and deadlines still raise errors.
+The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document`, individual setters and positional deadline/context forms refuse with migration guidance. Read probability from the same decide or choose `_many` row as its value, and order records with `thinkthen_rank`. A NULL question or input returns SQL NULL; malformed types and settings raise `thinkthen usage` before a send. Ordinary errors read `thinkthen <kind>: <message> (retryable: yes|no)` with kinds `usage`, `local`, `backend`, `cancelled`, `deadline` and `defect`; removed calls keep plain migration messages. `thinkthen_try_details` returns fixed safe advice for a recoverable row failure; cancellation and deadlines still raise errors.
 
 `thinkthen_find` accepts an ordered JSON array of 2–255 nonblank text units, or 2–254 with `{"none":true}`. Duplicates retain separate zero-based positions. Empty input and SQL NULL return SQL NULL. `thinkthen_recognize` keeps the `text, start, end, length, kind, strength` row shape, with character offsets matching SQLite `substr`. `thinkthen_relations` accepts a full or bare recognize spec or an `@file`.
 
