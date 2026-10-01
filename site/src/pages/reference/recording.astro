@@ -1,0 +1,73 @@
+---
+// Goal: show how ThinkThen saves and reuses answers, what makes two questions the same, what --plan and --facts report, and why batching can change an answer.
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import { REFERENCE_PAGES, referencePage, RECORDING_SEE } from '../../data/reference.mjs';
+import { captioned } from '../../data/samples.mjs';
+import { setting } from '../../lib/settings-table.mjs';
+
+const page = referencePage('recording');
+const [plan, dryRun, miss, facts] = captioned('reference/answer-cache', RECORDING_SEE);
+const batch = setting('Batch');
+const prune = setting('Prune target');
+const spec = (name, anchor = '') => `https://github.com/botassembly/thinkthen/blob/main/specification/${name}.md${anchor}`;
+
+const MODES = [
+  ['--replay DIR', 'yes', 'nothing; a miss exits 5', 'no'],
+  ['--record DIR', 'no', 'every question', 'yes, replacing a held answer'],
+  ['--cache DIR, THINKTHEN_CACHE, or the default cache', 'yes', 'the questions it misses', 'yes'],
+  ['a cache with --refresh-cache, or the model jev-latest', 'no', 'every question', 'yes, replacing a held answer'],
+  ['--no-cache', 'no', 'every question', 'no'],
+];
+---
+<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'How ThinkThen saves and reuses answers, what makes two questions the same, what --plan and --facts report, and why batching can change an answer.' }} name="Reference">
+  <h1>Recording and the cache</h1>
+  <p class="lede">ThinkThen saves every good answer, one per question. Ask the same question again and it reads the saved answer instead of sending a request.</p>
+
+  <h2 id="plan">--plan</h2>
+  <p><code>--plan</code> reads the whole input and prints the first request it would send, then one summary line. It sends nothing and needs no key. The <a href="/install/backends/">Backends page</a> shows the request.</p>
+  <Terminal run={plan} caption={plan.see} />
+  <p>The old flag <code>--dry-run</code> is refused.</p>
+  <Terminal run={dryRun} caption={dryRun.see} />
+  <p><code>cache prune --dry-run</code> is a different preview, and it still exists. It lists the answers a prune would remove.</p>
+
+  <h2 id="the-cache-folder">The cache folder</h2>
+  <p>The cache is on by default. The <a href="/install/configuration/#locations">Configuration page</a> says where its folder lives on Linux and macOS, and how <code>THINKTHEN_CACHE</code> moves it.</p>
+
+  <h2 id="the-key">What makes two questions the same</h2>
+  <p>Each saved answer has a key. The key is the SHA-256 of five things: the adapter, the address, the model, the shared state, and the question as sent. The question as sent includes the quoted evidence. So <code>hello\n</code> and <code>hello\r\n</code> make two keys, and a cosmetic change to the text misses. In a stream, the framing may strip a line end or re-encode parsed JSON before the question is built. Answers from two addresses never mix, because the address is part of every key.</p>
+  <p>A cache folder keeps its answers in <code>thinkthen.sqlite</code>. A folder committed for replay keeps the same rows in <code>thinkthen.jsonl</code>. A saved answer holds the question and the reply's answer, never a header, so no key can reach it. Only a good answer is saved. A failure is never saved, so a later run asks only the questions that failed.</p>
+
+  <h2 id="modes">The modes</h2>
+  <table>
+    <tr><th>Mode</th><th>Looks up</th><th>Sends</th><th>Saves</th></tr>
+    {MODES.map(([mode, look, send, save]) => (
+      <tr><td><code>{mode}</code></td><td>{look}</td><td>{send}</td><td>{save}</td></tr>
+    ))}
+  </table>
+  <p><code>--record</code> sends every question, even one the folder already holds, and may charge for it again. Use <code>--cache DIR</code> to reuse what a folder holds. An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run. The <a href={spec('recording', '#the-question-store')}>recording specification</a> holds the full table.</p>
+
+  <h2 id="a-replay-miss">A replay miss</h2>
+  <p><code>--replay DIR</code> answers from the folder alone, with no key and no network. A question the folder lacks exits 5, and the message names its key.</p>
+  <Terminal run={miss} caption={miss.see} />
+
+  <h2 id="facts">--facts</h2>
+  <p><code>--facts</code> prints one <code>thinkthen.run/1</code> line last on standard error. It counts the records finished, the requests sent and the retries. It always gives <code>seconds</code>, the time the run took. It names the model when every reply named the same one. It adds token counts when every live reply reported them.</p>
+  <Terminal run={facts} caption={facts.see} />
+
+  <h2 id="batching">Batching</h2>
+  <p>A stream of records packs many questions into each request. The default batch is <code>{batch.default}</code>, which fills each request to the backend's limits. <code>--batch 1</code> sends one record a request. The batch does not change a key, so an answer saved under one batch setting replays under another.</p>
+  <p>Batching may change an answer slightly. Do not batch when you want steadier answers. ThinkThen measured the effect on <code>annotate</code>, where questions share one request. Other questions joined six borderline questions in that request, and one answer moved from no to not sure. The largest change in a probability was 0.04. The <a href={spec('annotate', '#cautions')}>annotate specification</a> records it.</p>
+  <p>The same request sent twice can also return another probability. A borderline answer, between 0.33 and 0.67, moved by up to 0.08 in ThinkThen's measurement. <code>--batch 1</code> does not remove that. A saved answer does. Replay, or a cache with a pinned model, returns the same answer every time. The <a href={spec('recording', '#the-question-store')}>recording specification</a> records the measurement.</p>
+
+  <h2 id="pruning">Pruning</h2>
+  <ul>
+    <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>thinkthen cache prune DIR</code>.</li>
+    <li><code>DIR</code> is always explicit. The prune trims the folder to <a href={prune.href}>{prune.default}</a>, or to <code>--max-size BYTES</code> for one run.</li>
+    <li><code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select answers to remove first. Either one alone is enough to select an answer.</li>
+    <li><code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code>, or a model no reply in the folder names, and removes nothing. An empty folder accepts any model name.</li>
+    <li>A saved question holds the evidence. ThinkThen creates <code>thinkthen.sqlite</code> with mode 0600, so only its owner can read it.</li>
+  </ul>
+
+  <p class="pagelinks"><a href="/install/configuration/">Configuration</a> · <a href={spec('recording')}>The recording specification</a> · <a href="/reference/#exit-codes">Every exit code</a></p>
+</SidePage>
