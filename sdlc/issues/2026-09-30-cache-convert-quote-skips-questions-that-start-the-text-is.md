@@ -8,4 +8,4 @@ Kind: bug
 
 Not a bug: plain `cache convert` without `--quote` writes old-form answers that miss on main. ADR 0111 quotes each record in its question.
 
-Fix: treat an instruction as already quoted only when it starts with `The text is `, the record's JSON and `. `. Add a count of answers left unquoted to the summary. Touches `convert.rs`, `store.rs`, `cli/cache.rs` and `recording.md`.
+Fix: treat an instruction as already quoted only when it starts with `The text is `, the record's JSON and `. `. Add a count of answers left unquoted to the summary. Touches `crates/thinkthen/src/core/recording/convert.rs`, `crates/thinkthen/src/engine/store/convert.rs`, `crates/thinkthen/src/engine/store.rs`, `crates/thinkthen/src/cli/cache.rs` and `specification/recording.md`.
