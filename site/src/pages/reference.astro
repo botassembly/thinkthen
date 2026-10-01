@@ -5,6 +5,7 @@ import SidePage from '../layouts/SidePage.astro';
 import { CODE_FUNCTIONS } from '../data/catalog.mjs';
 import { setting } from '../lib/settings-table.mjs';
 import { REFERENCE_PAGES } from '../data/reference.mjs';
+import { backends } from '../lib/backends-table.mjs';
 
 // Every row on this page comes from specification/. Nothing
 // here is an example. The runs live on the function pages and the tutorial.
@@ -54,7 +55,7 @@ const EXITS = [
   [1, 'no', 'A single piece of evidence under decide answers no. No other function exits 1.'],
   [2, 'broken', 'A usage error or an input error. The failing record sent nothing.'],
   [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
-  [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, evidence past the token limit, and a critical line in a check report.'],
+  [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a key that is unset or blank at any address other than localhost, 127.0.0.1 or [::1], evidence past the token limit, and a critical line in a check report.'],
   [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
   [6, 'broken', 'annotate or relate only. The run finished with at least one valid and one failed question. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
   [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row. When a run has both failed questions and such rows, 7 wins over 6.'],
@@ -130,7 +131,7 @@ const COUNTS = [
     ))}
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
-  <p>TypeSafe documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Set <code>requests_per_minute</code> on the backend, or <code>THINKTHEN_REQUESTS_PER_MINUTE</code>, to stay under the limit.</p>
+  <p>TypeSafe documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/closed/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Set <code>requests_per_minute</code> on the backend, or <code>THINKTHEN_REQUESTS_PER_MINUTE</code>, to stay under the limit.</p>
   <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
@@ -184,9 +185,17 @@ const COUNTS = [
 
   <h2>The environment</h2>
   <p>The <a href="/install/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads.</p>
+  <p>With no backend named, the key comes from <code>THINKTHEN_API_KEY</code>. <code>--backend</code>, <code>THINKTHEN_BACKEND</code> or the configuration file's <code>backend</code> names a backend. A named backend reads only its own key variables, and the first one that is not blank wins:</p>
+  <ul>
+    {backends().map((b) => (
+      <li><code>{b.name}</code> reads {b.keys.map((k, i) => <Fragment>{i > 0 && ', then '}<code>{k}</code></Fragment>)}.</li>
+    ))}
+  </ul>
+  <p>The command line comes first, then the environment, then the configuration file. The first of these that names a backend or an address decides. So <code>THINKTHEN_BASE_URL</code> in the shell outranks the configuration file's <code>backend</code>, and the key then comes from <code>THINKTHEN_API_KEY</code>. With both <code>--backend</code> and <code>--url</code>, the backend's key variables apply at that address.</p>
+  <p>With the key unset or blank, a request to <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code> goes out with no key and no <code>Authorization</code> header. At any other address, the command exits 4. The <a href="/install/backends/">Backends page</a> gives the rest of the key rules.</p>
 
   <h2 id="the-cache">The cache</h2>
-  <p><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, the cache key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page.</p>
+  <p><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, the cache key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page. <code>status --json</code> prints one <code>thinkthen.status/2</code> object.</p>
 
   <h2>The configuration file</h2>
   <p>The <a href="/install/configuration/#configuration-file">Configuration page</a> gives its path, its fields, and the rules ThinkThen reads it by.</p>
