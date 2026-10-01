@@ -600,6 +600,7 @@ export const SURFACES = [
   },
   {
     slug: 'java', name: 'Java', deckHeading: null,
+    backends: 'env',
     lang: 'java', tab: 'Java',
     blurb: 'One `Door` class over the C library, for Java 21. Each call returns its answer and its run facts.',
     unsureWord: '`Outcome.NOT_SURE`',
@@ -619,6 +620,7 @@ export const SURFACES = [
   },
   {
     slug: 'kotlin', name: 'Kotlin', deckHeading: null,
+    backends: 'env',
     lang: 'kotlin', tab: 'Kotlin',
     blurb: 'A `KotlinFacade` over the Java door. Its calls take strings.',
     unsureWord: '`Outcome.NOT_SURE`',
@@ -637,6 +639,7 @@ export const SURFACES = [
   },
   {
     slug: 'scala', name: 'Scala', deckHeading: null,
+    backends: 'env',
     lang: 'scala', tab: 'Scala',
     blurb: 'A `ScalaFacade` over the Java door, for Scala 3. Its calls take strings.',
     unsureWord: '`Outcome.NOT_SURE`',
@@ -655,6 +658,7 @@ export const SURFACES = [
   },
   {
     slug: 'csharp', name: 'C#', deckHeading: null,
+    backends: 'env',
     lang: 'csharp', tab: 'C#',
     blurb: 'An `Engine` over the C library, for .NET 8. Each call returns its answer and its run facts.',
     unsureWord: '`Outcome.NotSure`',

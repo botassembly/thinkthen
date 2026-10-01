@@ -95,6 +95,10 @@ const EXT = {
 // snake case.
 const FIRST = { ada: 'first_call', java: 'FirstCall', kotlin: 'FirstCall', scala: 'FirstCall', csharp: 'FirstCall', swift: 'main', dart: 'first_call' };
 
+// A Backends sample is named the same way, for the same reasons.
+const BACKENDS = { java: 'Backends', kotlin: 'Backends', scala: 'Backends', csharp: 'Backends' };
+export const backendsName = (surface) => BACKENDS[surface] ?? 'backends';
+
 // The first-call sample for a surface, with the output a database printed.
 export function firstCall(surface) {
   const file = `${FIRST[surface] ?? 'first-call'}.${EXT[surface]}`;

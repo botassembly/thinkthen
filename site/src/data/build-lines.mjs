@@ -114,7 +114,7 @@ export const BUILD_LINES = {
     run: [
       ...JAVA,
       `-cp ${DOOR}:thinkthen-jvm/thinkthen-scala.jar:${program(sample)}.jar:"$SCALA_HOME/lib/scala.jar"`,
-      'firstCall',
+      program(sample)[0].toLowerCase() + program(sample).slice(1),
     ],
   }),
   go: ({ sample }) => ({
@@ -153,6 +153,7 @@ export const BUILD_LINES = {
   }),
   csharp: () => ({
     archive: 'thinkthen-csharp',
+    beside: 'first-call.csproj and the unpacked archives, thinkthen-c/ and thinkthen-csharp/, in a folder with no other .cs file',
     lines: [['dotnet build -o bin', '--source "$PWD/thinkthen-csharp"']],
     run: ['LD_LIBRARY_PATH="$PWD/thinkthen-c/lib"', 'dotnet bin/first-call.dll'],
   }),

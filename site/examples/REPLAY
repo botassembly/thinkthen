@@ -18,10 +18,19 @@ install/cpp/backends.cpp backend=liquid
 install/cpp/backends.cpp backend=ollama
 install/cpp/backends.cpp backend=typesafe
 install/cpp/first-call.cpp
+install/csharp/Backends.cs backend=liquid
+install/csharp/Backends.cs backend=ollama
+install/csharp/Backends.cs backend=typesafe
 install/csharp/FirstCall.cs
 install/dart/first_call.dart
 install/go/first-call.go
+install/java/Backends.java backend=liquid
+install/java/Backends.java backend=ollama
+install/java/Backends.java backend=typesafe
 install/java/FirstCall.java
+install/kotlin/Backends.kt backend=liquid
+install/kotlin/Backends.kt backend=ollama
+install/kotlin/Backends.kt backend=typesafe
 install/kotlin/FirstCall.kt
 install/objective-c/backends.m backend=liquid
 install/objective-c/backends.m backend=ollama
@@ -45,6 +54,9 @@ install/ruby/backends.rb backend=typesafe
 install/ruby/first-call.rb
 install/rust/backends.rs
 install/rust/first-call.rs
+install/scala/Backends.scala backend=liquid
+install/scala/Backends.scala backend=ollama
+install/scala/Backends.scala backend=typesafe
 install/scala/FirstCall.scala
 install/swift/main.swift
 install/typescript/backends.ts backend=liquid
