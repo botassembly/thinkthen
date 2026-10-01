@@ -438,7 +438,7 @@ const ARTICLES = {
       "Permission: \"Should this command run?\" If Jev is not sure, the agent would ask a person. Tool choice: \"Which tool fits this step?\" The agent would load only the top few. Context: \"Does this chunk matter now?\" The agent would hide it, summarize it, or show it whole.",
       "Model choice: \"Is this step easy?\" An easy step would go to a smaller model. Parallel work: \"Can these tasks run at once?\" The agent would split them. Instructions: \"Is this front-end work?\" The agent would load the style guide.",
       "Data safety: \"Could this touch secrets?\" The task would run on an approved model. Done check: \"Is the task finished?\" The agent would stop or keep going. Review: \"Does this change do what was asked?\" The agent would approve it or send it back.",
-      "Evaluation: \"Which prompt wins?\" A language model asked to grade writes its grade in free text. A Jev judgment comes back as a probability, and you can check it against cases a person labeled. The done check and the prompt comparison come from ThinkThen, not from the post.",
+      "Evaluation: \"Which prompt wins?\" A language model asked to grade writes its grade in free text. A Jev judgment comes back as a probability, and you can check it against cases a person labeled. ThinkThen added the done check and the prompt comparison.",
     ],
     credit: "Most ideas from Diogo Almeida.",
     takeaway: "Each decision is one small question with a probability.",

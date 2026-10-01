@@ -41,7 +41,7 @@ export const RECORDING_SEE = {
   '1-plan': 'The plan ends with a summary line: one record, one request, and the size of what it would send.',
   '2-dry-run': 'The old flag is refused at exit 2, and the message names the new one.',
   '3-miss': 'The folder holds one answer, and this question is not it. The run exits 5 and names the missing key.',
-  '4-facts': 'The answer came from the folder. The facts line counts one record and no request sent. Seconds change on every run, so jq drops them.',
+  '4-facts': 'The answer came from the folder. The facts line counts one record and no request sent. Seconds change on every run. jq drops them.',
 };
 
 // Captions for the four tool pages, keyed by page and script name.

@@ -275,7 +275,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'The model picks each name\'s kind from your kinds. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
+    unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
     see: {
       '1-names': 'recognize finds three names. Each comes back with its kind and its strength.',
@@ -799,7 +799,7 @@ export const TECHNIQUES = [
   {
     slug: 'long-lived-loop', title: 'Keep one process for a step loop', label: 'one process',
     goal: 'A coproc sends each step to one choose process and reads its answer before the next step.',
-    said: '`coproc` holds one `choose` process open. `--batch 1` prints each answer while the input stays open. The example replays a recording, so it needs no key and no network. Use a library binding when each call must cost less time.',
+    said: '`coproc` holds one `choose` process open. `--batch 1` prints each answer while the input stays open. The example replays a recording. It needs no key and no network. Use a library binding when each call must cost less time.',
     see: { '1-loop': 'Three changing action lists produce three answers from one process.' },
   },
   {

@@ -30,10 +30,13 @@ export const RULES = [
   ['plan for 0.1', 'a status word'],
   ['preview', 'a status word; "Plan preview" and "Prune preview" are setting names'],
 ].map(([w, why]) => {
-  const lead = w === 'preview' ? String.raw`(?<!\b(?:plan|prune)${GAP})` : '';
   const body = word(w).replace('.', String.raw`\.`);
-  return { word: w, why, re: new RegExp(String.raw`${lead}(?<![&#\w])${body}(?!\w)`, 'gi') };
+  return { word: w, why, re: new RegExp(String.raw`(?<![&\w])${body}(?!\w)`, 'gi') };
 });
+
+// The setting names keep their capital, so only "Plan preview" and
+// "Prune preview" pass.
+const SETTING_NAME = new RegExp(String.raw`\b(?:Plan|Prune)${GAP}$`);
 
 const ALLOWED = [
   ['/install/settings/', 'planned', 'cached exchange', 'Settings renders specification/settings.md word for word. "planned" there means the requests a run would send.'],
@@ -55,6 +58,7 @@ export function wordHits(html) {
   const hits = [];
   for (const rule of RULES) {
     for (const m of text.matchAll(rule.re)) {
+      if (rule.word === 'preview' && SETTING_NAME.test(text.slice(0, m.index))) continue;
       const context = text.slice(Math.max(0, m.index - 60), m.index + m[0].length + 60).trim();
       hits.push({ word: rule.word, why: rule.why, context });
     }
@@ -89,4 +93,4 @@ function main() {
   console.log(`check-words: ${pages.length} pages, no retired word in prose, ${allowed} allowed`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

@@ -36,7 +36,7 @@ const MODES = [
 
   <h2 id="the-key">What makes two questions the same</h2>
   <p>Each saved answer has a key. The key is the SHA-256 of five things: the adapter, the address, the model, the shared state, and the question as sent. The question as sent includes the quoted evidence. So <code>hello\n</code> and <code>hello\r\n</code> make two keys, and a cosmetic change to the text misses. In a stream, the framing may strip a line end or re-encode parsed JSON before the question is built. Answers from two addresses never mix, because the address is part of every key.</p>
-  <p>The answer cache keeps its answers in <code>thinkthen.sqlite</code>. A folder committed for replay keeps the same rows in <code>thinkthen.jsonl</code>. A saved answer holds the question and the reply's answer, never a header. No API key can reach it. Only a good answer is saved. A failure is never saved, so a later run asks only the questions that failed.</p>
+  <p>The answer cache keeps its answers in <code>thinkthen.sqlite</code>. A folder committed for replay keeps the same rows in <code>thinkthen.jsonl</code>. A saved answer holds the question and the reply's answer, never a header. No API key can reach it. Only a good answer is saved. A failure is never saved. A later run asks only the questions that failed.</p>
 
   <h2 id="modes">The modes</h2>
   <table>
@@ -56,7 +56,7 @@ const MODES = [
   <Terminal run={facts} caption={facts.see} />
 
   <h2 id="batching">Batching</h2>
-  <p>A stream of records packs many questions into each request. The default batch is <code>{batch.default}</code>. It fills each request to the backend's limits. <code>--batch 1</code> sends one record a request. The batch does not change a key, so an answer saved under one batch setting replays under another.</p>
+  <p>A stream of records packs many questions into each request. The default batch is <code>{batch.default}</code>. It fills each request to the backend's limits. <code>--batch 1</code> sends one record a request. The batch does not change a key. An answer saved under one batch setting replays under another.</p>
   <p>Batching may change an answer slightly. Do not batch when you want steadier answers. ThinkThen measured the effect on <code>annotate</code>, where questions share one request. Six borderline questions shared a request with other questions. One answer moved from no to not sure. The largest change in a probability was 0.04. The <a href={spec('annotate', '#cautions')}>annotate specification</a> records it.</p>
   <p>The same request sent twice can also return another probability. A borderline answer, between 0.33 and 0.67, moved by up to 0.08 in ThinkThen's measurement. <code>--batch 1</code> does not remove that. A saved answer does. Replay, or a cache with a pinned model, returns the same answer every time. The <a href={spec('recording', '#the-question-store')}>recording specification</a> records the measurement.</p>
 

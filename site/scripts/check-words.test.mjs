@@ -20,6 +20,8 @@ const CASES = [
   ['a script', page('<script>const planned = 1;</script>'), []],
   ['Plan preview', page('<li>Plan preview</li>'), []],
   ['Prune preview', page('<li>Prune&nbsp;preview</li>'), []],
+  ['a lowercase plan preview', page('<p>Show a plan preview first.</p>'), ['preview']],
+  ['a hash before beta', page('<p>Status: #beta</p>'), ['beta']],
   ['a bare preview', page('<p>a different preview</p>'), ['preview']],
   ['alphabet and betas', page('<p>The alphabet holds betas and unsureness.</p>'), []],
   ['an entity named beta', page('<p>&beta; is a letter.</p>'), []],
