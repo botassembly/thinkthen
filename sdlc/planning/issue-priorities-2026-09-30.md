@@ -1,111 +1,88 @@
 # Issue priorities, 2026-09-30
 
-Status: current, rewritten 2026-09-30 night by the queue batches Quick Fix against main `d8018dd96`. It classifies every open issue and remaining ticket, then groups the ready work into lane batches. Git history holds the earlier ranked table. Ian can overturn any class, batch or default below.
+Status: current, rewritten 2026-09-30 late night by the issue priorities Quick Fix against main `91878c233`. It classifies every open issue, then lists the remaining batches in order. Git history holds the earlier batches B1 to B6 and the earlier full table. Ian can overturn any class, batch or default below.
 
-Main today: 0304 complete (the old store and batching code are gone, `5b7ec74c1`), 0314 and 0291 landed (every port reads the Rust schema), 0322 complete, 0338 (test binaries 44 to 11), 0339 (ollama), 0341 (stale connection), 0342 (relate menu) and 0343 (rate setting). Running: lane claude-1 builds 0335 slice 2 (a replay smoke per binding, paying the R and Dart check debts); lane claude-2 builds 0344 (both-ways edges carry `"either":true`).
+## Landed since the last rewrite
 
-## Batches
+Batches B1 to B6 are done: tickets 0345 to 0351 and both B6 Quick Fixes landed. Since then these landed and closed their issues:
 
-Each batch is one lane's work in one area of files, so batches running at once do not collide. A batch of two tickets builds them in order in one lane. Each ticket lands as its own merge; the two tickets of a batch may land as one merge when both pass their checks together. Every batch also edits `CHANGELOG.md` and `sdlc/ratchet.json`; landers take those one at a time and rebase.
+- 0354: deep records name their 127-level limit, and `find` returns its probability at the C door (`11294af2d`). It closed the deep JSON issue and the find probability issue.
+- 0357: `rank` returns each record's place and probability at the C door (`a275d64ed`).
+- 0358: every row sums its usage by one rule (`46c79749d`).
+- 0359: the C door's relate reads records through the shared parser (`33a8e0268`). It paid Debt 031.
+- The file cap Quick Fix: the 500-line cap covers the bindings and extensions (`501b641e4`). It paid Debt 027.
+- The pre-0.1 small fixes Quick Fix (`056a20b6c`) and 0355, the release workflow for every registry (`fedd2dd89`).
 
-| Order | Batch | Work | Files it touches | Starts | Runs beside |
-| ---: | --- | --- | --- | --- | --- |
-| 1 | B1 demos | ticket 0350: record scripts write a clean fixture; a demo of a first cut before a list over 255 (Debt 024, docs page 11, stumble row 9) | `demos/*/record.sh`, one new `demos/NN-*/` folder, `demos/README.md`, three issue files | now | lanes claude-1 and claude-2, then B2 and B3 |
-| 2 | B2 batch setting | ticket 0349: `audit` and `diff` read `meta.batch_setting` (Debt 008) | `crates/thinkthen/src/cli/{audit.rs,audit/,diff.rs,asking/row.rs}`, `public/results/member.rs`, `core/result/batch_warning.rs`, any conformance or type expectation that pins full `meta`, `specification/{result.md,result.schema.json}`, ADR 0085, `tests/backend/{audit_write,diff}.rs` | when 0344 lands (both edit the schema) | B1, B3, lane claude-1 |
-| 3 | B3 reader and C door | ticket 0345: one capped question-file reader (Debt 011); then ticket 0346: C door rows from the crate's types and door tests in their own folders (Debts 012, 025) | `crates/thinkthen/src/public/{question.rs,relate.rs}` and one new reader module, `cli/question_text.rs`, `libraries/c/src/{door.rs,call.rs}`, `libraries/c/tests/door/`, `libraries/typescript/src/door.rs`, `libraries/ruby/src/ffi/question_file.rs`, `libraries/python/src/asked.rs`, `specification/question-file.md` | when 0344 lands (both edit `asked.rs`) | B1, B2, lane claude-1 |
-| 4 | B4 SQL hosts | ticket 0347: the SQL hosts call the public API (Debt 018 items 1, 2, 3, 9, 10); then ticket 0348: SQL store proofs (Debt 010) | `databases/{sqlite,duckdb,postgresql}/` sources, tests and harnesses; `crates/thinkthen/src/public/{error.rs,engine.rs,question.rs}`; `core/relate_file.rs` | when 0344 and 0335 slice 2 land; lands after B3, which also edits `public/question.rs` | B5, B6 |
-| 5 | B5 macOS archive | ticket 0351: the macOS static library and R package export no SQLite names (Debt 001), with an M5 proof | `libraries/c/localize.sh`, `libraries/r/check.sh`, `libraries/r/thinkthen/src/Makevars*`, the symbol gate in `libraries/c/tests/door/main.rs` | when 0335 slice 2 lands; its door-test edit rebases on 0346 | B4, B6 |
-| 6 | B6 binding checks | two Quick Fixes, ready as written: `libraries/zig/check.sh` runs `run_matrix.py facts` and `facts-allocation`; the Flutter host test keeps only its facade call and drops `strict.dart` (issue text names the counts and fixture to move) | `libraries/zig/check.sh`, `libraries/dart/flutter/` | when 0335 slice 2 lands (it edits both check scripts) | B4, B5 |
+## Running
 
-Order follows the brief: 0.1 blockers first (B1 to B5), then debt that slows builders (B6: every Dart consumer change is made twice until the Flutter copy goes). B4 and B5 are also blockers, but they wait on lane claude-1. Four lanes run at most: now lanes 1 and 2 plus B1; after 0344, B1, B2 and B3 beside lane 1; after 0335 slice 2, B4, B5 and B6 as lanes free.
+- Lane claude-4: ticket 0356, the binding tests wait on events. It pays Debt 029.
+- Lane claude-2: ticket 0360, the usage totals move to the state folder.
+- Ian's release rehearsal (ticket 0128 phase 3b) runs outside the lanes.
 
-The system grading of 2026-09-30 (`grading-2026-09-30/README.md`) grades twenty areas and lists the 20 items left before 0.1, with owner, size and lane.
+## Remaining batches
+
+Each batch is one lane's work in one area of files. Landers take `CHANGELOG.md` and `sdlc/ratchet.json` one at a time and rebase.
+
+| Order | Batch | Work | Starts |
+| ---: | --- | --- | --- |
+| 1 | C1 test servers and input pause | One ticket. Every Python loopback test server sends `Connection: close`: Debt 020's workaround list, found with `grep -rl BaseHTTPRequestHandler`. The 50 ms piped input pause becomes settable for tests (Debt 030). | when 0356 lands (Debt 029) |
+| 2 | C2 spec lines | The lines in `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md`: the "Portable call settings" row, "Dry runs" in `recording.md`, and the Rust cell that cites ticket 0291. | when 0360 lands |
+| 3 | Checkpoint 2 | The full surface sweep on one main commit. The coordinator tags it `checkpoint/surfaces/2026-MM-DD-N` when every check passes. | after C1 and C2 land |
 
 Work outside the lanes:
 
-- **R1, the relate decision run.** One capped paid Beatles Bench run through `sdlc/scripts/live` (ruling 13) on the 0342 menu, after 0344 lands so the bench pins one commit. Conditions and bar: `sdlc/issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run". Blocks 0.1.
-- **E1, the loopback TLS count.** Done 2026-09-30: `sdlc/issues/closed/2026-09-26-count-secure-connections-at-sixteen-jobs.md`. Workspace experiment 2039 counted 16 connections at `--jobs 16`, so no ticket.
-- **Marketing, owner of `site/`.** Blocks 0.1: the reference page (`2026-09-30-reference-page-exit-codes-and-key-rule-drift.md`); the providers and Liquid d1 pages, including the `--timeout 90` line for stumble row 19 (`2026-09-29-docs-page-naming-supported-providers.md`); the site recording conversion, the five `--dry-run` examples and the site checks (`2026-09-30-site-replay-folders-have-no-fixture.md`, which holds the conversion command); the overhead benchmark for the README line (`2026-09-29-readme-key-backend-and-overhead-lines.md`).
-- **Ian.** The first release rehearsal ran on 2026-09-30 under his test approval and stopped at `resolve` on a bug of ours. The second run passed `resolve` and stopped on four more bugs of ours in `build` and `crate`. It runs again after those fixes land. Then phase 4 and the registry accounts already on his list.
+- **Marketing, owner of `site/`.** The reference page, the providers and Liquid d1 pages, parts 3 and 4 of the site replay issue, and the overhead benchmark for the README line.
+- **Ian.** The release rehearsal, then phase 4 and the registry accounts.
 
 ## Every open issue
 
-35 open. The second release rehearsal's Quick Fix refreshed this table against main `a7ee565ab`, and the system grading added its rows against main `f367545a0`. The status line, the running lanes, the batches, and the remaining tickets are older. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
+26 open. Class: **running**, **batch** (C1 or C2), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
-| `closed/2026-09-30-demo-record-scripts-write-beside-their-fixture.md` (Debt 024) | yes | closed | ticket 0350 landed |
-| `2026-09-25-docs-how-tos-and-spec-claims-owed.md` | page 11 only | batch for page 11 | B1, 0350; pages 12 to 24 after 0.1; page 23 marketing |
-| `2026-09-20-new-user-stumble-register.md` | rows 9, 18, 19 | batch for row 9 | B1 for row 9; ticket 0128 phase 4 for row 18; marketing for row 19 |
-| `closed/2026-09-30-audit-and-diff-lost-the-batch-setting.md` (Debt 008) | yes | closed | B2, 0349 landed |
-| `closed/2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` (Debt 011) | yes | closed | ticket 0345 landed |
-| `closed/2026-09-30-c-door-relate-rows-have-no-owner.md` (Debt 012) | yes | closed | ticket 0346 landed |
-| `closed/2026-09-30-c-door-tests-race-under-nextest.md` (Debt 025) | no | closed | ticket 0346 landed |
-| `closed/2026-09-30-c-door-cases-test-over-the-file-cap.md` (Debt 027) | no | closed | quick fix landed: the cap covers `libraries/` and `databases/` |
-| `2026-09-25-public-library-api-gaps.md` (Debt 018) | items 1, 2, 3, 9, 10 | waits | 0347 landed items 1, 2, 3, 9 and 10; items 6 and 7 after 0.1 |
-| `closed/2026-09-30-sql-host-store-proofs-are-partial.md` (Debt 010) | yes | closed | ticket 0348 landed |
-| `closed/2026-09-30-static-library-exports-sqlite-symbols.md` (Debt 001) | yes | closed | ticket 0351 landed |
-| `closed/2026-09-30-zig-check-skips-its-facts-lifetime-modes.md` (debt) | no | closed | B6 Quick Fix landed |
-| `closed/2026-09-30-flutter-strict-consumer-copies-dart-bravo.md` (Debt 021) | yes, by its trigger | closed | B6 Quick Fix landed |
-| `closed/2026-09-30-dart-check-never-runs-under-the-surfaces-rung.md` (Debt 022) | yes | closed | ticket 0335 slice 2 landed |
-| `closed/2026-09-30-r-check-rebuilds-every-dependency.md` (Debt 019) | no | closed | ticket 0335 slice 2 landed |
-| `closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` | yes | closed | ticket 0353 landed |
-| `closed/2026-09-26-count-secure-connections-at-sixteen-jobs.md` | no | closed | E1, 16 connections at `--jobs 16` |
+| `2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | running | ticket 0356 |
+| `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | batch | C1 for the test servers; the product fix waits on upstream |
+| `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | batch | C1 |
+| `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |
 | `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | outside | marketing |
 | `2026-09-29-docs-page-naming-supported-providers.md` | the Liquid timeout line | outside | marketing |
-| `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing; our conversion proof landed with 0304 slice 5 |
-| `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | waits | marketing's overhead benchmark, then the queue owner writes one sentence |
-| `closed/2026-09-30-release-resolve-writes-the-version-line-into-its-outputs.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
-| `closed/2026-09-30-release-host-setup-uv-check-fails-on-macos.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
-| `closed/2026-09-30-release-language-tools-refuses-the-apt-simulation-note.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
-| `closed/2026-09-30-release-host-setup-skips-the-duckdb-bridge-crates.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
-| `closed/2026-09-30-crate-job-library-tests-start-a-command-never-built.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
+| `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing, parts 3 and 4; parts 1 and 2 done |
+| `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | outside | marketing's overhead benchmark, then one sentence from the queue owner |
+| `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | outside | ticket 0128; Ian's rehearsal and registry accounts |
+| `2026-09-20-new-user-stumble-register.md` | rows 18, 19 | outside | row 18 ticket 0128; row 19 marketing; none of ours |
+| `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | outside | the external release QA team's edge list |
 | `2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md` (Debt 026) | if the rehearsal shows a `sqlite3_` name | waits | the rehearsal's macOS DuckDB jobs |
-| `closed/2026-09-30-no-routine-gate-runs-the-library-only-tests.md` (Debt 028) | no | closed | the pre-0.1 small quick fix landed |
-| `2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | waits | a binding's surface check fails once under load, or before 0.1 |
-| `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | waits | a piped batching test fails once under load, or the input pause gains a test setting |
-| `closed/2026-09-30-contract-sentences-that-drift-from-the-code.md` | yes | closed | the pre-0.1 small quick fix landed |
-| `closed/2026-09-30-cache-prune-older-than-panics-on-a-multi-byte-unit.md` | yes | closed | the pre-0.1 small quick fix landed |
-| `closed/2026-09-30-library-timeout-has-no-upper-bound.md` | if a huge timeout panics | closed | the pre-0.1 small quick fix landed |
-| `2026-09-30-find-returns-no-probability-in-c-interface-languages.md` | yes | waits | a free lane; release QA; `specification/find.md` promises the probability |
-| `2026-09-30-deep-json-record-refused-as-not-valid-json.md` | yes | waits | a free lane; release QA |
-| `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | waits | a free lane; two spec lines the site shows |
-| `2026-09-30-site-fixtures-converted-and-plan-examples-moved.md` (note) | no | waits | the queue owner records parts 1 and 2 of the site replay issue as done |
-| `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | waits | every blocker above; Ian's rehearsal dispatch and registry accounts |
-| `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | waits | the release QA suite's edge list |
-| `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (Debt 014) | no | waits | upstream, ollama/ollama#18718 |
-| `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | waits | upstream ureq-proto; Ian's resend choice has a recorded default: keep the rule |
+| `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (Debt 014) | no | waits | upstream ollama |
 | `2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md` (Debt 002) | no | waits | upstream Zig |
 | `2026-09-30-polars-door-cannot-test-lazy-streaming.md` (Debt 004) | no | waits | a user, or clean advisories |
 | `2026-09-24-rank-by-graded-relevance-for-search-reranking.md` | no | waits | a user |
-| `2026-09-26-every-surface-should-give-back-run-facts.md` | no | after 0.1 | tickets 0300 and 0302 stay open for it |
+| `2026-09-25-public-library-api-gaps.md` (Debt 018) | no | after 0.1 | items 6 and 7 |
+| `2026-09-25-docs-how-tos-and-spec-claims-owed.md` | no | after 0.1 | pages 12 to 24; page 23 marketing |
+| `2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md` | no | after 0.1 | Ian thinks through the evaluation flow first |
+| `2026-09-26-every-surface-should-give-back-run-facts.md` | no | after 0.1 | tickets 0300 and 0302 |
 | `2026-09-25-recognize-and-relate-scale-and-shape.md` | no | after 0.1 | a relate ticket |
-| `2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md` | no | after 0.1 | coordinator default 3 below |
+| `2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md` | no | after 0.1 | coordinator default 2 |
 | `2026-09-23-annotate-options-from-a-file-or-a-record.md` | no | after 0.1 | a ticket |
-| `2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md` | no | after 0.1 | tickets per part |
-| `2026-09-30-batch-command-runs-many-questions-in-one-process.md` (idea) | no | after 0.1 | stays as an idea |
-| `2026-09-30-opentelemetry-traces-after-0-1.md` (idea) | no | after 0.1 | stays as an idea |
-| `2026-09-30-proxy-service-for-shared-limits-and-traces.md` (idea) | no | after 0.1 | stays as an idea |
+| `2026-09-30-batch-command-runs-many-questions-in-one-process.md` (idea) | no | after 0.1 | stays an idea |
+| `2026-09-30-opentelemetry-traces-after-0-1.md` (idea) | no | after 0.1 | stays an idea |
+| `2026-09-30-proxy-service-for-shared-limits-and-traces.md` (idea) | no | after 0.1 | stays an idea |
 
-Closed by this Quick Fix: `closed/2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`, paid by `87602e2ad` (the unexplained calls) and `f0308dd9d` (ticket 0341, the one cause found for a lone exit 4).
+Closed by this Quick Fix: `closed/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md`. Its leftover line, the Rust cell that cites ticket 0291, joined the C2 issue.
 
 ## Remaining tickets
 
-- **0335** slice 2 and **0344**: running in lanes claude-1 and claude-2.
-- **0345 to 0351**: drafted here, ready, in batches B1 to B5.
-- **0334**: landed. Its deferred ADR 0114 build slice 2, a `backend` setting in each binding and SQL extension, waits until after 0.1: engines built from the environment already honor `THINKTHEN_BACKEND` and the configuration file's `backend`.
-- **0290**: withdrawn. Its E1 to E9 corpus would duplicate `conformance/`, and ADR 0111 changed the bodies it would pin. Its page items moved to page 24 of the docs issue.
-- **0295** and **0296**: deferred until after 0.1. Python already judges Polars and pandas Series in one engine call; the expression namespace and the `.tt` accessor are additive.
-- **0300** and **0302**: open for the other hosts, after 0.1, under the run facts issue.
-- Older Codex tickets whose status lines stop short of landed (for example 0268 to 0273) hold release runner work that the release issue owns.
+- **0356** and **0360**: running in lanes claude-4 and claude-2.
+- **0128**: phase 3b, the rehearsal, and phase 4, Ian's release run.
+- **0334** slice 2, a `backend` setting in each binding and SQL extension, waits until after 0.1.
+- **0295**, **0296**, **0300** and **0302**: after 0.1.
 
 ## Coordinator defaults
 
 Taken under the workspace rule to record reviewed choices and proceed. Ian can overturn each one.
 
-1. Both-ways relate edges get their shape before 0.1. Ticket 0344 chose a trailing `"either":true` member over a `pair` array, so directed edges keep their bytes and there is one edge shape.
-2. The release rehearsal waits for 0351's M5 proof, so its macOS jobs confirm the archive.
-3. Relation pairs keep the whole text for 0.1, with a distance limit as an opt-in later.
-4. Homebrew stays a Mac option; the curl script covers Linux.
-5. 0290 is withdrawn, and 0295 and 0296 wait until after 0.1 (above).
-6. `Engine::usage` stays per engine, and its doc says so (0347). Detailed rows on every surface carry `meta.batch_setting` for ADR 0085's warning (0349).
+1. Both-ways relate edges carry a trailing `"either":true` member (0344).
+2. Relation pairs keep the whole text for 0.1, with a distance limit as an opt-in later.
+3. Homebrew stays a Mac option; the curl script covers Linux.
+4. 0290 is withdrawn, and 0295 and 0296 wait until after 0.1.
+5. `Engine::usage` stays per engine, and detailed rows carry `meta.batch_setting` (0347, 0349).
+6. C1 starts after 0356 because both edit binding test fixtures. C2 starts after 0360 because both edit `specification/settings.md`.
