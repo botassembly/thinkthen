@@ -9,4 +9,4 @@ The site's Settings page renders `specification/settings.md` at build time. Thre
 2. **"Dry runs"** (`specification/recording.md:30`). The flag is `--plan` since 674a82041, and the Settings row is "Plan preview". The sentence should say "Plan previews".
 3. **The "Deadline and cancel" row's Rust cell** (`specification/settings.md`). It ends "remain for source callers until ticket 0291". Ticket 0291 has landed. The site drops a cell clause that cites a ticket. Rewrite the clause for a reader. Merged on 2026-09-30 from `closed/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md`.
 
-Asked: rewrite the row for a reader with no ticket numbers or "later", and change the one word. Tell the marketing lead when it lands, so the site drops its skip.
+Asked: rewrite the row for a reader with no ticket numbers or "later", change the one word, and rewrite the Rust cell's clause without the ticket number. Tell the marketing lead when it lands, so the site drops its skip.
