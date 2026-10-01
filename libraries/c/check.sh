@@ -44,7 +44,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	. ../../sdlc/scripts/installed.sh
 	case $(uname -s) in Darwin) own_panic_hook "$libdir/libthinkthen.dylib" ;; *) own_panic_hook "$libdir/libthinkthen.so" ;; esac
 	# shellcheck disable=SC2046 # pkg-config prints flags to split.
-	cc -std=c11 -Wall -Wextra -Werror $(pkg-config --cflags thinkthen) tests/c/driver.c \
+	cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror $(pkg-config --cflags thinkthen) tests/c/driver.c \
 		$(pkg-config --libs thinkthen) -Wl,-rpath,"$libdir" -o "$cache/driver"
 	cd ../.. && backend_start && cd libraries/c
 	base=http://127.0.0.1:$port/generic/v1 question='{"decide":"asks for a refund"}' text='Refund me.'
