@@ -2,6 +2,8 @@
 
 Status: in progress. Lane claude-3. Branch `ticket/0373-windows-stage-0`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian on 2026-10-01. It lands in two slices. Slice A lands the `windows` workflow file alone, so GitHub can dispatch it. Slice B lands the rest.
 
+Milestone: 0.2
+
 ## Outcome
 
 - The root workspace and `libraries/c` compile on `x86_64-pc-windows-msvc`. `cargo clippy --locked --all-targets -- -D warnings` passes for both, as `sdlc/scripts/lint` and `libraries/c/check.sh` run it on Linux.
