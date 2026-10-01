@@ -16,9 +16,12 @@ if [ "$PG_HOST" = Darwin ]; then
 fi
 # One pinned server package per CPU (ticket 0369). PINNED is empty on any other CPU.
 case $(uname -m) in x86_64) DEB_ARCH=amd64 ;; aarch64) DEB_ARCH=arm64 ;; *) DEB_ARCH=none ;; esac
-PINNED=$(awk -v name="_$DEB_ARCH.deb" 'substr($2, length($2) - length(name) + 1) == name { print $1 }' runtime.sha256)
-PACKAGE=$TOOLCHAIN/$(awk -v name="_$DEB_ARCH.deb" 'substr($2, length($2) - length(name) + 1) == name { print $2 }' runtime.sha256)
-PACKAGE_URL=$(grep -F "/${PACKAGE##*/}" runtime.url || true)
+read -r PINNED PACKAGE_NAME <<EOF
+$(awk -v name="_$DEB_ARCH.deb" 'substr($2, length($2) - length(name) + 1) == name { print $1, $2 }' runtime.sha256)
+EOF
+PACKAGE=$TOOLCHAIN/$PACKAGE_NAME
+PACKAGE_URL=
+[ -z "$PACKAGE_NAME" ] || PACKAGE_URL=$(grep -Fx "https://launchpad.net/ubuntu/+archive/primary/+files/$PACKAGE_NAME" runtime.url || true)
 VERSION=16.15-0ubuntu0.24.04.1
 EXTRACTED=$TOOLCHAIN/$VERSION
 FAKE_KEY=tt-loopback-fake

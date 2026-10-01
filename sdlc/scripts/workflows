@@ -392,6 +392,7 @@ rustup) [ "$1 $2" != 'target add' ] || echo "rustup $*" >> "$FAKE_LOG" ;;
 maturin) echo 'maturin 1.15.0' ;;
 python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
   case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
+python3.14) exit 1 ;;
 python3.13) [ "$1" != --version ] || {
   touch "$FAKE_PY313_READY"; echo py313-ready >> "$FAKE_LOG"; echo 'Python 3.13.0';
 } ;;
@@ -424,7 +425,7 @@ esac
         sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
         sqlite_python.chmod(0o755)
         for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "xcrun", "brew", "shasum",
-                     "python3", "python3.12", "python3.13"):
+                     "python3", "python3.12", "python3.13", "python3.14"):
             (bin_dir / name).symlink_to(route.name)
         (root / "pinned").mkdir()
         (root / "pinned/uv").symlink_to(route)
