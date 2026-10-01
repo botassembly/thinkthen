@@ -10,12 +10,12 @@ import thinkthen.{Door, Json}
       {"billing": "Invoices, fees, and refunds.",
        "shipping": "Parcels and delivery.",
        "account": "Logins and passwords."}"""
-    val text =
-      "Please refund the extra fee on my invoice."
-    val owner = Json.parseObject(tt.call(
+    val parcel =
+      "My parcel went to the wrong address."
+    val team = Json.parseObject(tt.call(
       s"""{"choose": ${Json.quote(question)},
           "options": $teams,
-          "evidence": ${Json.quote(text)}}"""
+          "evidence": ${Json.quote(parcel)}}"""
     )).get("value")
-    assert(owner == "billing")
+    assert(team == "shipping")
   }

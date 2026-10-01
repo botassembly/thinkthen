@@ -10,13 +10,13 @@ var teams = new Dictionary<string, string>
     ["shipping"] = "Parcels and delivery.",
     ["account"] = "Logins and passwords.",
 };
-const string text =
-    "Please refund the extra fee on my invoice.";
+const string parcel =
+    "My parcel went to the wrong address.";
 var request = JsonSerializer.Serialize(new
 {
     choose = question,
     options = teams,
-    evidence = text,
+    evidence = parcel,
 });
-var owner = tt.CallTyped(request).Value;
-Trace.Assert(owner.GetString() == "billing");
+var team = tt.CallTyped(request).Value;
+Trace.Assert(team.GetString() == "shipping");
