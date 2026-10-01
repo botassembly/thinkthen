@@ -140,6 +140,8 @@ Library examples assert the answer. They never print it. Pick the form below for
 | Rust | `assert_eq!(is_refund, Answer::Yes);` after taking `.into_value()` |
 | C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
 
+A C sample never calls a function inside `assert` when it uses the result or the side effect later. `assert` drops its whole expression when `NDEBUG` is set. Assign the call first, as in `json_bool has_value = json_object_object_get_ex(result, "value", &value);`, then write `assert(has_value);`. `check-samples` fails a C assert that passes an address with `&`. A C function page sample asserts the engine with `assert(tt);` after `thinkthen_engine_new()` and ends with `thinkthen_engine_free(tt);`.
+
 Ruby has no built-in assert, so `raise unless` stands in for one. SQL has no assert. A SQL example shows the query and then what the database printed.
 
 A Bash example that captures an answer in a variable ends with its `test` lines. The smoke run fails when a `test` line fails. The check fails a library sample that calls `print(`, `console.log(`, `puts`, `println!`, `printf(`, or `cat(`.

@@ -153,14 +153,14 @@ const FRAGMENT = {
   c(dir, rel) {
     const file = path.join(dir, path.basename(rel));
     const lines = fs.readFileSync(file, 'utf8').trimEnd().split('\n');
-    if (declaresMain(lines.join('\n'))) throw new Error('declares its own main, and a function page shows a fragment the runner wraps');
+    if (declaresMain(lines.join('\n'))) throw new Error('declares its own main. The runner wraps each function page fragment in main.');
     const cut = lines.findIndex((l) => l.trim() && !l.startsWith('#include'));
     fs.writeFileSync(file, [...lines.slice(0, cut), 'int main(void) {', ...lines.slice(cut), 'return 0;', '}', ''].join('\n'));
   },
   rust(dir, rel) {
     const file = path.join(dir, path.basename(rel));
     const code = fs.readFileSync(file, 'utf8').trimEnd();
-    if (declaresMain(code)) throw new Error('declares its own main, and a function page shows a fragment the runner wraps');
+    if (declaresMain(code)) throw new Error('declares its own main. The runner wraps each function page fragment in main.');
     fs.writeFileSync(file, `fn main() -> Result<(), Box<dyn std::error::Error>> {\n${code}\nOk(())\n}\n`);
     fs.copyFileSync(path.join(examples, 'install/rust/files/Cargo.toml'), path.join(dir, 'Cargo.toml'));
   },

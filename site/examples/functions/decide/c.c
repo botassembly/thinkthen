@@ -3,6 +3,7 @@
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
+assert(tt);
 
 const char *question =
     "Does the customer ask for a refund?";
@@ -18,3 +19,4 @@ int rc = thinkthen_decide(
 );
 assert(rc == THINKTHEN_OK);
 assert(is_refund.outcome == THINKTHEN_YES);
+thinkthen_engine_free(tt);

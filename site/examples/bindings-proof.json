@@ -1,7 +1,7 @@
 {
   "functions/annotate/c.c": {
     "page": "/functions/annotate/",
-    "sample": "1bc7696fa1e6ff3d5bdfec0e7ee236c3bbc003e2315248017fcca56c696b72f5",
+    "sample": "b916cc56637c7f8360dfdc079839bc1cee4c47d3b51e009ecc6c6f50fd859246",
     "output": null,
     "files": {
       "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
@@ -154,7 +154,7 @@
   },
   "functions/choose/c.c": {
     "page": "/functions/choose/",
-    "sample": "43be6ef247b95a5af27e4d184323ab2985d7ccaac8e17c9760c97e40280034a0",
+    "sample": "dc2042a11e4af8dbe49686491aef7e8f4c578e51fa3da19620540fe6eda005f0",
     "output": null,
     "files": {},
     "answers": {
@@ -249,7 +249,7 @@
   },
   "functions/decide/c.c": {
     "page": "/functions/decide/",
-    "sample": "e1debd857752dd5d22449857e8d8078b61c50d173bab008ede7f18cf4bb0645c",
+    "sample": "c1752640b33e808edf25dc80cdf27003dfd851863615208780631679a061da2d",
     "output": null,
     "files": {},
     "answers": {
@@ -378,7 +378,7 @@
   },
   "functions/filter/c.c": {
     "page": "/functions/filter/",
-    "sample": "ea3c14ec44d4a6bf4669a29d9d22dc73f360e3aeaae7133b7f75366e92304203",
+    "sample": "f42ef7be1573191a2b6e65845f8403115b430ef2dde6615843e08a42bad51a8a",
     "output": null,
     "files": {},
     "answers": {
@@ -497,7 +497,7 @@
   },
   "functions/find/c.c": {
     "page": "/functions/find/",
-    "sample": "8ed084c66969d27589550419ceab58388b409881d030a408a4c7448f9f2cbc1a",
+    "sample": "4bbd52cd9e7132e3cf270621831ea8b4c24d6fcef4c36e2412bed789d466240e",
     "output": null,
     "files": {},
     "answers": {
@@ -717,7 +717,7 @@
   },
   "functions/rank/c.c": {
     "page": "/functions/rank/",
-    "sample": "9b2f221d6d879c5fcca02752ab096064072382e3e2a573c049ea2644c22893a6",
+    "sample": "290a456a4faffd72b56afd4401e79d6465623e11f4922a2cc6f915f284584c2d",
     "output": null,
     "files": {},
     "answers": {
@@ -835,7 +835,7 @@
   },
   "functions/recognize/c.c": {
     "page": "/functions/recognize/",
-    "sample": "f3b037d52f27857333ac3b7ab62568132d8c4ee40b3280d3917abba13dfda2f6",
+    "sample": "17960eff5f66af355d3929cbc2ab7905aca03da6c5b17c69e89457c0c94bd386",
     "output": null,
     "files": {
       "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
@@ -1068,7 +1068,7 @@
   },
   "functions/relate/c.c": {
     "page": "/functions/relate/",
-    "sample": "d078100f408d36331f6de76d276d4fa9d403adf17a7c202425efca9e1bd71022",
+    "sample": "21ce63236eeeaca75604e2504404fb87e05fcbb0880d268004a7d311aeefca6e",
     "output": null,
     "files": {},
     "answers": {
@@ -1443,7 +1443,7 @@
   },
   "functions/tag/c.c": {
     "page": "/functions/tag/",
-    "sample": "18c8bb9292b1a6b7ffa7a7b0bd7941748c1184d71729dcd132a786a2b6adceb1",
+    "sample": "99321a3c466ec0c0bd46eec7d2ac43106b907f15dac7cbe3f7acad3d96864e85",
     "output": null,
     "files": {},
     "answers": {
@@ -1718,7 +1718,7 @@
   },
   "install/c/first-call.c": {
     "page": "/install/c/",
-    "sample": "7093b2e97de40fd1eec585005d8d4088274793a272682a54425dafde583fc04d",
+    "sample": "6643e90bc020cf52474c4c45490f99163638aff98e214fdd39c5048a20215515",
     "output": null,
     "files": {},
     "answers": {

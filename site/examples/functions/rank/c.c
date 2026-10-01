@@ -3,6 +3,7 @@
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
+assert(tt);
 
 const char *rank =
     "{\"rank\": \"Is this urgent?\", "
@@ -23,18 +24,25 @@ assert(parse_error == json_tokener_success);
 assert(result && json_object_get_type(result)
     == json_type_object);
 struct json_object *value;
-assert(json_object_object_get_ex(result, "value", &value));
+json_bool has_value = json_object_object_get_ex(
+    result, "value", &value);
+assert(has_value);
 struct json_object *facts;
-assert(json_object_object_get_ex(result, "facts", &facts));
+json_bool has_facts = json_object_object_get_ex(
+    result, "facts", &facts);
+assert(has_facts);
 assert(facts && json_object_get_type(facts)
     == json_type_object);
 assert(json_object_array_length(value) == 4);
 for (size_t i = 0; i < 4; i++) {
     struct json_object *index;
-    assert(json_object_object_get_ex(
-        json_object_array_get_idx(value, i),
-        "index", &index));
+    struct json_object *ranked =
+        json_object_array_get_idx(value, i);
+    json_bool has_index =
+        json_object_object_get_ex(ranked, "index", &index);
+    assert(has_index);
     assert(json_object_get_int(index) == expected[i]);
 }
 json_object_put(result);
 thinkthen_free_string(rank_call);
+thinkthen_engine_free(tt);

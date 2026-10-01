@@ -3,6 +3,7 @@
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
+assert(tt);
 
 const char *text =
     "Maria Chen joined Northwind Freight, "
@@ -34,3 +35,4 @@ assert(strstr(facts, "\"Chicago\""));
 assert(strstr(facts, "\"works_for\""));
 assert(strstr(facts, "\"based_in\""));
 thinkthen_free_string(facts);
+thinkthen_engine_free(tt);

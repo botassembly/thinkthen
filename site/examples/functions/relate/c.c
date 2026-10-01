@@ -4,6 +4,7 @@
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
+assert(tt);
 
 const char *rules[] = {
     "Book economy class for every flight under six hours.",
@@ -49,3 +50,4 @@ assert(rc == THINKTHEN_OK);
 assert(strstr(contradictions, "\"probability\":0.83"));
 assert(strstr(contradictions, "\"probability\":0.97"));
 thinkthen_free_string(contradictions);
+thinkthen_engine_free(tt);
