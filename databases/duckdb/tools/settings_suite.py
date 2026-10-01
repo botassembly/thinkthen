@@ -41,8 +41,10 @@ def portable_decide_zero_budget():
 
 
 def usage_folder(env: dict[str, str]) -> Path:
-    """The child's usage folder on either platform."""
-    return (Path(env["HOME"]) / "Library/Caches" if sys.platform == "darwin" else Path(env["XDG_CACHE_HOME"])) / "thinkthen-usage"
+    """The child's usage folder on either platform (ticket 0360)."""
+    if sys.platform == "darwin":
+        return Path(env["HOME"]) / "Library/Application Support/thinkthen/usage"
+    return Path(env["XDG_STATE_HOME"]) / "thinkthen"
 
 
 @case
@@ -52,7 +54,7 @@ def the_exit_flushes_a_call_while_the_usage_lock_is_held():
     with Backend() as backend, tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-") as folder:
         env = child_env(backend.base(), Path(folder))
         usage = usage_folder(env)
-        usage.mkdir(mode=0o700)
+        usage.mkdir(mode=0o700, parents=True)
         lock = os.open(usage / ".lock", os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
         child = subprocess.Popen([sys.executable, "-c", CHILD, str(EXTENSION), json.dumps([ASK])],

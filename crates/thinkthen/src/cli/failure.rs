@@ -191,10 +191,8 @@ pub(crate) enum Failure {
     /// `cache convert` named no existing folder; its path is withheld.
     ConvertFolder,
     StatusState,
-    StatusUsage {
-        name: String,
-        category: &'static str,
-    },
+    /// The usage folder cannot be read, so the run refused before sending.
+    UsageUnreadable(String),
     Defect(&'static str),
     /// A measuring command refused its inputs or options.
     Measure(crate::cli::measure::Refusal),
@@ -378,10 +376,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             "status could not read the local cache or usage state; check its permissions and contents"
                 .to_owned(),
         ),
-        Failure::StatusUsage { name, category } => (
-            5,
-            format!("status could not read local usage file {name}: {category}"),
-        ),
+        Failure::UsageUnreadable(sentence) => (5, sentence.clone()),
         Failure::InvalidUtf8 { record } => (
             5,
             if *record {

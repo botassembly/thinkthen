@@ -22,6 +22,7 @@ pub(crate) struct PreparedAttempt<'a> {
 impl Counters {
     /// Do the potentially blocking ledger setup before the final stop check.
     pub(crate) fn prepare_attempt(&self) -> Result<PreparedAttempt<'_>, Error> {
+        self.check_readable()?;
         let mut queue = self
             .shared
             .queue

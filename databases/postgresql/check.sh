@@ -742,7 +742,7 @@ the_environment_seeds_the_cache() {
 	same "$(q -c "SELECT thinkthen_decide('$Q', 'seed')" -c "SELECT thinkthen_decide('$Q', 'seed')")" "$(printf 't\nt')"
 	same "$(bcount)" 1
 	[ -n "$(find "$CACHEDIR" -type f | head -1)" ]
-	[ -z "$(find "$SCRATCH" -type f -not -path '*/thinkthen-usage/*' | head -1)" ]
+	[ -z "$(find "$SCRATCH" -type f -not -path '*/.local/state/thinkthen/*' -not -path '*/Application Support/thinkthen/usage/*' | head -1)" ]
 }
 check the_environment_seeds_the_cache
 the_cache_setting_names_the_folder() {
@@ -759,21 +759,21 @@ the_platform_cache_stays_off() {
 	UNNAMED_CACHE=1 fresh generic
 	same "$(q -c "SELECT thinkthen_decide('$Q', 'seed')" -c "SELECT thinkthen_decide('$Q', 'seed')")" "$(printf 't\nt')"
 	same "$(bcount)" 2
-	[ -z "$(find "$SCRATCH" -type f -not -path '*/thinkthen-usage/*' | head -1)" ]
+	[ -z "$(find "$SCRATCH" -type f -not -path '*/.local/state/thinkthen/*' -not -path '*/Application Support/thinkthen/usage/*' | head -1)" ]
 }
 check the_platform_cache_stays_off
 # ADR 0113: each backend adds its sends to the server user's usage totals when
 # it exits. The check holds the usage lock while both connections disconnect,
 # so only the exit hook's wait writes the counts.
 usage_total() {
-	env -i PATH="$PATH" HOME="$SCRATCH" XDG_CACHE_HOME="$SCRATCH/.cache" "$COMMAND" status --json |
+	env -i PATH="$PATH" HOME="$SCRATCH" XDG_STATE_HOME="$SCRATCH/.local/state" "$COMMAND" status --json |
 		python3 -c 'import json, sys; print(json.load(sys.stdin)["usage"]["total"][sys.argv[1]])' "$1"
 }
 usage_requests() { usage_total requests_sent; }
 each_backend_adds_its_sends_at_exit() {
 	fresh generic
-	folder=$SCRATCH/.cache/thinkthen-usage
-	[ "$PG_HOST" != Darwin ] || folder=$SCRATCH/Library/Caches/thinkthen-usage
+	folder=$SCRATCH/.local/state/thinkthen
+	[ "$PG_HOST" != Darwin ] || folder="$SCRATCH/Library/Application Support/thinkthen/usage"
 	mkdir -p -m 700 "$folder"
 	(umask 077 && : >>"$folder/.lock")
 	before=$(usage_requests)

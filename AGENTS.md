@@ -16,7 +16,7 @@ Read `README.md`, `specification/README.md`, then `sdlc/planning/rust-standards.
 
 `crates/thinkthen/src/core` touches no file, environment, socket, clock, or process. The command parses at the edge and passes typed values inward; attributes and `policy.py` enforce inward dependencies.
 
-`thinkthen` judges and never acts: it runs no commands or free-text instructions. It writes only user-named files, its platform cache, and adjacent count-only usage totals; it never creates or edits read-only configuration.
+`thinkthen` judges and never acts: it runs no commands or free-text instructions. It writes only user-named files, its platform cache, and count-only usage totals in its platform state folder; it never creates or edits read-only configuration.
 
 Tests replay saved responses. A paid call runs only through `sdlc/scripts/live`, by hand, under a token cap and Ian's authorization. Git's common-directory live ledger is the sole runtime authority: never manually edit, replace, remove, or copy it. Audit with `live --status`; only a ticket permits migration under `sdlc/scripts/README.md`.
 

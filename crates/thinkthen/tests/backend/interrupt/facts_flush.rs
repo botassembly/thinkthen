@@ -15,8 +15,8 @@ use crate::harness::{Canned, Listener, finish, start};
 fn a_signal_during_usage_flush_still_marks_the_final_facts_line_stopped() {
     let acknowledgment = Acknowledgment::new();
     let home = acknowledgment.0.with_extension("home");
-    let cache = home.join("cache");
-    let usage = cache.join("thinkthen-usage");
+    let state = home.join("state");
+    let usage = state.join("thinkthen");
     fs::create_dir_all(&usage).expect("usage folder");
     fs::set_permissions(&usage, fs::Permissions::from_mode(0o700)).expect("private folder");
     let lock = fs::OpenOptions::new()
@@ -37,7 +37,7 @@ fn a_signal_during_usage_flush_still_marks_the_final_facts_line_stopped() {
             "THINKTHEN_TEST_SIGINT_ACK",
             acknowledgment.0.to_str().expect("ack path"),
         ),
-        ("XDG_CACHE_HOME", cache.to_str().expect("cache path")),
+        ("XDG_STATE_HOME", state.to_str().expect("state path")),
     ];
     let mut child = start(
         &[

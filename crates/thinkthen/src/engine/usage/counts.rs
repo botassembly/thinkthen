@@ -1,4 +1,4 @@
-//! Counts that keep their original schema when older usage files are read.
+//! The five counts one month file holds. A file without `retries` reads as zero.
 
 use serde::{Deserialize, Serialize};
 
@@ -22,18 +22,20 @@ pub(super) enum UsageSchema {
 
 impl Default for Counts {
     fn default() -> Self {
-        Self {
-            schema: UsageSchema::One,
-            requests_sent: 0,
-            retries: 0,
-            input_tokens: 0,
-            output_tokens: 0,
-            cache_answers: 0,
-        }
+        Self::ZERO
     }
 }
 
 impl Counts {
+    pub(super) const ZERO: Self = Self {
+        schema: UsageSchema::One,
+        requests_sent: 0,
+        retries: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_answers: 0,
+    };
+
     pub(super) fn checked_add(self, other: Self) -> Option<Self> {
         Some(Self {
             schema: UsageSchema::One,

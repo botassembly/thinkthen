@@ -41,3 +41,23 @@ pub(super) fn acquire(file: &File, shared: &Shared) -> io::Result<()> {
         pause = pause.saturating_mul(2).min(LONGEST_PAUSE);
     }
 }
+
+/// Take the shared lock a reader needs, waiting at most one second. A lock
+/// still held then gives a timed-out error the caller names as busy.
+pub(super) fn shared(file: &File) -> io::Result<()> {
+    let end = deadline();
+    let mut pause = Duration::from_millis(10);
+    loop {
+        match file.try_lock_shared() {
+            Ok(()) => return Ok(()),
+            Err(TryLockError::WouldBlock) => {}
+            Err(TryLockError::Error(error)) => return Err(error),
+        }
+        let left = end.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return Err(io::Error::new(ErrorKind::TimedOut, "usage lock busy"));
+        }
+        std::thread::sleep(pause.min(left));
+        pause = pause.saturating_mul(2).min(LONGEST_PAUSE);
+    }
+}

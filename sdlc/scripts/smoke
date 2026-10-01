@@ -51,7 +51,7 @@ one() {
 	fi
 	export THINKTHEN_TEST_SMOKE_QUESTION THINKTHEN_TEST_SMOKE_TEXT XDG_CONFIG_HOME="$work/config" THINKTHEN_CACHE="$work/cache" \
 		THINKTHEN_API_KEY=sk-smoke-loopback THINKTHEN_BASE_URL="http://127.0.0.1:$port/case/$case_id/v1"
-	seeded=$(printf '%s' "$THINKTHEN_TEST_SMOKE_TEXT" | XDG_CACHE_HOME="$work/usage" "$bin/thinkthen" decide "$THINKTHEN_TEST_SMOKE_QUESTION") || {
+	seeded=$(printf '%s' "$THINKTHEN_TEST_SMOKE_TEXT" | XDG_STATE_HOME="$work/usage" "$bin/thinkthen" decide "$THINKTHEN_TEST_SMOKE_QUESTION") || {
 		echo "smoke: FAIL $1 (the seed printed $seeded)"; return 1; }
 	code=0
 	THINKTHEN_TEST_PROFILE=smoke sh "$1/check.sh" "$port" 3>&- >"$work/log" 2>&1 || code=$?
