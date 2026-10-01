@@ -1,5 +1,7 @@
-CREATE TABLE rules (id int, body text);
-INSERT INTO rules VALUES
+CREATE TABLE rules (
+    id int, body text, kind text DEFAULT 'rule'
+);
+INSERT INTO rules (id, body) VALUES
     (1, 'Book economy class for every flight ' ||
         'under six hours.'),
     (2, 'Submit receipts within 30 days of the trip.'),
@@ -12,6 +14,8 @@ INSERT INTO rules VALUES
     (8, 'Use the company travel portal for all bookings.');
 
 SELECT * FROM thinkthen_relate(
-    'SELECT id, body FROM rules',
-    ARRAY['contradicts']
+    'SELECT id, body AS name, kind FROM rules',
+    '{"version": 1, "relate": {"relations": [{' ||
+    '"name": "contradicts", "source": "*", ' ||
+    '"target": "*", "either": true}]}}'
 ) AS contradiction;

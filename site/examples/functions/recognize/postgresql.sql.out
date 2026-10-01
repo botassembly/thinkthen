@@ -1,0 +1,13 @@
+ id |       text        |     kind     
+----+-------------------+--------------
+  1 | Maria Chen        | person
+  1 | Northwind Freight | organization
+  1 | Chicago           | place
+(3 rows)
+
+ id | relation  |    source_text    |    target_text    
+----+-----------+-------------------+-------------------
+  1 | works_for | Maria Chen        | Northwind Freight
+  1 | based_in  | Northwind Freight | Chicago
+(2 rows)
+
