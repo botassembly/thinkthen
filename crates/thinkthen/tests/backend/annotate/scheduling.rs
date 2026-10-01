@@ -324,11 +324,11 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
         Listener::answering(|body| Canned::ok(&all_yes(body, "local-1", 1, 1)).after(20))
             .expect("a listener");
     let file = grouped("broken-pipe", 2);
-    let usage_home = folder("broken-pipe-usage");
+    let state_home = folder("broken-pipe-usage");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
-        .env("XDG_CACHE_HOME", usage_home)
+        .env("XDG_STATE_HOME", state_home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",
