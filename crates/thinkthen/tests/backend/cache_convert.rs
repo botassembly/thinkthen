@@ -130,8 +130,8 @@ struct Case {
     left: usize,
 }
 
-#[test]
-fn each_old_form_converts_to_its_keys_states_and_origins() {
+/// Each old form the test converts.
+fn cases() -> Vec<Case> {
     let records = r#"{"state":{"records":[{"id":1}]},"model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is {\"id\":1}. Is it red?"}}}"#;
     // The user's own question starts "The text is ", as the site's style does.
     let title = single().replace(
@@ -146,7 +146,7 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
         written,
         left,
     };
-    let cases = [
+    vec![
         case(
             "single",
             single(),
@@ -206,8 +206,12 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
             vec![],
             0,
         ),
-    ];
-    for case in cases {
+    ]
+}
+
+#[test]
+fn each_old_form_converts_to_its_keys_states_and_origins() {
+    for case in cases() {
         let name = case.name;
         let folder = scratch(name).expect("a folder");
         old_entry(&folder, 'a', &case.request, case.quoted).expect("an entry");

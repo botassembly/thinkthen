@@ -410,7 +410,10 @@ fn the_estimated_input_cap_stops_the_check_before_a_probe_it_cannot_admit() {
     let first = bodies.lines().next().expect("a first body").len();
     // `encoded-body-bytes-908-v1`: ceil(bytes × 908 / 1000).
     let first_estimate = (first * 908).div_ceil(1000).to_string();
-    for (cap, sent) in [("1", 0), (first_estimate.as_str(), 1)] {
+    for (cap, sent, before) in [
+        ("1", 0, "this call's first request"),
+        (first_estimate.as_str(), 1, "another request in this call"),
+    ] {
         let backend = Backend::start().expect("backend");
         let url = format!("{}/arm/full/v1", backend.origin());
         let output = check(
@@ -423,7 +426,7 @@ fn the_estimated_input_cap_stops_the_check_before_a_probe_it_cannot_admit() {
         assert_eq!(
             text(&output.stderr),
             format!(
-                "thinkthen usage: max_estimated_input_tokens_total={cap} (encoded-body-bytes-908-v1) would be exceeded before this call's first request\n"
+                "thinkthen usage: max_estimated_input_tokens_total={cap} (encoded-body-bytes-908-v1) would be exceeded before {before}\n"
             ),
             "{cap}"
         );
