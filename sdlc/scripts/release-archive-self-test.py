@@ -87,6 +87,26 @@ def main():
         for kind in parts:
             if len(list((base / "paired").glob(f"thinkthen-{kind}-*.tar.gz"))) != 1:
                 raise AssertionError(f"missing {kind} fixture archive")
+        # Ticket 0366: with no CARGO_TARGET_DIR, each part builds in its own scratch folder, which
+        # goes once the part is packed. This cargo records the folder it was given and fills it.
+        own_bin, own_tmp, own_calls = base / "own-bin", base / "own-tmp", base / "own-calls"
+        own_bin.mkdir()
+        own_tmp.mkdir()
+        (own_bin / "cargo").write_text("#!/bin/sh\nprintf '%s\\n' \"$CARGO_TARGET_DIR\" >>\"$THINKTHEN_CARGO_CALLS\"\n"
+                                       "mkdir -p \"$CARGO_TARGET_DIR/release\"\n"
+                                       f"cp '{native}'/* \"$CARGO_TARGET_DIR/release/\"\n")
+        (own_bin / "cargo").chmod(0o755)
+        own_env = {key: value for key, value in env.items() if key != "CARGO_TARGET_DIR"}
+        own_env.update(PATH=str(own_bin) + os.pathsep + os.environ["PATH"], TMPDIR=str(own_tmp),
+                       THINKTHEN_CARGO_CALLS=str(own_calls))
+        result = run("sh", str(source / "sdlc/scripts/release-pack"), host, str(base / "own"), "c", "first-run",
+                     cwd=source, env=own_env)
+        expect(result, "release-pack: c built", success=True)
+        built = own_calls.read_text().splitlines()
+        if (len(built) != 1 or not built[0].startswith(str(own_tmp)) or Path(built[0]).exists()
+                or list(own_tmp.iterdir()) or "release-pack: first-run built" not in result.stderr
+                or not list((base / "own").glob(f"thinkthen-c-{version}-{host}.tar.gz"))):
+            raise AssertionError(("own build folders", built, list(own_tmp.iterdir()), result.stderr))
         gate = str(REPO / "sdlc/scripts/release-workflow")
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)

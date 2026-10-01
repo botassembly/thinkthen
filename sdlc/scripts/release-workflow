@@ -110,6 +110,15 @@ install_dart() {
 		fail 'isolated pub cache has another ffi version'
 }
 case ${1:-} in
+disk)
+	# disk LABEL [PATH...] (ticket 0366): print the root disk's free space and the size of each
+	# named path that exists, so a run log shows where the build job's disk goes.
+	[ "$#" -ge 2 ] || fail 'disk LABEL [PATH...]'
+	echo "disk: $2"
+	shift 2
+	df -h / || true
+	for path in "$@"; do [ ! -e "$path" ] || du -sh -- "$path" || true; done
+	;;
 linux-work)
 	# Rehearsal run 36812401623 left 95 MB free on the x86 build runner's root disk while the
 	# container built. Hosted Linux runners carry a second disk at /mnt. This prints a folder there
@@ -309,9 +318,10 @@ host-setup)
 		sh databases/sqlite/setup.sh
 		sh databases/duckdb/tools/setup.sh --fetch
 	else
-		sh libraries/ruby/setup-ruby.sh
-		# Linux builds use containers; the native installed smoke needs the pinned host.
+		# Linux builds use containers, which build their own Ruby; the native installed smoke needs
+		# the pinned host. A host Ruby in the build job fills about 850 MB unused (ticket 0366).
 		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			sh libraries/ruby/setup-ruby.sh
 			sh databases/duckdb/tools/setup.sh --fetch
 		fi
 	fi
