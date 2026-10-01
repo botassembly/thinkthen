@@ -1,0 +1,19 @@
+---
+// Goal: tell a reader who searches for the OpenAI Decisions API what OpenAI announced, and what ThinkThen knows about it.
+import SidePage from '../../../layouts/SidePage.astro';
+import { BACKEND_PAGES } from '../../../data/catalog.mjs';
+
+const page = BACKEND_PAGES.find((p) => p.slug === 'openai');
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'The OpenAI Decisions API: what OpenAI announced at DevDay on 2026-09-29, and what ThinkThen knows about it.' }} name="Backends">
+  <h1>OpenAI Decisions API</h1>
+  <p class="lede">OpenAI announced the Decisions API at DevDay on 2026-09-29. OpenAI has not released it.</p>
+
+  <h2>What OpenAI announced</h2>
+  <p>OpenAI's <a href="https://openai.com/index/devday-2026-recap/">DevDay 2026 recap</a>, read on 2026-09-29, names a model called Luna. Luna answers questions a developer defines, with a finite set of answers fixed in advance. The context can be text or an image. OpenAI has published no schema, no price and no release date.</p>
+
+  <h2>What ThinkThen knows</h2>
+  <p>ThinkThen has not tested the Decisions API. Nobody knows yet whether it speaks System One, the wire shape ThinkThen speaks. This page will gain setup steps when OpenAI releases the API.</p>
+
+  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/backends/system-one/">Any System One server</a></p>
+</SidePage>

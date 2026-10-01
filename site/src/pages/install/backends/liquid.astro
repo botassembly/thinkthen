@@ -6,14 +6,13 @@ import BackendFacts from '../../../components/BackendFacts.astro';
 import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog.mjs';
 import { captioned } from '../../../data/samples.mjs';
 import { backend } from '../../../lib/backends-table.mjs';
-import { checkLines } from '../../../data/backend-checks.mjs';
+import CheckLines from '../../../components/CheckLines.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'liquid');
 const b = backend('liquid');
 const runs = captioned('install/backends/liquid', BACKENDS_SEE.liquid);
 const by = (name) => runs.find((r) => r.name.endsWith(name));
 const [status, one, lines, plan] = ['status', 'one', 'lines', 'check-plan'].map(by);
-const checks = checkLines('liquid');
 ---
 <SidePage pages={BACKEND_PAGES} page={{ ...page, description: "Liquid's d1 decision model through ThinkThen: the key from Liquid's console, the address, the model, the check, and a first answer." }} name="Backends">
   <h1>Liquid d1</h1>
@@ -32,9 +31,9 @@ const checks = checkLines('liquid');
   <Terminal run={status} caption={status.see} />
 
   <h2>Check it</h2>
+  <p>A first check can outlast the default timeout. Pass <code>--timeout 90</code> on a first run. On 2026-09-30, a first check timed out at 30 seconds and passed with <code>--timeout 90</code>.</p>
   <Terminal run={plan} caption={plan.see} />
-  {checks.map((c) => <p>{c.said}</p>)}
-  <p>This page shows the plan and no live report.</p>
+  <CheckLines name="liquid" />
 
   {one && lines ? (
     <Fragment>
@@ -52,3 +51,8 @@ const checks = checkLines('liquid');
 
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
 </SidePage>
+
+<style>
+  /* The address in prose wraps, so a phone does not scroll sideways. */
+  p code { white-space: normal; overflow-wrap: anywhere; }
+</style>
