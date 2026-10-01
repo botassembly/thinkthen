@@ -32,7 +32,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { nativeBuild } from '../src/data/native-builds.mjs';
+import { buildLines } from '../src/data/build-lines.mjs';
 import { readReplayList, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -49,7 +49,11 @@ if (leaked.length) {
 
 const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 26, ...opts });
 const has = (cmd) => run('sh', ['-c', `command -v ${cmd}`]).status === 0;
-const firstLine = (cmd, args) => (run(cmd, args).stdout || '').split('\n')[0].trim();
+// Some tools print their version on standard error.
+const firstLine = (cmd, args) => {
+  const done = run(cmd, args);
+  return (done.stdout || done.stderr || '').split('\n')[0].trim();
+};
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-bindings-'));
 const home = path.join(tmp, 'home');
@@ -75,42 +79,90 @@ function cDoor() {
   return door;
 }
 
-// A binding over the C door. The runner lays out the folder a reader
-// would have, with thinkthen-c/ and thinkthen-<slug>/ beside the sample,
-// and runs the build lines the install page shows. Each sample compiles
-// once.
-function native(slug, tools, versions) {
+// The JVM JARs, built once by the binding's own build script.
+let jars = null;
+function jvmJars() {
+  if (jars) return jars;
+  const out = path.join(tmp, 'jvm');
+  fs.mkdirSync(out);
+  const done = run('sh', [path.join(repo, 'libraries/jvm/build.sh')], { env: { ...process.env, THINKTHEN_JVM_OUT: out } });
+  if (done.status !== 0) throw new Error(`the JVM build failed\n${done.stdout}${done.stderr}`);
+  jars = path.join(out, 'jars');
+  return jars;
+}
+
+// The .NET tools write their caches here, not under the reader's home.
+const DOTNET_ENV = {
+  DOTNET_CLI_HOME: path.join(tmp, 'dotnet-home'), NUGET_PACKAGES: path.join(tmp, 'nuget'),
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1', DOTNET_NOLOGO: '1',
+};
+
+// The C# package, packed once into a folder that serves as a feed, as the
+// release archive does.
+let feed = null;
+function csharpFeed() {
+  if (feed) return feed;
+  const source = path.join(tmp, 'csharp-source');
+  fs.cpSync(path.join(repo, 'libraries/csharp'), source, { recursive: true, filter: (f) => !/\/(bin|obj|target)$/.test(f) });
+  const out = path.join(tmp, 'csharp-feed');
+  const done = run('dotnet', ['pack', 'ThinkThen.csproj', '-c', 'Release', '-o', out, '-v', 'quiet'], { cwd: source, env: { ...process.env, ...DOTNET_ENV } });
+  if (done.status !== 0) throw new Error(`dotnet pack failed\n${done.stdout}${done.stderr}`);
+  feed = out;
+  return feed;
+}
+
+// What each binding's archive holds, laid out in the build folder.
+const ARCHIVE = {
+  java: (dir) => fs.cpSync(jvmJars(), path.join(dir, 'thinkthen-jvm'), { recursive: true }),
+  csharp: (dir) => fs.cpSync(csharpFeed(), path.join(dir, 'thinkthen-csharp'), { recursive: true }),
+};
+ARCHIVE.kotlin = ARCHIVE.java;
+ARCHIVE.scala = ARCHIVE.java;
+const sourceArchive = (slug) => (dir) => fs.cpSync(path.join(repo, 'libraries', slug), path.join(dir, `thinkthen-${slug}`), { recursive: true });
+
+// A binding with a build step. The runner lays out the folder a reader
+// would have, with thinkthen-c/ and the binding's archive beside the
+// sample and its files/, and runs the build lines the install page shows.
+// Each sample builds once, and each attempt runs the page's run line.
+function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c/Cargo.toml', tools, versions, env = {}, buildEnv = {} }) {
+  const layout = ARCHIVE[slug] ?? sourceArchive(slug);
   return {
-    folder: `libraries/${slug}`,
-    manifest: 'libraries/c/Cargo.toml',
+    folder,
+    manifest,
     build() {
       for (const tool of [...tools, 'cargo']) if (!has(tool)) return { missing: tool };
+      const runEnv = typeof env === 'function' ? env() : env;
       const n = cDoor();
-      const programs = new Map();
-      const program = (rel) => {
-        if (programs.has(rel)) return programs.get(rel);
+      const dirs = new Map();
+      const prepare = (rel) => {
+        if (dirs.has(rel)) return dirs.get(rel);
         const dir = path.join(tmp, 'programs', rel);
+        const files = path.join(examples, path.dirname(rel), 'files');
+        if (fs.existsSync(files)) fs.cpSync(files, dir, { recursive: true });
         fs.mkdirSync(dir, { recursive: true });
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
-        fs.cpSync(path.join(repo, 'libraries', slug), path.join(dir, `thinkthen-${slug}`), { recursive: true });
+        layout(dir);
         fs.copyFileSync(path.join(examples, rel), path.join(dir, path.basename(rel)));
-        const build = nativeBuild(slug, path.basename(rel));
-        for (const line of build.lines) {
-          const done = run('sh', ['-c', line.join(' ')], { cwd: dir });
+        const lines = buildLines(slug, path.basename(rel));
+        for (const line of lines.lines) {
+          const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
         }
-        programs.set(rel, path.join(dir, build.program));
-        return programs.get(rel);
+        dirs.set(rel, { dir, run: lines.run.join(' ') });
+        return dirs.get(rel);
       };
       return {
         toolchain: [...versions(), firstLine('rustc', ['--version'])],
-        prepare: program,
-        command: (file, rel) => [program(rel), []],
-        env: {},
+        prepare,
+        command: (file, rel) => ['sh', ['-c', prepare(rel).run], prepare(rel).dir],
+        env: runEnv,
       };
     },
   };
 }
+
+const javaVersion = () => firstLine('java', ['-version']);
+const SCALA_HOME = () => path.dirname(path.dirname(fs.realpathSync(run('sh', ['-c', 'command -v scalac']).stdout.trim())));
 
 // Each binding: how to build it once, how to run one sample, and what it
 // builds on. A build returns null when a tool is missing.
@@ -166,14 +218,19 @@ const BINDINGS = {
       };
     },
   },
-  cpp: native('cpp', ['c++'], () => [firstLine('c++', ['--version'])]),
-  'objective-c': native('objective-c', ['gcc'], () => [firstLine('gcc', ['--version'])]),
-  cobol: native('cobol', ['cobc'], () => [firstLine('cobc', ['--version'])]),
-  ada: native('ada', ['gnatmake'], () => [firstLine('gnatmake', ['--version'])]),
+  cpp: withBuild({ slug: 'cpp', tools: ['c++'], versions: () => [firstLine('c++', ['--version'])] }),
+  'objective-c': withBuild({ slug: 'objective-c', tools: ['gcc'], versions: () => [firstLine('gcc', ['--version'])] }),
+  cobol: withBuild({ slug: 'cobol', tools: ['cobc'], versions: () => [firstLine('cobc', ['--version'])] }),
+  ada: withBuild({ slug: 'ada', tools: ['gnatmake'], versions: () => [firstLine('gnatmake', ['--version'])] }),
+  java: withBuild({ slug: 'java', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion()] }),
+  kotlin: withBuild({ slug: 'kotlin', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('kotlinc', ['-version'])] }),
+  scala: withBuild({ slug: 'scala', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('scalac', ['-version'])], env: () => ({ SCALA_HOME: SCALA_HOME() }) }),
+  csharp: withBuild({ slug: 'csharp', tools: ['dotnet'], versions: () => [`.NET SDK ${firstLine('dotnet', ['--version'])}`], buildEnv: DOTNET_ENV }),
 };
 
 // Which binding runs each page's samples.
-const PAGE_BINDING = { python: 'python', pandas: 'python', r: 'r', cpp: 'cpp', 'objective-c': 'objective-c', cobol: 'cobol', ada: 'ada' };
+const PAGE_BINDING = Object.fromEntries(Object.keys(BINDINGS).map((b) => [b, b]));
+PAGE_BINDING.pandas = 'python';
 
 const list = readReplayList(examples).filter((rel) => !only.length || only.some((o) => rel.includes(o)));
 const proofPath = path.join(examples, PROOF_FILE);
@@ -196,13 +253,13 @@ function attempt(rel, binding, answers, keep) {
   else fs.mkdirSync(cwd);
   fs.copyFileSync(path.join(examples, rel), path.join(cwd, path.basename(rel)));
   fs.writeFileSync(path.join(cache, 'thinkthen.jsonl'), [...states, ...answers].map((l) => l.text).join('\n') + '\n');
-  const [cmd, args] = binding.command(path.basename(rel), rel);
+  const [cmd, args, dir] = binding.command(path.basename(rel), rel);
   const env = {
     PATH: process.env.PATH, LC_ALL: 'C.UTF-8', HOME: home,
     XDG_CACHE_HOME: path.join(work, 'xdg-cache'), XDG_CONFIG_HOME: path.join(work, 'xdg-config'),
     THINKTHEN_CACHE: cache, ...binding.env,
   };
-  const done = run(cmd, args, { cwd, env });
+  const done = run(cmd, args, { cwd: dir ?? cwd, env });
   if (!keep) fs.rmSync(work, { recursive: true, force: true });
   return { ok: done.status === 0, output: `${done.stdout}${done.stderr}`.trim() };
 }

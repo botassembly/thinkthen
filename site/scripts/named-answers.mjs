@@ -25,8 +25,9 @@
 // order, and several may share a line.
 //
 // Accepted languages: bash, sh, python, typescript, ts, ruby, r, rust, c,
-// cpp, objective-c, objc, cobol, ada, and sql. sh is bash, ts is
-// typescript, and objc is objective-c. An unknown language throws a
+// cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs,
+// and sql. sh is bash, ts is typescript, objc is objective-c, and cs is
+// csharp. An unknown language throws a
 // TypeError. Its message names the bad language and lists the accepted
 // names. A name that every JavaScript object inherits, such as constructor
 // or __proto__, is unknown too. A caller skips text that holds no
@@ -45,7 +46,8 @@ const LANGUAGE = {
   bash: 'bash', sh: 'bash', python: 'python', typescript: 'typescript',
   ts: 'typescript', ruby: 'ruby', r: 'r', rust: 'rust', c: 'c',
   cpp: 'cpp', 'objective-c': 'objc', objc: 'objc', cobol: 'cobol',
-  ada: 'ada', sql: 'sql',
+  ada: 'ada', java: 'java', kotlin: 'kotlin', scala: 'scala',
+  csharp: 'csharp', cs: 'csharp', sql: 'sql',
 };
 const CALL = {
   python: new RegExp(`\\btt\\s*\\.(${FNS})\\(`),
@@ -58,6 +60,10 @@ const CALL = {
   objc: new RegExp(`\\[\\s*\\w+\\s+(call|plan|${FNS})\\w*:`),
   cobol: new RegExp(`\\bcall\\s+"TT-(CALL|PLAN|${FNS})"`, 'i'),
   ada: new RegExp(`\\b(call|plan|${FNS})(_many)?\\s*(\\(|$)`, 'im'),
+  java: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`),
+  kotlin: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many|Async)?\\(`),
+  scala: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many|Async)?\\(`),
+  csharp: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`, 'i'),
   bash: new RegExp(`\\bthinkthen\\s+(${FNS})\\b`),
 };
 const SQL_CALL = new RegExp(`\\bthinkthen_(${FNS}|probability|relations)\\s*\\(`, 'g');
@@ -73,6 +79,8 @@ const LANGUAGE_PRINT = {
   objc: /\bNSLog\(/,
   cobol: /^\s*display\b/i,
   ada: /\bPut_Line\b/i,
+  java: /\bSystem\.(out|err)\.print/,
+  csharp: /\bConsole\.Write/,
 };
 const ASSIGN = {
   python: /^\s*([A-Za-z_]\w*)\s*=(?!=)/,
@@ -85,6 +93,10 @@ const ASSIGN = {
   objc: /^\s*(?:const\s+)?[A-Za-z_]\w*\s*\*?\s*([A-Za-z_]\w*)\s*(?:=|;)/,
   cobol: /^\s*(?:move|compute)\b.*\b(?:to|giving)\s+([A-Za-z][\w-]*)/i,
   ada: /^\s*([A-Za-z]\w*)\s*(?::[^=]*)?:=/,
+  java: /^\s*(?:final\s+)?(?:[A-Za-z_][\w.<>,?\[\] ]*\s+)?([A-Za-z_]\w*)\s*=(?!=)/,
+  kotlin: /^\s*(?:(?:val|var)\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
+  scala: /^\s*(?:(?:val|var)\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
+  csharp: /^\s*(?:(?:const|using)\s+)?(?:[A-Za-z_][\w.<>,?\[\] ]*\s+)?([A-Za-z_]\w*)\s*=(?!=)/,
 };
 const ASSERT = {
   python: /^\s*assert\b/,
@@ -97,6 +109,10 @@ const ASSERT = {
   objc: /^\s*(assert\(|NSAssert)/,
   cobol: /(?!)/,
   ada: /^\s*pragma\s+Assert\b/i,
+  java: /^\s*assert\b/,
+  kotlin: /^\s*(assert|check|require)\(/,
+  scala: /^\s*(assert|require)\(/,
+  csharp: /^\s*(Trace|Debug)\.Assert\(/,
 };
 const SQL_WORDS = new Set(['from', 'where', 'order', 'group', 'is', 'and', 'or', 'not', 'in', 'desc', 'asc', 'limit', 'on', 'join', 'union', 'having', 'select', 'with', 'case', 'when', 'then', 'else', 'end']);
 
@@ -137,7 +153,7 @@ function statement(lines, start, lang) {
     depth += (line.match(/[([]/g) || []).length - (line.match(/[)\]]/g) || []).length;
     if (lang === 'ruby') depth += (line.match(/\bdo\b/g) || []).length - (line.match(/^\s*end\b/g) || []).length;
     const tail = line.trimEnd();
-    const more = ['typescript', 'rust', 'c', 'cpp', 'objc', 'ada'].includes(lang)
+    const more = ['typescript', 'rust', 'c', 'cpp', 'objc', 'ada', 'java', 'csharp'].includes(lang)
       ? !tail.endsWith(';') && !tail.endsWith('{') && !tail.endsWith('}')
       : /(\\|[+,=.]|<-|\|\||&&)$/.test(tail);
     const opens = lang === 'ada' && /\b(then|loop)$/i.test(tail);

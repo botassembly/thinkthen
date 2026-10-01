@@ -61,6 +61,24 @@ const CASES = [
   ['generic', 'ada', 'fail', 'Decide\n  (Client,\n   Question,\n   Result);', [[1, 'generic']]],
   ['generic', 'ada', 'pass', 'Refund : constant String :=\n  "{""decide"": ""Refund?""}";', []],
 
+  ['direct', 'java', 'pass', 'var isRefund = tt.decide(\n    question,\n    text);\nassert Door.outcome(isRefund.value()) == Outcome.YES;', []],
+  ['direct', 'java', 'fail', 'assert Door.outcome(tt.decide(q, m).value())\n    == Outcome.YES;', [[1, 'direct']]],
+  ['direct', 'java', 'fail', 'System.out.println(tt.decide(q, m));', [[1, 'direct']]],
+  ['generic', 'java', 'fail', 'var result = tt.decide(q, m);', [[1, 'generic']]],
+  ['generic', 'java', 'pass', 'TypedResult<Answer> isRefund =\n    tt.decide(q, m);', []],
+  ['direct', 'kotlin', 'pass', 'var isRefund = tt.decide(\n    question,\n    text,\n)\ncheck(Door.outcome(isRefund.value()) == Outcome.YES)', []],
+  ['direct', 'kotlin', 'fail', 'check(tt.decide(q, m).value().outcome() == 1)', [[1, 'direct']]],
+  ['generic', 'kotlin', 'fail', 'val answer = tt.decide(q, m)', [[1, 'generic']]],
+  ['generic', 'kotlin', 'pass', 'val refund = """\n    {"decide": "tt.decide(x)"}\n""".trimIndent()', []],
+  ['direct', 'scala', 'pass', 'val isRefund = tt.decide(q, m)\nassert(Door.outcome(isRefund.value()) == Outcome.YES)', []],
+  ['direct', 'scala', 'fail', 'assert(\n  tt.decide(q, m).value().outcome() == 1\n)', [[1, 'direct']]],
+  ['generic', 'scala', 'fail', 'var res = tt.decide(\n  q,\n  m\n)', [[1, 'generic']]],
+  ['direct', 'csharp', 'pass', 'var isRefund = tt.Decide(\n    question,\n    text);\nTrace.Assert(isRefund.Value.OutcomeKind == Outcome.Yes);', []],
+  ['direct', 'cs', 'fail', 'Trace.Assert(tt.Decide(q, m).Value.OutcomeKind\n    == Outcome.Yes);', [[1, 'direct']]],
+  ['direct', 'csharp', 'fail', 'Console.WriteLine(tt.Decide(q, m).Value);', [[1, 'direct']]],
+  ['generic', 'csharp', 'fail', 'var response = tt.Decide(q, m);', [[1, 'generic']]],
+  ['generic', 'csharp', 'pass', 'const string refund = """\n    {"decide": "Refund?"}\n    """;', []],
+
   ['direct', 'bash', 'pass', 'is_spam=$(thinkthen decide "$q" < mail.txt)\nif [ "$is_spam" = yes ]; then\n  echo spam\nfi', []],
   ['direct', 'bash', 'fail', 'if thinkthen decide "$q" < mail.txt; then\n  echo spam\nfi', [[1, 'direct']]],
   ['direct', 'bash', 'fail', 'echo "$(thinkthen decide "$q" < mail.txt)"', [[1, 'direct']]],
@@ -100,7 +118,7 @@ const CASES = [
 
 // An unknown language throws a TypeError that names it and lists the
 // accepted names. The expected value is the name the message must quote.
-const ACCEPTED = 'Accepted names: bash, sh, python, typescript, ts, ruby, r, rust, c, cpp, objective-c, objc, cobol, ada, sql.';
+const ACCEPTED = 'Accepted names: bash, sh, python, typescript, ts, ruby, r, rust, c, cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs, sql.';
 function thrown(code, language) {
   try {
     namedAnswerProblems(code, language);

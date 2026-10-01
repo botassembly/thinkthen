@@ -56,9 +56,14 @@ for (const rel of Object.keys(proof)) {
   if (!listed.includes(rel)) problems.push(`${PROOF_FILE} holds ${rel}, which examples/REPLAY does not list.`);
 }
 
-// Each install line names the package its binding's metadata names.
+// Each registry install line names the package its binding's metadata
+// names.
 const read = (rel) => fs.readFileSync(path.join(repo, rel), 'utf8');
 const pythonName = () => read('libraries/python/pyproject.toml').match(/^name = "(.+)"/m)[1];
+const maven = () => {
+  const pom = read('libraries/jvm/pom.xml');
+  return `${pom.match(/<groupId>(.+?)<\/groupId>/)[1]}:${pom.match(/<artifactId>(.+?)<\/artifactId>/)[1]}`;
+};
 const PACKAGE = {
   python: pythonName,
   polars: pythonName,
@@ -67,6 +72,10 @@ const PACKAGE = {
   ruby: () => read('libraries/ruby/thinkthen.gemspec').match(/\.name\s*=\s*["'](.+?)["']/)[1],
   r: () => read('libraries/r/thinkthen/DESCRIPTION').match(/^Package:\s*(\S+)/m)[1],
   rust: () => read('crates/thinkthen/Cargo.toml').match(/^name = "(.+)"/m)[1],
+  java: () => maven(),
+  kotlin: () => maven(),
+  scala: () => maven(),
+  csharp: () => read('libraries/csharp/Botassembly.ThinkThen.nuspec').match(/<id>(.+?)<\/id>/)[1],
 };
 // Each release archive an install line names is one release-pack makes.
 const pack = read('sdlc/scripts/release-pack');
@@ -85,7 +94,8 @@ for (const surface of SURFACES) {
   const want = name();
   const escaped = want.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(`(^|[\\s"'/:])${escaped}($|[\\s"'\\[@:])`);
-  for (const [line] of surface.install) {
+  // A release archive row names the C library, which the archive check covers.
+  for (const [line] of surface.install.filter(([l]) => !l.endsWith('.tar.gz'))) {
     if (!pattern.test(line)) problems.push(`/install/${surface.slug}/: the install line "${line}" does not name the package ${want}.`);
   }
 }

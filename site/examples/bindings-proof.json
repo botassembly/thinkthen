@@ -68,6 +68,78 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/csharp/FirstCall.cs": {
+    "page": "/install/csharp/",
+    "sample": "63dff756beb6f209ae5f8da219ad9be1f04e3384ea121883bddebe1aef5c5c18",
+    "output": null,
+    "files": {
+      "install/csharp/files/first-call.csproj": "5c2e97efc0d6c1a0982cbf3db3aa6245e2c864edf82b8d2c2da5706731abb62d"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/csharp"
+      ],
+      "tree": "18cf350b0c85e5e1a708342a326999609792fbae811092c6c274dc2535beb824"
+    },
+    "toolchain": [
+      ".NET SDK 8.0.131",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/java/FirstCall.java": {
+    "page": "/install/java/",
+    "sample": "9601925a01c9a9ebaf6e312f1a55eac61f47139cf492c1f8229ecfedeb1703ce",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "2b6e599ad85f7a903f88b611ab9cf10fc94e11736f7f15ab957707bc256c1cd0"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/kotlin/FirstCall.kt": {
+    "page": "/install/kotlin/",
+    "sample": "cf7559939ee8c75eef1729c50a95e85fa82587812a13c93b926e80239f8fafd8",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "2b6e599ad85f7a903f88b611ab9cf10fc94e11736f7f15ab957707bc256c1cd0"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "info: kotlinc-jvm 2.4.20 (JRE 21.0.12.1+1-1-24.04.4-Ubuntu)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/objective-c/first-call.m": {
     "page": "/install/objective-c/",
     "sample": "b20dce32765ebc6e32e0781c50e5f7f51f405e6fb69fc78c0336812e49f21aca",
@@ -187,6 +259,30 @@
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/scala/FirstCall.scala": {
+    "page": "/install/scala/",
+    "sample": "695432c28de8164cff02aba2a9a72a2419bc8cee114e1ed2baaa58423c533f1c",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/jvm"
+      ],
+      "tree": "2b6e599ad85f7a903f88b611ab9cf10fc94e11736f7f15ab957707bc256c1cd0"
+    },
+    "toolchain": [
+      "openjdk version \"21.0.12.1\" 2026-08-18",
+      "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   }
