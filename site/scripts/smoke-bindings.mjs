@@ -147,21 +147,24 @@ ARCHIVE.rust = (dir) => {
 // on top. Rust builds with the Rust install page's Cargo.toml.
 const declaresMain = (code) => /^\s*(int|void|fn)\s+main\s*\(/m.test(code);
 const FRAGMENT = {
-  c(dir, rel) {
-    const file = path.join(dir, path.basename(rel));
+  c(dir, name) {
+    const file = path.join(dir, name);
     const lines = fs.readFileSync(file, 'utf8').trimEnd().split('\n');
     if (declaresMain(lines.join('\n'))) throw new Error('declares its own main. The runner wraps each function page fragment in main.');
     const cut = lines.findIndex((l) => l.trim() && !l.startsWith('#include'));
     fs.writeFileSync(file, [...lines.slice(0, cut), 'int main(void) {', ...lines.slice(cut), 'return 0;', '}', ''].join('\n'));
   },
-  rust(dir, rel) {
-    const file = path.join(dir, path.basename(rel));
+  rust(dir, name) {
+    const file = path.join(dir, name);
     const code = fs.readFileSync(file, 'utf8').trimEnd();
     if (declaresMain(code)) throw new Error('declares its own main. The runner wraps each function page fragment in main.');
     fs.writeFileSync(file, `fn main() -> Result<(), Box<dyn std::error::Error>> {\n${code}\nOk(())\n}\n`);
     fs.copyFileSync(path.join(examples, 'install/rust/files/Cargo.toml'), path.join(dir, 'Cargo.toml'));
   },
 };
+// A function page's Dart sample builds with the Dart install page's
+// pubspec.yaml, as a reader's project would.
+const PROJECT = { dart: 'install/dart/files/pubspec.yaml' };
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
 
@@ -189,9 +192,11 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
         fs.mkdirSync(dir, { recursive: true });
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
         layout(dir);
-        fs.copyFileSync(path.join(examples, rel), path.join(dir, path.basename(rel)));
-        if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, rel);
-        const lines = buildLines(slug, path.basename(rel), true);
+        const name = runName(rel);
+        fs.copyFileSync(path.join(examples, rel), path.join(dir, name));
+        if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, name);
+        if (rel.startsWith('functions/') && PROJECT[slug]) fs.copyFileSync(path.join(examples, PROJECT[slug]), path.join(dir, path.basename(PROJECT[slug])));
+        const lines = buildLines(slug, name, true);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
