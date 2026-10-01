@@ -16,8 +16,10 @@ void main() {
     }) as Map;
     final triage = rows['value'] as List;
     assert(triage.length == 1);
-    assert(jsonEncode(triage[0]) ==
-        '{"steps":true,"area":"login","impact":1.98}');
+    final row = triage[0] as Map;
+    assert(row['steps'] == true);
+    assert(row['area'] == 'login');
+    assert(row['impact'] == 1.98);
   } finally {
     tt.engineFree(engine);
   }

@@ -25,6 +25,7 @@ void main() {
       for (final one in (facts.value as Map)['entities'])
         '${one['text']} ${one['kind']}',
     ];
+    assert(names.length == 3);
     assert(names[0] == 'Maria Chen person');
     assert(names[1] == 'Northwind Freight organization');
     assert(names[2] == 'Chicago place');

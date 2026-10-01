@@ -61,6 +61,13 @@ procedure division.
     call "TT-JSON-MEMBER" using found-names
         found-names-length member-name
         entities entities-length member-status
+    move 4 to member-name
+    call "TT-JSON-MEMBER" using entities
+        entities-length member-name
+        entity entity-length member-status
+    if member-status not = 1
+        stop run returning 1
+    end-if
     perform varying row from 1 by 1 until row > 3
         move row to member-name
         call "TT-JSON-MEMBER" using entities

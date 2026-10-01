@@ -28,6 +28,8 @@ begin
       Entities : constant String :=
         Member (To_String (Names), "entities");
    begin
+      pragma Assert (Element (Entities, 3) /= "");
+      pragma Assert (Element (Entities, 4) = "");
       for Row in Spans'Range loop
          declare
             One  : constant String :=
