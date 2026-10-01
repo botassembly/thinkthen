@@ -22,4 +22,4 @@ const outage = "Nobody can log in to the site right now.";
 const urgency = (await tt.score(
   urgencyScale, outage,
 )).value;
-assert.ok(urgency > 1.5);
+assert.equal(urgency, 1.99);

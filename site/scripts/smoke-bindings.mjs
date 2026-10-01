@@ -4,8 +4,9 @@
 // examples/bindings-proof.json. scripts/check-binding-proofs.mjs reads that
 // file in every build.
 //
-//   node scripts/smoke-bindings.mjs            replay every listed sample
-//   node scripts/smoke-bindings.mjs PATTERN    only the samples whose path holds PATTERN
+//   node scripts/smoke-bindings.mjs                  replay every listed sample
+//   node scripts/smoke-bindings.mjs PATTERN          only the samples whose path holds PATTERN
+//   node scripts/smoke-bindings.mjs --allow-missing  pass when a toolchain is missing
 //
 // A sample runs in a fresh folder that starts with a copy of its page's
 // files/. THINKTHEN_CACHE names a fresh copy of recordings/thinkthen.jsonl.
@@ -20,13 +21,16 @@
 // whose loss fails the sample is one the sample read. The final set must
 // pass on its own.
 //
-// A binding whose toolchain is missing reports "not run" and keeps its old
-// entry. The run needs Rust with the offline Cargo cache, and each
-// binding's own toolchain: a stable Python 3.12 or later with uv and maturin,
-// R 4.2 or later with dplyr, g++, gcc with Objective-C, GnuCOBOL, and GNAT.
-// The C++, Objective-C, COBOL and Ada samples link the C door that
-// sdlc/scripts/installed.sh lays out, and the runner compiles each sample
-// once.
+// A sample whose toolchain is missing reports "not run" and keeps its old
+// entry, and the run exits 1. With --allow-missing, the run prints how many
+// samples did not run and passes. The run needs Rust with the offline Cargo
+// cache, and each binding's own toolchain: a stable Python 3.12 or later
+// with uv and maturin, R 4.2 or later with dplyr, Node 22, the pinned Ruby
+// that libraries/ruby/setup-ruby.sh builds with libclang, a C compiler with
+// json-c, g++, gcc with Objective-C, GnuCOBOL, GNAT, JDK 21 with kotlinc and
+// scalac, .NET 8, Go, Swift, Zig, PHP with FFI and the pinned Flutter's
+// Dart. The native samples link the C door that sdlc/scripts/installed.sh
+// lays out, and the runner builds each sample once.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -39,6 +43,7 @@ const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const repo = path.resolve(site, '..');
 const examples = path.join(site, 'examples');
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const allowMissing = process.argv.includes('--allow-missing');
 
 // No key, address, backend or setting from the shell may reach a sample.
 const leaked = Object.keys(process.env).filter((n) => n.startsWith('THINKTHEN_') || ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY'].includes(n));
@@ -240,7 +245,7 @@ const BINDINGS = {
     build() {
       const prefix = RUBY_PREFIX();
       const ruby = path.join(prefix, 'bin', 'ruby');
-      if (!fs.existsSync(ruby)) return { missing: `the pinned Ruby at ${prefix}` };
+      if (!fs.existsSync(ruby)) return { missing: `pinned Ruby at ${prefix}` };
       if (!has('cargo')) return { missing: 'cargo' };
       const clang = run('sh', ['-c', 'for lib in /usr/lib/llvm-*/lib; do [ -e "$lib/libclang.so.1" ] && echo "$lib"; done | sort -V | tail -n 1']).stdout.trim();
       if (!clang) return { missing: 'libclang' };
@@ -265,7 +270,7 @@ const BINDINGS = {
     build() {
       const python = ['python3.14', 'python3.13', 'python3.12', 'python3'].map((p) => run('sh', ['-c', `command -v ${p}`]).stdout.trim())
         .find((p) => p && run(p, ['-c', 'import sys; sys.exit(sys.version_info < (3, 12) or sys.version_info.releaselevel != "final")']).status === 0);
-      if (!python) return { missing: 'a stable Python 3.12 or later' };
+      if (!python) return { missing: 'stable Python 3.12 or later' };
       for (const tool of ['uv', 'maturin', 'cargo']) if (!has(tool)) return { missing: tool };
       const out = path.join(tmp, 'python');
       const step = (cmd, args, opts) => {
@@ -299,7 +304,7 @@ const BINDINGS = {
       const user = run('Rscript', ['-e', 'cat(path.expand(strsplit(Sys.getenv("R_LIBS_USER"), ":")[[1]]), sep = "\\n")']).stdout.split('\n');
       const libs = [lib, path.join(os.homedir(), '.cache/thinkthen-toolchains/r-library'), ...user].filter((l) => l && fs.existsSync(l)).join(':');
       const ready = run('Rscript', ['-e', 'if (!requireNamespace("dplyr", quietly = TRUE)) quit(status = 1)'], { env: { ...process.env, R_LIBS: libs } });
-      if (ready.status !== 0) return { missing: 'the R package dplyr' };
+      if (ready.status !== 0) return { missing: 'R package dplyr' };
       const done = run('R', ['CMD', 'INSTALL', '-l', lib, 'thinkthen'], { cwd: path.join(repo, 'libraries/r'), env: { ...process.env, R_LIBS: libs, CARGO_TARGET_DIR: path.join(repo, 'target/r') } });
       if (done.status !== 0) throw new Error(`R CMD INSTALL failed\n${done.stdout}${done.stderr}`);
       const dplyr = run('Rscript', ['-e', 'cat(format(packageVersion("dplyr")))'], { env: { ...process.env, R_LIBS: libs } }).stdout.trim();
@@ -379,7 +384,7 @@ for (const rel of list) {
     }
   }
   const binding = built.get(name);
-  if (binding.missing) { notRun.push(`${rel}: not run, no ${binding.missing}`); continue; }
+  if (binding.missing) { notRun.push(`${rel}: not run: no ${binding.missing}`); continue; }
   if (binding.error) { failed.push(`${rel}: the ${name} binding did not build\n${binding.error}`); continue; }
 
   try {
@@ -421,5 +426,10 @@ if (failed.length) {
   console.error(`smoke-bindings: ${failed.length} samples failed\n\n${failed.join('\n\n')}`);
   process.exit(1);
 }
+if (notRun.length && !allowMissing) {
+  console.error(`smoke-bindings: ${notRun.length} samples did not run. Install their toolchains, or pass --allow-missing to keep their old entries.`);
+  process.exit(1);
+}
+if (notRun.length) console.log(`smoke-bindings: ${notRun.length} samples did not run, and --allow-missing lets the run pass.`);
 const tools = [...built.values()].filter((b) => b.toolchain).flatMap((b) => b.toolchain);
-console.log(`smoke-bindings: ${proved} samples replayed. Toolchains: ${[...new Set(tools)].join('; ')}.`);
+console.log(`smoke-bindings: ${proved} samples replayed.${tools.length ? ` Toolchains: ${[...new Set(tools)].join('; ')}.` : ''}`);

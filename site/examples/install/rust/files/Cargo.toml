@@ -2,9 +2,5 @@
 name = "first-call"
 edition = "2024"
 
-[[bin]]
-name = "first-call"
-path = "first-call.rs"
-
 [dependencies]
 thinkthen = "0.0.1"
