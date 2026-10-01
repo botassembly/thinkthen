@@ -61,7 +61,7 @@ The bindings include [DuckDB](/install/duckdb/), [SQLite](/install/sqlite/) and 
 
 On Beatles Bench, 1,000 Jev answers cost about $0.016. That's from the bench's [cost table](https://github.com/botassembly/beatles-bench/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/results/tables/cost.tsv).
 
-A live call through a library binding took a median of 138 ms on 2026-10-01. ThinkThen's own work was about 1 to 2 ms of it. From the command line, each run starts a new process and opens a new connection. There a live call took a median of 219 ms. The [overhead page](/learn/overhead/) has every measurement.
+A live call through a library binding took a median of 138 ms on 2026-10-01. ThinkThen's own work was about 1 to 2 ms of it. From the command line, each run starts a new process and opens a new connection. A live command run took a median of 219 ms. The [overhead page](/learn/overhead/) has every measurement.
 
 ## An open standard
 
