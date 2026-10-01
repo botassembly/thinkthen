@@ -5,23 +5,17 @@ int main() {
     auto engine = tt::create();
 
     tt::Json kinds = {
-        {"PER", "Part of a person's name."},
-        {"ORG", "Part of the name of an organization: "
-            "a company, band, team, agency, government "
-            "body, or media outlet."},
-        {"LOC", "Part of the name of a place: a country, "
-            "region, city, or geographic feature."},
-        {"MISC", "Part of another named entity: a "
-            "nationality, an event, a product, or the "
-            "name of a creative work."},
+        {"person", nullptr},
+        {"organization", nullptr},
+        {"place", nullptr},
     };
     tt::Json spec = {
         {"version", 1},
         {"recognize", {{"kinds", kinds}}},
     };
     const char *text =
-        "Maria Chen joined Northwind Freight in Chicago"
-        " last spring.";
+        "Maria Chen joined Northwind Freight, "
+        "a company in Chicago.";
     auto facts =
         tt::recognize(engine, spec.dump(), text).value;
     tt::Json::Array names;
@@ -31,8 +25,10 @@ int main() {
         });
     }
     assert(tt::Json(names) == (tt::Json::Array{
-        tt::Json::Array{"Maria Chen", "PER"},
-        tt::Json::Array{"Northwind Freight", "ORG"},
-        tt::Json::Array{"Chicago", "LOC"},
+        tt::Json::Array{"Maria Chen", "person"},
+        tt::Json::Array{
+            "Northwind Freight", "organization",
+        },
+        tt::Json::Array{"Chicago", "place"},
     }));
 }

@@ -17,8 +17,7 @@ pub fn main() !void {
         .shipping = "Parcels and delivery.",
         .account = "Logins and passwords.",
     };
-    const text = "Please refund the extra fee " ++
-        "on my invoice.";
+    const text = "My parcel went to the wrong address.";
     const choose = try std.fmt.allocPrintSentinel(
         allocator,
         "{f}",
@@ -39,13 +38,13 @@ pub fn main() !void {
         },
     };
     defer allocator.free(reply);
-    const team = try std.json.parseFromSlice(
+    const parsed = try std.json.parseFromSlice(
         struct { value: ?[]const u8 },
         allocator,
         reply,
         .{ .ignore_unknown_fields = true },
     );
-    defer team.deinit();
-    const owner = team.value.value orelse "";
-    std.debug.assert(std.mem.eql(u8, owner, "billing"));
+    defer parsed.deinit();
+    const team = parsed.value.value orelse "";
+    std.debug.assert(std.mem.eql(u8, team, "shipping"));
 }

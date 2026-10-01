@@ -11,11 +11,11 @@ int main() {
         {"account", "Logins and passwords."},
     };
     const char *text =
-        "Please refund the extra fee on my invoice.";
-    auto owner = tt::call(engine, {
+        "My parcel went to the wrong address.";
+    auto team = tt::call(engine, {
         {"choose", question},
         {"options", teams},
         {"evidence", text},
     }).at("value");
-    assert(owner == "billing");
+    assert(team == "shipping");
 }

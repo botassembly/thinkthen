@@ -17,16 +17,16 @@ let teams = """
      "shipping": "Parcels and delivery.",
      "account": "Logins and passwords."}
     """
-let text = "Please refund the extra fee on my invoice."
+let text = "My parcel went to the wrong address."
 let choose = """
     {"choose": \(try json(question)),
      "options": \(teams),
      "evidence": \(try json(text))}
     """
-let team = try tt.call(choose)
-let owner = try JSONDecoder().decode(
+let reply = try tt.call(choose)
+let team = try JSONDecoder().decode(
     Reply<String?>.self,
-    from: Data(team.utf8)
+    from: Data(reply.utf8)
 ).value
-precondition(owner == "billing")
+precondition(team == "shipping")
 tt.close()

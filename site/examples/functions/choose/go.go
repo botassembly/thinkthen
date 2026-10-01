@@ -24,7 +24,7 @@ func main() {
 	request, err := json.Marshal(map[string]any{
 		"choose":   "Which team owns this?",
 		"options":  json.RawMessage(teams),
-		"evidence": "Please refund the extra fee on my invoice.",
+		"evidence": "My parcel went to the wrong address.",
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -33,12 +33,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var owner struct{ Value string }
-	err = json.Unmarshal([]byte(reply), &owner)
+	var team struct{ Value string }
+	err = json.Unmarshal([]byte(reply), &team)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if owner.Value != "billing" {
-		log.Fatalf("expected billing, got %q", owner.Value)
+	if team.Value != "shipping" {
+		log.Fatalf("expected shipping, got %q", team.Value)
 	}
 }
