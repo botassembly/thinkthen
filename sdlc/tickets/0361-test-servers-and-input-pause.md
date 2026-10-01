@@ -16,7 +16,7 @@ Every Python loopback server that a test, check or probe starts sends `Connectio
   - `THINKTHEN_TEST_RETRY_WAIT_MS` is the precedent: `cli/edge.rs` `test_only` reads it only in a build with debug assertions, help never shows it, and the harness's `command()` sets it on every spawn.
   - Every harness spawn ends its input: `spawn` writes and drops the pipe, and `spawn_file` reads a file. End of input closes the open request at once, so a long pause cannot hang a harness test. `a_pause_sends_the_open_batch` builds its own command and holds its pipe open.
 - Keeps: the 50 ms pause and every other batching rule in the product, in both debug and release builds when the setting is unset. `a_pause_sends_the_open_batch` and its three cache modes, still on the product default. Every fixture's status codes, bodies and request counting. `verbs_budget.py` unchanged. `test_call.py`'s HTTP/1.1 listener keeps its protocol version; it only gains the header.
-- Changes:
+- Changes: one header override per Python server, one pause setting for the reader host, and the records.
   - Each Python handler class without the header gains one override, so every reply, including `send_error`, says it closes:
     ```python
     def end_headers(self):
@@ -30,13 +30,13 @@ Every Python loopback server that a test, check or probe starts sends `Connectio
   - `a_pause_sends_the_open_batch` moves from `batching.rs` (475 nonblank lines) to a new `tests/backend/batching/pause.rs`, beside the new test.
   - `sdlc/planning/rust-standards.md` names three hidden test-only variables. `sdlc/ratchet.json` rises to the measured source total.
   - Debt 030 moves to `sdlc/issues/closed/` with `Paid:` and a `Resolution:` line. Debt 020's status says the fixtures are done; it stays open for the upstream fix and Ian's recorded default.
-- Proof:
+- Proof: one new command test, the kept pause test, and the touched surface checks.
   - `batching/pause.rs` `a_test_pause_holds_the_open_batch_until_input_ends`: with the setting at 10,000 ms, write three records, keep the pipe open 300 ms, and count zero requests at the listener. Then close the pipe and pin one request of three records and the three rows. Passing never depends on timing: no request can go out while the pause holds. On today's main the count after 300 ms is one, so the test fails before the change.
   - `a_pause_sends_the_open_batch` still passes unchanged, without the setting, proving the default pause still sends.
   - `decide_edge/help.rs` adds the new name to its help-never-shows check.
   - Python: each touched surface check runs once, one at a time under the load rule: SQLite, Ada, COBOL, C++, C#, Dart, Go, JVM, Objective-C, PHP, Python, Swift and Zig. The two probes run their self-tests in `spec`, so the build runs those two scripts' self-tests directly. `installer-test` runs once.
   - Rust: `cargo nextest` on `backend` batching tests and the help test, workspace clippy with `-D warnings`, `policy.py`, `tickets`, and `lint`.
-- Defers:
+- Defers: one library test and the product side of Debt 020.
   - `tests/public_batches/interactive.rs` `batch_one_returns_before_the_next_held_input_while_max_waits_for_close` races the pause the other way, through the library's caller iterator, which this setting does not reach. It has not failed. It gets an issue if it fails once.
   - Debt 020's product fix waits on upstream ureq-proto or a ticket for `engine/http.rs`, and Ian's resend choice stays open.
 
