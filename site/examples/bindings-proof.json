@@ -897,7 +897,7 @@
   },
   "functions/filter/pandas.py": {
     "page": "/functions/filter/",
-    "sample": "a84e1cc7f78643184e86a9d1ef2dc1f0415b69011af22b6992c07e3f51a9acdd",
+    "sample": "a03b61123f1c7ad511b7f3f8626a766625f91450f01e0b0a41e4d92d6ffceb07",
     "output": null,
     "files": {},
     "answers": {
@@ -921,7 +921,7 @@
   },
   "functions/filter/polars.py": {
     "page": "/functions/filter/",
-    "sample": "0c47641bf0aa3ef99ec50b69f0016aa549f213635c5b742563e8293c612d52ff",
+    "sample": "f228c7303b17686e42caf771df59712692ef244f04b225a6970e8c83652fdc8a",
     "output": null,
     "files": {},
     "answers": {
@@ -1153,7 +1153,7 @@
   },
   "functions/find/pandas.py": {
     "page": "/functions/find/",
-    "sample": "eb1a550da4bd74884e938e3fd2c50b225831e33d5ed0e526b086e15e5343361a",
+    "sample": "8766870f658da5cec5ff968f2d12a68c333770d29651a9ce08a5ffae9b0ff093",
     "output": null,
     "files": {},
     "answers": {
@@ -1174,7 +1174,7 @@
   },
   "functions/find/polars.py": {
     "page": "/functions/find/",
-    "sample": "d3004ffc90f62bb89390e6fa2c4526cf235aad9a9fb4eac72cd41f98a724b7c8",
+    "sample": "4e6a7aa55cf08cf64760b976745964272db665bad76f63567bf67d42d4f0a88f",
     "output": null,
     "files": {},
     "answers": {
@@ -1649,7 +1649,7 @@
   },
   "functions/rank/pandas.py": {
     "page": "/functions/rank/",
-    "sample": "8826edec9c9351e1f72ccb9cda8019671101d66626f3dfa5e7b1e1bf82f896c3",
+    "sample": "c3fdd9cad13b0b343d991996022a33b291042fa6f1e43e45bac8ca0446430b08",
     "output": null,
     "files": {},
     "answers": {
@@ -1673,7 +1673,7 @@
   },
   "functions/rank/polars.py": {
     "page": "/functions/rank/",
-    "sample": "07177069cc533eb1557ac81df919a2032d4d75e61dd9ec49e97398d8fa03f7b1",
+    "sample": "3f8850babcee242d0425b0429029a38f559133e90092181538d39640dcdd88d5",
     "output": null,
     "files": {},
     "answers": {
@@ -2388,7 +2388,7 @@
   },
   "functions/relate/pandas.py": {
     "page": "/functions/relate/",
-    "sample": "40f059d28ac9f67d0353be44b998de30e3adb3cfded3c2b6339a3255df19b011",
+    "sample": "4f2b779366798a6785e53b12c1dfbcdb56810bcd0c3d0e393975ca1115b26950",
     "output": null,
     "files": {},
     "answers": {
@@ -2412,7 +2412,7 @@
   },
   "functions/relate/polars.py": {
     "page": "/functions/relate/",
-    "sample": "3e804d13da5443787cc99de4005d265893f4a0adfd888a0e43a147fbe85cbdc8",
+    "sample": "a29b1567db75342448a80ff21b469181489bcfabba1838e66d3cf32ff311e1f8",
     "output": null,
     "files": {},
     "answers": {
@@ -3068,8 +3068,8 @@
   },
   "functions/tag/pandas.py": {
     "page": "/functions/tag/",
-    "sample": "bb744b6268a499709f26ef9dee8f985cd9a0dca580867f3526d4b98c79811393",
-    "output": "33008c8d3e4d383643fafe37a29d5327a03f9fda1955c8b5fefc31eed797259c",
+    "sample": "c72b50d2e5d6163a613e7f2a6ae2f8534e35c136f642c4aca37a9f2eefa18ac4",
+    "output": null,
     "files": {},
     "answers": {
       "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
@@ -3091,8 +3091,8 @@
   },
   "functions/tag/polars.py": {
     "page": "/functions/tag/",
-    "sample": "03a7d36ac220c9d5c9ae657a51782bb85ab0c22f3e2da2695532559611773273",
-    "output": "89b3a7bf7c5d7ec51b8d0f7c0a6038fefdc0ddab203210bba4f23e4e00535933",
+    "sample": "d1de14a68e44a7431cef2746d61250d998bb84f3f89e2d25bd164fa94d551df0",
+    "output": null,
     "files": {},
     "answers": {
       "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
