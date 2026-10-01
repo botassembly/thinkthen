@@ -1,6 +1,6 @@
 # ureq reuses a connection after an HTTP/1.0 reply
 
-Status: open. A dependency bug noted for Ian. Found by ticket 0340. Owner: upstream (ureq-proto); then a Quick Fix removes the workaround, or a ticket changes `engine/http.rs`. Batch C1 in `../planning/issue-priorities-2026-09-30.md` extends the workaround to every Python loopback test server.
+Status: open. A dependency bug noted for Ian. Found by ticket 0340. Owner: upstream (ureq-proto); then a Quick Fix removes the workaround, or a ticket changes `engine/http.rs`. Ticket 0361 (batch C1) extended the workaround to every Python loopback test server, and `policy.py` holds it. The issue stays open for the upstream fix and Ian's resend choice below. No upstream ureq-proto issue is filed yet; filing one is an external change, so it waits for Ian. Remove the workaround when ureq-proto treats an HTTP/1.0 reply without `keep-alive` as closing.
 
 Kind: debt
 
@@ -20,7 +20,7 @@ Python's `http.server` replies over HTTP/1.0 and closes after each reply. The Du
 
 ## Our workaround
 
-`databases/duckdb/tools/verbs_budget.py` `PackedReplies` sends `Connection: close` on every reply. The other Python loopback fixtures (`libraries/*/fixtures/backend.py`, `libraries/python/tests/*.py`, `databases/sqlite/tests/conditional_backend.py` and others found by `grep -rl BaseHTTPRequestHandler`) reply over HTTP/1.0 without the header. They risk the same failure wherever one engine sends twice to them.
+Every tracked file that defines a `BaseHTTPRequestHandler` sends `Connection: close` on every reply. `databases/duckdb/tools/verbs_budget.py` `PackedReplies` sends it in its reply code. The others override `end_headers` to send it first (ticket 0361), so a `send_error` reply carries it twice, which HTTP reads as one list. `sdlc/scripts/policy.py` refuses a handler file without the header.
 
 ## What should happen
 

@@ -52,7 +52,7 @@ Mean 4.0, rounded to 4.
 3. **Confirm or correct the "Parity" claim for the eleven C-door languages.** Where: `specification/types.md` "Parity" (line 54), each port's `public_types.py` or `type_cases.py`. Why: the text says each binding runs the shared cases, while the ports I read run the 54-case type corpus. State what they run. Size: S. Blocks 0.1: no.
 4. **Name Polars's 31 skipped cases in the conformance README.** Where: `crates/thinkthen/tests/polars/cases.rs:57-75`, `conformance/README.md`. Why: the README says every surface reads the same cases, and a reader would not learn that Polars runs 24. Size: S. Blocks 0.1: no.
 5. **Share one case-matching helper per language family.** Where: the runners listed under Maintainability. Why: digest, name-swap and close-enough float logic exist in at least six languages, and a change to the case grammar touches all of them. Size: L. Blocks 0.1: no.
-6. **Send `Connection: close` from every loopback fixture.** Where: the 15 `BaseHTTPRequestHandler` files. Why: removes the known flake class until ureq-proto changes. Size: M. Blocks 0.1: no.
+6. **Send `Connection: close` from every loopback fixture.** Where: the 15 `BaseHTTPRequestHandler` files. Why: removes the known flake class until ureq-proto changes. Size: M. Blocks 0.1: no. Done by ticket 0361 for every handler file; `policy.py` holds it.
 7. **Refresh stale README paragraphs.** Where: `conformance/README.md` (the sentence that fault cases are "schema contracts until the private engine runner lands with the one-crate merge", and the pure-core test description). Why: the command runner exists and calls production code. Size: S. Blocks 0.1: no.
 
 ## Confidence: medium
