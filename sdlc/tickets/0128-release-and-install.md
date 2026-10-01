@@ -217,6 +217,20 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 
     Three of four targets built in rehearse mode, including both Macs. The registry, wheel, gem, npm, smoke and draft jobs have not run. No failure so far needs a setup step, account or secret from the documentation team. The runs published nothing, created no release, draft or tag, and read no secret. R5-37 needs the smoke job, so it stays open, and Phase 3b stays open.
 
+    **Seventh to ninth rehearsal attempts, 2026-10-01.** The coordinator allowed three more dispatches under Ian's approval of rehearsals until they pass. Before them, the quick fix `Land quick fix: build the Linux release container on the runner's /mnt disk` moved the container folder to `/mnt` when that disk is writable and roomier, and it logs `df` before and after. The coordinator first asked to delete the image's unused toolchains. Lint refuses that under `worktrees.md` rule 11, and the workspace rule lets a script delete only what it made.
+
+    | Run | Commit | Result |
+    | --- | --- | --- |
+    | [36817514201](https://github.com/botassembly/thinkthen/actions/runs/36817514201) | `aec47ecab` | `resolve`, `crate`, macOS ARM and ARM Linux passed. x86 Linux failed when the language tools met an HTTP 503 from an outside server. macOS Intel failed when Ruby setup lost DNS for `cache.ruby-lang.org` |
+    | [36820491315](https://github.com/botassembly/thinkthen/actions/runs/36820491315) | `728a9a74a` | `resolve`, `crate` and both Macs passed. Both Linux builds failed in the release container: its EL8 curl 7.61 lacks `--retry-all-errors`, which the retry fix had added |
+    | [36825140435](https://github.com/botassembly/thinkthen/actions/runs/36825140435) | `7ab8ec3e3` | GitHub did not start `resolve`: "recent account payments have failed or your spending limit needs to be increased" |
+
+    The quick fix `Land quick fix: retry the release downloads on a server error or a lost connection` makes the language tools retry a request twice on a server error, a timeout or a lost connection. The quick fix `Land quick fix: retry the Ruby fetch in a loop the release container's curl supports` replaces the curl flag with a three-try loop. No runner has run either fix.
+
+    The `/mnt` change frees nothing on these runners. Run 36820491315's `df` showed `/` and `/mnt` on the same `/dev/root`: 8.4 GB free on x86 Linux and 33 GB on ARM Linux. Run 36812401623's x86 build passed the container peak with 95 MB left, because the container's scratch folder goes at exit. A slightly larger build would fill the disk. Ian's options: allow the release workflow to delete the runner image's unused toolchains (Android, GHC, the image's .NET, CodeQL, about 20 GB) as a written exception to rule 11 for hosted runners; pay for a larger runner; or have a ticket shrink the container build's own output. The agent recommends the first: it costs nothing and changes no shipped file.
+
+    Both Macs built in each of runs 36820491315 and 36812401623, and ARM Linux built in runs 36812401623 and 36817514201. No run has reached `registries`, `smoke` or `draft`. No failure needs a setup step, account or secret from the documentation team. The runs published nothing, created no release, draft or tag, and read no secret. Phase 3b stays open.
+
 ## Phase 4: Ian's release run
 
 The agent writes this checklist into `sdlc/records/0128-release-0-1.md` and follows it beside Ian. Every step marked Ian is his. The run happens in one cycle, and nobody edits `release.yml` inside it. A change to `release.yml` restarts the checklist at step 2.
