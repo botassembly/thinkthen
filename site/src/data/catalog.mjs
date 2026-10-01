@@ -677,6 +677,7 @@ export const SURFACES = [
   },
   {
     slug: 'go', name: 'Go', deckHeading: null,
+    backends: 'env',
     lang: 'go', tab: 'Go',
     blurb: 'A cgo package over the C library. Each call that sends takes a `context.Context` and returns a `Result` and an `error`.',
     unsureWord: '`thinkthen.Unsure`',
@@ -695,6 +696,7 @@ export const SURFACES = [
   },
   {
     slug: 'swift', name: 'Swift', deckHeading: null,
+    backends: 'env',
     lang: 'swift', tab: 'Swift',
     blurb: 'A SwiftPM package over the C library, for Swift 6. Each call returns its answer and its run facts.',
     unsureWord: '`.unsure`',
@@ -713,6 +715,7 @@ export const SURFACES = [
   },
   {
     slug: 'zig', name: 'Zig', deckHeading: null,
+    backends: 'env',
     lang: 'zig', tab: 'Zig',
     blurb: 'A Zig 0.15.2 module over the C library. Each call returns `.ok` or `.failed`.',
     unsureWord: '`.unsure`',
@@ -730,6 +733,7 @@ export const SURFACES = [
   },
   {
     slug: 'php', name: 'PHP', deckHeading: null,
+    backends: 'env',
     lang: 'php', tab: 'PHP',
     blurb: 'One `ThinkThen` class over the C library, through PHP 8.3 FFI. Each call returns its answer and its run facts.',
     unsureWord: '`ThinkThen::UNSURE`',
@@ -750,6 +754,7 @@ export const SURFACES = [
   },
   {
     slug: 'dart', name: 'Dart', deckHeading: null,
+    backends: 'env',
     lang: 'dart', tab: 'Dart',
     blurb: 'One `Door` class over the C library, through Dart FFI. Each call returns its answer and its run facts.',
     unsureWord: '`Outcome.notSure`',

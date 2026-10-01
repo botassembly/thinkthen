@@ -96,7 +96,9 @@ const EXT = {
 const FIRST = { ada: 'first_call', java: 'FirstCall', kotlin: 'FirstCall', scala: 'FirstCall', csharp: 'FirstCall', swift: 'main', dart: 'first_call' };
 
 // A Backends sample is named the same way, for the same reasons.
-const BACKENDS = { java: 'Backends', kotlin: 'Backends', scala: 'Backends', csharp: 'Backends' };
+// Swift and Zig name the sample in their project files, so their Backends
+// sample sits in its own folder with its own files/.
+const BACKENDS = { java: 'Backends', kotlin: 'Backends', scala: 'Backends', csharp: 'Backends', swift: 'backends/backends', zig: 'backends/backends' };
 export const backendsName = (surface) => BACKENDS[surface] ?? 'backends';
 
 // The first-call sample for a surface, with the output a database printed.
@@ -112,7 +114,8 @@ export function installSample(surface, name) {
   const ext = EXT[surface];
   const code = text(`install/${surface}/${name}.${ext}`);
   if (code === undefined) throw new Error(`samples: examples/install/${surface}/${name}.${ext} is missing`);
-  return { file: `${name}.${ext}`, code: code.replace(/\n+$/, '') };
+  const cut = name.lastIndexOf('/');
+  return { file: `${name.slice(cut + 1)}.${ext}`, folder: cut < 0 ? null : name.slice(0, cut), code: code.replace(/\n+$/, '') };
 }
 
 // The library sample for a function on a surface, with the output a

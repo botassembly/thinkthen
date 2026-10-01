@@ -119,6 +119,7 @@ export const BUILD_LINES = {
   }),
   go: ({ sample }) => ({
     archive: 'thinkthen-go',
+    beside: 'the unpacked archives, thinkthen-c/ and thinkthen-go/, in a folder with no other .go file',
     lines: [
       ['go mod init first-call'],
       ['go mod edit', '-replace=github.com/botassembly/thinkthen/libraries/go=./thinkthen-go'],
@@ -127,19 +128,21 @@ export const BUILD_LINES = {
     ],
     run: ['LD_LIBRARY_PATH="$PWD/thinkthen-c/lib"', `./${program(sample)}`],
   }),
-  swift: () => ({
+  // Package.swift names the product. The first call's main.swift builds
+  // FirstCall, and another sample builds its name in Pascal case.
+  swift: ({ sample }) => ({
     archive: 'thinkthen-swift',
     lines: [[
       'swift build',
       '-Xlinker -L -Xlinker "$PWD/thinkthen-c/lib"',
       '-Xlinker -rpath -Xlinker "$PWD/thinkthen-c/lib"',
     ]],
-    run: ['.build/debug/FirstCall'],
+    run: [`.build/debug/${sample === 'main.swift' ? 'FirstCall' : program(sample).replace(/(^|-)(.)/g, (m, dash, c) => c.toUpperCase())}`],
   }),
-  zig: () => ({
+  zig: ({ sample }) => ({
     archive: 'thinkthen-zig',
     lines: [['zig build', '-Dnative="$PWD/thinkthen-c"']],
-    run: ['./zig-out/bin/first-call'],
+    run: [`./zig-out/bin/${program(sample)}`],
   }),
   php: ({ sample }) => ({
     archive: 'thinkthen-php',

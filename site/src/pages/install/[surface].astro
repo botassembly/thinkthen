@@ -35,12 +35,16 @@ const description = named
   : surface.blurb.replace(/`/g, '');
 if (description.length > 160) throw new Error(`/install/${surface.slug}/: the description runs ${description.length} characters, over 160`);
 const backendSample = route === 'env' || route === 'builder' ? installSample(surface.slug, backendsName(surface.slug)) : null;
+const backendInputs = backendSample?.folder ? files(`install/${surface.slug}/${backendSample.folder}`) : [];
 const backendBuild = backendSample ? buildLines(surface.slug, backendSample.file) : null;
 const backendBuildText = backendBuild && [...backendBuild.lines, backendBuild.run].map((p) => p.join(' \\\n    ')).join('\n');
 const shellLines = (r) => [
   `export THINKTHEN_BACKEND=${r.name}`,
   ...(r.address ? [`export THINKTHEN_BASE_URL=${r.address}`] : [`export ${r.keys[0]}=...`]),
 ].join('\n');
+const inputCaption = (name) => /\.csproj$|^Package\.swift$|^build\.zig(\.zon)?$|^pubspec\.yaml$|^Cargo\.toml$/.test(name)
+  ? `${name}, a project file beside the sample`
+  : `${name}, a file the sample reads`;
 // Copy marks code with backticks.
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
 ---
@@ -61,7 +65,7 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
   <h2>A first call</h2>
   {first ? (
     <>
-      {inputs.map((file) => <Code code={file.text} file={file.name} caption={/\.csproj$|^Package\.swift$|^build\.zig(\.zon)?$|^pubspec\.yaml$|^Cargo\.toml$/.test(file.name) ? `${file.name}, a project file beside the sample` : `${file.name}, a file the sample reads`} />)}
+      {inputs.map((file) => <Code code={file.text} file={file.name} caption={inputCaption(file.name)} />)}
       <Code code={first.code} file={first.file} label={`Copy the ${surface.name} sample`} />
       {build && <Code code={buildText} lang="bash" caption={`${build.lines.length ? 'Build and run' : 'Run'} it beside ${build.beside ?? `the unpacked archives, thinkthen-c/ and ${build.archive}/`}`} label={`Copy the ${surface.name} ${build.lines.length ? "build" : "run"} lines`} />}
       {first.output && <Code code={first.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
@@ -125,6 +129,8 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
           {route === 'env' && BACKEND_ROUTES.map((r) => (
             <Code code={shellLines(r)} lang="bash" caption={r.address ? `Ask ${r.title}. This block names a second port, 11535, as the site's runs do. On the default port, leave THINKTHEN_BASE_URL out.` : `Ask ${r.title}.`} label={`Copy the ${r.title} settings`} />
           ))}
+          {backendInputs.length > 0 && <p>The {surface.name} project file names its sample, so this sample has its own.</p>}
+          {backendInputs.map((file) => <Code code={file.text} file={file.name} caption={inputCaption(file.name)} />)}
           <Code code={backendSample.code} file={backendSample.file} caption={route === 'builder' ? 'The Ollama engine names the second port, 11535. On the default port, leave base_url out.' : null} label={`Copy the ${surface.name} backends sample`} />
           {backendBuild && <Code code={backendBuildText} lang="bash" caption={`${backendBuild.lines.length ? 'Build and run' : 'Run'} it beside ${backendBuild.beside ?? `the unpacked archives, thinkthen-c/ and ${backendBuild.archive}/`}`} label={`Copy the ${surface.name} backends ${backendBuild.lines.length ? 'build' : 'run'} lines`} />}
           {route === 'builder' && <p><code>EngineBuilder::from_env</code> also reads <code>THINKTHEN_BACKEND</code> and <code>THINKTHEN_BASE_URL</code>, so the shell settings the other language pages show work here too.</p>}
