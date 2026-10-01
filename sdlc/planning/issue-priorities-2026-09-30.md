@@ -36,7 +36,7 @@ Work outside the lanes:
 
 ## Every open issue
 
-25 open. Class: **running**, **batch** (C1 or C2), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
+26 open. Class: **running**, **batch** (C1 or C2), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
@@ -44,6 +44,7 @@ Work outside the lanes:
 | `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | batch | C1 for the test servers; the product fix waits on upstream |
 | `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | batch | C1 |
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |
+| `2026-09-30-duckdb-check-fails-four-tests-on-macos.md` | yes, the macOS DuckDB proof | batch | C1, a lane with the M5 |
 | `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | outside | marketing |
 | `2026-09-29-docs-page-naming-supported-providers.md` | the Liquid timeout line | outside | marketing |
 | `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing, parts 3 and 4; parts 1 and 2 done |
