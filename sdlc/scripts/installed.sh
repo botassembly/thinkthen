@@ -68,6 +68,12 @@ native_install() {
 # nor exports a panic symbol, so its panic hook state stays its own (ADR 0098, tickets 0226, 0227,
 # 0374). A release build holds no panic trigger, so this linkage is what an installed file can show.
 # The C library anchors the read: a read that finds neither libc nor libSystem fails.
+# own_panic_names TEXT: the first three symbols in nm output TEXT that name a panic. awk reads
+# all of TEXT, so a long export list never meets a closed pipe.
+own_panic_names() {
+	printf '%s\n' "$1" | awk 'tolower($NF) ~ /panic/ && n++ < 3 { print $NF }'
+}
+
 own_panic_hook() {
 	case $(uname -s) in
 	Darwin) own_tools='otool nm' own_libc=libSystem own_mac=1 ;;
@@ -86,7 +92,9 @@ own_panic_hook() {
 	fi
 	printf '%s\n' "$own_needed" | grep -q "$own_libc" || { echo "FAIL ${1##*/} names no $own_libc" >&2; exit 1; }
 	! printf '%s\n' "$own_needed" | grep -q 'libstd-' || { echo "FAIL ${1##*/} links a Rust standard library" >&2; exit 1; }
-	! printf '%s\n' "$own_imported" | grep -qi panic || { echo "FAIL ${1##*/} imports a panic symbol" >&2; exit 1; }
-	! printf '%s\n' "$own_exported" | grep -qi panic || { echo "FAIL ${1##*/} exports a panic symbol" >&2; exit 1; }
+	own_found=$(own_panic_names "$own_imported")
+	[ -z "$own_found" ] || { echo "FAIL ${1##*/} imports a panic symbol:" $own_found >&2; exit 1; }
+	own_found=$(own_panic_names "$own_exported")
+	[ -z "$own_found" ] || { echo "FAIL ${1##*/} exports a panic symbol:" $own_found >&2; exit 1; }
 	echo "${1##*/} keeps its own panic hook"
 }
