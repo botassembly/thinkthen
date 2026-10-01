@@ -1,0 +1,101 @@
+{
+  "install/pandas/first-call.py": {
+    "page": "/install/pandas/",
+    "sample": "5864bf422011005af88bf8c8dbae28176cb22ea44b2269b8a0694aff0f958f2d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "58ff4ac54667fecd73998a93292424b6060e4756ecfb4bf1701298774326badf"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/python/first-call.py": {
+    "page": "/install/python/",
+    "sample": "c0940a1e0faf6055c026aa90cb55f2a5fe41db577067111909b39d7a5f8eaf00",
+    "output": null,
+    "files": {
+      "install/python/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "0d62203ae694c4c635c3ac77688c50e9704a64afa66016f1b95effdbb71f6225": "bef59e4059fb49d408abae36724da46e2fafc0e44ede1d7cf53c3f8f223cec9f",
+      "36b62b6c69d7bed9bffbbdcbf2fbe79e9dea7f353fc6aec386d76d45694c6b16": "96e3365d31d812ac8065e8ae7f5b91ec1a2b9fda97adf71ffaf5f834bc9d7f9b",
+      "56251acdc69070d73f32971057de18cad66874b948070679a7a8a13fb84bab89": "9eeb3a1abc4455cb400b30b00027d3ac4efa7efc4ff78a635c9b681239d17ad6",
+      "596935ff43fa061343fd29d6a35f0c3dcb09d130efe950b8981d0e9b1ecb756a": "213e7b6cb25444a073099acd799686f86e896b5525cd9eb8089b48df055701ed",
+      "5c478c658fc6578de71c5fa7b2f19c479194d77d632f135b6b7b59d5cc7f3510": "4662ae0d4885363e0a49135f127f2a263cd7adb8c97cef3edaf16d692993d275",
+      "802ac71993ccd7c65b8fbe4642ddc9082ec8d287c573b45f0b22c40fa4dd967c": "42a7d4cf8b64c9fd6e7eb2c0de1a8c73a00796c218a82e797eae95ae7f40bc62",
+      "939f55001dd95d6d7eb1c92f695537df07e58b1a1816ea705cade5eecc05b884": "589707c37f678d3b3ae968f04b7f71a2db0d9c11d057c19cee78a15b9b42d519",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d",
+      "aec41b4960f2573a970d5110778e201f8af801a6d587ae9b3818ac1cfa8b068b": "0cfe1437fa831438f5b06331edfc448c14a0731edc5b8283364f8d1242e1b04a",
+      "fd1935d425bd0c58c0240db13f404f14d898ce8917d9ca4c10d599e2d380cf59": "c064c19f7f4ef5ab060fc6504ad16dfb9a5714132cb85fb4841b7d3405ea6164"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "58ff4ac54667fecd73998a93292424b6060e4756ecfb4bf1701298774326badf"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/r/data-frames.R": {
+    "page": "/install/r/",
+    "sample": "04b0d39120fe4a1fe3e70bad62bfd0013c2a50e085d1657a559548f9ed84a58d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/r",
+        "libraries/r/thinkthen/src/rust"
+      ],
+      "tree": "90873ebadc90f6ba22d1fc83f029198c8e2dd84496e4ac27b7f2e8e122ee3ada"
+    },
+    "toolchain": [
+      "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/r/first-call.R": {
+    "page": "/install/r/",
+    "sample": "2acab7db7b1497385f4c62684a4a7733af10af9b9b7a1a1339d2d06a56144133",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/r",
+        "libraries/r/thinkthen/src/rust"
+      ],
+      "tree": "90873ebadc90f6ba22d1fc83f029198c8e2dd84496e4ac27b7f2e8e122ee3ada"
+    },
+    "toolchain": [
+      "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  }
+}

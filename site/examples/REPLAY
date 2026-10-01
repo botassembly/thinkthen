@@ -1,0 +1,7 @@
+# The library samples scripts/smoke-bindings.mjs replays, one path a line,
+# relative to examples/. scripts/check-binding-proofs.mjs checks each one's
+# entry in bindings-proof.json in every build.
+install/pandas/first-call.py
+install/python/first-call.py
+install/r/data-frames.R
+install/r/first-call.R

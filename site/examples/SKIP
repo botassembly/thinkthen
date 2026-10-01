@@ -1,9 +1,11 @@
 # Files outside the CLI smoke runner: a glob, then the reason.
-**/*.py       Host library sample; check against the Python/Polars package.
+**/*.py       Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.ts       Host library sample; check against the TypeScript package.
 **/*.rb       Host library sample; check against the Ruby package.
-**/*.R        Host library sample; check against the R package.
+**/*.R        Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.rs       Host library sample; check against the Rust crate.
 **/*.c        Native sample; compile against the current C header.
 **/*.sql      SQL sample; check against the matching installed extension.
 **/*.sql.out  Saved output from a checked database sample.
+REPLAY        The samples smoke-bindings.mjs replays.
+bindings-proof.json  What smoke-bindings.mjs proved; check-binding-proofs.mjs reads it.
