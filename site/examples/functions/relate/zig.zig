@@ -27,16 +27,25 @@ pub fn main() !void {
         0,
     );
     defer allocator.free(spec);
-    const names = [_][]const u8{
-        \\{"name": "Paul McCartney", "kind": "singer"}
-        ,
-        \\{"name": "Ringo Starr", "kind": "singer"}
-        ,
-        \\{"name": "Yesterday", "kind": "song"}
-        ,
-        \\{"name": "Octopus's Garden", "kind": "song"}
-        ,
+    const Entity = struct {
+        name: []const u8,
+        kind: []const u8,
     };
+    const listed = [_]Entity{
+        .{ .name = "Paul McCartney", .kind = "singer" },
+        .{ .name = "Ringo Starr", .kind = "singer" },
+        .{ .name = "Yesterday", .kind = "song" },
+        .{ .name = "Octopus's Garden", .kind = "song" },
+    };
+    var names: [listed.len][]const u8 = undefined;
+    for (listed, &names) |one, *name| {
+        name.* = try std.fmt.allocPrint(
+            allocator,
+            "{f}",
+            .{std.json.fmt(one, .{})},
+        );
+    }
+    defer for (names) |name| allocator.free(name);
     const asked = try tt.relate(spec, &names, .{});
     const related = switch (asked) {
         .ok => |success| success,
