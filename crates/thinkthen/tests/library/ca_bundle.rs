@@ -42,18 +42,20 @@ const RESPONSE_ALT: &str = "{\"model\":\"local-2\",\"answers\":{\"q1\":{\"type\"
 //     -days 36500 -extfile NAME.cnf -out NAME.pem
 const CA: &[u8] = include_bytes!("tls/ca.pem");
 const WRONG_CA: &[u8] = include_bytes!("tls/wrong.pem");
-const LEAVES: [(&str, &[u8], &[u8]); 2] = [
-    (
-        "localhost",
-        include_bytes!("tls/localhost.pem"),
-        include_bytes!("tls/localhost.key"),
-    ),
-    (
-        "other-host",
-        include_bytes!("tls/other-host.pem"),
-        include_bytes!("tls/other-host.key"),
-    ),
-];
+/// The named leaf's certificate and key.
+fn leaf(name: &str) -> (&'static [u8], &'static [u8]) {
+    match name {
+        "localhost" => (
+            include_bytes!("tls/localhost.pem"),
+            include_bytes!("tls/localhost.key"),
+        ),
+        "other-host" => (
+            include_bytes!("tls/other-host.pem"),
+            include_bytes!("tls/other-host.key"),
+        ),
+        _ => panic!("unknown test leaf {name}"),
+    }
+}
 
 /// A temporary folder holding copies of both test CAs, so a test may remove one.
 struct Fixture(PathBuf);
@@ -90,14 +92,11 @@ struct Server {
 }
 
 impl Server {
-    fn start(leaf: &str, response: &str) -> Self {
+    fn start(name: &str, response: &str) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 
-        let (_, cert, key) = LEAVES
-            .into_iter()
-            .find(|(name, _, _)| *name == leaf)
-            .expect("known test leaf");
+        let (cert, key) = leaf(name);
         let config = rustls::ServerConfig::builder_with_provider(Arc::new(
             rustls::crypto::ring::default_provider(),
         ))
@@ -117,47 +116,49 @@ impl Server {
             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response}",
             response.len()
         );
-        let served = thread::spawn(move || {
-            // A broken client fails the test after 60 s and does not hang it.
-            let cap = Instant::now() + Duration::from_secs(60);
-            let socket = loop {
-                match listener.accept() {
-                    Ok((socket, _)) => break socket,
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                        assert!(Instant::now() < cap, "no TLS connection within 60 s");
-                        thread::sleep(Duration::from_millis(10));
-                    }
-                    Err(error) => panic!("TLS accept failed: {error}"),
-                }
-            };
-            socket.set_nonblocking(false).expect("blocking reads");
-            socket
-                .set_read_timeout(Some(Duration::from_secs(60)))
-                .expect("read limit");
-            let connection = rustls::ServerConnection::new(Arc::new(config)).expect("TLS session");
-            let mut stream = rustls::StreamOwned::new(connection, socket);
-            let (mut sent, mut replied, mut chunk) = (Vec::new(), false, [0_u8; 4096]);
-            // A refused handshake, or a client that leaves without a TLS
-            // goodbye, ends the read with an error.
-            while let Ok(read @ 1..) = stream.read(&mut chunk) {
-                sent.extend_from_slice(chunk.get(..read).unwrap_or_default());
-                if !replied && sent.windows(4).any(|end| end == b"\r\n\r\n") {
-                    stream.write_all(reply.as_bytes()).expect("fixed reply");
-                    stream.flush().expect("fixed reply sent");
-                    replied = true;
-                }
-            }
-            String::from_utf8_lossy(&sent).into_owned()
-        });
         Self {
             url: format!("https://localhost:{port}"),
-            served,
+            served: thread::spawn(move || serve(&listener, config, &reply)),
         }
     }
 
     fn finish(self) -> String {
         self.served.join().expect("the TLS responder")
     }
+}
+
+/// Accept one connection, reply once the request's head arrives, and return
+/// every byte the client sent. A broken client fails the test after 60 s.
+fn serve(listener: &TcpListener, config: rustls::ServerConfig, reply: &str) -> String {
+    let cap = Instant::now() + Duration::from_secs(60);
+    let socket = loop {
+        match listener.accept() {
+            Ok((socket, _)) => break socket,
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                assert!(Instant::now() < cap, "no TLS connection within 60 s");
+                thread::sleep(Duration::from_millis(10));
+            }
+            Err(error) => panic!("TLS accept failed: {error}"),
+        }
+    };
+    socket.set_nonblocking(false).expect("blocking reads");
+    socket
+        .set_read_timeout(Some(Duration::from_secs(60)))
+        .expect("read limit");
+    let connection = rustls::ServerConnection::new(Arc::new(config)).expect("TLS session");
+    let mut stream = rustls::StreamOwned::new(connection, socket);
+    let (mut sent, mut replied, mut chunk) = (Vec::new(), false, [0_u8; 4096]);
+    // A refused handshake, or a client that leaves without a TLS goodbye,
+    // ends the read with an error.
+    while let Ok(read @ 1..) = stream.read(&mut chunk) {
+        sent.extend_from_slice(chunk.get(..read).unwrap_or_default());
+        if !replied && sent.windows(4).any(|end| end == b"\r\n\r\n") {
+            stream.write_all(reply.as_bytes()).expect("fixed reply");
+            stream.flush().expect("fixed reply sent");
+            replied = true;
+        }
+    }
+    String::from_utf8_lossy(&sent).into_owned()
 }
 
 #[cfg(feature = "cli")]
