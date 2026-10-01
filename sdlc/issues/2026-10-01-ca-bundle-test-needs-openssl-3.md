@@ -12,4 +12,4 @@ Severity: low
 
 ## A fix
 
-Do what ticket 0371 did for the fork probe: commit fixed test certificates and serve TLS from a `rustls` server in the test. This test needs several certificates (two CAs, leaves for other hosts), so the fixed set is larger. Then run the test once on the M5.
+Do what ticket 0371 did for the fork probe: commit fixed test certificates and serve TLS from a `rustls` server in the test. This test needs several certificates (two CAs and a leaf for another host), so the fixed set is larger. Then run the test once on the M5.

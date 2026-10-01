@@ -1,4 +1,4 @@
-Status: open. Found on the M5 on 2026-10-01 while proving ticket 0365. Owner: the queue owner.
+Status: closed 2026-10-01 by ticket 0371 "Land 0371: the TLS roots fork probe serves its own TLS and passes on macOS". The parent-only call failed too, so the fixture was at fault: LibreSSL's `s_server` refuses `-naccept`. Found on the M5 on 2026-10-01 while proving ticket 0365. Owner: the queue owner.
 
 Kind: bug
 

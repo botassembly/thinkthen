@@ -1,6 +1,6 @@
 # 0371: The TLS roots fork probe serves its own TLS and runs on macOS
 
-Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Issue: `sdlc/issues/2026-10-01-macos-tls-roots-fork-probe-fails.md`.
+Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Issue: `sdlc/issues/closed/2026-10-01-macos-tls-roots-fork-probe-fails.md`.
 
 ## Outcome
 
@@ -19,4 +19,15 @@ Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1.
   - M5 at the branch head, with `/usr/bin/openssl` (LibreSSL 3.3.6) first on `PATH`: the TLS case passes 10 of 10 runs, and the whole `fork` test binary passes once.
   - Before the change: on the M5 the case and the parent-only call failed at `1437ae845`, as the issue and Starts from record.
   - `git diff --stat origin/main -- Cargo.lock conformance/consumer/Cargo.lock` shows only the one consumer line. `sdlc/scripts/lint` and `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` pass.
-- Defers: `crates/thinkthen/tests/library/ca_bundle.rs` uses the same `openssl` generator and `s_server -naccept` responder, so it likely fails on macOS the same way. It runs in the crate's Linux test rung, and nothing runs it on the M5 now. A follow-up issue records it rather than widening this ticket.
+- Defers: `crates/thinkthen/tests/library/ca_bundle.rs` uses the same `openssl` generator and `s_server -naccept` responder, so it likely fails on macOS the same way. It runs in the crate's Linux tests, and nothing runs it on the M5 now. `sdlc/issues/2026-10-01-ca-bundle-test-needs-openssl-3.md` records it. This ticket does not widen to it.
+
+## What the build taught us
+
+- The fault was the fixture. LibreSSL 3.3.6's `s_server` has no `-naccept` option, so it printed its usage and exited before it listened. Its `req` and `x509` worked. The macOS roots path after fork needed no change.
+- A fixed CA and leaf are simpler than making them in the test. `rcgen` is not in the root lock, and `policy.py` holds the consumer lock to the root lock's versions, so making them in Rust would have added several crates to both locks. The PEM files cannot carry a comment, because the product's bundle rule refuses text outside certificate blocks; the commands that made them live in `fork.rs`.
+- The responder replies once the request's head arrives and then reads until the client closes. ureq writes the whole body before it reads, so the early reply is safe.
+- A plain `cargo test` in `conformance/consumer` writes `conformance/consumer/target`, and `policy.py` then counts its generated sources against the file cap. Use `--target-dir target/consumer`, as `sdlc/scripts/test` does.
+- The fixture shrank by 50 nonblank lines, so the ratchet ceiling fell from 108958 to 108908.
+- Nothing must be installed on the M5. The case passes with `/usr/bin/openssl` first on `PATH`.
+- Reviews: ticket review returned five findings, all fixed, then ACCEPT. Code review returned ACCEPT with two optional notes: close the issue at landing, and say "a leaf for another host" in the follow-up issue. Both are done.
+- Proof run: on Linux, `fork-probe` passed in full with `--locked --offline`, and the TLS case passed 10 of 10 runs; `sdlc/scripts/lint` and `policy.py` passed. On the M5 (macOS 26.4, arm64, Rust 1.95.0, LibreSSL 3.3.6 first on `PATH`), at the branch's code commit, the TLS case passed 10 of 10 runs and the whole `fork` test binary passed once (8 passed, 1 ignored). The M5 run used a scratch folder under `/tmp` that was removed afterwards.
