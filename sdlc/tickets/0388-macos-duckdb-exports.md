@@ -2,8 +2,6 @@
 
 Status: landed. Lane claude-2. Branch `ticket/0388-macos-duckdb-exports`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
 
-Milestone: 0.1
-
 ## Outcome
 
 1. On both Macs, the shipped `thinkthen.duckdb_extension` exports no name from the Rust bridge archive. Its Rust standard library, its panic hook state and its bundled SQLite stay out of the export table, as `--exclude-libs,ALL` already keeps them out on Linux.
