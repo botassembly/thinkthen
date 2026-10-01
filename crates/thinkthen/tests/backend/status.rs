@@ -259,6 +259,7 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
 /// Plant a private usage folder under `home`'s state folder with these
 /// files, each private.
 #[cfg(unix)]
+#[allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 fn planted(label: &str, files: &[(&str, &[u8])]) -> (std::path::PathBuf, std::path::PathBuf) {
     use std::os::unix::fs::PermissionsExt as _;
 

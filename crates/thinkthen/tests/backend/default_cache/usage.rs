@@ -194,6 +194,7 @@ fn packed_annotate_counts_one_exchange_and_one_usage_object() {
 /// answered and stopped counting. Now the first send refuses, the whole run
 /// ends with exit 5 before any request, and no row fails alone (ticket 0360).
 #[cfg(unix)]
+#[allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 fn refused_before_any_send(root: &std::path::Path, key: &str) -> (std::process::Output, usize) {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
     let records: String = (1..=6)
