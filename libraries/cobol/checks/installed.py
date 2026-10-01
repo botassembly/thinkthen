@@ -48,7 +48,8 @@ for name in ("alpha", "bravo"):
         compile("types", installed / "examples/types.cob",
                 [installed / "src/tt_validate.cob", work / "ttjson.o", work / "ttshape.o", "-lm"])
         compile("typed", PACKAGE / "checks/failure.cob",
-                [installed / "src/tt_decide.cob", installed / "src/tt_error.cob",
+                [installed / "src/tt_engine.cob", installed / "src/tt_call.cob",
+                 installed / "src/tt_decide.cob", installed / "src/tt_error.cob",
                  work / "ttjson.o", work / "ttshape.o", "-lm"])
         barrier = work / "barrier"
         barrier.mkdir()
@@ -68,7 +69,8 @@ for name in ("alpha", "bravo"):
                     facts = json.loads(row)
                     assert (facts["records"], facts["requests_sent"], facts["cache_answers"]) == (1, 1, 0), facts
             assert collections.Counter(server.arrivals) == collections.Counter(
-                ["café", "settings", "failure-two", "failure-two", "first"]), server.arrivals
-            print(f"COBOL installed {name}: 5 exact arrivals, including copied typed facade")
+                ["café", "settings", "failure-two", "failure-two", "first", "decide-again",
+                 "decide-again", "call-again", "call-again", "decide-full"]), server.arrivals
+            print(f"COBOL installed {name}: 10 exact arrivals, including copied typed facade")
         finally:
             server.close()
