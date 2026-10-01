@@ -99,7 +99,7 @@ fn converting_old_entries_twice_writes_identical_bytes_and_keeps_every_old_file(
         convert(&folder, &[]).expect("a run"),
         (
             Some(0),
-            "thinkthen: cache convert: wrote 2 answers to thinkthen.jsonl, 2 from old entries; skipped 0 entries\n"
+            "thinkthen: cache convert: wrote 2 answers to thinkthen.jsonl, 2 from old entries, 0 left unquoted; skipped 0 entries\n"
                 .to_owned()
         )
     );
@@ -119,25 +119,32 @@ fn converting_old_entries_twice_writes_identical_bytes_and_keeps_every_old_file(
     assert_eq!(fs::read_dir(&folder).expect("a folder").count(), 3);
 }
 
-/// One old form and each answer it writes, as key, state and origin. An
-/// empty key is not pinned.
+/// One old form, each answer it writes, as key, state and origin, and how
+/// many the summary counts as left unquoted. An empty key is not pinned.
 struct Case {
     name: &'static str,
     request: String,
     quoted: bool,
     options: &'static [&'static str],
     written: Vec<(&'static str, &'static str, &'static str)>,
+    left: usize,
 }
 
 #[test]
 fn each_old_form_converts_to_its_keys_states_and_origins() {
     let records = r#"{"state":{"records":[{"id":1}]},"model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is {\"id\":1}. Is it red?"}}}"#;
-    let case = |name, request: String, quoted, options, written| Case {
+    // The user's own question starts "The text is ", as the site's style does.
+    let title = single().replace(
+        "Does this convey urgency?",
+        "The text is the title of a song by the Beatles. Is it?",
+    );
+    let case = |name, request: String, quoted, options, written, left| Case {
         name,
         request,
         quoted,
         options,
         written,
+        left,
     };
     let cases = [
         case(
@@ -146,6 +153,7 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
             false,
             &[],
             vec![(PINNED, STATE, "converted")],
+            1,
         ),
         case(
             "flagged",
@@ -153,6 +161,7 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
             true,
             &[],
             vec![(PINNED, STATE, "quoted")],
+            0,
         ),
         case(
             "quote",
@@ -163,6 +172,23 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
                 (PINNED, STATE, "converted"),
                 (PINNED_QUOTED, QUOTED_STATE, "quoted"),
             ],
+            0,
+        ),
+        case(
+            "title",
+            title.clone(),
+            false,
+            &["--quote"],
+            vec![("", STATE, "converted"), ("", QUOTED_STATE, "quoted")],
+            0,
+        ),
+        case(
+            "title-plain",
+            title,
+            false,
+            &[],
+            vec![("", STATE, "converted")],
+            1,
         ),
         case(
             "records",
@@ -170,8 +196,9 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
             false,
             &["--quote"],
             vec![("", QUOTED_STATE, "converted")],
+            0,
         ),
-        case("unjoined", single().replace(':', ": "), false, &[], vec![]),
+        case("unjoined", single().replace(':', ": "), false, &[], vec![], 0),
     ];
     for case in cases {
         let name = case.name;
@@ -179,6 +206,10 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
         old_entry(&folder, 'a', &case.request, case.quoted).expect("an entry");
         let (code, said) = convert(&folder, case.options).expect("a run");
         assert_eq!(code, Some(0), "{name}: {said}");
+        assert!(
+            said.contains(&format!(", {} left unquoted;", case.left)),
+            "{name}: {said}"
+        );
         let lines = lines(&folder).expect("a fixture");
         let written = answers(&folder).expect("answers");
         assert_eq!(written.len(), case.written.len(), "{name}");
@@ -210,7 +241,7 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
                 said,
                 format!(
                     "thinkthen: cache convert: skipped `{}.json`; its request does not rejoin byte for byte from its parts\n\
-                     thinkthen: cache convert: wrote 0 answers to thinkthen.jsonl, 0 from old entries; skipped 1 entries\n",
+                     thinkthen: cache convert: wrote 0 answers to thinkthen.jsonl, 0 from old entries, 0 left unquoted; skipped 1 entries\n",
                     "a".repeat(64)
                 )
             );

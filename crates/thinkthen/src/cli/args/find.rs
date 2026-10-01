@@ -117,7 +117,7 @@ pub(crate) struct FindCommon {
     )]
     pub(crate) timeout: u64,
     /// How many times a retried status is sent again. A transport failure is never sent again.
-    #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
+    #[arg(long, value_name = "N", default_value_t = super::DEFAULT_MAX_RETRIES, hide_short_help = true)]
     pub(crate) max_retries: u32,
 }
 

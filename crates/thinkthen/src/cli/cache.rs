@@ -68,9 +68,10 @@ pub(crate) fn convert(arguments: &ConvertArguments) -> Result<ExitCode, Failure>
     edge::write_line(
         &mut diagnostic,
         &format!(
-            "thinkthen: cache convert: wrote {} answers to thinkthen.jsonl, {} from old entries; skipped {} entries",
+            "thinkthen: cache convert: wrote {} answers to thinkthen.jsonl, {} from old entries, {} left unquoted; skipped {} entries",
             summary.answers,
             summary.converted,
+            summary.unquoted,
             summary.skipped.len()
         ),
     )?;

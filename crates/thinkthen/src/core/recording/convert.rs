@@ -44,6 +44,8 @@ pub(crate) struct Converted {
     pub(crate) answered_by: String,
     pub(crate) usage: Option<Usage>,
     pub(crate) origin: Origin,
+    /// Written only in the old form, which a replay on this version misses.
+    pub(crate) unquoted: bool,
 }
 
 /// Why an old entry gave no question entry.
@@ -117,9 +119,14 @@ pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Conve
     } else {
         Origin::Converted
     };
-    let requoted = (quote && own_state != fixed)
-        .then(|| requote(&state_json, &questions))
-        .flatten();
+    // An old-form exchange: quote it now, or it already quotes its records,
+    // or it cannot take the quote.
+    let form = (own_state != fixed && !entry.quoted).then(|| requote(&state_json, &questions));
+    let requoted = match &form {
+        Some(Requote::Quoted(all)) if quote => Some(all),
+        _ => None,
+    };
+    let unquoted = matches!(form, Some(Requote::Quoted(_) | Requote::Unquotable)) && requoted.is_none();
     let mut converted = Vec::new();
     for (place, answer) in reply.answers.into_iter().enumerate() {
         let (Ok(answer), Some(question), Some(usage)) =
@@ -137,9 +144,10 @@ pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Conve
             answered_by: reply.model.as_str().to_owned(),
             usage: *usage,
             origin,
+            unquoted: unquoted && origin == Origin::Converted,
         };
         converted.push(row(&own_state, question, origin));
-        if let Some(quoted) = requoted.as_ref().and_then(|all| all.get(place)) {
+        if let Some(quoted) = requoted.and_then(|all| all.get(place)) {
             converted.push(row(&fixed, quoted, Origin::Quoted));
         }
     }
@@ -179,29 +187,67 @@ fn records_form(state: &Json) -> bool {
         if matches!(members.as_slice(), [(name, Json::Array(_))] if name == "records"))
 }
 
-/// Each question with `line`, the single record the state carried, quoted
-/// into its string instructions. `None` when an instruction is JSON, which
-/// cannot take the quote, or already quotes a record, as a context's
-/// questions do.
-fn requote(line: &str, questions: &[Json]) -> Option<Vec<String>> {
-    questions
-        .iter()
-        .map(|question| {
-            let Json::Object(members) = question else {
-                return None;
-            };
-            let mut members = members.clone();
-            let (_, instructions) = members
-                .iter_mut()
-                .find(|(name, _)| name == "instructions")?;
-            let Json::String(asked) = instructions else {
-                return None;
-            };
-            if asked.starts_with("The text is ") {
-                return None;
-            }
-            *instructions = Json::String(quoted(line, asked));
-            serde_json::to_string(&Json::Object(members)).ok()
-        })
-        .collect()
+/// What `--quote` can do with one old single-record exchange.
+#[derive(Debug, Eq, PartialEq)]
+enum Requote {
+    /// Each question with the record quoted into its string instructions.
+    Quoted(Vec<String>),
+    /// Its questions already quote their records, as a context's questions do.
+    Already,
+    /// An instruction is JSON, which cannot take the quote.
+    Unquotable,
 }
+
+/// Quote `line`, the single record the state carried, into each question's
+/// string instructions.
+fn requote(line: &str, questions: &[Json]) -> Requote {
+    let mut written = Vec::new();
+    for question in questions {
+        let Json::Object(members) = question else {
+            return Requote::Unquotable;
+        };
+        let mut members = members.clone();
+        let Some((_, instructions)) = members
+            .iter_mut()
+            .find(|(name, _)| name == "instructions")
+        else {
+            return Requote::Unquotable;
+        };
+        let Json::String(asked) = instructions else {
+            return Requote::Unquotable;
+        };
+        if quotes_a_record(line, asked) {
+            return Requote::Already;
+        }
+        *instructions = Json::String(quoted(line, asked));
+        match serde_json::to_string(&Json::Object(members)) {
+            Ok(text) => written.push(text),
+            Err(_) => return Requote::Unquotable,
+        }
+    }
+    Requote::Quoted(written)
+}
+
+/// Whether an instruction already opens with a quoted record: `The text is `,
+/// one complete JSON value, and `. `. The value is the state's own record, or
+/// a string, list or object, as a context exchange quotes its records. A bare
+/// scalar that is not the state, as in "The text is true. Is it?", is the
+/// question's own words. No old entry tells a question that opens with a
+/// quoted word from a quoted record, so such a question is left unquoted.
+fn quotes_a_record(line: &str, asked: &str) -> bool {
+    let Some(rest) = asked.strip_prefix("The text is ") else {
+        return false;
+    };
+    rest.match_indices(". ").any(|(end, _)| {
+        let value = &rest[..end];
+        value == line
+            || matches!(
+                Json::parse(value),
+                Ok(Json::String(_) | Json::Array(_) | Json::Object(_))
+            )
+    })
+}
+
+#[cfg(test)]
+#[path = "convert/tests.rs"]
+mod tests;

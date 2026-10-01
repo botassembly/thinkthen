@@ -142,7 +142,7 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
             "{value:?}"
         );
     }
-    for value in ["0", "-1", "1.5", "lots", ""] {
+    for value in ["0", "-1", "1.5", "lots"] {
         let output = spawn(
             &["decide", QUESTION, "--lines", "--plan"],
             &[("THINKTHEN_MAX_REQUEST_BYTES", value)],
@@ -155,6 +155,18 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
             "thinkthen: THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1\n",
             "{value:?}"
         );
+    }
+    // A blank value counts as unset, as every other variable does (ticket 0364).
+    let unset = spawn(&["decide", QUESTION, "--lines", "--plan"], &[], input).expect("command");
+    for value in ["", "  "] {
+        let blank = spawn(
+            &["decide", QUESTION, "--lines", "--plan"],
+            &[("THINKTHEN_MAX_REQUEST_BYTES", value)],
+            input,
+        )
+        .expect("command");
+        assert_eq!(blank.status.code(), Some(0), "{value:?}: {}", text(&blank.stderr));
+        assert_eq!(blank.stdout, unset.stdout, "{value:?}");
     }
     let one = spawn(
         &["decide", QUESTION, "--plan", "--max-request-bytes", "1"],

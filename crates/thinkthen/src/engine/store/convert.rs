@@ -31,6 +31,9 @@ pub(crate) struct Summary {
     pub(crate) answers: usize,
     /// Answers the old entries gave, before merging.
     pub(crate) converted: usize,
+    /// Of those, the answers written only in the old form, which a replay on
+    /// this version misses.
+    pub(crate) unquoted: usize,
     /// Each skipped old entry's file name and why it was skipped.
     pub(crate) skipped: Vec<(String, &'static str)>,
 }
@@ -105,6 +108,7 @@ fn old_entries(folder: &Path, quote: bool, summary: &mut Summary) -> Result<Entr
             }
         };
         summary.converted += converted.len();
+        summary.unquoted += converted.iter().filter(|answer| answer.unquoted).count();
         for answer in converted {
             let state = bytes_sha256(answer.state.as_bytes());
             let (input_tokens, output_tokens) =
