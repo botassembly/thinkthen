@@ -28,7 +28,8 @@ const ENV = [
   ['THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL', 'The most estimated input tokens one process admits on the asking commands.', card('Estimated input admission total')],
   ['THINKTHEN_MAX_REQUEST_BYTES', 'The most bytes one batched request holds.', card('Request size')],
   ['XDG_CONFIG_HOME', 'The folder above the configuration file, on Linux. It counts only when absolute.', '#locations'],
-  ['XDG_CACHE_HOME', 'The folder above the cache and the usage totals, on Linux. It counts only when absolute.', '#locations'],
+  ['XDG_CACHE_HOME', 'The folder above the answer cache, on Linux. It counts only when absolute.', '#locations'],
+  ['XDG_STATE_HOME', 'The folder above the usage totals, on Linux. It counts only when absolute.', '#locations'],
   ['HOME', 'The folder every location falls back to. It counts only when absolute.', '#locations'],
   ['ALL_PROXY, HTTPS_PROXY, HTTP_PROXY, NO_PROXY', 'Read in upper and lower case. A proxy carries https requests. Under http every proxy is ignored.', null],
 ];
@@ -57,14 +58,14 @@ const ENV = [
     <tr><th>File</th><th>Linux</th><th>macOS</th></tr>
     <tr><td>Configuration file</td><td><code>$XDG_CONFIG_HOME/thinkthen/config.json</code>, else <code>$HOME/.config/thinkthen/config.json</code></td><td><code>$HOME/Library/Application Support/thinkthen/config.json</code></td></tr>
     <tr><td>Answer cache</td><td><code>$XDG_CACHE_HOME/thinkthen</code>, else <code>$HOME/.cache/thinkthen</code></td><td><code>$HOME/Library/Caches/thinkthen</code></td></tr>
-    <tr><td>Usage totals</td><td><code>$XDG_CACHE_HOME/thinkthen-usage</code>, else <code>$HOME/.cache/thinkthen-usage</code></td><td><code>$HOME/Library/Caches/thinkthen-usage</code></td></tr>
+    <tr><td>Usage totals</td><td><code>$XDG_STATE_HOME/thinkthen</code>, else <code>$HOME/.local/state/thinkthen</code></td><td><code>$HOME/Library/Application Support/thinkthen/usage</code></td></tr>
   </table>
-  <p>ThinkThen has no home-folder variable of its own. <code>HOME</code> and the two XDG variables decide every location.</p>
+  <p>ThinkThen has no home-folder variable of its own. <code>HOME</code> and the three XDG variables decide every location.</p>
   <Terminal run={paths} caption={paths.see} />
-  <p>On Linux, set <code>XDG_CONFIG_HOME</code> or <code>XDG_CACHE_HOME</code> to move the files. Each counts only when it is an absolute path. A relative path is ignored, and the location falls back to <code>HOME</code>. macOS ignores both XDG variables.</p>
+  <p>On Linux, set <code>XDG_CONFIG_HOME</code>, <code>XDG_CACHE_HOME</code> or <code>XDG_STATE_HOME</code> to move the files. Each counts only when it is an absolute path. A relative path is ignored, and the location falls back to <code>HOME</code>. macOS ignores the XDG variables.</p>
   <Terminal run={moved} caption={moved.see} />
   <Terminal run={relative} caption={relative.see} />
-  <p><code>THINKTHEN_CACHE</code> moves only the answer cache. The usage totals stay beside the default answer cache.</p>
+  <p><code>THINKTHEN_CACHE</code> moves only the answer cache. The usage totals stay in the state folder.</p>
 
   <h2 id="configuration-file">The configuration file</h2>
   <p>The file is optional. It holds one JSON object with <code>"schema": "thinkthen.config/1"</code>. ThinkThen never creates it and never edits it.</p>
@@ -78,7 +79,7 @@ const ENV = [
   <p>Whoever can write the file decides where the key and the evidence go. On Linux and macOS ThinkThen warns when another user owns the file, or when every user may write it. A group-write bit alone draws no warning. A file that draws the warning and holds <code>backends</code> is refused with exit 5. Keep the file writable by its owner alone.</p>
 
   <h2 id="usage-totals">The usage totals</h2>
-  <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and cache answers. It holds no request, no reply, no address, no model, no price and no key. <code>--no-cache</code> never turns it off. It counts what this machine saw, and the backend's bill is the real cost.</p>
+  <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and cache answers. It holds no request, no reply, no address, no model, no price and no key. Clearing the cache never resets it, and <code>--no-cache</code> never turns it off. It counts what this machine saw, and the backend's bill is the real cost.</p>
 
   <h2 id="status">See it all</h2>
   <p><code>thinkthen status</code> prints the resolved configuration path, backend, address, model and key variable, and where each value came from. It also prints whether a key is set, the cache path and size, the usage path, and the usage this month and in all. It opens no connection. <code>status --json</code> prints the same facts as one <code>thinkthen.status/2</code> object. Its <code>backend</code> object holds <code>name</code>, which is null when no backend is named, and <code>key_variable</code>, the first variable the key would come from.</p>

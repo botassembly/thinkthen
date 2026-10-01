@@ -119,11 +119,12 @@ fn the_rate_variable_spaces_request_starts_at_one_address() {
     })
     .expect("loopback listener");
     let arguments = ["decide", "Is it?", "--lines", "--batch", "1", "--jobs", "4"];
+    let launched = std::time::Instant::now();
     let output = spawn(
         &[&arguments[..], &["--no-cache", "--url", listener.base()]].concat(),
         &[
             ("THINKTHEN_API_KEY", "sk-test"),
-            ("THINKTHEN_REQUESTS_PER_MINUTE", "600"),
+            ("THINKTHEN_REQUESTS_PER_MINUTE", "300"),
         ],
         b"a\nb\nc\nd\ne\nf\n",
     )
@@ -131,10 +132,11 @@ fn the_rate_variable_spaces_request_starts_at_one_address() {
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     let starts = starts.lock().unwrap();
     assert_eq!(starts.len(), 6);
-    // 600 a minute is one start each 100 ms, so six starts span 500 ms. The bound
-    // leaves one interval for a late first delivery on a busy machine.
-    let span = *starts.iter().max().unwrap() - *starts.iter().min().unwrap();
-    assert!(span >= std::time::Duration::from_millis(400), "{span:?}");
+    // 300 a minute is one start each 200 ms. The first slot comes no earlier
+    // than the launch, so the sixth arrives at least 1 s after it, however
+    // late any send leaves (ticket 0356). An unpaced run ends well inside 1 s.
+    let span = *starts.iter().max().unwrap() - launched;
+    assert!(span >= std::time::Duration::from_secs(1), "{span:?}");
 }
 
 #[test]

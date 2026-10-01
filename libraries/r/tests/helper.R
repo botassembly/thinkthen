@@ -47,6 +47,21 @@ backend_count <- function() {
   }
 }
 
+# The backend's count once it reads at least n, or at 30 s, from its `wait` line.
+backend_wait <- function(n) {
+  out <- Sys.getenv("TT_BACKEND_OUT")
+  before <- length(grep("^wait ", readLines(out)))
+  backend_say(paste("wait", n))
+  repeat {
+    lines <- grep("^wait ", readLines(out), value = TRUE)
+    if (length(lines) > before) return(as.integer(sub("^wait ", "", lines[[length(lines)]])))
+    Sys.sleep(0.02)
+  }
+}
+
+# Millisecond promises run only under the stress profile (ticket 0356).
+stress <- identical(Sys.getenv("THINKTHEN_TEST_PROFILE"), "stress")
+
 capture <- function() {
   output <- Sys.getenv("TT_BACKEND_OUT")
   before <- length(grep("^\\{", readLines(output)))

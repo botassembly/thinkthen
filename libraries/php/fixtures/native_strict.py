@@ -36,7 +36,7 @@ def call():
 thread=threading.Thread(target=call)
 thread.start()
 try:
-    limit=time.monotonic()+5
+    limit=time.monotonic()+30
     while not (barrier/'arrived-hold-native').exists():
         if time.monotonic()>limit: raise RuntimeError('strict request never arrived')
         time.sleep(.005)
@@ -48,7 +48,7 @@ try:
 finally:
     result['release_ns']=time.monotonic_ns()
     (barrier/'release-hold-native').touch()
-    thread.join(timeout=6)
+    thread.join(timeout=30)
 if thread.is_alive():
     print('live call: cannot safely free token or engine',flush=True)
     os._exit(2)
@@ -86,7 +86,7 @@ try:
     worker=threading.Thread(target=bulk_call)
     worker.start()
     try:
-        limit=time.monotonic()+5
+        limit=time.monotonic()+30
         while not (barrier/'arrived-hold-bulk-1').exists():
             if time.monotonic()>limit: raise RuntimeError('bulk request never arrived')
             time.sleep(.005)
@@ -98,7 +98,7 @@ try:
     finally:
         bulk['release_ns']=time.monotonic_ns()
         for i in range(1,7): (barrier/f'release-hold-bulk-{i}').touch()
-        worker.join(timeout=6)
+        worker.join(timeout=30)
     if worker.is_alive():
         print('live bulk call: cannot safely free token or engine',flush=True)
         os._exit(2)

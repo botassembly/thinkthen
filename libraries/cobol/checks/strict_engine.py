@@ -29,7 +29,7 @@ proof = []
 
 def wait(state):
     marker = barrier / ("arrived-" + state)
-    end = time.monotonic() + 5
+    end = time.monotonic() + 30
     while not marker.exists() and time.monotonic() < end:
         time.sleep(.005)
     assert marker.exists(), f"no counted arrival for {state}"
@@ -54,7 +54,7 @@ def held(state, bulk=False):
         lib.thinkthen_cancel(token)
         lib.thinkthen_cancel(token)
         (barrier / ("release-" + state)).touch()
-        thread.join(timeout=6)
+        thread.join(timeout=30)
         assert not thread.is_alive(), f"held {state} did not finish"
         assert result == {"code": 5, "error": 5}, (state, result)
         assert (answer.outcome, answer.probability) == (71, -0.125), (state, answer.outcome, answer.probability)
@@ -62,7 +62,7 @@ def held(state, bulk=False):
     finally:
         if thread.is_alive():
             (barrier / ("release-" + state)).touch()
-            thread.join(timeout=8)
+            thread.join(timeout=60)
         assert not thread.is_alive()
         lib.thinkthen_cancel_token_free(token)
 

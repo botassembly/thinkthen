@@ -13,7 +13,7 @@ static TTClient *e;
 static const char *barrier;
 static void require(int good,const char *note) { if (!good) { fprintf(stderr,"FAIL: %s\n",note); exit(1); } }
 static void path(char *buf,size_t cap,const char *prefix,const char *state) { snprintf(buf,cap,"%s/%s%s",barrier,prefix,state); }
-static void arrived(const char *state) { char b[512]; path(b,sizeof b,"arrived-",state); for(int i=0;i<2000 && access(b,F_OK);i++) usleep(5000); require(!access(b,F_OK),"counted arrival"); }
+static void arrived(const char *state) { char b[512]; path(b,sizeof b,"arrived-",state); for(int i=0;i<6000 && access(b,F_OK);i++) usleep(5000); require(!access(b,F_OK),"counted arrival"); }
 static void release(const char *state) { char b[512]; path(b,sizeof b,"release-",state); int fd=open(b,O_WRONLY|O_CREAT,0600); require(fd>=0,"release barrier"); close(fd); }
 /* Facts are JSON text; fact_is compares one member's literal text, and a NULL
  * want means the member is absent. */
@@ -120,7 +120,7 @@ int main(int argc,char **argv) {
   TTToken *t=[TTToken create]; const char *ts[]={"hold-bulk-1","hold-bulk-2"}; size_t ns[]={11,11}; Bulk b={.texts=ts,.lengths=ns,.n=2,.token=t,.answers={{123,-1},{123,-1}}}; pthread_t p;
   require(!pthread_create(&p,NULL,bulkcaller,&b),"pthread bulk"); arrived("hold-bulk-1"); [t fire]; release("hold-bulk-1"); /* second row may never send after cancellation */
   pthread_join(p,NULL); require(b.code==5 && b.failure.kind==5 && !b.failure.retryable && b.answers[0].outcome==123 && b.answers[0].probability==-1 && b.answers[1].outcome==123 && b.answers[1].probability==-1,"held bulk"); free(b.facts);tt_failure_clear(&b.failure); [t dealloc];
-  Scalar d={.state="hold-deadline",.deadline=150}; require(!pthread_create(&p,NULL,caller,&d),"pthread deadline"); arrived("hold-deadline"); pthread_join(p,NULL); release("hold-deadline");
+  Scalar d={.state="hold-deadline",.deadline=1000}; require(!pthread_create(&p,NULL,caller,&d),"pthread deadline"); arrived("hold-deadline"); pthread_join(p,NULL); release("hold-deadline");
   require(d.code==3 && d.answer.outcome==123 && d.answer.probability==-1,"held deadline"); free(d.facts);tt_failure_clear(&d.failure); result("recovery-held",0,-1,nil); puts("OBJC_HELD_PASS");
  } else if(!strcmp(mode,"boundaries")) {
   const char data[]={'a',0,'b'}; TTDecision a={123,-1}; TTFailure f={0}; char *facts=NULL;

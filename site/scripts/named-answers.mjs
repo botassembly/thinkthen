@@ -26,8 +26,8 @@
 //
 // Accepted languages: bash, sh, python, typescript, ts, ruby, r, rust, c,
 // cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs,
-// go, swift, zig, and sql. sh is bash, ts is typescript, objc is objective-c, and cs is
-// csharp. An unknown language throws a
+// go, swift, zig, php, dart, and sql. sh is bash, ts is typescript, objc
+// is objective-c, and cs is csharp. An unknown language throws a
 // TypeError. Its message names the bad language and lists the accepted
 // names. A name that every JavaScript object inherits, such as constructor
 // or __proto__, is unknown too. A caller skips text that holds no
@@ -48,7 +48,7 @@ const LANGUAGE = {
   cpp: 'cpp', 'objective-c': 'objc', objc: 'objc', cobol: 'cobol',
   ada: 'ada', java: 'java', kotlin: 'kotlin', scala: 'scala',
   csharp: 'csharp', cs: 'csharp', go: 'go', swift: 'swift', zig: 'zig',
-  sql: 'sql',
+  php: 'php', dart: 'dart', sql: 'sql',
 };
 const CALL = {
   python: new RegExp(`\\btt\\s*\\.(${FNS})\\(`),
@@ -68,6 +68,8 @@ const CALL = {
   go: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`, 'i'),
   swift: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`),
   zig: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`),
+  php: new RegExp(`\\$tt\\s*->\\s*(call|${FNS})(Many)?\\(`),
+  dart: new RegExp(`\\btt\\s*\\.(call|ask|many|${FNS})\\(`),
   bash: new RegExp(`\\bthinkthen\\s+(${FNS})\\b`),
 };
 const SQL_CALL = new RegExp(`\\bthinkthen_(${FNS}|probability|relations)\\s*\\(`, 'g');
@@ -86,6 +88,7 @@ const LANGUAGE_PRINT = {
   java: /\bSystem\.(out|err)\.print/,
   csharp: /\bConsole\.Write/,
   go: /\bfmt\.Print/,
+  php: /^\s*echo\b|\bvar_dump\(/,
 };
 const ASSIGN = {
   python: /^\s*([A-Za-z_]\w*)\s*=(?!=)/,
@@ -105,6 +108,8 @@ const ASSIGN = {
   go: /^\s*(?:var\s+)?([A-Za-z_][\w, ]*?)\s*:?=(?!=)/,
   swift: /^\s*(?:(?:let|var)\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
   zig: /^\s*(?:const|var)\s+([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
+  php: /^\s*\$([A-Za-z_]\w*)\s*=(?![=>])/,
+  dart: /^\s*(?:(?:final|var|const)\s+)?(?:[A-Za-z_][\w<>?]*\s+)?([A-Za-z_]\w*)\s*=(?![=>])/,
 };
 const ASSERT = {
   python: /^\s*assert\b/,
@@ -124,6 +129,8 @@ const ASSERT = {
   go: /(?!)/,
   swift: /^\s*(precondition|assert)\(/,
   zig: /^\s*std\.debug\.assert\(/,
+  php: /^\s*assert\(/,
+  dart: /^\s*assert\(/,
 };
 const SQL_WORDS = new Set(['from', 'where', 'order', 'group', 'is', 'and', 'or', 'not', 'in', 'desc', 'asc', 'limit', 'on', 'join', 'union', 'having', 'select', 'with', 'case', 'when', 'then', 'else', 'end']);
 
@@ -132,7 +139,7 @@ const named = (name) => `the answer is named ${name}. Name it for its meaning.`;
 
 // Blank out string literals, so brackets and words inside them do not count.
 function unquote(text, lang) {
-  const single = ['python', 'ruby', 'r', 'typescript', 'sql'].includes(lang);
+  const single = ['python', 'ruby', 'r', 'typescript', 'sql', 'php', 'dart'].includes(lang);
   let out = '';
   let quote = null;
   for (let i = 0; i < text.length; i++) {
@@ -164,7 +171,7 @@ function statement(lines, start, lang) {
     depth += (line.match(/[([]/g) || []).length - (line.match(/[)\]]/g) || []).length;
     if (lang === 'ruby') depth += (line.match(/\bdo\b/g) || []).length - (line.match(/^\s*end\b/g) || []).length;
     const tail = line.trimEnd();
-    const more = ['typescript', 'rust', 'c', 'cpp', 'objc', 'ada', 'java', 'csharp', 'zig'].includes(lang)
+    const more = ['typescript', 'rust', 'c', 'cpp', 'objc', 'ada', 'java', 'csharp', 'zig', 'php', 'dart'].includes(lang)
       ? !tail.endsWith(';') && !tail.endsWith('{') && !tail.endsWith('}')
       : /(\\|[+,=.]|<-|\|\||&&)$/.test(tail);
     const opens = lang === 'ada' && /\b(then|loop)$/i.test(tail);

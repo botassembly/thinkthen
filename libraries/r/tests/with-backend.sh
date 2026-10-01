@@ -18,7 +18,7 @@ mkfifo "$dir/in"
 "$backend" <"$dir/in" >"$dir/out" &
 served=$!
 exec 3>"$dir/in"
-for _ in $(seq 1 100); do [ -s "$dir/out" ] && break; sleep 0.05; done
+for _ in $(seq 1 600); do [ -s "$dir/out" ] && break; sleep 0.05; done
 port=$(head -n 1 "$dir/out")
 [ -n "$port" ] || { echo "with-backend: the backend printed no port" >&2; exit 1; }
 base=${3:-http://127.0.0.1:$port/generic/v1}

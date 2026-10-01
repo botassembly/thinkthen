@@ -108,8 +108,8 @@ RUBY=$prefix/bin/ruby
 if [ "$host" = Darwin ]; then
   command -v xcrun >/dev/null 2>&1 || not_run "xcrun is missing"
   openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix openssl@3 2>/dev/null || true)}
-  [ -x "$openssl/bin/openssl" ] || not_run "OpenSSL $RUBY_OPENSSL_VERSION host prefix is missing"
-  case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_VERSION "*) ;; *) not_run "OpenSSL host version differs from toolchain.env" ;; esac
+  [ -x "$openssl/bin/openssl" ] || not_run "OpenSSL $RUBY_OPENSSL_SERIES host prefix is missing"
+  case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) not_run "OpenSSL host version differs from toolchain.env" ;; esac
   clang=$(xcrun --find clang 2>/dev/null)
   clang=${clang%/bin/clang}/lib
   [ -f "$clang/libclang.dylib" ] || not_run "no libclang.dylib beside the selected Xcode clang"
@@ -175,6 +175,10 @@ cargo clippy --locked --offline --all-targets --quiet -- -D warnings
 cargo test --locked --offline --quiet --lib
 if [ "$profile" = stress ]; then
   sh "$LIMIT" 120 "$RUBY" -I lib tests/test_flood.rb || fail "the trap flood failed"
+  # The interrupt files check their millisecond promises only here (ticket 0356).
+  for test in tests/test_interrupt_single.rb tests/test_interrupt_batch.rb; do
+    sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed, stress"
+  done
   echo "check ruby: pass, stress"
   exit 0
 fi

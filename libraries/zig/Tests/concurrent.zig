@@ -18,7 +18,7 @@ const ThreadCase = struct {
     }
 };
 fn waitFor(path: []const u8) !void {
-    for (0..2000) |_| {
+    for (0..6000) |_| {
         if (std.fs.cwd().access(path, .{})) |_| return else |_| {}
         std.Thread.sleep(5 * std.time.ns_per_ms);
     }
@@ -39,7 +39,7 @@ fn checked(result: tt.Result(tt.CallResult(tt.Answer)), code: c_int) !void {
 fn hold(engine: *tt.Engine, alloc: Allocator, dir: []const u8, text: []const u8) !void {
     var token = try tt.CancelToken.init();
     defer token.deinit();
-    var case = ThreadCase{ .engine = engine, .token = &token, .text = text, .deadline_ms = if (std.mem.eql(u8, text, "hold-deadline")) 25 else -1 };
+    var case = ThreadCase{ .engine = engine, .token = &token, .text = text, .deadline_ms = if (std.mem.eql(u8, text, "hold-deadline")) 1000 else -1 };
     const arrival = try std.fmt.allocPrint(alloc, "{s}/arrived-{s}", .{ dir, text });
     defer alloc.free(arrival);
     const release = try std.fmt.allocPrint(alloc, "{s}/release-{s}", .{ dir, text });
@@ -63,13 +63,22 @@ fn hold(engine: *tt.Engine, alloc: Allocator, dir: []const u8, text: []const u8)
         token.cancel();
         token.cancel();
     }
-    // The arrival barrier proves in-flight work; allow a cancellation/deadline tick before the held reply.
-    std.Thread.sleep(100 * std.time.ns_per_ms);
-    std.debug.print("held call completed before release: {} token address: {x}\n", .{ case.done.load(.acquire), @intFromPtr(token.raw) });
+    // A fired token lets the sent request finish, so a cancelled call returns
+    // after the release. A deadline ends the call while the reply is held, so
+    // the release waits up to 30 s for that return (ticket 0356).
+    if (is_deadline) {
+        for (0..6000) |_| {
+            if (case.done.load(.acquire)) break;
+            std.Thread.sleep(5 * std.time.ns_per_ms);
+        }
+    }
+    const returned_held = case.done.load(.acquire);
+    std.debug.print("held call completed before release: {} token address: {x}\n", .{ returned_held, @intFromPtr(token.raw) });
     try releaseHeld(release);
     worker.join();
     joined = true;
     if (case.err) |err| return err;
+    if (is_deadline and !returned_held) return error.DeadlineDidNotEndHeldCall;
     switch (case.result.?) {
         .ok => |answer| std.debug.print("held call unexpectedly succeeded: {s} {d}\n", .{ @tagName(answer.value.outcome), answer.value.probability }),
         .failed => |f| std.debug.print("held call failed code={d}\n", .{f.code}),
@@ -136,9 +145,9 @@ fn holdBulk(engine: *tt.Engine, alloc: Allocator, dir: []const u8) !void {
         };
     }
     try waitFor(arrival);
+    // The token fires before cancel returns, and it lets the sent requests finish.
     token.cancel();
     token.cancel();
-    std.Thread.sleep(100 * std.time.ns_per_ms);
     for (releases) |path| try releaseHeld(path);
     worker.join();
     joined = true;

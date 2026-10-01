@@ -1,7 +1,9 @@
 //! Requests a minute from the configuration file (ticket 0343): a rate set
 //! only in the file paces the backend it names, and
-//! `THINKTHEN_REQUESTS_PER_MINUTE` outranks it. Each leg asserts only a lower
-//! bound on the spread of request starts, so a loaded machine cannot fail it.
+//! `THINKTHEN_REQUESTS_PER_MINUTE` outranks it. Each paced leg measures from
+//! the moment before the command starts to the last request's arrival. The
+//! pacer's first slot comes no earlier than that moment, so a loaded machine
+//! cannot shrink the span below five intervals (ticket 0356).
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -13,7 +15,7 @@ use super::support::{Home, said};
 const ANSWER: &str = r#"{"model":"nimble","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
 
 /// Six one-line requests to a loopback `ollama` under this configuration and
-/// these variables; returns the spread from the first start to the last.
+/// these variables; returns the time from the launch to the last start.
 fn spread(config: &str, changes: &[(&str, &str)]) -> Duration {
     let starts = Arc::new(Mutex::new(Vec::new()));
     let seen = Arc::clone(&starts);
@@ -36,6 +38,7 @@ fn spread(config: &str, changes: &[(&str, &str)]) -> Duration {
         "--no-cache",
     ];
     let flags = ["--backend", "ollama", "--url", target.base()];
+    let launched = Instant::now();
     let output = home.run(
         &[&arguments[..], &flags[..]].concat(),
         &[&[("THINKTHEN_BATCH", "1")], changes].concat(),
@@ -45,7 +48,7 @@ fn spread(config: &str, changes: &[(&str, &str)]) -> Duration {
     assert_eq!(stdout.lines().count(), 6);
     let starts = starts.lock().expect("the start list");
     assert_eq!(starts.len(), 6);
-    *starts.iter().max().expect("a start") - *starts.iter().min().expect("a start")
+    *starts.iter().max().expect("a start") - launched
 }
 
 fn paced(name: &str, rate: u32) -> String {
@@ -67,14 +70,14 @@ fn with_no_rate_for_the_backend_in_use_nothing_is_spaced() {
 
 #[test]
 fn a_rate_set_only_in_the_file_paces_its_backend_and_the_variable_outranks_it() {
-    // 600 a minute is one start each 100 ms, so six starts span 500 ms. The
-    // bound leaves one interval for a late first delivery.
-    let bound = Duration::from_millis(400);
-    let from_file = spread(&paced("ollama", 600), &[]);
+    // 300 a minute is one start each 200 ms, so the sixth start comes at
+    // least 1 s after the launch. An unpaced run ends well inside 1 s.
+    let bound = Duration::from_secs(1);
+    let from_file = spread(&paced("ollama", 300), &[]);
     assert!(from_file >= bound, "the file's rate: {from_file:?}");
     let from_variable = spread(
         &paced("ollama", 60_000),
-        &[("THINKTHEN_REQUESTS_PER_MINUTE", "600")],
+        &[("THINKTHEN_REQUESTS_PER_MINUTE", "300")],
     );
     assert!(
         from_variable >= bound,

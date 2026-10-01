@@ -34,6 +34,8 @@ checksum() {
 
 # Every library file, unpacked, holds neither the builder's home nor the PostgreSQL test probe. The
 # checks' own scans read their builds, and this one reads the files a user installs.
+# DuckDB's prebuilt static archives name DuckDB's own CI checkout, $HOME/work/duckdb/duckdb/,
+# which equals a GitHub runner's home by coincidence. Only that upstream prefix is allowed.
 scan() {
 	into=$(mktemp -d "$backend/scan.XXXXXX") || return 1
 	case $1 in
@@ -41,7 +43,12 @@ scan() {
 	*.gem) tar -xOf "$1" data.tar.gz | tar -xzf - -C "$into" ;;
 	*) tar -xzf "$1" -C "$into" ;;
 	esac
-	found=$(grep -rlaF -e "$HOME" -e thinkthen_panic_probe "$into" | sed "s|^$into/||" | tr '\n' ' ')
+	found=$(grep -rlaF -e "$HOME" -e thinkthen_panic_probe "$into" | while IFS= read -r file; do
+		grep -qaF thinkthen_panic_probe "$file" ||
+			[ "$(grep -aoF "$HOME" "$file" | wc -l)" != "$(grep -aoF "$HOME/work/duckdb/duckdb/" "$file" | wc -l)" ] ||
+			continue
+		printf '%s\n' "$file"
+	done | sed "s|^$into/||" | tr '\n' ' ')
 	[ -z "$found" ] || { echo "release-smoke: FAIL ${1##*/} (the builder's home or the test probe is in $found)"; return 1; }
 }
 

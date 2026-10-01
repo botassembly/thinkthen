@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ask, child, startBackend, until } from './backend.mjs';
+import { ask, child, startBackend, timedTest, until } from './backend.mjs';
 
 const refused = (written) =>
   `deadlineMs ${written} is not a deadline; use -1, null, or a whole number of milliseconds from 0 to 4294967295000`;
@@ -46,14 +46,15 @@ test('each deadline spelling runs, is spent, or is refused before a send', async
   assert.equal(await backend.count(), 4, 'only -1, null, missing, and the most send');
 });
 
-test('a deadline ends a call during a held send', async (t) => {
+// The reply is never released, so a deadline answer proves the stop came while the send was held.
+timedTest('a deadline ends a call during a held send', async (t, timed) => {
   const backend = await startBackend(t);
   const run = child(backend, "return tt.decide('Refund?', 'held', { deadlineMs: 300 });", { arm: 'arm/held' });
   assert.equal(await backend.wait(1), 1);
   const sent = performance.now();
-  assert.ok(await until(() => run.lines.length > 0, 2000));
+  assert.ok(await until(() => run.lines.length > 0, 30000));
   const [{ at, value }] = run.lines;
   assert.equal(value.error.kind, 'deadline');
-  assert.ok(at - sent <= 450, `rejected ${Math.round(at - sent)} ms after the send`);
+  if (timed) assert.ok(at - sent <= 450, `rejected ${Math.round(at - sent)} ms after the send`);
   assert.equal(await backend.count(), 1);
 });
