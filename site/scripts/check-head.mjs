@@ -8,8 +8,11 @@
 //   - an icon file is missing or the wrong size;
 //   - sitemap.xml and the listed pages differ;
 //   - robots.txt disagrees with NOINDEX;
-//   - the home page's JSON-LD lacks WebSite with SearchAction or
-//     SoftwareApplication;
+//   - the home page's JSON-LD lacks WebSite with SearchAction,
+//     SoftwareApplication or Organization, the About page's lacks AboutPage,
+//     Person or Organization, or another page carries JSON-LD;
+//   - two listed pages share a title or a description;
+//   - llms.txt or llms-full.txt is missing;
 //   - the search index holds any address that is not a listed page.
 
 import fs from 'node:fs';
@@ -137,8 +140,37 @@ if (!site || site.potentialAction?.['@type'] !== 'SearchAction' || !String(site.
 }
 const app = items.find((i) => i['@type'] === 'SoftwareApplication');
 if (!app || app.offers?.priceCurrency !== 'USD') problems.push('/: JSON-LD has no SoftwareApplication with an Offer in USD');
-for (const page of listed.filter((p) => p !== home)) {
-  if (page.html.includes('application/ld+json')) problems.push(`${page.route}: JSON-LD belongs on the home page only`);
+if (!items.some((i) => i['@type'] === 'Organization')) problems.push('/: JSON-LD has no Organization');
+
+const about = listed.find((p) => p.route === '/about/');
+const aboutLd = about && about.html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+let aboutItems = [];
+try { aboutItems = aboutLd ? [].concat(JSON.parse(aboutLd[1])).flatMap((i) => i['@graph'] || [i]) : []; } catch { problems.push('/about/: JSON-LD does not parse'); }
+for (const type of ['AboutPage', 'Person', 'Organization']) {
+  if (!aboutItems.some((i) => i['@type'] === type)) problems.push(`/about/: JSON-LD has no ${type}`);
+}
+for (const page of listed.filter((p) => p !== home && p !== about)) {
+  if (page.html.includes('application/ld+json')) problems.push(`${page.route}: JSON-LD belongs on the home and About pages only`);
+}
+
+// ------------------------------------------------- titles and descriptions
+
+const decodeAttr = (s) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+for (const [name, re] of [['title', /<title>([^<]*)<\/title>/], ['description', /<meta name="description" content="([^"]*)">/]]) {
+  const seen = new Map();
+  for (const page of listed) {
+    const m = page.html.match(re);
+    if (!m || !m[1].trim()) { problems.push(`${page.route}: no ${name}`); continue; }
+    const value = decodeAttr(m[1]);
+    if (seen.has(value)) problems.push(`${page.route}: same ${name} as ${seen.get(value)}`);
+    else seen.set(value, page.route);
+  }
+}
+
+// ------------------------------------------------------------- llms files
+
+for (const file of ['/llms.txt', '/llms-full.txt']) {
+  if (!read(file)?.length) problems.push(`${file}: missing or empty`);
 }
 
 // ----------------------------------------------------------- search index
@@ -161,4 +193,4 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`check-head: ${listed.length} listed pages, each with one canonical link, in the sitemap and the search index; ${unlisted.length} unlisted pages; icons, manifest, theme colours, robots.txt (NOINDEX = ${NOINDEX}) and JSON-LD hold`);
+console.log(`check-head: ${listed.length} listed pages, each with one canonical link, in the sitemap and the search index; ${unlisted.length} unlisted pages; icons, manifest, theme colours, robots.txt (NOINDEX = ${NOINDEX}), JSON-LD, unique titles and descriptions, and the llms files hold`);
