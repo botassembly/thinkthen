@@ -1,7 +1,7 @@
 .{
-    .name = .first_call,
+    .name = .backends,
     .version = "0.0.0",
-    .fingerprint = 0x3b7c900a11fafa61,
+    .fingerprint = 0x3c836b68ae394830,
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .thinkthen = .{ .path = "thinkthen-zig" },

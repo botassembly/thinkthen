@@ -121,7 +121,7 @@ export const BUILD_LINES = {
     archive: 'thinkthen-go',
     beside: 'the unpacked archives, thinkthen-c/ and thinkthen-go/, in a folder with no other .go file',
     lines: [
-      ['go mod init first-call'],
+      [`go mod init ${program(sample)}`],
       ['go mod edit', '-replace=github.com/botassembly/thinkthen/libraries/go=./thinkthen-go'],
       ['go mod tidy'],
       ['PKG_CONFIG_PATH="$PWD/thinkthen-c/lib/pkgconfig"', `go build -o ${program(sample)} .`],
