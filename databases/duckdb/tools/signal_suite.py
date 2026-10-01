@@ -329,10 +329,18 @@ SIGINFO = r"""
 import ctypes, json, sys
 import duckdb
 libc = ctypes.CDLL(None, use_errno=True)
-class Info(ctypes.Structure):
-    _fields_ = [("signo", ctypes.c_int), ("errno", ctypes.c_int), ("code", ctypes.c_int), ("pad", ctypes.c_int), ("pid", ctypes.c_int)]
-class Action(ctypes.Structure):
-    _fields_ = [("handler", ctypes.c_void_p), ("mask", ctypes.c_ulong * 16), ("flags", ctypes.c_int), ("restorer", ctypes.c_void_p)]
+if sys.platform == "darwin":
+    class Info(ctypes.Structure):
+        _fields_ = [("signo", ctypes.c_int), ("errno", ctypes.c_int), ("code", ctypes.c_int), ("pid", ctypes.c_int)]
+    class Action(ctypes.Structure):
+        _fields_ = [("handler", ctypes.c_void_p), ("mask", ctypes.c_uint32), ("flags", ctypes.c_int)]
+    SA_SIGINFO = 0x40
+else:
+    class Info(ctypes.Structure):
+        _fields_ = [("signo", ctypes.c_int), ("errno", ctypes.c_int), ("code", ctypes.c_int), ("pad", ctypes.c_int), ("pid", ctypes.c_int)]
+    class Action(ctypes.Structure):
+        _fields_ = [("handler", ctypes.c_void_p), ("mask", ctypes.c_ulong * 16), ("flags", ctypes.c_int), ("restorer", ctypes.c_void_p)]
+    SA_SIGINFO = 4
 seen = []
 Handler = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.POINTER(Info), ctypes.c_void_p)
 def record(number, info, context):
@@ -340,7 +348,7 @@ def record(number, info, context):
 handler = Handler(record)
 action = Action()
 action.handler = ctypes.cast(handler, ctypes.c_void_p).value
-action.flags = 4  # SA_SIGINFO
+action.flags = SA_SIGINFO
 if libc.sigaction(2, ctypes.byref(action), None) != 0:
     raise SystemExit("sigaction failed")
 con = duckdb.connect(config={"allow_unsigned_extensions": "true"})

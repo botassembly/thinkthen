@@ -45,7 +45,8 @@ Work outside the lanes:
 | `closed/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | closed | closed by ticket 0356 |
 | `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | waits | the test servers are done (ticket 0361); the product fix waits on upstream and Ian's resend choice |
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |
-| `2026-09-30-duckdb-check-fails-four-tests-on-macos.md` | yes, the macOS DuckDB proof | batch | a lane with the M5 |
+| `closed/2026-09-30-duckdb-check-fails-four-tests-on-macos.md` | no | closed | closed by the DuckDB macOS fork quick fix |
+| `2026-10-01-macos-forked-children-crash-on-a-channel-wait.md` | no | batch | a lane with the M5 |
 | `2026-09-30-check-ignores-the-estimated-token-cap.md` | yes | batch | C3 |
 | `2026-09-30-blank-max-request-bytes-exits-2.md` | no | batch | C3 |
 | `2026-09-30-transforms-score-the-band-low-edge-as-no.md` | no | batch | C3 |

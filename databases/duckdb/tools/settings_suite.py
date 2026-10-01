@@ -646,13 +646,13 @@ if pid == 0:
     os._exit(0)
 os.close(writer)
 deadline = time.monotonic() + 30
-while os.waitpid(pid, os.WNOHANG) == (0, 0):
+while (status := os.waitpid(pid, os.WNOHANG)) == (0, 0):
     if time.monotonic() > deadline:
         os.kill(pid, 9)
-        os.waitpid(pid, 0)
+        status = os.waitpid(pid, 0)
         break
     time.sleep(0.05)
-child = os.read(reader, 65536).decode() or '{"error": "the child timed out"}'
+child = os.read(reader, 65536).decode() or json.dumps({"error": f"the child wrote nothing; wait status {status[1]}"})
 print(json.dumps({"before": before, "after": usage(parent), "child": json.loads(child)}), flush=True)
 """
 
@@ -673,7 +673,7 @@ def a_forked_child_answers_from_a_zero_total():
         if not lines:
             raise AssertionError(f"the parent printed nothing: {done.stderr[-800:]}")
         got = json.loads(lines[-1])
-        expect(got["child"].get("answer"), [[True]], "the child answers under a total of one")
+        expect(got["child"].get("answer", got["child"].get("error")), [[True]], "the child answers under a total of one")
         for metric in ("requests_sent", "input_tokens", "output_tokens"):
             expect(got["before"][metric], 17, f"parent {metric} after retirement")
             expect(got["after"][metric], 17, f"parent {metric} after fork")
@@ -686,4 +686,9 @@ if __name__ == "__main__":
     stress = {"r1_15_and_r2_18_file_opens_under_strace"}
     only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
     CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
+    if not sys.platform.startswith("linux"):
+        traced = {"two_file_rows_share_one_open_and_a_refusal_opens_none", "r1_15_and_r2_18_file_opens_under_strace"}
+        for function in [function for function in CASES if function.__name__ in traced]:
+            print(f"skip {function.__name__}: strace counts opens only on Linux")
+            CASES.remove(function)
     sys.exit(main())
