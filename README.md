@@ -73,6 +73,8 @@ Every language uses the same Rust engine. Each page below gives the install line
 
 Each folder under [libraries/](https://github.com/botassembly/thinkthen/tree/main/libraries) and [databases/](https://github.com/botassembly/thinkthen/tree/main/databases) has a README that builds that binding from source.
 
+On 2026-10-01 a call to Jev took a median of 138 ms. ThinkThen's own work took about 2 ms of it. Each binding added a median of 3 ms or less, and the slowest single function added 6.7 ms. [Overhead](https://thinkthen.dev/learn/overhead/) gives every measurement and its spread.
+
 ## How-tos
 
 - [Build a triage pipeline that drafts, blocks, or asks a person](https://github.com/botassembly/thinkthen/tree/main/demos/16-triage-pipeline)
