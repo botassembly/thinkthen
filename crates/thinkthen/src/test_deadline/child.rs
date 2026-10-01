@@ -45,6 +45,53 @@ pub(crate) trait ChildEnvironment {
     fn home(&mut self, home: impl AsRef<Path>) -> &mut Self;
 }
 
+/// A default folder the command picks when no setting names one.
+///
+/// Linux reads each from its own XDG variable, so a case's root holds one
+/// subfolder per kind. macOS reads all three from `HOME`, so there the root is
+/// the home (ticket 0379). Windows reads `APPDATA` and `LOCALAPPDATA`; its cases
+/// wait on finding W6 in `sdlc/planning/windows.md`.
+#[cfg(unix)]
+#[derive(Clone, Copy)]
+pub(crate) enum Folder {
+    /// The folder that holds `config.json`.
+    Config,
+    /// The answer cache.
+    Cache,
+    /// The usage totals.
+    Usage,
+}
+
+#[cfg(unix)]
+impl Folder {
+    /// The variable that puts this folder under `root`, and its value.
+    pub(crate) fn variable(self, root: &Path) -> (&'static str, String) {
+        let (name, value) = if cfg!(target_os = "macos") {
+            ("HOME", root.to_owned())
+        } else {
+            match self {
+                Self::Config => ("XDG_CONFIG_HOME", root.join("config")),
+                Self::Cache => ("XDG_CACHE_HOME", root.join("cache")),
+                Self::Usage => ("XDG_STATE_HOME", root.join("state")),
+            }
+        };
+        (name, value.to_str().expect("a UTF-8 test folder").to_owned())
+    }
+
+    /// Where the command keeps this folder once `variable` names `root`.
+    pub(crate) fn under(self, root: &Path) -> std::path::PathBuf {
+        let mac = cfg!(target_os = "macos");
+        match self {
+            Self::Config if mac => root.join("Library/Application Support/thinkthen"),
+            Self::Cache if mac => root.join("Library/Caches/thinkthen"),
+            Self::Usage if mac => root.join("Library/Application Support/thinkthen/usage"),
+            Self::Config => root.join("config/thinkthen"),
+            Self::Cache => root.join("cache/thinkthen"),
+            Self::Usage => root.join("state/thinkthen"),
+        }
+    }
+}
+
 impl ChildEnvironment for Command {
     fn clear_environment(&mut self) -> &mut Self {
         self.env_clear();
