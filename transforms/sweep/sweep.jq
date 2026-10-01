@@ -62,7 +62,7 @@ def has_repeated_ids($rows):
 
 def verdict($p; $cut):
   if ($cut | type) == "array" then
-    if $p >= $cut[1] then "yes" elif $p <= $cut[0] then "no" else "unsure" end
+    if $p >= $cut[1] then "yes" elif $p < $cut[0] then "no" else "unsure" end
   else
     if $p >= $cut then "yes" else "no" end
   end;
@@ -416,7 +416,7 @@ def decision_rule($threshold):
 def decision_value($probability; $rule):
   if $rule.kind == "cut" then $probability >= $rule.cut
   elif $probability >= $rule.high then true
-  elif $probability <= $rule.low then false
+  elif $probability < $rule.low then false
   else null
   end;
 

@@ -3,9 +3,9 @@
 # Reads: the rows of one run, one JSON object per line. Run it with
 #   `jq -n --argjson band '[0.2,0.8]' -f band.jq ROWS`.
 # Arguments:
-#   $band  the pair [low, high]. A probability at or above high is yes, at or
-#          below low is no, and anything strictly between is not sure, which
-#          is the rule in specification/threshold.md. The band is applied to
+#   $band  the pair [low, high]. A probability at or above high is yes, below
+#          low is no, and anything from low up to high is not sure, which is
+#          the rule in specification/threshold.md. The band is applied to
 #          the stored probability, so no request is made.
 # Policies:
 #   - Unsure rows are counted apart. They are never scored right or wrong,
@@ -28,7 +28,7 @@
 def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 
 def verdict($p):
-  if $p >= $band[1] then "yes" elif $p <= $band[0] then "no" else "unsure" end;
+  if $p >= $band[1] then "yes" elif $p < $band[0] then "no" else "unsure" end;
 
 def has_repeated_ids($rows):
   [$rows[] | select((.input? | type) == "object" and (.input | has("id")))
