@@ -43,23 +43,25 @@ scratch_clean() {
 }
 
 # usage_home: point the usage folder of everything this run starts at a scratch copy of the
-# platform cache folder, and set usage_folder to it. The copy links each entry of the real folder
-# except thinkthen-usage, so toolchain caches still resolve. Linux moves XDG_CACHE_HOME. macOS
-# finds the usage folder from HOME alone, so it pins CARGO_HOME and RUSTUP_HOME and moves HOME to
-# a copy whose Library and Library/Caches are copied the same way.
+# platform state folder, and set usage_folder to it (ticket 0360). The copy links each entry of
+# the real folder except thinkthen, so other programs' state still resolves. Linux moves
+# XDG_STATE_HOME. macOS finds the usage folder from HOME alone, so it pins CARGO_HOME and
+# RUSTUP_HOME and moves HOME to a copy whose Library and Library/Application Support are copied
+# the same way. The copy skips Application Support/thinkthen, so tests also miss the real
+# configuration file.
 usage_home() {
 	scratch_dir usage_scratch
 	if [ "$(uname -s)" = Darwin ]; then
 		export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}" RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
 		usage_link "$HOME" "$usage_scratch" Library
-		usage_link "$HOME/Library" "$usage_scratch/Library" Caches
-		usage_link "$HOME/Library/Caches" "$usage_scratch/Library/Caches" thinkthen-usage
+		usage_link "$HOME/Library" "$usage_scratch/Library" 'Application Support'
+		usage_link "$HOME/Library/Application Support" "$usage_scratch/Library/Application Support" thinkthen
 		export HOME="$usage_scratch"
-		usage_folder=$usage_scratch/Library/Caches/thinkthen-usage
+		usage_folder="$usage_scratch/Library/Application Support/thinkthen/usage"
 	else
-		usage_link "${XDG_CACHE_HOME:-$HOME/.cache}" "$usage_scratch" thinkthen-usage
-		export XDG_CACHE_HOME="$usage_scratch"
-		usage_folder=$usage_scratch/thinkthen-usage
+		usage_link "${XDG_STATE_HOME:-$HOME/.local/state}" "$usage_scratch" thinkthen
+		export XDG_STATE_HOME="$usage_scratch"
+		usage_folder=$usage_scratch/thinkthen
 	fi
 }
 

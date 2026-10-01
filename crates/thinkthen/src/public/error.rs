@@ -287,6 +287,7 @@ fn message(error: &EngineError) -> String {
             "the default cache folder is not private; set its permissions to 0700 or use no_cache"
         }
         EngineError::Defect(what) => return format!("defect: {what}"),
+        EngineError::UsageUnreadable(sentence) => return sentence.clone(),
         EngineError::Usage(what) => what,
         EngineError::ProfileLimit(limit) => {
             return format!(

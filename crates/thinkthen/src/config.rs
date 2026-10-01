@@ -298,10 +298,12 @@ pub(crate) fn cache_path() -> Option<PathBuf> {
     )
 }
 
+/// The usage totals are state, not cache, so clearing the cache keeps them
+/// (ticket 0360).
 pub(crate) fn usage_path() -> Option<PathBuf> {
     resolve_usage(
         current_platform(),
-        variable("XDG_CACHE_HOME"),
+        variable("XDG_STATE_HOME"),
         variable("HOME"),
     )
 }
@@ -331,10 +333,13 @@ fn resolve_cache(platform: Platform, xdg: Option<String>, home: Option<String>) 
 
 fn resolve_usage(platform: Platform, xdg: Option<String>, home: Option<String>) -> Option<PathBuf> {
     match platform {
-        Platform::Macos => absolute(home).map(|home| home.join("Library/Caches/thinkthen-usage")),
+        // macOS has no state folder. The configuration file shares
+        // `Application Support/thinkthen`, so usage takes a private folder below it.
+        Platform::Macos => absolute(home)
+            .map(|home| home.join("Library/Application Support/thinkthen/usage")),
         Platform::Linux => absolute(xdg)
-            .map(|home| home.join("thinkthen-usage"))
-            .or_else(|| absolute(home).map(|home| home.join(".cache/thinkthen-usage"))),
+            .map(|home| home.join("thinkthen"))
+            .or_else(|| absolute(home).map(|home| home.join(".local/state/thinkthen"))),
     }
 }
 
@@ -482,16 +487,6 @@ mod tests {
             Some(PathBuf::from("/config/thinkthen/config.json"))
         );
         assert_eq!(resolve_cache(Platform::Linux, None, None), None);
-        assert_eq!(
-            resolve_usage(Platform::Linux, Some("/cache".to_owned()), None),
-            Some(PathBuf::from("/cache/thinkthen-usage"))
-        );
-        assert_eq!(
-            resolve_usage(Platform::Macos, None, Some("/Users/person".to_owned())),
-            Some(PathBuf::from(
-                "/Users/person/Library/Caches/thinkthen-usage"
-            ))
-        );
         for platform in [Platform::Linux, Platform::Macos] {
             for unusable in ["", "relative"] {
                 assert_eq!(
@@ -511,6 +506,32 @@ mod tests {
                     None
                 );
             }
+        }
+    }
+
+    #[test]
+    fn usage_lives_in_the_state_folder_and_never_follows_the_cache() {
+        let home = Some("/home/person");
+        for (platform, state, home, expected) in [
+            (Platform::Linux, Some("/state"), home, Some("/state/thinkthen")),
+            (Platform::Linux, None, home, Some("/home/person/.local/state/thinkthen")),
+            (Platform::Linux, Some("relative"), home, Some("/home/person/.local/state/thinkthen")),
+            (Platform::Linux, Some("/state"), None, Some("/state/thinkthen")),
+            (Platform::Linux, None, None, None),
+            (Platform::Linux, Some(""), Some("relative"), None),
+            (
+                Platform::Macos,
+                Some("/ignored"),
+                Some("/Users/person"),
+                Some("/Users/person/Library/Application Support/thinkthen/usage"),
+            ),
+            (Platform::Macos, None, Some("relative"), None),
+        ] {
+            assert_eq!(
+                resolve_usage(platform, state.map(str::to_owned), home.map(str::to_owned)),
+                expected.map(PathBuf::from),
+                "{state:?} {home:?}"
+            );
         }
     }
 }

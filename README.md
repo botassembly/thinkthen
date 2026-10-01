@@ -113,7 +113,7 @@ The cache is on by default.
 
 ## Usage counts
 
-`thinkthen status` reports the resolved configuration, cache size, and request, retry, token, and cache-answer counts for the current UTC month and in total. It counts what every surface sends: the command, and any library, SQL extension, or data frame engine built from the environment. An engine a Rust caller builds by hand keeps its counts in memory. The usage files hold no judged evidence and no key. They are local conservative statistics, not an account bill.
+`thinkthen status` reports the resolved configuration, cache size, and request, retry, token, and cache-answer counts for the current UTC month and in total. It counts what every surface sends: the command, and any library, SQL extension, or data frame engine built from the environment. An engine a Rust caller builds by hand keeps its counts in memory. The usage files hold no judged evidence and no key. They are local conservative statistics, not an account bill. They live in the state folder, `~/.local/state/thinkthen` (or `$XDG_STATE_HOME/thinkthen`) on Linux and `~/Library/Application Support/thinkthen/usage` on macOS, so clearing the cache keeps them. If that folder cannot be read, a run refuses before it sends and names the file to move aside.
 
 ## How-tos
 

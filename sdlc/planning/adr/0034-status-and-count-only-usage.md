@@ -2,6 +2,7 @@
 
 - Status: Accepted by ticket 0063
 - Date: 2026-09-22
+- Amended by ticket 0360 (2026-09-30): the totals live in the platform state folder (`$XDG_STATE_HOME/thinkthen` on Linux, `~/Library/Application Support/thinkthen/usage` on macOS), not the cache sibling `thinkthen-usage`. One month file holds all five counts. A usage folder that exists and cannot be read refuses a process's first send and every later one, and `status` reports it and exits 0. A write that fails after a good start keeps the warning policy below.
 
 ## Decision
 

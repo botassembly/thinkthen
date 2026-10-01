@@ -131,7 +131,7 @@ pg_start() {
 	url=$1 cache=$2
 	[ "$(url_host "$url")" = 127.0.0.1 ] || { echo "refused: $url is not loopback" >&2; return 2; }
 	env -u THINKTHEN_API_KEY THINKTHEN_API_KEY=$FAKE_KEY THINKTHEN_BASE_URL="$url" THINKTHEN_CACHE="$cache" \
-		HOME="$SCRATCH" XDG_CACHE_HOME="$SCRATCH/.cache" XDG_CONFIG_HOME="$SCRATCH/.config" \
+		HOME="$SCRATCH" XDG_CACHE_HOME="$SCRATCH/.cache" XDG_CONFIG_HOME="$SCRATCH/.config" XDG_STATE_HOME="$SCRATCH/.local/state" \
 		sh "$LIMIT" 30 "$BIN/pg_ctl" -D "$DATA" -l "$LOG" -w -t 10 start >/dev/null || return 1
 	if [ "$PG_HOST" = Darwin ]; then
 		ps eww -p "$(head -1 "$DATA/postmaster.pid")" -o command= | grep -Fq "THINKTHEN_API_KEY=$FAKE_KEY" || {

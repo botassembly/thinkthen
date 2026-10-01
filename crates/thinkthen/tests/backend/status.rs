@@ -38,7 +38,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
             "configuration": {"path": home.join(".config/thinkthen/config.json"), "present": false},
             "backend": {"name": null, "url": "https://api.typesafe.ai/v1/systemone", "url_source": "built_in", "model": "jev-1.13.0", "model_source": "built_in", "key_variable": "THINKTHEN_API_KEY", "api_key_set": false},
             "cache": {"enabled": true, "enabled_source": "built_in", "path": home.join(".cache/thinkthen"), "path_source": "platform", "entries": 0, "bytes": 0, "old_entries": 0, "prune_target_bytes": 100000000, "prune_target_source": "built_in"},
-            "usage": {"path": home.join(".cache/thinkthen-usage"), "month": month, "this_month": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}, "total": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}}
+            "usage": {"path": home.join(".local/state/thinkthen"), "month": month, "this_month": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}, "total": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}}
         })
     );
     assert_eq!(output.stdout.last(), Some(&b'\n'));
@@ -51,7 +51,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
         env!("CARGO_PKG_VERSION"),
         home.join(".config/thinkthen/config.json").display(),
         home.join(".cache/thinkthen").display(),
-        home.join(".cache/thinkthen-usage").display(),
+        home.join(".local/state/thinkthen").display(),
         month,
     );
     assert_eq!(
@@ -218,6 +218,7 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
             .args(["status", "--json"])
             .env("XDG_CONFIG_HOME", &config_home)
             .env("XDG_CACHE_HOME", &cache_home)
+            .env("XDG_STATE_HOME", home.join("state"))
             .env("THINKTHEN_BASE_URL", "https://environment.example/v1")
             .env("THINKTHEN_CACHE", &named_cache)
             .env("THINKTHEN_API_KEY", "secret-status-marker"),
@@ -250,73 +251,111 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
     assert_eq!(value["cache"]["prune_target_source"], "configuration");
     assert_eq!(
         value["usage"]["path"],
-        cache_home
-            .join("thinkthen-usage")
-            .to_string_lossy()
-            .as_ref()
+        home.join("state/thinkthen").to_string_lossy().as_ref()
     );
-    assert!(!home.join("named/thinkthen-usage").exists());
+    assert!(!cache_home.join("thinkthen-usage").exists());
 }
 
+/// Plant a private usage folder under `home`'s state folder with these
+/// files, each private.
 #[cfg(unix)]
-#[test]
-fn a_missing_usage_lock_names_the_lock_without_creating_or_changing_state() {
+fn planted(label: &str, files: &[(&str, &[u8])]) -> (std::path::PathBuf, std::path::PathBuf) {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let home =
-        std::env::temp_dir().join(format!("thinkthen-status-no-lock-{}", std::process::id()));
+    let home = std::env::temp_dir().join(format!("thinkthen-status-{label}-{}", std::process::id()));
     let _absent = fs::remove_dir_all(&home);
-    let usage = home.join(".cache/thinkthen-usage");
+    let usage = home.join(".local/state/thinkthen");
     fs::create_dir_all(&usage).expect("usage folder");
     fs::set_permissions(&usage, fs::Permissions::from_mode(0o700)).expect("private folder");
-    let month = usage.join("2026-09.json");
+    for (name, bytes) in files {
+        fs::write(usage.join(name), bytes).expect("usage file");
+        fs::set_permissions(usage.join(name), fs::Permissions::from_mode(0o600)).expect("private");
+    }
+    (home, usage)
+}
+
+/// Main refused a folder without `.lock` with exit 5. The writer makes
+/// `.lock` before any month, so such a folder reads as zero (ticket 0360).
+#[cfg(unix)]
+#[test]
+fn a_missing_usage_lock_reads_as_zero_without_creating_or_changing_state() {
     let bytes = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":2,\"output_tokens\":3,\"cache_answers\":0}\n";
-    fs::write(&month, bytes).expect("month");
-    fs::set_permissions(&month, fs::Permissions::from_mode(0o600)).expect("private month");
-
+    let (home, usage) = planted("no-lock", &[("2026-09.json", bytes)]);
     let output = run::output(command(&home).args(["status", "--json"])).expect("status");
-    assert_eq!(output.status.code(), Some(5));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: status could not read local usage file .lock: unsafe or unreadable state\n"
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(output.stderr, b"");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
+    assert_eq!(value["usage"]["total"]["requests_sent"], 0);
+    assert_eq!(fs::read(usage.join("2026-09.json")).expect("unchanged month"), bytes);
+    assert_eq!(fs::read_dir(&usage).expect("unchanged directory").count(), 1);
+}
+
+/// Main failed with exit 5 and printed no report. Status now reports the
+/// rest, shows the counts as unavailable, and names the file and the fix.
+#[cfg(unix)]
+#[test]
+fn a_malformed_usage_month_reports_unavailable_counts_and_the_fix() {
+    let (home, usage) = planted("strict", &[(".lock", b""), ("2026-09.json", b"")]);
+    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
+    assert_eq!(output.status.code(), Some(0));
+    let sentence = format!(
+        "thinkthen: cannot read the usage totals: {} has invalid contents. Move it aside, and counting starts again.\n",
+        usage.join("2026-09.json").display()
     );
-    assert_eq!(fs::read(&month).expect("unchanged month"), bytes);
-    assert_eq!(
-        fs::read_dir(&usage).expect("unchanged directory").count(),
-        1
-    );
-    assert!(!usage.join(".lock").exists());
+    assert_eq!(String::from_utf8_lossy(&output.stderr), sentence);
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
+    assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
+    assert_eq!(value["usage"]["total"], serde_json::Value::Null);
+    assert_eq!(value["cache"]["path"], home.join(".cache/thinkthen").to_string_lossy().as_ref());
+    let human = run::output(command(&home).arg("status")).expect("human status");
+    assert_eq!(human.status.code(), Some(0));
+    assert_eq!(String::from_utf8_lossy(&human.stderr), sentence);
+    let text = String::from_utf8(human.stdout).expect("text");
+    assert!(text.ends_with("month_requests_sent unavailable\nmonth_retries unavailable\nmonth_input_tokens unavailable\nmonth_output_tokens unavailable\nmonth_cache_answers unavailable\ntotal_requests_sent unavailable\ntotal_retries unavailable\ntotal_input_tokens unavailable\ntotal_output_tokens unavailable\ntotal_cache_answers unavailable\n"), "{text}");
+    assert_eq!(fs::read(usage.join("2026-09.json")).expect("after"), b"");
     assert!(!usage.join(".update.tmp").exists());
 }
 
+/// QA's case: an older build wrote retries into the month file and a newer
+/// one wrote a `retries-` file with another value. Main refused to choose
+/// (exit 5, "retry totals differ"). The month file alone holds the counts.
 #[cfg(unix)]
 #[test]
-fn a_malformed_recognized_usage_month_fails_without_partial_output_or_repair() {
+fn an_old_retries_file_beside_a_month_with_retries_is_ignored() {
+    let (home, _usage) = planted(
+        "two-retries",
+        &[
+            (".lock", b""),
+            ("2026-09.json", b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":4,\"retries\":2,\"input_tokens\":7,\"output_tokens\":3,\"cache_answers\":0}\n"),
+            ("retries-2026-09.json", b"{\"schema\":\"thinkthen.usage.retries/1\",\"retries\":5}\n"),
+        ],
+    );
+    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
+    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(output.stderr, b"");
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
+    assert_eq!(value["usage"]["total"]["requests_sent"], 4);
+    assert_eq!(value["usage"]["total"]["retries"], 2);
+}
+
+/// An unsafe month mode gives the unsafe sentence with the full path.
+#[cfg(unix)]
+#[test]
+fn an_unsafe_usage_month_names_the_unsafe_fix() {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let home = std::env::temp_dir().join(format!("thinkthen-status-strict-{}", std::process::id()));
-    let _absent = fs::remove_dir_all(&home);
-    let usage = home.join(".cache/thinkthen-usage");
-    fs::create_dir_all(&usage).expect("usage folder");
-    fs::set_permissions(&usage, fs::Permissions::from_mode(0o700)).expect("private folder");
-    let lock = usage.join(".lock");
-    fs::write(&lock, []).expect("lock");
-    fs::set_permissions(&lock, fs::Permissions::from_mode(0o600)).expect("private lock");
-    let month = usage.join("2026-09.json");
-    fs::write(&month, b"").expect("zero-byte month");
-    fs::set_permissions(&month, fs::Permissions::from_mode(0o600)).expect("private month");
-    let before = fs::read(&month).expect("before");
-
-    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
-    assert_eq!(output.status.code(), Some(5));
-    assert!(output.stdout.is_empty());
+    let month = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
+    let (home, usage) = planted("unsafe", &[(".lock", b""), ("2026-09.json", month)]);
+    fs::set_permissions(usage.join("2026-09.json"), fs::Permissions::from_mode(0o644)).expect("mode");
+    let output = run::output(command(&home).args(["status"])).expect("status");
+    assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: status could not read local usage file 2026-09.json: invalid contents\n"
+        format!(
+            "thinkthen: cannot read the usage totals: {} has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.\n",
+            usage.join("2026-09.json").display()
+        )
     );
-    assert_eq!(fs::read(month).expect("after"), before);
-    assert!(!usage.join(".update.tmp").exists());
 }
 
 #[cfg(unix)]

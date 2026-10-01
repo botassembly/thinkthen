@@ -64,6 +64,10 @@ pub(crate) enum Error {
     RecordingStorage,
     RecordingPathIsFile,
     DefaultCachePrivate,
+    /// The usage folder exists and cannot be read, so a send would go
+    /// uncounted (ticket 0360). It carries the whole sentence, which names
+    /// only a generated file name.
+    UsageUnreadable(String),
     CacheEntry,
     Defect(&'static str),
     Usage(&'static str),
@@ -165,7 +169,8 @@ impl Error {
             | Self::Entry(_, _)
             | Self::RecordingStorage
             | Self::RecordingPathIsFile
-            | Self::DefaultCachePrivate => Kind::Local,
+            | Self::DefaultCachePrivate
+            | Self::UsageUnreadable(_) => Kind::Local,
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_)

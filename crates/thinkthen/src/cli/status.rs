@@ -17,6 +17,9 @@ struct Status {
     backend: Backend,
     cache: Cache,
     usage: UsageStatus,
+    /// Why the usage counts are unavailable, said on standard error.
+    #[serde(skip)]
+    problem: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -98,6 +101,11 @@ pub(crate) fn run(
     } else {
         write_human(&status, &mut writer)?;
     }
+    if let Some(problem) = &status.problem {
+        // Status still reports everything else and exits 0 (ticket 0360).
+        let mut stderr = std::io::stderr().lock();
+        let _unwritten = writeln!(stderr, "thinkthen: {problem}").and_then(|()| stderr.flush());
+    }
     Ok(ExitCode::SUCCESS)
 }
 
@@ -121,14 +129,14 @@ fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Fa
     let resolved_backend = environment.settle(&choice, None)?;
     let cache = cache_status(environment)?;
     let month = crate::engine::usage::month_now();
-    let usage = environment
+    let (usage, problem) = match environment
         .usage_path()
-        .map(|path| crate::engine::usage::read(path, &month))
-        .transpose()
-        .map_err(|error| Failure::StatusUsage {
-            name: error.name.clone(),
-            category: error.category(),
-        })?;
+        .map(|path| (path, crate::engine::usage::read(path, &month)))
+    {
+        None => (None, None),
+        Some((_, Ok(totals))) => (Some(totals), None),
+        Some((path, Err(failure))) => (None, Some(failure.sentence(Some(path)))),
+    };
     Ok(Status {
         schema: "thinkthen.status/2",
         version: env!("CARGO_PKG_VERSION"),
@@ -152,6 +160,7 @@ fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Fa
             this_month: usage.as_ref().map(|totals| totals.month.into()),
             total: usage.map(|totals| totals.total.into()),
         },
+        problem,
     })
 }
 
