@@ -74,7 +74,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 
 ## Maintaining these pages
 
-A how-to is one of the four names in the table in [`../README.md`](../README.md). A green page is the how-to, the demo, and the test at once. `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy.
+A how-to is one of the four names in the table in [`CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names). A green page is the how-to, the demo, and the test at once. `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy.
 
 ADR 0018 fixed the base list at 20 pages, and later tickets added focused pages. This page holds the one list of how-tos. `sdlc/planning/documentation-plan.md` keeps the form, the capability map, the numbers that left and the rules, and points here. `sdlc/scripts/pages` checks that every relative link resolves.
 

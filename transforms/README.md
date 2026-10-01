@@ -1,6 +1,6 @@
 # transforms/
 
-A report transform is a metric or a policy, as ADR 0015 item 1 defines them. A metric reads a whole run and prints numbers. A policy reads one row and names an action. Eight transforms here are metrics, and `triage` is a policy. `trials` prepares repeated observations for a metric and prints derived rows. The names table in [`README.md`](../README.md) holds the four names.
+A report transform is a metric or a policy, as ADR 0015 item 1 defines them. A metric reads a whole run and prints numbers. A policy reads one row and names an action. Eight transforms here are metrics, and `triage` is a policy. `trials` prepares repeated observations for a metric and prints derived rows. The names table in [`CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) holds the four names.
 
 A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a header that states what it reads, what arguments it takes, and what it does at every edge, and one short `example.sh` with the pipeline line. The page that teaches it is a green demo, so the gate runs the transform against committed rows and no transform can drift from what it claims.
 

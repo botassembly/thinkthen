@@ -9,6 +9,28 @@
 ThinkThen answers typed questions about text. Ask from a shell script or from your own program, and get back `true`, `false`, a label, or a number. A failed call never looks like an answer.
 
 ```sh
+thinkthen decide 'Does the customer ask for money back?' < message.txt
+```
+
+```text
+true
+```
+
+The exit code is 0 for yes, 1 for no, and 3 for not sure. A shell `if` can branch on it. [How-to 01](https://github.com/botassembly/thinkthen/tree/main/demos/01-refund-gate) runs this question against a recorded answer.
+
+## Install
+
+```sh
+curl -fsSL https://thinkthen.dev/install.sh | sh
+```
+
+A live run needs a backend and its key. [Backends](https://thinkthen.dev/install/backends/) shows how to get a TypeSafe key or point ThinkThen at another server. Until the first release ships, build the command from a checkout as [CONTRIBUTING.md](https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md) shows.
+
+### Try it with no key
+
+From a checkout of this repository, replay a recorded answer with no key and no network:
+
+```sh
 cd demos/27-test-with-no-network
 thinkthen decide 'Does this report say what the person did before the problem appeared?' \
   --replay recording < report.txt
@@ -18,15 +40,7 @@ thinkthen decide 'Does this report say what the person did before the problem ap
 true
 ```
 
-This run replays a recorded answer, so it needs no key and no network. Drop `--replay recording` to ask a live model. [How-to 27](https://github.com/botassembly/thinkthen/tree/main/demos/27-test-with-no-network) shows how a test uses a recording.
-
-## Install
-
-```sh
-curl -fsSL https://thinkthen.dev/install.sh | sh
-```
-
-A live run needs a backend and its key. [Backends](https://thinkthen.dev/install/backends/) shows how to get a TypeSafe key or point ThinkThen at another server. Until the first release ships, build the command from a checkout as [CONTRIBUTING.md](https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md) shows.
+[How-to 27](https://github.com/botassembly/thinkthen/tree/main/demos/27-test-with-no-network) shows how a test uses a recording.
 
 ## The ten functions
 
@@ -73,16 +87,7 @@ By default ThinkThen sends your question and text to TypeSafe. [Backends](https:
 
 ## Contributing
 
-[CONTRIBUTING.md](https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md) explains how to build from a checkout and how work is recorded. Run the gate scripts `sdlc/scripts/install`, `lint`, `test`, `spec`, and `surfaces`, cheapest first. No gate touches the network.
-
-ADR 0015 fixes four names, and other pages link this table.
-
-| Name | What it is | What runs it |
-| --- | --- | --- |
-| question file | JSON that holds what to ask, with its options, levels, and cuts | `thinkthen` |
-| transform | one `.jq` file that reads saved rows | `jq` |
-| how-to | a folder under `demos/` that holds a worked example you can run again | the `spec` gate |
-| pipeline | a Bash script that runs your own job over your own input | Bash |
+[CONTRIBUTING.md](https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md) explains how to build from a checkout, run the gate, and record work. It also defines the four names this repository uses. No gate touches the network.
 
 ## License
 
