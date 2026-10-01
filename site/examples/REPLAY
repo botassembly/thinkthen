@@ -7,6 +7,7 @@
 # examples/ has no line here.
 functions/annotate/ada.adb
 functions/annotate/c.c
+functions/annotate/cobol.cob
 functions/annotate/dart.dart
 functions/annotate/duckdb.sql
 functions/annotate/objective-c.m
@@ -19,6 +20,7 @@ functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/ada.adb
 functions/choose/c.c
+functions/choose/cobol.cob
 functions/choose/dart.dart
 functions/choose/objective-c.m
 functions/choose/php.php
@@ -29,6 +31,7 @@ functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/ada.adb
 functions/decide/c.c
+functions/decide/cobol.cob
 functions/decide/dart.dart
 functions/decide/objective-c.m
 functions/decide/php.php
@@ -40,6 +43,7 @@ functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/ada.adb
 functions/filter/c.c
+functions/filter/cobol.cob
 functions/filter/dart.dart
 functions/filter/objective-c.m
 functions/filter/php.php
@@ -51,6 +55,7 @@ functions/filter/rust.rs
 functions/filter/sqlite.sql
 functions/find/ada.adb
 functions/find/c.c
+functions/find/cobol.cob
 functions/find/dart.dart
 functions/find/objective-c.m
 functions/find/php.php
@@ -69,6 +74,7 @@ functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/ada.adb
 functions/rank/c.c
+functions/rank/cobol.cob
 functions/rank/dart.dart
 functions/rank/duckdb.sql
 functions/rank/objective-c.m
@@ -80,6 +86,7 @@ functions/rank/rust.rs
 functions/rank/typescript.ts
 functions/recognize/ada.adb
 functions/recognize/c.c
+functions/recognize/cobol.cob
 functions/recognize/dart.dart
 functions/recognize/duckdb.sql
 functions/recognize/objective-c.m
@@ -93,6 +100,7 @@ functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/ada.adb
 functions/relate/c.c
+functions/relate/cobol.cob
 functions/relate/dart.dart
 functions/relate/duckdb.sql
 functions/relate/objective-c.m
@@ -105,6 +113,7 @@ functions/relate/rust.rs
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
 functions/score/ada.adb
+functions/score/cobol.cob
 functions/score/dart.dart
 functions/score/duckdb.sql
 functions/score/objective-c.m
@@ -118,6 +127,7 @@ functions/score/rust.rs
 functions/score/sqlite.sql
 functions/tag/ada.adb
 functions/tag/c.c
+functions/tag/cobol.cob
 functions/tag/dart.dart
 functions/tag/duckdb.sql
 functions/tag/objective-c.m
