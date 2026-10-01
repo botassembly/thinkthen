@@ -514,6 +514,73 @@ export const SURFACES = [
     ],
   },
   {
+    slug: 'cpp', name: 'C++', deckHeading: null,
+    lang: 'cpp', tab: 'C++',
+    blurb: 'One C++17 header over the C library. Calls return `CallResult` values. The engine frees itself when it goes out of scope.',
+    unsureWord: 'tt::Outcome::notSure',
+    facts: '`decide` returns a `CallResult`. Its `.value` holds the answer, and its `.facts` holds this call\'s run facts as `tt::Json`.',
+    errors: 'A failed call throws a `tt::Failure`. Its `tt::ErrorKind` names one of six kinds, with the message and the retry flag.',
+    settings: '`tt::create(settings)` takes the settings as JSON. `"record"` saves every answer to a folder. `"replay"` answers from that folder with no connection.',
+    install: [
+      ['thinkthen-cpp-VERSION-TARGET.tar.gz', 'The header and a CMake package, from each release.'],
+      ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
+    ],
+    particular: [
+      'The CMake package gives `find_package(thinkthen-cpp)`.',
+      '`tt::Engine` and `tt::CancelToken` move but do not copy. Join every thread that uses them before they go.',
+    ],
+  },
+  {
+    slug: 'objective-c', name: 'Objective-C', deckHeading: null,
+    lang: 'objective-c', tab: 'Objective-C',
+    blurb: 'A `TTClient` over the C library, for GNU Objective-C with no Foundation.',
+    unsureWord: 'TTOutcomeNotSure',
+    facts: 'Each typed call sets `facts:` to this call\'s run facts as JSON text. Free it with `free`.',
+    errors: 'A failed call returns a `TTErrorKind` and fills the `TTFailure`. A failed call leaves the answer untouched.',
+    settings: '`createWithSettings:length:failure:` takes the settings as JSON. `"record"` saves every answer to a folder. `"replay"` answers from that folder with no connection.',
+    install: [
+      ['thinkthen-objective-c-VERSION-TARGET.tar.gz', 'The binding\'s source, from each release.'],
+      ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
+    ],
+    particular: [
+      'The `*Bytes` forms, such as `decideBytes`, take the text with its length, so the text may hold NUL bytes.',
+    ],
+  },
+  {
+    slug: 'cobol', name: 'COBOL', deckHeading: null,
+    lang: 'cobol', tab: 'COBOL',
+    blurb: 'A copybook and called programs over the C library, for GnuCOBOL.',
+    unsureWord: 'outcome-not-sure',
+    facts: '`TT-DECIDE` fills `tt-facts` with this call\'s run facts as JSON text. `TT-JSON-MEMBER` reads one member.',
+    errors: '`tt-failure` holds the kind as a code from 1 to 6, the retry flag and the message. Its level-88 names, such as `failure-backend`, test each kind.',
+    settings: '`TT-ENGINE-NEW` takes the settings as JSON. `"record"` saves every answer to a folder. `"replay"` answers from that folder with no connection.',
+    install: [
+      ['thinkthen-cobol-VERSION-TARGET.tar.gz', 'The copybook and the called programs, from each release.'],
+      ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
+    ],
+    particular: [
+      'Compile the programs you call from `src/` with your own, as the build line does with `TT-DECIDE`.',
+      'The copybook names no, yes and not sure as level-88 conditions, so `if outcome-yes` reads the answer.',
+    ],
+  },
+  {
+    slug: 'ada', name: 'Ada', deckHeading: null,
+    lang: 'ada', tab: 'Ada',
+    blurb: 'A `Thinkthen` package over the C library, for GNAT. Each call is a procedure with out parameters.',
+    unsureWord: 'Not_Sure',
+    facts: '`Decide` sets `Facts` to this call\'s run facts as JSON text. `Member` reads one member.',
+    errors: '`Decide` sets `Error`. Its `Kind` runs from `Usage` to `Defect`, and `None` means the call answered.',
+    settings: '`Configure` takes the settings as JSON. `"record"` saves every answer to a folder. `"replay"` answers from that folder with no connection.',
+    install: [
+      ['thinkthen-ada-VERSION-TARGET.tar.gz', 'The package and its GNAT project, from each release.'],
+      ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
+    ],
+    particular: [
+      '`gprbuild -P thinkthen.gpr` builds the package as a library.',
+      '`pragma Assert` runs only under `-gnata`.',
+    ],
+  },
+  {
     slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB',
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',

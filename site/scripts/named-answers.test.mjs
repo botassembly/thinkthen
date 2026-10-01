@@ -40,6 +40,27 @@ const CASES = [
   ['generic', 'c', 'pass', 'int is_spam;\nint code = thinkthen_decide(tt, q, m, &is_spam);', []],
   ['generic', 'c', 'fail', 'int answer;\nint code = thinkthen_decide(tt, q, m, &answer);', [[2, 'generic']]],
 
+  ['direct', 'cpp', 'pass', 'auto is_refund = tt::decide(engine, q, m);\nassert(is_refund.value.outcome == tt::Outcome::yes);', []],
+  ['direct', 'cpp', 'fail', 'assert(tt::decide(engine, q, m).value.outcome\n       == tt::Outcome::yes);', [[1, 'direct']]],
+  ['direct', 'cpp', 'fail', 'std::cout << tt::decide(engine, q, m).ok;', [[1, 'direct']]],
+  ['direct', 'cpp', 'pass', 'const char *q = R"({"decide": "Refund?"})";\nauto is_refund = tt::decide(engine, q, m);', []],
+  ['generic', 'cpp', 'pass', 'is_refund = tt::decide(\n    engine, q, m);', []],
+  ['generic', 'cpp', 'fail', 'auto result = tt::decide(engine, q, m);', [[1, 'generic']]],
+  ['direct', 'objc', 'pass', '[client decide:q\n          text:m\n        answer:&is_refund];\nassert(is_refund.outcome == TTOutcomeYes);', []],
+  ['direct', 'objective-c', 'fail', 'if ([client decide:q text:m answer:&is_refund] == TTErrorNone) {', [[1, 'direct']]],
+  ['generic', 'objective-c', 'fail', '[client decide:q\n          text:m\n        answer:&answer];', [[1, 'generic']]],
+  ['generic', 'objc', 'pass', 'TTDecision is_refund = {0};', []],
+  ['direct', 'cobol', 'pass', 'call "TT-DECIDE" using engine\n    question tt-answer.\nif not outcome-yes\n    call "TT-DECIDE" using engine question tt-answer\nend-if', []],
+  ['direct', 'cobol', 'pass', "move '(call \"TT-DECIDE\" using x)' to question", []],
+  ['generic', 'cobol', 'fail', 'call "TT-DECIDE" using engine\n    question question-length\n    result tt-facts.', [[1, 'generic']]],
+  ['generic', 'cobol', 'pass', 'call "tt-decide" using engine question tt-answer.', []],
+  ['direct', 'ada', 'pass', 'Decide\n  (Client,\n   Question,\n   Is_Refund);\npragma Assert (Is_Refund.Value = Yes);', []],
+  ['direct', 'ada', 'pass', 'if Ready then\n   Decide (Client, Question, Is_Refund);\nend if;', []],
+  ['direct', 'ada', 'fail', 'pragma Assert\n  (Decide (Client, Question) = Yes);', [[1, 'direct']]],
+  ['direct', 'ada', 'fail', 'Put_Line (Decide (Client, Question));', [[1, 'direct']]],
+  ['generic', 'ada', 'fail', 'Decide\n  (Client,\n   Question,\n   Result);', [[1, 'generic']]],
+  ['generic', 'ada', 'pass', 'Refund : constant String :=\n  "{""decide"": ""Refund?""}";', []],
+
   ['direct', 'bash', 'pass', 'is_spam=$(thinkthen decide "$q" < mail.txt)\nif [ "$is_spam" = yes ]; then\n  echo spam\nfi', []],
   ['direct', 'bash', 'fail', 'if thinkthen decide "$q" < mail.txt; then\n  echo spam\nfi', [[1, 'direct']]],
   ['direct', 'bash', 'fail', 'echo "$(thinkthen decide "$q" < mail.txt)"', [[1, 'direct']]],
@@ -79,7 +100,7 @@ const CASES = [
 
 // An unknown language throws a TypeError that names it and lists the
 // accepted names. The expected value is the name the message must quote.
-const ACCEPTED = 'Accepted names: bash, sh, python, typescript, ts, ruby, r, rust, c, sql.';
+const ACCEPTED = 'Accepted names: bash, sh, python, typescript, ts, ruby, r, rust, c, cpp, objective-c, objc, cobol, ada, sql.';
 function thrown(code, language) {
   try {
     namedAnswerProblems(code, language);
