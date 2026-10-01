@@ -1,0 +1,21 @@
+# 0370: PostgreSQL resolves a relative named file inside thinkthen.file_directory
+
+Status: in progress
+
+Lane: `worktrees/thinkthen-claude-3`. Branch: `ticket/0370-postgresql-relative-files`.
+
+## Outcome
+
+When `thinkthen.file_directory` is set, a relative `'@name'` in the PostgreSQL extension names a file inside that folder. An ordinary role holding the grant in `databases/postgresql/fixtures/grant.sql` reads `thinkthen_decide('@refund.json', body)` from the folder. Every confinement check still holds: a `..` step, a symlink that leaves the folder, a hard link, and an absolute path outside the folder all refuse with the one message. When the folder is unset, a relative name keeps today's meaning: a role with `pg_read_server_files` reads it from the backend's working folder, the server's data folder, and any other role is refused before any read.
+
+## Evidence
+
+- Starts from: a defect the site owner reported. `read_within` in `databases/postgresql/src/files.rs` joins a relative path to `std::env::current_dir()`, which is the server's data folder, and only then asks whether it sits beneath `thinkthen.file_directory`. So `'@refund.json'` fails as an ordinary role with the folder set, "the question file '@refund.json' did not read", while the absolute spelling inside the folder works. The site has three pages that use relative names: `@refund.json`, `@form.json` and `@names.json`. `the_file_gate` in `databases/postgresql/check.sh` tests only absolute names under the folder. Ticket 0111 and the 0111 design review set the confinement rules this ticket keeps.
+- Keeps: the privilege gate (`pg_read_server_files` or the folder), the 1 MiB cap, the regular-file rule, refusal before any open for an outside spelling, `openat2` beneath the folder on Linux and the macOS symlink rule, the one-link rule, the descriptor-path check, and the one refusal message for every unreadable cause. Absolute names behave as before. Relative names with the folder unset behave as before.
+- Changes: `read_named` joins a relative name to `thinkthen.file_directory` when the folder is set, for every role, so a name means one file whoever calls it. The confined read then judges the joined path by the existing rules. `databases/postgresql/README.md` says how a relative name resolves, with the folder set and unset. The settings row in `specification/settings.md` says the same in one clause. The specification has no separate page for `@` files. SQLite and DuckDB have no file-directory setting: SQLite reads a named file through the process's own working folder, and DuckDB reads through the database's own file system and its `allowed_directories`. Neither shares the defect, so neither changes.
+- Proof: an edge table of unit tests in `files.rs` over the resolution and the confined read: a relative name inside the folder reads; `../x` refuses; a relative name through a symlink leaving the folder refuses; an absolute name inside reads; an absolute name outside refuses; a relative name with the folder unset keeps the working-folder meaning. `the_file_gate` in `check.sh` adds the defect's exact call: the ordinary role with the narrowed grant and the folder set reads `'@refund.json'`, and `'@../anywhere.json'` refuses with the one message. Run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`, the PostgreSQL check's file steps, and `sdlc/scripts/lint`.
+- Defers: a superuser who set `thinkthen.file_directory` and also keeps relative-named files in the data folder must now name those absolutely; the README says so. No change to SQLite or DuckDB.
+
+## What the build taught us
+
+To be written before landing.
