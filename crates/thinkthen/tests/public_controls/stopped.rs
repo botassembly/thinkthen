@@ -55,7 +55,11 @@ fn a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new() {
     assert!(kept.len() <= 4 && kept.iter().zip(texts).all(|(row, text)| **row == text));
     assert_eq!(backend.count(), 4, "nothing new was sent");
 
-    // A second engine on one cache folder waits for the first's answer.
+    // A second engine on one cache folder waits for the first's answer. The
+    // first half's release lets every later held reply go, so this half holds
+    // on a backend of its own; with the shared one the first answer could land
+    // in the cache before the second engine asked (rehearsal run 36809341385).
+    let backend = Backend::start().expect("backend");
     let folder = std::env::temp_dir().join(format!("thinkthen-controls-{}", std::process::id()));
     let _gone = std::fs::remove_dir_all(&folder);
     let cached = || {
@@ -69,7 +73,7 @@ fn a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new() {
     let (first, second) = (cached(), cached());
     thread::scope(|scope| {
         let owner = scope.spawn(|| first.decide(&asked, "Cache me."));
-        assert_eq!(backend.wait(5), 5, "the first engine sends");
+        assert_eq!(backend.wait(1), 1, "the first engine sends");
         let waited = Runs::default();
         let check = || waited.record(backend.count()) >= 3;
         let options = CallOptions::new().interrupt(&check);
@@ -86,7 +90,7 @@ fn a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new() {
             Some(Answer::Yes)
         );
     });
-    assert_eq!(backend.count(), 5, "the waiting engine sent nothing");
+    assert_eq!(backend.count(), 1, "the waiting engine sent nothing");
     assert_eq!(second.usage().requests_sent(), 0);
     let _gone = std::fs::remove_dir_all(&folder);
 }
