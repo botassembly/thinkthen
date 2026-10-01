@@ -507,11 +507,17 @@ the_file_gate() {
 	q -c "CREATE ROLE tt_exec LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text,text,json,text,text,text,text,bigint) TO tt_exec" >/dev/null
 	out=$(PGUSER_AS=tt_exec q -c "SELECT thinkthen_decide('@/etc/hostname', 'x')")
 	has "$out" "a named file needs pg_read_server_files, or an administrator's thinkthen.file_directory"
+	cp fixtures/refund.json "$RUN/anywhere.json"
 	fresh generic "thinkthen.file_directory = '$RUN/files'"
 	same "$(PGUSER_AS=tt_exec q -c "SELECT thinkthen_decide('@$RUN/files/refund.json', 'I want a refund')")" t
+	# 0370: a relative name resolves inside the folder, and `..` still refuses.
+	same "$(PGUSER_AS=tt_exec q -c "SELECT thinkthen_decide('@refund.json', 'I want a refund')")" t
+	has "$(PGUSER_AS=tt_exec q -c "SELECT thinkthen_decide('@../anywhere.json', 'x')")" "'@../anywhere.json' $DID_NOT_READ"
+	# A superuser's relative name resolves inside the folder too.
+	cp fixtures/refund.json "$RUN/files/only-here.json"
+	same "$(q -c "SELECT thinkthen_decide('@only-here.json', 'I want a refund')")" t
 	has "$(PGUSER_AS=tt_exec q -c "SELECT thinkthen_decide('@/etc/hostname', 'x')")" "'@/etc/hostname' $DID_NOT_READ"
 	q -c "GRANT pg_read_server_files TO tt_exec" >/dev/null
-	cp fixtures/refund.json "$RUN/anywhere.json"
 	same "$(PGUSER_AS=tt_exec q -c "SELECT thinkthen_decide('@$RUN/anywhere.json', 'I want a refund')")" t
 }
 check the_file_gate
