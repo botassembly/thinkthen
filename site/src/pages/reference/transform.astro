@@ -1,0 +1,40 @@
+---
+// Goal: list the ten built-in jq transforms and show how to run one, since thinkthen prints them and jq runs them.
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import { REFERENCE_PAGES, referencePage, TOOLS_SEE } from '../../data/reference.mjs';
+import { captioned } from '../../data/samples.mjs';
+
+const page = referencePage('transform');
+const [list, show] = captioned('reference/transform', TOOLS_SEE.transform);
+const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/transform.md';
+const CATALOG = [
+  ['band', 'How many answers a band settles, and how many of those are right.'],
+  ['calibration', 'Whether answers given at a probability of 0.8 are right about eight times in ten.'],
+  ['compare', 'What changed between two runs, and why it could have.'],
+  ['cost', 'The input tokens a run spent, and what they cost at your prices.'],
+  ['counts', 'How many answers were yes, no, and not sure.'],
+  ['monitor', 'How often each action of a policy ran, was reviewed, and was changed.'],
+  ['score', 'How many answers are right at a cut, against your labels.'],
+  ['sweep', 'What every cut would have done.'],
+  ['triage', 'A policy: whether a support ticket is drafted, blocked, or reviewed, and why.'],
+  ['trials', 'One row per record from repeated runs, before another transform reads them.'],
+];
+---
+<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'The ten built-in jq transforms, and how to run one.' }} name="Reference">
+  <h1><code>transform</code></h1>
+  <p class="lede">ThinkThen ships ten <code>jq</code> programs that read saved runs. <code>thinkthen transform</code> prints them. It never runs one. <code>jq</code> does.</p>
+
+  <h2 id="list">The catalog</h2>
+  <Terminal run={list} caption={list.see} />
+  <table>
+    <tr><th>Transform</th><th>What it answers</th></tr>
+    {CATALOG.map(([name, what]) => (<tr><td><code>{name}</code></td><td>{what}</td></tr>))}
+  </table>
+
+  <h2 id="show">Run one</h2>
+  <p><code>thinkthen transform show NAME</code> prints one transform exactly as shipped. Save it, then hand it to <code>jq -f</code> with a saved run. Each transform's first lines say what it reads and what arguments it takes. An unknown name prints nothing and exits 2.</p>
+  <Terminal run={show} caption={show.see} />
+
+  <p class="pagelinks"><a href="/reference/audit/">audit</a> · <a href={spec}>The transform specification</a></p>
+</SidePage>

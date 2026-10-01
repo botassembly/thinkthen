@@ -1,0 +1,39 @@
+---
+// Goal: say what diff prints for each changed answer, what each effect means, and how not-sure and tied answers count.
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import { REFERENCE_PAGES, referencePage, TOOLS_SEE } from '../../data/reference.mjs';
+import { captioned } from '../../data/samples.mjs';
+import { PAGES } from '../../data/beatles.mjs';
+
+const page = referencePage('diff');
+const [cuts] = captioned('reference/diff', TOOLS_SEE.diff);
+const bench = PAGES.find((p) => p.slug === 'diff');
+const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/diff.md';
+const EFFECTS = [
+  ['gained', 'wrong', 'right'],
+  ['lost', 'right', 'wrong'],
+  ['resolved', 'not sure or tied', 'right or wrong'],
+  ['withdrawn', 'right or wrong', 'not sure or tied'],
+  ['changed', 'any other change', ''],
+];
+---
+<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'What diff prints for each changed answer, what each effect means, and how not-sure and tied answers count.' }} name="Reference">
+  <h1><code>diff</code></h1>
+  <p class="lede"><code>thinkthen diff A B</code> prints only the saved answers that changed between two runs. It sends no request.</p>
+
+  <h2 id="two-runs-or-two-cuts">Two runs, or two cuts</h2>
+  <p>With two files, <code>diff</code> pairs each answer in <code>A</code> with the answer in <code>B</code> for the same record and question. With one file and <code>--compare-threshold</code>, it reads the same run under two rules. <code>A</code> reads under <code>--threshold</code>, and <code>B</code> under <code>--compare-threshold</code>. It warns when two paired answers came from different questions.</p>
+  <Terminal run={cuts} caption={cuts.see} />
+
+  <h2 id="what-it-prints">What it prints</h2>
+  <p>One line for each changed answer, in the order of <code>A</code>. A line holds <code>id</code>, <code>name</code>, <code>from</code>, <code>to</code>, the two probabilities, <code>key</code>, and <code>effect</code>. A summary line comes last. It counts the records, the changes, each move, and the right answers on each side.</p>
+  <p>With <code>--key</code>, each change gets an effect:</p>
+  <table>
+    <tr><th>Effect</th><th>From</th><th>To</th></tr>
+    {EFFECTS.map(([effect, from, to]) => (<tr><td><code>{effect}</code></td><td>{from}</td><td>{to}</td></tr>))}
+  </table>
+  <p>A not-sure answer and a tied answer count the same way. Each one becomes <code>resolved</code> when it turns right or wrong. Without a key, every effect is <code>null</code>. The <a href={bench.route}>Beatles diff page</a> compares a run from the title alone with a run that had context.</p>
+
+  <p class="pagelinks"><a href="/reference/audit/">audit</a> · <a href={spec}>The diff specification</a></p>
+</SidePage>
