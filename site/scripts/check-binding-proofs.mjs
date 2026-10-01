@@ -11,8 +11,12 @@
 //
 // A change in a binding's folder or in a Cargo workspace member it builds
 // on only warns, and names each page to prove again. Another queue's commit
-// never turns the site build red. The marketing lead reruns the replay at
-// each published checkpoint tag.
+// never turns the site build red.
+//
+// With --strict, that change fails instead. The Pages workflow runs it that
+// way, so a deploy needs proof that every sample passed against the code it
+// ships. The code release can run it that way too. The ThinkThen queue owner
+// decides whether it does.
 //
 // It fails when a library or SQL sample under examples/ has no REPLAY
 // line.
@@ -29,6 +33,7 @@ const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const repo = path.resolve(site, '..');
 const examples = path.join(site, 'examples');
 
+const strict = process.argv.includes('--strict');
 const problems = [];
 const warnings = [];
 const stalePages = new Set();
@@ -57,7 +62,7 @@ for (const line of listed) {
   }
   if (sourceTree(repo, entry.sources.folders) !== entry.sources.tree) {
     stalePages.add(entry.page);
-    warnings.push(`${entry.page}: ${entry.sources.folders.join(', ')} changed after the proof of ${line}. Prove the page again.`);
+    (strict ? problems : warnings).push(`${entry.page}: ${entry.sources.folders.join(', ')} changed after the proof of ${line}. Prove the page again with npm run test-docs.`);
   }
 }
 for (const line of Object.keys(proof)) {

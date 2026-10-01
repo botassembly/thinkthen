@@ -9,6 +9,7 @@
     "smoke": "node scripts/smoke.mjs",
     "smoke-bindings": "node scripts/smoke-bindings.mjs",
     "smoke-sql": "node scripts/smoke-sql.mjs",
+    "test-docs": "node scripts/test-docs.mjs",
     "build": "node scripts/write-version.mjs && node scripts/named-answers.test.mjs && node scripts/check-samples.mjs && node scripts/check-slides.mjs && node scripts/smoke.mjs && node scripts/check-binding-proofs.mjs && astro build && node scripts/label-tables.mjs && node scripts/emit-md.mjs && node scripts/check-code.mjs && node scripts/check-words.test.mjs && node scripts/check-words.mjs && pagefind --site dist --exclude-selectors button && node scripts/write-sitemap.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs && node scripts/check-cards.mjs && node scripts/check-head.mjs",
     "dev": "astro dev",
     "preview": "astro preview",
