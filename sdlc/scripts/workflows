@@ -392,12 +392,14 @@ rustup) [ "$1 $2" != 'target add' ] || echo "rustup $*" >> "$FAKE_LOG" ;;
 maturin) echo 'maturin 1.15.0' ;;
 python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
   case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
+python3.14) exit 1 ;;
 python3.13) [ "$1" != --version ] || {
   touch "$FAKE_PY313_READY"; echo py313-ready >> "$FAKE_LOG"; echo 'Python 3.13.0';
 } ;;
 uv) case $0 in "$FAKE_ROOT/pinned/uv") ;; *) echo 'a stray uv ran' >&2; exit 93 ;; esac
   [ -f "$FAKE_UV_READY" ] || { echo 'uv was not installed' >&2; exit 91; }
-  [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo "$FAKE_UV_LINE"; } ;;
+  [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo "$FAKE_UV_LINE"; }
+  [ "$1" != venv ] || echo "seed $4" >> "$FAKE_LOG" ;;
 uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
   -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
 xcrun) echo "$FAKE_ROOT/sdk" ;;
@@ -419,8 +421,11 @@ esac
         openssl.parent.mkdir(parents=True)
         openssl.write_text("#!/bin/sh\necho 'OpenSSL 3.6.3 27 Jan 2026'\n")
         openssl.chmod(0o755)
+        sqlite_python = root / "openssl3/bin/python3.14"
+        sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
+        sqlite_python.chmod(0o755)
         for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "xcrun", "brew", "shasum",
-                     "python3", "python3.12", "python3.13"):
+                     "python3", "python3.12", "python3.13", "python3.14"):
             (bin_dir / name).symlink_to(route.name)
         (root / "pinned").mkdir()
         (root / "pinned/uv").symlink_to(route)
@@ -430,16 +435,20 @@ esac
                    TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
                    FAKE_UV_LINE=uv_line, GITHUB_PATH=str(root / "github-path"),
+                   GITHUB_ENV=str(root / "github-env"),
                    RELEASE_SMOKE="1" if smoke else "0")
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
-        calls = log.read_text().splitlines() if log.exists() else []
+        calls = [line.replace(str(root), "$ROOT") for line in log.read_text().splitlines()] if log.exists() else []
         pgrx = root / ".pgrx/config.toml"
         if pgrx.exists():
             calls.append("pgrx " + pgrx.read_text().replace(str(root), "$ROOT").replace("\n", " ").strip())
         handoff = root / "github-path"
         if handoff.exists():
             calls.append(f"path {handoff.read_text().strip().replace(str(root), '$ROOT')}")
+        handoff = root / "github-env"
+        if handoff.exists():
+            calls.append(f"env {handoff.read_text().strip().replace(str(root), '$ROOT')}")
         return result, calls
 
 
@@ -757,13 +766,19 @@ def self_test():
                   for smoke in (False, True)]
     for target, smoke in host_cases:
         result, calls = host_setup_calls(target, smoke)
+        # Ticket 0369: the smoke seeds uv for the check's Python, Linux fetches the SQLite and
+        # PostgreSQL pins, and macOS hands the SQLite check a Python that loads extensions.
+        seed = ["seed $ROOT/bin/python3.13"] if smoke else []
         if "apple" in target:
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
-                      'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned"]
+                      *(["sqlite-python-check"] if smoke else []), *seed,
+                      'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned",
+                      *(["env THINKTHEN_PYTHON=$ROOT/openssl3/bin/python3.14"] if smoke else [])]
         elif smoke:
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
-                      "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
+                      "databases/duckdb/tools/setup.sh --fetch", "databases/sqlite/setup.sh ",
+                      "databases/postgresql/setup.sh ", *seed, "path $ROOT/pinned"]
         else:
             # Ticket 0366: the Linux build job builds Ruby in its container, not on the host.
             wanted = [f"rustup target add --toolchain 1.95.0 {target.replace('-gnu', '-musl')}"]
