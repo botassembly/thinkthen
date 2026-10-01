@@ -1,6 +1,6 @@
 # 0376: Prepare the release candidate cut
 
-Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-4.
+Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-4.
 
 Milestone: 0.1
 
@@ -75,4 +75,8 @@ The 0.1 cut is one checked command plus the README, CHANGELOG and site text.
 
 ## What the build taught us
 
-Added before landing.
+- The proof ran as planned. A second scratch branch committed `versions --set 0.1.0`, which changed 49 files and read 70 places. At 0.1.0 these passed: `versions --self-test` (27/27), `policy.py`, `workflows --self-test` (68/68), `release-managed-pair-self-test.py`, 72 focused backend tests in `crates/thinkthen`, and the C door's `every_door_reply_keeps_its_bytes`. Go's header gate passed a `cc -fsyntax-only` check at 0.1.0 and refused a wrong patch number. The scratch branch was deleted unpushed. On the ticket branch at 0.0.1, the same Rust tests and `sdlc/scripts/lint` pass.
+- The dry run must commit the bump. `release-archive-self-test.py` packs `git archive HEAD`, so an uncommitted `--set` names the archive 0.0.1 while the check expects 0.1.0. The 0128 dry bump already used a scratch commit for this reason.
+- The version-free edits grow three line ratchets. The Rust total rises by 7 to 108870. The C library's rises by 3 to 4945, for the `{VERSION}` placeholder in `golden.rs`. The C# Python tests rise by 3 to 605, and the JVM Python tests by 6 to 673. Each comes from reading the version where a literal stood.
+- The address-safe grep in the checklist matters. A plain `0\.0\.1` also matches `127.0.0.1` in 442 files.
+- The C#, JVM, Go and Dart surface checks did not run here. The coordinator's next checkpoint runs them, as Defers says.
