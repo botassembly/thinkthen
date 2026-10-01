@@ -14,9 +14,9 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 ## Stages
 
 0. **Groundwork (ticket 0373, milestone 0.2, landed).** The root workspace and `libraries/c` compile, pass Clippy and pass their tests on `x86_64-pc-windows-msvc`. The hand-started `windows` workflow proves it on `windows-2025`. Nothing ships. No Linux or macOS behavior changes.
-1. **First shipped surfaces (milestone 0.2).** The command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM binding ship for Windows x86-64. The release workflow builds, tests and publishes them. The specification and the README name the Windows folders.
+1. **First shipped surfaces (milestone 0.2).** The command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM binding ship for Windows x86-64. The release workflow builds, tests and publishes them. The specification and the README name the Windows folders. Stage 1 also closes findings W1 to W7: the Ctrl-C exit, the Windows privacy checks, the port of the guarded XDG cases and the rest.
 2. **The other bindings and the SQL extensions.** C++, Go, Ruby, R, PHP, Swift, Dart, Zig, the Polars door, and the SQLite and DuckDB extensions. Each loads the stage 1 C DLL or builds the engine as stage 1 does.
-3. **Hardening.** Windows privacy checks for the usage store and the configuration file, a Windows Ctrl-C end-to-end test, a test port of the cases stage 0 guarded with `#[cfg(unix)]`, Windows ARM64, and the PostgreSQL question.
+3. **Hardening.** Windows ARM64, finding W8, and the PostgreSQL question.
 
 ## Surfaces that stay Unix-only
 
@@ -29,7 +29,7 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 
 | Surface | Stage 0 result | Verdict |
 | --- | --- | --- |
-| Command line | Builds and passes on Windows. 3 small product fixes landed. Findings W1 to W6 remain. | Stage 1 |
+| Command line | Builds and passes on Windows. Six small product fixes landed. Findings W1 to W8 remain. | Stage 1 |
 | Rust crate | Builds and passes on Windows as part of the root workspace. | Stage 1 |
 | C door (`libraries/c`) | Builds, passes Clippy and passes its Rust tests. The C door tests build C with a Unix compiler under ASan, so they stay on Unix. | Stage 1 |
 | Python wheel | Not built in stage 0. The wheel script expects a `.so`. | Stage 1 |
@@ -50,13 +50,13 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 - `cache convert` closes the live store before it removes the old file on Windows, because Windows cannot remove an open file.
 - On Windows a cancelled run returns 130 without re-raising SIGINT. The C runtime's default SIGINT action would end the process with exit 3, which means "not sure".
 - Clap names the program `thinkthen` in usage and error sentences on Windows, in place of `thinkthen.exe`.
-- The conformance fixture puts each accepted connection in blocking mode. Windows hands an accepted socket the listener's nonblocking mode, and Linux and macOS do not.
+- The conformance fixture puts each accepted connection in blocking mode. Windows and macOS hand an accepted socket the listener's nonblocking mode, and Linux does not. On macOS the fixture's accepted connections now read blocking, as they always did on Linux.
 - Two test helpers replace `env_clear()` and `.env("HOME", …)`. On Windows they keep `SystemRoot`, `SystemDrive`, `TEMP` and `TMP`, and set `APPDATA` and `LOCALAPPDATA` under the test home. On Linux and macOS each does what the replaced line did.
 - Test cases that need a Unix tool, a Unix mode, a Unix signal, the XDG folders or a Linux path carry `#[cfg(unix)]` and a reason.
 
 ## Findings stage 0 leaves open
 
-Each finding has a test that shows it. Stage 1 owns W1 to W7 unless the stage 1 tickets say otherwise. W8 waits for stage 3.
+W3, W4, W5 and W8 name the tests that show them. The others come from reading the code. Stage 1 owns W1 to W7. W8 waits for stage 3.
 
 - **W1. Ctrl-C outside an active command exits 3.** `signal-hook`'s conditional default re-raises through the C runtime when no command holds the cancel, and the C runtime ends the process with exit 3. A cancelled command returns 130. The fix needs a console control handler, which the standard library does not expose; it needs `windows-sys` and a `policy.py` and `deny.toml` update. A Windows Ctrl-C end-to-end test needs `GenerateConsoleCtrlEvent` for the same reason.
 - **W2. No privacy checks on Windows.** The usage store's mode, owner and identity checks are `cfg(unix)`, and `config::writable_by_another` returns `false` off Unix. The usage refusal sentences say "folder 0700, files 0600", which means nothing on Windows. A Windows check reads the folder's ACL and needs `windows-sys`.
@@ -73,18 +73,18 @@ Sizes count files, changed lines and tickets. They come from the stage 0 build a
 
 ### Shared release work
 
-Every stage 1 surface shares one release change. `release.yml` builds four targets, and the number four is written into `draft`, the `collect` step's `expected_targets`, `verify-family`, the PyPI job's wheel count, `npm-assemble`'s addon count and the Homebrew tap. A fifth target touches each of them. The command line ticket carries this change, and the others build on it.
+Every stage 1 surface shares one release change. `release.yml` builds four targets, and the number four is written into `draft`, `verify-family`, the RubyGems platform-gem counts, the PyPI job's wheel count, `npm-assemble`'s addon count and the Homebrew tap. `sdlc/scripts/release-workflow` lists the four targets in its `collect` step's `expected_targets`. A fifth target touches each of them. The command line ticket carries this change, and the others build on it.
 
 ### Command line
 
-- Files: `release.yml`, `sdlc/scripts/release-pack` (471 lines of shell; it knows only `darwin` and `linux-gnu` and makes only `.tar.gz`), `release-registry.py`, `release-managed-pair.py`, a new PowerShell installer beside the 206-line `install.sh`, `README.md`, and the checks for each.
-- Lines: 400 to 700.
+- Files: `release.yml`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-pack` (471 lines of shell; it knows only `darwin` and `linux-gnu` and makes only `.tar.gz`), `release-registry.py`, `release-managed-pair.py`, a new PowerShell installer beside the 206-line `install.sh`, `README.md`, and the checks for each. The findings add `cli/interrupt.rs` (W1), the usage store and `config.rs` privacy checks (W2), and the guarded XDG cases (W6). W1 and W2 need `windows-sys`, so `policy.py` and `deny.toml` change too.
+- Lines: 700 to 1,200.
 - Specification: `specification/recording.md` (the cache, usage and configuration folders), `specification/settings.md` (the configuration home and the Unix-only warning), `specification/question-file.md` (the `XDG_CONFIG_HOME` example). The site pages that name platforms belong to marketing and get a message in `sdlc/inbox`.
 - Release workflow: a fifth matrix target on `windows-2025`, a `.zip` pack, the count of four in each job above, and the installer upload.
-- New tests: the W6 helper and the ported XDG cases; a release-pack case for the `.zip`; an installer smoke on the runner.
+- New tests: the W6 helper and the ported XDG cases; a Windows Ctrl-C end-to-end case (W1); the Windows privacy refusals (W2); a release-pack case for the `.zip`; an installer smoke on the runner.
 - Linux and macOS risk: **medium**. The release scripts and the count of four are shared, so a mistake there breaks the Unix release.
 - Unknowns: code signing for the `.exe` (SmartScreen warns on unsigned downloads), the installer's home (a `.ps1` script, winget or Scoop), and whether `managed-build` must cover Windows.
-- Tickets: 2 to 3.
+- Tickets: 3 to 4.
 
 ### Rust crate
 
@@ -156,15 +156,15 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 
 | Surface | Lines | Tickets | Linux and macOS risk |
 | --- | --- | --- | --- |
-| Command line (with the shared release work) | 400 to 700 | 2 to 3 | medium |
+| Command line (with the shared release work and W1 to W7) | 700 to 1,200 | 3 to 4 | medium |
 | Rust crate | 30 to 80 | 0 (in the command line ticket) | low |
 | C DLL | 400 to 900 | 2 | low to medium |
 | Python wheel | 150 to 350 | 1 to 2 | low to medium |
 | Node addon | 100 to 250 | 1 | medium |
 | C# | 150 to 400 | 1 | low to medium |
 | JVM | 50 to 200 | 1 | low |
-| **Total** | **1,300 to 2,900** | **8 to 10** | |
+| **Total** | **1,600 to 3,400** | **9 to 11** | |
 
 Recommendation: **keep stage 1 in 0.2.** Stage 1 touches the release workflow that 0.1 has not yet passed a rehearsal on, and the count of four runs through every publishing job. Pulling it into 0.1 moves the cut later, as ADR 0116 item 6 says, and adds risk to the release that matters most.
 
-The option if Ian wants Windows in 0.1: pull only the command line and the Rust crate (2 to 3 tickets, 430 to 780 lines). They give Windows users the command and `cargo add thinkthen` without the binding packages, and they keep the release change to the pack script, the installer and the target count. The bindings follow in 0.2.
+The option if Ian wants Windows in 0.1: pull only the command line and the Rust crate (3 to 4 tickets, 730 to 1,280 lines). They give Windows users the command and `cargo add thinkthen` without the binding packages, and they keep the release change to the pack script, the installer and the target count. The bindings follow in 0.2.

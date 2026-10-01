@@ -94,8 +94,8 @@ impl Lifetime {
             }
             match listener.accept() {
                 Ok((stream, _)) => {
-                    // Windows hands the listener's nonblocking mode to each
-                    // accepted socket, and Linux and macOS do not. Every
+                    // Windows and macOS hand the listener's nonblocking mode
+                    // to each accepted socket, and Linux does not. Every
                     // connection reads blocking (ticket 0373).
                     let _blocking = stream.set_nonblocking(false);
                     return Some(stream);
