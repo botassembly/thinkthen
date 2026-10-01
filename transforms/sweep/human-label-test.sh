@@ -212,3 +212,10 @@ jq -c '.answers.failure_kind.answer.probabilities={none:0.5,wrong_fact:0.5,unsup
        | .value.failure_kind="none"' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-tie 'sweep: mapped choice value must follow its probabilities and threshold' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+
+# A probability at a band's low edge is not sure (specification/threshold.md),
+# so a mapped decision at the edge with a null value is accepted.
+jq -c 'if .input.id=="E-03" then .answers.correct.answer.probability=0.2 else . end' \
+  "$work/annotate.jsonl" > "$work/edge.jsonl"
+jq -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/edge.jsonl" \
+  | jq -e '.questions.correct.labeled == 6' > /dev/null

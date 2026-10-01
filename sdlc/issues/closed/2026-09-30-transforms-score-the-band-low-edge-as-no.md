@@ -1,6 +1,6 @@
 # Four transforms score a probability at the band's low edge as no
 
-Status: open. Reported by the site team on 2026-09-30 and confirmed on main `d75a4bdf1`. Owner: the queue owner, as batch C3 in `../planning/issue-priorities-2026-09-30.md`.
+Status: closed 2026-09-30 by ticket 0364 (`4a1cb5cf7`). Reported by the site team on 2026-09-30 and confirmed on main `d75a4bdf1`. Owner: the queue owner, as batch C3 in `../planning/issue-priorities-2026-09-30.md`. Resolution: `band`, `score`, `sweep` (both places) and `trials` treat p = LOW as not sure, as `specification/threshold.md` says. `transforms/band/test.sh` pins the edge.
 Kind: bug
 
 `specification/threshold.md:17-19` puts a band's low edge on the not-sure side, and `crates/thinkthen/src/core/threshold.rs:148` answers no only when `p < low`. These transform lines use `<=` and score the edge as no:

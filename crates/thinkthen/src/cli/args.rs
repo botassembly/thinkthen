@@ -6,6 +6,10 @@ use std::path::PathBuf;
 use crate::core::{DEFAULT_MODEL, Framing};
 use clap::{Args, Parser};
 
+/// How many times every command sends a retried status again by default: ADR 0052's
+/// three doubling waits. `check` takes no option and uses it too.
+pub(crate) const DEFAULT_MAX_RETRIES: u32 = 3;
+
 mod annotate;
 mod batching;
 mod command;
@@ -207,7 +211,7 @@ pub(crate) struct Common {
     pub(crate) jobs: Option<u8>,
 
     /// How many times a retried status is sent again. A transport failure is never sent again.
-    #[arg(long, value_name = "N", default_value_t = 3, hide_short_help = true)]
+    #[arg(long, value_name = "N", default_value_t = DEFAULT_MAX_RETRIES, hide_short_help = true)]
     pub(crate) max_retries: u32,
 }
 

@@ -396,3 +396,52 @@ fn a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on() {
     assert_eq!(text(&output.stdout), report);
     assert_eq!(output.status.code(), Some(4));
 }
+
+/// The estimated input cap binds `check` as it binds every live request
+/// (ticket 0364). A cap of 1 refuses the first probe and sends nothing; a cap
+/// of the first probe's estimate refuses the second after one request.
+#[test]
+fn the_estimated_input_cap_stops_the_check_before_a_probe_it_cannot_admit() {
+    let fixture = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../specification/fixtures/check/requests.jsonl"
+    );
+    let bodies = fs::read_to_string(fixture).expect("the fixture");
+    let first = bodies.lines().next().expect("a first body").len();
+    // `encoded-body-bytes-908-v1`: ceil(bytes × 908 / 1000).
+    let first_estimate = (first * 908).div_ceil(1000).to_string();
+    for (cap, sent, before) in [
+        ("1", 0, "this call's first request"),
+        (first_estimate.as_str(), 1, "another request in this call"),
+    ] {
+        let backend = Backend::start().expect("backend");
+        let url = format!("{}/arm/full/v1", backend.origin());
+        let output = check(
+            &["--url", url.as_str()],
+            &[
+                ("THINKTHEN_API_KEY", KEY),
+                ("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL", cap),
+            ],
+        );
+        assert_eq!(
+            text(&output.stderr),
+            format!(
+                "thinkthen usage: max_estimated_input_tokens_total={cap} (encoded-body-bytes-908-v1) would be exceeded before {before}\n"
+            ),
+            "{cap}"
+        );
+        assert_eq!(text(&output.stdout), "", "{cap}");
+        assert_eq!(output.status.code(), Some(2), "{cap}");
+        assert_eq!(backend.count(), sent, "{cap}");
+    }
+}
+
+/// Each probe retries a retried status three times, the default of every
+/// command, so four probes send sixteen requests (`specification/check.md`).
+#[test]
+fn a_retried_status_is_sent_four_times_for_each_probe() {
+    let backend = Backend::start().expect("backend");
+    let output = at(&backend, "/arm/503/v1");
+    assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
+    assert_eq!(backend.count(), 16);
+}
