@@ -57,7 +57,7 @@ const DATABASES = {
     build() {
       const host = path.join(TOOLCHAINS, 'sqlite-3500000-host');
       const cli = path.join(host, 'sqlite3');
-      if (!fs.existsSync(cli)) return { missing: 'the SQLite 3.50.0 CLI that databases/sqlite/setup.sh builds' };
+      if (!fs.existsSync(cli)) return { missing: 'the pinned SQLite 3.50.0 CLI that databases/sqlite/setup.sh builds' };
       if (run('sh', ['-c', 'command -v cargo']).status !== 0) return { missing: 'cargo' };
       const target = path.join(repo, 'target', 'site-sqlite');
       const done = run('cargo', ['build', '--quiet', '--release', '--locked', '--offline'], { cwd: path.join(repo, this.folder), env: { ...process.env, CARGO_TARGET_DIR: target } });
@@ -112,7 +112,7 @@ for (const line of list) {
   if (backend) { failed.push(`${line}: a SQL sample takes no backend.`); continue; }
   const surface = sampleSurface(rel);
   const spec = DATABASES[surface];
-  if (!spec) { failed.push(`${line}: smoke-sql runs no ${surface} sample yet.`); continue; }
+  if (!spec) { failed.push(`${line}: smoke-sql has no ${surface} samples.`); continue; }
   if (!built.has(surface)) {
     try {
       built.set(surface, spec.build());
@@ -121,7 +121,7 @@ for (const line of list) {
     }
   }
   const db = built.get(surface);
-  if (db.missing) { notRun.push(`${line}: not run: no ${db.missing}`); continue; }
+  if (db.missing) { notRun.push(`${line}: not run: ${db.missing} is missing`); continue; }
   if (db.error) { failed.push(`${line}: the ${surface} extension did not build\n${db.error}`); continue; }
 
   const outPath = path.join(examples, `${rel}.out`);
