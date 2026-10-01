@@ -36,7 +36,7 @@ Work outside the lanes:
 
 ## Every open issue
 
-26 open. Class: **running**, **batch** (C1 or C2), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
+25 open. Class: **running**, **batch** (C1 or C2), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
@@ -51,7 +51,6 @@ Work outside the lanes:
 | `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | outside | ticket 0128; Ian's rehearsal and registry accounts |
 | `2026-09-20-new-user-stumble-register.md` | rows 18, 19 | outside | row 18 ticket 0128; row 19 marketing; none of ours |
 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | outside | the external release QA team's edge list |
-| `2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md` (Debt 026) | if the rehearsal shows a `sqlite3_` name | waits | the rehearsal's macOS DuckDB jobs |
 | `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (Debt 014) | no | waits | upstream ollama |
 | `2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md` (Debt 002) | no | waits | upstream Zig |
 | `2026-09-30-polars-door-cannot-test-lazy-streaming.md` (Debt 004) | no | waits | a user, or clean advisories |
