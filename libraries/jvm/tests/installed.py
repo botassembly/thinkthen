@@ -2,6 +2,7 @@
 import datetime
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -14,6 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/childr
 from portable import one_portable_request, question_keys  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+# Every package shares the command crate's version (ticket 0376).
+VERSION = re.search(r'(?m)^version = "([^"]+)"$', (ROOT.parents[1] / "crates/thinkthen/Cargo.toml").read_text())[1]
 TARGET = ROOT / "target"
 RELEASE = os.environ.get("THINKTHEN_RELEASE_JVM_DIR")
 RELEASE_C = os.environ.get("THINKTHEN_RELEASE_C_DIR")
@@ -27,7 +30,7 @@ if RELEASE:
     pom = ET.fromstring((package / "pom.xml").read_text())
     metadata = {item.tag.rsplit("}", 1)[-1]: (item.text or "").strip() for item in pom}
     assert (metadata["groupId"], metadata["artifactId"], metadata["version"]) == (
-        "io.github.botassembly", "thinkthen-jvm", "0.0.1")
+        "io.github.botassembly", "thinkthen-jvm", VERSION)
     for name, required in (("door", "thinkthen/Door.class"), ("kotlin", "KotlinFacade.class"),
                            ("scala", "ScalaFacade.class")):
         with zipfile.ZipFile(package / f"thinkthen-{name}.jar") as bundle:

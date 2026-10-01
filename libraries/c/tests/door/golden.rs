@@ -79,7 +79,10 @@ fn every_door_reply_keeps_its_bytes() {
         .collect();
     let expected: Vec<String> = GOLDEN
         .iter()
-        .map(|line| line.replace("{FACTS}", FACTS))
+        .map(|line| {
+            line.replace("{FACTS}", FACTS)
+                .replace("{VERSION}", env!("CARGO_PKG_VERSION"))
+        })
         .collect();
     assert_eq!(said, expected);
 }
@@ -112,7 +115,7 @@ fn steady(body: &str) -> String {
 const GOLDEN: [&str; 21] = [
     r#"0 "#,
     r#"0 {"value":true,{FACTS}}"#,
-    r#"0 {"value":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Refund?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"meta":{"tool":"thinkthen 0.0.1","question_sha256":"6c0b2c1ba8577c1d9d8df9ee08c9cce188ec4283e097cd37f5944518f2ce8317","url":"ORIGIN/arm/full/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":1,"output_tokens":1},"requests_sent":1,"cached":false,"requests":["0"],"failed_questions":0}},{FACTS}}"#,
+    r#"0 {"value":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Refund?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"meta":{"tool":"thinkthen {VERSION}","question_sha256":"6c0b2c1ba8577c1d9d8df9ee08c9cce188ec4283e097cd37f5944518f2ce8317","url":"ORIGIN/arm/full/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":1,"output_tokens":1},"requests_sent":1,"cached":false,"requests":["0"],"failed_questions":0}},{FACTS}}"#,
     r#"0 {"value":null,{FACTS}}"#,
     r#"0 {"value":"billing",{FACTS}}"#,
     r#"0 {"value":0.1,{FACTS}}"#,
