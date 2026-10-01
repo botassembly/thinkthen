@@ -1,0 +1,83 @@
+# Windows stage 0 (ticket 0373, sdlc/planning/windows.md), run only by hand.
+#
+# It runs Clippy and the tests of the root workspace and of libraries/c on
+# Windows. It ships nothing and promises users nothing. Start it from the
+# Actions tab or with `gh workflow run windows --ref BRANCH`; a dispatch runs
+# the branch's own copy of this file. The repository is public, so its
+# Windows runner minutes are free.
+#
+# No step holds a secret, reads a key, or sets a THINKTHEN_ variable. Nothing
+# here calls a paid backend. The runner downloads crates once with
+# `cargo fetch --locked`, as the release workflow does, and every build after
+# that runs offline. Each action is pinned to the commit SHA gate.yml uses.
+
+name: windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  stage-0:
+    name: clippy and tests, root workspace and libraries/c
+    runs-on: windows-2025
+    timeout-minutes: 120
+    env:
+      CARGO_TERM_COLOR: never
+
+    steps:
+      - name: Check out the commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Install the toolchain that rust-toolchain.toml pins
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Cache the cargo registry and the build directories
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+            libraries/c/target
+          key: windows-${{ hashFiles('Cargo.lock', 'libraries/c/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: windows-
+
+      # The default folders resolve under APPDATA and LOCALAPPDATA on Windows.
+      # Point both at the runner's temp folder, so no test writes the runner
+      # user's real folders. A job-level env cannot read the runner context.
+      - name: Point the default folders at the runner's temp folder
+        run: |
+          set -eu
+          printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/thinkthen-appdata/Roaming" "$RUNNER_TEMP/thinkthen-appdata/Local"
+
+      - name: Download the locked crates
+        run: |
+          set -eu
+          cargo fetch --locked
+          cargo fetch --locked --manifest-path libraries/c/Cargo.toml
+
+      - name: Clippy, root workspace
+        run: cargo clippy --locked --offline --workspace --all-targets -- -D warnings
+
+      - name: Tests, root workspace
+        run: cargo test --locked --offline --workspace --all-targets
+
+      - name: Clippy, libraries/c
+        working-directory: libraries/c
+        run: cargo clippy --locked --offline --all-targets -- -D warnings
+
+      - name: Tests, libraries/c
+        working-directory: libraries/c
+        run: cargo test --locked --offline
