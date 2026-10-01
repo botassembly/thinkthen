@@ -43,7 +43,7 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
   <p><code>check</code> reads no input, cache, recording or profile. <code>--cache</code>, <code>--no-cache</code>, <code>--record</code>, <code>--replay</code> and <code>--profile</code> are refused at exit 2. It takes no <code>--max-retries</code>, and four probes send at most sixteen attempts.</p>
 
   <h2 id="limits">Limits</h2>
-  <p>A check has no fixed worst case. A server's <code>Retry-After</code> header sets a minimum wait before a retry, with no cap. Without that header, sixteen attempts at <code>--timeout 90</code> take about 24.5 minutes at most.</p>
+  <p>A check has no fixed worst case. A server's <code>Retry-After</code> or <code>Retry-After-Ms</code> header sets a minimum wait before a retry, with no cap. Without either header, a check at <code>--timeout 90</code> takes about 25 minutes at most.</p>
   <p><code>THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL</code> binds each probe. A probe the cap cannot admit stops the check before it is sent. The check prints no report and exits 2.</p>
 
   <p class="pagelinks"><a href="/install/backends/system-one/">Any System One server</a> · <a href={spec}>The check specification</a> · <a href="/reference/#exit-codes">Every exit code</a></p>
