@@ -3,7 +3,7 @@
 //! entry, rule order beside pair rules, the cache, and the refusals.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
@@ -12,10 +12,17 @@ use crate::harness::{Canned, Listener, spawn};
 
 const PEOPLE: &[u8] = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Initech","kind":"organization"},{"name":"Grace","kind":"person"}]"#;
 
-/// Write one relate file and return its `@FILE` operand.
-fn file(name: &str, relations: &str) -> String {
-    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-menu");
+/// Make one test's own folder, so parallel tests and runs never write one path.
+fn folder(test: &str) -> PathBuf {
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join("relate-menu")
+        .join(format!("{test}-{}", std::process::id()));
     fs::create_dir_all(&folder).expect("folder");
+    folder
+}
+
+/// Write one relate file and return its `@FILE` operand.
+fn file(folder: &Path, name: &str, relations: &str) -> String {
     let path = folder.join(format!("{name}.json"));
     let text = format!(r#"{{"version":1,"relate":{{"relations":[{relations}]}}}}"#);
     fs::write(&path, text).expect("relate file");
@@ -30,8 +37,9 @@ fn choice(i2: f64, i3: f64, none: f64) -> String {
 
 #[test]
 fn a_single_rule_asks_one_described_menu_per_source_and_the_plan_shows_it() {
+    let folder = folder("a_single_rule_asks_one_described_menu_per_source_and_the_plan_shows_it");
     let listener = Listener::answering(answered).expect("listener");
-    let rule = file("works-for", WORKS_FOR);
+    let rule = file(&folder, "works-for", WORKS_FOR);
     let plan = plan_json(&run(&listener, &[&rule, "--plan"], PEOPLE));
     assert_eq!(listener.connections(), 0);
     assert_eq!(plan["relations"][0]["method"], "choice");
@@ -50,6 +58,7 @@ fn a_single_rule_asks_one_described_menu_per_source_and_the_plan_shows_it() {
     // A same-kind wildcard menu leaves its own source out, and a lone name
     // has no candidate, so it asks nothing and sends nothing.
     let rule = file(
+        &folder,
         "mentor",
         r#"{"name":"mentors","source":"*","target":"*","single":true}"#,
     );
@@ -75,6 +84,7 @@ fn a_single_rule_asks_one_described_menu_per_source_and_the_plan_shows_it() {
 /// target, probability and accepted marker; an accepted entry is the edge.
 #[test]
 fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
+    let folder = folder("the_top_label_makes_the_one_edge_and_the_detail_entry");
     let acme = json!({"name":"Acme","kind":"organization"});
     let initech = json!({"name":"Initech","kind":"organization"});
     let rows = [
@@ -115,7 +125,7 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
             true,
         ),
     ];
-    let rule = file("works-for", WORKS_FOR);
+    let rule = file(&folder, "works-for", WORKS_FOR);
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Initech","kind":"organization"}]"#;
     for (row, (i2, i3, none), target, probability, accepted) in rows {
         let answer = choice(i2, i3, none);
@@ -154,11 +164,12 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
 
 #[test]
 fn a_failed_menu_keeps_its_source_and_the_run_exits_six() {
+    let folder = folder("a_failed_menu_keeps_its_source_and_the_run_exits_six");
     let listener = scripted(&[
         r#"{"type":"choice","probabilities":{"i2":0.9,"i3":0.05,"none":0.05}}"#,
         r#"{"type":"noul","noul":0.9}"#,
     ]);
-    let rule = file("works-for", WORKS_FOR);
+    let rule = file(&folder, "works-for", WORKS_FOR);
     let output = run(&listener, &[&rule, "--details"], PEOPLE);
     assert_eq!(output.status.code(), Some(6));
     let result: Value = serde_json::from_slice(&output.stdout).expect("details");
@@ -173,6 +184,7 @@ fn a_failed_menu_keeps_its_source_and_the_run_exits_six() {
 
 #[test]
 fn pair_rules_and_menus_keep_rule_order_in_one_request() {
+    let folder = folder("pair_rules_and_menus_keep_rule_order_in_one_request");
     let listener = scripted(&[
         r#"{"type":"noul","noul":0.9}"#,
         r#"{"type":"noul","noul":0.1}"#,
@@ -180,6 +192,7 @@ fn pair_rules_and_menus_keep_rule_order_in_one_request() {
         r#"{"type":"choice","probabilities":{"i2":0.1,"i3":0.1,"none":0.8}}"#,
     ]);
     let rule = file(
+        &folder,
         "mixed",
         &format!(r#"{{"name":"knows","source":"person","target":"person"}},{WORKS_FOR}"#),
     );
@@ -207,13 +220,14 @@ fn pair_rules_and_menus_keep_rule_order_in_one_request() {
 
 #[test]
 fn an_unchanged_rerun_answers_every_menu_from_the_cache() {
-    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-menu-cache");
+    let folder = folder("an_unchanged_rerun_answers_every_menu_from_the_cache");
+    let root = folder.join("cache-root");
     let _removed = fs::remove_dir_all(&root);
     let cache = root.join("cache").to_string_lossy().into_owned();
     let xdg = root.join("xdg").to_string_lossy().into_owned();
     let listener =
         scripted(&[r#"{"type":"choice","probabilities":{"i2":0.7,"i3":0.2,"none":0.1}}"#]);
-    let rule = file("works-for", WORKS_FOR);
+    let rule = file(&folder, "works-for", WORKS_FOR);
     let arguments = [
         "relate",
         &rule,
@@ -240,8 +254,11 @@ fn an_unchanged_rerun_answers_every_menu_from_the_cache() {
 
 #[test]
 fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing() {
+    let folder =
+        folder("single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing");
     let listener = Listener::answering(answered).expect("listener");
     let both = file(
+        &folder,
         "both",
         r#"{"name":"married_to","source":"person","target":"person","single":true,"either":true}"#,
     );
@@ -251,7 +268,6 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
         String::from_utf8_lossy(&refused.stderr),
         "thinkthen: a single-answer relation is directed, so `single` and `either` do not mix\n"
     );
-    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-menu");
     let recognize = folder.join("recognize.json");
     fs::write(&recognize, r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"works_for","source":"person","target":"organization","single":true}]}}"#).expect("recognize file");
     let refused = spawn(
@@ -278,7 +294,7 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
         r#"{"schema":"thinkthen.backend-profile/1","name":"two-options","max_options":2}"#,
     )
     .expect("profile");
-    let rule = file("works-for", WORKS_FOR);
+    let rule = file(&folder, "works-for", WORKS_FOR);
     let refused = run(
         &listener,
         &[&rule, "--profile", profile.to_str().expect("path")],
@@ -294,6 +310,7 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
 
 #[test]
 fn single_false_names_the_same_question_as_no_single() {
+    let folder = folder("single_false_names_the_same_question_as_no_single");
     let listener = Listener::answering(answered).expect("listener");
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#;
     let digests: Vec<Value> = [
@@ -303,7 +320,7 @@ fn single_false_names_the_same_question_as_no_single() {
     .iter()
     .enumerate()
     .map(|(place, relation)| {
-        let rule = file(&format!("plain-{place}"), relation);
+        let rule = file(&folder, &format!("plain-{place}"), relation);
         let output = run(&listener, &[&rule, "--details"], input);
         assert_eq!(output.status.code(), Some(0));
         let result: Value = serde_json::from_slice(&output.stdout).expect("details");
