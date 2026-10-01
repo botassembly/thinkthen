@@ -1521,9 +1521,31 @@
     },
     "rank": {
       "items": {
-        "type": "string"
+        "$ref": "#/$defs/rankedRecord"
       },
       "type": "array"
+    },
+    "rankedRecord": {
+      "properties": {
+        "index": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "record": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "record",
+        "probability"
+      ],
+      "type": "object"
     },
     "recognize": {
       "properties": {

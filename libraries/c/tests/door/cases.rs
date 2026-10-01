@@ -267,7 +267,13 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
                 .unwrap_or_default();
             let want = ranking
                 .iter()
-                .map(|row| picked(&texts, &row["index"]))
+                .map(|row| {
+                    json!({
+                        "index": row["index"],
+                        "record": picked(&texts, &row["index"]),
+                        "probability": row["probability"],
+                    })
+                })
                 .collect();
             Ok(Box::new(move |got| same("rank", &parsed(&got[0])?, &want)))
         }

@@ -178,7 +178,9 @@ func matrix() throws {
         case 2: check((value as! [String]) == ["first", "second"], "tag")
         case 3: check((value as! Double) == 0.1, "score")
         case 4: check((value as! [String]) == ["filter-one", "filter-two"], "filter")
-        case 5: check((value as! [String]) == ["rank-one", "rank-two"], "rank")
+        case 5:
+            let rows = value as? [[String: Any]] ?? []
+            check(rows.map { $0["record"] as? String } == ["rank-one", "rank-two"] && rows.map { $0["index"] as? Int } == [0, 1] && rows.map { $0["probability"] as? Double } == [0.9, 0.9], "rank")
         case 6:
             let found = value as? [String: Any]
             check(found?["index"] as? Int == 0 && found?["unit"] as? String == "find-one" && found?["probability"] as? Double == 0.9, "find")

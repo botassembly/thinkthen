@@ -5,7 +5,8 @@
 //! the command. Each shared case of those verbs runs through the door and
 //! through the compiled command on the same case arm. A single value and a
 //! line feed equal the command's output. A list equals the command's
-//! `--jsonl` lines joined into one array. `find` runs on the generic arm; its
+//! `--jsonl` lines joined into one array; a `rank` row's record stands for
+//! the row. `find` runs on the generic arm; its
 //! door value adds the unit's place and probability, and its unit equals the
 //! command's output.
 
@@ -88,7 +89,19 @@ fn the_doors_bare_values_are_the_commands_bytes() {
                     "find" if value["index"] == 0 && value["probability"] == 0.9 => {
                         value["unit"].to_string()
                     }
-                    _ => value.to_string(),
+                    // A rank row adds the record's place and probability,
+                    // which `cases.rs` checks; its record is the command's line.
+                    _ => match value.as_array() {
+                        Some(rows) if rows.iter().all(|row| row.get("record").is_some()) => {
+                            serde_json::Value::from(
+                                rows.iter()
+                                    .map(|row| row["record"].clone())
+                                    .collect::<Vec<_>>(),
+                            )
+                            .to_string()
+                        }
+                        _ => value.to_string(),
+                    },
                 });
             *code != 0 || value.is_none_or(|value| format!("{value}\n") != *said)
         })

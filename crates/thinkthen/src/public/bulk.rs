@@ -319,22 +319,23 @@ impl Engine {
         only(question, &[Kind::Rank], "rank")?;
         let records = self.within_limit(records)?;
         let mut batch = self.decisions(question, records, options, |item, (_, yes)| {
-            Ok(Some(Ranked::new(item, yes)))
+            Ok(Some((item, yes)))
         })?;
         let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
         let facts = batch
             .facts()
             .cloned()
             .ok_or_else(|| Error::defect("a completed rank has no facts"))?;
-        let order = ranking(
-            &rows.iter().map(Ranked::probability).collect::<Vec<_>>(),
-            None,
-        );
-        let mut rows: Vec<Option<Ranked<I::Item>>> = rows.into_iter().map(Some).collect();
+        let order = ranking(&rows.iter().map(|(_, yes)| *yes).collect::<Vec<_>>(), None);
+        // Rows arrive in input order, so a row's place is its input index.
+        let mut rows: Vec<Option<(I::Item, f64)>> = rows.into_iter().map(Some).collect();
         Ok(Call::new(
             order
                 .into_iter()
-                .filter_map(|place| rows.get_mut(place).and_then(Option::take))
+                .filter_map(|place| {
+                    let (item, yes) = rows.get_mut(place).and_then(Option::take)?;
+                    Some(Ranked::new(place, item, yes))
+                })
                 .collect(),
             facts,
         ))

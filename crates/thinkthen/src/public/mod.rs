@@ -58,7 +58,7 @@ pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, DoorReply,
     Facts, Found, Judgment, NamedProbability, ObservedRow, Picked, Probabilities, QuestionDetail,
-    Ranked, RecordObservation, Row, Tally, TallyStart, Usage,
+    Ranked, RankedRow, RecordObservation, Row, Tally, TallyStart, Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;

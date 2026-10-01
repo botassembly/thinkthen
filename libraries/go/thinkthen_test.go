@@ -188,7 +188,10 @@ func TestMatrix(t *testing.T) {
 				t.Fatalf("filter: %v", value)
 			}
 		case 5:
-			if !reflect.DeepEqual(value, []any{"rank-one", "rank-two"}) {
+			if !reflect.DeepEqual(value, []any{
+				map[string]any{"index": float64(0), "record": "rank-one", "probability": 0.9},
+				map[string]any{"index": float64(1), "record": "rank-two", "probability": 0.9},
+			}) {
 				t.Fatalf("rank: %v", value)
 			}
 		case 6:
