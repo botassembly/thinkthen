@@ -516,7 +516,7 @@ export const SURFACES = [
   {
     slug: 'cpp', name: 'C++', deckHeading: null,
     lang: 'cpp', tab: 'C++',
-    blurb: 'One C++17 header over the C library. Calls return `CallResult` values, and the RAII owners free themselves.',
+    blurb: 'One C++17 header over the C library. Calls return `CallResult` values. The engine frees itself when it goes out of scope.',
     unsureWord: 'tt::Outcome::notSure',
     facts: '`decide` returns a `CallResult`. Its `.value` holds the answer, and its `.facts` holds this call\'s run facts as `tt::Json`.',
     errors: 'A failed call throws a `tt::Failure`. Its `tt::ErrorKind` names one of six kinds, with the message and the retry flag.',
@@ -543,7 +543,7 @@ export const SURFACES = [
       ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
     ],
     particular: [
-      'The `*Bytes` forms, such as `decideBytes`, take counted text that may hold NUL.',
+      'The `*Bytes` forms, such as `decideBytes`, take the text with its length, so the text may hold NUL bytes.',
     ],
   },
   {
