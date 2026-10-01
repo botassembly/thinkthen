@@ -2744,13 +2744,11 @@
   },
   "functions/score/c.c": {
     "page": "/functions/score/",
-    "sample": "e25e56484900a026b09b4a0c01e5080470f8c3b3656365ed3442487cb21db29f",
+    "sample": "7119114541ff5e818ebbfdc465a0c19693f650405095980fedd589e7e56908a6",
     "output": null,
     "files": {},
     "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
     },
     "sources": {
       "folders": [
@@ -2767,6 +2765,28 @@
     ]
   },
   "functions/score/duckdb.sql": {
+    "page": "/functions/score/",
+    "sample": "647de12ef626123372116d5a1371c50961c4385725dfdfc68b92a0e9ee04c239",
+    "output": "fc9d6decb04a0b3b1bbfdc26bc066f3ba01f6e8c55ea24e48178be1633038a06",
+    "files": {},
+    "answers": {
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/duckdb",
+        "databases/duckdb/bridge"
+      ],
+      "tree": "de562b2bd6f9047ae68050f00afff7b9a830eac2aa3cdad8e64004d4e8b49ff9"
+    },
+    "toolchain": [
+      "DuckDB v1.5.5",
+      "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/more/duckdb.sql": {
     "page": "/functions/score/",
     "sample": "9f5511e5cfd2c8c4926096d85dc9937e3ce5e6f028c1d6cf49b54e4d539963e3",
     "output": "d530bfda4f2a91fe0e448ee839a53b54e8490b2e6a004c2daba25541966dbc54",
@@ -2790,30 +2810,7 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
-  "functions/score/pandas.py": {
-    "page": "/functions/score/",
-    "sample": "a161f79a8b404da1c56a466f6e5deb9502d7ce158dd608d0c4418582a71bddd3",
-    "output": "e56aefbec99df06560431614ada55a826a04ad0735ad85953e23493beaab54dc",
-    "files": {},
-    "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
-    },
-    "sources": {
-      "folders": [
-        "crates/thinkthen",
-        "libraries/python"
-      ],
-      "tree": "b42b0f557d40ad554ffa819a521cf6b39977f8a513da4215d3019609c81b15f5"
-    },
-    "toolchain": [
-      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
-      "maturin 1.15.0",
-      "rustc 1.95.0 (59807616e 2026-04-14)"
-    ]
-  },
-  "functions/score/polars.py": {
+  "functions/score/more/polars.py": {
     "page": "/functions/score/",
     "sample": "a72f363a3880d447925fa2a75ba46a70c419788d898e653d0cce377e6a39639c",
     "output": "a5a6ab819703b1426acc44b059709c93a5a8ccb8c9f9551c76aef20e48fa0d4e",
@@ -2836,15 +2833,55 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
-  "functions/score/postgresql.sql": {
+  "functions/score/pandas.py": {
     "page": "/functions/score/",
-    "sample": "c8bb0eb6eeb8174d8f49ce17a8ef00196112fa5f339673ab8fca24a7400d0f8a",
-    "output": "45716d8111cb0960800ff5031888fe207cc375e3b5afe97ce88009198990b0ad",
+    "sample": "418b150b5bda1481e6b8a7fc4c86f134d3a631926b07756a6ba12a12473cfb66",
+    "output": null,
     "files": {},
     "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "b42b0f557d40ad554ffa819a521cf6b39977f8a513da4215d3019609c81b15f5"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/polars.py": {
+    "page": "/functions/score/",
+    "sample": "ae9e26ff5e18ad30c23b88e5951720cee73ed0d540eed7ee8b4a2cd83fd15943",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "b42b0f557d40ad554ffa819a521cf6b39977f8a513da4215d3019609c81b15f5"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/postgresql.sql": {
+    "page": "/functions/score/",
+    "sample": "00a18743f0b063bd0f1261d75144b48eeceb8fb7463e540fde8c358bdc99768d",
+    "output": "3b4c7e86dad051c473ba55d4bdd34057189748972e1a7f40a0555ff384393759",
+    "files": {},
+    "answers": {
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
     },
     "sources": {
       "folders": [
@@ -2861,13 +2898,11 @@
   },
   "functions/score/python.py": {
     "page": "/functions/score/",
-    "sample": "03b5efd26e01bf980b212489f98b006fe7004911831a457a190e776eb1e7c0b1",
+    "sample": "21f08503daa9e8b2bb96c62c1afa3261eddc181702ffb4f40d249d562f5a6a67",
     "output": null,
     "files": {},
     "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
     },
     "sources": {
       "folders": [
@@ -2884,13 +2919,11 @@
   },
   "functions/score/r.R": {
     "page": "/functions/score/",
-    "sample": "60ee00c7587ad77c474213784feced8d2f8ddedef96a2af75979f6e9f9c88362",
+    "sample": "46aecf8cdf7fef2665624ff43f79e7ee044e7389a7062b8a95b483fa91dfcaff",
     "output": null,
     "files": {},
     "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
     },
     "sources": {
       "folders": [
@@ -2907,13 +2940,11 @@
   },
   "functions/score/ruby.rb": {
     "page": "/functions/score/",
-    "sample": "450570cb107667b31f4c9472e8c48547e1b3fb26411a99e1f0fecbb970e8a831",
+    "sample": "b1e6c31a5852259a6d2c745428caf541cc9a3c72e902f013d0bac882be36b4b4",
     "output": null,
     "files": {},
     "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
     },
     "sources": {
       "folders": [
@@ -2929,13 +2960,11 @@
   },
   "functions/score/rust.rs": {
     "page": "/functions/score/",
-    "sample": "47ad36d4fdf54db0b816bae715942da59eb2b726392e2dc835dc452864edba88",
+    "sample": "b4e48db95d2a70eb2728885b1eb30d543b9687dc92248e111e018d54c881f003",
     "output": null,
     "files": {},
     "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
     },
     "sources": {
       "folders": [
@@ -2951,13 +2980,11 @@
   },
   "functions/score/sqlite.sql": {
     "page": "/functions/score/",
-    "sample": "8a2e14e271f9754ab716c7e0bad80e8d604c1146c0db1daea2713ff966830162",
-    "output": "6c95624df45a4aa133e911320f08104c854f679d806034558c64bd638f37219a",
+    "sample": "0ef316dac27c1551d0b1c209f75273fee35e2879508a40e8442c6189d76577df",
+    "output": "d526eb4e878a23ef26ae190031b4efd2d58ed66789ac049ea3dbaf74c9df7402",
     "files": {},
     "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
     },
     "sources": {
       "folders": [
@@ -2973,13 +3000,11 @@
   },
   "functions/score/typescript.ts": {
     "page": "/functions/score/",
-    "sample": "31eabab6641ce2c2fefc5cab5f793ce9f93e89108d549d7b855ee19c621e820a",
+    "sample": "c2deb318fd2306241f065deeb546c565ba143c22a715617e4fd89ec76fd0a340",
     "output": null,
     "files": {},
     "answers": {
-      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
-      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
-      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+      "d3f228e5318b4d15aafaab35f77f57d16d221963c1d087f6ee07f16d054054de": "945e1a3ad398bb91af849ffcc77d35095580947f79a7de7d83356f0978b78e12"
     },
     "sources": {
       "folders": [

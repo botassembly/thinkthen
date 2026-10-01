@@ -170,6 +170,10 @@ export const FUNCTIONS = [
       '1-one': "The outage scores 2.0, and 2 is Immediate on this scale.",
       '3-lines': "The address change lands near 0, the Friday deadline near 1, and the login outage at 2.",
     },
+    moreSee: {
+      polars: 'A data frame of three messages gets an urgency column. Each message lands on the scale.',
+      duckdb: 'The same three messages as rows of a table, each with its urgency.',
+    },
   },
   {
     name: 'filter',

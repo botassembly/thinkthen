@@ -107,6 +107,8 @@ functions/relate/rust.rs
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
 functions/score/c.c
+functions/score/more/duckdb.sql
+functions/score/more/polars.py
 functions/score/duckdb.sql
 functions/score/pandas.py
 functions/score/polars.py
