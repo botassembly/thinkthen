@@ -52,12 +52,12 @@ procedure division.
     display "SUCCESS_FACTS " tt-facts-json(1:tt-facts-length)
     move "decide-again" to evidence-text
     perform decide-ok 2 times
+    move '{"decide":"Is it?","evidence":"call-again"}' to request-text
+    perform call-ok 2 times
     move all "x" to question-text
     move "Is it?" to question-text(1:6)
     move "decide-full" to evidence-text
     perform decide-ok
-    move '{"decide":"Is it?","evidence":"call-again"}' to request-text
-    perform call-ok 2 times
     display "COBOL_FAILURE_OWNERSHIP_PASS"
     call dyn-free using by value engine
     move 0 to return-code
