@@ -2,11 +2,9 @@ import pandas as pd
 import thinkthen as tt
 
 reports = pd.DataFrame({
-    "body": [
-        "Steps: click Export. It is very slow.",
-        "Steps: click Log in. Nobody gets in.",
-        "The Pay button on billing is too blue.",
-    ],
+    "body": ["Steps: click Log in. Nobody gets in."],
 })
 triage = tt.annotate("form.json", reports, on="body").value
-print(triage[["steps", "area", "impact"]])
+assert triage["steps"].tolist() == [True]
+assert triage["area"].tolist() == ["login"]
+assert triage["impact"].tolist() == [1.98]

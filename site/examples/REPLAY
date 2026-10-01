@@ -6,6 +6,8 @@
 # bindings-proof.json in every build, and fails when a sample under
 # examples/ has no line here.
 functions/annotate/c.c
+functions/annotate/more/duckdb.sql
+functions/annotate/more/pandas.py
 functions/annotate/duckdb.sql
 functions/annotate/pandas.py
 functions/annotate/polars.py

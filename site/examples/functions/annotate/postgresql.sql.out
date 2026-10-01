@@ -1,7 +1,5 @@
-                       triage                        
------------------------------------------------------
- {"area": "export", "steps": true, "impact": 1.04}
+                      triage                      
+--------------------------------------------------
  {"area": "login", "steps": true, "impact": 1.98}
- {"area": "billing", "steps": false, "impact": 0.09}
-(3 rows)
+(1 row)
 

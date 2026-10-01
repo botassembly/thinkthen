@@ -1,11 +1,11 @@
 library(thinkthen)
 
-reports <- data.frame(body = c(
-  "Steps: click Export. It is very slow.",
-  "Steps: click Log in. Nobody gets in.",
-  "The Pay button on billing is too blue."
-))
+reports <- data.frame(
+  body = "Steps: click Log in. Nobody gets in."
+)
 triage <- tt_annotate(
   "form.json", reports, on = "body"
 )$value
-print(triage[c("steps", "area", "impact")])
+stopifnot(identical(triage$steps, TRUE))
+stopifnot(identical(triage$area, "login"))
+stopifnot(identical(triage$impact, 1.98))

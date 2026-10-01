@@ -271,6 +271,10 @@ export const FUNCTIONS = [
       '0-json': "One JSON document goes in. The same document comes back with three answers added: steps, area, and impact. The nested report rides through unchanged.",
       '1-jsonl': "Each report keeps its id and lands in its own area: login, billing, and export. The two with steps say true, and the blue button blocks nothing.",
     },
+    moreSee: {
+      pandas: 'A data frame of three reports gets one new column for each question in form.json.',
+      duckdb: 'The same three reports as rows of a table. Each row gets its answers as one JSON object.',
+    },
   },
   {
     name: 'recognize',
