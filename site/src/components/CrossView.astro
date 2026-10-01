@@ -4,7 +4,8 @@
 // the same tabs in the same order. Bash shows the function page's first
 // example with its output and exit code. Every other surface shows its
 // library sample, with what it printed when it prints. A surface with no
-// sample shows the function's `cannot` sentence, or says it has none.
+// sample shows the function's `cannot` sentence. A surface with neither
+// has no tab, and a group with no tab is left out.
 import Terminal from './Terminal.astro';
 import Code from './Code.astro';
 import InstallLine from './InstallLine.astro';
@@ -39,10 +40,11 @@ const tabOf = (s) => ({
   code: s.slug === 'shell' ? null : sample(fn, s.slug),
   cannot: entry.cannot?.[s.slug] ?? null,
 });
+const shown = (t) => t.slug === 'shell' || t.code || t.cannot;
 const groups = TAB_GROUPS.map((g) => ({
   name: g.name,
-  tabs: g.slugs.map((slug) => tabOf(SURFACES.find((s) => s.slug === slug))),
-}));
+  tabs: g.slugs.map((slug) => tabOf(SURFACES.find((s) => s.slug === slug))).filter(shown),
+})).filter((g) => g.tabs.length);
 const tabs = groups.flatMap((g) => g.tabs);
 ---
 <div class="tabbed" data-fallback="Bash">
@@ -69,7 +71,7 @@ const tabs = groups.flatMap((g) => g.tabs);
       {t.code && <Code code={t.code.code} file={t.code.file} label={`Copy the ${t.surface.name} sample`} />}
       {t.code && t.surface.fragment && <p class="note">{parts(t.surface.fragment).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>}
       {t.code?.output && <Code code={t.code.output} lang="output" caption={`What ${t.surface.name} printed`} copy={false} />}
-      {t.slug !== 'shell' && !t.code && <p class="note">{t.cannot ?? <>No {t.surface.name} sample for <code>{fn}</code>.</>}</p>}
+      {t.slug !== 'shell' && !t.code && <p class="note">{t.cannot}</p>}
       {install && t.slug === 'shell' && <InstallLine line={t.surface.install[0][0]} caption="Install the command" />}
       {install && t.slug === 'shell' && <InstallLine line={t.surface.install[1][0]} caption="Or with Homebrew, an option on a Mac" />}
       {install && t.slug !== 'shell' && <InstallLine line={t.surface.install[0][0]} caption={`Install it for ${t.surface.name}`} />}
