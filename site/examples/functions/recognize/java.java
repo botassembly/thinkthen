@@ -6,7 +6,7 @@ import thinkthen.Door;
 
 void main() {
     try (var tt = new Door()) {
-        var kinds = """
+        var spec = """
             {"version": 1, "recognize": {"kinds": {
               "PER": "Part of a person's name.",
               "ORG": "Part of the name of an organization: \
@@ -21,7 +21,7 @@ void main() {
         var text = "Maria Chen joined Northwind Freight "
             + "in Chicago last spring.";
         var facts = tt.recognize(
-            kinds, text.getBytes(UTF_8)).value();
+            spec, text.getBytes(UTF_8)).value();
         var entities = (List<?>) facts.get("entities");
         var names = entities.stream()
             .map(one -> (Map<?, ?>) one)

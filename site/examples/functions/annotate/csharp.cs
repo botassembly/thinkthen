@@ -12,5 +12,13 @@ var request = JsonSerializer.Serialize(new
     records = new[] { body },
 });
 var triage = tt.CallTyped(request).Value;
-Trace.Assert(triage.GetRawText() ==
-    """[{"steps":true,"area":"login","impact":1.98}]""");
+var ticket = triage.EnumerateArray().Single();
+var fields = ticket.EnumerateObject()
+    .Select(one => one.Name).Order();
+var filled = (
+    ticket.GetProperty("steps").GetBoolean(),
+    ticket.GetProperty("area").GetString(),
+    ticket.GetProperty("impact").GetDecimal());
+Trace.Assert(fields.SequenceEqual(
+    ["area", "impact", "steps"]));
+Trace.Assert(filled == (true, "login", 1.98m));

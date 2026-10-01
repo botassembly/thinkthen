@@ -33,7 +33,7 @@
   },
   "functions/annotate/csharp.cs": {
     "page": "/functions/annotate/",
-    "sample": "d5c8578bba49d0967e61901b8334207f2af81d9690f938b07b2e786488522612",
+    "sample": "bdd6bb46ca107956fa1b2f08f08c8103fb122f903303a69825d546c8e5fe852e",
     "output": null,
     "files": {
       "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
@@ -1977,7 +1977,7 @@
   },
   "functions/recognize/java.java": {
     "page": "/functions/recognize/",
-    "sample": "2121675c1852f125e5181de2abc76eb7931a5429f48d322f39dbad05452bc19a",
+    "sample": "0af47bc126ce17c010bdaad91925fa3edf0374d84619e0c68feb4583686f2b68",
     "output": null,
     "files": {
       "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
