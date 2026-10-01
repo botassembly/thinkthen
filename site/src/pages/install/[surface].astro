@@ -5,7 +5,7 @@ import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
 import { SURFACES, FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
-import { captioned, firstCall, installSample, sample } from '../../data/samples.mjs';
+import { captioned, files, firstCall, installSample, sample } from '../../data/samples.mjs';
 
 export function getStaticPaths() {
   return SURFACES.map((s) => ({ params: { surface: s.slug }, props: { surface: s } }));
@@ -15,6 +15,7 @@ const { surface } = Astro.props;
 const shell = surface.slug === 'shell';
 const notes = surface.install.some(([, note]) => note);
 const first = shell ? null : firstCall(surface.slug);
+const inputs = shell ? [] : files(`install/${surface.slug}`);
 const frames = surface.frames ? installSample(surface.slug, 'data-frames') : null;
 const onFunctionPages = !shell && CODE_FUNCTIONS.some((fn) => sample(fn.name, surface.slug));
 const decideOne = shell ? captioned('functions/decide', FUNCTIONS[0].see).find((r) => r.name === '3-one') : null;
@@ -41,6 +42,7 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
   <h2>A first call</h2>
   {first ? (
     <>
+      {inputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the sample reads`} />)}
       <Code code={first.code} file={first.file} label={`Copy the ${surface.name} sample`} />
       {first.output && <Code code={first.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
     </>

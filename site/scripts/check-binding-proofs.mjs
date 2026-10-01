@@ -27,6 +27,7 @@ const examples = path.join(site, 'examples');
 
 const problems = [];
 const warnings = [];
+const stalePages = new Set();
 
 const listed = readReplayList(examples);
 const proofPath = path.join(examples, PROOF_FILE);
@@ -47,6 +48,7 @@ for (const rel of listed) {
     else if (answers.get(key) !== hash) problems.push(`${rel} read the recorded answer ${key}, which changed after its proof.`);
   }
   if (sourceTree(repo, entry.sources.folders) !== entry.sources.tree) {
+    stalePages.add(entry.page);
     warnings.push(`${entry.page}: ${entry.sources.folders.join(', ')} changed after the proof of ${rel}. Prove the page again.`);
   }
 }
@@ -82,4 +84,4 @@ if (problems.length) {
   console.error(`check-binding-proofs: ${problems.length} problems\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`check-binding-proofs: ${listed.length} replayed samples match their proofs; ${warnings.length} pages to prove again.`);
+console.log(`check-binding-proofs: ${listed.length} replayed samples match their proofs; ${stalePages.size} pages to prove again.`);

@@ -437,7 +437,7 @@ export const SURFACES = [
     lang: 'python', tab: 'Python',
     blurb: 'A pandas Series goes in, and a Series with the same index comes back in `Call.value`.',
     unsureWord: 'pd.NA',
-    facts: '`Call.facts` counts this call outside the Series.',
+    facts: '`Call.facts` counts this call.',
     errors: 'Every failure raises a `ThinkThenError`, as in Python. Its subclass names the kind.',
     settings: '`tt.Engine` takes each setting as a keyword, as in Python. `record=` saves every answer to a folder. `replay=` answers from that folder with no connection.',
     install: [['pip install thinkthen pandas', null]],
