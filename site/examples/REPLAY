@@ -22,7 +22,13 @@ install/csharp/Backends.cs backend=liquid
 install/csharp/Backends.cs backend=ollama
 install/csharp/Backends.cs backend=typesafe
 install/csharp/FirstCall.cs
+install/dart/backends.dart backend=liquid
+install/dart/backends.dart backend=ollama
+install/dart/backends.dart backend=typesafe
 install/dart/first_call.dart
+install/go/backends.go backend=liquid
+install/go/backends.go backend=ollama
+install/go/backends.go backend=typesafe
 install/go/first-call.go
 install/java/Backends.java backend=liquid
 install/java/Backends.java backend=ollama
@@ -37,6 +43,9 @@ install/objective-c/backends.m backend=ollama
 install/objective-c/backends.m backend=typesafe
 install/objective-c/first-call.m
 install/pandas/first-call.py
+install/php/backends.php backend=liquid
+install/php/backends.php backend=ollama
+install/php/backends.php backend=typesafe
 install/php/first-call.php
 install/polars/first-call.py
 install/python/backends.py backend=liquid
@@ -58,9 +67,15 @@ install/scala/Backends.scala backend=liquid
 install/scala/Backends.scala backend=ollama
 install/scala/Backends.scala backend=typesafe
 install/scala/FirstCall.scala
+install/swift/backends/backends.swift backend=liquid
+install/swift/backends/backends.swift backend=ollama
+install/swift/backends/backends.swift backend=typesafe
 install/swift/main.swift
 install/typescript/backends.ts backend=liquid
 install/typescript/backends.ts backend=ollama
 install/typescript/backends.ts backend=typesafe
 install/typescript/first-call.ts
+install/zig/backends/backends.zig backend=liquid
+install/zig/backends/backends.zig backend=ollama
+install/zig/backends/backends.zig backend=typesafe
 install/zig/first-call.zig

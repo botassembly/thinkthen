@@ -466,6 +466,81 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/dart/backends.dart backend=liquid": {
+    "page": "/install/dart/",
+    "sample": "abe1f2499cbf4f8cecf13689685f89dd5130f410eedcc82fc0095027c34fea92",
+    "output": null,
+    "files": {
+      "install/dart/files/pubspec.yaml": "1990c50f61b81edf6028fbbf0753101c6af1b4e542648b5cab84978f9df3ecb1"
+    },
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/dart"
+      ],
+      "tree": "a2cfdce4499b8e87d8e77baa3169d81966982a0a605c6dced1b4569bc08eac87"
+    },
+    "toolchain": [
+      "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/dart/backends.dart backend=ollama": {
+    "page": "/install/dart/",
+    "sample": "abe1f2499cbf4f8cecf13689685f89dd5130f410eedcc82fc0095027c34fea92",
+    "output": null,
+    "files": {
+      "install/dart/files/pubspec.yaml": "1990c50f61b81edf6028fbbf0753101c6af1b4e542648b5cab84978f9df3ecb1"
+    },
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/dart"
+      ],
+      "tree": "a2cfdce4499b8e87d8e77baa3169d81966982a0a605c6dced1b4569bc08eac87"
+    },
+    "toolchain": [
+      "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/dart/backends.dart backend=typesafe": {
+    "page": "/install/dart/",
+    "sample": "abe1f2499cbf4f8cecf13689685f89dd5130f410eedcc82fc0095027c34fea92",
+    "output": null,
+    "files": {
+      "install/dart/files/pubspec.yaml": "1990c50f61b81edf6028fbbf0753101c6af1b4e542648b5cab84978f9df3ecb1"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/dart"
+      ],
+      "tree": "a2cfdce4499b8e87d8e77baa3169d81966982a0a605c6dced1b4569bc08eac87"
+    },
+    "toolchain": [
+      "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/dart/first_call.dart": {
     "page": "/install/dart/",
     "sample": "7ace831daf9aafaf93dc1cd39e69ab5ed7e07fe6f7e28887928eda2c0d458e79",
@@ -491,6 +566,75 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/go/backends.go backend=liquid": {
+    "page": "/install/go/",
+    "sample": "0cb810444cda28191fa62ba97c0b88c09938337a36be86a86faab865187f852a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/go"
+      ],
+      "tree": "2b4ffbd3006e93c48c9b2762bc3d9979a859fb1be79609c3b99e437fcc1e85d0"
+    },
+    "toolchain": [
+      "go version go1.22.2 linux/amd64",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/go/backends.go backend=ollama": {
+    "page": "/install/go/",
+    "sample": "0cb810444cda28191fa62ba97c0b88c09938337a36be86a86faab865187f852a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/go"
+      ],
+      "tree": "2b4ffbd3006e93c48c9b2762bc3d9979a859fb1be79609c3b99e437fcc1e85d0"
+    },
+    "toolchain": [
+      "go version go1.22.2 linux/amd64",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/go/backends.go backend=typesafe": {
+    "page": "/install/go/",
+    "sample": "0cb810444cda28191fa62ba97c0b88c09938337a36be86a86faab865187f852a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/go"
+      ],
+      "tree": "2b4ffbd3006e93c48c9b2762bc3d9979a859fb1be79609c3b99e437fcc1e85d0"
+    },
+    "toolchain": [
+      "go version go1.22.2 linux/amd64",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/go/first-call.go": {
     "page": "/install/go/",
     "sample": "6a20fd9a2353c9faeb346f726d1f65ba4e1c606381cb8597ac9862772100a48a",
@@ -507,7 +651,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "169158b7b92ce864c2115d50d6adae6eb18ed433e0576412e92c4eb11fc11dce"
+      "tree": "2b4ffbd3006e93c48c9b2762bc3d9979a859fb1be79609c3b99e437fcc1e85d0"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -816,6 +960,75 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/php/backends.php backend=liquid": {
+    "page": "/install/php/",
+    "sample": "8714e159eff8b429d8cdbf085cb74beaf69f0556cf28eed632f6900a25a653c2",
+    "output": null,
+    "files": {},
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/php"
+      ],
+      "tree": "8bf5d3624abe391c42f434d48bf388bde15201c0515bfcdc12c0536f006f3113"
+    },
+    "toolchain": [
+      "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/php/backends.php backend=ollama": {
+    "page": "/install/php/",
+    "sample": "8714e159eff8b429d8cdbf085cb74beaf69f0556cf28eed632f6900a25a653c2",
+    "output": null,
+    "files": {},
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/php"
+      ],
+      "tree": "8bf5d3624abe391c42f434d48bf388bde15201c0515bfcdc12c0536f006f3113"
+    },
+    "toolchain": [
+      "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/php/backends.php backend=typesafe": {
+    "page": "/install/php/",
+    "sample": "8714e159eff8b429d8cdbf085cb74beaf69f0556cf28eed632f6900a25a653c2",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/php"
+      ],
+      "tree": "8bf5d3624abe391c42f434d48bf388bde15201c0515bfcdc12c0536f006f3113"
+    },
+    "toolchain": [
+      "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/php/first-call.php": {
     "page": "/install/php/",
     "sample": "2c2874ca6d2b2a58f3291415a2e7b882f6b5398403b5a472b8887969cadc11f7",
@@ -1099,7 +1312,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "b4b156170787614b6a841aa02a2a516094eb371bd0be3ccb0ccbdc2007dfdbf2"
+      "tree": "20a745246ff50a5d15902ae7a9f62fd29779c5863ae3282b617aade5b602248b"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1120,7 +1333,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "b4b156170787614b6a841aa02a2a516094eb371bd0be3ccb0ccbdc2007dfdbf2"
+      "tree": "20a745246ff50a5d15902ae7a9f62fd29779c5863ae3282b617aade5b602248b"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1141,7 +1354,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "b4b156170787614b6a841aa02a2a516094eb371bd0be3ccb0ccbdc2007dfdbf2"
+      "tree": "20a745246ff50a5d15902ae7a9f62fd29779c5863ae3282b617aade5b602248b"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1164,7 +1377,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "177507892cbeafc2a789445dca7f04cbdd69491294a305e474633c8f30d15ba0"
+      "tree": "20a745246ff50a5d15902ae7a9f62fd29779c5863ae3282b617aade5b602248b"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1318,6 +1531,81 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/swift/backends/backends.swift backend=liquid": {
+    "page": "/install/swift/",
+    "sample": "274cac1a30a798c50532283b1727226d01a39d64fb39eca10061800e4cfb07e2",
+    "output": null,
+    "files": {
+      "install/swift/backends/files/Package.swift": "6b267cf1f9a75c68a6bbb428c1b2ff6976667fb60340248324ca96d7bb58a59e"
+    },
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/swift"
+      ],
+      "tree": "02e98eadce4c6fd41a0fd02912f307a9900e21d87c7dbe87ac4d9926f7f8b27a"
+    },
+    "toolchain": [
+      "Swift version 6.4 (swift-6.4-RELEASE)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/swift/backends/backends.swift backend=ollama": {
+    "page": "/install/swift/",
+    "sample": "274cac1a30a798c50532283b1727226d01a39d64fb39eca10061800e4cfb07e2",
+    "output": null,
+    "files": {
+      "install/swift/backends/files/Package.swift": "6b267cf1f9a75c68a6bbb428c1b2ff6976667fb60340248324ca96d7bb58a59e"
+    },
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/swift"
+      ],
+      "tree": "02e98eadce4c6fd41a0fd02912f307a9900e21d87c7dbe87ac4d9926f7f8b27a"
+    },
+    "toolchain": [
+      "Swift version 6.4 (swift-6.4-RELEASE)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/swift/backends/backends.swift backend=typesafe": {
+    "page": "/install/swift/",
+    "sample": "274cac1a30a798c50532283b1727226d01a39d64fb39eca10061800e4cfb07e2",
+    "output": null,
+    "files": {
+      "install/swift/backends/files/Package.swift": "6b267cf1f9a75c68a6bbb428c1b2ff6976667fb60340248324ca96d7bb58a59e"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/swift"
+      ],
+      "tree": "02e98eadce4c6fd41a0fd02912f307a9900e21d87c7dbe87ac4d9926f7f8b27a"
+    },
+    "toolchain": [
+      "Swift version 6.4 (swift-6.4-RELEASE)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/swift/main.swift": {
     "page": "/install/swift/",
     "sample": "f4dbadd4c54118bb5bf91974303bea2c9b2bb50f967fad8f704489dc035b4535",
@@ -1336,7 +1624,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "901f6584cc9bce0a739f0b295a7bedd07940ebeb3f5f95b9b9fb5a9dfcfe3a3f"
+      "tree": "02e98eadce4c6fd41a0fd02912f307a9900e21d87c7dbe87ac4d9926f7f8b27a"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -1429,6 +1717,84 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/zig/backends/backends.zig backend=liquid": {
+    "page": "/install/zig/",
+    "sample": "7d6d2be2f1733e5f7871724006edb5a028736d9e163f167875498819c6470f47",
+    "output": null,
+    "files": {
+      "install/zig/backends/files/build.zig": "60b10c7bcef991ddc64d9272d83d52d475fe911a1b8dfdf1a9b1a631df90b413",
+      "install/zig/backends/files/build.zig.zon": "870c16a3410b0c3a772d1776adabcd095f14a2e7f0f0f76529afdcfcdee44d28"
+    },
+    "answers": {
+      "bdfd73a3b572f41d17c8709df9d1a146e59143f3def6a41c9932284de526a020": "577e49b1c93df6c726abfad72eee8cc645bdf60015c55cce1aaeb0ad221b11db",
+      "dc554f4f0cb538bc5c5d0b8be6155198199000c2308b426d52ee1aaa35a1fd70": "0c8ec712f6cfffaa08820f5c26f521d1724c06f9351c71f2cabb3f969e60dab2"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/zig"
+      ],
+      "tree": "07dc70029c35692cd936d9a9969dad8d3c2b91783294322484935feb30f32256"
+    },
+    "toolchain": [
+      "Zig 0.15.2",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/zig/backends/backends.zig backend=ollama": {
+    "page": "/install/zig/",
+    "sample": "7d6d2be2f1733e5f7871724006edb5a028736d9e163f167875498819c6470f47",
+    "output": null,
+    "files": {
+      "install/zig/backends/files/build.zig": "60b10c7bcef991ddc64d9272d83d52d475fe911a1b8dfdf1a9b1a631df90b413",
+      "install/zig/backends/files/build.zig.zon": "870c16a3410b0c3a772d1776adabcd095f14a2e7f0f0f76529afdcfcdee44d28"
+    },
+    "answers": {
+      "d1ff609cce171e1d3ba53f3413b880e09b0c677406b564dc670afca12325c317": "22fb3a14e4dcd7ba43d8c0e58bca068a51da6763f280238c7d55327f892a0403",
+      "e36de45af5cbc9787ddd373e80b9783cb0bb0bb5866bda1a63716b7b72cba6c6": "011c9cfe673a318aec2264c9bdd216385305b02f7fa328c0f834335d33eb8cff"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/zig"
+      ],
+      "tree": "07dc70029c35692cd936d9a9969dad8d3c2b91783294322484935feb30f32256"
+    },
+    "toolchain": [
+      "Zig 0.15.2",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/zig/backends/backends.zig backend=typesafe": {
+    "page": "/install/zig/",
+    "sample": "7d6d2be2f1733e5f7871724006edb5a028736d9e163f167875498819c6470f47",
+    "output": null,
+    "files": {
+      "install/zig/backends/files/build.zig": "60b10c7bcef991ddc64d9272d83d52d475fe911a1b8dfdf1a9b1a631df90b413",
+      "install/zig/backends/files/build.zig.zon": "870c16a3410b0c3a772d1776adabcd095f14a2e7f0f0f76529afdcfcdee44d28"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/zig"
+      ],
+      "tree": "07dc70029c35692cd936d9a9969dad8d3c2b91783294322484935feb30f32256"
+    },
+    "toolchain": [
+      "Zig 0.15.2",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/zig/first-call.zig": {
     "page": "/install/zig/",
     "sample": "cdf9c17933cd63266adb2a5a2e78176b146c3ba2334703af8c6f66c501b96294",
@@ -1448,7 +1814,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "3f8ad36b9e3baa3ecb565f640d8c97a5bdacb39abd3cdc078d6c914866a49020"
+      "tree": "07dc70029c35692cd936d9a9969dad8d3c2b91783294322484935feb30f32256"
     },
     "toolchain": [
       "Zig 0.15.2",
