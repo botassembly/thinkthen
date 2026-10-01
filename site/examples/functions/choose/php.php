@@ -5,19 +5,18 @@ require __DIR__ . '/thinkthen-php/autoload.php';
 $library = __DIR__ . '/thinkthen-c/lib/libthinkthen.so';
 $tt = new ThinkThen($library);
 
+$question = 'Which team owns this?';
+$teams = [
+    'billing' => 'Invoices, fees, and refunds.',
+    'shipping' => 'Parcels and delivery.',
+    'account' => 'Logins and passwords.',
+];
+$parcel = 'My parcel went to the wrong address.';
 $owner = $tt->call(json_encode([
-    'choose' => 'Which team owns this?',
-    'options' => [
-        'billing' => 'Invoices, fees, and refunds.',
-        'shipping' => 'Parcels and delivery.',
-        'account' => 'Logins and passwords.',
-    ],
-    'records' => [
-        'Please refund the extra fee on my invoice.',
-        'My parcel went to the wrong address.',
-        'I cannot reset my password.',
-    ],
+    'choose' => $question,
+    'options' => $teams,
+    'evidence' => $parcel,
 ]));
-$teams = json_decode($owner, true)['value'];
-assert($teams === ['billing', 'shipping', 'account']);
+$team = json_decode($owner, true)['value'];
+assert($team === 'shipping');
 $tt->close();

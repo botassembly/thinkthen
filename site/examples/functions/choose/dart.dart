@@ -7,23 +7,20 @@ void main() {
   final tt = Door(library.absolute.path);
   final engine = tt.create();
   try {
+    const question = 'Which team owns this?';
+    const teams = {
+      'billing': 'Invoices, fees, and refunds.',
+      'shipping': 'Parcels and delivery.',
+      'account': 'Logins and passwords.',
+    };
+    const parcel = 'My parcel went to the wrong address.';
     final owner = tt.ask(engine, {
-      'choose': 'Which team owns this?',
-      'options': {
-        'billing': 'Invoices, fees, and refunds.',
-        'shipping': 'Parcels and delivery.',
-        'account': 'Logins and passwords.',
-      },
-      'records': [
-        'Please refund the extra fee on my invoice.',
-        'My parcel went to the wrong address.',
-        'I cannot reset my password.',
-      ],
+      'choose': question,
+      'options': teams,
+      'evidence': parcel,
     }) as Map;
-    final teams = owner['value'] as List;
-    assert(teams[0] == 'billing');
-    assert(teams[1] == 'shipping');
-    assert(teams[2] == 'account');
+    final team = owner['value'] as String;
+    assert(team == 'shipping');
   } finally {
     tt.engineFree(engine);
   }

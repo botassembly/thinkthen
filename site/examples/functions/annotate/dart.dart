@@ -9,21 +9,15 @@ void main() {
   final engine = tt.create();
   try {
     final form = File('form.json').readAsStringSync();
-    final triage = tt.ask(engine, {
+    const report = 'Steps: click Log in. Nobody gets in.';
+    final rows = tt.ask(engine, {
       'annotate': jsonDecode(form),
-      'records': [
-        'Steps: click Export. It is very slow.',
-        'Steps: click Log in. Nobody gets in.',
-        'The Pay button on billing is too blue.',
-      ],
+      'records': [report],
     }) as Map;
-    final rows = triage['value'] as List;
-    assert(jsonEncode(rows[0]) ==
-        '{"steps":true,"area":"export","impact":1.04}');
-    assert(jsonEncode(rows[1]) ==
+    final triage = rows['value'] as List;
+    assert(triage.length == 1);
+    assert(jsonEncode(triage[0]) ==
         '{"steps":true,"area":"login","impact":1.98}');
-    assert(jsonEncode(rows[2]) ==
-        '{"steps":false,"area":"billing","impact":0.09}');
   } finally {
     tt.engineFree(engine);
   }

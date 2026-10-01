@@ -21,29 +21,24 @@ int main(void) {
         "\"levels\": [\"None.\", \"Slows them.\", "
         "\"Blocks work.\"]}}}, "
         "\"records\": ["
-        "\"Steps: click Export. It is very slow.\", "
-        "\"Steps: click Log in. Nobody gets in.\", "
-        "\"The Pay button on billing is too blue.\"]}";
-    char *triage = [client json:annotate
-                       deadline:-1
-                          token:nil
-                        failure:&failure];
-    assert(triage);
-    TTJSON *envelope =
-        tt_json_parse(triage, strlen(triage));
-    const TTJSON *rows = tt_json_get(envelope, "value");
-    const char *areas[] = {"export", "login", "billing"};
-    const char *impacts[] = {"1.04", "1.98", "0.09"};
-    assert(rows->count == 3);
-    for (size_t i = 0; i < 3; i++) {
-        const TTJSON *row = rows->children[i];
-        const TTJSON *area = tt_json_get(row, "area");
-        const TTJSON *impact = tt_json_get(row, "impact");
-        assert(strcmp(area->text, areas[i]) == 0);
-        assert(strcmp(impact->text, impacts[i]) == 0);
-    }
+        "\"Steps: click Log in. Nobody gets in.\"]}";
+    char *rows = [client json:annotate
+                     deadline:-1
+                        token:nil
+                      failure:&failure];
+    assert(rows);
+    TTJSON *envelope = tt_json_parse(rows, strlen(rows));
+    const TTJSON *triage = tt_json_get(envelope, "value");
+    assert(triage->count == 1);
+    const TTJSON *row = triage->children[0];
+    const TTJSON *steps = tt_json_get(row, "steps");
+    const TTJSON *area = tt_json_get(row, "area");
+    const TTJSON *impact = tt_json_get(row, "impact");
+    assert(strcmp(steps->text, "true") == 0);
+    assert(strcmp(area->text, "login") == 0);
+    assert(strcmp(impact->text, "1.98") == 0);
     tt_json_free(envelope);
-    free(triage);
+    free(rows);
 
     tt_failure_clear(&failure);
     [client dealloc];

@@ -9,20 +9,12 @@ int main(void) {
     TTFailure failure = {0};
 
     const char *kinds =
-        "{\"version\": 1, \"recognize\": {\"kinds\": {"
-        "\"PER\": \"Part of a person's name.\", "
-        "\"ORG\": \"Part of the name of an organization: "
-        "a company, band, team, agency, government "
-        "body, or media outlet.\", "
-        "\"LOC\": \"Part of the name of a place: "
-        "a country, region, city, or geographic "
-        "feature.\", "
-        "\"MISC\": \"Part of another named entity: a "
-        "nationality, an event, a product, or the "
-        "name of a creative work.\"}}}";
+        "{\"version\": 1, \"recognize\": {"
+        "\"kinds\": {\"person\": null, "
+        "\"organization\": null, \"place\": null}}}";
     const char *text =
-        "Maria Chen joined Northwind Freight in Chicago "
-        "last spring.";
+        "Maria Chen joined Northwind Freight, "
+        "a company in Chicago.";
     char *names = NULL;
     size_t names_length = 0;
     char *facts = NULL;
@@ -39,16 +31,18 @@ int main(void) {
     assert(names_error == TTErrorNone);
     TTJSON *found = tt_json_parse(names, names_length);
     const TTJSON *entities = tt_json_get(found, "entities");
-    const char *people[] = {
+    const char *spans[] = {
         "Maria Chen", "Northwind Freight", "Chicago",
     };
-    const char *labels[] = {"PER", "ORG", "LOC"};
+    const char *labels[] = {
+        "person", "organization", "place",
+    };
     assert(entities->count == 3);
     for (size_t i = 0; i < 3; i++) {
         const TTJSON *one = entities->children[i];
         const TTJSON *name = tt_json_get(one, "text");
         const TTJSON *kind = tt_json_get(one, "kind");
-        assert(strcmp(name->text, people[i]) == 0);
+        assert(strcmp(name->text, spans[i]) == 0);
         assert(strcmp(kind->text, labels[i]) == 0);
     }
     tt_json_free(found);
