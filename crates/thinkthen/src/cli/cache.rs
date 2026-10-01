@@ -82,8 +82,8 @@ pub(crate) fn prune(
     environment: &Environment,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let max_size = max_size(arguments.max_size.as_deref())?
-        .unwrap_or_else(|| environment.cache_bytes());
+    let max_size =
+        max_size(arguments.max_size.as_deref())?.unwrap_or_else(|| environment.cache_bytes());
     let older_than = arguments.older_than.as_deref().map(duration).transpose()?;
     if arguments
         .answered_by_other_than
@@ -134,7 +134,9 @@ fn max_size(value: Option<&str>) -> Result<Option<u64>, Failure> {
             text.parse::<u64>()
                 .ok()
                 .filter(|number| *number > 0)
-                .ok_or(Failure::Usage("--max-size takes a positive base-ten integer"))
+                .ok_or(Failure::Usage(
+                    "--max-size takes a positive base-ten integer",
+                ))
         })
         .transpose()
 }

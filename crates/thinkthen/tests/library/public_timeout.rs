@@ -23,7 +23,10 @@ fn the_setter_refuses_a_timeout_past_one_day() {
             Duration::from_secs(86_400) + Duration::from_nanos(1),
             "a timeout is at most 86400 seconds",
         ),
-        (Duration::from_secs(u64::MAX), "a timeout is at most 86400 seconds"),
+        (
+            Duration::from_secs(u64::MAX),
+            "a timeout is at most 86400 seconds",
+        ),
         (Duration::MAX, "a timeout is at most 86400 seconds"),
     ] {
         let error = Engine::builder().timeout(timeout).expect_err("refused");

@@ -8,6 +8,8 @@ The first release. It ships every surface: the command; the Rust, C, Python, Typ
 
 The command handles SIGTERM like Ctrl-C, reports a signal as the cause when a sent request later fails, and gives the finished count without naming a record that may not exist.
 
+Every library takes the command's timeout bound: a timeout past 86,400 seconds is the usage error `a timeout is at most 86400 seconds`. A timeout near the largest `Duration` used to hang the call.
+
 The command reads at most 1 MiB of a question file or question set, as the libraries do. A larger file, such as `/dev/zero`, exits 5 with `the question file is too large` before any request.
 
 The Rust loaders `Question::load`, `QuestionSet::load`, `Relate::load` and `Recognize::load`, Python's `question(file=)` and R's `tt_question(file=)` now read at most 1 MiB too. A larger file is a local error, such as `the question file is too large` or `the relate file is too large`, and nothing is sent. The command and every library read question files through one public reader, `read_question_file`; the SQL extensions keep their own 1 MiB readers (ticket 0345).

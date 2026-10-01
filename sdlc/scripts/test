@@ -66,7 +66,7 @@ cargo test --locked --offline --workspace --doc
 # a test that starts the command without `#[cfg(feature = "cli")]` fails here
 # and not first in the release `crate` job. Only integration tests can start
 # the command, so nextest skips the unit tests the run above already ran.
-# `sdlc/scripts/package` builds the same folder.
+# `sdlc/scripts/package` runs every target in the same folder.
 if [ "$runner" = test ]; then only=; else only='kind(test)'; fi
 CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/library-only" \
     cargo $runner --locked --offline --package thinkthen --no-default-features \
