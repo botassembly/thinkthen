@@ -78,6 +78,15 @@ impl Folder {
         (name, value.to_string_lossy().into_owned())
     }
 
+    /// Write `text` as the configuration file under `root`, and return the
+    /// variable that points the command at it.
+    pub(crate) fn configure(root: &Path, text: &str) -> std::io::Result<(&'static str, String)> {
+        let folder = Self::Config.under(root);
+        std::fs::create_dir_all(&folder)?;
+        std::fs::write(folder.join("config.json"), text)?;
+        Ok(Self::Config.variable(root))
+    }
+
     /// Where the command keeps this folder once `variable` names `root`.
     pub(crate) fn under(self, root: &Path) -> PathBuf {
         let mut folder = PathBuf::from(self.variable(root).1);

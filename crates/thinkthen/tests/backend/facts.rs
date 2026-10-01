@@ -499,10 +499,7 @@ fn dry_run_and_early_setup_failures_report_zero_work() {
     assert!(line(&dry).get("stopped").is_none());
 
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("facts-invalid-config");
-    let config = Folder::Config.under(&root);
-    fs::create_dir_all(&config).expect("configuration folder");
-    fs::write(config.join("config.json"), b"not JSON").expect("invalid configuration");
-    let moved = Folder::Config.variable(&root);
+    let moved = Folder::configure(&root, "not JSON").expect("invalid configuration");
     let early = spawn(
         &["decide", QUESTION, "--facts", "--plan"],
         &[(moved.0, moved.1.as_str())],
