@@ -16,10 +16,11 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     export THINKTHEN_HEAVY_LOCK_HELD
     exec flock -w 180 -E 75 -o "$lock" /bin/sh "$0" "$@"
 fi
+# ADR 0113: every branch's engines write a scratch usage folder, never the real one.
+. "$root/sdlc/scripts/scratch.sh"
+usage_home
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     # The replay smoke (ticket 0335): the package source over the installed C door's module.
-    . "$root/sdlc/scripts/scratch.sh"
-    usage_home
     smoke_guard
     . "$root/sdlc/scripts/installed.sh"
     scratch_dir smoke
