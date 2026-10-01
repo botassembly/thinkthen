@@ -29,7 +29,7 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 
 | Surface | Stage 0 result | Verdict |
 | --- | --- | --- |
-| Command line | Builds and passes on Windows. Six small product fixes landed. Findings W1 to W8 remain. | Stage 1 |
+| Command line | Builds and passes on Windows. Six small product fixes landed. Findings W1 to W7 remain. | Stage 1 |
 | Rust crate | Builds and passes on Windows as part of the root workspace. | Stage 1 |
 | C door (`libraries/c`) | Builds, passes Clippy and passes its Rust tests. The C door tests build C with a Unix compiler under ASan, so they stay on Unix. | Stage 1 |
 | Python wheel | Not built in stage 0. The wheel script expects a `.so`. | Stage 1 |

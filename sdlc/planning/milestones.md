@@ -65,7 +65,10 @@ Blockers:
 
 - The `release/0.1` cut. Only work that cannot change 0.1 behavior lands before it.
 
-Windows work has no file on main yet. Ticket 0373, Windows stage 0, is in progress in a lane. It is safe before the cut, and its milestone is `0.2`. Windows stage 1 is `0.2` and has no ticket yet. ADR 0116 item 6 says what happens if Ian pulls it into 0.1.
+Windows work follows [windows.md](windows.md):
+
+- [0373: Windows stage 0](../tickets/0373-windows-stage-0.md), landed before the cut. The root workspace and the C door build and pass their tests on Windows, and nothing ships. It changes no 0.1 behavior.
+- Windows stage 1: the command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM ship for Windows x86-64, and findings W1 to W7 close. It has no ticket yet. The stage 1 report in [windows.md](windows.md#stage-1-difficulty-report) sizes it at 9 to 11 tickets and recommends keeping it in 0.2. ADR 0116 item 6 says what happens if Ian pulls it into 0.1.
 
 Open items:
 

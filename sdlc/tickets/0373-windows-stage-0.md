@@ -1,6 +1,6 @@
 # 0373: Windows stage 0: the root workspace and the C door compile and pass their tests on Windows
 
-Status: in progress. Lane claude-3. Branch `ticket/0373-windows-stage-0`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian on 2026-10-01. It lands in two slices. Slice A lands the `windows` workflow file alone, so GitHub can dispatch it. Slice B lands the rest.
+Status: landed. Lane claude-3. Branch `ticket/0373-windows-stage-0`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian on 2026-10-01. It lands in two slices. Slice A lands the `windows` workflow file alone, so GitHub can dispatch it. Slice B lands the rest.
 
 Milestone: 0.2
 
@@ -79,5 +79,6 @@ Milestone: 0.2
 - About forty integration cases name the XDG folders or a Linux path under `HOME`. Windows keeps the cache and the usage totals both under `LOCALAPPDATA`, so the XDG names do not map one to one. They carry `#[cfg(unix)]`, and finding W6 ports them in stage 1. The configuration file maps one to one, so the named-backend harness also sets `APPDATA` and runs on Windows.
 - The M5 call: the change reaches macOS through the conformance fixture's accept, so the M5 ran the whole root workspace tests at the branch's code commit and at the base, as the first item records. Every other change is either Windows-only or the same code on macOS and Linux.
 - The Windows-target type check on Linux caught most compile errors before a dispatch. It cannot see dead code that only the Windows test build leaves behind, so the runner found the unused helpers that the guards created.
+- Proof run: the `windows` workflow passed at the branch's code commit `d85e5e961`: https://github.com/botassembly/thinkthen/actions/runs/36880023738. Later commits change only a comment, the plan page and this record. On Linux, `sdlc/scripts/lint`, `policy.py` and the focused unit and integration tests passed on the lane. One dispatch on main after landing confirms it there.
 - Reviews: the ticket review returned findings, then ACCEPT. Slice A's code review found the job-level `runner` context. Slice B's code review returned five findings: the macOS accept note, the usage proof line, the stage of each finding, two counts in `windows.md`, and the release files that hold the count of four. All five are fixed.
 
