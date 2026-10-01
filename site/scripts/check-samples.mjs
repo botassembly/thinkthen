@@ -60,6 +60,11 @@ const EXEMPT = [
     test: (line, file) => file.startsWith('reference/annotate/') && file.endsWith('.out') && /^thinkthen: the record already holds `[a-z0-9_]+`, so that question cannot be appended$/.test(line),
   },
   {
+    name: 'the replay miss',
+    why: 'thinkthen prints a replay miss as one line, and the page quotes the key sentence exactly.',
+    test: (line, file) => file === 'reference/answer-cache/3-miss.out' && /^thinkthen: .*the replay folder holds no answer for question `[0-9a-f]{64}`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent$/.test(line),
+  },
+  {
     name: 'the diff warning',
     why: 'thinkthen diff prints its warning as one line.',
     test: (line, file) => file.startsWith('beatles/diff/') && file.endsWith('.out') && line.startsWith('thinkthen: diff: warning:'),

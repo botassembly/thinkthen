@@ -185,20 +185,8 @@ const COUNTS = [
   <h2>The environment</h2>
   <p>The <a href="/install/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads.</p>
 
-  <h2>The cache</h2>
-  <p>The cache is {dflt('Answer cache').split(',')[0]} by default. Ask the same question of the same evidence again and the tool reads the saved answer instead of sending a request.</p>
-  <ul>
-    <li>The cache keeps one answer for each question, in <code>thinkthen.sqlite</code> in the cache folder. A question's key is the SHA-256 of the adapter, the address, the model, the shared state, and the question as sent. The same command finds the same answer.</li>
-    <li>The key covers the encoded question. When the input is read as one document, <code>hello\n</code> and <code>hello\r\n</code> make two keys, and so do <code>{'{"a":1}'}</code> and <code>{'{"a":1.0}'}</code>. Record framing may strip line ends or re-encode parsed JSON first. <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> gives the full rule.</li>
-    <li>An answer holds the question and the reply's answer, never a header. No key can reach it. Only a good answer is saved. A failure is never saved.</li>
-    <li>The <a href="/install/configuration/#locations">Configuration page</a> says where the cache folder lives. <code>THINKTHEN_CACHE</code> names another one.</li>
-    <li>A saved question holds the evidence. The tool creates <code>thinkthen.sqlite</code> with mode 0600.</li>
-    <li>Answers from two addresses never mix, because the address is part of every key. A cache pointed at a new address misses and sends again.</li>
-    <li>An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run.</li>
-    <li><code>thinkthen cache prune DIR</code> is the only way answers are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> or a model no reply in the folder names, and deletes nothing. An empty folder accepts any model name.</li>
-    <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>cache prune</code>.</li>
-  </ul>
-  <p>The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page.</p>
+  <h2 id="the-cache">The cache</h2>
+  <p><a href="/reference/recording/">Recording and the cache</a> covers the cache, the answer key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page.</p>
 
   <h2>The configuration file</h2>
   <p>The <a href="/install/configuration/#configuration-file">Configuration page</a> gives its path, its fields, and the rules ThinkThen reads it by.</p>

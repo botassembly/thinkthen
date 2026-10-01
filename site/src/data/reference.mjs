@@ -7,6 +7,7 @@ export const REFERENCE_PAGES = [
   { slug: 'answers', title: 'How answers work', label: 'How answers work', group: 'Answers' },
   { slug: 'annotate', title: "annotate's edge cases", label: "annotate's edge cases", group: 'annotate' },
   { slug: 'question-sets', title: 'Question sets', label: 'Question sets', group: 'annotate' },
+  { slug: 'recording', title: 'Recording and the cache', label: 'Recording and the cache', group: 'Saved answers' },
 ].map((p) => ({ ...p, route: p.slug ? `/reference/${p.slug}/` : '/reference/' }));
 
 export const referencePage = (slug) => {
@@ -27,4 +28,14 @@ export const ANNOTATE_SEE = {
 // Captions for the question-set page, keyed by script name.
 export const QUESTION_SETS_SEE = {
   '1-plan': 'The plan shows each question\'s pointers. urgent reads both fields as one object, keyed subject and body. team reads only the body.',
+};
+
+// Captions for the recording page, keyed by script name. Its examples sit
+// in examples/reference/answer-cache/, because check-samples skips any folder
+// named recording.
+export const RECORDING_SEE = {
+  '1-plan': 'The plan ends with a summary line: one record, one request, and the size of what it would send.',
+  '2-dry-run': 'The old flag is refused at exit 2, and the message names the new one.',
+  '3-miss': 'The folder holds one answer, and this question is not it. The run exits 5 and names the missing key.',
+  '4-facts': 'The answer came from the folder. The facts line counts one record and no request sent.',
 };

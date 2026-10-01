@@ -1,0 +1,10 @@
+{
+  "records": 1,
+  "requests": 1,
+  "estimated_bytes": 211,
+  "estimated_input_tokens": {
+    "lower": 108,
+    "upper": 192
+  },
+  "upper_bound": false
+}
