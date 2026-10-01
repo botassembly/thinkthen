@@ -21,7 +21,7 @@ export const ANNOTATE_SEE = {
   '2-clash': 'The record already holds steps. annotate refuses it at exit 2 and sends nothing for it.',
   '3-plan': 'The second record holds area. The plan refuses it at exit 2 and sends nothing.',
   '4-details': 'Under --details the record keeps its own steps under input. The answer named steps sits under value.',
-  '5-continue': 'B-8 has no /body. It gets one error row, B-7 gets its answers, and the run exits 7.',
+  '5-continue': 'B-8 has no /body. It gets one error row in its place. B-7 and B-9 get their answers, and the run exits 7.',
 };
 
 // Captions for the question-set page, keyed by script name.

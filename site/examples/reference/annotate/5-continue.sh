@@ -1,6 +1,7 @@
 cat <<'EOF' |
 {"id": "B-7", "body": "Steps: click Log in. Nobody gets in."}
 {"id": "B-8", "text": "The Pay button on billing is too blue."}
+{"id": "B-9", "body": "Steps: click Export. It is very slow."}
 EOF
 thinkthen annotate on-body.json \
   --jsonl \

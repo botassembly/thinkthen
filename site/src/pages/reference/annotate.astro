@@ -45,7 +45,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
   <Terminal run={carryOn} caption={carryOn.see} />
 
   <h2 id="failed-questions">Failed questions and exit 6</h2>
-  <p>When the backend cannot answer one question, that question fails and the others keep their answers. The failed question's field holds <code>{'{"failed":{"kind":"backend","cause":…}}'}</code>, never <code>null</code>. The run finishes and exits 6. When a run has both failed questions and skipped records, exit 7 wins. A failure is never saved. Under a cache, a later run asks only the failed questions again.</p>
+  <p>When the backend cannot answer one question, that question fails and the others keep their answers. The failed question's field holds <code>{'{"failed":{"kind":"backend","cause":…}}'}</code>, never <code>null</code>. <code>null</code> means not sure. The run finishes and exits 6. When a reply holds no usable answer at all, the run stops at exit 4. It prints none of that record's answers, even those another <code>on</code> group answered. When a run has both failed questions and skipped records, exit 7 wins. A failure is never saved. Under a cache, a later run asks only the failed questions again.</p>
 
   <p class="pagelinks"><a href="/reference/question-sets/">Question sets</a> · <a href="/functions/annotate/">annotate</a> · <a href={spec}>The annotate specification</a> · <a href="/reference/#exit-codes">Every exit code</a></p>
 </SidePage>

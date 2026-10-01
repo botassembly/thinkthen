@@ -10,12 +10,15 @@ const page = referencePage('question-sets');
 const dir = 'reference/question-sets';
 const [plan] = captioned(dir, QUESTION_SETS_SEE);
 const [triage] = files(dir);
+const [form] = files('reference/annotate');
 const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/annotate.md#the-question-set';
 ---
 <SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'The rules a question set for annotate follows, and how on picks the part of each record a question reads.' }} name="Reference">
   <h1>Question sets</h1>
   <p class="lede">A question set is one JSON file that holds every question <code>annotate</code> asks of each record.</p>
-  <Code code={triage.text} file={triage.name} caption={`${triage.name}, a question set`} />
+  <Code code={form.text} file={form.name} caption={`${form.name}, the smallest useful set: three questions and nothing else`} />
+  <p>A set may also carry a top-level threshold and say which part of each record a question reads.</p>
+  <Code code={triage.text} file={triage.name} caption={`${triage.name}, a band for every decide question, and on`} />
 
   <h2 id="top-level">The top level</h2>
   <ul>
