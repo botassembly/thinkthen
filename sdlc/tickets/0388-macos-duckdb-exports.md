@@ -1,6 +1,6 @@
 # 0388: The macOS DuckDB extension exports no Rust names
 
-Status: in progress. Lane claude-2. Branch `ticket/0388-macos-duckdb-exports`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
+Status: landed. Lane claude-2. Branch `ticket/0388-macos-duckdb-exports`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
 
 Milestone: 0.1
 
@@ -35,3 +35,19 @@ Milestone: 0.1
   - `sdlc/scripts/lint` in full, `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` and `sdlc/scripts/tickets`.
   - No workflow is dispatched. The coordinator's next rehearsal proves both Mac smoke jobs.
 - Defers: the DuckDB archives' C++ names stay exported on macOS, about 39,000 of them, including weak definitions that dyld may coalesce with the host's: `llvm-nm-18 -gU -m` counts 2,154 weak externals in the ARM Mac file and 5,857 in the Intel Mac file. Hiding them could change how C++ exceptions and type identity cross between host and extension, because Apple's libc++ compares type information by address for default-visibility types. That needs its own evidence and ticket. No panic name is among them.
+
+## Build result
+
+- Run 36903959951 finished after this ticket was written. The Intel Mac smoke job failed the same single check, `FAIL thinkthen.duckdb_extension exports a panic symbol`, on `thinkthen-duckdb-0.0.1-x86_64-apple-darwin.tar.gz`. Every other step on both Macs and both Linux smokes passed. The change sits in the Apple branch of `CMakeLists.txt` and the macOS branch of `build.sh`, so it covers both Mac architectures. The M5 is ARM; the next rehearsal proves the Intel build.
+- On the M5 (macOS 26.5, `ld-1267`, the pinned Rust 1.95.0 toolchain), `databases/duckdb/cpp/build.sh` built the branch's extension and its widened guard passed. `nm -gU` lists 34,955 exported names, down from the runner file's 39,247. None names a panic, and none matches the Rust or SQLite pattern. `thinkthen_duckdb_cpp_init` and `thinkthen_cpp_interrupt_busy` stay exported, and `std::panicking::HOOK` no longer appears at all after `strip -x`. `own_panic_hook` passes on it.
+- On the M5, the run's ARM Mac DuckDB archive with only its extension replaced by the branch's passed the whole installed DuckDB check, driven as `release-smoke` drives it: `keeps its own panic hook`, the stock CLI load, `C++ package loads in v1.5.5 and the unchanged artifact refuses stock v1.5.4`, `C++ held grouped, listed, nested, and late SIGINT boundaries pass`, conformance `pass=53 fail=0 not_run=2`, every named suite case `ok`, and `check: databases/duckdb passes, installed`.
+- On the M5, `own_panic_hook` on the run's ARM Mac extension still fails with `exports a panic symbol:` and three `std`/`core` panic names, and prints no broken pipe line. The plant that links the Rust archive plainly again fails `build.sh` with `duckdb: the macOS extension exports 4540 SQLite or Rust names`.
+- The Linux runs named under Proof pass and fail as stated.
+- `sdlc/scripts/lint` in full in a clean clone, `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` and `sdlc/scripts/tickets` pass.
+
+## What the build taught us
+
+- On Mach-O, every global name in a static archive linked into a dynamic library stays exported unless the link says otherwise. Linux's `--exclude-libs,ALL` has no single macOS twin. `-load_hidden ARCHIVE` is the per-archive equivalent, and it replaces name-by-name rules such as `-unexported_symbol,_sqlite3_*`.
+- Two-level namespace keeps another image from supplying a non-weak name the library binds to itself, but it does not keep the name private. The export trie still offers it to `dlsym`. A check of exported names reads the right thing on both systems.
+- Rust names come in two manglings in one file. The standard library uses v0 (`__R...`), and other crates here still use legacy names ending in `17h` and a hash. A guard that counts only one misses about half.
+- `printf | grep -q` on a long list prints a shell broken pipe error when `grep` exits first. A reader that consumes all its input, such as `awk`, avoids it and can name what it found.
