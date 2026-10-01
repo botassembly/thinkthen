@@ -198,7 +198,14 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
             vec![("", QUOTED_STATE, "converted")],
             0,
         ),
-        case("unjoined", single().replace(':', ": "), false, &[], vec![], 0),
+        case(
+            "unjoined",
+            single().replace(':', ": "),
+            false,
+            &[],
+            vec![],
+            0,
+        ),
     ];
     for case in cases {
         let name = case.name;

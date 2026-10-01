@@ -165,7 +165,12 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
             input,
         )
         .expect("command");
-        assert_eq!(blank.status.code(), Some(0), "{value:?}: {}", text(&blank.stderr));
+        assert_eq!(
+            blank.status.code(),
+            Some(0),
+            "{value:?}: {}",
+            text(&blank.stderr)
+        );
         assert_eq!(blank.stdout, unset.stdout, "{value:?}");
     }
     let one = spawn(

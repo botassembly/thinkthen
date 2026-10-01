@@ -126,7 +126,8 @@ pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Conve
         Some(Requote::Quoted(all)) if quote => Some(all),
         _ => None,
     };
-    let unquoted = matches!(form, Some(Requote::Quoted(_) | Requote::Unquotable)) && requoted.is_none();
+    let unquoted =
+        matches!(form, Some(Requote::Quoted(_) | Requote::Unquotable)) && requoted.is_none();
     let mut converted = Vec::new();
     for (place, answer) in reply.answers.into_iter().enumerate() {
         let (Ok(answer), Some(question), Some(usage)) =
@@ -207,9 +208,7 @@ fn requote(line: &str, questions: &[Json]) -> Requote {
             return Requote::Unquotable;
         };
         let mut members = members.clone();
-        let Some((_, instructions)) = members
-            .iter_mut()
-            .find(|(name, _)| name == "instructions")
+        let Some((_, instructions)) = members.iter_mut().find(|(name, _)| name == "instructions")
         else {
             return Requote::Unquotable;
         };

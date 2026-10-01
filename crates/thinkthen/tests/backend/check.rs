@@ -422,7 +422,9 @@ fn the_estimated_input_cap_stops_the_check_before_a_probe_it_cannot_admit() {
         );
         assert_eq!(
             text(&output.stderr),
-            format!("thinkthen usage: max_estimated_input_tokens_total={cap} (encoded-body-bytes-908-v1) would be exceeded before this call's first request\n"),
+            format!(
+                "thinkthen usage: max_estimated_input_tokens_total={cap} (encoded-body-bytes-908-v1) would be exceeded before this call's first request\n"
+            ),
             "{cap}"
         );
         assert_eq!(text(&output.stdout), "", "{cap}");
