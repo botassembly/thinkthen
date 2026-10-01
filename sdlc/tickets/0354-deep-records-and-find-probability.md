@@ -1,6 +1,6 @@
 # 0354: deep records name their limit, and `find` returns its probability at the C door
 
-Status: in progress. Lane claude-3. Branch `ticket/0354-deep-records-and-find-probability`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves two issues that block 0.1: `../issues/closed/2026-09-30-deep-json-record-refused-as-not-valid-json.md` (slice A) and `../issues/closed/2026-09-30-find-returns-no-probability-in-c-interface-languages.md` (slice B). Both slices land in one merge.
+Status: landed. Lane claude-3. A fresh ticket review accepted it after two rounds of fixes; a fresh code review accepted it after one. Branch `ticket/0354-deep-records-and-find-probability`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves two issues that block 0.1: `../issues/closed/2026-09-30-deep-json-record-refused-as-not-valid-json.md` (slice A) and `../issues/closed/2026-09-30-find-returns-no-probability-in-c-interface-languages.md` (slice B). Both slices land in one merge.
 
 ## Outcome
 
@@ -42,3 +42,14 @@ fn Found::picked(&self) -> Option<Picked<'_>>
 impl Serialize for Picked
 struct Picked<'a>
 ```
+
+## What the build taught us
+
+- `serde_json` already bounds the depth: it refuses the 128th open bracket. The fix only had to name that refusal. A million-level row returns the same refusal at once, so the stack stays safe without a feature flag or a pre-scan.
+- The depth refusal reached more paths than the issue named. The command's whole-document `annotate` and every library's annotate `on` reader read a too-deep document as text before, because the parser called the refusal a syntax error. The ticket review found both.
+- The C door dropped the `find` probability; no port did. The 11 port folders read the door value as host JSON, so no binding source file changed. Their own matrix tests pinned the old string and needed updating, and the shared type corpus now pins the probability for all of them.
+- `### Added public declarations` written inline in prose stops `inventory`, which matches the heading text anywhere in a ticket.
+- A test that writes a fixed month broke at midnight UTC: `a_failed_retry_sidecar_keeps_the_durable_base_and_warns_once` failed on main from 2026-10-01 00:00 UTC. It now reads `month_now()`.
+- The C door's `rank` drops each record's probability the same way, and its `relate` keeps its own record parser. Two issues record them.
+- Checks on the rebased branch: `sdlc/scripts/test` (1,284 and 20 passed), `spec` (24 demos green), workspace clippy with `-D warnings` on all targets, `policy.py`, `tickets`, `inventory`, lint in a clean checkout, the C door tests (32 passed) and `specification/fixtures/types/self-test`. The C surface and all 11 C-door port surface checks passed against one loopback backend: Go, C++, C#, the JVM family, Dart with Flutter, PHP, Swift, Zig, Ada, Objective-C and COBOL. Each port's type-corpus runner read the new `18-find-second` response.
+- Reviews: the ticket review found four gaps (the C-door relate parser, the golden test, the other annotate paths, the hint) and then one false reason; all were fixed. The code review found the command annotate document row and the issue closings missing; both were fixed and it accepted.
