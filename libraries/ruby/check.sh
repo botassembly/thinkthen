@@ -165,6 +165,11 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   for test in tests/conformance.rb tests/examples.rb; do
     sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed, installed"
   done
+  # Ticket 0374: the loaded extension keeps its own panic hook, and the token cap variable
+  # refuses before any send, counted at the test's own backend.
+  own_panic_hook "$("$RUBY" -e 'require "thinkthen"; puts $LOADED_FEATURES.grep(%r{/thinkthen/thinkthen\.(so|bundle)\z})')"
+  sh "$LIMIT" 120 "$RUBY" -I lib tests/test_engine_settings.rb -n test_the_token_cap_variable_refuses_before_any_request ||
+    fail "the token cap test failed, installed"
   echo "check ruby: pass, installed"
   exit 0
 fi

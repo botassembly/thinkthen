@@ -79,11 +79,13 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	THINKTHEN_SQLITE_EXTENSION=$(echo "$scratch"/libthinkthen0.*)
 	[ -f "$THINKTHEN_SQLITE_EXTENSION" ] || { echo "FAIL     the archive holds no libthinkthen0 library" >&2; exit 1; }
 	export THINKTHEN_SQLITE_EXTENSION
+	# Ticket 0374: the shipped library keeps its own panic hook.
+	own_panic_hook "$THINKTHEN_SQLITE_EXTENSION"
 	for test in tests/examples.py tests/conformance.py tests/test_probability.py tests/test_portable_batch.py; do
 		step "$test, installed"
 		sh "$LIMIT" 300 "$python" "$test"
 	done
-	step "plan, keyed rows, safe lookup, file freshness, cap and the JSON-only counter, installed"
+	step "plan, keyed rows, safe lookup, file freshness, caps and the JSON-only counter, installed"
 	sh "$LIMIT" 300 "$python" -c '
 import sys
 sys.path.insert(0, "tests")
@@ -97,8 +99,11 @@ from test_redesign import (
     test_changed_question_file_invalidates_connection_rows as fresh,
     test_process_total_refuses_the_second_packed_send as cap,
 )
-from test_settings import test_recording_counter_excludes_lock_files as counter
-for witness in (plan, e1, keyed, slots, edges, repeated, fresh, cap, counter):
+from test_settings import (
+    test_recording_counter_excludes_lock_files as counter,
+    test_environment_token_cap_refuses_before_any_send as token,
+)
+for witness in (plan, e1, keyed, slots, edges, repeated, fresh, cap, counter, token):
     witness()
 '
 	step "selected find value, budget and interrupt boundaries, installed"

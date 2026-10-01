@@ -39,6 +39,28 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# shellcheck disable=SC2046 # pkg-config prints flags to split.
 	cc -std=c11 -Wall -Wextra -Werror $(pkg-config --cflags thinkthen) examples/slide.c \
 		$(pkg-config --libs thinkthen) -Wl,-rpath,"$libdir" -o "$cache/slide"
+	# Ticket 0374: the shipped library keeps its own panic hook, and the token cap variable
+	# refuses a call before it sends, counted at a backend this check starts.
+	. ../../sdlc/scripts/installed.sh
+	case $(uname -s) in Darwin) own_panic_hook "$libdir/libthinkthen.dylib" ;; *) own_panic_hook "$libdir/libthinkthen.so" ;; esac
+	# shellcheck disable=SC2046 # pkg-config prints flags to split.
+	cc -std=c11 -Wall -Wextra -Werror $(pkg-config --cflags thinkthen) tests/c/driver.c \
+		$(pkg-config --libs thinkthen) -Wl,-rpath,"$libdir" -o "$cache/driver"
+	cd ../.. && backend_start && cd libraries/c
+	base=http://127.0.0.1:$port/generic/v1 question='{"decide":"asks for a refund"}' text='Refund me.'
+	ask() {
+		folder=$1
+		shift
+		printf 'decide 3\n%s\n%s\n%s\n%s\n%s\n%s\n' ${#base} "$base" ${#question} "$question" ${#text} "$text" |
+			env -i THINKTHEN_CACHE="$cache/$folder" THINKTHEN_API_KEY=sk-examples-loopback "$@" "$cache/driver"
+	}
+	refusal="max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request"
+	[ "$(ask capped THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10)" = "$(printf '1 %s\n%s' ${#refusal} "$refusal")" ] ||
+		{ echo 'libraries/c: the token cap did not refuse with code 1 and its sentence' >&2; exit 1; }
+	[ "$(backend_count)" = 0 ] || { echo 'libraries/c: the refused call reached the backend' >&2; exit 1; }
+	[ "$(ask open | head -n 1 | cut -d' ' -f1)" = 0 ] && [ "$(backend_count)" = 1 ] ||
+		{ echo 'libraries/c: the uncapped call did not send exactly one request' >&2; exit 1; }
+	echo 'libraries/c: the token cap refused before sending, installed'
 fi
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	# The remaps keep the builder's home out of this build. release-pack --reuse rebuilds the library it packs (ticket 0128).

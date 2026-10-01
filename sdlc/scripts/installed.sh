@@ -63,3 +63,29 @@ native_install() {
 		'Description: ThinkThen C door' 'Version: 0.0.1' 'Libs: -L${libdir} -lthinkthen' 'Cflags: -I${includedir}' \
 		>"$2/lib/pkgconfig/thinkthen.pc"
 }
+
+# own_panic_hook LIBRARY: the shipped library links no Rust standard library, and neither imports
+# nor exports a panic symbol, so its panic hook state stays its own (ADR 0098, tickets 0226, 0227,
+# 0374). A release build holds no panic trigger, so this linkage is what an installed file can show.
+# The C library anchors the read: a read that finds neither libc nor libSystem fails.
+own_panic_hook() {
+	case $(uname -s) in
+	Darwin) own_tools='otool nm' own_libc=libSystem ;;
+	*) own_tools='readelf nm' own_libc=libc.so.6 ;;
+	esac
+	for own_tool in $own_tools; do
+		command -v "$own_tool" >/dev/null 2>&1 || { echo "not run: no $own_tool to read ${1##*/}" >&2; exit 77; }
+	done
+	if [ "$(uname -s)" = Darwin ]; then
+		own_needed=$(otool -L "$1") && own_imported=$(nm -u "$1") && own_exported=$(nm -gU "$1") ||
+			{ echo "FAIL ${1##*/} cannot be read" >&2; exit 1; }
+	else
+		own_needed=$(readelf -d "$1" | sed -n 's/.*(NEEDED).*\[\(.*\)\]$/\1/p') && own_imported=$(nm -D --undefined-only "$1") &&
+			own_exported=$(nm -D --defined-only "$1") || { echo "FAIL ${1##*/} cannot be read" >&2; exit 1; }
+	fi
+	printf '%s\n' "$own_needed" | grep -q "$own_libc" || { echo "FAIL ${1##*/} names no $own_libc" >&2; exit 1; }
+	! printf '%s\n' "$own_needed" | grep -q 'libstd-' || { echo "FAIL ${1##*/} links a Rust standard library" >&2; exit 1; }
+	! printf '%s\n' "$own_imported" | grep -qi panic || { echo "FAIL ${1##*/} imports a panic symbol" >&2; exit 1; }
+	! printf '%s\n' "$own_exported" | grep -qi panic || { echo "FAIL ${1##*/} exports a panic symbol" >&2; exit 1; }
+	echo "${1##*/} keeps its own panic hook"
+}

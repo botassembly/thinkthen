@@ -83,6 +83,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	. "$REPO/sdlc/scripts/installed.sh"
 	installed_unpack
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension"
+	# Ticket 0374: the shipped extension keeps its own panic hook.
+	own_panic_hook "$THINKTHEN_DUCKDB_EXTENSION"
 	stock_cli
 	"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --different-host "$TOOLS/older-host/duckdb"
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
@@ -91,7 +93,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	sh "$LIMIT" 900 "$PY" tools/find_suite.py original_duplicate_and_ties null_empty_and_invalid_units_do_not_send portable_find_settings_and_removed_slots held_find_and_spent_statement_budget
 	sh "$LIMIT" 900 "$PY" tools/portable_suite.py named_decide_binds_by_name_and_settings_refuse_before_send listed_settings_and_members_are_distinct_overloads keyed_decide_preserves_key_body_and_one_send keyed_verbs_keep_members_order_and_refuse_duplicate_keys six_song_vector_and_keyed_forms_share_one_packed_body removed_warm_forms_refuse_without_transport probability_and_details_share_one_portable_request annotate_accepts_call_settings_and_refuses_question_only_keys try_details_keeps_recoverable_settings_failures_beside_an_answer recognize_named_settings_and_old_deadline_boundary
 	sh "$LIMIT" 900 "$PY" tools/verbs_suite.py b13c_try_details_members b13c_try_details_prepared b13c_try_details_blank_context_keeps_good_siblings b13c_try_details_whole_request_failure b13c_context_and_batch_one_wire_identity portable_vector_first_seen_context b13c_packed_total_admits_one_attempt b13c_try_details_total_one_preserves_answered_rows b13c_try_details_total_zero_sends_nothing b13c_try_details_split_denials b13c_try_details_denied_retry_keeps_later_answer portable_batch_identity
-	sh "$LIMIT" 900 "$PY" tools/settings_suite.py portable_decide_zero_budget the_process_request_total_holds_across_calls
+	sh "$LIMIT" 900 "$PY" tools/settings_suite.py portable_decide_zero_budget the_process_request_total_holds_across_calls environment_token_cap_refuses_before_any_send
 	echo "check: databases/duckdb passes, installed"
 	exit 0
 fi

@@ -40,6 +40,11 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
     (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/conformance.test.mjs tests/examples.test.mjs)
+    # Ticket 0374: the installed addon keeps its own panic hook, and the token cap variable
+    # refuses before any send, counted at the test's own backend.
+    own_panic_hook "$project/node_modules/thinkthen/thinkthen-$expected.node"
+    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 \
+        --test-name-pattern='^the token cap variable refuses a call before any request$' tests/settings.test.mjs)
     echo 'typescript: pass, installed'
     exit 0
 fi

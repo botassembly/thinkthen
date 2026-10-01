@@ -122,6 +122,13 @@ check("the tarball install answers", isTRUE(tt_decide("Is this a complaint?", "I
 finish("tarball", 1L)
 EOF
 R_LIBS="$scratch/lib:$libs" bash tests/with-backend.sh "$backend" "$scratch/answer.R"
+# Ticket 0374: the tarball install keeps its own panic hook, and its facts checks pass, the
+# token cap variable's refusal before any send among them.
+. "$root/sdlc/scripts/installed.sh"
+own_panic_hook "$scratch/lib/thinkthen/libs/thinkthen.so"
+R_LIBS="$scratch/lib:$libs" Rscript -e 'stopifnot(startsWith(find.package("thinkthen"), commandArgs(TRUE)[1]))' "$scratch/lib/" ||
+  { echo "r: the facts run would load thinkthen from outside the tarball install" >&2; exit 1; }
+R_LIBS="$scratch/lib:$libs" bash tests/with-backend.sh "$backend" tests/facts.R
 
 echo "== r: outside the repository, against the packed crate with no network (ticket 0128)"
 # R-universe builds this package's folder alone. The copy has no repository

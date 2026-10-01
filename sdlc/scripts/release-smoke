@@ -75,6 +75,16 @@ command_check() {
 	sent=$(($(backend_count) - before))
 	[ "$sent" = 0 ] || { echo "release-smoke: the no-key block sent $sent requests to the loopback backend" >&2; return 1; }
 	echo "release-smoke: the no-key block printed true and sent 0 requests"
+	# Ticket 0374: the token cap variable refuses before the first request, with exit 2.
+	before=$(backend_count)
+	refused=$(printf evidence | env -u THINKTHEN_BASE_URL HOME="$prefix/home" THINKTHEN_API_KEY=sk-release-smoke-loopback \
+		THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10 "$prefix/thinkthen" decide 'Is it?' --no-cache \
+		--url "http://127.0.0.1:$port/generic/v1" 2>&1 >/dev/null) && code=0 || code=$?
+	[ "$code" = 2 ] && [ "$refused" = "thinkthen usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request" ] ||
+		{ echo "release-smoke: the token cap exited $code with '$refused'" >&2; return 1; }
+	sent=$(($(backend_count) - before))
+	[ "$sent" = 0 ] || { echo "release-smoke: the token cap let $sent requests reach the loopback backend" >&2; return 1; }
+	echo "release-smoke: the token cap refused with exit 2 and sent 0 requests"
 }
 
 # The command-line release alone: its exact files, their checksums, the scan, the block, and install.sh.
