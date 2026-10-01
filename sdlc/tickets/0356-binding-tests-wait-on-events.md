@@ -32,3 +32,11 @@ The held deadline case on every C-door binding now uses a 1 s deadline instead o
 
 ## What the build taught us
 
+- A C-door cancel lets the sent request finish, so firing the token and then releasing the reply already proves order. The real races sat in the deadline cases, and in Go, whose context reaches the token through a goroutine.
+- A held deadline must outlast the send as well as end before the reply. At 25 ms, a loaded machine let Go's deadline fire before the request left, so the arrival never came. A 1 s deadline keeps the margin wide.
+- A host that runs its matrix in one thread still marks "the call returned": its next request reaches the backend only afterwards. The PHP and COBOL release workers wait for that arrival.
+- A count that stays still for 100 ms is not an event. R's old `settled` let the bulk-verb rows stop at two sends under load; waiting for the eight held sends the throttle allows fixed it. Main had the same race.
+- A rate test measured from the launch has a lower bound that load cannot break, because the pacer's first slot comes after the launch.
+- Comment lines count toward each binding's line ratchet, so a change across 14 bindings moves 21 ratchet files.
+- Code review caught the Dart alpha consumer, a copy of bravo that kept the old 100 ms pause.
+
