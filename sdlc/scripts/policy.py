@@ -1811,7 +1811,13 @@ def check_sources() -> None:
     )
     if not sources:
         fail("size", "the workspace holds at least one Rust source file")
-    for source in sources:
+    # Debt 027: the bindings' and extensions' Rust files keep the same cap. Each
+    # is its own workspace with build folders inside, so only tracked files count.
+    bindings = subprocess.run(
+        ["git", "ls-files", "-z", "--", "libraries/*.rs", "databases/*.rs"],
+        cwd=REPO, capture_output=True, check=True,
+    ).stdout.decode("utf-8").split("\0")
+    for source in [*sources, *(REPO / name for name in bindings if name)]:
         lines = sum(1 for line in source.read_text(encoding="utf-8").splitlines() if line.strip())
         if lines > MAX_FILE_LINES:
             relative = source.relative_to(REPO)
