@@ -5,11 +5,11 @@
 // find out.
 
 import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 function git(args, fallback) {
   try {
-    return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    return execFileSync('git', args.split(' '), { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
   } catch {
     return fallback;
   }
