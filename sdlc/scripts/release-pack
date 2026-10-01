@@ -443,14 +443,18 @@ part_first_run() {
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
 # Ticket 0366: in build mode without a caller's CARGO_TARGET_DIR, each part builds in its own scratch
 # folder, which goes once the part is packed. A run then holds one part's build at a time.
+# The last remap wins, so the build folder's own remap keeps its scratch path out of the files.
 own_build=
 [ -n "$reuse" ] || [ -n "${CARGO_TARGET_DIR:-}" ] || own_build=1
-duckdb_build=${THINKTHEN_DUCKDB_CPP_BUILD:-}
+duckdb_build=${THINKTHEN_DUCKDB_CPP_BUILD:-} rust_flags=$RUSTFLAGS c_flags=$CFLAGS cxx_flags=${CXXFLAGS:-}
 for part in "$@"; do
 	if [ -n "$own_build" ]; then
 		scratch_dir part_build
 		CARGO_TARGET_DIR=$part_build THINKTHEN_DUCKDB_CPP_BUILD=${duckdb_build:-$part_build/cpp}
-		export CARGO_TARGET_DIR THINKTHEN_DUCKDB_CPP_BUILD
+		RUSTFLAGS="$rust_flags --remap-path-prefix=$part_build=/build/target"
+		CFLAGS="$c_flags -ffile-prefix-map=$part_build=/build/target"
+		CXXFLAGS="${cxx_flags:+$cxx_flags }-ffile-prefix-map=$part_build=/build/target"
+		export CARGO_TARGET_DIR THINKTHEN_DUCKDB_CPP_BUILD RUSTFLAGS CFLAGS CXXFLAGS
 	fi
 	case $part in
 	objective-c) part_source_wrapper objective-c ;;
