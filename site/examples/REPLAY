@@ -6,6 +6,7 @@
 # bindings-proof.json in every build, and fails when a sample under
 # examples/ has no line here.
 functions/annotate/c.c
+functions/annotate/cpp.cpp
 functions/annotate/duckdb.sql
 functions/annotate/postgresql.sql
 functions/annotate/r.R
@@ -14,12 +15,14 @@ functions/annotate/rust.rs
 functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/c.c
+functions/choose/cpp.cpp
 functions/choose/postgresql.sql
 functions/choose/python.py
 functions/choose/ruby.rb
 functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/c.c
+functions/decide/cpp.cpp
 functions/decide/polars.py
 functions/decide/r.R
 functions/decide/ruby.rb
@@ -27,6 +30,7 @@ functions/decide/rust.rs
 functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/c.c
+functions/filter/cpp.cpp
 functions/filter/postgresql.sql
 functions/filter/python.py
 functions/filter/r.R
@@ -34,6 +38,7 @@ functions/filter/ruby.rb
 functions/filter/rust.rs
 functions/filter/sqlite.sql
 functions/find/c.c
+functions/find/cpp.cpp
 functions/find/postgresql.sql
 functions/find/python.py
 functions/find/r.R
@@ -48,6 +53,7 @@ functions/question-file/rust.rs
 functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/c.c
+functions/rank/cpp.cpp
 functions/rank/duckdb.sql
 functions/rank/postgresql.sql
 functions/rank/python.py
@@ -55,6 +61,7 @@ functions/rank/ruby.rb
 functions/rank/rust.rs
 functions/rank/typescript.ts
 functions/recognize/c.c
+functions/recognize/cpp.cpp
 functions/recognize/duckdb.sql
 functions/recognize/postgresql.sql
 functions/recognize/python.py
@@ -64,6 +71,7 @@ functions/recognize/rust.rs
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/c.c
+functions/relate/cpp.cpp
 functions/relate/duckdb.sql
 functions/relate/postgresql.sql
 functions/relate/python.py
@@ -72,6 +80,7 @@ functions/relate/ruby.rb
 functions/relate/rust.rs
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
+functions/score/cpp.cpp
 functions/score/duckdb.sql
 functions/score/polars.py
 functions/score/postgresql.sql
@@ -81,6 +90,7 @@ functions/score/ruby.rb
 functions/score/rust.rs
 functions/score/sqlite.sql
 functions/tag/c.c
+functions/tag/cpp.cpp
 functions/tag/duckdb.sql
 functions/tag/postgresql.sql
 functions/tag/python.py
