@@ -46,8 +46,7 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
     assert_eq!(good.requests().len(), 1);
     assert_eq!(line(&complete)["estimated_cost_usd"], "0.000001");
 
-    let blocked = root.join("usage-is-file");
-    fs::write(&blocked, b"not a folder").expect("blocked usage directory");
+    let blocked = crate::facts::unwritable_state("facts-priced-usage-unwritable");
     let warned_listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
     let warned = spawn(
         &[
@@ -61,7 +60,7 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
         &[
             KEY,
             ("XDG_CONFIG_HOME", root.to_str().expect("config path")),
-            ("XDG_CACHE_HOME", blocked.to_str().expect("usage path")),
+            ("XDG_STATE_HOME", blocked.to_str().expect("usage path")),
         ],
         b"Still a refund.",
     )

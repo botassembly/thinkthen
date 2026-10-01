@@ -79,6 +79,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["decide", "asks for a refund"])
         .env_clear()
+        .env("XDG_CACHE_HOME", &home)
         .env("XDG_STATE_HOME", home.join("state"))
         .env("THINKTHEN_BASE_URL", listener.base())
         .stdin(fs::File::open(&evidence).expect("evidence"))

@@ -120,7 +120,8 @@ fn concurrent_updates_keep_every_count_in_one_monthly_aggregate() {
     let bytes = fs::read(folder.join(format!("{}.json", month_now()))).expect("month");
     let row: Counts = serde_json::from_slice(&bytes).expect("closed row");
     assert_eq!(row.requests_sent, 40);
-    assert!(!String::from_utf8_lossy(&bytes).contains("retries"));
+    assert_eq!(row.retries, 0);
+    assert!(String::from_utf8_lossy(&bytes).contains("\"retries\":0"), "one file holds every count");
     fs::remove_dir_all(folder).expect("cleanup");
 }
 

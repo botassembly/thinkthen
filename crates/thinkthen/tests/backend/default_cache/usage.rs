@@ -224,7 +224,7 @@ fn an_unsafe_usage_folder_refuses_the_run_before_any_send() {
     assert_eq!(output.stdout, b"");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: cannot read the usage totals: the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.\n"
+        "thinkthen: cannot read the usage totals: the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.\nthinkthen: stopped at record 1; 0 records finished\n"
     );
 }
 
@@ -249,7 +249,7 @@ fn a_malformed_month_refuses_the_run_and_keeps_its_bytes() {
     assert_eq!(output.stdout, b"");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: cannot read the usage totals: 2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.\n"
+        "thinkthen: cannot read the usage totals: 2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.\nthinkthen: stopped at record 1; 0 records finished\n"
     );
     assert_eq!(fs::read(&month).expect("unchanged month"), b"");
     let planned = crate::harness::spawn(

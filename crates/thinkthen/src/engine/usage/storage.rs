@@ -108,8 +108,11 @@ const ZERO: Totals = Totals {
 /// Read the month and all-month totals under a shared lock that waits at
 /// most one second. A missing folder or a folder without `.lock` holds no
 /// count thinkthen wrote, because the writer makes `.lock` before any month.
+fn at(name: &'static str) -> impl Fn(io::Error) -> ReadFailure {
+    move |error| ReadFailure::at(name, error)
+}
+
 pub(crate) fn read(path: &Path, month: &str) -> Result<Totals, ReadFailure> {
-    let at = |name: &str| move |error| ReadFailure::at(name, error);
     match fs::symlink_metadata(path) {
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(ZERO),
         Err(error) => return Err(ReadFailure::at(DIRECTORY, error)),

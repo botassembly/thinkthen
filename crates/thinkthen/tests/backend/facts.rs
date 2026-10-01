@@ -64,7 +64,7 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
     ];
     let output = spawn(
         &arguments,
-        &[KEY, ("XDG_CACHE_HOME", home)],
+        &[KEY, ("XDG_STATE_HOME", home)],
         input.as_bytes(),
     )
     .expect("compiled filter");
@@ -88,7 +88,7 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
     );
     assert_eq!(String::from_utf8_lossy(&output.stderr).lines().count(), 1);
     let status =
-        spawn(&["status", "--json"], &[("XDG_CACHE_HOME", home)], b"").expect("compiled status");
+        spawn(&["status", "--json"], &[("XDG_STATE_HOME", home)], b"").expect("compiled status");
     let status: Value = serde_json::from_slice(&status.stdout).expect("status JSON");
     for field in [
         "requests_sent",
@@ -148,11 +148,24 @@ fn top_dropped_records_still_count() {
     assert_eq!(line(&ranked)["records"], 20);
 }
 
+/// A usage folder the writer cannot make passes the read before the first
+/// send, since it is missing, then fails the write: the warning stays.
+#[cfg(unix)]
+pub(crate) fn unwritable_state(name: &str) -> std::path::PathBuf {
+    use std::os::unix::fs::PermissionsExt as _;
+    let blocked = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _absent = fs::set_permissions(&blocked, fs::Permissions::from_mode(0o700));
+    let _absent = fs::remove_dir_all(&blocked);
+    fs::create_dir_all(&blocked).expect("state home");
+    fs::set_permissions(&blocked, fs::Permissions::from_mode(0o500)).expect("read-only");
+    blocked
+}
+
+#[cfg(unix)]
 #[test]
 fn a_usage_warning_precedes_the_facts_line() {
     let listener = Listener::answering(answered).expect("warning loopback");
-    let blocked = Path::new(env!("CARGO_TARGET_TMPDIR")).join("facts-usage-path-is-file");
-    fs::write(&blocked, b"not a folder").expect("blocking file");
+    let blocked = unwritable_state("facts-usage-unwritable");
     let warned = spawn(
         &[
             "decide",
@@ -164,7 +177,7 @@ fn a_usage_warning_precedes_the_facts_line() {
         ],
         &[
             KEY,
-            ("XDG_CACHE_HOME", blocked.to_str().expect("UTF-8 path")),
+            ("XDG_STATE_HOME", blocked.to_str().expect("UTF-8 path")),
         ],
         b"line 1",
     )
