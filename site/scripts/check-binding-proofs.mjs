@@ -11,12 +11,12 @@
 //
 // A change in a binding's folder or in a Cargo workspace member it builds
 // on only warns, and names each page to prove again. Another queue's commit
-// never turns the site build red. The marketing lead reruns the replay at
-// each published checkpoint tag.
+// never turns the site build red.
 //
-// With --strict, that change fails instead. The Pages workflow and the code
-// release run it that way, so a release needs proof that every sample passed
-// against the code it ships.
+// With --strict, that change fails instead. The Pages workflow runs it that
+// way, so a deploy needs proof that every sample passed against the code it
+// ships. The code release can run it that way too. The ThinkThen queue owner
+// decides whether it does.
 //
 // It fails when a library or SQL sample under examples/ has no REPLAY
 // line.

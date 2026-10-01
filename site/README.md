@@ -81,7 +81,7 @@ npm run test-docs
 
 The command builds `thinkthen` from this working tree and runs `npm run build`, `npm run smoke-bindings` and `npm run smoke-sql`. It then runs `scripts/check-binding-proofs.mjs --strict`. It unsets every `THINKTHEN_` variable and every key, token or secret first. It takes no options, so a missing toolchain fails the run. The runners rewrite `examples/bindings-proof.json`. Commit that file when every sample passed.
 
-The Pages workflow runs `node scripts/check-binding-proofs.mjs --strict` before it builds. The strict check fails when the engine or a binding changed after a sample's proof, so a deploy refuses a stale proof. It needs only Node and git, so the code release runs it too. The everyday build keeps the warning.
+The Pages workflow runs `node scripts/check-binding-proofs.mjs --strict` before it builds. The strict check fails when the engine or a binding changed after a sample's proof, so a deploy refuses a stale proof. It needs only Node and git, so the code release can run it too. The ThinkThen queue owner decides whether it does. The everyday build keeps the warning.
 
 ## Where the Beatles Bench pages come from
 
