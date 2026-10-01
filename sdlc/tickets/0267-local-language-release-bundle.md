@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/records/0249-r
 
 # 0267: Require the installed language files in one local Linux release bundle
 
-Status: presence code accepted after fresh independent review of `3f22a71d`; its focused refusal fixture runs in routine lint. The coordinator lands this independent correction while keeping the ticket open for its aggregate checkpoint. See [the code review](../records/0267-local-bundle-code-review.md). A one-pin local pack produced 18 of 21 planned archives before the new SQL/DataFrame hold. The complete installed checkpoint is **held and unverified**: no `release-smoke --source-packages` run started. The [preparation](../records/0267-release-bundle-preparation.md) and [held build record](../records/0267-local-bundle-build.md) give the exact boundary. Accepted 0265 and 0266 routes have landed.
+Status: in progress. Presence code accepted after fresh independent review of `3f22a71d`; its focused refusal fixture runs in routine lint. The coordinator lands this independent correction while keeping the ticket open for its aggregate checkpoint. See [the code review](../records/0267-local-bundle-code-review.md). A one-pin local pack produced 18 of 21 planned archives before the new SQL/DataFrame hold. The complete installed checkpoint is **held and unverified**: no `release-smoke --source-packages` run started. The [preparation](../records/0267-release-bundle-preparation.md) and [held build record](../records/0267-local-bundle-build.md) give the exact boundary. Accepted 0265 and 0266 routes have landed.
 
 Milestone: 0.1
 

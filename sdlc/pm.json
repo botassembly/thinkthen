@@ -6,10 +6,16 @@
     "in progress": "open",
     "resolved": "closed",
     "**accepted": "accepted",
-    "**accepted**": "accepted"
+    "**accepted**": "accepted",
+    "**complete": "complete",
+    "**done": "complete",
+    "**done**": "complete",
+    "deferred": "open"
   },
   "issueStatusMappings": {
-    "done": "closed"
+    "done": "closed",
+    "addressed": "closed",
+    "answered": "closed"
   },
   "evidenceFromTicketNumber": 120,
   "closedIssuesFolder": "closed",

@@ -6,7 +6,7 @@ opens: sdlc/tickets/0215-tag-and-score-record-batching.md sdlc/records/0215-batc
 
 # 0215: Batch tag and score records
 
-Status: Design `70dc1755`, runtime `ff76e9e7`, corrected helper `0a707849` and one paid completion `c0d39ed2` independently ACCEPTED. Final integration at `d47e83e2` is landed on main; B9 is complete. Library list batching and annotate remain separate open work. Owner: Codex.
+Status: landed. Design `70dc1755`, runtime `ff76e9e7`, corrected helper `0a707849` and one paid completion `c0d39ed2` independently ACCEPTED. Final integration at `d47e83e2` is landed on main; B9 is complete. Library list batching and annotate remain separate open work. Owner: Codex.
 
 ## Outcome and authority
 

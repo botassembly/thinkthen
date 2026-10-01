@@ -4,6 +4,8 @@ Status: Closed by the quick fix landed as `Land quick fix: the Zig check runs it
 
 Kind: debt
 
+Debt: 034
+
 Severity: low
 
 Paid: 2026-09-30

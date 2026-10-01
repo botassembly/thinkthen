@@ -6,7 +6,7 @@ Status: High code review accepted `c513b98a`; merged main `73932ef4` and passed 
 
 `lib/thinkthen.rb` adds `Call.value/facts/details`, `Completion.done?/result(timeout:)`, engine and eligible call batch controls, eligible context and runtime-label `choose_many`, `score_many` and `tag_many` delegates. Every asking method keeps its old Ruby value inside `Call`. One shared `crossing` gate rejects unsupported controls before sending. The worker remains Rust-owned: `src/call.rs` observes ordered question details, copies eager `Call::facts` or exhausted `Batch::facts`, and uses `details_many_with` for runtime labels. `src/lib.rs` retains optional final facts on a fault, while `src/ffi.rs` and private `src/ffi/result.rs` convert owned results and retain the same worker handoff for a prompt-stop receipt. `Call#map` keeps the account on host conversions and attaches it to a conversion error. No second model call supplies facts.
 
-The source ratchet rises from 913 to 1407 nonblank Rust lines because owned detail snapshots, Ruby conversion, and receipt handling add one coherent host boundary. The private conversion child keeps `ffi.rs` below the 500-line limit. No dependency was added. The site examples remain owned by section 9 of [the existing site issue](../issues/2026-09-25-site-samples-and-pages-after-the-surfaces-land.md).
+The source ratchet rises from 913 to 1407 nonblank Rust lines because owned detail snapshots, Ruby conversion, and receipt handling add one coherent host boundary. The private conversion child keeps `ffi.rs` below the 500-line limit. No dependency was added. The site examples remain owned by section 9 of [the existing site issue](../issues/closed/2026-09-25-site-samples-and-pages-after-the-surfaces-land.md).
 
 ## Focused evidence
 

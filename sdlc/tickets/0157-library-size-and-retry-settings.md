@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/resul
 
 # 0157: Expose request size and retry counts through the libraries
 
-Status: staged implementation landed after fresh High review accepted source `85180c3f`. Owner: Codex. Six libraries, SQLite, PostgreSQL and Linux x86-64 DuckDB passed the focused settings integration checkpoint. Full ticket completion remains open for Linux ARM64 and both macOS DuckDB C API packages.
+Status: in progress. Staged implementation landed after fresh High review accepted source `85180c3f`. Owner: Codex. Six libraries, SQLite, PostgreSQL and Linux x86-64 DuckDB passed the focused settings integration checkpoint. Full ticket completion remains open for Linux ARM64 and both macOS DuckDB C API packages.
 
 Milestone: 0.1
 

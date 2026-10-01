@@ -1,6 +1,6 @@
 # Ticket 0247: Complete choose, score and tag questions in DuckDB
 
-Status: **Accepted and integrated for Linux x86-64 at `795fe61a`, with native M5 ARM64 proof accepted at `a6877b43` and native Linux ARM64 proof at `e981c9b0` after fresh High reviews.** The fresh High [design review](../records/0247-duckdb-complete-question-forms-design-review.md) accepted `4f0f93e5`, and the coordinator approved the exact runtime claim at main `6fd7b170`. The [preflight](../records/0247-duckdb-complete-question-forms-preflight.md) pins the starting source. The [build record](../records/0247-duckdb-complete-question-forms-build.md) pins the Linux installed package and selected proof. The [code review](../records/0247-duckdb-complete-question-forms-code-review.md) records acceptance and retained target limits.
+Status: landed. **Accepted and integrated for Linux x86-64 at `795fe61a`, with native M5 ARM64 proof accepted at `a6877b43` and native Linux ARM64 proof at `e981c9b0` after fresh High reviews.** The fresh High [design review](../records/0247-duckdb-complete-question-forms-design-review.md) accepted `4f0f93e5`, and the coordinator approved the exact runtime claim at main `6fd7b170`. The [preflight](../records/0247-duckdb-complete-question-forms-preflight.md) pins the starting source. The [build record](../records/0247-duckdb-complete-question-forms-build.md) pins the Linux installed package and selected proof. The [code review](../records/0247-duckdb-complete-question-forms-code-review.md) records acceptance and retained target limits.
 
 ## Outcome
 

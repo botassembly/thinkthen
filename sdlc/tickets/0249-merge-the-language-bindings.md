@@ -6,7 +6,7 @@ opens: libraries sdlc/issues sdlc/tickets
 
 # 0249: Merge the language bindings
 
-Status: **source integration complete; all eleven packages reviewed and integrated; original release follow-ups remain open**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). Nothing is published and no release CI is configured. The package build records under `sdlc/records/0249-*` hold current proof and remaining host criteria.
+Status: in progress. **source integration complete; all eleven packages reviewed and integrated; original release follow-ups remain open**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). Nothing is published and no release CI is configured. The package build records under `sdlc/records/0249-*` hold current proof and remaining host criteria.
 
 Milestone: 0.1
 

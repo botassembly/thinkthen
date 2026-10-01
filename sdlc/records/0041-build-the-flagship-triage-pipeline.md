@@ -20,7 +20,7 @@ The agent set urgency 1, the middle of the three-level scale, as the inclusive `
 
 ## Recording and closure
 
-The cold marketing read filed [`2026-09-21-page-16-first-result-is-not-runnable.md`](../issues/2026-09-21-page-16-first-result-is-not-runnable.md). The page-local runner and reviewed recording resolved it. The code reviewer accepted the corrected behavior and tests after the durable prose matched them.
+The cold marketing read filed [`2026-09-21-page-16-first-result-is-not-runnable.md`](../issues/closed/2026-09-21-page-16-first-result-is-not-runnable.md). The page-local runner and reviewed recording resolved it. The code reviewer accepted the corrected behavior and tests after the durable prose matched them.
 
 The first code review rejected four findings. Exact answer-name validation, the recording job boundary, and the README order sentence were corrected. The review disproved the first publication assumption: shell `mv` does not portably combine an atomic directory rename with no replacement. The accepted revision reserves the caller's name with `mkdir`, stages inside that owned directory, removes it after handled failures and catchable interruptions, and makes successful return the publication boundary. Two synchronized runs prove that only the reservation winner judges. Separate failures during judgment, validation, and each final file move preserve their status and remove the owned output. The recording and page-local runner resolved the cold-read issue.
 

@@ -1,6 +1,6 @@
 # `recognize --help` describes the old one-call design
 
-Status: corrected by the CLI diagnostic Quick Fix candidate. Fresh independent code review and landing remain.
+Status: Closed on 2026-09-28 by Quick Fix `qf-cli-diagnostic-corrections` at c1db7d43a, after fresh independent code review accepted `8c0f423e` (`sdlc/records/qf-cli-diagnostic-corrections.md`). Earlier status: corrected by the CLI diagnostic Quick Fix candidate. Fresh independent code review and landing remain.
 
 Filed 2026-09-28 by marketing, from the Beatles deck's recognize steps slide.
 

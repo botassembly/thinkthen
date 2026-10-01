@@ -6,7 +6,7 @@ Status: closed 2026-09-30. The second hosted `thinkthen check` against Liquid's 
 
 The fixed `thinkthen check` probe supplies an explicit `"false":null` description. The System One encoder retains that value and sends `"criteria":{"true":"The text says the box was intact.","false":null}`. Experiment 413 reports that Liquid's d1 at `https://api.liquid.ai/decisions/v1/systemone` refuses this with status 422 and `param: questions.q1.criteria.false`. The original filing reports that TypeSafe accepts the body and that other question forms passed; separate raw check bodies and statuses were not retained for independent verification.
 
-The original filing incorrectly said that a missing CLI side becomes null. Reviewed preparation at `46925b681` confirmed that an absent `--true` or `--false` side is already omitted. The affected case is an explicitly null description, including the fixed check probe. The [preparation record](../records/0301-noul-criteria-preparation.md) traces both paths and the existing exact R and TypeScript assertions.
+The original filing incorrectly said that a missing CLI side becomes null. Reviewed preparation at `46925b681` confirmed that an absent `--true` or `--false` side is already omitted. The affected case is an explicitly null description, including the fixed check probe. The [preparation record](../../records/0301-noul-criteria-preparation.md) traces both paths and the existing exact R and TypeScript assertions.
 
 ## Accepted correction
 

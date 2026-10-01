@@ -1,6 +1,6 @@
 # 0299 — Estimated input admission total
 
-Status: Core, CLI and C stage landed after fresh independent High ACCEPT of `bb1d1f65c98229fef9ab2ab6ab1645e181b833fa`. Design review accepted `f49eaccf2`. The combined source checkpoint proves SQLite explicitly refuses the new key until its active host rollout. Other host settings, installed and release qualification, and the overall issue remain open; this ticket is not fully closed.
+Status: in progress. Core, CLI and C stage landed after fresh independent High ACCEPT of `bb1d1f65c98229fef9ab2ab6ab1645e181b833fa`. Design review accepted `f49eaccf2`. The combined source checkpoint proves SQLite explicitly refuses the new key until its active host rollout. Other host settings, installed and release qualification, and the overall issue remain open; this ticket is not fully closed.
 
 Milestone: 0.1
 

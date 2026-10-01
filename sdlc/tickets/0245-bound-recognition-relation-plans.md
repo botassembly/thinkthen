@@ -1,6 +1,6 @@
 # Ticket 0245: Bound recognition relation plans
 
-Status: **Code accepted and integrated.** Fresh independent Medium review accepted `cbf430ab`, and the coordinator granted the runtime claim on main `7e8fe1e8`. The source candidate is `b147a98b`; the [build record](../records/0245-bound-recognition-relation-plans-build.md) holds its focused proof. Fresh Medium code review accepted `e037c0f1`; integrated rule proof passed and register 111 is fixed. The public specification sentence remains an explicit documentation follow-up during the marketing hold. The [preflight](../records/0245-bound-recognition-relation-plans-preflight.md) pins the source and evidence; the [design review](../records/0245-bound-recognition-relation-plans-design-review.md) records acceptance.
+Status: landed. **Code accepted and integrated.** Fresh independent Medium review accepted `cbf430ab`, and the coordinator granted the runtime claim on main `7e8fe1e8`. The source candidate is `b147a98b`; the [build record](../records/0245-bound-recognition-relation-plans-build.md) holds its focused proof. Fresh Medium code review accepted `e037c0f1`; integrated rule proof passed and register 111 is fixed. The public specification sentence remains an explicit documentation follow-up during the marketing hold. The [preflight](../records/0245-bound-recognition-relation-plans-preflight.md) pins the source and evidence; the [design review](../records/0245-bound-recognition-relation-plans-design-review.md) records acceptance.
 
 ## Outcome
 

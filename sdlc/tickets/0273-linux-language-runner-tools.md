@@ -6,7 +6,7 @@ opens: sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-packag
 
 # 0273: Select and verify Linux x86 language runner tools
 
-Status: static implementation complete and accepted by fresh independent High code review at `9c26a689`; see [the code review](../records/0273-linux-language-runner-code-review.md). This ticket supports existing release consumer issues; it creates no new issue or public surface. [Preparation](../records/0273-linux-language-runner-preparation.md) compares landed 0271 and 0272. The [build record](../records/0273-linux-language-runner-build.md) names the implemented seam and static proof. Ian holds all SQL/DataFrame work. Actual runner setup, container, consumers and Actions need their later execution checkpoint.
+Status: in progress. Static implementation complete and accepted by fresh independent High code review at `9c26a689`; see [the code review](../records/0273-linux-language-runner-code-review.md). This ticket supports existing release consumer issues; it creates no new issue or public surface. [Preparation](../records/0273-linux-language-runner-preparation.md) compares landed 0271 and 0272. The [build record](../records/0273-linux-language-runner-build.md) names the implemented seam and static proof. Ian holds all SQL/DataFrame work. Actual runner setup, container, consumers and Actions need their later execution checkpoint.
 
 Milestone: 0.1
 

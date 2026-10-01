@@ -2,7 +2,7 @@
 
 Status: open. Filed 2026-09-30 on Ian's request. Owner: none until 0.1 ships.
 Kind: idea
-When: after the 0.1 release.
+When: after the 0.1 release
 Milestone: later
 
 OpenTelemetry support would give a user traces of every backend call, with spans and token counts that match the call facts thinkthen already returns.

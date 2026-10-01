@@ -6,7 +6,7 @@ opens: sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-pac
 
 # 0272: Prepare C# and JVM managed archives for the Linux x86 release workflow
 
-Status: static CODE ACCEPT `bfa7c2e3` after fresh independent High review. The [build record](../records/0272-managed-package-helper-build.md) and [final review](../records/0272-managed-workflow-code-review.md) cover the helper, workflow integration and all three early corrections. Actual SDK provisioning and runner qualification remain open. No SDK download, compilation, container execution or Actions rehearsal is claimed. Ian’s SQL/DataFrame hold remains in force.
+Status: in progress. Static CODE ACCEPT `bfa7c2e3` after fresh independent High review. The [build record](../records/0272-managed-package-helper-build.md) and [final review](../records/0272-managed-workflow-code-review.md) cover the helper, workflow integration and all three early corrections. Actual SDK provisioning and runner qualification remain open. No SDK download, compilation, container execution or Actions rehearsal is claimed. Ian’s SQL/DataFrame hold remains in force.
 
 Milestone: 0.1
 

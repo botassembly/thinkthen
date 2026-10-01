@@ -6,7 +6,7 @@ opens: databases/duckdb sdlc/scripts/policy.py sdlc/scripts/surfaces sdlc/script
 
 # 0201: Move the DuckDB extension to the C++ API
 
-Status: accepted design, 2026-09-27. The reviewed design is `c7000a4a`; `sdlc/records/0200-0201-design-review.md` records the paired review. Owner: Codex. The staged Linux x86_64 implementation passed final High follow-up review at `493a1461` and is landed. Linux aarch64 and both macOS migrations remain open; the ticket does not claim all-platform completion.
+Status: in progress. Accepted design, 2026-09-27. The reviewed design is `c7000a4a`; `sdlc/records/0200-0201-design-review.md` records the paired review. Owner: Codex. The staged Linux x86_64 implementation passed final High follow-up review at `493a1461` and is landed. Linux aarch64 and both macOS migrations remain open; the ticket does not claim all-platform completion.
 
 Milestone: 0.1
 
