@@ -168,6 +168,12 @@ fn an_unreadable_usage_folder_refuses_every_send_and_names_no_path() {
     for (label, mode, month, problem) in [
         ("usage-shared-folder", 0o755, None, shared),
         ("usage-malformed-month", 0o700, Some(&b"{"[..]), malformed),
+        (
+            "usage-malformed-month-no-lock",
+            0o700,
+            Some(&b"garbage"[..]),
+            malformed,
+        ),
     ] {
         let listener = listener();
         let home = folder(label);
@@ -175,7 +181,9 @@ fn an_unreadable_usage_folder_refuses_every_send_and_names_no_path() {
         fs::create_dir_all(&usage).expect("usage folder");
         fs::set_permissions(&usage, fs::Permissions::from_mode(mode)).expect("folder mode");
         if let Some(bytes) = month {
-            for (name, contents) in [(".lock", &b""[..]), ("2026-08.json", bytes)] {
+            let lock = !label.ends_with("no-lock");
+            let files = [(".lock", &b""[..]), ("2026-08.json", bytes)];
+            for (name, contents) in files.into_iter().skip(usize::from(!lock)) {
                 fs::write(usage.join(name), contents).expect("usage file");
                 fs::set_permissions(usage.join(name), fs::Permissions::from_mode(0o600))
                     .expect("private file");

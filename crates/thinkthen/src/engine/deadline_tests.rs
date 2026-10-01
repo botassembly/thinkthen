@@ -319,7 +319,7 @@ fn without_a_deadline_the_held_reply_reaches_the_attempt_timeout() {
 
 #[test]
 fn a_retry_wait_past_the_budget_ends_as_the_deadline_without_a_second_send() {
-    let (server, _) = serve(vec![Reply::Busy(60_000)]);
+    let (server, _) = serve(vec![Reply::Busy(20_000)]);
     let attempts = Cell::new(0);
     let started = Instant::now();
 

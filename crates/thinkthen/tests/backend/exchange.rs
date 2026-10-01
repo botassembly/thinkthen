@@ -277,27 +277,42 @@ fn a_rate_limit_waits_the_seconds_the_backend_asked_for() {
     assert!(took >= Duration::from_millis(900), "{took:?}");
 }
 
+/// Main waited any server floor, even one past the attempt timeout, so a run
+/// had no fixed worst case. A floor up to the timeout (under 60 s) is still
+/// waited; one past it ends the retries at once with the status (ticket 0367).
 #[test]
-fn a_server_retry_floor_can_exceed_the_attempt_timeout() {
-    let listener = Listener::serving(vec![
-        Canned::status(429, "slow down").asking("retry-after-ms", "1200"),
-        Canned::ok(ANSWERED),
-    ])
-    .expect("a loopback listener");
+fn a_server_retry_floor_past_the_attempt_timeout_fails_at_once() {
+    for (asked, code, requests) in [("1000", 0, 2), ("1001", 4, 1)] {
+        let listener = Listener::serving(vec![
+            Canned::status(429, "slow down").asking("retry-after-ms", asked),
+            Canned::ok(ANSWERED),
+        ])
+        .expect("a loopback listener");
 
-    let started = Instant::now();
-    let output = decide(
-        listener.base(),
-        &["--max-retries", "1", "--timeout", "1"],
-        KEY,
-        "Refund me.",
-    )
-    .expect("the compiled binary runs");
-    let took = started.elapsed();
+        let started = Instant::now();
+        let output = decide(
+            listener.base(),
+            &["--max-retries", "1", "--timeout", "1"],
+            KEY,
+            "Refund me.",
+        )
+        .expect("the compiled binary runs");
+        let took = started.elapsed();
 
-    assert_eq!(output.status.code(), Some(0));
-    assert_eq!(listener.requests().len(), 2);
-    assert!(took >= Duration::from_millis(1200), "{took:?}");
+        assert_eq!(output.status.code(), Some(code), "{asked}");
+        assert_eq!(listener.requests().len(), requests, "{asked}");
+        if code == 0 {
+            assert!(took >= Duration::from_millis(1000), "{asked}: {took:?}");
+        } else {
+            let message = String::from_utf8_lossy(&output.stderr);
+            assert!(message.contains("429"), "{message}");
+            assert!(output.stdout.is_empty(), "{asked}");
+            assert!(
+                took < Duration::from_millis(1000),
+                "{asked}: waited {took:?}"
+            );
+        }
+    }
 }
 
 /// The same floor, timed: the retry goes out soon after the 1.2 s floor, not
@@ -313,7 +328,7 @@ fn a_server_retry_floor_is_waited_once() {
     let started = Instant::now();
     let output = decide(
         listener.base(),
-        &["--max-retries", "1", "--timeout", "1"],
+        &["--max-retries", "1", "--timeout", "2"],
         KEY,
         "Refund me.",
     )
