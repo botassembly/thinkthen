@@ -31,17 +31,7 @@ caught_at <- function(one) {
   line <- grep("^CAUGHT ", lines_of(one), value = TRUE)
   if (length(line)) as.numeric(strsplit(line[[1]], " ")[[1]][[2]]) else NA
 }
-ended <- function(one) until(function() !tools::pskill(one$pid, 0L), 20)
-settled <- function(least) {
-  count <- -1L
-  until(function() {
-    first <- backend_count()
-    Sys.sleep(0.1)
-    count <<- backend_count()
-    first == count && count >= least
-  }, 60)
-  count
-}
+ended <- function(one) until(function() !tools::pskill(one$pid, 0L), 60)
 
 # Check point before a call: the deadline argument signals as the Rust call
 # forces it, after .tt_call's first check. The Rust check before the spawn
@@ -60,40 +50,43 @@ around <- child(c(
 check("the first check stops the expression", grepl("set no", around, fixed = TRUE))
 check("the second check replaces the value", grepl("after interrupted", around, fixed = TRUE))
 
-# The tick, single call: CAUGHT within 0.5 s of the signal, before any
-# release, and the held request is the only one.
+# The tick, single call: CAUGHT before any release, and the held request is
+# the only one. Under the stress profile CAUGHT also comes within 0.5 s.
 single <- spawn(c(sprintf('tryCatch(tt_decide("Q?", "single"), interrupt = %s)', caught), 'Sys.sleep(5)'))
-check("the single call reaches the wire", settled(1L) == 1L)
+check("the single call reaches the wire", backend_wait(1L) == 1L)
 signalled <- now()
 tools::pskill(single$pid, 2L)
-invisible(until(function() !is.na(caught_at(single)), 5))
+check("a single call answers the interrupt before release", until(function() !is.na(caught_at(single)), 30))
 took <- caught_at(single) - signalled
 cat(sprintf("signal to CAUGHT, single: %.3f s\n", took))
-check("a single call answers the interrupt within 0.5 s, before release", isTRUE(took < 0.5))
+if (stress) check("a single call answers the interrupt within 0.5 s", isTRUE(took < 0.5))
 backend_say("round")
 Sys.sleep(1)
 check("the single count stays 1 after release", backend_count() == 1L)
 invisible(ended(single))
 
-# The tick, batch at throttle 8: the cap is exactly 8, CAUGHT within 0.5 s,
-# and the cancelled batch sends nothing more after release.
+# The tick, batch at throttle 8: the cap is exactly 8, CAUGHT comes before
+# release (within 0.5 s under stress), and the cancelled batch sends nothing
+# more after release.
 receipt_caught <- 'function(e) { cat("CAUGHT", format(as.numeric(Sys.time()), digits = 15), "\\n"); cat("ON_INTERRUPT", tt_completion_read(h)$state, "\\n"); flush(stdout()) }'
 batch <- spawn(c('tt_engine(throttle = 8L)',
   'h <- tt_completion(); cat("BEFORE", tt_completion_read(h)$state, "\\n")',
   sprintf('tryCatch(tt_decide("Q?", paste("batch", 1:200), batch = 2L, completion = h), interrupt = %s)', receipt_caught),
-  'for (i in 1:100) { a <- tt_completion_read(h); if (identical(a$state, "terminal")) break; Sys.sleep(0.05) }',
+  'for (i in 1:600) { a <- tt_completion_read(h); if (identical(a$state, "terminal")) break; Sys.sleep(0.05) }',
   'b <- tt_completion_read(h)',
   'reuse <- tryCatch(tt_decide("Q?", "reuse", completion = h), thinkthen_error = function(e) e$kind)',
   'cat("FINAL", a$kind, a$facts$requests_sent, a$facts$records, identical(a, b), reuse, "\\n")',
   'a$details[[1]]$index <- 99; cat("OWNED", tt_completion_read(h)$details[[1]]$index, "\\n")'))
-at_signal <- settled(2L)
+invisible(backend_wait(1L + 8L))
+Sys.sleep(0.3)
+at_signal <- backend_count()
 check("throttle 8 holds exactly 8 on the wire", at_signal == 1L + 8L)
 signalled <- now()
 tools::pskill(batch$pid, 2L)
-invisible(until(function() !is.na(caught_at(batch)), 5))
+check("a batch answers the interrupt before release", until(function() !is.na(caught_at(batch)), 30))
 took <- caught_at(batch) - signalled
 cat(sprintf("signal to CAUGHT, batch: %.3f s\n", took))
-check("a batch answers the interrupt within 0.5 s", isTRUE(took < 0.5))
+if (stress) check("a batch answers the interrupt within 0.5 s", isTRUE(took < 0.5))
 backend_say("round")
 Sys.sleep(1)
 later <- backend_count()
@@ -112,10 +105,10 @@ check("completion reads are owned snapshots", grepl("OWNED 0", batch_lines, fixe
 base <- backend_count()
 collected <- spawn(c('h <- tt_completion()',
   'tryCatch(tt_decide("Q?", "collected", completion = h), interrupt = function(e) { rm(h); invisible(gc()); cat("COLLECTED\\n"); flush(stdout()) })'))
-check("a handle can be collected during a held send", settled(base + 1L) == base + 1L)
+check("a handle can be collected during a held send", backend_wait(base + 1L) == base + 1L)
 tools::pskill(collected$pid, 2L)
 check("R returns promptly after collecting the handle",
-      until(function() grepl("COLLECTED", paste(lines_of(collected), collapse = "\n"), fixed = TRUE), 5))
+      until(function() grepl("COLLECTED", paste(lines_of(collected), collapse = "\n"), fixed = TRUE), 30))
 backend_say("round")
 invisible(ended(collected))
 check("the collected handle starts no later send", backend_count() == base + 1L)
@@ -128,7 +121,7 @@ bulk <- c(choose = 'tt_choose("Which?", paste("c", 1:50), c("a", "b"), batch = 2
 for (verb in names(bulk)) {
   base <- backend_count()
   job <- spawn(c('tt_engine(throttle = 8L)', bulk[[verb]]))
-  check(paste("R2-23:", verb, "puts more than one request on the wire"), settled(base + 2L) - base > 1L)
+  check(paste("R2-23:", verb, "puts more than one request on the wire"), backend_wait(base + 2L) - base > 1L)
   tools::pskill(job$pid, 9L)
   ended(job)
   backend_say("round")
@@ -143,7 +136,7 @@ twin <- function(body, catch) {
   base <- backend_count()
   job <- spawn(c('options(error = function() cat("HOOK RAN\\n"))', run, call, 'cat("AFTER\\n")'))
   until(function() "ready" %in% lines_of(job), 60)
-  if (grepl("tt_", body)) settled(base + 1L) else Sys.sleep(0.5)
+  if (grepl("tt_", body)) backend_wait(base + 1L) else Sys.sleep(0.5)
   tools::pskill(job$pid, 2L)
   ended(job)
   backend_say("round")

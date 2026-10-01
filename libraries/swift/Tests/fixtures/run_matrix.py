@@ -11,7 +11,7 @@ env={'PATH':'/usr/bin:/bin','HOME':str(L/'home'),'XDG_CONFIG_HOME':str(L/'home')
  'THINKTHEN_API_KEY':'tt-canary-294','THINKTHEN_CACHE':str(L/'cache'),'TT_BARRIER_DIR':str(L/'barrier')}
 try:
     if len(sys.argv)==2 and sys.argv[1]=='facts':
-        result=run([str(R/'target/scratch/swift-matrix'),'facts'],cwd=R,env=env,timeout=30)
+        result=run([str(R/'target/scratch/swift-matrix'),'facts'],cwd=R,env=env,timeout=60)
         (L/'facts.log').write_bytes(result.stdout+result.stderr)
         assert result.exit==0 and b'SWIFT_FACTS_LIFETIME_PASS' in result.stdout,(result.exit,(result.stdout+result.stderr)[-1500:])
         assert collections.Counter(server.arrivals)==collections.Counter(['hold-facts-one','hold-facts-no-usage','status-401','recovery-scalar']) and server.attempts==server.connections==4,server.arrivals

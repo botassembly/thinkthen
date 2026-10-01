@@ -85,4 +85,4 @@ check("later recognition usage retains the first accounted call only",
       identical(trimws(prefix$text), "usage 1 2 FALSE 3 TRUE TRUE"))
 # Repeated equivalent relate inputs reuse their cached answer across the
 # frame-shape comparisons above.
-finish("recognize", 14L)
+finish("recognize", 12L + sent)

@@ -28,13 +28,19 @@ env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home), "XDG_
 receipts = []
 active = None
 
+# The deadline ends the held call while its reply is held. The matrix sends
+# its next request only after that call returns, so the release waits for
+# that next arrival, up to 30 s (ticket 0356).
 def release_deadline():
     marker = barrier / "arrived-hold-deadline"
     end = time.monotonic() + 60
     while not marker.exists() and time.monotonic() < end:
         time.sleep(.005)
     if marker.exists():
-        time.sleep(.075)
+        seen = len(backend.arrivals)
+        end = time.monotonic() + 30
+        while len(backend.arrivals) <= seen and time.monotonic() < end:
+            time.sleep(.005)
         (barrier / "release-hold-deadline").touch()
 
 release_worker = threading.Thread(target=release_deadline, daemon=True)

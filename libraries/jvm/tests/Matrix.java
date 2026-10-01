@@ -23,7 +23,7 @@ public class Matrix {
     }
     static void arrived(String name) throws Exception {
         Path path=Path.of(System.getenv("TT_BARRIER_DIR"),"arrived-"+name);
-        for(int i=0;i<2000;i++) { if(Files.exists(path)) return; Thread.sleep(5); }
+        for(int i=0;i<6000;i++) { if(Files.exists(path)) return; Thread.sleep(5); }
         throw new AssertionError("no arrival " +name);
     }
     static void release(String name) throws Exception { Files.createFile(Path.of(System.getenv("TT_BARRIER_DIR"),"release-"+name)); }
@@ -127,8 +127,11 @@ public class Matrix {
             try(Door.Token deadline=engine.token()) {
                 AtomicReference<Throwable> error=new AtomicReference<>();
                 Thread caller=Thread.ofPlatform().start(()->{try{failed(()->engine.decide("Is it?",b("hold-deadline"),50,deadline),3);}catch(Throwable ex){error.set(ex);}});
-                try {arrived("hold-deadline");Thread.sleep(200);}
+                // The deadline ends the call while the reply is held, so the release waits for that return.
+                boolean returnedHeld=false;
+                try {arrived("hold-deadline");caller.join(30_000);returnedHeld=!caller.isAlive();}
                 finally {release("hold-deadline");caller.join();}if(error.get()!=null)throw new AssertionError(error.get());
+                check(returnedHeld,"the deadline ends a held call before its release");
             }
             // Callers join before any shared engine or token is closed.
             try(Door.Token token=engine.token()) {

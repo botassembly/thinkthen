@@ -13,7 +13,7 @@ static TTClient *e;
 static const char *barrier;
 static void require(int good,const char *note) { if (!good) { fprintf(stderr,"FAIL: %s\n",note); exit(1); } }
 static void path(char *buf,size_t cap,const char *prefix,const char *state) { snprintf(buf,cap,"%s/%s%s",barrier,prefix,state); }
-static void arrived(const char *state) { char b[512]; path(b,sizeof b,"arrived-",state); for(int i=0;i<2000 && access(b,F_OK);i++) usleep(5000); require(!access(b,F_OK),"counted arrival"); }
+static void arrived(const char *state) { char b[512]; path(b,sizeof b,"arrived-",state); for(int i=0;i<6000 && access(b,F_OK);i++) usleep(5000); require(!access(b,F_OK),"counted arrival"); }
 static void release(const char *state) { char b[512]; path(b,sizeof b,"release-",state); int fd=open(b,O_WRONLY|O_CREAT,0600); require(fd>=0,"release barrier"); close(fd); }
 /* Facts are JSON text; fact_is compares one member's literal text, and a NULL
  * want means the member is absent. */

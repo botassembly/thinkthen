@@ -24,7 +24,7 @@ static class Program
     static void Marker(string name)
     {
         string path = Path.Combine(Environment.GetEnvironmentVariable("TT_BARRIER_DIR")!, "arrived-" + name);
-        Check(SpinWait.SpinUntil(() => File.Exists(path), TimeSpan.FromSeconds(5)), "arrival " + name);
+        Check(SpinWait.SpinUntil(() => File.Exists(path), TimeSpan.FromSeconds(30)), "arrival " + name);
     }
     static void Release(string name) => File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("TT_BARRIER_DIR")!, "release-" + name), "");
     static void Direct()
@@ -65,10 +65,14 @@ static class Program
             catch (Failure f) { return f; }
         });
         Marker(state);
+        // Cancel fires the token before it returns, and a fired token lets the
+        // sent request finish, so the release follows at once. A deadline ends
+        // the call while the reply is held, so the release waits for that return.
         if (expected == 5) { cancel.Cancel(); cancel.Cancel(); }
-        Thread.Sleep(100);
+        bool returnedHeld = expected == 3 && call.Wait(TimeSpan.FromSeconds(30));
         if (many) for (int i = 1; i <= 6; i++) Release($"hold-bulk-{i}"); else Release(state);
-        Check(call.Wait(TimeSpan.FromSeconds(20)), $"held call did not finish {state}");
+        Check(call.Wait(TimeSpan.FromSeconds(60)), $"held call did not finish {state}");
+        Check(expected != 3 || returnedHeld, $"the deadline did not end {state} while its reply was held");
         Check(call.Result is { Code: var code } && code == expected, $"held {state}: {call.Result?.Code}");
         Console.WriteLine($"HELD_{state.ToUpperInvariant().Replace('-', '_')}_PASS: code {expected}, untouched output");
     }

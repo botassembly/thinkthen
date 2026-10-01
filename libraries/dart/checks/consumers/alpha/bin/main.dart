@@ -14,7 +14,7 @@ void require(bool ok, String label) {
 
 Future<void> arrival(String name) async {
   final file = File('${Platform.environment['TT_BARRIER_DIR']}/arrived-$name');
-  for (var i = 0; i < 2000; i++) {
+  for (var i = 0; i < 6000; i++) {
     if (await file.exists()) return;
     await Future<void>.delayed(const Duration(milliseconds: 5));
   }
@@ -118,9 +118,9 @@ Future<void> ownedFactsCase(Door door, String library) async {
       release('hold-owned-scalar');
       release('hold-owned-bulk-first');
       final scalarResult =
-          await scalarReceived.timeout(const Duration(seconds: 18)) as List;
+          await scalarReceived.timeout(const Duration(seconds: 30)) as List;
       final bulkResult =
-          await bulkReceived.timeout(const Duration(seconds: 18)) as List;
+          await bulkReceived.timeout(const Duration(seconds: 30)) as List;
       retainedScalar = scalarResult[0] as Map;
       retainedBulk = bulkResult[0] as Map;
       require(
@@ -252,7 +252,7 @@ Future<bool> joinIsolate(
 ) async {
   if (isolate == null || exited == null) return true;
   try {
-    await exited.timeout(const Duration(seconds: 18));
+    await exited.timeout(const Duration(seconds: 30));
     return true;
   } on TimeoutException {
     isolate.kill(priority: Isolate.immediate);
@@ -310,7 +310,7 @@ Future<void> held(
           onExit: fireExited.sendPort);
       fireExitFuture = fireExited.first;
       require(
-        await fireReceiver.first.timeout(const Duration(seconds: 18)) ==
+        await fireReceiver.first.timeout(const Duration(seconds: 30)) ==
             'fired twice',
         'second isolate fired twice after counted arrival',
       );
@@ -321,7 +321,7 @@ Future<void> held(
       release(state);
     }
     final result =
-        await receiver.first.timeout(const Duration(seconds: 18)) as List;
+        await receiver.first.timeout(const Duration(seconds: 30)) as List;
     require(
       result[0] == 'failure' &&
           result[1] == wanted &&

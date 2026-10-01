@@ -73,8 +73,14 @@ try:
         limit = time.monotonic()+90
         while not marker.exists() and time.monotonic()<limit:
             time.sleep(.01)
+        # The deadline ends the held call while its reply is held. The matrix
+        # sends its next request only after that call returns, so the release
+        # waits for that next arrival, up to 30 s (ticket 0356).
         if marker.exists():
-            time.sleep(.2)
+            seen = len(server.arrivals)
+            limit = time.monotonic()+30
+            while len(server.arrivals) <= seen and time.monotonic()<limit:
+                time.sleep(.005)
             (RUN/'barrier/release-hold-deadline').touch()
     releaser = threading.Thread(target=release_deadline, daemon=True)
     releaser.start()
