@@ -7,7 +7,7 @@ Milestone: 0.2
 ## Outcome
 
 - The release workflow builds, tests, packs and publishes a fifth target, `x86_64-pc-windows-msvc`, on `windows-2025`. The command ships as a `.zip` with `thinkthen.exe`.
-- Every place that counts four targets counts five: `draft`, `verify-family`, the RubyGems platform-gem counts, the PyPI job's wheel count, `npm-assemble`'s addon count, the Homebrew tap and `expected_targets` in `sdlc/scripts/release-workflow`'s `collect` step. A target the other tickets do not yet fill reports "not run" by name.
+- The release jobs know a fifth target where the command ships: the matrix, `draft`, `verify-family` and `expected_targets` in `sdlc/scripts/release-workflow`'s `collect` step. The PyPI wheel count and `npm-assemble`'s addon count stay at four; tickets 0382 and 0383 raise them. The RubyGems platform-gem count and the Homebrew tap skip Windows on purpose. The `collect` checks for the stage 2 and Unix-only surfaces (Go, C++, Swift, Zig, PHP, Dart, Ada, Objective-C, COBOL) skip the Windows target by name.
 - A Windows user installs the command with one documented step. The README names the Windows install and the Windows folders.
 - `cargo add thinkthen` works on Windows. The crate's metadata and README name Windows.
 - Findings W1 to W7 of `sdlc/planning/windows.md` are closed. Ctrl-C outside a command exits 130 (W1). The usage store and the configuration file get Windows privacy checks with Windows sentences (W2). A refused loopback port reads "refused" (W3). A closed output reader stops `filter` (W4). The `127.1` tests use an address Windows resolves (W5). The XDG cases run on Windows through a per-platform folder helper (W6). `clippy.toml` gives no "not reachable" warning on Windows (W7).
@@ -23,14 +23,14 @@ Milestone: 0.2
   - No experiment preceded this ticket. Stage 0's runner results are the evidence.
 - Keeps: every Linux and macOS release file, name, count and checksum. `release.yml` keeps its four existing jobs unchanged apart from the count. The folders chosen by ADR 0017, ticket 0062 and ticket 0360: `%APPDATA%\thinkthen\config.json`, `%LOCALAPPDATA%\thinkthen\cache` and `%LOCALAPPDATA%\thinkthen\usage`. A cancelled command still returns 130. The Unix privacy checks and sentences stay word for word.
 - Changes: per slice, a suggested split the builder may refine.
-  - Slice A, the fifth target: `release.yml`'s Windows matrix entry, the `.zip` pack in `release-pack`, the count of four in each job, `release-registry.py`, `release-managed-pair.py` and `release-workflow`'s `expected_targets`. The Rust crate's metadata and README.
-  - Slice B, the installer: a Windows installer beside `install.sh`, its README section and an installer smoke on the runner. Code signing is decided here (see Defers).
+  - Slice A, the fifth target: `release.yml`'s Windows matrix entry, the `.zip` pack in `release-pack`, the target lists named in the Outcome and the Windows skips, `release-registry.py`, `release-managed-pair.py` and `release-workflow`'s `expected_targets`. The Rust crate's metadata and README.
+  - Slice B, the installer: a Windows installer beside `install.sh`, its README section and an installer smoke on the runner.
   - Slice C, W1 and W2: a console control handler in `cli/interrupt.rs`, ACL privacy checks in the usage store and `config.rs`, `windows-sys` in `policy.py` and `deny.toml`. Windows refusal sentences for the usage folder.
   - Slice D, W3 to W7: the refused-port sentence, the closed-reader stop, the `127.1` test addresses, the per-platform folder helper and the ported XDG cases, and the `clippy.toml` warning.
   - Specification: `specification/recording.md`, `specification/settings.md` and `specification/question-file.md` name the Windows folders. The site pages that name platforms belong to marketing; send a message to `sdlc/inbox`.
 - Proof: a rehearsal passes on all five targets with zero "not run" for the command. A `release-pack` case for the `.zip`. An installer smoke on `windows-2025`. A Windows Ctrl-C end-to-end case through `GenerateConsoleCtrlEvent` (W1). The Windows privacy refusals (W2). The W3 to W5 tests named in `windows.md` pass on Windows without a guard. The ported XDG cases pass on Windows and Linux (W6). Clippy on Windows prints no warning (W7). Each slice keeps the Linux and macOS release self-tests green.
 - Defers: the main unknowns, each decided inside this ticket or escalated.
-  - Code signing for `thinkthen.exe`. SmartScreen warns on unsigned downloads. A certificate costs money, so the builder brings Ian the options and costs before slice B lands.
+  - Code signing for `thinkthen.exe`. SmartScreen warns on unsigned downloads. A certificate costs money, so the builder brings Ian the options and costs before slice A, which ships the `.exe`, lands.
   - The installer's home: a `.ps1` script, winget or Scoop. The builder picks the simplest that works and records why.
   - Whether `managed-build` must cover Windows.
   - W8, the busy-parent fork proof, waits for stage 3.

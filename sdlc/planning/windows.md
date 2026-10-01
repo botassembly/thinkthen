@@ -74,7 +74,7 @@ Sizes count files, changed lines and tickets. They come from the stage 0 build a
 
 ### Shared release work
 
-Every stage 1 surface shares one release change. `release.yml` builds four targets, and the number four is written into `draft`, `verify-family`, the RubyGems platform-gem counts, the PyPI job's wheel count, `npm-assemble`'s addon count and the Homebrew tap. `sdlc/scripts/release-workflow` lists the four targets in its `collect` step's `expected_targets`. A fifth target touches each of them. The command line ticket carries this change, and the others build on it.
+Every stage 1 surface shares one release change. `release.yml` builds four targets, and the number four is written into `draft`, `verify-family`, the RubyGems platform-gem counts, the PyPI job's wheel count, `npm-assemble`'s addon count and the Homebrew tap. `sdlc/scripts/release-workflow` lists the four targets in its `collect` step's `expected_targets`. A fifth target touches each of them. Ticket 0380 slice A adds the Windows target where the command ships. Each other count stays at four until the ticket for its surface raises it. The Homebrew tap and the RubyGems platform gems skip Windows on purpose, and so do the `collect` checks for stage 2 and Unix-only surfaces.
 
 ### Command line
 
@@ -133,21 +133,21 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 
 ### C\#
 
-- Files: `ThinkThen.cs` (line 45 imports `libthinkthen.so.0` by name), a native library resolver, the NuGet `runtimes/` layout, the tests that use `bwrap`, `flock` and `killpg`.
+- Files: `ThinkThen.cs` (line 45 imports `libthinkthen.so.0` by name), a native library resolver, the tests that use `bwrap`, `flock` and `killpg`.
 - Lines: 150 to 400.
 - Specification: no page changes. `libraries/csharp/README.md` names Windows.
-- Release workflow: a `runtimes/win-x64/native/thinkthen.dll` entry in the package.
+- Release workflow: none. The package ships no native library on any platform; the user installs the C DLL archive from ticket 0381, as `libraries/csharp/README.md` says for Unix.
 - New tests: a load and smoke case on the runner; skips for the Unix-only cases.
 - Linux and macOS risk: **low to medium**. A resolver replaces the fixed name, so it touches the Linux load path.
-- Unknowns: whether `NativeLibrary.SetDllImportResolver` or the plain `runtimes/` probing is enough on every .NET version the binding supports.
+- Unknowns: whether `NativeLibrary.SetDllImportResolver` finds `thinkthen.dll` the same way on every .NET version the binding supports.
 - Tickets: 1.
 
 ### JVM
 
-- Files: `check.sh` (it builds a `:` classpath and expects a `.so`), the jar's native resource layout, the tests that use `bwrap` and `pthread_self`. `Door.java` loads the library from `-Dthinkthen.library`, so it needs no change.
+- Files: `check.sh` (it builds a `:` classpath and expects a `.so`), the tests that use `bwrap` and `pthread_self`. `Door.java` loads the library from `-Dthinkthen.library`, so it needs no change.
 - Lines: 50 to 200.
 - Specification: no page changes. `libraries/jvm/README.md` names Windows.
-- Release workflow: the DLL in the jar's native resources.
+- Release workflow: none. The jars neither fetch nor bundle the library, as `libraries/jvm/README.md` says; the user points `-Dthinkthen.library` at ticket 0381's DLL.
 - New tests: a load and smoke case on the runner; skips for the Unix-only cases.
 - Linux and macOS risk: **low**. The loader is already name-agnostic.
 - Unknowns: none of note.
@@ -157,7 +157,7 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 
 Three unknowns carry the most risk in stage 1. Each ticket below names its own.
 
-- **Signing the `.exe`.** SmartScreen warns on an unsigned download. A signing certificate costs money, so it needs Ian's approval. Ticket 0380 brings Ian the options and their costs before its release slice lands.
+- **Signing the `.exe`.** SmartScreen warns on an unsigned download. A signing certificate costs money, so it needs Ian's approval. Ticket 0380 brings Ian the options and their costs before slice A, which ships the `.exe`, lands.
 - **Installer packaging.** The home of the installer is open: a `.ps1` script beside `install.sh`, winget or Scoop. Ticket 0380 decides.
 - **Hiding Rust internal symbols in a Windows static library.** `localize.sh` hides the Rust standard library's symbols with `objcopy` on ELF and Mach-O. MSVC has no twin for a COFF static library. Ticket 0381 decides, and may ship the DLL alone first.
 
@@ -182,7 +182,7 @@ Ian's ruling, 2026-10-01: keep all Windows work in 0.2. The smaller option is no
 
 ## Stage 1 tickets
 
-Each ticket is ready, carries milestone 0.2, and waits for the `release/0.1` cut. Ticket 0380 lands first, because it adds the fifth release target that the others build on. Tickets 0384 and 0385 also wait for 0381's DLL.
+Each ticket is ready, carries milestone 0.2, and waits for the `release/0.1` cut. Tickets 0381 to 0385 wait for ticket 0380 slice A, because it adds the fifth release target that the others build on. Tickets 0384 and 0385 also wait for 0381 slice A, which ships the DLL.
 
 | Ticket | Surface | Slices | Lines | Findings |
 | --- | --- | --- | --- | --- |

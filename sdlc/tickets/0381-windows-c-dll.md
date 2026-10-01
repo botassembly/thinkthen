@@ -6,8 +6,9 @@ Milestone: 0.2
 
 ## Outcome
 
-- The Windows target builds `thinkthen.dll`, its import library `thinkthen.dll.lib` and a static library, and packs them with the header.
-- The DLL exports exactly the C door's public functions. A static link against the static library exposes no Rust standard library symbol, as on Linux and macOS.
+- The Windows target builds `thinkthen.dll` and its import library `thinkthen.dll.lib`, and packs them with the header in their own archive.
+- The DLL exports exactly the C door's public functions.
+- Either a static link against the static library exposes no Rust standard library symbol, as on Linux and macOS, or the DLL ships alone, `DESIGN.md` says so, and an issue for stage 3 holds the static library.
 - The door's C tests build and pass with MSVC on `windows-2025`, apart from `fork.c`, which stays Unix.
 - `libraries/c/DESIGN.md` states the DLL, import library and static library rules.
 - Linux and macOS libraries are unchanged.

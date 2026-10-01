@@ -68,7 +68,7 @@ Blockers:
 Windows work follows [windows.md](windows.md):
 
 - [0373: Windows stage 0](../tickets/0373-windows-stage-0.md), landed before the cut. The root workspace and the C door build and pass their tests on Windows, and nothing ships. It changes no 0.1 behavior.
-- Windows stage 1: the command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM ship for Windows x86-64, and findings W1 to W7 close. The stage 1 report in [windows.md](windows.md#stage-1-difficulty-report) sizes it at 9 to 11 tickets' worth of work and 1,600 to 3,400 lines. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Tickets 0380 to 0385 carry it, in slices. Each waits for the `release/0.1` cut. 0380 lands first, and 0384 and 0385 also wait for 0381.
+- Windows stage 1: the command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM ship for Windows x86-64, and findings W1 to W7 close. The stage 1 report in [windows.md](windows.md#stage-1-difficulty-report) sizes it at 9 to 11 tickets' worth of work and 1,600 to 3,400 lines. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Tickets 0380 to 0385 carry it, in slices. Each waits for the `release/0.1` cut. 0381 to 0385 wait for 0380 slice A, and 0384 and 0385 also wait for 0381 slice A.
 
 Open items:
 

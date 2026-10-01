@@ -6,7 +6,7 @@ Milestone: 0.2
 
 ## Outcome
 
-- The NuGet package carries `runtimes/win-x64/native/thinkthen.dll`, and on Windows it loads the DLL and answers from a loopback backend.
+- On Windows the package finds `thinkthen.dll` from ticket 0381's archive, loads it and answers from a loopback backend. The package still ships no native library, as `libraries/csharp/README.md` says.
 - The C# tests that need `bwrap`, `flock` or `killpg` skip on Windows with a reason. The rest pass on `windows-2025`.
 - `libraries/csharp/README.md` names Windows. Linux and macOS loading is unchanged.
 
@@ -14,6 +14,6 @@ Milestone: 0.2
 
 - Starts from: ticket 0373 (stage 0) did not build C#. `ThinkThen.cs` line 45 imports `libthinkthen.so.0` by name. The stage 1 report in `sdlc/planning/windows.md` sizes this ticket at 150 to 400 lines and 1 slice, with low to medium Linux and macOS risk: a resolver replaces the fixed name, so it touches the Linux load path. No experiment preceded this ticket.
 - Keeps: the Linux and macOS packages load the same library files as today. The package's public API.
-- Changes: a native library resolver, or plain `runtimes/` probing, picks the library per platform. The NuGet layout gains the Windows entry. The Unix-only tests get skips with reasons. `release.yml` puts the DLL into the package.
+- Changes: a native library resolver picks `thinkthen.dll` on Windows and keeps today's name elsewhere. The README says where to put the DLL, beside the application or on `PATH`. The Unix-only tests get skips with reasons.
 - Proof: a load and smoke case on `windows-2025` that counts loopback requests. The Linux and macOS C# checks and the installed-file check stay green.
-- Defers: the main unknown, whether `NativeLibrary.SetDllImportResolver` or plain `runtimes/` probing is enough on every .NET version the binding supports. The builder tests each supported version and records the answer.
+- Defers: the main unknown, whether `NativeLibrary.SetDllImportResolver` finds the DLL the same way on every .NET version the binding supports. The builder tests each supported version and records the answer. A native NuGet package, such as the reserved `Botassembly.ThinkThen.C`, stays out of scope.
