@@ -157,6 +157,13 @@ def main():
                                               github_env, github_path, observer), "selected JDK java differs")
                 assert not any(args[0].endswith(("/kotlinc", "/scalac")) for args, _ in observer.calls)
                 observer.java_version = "21.0.12"
+                # Rehearsal run 36809341385: the runner's PATH javac is the image's own JDK.
+                del os.environ["THINKTHEN_JDK_HOME"]
+                executable(root / "bin/javac")
+                with patch.object(tools, "APT_JDK", root / "jdk"):
+                    assert tools.check_jdk(observer) == root / "jdk"
+                (root / "bin/javac").unlink()
+                os.environ["THINKTHEN_JDK_HOME"] = str(root / "jdk")
                 (root / "kotlin/lib/kotlin-stdlib.jar").unlink()
                 observer.calls.clear()
                 must_fail(lambda: tools.setup("managed", root / "missing-runtime", SHA, False,

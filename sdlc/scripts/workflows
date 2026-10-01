@@ -434,6 +434,9 @@ esac
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
         calls = log.read_text().splitlines() if log.exists() else []
+        pgrx = root / ".pgrx/config.toml"
+        if pgrx.exists():
+            calls.append("pgrx " + pgrx.read_text().replace(str(root), "$ROOT").replace("\n", " ").strip())
         handoff = root / "github-path"
         if handoff.exists():
             calls.append(f"path {handoff.read_text().strip().replace(str(root), '$ROOT')}")
@@ -756,7 +759,8 @@ def self_test():
         result, calls = host_setup_calls(target, smoke)
         if "apple" in target:
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
-                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
+                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
+                      'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned"]
         else:
             wanted = ["libraries/ruby/setup-ruby.sh "]
             if not smoke:

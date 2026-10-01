@@ -203,6 +203,9 @@ def ensure_packages(mode, job, acquire, run=command, get=fetch):
             "plan": "apt-plan.txt"}
 
 
+APT_JDK = Path("/usr/lib/jvm/java-21-openjdk-amd64")
+
+
 def selected_executable(path):
     resolved = path.expanduser().resolve()
     return resolved if resolved.is_file() and os.access(resolved, os.X_OK) else None
@@ -233,9 +236,9 @@ def managed_env(jdk):
 
 
 def check_jdk(run=command):
-    home = sdk_home("THINKTHEN_JDK_HOME", "javac")
-    if home is None:
-        home = Path("/usr/lib/jvm/java-21-openjdk-amd64")
+    # The runner's PATH javac belongs to the image's own JDK. Only the pinned package's
+    # tree passes the owner check below. This check never searches PATH.
+    home = sdk_home("THINKTHEN_JDK_HOME", "javac") if os.environ.get("THINKTHEN_JDK_HOME") else APT_JDK
     for tool in ("java", "javac", "jar"):
         if selected_executable(home / "bin" / tool) is None:
             fail(f"selected JDK lacks {tool}")
