@@ -1,6 +1,6 @@
 # 0359: the C door's `relate` reads records through the shared parser
 
-Status: in progress. Lane claude-1. Branch `ticket/0359-c-door-relate-shared-reader`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 031, `../issues/closed/2026-09-30-c-door-relate-parses-records-with-its-own-reader.md`, filed by ticket 0354.
+Status: landed. Lane claude-1. A fresh ticket review found three gaps, all fixed: the `call` path also reaches the reader, the finite change lacked a row, and the binding waiver lacked its reason. The build began during that review, so the code review treated all of it as new. The code review found three gaps, all fixed, and then accepted. Branch `ticket/0359-c-door-relate-shared-reader`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 031, `../issues/closed/2026-09-30-c-door-relate-parses-records-with-its-own-reader.md`, filed by ticket 0354.
 
 ## Outcome
 
@@ -23,3 +23,9 @@ The C door's `relate` reads each record through the crate's one JSON record pars
   - The debt issue moves to `sdlc/issues/closed/` with `Paid: 2026-09-30` and a `Resolution:` line. `CHANGELOG.md` gains one line.
 - Proof: one edge table through the real door in `libraries/c/tests/door/batching.rs`, beside the annotate depth row from 0354. Each row calls `thinkthen_relate` through `tests/c/driver.c` with one record and pins the exact code and reply. The rows are a record 127 levels deep (code 0, `{"edges":[]}`), 128 levels deep (the depth sentence), text that is not JSON (kept sentence), an array (kept shape sentence), an object without `kind` (kept shape sentence), a number `name` beside a string `text` (kept shape sentence, so a present name that is not a string never falls back to `text`), a repeated member name (the duplicate sentence), and a number too large to be finite (the finite sentence). The JSON `call` reads `records` as raw values, which `serde_json` skips with no depth limit, so two more rows send the 127-level and 128-level records through `call` and pin code 0 and the depth sentence. A loopback listener counts zero requests. The existing `relate_reads_what_recognize_found` keeps the `name`, then `text` order. Checks: the C door tests, `policy.py`, `tickets`, `inventory`, clippy with `-D warnings` on the two crates, and lint. Every binding's `relate` runs over this door, but a grep finds neither door relate sentence in any binding, site page or specification page, so no binding test pins the changed text and no binding surface check is owed.
 - Defers: nothing. The rule of one record parser now holds on both door paths.
+
+## What the build taught us
+
+- The door's JSON `call` reads `records` as raw values, and `serde_json` skips a raw value with no depth limit. So the envelope never refuses a deep record, and the record reader is the one place depth is checked on both door paths.
+- `core::JsonError` was re-exported only under the `cli` feature, because no library code used it. The library build without that feature caught the gap; the door's build is the check for library-only use.
+- A host-only hook stays `#[doc(hidden)]`, so `sdlc/scripts/inventory` and the reviewed public contract do not change.
