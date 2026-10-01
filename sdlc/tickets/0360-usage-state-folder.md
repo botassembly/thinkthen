@@ -27,13 +27,13 @@ Status: in progress. Lane claude-2. Branch `ticket/0360-usage-state-folder`. Pla
     - The command prints one fixed warning at exit (`cli/mod.rs`).
     - `Engine::finish_usage` discards the result (`engine/facade/finish.rs`). So every library, the C door, the data frames and the SQL extensions stopped counting without a word.
   - Premise check: no limit reads the durable totals. The process request total and the estimated input admission total count in memory, per process (`specification/settings.md`, rows "Process request total" and "Estimated input admission total"). A lost count misleads `status` and the person reading it. It weakens no limit today. A future monthly limit would read these files, so it would need the refusal below.
-- Keeps:
+- Keeps: the counting rules and the safety of the files.
   - Every count's meaning, the `.lock` serialization, the private modes (folder 0700, files 0600) and the write, sync and rename order.
   - The one-second finish deadline, `THINKTHEN_CACHE` never moving usage, and `--no-cache` never disabling it. `EngineBuilder::new()` keeps counting in memory.
   - The fixed exit warning for a write that fails after a good start.
   - The fork-safe counters.
   - Retained regressions: the lock, interrupt flush, fork, overflow and malformed-month cases keep their subjects. Only their paths and outcomes change as listed below.
-- Changes:
+- Changes: the paths, one file, one check at engine build, and status.
   - `config.rs`: `usage_path` reads `XDG_STATE_HOME` and `HOME` as above. Its edge table covers Linux with and without `XDG_STATE_HOME`, a relative or blank home, macOS, and `XDG_CACHE_HOME` no longer moving usage.
   - `engine/usage/storage.rs` and `counts.rs`:
     - One month file in the `thinkthen.usage/1` shape with all five counters always written. A file without `retries` reads as zero, as it does on main.
@@ -51,7 +51,7 @@ Status: in progress. Lane claude-2. Branch `ticket/0360-usage-state-folder`. Pla
     - `specification/recording.md` gives the new paths and the single file. Its "best effort" paragraph says an engine refuses to start on an unreadable count. Diagnostics name the full path, because the fix needs it and `status` already prints `usage_path`.
     - `specification/settings.md` names `XDG_STATE_HOME`.
     - `README.md` "Usage counts" gives the folder.
-- Proof:
+- Proof: an edge table, one regression for each failing path, and two outside-in cases.
   - The `config.rs` edge table above.
   - Regressions, each failing on main:
     - Status on a malformed month file gives exit 0, both count groups `unavailable`, and the pinned standard-error sentence. Main gave exit 5 and no report.
@@ -63,7 +63,7 @@ Status: in progress. Lane claude-2. Branch `ticket/0360-usage-state-folder`. Pla
     - A run writes exactly one `YYYY-MM.json` with five counters, and no `retries-` file.
     - After the cache home is removed, status still shows the run's counts.
   - Checks: focused crate tests (config, usage, status, backend usage, library env), the C door tests, the touched binding and SQL checks, workspace clippy with `-D warnings`, `policy.py`, `sdlc/scripts/tickets`, and `lint` in a clean checkout. The coordinator runs the full surfaces sweep.
-- Defers:
+- Defers: carrying old counts, a mid-run write failure on the libraries, the site, and Windows.
   - Old counts are not carried over, and nothing reads `thinkthen-usage`. QA and the bench are told by inbox message.
   - A write that fails after a good start (full disk, permissions changed mid-run, another program writing a bad file) still stops counting quietly on the libraries and SQL extensions. Filed as a debt issue with `Pay when:` a binding gains a warning channel or a monthly limit lands.
   - `site/` pages and example outputs that show `thinkthen-usage` belong to marketing. They are noted in the debt issue for marketing to update.
