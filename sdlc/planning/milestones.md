@@ -68,15 +68,22 @@ Blockers:
 Windows work follows [windows.md](windows.md):
 
 - [0373: Windows stage 0](../tickets/0373-windows-stage-0.md), landed before the cut. The root workspace and the C door build and pass their tests on Windows, and nothing ships. It changes no 0.1 behavior.
-- Windows stage 1: the command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM ship for Windows x86-64, and findings W1 to W7 close. It has no ticket yet. The stage 1 report in [windows.md](windows.md#stage-1-difficulty-report) sizes it at 9 to 11 tickets and recommends keeping it in 0.2. ADR 0116 item 6 says what happens if Ian pulls it into 0.1.
+- Windows stage 1: the command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM ship for Windows x86-64, and findings W1 to W7 close. The stage 1 report in [windows.md](windows.md#stage-1-difficulty-report) sizes it at 9 to 11 tickets' worth of work and 1,600 to 3,400 lines. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Tickets 0380 to 0385 carry it, in slices. Each waits for the `release/0.1` cut. 0380 lands first, and 0384 and 0385 also wait for 0381.
 
 Open items:
 
 - [0377: Each language binding and SQL extension names a backend in code](../tickets/0377-binding-backends.md)
+- [0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64](../tickets/0380-windows-command-line-and-rust-crate.md)
+- [0381: Windows stage 1: the C library ships as a DLL for Windows x86-64](../tickets/0381-windows-c-dll.md)
+- [0382: Windows stage 1: the Python wheel ships for Windows x86-64](../tickets/0382-windows-python-wheel.md)
+- [0383: Windows stage 1: the Node addon ships for Windows x86-64](../tickets/0383-windows-node-addon.md)
+- [0384: Windows stage 1: the C# package loads the Windows DLL](../tickets/0384-windows-csharp.md)
+- [0385: Windows stage 1: the JVM binding loads the Windows DLL](../tickets/0385-windows-jvm.md)
 - [A Flutter app file in the release bundle](../issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md)
 - [The bindings and SQL extensions cannot name a backend](../issues/2026-10-01-bindings-and-sql-extensions-name-no-backend.md)
 - [`rank --threshold P` keeps only records at or above a probability](../issues/2026-10-01-rank-keeps-only-records-over-a-threshold.md)
 - [`score --level NAME=MEANING` describes a level on the command line](../issues/2026-10-01-score-levels-described-on-the-command-line.md)
+- [SQL named forms `thinkthen_rank` and `thinkthen_filter`](../issues/2026-10-01-sql-names-for-rank-and-filter.md)
 
 ## later
 

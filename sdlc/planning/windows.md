@@ -1,12 +1,13 @@
 # Windows
 
-Status: stage 0 landed through ticket 0373. Stage 1 waits for 0.2 unless Ian pulls it into 0.1. Ian can overturn every stage, verdict and recommendation on this page.
+Status: stage 0 landed through ticket 0373. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Stage 1 has ready tickets 0380 to 0385, which wait for the `release/0.1` cut. Ian can overturn every stage, verdict and recommendation on this page.
 
 This page is the one home of the Windows plan. It holds the stages, the surfaces that stay Unix-only, the verdict for each surface, the decision record, the stage 1 difficulty report and the findings stage 0 leaves open.
 
 ## Decision record
 
 - 2026-10-01, Ian: start Windows stage 0 now. Stage 0 promises users nothing new and must not change Linux or macOS behavior. Stage 1 is assigned to 0.2. Ian may pull stage 1 into 0.1, so stage 0 also measures how hard stage 1 is. Ian can overturn this ruling.
+- 2026-10-01, Ian: keep all Windows work in 0.2. Stage 1 is not pulled into 0.1. This follows the stage 1 report's recommendation below. Ian can overturn this ruling.
 - [ADR 0116](adr/0116-release-branches-cut-at-the-release-candidate.md) item 6: if Ian pulls stage 1 into 0.1, it lands on main before the `release/0.1` cut, and the cut moves later.
 - ADR 0017 and ticket 0062 chose `%APPDATA%\thinkthen\config.json` for the configuration file and `%LOCALAPPDATA%\thinkthen\cache` for the answer cache. Ticket 0360 chose `%LOCALAPPDATA%\thinkthen\usage` for the usage totals. Stage 0 implements these folders.
 - Coordinator default, which Ian can overturn: the target is `x86_64-pc-windows-msvc`. The GNU target and ARM64 wait for stage 3.
@@ -14,7 +15,7 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 ## Stages
 
 0. **Groundwork (ticket 0373, milestone 0.2, landed).** The root workspace and `libraries/c` compile, pass Clippy and pass their tests on `x86_64-pc-windows-msvc`. The hand-started `windows` workflow proves it on `windows-2025`. Nothing ships. No Linux or macOS behavior changes.
-1. **First shipped surfaces (milestone 0.2).** The command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM binding ship for Windows x86-64. The release workflow builds, tests and publishes them. The specification and the README name the Windows folders. Stage 1 also closes findings W1 to W7: the Ctrl-C exit, the Windows privacy checks, the port of the guarded XDG cases and the rest.
+1. **First shipped surfaces (milestone 0.2, tickets 0380 to 0385).** The command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM binding ship for Windows x86-64. The release workflow builds, tests and publishes them. The specification and the README name the Windows folders. Stage 1 also closes findings W1 to W7: the Ctrl-C exit, the Windows privacy checks, the port of the guarded XDG cases and the rest.
 2. **The other bindings and the SQL extensions.** C++, Go, Ruby, R, PHP, Swift, Dart, Zig, the Polars door, and the SQLite and DuckDB extensions. Each loads the stage 1 C DLL or builds the engine as stage 1 does.
 3. **Hardening.** Windows ARM64, finding W8, and the PostgreSQL question.
 
@@ -152,6 +153,14 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 - Unknowns: none of note.
 - Tickets: 1.
 
+### Main unknowns
+
+Three unknowns carry the most risk in stage 1. Each ticket below names its own.
+
+- **Signing the `.exe`.** SmartScreen warns on an unsigned download. A signing certificate costs money, so it needs Ian's approval. Ticket 0380 brings Ian the options and their costs before its release slice lands.
+- **Installer packaging.** The home of the installer is open: a `.ps1` script beside `install.sh`, winget or Scoop. Ticket 0380 decides.
+- **Hiding Rust internal symbols in a Windows static library.** `localize.sh` hides the Rust standard library's symbols with `objcopy` on ELF and Mach-O. MSVC has no twin for a COFF static library. Ticket 0381 decides, and may ship the DLL alone first.
+
 ### Totals and recommendation
 
 | Surface | Lines | Tickets | Linux and macOS risk |
@@ -168,3 +177,20 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 Recommendation: **keep stage 1 in 0.2.** Stage 1 touches the release workflow that 0.1 has not yet passed a rehearsal on, and the count of four runs through every publishing job. Pulling it into 0.1 moves the cut later, as ADR 0116 item 6 says, and adds risk to the release that matters most.
 
 The option if Ian wants Windows in 0.1: pull only the command line and the Rust crate (3 to 4 tickets, 730 to 1,280 lines). They give Windows users the command and `cargo add thinkthen` without the binding packages, and they keep the release change to the pack script, the installer and the target count. The bindings follow in 0.2.
+
+Ian's ruling, 2026-10-01: keep all Windows work in 0.2. The smaller option is not taken.
+
+## Stage 1 tickets
+
+Each ticket is ready, carries milestone 0.2, and waits for the `release/0.1` cut. Ticket 0380 lands first, because it adds the fifth release target that the others build on. Tickets 0384 and 0385 also wait for 0381's DLL.
+
+| Ticket | Surface | Slices | Lines | Findings |
+| --- | --- | --- | --- | --- |
+| [0380](../tickets/0380-windows-command-line-and-rust-crate.md) | Command line, Rust crate, shared release work | 3 to 4 | 730 to 1,280 | W1 to W7 |
+| [0381](../tickets/0381-windows-c-dll.md) | C DLL | 2 | 400 to 900 | none |
+| [0382](../tickets/0382-windows-python-wheel.md) | Python wheel | 1 to 2 | 150 to 350 | none |
+| [0383](../tickets/0383-windows-node-addon.md) | Node addon | 1 | 100 to 250 | none |
+| [0384](../tickets/0384-windows-csharp.md) | C# | 1 | 150 to 400 | none |
+| [0385](../tickets/0385-windows-jvm.md) | JVM | 1 | 50 to 200 | none |
+
+W8 stays with stage 3.
