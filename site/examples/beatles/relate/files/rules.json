@@ -12,7 +12,8 @@
         "name": "on_album",
         "source": "song",
         "target": "album",
-        "reads": "is on the album"
+        "reads": "is on the album",
+        "single": true
       }
     ]
   }
