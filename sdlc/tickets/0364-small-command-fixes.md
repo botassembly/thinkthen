@@ -18,14 +18,14 @@ Status: in progress. Lane claude-2. Branch `ticket/0364-small-command-fixes`. Pl
   - `transforms/band/band.jq:31` and its header at lines 6-7, `score/score.jq:30`, `sweep/sweep.jq:65` and `:419`, and `trials/trials.jq:108` use `<=` at the low edge. `transforms/trials/test.sh` row "band-low" pins `false` at p = 0.25 under `0.25:0.75`.
   - `core/recording/convert.rs:200-202` treats any instruction that starts "The text is " as already quoted and quotes none of the exchange. Its doc names the case it guards: a context exchange, whose questions quote their own records. `cli/cache.rs:68-75` prints no sign of answers left in the old form.
 - Keeps: every other `check` line, grade and exit code; `check --plan` sends nothing and reserves nothing. Malformed `THINKTHEN_MAX_REQUEST_BYTES` values still exit 2 with the same sentence, and the flag's refusals are unchanged. The transforms' cut rule (`>=`) and high edge (`>=`) are unchanged. `cache convert` without `--quote` writes the same rows and bytes; a context exchange and a JSON instruction still take no quote; converting twice still writes the same bytes.
-- Changes:
+- Changes: two command files, the convert path, five transform lines, and three specification pages.
   - `cli/check.rs`: the engine carries the process budget from `environment.estimated_total`; `check` has no flag for it. The retry count is the command default, named once beside `--max-retries` in `cli/args.rs` and read by both.
   - `cli/edge.rs`: read the variable through `read()`.
   - The five transform lines and the band header use `<` at the low edge. `trials/test.sh` row "band-low" expects `null`.
   - `core/recording/convert.rs`: an instruction counts as already quoted only when it starts with `The text is `, one complete JSON value, and `. `. This covers the record's own JSON, the issue's case, and a context exchange's records, which the issue's narrower rule would quote a second time. A converted answer written only in the old form is marked, and `engine/store/convert.rs` counts it before merging, as it counts `converted`.
   - `cli/cache.rs`: the summary reads `thinkthen: cache convert: wrote N answers to thinkthen.jsonl, M from old entries, U left unquoted; skipped K entries`.
   - Specification: `check.md` names the cap; `settings.md`'s Request size row says a blank value counts as unset; `recording.md` states the new quoted test and the summary.
-- Proof:
+- Proof: loopback, edge-table and transform tests, then the gates.
   - `check`: a loopback test with `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=1` pins the whole standard error, exit 2, empty standard output and a backend count of 0. A loopback test on a status that is retried pins sixteen requests for four probes.
   - Blank variable: `ceiling.rs` moves `""` and `"  "` out of the refused list into a case that plans with the default size, exit 0.
   - Transforms: `trials/test.sh` row "band-low" expects `null`; a band and a score example row at the low edge counts as not sure; the sweep test gains a row at the low edge that is accepted as not sure.
