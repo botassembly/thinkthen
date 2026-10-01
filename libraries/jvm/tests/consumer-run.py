@@ -126,7 +126,7 @@ if len(sys.argv) == 2:
         if portable:
             assert summary['attempts']==summary['connections']==3,summary
         else:
-            expected={'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'Is it?'}},'state':'release-'+lang}
+            expected={'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'The text is "release-'+lang+'". Is it?'}},'state':'Each question quotes the text it asks about.'}
             captured=[json.loads(path.read_text()) for path in BARRIER.glob('wire-body-*.json')]
             assert captured==[expected],(captured,expected)
             summary['body']=captured[0]
