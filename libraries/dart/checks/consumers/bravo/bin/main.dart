@@ -14,7 +14,7 @@ void require(bool ok, String label) {
 
 Future<void> arrival(String name) async {
   final file = File('${Platform.environment['TT_BARRIER_DIR']}/arrived-$name');
-  for (var i = 0; i < 2000; i++) {
+  for (var i = 0; i < 6000; i++) {
     if (await file.exists()) return;
     await Future<void>.delayed(const Duration(milliseconds: 5));
   }
@@ -39,7 +39,7 @@ void worker(List<Object> args) {
         engine,
         'Is it?',
         state,
-        deadline: mode == 'deadline' ? 35 : -1,
+        deadline: mode == 'deadline' ? 1000 : -1,
         token: token,
       );
     send.send(['wrong-success', 0, '']);
@@ -144,7 +144,7 @@ Future<bool> joinIsolate(
 ) async {
   if (isolate == null || exited == null) return true;
   try {
-    await exited.timeout(const Duration(seconds: 18));
+    await exited.timeout(const Duration(seconds: 30));
     return true;
   } on TimeoutException {
     isolate.kill(priority: Isolate.immediate);
@@ -202,18 +202,22 @@ Future<void> held(
           onExit: fireExited.sendPort);
       fireExitFuture = fireExited.first;
       require(
-        await fireReceiver.first.timeout(const Duration(seconds: 18)) ==
+        await fireReceiver.first.timeout(const Duration(seconds: 30)) ==
             'fired twice',
         'second isolate fired twice after counted arrival',
       );
       release(state);
       if (mode == 'bulk') release('hold-bulk-second');
-    } else {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    // A fired token lets the sent request finish, so a cancelled call answers
+    // after the release. A deadline ends the call while the reply is held, so
+    // the release waits for that answer (ticket 0356).
+    final answered = receiver.first;
+    if (wanted == 3) {
+      await answered.timeout(const Duration(seconds: 30));
       release(state);
     }
-    final result =
-        await receiver.first.timeout(const Duration(seconds: 18)) as List;
+    final result = await answered.timeout(const Duration(seconds: 30)) as List;
     require(
       result[0] == 'failure' &&
           result[1] == wanted &&

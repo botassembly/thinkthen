@@ -51,18 +51,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
             barrier = pathlib.Path(self.server.barrier_dir)
             (barrier / ('arrived-' + hold_key)).touch()
             release = barrier / ('release-' + hold_key)
-            end = time.monotonic() + 10
+            # Held up to 60 s, past every test's 30 s wait (ticket 0356).
+            end = time.monotonic() + 60
             while not release.exists() and time.monotonic() < end:
                 time.sleep(0.005)
             if not release.exists():
                 self.send_error(500)
                 return
         if state_key in ('failure-one', 'failure-two', 'success') and self.server.concurrent_barrier:
-            self.server.concurrent_barrier.wait(timeout=5)
+            self.server.concurrent_barrier.wait(timeout=30)
         if state_key in ('first', 'second', 'third'):
-            self.server.bulk_barrier.wait(timeout=5)
+            self.server.bulk_barrier.wait(timeout=30)
             predecessor = {'first': 'second', 'second': 'third'}.get(state_key)
-            if predecessor and not self.server.bulk_done[predecessor].wait(timeout=5):
+            if predecessor and not self.server.bulk_done[predecessor].wait(timeout=30):
                 raise RuntimeError('bulk reverse completion barrier timed out')
         # The packed bulk is a single request; the former reverse-completion
         # barrier between three requests cannot occur on this pin.

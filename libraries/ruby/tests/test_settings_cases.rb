@@ -19,7 +19,7 @@ class TestSettingsCases < Minitest::Test
       RUBY
       TestBackend.with(script, arm: entry.fetch("arm").delete_suffix("/v1")) do |backend, child, root|
         steps.each do |step|
-          got = child.hear(8)
+          got = child.hear
           if step.key?("error")
             assert_equal step.fetch("error"), got.fetch("error"), entry.fetch("id")
           elsif step["verb"] == "relate"

@@ -48,7 +48,7 @@ if (leaked.length) {
 }
 
 const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 26, ...opts });
-const has = (cmd) => run('sh', ['-c', `command -v ${cmd}`]).status === 0;
+const has = (cmd, env = process.env) => run('sh', ['-c', `command -v ${cmd}`], { env }).status === 0;
 // Some tools print their version on standard error.
 const firstLine = (cmd, args) => {
   const done = run(cmd, args);
@@ -136,8 +136,8 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
     folder,
     manifest,
     build() {
-      for (const tool of [...tools, 'cargo']) if (!has(tool)) return { missing: tool };
       const runEnv = typeof env === 'function' ? env() : env;
+      for (const tool of [...tools, 'cargo']) if (!has(tool, { ...process.env, ...runEnv })) return { missing: tool };
       const n = cDoor();
       const dirs = new Map();
       const prepare = (rel) => {
@@ -149,7 +149,7 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
         layout(dir);
         fs.copyFileSync(path.join(examples, rel), path.join(dir, path.basename(rel)));
-        const lines = buildLines(slug, path.basename(rel));
+        const lines = buildLines(slug, path.basename(rel), true);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
@@ -168,6 +168,10 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
 }
 
 const javaVersion = () => firstLine('java', ['-version']);
+// Dart from the pinned Flutter, as libraries/dart/check.sh finds it. Its
+// SDK folder runs no Flutter update check.
+const DART_SDK = path.join(os.homedir(), '.local/opt/flutter/bin/cache/dart-sdk/bin');
+const DART_PATH = { PATH: `${DART_SDK}:${process.env.PATH}` };
 const SCALA_HOME = () => path.dirname(path.dirname(fs.realpathSync(run('sh', ['-c', 'command -v scalac']).stdout.trim())));
 
 // Each binding: how to build it once, how to run one sample, and what it
@@ -236,6 +240,10 @@ const BINDINGS = {
   } }),
   swift: withBuild({ slug: 'swift', tools: ['swift'], versions: () => [firstLine('swift', ['--version'])], buildEnv: { XDG_CACHE_HOME: path.join(tmp, 'swift-cache') } }),
   zig: withBuild({ slug: 'zig', tools: ['zig'], versions: () => [`Zig ${firstLine('zig', ['version'])}`], buildEnv: { ZIG_GLOBAL_CACHE_DIR: path.join(tmp, 'zig-cache') } }),
+  php: withBuild({ slug: 'php', tools: ['php'], versions: () => [firstLine('php', ['--version'])] }),
+  dart: withBuild({ slug: 'dart', tools: ['dart'], versions: () => [run('dart', ['--version'], { env: { ...process.env, ...DART_PATH } }).stdout.trim()], env: DART_PATH, buildEnv: {
+    HOME: home, PUB_CACHE: process.env.PUB_CACHE ?? path.join(os.homedir(), '.pub-cache'),
+  } }),
   csharp: withBuild({ slug: 'csharp', tools: ['dotnet'], versions: () => [`.NET SDK ${firstLine('dotnet', ['--version'])}`], buildEnv: DOTNET_ENV }),
 };
 

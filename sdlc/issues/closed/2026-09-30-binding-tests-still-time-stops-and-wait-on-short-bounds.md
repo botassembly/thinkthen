@@ -1,4 +1,4 @@
-Status: open. Found while building ticket 0352. Owner: none yet.
+Status: closed by ticket 0356. Found while building ticket 0352. Resolution: every binding test that timed a stop or waited a short bound now waits on an event: a counted request, a file the backend or child writes, a pipe line, or a call that has returned. Millisecond promises run only under `THINKTHEN_TEST_PROFILE=stress`. Go's two held cancel cases keep a 1 s margin, recorded in the ticket's Exceptions.
 
 Kind: debt
 
@@ -7,6 +7,8 @@ Pay when: a binding's surface check fails once under load, or before 0.1.
 Debt: 029
 
 Severity: low
+
+Paid: 2026-09-30
 
 Keeping it lets a loaded machine fail a binding's surface check that proves nothing about the binding.
 

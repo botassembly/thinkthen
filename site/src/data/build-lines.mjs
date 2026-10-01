@@ -6,7 +6,8 @@
 // as thinkthen-c/, and the binding's archive unpacked beside it under the
 // name `archive` gives. Each line is a list of parts. The runner joins
 // them with spaces and runs the line with sh. The page puts each part on
-// its own line.
+// its own line. The runner passes `offline`, so a package tool reads only
+// its local cache and the run sends no request.
 
 const C_LIB = ['-L thinkthen-c/lib -lthinkthen', '-Wl,-rpath,"$PWD/thinkthen-c/lib"'];
 const JAVA = [
@@ -123,6 +124,16 @@ export const BUILD_LINES = {
     lines: [['zig build', '-Dnative="$PWD/thinkthen-c"']],
     run: ['./zig-out/bin/first-call'],
   }),
+  php: ({ sample }) => ({
+    archive: 'thinkthen-php',
+    lines: [],
+    run: ['php -d ffi.enable=1', '-d zend.assertions=1', sample],
+  }),
+  dart: ({ sample, offline }) => ({
+    archive: 'thinkthen-dart',
+    lines: [[offline ? 'dart pub get --offline' : 'dart pub get']],
+    run: ['dart run --enable-asserts', sample],
+  }),
   csharp: () => ({
     archive: 'thinkthen-csharp',
     lines: [['dotnet build -o bin', '--source "$PWD/thinkthen-csharp"']],
@@ -131,7 +142,7 @@ export const BUILD_LINES = {
 };
 
 // The build and run lines for one sample file.
-export function buildLines(slug, sample) {
+export function buildLines(slug, sample, offline = false) {
   const make = BUILD_LINES[slug];
-  return make ? make({ sample }) : null;
+  return make ? make({ sample, offline }) : null;
 }

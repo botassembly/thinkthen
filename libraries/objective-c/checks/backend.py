@@ -78,7 +78,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         for row in held: (self.server.barrier / ("arrived-" + row)).touch()
         for row in held:
             release = self.server.barrier / ("release-" + row)
-            end = time.monotonic() + 10
+            # Held up to 60 s, past every test's 30 s wait (ticket 0356).
+            end = time.monotonic() + 60
             while not release.exists() and time.monotonic() < end:
                 time.sleep(0.005)
             if not release.exists():

@@ -74,16 +74,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             barrier_name = 'hold-bulk-1' if packed_hold else state
             (self.server.barrier / ("arrived-" + barrier_name)).touch()
             release = self.server.barrier / ("release-" + barrier_name)
-            end = time.monotonic() + 10
+            # Held up to 60 s, past every test's 30 s wait (ticket 0356).
+            end = time.monotonic() + 60
             while not release.exists() and time.monotonic() < end:
                 time.sleep(0.005)
             if not release.exists():
                 self.send_error(500)
                 return
         if bulk_first:
-            self.server.bulk_barrier.wait(timeout=5)
+            self.server.bulk_barrier.wait(timeout=30)
             predecessor = {'first': 'second', 'second': 'third'}.get(state_key)
-            if predecessor and not self.server.bulk_done[predecessor].wait(timeout=5):
+            if predecessor and not self.server.bulk_done[predecessor].wait(timeout=30):
                 raise RuntimeError('bulk reverse completion timed out')
         if state_key == 'transport-close':
             self.connection.shutdown(socket.SHUT_RDWR)

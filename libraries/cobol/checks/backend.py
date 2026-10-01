@@ -65,7 +65,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             hold_name = held or state
             (self.server.barrier / ("arrived-" + hold_name)).touch()
             release = self.server.barrier / ("release-" + hold_name)
-            end = time.monotonic() + 8
+            # Held up to 60 s, past every test's 30 s wait (ticket 0356).
+            end = time.monotonic() + 60
             while not release.exists() and time.monotonic() < end:
                 time.sleep(.005)
             if not release.exists():

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # A fork after the first call answers in the forked child, and the parent's
-# counters do not move (0096, Q15). The parent reads under a 10 s bound, so
+# counters do not move (0096, Q15). The parent reads under a 30 s bound, so
 # a hang fails instead of stalling.
 require "minitest/autorun"
 require_relative "backend"
@@ -21,7 +21,7 @@ class TestFork < Minitest::Test
       end
       writer.close
       forked = begin
-        Timeout.timeout(10) { reader.read }
+        Timeout.timeout(30) { reader.read }
       rescue Timeout::Error
         Process.kill("KILL", pid)
         "the forked child hung"

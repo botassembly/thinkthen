@@ -77,6 +77,8 @@ const PACKAGE = {
   scala: () => maven(),
   go: () => read('libraries/go/go.mod').match(/^module (\S+)/m)[1],
   csharp: () => read('libraries/csharp/Botassembly.ThinkThen.nuspec').match(/<id>(.+?)<\/id>/)[1],
+  php: () => JSON.parse(read('libraries/php/composer.json')).name,
+  dart: () => read('libraries/dart/pubspec.yaml').match(/^name: (\S+)/m)[1],
 };
 // Each release archive an install line names is one release-pack makes.
 const pack = read('sdlc/scripts/release-pack');

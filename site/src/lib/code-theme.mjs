@@ -25,7 +25,7 @@ export const CODE_THEME = {
     { scope: ['constant.numeric'], settings: { foreground: v('number') } },
     { scope: ['constant.language'], settings: { foreground: v('literal') } },
     {
-      scope: ['keyword', 'storage', 'support.type.property-name', 'meta.object-literal.key', 'variable.other.jq.key'],
+      scope: ['keyword', 'storage', 'support.type.property-name', 'meta.object-literal.key', 'variable.other.jq.key', 'entity.name.tag.yaml'],
       settings: { foreground: v('key') },
     },
     { scope: ['keyword.operator', 'punctuation.separator', 'keyword.operator.assignment'], settings: { foreground: v('ink') } },

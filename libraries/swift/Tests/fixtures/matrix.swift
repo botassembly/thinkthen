@@ -30,7 +30,7 @@ func callValue(_ json: String) -> Any {
 }
 func waitFor(_ state: String) {
     let path = ProcessInfo.processInfo.environment["TT_BARRIER_DIR"]! + "/arrived-" + state
-    let end = Date().addingTimeInterval(6)
+    let end = Date().addingTimeInterval(30)
     while !FileManager.default.fileExists(atPath: path) && Date() < end { Thread.sleep(forTimeInterval: 0.005) }
     check(FileManager.default.fileExists(atPath: path), "no arrival \(state)")
 }
@@ -53,10 +53,15 @@ final class ConcurrentResults: @unchecked Sendable {
 func held(_ engine: Engine, _ state: String, _ wanted: Int32, many: Bool = false) throws {
     let token = try CancelToken()
     let semaphore = DispatchSemaphore(value: 0)
+    let returned = DispatchSemaphore(value: 0)
+    let stoppedHeld = DispatchSemaphore(value: 0)
+    // A fired token lets the sent request finish, so a cancelled call returns
+    // after the release. A deadline ends the call while the reply is held, so
+    // the helper waits up to 30 s for that return before it releases (ticket 0356).
     Thread.detachNewThread {
         waitFor(state)
         if wanted == 5 { token.cancel(); token.cancel() }
-        Thread.sleep(forTimeInterval: 0.12)
+        else if returned.wait(timeout: .now() + 30) == .success { stoppedHeld.signal() }
         if many { for i in 1...6 { release("hold-bulk-\(i)") } }
         else { release(state) }
         semaphore.signal()
@@ -64,9 +69,11 @@ func held(_ engine: Engine, _ state: String, _ wanted: Int32, many: Bool = false
     if many {
         error(wanted) { _ = try engine.decideMany("Is it?", (1...6).map { "hold-bulk-\($0)" }, token: token.handle) }
     } else {
-        error(wanted) { _ = try engine.decide("Is it?", state, deadline: wanted == 3 ? 25 : -1, token: token.handle) }
+        error(wanted) { _ = try engine.decide("Is it?", state, deadline: wanted == 3 ? 1000 : -1, token: token.handle) }
     }
-    check(semaphore.wait(timeout: .now() + 10) == .success, "helper did not finish")
+    returned.signal()
+    check(semaphore.wait(timeout: .now() + 60) == .success, "helper did not finish")
+    check(wanted != 3 || stoppedHeld.wait(timeout: .now()) == .success, "the deadline ends a held call before its release")
     print("HELD_\(state)_PASS code=\(wanted) untouched-output")
 }
 func direct() throws {
@@ -124,7 +131,7 @@ func factsLifetime() throws {
     waitFor("hold-facts-no-usage")
     release("hold-facts-one")
     release("hold-facts-no-usage")
-    check(group.wait(timeout: .now() + 10) == .success, "held facts calls did not finish")
+    check(group.wait(timeout: .now() + 30) == .success, "held facts calls did not finish")
     let first = results.answer("hold-facts-one")!
     let second = results.answer("hold-facts-no-usage")!
     answer(first.value, 1, 0.9); answer(second.value, 1, 0.9)
@@ -227,7 +234,7 @@ func matrix() throws {
             catch { fatalError("other error: \(error)") }
         }
     }
-    check(group.wait(timeout: .now() + 15) == .success, "concurrent calls")
+    check(group.wait(timeout: .now() + 30) == .success, "concurrent calls")
     check(results.failure("failure-one")?.kind == .backend && results.failure("failure-one")!.message.contains("401"), "first thread error")
     check(results.failure("failure-two")?.kind == .backend && results.failure("failure-two")!.message.contains("403"), "second thread error")
     answer(results.answer()!.value, 1, 0.9)

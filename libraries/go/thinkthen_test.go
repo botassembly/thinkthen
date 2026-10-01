@@ -412,7 +412,7 @@ func marker(t *testing.T, name string) string {
 	return filepath.Join(dir, name)
 }
 func waitMarker(path string) error {
-	end := time.Now().Add(5 * time.Second)
+	end := time.Now().Add(30 * time.Second)
 	for time.Now().Before(end) {
 		if _, err := os.Stat(path); err == nil {
 			return nil
@@ -422,6 +422,12 @@ func waitMarker(path string) error {
 	return fmt.Errorf("timed out waiting for %s", filepath.Base(path))
 }
 func release(path string) error { return os.WriteFile(path, []byte{}, 0600) }
+
+// A cancelled context reaches the call's token through a goroutine, and no
+// outside event marks the fire. The release waits this margin after cancel;
+// a failure needs that goroutine stalled for the whole second (ticket 0356).
+const cancelMargin = time.Second
+
 func TestHeldContext(t *testing.T) {
 	e := engine(t)
 	type result struct {
@@ -445,11 +451,22 @@ func TestHeldContext(t *testing.T) {
 			}
 		}()
 		waitErr := waitMarker(marker(t, "arrived-"+state))
+		// A fired token lets the sent request finish, so a cancelled call
+		// returns after the release. A deadline ends the call while the reply
+		// is held, so the test waits for that return before it releases.
+		var r result
+		returned := false
 		if deadline == 0 {
 			cancel()
 			cancel()
+			time.Sleep(cancelMargin)
+		} else if waitErr == nil {
+			select {
+			case r = <-ch:
+				returned = true
+			case <-time.After(30 * time.Second):
+			}
 		}
-		time.Sleep(100 * time.Millisecond)
 		if many {
 			for i := 1; i <= 6; i++ {
 				if err := release(marker(t, fmt.Sprintf("release-hold-bulk-%d", i))); err != nil {
@@ -461,14 +478,19 @@ func TestHeldContext(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		r := <-ch // always join before engine/token cleanup, including arrival failure
+		if !returned {
+			r = <-ch // always join before engine/token cleanup, including arrival failure
+		}
 		cancel()
 		if waitErr != nil {
 			t.Fatal(waitErr)
 		}
+		if deadline > 0 && !returned {
+			t.Fatalf("the deadline did not end %s while its reply was held", state)
+		}
 		return r
 	}
-	deadline := run("hold-deadline", 25*time.Millisecond, false)
+	deadline := run("hold-deadline", time.Second, false)
 	requireError(t, deadline.err, 3, false)
 	if deadline.answer.Value != (Answer{}) {
 		t.Fatalf("deadline wrote an answer: %+v", deadline.answer)
@@ -508,7 +530,7 @@ func TestHeldScalarContract(t *testing.T) {
 	arrived := waitMarker(marker(t, "arrived-hold-contract"))
 	cancel()
 	cancel()
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(cancelMargin)
 	if err := release(marker(t, "release-hold-contract")); err != nil {
 		t.Error(err)
 	}
@@ -541,7 +563,7 @@ func TestCancellationGoroutinesSettle(t *testing.T) {
 		requireError(t, err, 5, false)
 	}
 	e.Close()
-	end := time.Now().Add(2 * time.Second)
+	end := time.Now().Add(30 * time.Second)
 	for time.Now().Before(end) {
 		if runtime.NumGoroutine() <= before+2 {
 			return

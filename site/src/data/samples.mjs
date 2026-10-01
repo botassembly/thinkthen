@@ -85,14 +85,15 @@ const EXT = {
   python: 'py', polars: 'py', pandas: 'py', typescript: 'ts', ruby: 'rb', r: 'R',
   rust: 'rs', c: 'c', cpp: 'cpp', 'objective-c': 'm', cobol: 'cob', ada: 'adb',
   java: 'java', kotlin: 'kt', scala: 'scala', csharp: 'cs',
-  go: 'go', swift: 'swift', zig: 'zig',
+  go: 'go', swift: 'swift', zig: 'zig', php: 'php', dart: 'dart',
   duckdb: 'sql', sqlite: 'sql', postgresql: 'sql',
 };
 
 // GNAT names a unit after its file, so Ada's first call is first_call.
 // Java names a class after its file, and the JVM and .NET pages follow it.
-// SwiftPM runs top-level code only from main.swift.
-const FIRST = { ada: 'first_call', java: 'FirstCall', kotlin: 'FirstCall', scala: 'FirstCall', csharp: 'FirstCall', swift: 'main' };
+// SwiftPM runs top-level code only from main.swift. Dart names files in
+// snake case.
+const FIRST = { ada: 'first_call', java: 'FirstCall', kotlin: 'FirstCall', scala: 'FirstCall', csharp: 'FirstCall', swift: 'main', dart: 'first_call' };
 
 // The first-call sample for a surface, with the output a database printed.
 export function firstCall(surface) {
