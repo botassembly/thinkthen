@@ -9,7 +9,7 @@ This repository goes public, so no tracked file may hold a name from the externa
 ## Change
 
 - 6 files touched, 8 guard matches removed, one line per file (line 3, the status line). Every match was the machine-specific prefix ending immediately before `/experiments/` inside a backticked evidence pointer; none was prose.
-- Each pointer now reads the established workspace-relative form: "Evidence lives in local experiment 296" and "local experiment 297", matching how clean issue files already cite workspace experiments. Both folders exist on this machine, so the pointers resolve.
+- Each pointer now names the local experiment: "Evidence lives in local experiment 296" and "local experiment 297", matching how clean issue files already cite workspace experiments. Both folders exist on this machine, so the pointers resolve.
 - Preserved without change: the filing date, the GEPA tuning experiment numbers 296 and 297, both folder names, the `notes/2026-09-27-optimization-lessons.md` write-up pointer, every issue status, and every other line of every file. `git diff --numstat` shows exactly 1 insertion and 1 deletion per file.
 - Boundary note for root: the guard matched inside evidence paths, not prose. The fix drops only the private prefix and keeps the pointer resolvable under the repo's existing convention, the same treatment as the earlier private-name cleanups. Root rules on that boundary.
 

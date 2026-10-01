@@ -12,7 +12,7 @@ Only `thinkthen.recording/1` JSON entries count. A repeated digest appears in at
 
 This measurement uses the ticket's defined probability-pair rule. Report 09's 263 gaps above 0.1 used an unstated comparison rule and is retained as historical evidence, not substituted for the measured 310 here.
 
-The script run from the repository root was:
+The script run from the repository root was, with the Beatles Bench checkout path shortened:
 
 ```python
 import collections, io, json, pathlib, subprocess, tarfile
