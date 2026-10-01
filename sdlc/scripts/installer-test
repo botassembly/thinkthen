@@ -22,6 +22,8 @@ import tarfile
 import tempfile
 import threading
 
+from loopback_server import LoopbackServer
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOLS = "awk cat chmod cp curl gzip head mkdir mktemp mv perl rm sed sync tar uname".split()
 # Each `uname -s` and `uname -m` pair install.sh accepts, and the command archive's target
@@ -225,7 +227,7 @@ def main():
     if not TARGET:
         print(f"installer-test: no release for {os.uname().sysname} {os.uname().machine}", file=sys.stderr)
         return 1
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Fake)
+    server = LoopbackServer(("127.0.0.1", 0), Fake)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     bad = total = 0
     for shell in ("dash", "bash"):
