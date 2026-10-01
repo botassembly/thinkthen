@@ -17,6 +17,8 @@ functions/annotate/rust.rs
 functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/c.c
+functions/choose/more/duckdb.sql
+functions/choose/more/pandas.py
 functions/choose/duckdb.sql
 functions/choose/pandas.py
 functions/choose/polars.py

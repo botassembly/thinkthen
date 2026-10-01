@@ -340,14 +340,11 @@
   },
   "functions/choose/c.c": {
     "page": "/functions/choose/",
-    "sample": "dc2042a11e4af8dbe49686491aef7e8f4c578e51fa3da19620540fe6eda005f0",
+    "sample": "bb9726296a0633f444cb34ff8e9c82d34cc952e956f47643c93625af068dc73d",
     "output": null,
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [
@@ -364,6 +361,28 @@
     ]
   },
   "functions/choose/duckdb.sql": {
+    "page": "/functions/choose/",
+    "sample": "85cb1124cee0fa28e3c72cb47881fca12153d042c9234934f3d189e3fd5f0e20",
+    "output": "824889aa3958c8363576549d6c8be004d0dddf52a46f74fcbe01ae8b79ef8bea",
+    "files": {},
+    "answers": {
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/duckdb",
+        "databases/duckdb/bridge"
+      ],
+      "tree": "de562b2bd6f9047ae68050f00afff7b9a830eac2aa3cdad8e64004d4e8b49ff9"
+    },
+    "toolchain": [
+      "DuckDB v1.5.5",
+      "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/more/duckdb.sql": {
     "page": "/functions/choose/",
     "sample": "f77386973bc41dd277766674eff96febcfbcb689f8beda2f79d50131ec6dd796",
     "output": "42859bac78f07ad6a9e2cffc40f90bee015effd260b3907eef147782e8128e2a",
@@ -388,7 +407,7 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
-  "functions/choose/pandas.py": {
+  "functions/choose/more/pandas.py": {
     "page": "/functions/choose/",
     "sample": "2ee1893f8bb2c9f0624eb73104b1bd69ca0207f0668ec7cd8f9b5e8921d0d7e3",
     "output": "d738a1ba0cae1efe1b2696f9c60964ca122fe103c663f809d4a1d2221add5ebb",
@@ -412,16 +431,34 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
-  "functions/choose/polars.py": {
+  "functions/choose/pandas.py": {
     "page": "/functions/choose/",
-    "sample": "8e2099ca9096bb93fc6ea8da87a785a4a1a5f250d066741112867f31a54e4df9",
-    "output": "5c5e24b2147b9031c63313744bb2f25fd9e13d09b0b309b51ab41958c5564de9",
+    "sample": "1b59492618dbf735a7ba5d929c567114724c6d77b9a3861adcb69132f5363f82",
+    "output": null,
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "b42b0f557d40ad554ffa819a521cf6b39977f8a513da4215d3019609c81b15f5"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/polars.py": {
+    "page": "/functions/choose/",
+    "sample": "7684bc46526cbe2b15b279341e9975e7491b983c70cf2ba1f0f01ecb98683935",
+    "output": null,
+    "files": {},
+    "answers": {
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [
@@ -438,14 +475,11 @@
   },
   "functions/choose/postgresql.sql": {
     "page": "/functions/choose/",
-    "sample": "5975c675408e8f1dd423987c9e350420ccf372d48c4e7e2a842294cea86d11be",
-    "output": "724a3c8e596384153dee9c85bf576ac362eb646941a3c1d5900ce38c536e46f2",
+    "sample": "a618c17077fc6455e998859643e5881486bcfe3252470ce21fc2ab19a68a7695",
+    "output": "bfa56eeb4c070f988265a20ff979a7ff9fa339819952975892dc8fb2bd69acc1",
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [
@@ -462,14 +496,11 @@
   },
   "functions/choose/python.py": {
     "page": "/functions/choose/",
-    "sample": "fde09f0331a70ca7f4523339495b62297c1ab6ae0cadcb5bbce29a6f3e3c1de3",
+    "sample": "69b575b9cb0eac41f4415b3c0271c4b5c5659cadd77efd23e30c321f9dc85413",
     "output": null,
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [
@@ -486,14 +517,11 @@
   },
   "functions/choose/r.R": {
     "page": "/functions/choose/",
-    "sample": "71ed5c9819579318980323d853550cc3d3054f4e2b9dffd3359b1b301174bb3d",
+    "sample": "beca9d47aa0ae4d6baa2008dc23580bcdcb4955c975ca1df130399be7a8b423e",
     "output": null,
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [
@@ -510,14 +538,11 @@
   },
   "functions/choose/ruby.rb": {
     "page": "/functions/choose/",
-    "sample": "86b44e55f5db29c8c250ff91051e7c0042acaeae084e87d1fafe2b1365169c2a",
+    "sample": "122200bf6d07ee64ad29c90891a2e1dad83a4e5c021b6c2bd9ebb0c6cf3e0917",
     "output": null,
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [
@@ -533,14 +558,11 @@
   },
   "functions/choose/rust.rs": {
     "page": "/functions/choose/",
-    "sample": "faf294afdd16e68473cb524a4a609afc5e35451b8063d6f2a8763a71543807c2",
+    "sample": "d8abb70a92f0bc9fb58e0667142bcdbb41a7c1eddf99c6b25074d6004895e67d",
     "output": null,
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [
@@ -556,14 +578,11 @@
   },
   "functions/choose/sqlite.sql": {
     "page": "/functions/choose/",
-    "sample": "dae987086960e2e573681647e78829b497be8ac6359bab077e1d88b33d3d2f78",
-    "output": "476e1e19438882f0ef81f593829f99744b7299ca76198c3024dd2a13880e44c7",
+    "sample": "64795239c5e57fa03f92187d9aa762fc613064fd52fed43b59b6b576e656e397",
+    "output": "70d441cf2737681d8240bc101b438035f7f238eab83407bfd09d125cc8895cb3",
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [
@@ -579,14 +598,11 @@
   },
   "functions/choose/typescript.ts": {
     "page": "/functions/choose/",
-    "sample": "c8fb230ac466a80d9e8f6735ff5e7cd183397a7db50a55ffb445f28a053292f0",
+    "sample": "a0cd1697bc3b890114f783d2d65437adc78bfb3437d41555c03125e97ce284d7",
     "output": null,
     "files": {},
     "answers": {
-      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
-      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
-      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
-      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282"
     },
     "sources": {
       "folders": [

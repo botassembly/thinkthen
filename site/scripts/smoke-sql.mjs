@@ -39,7 +39,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { readReplayList, replayLine, sampleHashes, sourceTree, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, cargoFolders, sha256 } from './binding-proofs.mjs';
+import { readReplayList, replayLine, sampleHashes, sourceTree, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, sampleFiles, cargoFolders, sha256 } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -187,7 +187,7 @@ const DATABASES = {
         toolchain: [`PostgreSQL ${run(path.join(bin, 'postgres'), ['-V']).stdout.trim().split(' ')[2]}`, 'cargo-pgrx 0.17.0', run('rustc', ['--version']).stdout.trim()],
         lay: () => {},
         command: (sample) => {
-          const superuser = fs.existsSync(path.join(path.dirname(sample), 'files')) ? 'superuser=1\n' : '';
+          const superuser = fs.existsSync(sampleFiles(examples, path.relative(examples, sample))) ? 'superuser=1\n' : '';
           return ['sh', ['-c', `${superuser}${script}\n`], fs.readFileSync(sample, 'utf8')];
         },
         env: {},
@@ -212,7 +212,7 @@ function attempt(rel, db, answers) {
   const cache = path.join(work, 'cache');
   const cwd = path.join(work, 'work');
   fs.mkdirSync(cache, { mode: 0o700 });
-  const files = path.join(examples, path.dirname(rel), 'files');
+  const files = sampleFiles(examples, rel);
   if (fs.existsSync(files)) fs.cpSync(files, cwd, { recursive: true });
   else fs.mkdirSync(cwd);
   db.lay(cwd);

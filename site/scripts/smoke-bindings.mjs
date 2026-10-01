@@ -51,7 +51,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, cargoFolders } from './binding-proofs.mjs';
+import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, sampleFiles, cargoFolders } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -184,7 +184,7 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
       const prepare = (rel) => {
         if (dirs.has(rel)) return dirs.get(rel);
         const dir = path.join(tmp, 'programs', rel);
-        const files = path.join(examples, path.dirname(rel), 'files');
+        const files = sampleFiles(examples, rel);
         if (fs.existsSync(files)) fs.cpSync(files, dir, { recursive: true });
         fs.mkdirSync(dir, { recursive: true });
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
@@ -385,7 +385,7 @@ function attempt(rel, binding, answers, named = {}, keep = false) {
   const cache = path.join(work, 'cache');
   const cwd = path.join(work, 'work');
   fs.mkdirSync(cache);
-  const files = path.join(examples, path.dirname(rel), 'files');
+  const files = sampleFiles(examples, rel);
   if (fs.existsSync(files)) fs.cpSync(files, cwd, { recursive: true });
   else fs.mkdirSync(cwd);
   fs.copyFileSync(path.join(examples, rel), path.join(cwd, runName(rel)));

@@ -124,6 +124,10 @@ export const FUNCTIONS = [
       '0-one': 'A parcel sent to the wrong address belongs to shipping. choose prints "shipping" and exits 0.',
       '1-lines': "Each of the first three messages names one team: billing, shipping, and account. The fourth names a parcel and a login. No team reaches 0.9, and it comes back null.",
     },
+    moreSee: {
+      pandas: 'A Series of four tickets gets one team each at 0.9. The fourth names two teams, and it comes back as a missing value.',
+      duckdb: 'The same four tickets as rows of a table. The fourth row gets NULL at 0.9.',
+    },
   },
   {
     name: 'tag',

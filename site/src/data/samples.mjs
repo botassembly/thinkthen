@@ -128,3 +128,32 @@ export function sample(fn, surface) {
   if (own === undefined) return null;
   return { file: `${surface}.${ext}`, code: own.replace(/\n+$/, ''), output: text(`functions/${fn}/${surface}.${ext}.out`)?.replace(/\n+$/, '') ?? null };
 }
+
+// The bigger library samples a function page shows under Reference, from
+// examples/functions/<fn>/more/<surface>.<ext>, in the tab order. `see`
+// holds a caption for each, keyed by surface. A sample with no caption, or
+// a caption with no sample, fails the build.
+export function moreSamples(fn, see = {}, order = Object.keys(EXT)) {
+  const prefix = `/examples/functions/${fn}/more/`;
+  const found = Object.keys(raw)
+    .filter((k) => k.startsWith(prefix) && !k.endsWith('.out'))
+    .map((k) => k.slice(prefix.length));
+  for (const name of found) {
+    const surface = name.replace(/\..*$/, '');
+    if (EXT[surface] === undefined || name !== `${surface}.${EXT[surface]}`) throw new Error(`samples: examples/functions/${fn}/more/${name} is not named <surface>.<ext>`);
+    if (!see[surface]) throw new Error(`samples: examples/functions/${fn}/more/${name} has no caption in moreSee`);
+  }
+  for (const surface of Object.keys(see)) {
+    if (!found.includes(`${surface}.${EXT[surface]}`)) throw new Error(`samples: moreSee names ${fn}/more/${surface}, and no sample has that name`);
+  }
+  return order
+    .filter((surface) => found.includes(`${surface}.${EXT[surface]}`))
+    .map((surface) => {
+      const file = `${surface}.${EXT[surface]}`;
+      return {
+        surface, file, see: see[surface],
+        code: text(`functions/${fn}/more/${file}`).replace(/\n+$/, ''),
+        output: text(`functions/${fn}/more/${file}.out`)?.replace(/\n+$/, '') ?? null,
+      };
+    });
+}

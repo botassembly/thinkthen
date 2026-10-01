@@ -1,3 +1,5 @@
+LOAD './thinkthen.duckdb_extension';
+
 SELECT thinkthen_choose(
     '{"choose": "Which team owns this?",
       "options": {
@@ -5,6 +7,5 @@ SELECT thinkthen_choose(
         "shipping": "Parcels and delivery.",
         "account": "Logins and passwords."
       }}',
-    'My parcel went to the wrong address.',
-    NULL
+    'My parcel went to the wrong address.'
 ) AS team;
