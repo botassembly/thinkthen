@@ -1,6 +1,6 @@
 # 0363: Specification lines a site reader hits
 
-Status: in progress. Lane claude-2. Branch `ticket/0363-spec-lines-site-reader`. Plan: batch C2 of `sdlc/planning/issue-priorities-2026-09-30.md`. Closes `sdlc/issues/2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md`.
+Status: landed. Lane claude-2. Branch `ticket/0363-spec-lines-site-reader`. Plan: batch C2 of `sdlc/planning/issue-priorities-2026-09-30.md`. Closes `sdlc/issues/2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md`.
 
 ## Outcome
 
