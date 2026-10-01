@@ -8,10 +8,12 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
+MAJOR, MINOR, PATCH = VERSION.split(".")
 HEADER = ROOT.parents[1] / "libraries/c/include/thinkthen.h"
 NATIVE = ROOT.parents[1] / "libraries/c/target/debug/libthinkthen_c.so"
-NUPKG = ROOT / "target/scratch/managed/Botassembly.ThinkThen.0.0.1.nupkg"
-ARCHIVE = ROOT / "target/artifacts/thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz"
+NUPKG = ROOT / f"target/scratch/managed/Botassembly.ThinkThen.{VERSION}.nupkg"
+ARCHIVE = ROOT / f"target/artifacts/thinkthen-c-{VERSION}-x86_64-linux-gnu.tar.gz"
 BAD = (b"tt-canary-290", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
@@ -25,7 +27,7 @@ def safe(label, data):
 
 def inspect(header, package, native, expected=None):
     version = re.findall(r"(?m)^#define THINKTHEN_VERSION_(MAJOR|MINOR|PATCH)\s+(\d+)\s*$", header)
-    assert version == [("MAJOR", "0"), ("MINOR", "0"), ("PATCH", "1")], "header version mismatch"
+    assert version == [("MAJOR", MAJOR), ("MINOR", MINOR), ("PATCH", PATCH)], "header version mismatch"
     actual = {"header": digest(header.encode()), "package": digest(package), "native": digest(native)}
     if expected is not None:
         assert actual == expected, "artifact SHA-256 mismatch"
@@ -81,7 +83,7 @@ def rewrite_tar(native):
 header, package, native = HEADER.read_text(), NUPKG.read_bytes(), ARCHIVE.read_bytes()
 receipt = inspect(header, package, native)
 (ROOT / "target/artifacts/manifest.json").write_text(json.dumps(receipt, indent=2) + "\n")
-fail("header-version", lambda: inspect(header.replace("#define THINKTHEN_VERSION_PATCH 1", "#define THINKTHEN_VERSION_PATCH 2"), package, native))
+fail("header-version", lambda: inspect(header.replace(f"#define THINKTHEN_VERSION_PATCH {PATCH}", f"#define THINKTHEN_VERSION_PATCH {int(PATCH) + 1}"), package, native))
 stale = rewrite_zip(package, "README.md", b"\nstale\n")
 fail("stale-package-member", lambda: inspect(header, stale, native))
 fail("stale-package-hash", lambda: inspect(header, stale, native, receipt))

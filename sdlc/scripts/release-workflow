@@ -356,7 +356,10 @@ resolve)
 	[ "$#" = 3 ] || fail 'resolve MODE REF needs exactly two arguments'
 	mode=$2 ref=$3
 	case $mode in
-	rehearse) [ "$ref" = refs/heads/main ] || fail "rehearse must run from main, got $ref" ;;
+	# ADR 0116 item 7: a rehearsal also runs from a release branch such as release/0.1.
+	rehearse) [ "$ref" = refs/heads/main ] ||
+		expr "x$ref" : 'xrefs/heads/release/[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null ||
+		fail "rehearse must run from main or a release/X.Y branch, got $ref" ;;
 	release) case $ref in refs/tags/v*) ;; *) fail "release must run from a v* tag, got $ref" ;; esac ;;
 	*) fail "unknown mode $mode" ;;
 	esac

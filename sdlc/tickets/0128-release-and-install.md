@@ -6,7 +6,7 @@ opens: install.sh site/public/install.sh site/src/data/catalog.mjs site/src/page
 
 # 0128: Release and install for 0.1
 
-Status: in progress. Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`), with its Rust test version edits held until ticket 0119 lands. Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`) after two code reviews. Phase3a landed after independent High ACCEPT at `3b540d19`; the Ian-dispatched four-runner rehearsal in Phase 3b and Phase 4 remain open. Owner: the Codex release lane under the coordinator's 2026-09-28 go-ahead. Four phases, each its own build, review, and landing.
+Status: in progress. Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`). Its held Rust test version edits landed with ticket 0376. Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`) after two code reviews. Phase3a landed after independent High ACCEPT at `3b540d19`; the Ian-dispatched four-runner rehearsal in Phase 3b and Phase 4 remain open. Owner: the Codex release lane under the coordinator's 2026-09-28 go-ahead. Four phases, each its own build, review, and landing.
 
 Milestone: 0.1
 
@@ -241,7 +241,7 @@ The agent writes this checklist into `sdlc/records/0128-release-0-1.md` and foll
 
 1. Ian finishes every item in "Ian's setup list".
 2. Ian dispatches `rehearse` on the head of main. It passes.
-3. The agent runs `versions --set 0.1.0`, drops `publish = false` from `crates/thinkthen/Cargo.toml` and `"private": true` from `package.json`, and dates `CHANGELOG.md`. The same commit adds the README's "Install" section and the site's held lines from Phase 1 items 12 and 14. The coordinator lands that commit.
+3. The agent runs `versions --set 0.1.0`, which also drops `publish = false` from `crates/thinkthen/Cargo.toml` and `"private": true` from `package.json` (ticket 0376), and dates `CHANGELOG.md`. [release-process.md](../planning/release-process.md) section 5 orders this step with the checkpoint and the `release/0.1` cut, and step 4's rehearsal runs from `release/0.1`. The same commit adds the README's "Install" section and the site's held lines from Phase 1 items 12 and 14. The coordinator lands that commit.
 4. Ian dispatches `rehearse` on that commit. It passes.
 5. Ian creates tag `v0.1.0` at that commit and dispatches `release` from the tag.
 6. Ian approves each publish job in turn. The agent checks each registry page after it lands.

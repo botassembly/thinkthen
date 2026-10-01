@@ -23,7 +23,7 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 
 ## 4. Rehearsals
 
-1. A rehearsal dispatches the release workflow in rehearse mode by hand, under Ian's approval: `gh workflow run release.yml --ref main -f mode=rehearse`. After the cut, rehearsals run from the release branch once ADR 0116 item 7 lands.
+1. A rehearsal dispatches the release workflow in rehearse mode by hand, under Ian's approval: `gh workflow run release.yml --ref main -f mode=rehearse`. After the cut, rehearsals run from the release branch: `--ref release/0.1` (ADR 0116 item 7).
 2. Rehearse mode builds, smokes and collects a draft. It publishes nothing.
 3. Rehearsals repeat until every job passes through `draft` on all four targets with zero "not run".
 4. Ticket 0128 records each attempt and its result.
@@ -32,9 +32,22 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 
 [ADR 0116](adr/0116-release-branches-cut-at-the-release-candidate.md) defines the release candidate, the cut and the cherry-pick rule.
 
-1. At the release candidate, the coordinator tags `rc/VERSION-rc.N` under worktrees.md.
-2. The coordinator cuts `release/VERSION` from main.
-3. The coordinator cherry-picks each fix from main to the release branch.
+The release branch is named for the major and minor version: `release/0.1`. Ticket 0128 phase 4 holds the details. The cut runs in this order:
+
+1. **The release candidate holds on main.** The rehearsal is clean, release QA's latest round is clean, and only release fixes remain (ADR 0116 item 3).
+2. **The release commit lands on main.** On a ticket branch from main, the agent runs `sdlc/scripts/versions --set 0.1.0`. That one command writes every version copy and drops the two publish holds. The same commit writes the text by hand:
+   - `CHANGELOG.md`: date the 0.1.0 heading. `libraries/dart/CHANGELOG.md` gains a 0.1.0 heading.
+   - `README.md`: the "Install" section of ticket 0128 phase 1 item 12.
+   - The binding READMEs that name 0.0.1: `libraries/{ada,cobol,csharp,go,jvm,objective-c}`, and `databases/postgresql/NOTES.md`.
+   - The site, through marketing: the held install lines of ticket 0128 phase 1 item 14, and `site/examples/install/rust/files/Cargo.toml`, whose requirement the site smoke patches to the working tree. Marketing then re-runs the bindings proof that pins that file's hash.
+
+   Afterwards, `git grep -nE '(^|[^0-9.])0\.0\.1([^0-9.]|$)|0, 0, 1'` outside `sdlc/records`, `sdlc/tickets`, `sdlc/issues`, `sdlc/planning`, `probes`, locks and `.jsonl` fixtures finds only the copies ticket 0376 lists as not failing at 0.1.0. The coordinator lands the commit.
+3. **Checkpoint and QA on the cut.** The coordinator runs the checkpoint sweep of section 2 on that main commit. Release QA runs its round on it (section 3).
+4. **The cut.** The coordinator tags `rc/0.1.0-rc.1` on that commit under worktrees.md and pushes `release/0.1` from it.
+5. **The rehearsal from the release branch.** Ian dispatches `gh workflow run release.yml --ref release/0.1 -f mode=rehearse`. It passes on all four targets.
+6. **Ian's go.** Ian tags `v0.1.0` on the head of `release/0.1` and dispatches release mode from the tag. Section 6 and ticket 0128 phase 4 continue from there.
+
+After the cut, main carries 0.1.0 and takes 0.2 work. The 0.2 cut sets the next version. The coordinator cherry-picks each fix from main to the release branch (ADR 0116 item 5).
 
 ## 6. The release
 

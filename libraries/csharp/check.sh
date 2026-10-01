@@ -2,6 +2,7 @@
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
+version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$here/ThinkThen.csproj")
 lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-csharp.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ] && command -v flock >/dev/null 2>&1; then
     THINKTHEN_HEAVY_LOCK_HELD=$lock
@@ -65,9 +66,9 @@ cp "$native" "$here/target/scratch/lib/libthinkthen.so"
 ln -sf libthinkthen.so "$here/target/scratch/lib/libthinkthen.so.0"
 cp "$native" "$here/target/artifacts/native/lib/libthinkthen.so"
 ln -sf libthinkthen.so "$here/target/artifacts/native/lib/libthinkthen.so.0"
-tar -czf "$here/target/artifacts/thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz" -C "$here/target/artifacts/native" .
+tar -czf "$here/target/artifacts/thinkthen-c-$version-x86_64-linux-gnu.tar.gz" -C "$here/target/artifacts/native" .
 "$dotnet" pack "$here/ThinkThen.csproj" -c Release --source "$here/target/scratch/nuget" -o "$here/target/scratch/managed" -v quiet
-test -f "$here/target/scratch/managed/Botassembly.ThinkThen.0.0.1.nupkg"
+test -f "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg"
 python3 "$here/tests/package_check.py"
 python3 "$here/tests/run_matrix.py"
 run_dir=$(mktemp -d "$here/target/logs/package-XXXXXX")

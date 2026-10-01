@@ -5,7 +5,7 @@
 
 ## Context
 
-Main holds all work today. Ticket 0373 starts Windows support, which is 0.2 groundwork. Release fixes for 0.1 must not wait behind 0.2 work, and 0.2 work must not change 0.1 by accident. The release workflow's rehearse mode refuses any ref but `refs/heads/main` (`sdlc/scripts/release-workflow`, `resolve`).
+Main holds all work today. Ticket 0373 starts Windows support, which is 0.2 groundwork. Release fixes for 0.1 must not wait behind 0.2 work, and 0.2 work must not change 0.1 by accident. Before ticket 0376, the release workflow's rehearse mode refused any ref but `refs/heads/main` (`sdlc/scripts/release-workflow`, `resolve`).
 
 The coordinator's steps around this rule live in [release-process.md](../release-process.md). This ADR holds only the branching decision.
 
@@ -17,7 +17,7 @@ The coordinator's steps around this rule live in [release-process.md](../release
 4. **After the cut.** 0.2 work lands on main. The 0.1 release and every 0.1.x release come from `release/0.1`.
 5. **Fixes.** Each 0.1.x fix lands on main first. The coordinator then cherry-picks it to `release/0.1` with a `Cherry-picked-from: <sha>` trailer naming the main commit.
 6. **Windows stage 1.** It is 0.2 work and waits for the cut. If Ian pulls it into 0.1, it lands on main before the cut, and the cut moves later.
-7. **The workflow.** At the cut, rehearse mode must also accept `refs/heads/release/*`. A small ticket makes that change at the cut, not before.
+7. **The workflow.** Rehearse mode also accepts a release branch `refs/heads/release/X.Y`, such as `release/0.1`, and refuses every other branch. Ticket 0376 made the change before the cut on the coordinator's direction, so the cut does not wait on a ticket. Until a release branch exists, the rule allows nothing new. This item first said `refs/heads/release/*` and a change at the cut. Ian can overturn the timing and the narrower pattern.
 
 ## Consequences
 

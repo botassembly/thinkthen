@@ -1,18 +1,19 @@
 """Install managed nupkg and native tar in unrelated bwrap roots; count replies outside namespace."""
-import collections,json,os,pathlib,shutil,sys,tarfile,zipfile,xml.etree.ElementTree as ET
+import collections,json,os,pathlib,re,shutil,sys,tarfile,zipfile,xml.etree.ElementTree as ET
 from backend import Backend
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
 R=pathlib.Path(__file__).resolve().parent.parent
+V=re.search(r'<Version>([^<]+)</Version>',(R/'ThinkThen.csproj').read_text())[1]
 dotnet=resolve_dotnet()
 mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode)
 release_package=os.environ.get('THINKTHEN_RELEASE_NUPKG')
 release_c=os.environ.get('THINKTHEN_RELEASE_C_DIR')
 if bool(release_package) != bool(release_c): raise AssertionError('installed release needs both package paths')
-package=pathlib.Path(release_package) if release_package else R/'target/scratch/managed/Botassembly.ThinkThen.0.0.1.nupkg'
+package=pathlib.Path(release_package) if release_package else R/f'target/scratch/managed/Botassembly.ThinkThen.{V}.nupkg'
 if release_package:
  assert {item.name for item in package.parent.iterdir()} == {
-  'Botassembly.ThinkThen.0.0.1.nupkg','LICENSE','README.md','THINKTHEN-PACKAGE-INPUTS'},'C# wrapper inventory'
+  f'Botassembly.ThinkThen.{V}.nupkg','LICENSE','README.md','THINKTHEN-PACKAGE-INPUTS'},'C# wrapper inventory'
  for name in ('LICENSE','README.md'):
   assert (package.parent/name).read_bytes()==(R/name).read_bytes(),f'C# wrapper {name} differs'
  with zipfile.ZipFile(package) as bundle:
@@ -22,8 +23,8 @@ if release_package:
   assert not any(token in bundle.read(name) for name in names for token in (b'/home/', b'/Users/',b'thinkthen_panic_probe',b'tt-canary-290')), 'private nupkg byte'
   metadata=ET.fromstring(bundle.read('Botassembly.ThinkThen.nuspec'))
   fields={node.tag.rsplit('}',1)[-1]:(node.text or '').strip() for node in metadata.iter()}
-  assert fields['id']=='Botassembly.ThinkThen' and fields['version']=='0.0.1',fields
-archive_path=pathlib.Path(release_c) if release_c else R/'target/artifacts/thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz'
+  assert fields['id']=='Botassembly.ThinkThen' and fields['version']==V,fields
+archive_path=pathlib.Path(release_c) if release_c else R/f'target/artifacts/thinkthen-c-{V}-x86_64-linux-gnu.tar.gz'
 work.mkdir()
 install=work/'install with spaces';install.mkdir();home=work/'home';home.mkdir();cache=work/'cache';cache.mkdir();nuget=work/'nuget';nuget.mkdir()
 if release_c:
@@ -41,7 +42,7 @@ else:
    dest=install/'native'/member.name;dest.parent.mkdir(parents=True,exist_ok=True)
    if member.issym():dest.symlink_to(member.linkname)
    elif member.isfile():dest.write_bytes(archive.extractfile(member).read())
-local=work/'feed';local.mkdir();shutil.copyfile(package,local/'Botassembly.ThinkThen.0.0.1.nupkg')
+local=work/'feed';local.mkdir();shutil.copyfile(package,local/f'Botassembly.ThinkThen.{V}.nupkg')
 # Only consumer source and package feed are visible; compiler and original source are absent.
 shutil.copyfile(R/'tests/source/Installed.cs',work/'Installed.cs');shutil.copyfile(R/'tests/Installed.csproj',work/'Installed.csproj')
 barrier=work/'barrier';barrier.mkdir();server=Backend(barrier)

@@ -162,6 +162,7 @@ fn details_carry_every_probability_and_request_metadata() {
         .flat_map(|request| crate::support::keys(listener.url(), &request.body))
         .collect();
     let expected = include_str!("../../fixtures/recognize-detailed.json")
+        .replace("$VERSION", env!("CARGO_PKG_VERSION"))
         .replace("$URL", listener.url())
         .replace("$REQUESTS", &Value::from(keys).to_string());
     assert_eq!(stdout(&output), expected);

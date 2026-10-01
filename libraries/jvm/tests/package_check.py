@@ -4,10 +4,13 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import zipfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+# Every package shares the command crate's version (ticket 0376).
+VERSION = re.search(r'(?m)^version = "([^"]+)"$', (ROOT.parents[1] / "crates/thinkthen/Cargo.toml").read_text())[1]
 TARGET = Path(os.environ.get("THINKTHEN_JVM_OUT", ROOT / "target"))
 BAD = (b"tt-canary-289", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
@@ -36,7 +39,7 @@ def reject(label, action):
 
 pom = ET.fromstring((ROOT / "pom.xml").read_text())
 metadata = {child.tag.rsplit("}", 1)[-1]: (child.text or "").strip() for child in pom}
-assert metadata["groupId"] == "io.github.botassembly" and metadata["artifactId"] == "thinkthen-jvm" and metadata["version"] == "0.0.1"
+assert metadata["groupId"] == "io.github.botassembly" and metadata["artifactId"] == "thinkthen-jvm" and metadata["version"] == VERSION
 receipt = {}
 for name in ("door", "kotlin", "scala"):
     jar = TARGET / "jars" / f"thinkthen-{name}.jar"

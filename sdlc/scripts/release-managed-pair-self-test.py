@@ -2,6 +2,7 @@
 """Synthetic outside-in receipt and package refusals for release-managed-pair."""
 import hashlib
 import os
+import re
 import shutil
 import io
 import importlib.machinery
@@ -15,7 +16,8 @@ import zipfile
 
 HELPER = Path(__file__).with_name("release-managed-pair.py")
 COMMIT = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-VERSION = "0.0.1"
+# The managed gate reads the version from the crate, so the fixture does too (ticket 0376).
+VERSION = re.search(r'(?m)^version = "([^"]+)"$', (Path(__file__).resolve().parents[2] / "crates/thinkthen/Cargo.toml").read_text())[1]
 TARGET = "x86_64-unknown-linux-gnu"
 
 
@@ -41,14 +43,15 @@ def write_tar(path, files, commit=None, links=None, directories=()):
 
 
 SOURCE_LINKS = {"CLAUDE.md": "AGENTS.md", "crates/thinkthen/LICENSE": "../../LICENSE"}
-C_HEADER = b"#define THINKTHEN_VERSION_MAJOR 0\n#define THINKTHEN_VERSION_MINOR 0\n#define THINKTHEN_VERSION_PATCH 1\n"
+C_HEADER = "".join(f"#define THINKTHEN_VERSION_{name} {part}\n"
+                   for name, part in zip(("MAJOR", "MINOR", "PATCH"), VERSION.split("."))).encode()
 
 
 def write_c_tar(path, shared=b"fixture shared library"):
     write_tar(path, {"./include/thinkthen.h": C_HEADER,
                      "./lib/libthinkthen.a": b"fixture static library",
                      "./lib/libthinkthen.so": shared,
-                     "./lib/pkgconfig/thinkthen.pc": b"Name: thinkthen\nVersion: 0.0.1\n"},
+                     "./lib/pkgconfig/thinkthen.pc": f"Name: thinkthen\nVersion: {VERSION}\n".encode()},
               links={"./lib/libthinkthen.so.0": "libthinkthen.so"},
               directories=(".", "./include", "./lib", "./lib/pkgconfig"))
 
@@ -99,7 +102,7 @@ def fixture(base):
         "libraries/c/include/thinkthen.h": C_HEADER,
         "libraries/csharp/README.md": b"C# readme\n", "libraries/csharp/LICENSE": b"MIT\n",
         "libraries/jvm/README.md": b"JVM readme\n", "libraries/jvm/LICENSE": b"MIT\n",
-        "libraries/jvm/pom.xml": b"<project><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId><version>0.0.1</version></project>",
+        "libraries/jvm/pom.xml": f"<project><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId><version>{VERSION}</version></project>".encode(),
     }
     write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)
     save_json(base / "source.json", {"commit": COMMIT, "sha256": sha((base / "source.tar").read_bytes())})
@@ -110,7 +113,7 @@ def fixture(base):
     save_json(base / "c.json", {"name": c_name, "sha256": c_hash})
     (base / "out" / (c_name + ".sha256")).write_text(f"{c_hash}  {c_name}\n")
     nupkg = base / f"Botassembly.ThinkThen.{VERSION}.nupkg"
-    nuspec = b"<package><metadata><id>Botassembly.ThinkThen</id><version>0.0.1</version></metadata></package>"
+    nuspec = f"<package><metadata><id>Botassembly.ThinkThen</id><version>{VERSION}</version></metadata></package>".encode()
     write_zip(nupkg, {"Botassembly.ThinkThen.nuspec": nuspec,
                       "lib/net8.0/ThinkThen.dll": b"DLL", "README.md": source["libraries/csharp/README.md"],
                       "LICENSE": source["libraries/csharp/LICENSE"], "_rels/.rels": b"rels",
