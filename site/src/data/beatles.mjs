@@ -35,8 +35,8 @@ export const GROUPS = [
   ['Bindings', ['languages', 'data']],
   ['What Jev knows', ['blind-spots', 'rad']],
   ['Tune your bar', ['audit', 'diff']],
-  ['Agents', ['use-cases', 'retrieval']],
-  ['Run it', ['bench-run', 'backends']],
+  ['Agents', ['use-cases', 'shell-uses', 'data-uses', 'retrieval']],
+  ['The field', ['competitors', 'bench-field', 'backends']],
 ];
 
 // The choose and Jev slides show four faces cropped from one photo.
@@ -396,9 +396,10 @@ const ARTICLES = {
     label: "Blind spots",
     goal: "Jev misses obscure facts, and a low probability is how it says so.",
     idea: [
-      "Jev's memory fades on obscure facts. It gets 73% of the questions about the most viewed quarter of songs on Wikipedia right, and 49% about the least viewed. Tricky wording trips it. It gets 70% of the plain control questions and 50% of the word traps. Two hops are hard. One kind of question asks whether a song came out the same month as another event. On 26 of them, Jev knew both facts on their own. It got the chained question right on only 13.",
+      "Jev's memory fades on obscure facts. It gets 72% of the questions about the most viewed quarter of songs on Wikipedia right, and 52% about the least viewed. Tricky wording trips it. It gets 67% of the plain control questions and 48% of the word traps. Two hops are hard. One kind of question asks whether a song came out the same month as another event. On 30 of them, Jev knew both facts on their own. It got the chained question right on only 13.",
       "Nothin' Shakin' is an obscure song, and George sings it.",
     ],
+    slideNote: "The slide shows the bench's Jev run of 2026-09-30. There Jev picks Ringo for Nothin' Shakin'. The examples below replay the bench's recording of 2026-09-26, where Jev picks John.",
     source: record('catches'),
     see: {
       '1-choose': "With no bar, Jev picks `john`.",
@@ -430,18 +431,47 @@ const ARTICLES = {
   },
 
   "use-cases": {
-    title: "Jev for agents.",
-    label: "Jev for agents",
-    goal: "A coding agent could ask Jev ten small questions. Each answer comes back with a probability.",
+    title: "Agent harnesses",
+    label: "Agent harnesses",
+    goal: "An agent harness could ask Jev nine small questions, and each answer picks the harness's next step.",
     idea: [
-      "These are ideas for Jev inside a coding agent. Most come from [a post by Diogo Almeida](https://x.com/completeskeptic/status/2101894250401271876). Diogo works at TypeSafe, the maker of Jev. Each cell names one decision and quotes the question Jev would answer.",
-      "Permission: \"Should this command run?\" If Jev is not sure, the agent would ask a person. Tool choice: \"Which tool fits this step?\" The agent would load only the top few. Context: \"Does this chunk matter now?\" The agent would hide it, summarize it, or show it whole.",
-      "Model choice: \"Is this step easy?\" An easy step would go to a smaller model. Parallel work: \"Can these tasks run at once?\" The agent would split them. Instructions: \"Is this front-end work?\" The agent would load the style guide.",
-      "Data safety: \"Could this touch secrets?\" The task would run on an approved model. Done check: \"Is the task finished?\" The agent would stop or keep going. Review: \"Does this change do what was asked?\" The agent would approve it or send it back.",
-      "Evaluation: \"Which prompt wins?\" A language model asked to grade writes its grade in free text. A Jev judgment comes back as a probability, and you can check it against cases a person labeled. ThinkThen added the done check and the prompt comparison.",
+      "These are ideas for Jev inside an agent harness. Many come from [a post by Diogo Almeida](https://x.com/completeskeptic/status/2101894250401271876). Diogo works at TypeSafe, the maker of Jev. Each card names a job, the question Jev would answer, what the harness does with the answer, and the function that asks.",
+      "Permission asks \"Should this command run?\" If Jev is not sure, the harness asks a person. Tool choice ranks the tools for a step, and the harness loads only the top few. Context asks what should happen to a chunk. `choose` picks load, summarize, or hide.",
+      "Model choice asks \"Is this step easy?\" An easy step goes to a smaller model. Parallel work asks whether tasks can run at once, and the harness splits them. Data safety asks \"Could this touch secrets?\" Such a task runs on an approved model.",
+      "Off track asks whether the agent is going in circles. The harness stops it and asks a person. Done check asks whether the task is done as asked. The harness stops, or sends the work back. Evaluation asks which of two answers is better. The harness counts the wins and picks the winning prompt. A Jev pick comes back with a probability. You can check it against cases a person labeled.",
     ],
-    credit: "Most ideas from Diogo Almeida.",
+    credit: "Many ideas from Diogo Almeida.",
     takeaway: "Each decision is one small question with a probability.",
+    link: REPO,
+  },
+
+  "shell-uses": {
+    title: "Ops/Security",
+    label: "Ops and security",
+    goal: "Each answer drives a shell script. Nine ops and security jobs show how.",
+    idea: [
+      "Each card names a job, the question ThinkThen asks, what the script does with the answer, and the function that asks.",
+      "`decide` answers in its exit code: 0 for yes and 1 for no. With a band such as `--threshold 0.1:0.9`, not sure exits 3. Alert triage uses all three. The script pages a person, logs the alert, or queues it. Flaky test retries a flaky failure and fails the build on any other.",
+      "`choose` prints its pick, and failure routing runs that kind's runbook. `filter` keeps the lines where the answer is yes. Grep by meaning keeps the log lines about an outage, whatever words they use. Sample sheet keeps the complete rows and stops before hours of compute.",
+      "`score` places a login session on five levels, and the top two go to a person. `tag` labels each commit as a feature, a fix, or a breaking change, and the labels bump the version. `annotate` reads an incident email and hands its service, severity, and start time to `jq` as JSON. `rank` puts the error that hurts users most first.",
+      "[Bash techniques](/how-tos/bash/) teach these forms with real runs.",
+    ],
+    takeaway: "An answer is an exit code or a line of output, and the shell does the rest.",
+    link: REPO,
+  },
+
+  "data-uses": {
+    title: "Data science",
+    label: "Data science",
+    goal: "One question asked of each row turns free text into answers a query can filter, group, and count.",
+    idea: [
+      "Each card names a job, the question asked of each row, what the query does with the answers, and the function that asks.",
+      "Filter by meaning keeps the rows that are complaints. Category column picks a category for each row, and the query groups by it. Extract fields turns a receipt's free text into amount, date, and vendor columns.",
+      "Find duplicates asks whether two rows name the same company and merges the matching pairs. Score and average rates how happy each review is and averages by product. Count topics tags each ticket with its topics and counts them.",
+      "Check at load sends incomplete addresses to quarantine. Top N per group keeps the 3 leads in each account likeliest to buy. Second opinion lists the rows where the model and the existing label disagree.",
+      "The [tables and frames page](/learn/beatles-bench/data/) shows a real query on Beatles songs. To set one up, start at [Install](/install/).",
+    ],
+    takeaway: "Ask your data a question, row by row, where it already lives.",
     link: REPO,
   },
 
@@ -460,19 +490,46 @@ const ARTICLES = {
     link: REPO,
   },
 
-  "bench-run": {
-    title: "Run the Beatles Bench.",
-    label: "Run the bench",
-    goal: "Anyone can replay the bench for free and rerun it on Jev or on another backend.",
+  competitors: {
+    title: "Two weeks later, the field arrived.",
+    label: "The field arrives",
+    goal: "Within two weeks of Jev's launch, other decision models arrived, and ThinkThen speaks to the ones that share Jev's interface.",
     idea: [
-      "The bench is open source. The repository holds the songs, the questions and their right answers, and a saved recording of every answer. Each function has its own folder with a script to run it. The data is CC BY-SA 4.0.",
+      "TypeSafe launched Jev on 2026-09-15. Two weeks later, the field had moved on four fronts.",
+      "Liquid released d1 on 2026-09-29. Liquid calls it the first decision foundation model, and Liquid AI is a spin-off from MIT. d1 speaks the System One API, so ThinkThen runs on it. See [Liquid d1](/install/backends/liquid/).",
+      "Ollama 0.35 shipped on 2026-09-30. It serves the nimble and tev1 models on your own machine through the same API. See [Ollama](/install/backends/ollama/).",
+      "On 2026-09-30, Benchmark Heaven's JevBench board ranked 106 systems. Three days earlier it listed 62 open models. Cygnet tops its composite score, and Jev is third.",
+      "OpenAI announced a Decisions API at DevDay on 2026-09-29. Its model, Luna, answers questions a developer defines, from a fixed set of answers, over text or images. See [OpenAI Decisions API](/install/backends/openai/).",
+      "The slide's last line names the aim: ThinkThen is one SDK for every decision API.",
     ],
+    source: [
+      { text: "Ollama's announcement", href: 'https://ollama.com/blog/ollama-now-supports-jev-style-decision-models' },
+      { text: "the JevBench board", href: 'https://www.benchmarkheaven.com/jev-models/v1.5.4' },
+      { text: "OpenAI's DevDay 2026 recap", href: 'https://openai.com/index/devday-2026-recap/' },
+    ],
+    takeaway: "Decision models now come from more than one maker, and one interface reaches them.",
+    link: REPO,
+  },
+
+  "bench-field": {
+    title: "Beatles Bench scores the field.",
+    label: "The scores",
+    goal: "Beatles Bench asks every system the same questions, Jev leads the decision models, and anyone can replay the answers.",
+    idea: [
+      "The bench asks every system the same 1,501 questions. The hard set holds 505 of them, such as word traps and two-step questions. The easy set holds the other 996.",
+      "Jev leads the decision models. It gets 70.5% of all the questions right and 56.9% of the hard ones. Liquid d1 gets 67.6% and 52.9%. Nimble 9B gets 51.9% and 41.6%. Kev-4B gets 47.2% and 39.0%. Laya gets 35.8% and 29.9%.",
+      "Jev and d1 sit close, so the bench compares them question by question. It counts the questions only one of them got right: Jev alone right on 191, d1 alone on 140. A gap that wide is unlikely to come from chance.",
+      "GLM-5.3 Flash is a general language model, run with no reasoning. It gets 96.7% and 95.4%. The slide grays it out as the yardstick. It is not a decision model.",
+      "OpenAI announced its Decisions API on 2026-09-29. The bench has not run it, so it has no row.",
+      "The bench is open source. The repository holds the songs, the questions and their right answers, and a saved recording of every answer. The data is CC BY-SA 4.0.",
+    ],
+    source: { text: "the bench's accuracy table", href: `${REPO}/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/results/tables/accuracy.tsv` },
     blocks: [
       { caption: "Get the bench.", code: `git clone ${REPO}\ncd beatles-bench` },
       { caption: "Replay the Jev run. It is free and needs no key.", code: "./run.sh" },
       { caption: "Rerun it all fresh, on Jev or on your own backend.", code: "export THINKTHEN_BASE_URL=https://your-server/v1\nexport THINKTHEN_API_KEY=...\n./run.sh my-rerun" },
     ],
-    takeaway: "Replay every answer for free. Rerun it on the model you want to test.",
+    takeaway: "Every system answers the same questions, and you can replay every answer for free.",
     link: REPO,
   },
 
@@ -487,7 +544,7 @@ const ARTICLES = {
     see: {
       '1-check': "The check names the address and the model it would ask.",
     },
-    slideNote: "No run made the slide's console. It follows the check specification at thinkthen d0aa1b0b, except the model line, which shows the model a server names.",
+    slideNote: "The slide's console is a real run of thinkthen check on 2026-10-01, from thinkthen 55db6f59f. It checked ThinkThen's conformance server on the same machine, with no key.",
     source: { text: 'the check specification', href: 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md' },
     lesson: "A bar tuned on one model does not carry to another. Run `audit` again on your labeled records before you trust a new backend.",
     takeaway: "A new model needs its own bar.",

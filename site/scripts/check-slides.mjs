@@ -6,9 +6,10 @@
 // the one examples/beatles/bench-pin pins. Every image in
 // public/learn/beatles-bench/ and every card in public/og/ must match its
 // record, and every record needs both. An entry marked cardOnly needs its
-// card and must have no webp. Moving the pin, or replacing an image by
-// hand, then fails until the slides are exported again from a deck that quotes
-// the new bench.
+// card and must have no webp. The deck's PDF in
+// public/learn/beatles-bench/ must match the SHA-256 recorded as pdf. Moving
+// the pin, or replacing an image or the PDF by hand, then fails until the
+// slides are exported again from a deck that quotes the new bench.
 //
 // The Pages build cannot read the private deck. When DECK names the deck
 // folder, as the deck's own build.sh does, the check also fails when the
@@ -59,6 +60,11 @@ function images(folder, ext, field, skip = () => false) {
     if (!skip(entry) && !found.includes(page)) problems.push(`${where}/${page}${ext} is missing`);
   }
   return found.length;
+}
+const pdf = path.join(dir, 'jev-thinkthen-beatles-bench.pdf');
+if (!fs.existsSync(pdf)) problems.push(`${path.relative(site, pdf)} is missing`);
+else if (crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex') !== manifest.pdf) {
+  problems.push(`${path.relative(site, pdf)} differs from the PDF exported from deck ${String(manifest.deck).slice(0, 8)}`);
 }
 const count = images(dir, '.webp', 'sha256', (entry) => entry.cardOnly);
 images(cards, '.png', 'card');

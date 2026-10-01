@@ -33,6 +33,8 @@ export default defineConfig({
     // Each function's options and more examples moved onto its own page.
     ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file']
       .map((slug) => [`/reference/functions/${slug}`, `/functions/${slug}/#reference`])),
+    // The talk merged its bench-run slide into the bench-field slide.
+    '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
   },
   // Articles place examples with <!-- example: --> and <!-- file: -->.
   // src/lib/code.mjs draws them. scripts/check-code.mjs refuses a raw fence.

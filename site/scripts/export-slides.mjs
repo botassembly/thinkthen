@@ -19,9 +19,13 @@
 //     scaled to 630 pixels high and padded left and right on the deck's
 //     background colour, --tt-ground in deck.css. Nothing is cropped.
 //
-// The script then records the deck commit, the bench, and each image's
-// SHA-256 in slides.json. check-slides.mjs checks that record in the build.
-// The cards are committed because the Pages workflow cannot read the deck.
+// It also copies the deck's PDF at deck-pin to
+// public/learn/beatles-bench/jev-thinkthen-beatles-bench.pdf.
+//
+// The script then records the deck commit, the bench, each image's SHA-256,
+// and the PDF's SHA-256 as pdf in slides.json. check-slides.mjs checks that
+// record in the build. The cards and the PDF are committed because the Pages
+// workflow cannot read the deck.
 //
 // It stops unless the pinned deck's BENCH_AT names the commit
 // examples/beatles/bench-pin pins. It trusts the deck's build to have rendered
@@ -37,6 +41,7 @@ const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const out = path.join(site, 'public', 'learn', 'beatles-bench');
 const cards = path.join(site, 'public', 'og');
 const file = path.join(site, 'src', 'data', 'slides.json');
+const PDF = 'jev-thinkthen-beatles-bench.pdf';
 const deck = process.env.DECK;
 if (!deck) { console.error('export-slides: set DECK to the deck folder'); process.exit(2); }
 
@@ -79,7 +84,8 @@ for (const [page, entry] of Object.entries(manifest.slides)) {
     '-extent', '1200x630', '-strip', `png:${card}`], { input: png });
   entry.card = sha(card);
 }
-manifest.deck = commit;
-manifest.bench = pin;
-fs.writeFileSync(file, JSON.stringify(manifest, null, 2) + '\n');
+const pdf = path.join(out, PDF);
+fs.writeFileSync(pdf, show(PDF));
+const record = { deck: commit, bench: pin, pdf: sha(pdf), slides: manifest.slides };
+fs.writeFileSync(file, JSON.stringify(record, null, 2) + '\n');
 console.log(`export-slides: wrote ${Object.keys(manifest.slides).length} slides and cards from deck ${commit.slice(0, 8)}, bench ${pin.slice(0, 8)}`);
