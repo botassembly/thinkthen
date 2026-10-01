@@ -86,7 +86,7 @@ public class Matrix {
                     case 2 -> check(List.of("first","second").equals(value),"tag "+answer);
                     case 3 -> check(((Number)value).doubleValue()==.1,"score "+answer);
                     case 4 -> check(answer.contains("filter-one") && answer.contains("filter-two"),"filter "+answer);
-                    case 5 -> check(value instanceof List<?> rows && rows.size()==2 && rows.get(0) instanceof Map<?,?> first && rows.get(1) instanceof Map<?,?> second && ((Number)first.get("index")).intValue()==0 && "rank-one".equals(first.get("record")) && ((Number)first.get("probability")).doubleValue()==.9 && ((Number)second.get("index")).intValue()==1 && "rank-two".equals(second.get("record")),"rank "+answer);
+                    case 5 -> check(value instanceof List<?> ranked && ranked.size()==2 && ranked.get(0) instanceof Map<?,?> top && ranked.get(1) instanceof Map<?,?> next && ((Number)top.get("index")).intValue()==0 && "rank-one".equals(top.get("record")) && ((Number)top.get("probability")).doubleValue()==.9 && ((Number)next.get("index")).intValue()==1 && "rank-two".equals(next.get("record")),"rank "+answer);
                     case 6 -> check(value instanceof Map<?,?> found && ((Number)found.get("index")).intValue()==0 && "find-one".equals(found.get("unit")) && ((Number)found.get("probability")).doubleValue()==.9,"find "+answer);
                     case 7,11 -> check(value instanceof List<?> list && list.get(0) instanceof Map<?,?> row && Boolean.TRUE.equals(row.get("check")),"annotate "+answer);
                     case 8 -> check(answer.contains("length=") && answer.contains("text="),"recognize shape "+answer);
