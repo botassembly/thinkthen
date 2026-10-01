@@ -4,7 +4,7 @@ Kind: debt
 
 Pay when: a piped batching test fails once under load, or the input pause gains a test setting.
 
-Debt: 028
+Debt: 030
 
 Severity: low
 
