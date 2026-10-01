@@ -528,6 +528,7 @@ export const SURFACES = [
   },
   {
     slug: 'cpp', name: 'C++', deckHeading: null,
+    backends: 'env',
     lang: 'cpp', tab: 'C++',
     blurb: 'One C++17 header over the C library. Calls return `CallResult` values. The engine frees itself when it goes out of scope.',
     unsureWord: '`tt::Outcome::notSure`',
@@ -545,6 +546,7 @@ export const SURFACES = [
   },
   {
     slug: 'objective-c', name: 'Objective-C', deckHeading: null,
+    backends: 'env',
     lang: 'objective-c', tab: 'Objective-C',
     blurb: 'A `TTClient` over the C library, for GNU Objective-C with no Foundation.',
     unsureWord: '`TTOutcomeNotSure`',
@@ -561,6 +563,7 @@ export const SURFACES = [
   },
   {
     slug: 'cobol', name: 'COBOL', deckHeading: null,
+    backends: 'env',
     lang: 'cobol', tab: 'COBOL',
     blurb: 'A copybook and called programs over the C library, for GnuCOBOL.',
     unsureWord: '`outcome-not-sure`',
@@ -574,10 +577,12 @@ export const SURFACES = [
     particular: [
       'Compile the programs you call from `src/` with your own, as the build line does with `TT-DECIDE`.',
       'The copybook names no, yes and not sure as level-88 conditions, so `if outcome-yes` reads the answer.',
+      '`TT-DECIDE` writes into the question buffer, so set the question again before each call.',
     ],
   },
   {
     slug: 'ada', name: 'Ada', deckHeading: null,
+    backends: 'env',
     lang: 'ada', tab: 'Ada',
     blurb: 'A `Thinkthen` package over the C library, for GNAT. Each call is a procedure with out parameters.',
     unsureWord: '`Not_Sure`',
