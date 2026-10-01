@@ -481,7 +481,7 @@ const ARTICLES = {
     label: "Your own backend",
     goal: "Any server with Jev's interface can answer, and a bar must be tuned again on the new model.",
     idea: [
-      "Any server with the same interface as Jev can answer. Name it with `--url`.",
+      "Any server with [the same interface as Jev](/install/backends/system-one/) can answer. Name it with `--url`.",
       "`thinkthen check` sends four fixed requests to check that a server works. With `--plan`, it prints its plan and sends nothing.",
     ],
     see: {
