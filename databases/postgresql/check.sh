@@ -1275,7 +1275,7 @@ conformance() {
 		if [ "$arm" != - ]; then
 			fresh "$arm" ${setting:+"${setting//@SCRATCH@/$SCRATCH}"}
 		fi
-		line=$(BPORT=${BPORT:-} SCRATCH=$SCRATCH python3 tests/runner.py "$SOCK" "$id")
+		line=$(BPORT=${BPORT:-} SCRATCH=$SCRATCH STORE=${CACHEDIR:-} python3 tests/runner.py "$SOCK" "$id")
 		if [ "$line" = "pass $id" ] && { [ "$id" = 18-find-second ] || [ "$id" = 19-find-none ]; }; then
 			bcapture >"$RUN/$id.capture.json"
 			line=$(BPORT=$BPORT python3 tests/runner.py capture "$id" "$RUN/$id.capture.json")
@@ -1294,7 +1294,8 @@ conformance() {
 		*) fail=$((fail + 1)) ;;
 		esac
 	done 3< "$plan_file"
-	echo "         conformance: total=54 selected=$selected pass=$pass fail=$fail not_run=$skipped unselected=$((54 - selected))"
+	total=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["case_count"])' ../../conformance/cases.json)
+	echo "         conformance: total=$total selected=$selected pass=$pass fail=$fail not_run=$skipped unselected=$((total - selected))"
 	same "$((pass + fail + skipped))" "$selected"
 	same "$fail" 0
 }

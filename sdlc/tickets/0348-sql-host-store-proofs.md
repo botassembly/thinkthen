@@ -1,6 +1,6 @@
 # 0348: Each SQL host proves its question store answers
 
-Status: ready. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4, after ticket 0347 in the same lane. Pays Debt 010, `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md`.
+Status: landed 2026-09-30. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4, after ticket 0347 in the same lane. Pays Debt 010, `sdlc/issues/closed/2026-09-30-sql-host-store-proofs-are-partial.md`.
 
 ## Outcome
 
@@ -15,3 +15,14 @@ The DuckDB and PostgreSQL shared case runners count answer rows in `thinkthen.sq
 - Defers: nothing new.
 
 ## What the build taught us
+
+- The store answers where the ticket expected. The DuckDB runner reads the first child's count, which is every case kind's main run; the counters child runs later in a folder of its own. The PostgreSQL runner refuses to pass a case without a `STORE` folder, and each case gets a fresh one from `fresh`. A case wants one row per distinct question key in its exchanges, less its failed questions, as the SQLite and C door runners count.
+- The SQLite host waits on a held store. A `BEGIN EXCLUSIVE` from another connection blocks the lookup in the store's DELETE journal mode, and the call sends nothing until the holder lets go. Then it answers and stores its row. `test_store.py` pins that behavior. The child prints a ready line before its call, so the held-store check cannot pass on a child that never reached the store.
+- Replay from a folder at mode 0500 with its store at 0400 answers with no send and leaves each entry's mode, size, modification time, change time and inode as they were. The comparison leaves out access time, which `specification/recording.md` does not cover.
+- Planted proofs: with the DuckDB harness counting an empty folder, 44 of 55 cases failed with `stored answers`; the 9 that passed expect no stored row. With the PostgreSQL runner pointed at an empty folder, 44 cases failed the same way. Replay from an empty folder failed with the replay miss sentence, and the held-store test failed with a send while held when its child used an empty cache folder.
+- Review found two gaps, both fixed: the ready line above, and a store read error in the DuckDB conformance runner now fails one case instead of stopping the run.
+- `databases/postgresql/check.sh` printed a fixed case total of 54 after the case file grew to 55. It now reads `case_count` from `conformance/cases.json`.
+- Under load, `sdlc/scripts/test` failed once on `batching::a_pause_sends_the_open_batch`, a Rust timing test this ticket does not touch. It passed on the rerun at a lower load. The SQLite check's `test_aggregate_once_join_is_bounded_at_one_hundred_thousand` also ran past its 60 s child limit once at a load near 29, and passed on the rerun.
+- `lint` in a clean checkout first failed on main's own two site issue files, which named a private project in their status lines. Main reworded both before this ticket landed, so the branch dropped its own fix.
+- After the rebase onto ticket 0352, the ticket's SQLite and DuckDB test ratchets were raised again, and every check below ran on the rebased branch.
+- Checks: `sdlc/scripts/test` (1,280 passed), `spec` (24 demos green), workspace clippy with `-D warnings`, `policy.py`, `tickets`, the C door tests (31 passed), and the SQLite (53 of 55 cases, 2 not run), DuckDB (53 of 55) and PostgreSQL (89 steps, 52 of 55 cases, 3 not run) checks passed.

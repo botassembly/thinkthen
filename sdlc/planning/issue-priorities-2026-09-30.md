@@ -42,8 +42,8 @@ Work outside the lanes:
 | `closed/2026-09-30-c-door-relate-rows-have-no-owner.md` (Debt 012) | yes | closed | ticket 0346 landed |
 | `closed/2026-09-30-c-door-tests-race-under-nextest.md` (Debt 025) | no | closed | ticket 0346 landed |
 | `2026-09-30-c-door-cases-test-over-the-file-cap.md` (Debt 027) | no | waits | the next ticket that edits `libraries/c/tests/door/cases.rs`, or before 0.1 |
-| `2026-09-25-public-library-api-gaps.md` (Debt 018) | items 1, 2, 3, 9, 10 | batch | B4, 0347; items 6 and 7 after 0.1 |
-| `2026-09-30-sql-host-store-proofs-are-partial.md` (Debt 010) | yes | batch | B4, 0348 |
+| `2026-09-25-public-library-api-gaps.md` (Debt 018) | items 1, 2, 3, 9, 10 | waits | 0347 landed items 1, 2, 3, 9 and 10; items 6 and 7 after 0.1 |
+| `closed/2026-09-30-sql-host-store-proofs-are-partial.md` (Debt 010) | yes | closed | ticket 0348 landed |
 | `closed/2026-09-30-static-library-exports-sqlite-symbols.md` (Debt 001) | yes | closed | ticket 0351 landed |
 | `closed/2026-09-30-zig-check-skips-its-facts-lifetime-modes.md` (debt) | no | closed | B6 Quick Fix landed |
 | `closed/2026-09-30-flutter-strict-consumer-copies-dart-bravo.md` (Debt 021) | yes, by its trigger | closed | B6 Quick Fix landed |
