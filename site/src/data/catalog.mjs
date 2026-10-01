@@ -577,6 +577,7 @@ export const SURFACES = [
     particular: [
       'Compile the programs you call from `src/` with your own, as the build line does with `TT-DECIDE`.',
       'The copybook names no, yes and not sure as level-88 conditions, so `if outcome-yes` reads the answer.',
+      '`TT-DECIDE` writes into the question buffer, so set the question again before each call.',
     ],
   },
   {

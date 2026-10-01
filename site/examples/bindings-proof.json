@@ -184,7 +184,7 @@
   },
   "install/cobol/backends.cob backend=liquid": {
     "page": "/install/cobol/",
-    "sample": "7300154e76210e1614b4a172afb03e6a5fac4608b752db837d5bcbdb322c7119",
+    "sample": "8f7183b9152db6bb293e513e22dba091e67f23b77cb699856617d64a32c145bf",
     "output": null,
     "files": {},
     "answers": {
@@ -207,7 +207,7 @@
   },
   "install/cobol/backends.cob backend=ollama": {
     "page": "/install/cobol/",
-    "sample": "7300154e76210e1614b4a172afb03e6a5fac4608b752db837d5bcbdb322c7119",
+    "sample": "8f7183b9152db6bb293e513e22dba091e67f23b77cb699856617d64a32c145bf",
     "output": null,
     "files": {},
     "answers": {
@@ -230,7 +230,7 @@
   },
   "install/cobol/backends.cob backend=typesafe": {
     "page": "/install/cobol/",
-    "sample": "7300154e76210e1614b4a172afb03e6a5fac4608b752db837d5bcbdb322c7119",
+    "sample": "8f7183b9152db6bb293e513e22dba091e67f23b77cb699856617d64a32c145bf",
     "output": null,
     "files": {},
     "answers": {
@@ -488,7 +488,7 @@
   },
   "install/objective-c/backends.m backend=liquid": {
     "page": "/install/objective-c/",
-    "sample": "b3c9eeea4a63f01a2a3a008c6a0142d012f94fb9891a5d7c81174f617f51cd8c",
+    "sample": "2eb715f081e004849ddaf947307c5b257501fa120866ee4f4c31caba34ff453e",
     "output": null,
     "files": {},
     "answers": {
@@ -511,7 +511,7 @@
   },
   "install/objective-c/backends.m backend=ollama": {
     "page": "/install/objective-c/",
-    "sample": "b3c9eeea4a63f01a2a3a008c6a0142d012f94fb9891a5d7c81174f617f51cd8c",
+    "sample": "2eb715f081e004849ddaf947307c5b257501fa120866ee4f4c31caba34ff453e",
     "output": null,
     "files": {},
     "answers": {
@@ -534,7 +534,7 @@
   },
   "install/objective-c/backends.m backend=typesafe": {
     "page": "/install/objective-c/",
-    "sample": "b3c9eeea4a63f01a2a3a008c6a0142d012f94fb9891a5d7c81174f617f51cd8c",
+    "sample": "2eb715f081e004849ddaf947307c5b257501fa120866ee4f4c31caba34ff453e",
     "output": null,
     "files": {},
     "answers": {

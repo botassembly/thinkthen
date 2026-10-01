@@ -43,6 +43,7 @@ int main(void) {
     assert(thanks_is_refund.outcome == TTOutcomeNo);
     free(facts);
 
+    tt_failure_clear(&failure);
     [client dealloc];
     return 0;
 }
