@@ -101,6 +101,8 @@ functions/recognize/rust.rs
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/c.c
+functions/relate/more/duckdb.sql
+functions/relate/more/r.R
 functions/relate/duckdb.sql
 functions/relate/pandas.py
 functions/relate/polars.py

@@ -1,6 +1,6 @@
-  relation   | source | target | probability | either 
--------------+--------+--------+-------------+--------
- contradicts |      1 |      4 |        0.83 | t
- contradicts |      2 |      6 |        0.97 | t
+ relation | source | target | probability | either 
+----------+--------+--------+-------------+--------
+ sings    |      1 |      3 |        0.81 | f
+ sings    |      2 |      4 |        0.88 | f
 (2 rows)
 

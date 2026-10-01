@@ -1,27 +1,23 @@
 library(thinkthen)
 
-rules <- c(
-  "Book economy class for every flight under six hours.",
-  "Submit receipts within 30 days of the trip.",
-  "Hotel stays are capped at 200 dollars a night.",
-  "Employees may book business class on any flight.",
-  "Rental cars need a manager's approval.",
-  paste0(
-    "Receipts may be submitted at any time, ",
-    "with no deadline."
+names <- data.frame(
+  name = c(
+    "Paul McCartney",
+    "Ringo Starr",
+    "Yesterday",
+    "Octopus's Garden"
   ),
-  "Meals are reimbursed up to 60 dollars a day.",
-  "Use the company travel portal for all bookings."
+  kind = c("singer", "singer", "song", "song")
 )
-entities <- data.frame(name = rules, kind = "rule")
-contradictions <- tt_relate(
-  entities,
-  either = "contradicts",
-  threshold = 0.5
+who_sings <- tt_relate(
+  names,
+  relations = "sings=singer:song"
 )$value
-stopifnot(identical(contradictions$source, rules[c(1, 2)]))
-stopifnot(identical(contradictions$target, rules[c(4, 6)]))
 stopifnot(identical(
-  contradictions$probability,
-  c(0.83, 0.97)
+  who_sings$source,
+  c("Paul McCartney", "Ringo Starr")
+))
+stopifnot(identical(
+  who_sings$target,
+  c("Yesterday", "Octopus's Garden")
 ))

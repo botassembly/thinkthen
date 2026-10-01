@@ -328,6 +328,10 @@ export const FUNCTIONS = [
     see: {
       '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default threshold.',
     },
+    moreSee: {
+      r: 'Eight travel rules in a data frame. One both-ways rule, contradicts, finds the two pairs of rules that disagree, at a bar of 0.5.',
+      duckdb: 'The same eight rules as rows of a table. relate reads them through a query and returns the contradicting pairs by id.',
+    },
   },
   {
     name: 'question-file',

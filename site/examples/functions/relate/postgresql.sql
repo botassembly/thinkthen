@@ -1,21 +1,11 @@
-CREATE TABLE rules (
-    id int, body text, kind text DEFAULT 'rule'
-);
-INSERT INTO rules (id, body) VALUES
-    (1, 'Book economy class for every flight ' ||
-        'under six hours.'),
-    (2, 'Submit receipts within 30 days of the trip.'),
-    (3, 'Hotel stays are capped at 200 dollars a night.'),
-    (4, 'Employees may book business class on any flight.'),
-    (5, 'Rental cars need a manager''s approval.'),
-    (6, 'Receipts may be submitted at any time, ' ||
-        'with no deadline.'),
-    (7, 'Meals are reimbursed up to 60 dollars a day.'),
-    (8, 'Use the company travel portal for all bookings.');
+CREATE TABLE entities (id int, name text, kind text);
+INSERT INTO entities VALUES
+    (1, 'Paul McCartney', 'singer'),
+    (2, 'Ringo Starr', 'singer'),
+    (3, 'Yesterday', 'song'),
+    (4, 'Octopus''s Garden', 'song');
 
 SELECT * FROM thinkthen_relate(
-    'SELECT id, body AS name, kind FROM rules',
-    '{"version": 1, "relate": {"relations": [{' ||
-    '"name": "contradicts", "source": "*", ' ||
-    '"target": "*", "either": true}]}}'
-) AS contradiction;
+    'SELECT id, name, kind FROM entities',
+    ARRAY['sings=singer:song']
+) AS sings;
