@@ -16,7 +16,8 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Every binding is part of the product: no status, date, readiness note, or caveat. Link each to `/install/<slug>/`, even before its page exists. Counts read "10 functions, 1 CLI, 24 bindings".
 - Teach the idea, not the repository's files.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.
-- Colour: green yes, amber not sure, red no, grey broken. Values stay in ink. Only marks carry colour.
+- Colour: green yes, amber not sure, red no, grey broken. Values stay in ink. Only marks carry colour. Code panes are the one exception: they carry syntax colour. Output panes stay in ink.
+- Every code block comes from `site/src/lib/code.mjs`. Pass `Code` a `file` or a `lang`. An article uses example comments, never a Markdown fence.
 - Install: the download script first (`curl -fsSL https://thinkthen.dev/install.sh | sh`), then Homebrew as an option on a Mac.
 - Name no private project and no home path. The repository is public.
 

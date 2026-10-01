@@ -56,7 +56,8 @@ function attrsOf(raw) {
 function decode(s) {
   return s
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'").replace(/&#x27;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#([0-9]+);/g, (_, d) => String.fromCodePoint(Number(d))).replace(/&nbsp;/g, ' ')
     .replace(/&middot;/g, '·').replace(/&amp;/g, '&');
 }
 

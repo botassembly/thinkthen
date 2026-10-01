@@ -22,16 +22,17 @@ npm run build
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
 5. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
 6. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-7. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
-8. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
-9. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
-10. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
-11. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
-12. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
+7. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
+8. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
+9. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
+10. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
+11. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
+12. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
+13. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
 
 A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
-`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the settings check, the link check, the card check and the head check on the last build.
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the code check, the settings check, the link check, the card check and the head check on the last build.
 
 ## Writing a page
 
@@ -119,6 +120,18 @@ Phosphor, from the site plan. Four outcomes, four colours, everywhere an answer 
 | then, "yes", exit 0 | `#2fd27a` | `#0b8046` |
 | "no", exit 1 | `#ff5d5d` | `#c62828` |
 | "broken", other exits | `#7d8a83` | `#6b746f` |
+
+Code panes add a code palette, after the deck's code panes. Shiki colours every block at build time with one theme, `src/lib/code-theme.mjs`, whose colours are the variables below. Output panes and plain-text files stay in ink. Contrast is measured on the card.
+
+| Code role | Dark | Light |
+| --- | --- | --- |
+| keys, keywords, command names | `#2fd27a`, 8.34:1 | `#0b8046`, 5.01:1 |
+| quoted strings | `#ffb000`, 9.00:1 | `#a56300`, 4.79:1 |
+| numbers | `#ff7eb6`, 6.99:1 | `#b0306a`, 6.04:1 |
+| true, false, null | `#7aa2f7`, 6.54:1 | `#3355cc`, 6.34:1 |
+| comments, heredoc input, diff headers and ranges | `#8a9a90`, 5.58:1 | `#5d6b63`, 5.60:1 |
+
+A diff's added and removed lines stay in ink, because green and red mean yes and no.
 
 Dark follows the system and is the default. The sun and moon button in the header overrides it, and the choice is kept for the visit.
 

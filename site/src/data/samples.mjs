@@ -90,7 +90,7 @@ export function firstCall(surface) {
   const ext = EXT[surface];
   const code = text(`install/${surface}/first-call.${ext}`);
   if (code === undefined) throw new Error(`samples: examples/install/${surface}/first-call.${ext} is missing`);
-  return { code: code.replace(/\n+$/, ''), output: text(`install/${surface}/first-call.${ext}.out`)?.replace(/\n+$/, '') ?? null };
+  return { file: `first-call.${ext}`, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/first-call.${ext}.out`)?.replace(/\n+$/, '') ?? null };
 }
 
 // The library sample for a function on a surface, with the output a
@@ -99,5 +99,5 @@ export function sample(fn, surface) {
   const ext = EXT[surface];
   const own = text(`functions/${fn}/${surface}.${ext}`);
   if (own === undefined) return null;
-  return { code: own.replace(/\n+$/, ''), output: text(`functions/${fn}/${surface}.${ext}.out`)?.replace(/\n+$/, '') ?? null };
+  return { file: `${surface}.${ext}`, code: own.replace(/\n+$/, ''), output: text(`functions/${fn}/${surface}.${ext}.out`)?.replace(/\n+$/, '') ?? null };
 }

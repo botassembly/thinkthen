@@ -1,15 +1,9 @@
 ---
-// A code sample with a copy button.
-const { code, caption = null, copy = true } = Astro.props;
-const lines = code.split('\n');
-const comment = /^\s*(#|\/\/|--|\/\*|\*)/;
+// A code sample with a copy button. Pass `file`, the file it came from, and
+// the language follows the file's name. Pass `lang` for code with no file,
+// or "output" for what a surface printed. `label` names the copy button
+// for a screen reader. src/lib/code.mjs draws it.
+import { codeBlock } from '../lib/code.mjs';
+const { code, lang = null, file = null, caption = null, copy = true, label = null } = Astro.props;
 ---
-<div class="block">
-  <div class="caption">
-    <span class="grow">{caption}</span>
-    {copy && <button class="copy" type="button">Copy</button>}
-  </div>
-  <pre data-copy={code}>{lines.map((l, i) => (
-    <Fragment><span class={comment.test(l) ? 'cm' : 'cmd'}>{l}</span>{i < lines.length - 1 ? '\n' : ''}</Fragment>
-  ))}</pre>
-</div>
+<Fragment set:html={codeBlock({ code, lang, file, caption, copy, label })} />

@@ -2,48 +2,8 @@
 // One example: the script in one block, then what it printed in its own
 // block, closed by the exit code in its outcome colour. The run comes from
 // examples/ through src/data/samples.mjs. Nothing here is typed by hand.
-//
-// exitMark in catalog.mjs gives the word and the colour after the exit
-// code. Only a single answer gets a colour.
-import { exitMark } from '../data/catalog.mjs';
-
+// src/lib/code.mjs draws it.
+import { exampleBlock } from '../lib/code.mjs';
 const { run, caption = null } = Astro.props;
-
-// Heredoc bodies are input. Every other line is the script.
-const lines = [];
-let until = null;
-for (const l of run.command.split('\n')) {
-  if (until) {
-    const end = l.trim() === until;
-    if (end) until = null;
-    lines.push({ cls: end ? 'cmd' : 'in', text: l });
-    continue;
-  }
-  const doc = /<<-?\s*'?(\w+)'?/.exec(l);
-  if (doc) until = doc[1];
-  lines.push({ cls: 'cmd', text: l });
-}
-
-const exit = run.exit ?? 0;
-const mark = exitMark(run.command, exit);
-const output = run.output ? run.output.split('\n') : [];
 ---
-<div class="example">
-  <div class="block">
-    <div class="caption">
-      <span class="grow">{caption && caption.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</span>
-      <button class="copy" type="button" aria-label="Copy the script">Copy</button>
-    </div>
-    <pre data-copy={run.command}>{lines.map((l, i) => (
-      <Fragment><span class={l.cls}>{l.text}</span>{i < lines.length - 1 ? '\n' : ''}</Fragment>
-    ))}</pre>
-  </div>
-  <div class="block output">
-    {output.length > 0 && <div class="caption"><span class="grow">Output</span></div>}
-    {output.length > 0 && <pre>{output.join('\n')}</pre>}
-    <div class={output.length ? 'caption' : 'caption solo'}>
-      {output.length === 0 && <span class="grow">No output</span>}
-      <span class={`exit ${mark.cls}`}>exit {exit}{mark.word ? `: ${mark.word}` : ''}</span>
-    </div>
-  </div>
-</div>
+<Fragment set:html={exampleBlock(run, caption)} />

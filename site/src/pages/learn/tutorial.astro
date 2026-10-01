@@ -53,7 +53,7 @@ const triageForm = files(triagePage)[0];
 
   <h2>5. Save the question to a file</h2>
   <p>A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
-  <Code code={refundFile.text} caption={`${refundFile.name}, the saved question`} />
+  <Code code={refundFile.text} file={refundFile.name} caption={`${refundFile.name}, the saved question`} />
   <p>Write <code>@refund.json</code> in place of the question words.</p>
   <Terminal run={savedYes} caption={savedYes.see} />
   <Terminal run={savedUnsure} caption={savedUnsure.see} />
@@ -69,7 +69,7 @@ const triageForm = files(triagePage)[0];
 
   <h2>7. Ask many questions at once</h2>
   <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file.</p>
-  <Code code={triageForm.text} caption={`${triageForm.name}, the question set`} />
+  <Code code={triageForm.text} file={triageForm.name} caption={`${triageForm.name}, the question set`} />
   {triage.map((step) => <Terminal run={step} caption={step.see} />)}
   <p><code>filter</code> drops the thank-you note. Each message left comes back with one field per question.</p>
 

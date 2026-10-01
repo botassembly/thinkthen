@@ -27,7 +27,7 @@ if (!howto.goal) throw new Error(`how-tos: ${howto.slug} has no goal`);
   <h1>{howto.title}</h1>
   <p class="lede">{parts(howto.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
 
-  {inputs.map((file) => <Code code={file.text} caption={`${file.name}, a file the commands read`} />)}
+  {inputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the commands read`} />)}
   {runs.map((run) => <Terminal run={run} caption={run.see} />)}
 
   <h2>The functions it uses</h2>
