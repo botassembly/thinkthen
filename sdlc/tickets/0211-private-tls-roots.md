@@ -10,7 +10,7 @@ Status: complete. Fresh independent High code review accepted corrected source `
 
 ## Outcome and authority
 
-Register 118 reports that the bundled Mozilla roots do not trust a private backend certificate. Its certificate diagnostic half was built and independently accepted in 0155. This ticket implements a bounded way for the person who launches a process to name replacement trust for that process's backend without disabling certificate or hostname verification. It does not change the six public error kinds, the accepted 0149 SQL settings, or 0157's size and retry scope. The original finding is `$HOME/workspace/experiments/284-issue-register/118-no-private-tls-roots.md`; the exact file and source comparison are in the [preflight](../records/0211-tls-preflight.md).
+Register 118 reports that the bundled Mozilla roots do not trust a private backend certificate. Its certificate diagnostic half was built and independently accepted in 0155. This ticket implements a bounded way for the person who launches a process to name replacement trust for that process's backend without disabling certificate or hostname verification. It does not change the six public error kinds, the accepted 0149 SQL settings, or 0157's size and retry scope. The original finding is `$WORKSPACE/experiments/284-issue-register/118-no-private-tls-roots.md`; the exact file and source comparison are in the [preflight](../records/0211-tls-preflight.md).
 
 ## Accepted design
 

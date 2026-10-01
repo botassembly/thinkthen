@@ -380,7 +380,7 @@ fn a_gate_closed_while_the_send_slot_is_full_is_rechecked_before_sending() {
         blocked(&blocked_on, 1);
         crate::engine::limits::process()
             .gates
-            .close(&url, Duration::from_millis(200), true);
+            .close(&url, Duration::from_millis(200), Some(429));
         drop(full);
         waiting.join().expect("waiter")
     });

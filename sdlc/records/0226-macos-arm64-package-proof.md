@@ -4,7 +4,7 @@ Status: C source and installed archive proof passed on the M5 at pushed source `
 
 ## Host and source boundary
 
-The host reports Darwin ARM64, 18 logical cores, Rust 1.95.0 and Cargo 1.95.0. Its one-minute load was 0.57 before work. The isolated checkout `$HOME/workspace/worktrees/thinkthen-codex-m5` uses the exact pushed SHA above. On this case-insensitive filesystem, tracked `site/examples/beatles/BENCH` collides with tracked `site/examples/beatles/bench/` and appears deleted immediately after checkout. It stayed visible in `git status`; no test or package input under C or SQLite changed. The canonical M5 checkout and older worktrees were untouched.
+The host reports Darwin ARM64, 18 logical cores, Rust 1.95.0 and Cargo 1.95.0. Its one-minute load was 0.57 before work. The isolated checkout `$WORKSPACE/worktrees/thinkthen-codex-m5` uses the exact pushed SHA above. On this case-insensitive filesystem, tracked `site/examples/beatles/BENCH` collides with tracked `site/examples/beatles/bench/` and appears deleted immediately after checkout. It stayed visible in `git status`; no test or package input under C or SQLite changed. The canonical M5 checkout and older worktrees were untouched.
 
 The focused C command `cargo test --locked --lib failures::tests -- --nocapture` passed all three selected tests, including the child-process caught-payload diagnostic proof. The focused SQLite command `cargo test --locked --lib worker::tests -- --nocapture` passed all three selected tests. Both ran under the host's `/tmp/thinkthen-heavy.lock`. These source tests inject synthetic panics into private Rust boundaries. They do not prove an installed archive can inject a panic through a public native door.
 

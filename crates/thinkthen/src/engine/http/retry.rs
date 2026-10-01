@@ -1,9 +1,11 @@
-//! Existing bounded HTTP retry waits.
+//! Bounded HTTP retry waits.
 
 use std::hash::{BuildHasher as _, RandomState};
 use std::time::Duration;
 
-pub(super) const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
+use crate::engine::error::Error;
+
+const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
 const MIN_HEADER_WAIT: Duration = Duration::from_secs(1);
 
 /// The wait the two retry headers ask for, with zero given a one-second floor.
@@ -37,7 +39,7 @@ pub(super) fn bounded_wait(
     draw: u64,
 ) -> Duration {
     asked.unwrap_or_else(|| {
-        let full = exponential.min(timeout).min(MAX_RETRY_WAIT);
+        let full = exponential.min(longest(timeout));
         let half = full / 2;
         let span = (full - half).as_nanos();
         let share = span * u128::from(draw) / u128::from(u64::MAX);
@@ -45,7 +47,30 @@ pub(super) fn bounded_wait(
     })
 }
 
+/// The longest retry wait: the attempt timeout, at most 60 seconds.
+pub(super) fn longest(timeout: Duration) -> Duration {
+    timeout.min(MAX_RETRY_WAIT)
+}
+
+/// A server wait past the longest retry wait ends the retries, so no request
+/// waits without a fixed bound (ticket 0367).
+pub(super) fn too_long(asked: Option<Duration>, timeout: Duration) -> bool {
+    asked.is_some_and(|asked| asked > longest(timeout))
+}
+
+/// The status a gate's server floor carries: a status that asked a wait.
+pub(super) fn floor(asked: Option<Duration>, failure: &Error) -> Option<u16> {
+    match failure {
+        Error::Status(status) => asked.map(|_| *status),
+        _ => None,
+    }
+}
+
 /// One random draw from the hasher keys the standard library seeds per thread.
 pub(super) fn draw() -> u64 {
     RandomState::new().hash_one(())
 }
+
+#[cfg(test)]
+#[path = "retry_tests.rs"]
+mod tests;

@@ -66,7 +66,22 @@ impl Opening {
 #[derive(Clone, Copy, Debug)]
 struct Gate {
     until: Opening,
-    floor: Option<Opening>,
+    /// The latest wait a server asked for, and the status that asked it.
+    floor: Option<(Opening, u16)>,
+}
+
+impl Gate {
+    /// The status of a server floor more than `longest` from `now`. A request
+    /// that would wait longer fails with it unsent (ticket 0367).
+    fn past(&self, now: Instant, longest: Duration) -> Option<u16> {
+        let (floor, status) = self.floor?;
+        let bound = now.checked_add(longest).map_or(Opening::Never, Opening::At);
+        (floor > bound).then_some(status)
+    }
+
+    fn floor_passed(&self, now: Instant) -> bool {
+        self.floor.is_none_or(|(floor, _)| floor.passed(now))
+    }
 }
 
 impl Gates {
@@ -107,7 +122,8 @@ impl Gates {
     }
 
     /// Keep the later opening when two requests receive a retried status.
-    pub(crate) fn close(&self, url: &str, wait: Duration, server_floor: bool) {
+    /// `server_floor` is the status when a server header asked for the wait.
+    pub(crate) fn close(&self, url: &str, wait: Duration, server_floor: Option<u16>) {
         let mut closed = self.lock();
         let opening = Opening::after(wait);
         let gate = closed.entry(url.to_owned()).or_insert(Gate {
@@ -115,8 +131,11 @@ impl Gates {
             floor: None,
         });
         gate.until = gate.until.max(opening);
-        if server_floor {
-            gate.floor = Some(gate.floor.map_or(opening, |floor| floor.max(opening)));
+        if let Some(status) = server_floor {
+            gate.floor = Some(
+                gate.floor
+                    .map_or((opening, status), |floor| floor.max((opening, status))),
+            );
         }
         self.changed.notify_all();
     }
@@ -124,17 +143,18 @@ impl Gates {
     pub(crate) fn may_send(&self, url: &str, cap: Instant) -> bool {
         let closed = self.lock();
         let now = Instant::now();
-        closed.get(url).is_none_or(|gate| {
-            gate.until.passed(now)
-                || (cap <= now && gate.floor.is_none_or(|floor| floor.passed(now)))
-        })
+        closed
+            .get(url)
+            .is_none_or(|gate| gate.until.passed(now) || (cap <= now && gate.floor_passed(now)))
     }
 
-    /// Wait without a send permit. Return false once this attempt's wait cap passes.
+    /// Wait without a send permit. Return false once this attempt's wait cap
+    /// passes. A server floor more than `longest`, the longest retry wait,
+    /// away fails at once with its status.
     pub(crate) fn wait_open(
         &self,
         url: &str,
-        cap: Instant,
+        (cap, longest): (Instant, Duration),
         cancel: &Cancel<'_>,
     ) -> Result<bool, Error> {
         let mut closed = self.lock();
@@ -148,7 +168,10 @@ impl Gates {
             if gate.until.passed(now) {
                 return Ok(true);
             }
-            if cap <= now && gate.floor.is_none_or(|floor| floor.passed(now)) {
+            if let Some(status) = gate.past(now, longest) {
+                return Err(Error::Status(status));
+            }
+            if cap <= now && gate.floor_passed(now) {
                 return Ok(false);
             }
             if !observed {
@@ -160,8 +183,8 @@ impl Gates {
                 .remaining(now)
                 .min(
                     gate.floor
-                        .filter(|floor| !floor.passed(now))
-                        .map_or(Duration::MAX, |floor| floor.remaining(now)),
+                        .filter(|(floor, _)| !floor.passed(now))
+                        .map_or(Duration::MAX, |(floor, _)| floor.remaining(now)),
                 )
                 .min(Cancel::poll())
                 .min(budget.unwrap_or(Duration::MAX));
@@ -183,14 +206,60 @@ fn an_expired_server_floor_cannot_spin_under_a_later_unheaded_gate() {
         "local".into(),
         Gate {
             until: Opening::At(now + Duration::from_secs(1)),
-            floor: Some(Opening::At(now)),
+            floor: Some((Opening::At(now), 429)),
         },
     );
     assert!(
         !gates
-            .wait_open("local", now + Duration::from_millis(20), &Cancel::default())
+            .wait_open(
+                "local",
+                (now + Duration::from_millis(20), Duration::from_secs(1)),
+                &Cancel::default()
+            )
             .unwrap()
     );
+}
+
+/// Main held every request to an address until a server floor passed,
+/// however far off, and an overflowed floor never passed. A floor within the
+/// longest retry wait still holds a request; one past it, or an overflowed
+/// one, fails it at once with the floor's status (ticket 0367).
+#[cfg(test)]
+#[test]
+fn a_server_floor_past_the_longest_wait_fails_at_once_with_its_status() {
+    let longest = Duration::from_millis(100);
+    let cases = [
+        (Some(Duration::from_millis(60)), 429, Ok(true)),
+        (Some(Duration::from_secs(10)), 429, Err(429)),
+        (None, 503, Err(503)),
+    ];
+    for (wait, status, expected) in cases {
+        let gates = Gates::default();
+        let now = Instant::now();
+        let floor = wait.map_or(Opening::Never, |wait| Opening::At(now + wait));
+        gates.lock().insert(
+            "local".into(),
+            Gate {
+                until: floor,
+                floor: Some((floor, status)),
+            },
+        );
+        let opened = gates.wait_open("local", (now + longest, longest), &Cancel::default());
+        let waited = now.elapsed();
+        match expected {
+            Ok(open) => {
+                assert_eq!(opened.unwrap(), open, "{wait:?}");
+                assert!(waited >= Duration::from_millis(60), "{wait:?}: {waited:?}");
+            }
+            Err(code) => {
+                assert!(
+                    matches!(opened, Err(Error::Status(got)) if got == code),
+                    "{wait:?}"
+                );
+                assert!(waited < longest, "{wait:?}: waited {waited:?}");
+            }
+        }
+    }
 }
 
 #[cfg(test)]

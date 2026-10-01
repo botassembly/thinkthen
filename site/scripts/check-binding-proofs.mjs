@@ -15,8 +15,7 @@
 // each published checkpoint tag.
 //
 // It fails when a library or SQL sample under examples/ has no REPLAY
-// line. PENDING names the samples with no replay.
-// Each slice removes its own, and the last slice deletes the list.
+// line.
 //
 // It also fails when an install line does not name the package that the
 // binding's own metadata names.
@@ -65,23 +64,10 @@ for (const line of Object.keys(proof)) {
   if (!listed.includes(line)) problems.push(`${PROOF_FILE} holds ${line}, which examples/REPLAY does not list.`);
 }
 
-// Every library and SQL sample replays, apart from those still pending.
-const PENDING = new Set([
-  'functions/annotate/postgresql.sql',
-  'functions/choose/postgresql.sql',
-  'functions/filter/postgresql.sql',
-  'functions/find/postgresql.sql',
-  'functions/rank/postgresql.sql',
-  'functions/recognize/postgresql.sql',
-  'functions/relate/postgresql.sql',
-  'functions/score/postgresql.sql',
-  'functions/tag/postgresql.sql',
-  'install/postgresql/first-call.sql',
-]);
+// Every library and SQL sample replays.
 const replayed = new Set(listed.map((line) => replayLine(line).rel));
 for (const rel of librarySamples(examples)) {
-  if (!replayed.has(rel) && !PENDING.has(rel)) problems.push(`examples/${rel} has no line in examples/REPLAY. Add one and run node scripts/${runner(rel)} ${rel}.`);
-  if (replayed.has(rel) && PENDING.has(rel)) problems.push(`examples/${rel} replays. Remove it from PENDING in scripts/check-binding-proofs.mjs.`);
+  if (!replayed.has(rel)) problems.push(`examples/${rel} has no line in examples/REPLAY. Add one and run node scripts/${runner(rel)} ${rel}.`);
 }
 
 // Each registry install line names the package its binding's metadata

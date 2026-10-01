@@ -3,7 +3,7 @@
 //! of two or more questions refused as too large is halved once.
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use crate::core::AttemptObservation;
 use crate::core::adapters::built_in;
@@ -40,6 +40,9 @@ pub(super) struct Sender<'a> {
     model: String,
     packing: super::Packing,
     key: Mutex<Option<Arc<Key>>>,
+    /// The writing store's folder, checked once before the first send.
+    store: Option<store::Probe>,
+    stored: OnceLock<Result<(), Error>>,
 }
 
 impl<'a> Sender<'a> {
@@ -48,6 +51,7 @@ impl<'a> Sender<'a> {
         state: &'a crate::engine::facade::State,
         model: String,
         packing: super::Packing,
+        store: Option<store::Probe>,
     ) -> Self {
         Self {
             engine,
@@ -55,6 +59,8 @@ impl<'a> Sender<'a> {
             model,
             packing,
             key: Mutex::new(None),
+            store,
+            stored: OnceLock::new(),
         }
     }
 
@@ -123,6 +129,9 @@ impl<'a> Sender<'a> {
             Ok(key) => key,
             Err(error) => return refused(asks, error),
         };
+        if let Err(error) = key.check_control().and_then(|()| self.ready()) {
+            return refused(asks, error);
+        }
         let url = self.engine.backend().url();
         let digest = Recorded::new(url, body).digest();
         let events = Arc::new(Mutex::new(Vec::new()));
@@ -179,6 +188,17 @@ impl<'a> Sender<'a> {
             requests_sent: sent.load(Ordering::Relaxed),
             attempts: attempts.into(),
             taken_at,
+        }
+    }
+
+    /// Refuse before the first send when a count or an answer could not be
+    /// kept: the usage totals cannot be read, or the writing store cannot be
+    /// written (ticket 0367). Both results are kept for the call.
+    fn ready(&self) -> Result<(), Error> {
+        self.transport.usage.check_readable()?;
+        match &self.store {
+            Some(probe) => self.stored.get_or_init(|| probe.check()).clone(),
+            None => Ok(()),
         }
     }
 

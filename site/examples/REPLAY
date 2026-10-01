@@ -7,12 +7,14 @@
 # examples/ has no line here.
 functions/annotate/c.c
 functions/annotate/duckdb.sql
+functions/annotate/postgresql.sql
 functions/annotate/r.R
 functions/annotate/ruby.rb
 functions/annotate/rust.rs
 functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/c.c
+functions/choose/postgresql.sql
 functions/choose/python.py
 functions/choose/ruby.rb
 functions/choose/sqlite.sql
@@ -25,12 +27,14 @@ functions/decide/rust.rs
 functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/c.c
+functions/filter/postgresql.sql
 functions/filter/python.py
 functions/filter/r.R
 functions/filter/ruby.rb
 functions/filter/rust.rs
 functions/filter/sqlite.sql
 functions/find/c.c
+functions/find/postgresql.sql
 functions/find/python.py
 functions/find/r.R
 functions/find/rust.rs
@@ -45,12 +49,14 @@ functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/c.c
 functions/rank/duckdb.sql
+functions/rank/postgresql.sql
 functions/rank/python.py
 functions/rank/ruby.rb
 functions/rank/rust.rs
 functions/rank/typescript.ts
 functions/recognize/c.c
 functions/recognize/duckdb.sql
+functions/recognize/postgresql.sql
 functions/recognize/python.py
 functions/recognize/r.R
 functions/recognize/ruby.rb
@@ -59,6 +65,7 @@ functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/c.c
 functions/relate/duckdb.sql
+functions/relate/postgresql.sql
 functions/relate/python.py
 functions/relate/r.R
 functions/relate/ruby.rb
@@ -67,6 +74,7 @@ functions/relate/sqlite.sql
 functions/relate/typescript.ts
 functions/score/duckdb.sql
 functions/score/polars.py
+functions/score/postgresql.sql
 functions/score/python.py
 functions/score/r.R
 functions/score/ruby.rb
@@ -74,6 +82,7 @@ functions/score/rust.rs
 functions/score/sqlite.sql
 functions/tag/c.c
 functions/tag/duckdb.sql
+functions/tag/postgresql.sql
 functions/tag/python.py
 functions/tag/r.R
 functions/tag/rust.rs
@@ -125,6 +134,7 @@ install/php/backends.php backend=ollama
 install/php/backends.php backend=typesafe
 install/php/first-call.php
 install/polars/first-call.py
+install/postgresql/first-call.sql
 install/python/backends.py backend=liquid
 install/python/backends.py backend=ollama
 install/python/backends.py backend=typesafe

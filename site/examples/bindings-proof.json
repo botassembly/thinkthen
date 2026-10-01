@@ -23,7 +23,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -55,11 +55,42 @@
         "databases/duckdb",
         "databases/duckdb/bridge"
       ],
-      "tree": "6e908310de937365b5b0ea05f354d450d67923896b746922406f2968c8fd3b24"
+      "tree": "7adc5f3b2295334c89942457f1f1809e7dc178bc79f2a6478f3c147430bad2b8"
     },
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/annotate/postgresql.sql": {
+    "page": "/functions/annotate/",
+    "sample": "3ad1cb149952fb6f5567df79b6b9966fc31bcb7fc8ca35cc4afff2d04b57349f",
+    "output": "9e27944e75f8d50a92fbfe0de57ac65db5fe7075e1df05dd87f64dd904b24506",
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0b985aca11a89fe1dac9019fa49f7631459d3c68909eb6a1b91f03c2937a2b08": "58de5770c2c0e88510f0179f3689b947f81aae02b4c03a24249d59990c454a6a",
+      "189f8c82554ee18cdfb8c17de61c0000b9b0b9b7bce083d324e9d943ced8c6bd": "03b6eee6546d84f52937508c940982c5b48b503b75795f98528daabfd00ffce0",
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "78f152c9b671cdae3c24c5d2440a30ddd0f618c18a7d25be5be141a6c5e86c6f": "1b382fb273429c60171090ce73a0da600533e6842a007add1824f180f70af778",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c",
+      "a1d20de813f1f6027d2b4a7a5af0fab2f0e479cc2da83748cfa09d763754666f": "bc0eee02454bf6efee147a584092957e47c88deb326f0e5843dfb92656eed276",
+      "e9d30fab7c97f4dab04e473e2a3b93768eff02380b9a20d3291aeec60c7ade40": "6312d38cdfe3557a0060e0cd2fb4433a8d71e4a4dfecb7e0644e9d1dfeee3b25",
+      "ebb41638155be5709ca9cbe72ea57f53daaf75abc91d610c93e6bd55db97b0fa": "d156d1470d3cf007eb49b98bd42f3885b27389ff0a9536daf42b4d557339592e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -87,7 +118,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -117,7 +148,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -147,7 +178,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -177,7 +208,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -207,7 +238,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -231,11 +262,35 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
       "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/postgresql.sql": {
+    "page": "/functions/choose/",
+    "sample": "5975c675408e8f1dd423987c9e350420ccf372d48c4e7e2a842294cea86d11be",
+    "output": "724a3c8e596384153dee9c85bf576ac362eb646941a3c1d5900ce38c536e46f2",
+    "files": {},
+    "answers": {
+      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
+      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -255,7 +310,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -279,7 +334,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -302,7 +357,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -311,7 +366,7 @@
   },
   "functions/choose/typescript.ts": {
     "page": "/functions/choose/",
-    "sample": "030ea06e978a0b7a59b9ed1243622b7aea2bb75c7de835c5b9bf7367a3999c74",
+    "sample": "c8fb230ac466a80d9e8f6735ff5e7cd183397a7db50a55ffb445f28a053292f0",
     "output": null,
     "files": {},
     "answers": {
@@ -325,7 +380,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -346,7 +401,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -368,7 +423,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -391,7 +446,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -412,7 +467,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -433,7 +488,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -454,7 +509,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -475,7 +530,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -499,11 +554,35 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
       "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/filter/postgresql.sql": {
+    "page": "/functions/filter/",
+    "sample": "756fd9289ee8e787650804784c3558ec75a428950f9cd3ef725e73ef8392ff29",
+    "output": "d0615aca0d4d86ccb0de06906c5a84caa2b3972864447ba7cb62bea20c08fe4c",
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -523,7 +602,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -548,7 +627,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -571,7 +650,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -594,7 +673,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -617,7 +696,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -638,11 +717,32 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
       "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/find/postgresql.sql": {
+    "page": "/functions/find/",
+    "sample": "3b2d5fa8dc44a6b8fd82c67f165c8cd2ad724f00428bc2f06dd4f6c583d44ace",
+    "output": "5c3d73a134ce1f3b1817284effadcf5a5a2263046d9ad4d91abd58746c9f07e5",
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -659,7 +759,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -681,7 +781,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -701,7 +801,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -721,7 +821,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -741,7 +841,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -765,7 +865,7 @@
         "databases/duckdb",
         "databases/duckdb/bridge"
       ],
-      "tree": "6e908310de937365b5b0ea05f354d450d67923896b746922406f2968c8fd3b24"
+      "tree": "7adc5f3b2295334c89942457f1f1809e7dc178bc79f2a6478f3c147430bad2b8"
     },
     "toolchain": [
       "DuckDB v1.5.5",
@@ -790,7 +890,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -816,7 +916,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -838,7 +938,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -860,7 +960,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -883,7 +983,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -905,7 +1005,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -929,7 +1029,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -954,11 +1054,35 @@
         "databases/duckdb",
         "databases/duckdb/bridge"
       ],
-      "tree": "6e908310de937365b5b0ea05f354d450d67923896b746922406f2968c8fd3b24"
+      "tree": "7adc5f3b2295334c89942457f1f1809e7dc178bc79f2a6478f3c147430bad2b8"
     },
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/rank/postgresql.sql": {
+    "page": "/functions/rank/",
+    "sample": "f0b2543411f5fdfc1ed013345da6e5a08fd108be46f1fe4e6f45b795ea5c13b7",
+    "output": "75c278bd79f9bf6e0b0d3edc1d851b3fd724e21ed045210c0810bac9f1a00a53",
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -978,7 +1102,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1002,7 +1126,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1025,7 +1149,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -1048,7 +1172,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1088,7 +1212,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -1129,11 +1253,51 @@
         "databases/duckdb",
         "databases/duckdb/bridge"
       ],
-      "tree": "6e908310de937365b5b0ea05f354d450d67923896b746922406f2968c8fd3b24"
+      "tree": "7adc5f3b2295334c89942457f1f1809e7dc178bc79f2a6478f3c147430bad2b8"
     },
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/recognize/postgresql.sql": {
+    "page": "/functions/recognize/",
+    "sample": "499e92d99ffab87400cc5703451fdaff79768cb218cc4ba772c7d00dbe1b1e3b",
+    "output": "e8fac5f9413f0f4ad2c5f85229ac79793ba3c0d8bf45093737a143aa67a2afaf",
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "038467eedbe64182770dbfe591817581a2e4ab2d640ad8401c493698ce27bf0a": "a4b28b88eaadce8782ddc82c9510ef3ed5c5edcffa701c1c4c84bf8decc49102",
+      "1064a86286cff28361cdb90773d26d4c726975e0f5155cb48e8d6ae58e459651": "cb81b47cae9fc19296792cd1c3d918e7de9d99df3531873057e95652bb4202c0",
+      "118ec588fab3050ae5d80a69a3b9bfd05fa3bedd14d7b1a8140f670c11a0f878": "eb90642e4408ad8f06d73fefe071a56be2d156a7e809f1bf17968e5d95c7f119",
+      "20c9a417396e5ef37d77734d8300e0b754419bd8e8409f1825a25fad871e2ea9": "0e3c01ebf14d52b103f94b826085ca5bb2ea2b818a6eba3ebaf009637820aede",
+      "260b44ce27b1ab3426e139d748542d569e86a3d185cb1d17044119b9d0dd557e": "505c5e80c0791ce4ffd03b07d89291489fcb6414796977651b330233b81e57de",
+      "31fcb47e332a53081e71c6469e6679eec4cfb78c2e53ebe455c83c3ee310ec32": "4f78ee517ae3ed89d0df1fecbe3c05982a1126bdf4eea14934bbee8b8b988b11",
+      "58ac9842128b986860aaa5486b5c6314c0d084f697847e35148e9373c7e5cbce": "f4aee43c3918578350171470c64026daeedc89f9000ecff618a5f67f41a16894",
+      "5ab34168c903bd3daddb30a104052788dd6e90d8c9a0b82e0827d7d3b684bbad": "c775003e5a0504cf2d99d7d5e2c0d8f5ef9cd8a3fc6fe27bddf7550084f8bbca",
+      "73a1832e7f0d18829bbfda4080fc1a3ab2e637138729c0bdaf5dcae9bb38e413": "880b86848a0a19bd7d6d3483bb512ecdd6ab77f38967710670690e65ec9dbdf2",
+      "7ca39100e0d53664fdc86e7bf4e328113e56254801107e5ee1dcec6bc567be3e": "513dfbbf70db86f37966bdde0a7af057523055eb97794d590baf2737e97f5147",
+      "7cf1a9509a7f1a570a68d4df44b677c124a5324f52f0e3329f6de4901a077010": "78d91c332962c1e2edacc3a8e360fb4c5a8fca12c56875db73f691201d0d96ed",
+      "9397fa86d6e699ddf7de91e67bb8504d36b322ce944ea07643ac75d6c952590b": "9f1f5b9d8cfd908397ce0233cb7ea4b6a989c774c17f13db01c2fc9313469aeb",
+      "ae60289792b7165a53b400c096f0ba07dd30613d8b9459524d68cead8639cc25": "b162b46e2a3fc2848a8e1c0073647a27fd866a10dd011f3ff3e70924d3ba3382",
+      "d28a7836bb26505cdb37c033b548a0051ebefbc891210e79f5af4364e761f419": "c79428675b99a9d6085877ce9fd5154fd564ec13e3f325e759274a922e8e1b37",
+      "d97758ed6fdebb7b2e7d674eda57373e361c2907d591380a7dadbb5a2c604210": "cae34f4c12c091d373ebd4c0003d2a74ee586357a4a1c52631f817194fbd7a12",
+      "e60872d16c20af6600124feebd18dd43a026e4aba331cd1812d76c4b82c3f0b8": "e0d1f715b7d56bf5a4b414821cb487131358423afd3cb79cd0997a8a0c48a30c",
+      "f0c2c7bc48d67e5b40f6d3903262c100817dfad40e9d32f1f2ae281a8e14a8fa": "a63a01b6644ef441983bd2d0c4c16f1a045024efe264c277ebb0545e5be403fc",
+      "fc9bd1d13a18453ee33a549d01b94b4261d006d181103353f3ad8f6090ff1dd2": "e587d8d03ab1b20013136bdd9b2df15f77d65d2c82dfcbd98bcf60e640f80b6e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1164,7 +1328,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1205,7 +1369,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -1244,7 +1408,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1283,7 +1447,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -1322,7 +1486,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -1361,7 +1525,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1409,7 +1573,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -1458,11 +1622,59 @@
         "databases/duckdb",
         "databases/duckdb/bridge"
       ],
-      "tree": "6e908310de937365b5b0ea05f354d450d67923896b746922406f2968c8fd3b24"
+      "tree": "7adc5f3b2295334c89942457f1f1809e7dc178bc79f2a6478f3c147430bad2b8"
     },
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/relate/postgresql.sql": {
+    "page": "/functions/relate/",
+    "sample": "483d0f185421ead43a583422497e29a602a55ff38fb18781276bb758acefe454",
+    "output": "53b4371c4632cb080ddcaa832699512b3a07c4674af3413e1d692d59a8d07d80",
+    "files": {},
+    "answers": {
+      "0087671399591fba4e99a4049f29137c6e457a91e836b1975ec58600e99acb1a": "546f32880d7d25b0ed5a3000366d5051d918b0b8f69f3397a6306ed30185d5df",
+      "04e4f05192cb4a14f516e673389120573d3eab59d8004a9486fb2b7427226fc5": "79ba4fe85ebfc090d6bd325f5c750ddb8c9443cd6ad3ec674418ae6a8fbe4799",
+      "0ed28a2ee4d7a5cdec71b8f3139f8acd9ea1dd8452097000485823ee10b41ce4": "6110f2c9d0abe8740b6de2087668be7d1558f2a92d9c2a1d8df1ffd33f7c23b7",
+      "1390f80ce0ddfb5eadeeff5e6cbe9969b106bbc1f7374cd62f8f527c0d39de4d": "5787cf219009492b80696c3d7a2f3a3df7c361b1ef31891c643c3731ac72bb49",
+      "16ed7d6f79a994ac571201c38f3447a1f0a92bc889b3840efb8465eeb5a3bd34": "e4474280722f6dd9e4835bd7d38ddbd8016764691034fce1c4aecb1df9d28df5",
+      "1b1ea07c869f68ae9a86629801c1c0d821efd79b0ced83d38025cdafd2e33d89": "7bb883a3ab7272482ecea459effb2682aea177ea30d2e32afdc7cb64949f35e1",
+      "2ef1c6ba0387a2cd306a1bdaca41bef57ce2f540fb1f3af7e6cf5175049ea620": "b8e9c30d221c1e34bb73479c63ed117e939223995a2a175a49180f8cae1f430f",
+      "2fefe5e33bf0deb9b5d202017be0bb4461470d3909aeac998d196ba37555d4bf": "44387a8ad1648a99773d54c7fde731cde95b556df37d536944579c1df5d3012f",
+      "4936a59732a9e6941b592c7b60d8b0f7959091481becb5e0aee7541fb3c3b344": "e07a3efe8ef5b626ac728b202c52323e39fcab5d171d272b8a6243e4eeb2f0eb",
+      "4beb904b717e7042f1d47688fd4f53b35326e99678fb864da7ef430f27ce7c05": "fc5c3d4a52c1f313c2909a69c7cab9672a4fb15e174b2cd3addca79c93fd3b29",
+      "5f8e61a0dd23495939f060e92188c63c8573c934f93c42884d40e9b8bcd29274": "29be12f29355efacc7ccc684090cd24e2e597c519692a3a1636496c9c21c68c9",
+      "7df35b2dccb0d2dbdc5112f1cf7b38afb3c03e65e3d14635abcf755e08ceccf4": "a8a11a0a30048c63a08369853f8fc325ce03a534f49b983d6e09999dfc99eb3e",
+      "867477da488a3bd78b9d9a9781364479c87a6f4582681fdf030b28c96f0ea12d": "3866505582d902a63a33dd774ecae5a5337ab29a0f591813f0b81b87301954af",
+      "8821183965ce8fb1969820e2c14a1690c29dedf27d8ee65d513a3ffda637bcec": "d5aaa6cdb7ea364ebf546bc867d2cf59954dd66987fb5300cb805ac5ea3fc2c0",
+      "891242907ea3aa3144199296f2b91ecc9d0c8d0e78959f07c5efd8b3772ef611": "5251dc47eda53d2261abab97dc6aa8f25bfbf52c6bfb0071c1f1debda3745990",
+      "8bd3d71b2b53b686e31b2c0f94c440baf31cbe00d53618922c96a8bae2b1a1b6": "02220cdf252ab97124460defe4423842b0e1061e85d5b05aaa2de468ab2e3314",
+      "90e95e5aebac57dfee6e1489ddba5e2f7bbb47f915a0181d787a12c7be0ffbc2": "ad089d01a6e45ff2496c8540c9c521e6fa28e2bb071b8768489408e7e69cfdbb",
+      "9e56579b59f79f6c37d0f852841a710b3c0f35ced0d8b01592e87bd159ebb66f": "113f21675b6bb0f923f92911f92717be806053b8edfc5aa5f18b072bde3e5236",
+      "aceca5319ddd9808739bde03d5b945321368155efffa4826ac6657bada2f3818": "ffa80c616d86838bb11ad44e10defe446484310255a78760302b7aa7eb6107a7",
+      "b11cf8a101a2fc3c8f13d6975eb4166581134aa16e79e99ce41b93ad7230bf3e": "ef6d19efe196cb7186a30cb02b570d6200474b7eb58579cc9c363754a179a006",
+      "b26c4028d9df48adf73e9cabaaa9d946b3885f127076a4af02c875825341cc7c": "5ff2d92ceb30df7b3c098f34d9668bf1f4a0e8f0bb652020d924007b3784e51d",
+      "b9bb17775bebe04daef4a29d06f913baad0aa47719314d747a589c8301b49fae": "1e99adabc33884e91e05dd13a9e2fb0c0c16e7ada6280e3e0747bfdc92767848",
+      "c7d9a486b6f5c00a700fe27d9093dca0649d1eac720a12d4c75a2e2d89706913": "fb24c7ecc6c5085b502847c9697c5eb77da72a50cc01d382bade04d561a806b7",
+      "c81bf838ab8f5fc3d0494797fde887e1e2bf4e8dbf08d2c734aabe9eafbfa5b1": "dfb1dab019fcb1810909b5417eb492bcf9e4a859e6290e5d2c2a24205d0478be",
+      "ec399ff14a56f63431c87abb6bca3105b605c395fbc897f1425a0e248bbe95c9": "3d077117ebc6a8ea5b0ffb60ce3dbcef244e6f174d1e62ded35c3391c9398ddb",
+      "f876a608317fce01f14997033a06b0867e07604c5ba2857fc05a7d7206f6df59": "abe6986981ab28dd2adf2d56ada349b47edea8613b9ddfee05ed43895b3cfc78",
+      "f88f5d0d2846cbccae4bace90a63fb8dd9fec0e7e063e8b1c49c225831a097c8": "7b46d6169ac90a5cd4a65ee5cb7165ba285ba494a4f5f7026fe89edab60aa504",
+      "fb9ffcb9054a450f520c822667bbcc99e92dee22652561d6d5f464530aae8c0e": "5b0c90c83aef01505a4084bc8fed84e697e32edf0d5cdb69053420b32e78b435"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1482,7 +1694,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1531,7 +1743,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -1578,7 +1790,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1625,7 +1837,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -1672,7 +1884,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -1719,7 +1931,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1742,7 +1954,7 @@
         "databases/duckdb",
         "databases/duckdb/bridge"
       ],
-      "tree": "6e908310de937365b5b0ea05f354d450d67923896b746922406f2968c8fd3b24"
+      "tree": "7adc5f3b2295334c89942457f1f1809e7dc178bc79f2a6478f3c147430bad2b8"
     },
     "toolchain": [
       "DuckDB v1.5.5",
@@ -1765,11 +1977,34 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
       "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/postgresql.sql": {
+    "page": "/functions/score/",
+    "sample": "c8bb0eb6eeb8174d8f49ce17a8ef00196112fa5f339673ab8fca24a7400d0f8a",
+    "output": "45716d8111cb0960800ff5031888fe207cc375e3b5afe97ce88009198990b0ad",
+    "files": {},
+    "answers": {
+      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
+      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
+      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1788,7 +2023,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1812,7 +2047,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -1834,7 +2069,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1856,7 +2091,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -1878,7 +2113,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -1901,7 +2136,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -1925,11 +2160,34 @@
         "databases/duckdb",
         "databases/duckdb/bridge"
       ],
-      "tree": "6e908310de937365b5b0ea05f354d450d67923896b746922406f2968c8fd3b24"
+      "tree": "7adc5f3b2295334c89942457f1f1809e7dc178bc79f2a6478f3c147430bad2b8"
     },
     "toolchain": [
       "DuckDB v1.5.5",
       "cmake version 3.28.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/tag/postgresql.sql": {
+    "page": "/functions/tag/",
+    "sample": "7a2c6764054bd4af39f50160f4bc2990b9d56b20d5e44850a453ad7a4b465293",
+    "output": "2f2cc333535edff1e807dd102f35c2a8aa49f383e3ea4e203bd2b1dd37a2823d",
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1948,7 +2206,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1972,7 +2230,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -1994,7 +2252,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -2016,7 +2274,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -2039,7 +2297,7 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "80e5d4efa307b8281856b4a388fd9c6d8a62eb4027e326977dff7ba667eb06df"
+      "tree": "23922ea2f5233fb49a4a6eb5d360b82cb77527470ca32d371428287a475d7bba"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
@@ -2062,7 +2320,7 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "80e5d4efa307b8281856b4a388fd9c6d8a62eb4027e326977dff7ba667eb06df"
+      "tree": "23922ea2f5233fb49a4a6eb5d360b82cb77527470ca32d371428287a475d7bba"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
@@ -2085,7 +2343,7 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "80e5d4efa307b8281856b4a388fd9c6d8a62eb4027e326977dff7ba667eb06df"
+      "tree": "23922ea2f5233fb49a4a6eb5d360b82cb77527470ca32d371428287a475d7bba"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
@@ -2108,7 +2366,7 @@
         "libraries/ada",
         "libraries/c"
       ],
-      "tree": "80e5d4efa307b8281856b4a388fd9c6d8a62eb4027e326977dff7ba667eb06df"
+      "tree": "23922ea2f5233fb49a4a6eb5d360b82cb77527470ca32d371428287a475d7bba"
     },
     "toolchain": [
       "GNATMAKE 13.3.0",
@@ -2130,7 +2388,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2153,7 +2411,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2176,7 +2434,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2198,7 +2456,7 @@
         "crates/thinkthen",
         "libraries/c"
       ],
-      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+      "tree": "21fbd223e8a705a6dee32fcfcacfe70143d2b47fe9a3b04122709db202089034"
     },
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2222,7 +2480,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "97a2c1e53987a92572164e26a4ca28b2416d18fc26db60596dc4467120223693"
+      "tree": "bddacc870161f8fcf84f23b0809dcc16e0e3190feae2d8f4083b0423d2b6f069"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -2245,7 +2503,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "97a2c1e53987a92572164e26a4ca28b2416d18fc26db60596dc4467120223693"
+      "tree": "bddacc870161f8fcf84f23b0809dcc16e0e3190feae2d8f4083b0423d2b6f069"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -2268,7 +2526,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "97a2c1e53987a92572164e26a4ca28b2416d18fc26db60596dc4467120223693"
+      "tree": "bddacc870161f8fcf84f23b0809dcc16e0e3190feae2d8f4083b0423d2b6f069"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -2291,7 +2549,7 @@
         "libraries/c",
         "libraries/cobol"
       ],
-      "tree": "97a2c1e53987a92572164e26a4ca28b2416d18fc26db60596dc4467120223693"
+      "tree": "bddacc870161f8fcf84f23b0809dcc16e0e3190feae2d8f4083b0423d2b6f069"
     },
     "toolchain": [
       "cobc (GnuCOBOL) 4.0-early-dev.0",
@@ -2314,7 +2572,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "581f33485e63fc5d6c04b0c415e7ad6388a0b3aaf1b8a34b5341397c1e8845b3"
+      "tree": "bc36cf0a6fed11d0e52e22c838d6868e5ccf4998ed5cf0585b70680d34da35a5"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2337,7 +2595,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "581f33485e63fc5d6c04b0c415e7ad6388a0b3aaf1b8a34b5341397c1e8845b3"
+      "tree": "bc36cf0a6fed11d0e52e22c838d6868e5ccf4998ed5cf0585b70680d34da35a5"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2360,7 +2618,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "581f33485e63fc5d6c04b0c415e7ad6388a0b3aaf1b8a34b5341397c1e8845b3"
+      "tree": "bc36cf0a6fed11d0e52e22c838d6868e5ccf4998ed5cf0585b70680d34da35a5"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2383,7 +2641,7 @@
         "libraries/c",
         "libraries/cpp"
       ],
-      "tree": "581f33485e63fc5d6c04b0c415e7ad6388a0b3aaf1b8a34b5341397c1e8845b3"
+      "tree": "bc36cf0a6fed11d0e52e22c838d6868e5ccf4998ed5cf0585b70680d34da35a5"
     },
     "toolchain": [
       "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2408,7 +2666,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "4b8e75f40450161db7c40ce626765602a64a3da475b67747337f60dd58e40c65"
+      "tree": "3b6035d5aa6d01b3c44d797b48b05563dd211cf75e0e4e6c1235d78878cf84e2"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -2433,7 +2691,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "4b8e75f40450161db7c40ce626765602a64a3da475b67747337f60dd58e40c65"
+      "tree": "3b6035d5aa6d01b3c44d797b48b05563dd211cf75e0e4e6c1235d78878cf84e2"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -2458,7 +2716,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "4b8e75f40450161db7c40ce626765602a64a3da475b67747337f60dd58e40c65"
+      "tree": "3b6035d5aa6d01b3c44d797b48b05563dd211cf75e0e4e6c1235d78878cf84e2"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -2483,7 +2741,7 @@
         "libraries/c",
         "libraries/csharp"
       ],
-      "tree": "4b8e75f40450161db7c40ce626765602a64a3da475b67747337f60dd58e40c65"
+      "tree": "3b6035d5aa6d01b3c44d797b48b05563dd211cf75e0e4e6c1235d78878cf84e2"
     },
     "toolchain": [
       ".NET SDK 8.0.131",
@@ -2508,7 +2766,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "65e64574534af9dd442ad5ef892dc040735f3966b9888e43d7e9b9f56e507c4e"
+      "tree": "c8da55df9382ad4ac5e73384e6931971814f98d43c71e4f82a9786de1e7563e2"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -2533,7 +2791,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "65e64574534af9dd442ad5ef892dc040735f3966b9888e43d7e9b9f56e507c4e"
+      "tree": "c8da55df9382ad4ac5e73384e6931971814f98d43c71e4f82a9786de1e7563e2"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -2558,7 +2816,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "65e64574534af9dd442ad5ef892dc040735f3966b9888e43d7e9b9f56e507c4e"
+      "tree": "c8da55df9382ad4ac5e73384e6931971814f98d43c71e4f82a9786de1e7563e2"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -2583,7 +2841,7 @@
         "libraries/c",
         "libraries/dart"
       ],
-      "tree": "65e64574534af9dd442ad5ef892dc040735f3966b9888e43d7e9b9f56e507c4e"
+      "tree": "c8da55df9382ad4ac5e73384e6931971814f98d43c71e4f82a9786de1e7563e2"
     },
     "toolchain": [
       "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
@@ -2610,7 +2868,7 @@
         "databases/duckdb",
         "databases/duckdb/bridge"
       ],
-      "tree": "6e908310de937365b5b0ea05f354d450d67923896b746922406f2968c8fd3b24"
+      "tree": "7adc5f3b2295334c89942457f1f1809e7dc178bc79f2a6478f3c147430bad2b8"
     },
     "toolchain": [
       "DuckDB v1.5.5",
@@ -2634,7 +2892,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "ecba4fa2a01a8fd52b7573224afe3fff89b22475c4e535ab201d7ec5644b0452"
+      "tree": "bc2c0d39ca5402ab490786270694825a723c3757640b58d9f97fd1dcbed24361"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -2657,7 +2915,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "ecba4fa2a01a8fd52b7573224afe3fff89b22475c4e535ab201d7ec5644b0452"
+      "tree": "bc2c0d39ca5402ab490786270694825a723c3757640b58d9f97fd1dcbed24361"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -2680,7 +2938,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "ecba4fa2a01a8fd52b7573224afe3fff89b22475c4e535ab201d7ec5644b0452"
+      "tree": "bc2c0d39ca5402ab490786270694825a723c3757640b58d9f97fd1dcbed24361"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -2703,7 +2961,7 @@
         "libraries/c",
         "libraries/go"
       ],
-      "tree": "ecba4fa2a01a8fd52b7573224afe3fff89b22475c4e535ab201d7ec5644b0452"
+      "tree": "bc2c0d39ca5402ab490786270694825a723c3757640b58d9f97fd1dcbed24361"
     },
     "toolchain": [
       "go version go1.22.2 linux/amd64",
@@ -2726,7 +2984,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -2749,7 +3007,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -2772,7 +3030,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -2795,7 +3053,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -2818,7 +3076,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -2842,7 +3100,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -2866,7 +3124,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -2890,7 +3148,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -2914,7 +3172,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "16ae4652ab432b2bc2137b8d8f586caf142658a9468c7db96990ed5a98d129f0"
+      "tree": "cca67a9244351a904a4b57fc7d43a4159bf5d7f08878d2e0dc6bd15462acdbc6"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2937,7 +3195,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "16ae4652ab432b2bc2137b8d8f586caf142658a9468c7db96990ed5a98d129f0"
+      "tree": "cca67a9244351a904a4b57fc7d43a4159bf5d7f08878d2e0dc6bd15462acdbc6"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2960,7 +3218,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "16ae4652ab432b2bc2137b8d8f586caf142658a9468c7db96990ed5a98d129f0"
+      "tree": "cca67a9244351a904a4b57fc7d43a4159bf5d7f08878d2e0dc6bd15462acdbc6"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -2983,7 +3241,7 @@
         "libraries/c",
         "libraries/objective-c"
       ],
-      "tree": "16ae4652ab432b2bc2137b8d8f586caf142658a9468c7db96990ed5a98d129f0"
+      "tree": "cca67a9244351a904a4b57fc7d43a4159bf5d7f08878d2e0dc6bd15462acdbc6"
     },
     "toolchain": [
       "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
@@ -3004,7 +3262,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3028,7 +3286,7 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "6b06b98b558b3b4eb042e881d338ede11956b429998eae64e1c775d433522810"
+      "tree": "115c08dead512ff57dd15928399ac0eb2bd54368fa5846b0019bc3f4b60b86d1"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
@@ -3051,7 +3309,7 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "6b06b98b558b3b4eb042e881d338ede11956b429998eae64e1c775d433522810"
+      "tree": "115c08dead512ff57dd15928399ac0eb2bd54368fa5846b0019bc3f4b60b86d1"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
@@ -3074,7 +3332,7 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "6b06b98b558b3b4eb042e881d338ede11956b429998eae64e1c775d433522810"
+      "tree": "115c08dead512ff57dd15928399ac0eb2bd54368fa5846b0019bc3f4b60b86d1"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
@@ -3097,7 +3355,7 @@
         "libraries/c",
         "libraries/php"
       ],
-      "tree": "6b06b98b558b3b4eb042e881d338ede11956b429998eae64e1c775d433522810"
+      "tree": "115c08dead512ff57dd15928399ac0eb2bd54368fa5846b0019bc3f4b60b86d1"
     },
     "toolchain": [
       "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
@@ -3127,11 +3385,36 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
       "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/postgresql/first-call.sql": {
+    "page": "/install/postgresql/",
+    "sample": "b614223b10e475c19ea001357402f2df74e6dc66906421cfbd43d18ee1453875",
+    "output": "748282f834a714896b829bf8169ad885c3db4bfc2b8e1ab7a746f04ba8c65a38",
+    "files": {
+      "install/postgresql/files/refund.json": "3a10e88b9b8f5e0df3f5ef6d511936f68aa43af56517820413bfa70da0a88ba4"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "databases/postgresql"
+      ],
+      "tree": "73712b9a4ee1e8307d911433ded253ef66dc3825082a1bf80c7d3a9b82759866"
+    },
+    "toolchain": [
+      "PostgreSQL 16.15",
+      "cargo-pgrx 0.17.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -3151,7 +3434,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3175,7 +3458,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3199,7 +3482,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3232,7 +3515,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3256,7 +3539,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3278,7 +3561,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3302,7 +3585,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3325,7 +3608,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3347,7 +3630,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3369,7 +3652,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3391,7 +3674,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3413,7 +3696,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3435,7 +3718,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3456,7 +3739,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3477,7 +3760,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3498,7 +3781,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3521,7 +3804,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "e4d2bdda96b98c0e450befb9c5f41176765637cbf98906b9261e64c8282e5d36"
+      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3548,7 +3831,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -3572,7 +3855,7 @@
         "conformance/backend",
         "crates/thinkthen"
       ],
-      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
     },
     "toolchain": [
       "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -3595,7 +3878,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3619,7 +3902,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3643,7 +3926,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3667,7 +3950,7 @@
         "libraries/c",
         "libraries/jvm"
       ],
-      "tree": "9159423a3d4eca35a02a95a6fd96405cdfe1582dbe76fad40dc2d4e66816305c"
+      "tree": "5dc99eb61fd44e2af43066f90e14dbd8a9eb04ee4a6942626fa61d28d3f2b6f1"
     },
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
@@ -3690,7 +3973,7 @@
         "crates/thinkthen",
         "databases/sqlite"
       ],
-      "tree": "6da5f99893da3b45cd1d218c5548c4e0f250350ae861f25611043b7ad4cfac47"
+      "tree": "818ff1ea790fb18e8d859972ce3e1b499e75277ceb6a812bc5067dacdd1cb9d2"
     },
     "toolchain": [
       "SQLite 3.50.0",
@@ -3715,7 +3998,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "489c4285cd14a949c1377a4b5d6b9282c0ad3565a54778fc4efb440b15c982c1"
+      "tree": "7c6f25610752ef9739eee1754378c2b5dc936741c45d32716c817866047a7bfd"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -3740,7 +4023,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "489c4285cd14a949c1377a4b5d6b9282c0ad3565a54778fc4efb440b15c982c1"
+      "tree": "7c6f25610752ef9739eee1754378c2b5dc936741c45d32716c817866047a7bfd"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -3765,7 +4048,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "489c4285cd14a949c1377a4b5d6b9282c0ad3565a54778fc4efb440b15c982c1"
+      "tree": "7c6f25610752ef9739eee1754378c2b5dc936741c45d32716c817866047a7bfd"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -3790,7 +4073,7 @@
         "libraries/c",
         "libraries/swift"
       ],
-      "tree": "489c4285cd14a949c1377a4b5d6b9282c0ad3565a54778fc4efb440b15c982c1"
+      "tree": "7c6f25610752ef9739eee1754378c2b5dc936741c45d32716c817866047a7bfd"
     },
     "toolchain": [
       "Swift version 6.4 (swift-6.4-RELEASE)",
@@ -3811,7 +4094,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -3832,7 +4115,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -3853,7 +4136,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -3876,7 +4159,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "8fddbaee718e51a8db78c7e5c86a9b66355b8d09708ec3fb3ca1580640d083a8"
+      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -3902,7 +4185,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "6922f21895004739c7e33a980d256943454a68ed477152b9a691d71b3e76bed9"
+      "tree": "f319b908222102c434ca97c887cfd88215284c7a703c36c9ebefc7af9d8dffca"
     },
     "toolchain": [
       "Zig 0.15.2",
@@ -3928,7 +4211,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "6922f21895004739c7e33a980d256943454a68ed477152b9a691d71b3e76bed9"
+      "tree": "f319b908222102c434ca97c887cfd88215284c7a703c36c9ebefc7af9d8dffca"
     },
     "toolchain": [
       "Zig 0.15.2",
@@ -3954,7 +4237,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "6922f21895004739c7e33a980d256943454a68ed477152b9a691d71b3e76bed9"
+      "tree": "f319b908222102c434ca97c887cfd88215284c7a703c36c9ebefc7af9d8dffca"
     },
     "toolchain": [
       "Zig 0.15.2",
@@ -3980,7 +4263,7 @@
         "libraries/c",
         "libraries/zig"
       ],
-      "tree": "6922f21895004739c7e33a980d256943454a68ed477152b9a691d71b3e76bed9"
+      "tree": "f319b908222102c434ca97c887cfd88215284c7a703c36c9ebefc7af9d8dffca"
     },
     "toolchain": [
       "Zig 0.15.2",
