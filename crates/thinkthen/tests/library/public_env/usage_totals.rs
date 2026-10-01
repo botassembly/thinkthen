@@ -2,6 +2,7 @@
 //! usage totals, and one built by hand writes none.
 
 use super::*;
+#[cfg(unix)]
 use crate::child::ChildEnvironment as _;
 
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {

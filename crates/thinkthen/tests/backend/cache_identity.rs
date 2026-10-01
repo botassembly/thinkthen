@@ -64,12 +64,10 @@ fn files(folder: &Path) -> io::Result<FolderFiles> {
     Ok(found)
 }
 
+#[cfg(unix)]
 fn default_cache(home: &Path) -> PathBuf {
     if cfg!(target_os = "macos") {
         home.join("Library/Caches/thinkthen")
-    } else if cfg!(windows) {
-        // The test home sets LOCALAPPDATA to `AppData/Local` under it.
-        home.join("AppData/Local/thinkthen/cache")
     } else {
         home.join(".cache/thinkthen")
     }
@@ -133,6 +131,8 @@ fn explicit_refresh_replaces_a_complete_cache_answer_and_replay_stays_offline() 
     assert_eq!(listener.requests().len(), 2, "replay sends nothing");
 }
 
+// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_missing_key_writes_nothing_and_the_next_address_fills_the_folder() {
     const NO_KEY: &str = "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n";
@@ -200,6 +200,8 @@ fn a_missing_key_writes_nothing_and_the_next_address_fills_the_folder() {
     assert_eq!(second.requests().len(), 3);
 }
 
+// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_control_character_key_writes_nothing_and_a_hit_reads_no_key() {
     const REFUSAL: &str = "thinkthen: the API key contains a control character\n";
@@ -286,6 +288,8 @@ fn a_dangling_cache_path_is_storage_failure_before_key_lookup() {
     assert!(fs::symlink_metadata(&cache).is_ok());
 }
 
+// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_cache_pointed_at_a_new_address_resends_and_keeps_both_answers() {
     let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");

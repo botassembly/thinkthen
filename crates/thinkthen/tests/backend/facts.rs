@@ -1,8 +1,8 @@
 //! The compiled command's one run line counts work hidden by row output.
 
-use std::fs;
-use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
+#[cfg(unix)]
+use std::{fs, path::Path};
 
 use serde_json::{Map, Value, json};
 

@@ -2,6 +2,8 @@
 
 use super::*;
 
+// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn the_default_cache_answers_the_second_run() {
     let home = folder("default-cache-identity-home");

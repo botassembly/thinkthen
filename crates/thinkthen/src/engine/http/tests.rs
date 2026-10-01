@@ -7,7 +7,7 @@ use crate::engine::error::{Error, TransportKind};
 use crate::engine::usage::Counters;
 use std::cell::Cell;
 use std::io::{self, Read as _, Write as _};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
@@ -173,8 +173,7 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
     let server_cancel = cancel.clone();
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("request");
-        let mut request = [0_u8; 1024];
-        let _read = stream.read(&mut request).expect("request bytes");
+        whole_request(&mut stream);
         counted.fetch_add(1, Ordering::SeqCst);
         stream
             .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
@@ -286,8 +285,7 @@ fn cancellation_after_reservation_refunds_both_process_charges() {
     listener.set_nonblocking(false).expect("blocking server");
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("fresh request");
-        let mut request = [0_u8; 1024];
-        let _read = stream.read(&mut request).expect("request bytes");
+        whole_request(&mut stream);
         stream
             .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}")
             .expect("reply");
@@ -357,8 +355,7 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
     );
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("first request");
-        let mut body = [0_u8; 1024];
-        let _read = stream.read(&mut body).expect("request bytes");
+        whole_request(&mut stream);
         stream
             .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
             .expect("response");
@@ -485,4 +482,16 @@ fn a_connection_idle_for_a_second_is_not_reused_and_nothing_is_sent_twice() {
     let seen = tally.each_ref().map(|count| count.load(Ordering::SeqCst));
     assert_eq!(seen, [2, 2, 0], "connections, requests read, dropped");
     assert_eq!(counts.snapshot().requests_sent, 2);
+}
+
+/// Read the whole `{}` request before replying. A socket closed with unread
+/// bytes resets the connection, and on Windows the reset can reach the client
+/// before the reply does.
+fn whole_request(stream: &mut TcpStream) {
+    let (mut chunk, mut whole) = ([0_u8; 1024], Vec::new());
+    while !whole.ends_with(b"\r\n\r\n{}") {
+        let read = stream.read(&mut chunk).expect("request bytes");
+        assert!(read > 0, "the whole request arrives");
+        whole.extend_from_slice(&chunk[..read]);
+    }
 }
