@@ -145,6 +145,26 @@ ARCHIVE.rust = (dir) => {
   fs.writeFileSync(path.join(dir, '.cargo/config.toml'), `[patch.crates-io]\nthinkthen = { path = ${JSON.stringify(path.join(repo, 'crates/thinkthen'))} }\n\n[net]\noffline = true\n`);
   fs.copyFileSync(path.join(repo, 'Cargo.lock'), path.join(dir, 'Cargo.lock'));
 };
+// The function pages show C and Rust as fragments with no main. The runner
+// puts each one inside main, as a reader would. C keeps its #include lines
+// on top. Rust builds with the Rust install page's Cargo.toml.
+const declaresMain = (code) => /^\s*(int|void|fn)\s+main\s*\(/m.test(code);
+const FRAGMENT = {
+  c(dir, rel) {
+    const file = path.join(dir, path.basename(rel));
+    const lines = fs.readFileSync(file, 'utf8').trimEnd().split('\n');
+    if (declaresMain(lines.join('\n'))) throw new Error('declares its own main, and a function page shows a fragment the runner wraps');
+    const cut = lines.findIndex((l) => l.trim() && !l.startsWith('#include'));
+    fs.writeFileSync(file, [...lines.slice(0, cut), 'int main(void) {', ...lines.slice(cut), 'return 0;', '}', ''].join('\n'));
+  },
+  rust(dir, rel) {
+    const file = path.join(dir, path.basename(rel));
+    const code = fs.readFileSync(file, 'utf8').trimEnd();
+    if (declaresMain(code)) throw new Error('declares its own main, and a function page shows a fragment the runner wraps');
+    fs.writeFileSync(file, `fn main() -> Result<(), Box<dyn std::error::Error>> {\n${code}\nOk(())\n}\n`);
+    fs.copyFileSync(path.join(examples, 'install/rust/files/Cargo.toml'), path.join(dir, 'Cargo.toml'));
+  },
+};
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
 
@@ -173,6 +193,7 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
         layout(dir);
         fs.copyFileSync(path.join(examples, rel), path.join(dir, path.basename(rel)));
+        if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, rel);
         const lines = buildLines(slug, path.basename(rel), true);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });

@@ -30,7 +30,9 @@ assert(facts && json_object_get_type(facts)
 struct json_object *wanted =
     json_tokener_parse_verbose(expected, &parse_error);
 assert(parse_error == json_tokener_success);
-assert(json_object_equal(value, wanted));
+struct json_object *unit;
+assert(json_object_object_get_ex(value, "unit", &unit));
+assert(json_object_equal(unit, wanted));
 if (wanted) json_object_put(wanted);
 json_object_put(result);
 thinkthen_free_string(deadline_call);
