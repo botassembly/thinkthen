@@ -164,6 +164,8 @@ Dark follows the system and is the default. The sun and moon button in the heade
 
 The tabs on the home page and the cross-view on every function page share one choice, kept in `localStorage` under `tt-lang`. Pick Ruby once and every code block on every page reads Ruby, falling back to Bash where a surface has no sample. Plain JavaScript, no framework on the client.
 
+A function page groups its tabs into the rows `TAB_GROUPS` in `src/data/catalog.mjs` names, such as "JVM and .NET" and "Databases". A language's tab appears when `examples/functions/<fn>/<surface>.<ext>` exists, so a new sample needs no page edit. A function that a surface cannot run names that surface in its `cannot` field, with one sentence the tab shows. A chosen language a page lacks falls back to its family, such as Java for Kotlin, and then to Bash.
+
 ## What is not here yet
 
 - A page for any serve mode.

@@ -866,6 +866,34 @@ export const TAB_SURFACE = {
   Ruby: 'ruby', R: 'r', Rust: 'rust', SQL: 'duckdb',
 };
 
+// A function page groups its language tabs, so a reader finds one of 24
+// quickly on a phone or a desktop. Every surface sits in one group. A tab
+// shows when its sample file exists, or when the function names it in
+// `cannot`.
+export const TAB_GROUPS = [
+  { name: 'Command line', slugs: ['shell'] },
+  { name: 'Python and data', slugs: ['python', 'pandas', 'polars', 'r'] },
+  { name: 'Web and scripting', slugs: ['typescript', 'ruby', 'php', 'dart'] },
+  { name: 'JVM and .NET', slugs: ['java', 'kotlin', 'scala', 'csharp'] },
+  { name: 'Systems', slugs: ['c', 'cpp', 'objective-c', 'rust', 'go', 'swift', 'zig', 'ada', 'cobol'] },
+  { name: 'Databases', slugs: ['duckdb', 'sqlite', 'postgresql'] },
+];
+
+for (const s of SURFACES) {
+  const homes = TAB_GROUPS.filter((g) => g.slugs.includes(s.slug));
+  if (homes.length !== 1) throw new Error(`catalog: the surface ${s.slug} sits in ${homes.length} tab groups`);
+}
+for (const g of TAB_GROUPS) {
+  for (const slug of g.slugs) {
+    if (!SURFACES.some((s) => s.slug === slug)) throw new Error(`catalog: the tab group ${g.name} names ${slug}, which is not a surface`);
+  }
+}
+for (const f of FUNCTIONS) {
+  for (const slug of Object.keys(f.cannot || {})) {
+    if (!SURFACES.some((s) => s.slug === slug)) throw new Error(`catalog: ${f.name} names ${slug} in cannot, which is not a surface`);
+  }
+}
+
 // Captions for the tutorial's own examples, keyed by script name.
 export const TUTORIAL_SEE = {
   '1-band': "\"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8. decide prints null and exits 3.",

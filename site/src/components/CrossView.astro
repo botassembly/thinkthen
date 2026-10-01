@@ -1,11 +1,12 @@
 ---
-// The same call on every surface, as tabs. Bash shows the function page's
-// first example. Every other surface shows its library sample, and a
-// database sample shows what the database printed. A surface with no sample
-// says so.
+// The same call on every surface, as tabs in the groups TAB_GROUPS names.
+// Bash shows the function page's first example. Every other surface shows
+// its library sample, and a database sample shows what the database
+// printed. A surface gets a tab when its sample file exists, or when the
+// function says in `cannot` why that surface cannot run it.
 import Terminal from './Terminal.astro';
 import Code from './Code.astro';
-import { SURFACES, FUNCTIONS } from '../data/catalog.mjs';
+import { SURFACES, FUNCTIONS, TAB_GROUPS } from '../data/catalog.mjs';
 import { captioned, sample } from '../data/samples.mjs';
 import { beatlesPageFor } from '../data/beatles.mjs';
 
@@ -16,27 +17,47 @@ const bench = beatlesPageFor(fn);
 const entry = FUNCTIONS.find((f) => f.name === fn);
 const shell = captioned(`functions/${fn}`, entry.see, true)[0] || null;
 
+// A page with no tab for the chosen language falls back to its family.
 const alias = (slug) => ({
-  shell: 'Bash', python: 'Python', polars: 'Python', typescript: 'TypeScript',
-  ruby: 'Ruby', r: 'R', rust: 'Rust', c: 'C',
+  shell: 'Bash', python: 'Python', polars: 'Python', pandas: 'Python',
+  typescript: 'TypeScript', ruby: 'Ruby', r: 'R', rust: 'Rust',
+  c: 'C', cpp: 'C', 'objective-c': 'C',
+  java: 'Java', kotlin: 'Java', scala: 'Java',
   duckdb: 'SQL', sqlite: 'SQL', postgresql: 'SQL',
 }[slug]);
 
 // A C or Rust sample is a fragment. Its note names the main around it.
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
 
-const tabs = SURFACES.map((s) => ({
+const tabOf = (s) => ({
   slug: s.slug,
   label: s.name,
   alias: alias(s.slug),
   surface: s,
   code: s.slug === 'shell' ? null : sample(fn, s.slug),
-}));
+  cannot: entry.cannot?.[s.slug] ?? null,
+});
+const groups = TAB_GROUPS
+  .map((g) => ({
+    name: g.name,
+    tabs: g.slugs
+      .map((slug) => tabOf(SURFACES.find((s) => s.slug === slug)))
+      .filter((t) => t.slug === 'shell' || t.code || t.cannot),
+  }))
+  .filter((g) => g.tabs.length > 0);
+const tabs = groups.flatMap((g) => g.tabs);
 ---
 <div class="tabbed" data-fallback="Bash">
-  <div class="tabs" role="tablist">
-    {tabs.map((t) => (
-      <button type="button" role="tab" data-lang={t.label} data-alias={t.alias} aria-selected={t.label === 'Bash'}>{t.label}</button>
+  <div class="tabs grouped">
+    {groups.map((g) => (
+      <div class="tab-group">
+        <span class="group-name">{g.name}</span>
+        <div class="group-tabs" role="tablist" aria-label={g.name}>
+          {g.tabs.map((t) => (
+            <button type="button" role="tab" data-lang={t.label} data-alias={t.alias} aria-selected={t.label === 'Bash'}>{t.label}</button>
+          ))}
+        </div>
+      </div>
     ))}
   </div>
   {tabs.map((t) => (
@@ -51,7 +72,7 @@ const tabs = SURFACES.map((s) => ({
       {t.code && <Code code={t.code.code} file={t.code.file} label={`Copy the ${t.surface.name} sample`} />}
       {t.code && t.surface.fragment && <p class="note">{parts(t.surface.fragment).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>}
       {t.code?.output && <Code code={t.code.output} lang="output" caption={`What ${t.surface.name} printed`} copy={false} />}
-      {t.slug !== 'shell' && !t.code && <p class="note">No {t.surface.name} sample for <code>{fn}</code>.</p>}
+      {!t.code && t.cannot && <p class="note">{t.cannot}</p>}
     </div>
   ))}
 </div>

@@ -161,7 +161,7 @@ const nav = [
 
   // One language for the whole visit. Every tabbed block follows it.
   function tabsIn(group) {
-    return Array.prototype.slice.call(group.querySelectorAll(':scope > .tabs > button'));
+    return Array.prototype.slice.call(group.querySelectorAll(':scope > .tabs button'));
   }
   // A group that has no tab for the chosen language falls back to the same
   // family: Polars answers for Python, DuckDB for SQL.
