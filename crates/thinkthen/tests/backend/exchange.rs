@@ -304,8 +304,10 @@ fn a_server_retry_floor_past_the_attempt_timeout_fails_at_once() {
         if code == 0 {
             assert!(took >= Duration::from_millis(1000), "{asked}: {took:?}");
         } else {
-            let message = String::from_utf8_lossy(&output.stderr);
-            assert!(message.contains("429"), "{message}");
+            assert_eq!(
+                String::from_utf8_lossy(&output.stderr),
+                "thinkthen: the backend answered with status 429: the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries\n"
+            );
             assert!(output.stdout.is_empty(), "{asked}");
             assert!(
                 took < Duration::from_millis(1000),
