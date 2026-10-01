@@ -30,6 +30,8 @@ npm run build
 12. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
 13. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
 
+The Backends pages read each built-in backend's name, address, key variables and model with `backend('name')` from `src/lib/backends-table.mjs`, which parses the "Named backends" table in `../specification/backends.md`. A name the table lacks fails the build, and `scripts/check-settings.mjs` fails when the built overview disagrees with the table. A live `thinkthen check` cannot replay, so `src/data/backend-checks.mjs` holds each live check a page states, with its date, build and record.
+
 A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
 `npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the code check, the settings check, the link check, the card check and the head check on the last build.
@@ -40,7 +42,7 @@ Read `WRITING.md` first. It holds the page rules, the code rules, and how an exa
 
 ## The menu
 
-Five entries: Install, Functions, How-tos, Learn, and Blog. Trust, Reference, and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
+Five entries: Install, Functions, How-tos, Learn, and Blog. The Backends pages under `/install/backends/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust, Reference, and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
 
 ## Where the examples come from
 

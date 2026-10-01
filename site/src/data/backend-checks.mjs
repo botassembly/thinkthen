@@ -1,7 +1,9 @@
 // The live `thinkthen check` runs the Backends pages state. A live check
 // cannot replay in the smoke run, so each page shows `check --plan` and
 // states the live result from here. Each entry is copied from a check's own
-// report, and `record` links where that report is kept.
+// report. `record` links where that report is kept in the repository. An
+// entry with no record was run for the Backends pages, and the build record of
+// the site ticket that ran it holds the report.
 
 import { REPO } from './repo.mjs';
 
@@ -18,7 +20,10 @@ export const CHECKS = {
       record: `${REPO}/blob/main/sdlc/planning/cleanup-2026-09-30.md`,
     },
   ],
-  ollama: [],
+  ollama: [
+    { model: 'nimble', date: '2026-09-30', commit: 'e8f2804fe', exit: 0, critical: 0, warning: 3 },
+    { model: 'tev1', date: '2026-09-30', commit: 'e8f2804fe', exit: 0, critical: 0, warning: 3 },
+  ],
 };
 
 // One sentence for each check of a backend, or one saying none is on record.

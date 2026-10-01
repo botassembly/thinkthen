@@ -587,6 +587,9 @@ export const BACKENDS_SEE = {
   },
   ollama: {
     '1-check-plan': 'The plan names the second port and nimble. The first line says descriptions travel as text.',
+    '2-one': 'The nimble model answers yes, as Jev does.',
+    '3-lines': 'One request carries all three lines. The nimble model gives the same three answers as Jev.',
+    '4-tev1': 'The smaller tev1 model also answers yes.',
   },
   'system-one': {
     '1-environment': 'THINKTHEN_BASE_URL names the server. The address came from the environment, and the key will come from THINKTHEN_API_KEY.',
