@@ -1,6 +1,6 @@
 # The library's timeout has no upper bound
 
-Status: open. Filed 2026-09-30 from the system grading (`sdlc/planning/grading-2026-09-30/11-settings.md`, item 3), checked against main `f367545a0`. Owner: queue owner.
+Status: Closed by the quick fix landed as `Land quick fix: pre-0.1 small fixes`. Filed 2026-09-30 from the system grading (`sdlc/planning/grading-2026-09-30/11-settings.md`, item 3), checked against main `f367545a0`. Owner: queue owner. Resolution: A loopback probe on Linux showed no panic, but a timeout of `u64::MAX / 2` seconds or more hung the call; 10^14 seconds still answered. So the Rust setter `timeout` in `crates/thinkthen/src/public/settings.rs` refuses a value past 86,400 seconds with the usage error `a timeout is at most 86400 seconds`. Every surface hands its timeout to that setter. `crates/thinkthen/tests/library/public_timeout.rs` pins the refusal for one nanosecond past the bound, `u64::MAX` seconds and `Duration::MAX`, and runs one loopback call with a 503 retry at 86,400 seconds. `specification/settings.md` and `specification/backends.md` state the bound and the sentence.
 Kind: bug
 Pay when: before 0.1, if a huge timeout panics. Otherwise close it with the pinning test.
 
