@@ -81,7 +81,7 @@ export function captioned(page, see, optional = false) {
 }
 
 const EXT = {
-  python: 'py', polars: 'py', typescript: 'ts', ruby: 'rb', r: 'R',
+  python: 'py', polars: 'py', pandas: 'py', typescript: 'ts', ruby: 'rb', r: 'R',
   rust: 'rs', c: 'c', duckdb: 'sql', sqlite: 'sql', postgresql: 'sql',
 };
 
@@ -91,6 +91,14 @@ export function firstCall(surface) {
   const code = text(`install/${surface}/first-call.${ext}`);
   if (code === undefined) throw new Error(`samples: examples/install/${surface}/first-call.${ext} is missing`);
   return { file: `first-call.${ext}`, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/first-call.${ext}.out`)?.replace(/\n+$/, '') ?? null };
+}
+
+// Another install sample on a surface's page, such as R's data frames.
+export function installSample(surface, name) {
+  const ext = EXT[surface];
+  const code = text(`install/${surface}/${name}.${ext}`);
+  if (code === undefined) throw new Error(`samples: examples/install/${surface}/${name}.${ext} is missing`);
+  return { file: `${name}.${ext}`, code: code.replace(/\n+$/, '') };
 }
 
 // The library sample for a function on a surface, with the output a

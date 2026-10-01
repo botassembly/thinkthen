@@ -392,6 +392,7 @@ export const SURFACES = [
     lang: 'bash', tab: 'Bash',
     blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
     unsureWord: 'null, and exit code 3',
+    facts: '`--facts` prints one line of run facts on standard error, after the answers.',
     install: [
       ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
       ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
@@ -408,6 +409,9 @@ export const SURFACES = [
     lang: 'python', tab: 'Python',
     blurb: 'Pass a string or a list. Read the answer from `Call.value`; `None` means not sure.',
     unsureWord: 'None',
+    facts: '`Call.facts` counts this call.',
+    errors: 'Every failure raises a `ThinkThenError`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `Cancelled`.',
+    settings: '`tt.Engine` takes each setting as a keyword and reads the environment for the rest. `record=` saves every answer to a folder. `replay=` answers from that folder with no connection.',
     install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
     particular: [
       'A list goes in and `Call.value` holds the answered list. The list crosses into the engine once.',
@@ -419,6 +423,9 @@ export const SURFACES = [
     lang: 'python', tab: 'Python',
     blurb: 'A Polars frame goes in. Read the frame with its new columns from `Call.value`.',
     unsureWord: 'None',
+    facts: '`Call.facts` counts this frame call outside its columns.',
+    errors: 'Every failure raises a `ThinkThenError`, as in Python. A failed row in a column call ends the call with `BackendError`.',
+    settings: '`tt.Engine` takes each setting as a keyword, as in Python. `record=` saves every answer to a folder. `replay=` answers from that folder with no connection.',
     install: [['pip install thinkthen[polars]', null]],
     particular: [
       '`decide`, `choose`, `score`, and `tag` send a whole column to the engine in one call.',
@@ -426,10 +433,28 @@ export const SURFACES = [
     ],
   },
   {
+    slug: 'pandas', name: 'pandas', deckHeading: null,
+    lang: 'python', tab: 'Python',
+    blurb: 'A pandas Series goes in, and a Series with the same index comes back in `Call.value`.',
+    unsureWord: 'pd.NA',
+    facts: '`Call.facts` counts this call outside the Series.',
+    errors: 'Every failure raises a `ThinkThenError`, as in Python. Its subclass names the kind.',
+    settings: '`tt.Engine` takes each setting as a keyword, as in Python. `record=` saves every answer to a folder. `replay=` answers from that folder with no connection.',
+    install: [['pip install thinkthen pandas', null]],
+    particular: [
+      '`decide`, `choose`, `score` and `tag` take a Series and keep its index and name.',
+      '`decide` gives a `boolean` Series, `score` gives `Float64`, `choose` gives `string`, and `tag` gives one list of labels per row.',
+      '`annotate` takes a DataFrame with `on=` and adds one column per question.',
+    ],
+  },
+  {
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
     lang: 'ts', tab: 'TypeScript',
     blurb: 'Pass one options object. Await the call, then read its `.value`.',
     unsureWord: 'null',
+    facts: '`Call.facts` counts this call.',
+    errors: 'A failure rejects with a `ThinkThenError`. Its `kind` is `usage`, `backend`, `local`, `deadline`, `cancelled` or `defect`.',
+    settings: '`new Engine({...})` starts from the environment, and each key overrides one setting. `record` saves every answer to a folder. `replay` answers from that folder with no connection.',
     install: [['npm install thinkthen', null], ['pnpm add thinkthen', null], ['bun add thinkthen', null]],
     particular: [
       'An AbortSignal cancels the call, and the promise rejects at once.',
@@ -441,6 +466,9 @@ export const SURFACES = [
     lang: 'ruby', tab: 'Ruby',
     blurb: 'Any Enumerable goes in. Read the answer from `Call#value`.',
     unsureWord: 'nil',
+    facts: '`Call#facts` counts this call.',
+    errors: 'Every failure raises a `ThinkThen::Error`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `CancelledError`.',
+    settings: '`Engine.new` takes each setting as a keyword and reads the environment for the rest. `record:` saves every answer to a folder. `replay:` answers from that folder with no connection.',
     install: [['gem install thinkthen', null]],
     particular: ['Any Enumerable crosses to the engine once.'],
   },
@@ -449,17 +477,23 @@ export const SURFACES = [
     lang: 'r', tab: 'R',
     blurb: 'Ten asking verbs work inside dplyr. Read the answer from `$value`.',
     unsureWord: 'NA',
+    facts: '`$facts` counts this call.',
+    errors: 'Each failure arrives as an R condition named for its kind, such as `thinkthen_usage`. Each condition carries `retryable`.',
+    settings: '`tt_engine()` takes each setting as an argument and reads the environment for the rest. `record =` saves every answer to a folder. `replay =` answers from that folder with no connection.',
     install: [['install.packages("thinkthen")', null]],
     particular: [
       'A column goes in and the answered column is in `$value`.',
-      'dplyr\'s `filter()` drops NA rows. A not-sure answer leaves the pipeline on its own.',
     ],
+    frames: 'A verb inside `mutate()` answers a whole column in one call. dplyr\'s `filter()` drops NA rows, so a not-sure answer leaves the pipeline on its own.',
   },
   {
     slug: 'rust', name: 'Rust', deckHeading: 'Rust',
     lang: 'rust', tab: 'Rust',
     blurb: 'Call the engine directly. The compiler makes you handle not sure.',
     unsureWord: 'Answer::Unsure',
+    facts: '`Call::facts()` counts this call.',
+    errors: 'Every call returns a `Result`. Its `Error` names one of six kinds. A started call that fails keeps its facts in `Error::facts()`.',
+    settings: '`EngineBuilder` sets each setting. `record` saves every answer to a folder. `replay` answers from that folder and sends nothing, even on a miss.',
     install: [['cargo add thinkthen', null]],
     particular: [
       'Calls block. No async runtime comes with it.',
@@ -470,6 +504,9 @@ export const SURFACES = [
     lang: 'c', tab: 'Rust',
     blurb: 'One header over a shared or a static library. Bind ThinkThen to any language that can call C.',
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
+    facts: 'A JSON call returns `{"value":...,"facts":...}`.',
+    errors: 'A failed call returns NULL, or a code from `THINKTHEN_EUSAGE` to `THINKTHEN_EDEFECT`. `thinkthen_error_message` reads the message on the same thread.',
+    settings: '`thinkthen_engine_new_with` takes the settings as JSON. `"record"` saves every answer to a folder. `"replay"` answers from that folder with no connection. The key stays in `THINKTHEN_API_KEY`.',
     install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
     particular: [
       'The JSON examples parse the `value` and `facts` members with json-c. Install its development headers and link with `pkg-config --cflags --libs json-c` beside libthinkthen.',
@@ -481,6 +518,9 @@ export const SURFACES = [
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
     unsureWord: 'NULL',
+    facts: '`thinkthen_usage()` gives the totals for the process.',
+    errors: 'A failure is an error whose text starts `thinkthen <kind>: `. It never reads as `NULL`.',
+    settings: '`SET thinkthen_record` saves every answer to a folder. `SET thinkthen_replay` answers from that folder with no connection.',
     install: [['duckdb -unsigned', 'DuckDB loads the extension unsigned. The query loads the extension file first.']],
     particular: ['A whole column chunk crosses at once.'],
   },
@@ -489,6 +529,9 @@ export const SURFACES = [
     lang: 'sql', tab: 'SQL',
     blurb: 'Judge a whole table in one call, then join the answers back by key.',
     unsureWord: 'NULL',
+    facts: '`thinkthen_usage()` gives the totals for the process.',
+    errors: 'A failure is an error that reads `thinkthen <kind>: <message> (retryable: yes|no)`.',
+    settings: '`thinkthen_configure` takes the settings as JSON. `"record"` saves every answer to a folder. `"replay"` answers from that folder with no connection.',
     install: [['.load ./thinkthen', null]],
     particular: [
       'Its functions are direct-only. A view or trigger in an untrusted schema cannot call them to spend requests or read files.',
@@ -499,6 +542,9 @@ export const SURFACES = [
     lang: 'sql', tab: 'SQL',
     blurb: 'One extension. Ask questions in any query.',
     unsureWord: 'NULL',
+    facts: '`thinkthen_usage()` gives the totals for the process.',
+    errors: 'A failed call raises its named error. `thinkthen_try_details` returns a failure as `jsonb` instead.',
+    settings: '`SET thinkthen.record` saves every answer to a folder. `SET thinkthen.replay` answers from that folder with no connection.',
     install: [['CREATE EXTENSION thinkthen;', null]],
     particular: [
       'A question file carries a band. The not-sure rows come back NULL, and a person reads them.',
@@ -538,6 +584,9 @@ export const COUNTS = {
 
 for (const s of SURFACES) {
   if (s.slug !== 'shell' && !BINDINGS.some((b) => b.slug === s.slug)) throw new Error(`catalog: the surface ${s.slug} is not in BINDINGS`);
+  for (const field of s.slug === 'shell' ? ['facts'] : ['facts', 'errors', 'settings']) {
+    if (!s[field]) throw new Error(`catalog: the surface ${s.slug} has no ${field}`);
+  }
 }
 
 // The tabs on the home page sample, and on every code block that has variants.
