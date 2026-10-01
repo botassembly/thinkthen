@@ -4,5 +4,6 @@ true
   "records": 1,
   "requests_sent": 0,
   "retries": 0,
+  "cache_answers": 0,
   "model": "jev-1.13.0"
 }
