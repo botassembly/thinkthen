@@ -47,7 +47,7 @@ Work outside the lanes:
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |
 | `closed/2026-09-30-duckdb-check-fails-four-tests-on-macos.md` | no | closed | closed by the DuckDB macOS fork quick fix |
 | `closed/2026-10-01-macos-forked-children-crash-on-a-channel-wait.md` | no | closed | closed by ticket 0365 |
-| `2026-10-01-macos-tls-roots-fork-probe-fails.md` | no | batch | a lane with the M5 |
+| `closed/2026-10-01-macos-tls-roots-fork-probe-fails.md` | no | closed | closed by ticket 0371 |
 | `2026-09-30-check-ignores-the-estimated-token-cap.md` | yes | batch | C3 |
 | `2026-09-30-blank-max-request-bytes-exits-2.md` | no | batch | C3 |
 | `2026-09-30-transforms-score-the-band-low-edge-as-no.md` | no | batch | C3 |
