@@ -765,6 +765,7 @@ export const BACKEND_PAGES = [
   { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
   { slug: 'system-one', title: 'Any System One server', label: 'Any System One server', group: 'Your own' },
   { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
+  { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Announced' },
 ].map((p) => ({ ...p, route: `/install/backends/${p.slug ? `${p.slug}/` : ''}` }));
 
 export const BACKENDS_SEE = {

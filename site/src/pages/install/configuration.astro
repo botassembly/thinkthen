@@ -81,7 +81,7 @@ const ENV = [
   <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and cache answers. It holds no request, no reply, no address, no model, no price and no key. <code>--no-cache</code> never turns it off. It counts what this machine saw, and the backend's bill is the real cost.</p>
 
   <h2 id="status">See it all</h2>
-  <p><code>thinkthen status</code> prints the resolved configuration path, backend, address, model and key variable, and where each value came from. It also prints whether a key is set, the cache path and size, the usage path, and the usage this month and in all. It opens no connection. <code>status --json</code> prints the same facts as one object.</p>
+  <p><code>thinkthen status</code> prints the resolved configuration path, backend, address, model and key variable, and where each value came from. It also prints whether a key is set, the cache path and size, the usage path, and the usage this month and in all. It opens no connection. <code>status --json</code> prints the same facts as one <code>thinkthen.status/2</code> object. Its <code>backend</code> object holds <code>name</code>, which is null when no backend is named, and <code>key_variable</code>, the first variable the key would come from.</p>
 
   <p class="pagelinks"><a href="/install/settings/">Every setting and its default</a> · <a href="/install/backends/">Backends</a> · <a href="/reference/">Reference</a></p>
 </Base>

@@ -17,3 +17,7 @@ const rows = [
 <table class="backend-facts">
   {rows.map(([label, html]) => <tr><th>{label}</th><td set:html={html} /></tr>)}
 </table>
+<style>
+  /* A long address wraps inside its cell, so a phone does not scroll sideways. */
+  .backend-facts :global(code) { overflow-wrap: anywhere; }
+</style>
