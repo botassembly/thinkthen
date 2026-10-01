@@ -6,6 +6,7 @@
 # bindings-proof.json in every build, and fails when a sample under
 # examples/ has no line here.
 functions/annotate/c.c
+functions/annotate/dart.dart
 functions/annotate/duckdb.sql
 functions/annotate/php.php
 functions/annotate/postgresql.sql
@@ -15,6 +16,7 @@ functions/annotate/rust.rs
 functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/c.c
+functions/choose/dart.dart
 functions/choose/php.php
 functions/choose/postgresql.sql
 functions/choose/python.py
@@ -22,6 +24,7 @@ functions/choose/ruby.rb
 functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/c.c
+functions/decide/dart.dart
 functions/decide/php.php
 functions/decide/polars.py
 functions/decide/r.R
@@ -30,6 +33,7 @@ functions/decide/rust.rs
 functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/c.c
+functions/filter/dart.dart
 functions/filter/php.php
 functions/filter/postgresql.sql
 functions/filter/python.py
@@ -38,6 +42,7 @@ functions/filter/ruby.rb
 functions/filter/rust.rs
 functions/filter/sqlite.sql
 functions/find/c.c
+functions/find/dart.dart
 functions/find/php.php
 functions/find/postgresql.sql
 functions/find/python.py
@@ -53,6 +58,7 @@ functions/question-file/rust.rs
 functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/c.c
+functions/rank/dart.dart
 functions/rank/duckdb.sql
 functions/rank/php.php
 functions/rank/postgresql.sql
@@ -61,6 +67,7 @@ functions/rank/ruby.rb
 functions/rank/rust.rs
 functions/rank/typescript.ts
 functions/recognize/c.c
+functions/recognize/dart.dart
 functions/recognize/duckdb.sql
 functions/recognize/php.php
 functions/recognize/postgresql.sql
@@ -71,6 +78,7 @@ functions/recognize/rust.rs
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/c.c
+functions/relate/dart.dart
 functions/relate/duckdb.sql
 functions/relate/php.php
 functions/relate/postgresql.sql
@@ -80,6 +88,7 @@ functions/relate/ruby.rb
 functions/relate/rust.rs
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
+functions/score/dart.dart
 functions/score/duckdb.sql
 functions/score/php.php
 functions/score/polars.py
@@ -90,6 +99,7 @@ functions/score/ruby.rb
 functions/score/rust.rs
 functions/score/sqlite.sql
 functions/tag/c.c
+functions/tag/dart.dart
 functions/tag/duckdb.sql
 functions/tag/php.php
 functions/tag/postgresql.sql
