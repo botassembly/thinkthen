@@ -14,6 +14,7 @@ functions/annotate/r.R
 functions/annotate/ruby.rb
 functions/annotate/rust.rs
 functions/annotate/sqlite.sql
+functions/annotate/swift.swift
 functions/annotate/typescript.ts
 functions/choose/c.c
 functions/choose/cpp.cpp
@@ -22,6 +23,7 @@ functions/choose/postgresql.sql
 functions/choose/python.py
 functions/choose/ruby.rb
 functions/choose/sqlite.sql
+functions/choose/swift.swift
 functions/choose/typescript.ts
 functions/decide/c.c
 functions/decide/cpp.cpp
@@ -31,6 +33,7 @@ functions/decide/r.R
 functions/decide/ruby.rb
 functions/decide/rust.rs
 functions/decide/sqlite.sql
+functions/decide/swift.swift
 functions/decide/typescript.ts
 functions/filter/c.c
 functions/filter/cpp.cpp
@@ -41,6 +44,7 @@ functions/filter/r.R
 functions/filter/ruby.rb
 functions/filter/rust.rs
 functions/filter/sqlite.sql
+functions/filter/swift.swift
 functions/find/c.c
 functions/find/cpp.cpp
 functions/find/go.go
@@ -49,6 +53,7 @@ functions/find/python.py
 functions/find/r.R
 functions/find/rust.rs
 functions/find/sqlite.sql
+functions/find/swift.swift
 functions/find/typescript.ts
 functions/question-file/duckdb.sql
 functions/question-file/polars.py
@@ -65,6 +70,7 @@ functions/rank/postgresql.sql
 functions/rank/python.py
 functions/rank/ruby.rb
 functions/rank/rust.rs
+functions/rank/swift.swift
 functions/rank/typescript.ts
 functions/recognize/c.c
 functions/recognize/cpp.cpp
@@ -76,6 +82,7 @@ functions/recognize/r.R
 functions/recognize/ruby.rb
 functions/recognize/rust.rs
 functions/recognize/sqlite.sql
+functions/recognize/swift.swift
 functions/recognize/typescript.ts
 functions/relate/c.c
 functions/relate/cpp.cpp
@@ -87,6 +94,7 @@ functions/relate/r.R
 functions/relate/ruby.rb
 functions/relate/rust.rs
 functions/relate/sqlite.sql
+functions/relate/swift.swift
 functions/relate/typescript.ts
 functions/score/cpp.cpp
 functions/score/duckdb.sql
@@ -98,6 +106,7 @@ functions/score/r.R
 functions/score/ruby.rb
 functions/score/rust.rs
 functions/score/sqlite.sql
+functions/score/swift.swift
 functions/tag/c.c
 functions/tag/cpp.cpp
 functions/tag/duckdb.sql
@@ -106,6 +115,7 @@ functions/tag/postgresql.sql
 functions/tag/python.py
 functions/tag/r.R
 functions/tag/rust.rs
+functions/tag/swift.swift
 functions/tag/typescript.ts
 install/ada/backends.adb backend=liquid
 install/ada/backends.adb backend=ollama
