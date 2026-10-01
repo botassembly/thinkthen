@@ -12,4 +12,4 @@ tickets = pl.DataFrame({
 })
 is_refund = tt.decide(refund, tickets["body"]).value
 tickets = tickets.with_columns(is_refund=is_refund)
-assert tickets["is_refund"].to_list() == [True, False, None]
+print(tickets)

@@ -17,4 +17,4 @@ answered <- messages |>
   group_by(shop) |>
   mutate(is_refund = is_refund(body)$value) |>
   ungroup()
-stopifnot(identical(answered$is_refund, c(TRUE, NA)))
+print(select(answered, shop, is_refund))

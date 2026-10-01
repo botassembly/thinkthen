@@ -7,8 +7,8 @@
 //     it as <sample>.out.
 //   - No example asks for --details, except on the annotate edge-case page
 //     under examples/reference/annotate/ (checklist ruling of 2026-09-30).
-//   - Each function page opens with one command example of 10 to 25
-//     lines, script and output together (Ian, 2026-09-28).
+//   - Each function page opens with one plain command example of 3 to 25
+//     lines, script and output together (Ian, 2026-09-28 and 2026-10-01).
 //   - Code carries no comments.
 //   - Every page and article starts with its goal: a `// Goal:` line in
 //     an Astro page, and a `goal:` field or a `<!-- Goal: -->` comment in
@@ -37,7 +37,7 @@ const DETAILS_PAGE = 'reference/annotate/';
 
 const WIDTH = 60;
 // The lines a function page's example may show, script and output together.
-const EXAMPLE_LINES = { min: 10, max: 25 };
+const EXAMPLE_LINES = { min: 3, max: 25 };
 
 // Each exempt entry names a kind of line that cannot break, and says why.
 const EXEMPT = [

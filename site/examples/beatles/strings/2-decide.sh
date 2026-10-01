@@ -8,7 +8,6 @@ Hey Jude
 Penny Lane
 EOF
 thinkthen decide "$question" \
-  --batch 1 \
   --lines \
   --threshold 0.5 \
   --replay recording

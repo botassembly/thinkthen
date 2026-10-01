@@ -1,0 +1,4 @@
+   steps     area  impact
+0   True   export    1.04
+1   True    login    1.98
+2  False  billing    0.09

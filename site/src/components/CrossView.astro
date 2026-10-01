@@ -1,9 +1,10 @@
 ---
-// The same call on every surface, as tabs in the groups TAB_GROUPS names.
-// Bash shows the function page's first example. Every other surface shows
-// its library sample, and a database sample shows what the database
-// printed. A surface gets a tab when its sample file exists, or when the
-// function says in `cannot` why that surface cannot run it.
+// The same plain call on every surface, as one strip of tabs in the groups
+// TAB_GROUPS names, Bash first. Every function page and the home page show
+// the same tabs in the same order. Bash shows the function page's first
+// example with its output and exit code. Every other surface shows its
+// library sample, with what it printed when it prints. A surface with no
+// sample shows the function's `cannot` sentence, or says it has none.
 import Terminal from './Terminal.astro';
 import Code from './Code.astro';
 import InstallLine from './InstallLine.astro';
@@ -11,10 +12,9 @@ import { SURFACES, FUNCTIONS, TAB_GROUPS } from '../data/catalog.mjs';
 import { captioned, sample } from '../data/samples.mjs';
 import { beatlesPageFor } from '../data/beatles.mjs';
 
-// `above` says the page already shows the Bash example, so the Bash tab
-// points up to it and does not repeat it. `install` puts each surface's
-// install line under its sample, as the home page does.
-const { fn, above = false, install = false } = Astro.props;
+// `install` puts each surface's install line under its sample, as the home
+// page does.
+const { fn, install = false } = Astro.props;
 const bench = beatlesPageFor(fn);
 const entry = FUNCTIONS.find((f) => f.name === fn);
 const shell = captioned(`functions/${fn}`, entry.see, true)[0] || null;
@@ -39,14 +39,10 @@ const tabOf = (s) => ({
   code: s.slug === 'shell' ? null : sample(fn, s.slug),
   cannot: entry.cannot?.[s.slug] ?? null,
 });
-const groups = TAB_GROUPS
-  .map((g) => ({
-    name: g.name,
-    tabs: g.slugs
-      .map((slug) => tabOf(SURFACES.find((s) => s.slug === slug)))
-      .filter((t) => t.slug === 'shell' || t.code || t.cannot),
-  }))
-  .filter((g) => g.tabs.length > 0);
+const groups = TAB_GROUPS.map((g) => ({
+  name: g.name,
+  tabs: g.slugs.map((slug) => tabOf(SURFACES.find((s) => s.slug === slug))),
+}));
 const tabs = groups.flatMap((g) => g.tabs);
 ---
 <div class="tabbed" data-fallback="Bash">
@@ -64,8 +60,7 @@ const tabs = groups.flatMap((g) => g.tabs);
   </div>
   {tabs.map((t) => (
     <div class="cell" data-lang={t.label} hidden={t.label !== 'Bash'}>
-      {t.slug === 'shell' && shell && above && <p class="note">The Bash example opens this page.</p>}
-      {t.slug === 'shell' && shell && !above && <Terminal run={shell} caption={install ? shell.see : null} />}
+      {t.slug === 'shell' && shell && <Terminal run={shell} caption={shell.see} />}
       {t.slug === 'shell' && !shell && (
         <p class="note">{bench
           ? <>See <code>{fn}</code> run on <a href={bench.route}>Beatles Bench</a>.</>
@@ -74,7 +69,7 @@ const tabs = groups.flatMap((g) => g.tabs);
       {t.code && <Code code={t.code.code} file={t.code.file} label={`Copy the ${t.surface.name} sample`} />}
       {t.code && t.surface.fragment && <p class="note">{parts(t.surface.fragment).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>}
       {t.code?.output && <Code code={t.code.output} lang="output" caption={`What ${t.surface.name} printed`} copy={false} />}
-      {!t.code && t.cannot && <p class="note">{t.cannot}</p>}
+      {t.slug !== 'shell' && !t.code && <p class="note">{t.cannot ?? <>No {t.surface.name} sample for <code>{fn}</code>.</>}</p>}
       {install && t.slug === 'shell' && <InstallLine line={t.surface.install[0][0]} caption="Install the command" />}
       {install && t.slug === 'shell' && <InstallLine line={t.surface.install[1][0]} caption="Or with Homebrew, an option on a Mac" />}
       {install && t.slug !== 'shell' && <InstallLine line={t.surface.install[0][0]} caption={`Install it for ${t.surface.name}`} />}

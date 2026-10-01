@@ -92,6 +92,7 @@ export const FUNCTIONS = [
     unsure: 'On one piece of evidence, a probability inside the band prints null and exits 3. In a stream, that record prints null and the run exits 0.',
     howtos: ['screen-studies-for-a-review', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
     see: {
+      '0-refund': "The customer asks for money back. decide prints true and exits 0.",
       '1-lines': "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8 as null.",
       '2-case': "The send-back line lands in the band. decide exits 3, and the case sends it to a person. The script then exits 0.",
       '3-one': "The ticket asks for a refund. decide prints true and exits 0.",
@@ -120,6 +121,7 @@ export const FUNCTIONS = [
     unsure: 'On one piece of evidence, a pick under the threshold or an exact tie at the top prints null and exits 3. In a stream, the run exits 0. choose never exits 1.',
     howtos: ['rank-the-inbound-leads', 'split-a-scanned-packet-into-documents'],
     see: {
+      '0-one': 'A parcel sent to the wrong address belongs to shipping. choose prints "shipping" and exits 0.',
       '1-lines': "Each of the first three messages names one team: billing, shipping, and account. The fourth names a parcel and a login. No team reaches 0.9, and it comes back null.",
     },
   },

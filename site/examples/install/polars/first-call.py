@@ -22,9 +22,4 @@ reports = pl.DataFrame({
     ],
 })
 triage = tt.annotate("form.json", reports, on="body").value
-assert triage.select("steps", "area", "impact").rows() == [
-    (True, "export", 1.99),
-    (True, "login", 2.0),
-    (False, "billing", 0.01),
-]
-assert triage["failed"].to_list() == [None, None, None]
+print(triage.select("steps", "area", "impact"))

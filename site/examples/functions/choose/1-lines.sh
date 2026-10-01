@@ -12,7 +12,6 @@ I cannot reset my password.
 My parcel never came, and now I cannot log in to track it.
 EOF
 thinkthen choose "$question" "${teams[@]}" \
-  --batch 1 \
   --lines \
   --threshold 0.9 |
 jq -r .value

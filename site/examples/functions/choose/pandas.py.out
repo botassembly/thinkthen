@@ -1,0 +1,5 @@
+0     billing
+1    shipping
+2     account
+3        <NA>
+Name: owner, dtype: string

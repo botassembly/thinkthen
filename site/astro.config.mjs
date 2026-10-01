@@ -27,6 +27,9 @@ export default defineConfig({
     // The talk cut its what-jev-knows slide. The strings page compares Jev with search.
     '/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
     '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
+    // Each function's options and more examples moved onto its own page.
+    ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file']
+      .map((slug) => [`/reference/functions/${slug}`, `/functions/${slug}/#reference`])),
   },
   // Articles place examples with <!-- example: --> and <!-- file: -->.
   // src/lib/code.mjs draws them. scripts/check-code.mjs refuses a raw fence.

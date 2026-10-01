@@ -6,7 +6,6 @@ Thanks for the quick help yesterday!
 I want to send this back.
 EOF
 thinkthen decide "$question" \
-  --batch 1 \
   --lines \
   --threshold 0.5 |
 jq .value

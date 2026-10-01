@@ -3,7 +3,6 @@ question="$is_a_song It is a love song."
 
 printf '%s\n' "Yesterday" |
 thinkthen decide "$question" \
-  --batch 1 \
   --lines \
   --threshold 0.6 \
   --replay recording

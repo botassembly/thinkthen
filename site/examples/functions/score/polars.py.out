@@ -1,0 +1,10 @@
+shape: (3, 2)
+┌─────────────────────────────────┬─────────┐
+│ body                            ┆ urgency │
+│ ---                             ┆ ---     │
+│ str                             ┆ f64     │
+╞═════════════════════════════════╪═════════╡
+│ Please update my mailing addre… ┆ 0.06    │
+│ Can you send the signed contra… ┆ 0.99    │
+│ Nobody can log in to the site … ┆ 2.0     │
+└─────────────────────────────────┴─────────┘

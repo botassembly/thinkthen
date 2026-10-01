@@ -63,6 +63,68 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/annotate/pandas.py": {
+    "page": "/functions/annotate/",
+    "sample": "d0c5ed6b1ea811f55e9c9219f43f47f7028f59c8e1c7cf13916b0804428ad9a4",
+    "output": "fda0ba2878760ae9bc2d386dfdd767dde6fdecb9239c9adba068740be644057e",
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0b985aca11a89fe1dac9019fa49f7631459d3c68909eb6a1b91f03c2937a2b08": "58de5770c2c0e88510f0179f3689b947f81aae02b4c03a24249d59990c454a6a",
+      "189f8c82554ee18cdfb8c17de61c0000b9b0b9b7bce083d324e9d943ced8c6bd": "03b6eee6546d84f52937508c940982c5b48b503b75795f98528daabfd00ffce0",
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "78f152c9b671cdae3c24c5d2440a30ddd0f618c18a7d25be5be141a6c5e86c6f": "1b382fb273429c60171090ce73a0da600533e6842a007add1824f180f70af778",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c",
+      "a1d20de813f1f6027d2b4a7a5af0fab2f0e479cc2da83748cfa09d763754666f": "bc0eee02454bf6efee147a584092957e47c88deb326f0e5843dfb92656eed276",
+      "e9d30fab7c97f4dab04e473e2a3b93768eff02380b9a20d3291aeec60c7ade40": "6312d38cdfe3557a0060e0cd2fb4433a8d71e4a4dfecb7e0644e9d1dfeee3b25",
+      "ebb41638155be5709ca9cbe72ea57f53daaf75abc91d610c93e6bd55db97b0fa": "d156d1470d3cf007eb49b98bd42f3885b27389ff0a9536daf42b4d557339592e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/annotate/polars.py": {
+    "page": "/functions/annotate/",
+    "sample": "96a01606f35d662fee14cab2b15d673167136c85111dd8de6a40b4dc8361d3c2",
+    "output": "7ca2a1c64bc521c755f642c61fe496f662ebe23a85244ae5bd923db080226856",
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0b985aca11a89fe1dac9019fa49f7631459d3c68909eb6a1b91f03c2937a2b08": "58de5770c2c0e88510f0179f3689b947f81aae02b4c03a24249d59990c454a6a",
+      "189f8c82554ee18cdfb8c17de61c0000b9b0b9b7bce083d324e9d943ced8c6bd": "03b6eee6546d84f52937508c940982c5b48b503b75795f98528daabfd00ffce0",
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "78f152c9b671cdae3c24c5d2440a30ddd0f618c18a7d25be5be141a6c5e86c6f": "1b382fb273429c60171090ce73a0da600533e6842a007add1824f180f70af778",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c",
+      "a1d20de813f1f6027d2b4a7a5af0fab2f0e479cc2da83748cfa09d763754666f": "bc0eee02454bf6efee147a584092957e47c88deb326f0e5843dfb92656eed276",
+      "e9d30fab7c97f4dab04e473e2a3b93768eff02380b9a20d3291aeec60c7ade40": "6312d38cdfe3557a0060e0cd2fb4433a8d71e4a4dfecb7e0644e9d1dfeee3b25",
+      "ebb41638155be5709ca9cbe72ea57f53daaf75abc91d610c93e6bd55db97b0fa": "d156d1470d3cf007eb49b98bd42f3885b27389ff0a9536daf42b4d557339592e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/annotate/postgresql.sql": {
     "page": "/functions/annotate/",
     "sample": "3ad1cb149952fb6f5567df79b6b9966fc31bcb7fc8ca35cc4afff2d04b57349f",
@@ -94,10 +156,41 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/annotate/python.py": {
+    "page": "/functions/annotate/",
+    "sample": "6a560d7ca72aa0b1745cd629a2141779311c05e64f0903bbfdd06a5931e5cbda",
+    "output": null,
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0b985aca11a89fe1dac9019fa49f7631459d3c68909eb6a1b91f03c2937a2b08": "58de5770c2c0e88510f0179f3689b947f81aae02b4c03a24249d59990c454a6a",
+      "189f8c82554ee18cdfb8c17de61c0000b9b0b9b7bce083d324e9d943ced8c6bd": "03b6eee6546d84f52937508c940982c5b48b503b75795f98528daabfd00ffce0",
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "78f152c9b671cdae3c24c5d2440a30ddd0f618c18a7d25be5be141a6c5e86c6f": "1b382fb273429c60171090ce73a0da600533e6842a007add1824f180f70af778",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c",
+      "a1d20de813f1f6027d2b4a7a5af0fab2f0e479cc2da83748cfa09d763754666f": "bc0eee02454bf6efee147a584092957e47c88deb326f0e5843dfb92656eed276",
+      "e9d30fab7c97f4dab04e473e2a3b93768eff02380b9a20d3291aeec60c7ade40": "6312d38cdfe3557a0060e0cd2fb4433a8d71e4a4dfecb7e0644e9d1dfeee3b25",
+      "ebb41638155be5709ca9cbe72ea57f53daaf75abc91d610c93e6bd55db97b0fa": "d156d1470d3cf007eb49b98bd42f3885b27389ff0a9536daf42b4d557339592e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/annotate/r.R": {
     "page": "/functions/annotate/",
-    "sample": "7712d10cbf4d82bdd909bca7948682fd9cad867f909e557babc005416f4145f5",
-    "output": null,
+    "sample": "5ba41827770ab357120c97cbb2d4a67fe42ab914534358628f9c721b943a3aee",
+    "output": "641f8a9b98c0df7ecfeb4e752654a1bb9979b18c76d205250125140a8007442b",
     "files": {
       "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
     },
@@ -118,7 +211,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -148,7 +241,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -157,8 +250,8 @@
   },
   "functions/annotate/rust.rs": {
     "page": "/functions/annotate/",
-    "sample": "b6684ec2659c5470c9b159d9b5d57cdb7c5ef7e9c2279717dcdb141003f27d9b",
-    "output": null,
+    "sample": "1e96eb0bc87627c7d159e75a50943d6bf0ac99f0f1e33c1b44b260202fd6d09d",
+    "output": "a7ecffe2449ebe4004f8131c456d0143ace7f81e804b9808c7db5edc6562434f",
     "files": {
       "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
     },
@@ -238,7 +331,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -267,6 +360,54 @@
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
       "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/pandas.py": {
+    "page": "/functions/choose/",
+    "sample": "2ee1893f8bb2c9f0624eb73104b1bd69ca0207f0668ec7cd8f9b5e8921d0d7e3",
+    "output": "d738a1ba0cae1efe1b2696f9c60964ca122fe103c663f809d4a1d2221add5ebb",
+    "files": {},
+    "answers": {
+      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
+      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/polars.py": {
+    "page": "/functions/choose/",
+    "sample": "8e2099ca9096bb93fc6ea8da87a785a4a1a5f250d066741112867f31a54e4df9",
+    "output": "5c5e24b2147b9031c63313744bb2f25fd9e13d09b0b309b51ab41958c5564de9",
+    "files": {},
+    "answers": {
+      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
+      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -310,11 +451,35 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
       "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/r.R": {
+    "page": "/functions/choose/",
+    "sample": "71ed5c9819579318980323d853550cc3d3054f4e2b9dffd3359b1b301174bb3d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
+      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/r",
+        "libraries/r/thinkthen/src/rust"
+      ],
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
+    },
+    "toolchain": [
+      "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -334,10 +499,33 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/rust.rs": {
+    "page": "/functions/choose/",
+    "sample": "3e19b3d5681eafe85362c57133a622befdc7a1201c728cf093ea9c41f36b4341",
+    "output": "22f0a49175dbde9d2c3c5da06827554439e4191e981734d3b8900e2f192d6278",
+    "files": {},
+    "answers": {
+      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
+      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "530c0e33bdde600bd5e65b1d87bd6d2631aef4bf4706c89da0e7bb3d90e9c1d4"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -380,7 +568,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -409,21 +597,62 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
-  "functions/decide/polars.py": {
+  "functions/decide/pandas.py": {
     "page": "/functions/decide/",
-    "sample": "4c09314bbbbdc7bb64daef87b2a64698de96aeb99e673925bd9d337c391aef10",
+    "sample": "5ac15f281feb6a609484a97ce317914c9b3011768f270a391b74c95a29e48495",
     "output": null,
     "files": {},
     "answers": {
-      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
-      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
     },
     "sources": {
       "folders": [
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/decide/polars.py": {
+    "page": "/functions/decide/",
+    "sample": "b227b4665877e940c919c1dba08d54de44b94ed3f9e67b02fd5e438559c06006",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/decide/python.py": {
+    "page": "/functions/decide/",
+    "sample": "bfd1a47c897be3ab41bd18b359f2167288f8a567d26b25383e5a8b4107f3c019",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -433,12 +662,11 @@
   },
   "functions/decide/r.R": {
     "page": "/functions/decide/",
-    "sample": "469affffdb32bf6533ccb81695b9b87dee47299a4ac6957eaefdeab0606535cd",
+    "sample": "ec501f5229acd93d82c3b585689fae4d80c5d9d5e32a7144c315c16716a2d57f",
     "output": null,
     "files": {},
     "answers": {
-      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
-      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
     },
     "sources": {
       "folders": [
@@ -446,7 +674,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -455,19 +683,18 @@
   },
   "functions/decide/ruby.rb": {
     "page": "/functions/decide/",
-    "sample": "6b78d52026e742fdf231b4a1c10d7bd46d20bff8d006b9641563019fad563441",
+    "sample": "83b0dc2f71306e5cfb9f94d72b2efd5d4e9a782397d488164907065388756dc9",
     "output": null,
     "files": {},
     "answers": {
-      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
-      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
     },
     "sources": {
       "folders": [
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -476,12 +703,11 @@
   },
   "functions/decide/rust.rs": {
     "page": "/functions/decide/",
-    "sample": "d3527b63e3722c76dd345ccafe5935906be57df2cc5e864ea078e4b9516add31",
+    "sample": "9ccd5501189f38056f7939ab300a4327b9e145ac1f2fbccf391a9309b5cfae71",
     "output": null,
     "files": {},
     "answers": {
-      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
-      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
     },
     "sources": {
       "folders": [
@@ -518,19 +744,18 @@
   },
   "functions/decide/typescript.ts": {
     "page": "/functions/decide/",
-    "sample": "856767e3633c8fbe8660f8648429b902893fdfd4278cc1f7af3e95b65754a005",
+    "sample": "e09b0a9a9a282e2aebba9ea9d4e6396b849c548afd5e7c03b18f0b6d66214f6f",
     "output": null,
     "files": {},
     "answers": {
-      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
-      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
     },
     "sources": {
       "folders": [
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -559,6 +784,54 @@
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
       "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/filter/pandas.py": {
+    "page": "/functions/filter/",
+    "sample": "a84e1cc7f78643184e86a9d1ef2dc1f0415b69011af22b6992c07e3f51a9acdd",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/filter/polars.py": {
+    "page": "/functions/filter/",
+    "sample": "0c47641bf0aa3ef99ec50b69f0016aa549f213635c5b742563e8293c612d52ff",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -602,7 +875,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -627,7 +900,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -650,7 +923,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -659,8 +932,8 @@
   },
   "functions/filter/rust.rs": {
     "page": "/functions/filter/",
-    "sample": "832b56839ca582b08f86be5b2565ab51674eeb113162c277f6fdb6f1cf4aac03",
-    "output": null,
+    "sample": "950880db8917ef80539307d7d4be51d6fdc3c77b58a345fc1633319c39623957",
+    "output": "83515d7a136cdbefe178d177c68734b6740fdd621f7036564dfb5383869bba2d",
     "files": {},
     "answers": {
       "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
@@ -703,6 +976,29 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/filter/typescript.ts": {
+    "page": "/functions/filter/",
+    "sample": "47bcdca03c74cb111c5d381df891d09ec5e22ca7675d619494a6c40946fbbfd3",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/typescript"
+      ],
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
+    },
+    "toolchain": [
+      "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/find/c.c": {
     "page": "/functions/find/",
     "sample": "4bbd52cd9e7132e3cf270621831ea8b4c24d6fcef4c36e2412bed789d466240e",
@@ -722,6 +1018,48 @@
     "toolchain": [
       "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
       "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/find/pandas.py": {
+    "page": "/functions/find/",
+    "sample": "eb1a550da4bd74884e938e3fd2c50b225831e33d5ed0e526b086e15e5343361a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/find/polars.py": {
+    "page": "/functions/find/",
+    "sample": "d3004ffc90f62bb89390e6fa2c4526cf235aad9a9fb4eac72cd41f98a724b7c8",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -759,7 +1097,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -781,17 +1119,37 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/find/ruby.rb": {
+    "page": "/functions/find/",
+    "sample": "39e45f7e716e59528351f5c884a0bae2892872307fcecdaf20cd5462b36fdd86",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/ruby"
+      ],
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
+    },
+    "toolchain": [
+      "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/find/rust.rs": {
     "page": "/functions/find/",
-    "sample": "90aefe3c23e1811e8d6a13dc5dee5e21175257474fdb34548b851d12fc81e68f",
-    "output": null,
+    "sample": "611f4e3a4ff88ed452d7067697a2048e6edbbc1bfed11d1816294e2a9a61d3b5",
+    "output": "bd9bd91716fe3be8f332ab23db11f7f9c14e4a3f091526040ed39f7c51e8f2c0",
     "files": {},
     "answers": {
       "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
@@ -841,7 +1199,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -873,10 +1231,34 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/question-file/pandas.py": {
+    "page": "/functions/question-file/",
+    "sample": "35ac5b82613d88293ae1176d0673194d075a5f482346e2cdc4475a10ba28eabd",
+    "output": "44657d7c795232efcde1a660681be86c6bfbe26a14f9b44e05898efda4a6a003",
+    "files": {
+      "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
+    },
+    "answers": {
+      "7881717010bc4130df0115a68d30ff3996c9ac2263d1827d3e0848f0c9b8d5d0": "c46337a2be2760822ba19bb22821598be2f2e682fc5d8100bf92e0d4b0ad5d93",
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/question-file/polars.py": {
     "page": "/functions/question-file/",
-    "sample": "e9d3dc590a8591a95c38930f8daa82ac6d7e3cd2ce5729d99e8fb7403967b45c",
-    "output": null,
+    "sample": "efc3c95fd14751843b1f6fd90c4fe8c5c1cb02f7b92ebd21b7f40930df4c0331",
+    "output": "8b8b069ddf323155429b64101ea94ac8c6c3a27585d15a62ec05f9a6772e5dd5",
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
@@ -890,7 +1272,31 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/question-file/python.py": {
+    "page": "/functions/question-file/",
+    "sample": "beb4def6c37d1ccd6d299f4f2c3febf5b08e3e119c0da641f4fc737a69af7d52",
+    "output": null,
+    "files": {
+      "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
+    },
+    "answers": {
+      "7881717010bc4130df0115a68d30ff3996c9ac2263d1827d3e0848f0c9b8d5d0": "c46337a2be2760822ba19bb22821598be2f2e682fc5d8100bf92e0d4b0ad5d93",
+      "9658cca37d47ae98c45c8455a15cc3c1740baf577fbd0ac91faef65331565840": "b724507dd8d1b32779487e2225d171fdb5e49fa8d6f29b14af2ca96c91a37b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -916,7 +1322,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -938,7 +1344,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -947,8 +1353,8 @@
   },
   "functions/question-file/rust.rs": {
     "page": "/functions/question-file/",
-    "sample": "e2cd7891918d5dfd905ecde5e57dd591715af86e87772b3c984f70b17a79048f",
-    "output": null,
+    "sample": "596fabb2def6af25cc8407f7bc8438b65aee9d66f1924368e823fc967411af11",
+    "output": "b993757b9d11c2c49269068d174045d34e001ad203f968851df67e55da5b2d65",
     "files": {
       "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
     },
@@ -1005,7 +1411,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1062,6 +1468,54 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/rank/pandas.py": {
+    "page": "/functions/rank/",
+    "sample": "8826edec9c9351e1f72ccb9cda8019671101d66626f3dfa5e7b1e1bf82f896c3",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/rank/polars.py": {
+    "page": "/functions/rank/",
+    "sample": "07177069cc533eb1557ac81df919a2032d4d75e61dd9ec49e97398d8fa03f7b1",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/rank/postgresql.sql": {
     "page": "/functions/rank/",
     "sample": "f0b2543411f5fdfc1ed013345da6e5a08fd108be46f1fe4e6f45b795ea5c13b7",
@@ -1102,11 +1556,35 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
       "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/rank/r.R": {
+    "page": "/functions/rank/",
+    "sample": "b28e95b06729328d4f339ae309eb4eeebbdf634c4d2e3b5cd930a7707b3c0fdc",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/r",
+        "libraries/r/thinkthen/src/rust"
+      ],
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
+    },
+    "toolchain": [
+      "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1126,7 +1604,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1135,8 +1613,8 @@
   },
   "functions/rank/rust.rs": {
     "page": "/functions/rank/",
-    "sample": "0cb132fa58238b1daca98fffc3bbd2400725c7de221b229e099b2dd93c9262a9",
-    "output": null,
+    "sample": "0bd2d9d0b1c592c7c95c33c152f3809db273e85b33937efca620bea0b9060b12",
+    "output": "199d4ee503717c8848f37f1d8c9dac3668e40fe7602678e178d463d84aafe2ca",
     "files": {},
     "answers": {
       "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
@@ -1172,7 +1650,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1261,6 +1739,82 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/recognize/pandas.py": {
+    "page": "/functions/recognize/",
+    "sample": "1488390721774080562cd71338e1dba226b01814831824d3d7be71d6e36cb493",
+    "output": null,
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "038467eedbe64182770dbfe591817581a2e4ab2d640ad8401c493698ce27bf0a": "a4b28b88eaadce8782ddc82c9510ef3ed5c5edcffa701c1c4c84bf8decc49102",
+      "1064a86286cff28361cdb90773d26d4c726975e0f5155cb48e8d6ae58e459651": "cb81b47cae9fc19296792cd1c3d918e7de9d99df3531873057e95652bb4202c0",
+      "118ec588fab3050ae5d80a69a3b9bfd05fa3bedd14d7b1a8140f670c11a0f878": "eb90642e4408ad8f06d73fefe071a56be2d156a7e809f1bf17968e5d95c7f119",
+      "260b44ce27b1ab3426e139d748542d569e86a3d185cb1d17044119b9d0dd557e": "505c5e80c0791ce4ffd03b07d89291489fcb6414796977651b330233b81e57de",
+      "58ac9842128b986860aaa5486b5c6314c0d084f697847e35148e9373c7e5cbce": "f4aee43c3918578350171470c64026daeedc89f9000ecff618a5f67f41a16894",
+      "5ab34168c903bd3daddb30a104052788dd6e90d8c9a0b82e0827d7d3b684bbad": "c775003e5a0504cf2d99d7d5e2c0d8f5ef9cd8a3fc6fe27bddf7550084f8bbca",
+      "73a1832e7f0d18829bbfda4080fc1a3ab2e637138729c0bdaf5dcae9bb38e413": "880b86848a0a19bd7d6d3483bb512ecdd6ab77f38967710670690e65ec9dbdf2",
+      "7ca39100e0d53664fdc86e7bf4e328113e56254801107e5ee1dcec6bc567be3e": "513dfbbf70db86f37966bdde0a7af057523055eb97794d590baf2737e97f5147",
+      "7cf1a9509a7f1a570a68d4df44b677c124a5324f52f0e3329f6de4901a077010": "78d91c332962c1e2edacc3a8e360fb4c5a8fca12c56875db73f691201d0d96ed",
+      "9397fa86d6e699ddf7de91e67bb8504d36b322ce944ea07643ac75d6c952590b": "9f1f5b9d8cfd908397ce0233cb7ea4b6a989c774c17f13db01c2fc9313469aeb",
+      "ae60289792b7165a53b400c096f0ba07dd30613d8b9459524d68cead8639cc25": "b162b46e2a3fc2848a8e1c0073647a27fd866a10dd011f3ff3e70924d3ba3382",
+      "d28a7836bb26505cdb37c033b548a0051ebefbc891210e79f5af4364e761f419": "c79428675b99a9d6085877ce9fd5154fd564ec13e3f325e759274a922e8e1b37",
+      "d97758ed6fdebb7b2e7d674eda57373e361c2907d591380a7dadbb5a2c604210": "cae34f4c12c091d373ebd4c0003d2a74ee586357a4a1c52631f817194fbd7a12",
+      "e60872d16c20af6600124feebd18dd43a026e4aba331cd1812d76c4b82c3f0b8": "e0d1f715b7d56bf5a4b414821cb487131358423afd3cb79cd0997a8a0c48a30c",
+      "f0c2c7bc48d67e5b40f6d3903262c100817dfad40e9d32f1f2ae281a8e14a8fa": "a63a01b6644ef441983bd2d0c4c16f1a045024efe264c277ebb0545e5be403fc",
+      "fc9bd1d13a18453ee33a549d01b94b4261d006d181103353f3ad8f6090ff1dd2": "e587d8d03ab1b20013136bdd9b2df15f77d65d2c82dfcbd98bcf60e640f80b6e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/recognize/polars.py": {
+    "page": "/functions/recognize/",
+    "sample": "326c87167cb65918843c37b7408cbadb664d332a6dbbef53022b69c81a5b9c1e",
+    "output": "162f0f9d28de5dacd083f1819a4adb3db148c019e1bebb4e622526bd164ed1b1",
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "038467eedbe64182770dbfe591817581a2e4ab2d640ad8401c493698ce27bf0a": "a4b28b88eaadce8782ddc82c9510ef3ed5c5edcffa701c1c4c84bf8decc49102",
+      "1064a86286cff28361cdb90773d26d4c726975e0f5155cb48e8d6ae58e459651": "cb81b47cae9fc19296792cd1c3d918e7de9d99df3531873057e95652bb4202c0",
+      "118ec588fab3050ae5d80a69a3b9bfd05fa3bedd14d7b1a8140f670c11a0f878": "eb90642e4408ad8f06d73fefe071a56be2d156a7e809f1bf17968e5d95c7f119",
+      "260b44ce27b1ab3426e139d748542d569e86a3d185cb1d17044119b9d0dd557e": "505c5e80c0791ce4ffd03b07d89291489fcb6414796977651b330233b81e57de",
+      "58ac9842128b986860aaa5486b5c6314c0d084f697847e35148e9373c7e5cbce": "f4aee43c3918578350171470c64026daeedc89f9000ecff618a5f67f41a16894",
+      "5ab34168c903bd3daddb30a104052788dd6e90d8c9a0b82e0827d7d3b684bbad": "c775003e5a0504cf2d99d7d5e2c0d8f5ef9cd8a3fc6fe27bddf7550084f8bbca",
+      "73a1832e7f0d18829bbfda4080fc1a3ab2e637138729c0bdaf5dcae9bb38e413": "880b86848a0a19bd7d6d3483bb512ecdd6ab77f38967710670690e65ec9dbdf2",
+      "7ca39100e0d53664fdc86e7bf4e328113e56254801107e5ee1dcec6bc567be3e": "513dfbbf70db86f37966bdde0a7af057523055eb97794d590baf2737e97f5147",
+      "7cf1a9509a7f1a570a68d4df44b677c124a5324f52f0e3329f6de4901a077010": "78d91c332962c1e2edacc3a8e360fb4c5a8fca12c56875db73f691201d0d96ed",
+      "9397fa86d6e699ddf7de91e67bb8504d36b322ce944ea07643ac75d6c952590b": "9f1f5b9d8cfd908397ce0233cb7ea4b6a989c774c17f13db01c2fc9313469aeb",
+      "ae60289792b7165a53b400c096f0ba07dd30613d8b9459524d68cead8639cc25": "b162b46e2a3fc2848a8e1c0073647a27fd866a10dd011f3ff3e70924d3ba3382",
+      "d28a7836bb26505cdb37c033b548a0051ebefbc891210e79f5af4364e761f419": "c79428675b99a9d6085877ce9fd5154fd564ec13e3f325e759274a922e8e1b37",
+      "d97758ed6fdebb7b2e7d674eda57373e361c2907d591380a7dadbb5a2c604210": "cae34f4c12c091d373ebd4c0003d2a74ee586357a4a1c52631f817194fbd7a12",
+      "e60872d16c20af6600124feebd18dd43a026e4aba331cd1812d76c4b82c3f0b8": "e0d1f715b7d56bf5a4b414821cb487131358423afd3cb79cd0997a8a0c48a30c",
+      "f0c2c7bc48d67e5b40f6d3903262c100817dfad40e9d32f1f2ae281a8e14a8fa": "a63a01b6644ef441983bd2d0c4c16f1a045024efe264c277ebb0545e5be403fc",
+      "fc9bd1d13a18453ee33a549d01b94b4261d006d181103353f3ad8f6090ff1dd2": "e587d8d03ab1b20013136bdd9b2df15f77d65d2c82dfcbd98bcf60e640f80b6e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/recognize/postgresql.sql": {
     "page": "/functions/recognize/",
     "sample": "499e92d99ffab87400cc5703451fdaff79768cb218cc4ba772c7d00dbe1b1e3b",
@@ -1328,7 +1882,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1369,7 +1923,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -1408,7 +1962,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1417,8 +1971,8 @@
   },
   "functions/recognize/rust.rs": {
     "page": "/functions/recognize/",
-    "sample": "4234ed050550ba21bff476bf558dd1a51c59487a56f9f7041fcf39049c0cf284",
-    "output": null,
+    "sample": "e07d0154b830fb6c4cb8d5600a2186e32f87e91d924dae16f1449f8a67c5fde9",
+    "output": "ed4c2c14d0989844979ad13b6a9d7de47786f2195c81254e2414159e91e61279",
     "files": {
       "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
     },
@@ -1525,7 +2079,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1630,6 +2184,54 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/relate/pandas.py": {
+    "page": "/functions/relate/",
+    "sample": "40f059d28ac9f67d0353be44b998de30e3adb3cfded3c2b6339a3255df19b011",
+    "output": null,
+    "files": {},
+    "answers": {
+      "4524b9df16b2d794720f417428f1a5882b51171b80e396eb7a9962e8d1b9d9ed": "004ef3640cd152f6b19c3cf9aca936ad211c55bab050eaa5442ec74f4998201a",
+      "4ab6910965935e004b7f59e3336462a163fc04bbbd8fa5e1494b81c7cb8bdc64": "0718dfd86331b42c546f4c918ebfcc166086fa216bbc1893e0f19a559134758c",
+      "4d219a70a8d130ff6f966eff8faf22d824283beae783a5bed8f5fccb6520ec14": "6b0de78bc8e1bdc3cdc3a28d1f52c00e976651293385ed0198ccb87f9a90b70c",
+      "edf4c5394709b4d434036ae483b452f6714261e368ea2adb4c19538e0b67e70a": "a6a5ecfbe705363b5f8d22b2e01441c6dae591c75cb6c3e1820311a8a6b068b1"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/relate/polars.py": {
+    "page": "/functions/relate/",
+    "sample": "3e804d13da5443787cc99de4005d265893f4a0adfd888a0e43a147fbe85cbdc8",
+    "output": null,
+    "files": {},
+    "answers": {
+      "4524b9df16b2d794720f417428f1a5882b51171b80e396eb7a9962e8d1b9d9ed": "004ef3640cd152f6b19c3cf9aca936ad211c55bab050eaa5442ec74f4998201a",
+      "4ab6910965935e004b7f59e3336462a163fc04bbbd8fa5e1494b81c7cb8bdc64": "0718dfd86331b42c546f4c918ebfcc166086fa216bbc1893e0f19a559134758c",
+      "4d219a70a8d130ff6f966eff8faf22d824283beae783a5bed8f5fccb6520ec14": "6b0de78bc8e1bdc3cdc3a28d1f52c00e976651293385ed0198ccb87f9a90b70c",
+      "edf4c5394709b4d434036ae483b452f6714261e368ea2adb4c19538e0b67e70a": "a6a5ecfbe705363b5f8d22b2e01441c6dae591c75cb6c3e1820311a8a6b068b1"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/relate/postgresql.sql": {
     "page": "/functions/relate/",
     "sample": "483d0f185421ead43a583422497e29a602a55ff38fb18781276bb758acefe454",
@@ -1694,7 +2296,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -1743,7 +2345,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -1790,7 +2392,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -1799,8 +2401,8 @@
   },
   "functions/relate/rust.rs": {
     "page": "/functions/relate/",
-    "sample": "87ed6160d76c4907f8e53f3a175579609c7983a53bc45c724e6e156d20370a21",
-    "output": null,
+    "sample": "c2f7c4912d54fdf4bc5104c6f054ccc46496a2a4771a9b0726e401337ba83c90",
+    "output": "e63c89cb07024e840dd5783fe540e54684fb0c4bfae334bffeec182646eef613",
     "files": {},
     "answers": {
       "0087671399591fba4e99a4049f29137c6e457a91e836b1975ec58600e99acb1a": "546f32880d7d25b0ed5a3000366d5051d918b0b8f69f3397a6306ed30185d5df",
@@ -1931,7 +2533,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -1962,10 +2564,10 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
-  "functions/score/polars.py": {
+  "functions/score/pandas.py": {
     "page": "/functions/score/",
-    "sample": "fd6514a4e4b68a86b23463f779d680c9392060a56e2d8cf0668b47ca6d9a6524",
-    "output": null,
+    "sample": "a161f79a8b404da1c56a466f6e5deb9502d7ce158dd608d0c4418582a71bddd3",
+    "output": "e56aefbec99df06560431614ada55a826a04ad0735ad85953e23493beaab54dc",
     "files": {},
     "answers": {
       "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
@@ -1977,7 +2579,30 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/polars.py": {
+    "page": "/functions/score/",
+    "sample": "a72f363a3880d447925fa2a75ba46a70c419788d898e653d0cce377e6a39639c",
+    "output": "a5a6ab819703b1426acc44b059709c93a5a8ccb8c9f9551c76aef20e48fa0d4e",
+    "files": {},
+    "answers": {
+      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
+      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
+      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -2023,7 +2648,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -2047,7 +2672,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -2069,7 +2694,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -2078,8 +2703,8 @@
   },
   "functions/score/rust.rs": {
     "page": "/functions/score/",
-    "sample": "47ad36d4fdf54db0b816bae715942da59eb2b726392e2dc835dc452864edba88",
-    "output": null,
+    "sample": "b27d788d175b631a1deb3c7801e771031936f21e2ea7931083e3f0b76f455cb7",
+    "output": "3574d005986453987d80430e0635967f5118afeaea6ed43714fadacf2ba04379",
     "files": {},
     "answers": {
       "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
@@ -2117,6 +2742,28 @@
     },
     "toolchain": [
       "SQLite 3.50.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/score/typescript.ts": {
+    "page": "/functions/score/",
+    "sample": "31eabab6641ce2c2fefc5cab5f793ce9f93e89108d549d7b855ee19c621e820a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
+      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
+      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/typescript"
+      ],
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
+    },
+    "toolchain": [
+      "Node v22.22.3",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -2168,6 +2815,52 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/tag/pandas.py": {
+    "page": "/functions/tag/",
+    "sample": "bb744b6268a499709f26ef9dee8f985cd9a0dca580867f3526d4b98c79811393",
+    "output": "33008c8d3e4d383643fafe37a29d5327a03f9fda1955c8b5fefc31eed797259c",
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/tag/polars.py": {
+    "page": "/functions/tag/",
+    "sample": "03a7d36ac220c9d5c9ae657a51782bb85ab0c22f3e2da2695532559611773273",
+    "output": "89b3a7bf7c5d7ec51b8d0f7c0a6038fefdc0ddab203210bba4f23e4e00535933",
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/tag/postgresql.sql": {
     "page": "/functions/tag/",
     "sample": "7a2c6764054bd4af39f50160f4bc2990b9d56b20d5e44850a453ad7a4b465293",
@@ -2206,7 +2899,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -2230,17 +2923,39 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/tag/ruby.rb": {
+    "page": "/functions/tag/",
+    "sample": "4b52d39fe31ac82a3e851e16bf8be38ac9819435d064ceda99bef2ea235c597a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/ruby"
+      ],
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
+    },
+    "toolchain": [
+      "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/tag/rust.rs": {
     "page": "/functions/tag/",
-    "sample": "5232683cac81388b7577e696cbe06ca959581d2679769237aa21a42d45dbad9e",
-    "output": null,
+    "sample": "410e4142878f9c4de45f80396626d9a30d16779e2af0f1ef92e01542ece20d69",
+    "output": "612bea31ba25b2d934823819eb21c9485f0b933443ea75e6c0bdda328f8414d9",
     "files": {},
     "answers": {
       "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
@@ -2274,7 +2989,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -3250,8 +3965,8 @@
   },
   "install/pandas/first-call.py": {
     "page": "/install/pandas/",
-    "sample": "5864bf422011005af88bf8c8dbae28176cb22ea44b2269b8a0694aff0f958f2d",
-    "output": null,
+    "sample": "9c63ae9fcc5a284d6da9831a2f89792c545f6af0df1efcbd5acabc157b71dd7e",
+    "output": "472b7f57f30916ad9b7925c71708334495beb0ee20fd7c85e8148f3aef529cdf",
     "files": {},
     "answers": {
       "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
@@ -3262,7 +3977,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3364,8 +4079,8 @@
   },
   "install/polars/first-call.py": {
     "page": "/install/polars/",
-    "sample": "837e5a12c49dc5597b08e81c644deca6e94edf5141fc07d505ddac7c1c7fbe52",
-    "output": null,
+    "sample": "d67dd4a1492cad6eff6be38328325b1235e239bcce421a8efaabc846e993b13b",
+    "output": "7e379b46889e99c7c6214c26b052ef7feb72760a9b25e1048b113f23c46a1f7f",
     "files": {
       "install/polars/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
     },
@@ -3385,7 +4100,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3434,7 +4149,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3458,7 +4173,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3482,7 +4197,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3515,7 +4230,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3539,7 +4254,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3561,7 +4276,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3585,7 +4300,7 @@
         "crates/thinkthen",
         "libraries/python"
       ],
-      "tree": "61bea8ae7d63e17b4d3fe345543ea089e93104271c5b11f82795ee65473b0f2b"
+      "tree": "fb8d8e1492ad4a5ce11f59d0b003163017c809e54284d9eaebf316865ae1563a"
     },
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
@@ -3608,7 +4323,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3630,7 +4345,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3652,7 +4367,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3661,8 +4376,8 @@
   },
   "install/r/data-frames.R": {
     "page": "/install/r/",
-    "sample": "04b0d39120fe4a1fe3e70bad62bfd0013c2a50e085d1657a559548f9ed84a58d",
-    "output": null,
+    "sample": "052374c85063b08f66c256a41ab25af1a29480751bfbad57c78ad1b057eecbd3",
+    "output": "7d88c7d71f1de8958dbc50418a9ea9386e41365970b521ecdab4fd7604c4c4f1",
     "files": {},
     "answers": {
       "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
@@ -3674,7 +4389,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3696,7 +4411,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3705,8 +4420,8 @@
   },
   "install/r/functional/judge.R": {
     "page": "/install/r/",
-    "sample": "4a1d5655bd2788d2d2a15a6cc2b9c07de3a3f146187caf986180c0adc7303b56",
-    "output": null,
+    "sample": "5eff02ab181b6196176329e0a4fee4752a1ed9e8c0738960ed3d9392c977dfa6",
+    "output": "51f1ff7048b33702067bbe04f105611fbd8b7bde48f1161dd6df118acae14835",
     "files": {},
     "answers": {
       "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
@@ -3718,7 +4433,7 @@
         "libraries/r",
         "libraries/r/thinkthen/src/rust"
       ],
-      "tree": "9b383c1f0c292748fff41122888c171f07065ecd75113650ebf73270c41fac7a"
+      "tree": "1e0e760d683dae2c88e88298c26d17c8abde551ef5198d5355190fb6bedb5069"
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
@@ -3739,7 +4454,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3760,7 +4475,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3781,7 +4496,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3804,7 +4519,7 @@
         "crates/thinkthen",
         "libraries/ruby"
       ],
-      "tree": "9a85580ec4fe5cc9b6e27a35ce315ea1d6a8ef871e9657d95c45866e5973d4ad"
+      "tree": "43df58a935f90489f01d9b3ddcd2595e5e063a7c93f0da813c42489ebd43931a"
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
@@ -3813,8 +4528,8 @@
   },
   "install/rust/backends.rs": {
     "page": "/install/rust/",
-    "sample": "405417bfc673134412181656f87542235e2b499957519894e5d7041742c26e35",
-    "output": null,
+    "sample": "7271045cc2bb58df3ab6abd93a5e1779cc70903fc0dadbdc312b14a2c92b384f",
+    "output": "8b201ad33e2310e6a9892174e9e02653261e26994394e2729325e7951a21a9c3",
     "files": {
       "install/rust/files/Cargo.toml": "90d4c57f6646f09b7942fa33a15e51cb52ead48a5f107c1d103dbf6116751c0d"
     },
@@ -3840,8 +4555,8 @@
   },
   "install/rust/first-call.rs": {
     "page": "/install/rust/",
-    "sample": "31e10031a6d834686ff91a24d90786dd2c0025f2d9bdd4f61a8eea751a653e65",
-    "output": null,
+    "sample": "cce815dc9435e55b9ecb7a4d1975208866d271b67a772575104432db0c5a8290",
+    "output": "231737d4184059d93cd1517377e084587a5c9a9a00f87079cb4c186e18796382",
     "files": {
       "install/rust/files/Cargo.toml": "90d4c57f6646f09b7942fa33a15e51cb52ead48a5f107c1d103dbf6116751c0d"
     },
@@ -4094,7 +4809,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -4115,7 +4830,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -4136,7 +4851,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
@@ -4159,7 +4874,7 @@
         "crates/thinkthen",
         "libraries/typescript"
       ],
-      "tree": "10323b8f5ae04097e3474c45f58dba302159d0cfdcda77d373b78c79ebc8e6fb"
+      "tree": "5b1edc1eb81c4cc3a573c47815a4259ab9dd29ea06696198fc5926396b9580b0"
     },
     "toolchain": [
       "Node v22.22.3",
