@@ -63,6 +63,11 @@ fn kind(words: &str) -> &'static str {
 /// Answer every question: step-1 tags from capitals at 1.0, a kind by
 /// spelling at 0.9, the edge as found, and each pair at 0.9.
 pub(super) fn automatic(body: &[u8]) -> Canned {
+    reported(body, true)
+}
+
+/// The same answers, with usage only when `usage` holds.
+pub(super) fn reported(body: &[u8], usage: bool) -> Canned {
     let request: Value = serde_json::from_slice(body).expect("request");
     let mut answers = serde_json::Map::new();
     for (name, question) in request["questions"].as_object().expect("questions") {
@@ -109,7 +114,11 @@ pub(super) fn automatic(body: &[u8]) -> Canned {
             serde_json::json!({"type":"choice","choice":pick,"probabilities":probabilities}),
         );
     }
-    Canned::ok(&serde_json::json!({"model":"local-1","answers":answers,"usage":{"input_tokens":10,"output_tokens":2}}).to_string())
+    let mut reply = serde_json::json!({"model":"local-1","answers":answers});
+    if usage {
+        reply["usage"] = serde_json::json!({"input_tokens":10,"output_tokens":2});
+    }
+    Canned::ok(&reply.to_string())
 }
 
 pub(super) fn questions(body: &[u8]) -> Vec<Value> {
