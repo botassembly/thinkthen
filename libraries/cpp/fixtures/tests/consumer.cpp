@@ -34,7 +34,7 @@ void held(const tt::Engine& engine, const std::string& name, int expected, bool 
     std::thread worker([&] {
         try {
             if (bulk) tt::many(engine, "Is it?", {name, "hold-bulk-second"}, THINKTHEN_NO_DEADLINE, token.get());
-            else tt::decide(engine, "Is it?", name, expected == 3 ? 35 : THINKTHEN_NO_DEADLINE, token.get());
+            else tt::decide(engine, "Is it?", name, expected == 3 ? 1000 : THINKTHEN_NO_DEADLINE, token.get());
             result.code = -1;
         } catch (const tt::Failure& e) {
             // The error accessors and borrowed facts are copied ON THIS WORKER THREAD.

@@ -126,7 +126,7 @@ public class Matrix {
             try(Door.Token fired=engine.token()) {fired.fire();fired.fire();failed(()->engine.decide("Is it?",b("never-sent"),-1,fired),5);}
             try(Door.Token deadline=engine.token()) {
                 AtomicReference<Throwable> error=new AtomicReference<>();
-                Thread caller=Thread.ofPlatform().start(()->{try{failed(()->engine.decide("Is it?",b("hold-deadline"),50,deadline),3);}catch(Throwable ex){error.set(ex);}});
+                Thread caller=Thread.ofPlatform().start(()->{try{failed(()->engine.decide("Is it?",b("hold-deadline"),1000,deadline),3);}catch(Throwable ex){error.set(ex);}});
                 // The deadline ends the call while the reply is held, so the release waits for that return.
                 boolean returnedHeld=false;
                 try {arrived("hold-deadline");caller.join(30_000);returnedHeld=!caller.isAlive();}

@@ -101,7 +101,7 @@ begin
          Err : Failure;
       begin
          accept Start;
-         Decide (Client, "Is it?", "hold-deadline", Answer, Facts, Err, Deadline_Ms => 80);
+         Decide (Client, "Is it?", "hold-deadline", Answer, Facts, Err, Deadline_Ms => 1000);
          Kind := Err.Kind;
       end Caller;
    begin

@@ -39,7 +39,7 @@ fn checked(result: tt.Result(tt.CallResult(tt.Answer)), code: c_int) !void {
 fn hold(engine: *tt.Engine, alloc: Allocator, dir: []const u8, text: []const u8) !void {
     var token = try tt.CancelToken.init();
     defer token.deinit();
-    var case = ThreadCase{ .engine = engine, .token = &token, .text = text, .deadline_ms = if (std.mem.eql(u8, text, "hold-deadline")) 25 else -1 };
+    var case = ThreadCase{ .engine = engine, .token = &token, .text = text, .deadline_ms = if (std.mem.eql(u8, text, "hold-deadline")) 1000 else -1 };
     const arrival = try std.fmt.allocPrint(alloc, "{s}/arrived-{s}", .{ dir, text });
     defer alloc.free(arrival);
     const release = try std.fmt.allocPrint(alloc, "{s}/release-{s}", .{ dir, text });

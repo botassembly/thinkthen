@@ -39,7 +39,7 @@ void worker(List<Object> args) {
         engine,
         'Is it?',
         state,
-        deadline: mode == 'deadline' ? 35 : -1,
+        deadline: mode == 'deadline' ? 1000 : -1,
         token: token,
       );
     send.send(['wrong-success', 0, '']);

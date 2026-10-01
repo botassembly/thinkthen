@@ -69,7 +69,7 @@ func held(_ engine: Engine, _ state: String, _ wanted: Int32, many: Bool = false
     if many {
         error(wanted) { _ = try engine.decideMany("Is it?", (1...6).map { "hold-bulk-\($0)" }, token: token.handle) }
     } else {
-        error(wanted) { _ = try engine.decide("Is it?", state, deadline: wanted == 3 ? 25 : -1, token: token.handle) }
+        error(wanted) { _ = try engine.decide("Is it?", state, deadline: wanted == 3 ? 1000 : -1, token: token.handle) }
     }
     returned.signal()
     check(semaphore.wait(timeout: .now() + 60) == .success, "helper did not finish")

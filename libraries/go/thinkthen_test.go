@@ -487,7 +487,7 @@ func TestHeldContext(t *testing.T) {
 		}
 		return r
 	}
-	deadline := run("hold-deadline", 25*time.Millisecond, false)
+	deadline := run("hold-deadline", time.Second, false)
 	requireError(t, deadline.err, 3, false)
 	if deadline.answer.Value != (Answer{}) {
 		t.Fatalf("deadline wrote an answer: %+v", deadline.answer)

@@ -59,7 +59,7 @@ static class Program
             try
             {
                 if (many) engine.DecideManyWithOptions("Is it?", Enumerable.Range(1, 6).Select(i => $"hold-bulk-{i}").ToArray(), null, cancel.Token);
-                else engine.Decide("Is it?", state, expected == 3 ? TimeSpan.FromMilliseconds(25) : null, cancel.Token);
+                else engine.Decide("Is it?", state, expected == 3 ? TimeSpan.FromSeconds(1) : null, cancel.Token);
                 return null;
             }
             catch (Failure f) { return f; }
