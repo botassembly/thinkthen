@@ -56,13 +56,15 @@ The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles u
 BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
 ```
 
-The slides come from the talk's deck, which quotes one bench commit. The deck's own build renders and commits each `slide.png`. `src/data/slides.json` names the deck slide behind each image, the deck commit, the bench the deck quotes, and each image's SHA-256. To export them again from the deck's committed `slide.png` files:
+The slides come from the talk's deck, which quotes one bench commit. The deck's own build renders and commits each `slide.png`. `examples/beatles/deck-pin` names the deck commit the pages show. `src/data/slides.json` names the deck slide behind each image by name, the deck commit, the bench the deck quotes, and each image's SHA-256. An entry may name its own deck commit to keep a slide the pinned deck dropped. To export them again from the deck's committed `slide.png` files at the pinned commit:
 
 ```
 DECK=path/to/deck npm run export-slides
 ```
 
-The export stops unless the deck's `BENCH_AT` names the bench in `examples/beatles/bench-pin`. It trusts the deck's build to have rendered the slides after that pin moved. `scripts/check-slides.mjs` runs in the build. It fails when the recorded bench differs from `examples/beatles/bench-pin`, or when an image differs from its recorded SHA-256. Move the pin and the build fails until the slides are exported again.
+The export reads the deck at `deck-pin`, never at the checkout's HEAD. It stops unless that commit's `BENCH_AT` names the bench in `examples/beatles/bench-pin`. It trusts the deck's build to have rendered the slides after that pin moved. `scripts/check-slides.mjs` runs in the build. It fails when the recorded deck differs from `deck-pin`, when the recorded bench differs from `bench-pin`, or when an image differs from its recorded SHA-256. Move either pin and the build fails until the slides are exported again.
+
+The Pages build cannot read the private deck, so it cannot see a newer deck. With `DECK` set, `check-slides` also fails when the deck's `slides/`, `order.txt` or PDF in its working tree differ from `deck-pin`. Slides rendered and not yet committed count. The deck's own `build.sh` runs it that way.
 
 ## The Bash techniques
 

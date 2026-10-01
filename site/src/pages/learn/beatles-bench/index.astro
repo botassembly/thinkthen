@@ -17,6 +17,7 @@ const run = PAGES.find((p) => p.slug === 'bench-run');
 
   <p>Beatles Bench is the playground for the talk. It asks Jev questions about Beatles songs. A script set the right answer to each scored question ahead of time, from Wikipedia and Wikidata. The bench shows ThinkThen at work and shows where it goes wrong.</p>
   <p>Each page shows one slide and one idea. Most pages show a command and the same command at another bar. Every command answers from a saved recording. You need no key, and nothing leaves your machine.</p>
+  <p>The slides show the talk's own runs. The examples replay on the current thinkthen. A page says so under its slide when the slide shows other output.</p>
   <p><a href={run.route}>{run.title.replace(/\.$/, '')}</a> shows how to get the bench and replay every answer.</p>
   <p>It is not an official benchmark. Please don't tune a model on it. The bench's author also builds ThinkThen.</p>
 </BeatlesPage>

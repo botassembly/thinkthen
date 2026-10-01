@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "questions": {
+    "singer": {
+      "choose": "The text is the title of a song by the Beatles. Who sings the lead vocal on it?",
+      "options": [
+        "John",
+        "Paul",
+        "George",
+        "Ringo",
+        "John and Paul duet"
+      ]
+    },
+    "tags": {
+      "tag": "The text is the title of a song by the Beatles. Which of these describe it?",
+      "labels": [
+        "love song",
+        "sad",
+        "psychedelic",
+        "about a place",
+        "about the sea"
+      ]
+    },
+    "abbey_road": {
+      "decide": "The text is the title of a song by the Beatles. It appears on the album Abbey Road."
+    },
+    "big_hit": {
+      "decide": "The text is the title of a song by the Beatles. It is one of the Beatles' biggest hits."
+    }
+  }
+}

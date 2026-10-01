@@ -10,8 +10,10 @@
 // The examples live in examples/beatles/<slug>/. Each runs in the Beatles
 // Bench folder examples/beatles/folders.json names for its page, and answers
 // from a saved recording. A page with no bench folder runs from its own
-// files/, and its recordings come from the talk's deck. `see` gives the
-// caption for each example and `headings` the heading above it. `source`
+// files/, and its recordings come from the talk's deck or a recorded run. `see` gives the
+// caption for each example and `headings` the heading above it. `slideNote`
+// names the build behind a slide whose printed output differs from what the
+// current thinkthen prints in the page's example. `source`
 // links the bench record behind a number in the prose. Prose marks code with
 // backticks and a link as [text](/route/).
 //
@@ -28,8 +30,8 @@ const record = (name) => ({ text: `the bench's record for this slide`, href: tre
 
 export const GROUPS = [
   ['Start', ['strings', 'jev', 'runs-in']],
-  ['The ten functions', ['decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']],
-  ['Scripts', ['question-file', 'bash']],
+  ['The ten functions', ['decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'recognize', 'relate', 'question-file', 'annotate']],
+  ['Scripts', ['bash']],
   ['Bindings', ['languages', 'data']],
   ['What Jev knows', ['blind-spots', 'rad']],
   ['Tune your bar', ['audit', 'diff']],
@@ -230,19 +232,20 @@ const ARTICLES = {
 
   annotate: {
     title: "annotate fills in a form.",
-    goal: "Each question in an annotate form carries its own bar, and a low bar lets weak guesses through.",
+    goal: "annotate asks a set of questions about each record in one run, and each question carries its own bar.",
     idea: [
-      "`annotate` answers a saved set of questions about each record. Each question in the set carries its own threshold. This set asks for the lead singer, the first album, and the year, each at 0.8.",
+      "`annotate` answers many questions at once. The question set holds four questions you have already seen. choose asks who sings the lead vocal. tag asks which labels fit. Two decide questions ask whether the song is on Abbey Road and whether it is one of the biggest hits.",
+      "One run asks all four about each song. `--field /title` sends only the title. Each record comes back with one field for each question.",
     ],
-    files: { 'annotate-cold-card.json': "annotate-cold-card.json, the question set" },
+    files: { 'questions.json': "questions.json, the question set" },
     see: {
-      '1-card': "At 0.8, Octopus's Garden leaves the album and the year not sure.",
-      '2-bar': "`jq` sets every bar to 0.5. At 0.5, every field fills.",
+      '1-card': "Every question uses the default bar of 0.5.",
+      '2-band': "`jq` sets the band 0.2:0.8 on the two decide questions. Three answers turn not sure.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "At 0.5, Octopus's Garden gains White Album and 1968. Both are wrong. The song came out on Abbey Road in 1969.",
-    takeaway: "A lower bar fills every field, and it lets weak guesses through.",
-    link: tree('annotate'),
+    headings: { '2-band': "Set a band" },
+    lesson: "At the default bar, every field fills. Paul sings Yesterday, and Ringo sings Octopus's Garden. Octopus's Garden is on Abbey Road, and Yesterday is not. Under the band, Yesterday's Abbey Road answer and both of Octopus's Garden's answers fall inside it. A person checks them.",
+    takeaway: "One question set fills every field of a record, and each question keeps its own bar.",
+    link: REPO,
   },
 
   recognize: {
@@ -285,7 +288,7 @@ const ARTICLES = {
   },
 
   "question-file": {
-    title: "A question file is a recipe.",
+    title: "Store and reuse questions.",
     label: "Question files",
     goal: "A question file says what yes and no mean, when to answer not sure, and which fields to read, and decide runs it on one song.",
     idea: [
@@ -305,7 +308,7 @@ const ARTICLES = {
   },
 
   bash: {
-    title: "Answers drive a Bash script.",
+    title: "Bash runs on judgment.",
     label: "Bash scripts",
     goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
     idea: [
@@ -343,8 +346,8 @@ const ARTICLES = {
     label: "Tables and frames",
     goal: "One question adds an answer column to a database table or a data frame.",
     idea: [
-      "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey_road`. The question and the band 0.3:0.7 go in as JSON.",
-      "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
+      "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey`. The question and the band 0.3:0.7 sit inside the query as one JSON string.",
+      "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Penny Lane and Hey Jude fall inside the band. Both come back not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
       "DuckDB and PostgreSQL ask questions inside SQL too. Polars, pandas, and R take a column and give a column back.",
       "To set one up, start at [Install](/install/).",
     ],
@@ -357,7 +360,7 @@ const ARTICLES = {
     goal: "audit grades saved answers against answers you already know, at any bar, and sends no request.",
     idea: [
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any bar. It sends no request.",
-      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's red label reads (without context). The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The console under the table shows `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
+      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's column reads no context. The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The first example below runs `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 3 are right, 2 are wrong, and 5 are not sure.",
@@ -375,7 +378,7 @@ const ARTICLES = {
     goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
       "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
-      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's green label reads (with context). The warning is right. The two runs asked different questions.",
+      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's last column reads with context. The warning is right. The two runs asked different questions.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 7 of the 10 answers changed, and all 10 end right.",
@@ -483,6 +486,7 @@ const ARTICLES = {
     see: {
       '1-check': "The check names the address and the model it would ask.",
     },
+    slideNote: "No run made the slide's console. It follows the check specification at thinkthen d0aa1b0b, except the model line, which shows the model a server names.",
     source: { text: 'the check specification', href: 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md' },
     lesson: "A bar tuned on one model does not carry to another. Run `audit` again on your labeled records before you trust a new backend.",
     takeaway: "A new model needs its own bar.",

@@ -189,8 +189,9 @@ After a change to the command or to a script, run `node scripts/smoke.mjs --upda
 
 - The smoke run uses the command built from the same commit, `../target/release/thinkthen`. `cargo build --release` makes it. `THINKTHEN_BIN` names another build.
 - The Beatles Bench files come from the bench commit in `examples/beatles/bench-pin`. `BEATLES_BENCH=path npm run pull-bench` copies the files the Beatles scripts read from a checkout at that commit.
-- The Beatles Bench slides come from the talk's deck. `DECK=path npm run export-slides` exports them from the deck's committed `slide.png` files, and stops unless the deck's `BENCH_AT` names the commit in `examples/beatles/bench-pin`. It also writes each page's social card to `public/og/<page>.png`. The slide check fails when `src/data/slides.json` names another bench or an image or card differs from its record.
-- A Beatles page with no bench folder in `examples/beatles/folders.json` runs from its own `files/`. Its recordings come from the talk's deck.
+- The Beatles Bench slides come from the talk's deck at the commit in `examples/beatles/deck-pin`. `DECK=path npm run export-slides` exports them from the deck's committed `slide.png` files at that commit, and stops unless its `BENCH_AT` names the commit in `examples/beatles/bench-pin`. It also writes each page's social card to `public/og/<page>.png`. The slide check fails when `src/data/slides.json` names another deck or bench, or an image or card differs from its record.
+- A Beatles page with no bench folder in `examples/beatles/folders.json` runs from its own `files/`. Its recordings come from the talk's deck or from a recorded run on the current thinkthen.
+- When a slide prints output the current thinkthen prints differently, the page's `slideNote` names the slide's build under the slide.
 - `jq` must be on the path.
 
 ### What runs on each change

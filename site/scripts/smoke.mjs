@@ -57,7 +57,7 @@ const all = walk(root).map((p) => path.relative(root, p)).sort();
 const scripts = all.filter((p) => p.endsWith('.sh'));
 const stem = (p) => p.replace(/\.(out|exit)$/, '');
 const results = new Set(all.filter((p) => /\.(out|exit)$/.test(p) && all.includes(`${stem(p)}.sh`)));
-const kept = new Set(['SKIP', 'beatles/folders.json', 'beatles/bench-pin']);
+const kept = new Set(['SKIP', 'beatles/folders.json', 'beatles/bench-pin', 'beatles/deck-pin']);
 
 // examples/SKIP: a glob, then the reason, on each line.
 const skips = fs.readFileSync(path.join(root, 'SKIP'), 'utf8').split('\n')
