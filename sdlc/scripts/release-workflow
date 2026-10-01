@@ -187,7 +187,8 @@ for variable, name, args, expected, runtime in (
     version([selected(variable, name), *args], expected)
 PY
 	for tool in python3 nm tar flock; do command -v "$tool" >/dev/null || fail "missing $tool"; done
-	[ -x /usr/bin/bwrap ] || fail 'missing /usr/bin/bwrap for installed consumers'
+	# The build job packs managed outputs and runs no bwrap consumer. The smoke job pins and
+	# probes /usr/bin/bwrap in its language tools step. Rehearsal run 36812401623 found this gap.
 	;;
 managed-build)
 	[ "$#" = 5 ] && [ "$4" = x86_64-unknown-linux-gnu ] || fail 'managed-build PROVENANCE_DIR PLATFORM_DIR TARGET SHA'
