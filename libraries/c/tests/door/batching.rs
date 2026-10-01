@@ -348,7 +348,8 @@ fn direct_c_relate_record_reads_through_the_one_parser() {
     let listener = Listener::answering(|_| Canned::ok("{}")).expect("loopback");
     let base = listener.base();
     let settings = json!({"base_url":base,"cache":false}).to_string();
-    let rule = r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#;
+    let relations = r#"{"relations":[{"name":"knows","source":"person","target":"person"}]}"#;
+    let rule = format!(r#"{{"version":1,"relate":{relations}}}"#);
     let deep = |depth: usize| {
         let inner = depth - 1;
         let nested = format!("{}1{}", "[".repeat(inner), "]".repeat(inner));
@@ -370,11 +371,24 @@ fn direct_c_relate_record_reads_through_the_one_parser() {
             1,
             "a JSON record holds each member name once, and one name arrived twice",
         ),
+        (
+            r#"{"name":"Ada","kind":"person","x":1e400}"#.to_owned(),
+            1,
+            "a JSON number is finite, so `NaN` and `Infinity` are refused",
+        ),
     ];
     let mut script = Script::default();
     script.ask("settings", &[base, &settings]);
     for (record, _, _) in &rows {
-        script.ask("relate", &[base, rule, record]);
+        script.ask("relate", &[base, &rule, record]);
+    }
+    // The JSON call hands each raw record to the same reader.
+    for depth in [127, 128] {
+        let request = format!(
+            r#"{{"version":1,"relate":{relations},"records":[{}]}}"#,
+            deep(depth)
+        );
+        script.ask("call", &[base, &request]);
     }
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
     let output = run(&driver, "", &script.0);
@@ -384,7 +398,11 @@ fn direct_c_relate_record_reads_through_the_one_parser() {
         .iter()
         .map(|(_, code, said)| (*code, (*said).to_owned()))
         .collect();
-    assert_eq!(got[1..], wanted[..]);
+    let (typed, called) = got[1..].split_at(rows.len());
+    assert_eq!(typed, wanted);
+    assert_eq!(called.len(), 2);
+    assert_eq!(called[0].0, 0, "{}", called[0].1);
+    assert_eq!(called[1], wanted[1]);
     assert_eq!(
         listener.count(),
         0,
