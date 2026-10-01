@@ -526,7 +526,7 @@ export const SURFACES = [
       ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
     ],
     particular: [
-      'Compile with `-std=c++17` and link `libthinkthen`. The CMake package gives `find_package(thinkthen-cpp)`.',
+      'The CMake package gives `find_package(thinkthen-cpp)`.',
       '`tt::Engine` and `tt::CancelToken` move but do not copy. Join every thread that uses them before they go.',
     ],
   },
@@ -543,7 +543,6 @@ export const SURFACES = [
       ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
     ],
     particular: [
-      'Compile `Sources/ThinkThen.m` and `Sources/TTJSON.c` with your program, as `gcc -x objective-c`. Link `-lthinkthen -lobjc`.',
       'The `*Bytes` forms, such as `decideBytes`, take counted text that may hold NUL.',
     ],
   },
@@ -560,7 +559,7 @@ export const SURFACES = [
       ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
     ],
     particular: [
-      'Copy `copybooks/thinkthen.cpy` and the programs you call from `src/`. Compile them with your program and link `-lthinkthen`.',
+      'Compile the programs you call from `src/` with your own, as the build line does with `TT-DECIDE`.',
       'The copybook names no, yes and not sure as level-88 conditions, so `if outcome-yes` reads the answer.',
     ],
   },
@@ -577,7 +576,7 @@ export const SURFACES = [
       ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'],
     ],
     particular: [
-      'Build with `gprbuild -P thinkthen.gpr`, or pass the `src/` folder to `gnatmake` and link `-lthinkthen`.',
+      '`gprbuild -P thinkthen.gpr` builds the package as a library.',
       '`pragma Assert` runs only under `-gnata`.',
     ],
   },
