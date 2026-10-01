@@ -45,7 +45,7 @@ Status: in progress. Lane claude-2. Branch `ticket/0360-usage-state-folder`. Pla
     - A `retries-*.json` file is ignored like any other name that is not a month.
     - `read` takes the shared lock with a one-second bounded try. A missing `.lock` reads as zero counts.
   - `engine/usage`: one helper builds the sentence from the read failure, with the full path only when status asks for it.
-  - `Counters` checks once, through a once-only cell, in `prepare_attempt` when it has a folder. A failure returns a new local engine error that carries the sentence. The command and the public `Error` pass it through.
+  - `Counters` checks once, through a once-only cell, in `prepare_attempt` when it has a folder. The check runs before `prepare_attempt` takes the queue lock. The cell keeps its result, so after a failure every later send in that process refuses too, and a busy-lock pass stays a pass. A failure returns a new local engine error that carries the sentence. The command and the public `Error` pass it through. The check runs after the send permit and stop check, so a Ctrl-C during it can wait up to one second. That wait is accepted.
   - `cli/status.rs`: an unreadable count gives `unavailable` counts, the sentence on standard error, and exit 0. `Failure::StatusUsage` goes.
   - `sdlc/scripts/scratch.sh` `usage_home`:
     - On Linux, move `XDG_STATE_HOME` to a scratch copy that links every entry except `thinkthen`.
@@ -63,9 +63,9 @@ Status: in progress. Lane claude-2. Branch `ticket/0360-usage-state-folder`. Pla
   - Regressions, each failing on main:
     - Status on a malformed month file gives exit 0, both count groups `unavailable`, and the pinned standard-error sentence. Main gave exit 5 and no report.
     - Status on QA's case gives exit 0 and reads the month file's own retries. The case is a month file with `retries` beside a `retries-` file with another value. Main gave exit 5 with "retry totals differ".
-    - A command run with a malformed month file exits 5 with the pinned sentence, and the loopback listener counts zero requests. Main exited 0 and stopped counting.
+    - A command run over several records with `--jobs` above 1 and a malformed month file exits 5 with the pinned sentence. The loopback listener counts zero requests, which shows the refusal ends the whole run and does not become a failed row. Main exited 0 and stopped counting.
     - The same run under `--plan` exits 0 and sends nothing.
-    - `EngineBuilder::from_env()` with a malformed month file returns a local error with the sentence on its first call, and sends nothing. Main answered, and its counts were lost silently.
+    - `EngineBuilder::from_env()` with a malformed month file returns a local error with the sentence on its first call and again on a second call, and sends nothing. Main answered, and its counts were lost silently.
     - A C door call with a malformed month file returns the local status code with the sentence, and the loopback listener counts zero requests.
     - A month file with mode 0644 gives the unsafe sentence on a run and on status.
     - A folder with no `.lock` reads as zero on status. Main gave exit 5.
