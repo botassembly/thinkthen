@@ -28,7 +28,7 @@ const checks = checkLines('typesafe');
   <h2>Check it</h2>
   <p><code>thinkthen check</code> sends four fixed questions and reports whether the backend answers each one the way ThinkThen needs. The plan shows where they would go.</p>
   <Terminal run={plan} caption={plan.see} />
-  {checks.map((c) => <p>{c.said} <a href={c.record}>The record</a> holds the report.</p>)}
+  {checks.map((c) => <p>{c.said}</p>)}
 
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
 </SidePage>

@@ -36,7 +36,7 @@ const timeout = setting('Timeout').default;
   <h2>Check it</h2>
   <p>A first check can take longer than the default timeout of {timeout}. Pass <code>--timeout 90</code> on the first run.</p>
   <Terminal run={plan} caption={plan.see} />
-  {checks.map((c) => <p>{c.said} <a href={c.record}>The record</a> holds the report.</p>)}
+  {checks.map((c) => <p>{c.said}</p>)}
 
   {one && lines ? (
     <Fragment>

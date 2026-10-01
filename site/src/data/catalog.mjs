@@ -583,6 +583,8 @@ export const BACKENDS_SEE = {
   },
   liquid: {
     '1-status': 'status names the address, the model, and the variable the key comes from. It sends nothing.',
+    '2-one': 'd1 answers no and exits 1. Jev answers yes to the same line.',
+    '3-lines': 'One request carries all three lines. d1 says yes to the broken order and no to the send-back line.',
     '4-check-plan': "The check would post to Liquid's address with d1:free. The plan sends nothing.",
   },
   ollama: {

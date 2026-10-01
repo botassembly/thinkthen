@@ -1,23 +1,15 @@
 // The live `thinkthen check` runs the Backends pages state. A live check
 // cannot replay in the smoke run, so each page shows `check --plan` and
-// states the live result from here. Each entry is copied from a check's own
-// report. `record` links where that report is kept in the repository. An
-// entry with no record was run for the Backends pages, and the build record of
-// the site ticket that ran it holds the report.
-
-import { REPO } from './repo.mjs';
+// states the live result from here. Each entry is copied from a check run for
+// these pages. `said` replaces the usual sentence when the check printed no
+// report. The site ticket's build record holds each transcript.
 
 export const CHECKS = {
-  typesafe: [
-    {
-      model: 'jev-1.13.0', date: '2026-09-26', commit: 'b50e0425c', exit: 0, critical: 0, warning: 0,
-      record: `${REPO}/blob/main/sdlc/records/0160-build-the-answer-contract-holds.md`,
-    },
-  ],
+  typesafe: [],
   liquid: [
     {
-      model: 'd1:free', date: '2026-09-30', commit: '09ebcc5ce', exit: 0, critical: 0, warning: 0,
-      record: `${REPO}/blob/main/sdlc/planning/cleanup-2026-09-30.md`,
+      model: 'd1:free', date: '2026-09-30', commit: 'e8f2804fe',
+      said: 'On 2026-09-30, thinkthen check on build e8f2804fe sent its four requests to d1:free and printed no report within five minutes, so it was stopped.',
     },
   ],
   ollama: [
@@ -32,6 +24,6 @@ export function checkLines(name) {
   if (!list) throw new Error(`backend checks: no entry for ${name}`);
   return list.map((c) => ({
     ...c,
-    said: `On ${c.date}, thinkthen check on build ${c.commit} asked ${c.model} and exited ${c.exit}, with ${c.critical} critical and ${c.warning} warning findings.`,
+    said: c.said ?? `On ${c.date}, thinkthen check on build ${c.commit} asked ${c.model} and exited ${c.exit}, with ${c.critical} critical and ${c.warning} warning findings.`,
   }));
 }
