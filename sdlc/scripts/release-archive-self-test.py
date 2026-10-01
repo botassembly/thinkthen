@@ -350,7 +350,7 @@ def main():
                "archived source commit differs from selected checkout")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), "--reuse", host,
                    str(base / "reuse"), *parts, cwd=source, env=env),
-               "source wrappers need a fresh C build")
+               "archived source does not permit --reuse")
         stale = base / "stale"
         stale.mkdir()
         (stale / f"thinkthen-c-{version}-{host}.tar.gz").write_bytes(b"prior C")
