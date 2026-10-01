@@ -4,7 +4,7 @@
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
-import { SURFACES, FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { SURFACES, FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE, BACKEND_ROUTES, OPENAI_ANNOUNCED } from '../../data/catalog.mjs';
 import { captioned, files, firstCall, installSample, sample } from '../../data/samples.mjs';
 import { buildLines } from '../../data/build-lines.mjs';
 
@@ -25,10 +25,26 @@ const decideOne = shell ? captioned('functions/decide', FUNCTIONS[0].see).find((
 const headline = shell
   ? `A ${surface.name} command that answers questions about text`
   : `${surface.name} functions that answer questions about text`;
+// The Backends section: how this page's language reaches each built-in
+// backend. A page whose route is python links Python's section.
+const route = surface.backends ?? null;
+const named = route && route !== 'python';
+const title = named ? `Jev and System One API from ${surface.name}` : surface.name;
+const description = named
+  ? `Call Jev and any System One API from ${surface.name} with ThinkThen. Liquid d1 and Ollama work the same way. The OpenAI Decisions API is announced, not released.`
+  : surface.blurb.replace(/`/g, '');
+if (description.length > 160) throw new Error(`/install/${surface.slug}/: the description runs ${description.length} characters, over 160`);
+const backendSample = route === 'env' || route === 'builder' ? installSample(surface.slug, 'backends') : null;
+const backendBuild = backendSample ? buildLines(surface.slug, backendSample.file) : null;
+const backendBuildText = backendBuild && [...backendBuild.lines, backendBuild.run].map((p) => p.join(' \\\n    ')).join('\n');
+const shellLines = (r) => [
+  `export THINKTHEN_BACKEND=${r.name}`,
+  ...(r.address ? [`export THINKTHEN_BASE_URL=${r.address}`] : [`export ${r.keys[0]}=...`]),
+].join('\n');
 // Copy marks code with backticks.
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
 ---
-<Base title={surface.name} description={surface.blurb.replace(/`/g, '')}>
+<Base title={title} description={description}>
   <div class="eyebrow"><a href="/install/">Install</a></div>
   <h1>{headline}</h1>
   <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
@@ -80,6 +96,50 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
     </>
   )}
 
+  {route === 'python' && (
+    <>
+      <h2 id="backends">Backends</h2>
+      <p>{surface.name} runs on the Python engine, so it reaches each backend the same way. The <a href="/install/python/#backends">Python page</a> shows Jev, Liquid d1 and Ollama.</p>
+    </>
+  )}
+  {named && (
+    <>
+      <h2 id="backends">Jev, Liquid d1 and Ollama from {surface.name}</h2>
+      {route === 'cli' && (
+        <>
+          <p><code>--backend NAME</code> names the backend for one run. <code>THINKTHEN_BACKEND</code> names it for every run in the shell. Each backend page shows its runs.</p>
+          <ul>{BACKEND_ROUTES.map((r) => <li><a href={r.route}>{r.title}</a>: <code>--backend {r.name}</code></li>)}</ul>
+        </>
+      )}
+      {route !== 'cli' && (
+        <>
+          {route === 'env'
+            ? <p>{surface.name} reads its backend from the environment. Set <code>THINKTHEN_BACKEND</code> and the backend's key variable in the shell, and the same sample asks that backend.</p>
+            : <p><code>EngineBuilder::backend</code> names the backend in code, and it outranks the environment. The sample builds one engine for each backend and asks each the same question.</p>}
+          <table class="backend-routes">
+            <tr><th>Backend</th><th>Name</th><th>Key variable</th></tr>
+            {BACKEND_ROUTES.map((r) => (
+              <tr><td><a href={r.route}>{r.title}</a></td><td><code>{r.name}</code></td><td>{r.keys.map((k, i) => <>{i > 0 && ', then '}<code>{k}</code></>)}{r.address && ', not needed on this machine'}</td></tr>
+            ))}
+          </table>
+          {route === 'env' && BACKEND_ROUTES.map((r) => (
+            <Code code={shellLines(r)} lang="bash" caption={r.address ? `Ask ${r.title}. This block names a second port, 11535, as the site's runs do. On the default port, leave THINKTHEN_BASE_URL out.` : `Ask ${r.title}.`} label={`Copy the ${r.title} settings`} />
+          ))}
+          <Code code={backendSample.code} file={backendSample.file} caption={route === 'builder' ? 'The Ollama engine names the second port, 11535. On the default port, leave base_url out.' : null} label={`Copy the ${surface.name} backends sample`} />
+          {backendBuild && <Code code={backendBuildText} lang="bash" caption={`${backendBuild.lines.length ? 'Build and run' : 'Run'} it beside ${backendBuild.beside ?? `the unpacked archives, thinkthen-c/ and ${backendBuild.archive}/`}`} label={`Copy the ${surface.name} backends ${backendBuild.lines.length ? 'build' : 'run'} lines`} />}
+          {route === 'builder' && <p><code>EngineBuilder::from_env</code> also reads <code>THINKTHEN_BACKEND</code> and <code>THINKTHEN_BASE_URL</code>, so the shell settings the other language pages show work here too.</p>}
+        </>
+      )}
+      <p>The configuration file's <code>backend</code> names a default backend for every run. The <a href="/install/configuration/#configuration-file">Configuration</a> page shows the file.</p>
+      <h3>OpenAI Decisions API from {surface.name}</h3>
+      <p set:html={OPENAI_ANNOUNCED} />
+    </>
+  )}
+
   <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>
 </Base>
+<style>
+  /* A long variable name wraps inside its cell, so a phone does not cut it off. */
+  .backend-routes td:last-child code { overflow-wrap: anywhere; }
+</style>

@@ -7,6 +7,7 @@ import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog
 import { captioned } from '../../../data/samples.mjs';
 import { backend } from '../../../lib/backends-table.mjs';
 import CheckLines from '../../../components/CheckLines.astro';
+import FromYourLanguage from '../../../components/FromYourLanguage.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'liquid');
 const b = backend('liquid');
@@ -48,6 +49,8 @@ const [status, one, lines, plan] = ['status', 'one', 'lines', 'check-plan'].map(
 
   <h2>Without the backend name</h2>
   <p>The address and a key work without the name too. Set <code>THINKTHEN_BASE_URL={b.base}</code>, put the key in <code>{KEY_VARIABLE}</code>, and pass <code>--model {b.model}</code>.</p>
+
+  <FromYourLanguage />
 
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
 </SidePage>

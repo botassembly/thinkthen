@@ -7,6 +7,7 @@ import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog
 import { captioned } from '../../../data/samples.mjs';
 import { backend } from '../../../lib/backends-table.mjs';
 import CheckLines from '../../../components/CheckLines.astro';
+import FromYourLanguage from '../../../components/FromYourLanguage.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'typesafe');
 const b = backend('typesafe');
@@ -28,6 +29,8 @@ const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.t
   <p><code>thinkthen check</code> sends four fixed questions and reports whether the backend answers each one the way ThinkThen needs. The plan shows where they would go.</p>
   <Terminal run={plan} caption={plan.see} />
   <CheckLines name="typesafe" />
+
+  <FromYourLanguage />
 
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
 </SidePage>

@@ -8,6 +8,7 @@ import { captioned } from '../../../data/samples.mjs';
 import { backend } from '../../../lib/backends-table.mjs';
 import { checkLines } from '../../../data/backend-checks.mjs';
 import CheckLines from '../../../components/CheckLines.astro';
+import FromYourLanguage from '../../../components/FromYourLanguage.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'ollama');
 const b = backend('ollama');
@@ -54,6 +55,8 @@ const checks = checkLines('ollama');
   )}
 
   <p>A pulled model can change under the same name. After a new pull, pass <code>--refresh-cache</code> once. It asks every question again and replaces the answers in the answer cache.</p>
+
+  <FromYourLanguage />
 
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
 </SidePage>

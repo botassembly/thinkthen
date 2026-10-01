@@ -12,10 +12,20 @@ export const REPLAY_FILE = 'REPLAY';
 
 export const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
-// examples/REPLAY: one sample path a line, relative to examples/.
+// examples/REPLAY: one sample path a line, relative to examples/. A line
+// may end with backend=NAME, and the run then names that backend. The whole
+// line keys the sample's proof entry.
 export function readReplayList(examples) {
   return fs.readFileSync(path.join(examples, REPLAY_FILE), 'utf8').split('\n')
     .map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+}
+
+// One REPLAY line as its sample path and its backend, or null for none.
+export function replayLine(line) {
+  const [rel, ...rest] = line.split(/\s+/);
+  const named = rest.map((r) => /^backend=([a-z0-9-]+)$/.exec(r));
+  if (named.some((m) => !m) || named.length > 1) throw new Error(`examples/REPLAY: "${line}" holds more than a path and backend=NAME`);
+  return { rel, backend: named[0]?.[1] ?? null };
 }
 
 // The site-owned inputs of one sample: the sample, its saved output when
@@ -40,11 +50,12 @@ export function sampleHashes(examples, rel) {
   };
 }
 
-// The fixture's lines. An answer line carries its key and question.
+// The fixture's lines. An answer line carries its key, the address it was
+// posted to, and its question.
 export function fixtureLines(file) {
   return fs.readFileSync(file, 'utf8').split('\n').filter((l) => l.trim()).map((text) => {
     const row = JSON.parse(text);
-    return { text, key: row.key ?? null, question: row.question ?? '' };
+    return { text, key: row.key ?? null, url: row.url ?? null, question: row.question ?? '' };
   });
 }
 

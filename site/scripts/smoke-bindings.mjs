@@ -13,6 +13,12 @@
 // The run sets no key and no address, so a missed answer fails with no
 // request sent. A sample passes when it exits 0, so every assert held.
 //
+// A REPLAY line that ends with backend=NAME runs its sample with
+// THINKTHEN_BACKEND set to that name, and with THINKTHEN_BASE_URL set to
+// Ollama's second port for ollama. Every answer that run read must sit at
+// that backend's address, so a sample that falls back to another backend
+// fails. The whole line keys the proof entry.
+//
 // The store loads the whole fixture, so it cannot say which answers a
 // sample read. The runner finds them in three steps. It keeps the answers
 // whose question holds one of the sample's string literals of 12
@@ -37,7 +43,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildLines } from '../src/data/build-lines.mjs';
-import { readReplayList, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines } from './binding-proofs.mjs';
+import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
+import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -350,7 +357,7 @@ const notRun = [];
 let proved = 0;
 
 // One run of a sample over the given answers. True when it exits 0.
-function attempt(rel, binding, answers, keep) {
+function attempt(rel, binding, answers, named = {}, keep = false) {
   const work = fs.mkdtempSync(path.join(tmp, 'run-'));
   const cache = path.join(work, 'cache');
   const cwd = path.join(work, 'work');
@@ -364,17 +371,21 @@ function attempt(rel, binding, answers, keep) {
   const env = {
     PATH: process.env.PATH, LC_ALL: 'C.UTF-8', HOME: home,
     XDG_CACHE_HOME: path.join(work, 'xdg-cache'), XDG_CONFIG_HOME: path.join(work, 'xdg-config'),
-    THINKTHEN_CACHE: cache, ...binding.env,
+    THINKTHEN_CACHE: cache, ...binding.env, ...named,
   };
   const done = run(cmd, args, { cwd: dir ?? cwd, env });
   if (!keep) fs.rmSync(work, { recursive: true, force: true });
   return { ok: done.status === 0, output: `${done.stdout}${done.stderr}`.trim() };
 }
 
-for (const rel of list) {
+for (const line of list) {
+  const { rel, backend } = replayLine(line);
+  const route = backend && BACKEND_ROUTES.find((r) => r.name === backend);
+  if (backend && !route) { failed.push(`${line}: ${backend} is not one of ${BACKEND_ROUTES.map((r) => r.name).join(', ')}.`); continue; }
+  const named = route ? { THINKTHEN_BACKEND: route.name, ...(route.address ? { THINKTHEN_BASE_URL: route.address } : {}) } : {};
   const page = rel.split('/')[1];
   const name = PAGE_BINDING[page];
-  if (!name) { failed.push(`${rel}: no binding runs the ${page} page. Add it to PAGE_BINDING.`); continue; }
+  if (!name) { failed.push(`${line}: no binding runs the ${page} page. Add it to PAGE_BINDING.`); continue; }
   const spec = BINDINGS[name];
   if (!built.has(name)) {
     try {
@@ -384,30 +395,33 @@ for (const rel of list) {
     }
   }
   const binding = built.get(name);
-  if (binding.missing) { notRun.push(`${rel}: not run: no ${binding.missing}`); continue; }
-  if (binding.error) { failed.push(`${rel}: the ${name} binding did not build\n${binding.error}`); continue; }
+  if (binding.missing) { notRun.push(`${line}: not run: no ${binding.missing}`); continue; }
+  if (binding.error) { failed.push(`${line}: the ${name} binding did not build\n${binding.error}`); continue; }
 
   try {
     binding.prepare?.(rel);
   } catch (error) {
-    failed.push(`${rel}: ${error.message}`);
+    failed.push(`${line}: ${error.message}`);
     continue;
   }
-  const whole = attempt(rel, binding, fixture.filter((l) => l.key));
-  if (!whole.ok) { failed.push(`${rel}: failed against the whole recording\n${whole.output}`); continue; }
+  const whole = attempt(rel, binding, fixture.filter((l) => l.key), named);
+  if (!whole.ok) { failed.push(`${line}: failed against the whole recording\n${whole.output}`); continue; }
 
   const text = fs.readFileSync(path.join(examples, rel), 'utf8');
   const literals = [...text.matchAll(/"((?:[^"\\\n]|\\.){12,})"|'((?:[^'\\\n]|\\.){12,})'/g)].map((m) => (m[1] ?? m[2]).replace(/\\n/g, '\n').replace(/\\(.)/g, '$1'));
   let kept = fixture.filter((l) => l.key && literals.some((x) => l.question.includes(x)));
-  if (!attempt(rel, binding, kept).ok) { failed.push(`${rel}: the answers whose question holds one of its literals do not answer it. The runner cannot tell which answers it read.`); continue; }
+  if (!attempt(rel, binding, kept, named).ok) { failed.push(`${line}: the answers whose question holds one of its literals do not answer it. The runner cannot tell which answers it read.`); continue; }
   for (const line of [...kept]) {
     const without = kept.filter((l) => l !== line);
-    if (attempt(rel, binding, without).ok) kept = without;
+    if (attempt(rel, binding, without, named).ok) kept = without;
   }
-  if (!kept.length || !attempt(rel, binding, kept).ok) { failed.push(`${rel}: the answers it read do not answer it on their own.`); continue; }
+  if (!kept.length || !attempt(rel, binding, kept, named).ok) { failed.push(`${line}: the answers it read do not answer it on their own.`); continue; }
+
+  const stray = route ? kept.filter((l) => !l.url?.startsWith(`${route.base}/`)) : [];
+  if (stray.length) { failed.push(`${line}: read ${stray.length} answers recorded away from ${route.base}: ${[...new Set(stray.map((l) => l.url))].join(', ')}. The backend setting did not reach the sample.`); continue; }
 
   const folders = [...new Set([spec.folder, ...cargoFolders(spec.manifest)])].sort();
-  proof[rel] = {
+  proof[line] = {
     page: `/install/${page}/`,
     ...sampleHashes(examples, rel),
     answers: Object.fromEntries(kept.map((l) => [l.key, sha256(l.text)]).sort()),
@@ -415,7 +429,7 @@ for (const rel of list) {
     toolchain: binding.toolchain,
   };
   proved += 1;
-  console.log(`smoke-bindings: ${rel} passed, reading ${kept.length} recorded answers.`);
+  console.log(`smoke-bindings: ${line} passed, reading ${kept.length} recorded answers at ${[...new Set(kept.map((l) => l.url))].join(', ')}.`);
 }
 fs.rmSync(tmp, { recursive: true, force: true });
 

@@ -1,0 +1,16 @@
+---
+// The language pages that show how to reach a backend. Each item links the
+// page's Backends section. pandas and Polars share Python's section.
+import { SURFACES } from '../data/catalog.mjs';
+
+const pages = SURFACES.filter((s) => s.backends && s.backends !== 'python');
+---
+<h2>From your language</h2>
+<p>Each page shows how its language names a backend.</p>
+<ul class="from-your-language">
+  {pages.map((s) => <li><a href={`/install/${s.slug}/#backends`}>{s.name}</a></li>)}
+</ul>
+<style>
+  .from-your-language { columns: 3 9rem; }
+  .from-your-language li { break-inside: avoid; margin: 0 0 .4rem; }
+</style>
