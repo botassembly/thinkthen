@@ -192,7 +192,7 @@ func TestMatrix(t *testing.T) {
 				t.Fatalf("rank: %v", value)
 			}
 		case 6:
-			if value != "find-one" {
+			if found, ok := value.(map[string]any); !ok || found["index"] != float64(0) || found["unit"] != "find-one" || found["probability"] != 0.9 {
 				t.Fatalf("find: %v", value)
 			}
 		case 7:

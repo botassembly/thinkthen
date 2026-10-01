@@ -935,9 +935,13 @@
       "type": "array"
     },
     "find": {
-      "type": [
-        "string",
-        "null"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/foundUnit"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "findAnswer": {
@@ -1005,6 +1009,28 @@
       "required": [
         "text",
         "none"
+      ],
+      "type": "object"
+    },
+    "foundUnit": {
+      "properties": {
+        "index": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "unit",
+        "probability"
       ],
       "type": "object"
     },

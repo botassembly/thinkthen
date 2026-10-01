@@ -234,3 +234,129 @@ fn invalid_utf8_names_a_stream_record_and_a_whole_document_as_evidence() {
         assert!(!said(&output).contains("private"));
     }
 }
+
+const TOO_DEEP: &str =
+    "the JSON nests more than 127 levels of arrays and objects, the most this tool reads";
+
+/// A decide reply that answers every question the request asks.
+fn answered(body: &[u8]) -> Canned {
+    let request: serde_json::Value = serde_json::from_slice(body).unwrap_or_default();
+    let answers: serde_json::Map<String, serde_json::Value> = request
+        .get("questions")
+        .and_then(serde_json::Value::as_object)
+        .into_iter()
+        .flat_map(|questions| questions.keys())
+        .map(|name| {
+            (
+                name.clone(),
+                serde_json::json!({"type": "noul", "noul": 0.9}),
+            )
+        })
+        .collect();
+    Canned::ok(&serde_json::json!({"model": "jev-1.13.0", "answers": answers}).to_string())
+}
+
+/// A record nests at most 127 levels of arrays and objects. At 128 it is
+/// refused by that limit, not as bad syntax, and nothing is sent.
+#[test]
+fn a_jsonl_record_nests_at_most_127_levels() {
+    let nested = |depth: usize, open: &str, close: &str| {
+        format!("{}\"x\"{}\n", open.repeat(depth), close.repeat(depth))
+    };
+    for (depth, open, close) in [
+        (127, "[", "]"),
+        (127, "{\"a\":", "}"),
+        (128, "[", "]"),
+        (128, "{\"a\":", "}"),
+    ] {
+        let listener = Listener::answering(answered).expect("a loopback listener");
+        let output = spawn(
+            &[
+                "decide",
+                QUESTION,
+                "--jsonl",
+                "--no-cache",
+                "--url",
+                listener.base(),
+            ],
+            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            nested(depth, open, close).as_bytes(),
+        )
+        .expect("the compiled binary runs");
+        if depth == 127 {
+            assert_eq!(
+                output.status.code(),
+                Some(0),
+                "{depth} {open}: {}",
+                said(&output)
+            );
+            assert_eq!(listener.count(), 1, "{depth} {open}");
+            continue;
+        }
+        assert_eq!(output.status.code(), Some(2), "{depth} {open}");
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            said(&output),
+            format!("thinkthen: {TOO_DEEP}\nthinkthen: stopped at record 1; 0 records finished\n")
+        );
+        assert_eq!(listener.connections(), 0);
+    }
+}
+
+#[test]
+fn a_question_file_past_the_depth_limit_names_the_limit() {
+    let listener = listener().expect("a loopback listener");
+    let deep = format!(
+        "{{\"decide\":\"q\",\"x\":{}1{}}}",
+        "[".repeat(127),
+        "]".repeat(127)
+    );
+    let path = written("syntax-question-too-deep.json", deep.as_bytes()).expect("a question file");
+    let question = format!("@{}", path.display());
+    let output = spawn(
+        &["decide", &question, "--url", listener.base()],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"evidence",
+    )
+    .expect("the compiled binary runs");
+    assert_refused(
+        &output,
+        &listener,
+        5,
+        &format!("the question file is not JSON this tool reads: {TOO_DEEP}"),
+    );
+}
+
+/// `annotate` reads a whole JSON document as a record. At 127 levels it is
+/// asked; at 128 it is refused by the limit, not read as text, and nothing is sent.
+#[test]
+fn an_annotate_document_nests_at_most_127_levels() {
+    let set = written(
+        "depth-annotate-set.json",
+        br#"{"version":1,"questions":{"one":{"decide":"Is it kept?"}}}"#,
+    )
+    .expect("a question set");
+    let set = set.to_string_lossy();
+    for depth in [127, 128] {
+        let listener = Listener::answering(answered).expect("a loopback listener");
+        let document = format!("{}1{}", "[".repeat(depth), "]".repeat(depth));
+        let output = spawn(
+            &[
+                "annotate",
+                set.as_ref(),
+                "--no-cache",
+                "--url",
+                listener.base(),
+            ],
+            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            document.as_bytes(),
+        )
+        .expect("the compiled binary runs");
+        if depth == 127 {
+            assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+            assert_eq!(listener.count(), 1);
+            continue;
+        }
+        assert_refused(&output, &listener, 2, TOO_DEEP);
+    }
+}

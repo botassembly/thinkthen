@@ -253,7 +253,7 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
                 .ok()
                 .and_then(|asked| serde_json::from_value(asked["units"].clone()).ok())
                 .unwrap_or_default();
-            let want = picked(&units, &success["operation"]["selected"]);
+            let want = found(&units, &success["operation"]);
             Ok(Box::new(move |got| same("find", &parsed(&got[0])?, &want)))
         }
         ("rank", _) => {
@@ -654,6 +654,21 @@ fn picked(texts: &[String], index: &Value) -> Value {
     let at = index.as_u64().and_then(|at| usize::try_from(at).ok());
     at.and_then(|at| texts.get(at))
         .map_or(Value::Null, |text| json!(text))
+}
+
+/// The door's `find` value: the selected unit with its place and its
+/// probability from the case's candidate list, or null.
+fn found(units: &[String], operation: &Value) -> Value {
+    let selected = &operation["selected"];
+    let chosen = operation["probabilities"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|row| &row["index"] == selected));
+    match (picked(units, selected), chosen) {
+        (Value::Null, _) | (_, None) => Value::Null,
+        (unit, Some(row)) => {
+            json!({"index": selected, "unit": unit, "probability": row["probability"]})
+        }
+    }
 }
 
 /// A question object's written bytes with one more member at the end.

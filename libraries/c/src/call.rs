@@ -283,7 +283,7 @@ fn answer(
             })?;
             let found = engine.find_with(&asked, units.iter().map(String::as_str), options)?;
             Ok((
-                written(serde_json::to_string(&found.value().selected()))?,
+                written(serde_json::to_string(&found.value().picked()))?,
                 found.facts().clone(),
             ))
         }

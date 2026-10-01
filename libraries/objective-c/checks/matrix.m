@@ -58,8 +58,12 @@ static void json(const char *request,const char *expect) {
           !strcmp(tt_json_get(tt_json_get(value,"answer"),"probability")->text,"0.9") &&
           !strcmp(tt_json_get(value,"threshold")->text,"0.5") &&
           !strcmp(tt_json_get(tt_json_get(value,"question"),"verb")->text,"decide"),"detailed decision true at 0.9");
- }else if(!strcmp(expect,"first") || !strcmp(expect,"find-one")){
-  if(value->type==TTJSONString)require(!strcmp(value->text,expect),"literal JSON choice/find value");
+ }else if(!strcmp(expect,"found")){
+  require(value->type==TTJSONObject && !strcmp(tt_json_get(value,"index")->text,"0") &&
+          !strcmp(tt_json_get(value,"unit")->text,"find-one") &&
+          !strcmp(tt_json_get(value,"probability")->text,"0.9"),"find unit with its place and probability");
+ }else if(!strcmp(expect,"first")){
+  if(value->type==TTJSONString)require(!strcmp(value->text,expect),"literal JSON choice value");
   else {require(value->type==TTJSONArray && value->count==2 &&
                  !strcmp(value->children[0]->text,"first") &&
                  !strcmp(value->children[1]->text,"second"),"literal ordered tag labels");}
@@ -86,7 +90,7 @@ int main(int argc,char **argv) {
   json("{\"score\":\"What level?\",\"levels\":[\"Low.\",\"High.\"],\"evidence\":\"score\"}","0");
   json("{\"filter\":\"Is it?\",\"records\":[\"filter-one\",\"filter-two\"]}","filter-one");
   json("{\"rank\":\"Is it?\",\"records\":[\"rank-one\",\"rank-two\"]}","rank-one");
-  json("{\"find\":\"Which line?\",\"units\":[\"find-one\",\"find-two\"]}","find-one");
+  json("{\"find\":\"Which line?\",\"units\":[\"find-one\",\"find-two\"]}","found");
   json("{\"annotate\":{\"version\":1,\"questions\":{\"check\":{\"decide\":\"Is it?\"}}},\"records\":[\"annotate-one\"]}","check");
   json("{\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}},\"version\":1,\"evidence\":\"Maria Chen\"}","entities");
   json("{\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]},\"version\":1,\"records\":[{\"name\":\"First\",\"kind\":\"alert\"},{\"name\":\"Second\",\"kind\":\"alert\"}]}","edges");

@@ -87,7 +87,7 @@ public class Matrix {
                     case 3 -> check(((Number)value).doubleValue()==.1,"score "+answer);
                     case 4 -> check(answer.contains("filter-one") && answer.contains("filter-two"),"filter "+answer);
                     case 5 -> check(answer.contains("rank-one") && answer.contains("rank-two"),"rank "+answer);
-                    case 6 -> check(answer.contains("find-one"),"find "+answer);
+                    case 6 -> check(value instanceof Map<?,?> found && ((Number)found.get("index")).intValue()==0 && "find-one".equals(found.get("unit")) && ((Number)found.get("probability")).doubleValue()==.9,"find "+answer);
                     case 7,11 -> check(value instanceof List<?> list && list.get(0) instanceof Map<?,?> row && Boolean.TRUE.equals(row.get("check")),"annotate "+answer);
                     case 8 -> check(answer.contains("length=") && answer.contains("text="),"recognize shape "+answer);
                     case 9 -> check(value instanceof Map<?,?> edges && edges.containsKey("edges"),"relate "+answer);

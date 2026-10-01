@@ -168,7 +168,7 @@ pub fn main() !void {
                     try require(item == .string and std.mem.eql(u8, item.string, expected));
                 }
             },
-            6 => try require(value == .string and std.mem.eql(u8, value.string, "find-one")),
+            6 => try require(value == .object and value.object.get("index").?.integer == 0 and std.mem.eql(u8, value.object.get("unit").?.string, "find-one") and value.object.get("probability").?.float == 0.9),
             7 => try require(value == .array and value.array.items.len == 1 and value.array.items[0].object.get("check").?.bool),
             8 => {
                 const entities = value.object.get("entities").?.array.items;

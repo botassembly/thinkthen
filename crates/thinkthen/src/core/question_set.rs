@@ -39,6 +39,9 @@ pub(crate) enum QuestionSetError {
         /// One-based column where parsing stopped.
         column: usize,
     },
+    /// The set nests past the JSON depth limit.
+    #[error("the question set is not JSON this tool reads: {}", JsonError::TooDeep)]
+    TooDeep,
     /// A duplicate key occurred at an unknown nested path.
     #[error("`{0}` appears more than once in the question set")]
     Duplicate(String),
@@ -410,6 +413,7 @@ fn json_error(error: JsonError) -> QuestionSetError {
     match error {
         JsonError::Syntax { line, column } => QuestionSetError::Syntax { line, column },
         JsonError::DuplicateName { path } => QuestionSetError::Duplicate(path),
+        JsonError::TooDeep => QuestionSetError::TooDeep,
         JsonError::NotFinite => QuestionSetError::Shape {
             path: "number".to_owned(),
             wanted: "is finite",

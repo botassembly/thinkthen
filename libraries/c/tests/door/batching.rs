@@ -303,3 +303,39 @@ fn call_batch_controls_request_count_and_refuses_scalar_context_before_send() {
         "the shared context reached the request"
     );
 }
+
+/// An annotate record read by an `on` question nests at most 127 levels. At
+/// 128 the door refuses it by that limit, with the usage code, and sends nothing.
+#[test]
+fn direct_c_annotate_record_nests_at_most_127_levels() {
+    let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
+    let listener = Listener::answering(move |_| Canned::ok(reply)).expect("loopback");
+    let base = listener.base();
+    let settings = json!({"base_url":base,"cache":false}).to_string();
+    let set = json!({"version":1,"questions":{"one":{"decide":"Q?","on":"/a"}}});
+    let record = |depth: usize| {
+        let inner = depth - 1;
+        format!("{{\"a\":{}1{}}}", "[".repeat(inner), "]".repeat(inner))
+    };
+    let mut script = Script::default();
+    script.ask("settings", &[base, &settings]);
+    for depth in [127, 128] {
+        let request = json!({"annotate":set,"records":[record(depth)]}).to_string();
+        script.ask("call", &[base, &request]);
+    }
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let output = run(&driver, "", &script.0);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let got = replies(&output.stdout).expect("framed replies");
+    assert_eq!(got.len(), 3);
+    assert_eq!(got[1].0, 0, "{}", got[1].1);
+    assert_eq!(
+        got[2],
+        (
+            1,
+            "the JSON nests more than 127 levels of arrays and objects, the most this tool reads"
+                .to_owned()
+        )
+    );
+    assert_eq!(listener.count(), 1, "the refused record sends nothing");
+}

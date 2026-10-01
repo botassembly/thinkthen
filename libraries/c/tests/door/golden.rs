@@ -120,7 +120,7 @@ const GOLDEN: [&str; 21] = [
     r#"0 {"value":[true,true],"facts":{"cache_answers":0,"estimated_cost_usd":"0.000001","input_tokens":1,"model":"jev-1.13.0","output_tokens":1,"records":2,"requests_sent":1,"seconds":0}}"#,
     r#"0 {"value":["one","two"],"facts":{"cache_answers":0,"estimated_cost_usd":"0.000001","input_tokens":1,"model":"jev-1.13.0","output_tokens":1,"records":2,"requests_sent":1,"seconds":0}}"#,
     r#"0 {"value":["one","two"],"facts":{"cache_answers":0,"estimated_cost_usd":"0.000001","input_tokens":1,"model":"jev-1.13.0","output_tokens":1,"records":2,"requests_sent":1,"seconds":0}}"#,
-    r#"0 {"value":"one",{FACTS}}"#,
+    r#"0 {"value":{"index":0,"unit":"one","probability":0.9},{FACTS}}"#,
     r#"0 {"value":[{"refund":true,"team":"billing"}],{FACTS}}"#,
     r#"0 {"value":{"entities":[]},"facts":{"cache_answers":0,"estimated_cost_usd":"0.000001","input_tokens":2,"model":"jev-1.13.0","output_tokens":2,"records":1,"requests_sent":2,"seconds":0}}"#,
     r#"0 {"value":{"edges":[{"relation":"linked","source":{"name":"Ada","kind":"person"},"target":{"name":"Bea","kind":"person"},"probability":0.9},{"relation":"linked","source":{"name":"Bea","kind":"person"},"target":{"name":"Ada","kind":"person"},"probability":0.9}]},{FACTS}}"#,

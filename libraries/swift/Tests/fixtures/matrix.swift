@@ -179,7 +179,9 @@ func matrix() throws {
         case 3: check((value as! Double) == 0.1, "score")
         case 4: check((value as! [String]) == ["filter-one", "filter-two"], "filter")
         case 5: check((value as! [String]) == ["rank-one", "rank-two"], "rank")
-        case 6: check(value as? String == "find-one", "find")
+        case 6:
+            let found = value as? [String: Any]
+            check(found?["index"] as? Int == 0 && found?["unit"] as? String == "find-one" && found?["probability"] as? Double == 0.9, "find")
         case 7: check((value as! [[String: Any]])[0]["check"] as? Bool == true, "annotate")
         case 8: check(((value as! [String: Any])["entities"] as! [Any]).count == 1, "recognize json")
         case 9: check(((value as! [String: Any])["edges"] as! [Any]).count == 2, "relate json")
