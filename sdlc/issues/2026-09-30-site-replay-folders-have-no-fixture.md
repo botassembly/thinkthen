@@ -1,6 +1,6 @@
 # The site smoke is red, and most site samples run under no check
 
-Status: open. Found on 2026-09-30 by running the site smoke against main `acebf3044`. Marketing owns `site/` (`sdlc/planning/ownership.md`); converting the recordings is ours. Our part, the conversion proof, landed with ticket 0304 slice 5; marketing runs the conversion. Owner of the rest: marketing. Merged on 2026-09-30 with the site samples issue, now in `closed/`.
+Status: open for parts 3 and 4, both marketing's. Parts 1 and 2 are done, as marketing reported in `closed/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md`. Found on 2026-09-30 by running the site smoke against main `acebf3044`. Marketing owns `site/` (`sdlc/planning/ownership.md`); converting the recordings is ours. Our part, the conversion proof, landed with ticket 0304 slice 5; marketing runs the conversion. Owner of the rest: marketing. Merged on 2026-09-30 with the site samples issue, now in `closed/`.
 
 Kind: debt
 
@@ -12,37 +12,13 @@ Severity: medium
 
 Keeping it leaves the site smoke red, so a new site failure hides among 79 known ones, and a library or database tab can drift from its surface with no check failing.
 
-## 1. Fifteen replay folders have no fixture (ours, 0304 slice 5)
+## 1. Fifteen replay folders have no fixture: done
 
-Since 0304 slice 2, replay reads only `thinkthen.jsonl` or `thinkthen.sqlite` (`engine/store.rs:127-133`). Fifteen tracked folders under `site/` hold only old `DIGEST.json` entries:
+Marketing converted the fifteen folders with `thinkthen cache convert`, and no entry was skipped. Each folder now holds only `thinkthen.jsonl`. Our conversion proof landed with ticket 0304 slice 5. Git history holds the folder list and the command.
 
-- `site/recordings`, which the smoke passes to every function call (`site/scripts/smoke.mjs:101`).
-- Eight Beatles Bench examples: `site/examples/beatles/bench/examples/{annotate,choose,decide,filter,find,rank,score,tag}/recording`.
-- One bench results run: `site/examples/beatles/bench/results/runs/2026-09-26-thinkthen-jev/recording`.
-- Three Beatles pages: `site/examples/beatles/{recognize,relate,score-bands}/files/recording`.
-- Two Bash how-tos: `site/examples/how-tos/bash/{agent-tool-guard,long-lived-loop}/files/recording`.
+## 2. The five `--dry-run` examples: done
 
-The folder list comes from `git ls-files`: folders with digest-named `.json` files and no `thinkthen.jsonl`, outside `probes/`.
-
-The smoke run, `cd site && THINKTHEN_BIN=../target/debug/thinkthen node scripts/smoke.mjs`, with no key or address set and no network, exited 1: 79 of 97 examples failed and 18 passed. 74 failed because the replay folder holds no answer for the question key; that count includes three asserts that failed after a miss. The other 5 failed with `--dry-run was renamed --plan`: `beatles/backends/1-check.sh`, `beatles/recognize/1-find.sh`, `install/backends/1-dry-run.sh`, `install/settings/1-environment.sh` and `install/settings/2-flag.sh`. The smoke's wrapper also still matches `--dry-run`. The smoke log was kept as a local scratch file.
-
-Slice 5 converted each folder in a scratch copy of `site/` with a build of its branch. Every folder converted with no `--quote` and skipped no entry. The smoke over that copy, with the old files deleted, failed 5 of 97 examples, all five the `--dry-run` examples of part 2. Slice 5 does not edit `site/`, so marketing runs the conversion. The command is in ticket 0304, slice 5 evidence:
-
-```sh
-for dir in site/recordings \
-  site/examples/beatles/bench/examples/{annotate,choose,decide,filter,find,rank,score,tag}/recording \
-  site/examples/beatles/bench/results/runs/2026-09-26-thinkthen-jev/recording \
-  site/examples/beatles/{recognize,relate,score-bands}/files/recording \
-  site/examples/how-tos/bash/{agent-tool-guard,long-lived-loop}/files/recording; do
-  thinkthen cache convert "$dir"
-done
-```
-
-Then delete each folder's digest-named `.json` files and `.thinkthen-backend.json`, and rerun the smoke. Part 1 is done when those folders hold only `thinkthen.jsonl`.
-
-## 2. The five `--dry-run` examples (marketing)
-
-Change the five examples above and the smoke wrapper to `--plan`, review any `.out` change the converted fixtures cause, and keep the smoke green afterwards.
+The five examples and the smoke wrapper use `--plan`. The site smoke passes 97 of 97 examples, and `npm run build` passes.
 
 ## 3. Run the library and database samples (marketing)
 

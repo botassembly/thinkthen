@@ -1,0 +1,4 @@
+url https://api.liquid.ai/decisions/v1/systemone
+provider systemone
+model asked unspecified
+model sent d1:free

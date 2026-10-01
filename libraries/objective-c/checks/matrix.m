@@ -68,10 +68,17 @@ static void json(const char *request,const char *expect) {
                  !strcmp(value->children[0]->text,"first") &&
                  !strcmp(value->children[1]->text,"second"),"literal ordered tag labels");}
  }else if(!strcmp(expect,"0"))require(value->type==TTJSONNumber && !strcmp(value->text,"0.1"),"literal score 0.1");
- else if(!strcmp(expect,"filter-one")||!strcmp(expect,"rank-one"))
+ else if(!strcmp(expect,"filter-one"))
   require(value->type==TTJSONArray && value->count==2 &&
-          !strcmp(value->children[0]->text,expect) &&
-          !strcmp(value->children[1]->text,!strcmp(expect,"filter-one")?"filter-two":"rank-two"),"literal ordered record answers");
+          !strcmp(value->children[0]->text,"filter-one") &&
+          !strcmp(value->children[1]->text,"filter-two"),"literal ordered record answers");
+ else if(!strcmp(expect,"rank-one"))
+  require(value->type==TTJSONArray && value->count==2 &&
+          !strcmp(tt_json_get(value->children[0],"index")->text,"0") &&
+          !strcmp(tt_json_get(value->children[0],"record")->text,"rank-one") &&
+          !strcmp(tt_json_get(value->children[0],"probability")->text,"0.9") &&
+          !strcmp(tt_json_get(value->children[1],"index")->text,"1") &&
+          !strcmp(tt_json_get(value->children[1],"record")->text,"rank-two"),"rank rows with place and probability");
  else require(strstr(s,expect) != NULL,"JSON verb result literal");
  tt_json_free(tree);free(s);tt_failure_clear(&f);
 }

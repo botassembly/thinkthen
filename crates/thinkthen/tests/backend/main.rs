@@ -101,6 +101,7 @@ mod refused;
 mod relate;
 mod resend;
 mod result_assertions;
+mod row_usage;
 mod scheduling;
 mod secrecy;
 mod secrecy_find;

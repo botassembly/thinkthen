@@ -1,0 +1,21 @@
+{
+  "title": "Yesterday",
+  "singer": "Paul",
+  "tags": [
+    "love song",
+    "sad"
+  ],
+  "abbey_road": null,
+  "big_hit": true
+}
+{
+  "title": "Octopus's Garden",
+  "singer": "Ringo",
+  "tags": [
+    "psychedelic",
+    "about a place",
+    "about the sea"
+  ],
+  "abbey_road": null,
+  "big_hit": null
+}

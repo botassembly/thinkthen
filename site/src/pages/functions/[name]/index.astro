@@ -8,12 +8,15 @@ import { FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
 import { captioned, files } from '../../../data/samples.mjs';
 import { beatlesPageFor } from '../../../data/beatles.mjs';
 import { slideCard } from '../../../data/cards.mjs';
+import { REFERENCE_PAGES } from '../../../data/reference.mjs';
 
 export function getStaticPaths() {
   return FUNCTIONS.map((fn) => ({ params: { name: fn.name }, props: { fn } }));
 }
 
 const { fn } = Astro.props;
+// The Reference page that covers this function's edge cases, if one does.
+const edges = REFERENCE_PAGES.find((p) => p.slug === fn.name);
 if (!fn.goal) throw new Error(`functions: ${fn.name} has no goal`);
 const page = `functions/${fn.name}`;
 const all = captioned(page, fn.see, true);
@@ -53,7 +56,7 @@ const card = slideCard(fn.name);
   <h2>Call it from your language</h2>
   <CrossView fn={fn.name} above={Boolean(first)} />
 
-  <p class="pagelinks"><a href={`/reference/functions/${fn.name}/`}>Arguments, options, and more examples</a></p>
+  <p class="pagelinks"><a href={`/reference/functions/${fn.name}/`}>Arguments, options, and more examples</a>{edges && <> · <a href={edges.route}>{edges.title}</a></>}</p>
 
   {howtos.length > 0 && (
     <>

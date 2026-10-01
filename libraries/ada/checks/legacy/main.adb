@@ -323,7 +323,7 @@ begin
                  when 3 => V = "[""first"",""second""]",
                  when 4 => V = "0.1",
                  when 5 => V = "[""filter-one"",""filter-two""]",
-                 when 6 => V = "[""rank-one"",""rank-two""]",
+                 when 6 => V = "[{""index"":0,""record"":""rank-one"",""probability"":0.9},{""index"":1,""record"":""rank-two"",""probability"":0.9}]",
                  when 7 => V = "{""index"":0,""unit"":""find-one"",""probability"":0.9}",
                  when 8 => Ada.Strings.Fixed.Index (V, """check"":true") > 0,
                  when 9 => Ada.Strings.Fixed.Index (V, """entities""") > 0 and Ada.Strings.Fixed.Index (V, "Maria Chen") > 0,

@@ -4,8 +4,9 @@
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
-import { SURFACES, FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
-import { captioned, firstCall } from '../../data/samples.mjs';
+import { SURFACES, FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { captioned, files, firstCall, installSample, sample } from '../../data/samples.mjs';
+import { buildLines } from '../../data/build-lines.mjs';
 
 export function getStaticPaths() {
   return SURFACES.map((s) => ({ params: { surface: s.slug }, props: { surface: s } }));
@@ -15,25 +16,17 @@ const { surface } = Astro.props;
 const shell = surface.slug === 'shell';
 const notes = surface.install.some(([, note]) => note);
 const first = shell ? null : firstCall(surface.slug);
+const build = first ? buildLines(surface.slug, first.file) : null;
+const buildText = build && [...build.lines, build.run].map((parts) => parts.join(' \\\n    ')).join('\n');
+const inputs = shell ? [] : files(`install/${surface.slug}`);
+const frames = surface.frames ? installSample(surface.slug, 'data-frames') : null;
+const onFunctionPages = !shell && CODE_FUNCTIONS.some((fn) => sample(fn.name, surface.slug));
 const decideOne = shell ? captioned('functions/decide', FUNCTIONS[0].see).find((r) => r.name === '3-one') : null;
 const headline = shell
   ? `A ${surface.name} command that answers questions about text`
   : `${surface.name} functions that answer questions about text`;
 // Copy marks code with backticks.
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
-const runFacts = {
-  shell: '`--facts` prints one line of run facts on standard error, after the answers.',
-  python: '`Call.facts` counts this call.',
-  polars: '`Call.facts` counts this frame call outside its columns.',
-  typescript: '`Call.facts` counts this call.',
-  ruby: '`Call#facts` counts this call.',
-  r: '`$facts` counts this call.',
-  rust: '`Call::facts()` counts this call.',
-  c: 'A JSON call returns `{"value":...,"facts":...}`.',
-  duckdb: '`thinkthen_usage()` gives the totals for the process.',
-  sqlite: '`thinkthen_usage()` gives the totals for the process.',
-  postgresql: '`thinkthen_usage()` gives the totals for the process.',
-};
 ---
 <Base title={surface.name} description={surface.blurb.replace(/`/g, '')}>
   <div class="eyebrow"><a href="/install/">Install</a></div>
@@ -44,7 +37,7 @@ const runFacts = {
   <table>
     <tr><th>Channel</th>{notes && <th>Note</th>}</tr>
     {surface.install.map(([line, note]) => (
-      <tr><td><code>{line}</code></td>{notes && <td>{note || ''}</td>}</tr>
+      <tr><td><code>{line}</code></td>{notes && <td>{parts(note || '').map((x) => x.code ? <code>{x.part}</code> : x.part)}</td>}</tr>
     ))}
   </table>
   <p>Set <code>{KEY_VARIABLE}</code> in the environment.</p>
@@ -52,16 +45,40 @@ const runFacts = {
   <h2>A first call</h2>
   {first ? (
     <>
+      {inputs.map((file) => <Code code={file.text} file={file.name} caption={file.name.endsWith('.csproj') ? `${file.name}, the project file beside the sample` : `${file.name}, a file the sample reads`} />)}
       <Code code={first.code} file={first.file} label={`Copy the ${surface.name} sample`} />
+      {build && <Code code={buildText} lang="bash" caption={`Build and run it beside the unpacked archives, thinkthen-c/ and ${build.archive}/`} label={`Copy the ${surface.name} build lines`} />}
       {first.output && <Code code={first.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
     </>
   ) : (
     <Terminal run={decideOne} caption={decideOne.see} />
   )}
-  <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person. Each <a href="/functions/">function page</a> shows its {surface.name} call.</p>
+  <p>Not sure comes back as {parts(surface.unsureWord).map((x) => x.code ? <code>{x.part}</code> : x.part)}. Branch on it and send those cases to a person.{onFunctionPages && <> Each <a href="/functions/">function page</a> shows its {surface.name} call.</>}</p>
+
+  {frames && (
+    <>
+      <h2>Data frames</h2>
+      <p>{parts(surface.frames).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+      <Code code={frames.code} file={frames.file} label={`Copy the ${surface.name} data frame sample`} />
+    </>
+  )}
 
   <h2>Run facts</h2>
-  <p>{parts(runFacts[surface.slug]).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+  <p>{parts(surface.facts).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+
+  {surface.errors && (
+    <>
+      <h2>Errors</h2>
+      <p>{parts(surface.errors).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+    </>
+  )}
+
+  {surface.settings && (
+    <>
+      <h2>Settings and recording</h2>
+      <p>{parts(surface.settings).map((x) => x.code ? <code>{x.part}</code> : x.part)} The <a href="/install/settings/">Settings</a> page lists every setting.</p>
+    </>
+  )}
 
   <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>

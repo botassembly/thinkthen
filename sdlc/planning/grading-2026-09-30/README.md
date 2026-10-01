@@ -72,7 +72,7 @@ Ranked by value against size, across the whole repo. Blocking items come first, 
 - The wall-clock waits in routine tests (area 2 item 3, area 4 item 2, area 12 item 1, area 20 item 8): ticket 0352 landed at `9e33cd639`. Area 3's rate-spacing tests (`tests/backend/backoff.rs`, `named_backends/rate.rs`) were not changed, so area 3 item 1 stayed open until ticket 0356 measured them from the launch. The ticket filed Debt 029 (binding tests) and Debt 030 (the piped batching pause) for what remains.
 - The relate decision run (R1) and docs page 11 were done before the graded commit.
 
-Two queue-owner issues from marketing's site ticket are open and do not block 0.1. `sdlc/issues/2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` asks to rewrite two draft-form lines the site shows, in `settings.md:67` and `recording.md:30`. `sdlc/issues/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md` is a note recording parts 1 and 2 of the site issue as done.
+One queue-owner issue from marketing's site ticket is open and does not block 0.1. `sdlc/issues/2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` asks to rewrite three draft-form lines the site shows, in `settings.md` and `recording.md`. The note recording parts 1 and 2 of the site issue as done is closed: `sdlc/issues/closed/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md`.
 
 ## Unconfirmed claims, rechecked
 
@@ -89,14 +89,14 @@ This merges the reports' blocking items, the open issues that `sdlc/planning/iss
 
 | No. | Item | Source | Owner | Size | Lane |
 | ---: | --- | --- | --- | :---: | --- |
-| 1 | Correct six contract sentences that drift from the code (top-ten item 1) | areas 1.1, 5.2, 10.5, 13.1, 15.1, 17.1; `sdlc/issues/2026-09-30-contract-sentences-that-drift-from-the-code.md` | queue owner | S | no |
-| 2 | `cache prune --older-than 5é` panics instead of printing the usage sentence | area 2.1; `sdlc/issues/2026-09-30-cache-prune-older-than-panics-on-a-multi-byte-unit.md` | queue owner | S | no |
-| 3 | Show whether a huge library `timeout` can overflow the client's clock, then cap it or pin it | area 11.3 (blocks only if it panics); `sdlc/issues/2026-09-30-library-timeout-has-no-upper-bound.md` | queue owner | S | no |
+| 1 | Correct six contract sentences that drift from the code (top-ten item 1) | areas 1.1, 5.2, 10.5, 13.1, 15.1, 17.1; `sdlc/issues/2026-09-30-contract-sentences-that-drift-from-the-code.md` | queue owner | S | done: the pre-0.1 small quick fix |
+| 2 | `cache prune --older-than 5é` panics instead of printing the usage sentence | area 2.1; `sdlc/issues/2026-09-30-cache-prune-older-than-panics-on-a-multi-byte-unit.md` | queue owner | S | done: the pre-0.1 small quick fix |
+| 3 | Show whether a huge library `timeout` can overflow the client's clock, then cap it or pin it | area 11.3 (blocks only if it panics); `sdlc/issues/2026-09-30-library-timeout-has-no-upper-bound.md` | queue owner | S | done: the pre-0.1 small quick fix |
 | 4 | `find` returns no probability through the C door, so the 13 C-interface languages cannot return it, and no runner proves it | areas 7.1, 8.1; release QA; `sdlc/issues/2026-09-30-find-returns-no-probability-in-c-interface-languages.md` | queue owner | M | no |
 | 5 | A JSON record nested 128 deep is refused as "not valid JSON"; name the depth limit and give it its own sentence on every surface | release QA; `sdlc/issues/2026-09-30-deep-json-record-refused-as-not-valid-json.md` | queue owner | M | no |
 | 6 | Count stored answers in the DuckDB and PostgreSQL runners, and add SQLite's read-only replay and busy-store tests (Debt 010) | areas 2.6, 9.1; priorities; `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md` | queue owner | M | yes, claude-2 (0348) |
-| 7 | Run the 500-line cap over `libraries/` and `databases/`, and split `libraries/c/tests/door/cases.rs` (768 lines) (Debt 027) | areas 7.2, 12.4; `sdlc/issues/2026-09-30-c-door-cases-test-over-the-file-cap.md` | queue owner | M | no |
-| 8 | Run the library-only tests in a routine gate (Debt 028) | the rehearsal fix review; `sdlc/issues/2026-09-30-no-routine-gate-runs-the-library-only-tests.md` | queue owner | S | no |
+| 7 | Run the 500-line cap over `libraries/` and `databases/`, and split `libraries/c/tests/door/cases.rs` (768 lines) (Debt 027) | areas 7.2, 12.4; `sdlc/issues/closed/2026-09-30-c-door-cases-test-over-the-file-cap.md` | queue owner | M | no |
+| 8 | Run the library-only tests in a routine gate (Debt 028) | the rehearsal fix review; `sdlc/issues/2026-09-30-no-routine-gate-runs-the-library-only-tests.md` | queue owner | S | done: the pre-0.1 small quick fix |
 | 9 | Rerun the release rehearsal once billing works: every job passes on four targets with zero "not run", carrying the package proofs of the release issue's items 6 and 7. The third attempt (run 36791693601) started no job | area 10.1; ticket 0128 phase 3b; `sdlc/issues/2026-09-25-release-and-install-for-0-1.md` item 1 | queue owner | M | no, blocked on item 19 (lane claude-3 was freed at `d3fd19419`) |
 | 10 | Inspect the macOS DuckDB extension for `sqlite3_` names, and hide them if present (Debt 026) | area 9.2; priorities; `sdlc/issues/2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md` | queue owner | M | no, waits on item 9 |
 | 11 | Add publish jobs for NuGet, Packagist, Maven Central, pub.dev and R-universe, or state which languages ship as GitHub assets or tags only | area 10.4; release issue item 5 | queue owner | L | no |

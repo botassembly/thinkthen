@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseSettings, plain, SURFACES, ABSENT, LEFT_OUT } from '../src/lib/settings-table.mjs';
+import { backends } from '../src/lib/backends-table.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const spec = fs.readFileSync(path.join(site, '..', 'specification', 'settings.md'), 'utf8');
@@ -112,8 +113,22 @@ for (const file of walkHtml(path.join(site, 'dist'))) {
   }
 }
 
+// The Backends overview must show every built-in backend as
+// specification/backends.md holds it: name, address, key variables, model.
+const overview = fs.readFileSync(path.join(site, 'dist', 'install', 'backends', 'index.html'), 'utf8');
+const shown = [...overview.matchAll(/<tr[^>]*data-backend="([^"]+)"[^>]*>([\s\S]*?)<\/tr>/g)];
+const builtIns = backends();
+if (shown.length !== builtIns.length) problems.push(`the Backends overview shows ${shown.length} backends and specification/backends.md holds ${builtIns.length}`);
+for (const b of builtIns) {
+  const row = shown.find((m) => m[1] === b.name);
+  if (!row) { problems.push(`the Backends overview has no row for ${b.name}`); continue; }
+  for (const part of [b.name, b.base, ...b.keys, b.model]) {
+    if (!text(row[2]).includes(squash(part))) problems.push(`the Backends overview's ${b.name} row does not say ${part}`);
+  }
+}
+
 if (problems.length) {
-  console.error(`check-settings: the Settings page and specification/settings.md disagree\n  ${problems.join('\n  ')}`);
+  console.error(`check-settings: a page and the specification disagree\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`check-settings: the page shows all ${rows.length} settings, as the table says, and cites no record. No source types a default, and every default the site states is in the table`);
+console.log(`check-settings: the page shows all ${rows.length} settings, as the table says, and cites no record. No source types a default, every default the site states is in the table, and the Backends overview shows all ${backends().length} built-in backends`);

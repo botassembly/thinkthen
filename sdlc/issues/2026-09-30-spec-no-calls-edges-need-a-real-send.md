@@ -1,6 +1,6 @@
 # About a third of the spec's "no calls" edges show only after a real send, and the spec lags the build in places
 
-Status: open. Reported by the Beatles Bench team on 2026-09-30 from the private release QA suite's first edge pass. Owner: the queue owner, who feeds each finding back into `specification/`.
+Status: open. Reported by the Beatles Bench team on 2026-09-30 from the private release QA suite's first edge pass. Owner: the external release QA team, on its edge list. When that team sends a finding, the queue owner feeds it back into `specification/`.
 
 ## The problem
 

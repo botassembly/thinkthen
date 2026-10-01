@@ -57,7 +57,7 @@ const all = walk(root).map((p) => path.relative(root, p)).sort();
 const scripts = all.filter((p) => p.endsWith('.sh'));
 const stem = (p) => p.replace(/\.(out|exit)$/, '');
 const results = new Set(all.filter((p) => /\.(out|exit)$/.test(p) && all.includes(`${stem(p)}.sh`)));
-const kept = new Set(['SKIP', 'beatles/folders.json', 'beatles/bench-pin']);
+const kept = new Set(['SKIP', 'beatles/folders.json', 'beatles/bench-pin', 'beatles/deck-pin']);
 
 // examples/SKIP: a glob, then the reason, on each line.
 const skips = fs.readFileSync(path.join(root, 'SKIP'), 'utf8').split('\n')
@@ -101,10 +101,14 @@ done
 exec "${bin}" "$@" --replay "${recordings}"
 `, { mode: 0o755 });
 
-const env = { ...process.env, PATH: `${wrapper}:${process.env.PATH}`, HOME: path.join(tmp, 'home'), XDG_CACHE_HOME: path.join(tmp, 'cache'), LC_ALL: 'C.UTF-8' };
-delete env.THINKTHEN_API_KEY;
-delete env.THINKTHEN_BASE_URL;
-delete env.THINKTHEN_CACHE;
+// Every example sees the same environment on every machine: no key, no
+// address, no backend, no setting from the shell, and an empty
+// configuration folder.
+const env = { ...process.env, PATH: `${wrapper}:${process.env.PATH}`, HOME: path.join(tmp, 'home'), XDG_CACHE_HOME: path.join(tmp, 'cache'), XDG_CONFIG_HOME: path.join(tmp, 'config'), LC_ALL: 'C.UTF-8' };
+for (const name of Object.keys(env)) {
+  if (name.startsWith('THINKTHEN_')) delete env[name];
+}
+for (const name of ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY']) delete env[name];
 
 // A `test` line fails the example when it fails.
 const asserting = (text) => text.split('\n').map((l) => (/^\s*test /.test(l) ? `${l} || { echo 'assert failed: ${l.trim().replace(/'/g, "'\\''")}' >&2; exit 99; }` : l)).join('\n');

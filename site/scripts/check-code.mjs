@@ -17,7 +17,7 @@ import path from 'node:path';
 
 const dist = path.resolve(process.argv[2] || 'dist');
 
-const LANGS = new Set(['bash', 'json', 'jsonl', 'jq', 'diff', 'python', 'typescript', 'ruby', 'r', 'rust', 'c', 'sql']);
+const LANGS = new Set(['bash', 'json', 'jsonl', 'jq', 'diff', 'python', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'xml', 'sql']);
 
 // Blocks whose code holds no token the theme colours, keyed by page and
 // the block's first line, with the reason. Every block on the site has a

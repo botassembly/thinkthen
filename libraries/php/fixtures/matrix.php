@@ -116,7 +116,8 @@ try {
             case 1: check($result === '"first"', 'choose'); break;
             case 2: check($result === '["first","second"]', 'tag'); break;
             case 3: check((float)$result === 0.1, 'score'); break;
-            case 4: case 5: check(str_contains($result, $i===4?'filter-one':'rank-one'), 'record order'); break;
+            case 4: check(str_contains($result, 'filter-one'), 'record order'); break;
+            case 5: check($result === '[{"index":0,"record":"rank-one","probability":0.9},{"index":1,"record":"rank-two","probability":0.9}]', 'rank'); break;
             case 6: check($result === '{"index":0,"unit":"find-one","probability":0.9}', 'find'); break;
             case 7: case 11: check(str_contains($result, '"check":true'), 'annotate'); break;
             case 8: check(str_contains($result, '"length"') && str_contains($result,'"text"'), 'recognize shape'); break;

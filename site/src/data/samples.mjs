@@ -6,7 +6,8 @@
 // and <name>.exit its exit code when that is not 0. examples/<page>/files/
 // holds the files the scripts read. A library sample sits beside the
 // scripts as <surface>.<ext>, and a first-call sample as
-// examples/install/<surface>/first-call.<ext>.
+// examples/install/<surface>/first-call.<ext>. FIRST names the
+// exceptions.
 
 const raw = import.meta.glob(
   ['/examples/**/*', '!/examples/beatles/bench/**'],
@@ -81,16 +82,30 @@ export function captioned(page, see, optional = false) {
 }
 
 const EXT = {
-  python: 'py', polars: 'py', typescript: 'ts', ruby: 'rb', r: 'R',
-  rust: 'rs', c: 'c', duckdb: 'sql', sqlite: 'sql', postgresql: 'sql',
+  python: 'py', polars: 'py', pandas: 'py', typescript: 'ts', ruby: 'rb', r: 'R',
+  rust: 'rs', c: 'c', cpp: 'cpp', 'objective-c': 'm', cobol: 'cob', ada: 'adb',
+  java: 'java', kotlin: 'kt', scala: 'scala', csharp: 'cs',
+  duckdb: 'sql', sqlite: 'sql', postgresql: 'sql',
 };
+
+// GNAT names a unit after its file, so Ada's first call is first_call.
+// Java names a class after its file, and the JVM and .NET pages follow it.
+const FIRST = { ada: 'first_call', java: 'FirstCall', kotlin: 'FirstCall', scala: 'FirstCall', csharp: 'FirstCall' };
 
 // The first-call sample for a surface, with the output a database printed.
 export function firstCall(surface) {
+  const file = `${FIRST[surface] ?? 'first-call'}.${EXT[surface]}`;
+  const code = text(`install/${surface}/${file}`);
+  if (code === undefined) throw new Error(`samples: examples/install/${surface}/${file} is missing`);
+  return { file, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/${file}.out`)?.replace(/\n+$/, '') ?? null };
+}
+
+// Another install sample on a surface's page, such as R's data frames.
+export function installSample(surface, name) {
   const ext = EXT[surface];
-  const code = text(`install/${surface}/first-call.${ext}`);
-  if (code === undefined) throw new Error(`samples: examples/install/${surface}/first-call.${ext} is missing`);
-  return { file: `first-call.${ext}`, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/first-call.${ext}.out`)?.replace(/\n+$/, '') ?? null };
+  const code = text(`install/${surface}/${name}.${ext}`);
+  if (code === undefined) throw new Error(`samples: examples/install/${surface}/${name}.${ext} is missing`);
+  return { file: `${name}.${ext}`, code: code.replace(/\n+$/, '') };
 }
 
 // The library sample for a function on a surface, with the output a

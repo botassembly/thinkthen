@@ -1,0 +1,4 @@
+url https://api.typesafe.ai/v1/systemone
+provider systemone
+model asked unspecified
+model sent jev-1.13.0

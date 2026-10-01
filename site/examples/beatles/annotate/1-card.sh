@@ -1,9 +1,9 @@
 cat <<'EOF' |
-Blackbird
-Octopus's Garden
+{"title":"Yesterday"}
+{"title":"Octopus's Garden"}
 EOF
-thinkthen annotate annotate-cold-card.json \
-  --batch 1 \
-  --lines \
+thinkthen annotate questions.json \
+  --jsonl \
+  --field /title \
   --replay recording |
 jq .

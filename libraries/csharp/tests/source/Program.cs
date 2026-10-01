@@ -129,7 +129,7 @@ static class Program
                 case 2: Check(value.GetArrayLength() == 2 && value[0].GetString() == "first" && value[1].GetString() == "second", "tag"); break;
                 case 3: Check(value.GetDouble() == .1, "score"); break;
                 case 4: Check(value.GetArrayLength() == 2 && value[0].GetString() == "filter-one", "filter"); break;
-                case 5: Check(value.GetArrayLength() == 2 && value[0].GetString() == "rank-one", "rank"); break;
+                case 5: Check(value.GetArrayLength() == 2 && value[0].GetProperty("index").GetInt32() == 0 && value[0].GetProperty("record").GetString() == "rank-one" && value[0].GetProperty("probability").GetDouble() == .9 && value[1].GetProperty("record").GetString() == "rank-two", "rank"); break;
                 case 6: Check(value.GetProperty("index").GetInt32() == 0 && value.GetProperty("unit").GetString() == "find-one" && value.GetProperty("probability").GetDouble() == .9, "find"); break;
                 case 7: Check(value.GetArrayLength() == 1 && value[0].GetProperty("check").GetBoolean(), "annotate"); break;
                 case 8: Check(value.GetProperty("entities").GetArrayLength() == 1, "recognize JSON"); break;

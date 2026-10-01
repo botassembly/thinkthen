@@ -282,6 +282,16 @@ fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
     assert_eq!(held(&folder), [filled[1].clone()]);
     assert_eq!(fs::read(folder.join(old)).expect("old"), b"an old entry");
     assert_eq!(fs::read(folder.join("sentinel")).expect("kept"), b"keep me");
+    // A multi-byte last character is a typo, not a panic.
+    let typo = prune(&folder, &["--older-than", "5\u{e9}"]);
+    assert_eq!(typo.status.code(), Some(2), "{typo:?}");
+    assert!(typo.stdout.is_empty());
+    assert!(
+        String::from_utf8_lossy(&typo.stderr)
+            .contains("--older-than takes a positive integer and one lowercase unit"),
+        "{typo:?}"
+    );
+    assert_eq!(held(&folder), [filled[1].clone()]);
 }
 
 #[test]

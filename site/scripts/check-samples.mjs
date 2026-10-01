@@ -4,8 +4,8 @@
 //
 //   - No line over 60 characters, apart from the exempt lines below.
 //   - A library sample asserts. It never prints.
-//   - No example asks for --details. Pages may name it (checklist ruling of
-//     2026-09-30); examples wait for the annotate edge cases.
+//   - No example asks for --details, except on the annotate edge-case page
+//     under examples/reference/annotate/ (checklist ruling of 2026-09-30).
 //   - Each function page opens with one command example of 10 to 25
 //     lines, script and output together (Ian, 2026-09-28).
 //   - Code carries no comments.
@@ -29,6 +29,10 @@ const here = fileURLToPath(import.meta.url);
 const site = path.resolve(path.dirname(here), '..');
 const root = path.join(site, 'examples');
 const bench = path.join(root, 'beatles', 'bench');
+
+// The one page whose examples may ask for --details.
+const DETAILS_PAGE = 'reference/annotate/';
+
 const WIDTH = 60;
 // The lines a function page's example may show, script and output together.
 const EXAMPLE_LINES = { min: 10, max: 25 };
@@ -51,9 +55,24 @@ const EXEMPT = [
     test: (line, file) => file === 'how-tos/join-two-tables-by-meaning/1-join.out',
   },
   {
+    name: 'the annotate clash refusal',
+    why: 'thinkthen annotate prints its name-clash refusal as one line, and the page quotes it exactly.',
+    test: (line, file) => file.startsWith('reference/annotate/') && file.endsWith('.out') && /^thinkthen: the record already holds `[a-z0-9_]+`, so that question cannot be appended$/.test(line),
+  },
+  {
+    name: 'the replay miss',
+    why: 'thinkthen prints a replay miss as one line, and the page quotes the key sentence exactly.',
+    test: (line, file) => file === 'reference/answer-cache/3-miss.out' && /^thinkthen: .*the replay folder holds no answer for question `[0-9a-f]{64}`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent$/.test(line),
+  },
+  {
     name: 'the diff warning',
     why: 'thinkthen diff prints its warning as one line.',
     test: (line, file) => file.startsWith('beatles/diff/') && file.endsWith('.out') && line.startsWith('thinkthen: diff: warning:'),
+  },
+  {
+    name: 'a backend diagnostic',
+    why: 'thinkthen prints each warning or refusal as one line on standard error.',
+    test: (line, file) => file.startsWith('install/backends/') && file.endsWith('.out') && line.startsWith('thinkthen: '),
   },
 ];
 
@@ -65,10 +84,19 @@ const COMMENT = {
   '.ts': /^\s*(\/\/|\/\*)/,
   '.rs': /^\s*(\/\/|\/\*)/,
   '.c': /^\s*(\/\/|\/\*)/,
+  '.cpp': /^\s*(\/\/|\/\*)/,
+  '.m': /^\s*(\/\/|\/\*)/,
+  '.cob': /^\s*\*>/,
+  '.adb': /^\s*--/,
+  '.java': /^\s*(\/\/|\/\*)/,
+  '.kt': /^\s*(\/\/|\/\*)/,
+  '.scala': /^\s*(\/\/|\/\*)/,
+  '.cs': /^\s*(\/\/|\/\*)/,
+  '.csproj': /^\s*<!--/,
   '.sql': /^\s*--/,
 };
-const PRINT = /\b(print\(|console\.log\(|puts\b|println!|printf\(|cat\()/;
-const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c']);
+const PRINT = /\b(print\(|console\.log\(|puts\b|println!|printf\(|cat\(|NSLog\(|Put_Line\b|System\.out\.print|Console\.Write)|std::cout\b|^\s*display\b/i;
+const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c', '.cpp', '.m', '.cob', '.adb', '.java', '.kt', '.scala', '.cs']);
 
 // Named answers (Ian, 2026-09-26). An example keeps each ThinkThen answer
 // in a variable named for its meaning, then asserts on that name. The rule
@@ -80,11 +108,11 @@ const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c']);
 // does not accept. That throw fails the build, so a mistyped fence tag or
 // a new kind of file never passes unread.
 export const NO_CALL = new Set([
-  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq',
+  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq', '.csproj',
   'text', 'json', 'console', 'output',
 ]);
-const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.sql': 'sql' };
-const FENCE_EXT = { bash: '.sh', sh: '.sh', python: '.py', ts: '.ts', typescript: '.ts', ruby: '.rb', r: '.R', rust: '.rs', c: '.c', sql: '.sql', json: '.json' };
+const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.cpp': 'cpp', '.m': 'objective-c', '.cob': 'cobol', '.adb': 'ada', '.java': 'java', '.kt': 'kotlin', '.scala': 'scala', '.cs': 'csharp', '.sql': 'sql' };
+const FENCE_EXT = { bash: '.sh', sh: '.sh', python: '.py', ts: '.ts', typescript: '.ts', ruby: '.rb', r: '.R', rust: '.rs', c: '.c', cpp: '.cpp', 'objective-c': '.m', objc: '.m', cobol: '.cob', ada: '.adb', java: '.java', kotlin: '.kt', scala: '.scala', csharp: '.cs', cs: '.cs', sql: '.sql', json: '.json' };
 
 function namedAnswers(label, text, kind, language, offset = 0) {
   if (NO_CALL.has(kind)) return [];
@@ -153,12 +181,12 @@ function main() {
   const problems = [];
   for (const file of walk(root)) {
     const rel = path.relative(root, file);
-    if (['SKIP', 'beatles/bench-pin', 'beatles/folders.json'].includes(rel)) continue;
+    if (['SKIP', 'REPLAY', 'bindings-proof.json', 'beatles/bench-pin', 'beatles/deck-pin', 'beatles/folders.json'].includes(rel)) continue;
     const ext = path.extname(file);
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
     problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
-    if (ext === '.sh' && /--details\b/.test(text)) problems.push(`examples/${rel}: asks for --details. Examples leave it out for now.`);
+    if (ext === '.sh' && /--details\b/.test(text) && !rel.startsWith(DETAILS_PAGE)) problems.push(`examples/${rel}: asks for --details. Only examples under examples/${DETAILS_PAGE} may.`);
   }
 
   const lineCount = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\n+$/, '').split('\n').length : 0);

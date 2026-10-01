@@ -1,22 +1,15 @@
 library(thinkthen)
 
-question <- "Which team owns this?"
-teams <- c("billing", "shipping", "account")
-body <- c(
-  "I was billed twice for one order.",
-  "My parcel is a week late.",
-  "I am locked out of my account."
-)
-team <- tt_choose(question, body, teams)$value
-stopifnot(identical(
-  team,
-  c("billing", "shipping", "account")
-))
+question <- "Does the customer ask for a refund?"
 
-about_money <- tt_rank(
-  "Is this about money?",
-  body,
-  top = 1
+broken <- "Please refund my order. It arrived broken."
+is_refund <- tt_decide(question, broken)$value
+stopifnot(identical(is_refund, TRUE))
+
+send_back <- "I want to send this back."
+is_refund <- tt_decide(
+  question,
+  send_back,
+  threshold = "0.2:0.8"
 )$value
-stopifnot(identical(about_money$record, body[1]))
-stopifnot(identical(about_money$probability, 0.98))
+stopifnot(identical(is_refund, NA))

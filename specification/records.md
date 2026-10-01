@@ -104,14 +104,14 @@ A threshold saved in a question file was tuned at the file's `batch`, or at 1 wh
 | Command | Requests |
 | --- | --- |
 | `decide`, `choose`, `tag`, `score` on one document | 1 |
-| `annotate` on one document | 1 for each distinct `on` |
+| `annotate` on one document | 1, because every `on` group shares one state; more when its questions pass a request or profile limit |
 | `decide`, `filter`, `rank`, `choose`, `tag`, `score` over N records | One for each batch, and N at `--batch 1` |
-| `annotate` over N records | One request for each filled compatible `(on group, question slice)` batch; at `--batch 1`, N times its profile chunks |
+| `annotate` over N records | One for each batch, where a batch carries every question of its records across all `on` groups; at `--batch 1`, one for each record. A record whose questions pass a request or profile limit splits across requests |
 | `find` | 1 |
 | `relate` | The shared relation planner's exact request count for the complete set |
 | `--plan`, `--replay` | 0 |
 
-`rank` sorts locally and makes no pairwise calls. Without a cache, every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept. With a cache, equal request digests share one backend call and each record still receives its own logical judgment in input order.
+`rank` sorts locally and makes no pairwise calls. Without a cache, every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept. With a cache, the store keeps one answer for each question under its question key. A request carries only the questions that the store and the run's earlier requests lack, so equal questions share one backend answer. Each record still receives its own logical judgment in input order.
 
 ## Empty input
 
@@ -137,7 +137,7 @@ A rerun with `--record DIR --replay DIR` on one folder answers the finished reco
 thinkthen decide 'This reports a payment failure.' --jsonl --field /body --record runs/tickets --replay runs/tickets < tickets.jsonl
 ```
 
-At `--batch 1`, a first run that stops at record 400 leaves 399 entries, and the same command run again replays those 399 and pays for the rest. Under batching, `decide`, `filter`, `rank`, `choose`, `tag`, and `score` leave one entry for each batch that finished. A refused whole batch leaves no entry; its successful halves are recorded as ordinary requests. A replay that misses the whole batch asks the halves from disk in order. If both halves are missing, its stop names the whole batch's range; if only the second is missing, `decide`, `filter`, `choose`, `tag`, and `score` print the first half's rows before a stop naming the second half; `rank` withholds rows. A cache sends a missing whole batch live, then reads or sends its halves after a too-large refusal. A batch whose reply was partial has no entry, so the resumed run asks for the whole batch again. At `--batch 1` that batch is one record.
+At `--batch 1`, a first run that stops at record 400 leaves 399 entries, and the same command run again replays those 399 and pays for the rest. Under batching, the store keeps one entry for each answered question, whatever batch carried it. A rerun under the same folder replays the stored answers and sends only the questions the store lacks, packed into new batches. A partial reply stores its good answers, and its failed question has no entry, so the resumed run asks only that question. A too-large batch that halves stores both halves' answers; the refused whole batch stores nothing. Under `--replay` alone, a question the folder lacks stops the run at exit 5, as [recording.md](recording.md) gives.
 
 Each digest keeps the first complete response installed in the folder. A partial reply, one that failed a question beside a good answer, is not complete. Under ADR 0053 item 6 and its amendment, a cache does not install it, and reads an entry that holds one as a miss. Concurrent cache misses for that digest wait on one operating-system file lock. The owner checks again, sends unless a complete entry now exists, and installs the response only when it is complete. Waiters replay it. A failed or stopped owner releases the lock automatically; the next waiter sends if no entry was installed. Record-only writers remain independent, and a later writer holding another stored response stops at exit 5. The winner stays intact, so every successful run can replay the answers it printed.
 

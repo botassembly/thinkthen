@@ -17,6 +17,8 @@ use crate::engine::facade::Engine;
 use crate::engine::store::{Mode, Store};
 use crate::engine::{Cancel, workers};
 
+mod receipt;
+pub(crate) use receipt::{RowUsage, read, receipt};
 mod run;
 pub(crate) use run::options;
 mod send;

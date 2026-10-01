@@ -1,0 +1,6 @@
+{
+  "schema": "thinkthen.config/1",
+  "backends": {
+    "typesafe": {"requests_per_minute": 0}
+  }
+}

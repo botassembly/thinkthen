@@ -1,9 +1,10 @@
 ---
 // Goal: list everything the command takes and prints, for a reader or an agent
 // writing a pipeline.
-import Base from '../layouts/Base.astro';
+import SidePage from '../layouts/SidePage.astro';
 import { CODE_FUNCTIONS } from '../data/catalog.mjs';
 import { setting } from '../lib/settings-table.mjs';
+import { REFERENCE_PAGES } from '../data/reference.mjs';
 
 // Every row on this page comes from specification/. Nothing
 // here is an example. The runs live on the function pages and the tutorial.
@@ -19,19 +20,17 @@ const frameOn = (fn, rest) => setting('Framing').defaultOn(fn, { rest });
 const CUT = setting('Threshold').bounds;
 const count = (name, noun) => `${setting(name).range.min} to ${setting(name).range.max} ${noun}`;
 const THROTTLE = setting('Throttle');
-const PRUNE = setting('Prune target');
-const pruneKey = PRUNE.surface('Configuration file');
 
 const GLOBAL = [
   ['--plan', 'none', 'Checks the whole input, prints the first request it would send and a summary line, and sends nothing. It needs no key.', dflt('Plan preview')],
-  ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
+  ['--url BASE', 'an address', 'The server\'s base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
   ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
   ['--timeout SECONDS', takes('Timeout').split(';')[0].replace(/^command: /, ''), 'Covers one attempt from connect to last byte. Other values exit 2.', setting('Timeout').number],
   ['--max-retries N', takes('Retries'), 'How many times a retried status is sent again. A transport failure is never sent again.', setting('Retries').default],
   ['--record DIR', takes('Recording'), 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', dflt('Recording')],
   ['--replay DIR', takes('Recording'), 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', dflt('Recording')],
   ['--cache DIR', takes('Recording'), 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', dflt('Recording')],
-  ['--no-cache', 'none', 'Turns off the platform cache for one run, both lookup and writing. It never turns off usage counting.', dflt('Answer cache')],
+  ['--no-cache', 'none', 'Turns off the answer cache for one run, both lookup and writing. It never turns off usage counting.', dflt('Answer cache')],
   ['--profile FILE', takes('Backend profile'), 'Applies local byte and question limits before a request leaves, and names the profile in use. It selects neither address nor model.', dflt('Backend profile')],
   ['--input FILE', takes('Input file'), 'Reads the evidence from a file instead of standard input. It names a path. It never names a framing.', dflt('Input file')],
 ];
@@ -55,21 +54,12 @@ const EXITS = [
   [1, 'no', 'A single piece of evidence under decide answers no. No other function exits 1.'],
   [2, 'broken', 'A usage error or an input error. The failing record sent nothing.'],
   [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
-  [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, and evidence past the token limit.'],
+  [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, evidence past the token limit, and a critical line in a check report.'],
   [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
   [6, 'broken', 'annotate or relate only. The run finished with at least one valid and one failed question. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
-  [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row.'],
-  [70, 'broken', 'A defect in the tool.'],
-];
-
-const ENVS = [
-  ['THINKTHEN_API_KEY', 'The key. Absent or empty is exit 4, and an empty variable counts as absent.', dflt('Key')],
-  ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', dflt('Address')],
-  ['THINKTHEN_CACHE', 'Selects another folder for the platform cache. It never moves the usage folder.', dflt('Answer cache')],
-  ['XDG_CACHE_HOME', 'The root for the cache and the usage folder. It counts only when absolute.', '$HOME/.cache on Linux'],
-  ['XDG_CONFIG_HOME', 'The root for config.json. It counts only when absolute.', '$HOME/.config on Linux'],
-  ['HOME', 'The fallback root for the cache, the usage totals, and the configuration. It counts only when absolute.', 'none'],
-  ['ALL_PROXY, HTTPS_PROXY, HTTP_PROXY, NO_PROXY', 'Read in upper and in lower case. Under https:// the named proxy carries the request and sees only the host. Under http:// every one of them is cancelled.', 'none'],
+  [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row. When a run has both failed questions and such rows, 7 wins over 6.'],
+  [70, 'broken', 'A defect in the tool. Its message begins "defect:".'],
+  ['130, 143', 'broken', 'SIGINT or SIGTERM stopped the command. It ends by that signal, and the shell reports 128 plus the signal number.'],
 ];
 
 const BARE = [
@@ -89,20 +79,20 @@ const COUNTS = [
   ['tag', count('Labels', 'labels'), 'A cut only, applied to each label on its own. A band is refused.', cutOn('tag')],
   ['score', `${count('Levels', 'levels')}, lowest first`, 'None. score has no threshold.', noCut('score')],
   ['filter', 'none', 'A cut only. A band is exit 2 from the command line and exit 5 from a question file.', cutOn('filter')],
-  ['rank', 'none', 'None. A threshold is refused in both homes.', noCut('rank')],
-  ['find', '2 to 255 units, or 2 to 254 with --none', 'None.', 'n/a'],
+  ['rank', 'none', 'None. rank refuses a threshold on the command line and in a question file.', noCut('rank')],
+  ['find', '2 to 255 lines or records, or 2 to 254 with --none', 'None.', 'n/a'],
   ['annotate', 'a question set file', 'Each question carries its own. A top-level threshold applies to every decide question that names none.', 'per question'],
   ['recognize', 'optional kinds', 'A cut on printed name strength; a separate relation cut applies to edges.', cutOn('recognize')],
   ['relate', 'relation rules', 'A cut on each edge’s probability of yes.', cutOn('relate')],
 ];
 ---
-<Base title="Reference" description="Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.">
+<SidePage pages={REFERENCE_PAGES} page={{ ...REFERENCE_PAGES[0], description: 'Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.' }} name="Reference">
   <h1>Reference</h1>
-  <p class="lede">Everything the <code>thinkthen</code> command takes and prints. Read this page before you write a pipeline, and hand it to an agent.</p>
+  <p class="lede">Everything the <code>thinkthen</code> command takes and prints. Read this page before you write a pipeline, and hand it to an agent. <a href="/reference/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number.</p>
 
   <h2>The ten functions</h2>
   <table>
-    <tr><th>Function</th><th>What it does</th><th>Primitive</th><th>Requests</th></tr>
+    <tr><th>Function</th><th>What it does</th><th>Kind of answer</th><th>Requests</th></tr>
     {CODE_FUNCTIONS.map((fn) => (
       <tr>
         <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></td>
@@ -113,7 +103,7 @@ const COUNTS = [
     ))}
   </table>
 
-  <h2>Arguments and thresholds</h2>
+  <h2 id="arguments-and-thresholds">Arguments and thresholds</h2>
   <p>A threshold is a cut on the quantity each function names. You set it; the tool never reports one. A cut is one number. Only <code>decide</code> takes a band, written <code>LOW:HIGH</code>. A recognized name’s printed strength is a computed product, not a probability.</p>
   <table>
     <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
@@ -140,7 +130,7 @@ const COUNTS = [
     ))}
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
-  <p>The vendor documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to the vendor. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Lower <code>--jobs</code> when replies come back fast.</p>
+  <p>TypeSafe documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Set <code>requests_per_minute</code> on the backend, or <code>THINKTHEN_REQUESTS_PER_MINUTE</code>, to stay under the limit.</p>
   <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
@@ -172,7 +162,7 @@ const COUNTS = [
   <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
 
   <h2>Limits</h2>
-  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. The vendor published both numbers on 2026-09-19 for its hosted service. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> lists them. They belong to the backend and not to the tool.</p>
+  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. TypeSafe published both numbers on 2026-09-19 for its hosted service. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> lists them. They belong to the backend and not to the tool.</p>
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>
@@ -183,51 +173,28 @@ const COUNTS = [
   <p>In record mode, a <code>decide</code>, <code>choose</code>, <code>tag</code>, or <code>score</code> row is <code>{'{"input":RECORD,"value":ANSWER}'}</code>, in that key order. <code>filter</code>, <code>rank</code>, and <code>find</code> keep returning records. Every result is compact and sits on one line.</p>
   <p><code>annotate</code> in record mode adds one top-level field per question to an object record. A line, a JSON scalar, or a JSON array keeps its parsed record under <code>input</code> and its named answers under <code>value</code>. CSV and TSV rows are objects, and they stay flat.</p>
 
-  <h2>Exit codes</h2>
+  <h2 id="exit-codes">Exit codes</h2>
   <table>
     <tr><th>Code</th><th>What it means</th></tr>
     {EXITS.map(([code, outcome, what]) => (
       <tr><td><span class={`exit ${outcome}`}>{code}</span></td><td>{what}</td></tr>
     ))}
   </table>
-  <p>Code 8 is reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6 or 7. A valid answer on standard output can sit beside exit 1, 3, 6, or 7.</p>
+  <p>Code 8 is reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6 or 7, or <code>relate</code> exits 6. A valid answer on standard output can sit beside exit 1, 3, 6, or 7.</p>
 
   <h2>The environment</h2>
-  <table>
-    <tr><th>Variable</th><th>What it does</th><th>Default</th></tr>
-    {ENVS.map(([name, what, dflt]) => (
-      <tr><td><code>{name}</code></td><td>{what}</td><td><code>{dflt}</code></td></tr>
-    ))}
-  </table>
+  <p>The <a href="/install/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads.</p>
 
-  <h2>The cache</h2>
-  <p>The cache is {dflt('Answer cache').split(',')[0]} by default. Ask the same question of the same evidence again and the tool reads the saved answer instead of sending a request.</p>
-  <ul>
-    <li>The cache keeps one answer for each question, in <code>thinkthen.sqlite</code> in the cache folder. A question's key is the SHA-256 of the adapter, the address, the model, the shared state, and the question as sent. The same command finds the same answer.</li>
-    <li>The key covers the encoded question. When the input is read as one document, <code>hello\n</code> and <code>hello\r\n</code> make two keys, and so do <code>{'{"a":1}'}</code> and <code>{'{"a":1.0}'}</code>. Record framing may strip line ends or re-encode parsed JSON first. <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> gives the full rule.</li>
-    <li>An answer holds the question and the reply's answer, never a header. No key can reach it. Only a good answer is saved. A failure is never saved.</li>
-    <li>The folder is <code>$XDG_CACHE_HOME/thinkthen</code>, then <code>$HOME/.cache/thinkthen</code> on Linux and <code>$HOME/Library/Caches/thinkthen</code> on macOS. <code>THINKTHEN_CACHE</code> names another one.</li>
-    <li>A saved question holds the evidence. The tool creates <code>thinkthen.sqlite</code> with mode 0600.</li>
-    <li>Answers from two addresses never mix, because the address is part of every key. A cache pointed at a new address misses and sends again.</li>
-    <li>An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run.</li>
-    <li><code>thinkthen cache prune DIR</code> is the only way answers are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> or a model no reply in the folder names, and deletes nothing. An empty folder accepts any model name.</li>
-    <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>cache prune</code>.</li>
-  </ul>
-  <p>Count-only usage totals live beside the cache, in <code>thinkthen-usage</code>. One file per UTC month holds requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key. <code>THINKTHEN_CACHE</code> never moves them and <code>--no-cache</code> never turns them off. They count what this machine saw. Your provider’s bill is the real cost.</p>
-  <p><code>thinkthen status</code> is read-only and opens no connection. It reports the version, the resolved configuration and where each value came from, whether a key is present, the cache entry count and allocated bytes, and the local usage for the current UTC month and in all. <code>status --json</code> prints the same facts as one <code>thinkthen.status/2</code> object.</p>
+  <h2 id="the-cache">The cache</h2>
+  <p><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, the cache key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page.</p>
 
   <h2>The configuration file</h2>
-  <p>Optional, and read-only to the command. <b>The tool never creates it and never edits it.</b> There is no command that sets a value in it.</p>
-  <ul>
-    <li>Path: <code>$XDG_CONFIG_HOME/thinkthen/config.json</code>, then <code>$HOME/.config/thinkthen/config.json</code> on Linux and <code>$HOME/Library/Application Support/thinkthen/config.json</code> on macOS.</li>
-    <li>Format: one JSON object with <code>"schema": "thinkthen.config/1"</code>.</li>
-    <li>It may set <code>url</code>, <code>model</code>, <code>cache</code>, a positive <code>{pruneKey}</code>, and the other keys <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> lists. An unknown field is refused.</li>
-    <li>The default is the cache on. <code>{pruneKey}</code> defaults to {PRUNE.number} allocated bytes. It is the size <code>cache prune</code> trims to. <code>status</code> shows it as <code>cache_prune_target_bytes</code>.</li>
-  </ul>
-  <p>A typed list replaces a question file's whole list and never merges. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>
+  <p>The <a href="/install/configuration/#configuration-file">Configuration page</a> gives its path, its fields, and the rules ThinkThen reads it by.</p>
+
+  <p>A list given on the command line replaces the file's whole list. The two never merge. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>
 
   <h2>Question files</h2>
   <p>A question file holds one saved question. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> holds many questions. The <a href="/functions/question-file/">question file page</a> carries the keys and the exit codes.</p>
 
   <p class="pagelinks"><a href="/learn/tutorial/">Take the tutorial</a> · <a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
-</Base>
+</SidePage>

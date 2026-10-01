@@ -13,6 +13,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - One idea per page. Say a thing once and link to it elsewhere.
 - Plain sentences: subject, verb, object. No dash glosses, no trailing clauses, no clefts.
 - No status words: planned, drawn, preview, coming soon, or "Plan for 0.1".
+- One name per thing. `site/WRITING.md`, "Pages", holds the name table. `check-words` fails retired words in prose.
 - Every binding is part of the product: no status, date, readiness note, or caveat. Link each to `/install/<slug>/`, even before its page exists. Counts read "10 functions, 1 CLI, 24 bindings".
 - Teach the idea, not the repository's files.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.
@@ -20,13 +21,14 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Every code block comes from `site/src/lib/code.mjs`. Pass `Code` a `file` or a `lang`. An article uses example comments, never a Markdown fence.
 - Install: the download script first (`curl -fsSL https://thinkthen.dev/install.sh | sh`), then Homebrew as an option on a Mac.
 - Name no private project and no home path. The repository is public.
+- A blog article follows the deslop and voice guides the brief names, and a fresh reader checks it against both before review.
 
 ## Every code example
 
 - Name the question and the choices in variables above the call.
 - Pipe the input in with a heredoc, or `printf` for one short record.
 - No line over 60 characters. One option per line with a trailing backslash. One array item per line. Python uses bracket indenting. Other languages use their own line breaks and string joining.
-- Examples leave out `--details` for now. A page may name it. Show plain values. Show where a probability sits with a bar or a band.
+- Examples leave out `--details`. Only the annotate edge-case examples under `site/examples/reference/annotate/` may ask for it. A page may name it. Show plain values. Show where a probability sits with a bar or a band.
 - A function page's example runs 10 to 25 lines, script and output together. Trim output with `jq`.
 - Examples are honest: a sensible question and Jev's real output. Nothing fake or deliberately false.
 - Output goes in its own block. JSON is pretty-printed with `jq .`.

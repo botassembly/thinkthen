@@ -295,12 +295,17 @@ impl EngineBuilder {
         self
     }
 
-    /// End each live attempt after this duration.
+    /// End each live attempt after this duration, at most 86,400 seconds.
     /// # Errors
-    /// Returns [`Error::Usage`] for zero.
+    /// Returns [`Error::Usage`] for zero or for more than 86,400 seconds.
     pub fn timeout(mut self, value: Duration) -> Result<Self, Error> {
         if value.is_zero() {
             return Err(Error::usage("a timeout is a time above zero"));
+        }
+        // A timeout near `Duration::MAX` overflows the client's clock and
+        // hangs the call, so the library takes the command's bound.
+        if value > Duration::from_secs(86_400) {
+            return Err(Error::usage("a timeout is at most 86400 seconds"));
         }
         self.timeout = value;
         Ok(self)

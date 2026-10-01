@@ -35,6 +35,8 @@ UNFETCHED_LOCKS = {
     "libraries/rust/Cargo.lock": "the Rust examples surface, which no release job builds",
     "probes/churn-0086/Cargo.lock": "an experiment probe",
 }
+# Each registry job publishes in release mode only; `publish` waits for all of them (ticket 0355).
+OUTWARD_REGISTRIES = ("crates", "pypi", "npm", "rubygems", "tap", "nuget", "maven", "pub")
 ARMED_STEP = {"env": {"RELEASE_ARMED": "${{ vars.RELEASE_ARMED }}"},
               "run": '[ "$RELEASE_ARMED" = true ]'}
 
@@ -95,15 +97,16 @@ def release(name, doc):
     if set(inputs) != {"mode"} or inputs["mode"].get("options") != ["rehearse", "release"]:
         out.append(f"{name}: dispatch must have only mode with rehearse and release choices")
     jobs = doc.get("jobs") or {}
-    required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "smoke", "draft",
-                "crates", "pypi", "npm", "rubygems", "tap", "publish"}
+    required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "draft",
+                "crates", "pypi", "npm", "rubygems", "tap", "nuget", "maven", "pub", "publish"}
     if set(jobs) != required:
         out.append(f"{name}: release job graph differs from the accepted jobs")
     dependencies = {"build": {"resolve"}, "wheels": {"resolve", "build"},
                     "npm-pack": {"resolve", "build"}, "gems": {"resolve", "build"},
                     "crate": {"resolve"}, "smoke": {"resolve", "build", "wheels", "npm-pack", "gems", "crate"},
-                    "draft": {"resolve", "smoke"}, "publish": {"resolve", "draft", "crates", "pypi", "npm", "rubygems", "tap"}}
-    for job in ("crates", "pypi", "npm", "rubygems", "tap"):
+                    "registries": {"resolve", "build"}, "draft": {"resolve", "smoke", "registries"},
+                    "publish": {"resolve", "draft", *OUTWARD_REGISTRIES}}
+    for job in OUTWARD_REGISTRIES:
         dependencies[job] = {"resolve", "draft"}
     for job, need in dependencies.items():
         value = jobs.get(job, {}).get("needs", [])
@@ -284,7 +287,8 @@ def release(name, doc):
             collect.index("release-workflow managed-gate") > collect.index("release-workflow collect") or
             (collect_step.get("env") or {}).get("SHA") != RESOLVED):
         out.append(f"{name}: draft must gate managed packages with internal provenance before collection")
-    outward = ("crates", "pypi", "npm", "rubygems", "tap", "publish")
+    outward = (*OUTWARD_REGISTRIES, "publish")
+    out += registry_rules(name, jobs)
     for job in outward:
         spec = jobs.get(job, {})
         if spec.get("if") != "inputs.mode == 'release'":
@@ -315,6 +319,27 @@ def release(name, doc):
         for pattern, why in UNPINNED:
             if pattern.search(step.get("run") or ""):
                 out.append(f"{name}: job {job} {why}")
+    return out
+
+
+def registry_rules(name, jobs):
+    """The registry job packs and rehearses every package; maven signs before it uploads."""
+    out = []
+    runs = [step.get("run") or "" for step in (jobs.get("registries", {}).get("steps") or [])
+            if step.get("if") is None and step.get("continue-on-error") is None]
+    text = "\n".join(runs)
+    order = ["release-workflow registry-pack platform registry", "release-workflow maven-sign registry/maven rehearse",
+             "release-workflow pub-dry-run registry/pub/thinkthen_dart"]
+    upload = any((step.get("with") or {}).get("name") == "registry-packages"
+                 and (step.get("uses") or "").startswith("actions/upload-artifact@")
+                 for step in (jobs.get("registries", {}).get("steps") or []))
+    if (not all(part in text for part in order) or [text.find(part) for part in order] != sorted(text.find(part) for part in order)
+            or "|| true" in text or not upload or jobs.get("registries", {}).get("environment")):
+        out.append(f"{name}: job registries must pack, rehearse signing, dry-run pub and upload registry-packages, outside any environment")
+    runs = "\n".join(step.get("run") or "" for step in (jobs.get("maven", {}).get("steps") or []))
+    sign, upload_at = runs.find("maven-sign registry/maven release"), runs.find("release-workflow maven-upload")
+    if sign < 0 or upload_at < 0 or sign > upload_at:
+        out.append(f"{name}: job maven must sign with the release key before it uploads")
     return out
 
 
@@ -455,9 +480,18 @@ jobs:
       - run: sh sdlc/scripts/package
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error}
+  registries:
+    needs: [resolve, build]
+    steps:
+      - run: |
+          sdlc/scripts/release-workflow registry-pack platform registry "$SHA"
+          sdlc/scripts/release-workflow maven-sign registry/maven rehearse
+          sdlc/scripts/release-workflow pub-dry-run registry/pub/thinkthen_dart
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: registry-packages, path: registry/}
   smoke: {needs: [resolve, build, wheels, npm-pack, gems, crate]}
   draft:
-    needs: [resolve, smoke]
+    needs: [resolve, smoke, registries]
     runs-on: ubuntu-24.04
     permissions: {contents: write}
     steps:
@@ -501,8 +535,34 @@ jobs:
     steps:
       - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
         run: '[ "$RELEASE_ARMED" = true ]'
+  nuget:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - env: {NUGET_API_KEY: "${{ secrets.NUGET_API_KEY }}"}
+        run: sdlc/scripts/release-workflow nuget-push registry/nuget/x.nupkg
+  maven:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - run: sdlc/scripts/release-workflow maven-sign registry/maven release bundle.zip
+      - run: sdlc/scripts/release-workflow maven-upload bundle.zip
+  pub:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    permissions: {id-token: write}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
   publish:
-    needs: [resolve, draft, crates, pypi, npm, rubygems, tap]
+    needs: [resolve, draft, crates, pypi, npm, rubygems, tap, nuget, maven, pub]
     if: inputs.mode == 'release'
     environment: release
     steps:
@@ -562,8 +622,33 @@ def self_test():
          ["release.yml: top-level permissions must be {}"]),
         ("mode", "release.yml", lambda t: t.replace("options: [rehearse, release]", "options: [rehearse, deploy]"),
          ["release.yml: dispatch must have only mode with rehearse and release choices"]),
-        ("draft-order", "release.yml", lambda t: t.replace("needs: [resolve, smoke]", "needs: [resolve, build]"),
-         ["release.yml: job draft must need resolve, smoke"]),
+        ("draft-order", "release.yml", lambda t: t.replace("needs: [resolve, smoke, registries]", "needs: [resolve, build]"),
+         ["release.yml: job draft must need registries, resolve, smoke"]),
+        ("draft-skips-registries", "release.yml", lambda t: t.replace("needs: [resolve, smoke, registries]", "needs: [resolve, smoke]"),
+         ["release.yml: job draft must need registries, resolve, smoke"]),
+        ("publish-skips-maven", "release.yml", lambda t: t.replace("tap, nuget, maven, pub]", "tap, nuget, pub]"),
+         ["release.yml: job publish must need crates, draft, maven, npm, nuget, pub, pypi, resolve, rubygems, tap"]),
+        ("registry-graph", "release.yml", lambda t: t.replace("  pub:\n    needs: [resolve, draft]", "  pub:\n    needs: [resolve, build]"),
+         ["release.yml: job pub must need draft, resolve"]),
+        ("registry-no-pack", "release.yml", lambda t: t.replace("          sdlc/scripts/release-workflow registry-pack platform registry \"$SHA\"\n", ""),
+         ["release.yml: job registries must pack, rehearse signing, dry-run pub and upload registry-packages, outside any environment"]),
+        ("registry-no-dry-run", "release.yml", lambda t: t.replace("sdlc/scripts/release-workflow pub-dry-run registry/pub/thinkthen_dart", "true"),
+         ["release.yml: job registries must pack, rehearse signing, dry-run pub and upload registry-packages, outside any environment"]),
+        ("registry-bypass", "release.yml", lambda t: t.replace("maven-sign registry/maven rehearse", "maven-sign registry/maven rehearse || true"),
+         ["release.yml: job registries must pack, rehearse signing, dry-run pub and upload registry-packages, outside any environment"]),
+        ("registry-no-upload", "release.yml", lambda t: t.replace("{name: registry-packages, path: registry/}", "{name: other, path: registry/}"),
+         ["release.yml: job registries must pack, rehearse signing, dry-run pub and upload registry-packages, outside any environment"]),
+        ("maven-unsigned", "release.yml", lambda t: t.replace("      - run: sdlc/scripts/release-workflow maven-sign registry/maven release bundle.zip\n", ""),
+         ["release.yml: job maven must sign with the release key before it uploads"]),
+        ("nuget-unarmed", "release.yml", lambda t: t.replace("  nuget:\n    needs: [resolve, draft]\n    if: inputs.mode == 'release'\n    environment: release\n    steps:\n      - env: {RELEASE_ARMED: \"${{ vars.RELEASE_ARMED }}\"}\n        run: '[ \"$RELEASE_ARMED\" = true ]'\n",
+                                                            "  nuget:\n    needs: [resolve, draft]\n    if: inputs.mode == 'release'\n    environment: release\n    steps:\n"),
+         ["release.yml: job nuget must check environment RELEASE_ARMED before any outward step"]),
+        ("nuget-outside-release", "release.yml", lambda t: t.replace("  nuget:\n    needs: [resolve, draft]\n    if: inputs.mode == 'release'\n    environment: release\n",
+                                                                    "  nuget:\n    needs: [resolve, draft]\n    if: inputs.mode == 'release'\n"),
+         ["release.yml: job nuget holds id-token or a secret outside environment release",
+          "release.yml: job nuget must use environment release"]),
+        ("pub-rehearse", "release.yml", lambda t: t.replace("  pub:\n    needs: [resolve, draft]\n    if: inputs.mode == 'release'\n", "  pub:\n    needs: [resolve, draft]\n"),
+         ["release.yml: job pub must require release mode"]),
         ("maturin", "release.yml", lambda t: t.replace("maturin==1.9.6", "maturin"),
          ["release.yml: job build installs maturin with no version"]),
         ("go-cpp-build-sha", "release.yml",
@@ -703,7 +788,12 @@ def self_test():
     if language.returncode != 0:
         bad += 1
         print(f"workflows self-test language tools: {language.stdout}{language.stderr}", file=sys.stderr)
-    total = len(cases) + 4 + len(host_cases) + 3
+    registry = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-registry-self-test.py")],
+                              capture_output=True, text=True)
+    if registry.returncode != 0:
+        bad += 1
+        print(f"workflows self-test registry operations: {registry.stdout}{registry.stderr}", file=sys.stderr)
+    total = len(cases) + 4 + len(host_cases) + 4
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 

@@ -10,8 +10,10 @@
 // The examples live in examples/beatles/<slug>/. Each runs in the Beatles
 // Bench folder examples/beatles/folders.json names for its page, and answers
 // from a saved recording. A page with no bench folder runs from its own
-// files/, and its recordings come from the talk's deck. `see` gives the
-// caption for each example and `headings` the heading above it. `source`
+// files/, and its recordings come from the talk's deck or a recorded run. `see` gives the
+// caption for each example and `headings` the heading above it. `slideNote`
+// names the build or run behind a slide whose printed output differs from what
+// the current thinkthen prints in the page's example. `source`
 // links the bench record behind a number in the prose. Prose marks code with
 // backticks and a link as [text](/route/).
 //
@@ -28,8 +30,8 @@ const record = (name) => ({ text: `the bench's record for this slide`, href: tre
 
 export const GROUPS = [
   ['Start', ['strings', 'jev', 'runs-in']],
-  ['The ten functions', ['decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']],
-  ['Scripts', ['question-file', 'bash']],
+  ['The ten functions', ['decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'recognize', 'relate', 'question-file', 'annotate']],
+  ['Scripts', ['bash']],
   ['Bindings', ['languages', 'data']],
   ['What Jev knows', ['blind-spots', 'rad']],
   ['Tune your bar', ['audit', 'diff']],
@@ -66,8 +68,8 @@ const ARTICLES = {
     label: "Jev",
     goal: "Jev reads a text and a question and returns a probability for every answer.",
     idea: [
-      "Jev is the model behind ThinkThen, a System One model from TypeSafe. It reads a text and a question and returns a probability for every answer. It writes no text, and you train nothing.",
-      "Roger Bannister's mile set a standard for runners. Jev answers in about 60 milliseconds. That is the median time at Jev's server, measured on 2026-09-26. On Beatles Bench, a thousand answers cost 0.015 dollars.",
+      "Jev is the model behind ThinkThen. TypeSafe makes it. It reads a text and a question and returns a probability for every answer. It writes no text, and you train nothing.",
+      "Roger Bannister's mile set a standard for runners. Jev answers in about 60 milliseconds. That is the median time at Jev's server, measured on 2026-09-26. On Beatles Bench, a thousand answers cost 0.016 dollars.",
     ],
     credit: `Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons. ${FACES}`,
     source: record('jev'),
@@ -175,7 +177,7 @@ const ARTICLES = {
     ],
     files: { 'question.json': "question.json, the question and its five levels" },
     see: {
-      '1-bands': "Every timed song goes in. `jq` keeps three of them.",
+      '1-bands': "Every song with a known length goes in. `jq` keeps three of them.",
     },
     lesson: "Her Majesty is the shortest Beatles song. It scores 0.23, very short. Revolution 9 is the longest. It scores 3.31, nearest long, one level short of the truth. Yesterday runs 2:05, right on the line between short and average. It scores 1.73, nearest average.",
     takeaway: "Give each level a range, and the steps can be as uneven as your data.",
@@ -229,20 +231,21 @@ const ARTICLES = {
   },
 
   annotate: {
-    title: "annotate fills in a form.",
-    goal: "Each question in an annotate form carries its own bar, and a low bar lets weak guesses through.",
+    title: "annotate answers a question set.",
+    goal: "annotate asks a set of questions about each record in one run, and each question carries its own bar.",
     idea: [
-      "`annotate` answers a saved set of questions about each record. Each question in the set carries its own threshold. This set asks for the lead singer, the first album, and the year, each at 0.8.",
+      "`annotate` answers many questions at once. The question set holds four questions you have already seen. choose asks who sings the lead vocal. tag asks which labels fit. Two decide questions ask whether the song is on Abbey Road and whether it is one of the biggest hits.",
+      "One run asks all four about each song. `--field /title` sends only the title. Each record comes back with one field for each question.",
     ],
-    files: { 'annotate-cold-card.json': "annotate-cold-card.json, the question set" },
+    files: { 'questions.json': "questions.json, the question set" },
     see: {
-      '1-card': "At 0.8, Octopus's Garden leaves the album and the year not sure.",
-      '2-bar': "`jq` sets every bar to 0.5. At 0.5, every field fills.",
+      '1-card': "Every question uses the default bar of 0.5.",
+      '2-band': "`jq` sets the band 0.2:0.8 on the two decide questions. Three answers turn not sure.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "At 0.5, Octopus's Garden gains White Album and 1968. Both are wrong. The song came out on Abbey Road in 1969.",
-    takeaway: "A lower bar fills every field, and it lets weak guesses through.",
-    link: tree('annotate'),
+    headings: { '2-band': "Set a band" },
+    lesson: "At the default bar, every field fills. Paul sings Yesterday, and Ringo sings Octopus's Garden. Octopus's Garden is on Abbey Road, and Yesterday is not. Under the band, Yesterday's Abbey Road answer and both of Octopus's Garden's decide answers fall inside it. A person checks them.",
+    takeaway: "One question set fills every field of a record, and each question keeps its own bar.",
+    link: REPO,
   },
 
   recognize: {
@@ -253,7 +256,7 @@ const ARTICLES = {
       "First it finds the names. It splits the text into pieces and asks one question about each piece. Does the piece begin a name, sit inside one, end one, stand alone as a name, or sit outside every name? Then it labels each name with one of your kinds. Last it relates the names. Each rule names a relation, a subject kind, and an object kind. `recognize` asks one yes or no question for each pair a rule allows.",
     ],
     see: {
-      '1-find': "A plan shows the find step's request: 28 pieces in one request.",
+      '1-find': "`--plan` shows the find step's request: 28 pieces in one request.",
       '2-label': "The label step gives each name one of the four kinds.",
       '3-relate': "The relate step keeps the edges at 0.5 or more.",
     },
@@ -264,28 +267,29 @@ const ARTICLES = {
   },
 
   relate: {
-    title: "relate asks what Jev knows about each pair.",
-    goal: "relate asks Jev about each pair of names your rules allow, and a higher bar removes wrong and right edges alike.",
+    title: "relate asks what Jev knows about the names.",
+    goal: "relate asks Jev about the names your rules allow, a menu gives each song at most one album, and a higher bar does not remove a confident wrong edge.",
+    slideNote: "The slide shows the talk's run, which asked one yes or no question for each pair. The example below marks the song-to-album rule single, so it asks one menu for each song.",
     idea: [
       "`relate` gets a list of names and their kinds, and no text. Jev answers from what it knows. `recognize --relation` links names by what a text states.",
-      "Here four people, five songs, and three albums go in. The rules file names two relations. `sings` runs from a person to a song. `on_album` runs from a song to an album. `relate` asks one yes or no question for each pair a rule allows. Every answer at 0.5 or more comes out as an edge.",
+      "Here four people, five songs, and three albums go in. The rules file names two relations. `sings` runs from a person to a song, and it asks one yes or no question for each pair. One person sings the lead on many songs. `on_album` runs from a song to an album. A song first appears on one album, so the rule says `\"single\": true`. It asks one menu for each song: which listed album, or none of these. Every answer at 0.5 or more comes out as an edge.",
     ],
     files: {
       'names.jsonl': "names.jsonl, the names in",
       'rules.json': "rules.json, the two rules",
     },
     see: {
-      '1-edges': "Twelve edges come out at the default bar of 0.5.",
-      '2-bar': "At 0.8, seven edges stay.",
+      '1-edges': "Nine edges come out at the default bar of 0.5. Each song gets one album.",
+      '2-bar': "At 0.8, eight edges stay.",
     },
     headings: { '2-bar': "Change the bar" },
-    lesson: "Three of the twelve edges are wrong. Jev puts Yesterday, Something, and Octopus's Garden on Revolver. Each of the three songs also gets its right album. No edge says who sings Taxman. George sings it, and Jev's answer fell under the bar. At 0.8, two wrong edges drop out, and Octopus's Garden on Revolver stays at 0.9. Three right edges drop out as well.",
-    takeaway: "A higher bar removes wrong edges and right ones alike.",
+    lesson: "One of the nine edges is wrong. Jev puts Octopus's Garden on Revolver at 0.91. It first appeared on Abbey Road. No edge says who sings Taxman. George sings it, and Jev's answer fell under the bar. At 0.8, Yesterday on Help! drops out at 0.62, and it is right. The wrong edge stays.",
+    takeaway: "A menu gives each song one album. A bar of 0.8 keeps the confident wrong answer.",
     link: tree('relate'),
   },
 
   "question-file": {
-    title: "A question file is a recipe.",
+    title: "Store and reuse questions.",
     label: "Question files",
     goal: "A question file says what yes and no mean, when to answer not sure, and which fields to read, and decide runs it on one song.",
     idea: [
@@ -305,11 +309,11 @@ const ARTICLES = {
   },
 
   bash: {
-    title: "Answers drive a Bash script.",
+    title: "Bash runs on judgment.",
     label: "Bash scripts",
     goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
     idea: [
-      "The script reads one song per line on standard input and asks whether a Beatle wrote each one. It passes the question and its options on the command line. `--true` and `--false` say what yes and no mean. `--threshold 0.2:0.8` sets the band. An answer of 0.8 or more is yes, and an answer under 0.2 is no. Between them is not sure. The two `--field` pointers send the title and the album as one JSON object. Without them, `decide` sends the whole line as text. The last page keeps the same question in a file. The script plays a yes, skips a no, and hands a not sure to a person.",
+      "The script reads one song per line on standard input and asks whether a Beatle wrote each one. It passes the question and its flags on the command line. `--true` and `--false` say what yes and no mean. `--threshold 0.2:0.8` sets the band. A probability of 0.8 or more is yes, and one under 0.2 is no. Between them is not sure. The two `--field` pointers send the title and the album as one JSON object. Without them, `decide` sends the whole line as text. The previous page keeps the same question in a file. The script plays a yes, skips a no, and hands a not sure to a person.",
       "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means. `code=$?` names the code, and `case` picks the step. Any other code is a failure, and the script stops. [Handle not sure](/how-tos/bash/not-sure/) teaches the same form.",
     ],
     files: {
@@ -331,7 +335,7 @@ const ARTICLES = {
     goal: "Each language binding asks the same question the command asks.",
     idea: [
       "On the slide, Python and C ask Jev the same `decide` question: does Ringo Starr sing the lead vocal on Octopus's Garden? Each stores the answer in `is_ringo` and asserts it. Both get yes.",
-      "Python sits over the scripting languages, and C sits over the systems languages.",
+      "On the slide, Python heads the scripting languages and C heads the systems languages.",
       "Each binding calls the same engine as the command. To set one up, start at [Install](/install/).",
     ],
     takeaway: "Pick your language. The question stays the same.",
@@ -343,8 +347,8 @@ const ARTICLES = {
     label: "Tables and frames",
     goal: "One question adds an answer column to a database table or a data frame.",
     idea: [
-      "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey_road`. The question and the band 0.3:0.7 go in as JSON.",
-      "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
+      "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey`. The question and the band 0.3:0.7 sit inside the query as one JSON string.",
+      "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Penny Lane and Hey Jude fall inside the band. Both come back not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
       "DuckDB and PostgreSQL ask questions inside SQL too. Polars, pandas, and R take a column and give a column back.",
       "To set one up, start at [Install](/install/).",
     ],
@@ -357,7 +361,7 @@ const ARTICLES = {
     goal: "audit grades saved answers against answers you already know, at any bar, and sends no request.",
     idea: [
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any bar. It sends no request.",
-      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's red label reads (without context). The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The console under the table shows `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
+      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's no-context column shows these answers. The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The first example below runs `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 3 are right, 2 are wrong, and 5 are not sure.",
@@ -375,14 +379,14 @@ const ARTICLES = {
     goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
       "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
-      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's green label reads (with context). The warning is right. The two runs asked different questions.",
+      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's last column shows the answers with context. The warning is right. The two runs asked different questions.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 7 of the 10 answers changed, and all 10 end right.",
       '2-bar': "At a bar of 0.5, 5 changed. Each was a wrong yes that turned right.",
     },
     headings: { '2-bar': "Change the bar" },
-    lesson: "`gained` marks a wrong answer that turned right. `resolved` marks a not-sure answer that turned right. `lost` counts right answers that turned wrong, and none did. At the band 0.2:0.8, Come Together, Here Comes the Sun, and Octopus's Garden kept their answers. `diff` leaves them out.",
+    lesson: "`gained` marks a wrong answer that turned right. `resolved` marks a not-sure answer that settled, right or wrong. `lost` counts right answers that turned wrong, and none did. At the band 0.2:0.8, Come Together, Here Comes the Sun, and Octopus's Garden kept their answers. `diff` leaves them out.",
     takeaway: "diff shows what a change fixed and what it broke.",
     link: tree('audit'),
   },
@@ -411,8 +415,8 @@ const ARTICLES = {
     label: "RAD",
     goal: "Putting the facts in the text fixes a sure miss that no bar can fix.",
     idea: [
-      "Giving Jev context improves accuracy. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions. Jev calls this context state.",
-      "The song catalog covers 1,075 of the bench's questions. From memory, Jev gets 68% of them right. With the catalog in the text, the bench's report estimates about 97%. Context costs input tokens.",
+      "Giving Jev context improves accuracy. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions. ThinkThen sends this context as `state`.",
+      "The song catalog covers 1,075 of the bench's questions. From memory, Jev gets 68% of them right. With the catalog in the text, the bench's report estimates about 97%. Context makes each request longer, and a longer request costs more.",
     ],
     source: record('open-book'),
     see: {
@@ -434,7 +438,7 @@ const ARTICLES = {
       "Permission: \"Should this command run?\" If Jev is not sure, the agent would ask a person. Tool choice: \"Which tool fits this step?\" The agent would load only the top few. Context: \"Does this chunk matter now?\" The agent would hide it, summarize it, or show it whole.",
       "Model choice: \"Is this step easy?\" An easy step would go to a smaller model. Parallel work: \"Can these tasks run at once?\" The agent would split them. Instructions: \"Is this front-end work?\" The agent would load the style guide.",
       "Data safety: \"Could this touch secrets?\" The task would run on an approved model. Done check: \"Is the task finished?\" The agent would stop or keep going. Review: \"Does this change do what was asked?\" The agent would approve it or send it back.",
-      "Evaluation: \"Which prompt wins?\" An LLM judge writes a grade in free text. A Jev judgment comes back as a probability, and you can check it against cases a person labeled. ThinkThen added the done check and the prompt comparison.",
+      "Evaluation: \"Which prompt wins?\" A language model asked to grade writes its grade in free text. A Jev judgment comes back as a probability, and you can check it against cases a person labeled. ThinkThen added the done check and the prompt comparison.",
     ],
     credit: "Most ideas from Diogo Almeida.",
     takeaway: "Each decision is one small question with a probability.",
@@ -446,9 +450,9 @@ const ARTICLES = {
     label: "Retrieval",
     goal: "The four ways combine to find records in a large collection at an affordable cost.",
     idea: [
-      "Keyword search matches shared words. TF-IDF and BM25 work this way. Semantic search matches similar meaning. Embeddings and cosine similarity work this way. Hybrid search blends the two scores.",
+      "Keyword search matches shared words. TF-IDF and BM25 work this way. Semantic search matches similar meaning. Embeddings work this way. Each text becomes a list of numbers, and close lists mean close meaning. Hybrid search blends the two scores.",
       "Classification asks a question about each item. Should it stay? How well does it fit? Which tags apply? A language model reads the item and answers. Each answer carries a probability.",
-      "The strategies combine. A cheap search narrows a large collection. Keyword search and semantic search both work. Classification then judges the shortlist.",
+      "The strategies combine. A cheap search narrows a large collection. Classification then judges the shortlist.",
       "Classification can also stack on itself. Ask a coarse question first. Then ask finer questions of the fewer items that pass.",
       "Cost grows with the number of items judged. Keyword and semantic search look items up in a prebuilt index. Classification sends every item it judges to a language model. Narrowing first keeps the cost affordable.",
     ],
@@ -477,12 +481,13 @@ const ARTICLES = {
     label: "Your own backend",
     goal: "Any server with Jev's interface can answer, and a bar must be tuned again on the new model.",
     idea: [
-      "Any server with the same interface as Jev can answer. Name it with `--url`.",
+      "Any server with [the same interface as Jev](/install/backends/system-one/) can answer. Name it with `--url`.",
       "`thinkthen check` sends four fixed requests to check that a server works. With `--plan`, it prints its plan and sends nothing.",
     ],
     see: {
       '1-check': "The check names the address and the model it would ask.",
     },
+    slideNote: "No run made the slide's console. It follows the check specification at thinkthen d0aa1b0b, except the model line, which shows the model a server names.",
     source: { text: 'the check specification', href: 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md' },
     lesson: "A bar tuned on one model does not carry to another. Run `audit` again on your labeled records before you trust a new backend.",
     takeaway: "A new model needs its own bar.",

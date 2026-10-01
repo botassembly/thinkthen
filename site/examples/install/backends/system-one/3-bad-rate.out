@@ -1,0 +1,1 @@
+thinkthen: configuration backend field `requests_per_minute` must be a whole number from 1 to 60000

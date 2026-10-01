@@ -1,7 +1,8 @@
 #!/bin/sh
 # Small, local operations shared by the dispatch-only release jobs. They read
-# files made from resolve's SHA. Only `draft`, `tap`, and `publish` change a
-# remote service, and the workflow gates those jobs separately.
+# files made from resolve's SHA. Only `draft`, `tap`, `publish`, `nuget-push`,
+# `maven-upload` and `pub-publish` change a remote service, and the workflow
+# gates those jobs separately.
 set -eu
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$repo"
@@ -89,6 +90,24 @@ managed_names() {
 			fail "unsupported target has $name"
 		fi
 	done
+}
+install_dart() {
+	dart_archive=$1/dartsdk-linux-x64-release.zip
+	curl --proto '=https' --tlsv1.2 -fsSL -o "$dart_archive" \
+		https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.4/sdk/dartsdk-linux-x64-release.zip
+	printf '%s  %s\n' 6487a10df5eab890d746d14a55f4c70bec3c1c0633f51804eb504cbc0fc395bb "$dart_archive" |
+		sha256sum -c --quiet || fail 'Dart 3.13.4 SDK differs from official checksum'
+	unzip -q "$dart_archive" -d "$1"
+	dart_bin=$1/dart-sdk/bin/dart
+	"$dart_bin" --version 2>&1 | grep -Eq '^Dart SDK version: 3\.13\.4 \(stable\)' || fail 'Dart SDK differs from pin'
+	pub_cache=$1/pub-cache
+	mkdir -p -- "$pub_cache"
+	PUB_CACHE=$pub_cache "$dart_bin" pub cache add ffi --version 2.2.0 || fail 'pinned ffi cache fill failed'
+	[ -d "$pub_cache/hosted/pub.dev/ffi-2.2.0" ] || fail 'pinned ffi cache is missing'
+	[ "$(cat "$pub_cache/hosted-hashes/pub.dev/ffi-2.2.0.sha256")" = 6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45 ] ||
+		fail 'cached ffi 2.2.0 differs from official digest'
+	[ "$(find "$pub_cache/hosted/pub.dev" -maxdepth 1 -name 'ffi-*' -type d | wc -l | tr -d ' ')" = 1 ] ||
+		fail 'isolated pub cache has another ffi version'
 }
 case ${1:-} in
 source-capture)
@@ -454,22 +473,7 @@ php-dart-tools)
 	case $3 in /*) ;; *) fail 'Dart setup output must be absolute' ;; esac
 	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Dart setup output already exists'
 	mkdir -p -- "$3"
-	dart_archive=$3/dartsdk-linux-x64-release.zip
-	curl --proto '=https' --tlsv1.2 -fsSL -o "$dart_archive" \
-		https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.4/sdk/dartsdk-linux-x64-release.zip
-	printf '%s  %s\n' 6487a10df5eab890d746d14a55f4c70bec3c1c0633f51804eb504cbc0fc395bb "$dart_archive" |
-		sha256sum -c --quiet || fail 'Dart 3.13.4 SDK differs from official checksum'
-	unzip -q "$dart_archive" -d "$3"
-	dart_bin=$3/dart-sdk/bin/dart
-	"$dart_bin" --version 2>&1 | grep -Eq '^Dart SDK version: 3\.13\.4 \(stable\)' || fail 'Dart SDK differs from pin'
-	pub_cache=$3/pub-cache
-	mkdir -p -- "$pub_cache"
-	PUB_CACHE=$pub_cache "$dart_bin" pub cache add ffi --version 2.2.0 || fail 'pinned ffi cache fill failed'
-	[ -d "$pub_cache/hosted/pub.dev/ffi-2.2.0" ] || fail 'pinned ffi cache is missing'
-	[ "$(cat "$pub_cache/hosted-hashes/pub.dev/ffi-2.2.0.sha256")" = 6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45 ] ||
-		fail 'cached ffi 2.2.0 differs from official digest'
-	[ "$(find "$pub_cache/hosted/pub.dev" -maxdepth 1 -name 'ffi-*' -type d | wc -l | tr -d ' ')" = 1 ] ||
-		fail 'isolated pub cache has another ffi version'
+	install_dart "$3"
 	printf '%s\n' "$3/dart-sdk/bin" >>"$GITHUB_PATH"
 	printf 'TT_DART=%s\nPUB_CACHE=%s\nTHINKTHEN_PHP_BIN=%s\n' "$dart_bin" "$pub_cache" "$php_bin" >>"$GITHUB_ENV"
 	;;
@@ -526,6 +530,37 @@ PY
 	tar -xzf "$go_archive" -C "$3"
 	[ "$("$3/go/bin/go" version)" = 'go version go1.27.1 linux/amd64' ] || fail 'Go tool differs from pin'
 	printf '%s\n' "$3/go/bin" >>"$GITHUB_PATH"
+	;;
+dart-tools)
+	[ "$#" = 3 ] || fail 'dart-tools TARGET OUT'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
+		fail 'Dart registry tools require Linux x86-64'
+	for tool in curl sha256sum unzip; do command -v "$tool" >/dev/null 2>&1 || fail "Dart registry tool is missing: $tool"; done
+	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
+	[ -n "${GITHUB_ENV:-}" ] && [ -f "$GITHUB_ENV" ] || fail 'GitHub environment handoff is missing'
+	case $3 in /*) ;; *) fail 'Dart setup output must be absolute' ;; esac
+	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Dart setup output already exists'
+	mkdir -p -- "$3"
+	install_dart "$3"
+	printf '%s\n' "$3/dart-sdk/bin" >>"$GITHUB_PATH"
+	printf 'TT_DART=%s\nPUB_CACHE=%s\n' "$dart_bin" "$pub_cache" >>"$GITHUB_ENV"
+	;;
+registry-pack)
+	[ "$#" = 4 ] || fail 'registry-pack PLATFORM_DIR OUT SHA'
+	python3 sdlc/scripts/release-registry.py pack "$2" "$3" "$4"
+	;;
+maven-sign)
+	[ "$#" -ge 3 ] || fail 'maven-sign MAVEN_DIR rehearse|release [BUNDLE]'
+	shift
+	python3 sdlc/scripts/release-registry.py maven-sign "$@"
+	;;
+maven-upload | nuget-push | pub-publish)
+	[ "$#" = 2 ] || fail "$1 FILE"
+	python3 sdlc/scripts/release-registry.py "$1" "$2"
+	;;
+pub-dry-run)
+	[ "$#" = 2 ] || fail 'pub-dry-run PUB_DIR'
+	python3 sdlc/scripts/release-registry.py dry-run "$2"
 	;;
 npm-assemble)
 	[ "$#" = 3 ] || fail 'npm-assemble INPUT OUT'
@@ -738,7 +773,22 @@ EOF
 publish)
 	[ "$#" = 3 ] || fail 'publish NAME SHA'
 	[ "$(git rev-parse HEAD)" = "$3" ] || fail 'publish checkout differs from resolve SHA'
+	# The Go module lives in libraries/go, so proxy.golang.org reads only a tag with that prefix.
+	go_tag=libraries/go/v$version
+	go_status=$(gh api --include "repos/$GITHUB_REPOSITORY/git/ref/tags/$go_tag" 2>&1 |
+		sed -n '1s/^HTTP[^ ]* \([0-9][0-9][0-9]\).*/\1/p')
+	case $go_status in
+	200)
+		[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$go_tag" --jq .object.sha)" = "$3" ] ||
+			fail "tag $go_tag exists at another commit"
+		;;
+	404) gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$go_tag" -f "sha=$3" >/dev/null ;;
+	*) fail "could not read tag $go_tag (HTTP ${go_status:-none})" ;;
+	esac
 	gh release edit "$2" --draft=false
+	# A private repository cannot serve the proxy yet; the tag stays and the proxy reads it once public.
+	curl -fsS "https://proxy.golang.org/$(printf '%s' 'github.com/botassembly/thinkthen/libraries/go')/@v/v$version.info" ||
+		echo "release-workflow: proxy.golang.org has not read $go_tag yet" >&2
 	;;
 *) fail "unknown operation ${1:-}" ;;
 esac

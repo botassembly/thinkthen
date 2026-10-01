@@ -19,7 +19,7 @@ export const OUTCOMES = [
   { key: 'yes', code: 0, label: 'yes', prints: 'true' },
   { key: 'no', code: 1, label: 'no', prints: 'false' },
   { key: 'unsure', code: 3, label: 'not sure', prints: 'null' },
-  { key: 'broken', code: '2, 4, 5, 6, 70', label: 'broken', prints: 'nothing' },
+  { key: 'broken', code: '2, 4, 5, 6, 7, 70', label: 'broken', prints: 'nothing' },
 ];
 
 export function outcomeOf(exit) {
@@ -37,13 +37,13 @@ const cutOn = (fn) => setting('Threshold').defaultOn(fn);
 
 const BACKEND_OPTIONS = [
   ['--model NAME', `The model the request carries. Name a version to pin a run. The default is ${setting('Model').default}.`],
-  ['--url BASE', 'The backend base address. It outranks THINKTHEN_BASE_URL.'],
+  ['--url BASE', 'The server\'s base address. It outranks THINKTHEN_BASE_URL.'],
   ['--timeout SECONDS', `How long one attempt may take. The default is ${setting('Timeout').number}.`],
   ['--max-retries N', `How many times a retried status is sent again. A transport failure is never sent again. The default is ${setting('Retries').default}.`],
   ['--record DIR', 'Calls the backend and saves each exchange in DIR.'],
   ['--replay DIR', 'Answers from DIR alone, with no key and no network.'],
   ['--cache DIR', 'Answers from DIR when it can and saves new exchanges there.'],
-  ['--no-cache', 'Turns off the saved answers for one run.'],
+  ['--no-cache', 'Turns off the answer cache for one run.'],
   ['--profile FILE', 'Applies local backend limits and names the calibration profile in use.'],
 ];
 
@@ -88,7 +88,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'yes'], [1, 'no'], [3, 'not sure'], ...COMMON_EXITS],
-    unsure: 'The probability landed inside the band. The tool prints null and exits 3.',
+    unsure: 'On one piece of evidence, a probability inside the band prints null and exits 3. In a stream, that record prints null and the run exits 0.',
     howtos: ['screen-studies-for-a-review', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
     see: {
       '1-lines': "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8 as null.",
@@ -112,11 +112,11 @@ export const FUNCTIONS = [
       ['--option LABEL=DESCRIPTION', 'One option and what it means. It may repeat, and it replaces the positional options.'],
       ['--options POINTER', 'Takes the options from each record. It needs --jsonl.'],
       ['--raw', 'Prints the label without quotation marks.'],
-      ['--quiet', 'Prints nothing. The exit code carries the run.'],
+      ['--quiet', 'Prints nothing. The exit code says whether an option came back.'],
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'an option came back'], [3, 'not sure'], ...COMMON_EXITS],
-    unsure: 'No option reached the threshold. The tool prints null and exits 3. choose never exits 1.',
+    unsure: 'On one piece of evidence, a pick under the threshold or an exact tie at the top prints null and exits 3. In a stream, the run exits 0. choose never exits 1.',
     howtos: ['rank-the-inbound-leads', 'split-a-scanned-packet-into-documents'],
     see: {
       '1-lines': "Each of the first three messages names one team: billing, shipping, and account. The fourth names a parcel and a login. No team reaches 0.9, and it comes back null.",
@@ -137,7 +137,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'A label under the bar is left out. An empty list is a good answer and exits 0.',
+    unsure: 'A label under the threshold is left out. An empty list is a good answer and exits 0.',
     howtos: ['code-open-ended-survey-answers'],
     see: {
       '1-one': "The message praises the dashboard, reports a crash, and names a double charge. It gets praise, bug, and billing.",
@@ -157,7 +157,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads. Do not use it as a gate.',
+    unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads. Do not use it to decide yes or no.',
     howtos: ['code-open-ended-survey-answers'],
     see: {
       '1-one': "The outage scores 2.0, and 2 is Immediate on this scale.",
@@ -180,7 +180,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'No record sets the exit code. A record under the bar is dropped.',
+    unsure: 'No record sets the exit code. A record under the threshold is dropped.',
     howtos: ['triage-a-support-inbox', 'join-two-tables-by-meaning', 'rank-the-inbound-leads'],
     see: {
       '1-lines': "filter keeps the two complaints: the broken zipper and the snapped strap.",
@@ -275,7 +275,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'The model only picks from options. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
+    unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
     see: {
       '1-names': 'recognize finds three names. Each comes back with its kind and its strength.',
@@ -283,13 +283,13 @@ export const FUNCTIONS = [
   },
   {
     name: 'relate',
-    goal: 'relate asks the model about named entities, one possible edge per pair and rule.',
-    primitive: 'Yes or no per allowed entity pair and rule',
+    goal: 'relate asks the model about named entities, one possible edge per pair and rule, or one menu per source for a single rule.',
+    primitive: 'Yes or no for each pair of names, or one choice for each source under a single rule',
     line: 'Find relationships among named entities.',
-    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. For the links a text states, use <code>recognize --relation</code>.',
+    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. A rule asks one yes or no question for each pair. In a rules file, a rule marked <code>"single": true</code> asks one choice for each source instead, and gives that source at most one edge. For the links a text states, use <code>recognize --relation</code>.',
     takes: 'one set of named entities and relation rules',
-    gives: 'one edge for each related pair, with a probability',
-    requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. --plan prints the first request it would send.',
+    gives: 'one edge for each related pair, with a probability, and at most one edge per source for a single rule',
+    requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. A single rule asks one choice per source instead, with none of these as an option. --plan prints the first request it would send.',
     args: 'RELATION... as NAME=SOURCE_KIND:TARGET_KIND or a bare NAME, or one @FILE',
     options: [
       ['--either', 'Treats every relation as reading the same both ways.'],
@@ -301,7 +301,7 @@ export const FUNCTIONS = [
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
     see: {
-      '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default bar.',
+      '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default threshold.',
     },
   },
   {
@@ -309,7 +309,7 @@ export const FUNCTIONS = [
     title: '@question',
     goal: 'A question file saves one question with its threshold, and every command that reads it asks the same question.',
     primitive: 'Not a function',
-    line: 'A saved question every function accepts.',
+    line: 'A saved question that six functions accept.',
     lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. Every command that reads the file then asks the same question.',
     requests: 'None of its own. The function that reads it sends the requests.',
     args: '@FILE in place of the question words, on decide, choose, tag, score, filter, and rank.',
@@ -323,11 +323,11 @@ export const FUNCTIONS = [
       ['model, profile', 'The model to ask and the calibration profile to apply.'],
     ],
     exits: [[5, 'the file could not be read, is not one JSON object, or breaks a rule'], [2, 'the command names the wrong verb for the file']],
-    unsure: 'A band in the file sends the not-sure answers to a person.',
+    unsure: 'A band in the file marks the middle answers not sure. Send those to a person.',
     howtos: [],
     see: {
       '1-yes': "The saved question answers true for a plain request for money back.",
-      '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure: null and exit 3.",
+      '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure. decide prints null and exits 3.",
     },
     notAFunction: true,
   },
@@ -386,12 +386,16 @@ export function exitMark(script, exit) {
 export const CODE_FUNCTIONS = FUNCTIONS.filter((f) => !f.notAFunction);
 
 
+// The C library row on every page of a binding that calls it.
+const C_ARCHIVE = ['thinkthen-c-VERSION-TARGET.tar.gz', 'The C library it calls, from the same release.'];
+
 export const SURFACES = [
   {
     slug: 'shell', name: 'Bash', deckHeading: null,
     lang: 'bash', tab: 'Bash',
     blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
-    unsureWord: 'null, and exit code 3',
+    unsureWord: '`null`, and exit code 3',
+    facts: '`--facts` prints one line of run facts on standard error, after the answers.',
     install: [
       ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
       ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
@@ -406,8 +410,11 @@ export const SURFACES = [
   {
     slug: 'python', name: 'Python', deckHeading: 'Python',
     lang: 'python', tab: 'Python',
-    blurb: 'Pass a string or a list. Read the answer from `Call.value`; `None` means not sure.',
-    unsureWord: 'None',
+    blurb: 'Pass a string or a list. Read the answer from `Call.value`.',
+    unsureWord: '`None`',
+    facts: '`Call.facts` counts this call.',
+    errors: 'Every failure raises a `ThinkThenError`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `Cancelled`.',
+    settings: '`tt.Engine` takes each setting as a keyword and reads the environment for the rest. `record=` writes a recording to a folder. `replay=` answers from that recording with no connection.',
     install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
     particular: [
       'A list goes in and `Call.value` holds the answered list. The list crosses into the engine once.',
@@ -418,7 +425,10 @@ export const SURFACES = [
     slug: 'polars', name: 'Polars', deckHeading: 'Polars',
     lang: 'python', tab: 'Python',
     blurb: 'A Polars frame goes in. Read the frame with its new columns from `Call.value`.',
-    unsureWord: 'None',
+    unsureWord: '`None`',
+    facts: '`Call.facts` counts the whole frame call. The new columns hold only the answers.',
+    errors: 'Every failure raises a `ThinkThenError`, as in Python. A failed row in a column call ends the call with `BackendError`.',
+    settings: '`tt.Engine` takes each setting as a keyword, as in Python. `record=` writes a recording to a folder. `replay=` answers from that recording with no connection.',
     install: [['pip install thinkthen[polars]', null]],
     particular: [
       '`decide`, `choose`, `score`, and `tag` send a whole column to the engine in one call.',
@@ -426,10 +436,28 @@ export const SURFACES = [
     ],
   },
   {
+    slug: 'pandas', name: 'pandas', deckHeading: null,
+    lang: 'python', tab: 'Python',
+    blurb: 'A pandas Series goes in, and a Series with the same index comes back in `Call.value`.',
+    unsureWord: '`pd.NA`',
+    facts: '`Call.facts` counts this call.',
+    errors: 'Every failure raises a `ThinkThenError`, as in Python. Its subclass names the kind.',
+    settings: '`tt.Engine` takes each setting as a keyword, as in Python. `record=` writes a recording to a folder. `replay=` answers from that recording with no connection.',
+    install: [['pip install thinkthen pandas', null]],
+    particular: [
+      '`decide`, `choose`, `score` and `tag` take a Series and keep its index and name.',
+      '`decide` gives a `boolean` Series, `score` gives `Float64`, `choose` gives `string`, and `tag` gives one list of labels per row.',
+      '`annotate` takes a DataFrame with `on=` and adds one column per question.',
+    ],
+  },
+  {
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
     lang: 'ts', tab: 'TypeScript',
-    blurb: 'Pass one options object. Await the call, then read its `.value`.',
-    unsureWord: 'null',
+    blurb: 'Pass the question and the text. Await the call, then read its `.value`.',
+    unsureWord: '`null`',
+    facts: '`Call.facts` counts this call.',
+    errors: 'A failure rejects with a `ThinkThenError`. Its `kind` is `usage`, `backend`, `local`, `deadline`, `cancelled` or `defect`.',
+    settings: '`new Engine({...})` starts from the environment, and each key overrides one setting. `record` writes a recording to a folder. `replay` answers from that recording with no connection.',
     install: [['npm install thinkthen', null], ['pnpm add thinkthen', null], ['bun add thinkthen', null]],
     particular: [
       'An AbortSignal cancels the call, and the promise rejects at once.',
@@ -440,26 +468,35 @@ export const SURFACES = [
     slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
     lang: 'ruby', tab: 'Ruby',
     blurb: 'Any Enumerable goes in. Read the answer from `Call#value`.',
-    unsureWord: 'nil',
+    unsureWord: '`nil`',
+    facts: '`Call#facts` counts this call.',
+    errors: 'Every failure raises a `ThinkThen::Error`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `CancelledError`.',
+    settings: '`Engine.new` takes each setting as a keyword and reads the environment for the rest. `record:` writes a recording to a folder. `replay:` answers from that recording with no connection.',
     install: [['gem install thinkthen', null]],
     particular: ['Any Enumerable crosses to the engine once.'],
   },
   {
     slug: 'r', name: 'R', deckHeading: 'R',
     lang: 'r', tab: 'R',
-    blurb: 'Ten asking verbs work inside dplyr. Read the answer from `$value`.',
-    unsureWord: 'NA',
+    blurb: 'The ten functions work inside dplyr pipelines. Read the answer from `$value`.',
+    unsureWord: '`NA`',
+    facts: '`$facts` counts this call.',
+    errors: 'Each failure arrives as an R condition named for its kind, such as `thinkthen_usage`. Each condition carries `retryable`.',
+    settings: '`tt_engine()` takes each setting as an argument and reads the environment for the rest. `record =` writes a recording to a folder. `replay =` answers from that recording with no connection.',
     install: [['install.packages("thinkthen")', null]],
     particular: [
       'A column goes in and the answered column is in `$value`.',
-      'dplyr\'s `filter()` drops NA rows. A not-sure answer leaves the pipeline on its own.',
     ],
+    frames: 'A verb inside `mutate()` answers a whole column in one call. dplyr\'s `filter()` drops NA rows, so a not-sure answer leaves the pipeline on its own.',
   },
   {
     slug: 'rust', name: 'Rust', deckHeading: 'Rust',
     lang: 'rust', tab: 'Rust',
     blurb: 'Call the engine directly. The compiler makes you handle not sure.',
-    unsureWord: 'Answer::Unsure',
+    unsureWord: '`Answer::Unsure` from `decide`, and `None` from `choose`',
+    facts: '`Call::facts()` counts this call.',
+    errors: 'Every call returns a `Result`. Its `Error` names one of six kinds. A started call that fails keeps its facts in `Error::facts()`.',
+    settings: '`EngineBuilder` sets each setting. `record` writes a recording to a folder. `replay` answers from that recording and sends nothing, even on a miss.',
     install: [['cargo add thinkthen', null]],
     particular: [
       'Calls block. No async runtime comes with it.',
@@ -469,7 +506,10 @@ export const SURFACES = [
     slug: 'c', name: 'C', deckHeading: 'C',
     lang: 'c', tab: 'Rust',
     blurb: 'One header over a shared or a static library. Bind ThinkThen to any language that can call C.',
-    unsureWord: 'an outcome of THINKTHEN_UNSURE',
+    unsureWord: 'the outcome `THINKTHEN_UNSURE`',
+    facts: 'A JSON call returns `{"value":...,"facts":...}`.',
+    errors: 'A failed call returns NULL, or a code from `THINKTHEN_EUSAGE` to `THINKTHEN_EDEFECT`. `thinkthen_error_message` reads the message on the same thread.',
+    settings: '`thinkthen_engine_new_with` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection. The key stays in `THINKTHEN_API_KEY`.',
     install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
     particular: [
       'The JSON examples parse the `value` and `facts` members with json-c. Install its development headers and link with `pkg-config --cflags --libs json-c` beside libthinkthen.',
@@ -477,28 +517,177 @@ export const SURFACES = [
     ],
   },
   {
+    slug: 'cpp', name: 'C++', deckHeading: null,
+    lang: 'cpp', tab: 'C++',
+    blurb: 'One C++17 header over the C library. Calls return `CallResult` values. The engine frees itself when it goes out of scope.',
+    unsureWord: '`tt::Outcome::notSure`',
+    facts: '`decide` returns a `CallResult`. Its `.value` holds the answer, and its `.facts` holds this call\'s run facts as `tt::Json`.',
+    errors: 'A failed call throws a `tt::Failure`. Its `tt::ErrorKind` names one of six kinds, with the message and the retry flag.',
+    settings: '`tt::create(settings)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['thinkthen-cpp-VERSION-TARGET.tar.gz', 'The header and a CMake package, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      'The CMake package gives `find_package(thinkthen-cpp)`.',
+      '`tt::Engine` and `tt::CancelToken` move but do not copy. Join every thread that uses them before they go.',
+    ],
+  },
+  {
+    slug: 'objective-c', name: 'Objective-C', deckHeading: null,
+    lang: 'objective-c', tab: 'Objective-C',
+    blurb: 'A `TTClient` over the C library, for GNU Objective-C with no Foundation.',
+    unsureWord: '`TTOutcomeNotSure`',
+    facts: 'Each typed call sets `facts:` to this call\'s run facts as JSON text. Free it with `free`.',
+    errors: 'A failed call returns a `TTErrorKind` and fills the `TTFailure`. A failed call leaves the answer untouched.',
+    settings: '`createWithSettings:length:failure:` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['thinkthen-objective-c-VERSION-TARGET.tar.gz', 'The binding\'s source, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      'The `*Bytes` forms, such as `decideBytes`, take the question with its length and refuse a NUL inside it.',
+    ],
+  },
+  {
+    slug: 'cobol', name: 'COBOL', deckHeading: null,
+    lang: 'cobol', tab: 'COBOL',
+    blurb: 'A copybook and called programs over the C library, for GnuCOBOL.',
+    unsureWord: '`outcome-not-sure`',
+    facts: '`TT-DECIDE` fills `tt-facts` with this call\'s run facts as JSON text. `TT-JSON-MEMBER` reads one member.',
+    errors: '`tt-failure` holds the kind as a code from 1 to 6, the retry flag and the message. Its level-88 names, such as `failure-backend`, test each kind.',
+    settings: '`TT-ENGINE-NEW` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['thinkthen-cobol-VERSION-TARGET.tar.gz', 'The copybook and the called programs, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      'Compile the programs you call from `src/` with your own, as the build line does with `TT-DECIDE`.',
+      'The copybook names no, yes and not sure as level-88 conditions, so `if outcome-yes` reads the answer.',
+    ],
+  },
+  {
+    slug: 'ada', name: 'Ada', deckHeading: null,
+    lang: 'ada', tab: 'Ada',
+    blurb: 'A `Thinkthen` package over the C library, for GNAT. Each call is a procedure with out parameters.',
+    unsureWord: '`Not_Sure`',
+    facts: '`Decide` sets `Facts` to this call\'s run facts as JSON text. `Member` reads one member.',
+    errors: '`Decide` sets `Error`. Its `Kind` runs from `Usage` to `Defect`, and `None` means the call answered.',
+    settings: '`Configure` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['thinkthen-ada-VERSION-TARGET.tar.gz', 'The package and its GNAT project, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      '`gprbuild -P thinkthen.gpr` builds the package as a library.',
+      '`pragma Assert` runs only under `-gnata`.',
+    ],
+  },
+  {
+    slug: 'java', name: 'Java', deckHeading: null,
+    lang: 'java', tab: 'Java',
+    blurb: 'One `Door` class over the C library, for Java 21. Each call returns its answer and its run facts.',
+    unsureWord: '`Outcome.NOT_SURE`',
+    facts: '`decide` returns a `TypedResult`. Its `value()` holds the answer, and its `facts()` holds this call\'s run facts as a `Map`.',
+    errors: 'A failed call throws a `Door.NativeFailure`. Its `failure` names one of six `FailureKind` values, with the message and the retry flag.',
+    settings: '`new Door(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      'The door calls the C library through Java 21\'s foreign function API. `javac` and `java` take `--enable-preview`.',
+      '`-Dthinkthen.library` names the C library by its absolute path.',
+      '`assert` runs only under `java -ea`.',
+    ],
+  },
+  {
+    slug: 'kotlin', name: 'Kotlin', deckHeading: null,
+    lang: 'kotlin', tab: 'Kotlin',
+    blurb: 'A `KotlinFacade` over the Java door. Its calls take strings.',
+    unsureWord: '`Outcome.NOT_SURE`',
+    facts: '`decide` returns the door\'s `TypedResult`. `value()` holds the answer, and `facts()` holds this call\'s run facts as a `Map`.',
+    errors: 'A failed call throws a `Door.NativeFailure`, as in Java. Its `failure` names the kind, the message and the retry flag.',
+    settings: '`Door(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['io.github.botassembly:thinkthen-jvm:VERSION:kotlin', 'The Kotlin JAR. Add the Java coordinate beside it.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      '`decideAsync` runs a call on its own thread. `await()` gives the answer. Close it before the door.',
+      'The run takes the same `java` flags as Java: `--enable-preview` and `-Dthinkthen.library`.',
+    ],
+  },
+  {
+    slug: 'scala', name: 'Scala', deckHeading: null,
+    lang: 'scala', tab: 'Scala',
+    blurb: 'A `ScalaFacade` over the Java door, for Scala 3. Its calls take strings.',
+    unsureWord: '`Outcome.NOT_SURE`',
+    facts: '`decide` returns the door\'s `TypedResult`. `value()` holds the answer, and `facts()` holds this call\'s run facts as a `Map`.',
+    errors: 'A failed call throws a `Door.NativeFailure`, as in Java. Its `failure` names the kind, the message and the retry flag.',
+    settings: '`Door(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['io.github.botassembly:thinkthen-jvm:VERSION:scala', 'The Scala JAR. Add the Java coordinate beside it.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      '`ScalaFacade` takes an `ExecutionContext`. `decideAsync` gives a `future`, and `close()` waits for the call.',
+      'The run needs the Scala library on the class path, such as `$SCALA_HOME/lib/scala.jar`.',
+    ],
+  },
+  {
+    slug: 'csharp', name: 'C#', deckHeading: null,
+    lang: 'csharp', tab: 'C#',
+    blurb: 'An `Engine` over the C library, for .NET 8. Each call returns its answer and its run facts.',
+    unsureWord: '`Outcome.NotSure`',
+    facts: '`Decide` returns a `TypedResult`. `.Value` holds the answer, and `.Facts` holds this call\'s run facts as a `JsonElement`.',
+    errors: 'A failed call throws a `Failure`. Its `Kind` names one of six `FailureKind` values, and `Retryable` says whether a retry may help.',
+    settings: '`Engine.Open(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['dotnet add package Botassembly.ThinkThen', 'The NuGet package.'],
+      ['thinkthen-csharp-VERSION-TARGET.tar.gz', 'The package file, from each release. Its folder serves as a local feed.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      'The package finds the C library by name. `LD_LIBRARY_PATH` names its folder.',
+      '`Trace.Assert` runs in a Release build. `Debug.Assert` does not.',
+    ],
+  },
+  {
     slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB',
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
-    unsureWord: 'NULL',
-    install: [['duckdb -unsigned', 'DuckDB loads the extension unsigned. The query loads the extension file first.']],
-    particular: ['A whole column chunk crosses at once.'],
+    unsureWord: '`NULL`',
+    facts: '`thinkthen_usage()` gives the totals for the process.',
+    errors: 'A failure is an error whose text starts `thinkthen <kind>: `. It never reads as `NULL`.',
+    settings: '`SET thinkthen_record` writes a recording to a folder. `SET thinkthen_replay` answers from that recording with no connection.',
+    install: [['duckdb -unsigned', 'The `-unsigned` flag lets DuckDB load a local extension file. The query loads that file first.']],
+    particular: ['DuckDB hands the extension up to 2,048 rows at a time. One call judges those rows together, and `SET thinkthen_max_requests` caps that call.'],
   },
   {
     slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite',
     lang: 'sql', tab: 'SQL',
     blurb: 'Judge a whole table in one call, then join the answers back by key.',
-    unsureWord: 'NULL',
+    unsureWord: '`NULL`',
+    facts: '`thinkthen_usage()` gives the totals for the process.',
+    errors: 'A failure is an error that reads `thinkthen <kind>: <message> (retryable: yes|no)`.',
+    settings: '`thinkthen_configure` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [['.load ./thinkthen', null]],
     particular: [
-      'Its functions are direct-only. A view or trigger in an untrusted schema cannot call them to spend requests or read files.',
+      'Only a query you type can call its functions. A view or trigger in an untrusted schema cannot call them to spend requests or read files.',
     ],
   },
   {
     slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL',
     lang: 'sql', tab: 'SQL',
     blurb: 'One extension. Ask questions in any query.',
-    unsureWord: 'NULL',
+    unsureWord: '`NULL`',
+    facts: '`thinkthen_usage()` gives the totals for the process.',
+    errors: 'A failed call raises its named error. `thinkthen_try_details` returns a failure as `jsonb` instead.',
+    settings: '`SET thinkthen.record` writes a recording to a folder. `SET thinkthen.replay` answers from that recording with no connection.',
     install: [['CREATE EXTENSION thinkthen;', null]],
     particular: [
       'A question file carries a band. The not-sure rows come back NULL, and a person reads them.',
@@ -538,6 +727,9 @@ export const COUNTS = {
 
 for (const s of SURFACES) {
   if (s.slug !== 'shell' && !BINDINGS.some((b) => b.slug === s.slug)) throw new Error(`catalog: the surface ${s.slug} is not in BINDINGS`);
+  for (const field of s.slug === 'shell' ? ['facts'] : ['facts', 'errors', 'settings']) {
+    if (!s[field]) throw new Error(`catalog: the surface ${s.slug} has no ${field}`);
+  }
 }
 
 // The tabs on the home page sample, and on every code block that has variants.
@@ -555,12 +747,61 @@ export const TUTORIAL_SEE = {
 };
 
 // The tutorial's caption for functions/decide/1-lines in its stream step.
-export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 4.";
+export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 3.";
 
 // Captions for the Settings page's examples, keyed by script name.
 export const SETTINGS_SEE = {
   '1-environment': 'THINKTHEN_BASE_URL names the address. The plan shows the request going there.',
   '2-flag': 'The same variable is set, and --url names another address. The flag wins.',
+};
+
+// The Backends section under /install/backends/, in side-list order. Each
+// page runs the scripts in examples/install/backends/<slug>/, and `see`
+// says what to look for in each.
+export const BACKEND_PAGES = [
+  { slug: '', title: 'Backends', label: 'Overview', group: null },
+  { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Built in' },
+  { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Built in' },
+  { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
+  { slug: 'system-one', title: 'Any System One server', label: 'Any System One server', group: 'Your own' },
+  { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
+].map((p) => ({ ...p, route: `/install/backends/${p.slug ? `${p.slug}/` : ''}` }));
+
+export const BACKENDS_SEE = {
+  typesafe: {
+    '1-one': 'Jev answers yes. Sending the item back asks for a refund.',
+    '2-lines': 'One request carries all three lines. The thanks is the only no.',
+    '3-check-plan': "The check would post to TypeSafe's address with Jev's pinned model. The plan sends nothing.",
+  },
+  liquid: {
+    '1-status': 'status names the address, the model, and the variable the key comes from. It sends nothing.',
+    '2-one': 'd1 answers no and exits 1. Jev answers yes to the same line.',
+    '3-lines': 'One request carries all three lines. d1 says yes to the broken order and no to the send-back line.',
+    '4-check-plan': "The check would post to Liquid's address with d1:free. The plan sends nothing.",
+  },
+  ollama: {
+    '1-check-plan': 'The plan names the second port and nimble. The first line says descriptions travel as text.',
+    '2-one': 'The nimble model answers yes, as Jev does.',
+    '3-lines': 'One request carries all three lines. The nimble model gives the same three answers as Jev.',
+    '4-tev1': 'The smaller tev1 model also answers yes.',
+  },
+  'system-one': {
+    '1-environment': 'THINKTHEN_BASE_URL names the server. The address came from the environment, and the key will come from THINKTHEN_API_KEY.',
+    '2-entry': 'The entry local-d1 brings its own address, model, and key variable.',
+    '3-bad-rate': 'A rate of 0 is out of range. The command names the field, exits 5, and sends nothing.',
+    '4-check-plan': "The check would post its four fixed questions to the server's systemone address.",
+  },
+  'other-servers': {
+    '1-request': 'The plan prints the exact body a server receives at BASE/systemone.',
+  },
+};
+
+// Captions for the Configuration page's examples, keyed by script name.
+export const CONFIGURATION_SEE = {
+  '1-default': 'With no XDG variable, all three paths sit under HOME.',
+  '2-xdg': 'Absolute XDG variables move the configuration file, the cache, and the usage totals.',
+  '3-relative': 'A relative XDG_CONFIG_HOME does not count. The path falls back to HOME.',
+  '4-file': 'The file names liquid. THINKTHEN_BACKEND outranks the file and names ollama.',
 };
 
 // The business how-tos. Each page runs the scripts in
@@ -578,7 +819,7 @@ export const HOWTOS = [
     goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
     functions: ['decide'],
-    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it comes back null for a person.' },
+    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it is not sure. It prints null, and a person reads it.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
@@ -665,10 +906,10 @@ export const TECHNIQUES = [
   {
     slug: 'threshold-band', title: 'Set a cut or a band', label: 'cut or band',
     goal: 'One number is a cut, and two numbers make a band with a not-sure middle.',
-    said: 'One number is a cut. Two numbers are a band, and the middle comes back as null.',
+    said: 'One number is a cut. Two numbers are a band. An answer inside the band is not sure, and it prints null.',
     see: {
       '1-cut': 'At a cut of 0.5, the send-back line counts as a refund.',
-      '2-band': 'With a band from 0.2 to 0.8, the same line comes back null for a person.',
+      '2-band': 'With a band from 0.2 to 0.8, the same line is not sure, and it goes to a person.',
     },
   },
   {
@@ -701,7 +942,7 @@ export const TECHNIQUES = [
   {
     slug: 'long-lived-loop', title: 'Keep one process for a step loop', label: 'one process',
     goal: 'A coproc sends each step to one choose process and reads its answer before the next step.',
-    said: '`coproc` holds one `choose` process open. `--batch 1` releases each answer while the input remains open; strict replay needs no key or network. A library is the route when the loop needs lower call overhead.',
+    said: '`coproc` holds one `choose` process open. `--batch 1` prints each answer while the input stays open. The example replays a recording. It needs no key and no network. Use a library binding when each call must cost less time.',
     see: { '1-loop': 'Three changing action lists produce three answers from one process.' },
   },
   {
@@ -713,7 +954,7 @@ export const TECHNIQUES = [
   {
     slug: 'agent-tool-guard', title: 'Guard a coding agent tool call', label: 'tool guard',
     goal: 'Map a bounded decide answer to one coding agent host hook contract.',
-    said: 'This Claude Code `PreToolUse` hook reads a proposed Bash command as text. It runs none of the proposals. A yes gives `allow`, a no gives `deny`, and not sure gives `ask`. A failed judge also gives `deny`. The hook answers in JSON. In ThinkThen, exit 2 means an input error. In a hook, exit 2 blocks the tool call.',
+    said: 'This Claude Code `PreToolUse` hook reads a proposed Bash command as text. It runs none of the proposals. A yes gives `allow`, a no gives `deny`, and not sure gives `ask`. A failed call also gives `deny`. The hook answers in JSON. In ThinkThen, exit 2 means a usage or input error. In a hook, exit 2 blocks the tool call.',
     source: ['Claude Code hooks reference, checked 2026-09-28', 'https://code.claude.com/docs/en/hooks#pretooluse-decision-control'],
     see: { '1-guard': 'One recorded proposal is allowed, one asks a person, and one is denied.' },
   },
@@ -723,7 +964,7 @@ export const RECIPES = [
   {
     slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
     goal: 'annotate labels a JSON array and keeps every other field, and a second run costs nothing.',
-    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date ride through. Run it again, and the saved answers come back at no cost.',
+    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date stay in each record. Run it again, and the answers come from the answer cache with no request sent.',
     see: {
       '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
     },
@@ -731,7 +972,7 @@ export const RECIPES = [
   {
     slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does', label: 'Review a diff',
     goal: 'decide separates the hunks of a diff that change behavior from those that do not.',
-    said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does, and the file and hunk header ride through.',
+    said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does. The file name and the hunk header stay in each record.',
     see: { '1-diff': 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
   },
   {
@@ -750,7 +991,7 @@ export const RECIPES = [
     slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'Set aside bad records',
     goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
     said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
-    see: { '1-split': 'The malformed line and numeric body stay aside; three text records are judged.' },
+    see: { '1-split': 'The malformed line and the numeric body stay aside. decide judges the three text records.' },
   },
 ];
 

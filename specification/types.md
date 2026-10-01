@@ -28,7 +28,7 @@ Every surface that accepts a description string also accepts its structured form
 | `tag` | Ordered labels above the cut; `[]` is success | No separate not sure form |
 | `score` | Number from 0 to K−1, possibly fractional | None |
 | `filter` | Kept records | None |
-| `rank` | Every record, most likely yes first | None |
+| `rank` | Every record, most likely yes first; the libraries and the C door give `{index, record, probability}` rows with a zero-based index (R: one-based `place`) | None |
 | `find` | Selected unit; the libraries and the C door give `{index, unit, probability}` with a zero-based index (R: one-based `place`) | `null` when `none` wins |
 | `annotate` | Named answers per input record | `null` for a not sure member |
 | `recognize` | Entities with `text`, `start`, `end`, `length`, `kind`, `strength`, plus optional relations, flagged as relate's edges are | Empty `entities` is success |

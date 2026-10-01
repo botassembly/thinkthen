@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use serde_json::value::RawValue;
 use thinkthen::{
     AttemptObservation, BatchSetting, CallOptions, CancelToken, DoorReply, Engine, Facts, Judgment,
-    LoadedQuestion, Question, QuestionSet,
+    LoadedQuestion, Question, QuestionSet, Ranked,
 };
 
 use crate::door;
@@ -261,11 +261,7 @@ fn answer(
             let ranked = engine.rank_with(&asked, records.iter().map(String::as_str), options)?;
             Ok((
                 written(serde_json::to_string(
-                    &ranked
-                        .value()
-                        .iter()
-                        .map(|row| *row.input())
-                        .collect::<Vec<_>>(),
+                    &ranked.value().iter().map(Ranked::row).collect::<Vec<_>>(),
                 ))?,
                 ranked.facts().clone(),
             ))

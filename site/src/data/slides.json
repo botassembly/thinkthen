@@ -1,142 +1,143 @@
 {
-  "deck": "62ddf209908fa7f03c06e219edca3300ad3af9ea",
+  "deck": "4595c70095c8535754c602718438a136f0dbc47a",
   "bench": "af538978aea39c738cc3c4d2a15aaf43c48b3a8a",
   "slides": {
     "beatles-bench": {
-      "slide": "01-title",
-      "sha256": "ace85591bb2c02e301cb732ea0d5fa946c7d07c57bf5e07bb452bfc24361aae9",
-      "card": "7905b2d02b4c89b8ba0fee70b50ed3e517ba4fb852768d8b6c63edba32dd20f0"
+      "slide": "title",
+      "sha256": "031e8bbcc3e614f33bc0a9d1e0e2e3a0d640e0bfe46aeb20aa758b2f3982f5fb",
+      "card": "268fe760ed1155a44f10dcc7f05b98006df2cbf88634127f0808a44af664248c"
     },
     "strings": {
-      "slide": "02-strings",
+      "slide": "strings",
       "sha256": "dba792a883cb7914b79349d99c4cead7951c4adaa6fc340b3e90eee6239b4f65",
       "card": "b05d4c5ed7a5c8affe7cb665d3842bbdc3af126e27576a3f219a38c6110affcc"
     },
     "jev": {
-      "slide": "03-jev",
+      "slide": "jev",
       "sha256": "cc6babe9739feba2ff586be83e945c4046c033fc99290298f8d0a633207d12ac",
       "card": "bf98bb7ff84ac473c916feefc2e2d0b143adec3a8bfc7c7049afc7d234676710"
     },
     "runs-in": {
-      "slide": "05-runs-in",
-      "sha256": "daf33b60f2b05477d20138a14af9874ac65945d4115956dbaca19533079c17e5",
-      "card": "2ea89e28bb18e1c2efaa0d12f6908264bf62c12909c1841cdbb8c824efb35433"
+      "slide": "runs-in",
+      "sha256": "9cc2f5d67f840e783aba17d36fac727a667af7cfa9bddc521bfc0c007c061469",
+      "card": "3a994dadb1b0819403f00a6af63f68e9c82df736dabe078075609da753e2bb15"
     },
     "decide": {
-      "slide": "06-decide",
-      "sha256": "90429c7ef8394815519051481262b04bbf0a5243f22a9752d69152e00c7df50d",
-      "card": "7f8dac8c2218bf216894ad75d0091f6fadc576ca9a4a480e263c33b71d3d35ef"
+      "slide": "decide",
+      "sha256": "e72820b2f50ebd484ea7b7509f8293081fd9bd3d8b4f0702a8d1aed2b296da5f",
+      "card": "bbb5e165275ff6c2534047cb8dd5ad5ab06642adfb3bfb8536ef8b3407ca6de4"
     },
     "choose": {
-      "slide": "07-choose",
-      "sha256": "8b9c7cb5a5d4e855ce401e40ead092306f7910c0733b4727cba62476681a231c",
-      "card": "af4443d5e973ae07861b4bb849bb86c89188903c87d447fafd210cba49d531a1"
+      "slide": "choose",
+      "sha256": "4fdfe44889ef2c30899e05d6d207c3e6db3fff896b6bd6c5be5005b379bf42f0",
+      "card": "9bf62be4b3c0c50c0a9736faeb813657d476426aad1da2124a336f130133c6da"
     },
     "tag": {
-      "slide": "08-tag",
-      "sha256": "eff3754cb9237739eb43341db0ffcde3b1a4a90f4ae0bfcaad5d5f436f91cac8",
-      "card": "d26ae0e1475f0959c112e73207afd03f02b691d06c7f0940cc405639b337ced4"
+      "slide": "tag",
+      "sha256": "6dd4decc7ce275950ecc585baa43f9e55c06b34a8dc0d3e8bc325216bfbe1f8a",
+      "card": "732e2ec065494a1b8a79794e52f23f396a733b98fdcd3834c3068cb93f212f5f"
     },
     "score": {
-      "slide": "09-score",
-      "sha256": "4b5ef3da6c337ad9df3c1fbcdb651c1158d937b4b7d1cc77932265e23a35a8ef",
-      "card": "d518cfec10c9d301685a0acdf74037caa739d940d7ecf14ecf17320e49882972"
+      "slide": "score",
+      "sha256": "e2231d5945bf174b1b0bc1641225b00f690817e7db73c693cf037102a910d2ac",
+      "card": "80adcc72717a26de5a0247cb7946f024204e9c7093ac9c7eb5964c771a2bbf1d"
     },
     "score-bands": {
-      "slide": "10-score-bands",
-      "sha256": "4d37d584cf567f95ebd724ebe5958a66056b6ff265e44531a0fd6b9b9338e237",
-      "card": "1e26ab7d4440b228ba9562d66c13f24739713442227f407137e4f0af8a541ebb"
+      "slide": "score-bands",
+      "sha256": "803a92a696af26bbc529aad9dfb1dad3ee322fcd50fd4f9926070221cd46fbf3",
+      "card": "0b211e65e6a9db650e5f754d2d68506bb07a9a9c1612233790f18155a31fde8b"
     },
     "filter": {
-      "slide": "11-filter",
-      "sha256": "f6def1cc84720f78ba789d6781569dc85971a6b8ebd19b02c1159463d6c44736",
-      "card": "f9c2684da4383dbd10c6c652449b5964803c1205638543c2f8fed4f1b8eb4cd2"
+      "slide": "filter",
+      "sha256": "f0006332d8f6b47b818f7138ad4055544e129d2f1c9c4310efc35cf453347040",
+      "card": "b0a6ca9d28f44f891527c779fe3727ccf4b8d8955dfe1fe39f49ec69fa96c23a"
     },
     "rank": {
-      "slide": "12-rank",
-      "sha256": "4cbdea08ee1b4c7977c9b5113b15bff1cad40a5d6f9feb0efa43352fc52c2e06",
-      "card": "6a4352c04ac7dc350e79f2f9aa75d451a08e5a9ec1615cb34e76d2d20af38ce7"
+      "slide": "rank",
+      "sha256": "7f2963a5c91184aa04cf8facbccc78bc97d77918297a6d18c27b6efe7469d970",
+      "card": "a7b3da9cfba1238c848ceadde6d9a18f70fb0fdb5097c04b1202113c980c1252"
     },
     "find": {
-      "slide": "13-find",
-      "sha256": "becad7086bf4cd2209dec739aa5a2cb0aeaef08a49d4a143af51edc2b417f015",
-      "card": "5ad2dc9f442c28464e1155395c2be46d22c5dfb153b2c3303d957d017d3583ef"
+      "slide": "find",
+      "sha256": "90864aa5585c03492f82d8eaf65a874cf62148633ebc98c67add32050799298c",
+      "card": "c21d2841459ecf71ecea82c34c36e6ee04ea522bc12cc110eb7c9f038d68c49c"
     },
     "annotate": {
-      "slide": "14-annotate",
-      "sha256": "d0c4d8caa7178a1652cd1ce62830bfd61f93ea6fcfdbdd924e836eb1c5df44af",
-      "card": "f0f7719d83c6fe3cf54a3405a293b1ce54729b03747b3057650fd58907e88152"
+      "slide": "annotate",
+      "sha256": "b08074a33a4df38e04b8a01f8b9e67a2275270b43c1be54666badf70101cedd6",
+      "card": "057bc2d3231da607048126585b149efc615a34b7125910d8c3f2ef57ee8e3e81"
     },
     "recognize": {
-      "slide": "15-recognize",
-      "sha256": "3b0c088a9726ef818ad9b8a0269023ab9a2e88e4fa5029f4f11e1596b7b4ee55",
-      "card": "8e07ff9335f014a8ab53d9ab09946ca3e4b165a8ebcd4d3bd412601eeb149299"
+      "slide": "recognize",
+      "sha256": "bd974e74328bb01235098b9971bf6e4b06a1162bd2c4923422de1b2281ac2c4d",
+      "card": "011d2ba931a12bb3af6e97bd6fe6792c0e56eb717ea747727ca01706c4dd4902"
     },
     "relate": {
-      "slide": "16-relate",
-      "sha256": "9df140fea0f302e64ef99c7d6af15457574cc914be26494cbacb0cc41498b231",
-      "card": "c6ca51760ca22702f24ab73a3ee4060ef7c6ca6781e4c75bc4c354e7798fa7a5"
+      "slide": "relate",
+      "sha256": "5f4b667430c11dd377ebd083c9e5565f4c3ec8dcfdcede9d629df93791203d75",
+      "card": "1e55cc0190168e0385f8bbdd35a9cac7b0fdb84d4d4bb8ec1258b68557e0471d"
     },
     "question-file": {
-      "slide": "17-question-file",
-      "sha256": "288af265475cfb1960d0f221ab189b577fef460d83d675643b0d32849e86c788",
-      "card": "5351f09c73cf0ddeb55a190bf850009dd96b716163a84ed2e5d95d4ac6f099e2"
+      "slide": "question-file",
+      "sha256": "031fe43b8db2cfb3a9f3a3b6a68ac456368b22e5d1e789e475e2ca334ddf1bea",
+      "card": "397ff330193cf0c726878b2151f54cb81210afbbcb04bbd2729529370b7ab29b"
     },
     "bash": {
-      "slide": "18-bash",
-      "sha256": "1145c0ea40e085202b811a2b575d7daf381f05d36bdf70000d88f4e3ad1ea6f7",
-      "card": "76ea245d901ef1b77a9b7dd69900e8dc87a1399c32041ff86544667199e4a62a"
+      "slide": "bash",
+      "sha256": "d83f7810963602e7608cb1851ebb114f6f7ca88847ef3502941386b1bf33f850",
+      "card": "7439ef93baaa934532e3f3a1e3523d5c2e9d917f8492eb4fbde4e65271f99f40"
     },
     "languages": {
-      "slide": "19-languages",
-      "sha256": "acab00669c6158ab9954fdb0cda6eb347773e35768bd472ba2a33b30188d3109",
-      "card": "ae622a021f98a8a49d22cce5430faa01d884363ce3577ecb3e3f149f7950d77c"
+      "slide": "languages",
+      "sha256": "2e4d830af462c1f2df888f1951157a71a733aee703b275d7230524f2f0245355",
+      "card": "0bcff3800cd0007c7089ffe624aa499c0bba511923dc26b6678a9fdcb6c4b582"
     },
     "data": {
-      "slide": "20-data",
-      "sha256": "0c4ad5ebe68463c789c7d14ee2d171648cee15a1a9d2b5c5d22bba7d5c8e8fef",
-      "card": "8a57175ea135db3fa618b4cd88ab06b8b8dfcb5889c22239de6d627bd86195b5"
+      "slide": "data",
+      "sha256": "79682b45f677411726b324f3d388cf4617cf9b71a0359e5f8af35014ff31a445",
+      "card": "eb5d648c790f2ec0c1347862bacc09661211a434729d5f2deecd854a09f3453d"
     },
     "blind-spots": {
-      "slide": "21-catches",
-      "sha256": "6abace6b3d317e4f99396bd82b6bcfdb48808697767e7f9b3ae26dd6e6c6c339",
-      "card": "4a79892b81f04ad7c42994a9dca78546ad6eafc7f32373d8e41b4b90de8bd8a6"
+      "slide": "catches",
+      "sha256": "f29e9e9de360da8bfff2f80fa0708f0d2e25582202bf69a669b38c4cd1a194d8",
+      "card": "44dafa6ecb40ab131d0fb0cb9071c31881887560625915c683594f7ecc05b923"
     },
     "rad": {
-      "slide": "22-open-book",
-      "sha256": "0b6f1989af709bd5fe46f30263e6d855b211e6e9be235ef54d3c066c6c02fabe",
-      "card": "107ad54938fce6995d74130f3ab6e49594ca9c6aedc60e29dd12d0091d942307"
+      "slide": "open-book",
+      "sha256": "86941548e47a049ea81b571c4ec502a76f964c5eb5fe00b93ef63ed2a1141802",
+      "card": "3222b7a8244460e5401320940e31fb828f4eb737628358725aa939617bc0416b"
     },
     "audit": {
-      "slide": "23-audit",
-      "sha256": "21c7dc46332734d7150738c21790b2ef705ede088a06fb5ecbd1d0c3c8b7f053",
-      "card": "bed5343a678210525f6335e1057e6a41f526dd7f0ce58fffc0158b7d3a694a34"
+      "slide": "audit",
+      "sha256": "a278252ba25aaef7ce7d3de93fb9166965de639c7f5a39df510bd417c5f07a66",
+      "card": "e70f53be6e65374c612e26395388e394fced92e318dd695a2c63547a92f72aec"
     },
     "diff": {
-      "slide": "24-diff",
-      "sha256": "e820b73933244b2372699ea4575e8c08b4042379ff6dff0a9c79d5114ed4d1f3",
-      "card": "cf0548938b199cdcc4d121d3e83c5af036a6d7a8ddf885478055c468c79bc3b8"
+      "slide": "diff",
+      "sha256": "18d2868c1423f02a1f1ef3981bf02ec9ccc785c098e3c52064a9bac29f3549a4",
+      "card": "6e08cbdb17cef5664934aa07728dac2f5755cc340d743d9875cad04a424506fa"
     },
     "use-cases": {
-      "slide": "25-use-cases",
-      "sha256": "055c64f4b6d62e54994aafe40e9e5eb1b1fd1d025d7a6d64c72e3704fe858b48",
-      "card": "04be001e0dd1f7698ee7d47cc342fbd1ad75fb86ac10a71ecc187af661ac8f1b"
+      "slide": "use-cases",
+      "sha256": "99aa86312a53fbc4dc7054c7d232411df4b5bb32fe9aaf15cf1bd51bc93c832f",
+      "card": "03d9377043b6c85f844d3c970659a3c3828df83f1e0c2b40d1797a64ef21a77f"
     },
     "retrieval": {
-      "slide": "26-retrieval",
+      "slide": "retrieval",
       "sha256": "da3f8fdb9f4b8e2657184b5260e3f64217c1b553b93dec8dec87ae636ca2fa0a",
       "card": "d3ef318e61c790e6ada6ce55d912c6fe9f64e80126c71eba55c09d050c984f01"
     },
     "bench-run": {
-      "slide": "27-bench-run",
+      "slide": "bench-run",
+      "deck": "62ddf209908fa7f03c06e219edca3300ad3af9ea",
       "sha256": "af9ebaa10f2c345dc184f51c57451ec2223e7bfb9e0992ecbb624114be8c1db1",
       "card": "c6b508bfa34c5ab3939e35c002c7170dc2818263e7feeaf0bd7b7f2d61790d3d"
     },
     "backends": {
-      "slide": "28-backends",
+      "slide": "backends",
       "height": 720,
       "sha256": "bbbe99f4b4ca596db38aeafbd169995917ae851376490dd517e7f8cceb4b01ed",
-      "card": "09fb7660fd37c3c7eef97e699912c5b8f14265865ebce8d4bd60d9a40d297180"
+      "card": "8d2eb9d37fb3237a93aa92b6f70ac92c0c2fc4711620f9d30d2c7a9c83e6826d"
     }
   }
 }

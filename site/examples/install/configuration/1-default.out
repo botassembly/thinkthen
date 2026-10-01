@@ -1,0 +1,5 @@
+{
+  "configuration": "/home/reader/.config/thinkthen/config.json",
+  "cache": "/home/reader/.cache/thinkthen",
+  "usage": "/home/reader/.cache/thinkthen-usage"
+}

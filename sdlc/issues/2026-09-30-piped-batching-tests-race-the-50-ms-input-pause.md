@@ -1,4 +1,4 @@
-Status: open. Found while building ticket 0352. Owner: none yet.
+Status: open. Found while building ticket 0352. Owner: batch C1 in `../planning/issue-priorities-2026-09-30.md`, after ticket 0356 lands.
 
 Kind: debt
 

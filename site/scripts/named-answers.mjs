@@ -25,7 +25,9 @@
 // order, and several may share a line.
 //
 // Accepted languages: bash, sh, python, typescript, ts, ruby, r, rust, c,
-// and sql. sh is bash, and ts is typescript. An unknown language throws a
+// cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs,
+// and sql. sh is bash, ts is typescript, objc is objective-c, and cs is
+// csharp. An unknown language throws a
 // TypeError. Its message names the bad language and lists the accepted
 // names. A name that every JavaScript object inherits, such as constructor
 // or __proto__, is unknown too. A caller skips text that holds no
@@ -42,7 +44,10 @@
 const FNS = 'decide|choose|score|tag|filter|rank|find|annotate|recognize|relate';
 const LANGUAGE = {
   bash: 'bash', sh: 'bash', python: 'python', typescript: 'typescript',
-  ts: 'typescript', ruby: 'ruby', r: 'r', rust: 'rust', c: 'c', sql: 'sql',
+  ts: 'typescript', ruby: 'ruby', r: 'r', rust: 'rust', c: 'c',
+  cpp: 'cpp', 'objective-c': 'objc', objc: 'objc', cobol: 'cobol',
+  ada: 'ada', java: 'java', kotlin: 'kotlin', scala: 'scala',
+  csharp: 'csharp', cs: 'csharp', sql: 'sql',
 };
 const CALL = {
   python: new RegExp(`\\btt\\s*\\.(${FNS})\\(`),
@@ -51,6 +56,14 @@ const CALL = {
   ruby: new RegExp(`\\bThinkThen\\.(${FNS})\\(`),
   r: new RegExp(`\\btt_(${FNS})\\(`),
   c: new RegExp(`\\bthinkthen_(call|${FNS})\\(`),
+  cpp: new RegExp(`\\btt::(call|${FNS})\\(`),
+  objc: new RegExp(`\\[\\s*\\w+\\s+(call|plan|${FNS})\\w*:`),
+  cobol: new RegExp(`\\bcall\\s+"TT-(CALL|PLAN|${FNS})"`, 'i'),
+  ada: new RegExp(`\\b(call|plan|${FNS})(_many)?\\s*(\\(|$)`, 'im'),
+  java: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`),
+  kotlin: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many|Async)?\\(`),
+  scala: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many|Async)?\\(`),
+  csharp: new RegExp(`\\btt\\s*\\.(call|${FNS})(Many)?\\(`, 'i'),
   bash: new RegExp(`\\bthinkthen\\s+(${FNS})\\b`),
 };
 const SQL_CALL = new RegExp(`\\bthinkthen_(${FNS}|probability|relations)\\s*\\(`, 'g');
@@ -61,6 +74,14 @@ const GENERIC = new Set([
   'edges', 'forms', 'tmp', 'x', 'y', 'n', 'r', 'v',
 ]);
 const PRINT = /\b(print\(|console\.log\(|puts\b|println!|printf\(|cat\()/;
+const LANGUAGE_PRINT = {
+  cpp: /\bstd::cout\b/,
+  objc: /\bNSLog\(/,
+  cobol: /^\s*display\b/i,
+  ada: /\bPut_Line\b/i,
+  java: /\bSystem\.(out|err)\.print/,
+  csharp: /\bConsole\.Write/,
+};
 const ASSIGN = {
   python: /^\s*([A-Za-z_]\w*)\s*=(?!=)/,
   ruby: /^\s*([A-Za-z_]\w*)\s*=(?!=)/,
@@ -68,6 +89,14 @@ const ASSIGN = {
   typescript: /^\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/,
   rust: /^\s*(?:let\s+(?:mut\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=|for\s+\(?([\w, ]+?)\)?\s+in\b)/,
   c: /^\s*(?:const\s+)?[A-Za-z_]\w*\s*\*?\s*([A-Za-z_]\w*)\s*(?:=|;)/,
+  cpp: /^\s*(?:(?:const\s+)?[A-Za-z_][\w:<>]*\s*[*&]?\s+)?([A-Za-z_]\w*)\s*=(?!=)/,
+  objc: /^\s*(?:const\s+)?[A-Za-z_]\w*\s*\*?\s*([A-Za-z_]\w*)\s*(?:=|;)/,
+  cobol: /^\s*(?:move|compute)\b.*\b(?:to|giving)\s+([A-Za-z][\w-]*)/i,
+  ada: /^\s*([A-Za-z]\w*)\s*(?::[^=]*)?:=/,
+  java: /^\s*(?:final\s+)?(?:[A-Za-z_][\w.<>,?\[\] ]*\s+)?([A-Za-z_]\w*)\s*=(?!=)/,
+  kotlin: /^\s*(?:(?:val|var)\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
+  scala: /^\s*(?:(?:val|var)\s+)?([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)/,
+  csharp: /^\s*(?:(?:const|using)\s+)?(?:[A-Za-z_][\w.<>,?\[\] ]*\s+)?([A-Za-z_]\w*)\s*=(?!=)/,
 };
 const ASSERT = {
   python: /^\s*assert\b/,
@@ -76,6 +105,14 @@ const ASSERT = {
   r: /^\s*stopifnot\(/,
   rust: /^\s*(debug_)?assert(_eq|_ne)?!\(/,
   c: /^\s*assert\(/,
+  cpp: /^\s*assert\(/,
+  objc: /^\s*(assert\(|NSAssert)/,
+  cobol: /(?!)/,
+  ada: /^\s*pragma\s+Assert\b/i,
+  java: /^\s*assert\b/,
+  kotlin: /^\s*(assert|check|require)\(/,
+  scala: /^\s*(assert|require)\(/,
+  csharp: /^\s*(Trace|Debug)\.Assert\(/,
 };
 const SQL_WORDS = new Set(['from', 'where', 'order', 'group', 'is', 'and', 'or', 'not', 'in', 'desc', 'asc', 'limit', 'on', 'join', 'union', 'having', 'select', 'with', 'case', 'when', 'then', 'else', 'end']);
 
@@ -103,16 +140,24 @@ function unquote(text, lang) {
 
 // The lines from `start` to the end of the statement that begins there.
 function statement(lines, start, lang) {
+  // A COBOL statement runs on through the lines indented under it.
+  if (lang === 'cobol') {
+    const indent = (line) => /^\s*/.exec(line)[0].length;
+    let j = start + 1;
+    while (j < lines.length && lines[j].trim() && indent(lines[j]) > indent(lines[start])) j += 1;
+    return lines.slice(start, j).join('\n');
+  }
   let depth = 0;
   for (let j = start; j < lines.length; j++) {
     const line = lines[j];
     depth += (line.match(/[([]/g) || []).length - (line.match(/[)\]]/g) || []).length;
     if (lang === 'ruby') depth += (line.match(/\bdo\b/g) || []).length - (line.match(/^\s*end\b/g) || []).length;
     const tail = line.trimEnd();
-    const more = ['typescript', 'rust', 'c'].includes(lang)
+    const more = ['typescript', 'rust', 'c', 'cpp', 'objc', 'ada', 'java', 'csharp'].includes(lang)
       ? !tail.endsWith(';') && !tail.endsWith('{') && !tail.endsWith('}')
       : /(\\|[+,=.]|<-|\|\||&&)$/.test(tail);
-    if (depth <= 0 && !more) return lines.slice(start, j + 1).join('\n');
+    const opens = lang === 'ada' && /\b(then|loop)$/i.test(tail);
+    if (depth <= 0 && (!more || opens)) return lines.slice(start, j + 1).join('\n');
   }
   return lines.slice(start).join('\n');
 }
@@ -203,15 +248,32 @@ function bash(text) {
   return found;
 }
 
+// The names a call writes its answer into: C and Objective-C pass &name,
+// Ada passes a bare name as an argument, and COBOL names fields after
+// using. The other languages return the answer.
+function outNames(call, lang) {
+  if (lang === 'c' || lang === 'objc') return [...call.matchAll(/&\s*([A-Za-z_]\w*)/g)].map((m) => m[1]);
+  if (lang === 'ada') {
+    const args = /\(([^]*)\)/.exec(call)?.[1] ?? '';
+    return args.split(',').map((s) => s.trim()).filter((s) => /^[A-Za-z]\w*$/.test(s));
+  }
+  if (lang === 'cobol') return (/\busing\b([^]*)/i.exec(call)?.[1] ?? '').split(/\s+/).filter((s) => /^[A-Za-z][\w-]*$/.test(s));
+  return [];
+}
+
 function library(text, lang) {
   const found = [];
   const call = CALL[lang];
-  const lines = unquote(text, lang).split('\n');
+  // A COBOL call names its program in a string, so COBOL keeps its strings.
+  const lines = (lang === 'cobol' ? text : unquote(text, lang)).split('\n');
   const assign = ASSIGN[lang];
   const assert = ASSERT[lang];
   lines.forEach((line, i) => {
     const at = i + 1;
-    if ((assert.test(line) || PRINT.test(line) || /^\s*(if|while)\b/.test(line)) && call.test(statement(lines, i, lang))) {
+    const print = PRINT.test(line) || LANGUAGE_PRINT[lang]?.test(line);
+    // A COBOL condition cannot hold a call, and its statement holds the body.
+    const acts = assert.test(line) || print || (lang !== 'cobol' && /^\s*(if|while)\b/i.test(line));
+    if (acts && call.test(statement(lines, i, lang))) {
       found.push({ line: at, rule: 'direct', message: 'an assert, print, or branch acts on a ThinkThen call. Name the answer first, then assert on the name.' });
     }
     const a = assign.exec(line);
@@ -220,8 +282,8 @@ function library(text, lang) {
         if (generic(name)) found.push({ line: at, rule: 'generic', message: named(name) });
       }
     }
-    if (lang === 'c' && call.test(line)) {
-      for (const [, name] of statement(lines, i, lang).matchAll(/&\s*([A-Za-z_]\w*)/g)) {
+    if (call.test(line)) {
+      for (const name of outNames(statement(lines, i, lang), lang)) {
         if (generic(name)) found.push({ line: at, rule: 'generic', message: named(name) });
       }
     }

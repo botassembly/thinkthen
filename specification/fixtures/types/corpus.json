@@ -134,11 +134,17 @@
         ]
       },
       "response": [
-        "item 1",
-        "item 2",
-        "item 0"
+        {"index": 1, "record": "item 1", "probability": 0.9},
+        {"index": 2, "record": "item 2", "probability": 0.5},
+        {"index": 0, "record": "item 0", "probability": 0.2}
       ],
       "case_id": "15-rank-records"
+    },
+    {
+      "name": "rank-without-probability",
+      "definition": "rank",
+      "response": ["item 1", "item 2", "item 0"],
+      "response_valid": false
     },
     {
       "name": "18-find-second",

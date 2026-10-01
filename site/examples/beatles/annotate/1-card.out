@@ -1,16 +1,21 @@
 {
-  "input": "Blackbird",
-  "value": {
-    "singer": "Paul",
-    "album": "White Album",
-    "year": "1968"
-  }
+  "title": "Yesterday",
+  "singer": "Paul",
+  "tags": [
+    "love song",
+    "sad"
+  ],
+  "abbey_road": false,
+  "big_hit": true
 }
 {
-  "input": "Octopus's Garden",
-  "value": {
-    "singer": "Ringo",
-    "album": null,
-    "year": null
-  }
+  "title": "Octopus's Garden",
+  "singer": "Ringo",
+  "tags": [
+    "psychedelic",
+    "about a place",
+    "about the sea"
+  ],
+  "abbey_road": true,
+  "big_hit": false
 }

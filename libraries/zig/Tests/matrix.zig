@@ -159,13 +159,14 @@ pub fn main() !void {
             1 => try require(value == .string and std.mem.eql(u8, value.string, "first")),
             2 => try require(value == .array and value.array.items.len == 2 and std.mem.eql(u8, value.array.items[0].string, "first") and std.mem.eql(u8, value.array.items[1].string, "second")),
             3 => try require(value == .float and value.float == 0.1),
-            4, 5 => {
+            4 => try require(value == .array and value.array.items.len == 2 and value.array.items[0] == .string and std.mem.eql(u8, value.array.items[0].string, "filter-one") and value.array.items[1] == .string and std.mem.eql(u8, value.array.items[1].string, "filter-two")),
+            5 => {
                 try require(value == .array and value.array.items.len == 2);
-                const prefix: []const u8 = if (i == 4) "filter" else "rank";
                 for (value.array.items, 0..) |item, position| {
-                    const expected = try std.fmt.allocPrint(alloc, "{s}-{s}", .{ prefix, if (position == 0) @as([]const u8, "one") else "two" });
-                    defer alloc.free(expected);
-                    try require(item == .string and std.mem.eql(u8, item.string, expected));
+                    try require(item == .object);
+                    const row = item.object;
+                    try require(row.get("index").?.integer == @as(i64, @intCast(position)) and row.get("probability").?.float == 0.9);
+                    try require(std.mem.eql(u8, row.get("record").?.string, if (position == 0) "rank-one" else "rank-two"));
                 }
             },
             6 => try require(value == .object and value.object.get("index").?.integer == 0 and std.mem.eql(u8, value.object.get("unit").?.string, "find-one") and value.object.get("probability").?.float == 0.9),

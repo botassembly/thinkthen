@@ -52,7 +52,7 @@ The `value` inside a successful `{"value":VALUE,"facts":FACTS}` reply has the pr
 - `score`: a number.
 - `tag`: an array of labels.
 - `filter`: an array of the kept records.
-- `rank`: an array of the records, most likely yes first.
+- `rank`: an array of `{"index":N,"record":TEXT,"probability":P}` rows, most likely yes first, with a zero-based index.
 - `find`: `{"index":N,"unit":TEXT,"probability":P}` for the chosen unit, with a zero-based index, or `null`.
 - `annotate`: an array holding each record's `value_json` object.
 - `recognize`: the `Recognized::to_json` object.

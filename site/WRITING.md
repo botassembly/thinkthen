@@ -11,6 +11,17 @@ Follow these rules when you write or edit any page or code example on this site.
 - Write no dash glosses. Do not end a sentence with a trailing clause such as "which is" or "so that". Do not write clefts such as "It is X that".
 - Use plain words. Write "not sure", "context", "wrong yes", and "missed yes". Do not write "false positive" or "false negative". Command output keeps its own words.
 - Write no status words. A page never says planned, drawn, preview, coming soon, or "Plan for 0.1". The site goes up after the release it describes.
+- `scripts/check-words.mjs` fails the build when page prose says "unsure", "unresolved", "false positive", "false negative", "coming soon", "alpha", "beta", "planned", "preview" or "Plan for 0.1". Code and output pass. "Plan preview" and "Prune preview" pass as setting names. Its `ALLOWED` list gives each exception a reason.
+- Give each thing one name on every page. The specification's word wins.
+
+  | Thing | Name in prose |
+  | --- | --- |
+  | The third answer | not sure |
+  | The folder normal commands read and write | answer cache |
+  | A folder `--record` writes | recording |
+  | Showing a request without sending it | `--plan`; "Plan preview" only as the setting's name |
+  | A named way to reach a model, such as `typesafe` | backend |
+  | The program at an address | server |
 - Show every binding as part of the product (Ian, 2026-09-28). "Bindings" names the languages and databases together. A binding carries no status, date, readiness note, or caveat, including none about 0.1 or alpha. Where a page counts them, it says "10 functions, 1 CLI, 24 bindings" from `COUNTS` in `src/data/catalog.mjs`.
 - Link every binding to its install page, even before that page exists (Ian, 2026-09-28). `BINDINGS` in `src/data/catalog.mjs` holds the list. The link check allows exactly the install paths of the bindings with no page yet.
 - Teach the idea. Do not walk the reader through repository files, JSONL files, pins, or run folders.
@@ -18,6 +29,7 @@ Follow these rules when you write or edit any page or code example on this site.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.
 - Page prose carries no interval, calibration error, AUC, or p value.
 - A page names no private project and no home path. This repository is public.
+- A blog article follows the deslop and voice guides the brief names. A fresh reader checks it against both before review. Its byline is Ian Maurer. The blog index carries the one note that agents draft the articles and Ian reviews them.
 
 ## Install lines
 
@@ -100,7 +112,7 @@ Every line of code stays at 60 characters or fewer. Code reads down the page, no
 
 ### Examples leave out --details
 
-A page may name `--details` where the reference or an edge case needs it (docs checklist ruling of 2026-09-30). An example still leaves it out until the annotate edge cases land. Every example shows the command, its plain value, and its exit code. To show where a probability sits, run the same example at a bar or a band. `check-samples` fails an example script that asks for `--details`.
+A page may name `--details` where the reference or an edge case needs it (docs checklist ruling of 2026-09-30). Examples leave it out. The one exception is the annotate edge-case page, whose examples live under `examples/reference/annotate/`. There `--details` is the behaviour the page teaches. Every other example shows the command, its plain value, and its exit code. To show where a probability sits, run the same example at a bar or a band. `check-samples` fails any other example script that asks for `--details`.
 
 ### Keep a function page's example short
 
@@ -169,7 +181,7 @@ The build fails when a script has no caption, a caption has no script, or a scri
 - Every other `thinkthen` function call answers from `recordings/`. The runner adds `--replay recordings/` to a call that names no replay folder and no `--plan`.
 - The run has no key and no base address. It sends nothing and costs nothing.
 - A line that starts with `test` is an assert. When it fails, the example fails.
-- A file under `examples/` that is neither run nor kept must match a line in `examples/SKIP`, with its reason. The site smoke runner does not invoke installed library or SQL samples; it counts them as skipped. Their libraries have strict replay controls, which are separate from this site runner.
+- A file under `examples/` that is neither run nor kept must match a line in `examples/SKIP`, with its reason. The site smoke runner does not invoke installed library or SQL samples; it counts them as skipped. `npm run smoke-bindings` replays each library sample that `examples/REPLAY` lists against its binding, and the build checks its proof. `README.md`, "The binding replay", gives the steps. A new install first call goes in `examples/REPLAY`, and its proof is committed with it.
 
 ### Add an example
 
@@ -189,10 +201,11 @@ After a change to the command or to a script, run `node scripts/smoke.mjs --upda
 
 - The smoke run uses the command built from the same commit, `../target/release/thinkthen`. `cargo build --release` makes it. `THINKTHEN_BIN` names another build.
 - The Beatles Bench files come from the bench commit in `examples/beatles/bench-pin`. `BEATLES_BENCH=path npm run pull-bench` copies the files the Beatles scripts read from a checkout at that commit.
-- The Beatles Bench slides come from the talk's deck. `DECK=path npm run export-slides` exports them from the deck's committed `slide.png` files, and stops unless the deck's `BENCH_AT` names the commit in `examples/beatles/bench-pin`. It also writes each page's social card to `public/og/<page>.png`. The slide check fails when `src/data/slides.json` names another bench or an image or card differs from its record.
-- A Beatles page with no bench folder in `examples/beatles/folders.json` runs from its own `files/`. Its recordings come from the talk's deck.
+- The Beatles Bench slides come from the talk's deck at the commit in `examples/beatles/deck-pin`. `DECK=path npm run export-slides` exports them from the deck's committed `slide.png` files at that commit, and stops unless its `BENCH_AT` names the commit in `examples/beatles/bench-pin`. It also writes each page's social card to `public/og/<page>.png`. The slide check fails when `src/data/slides.json` names another deck or bench, or an image or card differs from its record.
+- A Beatles page with no bench folder in `examples/beatles/folders.json` runs from its own `files/`. Its recordings come from the talk's deck or from a recorded run on the current thinkthen.
+- When a slide prints output the current thinkthen prints differently, the page's `slideNote` names the slide's build under the slide.
 - `jq` must be on the path.
 
 ### What runs on each change
 
-`npm run build` runs `check-samples`, then the slide check, then the smoke run, then the Astro build, the Markdown twins, the settings check, the link check, and the card check. `npm run check` runs `check-samples`, the slide check, the smoke run, the settings check, the link check, and the card check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.
+`npm run build` runs `check-samples`, then the slide check, then the smoke run, then the Astro build, the Markdown twins, the code check, the word check, the settings check, the link check, and the card check. `npm run check` runs `check-samples`, the slide check, the smoke run, the code check, the word check, the settings check, the link check, and the card check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.

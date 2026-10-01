@@ -20,19 +20,23 @@ npm run build
 2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, whole details, no comments, and a goal on every page.
 3. `scripts/check-slides.mjs` checks that the Beatles Bench slides come from a deck that quotes the pinned bench.
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
-5. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
-6. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-7. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
-8. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
-9. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
-10. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
-11. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
-12. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
-13. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
+5. `scripts/check-binding-proofs.mjs` checks each replayed library sample against its proof. See "The binding replay" below.
+6. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
+7. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
+8. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
+9. `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
+10. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
+11. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
+12. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
+13. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
+14. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
+15. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
+
+The Backends pages read each built-in backend's name, address, key variables and model with `backend('name')` from `src/lib/backends-table.mjs`, which parses the "Named backends" table in `../specification/backends.md`. A name the table lacks fails the build, and `scripts/check-settings.mjs` fails when the built overview disagrees with the table. A live `thinkthen check` cannot replay, so `src/data/backend-checks.mjs` holds each live check a page states, with its date, build and record.
 
 A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
-`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the code check, the settings check, the link check, the card check and the head check on the last build.
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the binding proof check, the code check, the word check, the settings check, the link check, the card check and the head check on the last build.
 
 ## Writing a page
 
@@ -40,13 +44,23 @@ Read `WRITING.md` first. It holds the page rules, the code rules, and how an exa
 
 ## The menu
 
-Five entries: Install, Functions, How-tos, Learn, and Blog. Trust, Reference, and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
+Five entries: Install, Functions, How-tos, Learn, and Blog. The Backends pages under `/install/backends/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust, Reference, and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
 
 ## Where the examples come from
 
 Every command and code sample on the site is a file under `examples/`. `src/data/samples.mjs` reads them for the pages, and `src/lib/remark-examples.mjs` puts them into the articles. The smoke run replays every script from a saved recording, with no key and no network. `WRITING.md` gives the layout, the skip list, and the refresh steps.
 
 The names, the order, the captions, the one line for each function, and the option tables live in `src/data/catalog.mjs`.
+
+## The binding replay
+
+The CLI smoke run cannot run a library sample, because each needs its language's toolchain. `examples/REPLAY` lists the library samples that replay. `npm run smoke-bindings` runs `scripts/smoke-bindings.mjs`, which builds each sample's binding from this working tree and runs the sample. The sample runs in a fresh folder with a copy of its page's `files/`. `THINKTHEN_CACHE` names a fresh copy of `recordings/thinkthen.jsonl`, and no key or address is set, so a missed answer fails with no request sent. The runner refuses to start when the shell holds any `THINKTHEN_` variable or a named backend's key.
+
+The runner finds the recorded answers each sample read, and writes `examples/bindings-proof.json`. Each entry holds the hashes of the sample, its saved output, its `files/`, and each answer it read. It also holds a tree hash of the binding's folder and of each Cargo workspace member it builds on, and the toolchain versions.
+
+`scripts/check-binding-proofs.mjs` runs in every build with Node and git alone. It fails when a listed sample has no entry, or a sample, its saved output, a file it reads, or an answer it read changed after its proof. A change in a binding or the engine only warns, and names each page to prove again, so another queue's commit never turns the site build red. The marketing lead reruns `npm run smoke-bindings` at each published checkpoint tag and commits the new proof file. The build cannot check that a run happened, so trust rests on review: the code reviewer reruns `npm run smoke-bindings` and diffs the proof file. The same check fails a registry install line that does not name the package its binding's metadata names. It also fails a release archive name that `sdlc/scripts/release-pack` does not make.
+
+The replay needs Rust with the offline Cargo cache, a stable Python 3.12 or later with uv and maturin for the Python and pandas samples, and R 4.2 or later with dplyr for the R samples. The C++, Objective-C, COBOL and Ada samples need g++, gcc with Objective-C, GnuCOBOL and GNAT. The Java, Kotlin and Scala samples need JDK 21, kotlinc and scalac, and the C# sample needs the .NET 8 SDK. These samples call the C library that `sdlc/scripts/installed.sh` lays out. `src/data/build-lines.mjs` holds the lines that build and run each one. The install page shows those lines, and the runner runs the same lines once per sample, in a folder laid out as a reader's. A missing toolchain reports "not run" and keeps the old entry.
 
 ## Where the Beatles Bench pages come from
 
@@ -56,13 +70,15 @@ The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles u
 BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
 ```
 
-The slides come from the talk's deck, which quotes one bench commit. The deck's own build renders and commits each `slide.png`. `src/data/slides.json` names the deck slide behind each image, the deck commit, the bench the deck quotes, and each image's SHA-256. To export them again from the deck's committed `slide.png` files:
+The slides come from the talk's deck, which quotes one bench commit. The deck's own build renders and commits each `slide.png`. `examples/beatles/deck-pin` names the deck commit the pages show. `src/data/slides.json` names the deck slide behind each image by name, the deck commit, the bench the deck quotes, and each image's SHA-256. An entry may name its own deck commit to keep a slide the pinned deck dropped. To export them again from the deck's committed `slide.png` files at the pinned commit:
 
 ```
 DECK=path/to/deck npm run export-slides
 ```
 
-The export stops unless the deck's `BENCH_AT` names the bench in `examples/beatles/bench-pin`. It trusts the deck's build to have rendered the slides after that pin moved. `scripts/check-slides.mjs` runs in the build. It fails when the recorded bench differs from `examples/beatles/bench-pin`, or when an image differs from its recorded SHA-256. Move the pin and the build fails until the slides are exported again.
+The export reads the deck at `deck-pin`, never at the checkout's HEAD. It stops unless that commit's `BENCH_AT` names the bench in `examples/beatles/bench-pin`. It trusts the deck's build to have rendered the slides after that pin moved. `scripts/check-slides.mjs` runs in the build. It fails when the recorded deck differs from `deck-pin`, when the recorded bench differs from `bench-pin`, or when an image differs from its recorded SHA-256. Move either pin and the build fails until the slides are exported again.
+
+The Pages build cannot read the private deck, so it cannot see a newer deck. With `DECK` set, `check-slides` also fails when the deck's `slides/`, `order.txt` or PDF in its working tree differ from `deck-pin`. Slides rendered and not yet committed count. The deck's own `build.sh` runs it that way.
 
 ## The Bash techniques
 
@@ -141,5 +157,5 @@ The tabs on the home page and the cross-view on every function page share one ch
 
 ## What is not here yet
 
-- A pandas page, and a page for any serve mode.
-- An installed-host smoke runner for library and database samples. `examples/SKIP` identifies the samples the CLI replay runner does not execute; each changed sample needs its own checked-package or source-example proof.
+- A page for any serve mode.
+- A replay for the function pages' library samples and the SQL samples. `examples/SKIP` lists them.

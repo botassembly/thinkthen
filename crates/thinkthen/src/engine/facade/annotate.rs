@@ -3,14 +3,13 @@
 //! The command and the public library both answer a question set here. Each
 //! renders the [`Annotation`] its own way.
 
-use crate::core::adapters::built_in::{self, DecodeError};
-use crate::core::pack;
+use crate::core::adapters::built_in;
 use crate::core::{
     AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue, AnswerOutcome, FailedValue,
     ModelName, Question, QuestionSet, Reply, Usage,
 };
 use crate::engine::error::Error;
-use crate::engine::pipeline::Answered;
+use crate::engine::pipeline::{self, Answered, RowUsage};
 
 /// One set question's reply and the place it fills.
 struct ChunkAnswer {
@@ -57,23 +56,14 @@ pub(crate) struct QuestionAnswer {
 impl QuestionAnswer {
     /// One set question's outcome from its wire answers.
     pub(crate) fn read(place: usize, question: Question, own: &[Answered]) -> Result<Self, Error> {
-        let model = own.first().map_or("", |answered| &*answered.answered_by);
-        let stored: Vec<_> = own
-            .iter()
-            .map(|answered| answered.answer.as_deref().map_err(DecodeError::cause))
-            .collect();
-        let outcomes = pack::read(std::slice::from_ref(&question), &stored, model)?;
-        let usage = own.iter().try_fold(Usage::new(0, 0), |total, answered| {
-            total.checked_plus(answered.usage?)
-        });
-        let model =
-            ModelName::reported(model).map_err(|_| Error::Defect("a reply named no model"))?;
+        let outcomes = pipeline::read(&question, own)?;
+        let answered = pipeline::receipt(own, outcomes)?;
         Ok(Self {
             place,
-            reply: Reply::new(model, outcomes, usage),
+            reply: answered.reply,
             keys: own.iter().map(|answered| answered.key.hex()).collect(),
-            requests_sent: own.iter().map(|answered| answered.requests_sent).sum(),
-            cached: own.iter().all(|answered| answered.cached),
+            requests_sent: answered.requests_sent,
+            cached: answered.replayed,
         })
     }
 }
@@ -113,13 +103,14 @@ pub(crate) fn assemble(
         details: Vec::new(),
         receipts: Vec::new(),
         model: None,
-        usage: Some(Usage::new(0, 0)),
+        usage: None,
         requests: Vec::new(),
         requests_sent: 0,
         replayed: true,
         failed_questions: 0,
     };
     let mut stored_model = None;
+    let mut usage = RowUsage::default();
     for chunk in answered.into_iter().flat_map(|group| group.answered) {
         // A stored answer's model takes no part in the check, by ADR 0111.
         if chunk.replayed {
@@ -128,12 +119,7 @@ pub(crate) fn assemble(
             check_model(&mut annotation.model, chunk.reply.model(), requested)?;
         }
         annotation.requests.extend(chunk.keys.iter().cloned());
-        annotation.usage = match (annotation.usage, chunk.reply.usage()) {
-            (Some(total), Some(next)) => {
-                Some(total.checked_plus(next).ok_or(Error::UsageOverflow)?)
-            }
-            _ => None,
-        };
+        usage.add(chunk.reply.usage());
         annotation.replayed &= chunk.replayed;
         annotation.requests_sent = annotation
             .requests_sent
@@ -142,6 +128,7 @@ pub(crate) fn assemble(
         annotation.failed_questions +=
             take_answers(set, &chunk, &mut values, &mut details, &mut receipts)?;
     }
+    annotation.usage = usage.total()?;
     annotation.model = annotation.model.or(stored_model);
     annotation.values = pair(set, values, "a question has no value")?;
     annotation.details = pair(set, details, "a question has no detailed answer")?;
