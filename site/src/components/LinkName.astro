@@ -1,0 +1,6 @@
+---
+// A binding's name as link text. A screen reader and Lighthouse read a bare
+// "Go" link as the verb, so the Go link adds "language" for them alone.
+const { name } = Astro.props;
+---
+{name}{name === 'Go' && <span class="sr-only"> language</span>}

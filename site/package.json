@@ -14,6 +14,7 @@
     "dev": "astro dev",
     "preview": "astro preview",
     "check": "node scripts/named-answers.test.mjs && node scripts/check-samples.mjs && node scripts/check-slides.mjs && node scripts/smoke.mjs && node scripts/check-binding-proofs.mjs && node scripts/check-code.mjs && node scripts/check-words.test.mjs && node scripts/check-words.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs && node scripts/check-cards.mjs && node scripts/check-head.mjs && node scripts/check-widths.mjs",
+    "lighthouse": "node scripts/lighthouse.mjs",
     "pull-bench": "node scripts/pull-bench.mjs",
     "export-slides": "node scripts/export-slides.mjs",
     "icons": "node scripts/build-icons.mjs"
@@ -22,9 +23,12 @@
     "@resvg/resvg-js": "2.6.2",
     "astro": "^5.14.1",
     "pagefind": "^1.5.2",
+    "sharp": "0.34.5",
     "shiki": "^3.23.0"
   },
   "devDependencies": {
+    "chrome-launcher": "1.2.2",
+    "lighthouse": "13.5.0",
     "playwright-core": "1.55.0"
   }
 }

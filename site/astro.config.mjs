@@ -4,7 +4,8 @@ import remarkExamples from './src/lib/remark-examples.mjs';
 export default defineConfig({
   site: 'https://thinkthen.dev',
   output: 'static',
-  build: { format: 'directory' },
+  // Each page carries its CSS in a style tag, so no stylesheet blocks the first paint.
+  build: { format: 'directory', inlineStylesheets: 'always' },
   devToolbar: { enabled: false },
   // Pages that moved keep their old address.
   redirects: {
