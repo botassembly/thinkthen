@@ -13,5 +13,6 @@
   },
   "evidenceFromTicketNumber": 120,
   "closedIssuesFolder": "closed",
-  "lanesTable": { "file": "planning/cleanup-2026-09-30.md", "heading": "Lanes" }
+  "lanesTable": { "file": "planning/cleanup-2026-09-30.md", "heading": "Lanes" },
+  "recordNaming": "ticket"
 }

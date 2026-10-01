@@ -38,7 +38,7 @@ Work outside the lanes:
 
 ## Every open issue
 
-31 open. Class: **running**, **batch** (C1 to C4), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
+24 open on 2026-10-01. Class: **running**, **batch** (C1 to C4), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
@@ -53,12 +53,12 @@ Work outside the lanes:
 | `2026-09-30-transforms-score-the-band-low-edge-as-no.md` | no | batch | C3 |
 | `2026-09-30-cache-convert-quote-skips-questions-that-start-the-text-is.md` | no | batch | C3 |
 | `2026-09-30-checkpoints-publish-no-source-wrapper-packages.md` | no | batch | C4 |
-| `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | outside | marketing |
-| `2026-09-29-docs-page-naming-supported-providers.md` | the live `check` line | outside | marketing, after C3 fixes the `check` cap |
-| `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing, parts 3 and 4; parts 1 and 2 done |
+| `closed/2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | no | closed | closed by site tickets 0042 and 0044 |
+| `closed/2026-09-29-docs-page-naming-supported-providers.md` | no | closed | closed by site tickets 0042 and 0043 |
+| `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing; part 3 waits on site 0047 slice F; part 4 waits on a word check for three status phrases |
 | `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | outside | marketing's overhead benchmark, then one sentence from the queue owner |
 | `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | outside | ticket 0128; Ian's rehearsal and registry accounts |
-| `2026-09-20-new-user-stumble-register.md` | rows 18, 19 | outside | row 18 ticket 0128; row 19 marketing; none of ours |
+| `2026-09-20-new-user-stumble-register.md` | row 18 | outside | row 18 ticket 0128; none of ours |
 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | outside | the external release QA team's edge list |
 | `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (Debt 014) | no | waits | upstream ollama |
 | `2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md` (Debt 002) | no | waits | upstream Zig |
