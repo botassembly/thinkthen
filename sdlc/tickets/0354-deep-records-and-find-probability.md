@@ -1,6 +1,6 @@
 # 0354: deep records name their limit, and `find` returns its probability at the C door
 
-Status: in progress. Lane claude-3. Branch `ticket/0354-deep-records-and-find-probability`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves two issues that block 0.1: `../issues/2026-09-30-deep-json-record-refused-as-not-valid-json.md` (slice A) and `../issues/2026-09-30-find-returns-no-probability-in-c-interface-languages.md` (slice B). Both slices land in one merge.
+Status: in progress. Lane claude-3. Branch `ticket/0354-deep-records-and-find-probability`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves two issues that block 0.1: `../issues/closed/2026-09-30-deep-json-record-refused-as-not-valid-json.md` (slice A) and `../issues/closed/2026-09-30-find-returns-no-probability-in-c-interface-languages.md` (slice B). Both slices land in one merge.
 
 ## Outcome
 

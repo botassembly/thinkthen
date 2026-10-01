@@ -326,3 +326,37 @@ fn a_question_file_past_the_depth_limit_names_the_limit() {
         &format!("the question file is not JSON this tool reads: {TOO_DEEP}"),
     );
 }
+
+/// `annotate` reads a whole JSON document as a record. At 127 levels it is
+/// asked; at 128 it is refused by the limit, not read as text, and nothing is sent.
+#[test]
+fn an_annotate_document_nests_at_most_127_levels() {
+    let set = written(
+        "depth-annotate-set.json",
+        br#"{"version":1,"questions":{"one":{"decide":"Is it kept?"}}}"#,
+    )
+    .expect("a question set");
+    let set = set.to_string_lossy();
+    for depth in [127, 128] {
+        let listener = Listener::answering(answered).expect("a loopback listener");
+        let document = format!("{}1{}", "[".repeat(depth), "]".repeat(depth));
+        let output = spawn(
+            &[
+                "annotate",
+                set.as_ref(),
+                "--no-cache",
+                "--url",
+                listener.base(),
+            ],
+            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            document.as_bytes(),
+        )
+        .expect("the compiled binary runs");
+        if depth == 127 {
+            assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+            assert_eq!(listener.count(), 1);
+            continue;
+        }
+        assert_refused(&output, &listener, 2, TOO_DEEP);
+    }
+}
