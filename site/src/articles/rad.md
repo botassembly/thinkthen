@@ -32,7 +32,7 @@ The catalog also broke an answer. Asked whether two Beatles share the lead on "T
 
 ## What it costs
 
-Context costs input tokens. In the [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md), the whole catalog of 306 songs took a median of 12,214 input tokens a call. The same report asked 38 lead singer questions with only the song's own catalog line. Jev got 36 right at a median of 335 input tokens. With the whole catalog, it got 35 right at 12,145. Send the one entry the question is about.
+Context costs input tokens. In the [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md), the whole catalog of 306 songs took a median of 12,214 input tokens a call. The same report asked 38 lead singer questions with only the song's own catalog line. In the runs of 2026-09-23 and 2026-09-24, Jev got 36 of 38 right with the one line, at a median of 335 input tokens. With the whole catalog, it got 35 at 12,145. Send the one entry the question is about.
 
 ## Limits
 
