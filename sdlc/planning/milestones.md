@@ -18,15 +18,14 @@ Exit criteria:
 Blockers:
 
 - The rehearsal has not yet passed. Ticket 0128 phase 3b records each attempt.
-- The installed-file checks run no panic or token-cap case. Ticket 0374, in progress in another lane, adds them.
 - Registry setup belongs to the docs team, and Ian approves each outward step.
 - The README overhead line waits on marketing's overhead benchmark.
 
-Most DuckDB, language workflow and runner tool tickets below keep open only proofs on the release targets. A clean rehearsal on all four targets supplies those proofs. The rehearsal cannot supply the panic and token-cap proofs alone, because the installed-file checks it runs have no such cases. Tickets 0226, 0227 and 0299 stay in 0.1. Their proof comes from ticket 0374 plus the rehearsal.
+Most DuckDB, language workflow and runner tool tickets below keep open only proofs on the release targets. A clean rehearsal on all four targets supplies those proofs. Ticket 0374 added panic-isolation and token-cap cases to the installed-file checks the rehearsal runs. Tickets 0226, 0227 and 0299 stay in 0.1. Their proof comes from ticket 0374 plus the rehearsal.
 
 Path to 0.1:
 
-1. Ticket 0374 lands the panic and token-cap cases in the installed-file checks.
+1. Done: ticket 0374 landed the panic and token-cap cases in the installed-file checks.
 2. A clean rehearsal passes on all four targets (ticket 0128 phase 3b).
 3. A fresh checkpoint, the fourth, follows the clean rehearsal. Release QA runs its final round on it.
 4. The release candidate: the coordinator tags it and cuts `release/0.1` (ADR 0116, release-process.md section 5). The release commit lands at that cut, as ticket 0128 phase 4 step 3: `versions --set 0.1.0`, the publish flags dropped, the `CHANGELOG.md` date, the README "Install" section and the site's install lines.

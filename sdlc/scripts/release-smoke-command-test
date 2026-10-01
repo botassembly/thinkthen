@@ -15,14 +15,18 @@ version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$repo/crates/thinkthen/Cargo.tom
 archive=thinkthen-$version-$target.tar.gz
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
 
-# plant NAME ANSWER [EXTRA]: a folder NAME whose fake prints ANSWER for a replay. EXTRA is one
-# more shell line the fake runs first, which may reach the network or hold the builder's home.
+# The fake's answer to the token cap variable: the command's refusal and exit 2 (ticket 0374).
+cap="[ -z \"\${THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL:-}\" ] || { echo \"thinkthen usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request\" >&2; exit 2; }"
+# plant NAME ANSWER [EXTRA [CAP]]: a folder NAME whose fake prints ANSWER for a replay. EXTRA is one
+# more shell line the fake runs first, which may reach the network or hold the builder's home. CAP
+# replaces the fake's token cap line.
 plant() {
 	mkdir -p "$work/$1/bin" "$work/$1/sample/thinkthen-first-run/recording" "$work/$1/dir"
 	cat >"$work/$1/bin/thinkthen" <<-EOF
 		#!/bin/sh
 		[ "\$1" != --version ] || { echo 'thinkthen $version'; exit 0; }
 		${3:-:}
+		${4-$cap}
 		case " \$* " in *' --replay recording '*) [ -d recording ] && [ -f report.txt ] && echo $2 ;; *) exit 4 ;; esac
 	EOF
 	chmod +x "$work/$1/bin/thinkthen"
@@ -80,4 +84,6 @@ plant upstream-home true "# $HOME/work/duckdb/duckdb/src $HOME/.cargo"
 expect 1 "release-smoke: FAIL $archive (the builder's home or the test probe is in thinkthen )" upstream-home good
 plant sends true 'curl -s -o /dev/null --max-time 5 https://example.invalid/ || :'
 expect 1 'release-smoke: the no-key block sent 1 requests to the loopback backend' sends good
-echo 'release-smoke command: good, after-release, missing, extra, checksum, sample-line, answer, home, DuckDB upstream path and backend cases pinned'
+plant cap-ignored true : :
+expect 1 "release-smoke: the token cap exited 4 with ''" cap-ignored good
+echo 'release-smoke command: good, after-release, missing, extra, checksum, sample-line, answer, home, DuckDB upstream path, backend and token cap cases pinned'

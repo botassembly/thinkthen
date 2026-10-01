@@ -90,6 +90,11 @@ assert any(need.startswith("pydantic") and "2.11" in need and "<3" in need
            for need in importlib.metadata.requires("thinkthen"))' ||
 		{ echo "libraries/python: the installed wheel lacks its label modules or optional extra" >&2; exit 1; }
 	"$scratch/venv/bin/python" -m mypy --strict tests/type_contract.py
+	# Ticket 0374: the loaded extension keeps its own panic hook, and the token cap variable
+	# refuses before any send, counted at the test's own backend.
+	own_panic_hook "$("$scratch/venv/bin/python" -c 'import thinkthen._thinkthen as door; print(door.__file__)')"
+	CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo/target}" "$scratch/venv/bin/python" -m pytest -q -p no:cacheprovider --tb=short \
+		tests/test_call.py::test_token_cap_variable_refuses_before_any_send
 	THINKTHEN_API_KEY=sk-fake-loopback-python-0105 THINKTHEN_BASE_URL="http://127.0.0.1:$port/generic/v1" \
 		THINKTHEN_CACHE="$scratch/cache" "$scratch/venv/bin/python" tests/conformance.py "$port"
 	THINKTHEN_API_KEY=sk-fake-loopback-python-0105 "$scratch/venv/bin/python" tests/examples.py "$port"
