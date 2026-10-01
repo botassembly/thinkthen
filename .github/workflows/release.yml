@@ -1,5 +1,6 @@
 # Deliberate 0.1 release only. A dispatch never publishes without the release
 # environment, RELEASE_ARMED, and a separate approval for each outward job.
+# Packagist and R-universe have no job: each reads the published repository.
 name: release
 
 on:
@@ -150,6 +151,26 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error, retention-days: 7}
 
+  registries:
+    needs: [resolve, build]
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, actions: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: platform-x86_64-unknown-linux-gnu, path: platform}
+      - name: Install the pinned Dart
+        run: sdlc/scripts/release-workflow dart-tools x86_64-unknown-linux-gnu "$RUNNER_TEMP/thinkthen-registry-dart"
+      - name: Pack and check the NuGet, Maven and pub packages
+        env: {SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: |
+          sdlc/scripts/release-workflow registry-pack platform registry "$SHA"
+          sdlc/scripts/release-workflow maven-sign registry/maven rehearse
+          sdlc/scripts/release-workflow pub-dry-run registry/pub/thinkthen_dart
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: {name: registry-packages, path: registry/, if-no-files-found: error, retention-days: 7}
+
   smoke:
     needs: [resolve, build, wheels, npm-pack, gems, crate]
     strategy:
@@ -231,7 +252,7 @@ jobs:
           sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
 
   draft:
-    needs: [resolve, smoke]
+    needs: [resolve, smoke, registries]
     runs-on: ubuntu-24.04
     permissions: {contents: write, actions: read}
     steps:
@@ -344,8 +365,74 @@ jobs:
       - env: {TAP_DEPLOY_KEY: "${{ secrets.TAP_DEPLOY_KEY }}", VERSION: "${{ needs.resolve.outputs.version }}"}
         run: sdlc/scripts/release-workflow tap "$VERSION" platform
 
+  nuget:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, actions: read}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: registry-packages, path: registry}
+      - env: {NUGET_API_KEY: "${{ secrets.NUGET_API_KEY }}"}
+        run: sdlc/scripts/release-workflow nuget-push registry/nuget/Botassembly.ThinkThen.*.nupkg
+
+  maven:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, actions: read}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: registry-packages, path: registry}
+      - env:
+          MAVEN_CENTRAL_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_CENTRAL_GPG_PRIVATE_KEY }}
+          MAVEN_CENTRAL_GPG_PASSPHRASE: ${{ secrets.MAVEN_CENTRAL_GPG_PASSPHRASE }}
+        run: sdlc/scripts/release-workflow maven-sign registry/maven release "$RUNNER_TEMP/maven-bundle.zip"
+      - env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: sdlc/scripts/release-workflow maven-upload "$RUNNER_TEMP/maven-bundle.zip"
+
+  pub:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, actions: read, id-token: write}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: registry-packages, path: registry}
+      - run: sdlc/scripts/release-workflow dart-tools x86_64-unknown-linux-gnu "$RUNNER_TEMP/thinkthen-registry-dart"
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        id: auth
+        with:
+          workload_identity_provider: ${{ vars.PUB_DEV_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PUB_DEV_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: https://pub.dev
+          id_token_include_email: true
+          create_credentials_file: false
+      - env: {PUB_TOKEN: "${{ steps.auth.outputs.id_token }}"}
+        run: |
+          "$TT_DART" pub token add https://pub.dev --env-var PUB_TOKEN
+          sdlc/scripts/release-workflow pub-publish registry/pub/thinkthen_dart
+
   publish:
-    needs: [resolve, draft, crates, pypi, npm, rubygems, tap]
+    needs: [resolve, draft, crates, pypi, npm, rubygems, tap, nuget, maven, pub]
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
