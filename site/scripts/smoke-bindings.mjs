@@ -22,12 +22,12 @@
 // no other. The whole line keys the proof entry.
 //
 // The store loads the whole fixture, so it cannot say which answers a
-// sample read. The runner finds them in three steps. It keeps the answers
-// whose question holds one of the sample's string literals of 12
-// characters or more, and the sample must pass with only those. It then
-// drops each kept answer in turn and runs the sample again. An answer
-// whose loss fails the sample is one the sample read. The final set must
-// pass on its own.
+// sample read. narrow() in binding-proofs.mjs finds them.
+//
+// A sample on a function page, functions/<fn>/<surface>.<ext>, runs on
+// its surface's binding under the name sample.<ext>, so no sample shadows
+// a package. Its page shows no output for a library tab, so it fails when
+// it writes to standard output. It skips a line that ends in .sql.
 //
 // A sample whose toolchain is missing reports "not run" and keeps its old
 // entry, and the run exits 1. With --allow-missing, the run prints how many
@@ -46,7 +46,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines } from './binding-proofs.mjs';
+import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -55,7 +55,7 @@ const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const allowMissing = process.argv.includes('--allow-missing');
 
 // No key, address, backend or setting from the shell may reach a sample.
-const leaked = Object.keys(process.env).filter((n) => n.startsWith('THINKTHEN_') || ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY'].includes(n));
+const leaked = leakedVariables(process.env);
 if (leaked.length) {
   console.error(`smoke-bindings: unset ${leaked.join(', ')} first. The replay run sends nothing and reads no setting from the shell.`);
   process.exit(2);
@@ -348,7 +348,7 @@ const PAGE_BINDING = Object.fromEntries(Object.keys(BINDINGS).map((b) => [b, b])
 PAGE_BINDING.pandas = 'python';
 PAGE_BINDING.polars = 'python';
 
-const list = readReplayList(examples).filter((rel) => !only.length || only.some((o) => rel.includes(o)));
+const list = readReplayList(examples).filter((line) => !replayLine(line).rel.endsWith('.sql')).filter((rel) => !only.length || only.some((o) => rel.includes(o)));
 const proofPath = path.join(examples, PROOF_FILE);
 const proof = fs.existsSync(proofPath) ? JSON.parse(fs.readFileSync(proofPath, 'utf8')) : {};
 const fixture = fixtureLines(path.join(site, 'recordings', 'thinkthen.jsonl'));
@@ -358,7 +358,10 @@ const failed = [];
 const notRun = [];
 let proved = 0;
 
-// One run of a sample over the given answers. True when it exits 0.
+// The name a sample runs under.
+const runName = (rel) => (rel.startsWith('functions/') ? `sample${path.extname(rel)}` : path.basename(rel));
+
+// One run of a sample over the given answers. ok is true when it exits 0.
 function attempt(rel, binding, answers, named = {}, keep = false) {
   const work = fs.mkdtempSync(path.join(tmp, 'run-'));
   const cache = path.join(work, 'cache');
@@ -367,9 +370,9 @@ function attempt(rel, binding, answers, named = {}, keep = false) {
   const files = path.join(examples, path.dirname(rel), 'files');
   if (fs.existsSync(files)) fs.cpSync(files, cwd, { recursive: true });
   else fs.mkdirSync(cwd);
-  fs.copyFileSync(path.join(examples, rel), path.join(cwd, path.basename(rel)));
+  fs.copyFileSync(path.join(examples, rel), path.join(cwd, runName(rel)));
   fs.writeFileSync(path.join(cache, 'thinkthen.jsonl'), [...states, ...answers].map((l) => l.text).join('\n') + '\n');
-  const [cmd, args, dir] = binding.command(path.basename(rel), rel);
+  const [cmd, args, dir] = binding.command(runName(rel), rel);
   const env = {
     PATH: process.env.PATH, LC_ALL: 'C.UTF-8', HOME: home,
     XDG_CACHE_HOME: path.join(work, 'xdg-cache'), XDG_CONFIG_HOME: path.join(work, 'xdg-config'),
@@ -377,7 +380,7 @@ function attempt(rel, binding, answers, named = {}, keep = false) {
   };
   const done = run(cmd, args, { cwd: dir ?? cwd, env });
   if (!keep) fs.rmSync(work, { recursive: true, force: true });
-  return { ok: done.status === 0, output: `${done.stdout}${done.stderr}`.trim() };
+  return { ok: done.status === 0, stdout: done.stdout, output: `${done.stdout}${done.stderr}`.trim() };
 }
 
 for (const line of list) {
@@ -385,7 +388,7 @@ for (const line of list) {
   const route = backend && BACKEND_ROUTES.find((r) => r.name === backend);
   if (backend && !route) { failed.push(`${line}: ${backend} is not one of ${BACKEND_ROUTES.map((r) => r.name).join(', ')}.`); continue; }
   const named = route ? { THINKTHEN_BACKEND: route.name, ...(route.address ? { THINKTHEN_BASE_URL: route.address } : {}) } : {};
-  const page = rel.split('/')[1];
+  const page = sampleSurface(rel);
   const name = PAGE_BINDING[page];
   if (!name) { failed.push(`${line}: no binding runs the ${page} page. Add it to PAGE_BINDING.`); continue; }
   const spec = BINDINGS[name];
@@ -408,16 +411,11 @@ for (const line of list) {
   }
   const whole = attempt(rel, binding, fixture.filter((l) => l.key), named);
   if (!whole.ok) { failed.push(`${line}: failed against the whole recording\n${whole.output}`); continue; }
+  if (rel.startsWith('functions/') && whole.stdout.trim()) { failed.push(`${line}: printed output, and its page shows none for a library tab\n${whole.stdout.trim()}`); continue; }
 
-  const text = fs.readFileSync(path.join(examples, rel), 'utf8');
-  const literals = [...text.matchAll(/"((?:[^"\\\n]|\\.){12,})"|'((?:[^'\\\n]|\\.){12,})'/g)].map((m) => (m[1] ?? m[2]).replace(/\\n/g, '\n').replace(/\\(.)/g, '$1'));
-  let kept = fixture.filter((l) => l.key && literals.some((x) => l.question.includes(x)));
-  if (!attempt(rel, binding, kept, named).ok) { failed.push(`${line}: the answers whose question holds one of its literals do not answer it. The runner cannot tell which answers it read.`); continue; }
-  for (const line of [...kept]) {
-    const without = kept.filter((l) => l !== line);
-    if (attempt(rel, binding, without, named).ok) kept = without;
-  }
-  if (!kept.length || !attempt(rel, binding, kept, named).ok) { failed.push(`${line}: the answers it read do not answer it on their own.`); continue; }
+  const narrowed = narrow(fixture, fs.readFileSync(path.join(examples, rel), 'utf8'), (answers) => attempt(rel, binding, answers, named).ok);
+  if (narrowed.reason) { failed.push(`${line}: ${narrowed.reason}`); continue; }
+  const { kept } = narrowed;
 
   const stray = route ? kept.filter((l) => !l.url?.startsWith(`${route.base}/`)) : [];
   if (stray.length) { failed.push(`${line}: read ${stray.length} answers recorded away from ${route.base}: ${[...new Set(stray.map((l) => l.url))].join(', ')}. The backend setting did not reach the sample.`); continue; }
@@ -431,7 +429,7 @@ for (const line of list) {
 
   const folders = [...new Set([spec.folder, ...cargoFolders(spec.manifest)])].sort();
   proof[line] = {
-    page: `/install/${page}/`,
+    page: samplePage(rel),
     ...sampleHashes(examples, rel),
     answers: Object.fromEntries(kept.map((l) => [l.key, sha256(l.text)]).sort()),
     sources: { folders, tree: sourceTree(repo, folders) },

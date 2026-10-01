@@ -14,13 +14,17 @@
 // never turns the site build red. The marketing lead reruns the replay at
 // each published checkpoint tag.
 //
+// It fails when a library or SQL sample under examples/ has no REPLAY
+// line. PENDING names the samples site ticket 0047 has not yet replayed.
+// Each slice removes its own, and the last slice deletes the list.
+//
 // It also fails when an install line does not name the package that the
 // binding's own metadata names.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { SURFACES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, sampleHashes, fixtureLines, sourceTree, sha256, PROOF_FILE } from './binding-proofs.mjs';
+import { readReplayList, replayLine, sampleHashes, fixtureLines, sourceTree, sha256, PROOF_FILE, librarySamples } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -57,6 +61,89 @@ for (const line of listed) {
 }
 for (const line of Object.keys(proof)) {
   if (!listed.includes(line)) problems.push(`${PROOF_FILE} holds ${line}, which examples/REPLAY does not list.`);
+}
+
+// Every library and SQL sample replays, apart from those still pending.
+const PENDING = new Set([
+  'functions/annotate/c.c',
+  'functions/annotate/duckdb.sql',
+  'functions/annotate/postgresql.sql',
+  'functions/annotate/r.R',
+  'functions/annotate/ruby.rb',
+  'functions/annotate/rust.rs',
+  'functions/annotate/sqlite.sql',
+  'functions/annotate/typescript.ts',
+  'functions/choose/c.c',
+  'functions/choose/postgresql.sql',
+  'functions/choose/ruby.rb',
+  'functions/choose/sqlite.sql',
+  'functions/choose/typescript.ts',
+  'functions/decide/c.c',
+  'functions/decide/r.R',
+  'functions/decide/ruby.rb',
+  'functions/decide/rust.rs',
+  'functions/decide/sqlite.sql',
+  'functions/decide/typescript.ts',
+  'functions/filter/c.c',
+  'functions/filter/postgresql.sql',
+  'functions/filter/r.R',
+  'functions/filter/ruby.rb',
+  'functions/filter/rust.rs',
+  'functions/filter/sqlite.sql',
+  'functions/find/c.c',
+  'functions/find/postgresql.sql',
+  'functions/find/r.R',
+  'functions/find/rust.rs',
+  'functions/find/sqlite.sql',
+  'functions/find/typescript.ts',
+  'functions/question-file/duckdb.sql',
+  'functions/question-file/r.R',
+  'functions/question-file/ruby.rb',
+  'functions/question-file/rust.rs',
+  'functions/question-file/sqlite.sql',
+  'functions/question-file/typescript.ts',
+  'functions/rank/c.c',
+  'functions/rank/duckdb.sql',
+  'functions/rank/postgresql.sql',
+  'functions/rank/ruby.rb',
+  'functions/rank/rust.rs',
+  'functions/rank/typescript.ts',
+  'functions/recognize/c.c',
+  'functions/recognize/duckdb.sql',
+  'functions/recognize/postgresql.sql',
+  'functions/recognize/r.R',
+  'functions/recognize/ruby.rb',
+  'functions/recognize/rust.rs',
+  'functions/recognize/sqlite.sql',
+  'functions/recognize/typescript.ts',
+  'functions/relate/c.c',
+  'functions/relate/duckdb.sql',
+  'functions/relate/postgresql.sql',
+  'functions/relate/r.R',
+  'functions/relate/ruby.rb',
+  'functions/relate/rust.rs',
+  'functions/relate/sqlite.sql',
+  'functions/relate/typescript.ts',
+  'functions/score/duckdb.sql',
+  'functions/score/postgresql.sql',
+  'functions/score/r.R',
+  'functions/score/ruby.rb',
+  'functions/score/rust.rs',
+  'functions/score/sqlite.sql',
+  'functions/tag/c.c',
+  'functions/tag/duckdb.sql',
+  'functions/tag/postgresql.sql',
+  'functions/tag/r.R',
+  'functions/tag/rust.rs',
+  'functions/tag/typescript.ts',
+  'install/duckdb/first-call.sql',
+  'install/postgresql/first-call.sql',
+  'install/sqlite/first-call.sql',
+]);
+const replayed = new Set(listed.map((line) => replayLine(line).rel));
+for (const rel of librarySamples(examples)) {
+  if (!replayed.has(rel) && !PENDING.has(rel)) problems.push(`examples/${rel} has no line in examples/REPLAY. Add one and run node scripts/smoke-bindings.mjs ${rel}.`);
+  if (replayed.has(rel) && PENDING.has(rel)) problems.push(`examples/${rel} replays. Remove it from PENDING in scripts/check-binding-proofs.mjs.`);
 }
 
 // Each registry install line names the package its binding's metadata
