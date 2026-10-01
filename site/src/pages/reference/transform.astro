@@ -31,6 +31,7 @@ const CATALOG = [
     <tr><th>Transform</th><th>What it answers</th></tr>
     {CATALOG.map(([name, what]) => (<tr><td><code>{name}</code></td><td>{what}</td></tr>))}
   </table>
+  <p><code>band</code>, <code>score</code>, <code>sweep</code> and <code>trials</code> read a band as the commands do. A probability exactly at the band's low edge is not sure. The <a href="/reference/#arguments-and-thresholds">Reference</a> gives the rule.</p>
 
   <h2 id="show">Run one</h2>
   <p><code>thinkthen transform show NAME</code> prints one transform exactly as shipped. Save it, then hand it to <code>jq -f</code> with a saved run. Each transform's first lines say what it reads and what arguments it takes. An unknown name prints nothing and exits 2.</p>

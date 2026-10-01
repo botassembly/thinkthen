@@ -1,0 +1,12 @@
+{
+  "schema": "thinkthen.status/2",
+  "backend": {
+    "name": null,
+    "url": "https://api.typesafe.ai/v1/systemone",
+    "url_source": "built_in",
+    "model": "jev-1.13.0",
+    "model_source": "built_in",
+    "key_variable": "THINKTHEN_API_KEY",
+    "api_key_set": false
+  }
+}

@@ -4,11 +4,15 @@
 import SidePage from '../layouts/SidePage.astro';
 import { CODE_FUNCTIONS } from '../data/catalog.mjs';
 import { setting } from '../lib/settings-table.mjs';
-import { REFERENCE_PAGES } from '../data/reference.mjs';
+import { REFERENCE_PAGES, STATUS_SEE } from '../data/reference.mjs';
+import Terminal from '../components/Terminal.astro';
+import { captioned } from '../data/samples.mjs';
 import { backends } from '../lib/backends-table.mjs';
 
-// Every row on this page comes from specification/. Nothing
-// here is an example. The runs live on the function pages and the tutorial.
+// Every row on this page comes from specification/. The one example is
+// the status run in The cache, which shows the thinkthen.status/2 shape
+// the specification defines. The other runs live on the function pages
+// and the tutorial.
 // Every default, range and allowed value comes from
 // specification/settings.md through setting().
 const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
@@ -21,6 +25,7 @@ const frameOn = (fn, rest) => setting('Framing').defaultOn(fn, { rest });
 const CUT = setting('Threshold').bounds;
 const count = (name, noun) => `${setting(name).range.min} to ${setting(name).range.max} ${noun}`;
 const THROTTLE = setting('Throttle');
+const [statusRun] = captioned('reference/status', STATUS_SEE);
 
 const GLOBAL = [
   ['--plan', 'none', 'Checks the whole input, prints the first request it would send and a summary line, and sends nothing. It needs no key.', dflt('Plan preview')],
@@ -195,7 +200,8 @@ const COUNTS = [
   <p>With the key unset or blank, a request to <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code> goes out with no key and no <code>Authorization</code> header. At any other address, the command exits 4. The <a href="/install/backends/">Backends page</a> gives the rest of the key rules.</p>
 
   <h2 id="the-cache">The cache</h2>
-  <p><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, the cache key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page. <code>status --json</code> prints one <code>thinkthen.status/2</code> object.</p>
+  <p><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, the cache key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page. <code>status --json</code> prints one <code>thinkthen.status/2</code> object. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md#the-options">recording specification</a> lists its fields.</p>
+  <Terminal run={statusRun} caption={statusRun.see} />
 
   <h2>The configuration file</h2>
   <p>The <a href="/install/configuration/#configuration-file">Configuration page</a> gives its path, its fields, and the rules ThinkThen reads it by.</p>

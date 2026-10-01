@@ -7,4 +7,4 @@ EOF
 thinkthen decide "$question" \
   --replay recording \
   --facts 2> facts.json
-jq 'del(.seconds, .cache_answers)' facts.json
+jq 'del(.seconds)' facts.json

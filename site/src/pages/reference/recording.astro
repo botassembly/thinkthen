@@ -52,7 +52,7 @@ const MODES = [
   <Terminal run={miss} caption={miss.see} />
 
   <h2 id="facts">--facts</h2>
-  <p><code>--facts</code> prints one <code>thinkthen.run/1</code> line last on standard error. It counts the records finished, the requests sent and the retries. It always gives <code>seconds</code>, the time the run took. It names the model when every reply named the same one. It adds token counts when every live reply reported them.</p>
+  <p><code>--facts</code> prints one <code>thinkthen.run/1</code> line last on standard error. It counts the records finished, the requests sent and the retries. It always gives <code>seconds</code>, the time the run took. It names the model when every reply named the same one. It adds token counts when every live reply reported them. <code>cache_answers</code> counts answers from the answer cache, never from a replay or record folder.</p>
   <Terminal run={facts} caption={facts.see} />
 
   <h2 id="batching">Batching</h2>
