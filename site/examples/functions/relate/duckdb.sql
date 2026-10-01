@@ -1,3 +1,5 @@
+LOAD './thinkthen.duckdb_extension';
+
 CREATE TABLE rules AS FROM (VALUES
     (1, 'Book economy class for every flight ' ||
         'under six hours.'),
@@ -12,6 +14,8 @@ CREATE TABLE rules AS FROM (VALUES
 ) r(id, body);
 
 SELECT * FROM thinkthen_relate(
-    'SELECT id, body AS name FROM rules',
-    ['contradicts']
+    'SELECT id, body AS name, ''rule'' AS kind FROM rules',
+    '{"version": 1, "relate": {"relations": [{' ||
+    '"name": "contradicts", "source": "*", ' ||
+    '"target": "*", "either": true}]}}'
 ) AS contradiction;

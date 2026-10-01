@@ -6,6 +6,7 @@
 # bindings-proof.json in every build, and fails when a sample under
 # examples/ has no line here.
 functions/annotate/c.c
+functions/annotate/duckdb.sql
 functions/annotate/r.R
 functions/annotate/ruby.rb
 functions/annotate/rust.rs
@@ -35,6 +36,7 @@ functions/find/r.R
 functions/find/rust.rs
 functions/find/sqlite.sql
 functions/find/typescript.ts
+functions/question-file/duckdb.sql
 functions/question-file/polars.py
 functions/question-file/r.R
 functions/question-file/ruby.rb
@@ -42,11 +44,13 @@ functions/question-file/rust.rs
 functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/c.c
+functions/rank/duckdb.sql
 functions/rank/python.py
 functions/rank/ruby.rb
 functions/rank/rust.rs
 functions/rank/typescript.ts
 functions/recognize/c.c
+functions/recognize/duckdb.sql
 functions/recognize/python.py
 functions/recognize/r.R
 functions/recognize/ruby.rb
@@ -54,12 +58,14 @@ functions/recognize/rust.rs
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/c.c
+functions/relate/duckdb.sql
 functions/relate/python.py
 functions/relate/r.R
 functions/relate/ruby.rb
 functions/relate/rust.rs
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
+functions/score/duckdb.sql
 functions/score/polars.py
 functions/score/python.py
 functions/score/r.R
@@ -67,6 +73,7 @@ functions/score/ruby.rb
 functions/score/rust.rs
 functions/score/sqlite.sql
 functions/tag/c.c
+functions/tag/duckdb.sql
 functions/tag/python.py
 functions/tag/r.R
 functions/tag/rust.rs
@@ -95,6 +102,7 @@ install/dart/backends.dart backend=liquid
 install/dart/backends.dart backend=ollama
 install/dart/backends.dart backend=typesafe
 install/dart/first_call.dart
+install/duckdb/first-call.sql
 install/go/backends.go backend=liquid
 install/go/backends.go backend=ollama
 install/go/backends.go backend=typesafe

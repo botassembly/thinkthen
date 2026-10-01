@@ -67,23 +67,15 @@ for (const line of Object.keys(proof)) {
 
 // Every library and SQL sample replays, apart from those still pending.
 const PENDING = new Set([
-  'functions/annotate/duckdb.sql',
   'functions/annotate/postgresql.sql',
   'functions/choose/postgresql.sql',
   'functions/filter/postgresql.sql',
   'functions/find/postgresql.sql',
-  'functions/question-file/duckdb.sql',
-  'functions/rank/duckdb.sql',
   'functions/rank/postgresql.sql',
-  'functions/recognize/duckdb.sql',
   'functions/recognize/postgresql.sql',
-  'functions/relate/duckdb.sql',
   'functions/relate/postgresql.sql',
-  'functions/score/duckdb.sql',
   'functions/score/postgresql.sql',
-  'functions/tag/duckdb.sql',
   'functions/tag/postgresql.sql',
-  'install/duckdb/first-call.sql',
   'install/postgresql/first-call.sql',
 ]);
 const replayed = new Set(listed.map((line) => replayLine(line).rel));

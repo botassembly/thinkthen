@@ -20,7 +20,12 @@
 //
 // SQLite needs the pinned 3.50.0 CLI that databases/sqlite/setup.sh builds
 // into ~/.cache/thinkthen-toolchains/sqlite-3500000-host, and Rust with the
-// offline Cargo cache. The CLI runs in its default list mode. A database
+// offline Cargo cache. The CLI runs in its default list mode. DuckDB needs
+// the pinned 1.5.5 CLI, source and static archives that
+// databases/duckdb/tools/setup.sh --fetch puts in
+// ~/.cache/thinkthen-toolchains/duckdb/v1.5.5, CMake, a C++ compiler and
+// Rust. cpp/build.sh builds the extension offline, and the CLI runs as
+// duckdb -unsigned -list. A database
 // whose toolchain is missing reports "not run" and keeps its old entries,
 // and the run exits 1 unless --allow-missing is given.
 
@@ -48,12 +53,13 @@ const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { encoding: 'utf8', m
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-sql-'));
 const TOOLCHAINS = path.join(os.homedir(), '.cache', 'thinkthen-toolchains');
 
-// Each database: the folder its extension builds from, and build(), which
-// returns the toolchain versions and how to run a sample in a folder, or
-// the tool that is missing.
+// Each database: the folder its extension builds from, the Cargo manifest
+// of its Rust part, and build(), which returns the toolchain versions and
+// how to run a sample in a folder, or the tool that is missing.
 const DATABASES = {
   sqlite: {
     folder: 'databases/sqlite',
+    manifest: 'databases/sqlite/Cargo.toml',
     build() {
       const host = path.join(TOOLCHAINS, 'sqlite-3500000-host');
       const cli = path.join(host, 'sqlite3');
@@ -70,6 +76,28 @@ const DATABASES = {
         lay: (dir) => fs.copyFileSync(library, path.join(dir, 'thinkthen.so')),
         command: (sample) => [cli, ['-batch'], fs.readFileSync(sample, 'utf8')],
         env,
+      };
+    },
+  },
+  duckdb: {
+    folder: 'databases/duckdb',
+    manifest: 'databases/duckdb/bridge/Cargo.toml',
+    build() {
+      const tools = path.join(TOOLCHAINS, 'duckdb', 'v1.5.5');
+      const cli = path.join(tools, 'duckdb');
+      if (!fs.existsSync(cli)) return { missing: 'the pinned DuckDB 1.5.5 CLI that databases/duckdb/tools/setup.sh fetches' };
+      if (!fs.existsSync(path.join(tools, 'static-libs', 'libduckdb_static.a'))) return { missing: 'the pinned DuckDB source and static archives that databases/duckdb/tools/setup.sh --fetch fetches' };
+      for (const tool of ['cargo', 'cmake']) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
+      const target = path.join(repo, 'target', 'site-duckdb');
+      const done = run('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_CPP_BUILD: path.join(target, 'cpp'), CARGO_TARGET_DIR: path.join(target, 'bridge') } });
+      if (done.status !== 0) throw new Error(`cpp/build.sh failed in ${this.folder}\n${done.stdout}${done.stderr}`);
+      const extension = path.join(target, 'cpp', 'extension', 'thinkthen', 'thinkthen.duckdb_extension');
+      return {
+        toolchain: [`DuckDB ${run(cli, ['--version']).stdout.split(' ')[0]}`, run('cmake', ['--version']).stdout.split('\n')[0], run('rustc', ['--version']).stdout.trim()],
+        // The install page loads the extension as ./thinkthen.duckdb_extension.
+        lay: (dir) => fs.copyFileSync(extension, path.join(dir, 'thinkthen.duckdb_extension')),
+        command: (sample) => [cli, ['-unsigned', '-list'], fs.readFileSync(sample, 'utf8')],
+        env: {},
       };
     },
   },
@@ -140,7 +168,7 @@ for (const line of list) {
   if (narrowed.reason) { failed.push(`${line}: ${narrowed.reason}`); continue; }
   const { kept } = narrowed;
 
-  const folders = [...new Set([spec.folder, ...cargoFolders(repo, `${spec.folder}/Cargo.toml`)])].sort();
+  const folders = [...new Set([spec.folder, ...cargoFolders(repo, spec.manifest)])].sort();
   proof[line] = {
     page: samplePage(rel),
     ...sampleHashes(examples, rel),
