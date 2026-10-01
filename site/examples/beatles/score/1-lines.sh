@@ -24,6 +24,5 @@ Hey Jude
 Revolution 9
 EOF
 thinkthen score "$question" "${minutes[@]}" \
-  --batch 1 \
   --lines \
   --replay recording

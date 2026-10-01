@@ -12,10 +12,7 @@ messages = pd.Series(
     name="message",
 )
 is_refund = tt.decide(refund, messages).value
-assert is_refund.dtype == "boolean"
-assert is_refund.tolist() == [True, pd.NA]
+print(is_refund)
 
 for_a_person = messages[is_refund.isna()]
-assert for_a_person.tolist() == [
-    "I want to send this back.",
-]
+print(for_a_person)

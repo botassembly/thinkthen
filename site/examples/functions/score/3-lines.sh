@@ -11,5 +11,5 @@ Can you send the signed contract by Friday?
 Nobody can log in to the site right now.
 EOF
 thinkthen score "$question" "${levels[@]}" \
-  --batch 1 --lines |
+  --lines |
 jq .

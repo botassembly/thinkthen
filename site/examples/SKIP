@@ -24,5 +24,24 @@
 **/*.toml     The package file a Rust sample builds with.
 **/*.sql      SQL sample; smoke-sql.mjs replays the ones REPLAY lists.
 **/*.sql.out  What a SQL sample printed; smoke-sql.mjs compares it.
+**/*.py.out      What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.ts.out      What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.rb.out      What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.R.out       What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.rs.out      What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.c.out       What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.cpp.out     What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.m.out       What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.cob.out     What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.adb.out     What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.java.out    What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.kt.out      What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.scala.out   What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.cs.out      What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.go.out      What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.swift.out   What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.zig.out     What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.php.out     What a library sample that prints printed; smoke-bindings.mjs compares it.
+**/*.dart.out    What a library sample that prints printed; smoke-bindings.mjs compares it.
 REPLAY        The samples smoke-bindings.mjs and smoke-sql.mjs replay.
 bindings-proof.json  What the replay runners proved; check-binding-proofs.mjs reads it.

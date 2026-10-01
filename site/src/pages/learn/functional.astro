@@ -23,19 +23,23 @@ const readme = (folder) => `${REPO}/blob/main/libraries/${folder}/README.md`;
   <p>Call <code>tt.decide</code> with a question and no text. It returns a judge. A judge is a plain Python callable. <code>functools.partial</code> and <code>toolz.pipe</code> take it like any function.</p>
   <p>Hand the judge the whole list. <code>map(judge, xs)</code> calls the judge once per item and sends one request per item. <code>judge(xs)</code> hands over the whole list. ThinkThen packs it into as few requests as <code>THINKTHEN_BATCH</code> and <code>THINKTHEN_MAX_REQUEST_BYTES</code> allow. <code>tt.plan</code> gives the count before anything is sent.</p>
   <Code code={judge.code} file={judge.file} label="Copy the judge sample" />
+  {judge.output && <Code code={judge.output} lang="output" caption="What Python printed" copy={false} />}
 
   <h2>A stream stops when you stop</h2>
   <p>Give a judge a generator, and it returns a lazy stream. The stream reads ahead a little and packs what it read. When the reader stops, ThinkThen stops sending. Here the reader takes the first complaint and closes the stream.</p>
   <Code code={stream.code} file={stream.file} label="Copy the stream sample" />
+  {stream.output && <Code code={stream.output} lang="output" caption="What Python printed" copy={false} />}
   <p>A slow source can leave a request half full while it waits. Build the judge with <code>batch=1</code> for a live source.</p>
 
   <h2>Count every call</h2>
   <p>A judge built with <code>tally=</code> adds the facts of each call it makes to the tally. This judge read four reviews, then two.</p>
   <Code code={tally.code} file={tally.file} label="Copy the tally sample" />
+  {tally.output && <Code code={tally.output} lang="output" caption="What Python printed" copy={false} />}
 
   <h2>R</h2>
   <p><code>tt_decide</code> with no input returns a function. Apply it inside <code>mutate</code>. Each group sends one packed call.</p>
   <Code code={r.code} file={r.file} label="Copy the R sample" />
+  {r.output && <Code code={r.output} lang="output" caption="What R printed" copy={false} />}
 
   <h2>The shell</h2>
   <p>The pipe is the same idea. <code>filter</code> reads a stream of lines and keeps the ones whose answer is yes.</p>

@@ -7,11 +7,17 @@
 //   node scripts/smoke-bindings.mjs                  replay every listed sample
 //   node scripts/smoke-bindings.mjs PATTERN          only the samples whose path holds PATTERN
 //   node scripts/smoke-bindings.mjs --allow-missing  pass when a toolchain is missing
+//   node scripts/smoke-bindings.mjs --update         write <sample>.out for each sample that prints
 //
 // A sample runs in a fresh folder that starts with a copy of its page's
 // files/. THINKTHEN_CACHE names a fresh copy of recordings/thinkthen.jsonl.
 // The run sets no key and no address, so a missed answer fails with no
-// request sent. A sample passes when it exits 0, so every assert held.
+// request sent. A sample passes when it exits 0, so every assert held. A
+// sample prints only when the printed form is the point, such as a stream
+// or a table. Then it must print its <sample>.out byte for byte, as a SQL
+// sample does. A sample that prints with no <sample>.out fails, and so
+// does one with a <sample>.out that prints something else. --update writes
+// the file from the run, and removes it when the sample prints nothing.
 //
 // A REPLAY line that ends with backend=NAME runs its sample with
 // THINKTHEN_BACKEND set to that name, and with THINKTHEN_BASE_URL set to
@@ -26,8 +32,7 @@
 //
 // A sample on a function page, functions/<fn>/<surface>.<ext>, runs on
 // its surface's binding under the name sample.<ext>, so no sample shadows
-// a package. Its page shows no output for a library tab, so it fails when
-// it writes to standard output. It skips a line that ends in .sql.
+// a package. It skips a line that ends in .sql.
 //
 // A sample whose toolchain is missing reports "not run" and keeps its old
 // entry, and the run exits 1. With --allow-missing, the run prints how many
@@ -46,13 +51,14 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, cargoFolders } from './binding-proofs.mjs';
+import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, sampleFiles, cargoFolders } from './binding-proofs.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
 const examples = path.join(site, 'examples');
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const allowMissing = process.argv.includes('--allow-missing');
+const update = process.argv.includes('--update');
 
 // No key, address, backend or setting from the shell may reach a sample.
 const leaked = leakedVariables(process.env);
@@ -141,20 +147,52 @@ ARCHIVE.rust = (dir) => {
 // on top. Rust builds with the Rust install page's Cargo.toml.
 const declaresMain = (code) => /^\s*(int|void|fn)\s+main\s*\(/m.test(code);
 const FRAGMENT = {
-  c(dir, rel) {
-    const file = path.join(dir, path.basename(rel));
+  c(dir, name) {
+    const file = path.join(dir, name);
     const lines = fs.readFileSync(file, 'utf8').trimEnd().split('\n');
     if (declaresMain(lines.join('\n'))) throw new Error('declares its own main. The runner wraps each function page fragment in main.');
     const cut = lines.findIndex((l) => l.trim() && !l.startsWith('#include'));
     fs.writeFileSync(file, [...lines.slice(0, cut), 'int main(void) {', ...lines.slice(cut), 'return 0;', '}', ''].join('\n'));
   },
-  rust(dir, rel) {
-    const file = path.join(dir, path.basename(rel));
+  rust(dir, name) {
+    const file = path.join(dir, name);
     const code = fs.readFileSync(file, 'utf8').trimEnd();
     if (declaresMain(code)) throw new Error('declares its own main. The runner wraps each function page fragment in main.');
     fs.writeFileSync(file, `fn main() -> Result<(), Box<dyn std::error::Error>> {\n${code}\nOk(())\n}\n`);
     fs.copyFileSync(path.join(examples, 'install/rust/files/Cargo.toml'), path.join(dir, 'Cargo.toml'));
   },
+};
+// C# runs a function page sample as top-level statements, in the project
+// the C# install page shows.
+FRAGMENT.csharp = (dir) => fs.copyFileSync(path.join(examples, 'install/csharp/files/first-call.csproj'), path.join(dir, 'first-call.csproj'));
+// A Java, Kotlin or Scala sample on a function page names its class or its
+// main for the function, such as Rank, so it builds under that name.
+const JVM = new Set(['java', 'kotlin', 'scala']);
+const programName = (rel) => `${rel.split('/')[1].replace(/(^|-)(.)/g, (m, dash, c) => c.toUpperCase())}${path.extname(rel)}`;
+// A function page's sample builds as a reader would build it in a project
+// of its own. Each entry lays out the install page's project files and
+// returns the name the sample builds under. Swift and Zig take the install
+// page's project files, which name the first call. Dart takes the install
+// page's pubspec.yaml. Every other sample builds as sample.<ext>, which
+// also keeps Go from naming its module after the language.
+const projectFiles = (slug, file) => (dir) => {
+  fs.cpSync(path.join(examples, 'install', slug, 'files'), dir, { recursive: true });
+  return file;
+};
+const PROJECT = {
+  swift: projectFiles('swift', 'main.swift'),
+  zig: projectFiles('zig', 'first-call.zig'),
+  dart: (dir, rel) => {
+    fs.copyFileSync(path.join(examples, 'install/dart/files/pubspec.yaml'), path.join(dir, 'pubspec.yaml'));
+    return runName(rel);
+  },
+};
+// The name a built sample takes: the JVM program name, then the project's
+// name, then the name every sample runs under.
+const buildName = (slug, rel, dir) => {
+  if (!rel.startsWith('functions/')) return path.basename(rel);
+  if (JVM.has(slug)) return programName(rel);
+  return PROJECT[slug] ? PROJECT[slug](dir, rel) : runName(rel);
 };
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
@@ -178,14 +216,15 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
       const prepare = (rel) => {
         if (dirs.has(rel)) return dirs.get(rel);
         const dir = path.join(tmp, 'programs', rel);
-        const files = path.join(examples, path.dirname(rel), 'files');
+        const files = sampleFiles(examples, rel);
         if (fs.existsSync(files)) fs.cpSync(files, dir, { recursive: true });
         fs.mkdirSync(dir, { recursive: true });
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
         layout(dir);
-        fs.copyFileSync(path.join(examples, rel), path.join(dir, path.basename(rel)));
-        if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, rel);
-        const lines = buildLines(slug, path.basename(rel), true);
+        const name = buildName(slug, rel, dir);
+        fs.copyFileSync(path.join(examples, rel), path.join(dir, name));
+        if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, name);
+        const lines = buildLines(slug, name, true);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
@@ -379,7 +418,7 @@ function attempt(rel, binding, answers, named = {}, keep = false) {
   const cache = path.join(work, 'cache');
   const cwd = path.join(work, 'work');
   fs.mkdirSync(cache);
-  const files = path.join(examples, path.dirname(rel), 'files');
+  const files = sampleFiles(examples, rel);
   if (fs.existsSync(files)) fs.cpSync(files, cwd, { recursive: true });
   else fs.mkdirSync(cwd);
   fs.copyFileSync(path.join(examples, rel), path.join(cwd, runName(rel)));
@@ -423,9 +462,17 @@ for (const line of list) {
   }
   const whole = attempt(rel, binding, fixture.filter((l) => l.key), named);
   if (!whole.ok) { failed.push(`${line}: failed against the whole recording\n${whole.output}`); continue; }
-  if (rel.startsWith('functions/') && whole.stdout.trim()) { failed.push(`${line}: printed output, and its page shows none for a library tab\n${whole.stdout.trim()}`); continue; }
+  const saved = path.join(examples, `${rel}.out`);
+  if (update && whole.stdout) fs.writeFileSync(saved, whole.stdout);
+  if (update && !whole.stdout) fs.rmSync(saved, { force: true });
+  const expected = fs.existsSync(saved) ? fs.readFileSync(saved, 'utf8') : '';
+  if (whole.stdout && !fs.existsSync(saved)) { failed.push(`${line}: printed output, and examples/${rel}.out does not exist. Run node scripts/smoke-bindings.mjs --update ${rel}, then read the file.\n${whole.stdout}`); continue; }
+  if (whole.stdout !== expected) { failed.push(`${line}: printed other output than examples/${rel}.out\n--- saved\n${expected}--- printed\n${whole.stdout}`); continue; }
 
-  const narrowed = narrow(fixture, fs.readFileSync(path.join(examples, rel), 'utf8'), (answers) => attempt(rel, binding, answers, named).ok);
+  const narrowed = narrow(fixture, fs.readFileSync(path.join(examples, rel), 'utf8'), (answers) => {
+    const tried = attempt(rel, binding, answers, named);
+    return tried.ok && tried.stdout === expected;
+  });
   if (narrowed.reason) { failed.push(`${line}: ${narrowed.reason}`); continue; }
   const { kept } = narrowed;
 

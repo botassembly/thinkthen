@@ -3,12 +3,5 @@ import * as tt from "thinkthen";
 
 const question = "Does the customer ask for a refund?";
 const broken = "Please refund my order. It arrived broken.";
-const thanks = "Thanks for the quick help yesterday!";
-const brokenIsRefund = (await tt.decide(
-  question, broken,
-)).value;
-const thanksIsRefund = (await tt.decide(
-  question, thanks,
-)).value;
-assert.equal(brokenIsRefund, true);
-assert.equal(thanksIsRefund, false);
+const isRefund = (await tt.decide(question, broken)).value;
+assert.equal(isRefund, true);

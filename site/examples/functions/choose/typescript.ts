@@ -7,26 +7,10 @@ const teams = {
   shipping: "Parcels and delivery.",
   account: "Logins and passwords.",
 };
-const teamQuestion = {
-  choose: question,
-  options: teams,
-  threshold: 0.9,
-};
-
-const texts = [
-  "Please refund the extra fee on my invoice.",
-  "My parcel went to the wrong address.",
-  "I cannot reset my password.",
-  "My parcel never came, and now " +
-    "I cannot log in to track it.",
-];
-const owners = [];
-for (const text of texts) {
-  owners.push((await tt.choose(teamQuestion, text)).value);
-}
-assert.deepEqual(owners, [
-  "billing",
-  "shipping",
-  "account",
-  null,
-]);
+const parcel = "My parcel went to the wrong address.";
+const team = (await tt.choose(
+  question,
+  parcel,
+  { options: teams },
+)).value;
+assert.equal(team, "shipping");

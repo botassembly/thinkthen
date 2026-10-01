@@ -2,10 +2,9 @@ library(thinkthen)
 
 question <- "How urgent is this?"
 levels <- c("Routine.", "Soon.", "Immediate.")
-texts <- c(
-  "Please update my mailing address when you can.",
-  "Can you send the signed contract by Friday?",
-  "Nobody can log in to the site right now."
+outage <- paste0(
+  "Our checkout page is down and customers cannot pay.",
+  "\n"
 )
-urgency <- tt_score(question, texts, levels)$value
-stopifnot(identical(urgency, c(0.06, 0.99, 2.0)))
+urgency <- tt_score(question, outage, levels)$value
+stopifnot(identical(urgency, 2.0))

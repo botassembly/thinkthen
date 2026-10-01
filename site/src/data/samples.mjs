@@ -109,13 +109,15 @@ export function firstCall(surface) {
   return { file, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/${file}.out`)?.replace(/\n+$/, '') ?? null };
 }
 
-// Another install sample on a surface's page, such as R's data frames.
+// Another install sample on a surface's page, such as R's data frames,
+// with what it printed.
 export function installSample(surface, name) {
   const ext = EXT[surface];
   const code = text(`install/${surface}/${name}.${ext}`);
   if (code === undefined) throw new Error(`samples: examples/install/${surface}/${name}.${ext} is missing`);
   const cut = name.lastIndexOf('/');
-  return { file: `${name.slice(cut + 1)}.${ext}`, folder: cut < 0 ? null : name.slice(0, cut), code: code.replace(/\n+$/, '') };
+  const output = text(`install/${surface}/${name}.${ext}.out`)?.replace(/\n+$/, '') ?? null;
+  return { file: `${name.slice(cut + 1)}.${ext}`, folder: cut < 0 ? null : name.slice(0, cut), code: code.replace(/\n+$/, ''), output };
 }
 
 // The library sample for a function on a surface, with the output a
@@ -125,4 +127,33 @@ export function sample(fn, surface) {
   const own = text(`functions/${fn}/${surface}.${ext}`);
   if (own === undefined) return null;
   return { file: `${surface}.${ext}`, code: own.replace(/\n+$/, ''), output: text(`functions/${fn}/${surface}.${ext}.out`)?.replace(/\n+$/, '') ?? null };
+}
+
+// The bigger library samples a function page shows under Reference, from
+// examples/functions/<fn>/more/<surface>.<ext>, in the tab order. `see`
+// holds a caption for each, keyed by surface. A sample with no caption, or
+// a caption with no sample, fails the build.
+export function moreSamples(fn, see = {}, order = Object.keys(EXT)) {
+  const prefix = `/examples/functions/${fn}/more/`;
+  const found = Object.keys(raw)
+    .filter((k) => k.startsWith(prefix) && !k.endsWith('.out'))
+    .map((k) => k.slice(prefix.length));
+  for (const name of found) {
+    const surface = name.replace(/\..*$/, '');
+    if (EXT[surface] === undefined || name !== `${surface}.${EXT[surface]}`) throw new Error(`samples: examples/functions/${fn}/more/${name} is not named <surface>.<ext>`);
+    if (!see[surface]) throw new Error(`samples: examples/functions/${fn}/more/${name} has no caption in moreSee`);
+  }
+  for (const surface of Object.keys(see)) {
+    if (!found.includes(`${surface}.${EXT[surface]}`)) throw new Error(`samples: moreSee names ${fn}/more/${surface}, and no sample has that name`);
+  }
+  return order
+    .filter((surface) => found.includes(`${surface}.${EXT[surface]}`))
+    .map((surface) => {
+      const file = `${surface}.${EXT[surface]}`;
+      return {
+        surface, file, see: see[surface],
+        code: text(`functions/${fn}/more/${file}`).replace(/\n+$/, ''),
+        output: text(`functions/${fn}/more/${file}.out`)?.replace(/\n+$/, '') ?? null,
+      };
+    });
 }

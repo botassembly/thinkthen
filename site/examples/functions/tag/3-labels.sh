@@ -11,7 +11,6 @@ Great support, thank you!
 Please add a dark mode.
 EOF
 thinkthen tag "$question" "${labels[@]}" \
-  --batch 1 \
   --lines \
   --threshold 0.9 |
 jq .

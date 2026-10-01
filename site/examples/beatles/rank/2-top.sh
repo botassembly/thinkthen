@@ -17,6 +17,5 @@ Can't Buy Me Love
 Good Night
 EOF
 thinkthen rank "$question" \
-  --batch 1 \
   --top 5 \
   --replay recording

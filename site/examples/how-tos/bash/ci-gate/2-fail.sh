@@ -6,7 +6,7 @@ It might possibly be worth considering a retry.
 Each row keeps its id.
 EOF
 
-thinkthen filter "$question" --batch 1 \
+thinkthen filter "$question" \
   < notes.txt > hedges.txt
 
 if [ -s hedges.txt ]; then

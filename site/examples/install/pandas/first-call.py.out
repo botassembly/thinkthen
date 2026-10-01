@@ -1,0 +1,5 @@
+0    True
+1    <NA>
+Name: message, dtype: boolean
+1    I want to send this back.
+Name: message, dtype: str

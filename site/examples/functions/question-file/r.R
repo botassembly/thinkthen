@@ -1,14 +1,9 @@
 library(thinkthen)
 
-question <- "Does the customer ask for a refund?"
-refund <- tt_question(
-  decide = question,
-  threshold = c(0.2, 0.8)
+refund <- tt_question(file = "refund.json")
+money_back <- paste0(
+  "I would like to return this and get my money back.",
+  "\n"
 )
-texts <- c(
-  "Please refund my order. It arrived broken.",
-  "Thanks for the quick help yesterday!",
-  "I want to send this back."
-)
-is_refund <- tt_decide(refund, texts)$value
-stopifnot(identical(is_refund, c(TRUE, FALSE, NA)))
+is_refund <- tt_decide(refund, money_back)$value
+stopifnot(identical(is_refund, TRUE))

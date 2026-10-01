@@ -116,7 +116,7 @@ A page may name `--details` where the reference or an edge case needs it (docs c
 
 ### Keep a function page's example short
 
-Each function page opens with one command example of 10 to 25 lines, the script and its shown output together (Ian, 2026-09-28). Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
+Each function page opens with one plain command example of 3 to 25 lines, the script and its shown output together (Ian, 2026-09-28). The opening example in every language is one plain call and its answer, with no batching and no option the call does not need (Ian, 2026-10-01). Every option, batching, and the larger examples sit lower on the page, under Reference. The home page shows the decide page's opening example in every language. Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
 
 ### Honest examples
 
@@ -126,9 +126,9 @@ An example asks what a sensible user would ask, and it shows the tool's real out
 
 The page shows the output in its own block after the script, then the exit code. A JSON document is pretty-printed with `jq .`. A stream of short records may keep one record per line.
 
-### Asserts, not prints
+### Asserts, and prints where the printed form is the point
 
-Library examples assert the answer. They never print it. Pick the form below for each language and use it everywhere.
+Library examples assert the answer (Ian, 2026-10-01). The assert shows the reader what comes back. Pick the form below for each language and use it everywhere.
 
 | Language | Form |
 | --- | --- |
@@ -139,12 +139,27 @@ Library examples assert the answer. They never print it. Pick the form below for
 | R | `stopifnot(identical(is_refund, TRUE))` after reading `$value` |
 | Rust | `assert_eq!(is_refund, Answer::Yes);` after taking `.into_value()` |
 | C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
+| Java | `assert Door.outcome(isRefund) == Outcome.YES;`, run with assertions on (`java -ea`) |
+| Kotlin | `check(Door.outcome(isRefund) == Outcome.YES)` |
+| Scala | `assert(Door.outcome(isRefund) == Outcome.YES)` |
+| C# | `Trace.Assert(isRefund.OutcomeKind == Outcome.Yes);` after `using System.Diagnostics;`. Compare fields, never raw JSON text. |
+| C++ | `assert(is_refund.value.outcome == tt::Outcome::yes);` after `#include <cassert>` |
+| Go | `if isRefund.Value.Outcome != thinkthen.Yes {`, then `log.Fatal("expected yes")` in the block. Go has no assert, so `log.Fatal` ends the run |
+| Swift | `precondition(isRefund.value.outcome == .yes)` |
+| Zig | `std.debug.assert(is_refund.value.outcome == .yes);` |
+| PHP | `assert($isRefund === ThinkThen::YES);`, run with `-d zend.assertions=1` |
+| Dart | `assert(isRefund == Outcome.yes);`, run with `dart run --enable-asserts` |
+| Ada | `pragma Assert (Is_Refund.Value = Yes);`, built with `gnatmake -gnata` |
+| Objective-C | `assert(is_refund.outcome == TTOutcomeYes);` after `#include <assert.h>` |
+| COBOL | `if not is-refund-yes`, then `stop run returning 1` in the block. COBOL has no assert, so the nonzero return ends the run |
+
+A library sample prints only when the printed form is the point, such as a stream, a table, a JSON shape, or a data frame. It prints with the language's ordinary print to standard output. Its saved output sits beside it as `<sample>.out`, and the page shows it under the sample. `npm run smoke-bindings` fails a sample that prints something other than its `.out`, and a sample that prints with no `.out`. `node scripts/smoke-bindings.mjs --update <path>` writes the file. Read it before the commit. A sample that prints nothing passes on its asserts.
 
 A C sample never calls a function inside `assert` when it uses the result or the side effect later. `assert` drops its whole expression when `NDEBUG` is set. Assign the call first, as in `json_bool has_value = json_object_object_get_ex(result, "value", &value);`, then write `assert(has_value);`. `check-samples` fails a C assert that passes an address with `&`. A C function page sample asserts the engine with `assert(tt);` after `thinkthen_engine_new()` and ends with `thinkthen_engine_free(tt);`.
 
-Ruby has no built-in assert, so `raise unless` stands in for one. SQL has no assert. A SQL example shows the query and then what the database printed.
+Ruby has no built-in assert, so `raise unless` stands in for one. SQL has no assert. A SQL example shows the query and then what the database printed. A Bash, command, or SQL example always shows its output block.
 
-A Bash example that captures an answer in a variable ends with its `test` lines. The smoke run fails when a `test` line fails. The check fails a library sample that calls `print(`, `console.log(`, `puts`, `println!`, `printf(`, or `cat(`.
+A Bash example that captures an answer in a variable ends with its `test` lines. The smoke run fails when a `test` line fails.
 
 ### Name each answer
 
@@ -167,8 +182,9 @@ Every example on the site is a file under `examples/`, and every page reads its 
 | Its exit code | `<name>.exit` beside it, only when the code is not 0 |
 | Files the scripts read | `examples/<page>/files/` |
 | A library sample | `examples/functions/<fn>/<surface>.<ext>` |
+| A bigger library sample, shown under Reference | `examples/functions/<fn>/more/<surface>.<ext>`, with its caption in the function's `moreSee` |
 | A first call | `examples/install/<surface>/first-call.<ext>` |
-| What a database printed | the sample's name plus `.out` |
+| What a database, or a library sample that prints, printed | the sample's name plus `.out` |
 | The caption for a script | `see` in `src/data/catalog.mjs` or `src/data/beatles.mjs`, keyed by script name |
 
 `src/data/samples.mjs` reads these files for the pages. An article includes an example with `<!-- example: functions/decide/3-one -->`, or a file with `<!-- file: functions/question-file/files/refund.json -->`. `src/lib/remark-examples.mjs` turns the comment into the script, its output, and its exit code.
