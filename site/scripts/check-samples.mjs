@@ -163,10 +163,11 @@ function checkLines(label, rel, lines, ext) {
 
 // A C assert never calls a function whose result or side effect the
 // sample uses later, since the call goes when NDEBUG is set. The check
-// catches the side effect: an assert that passes an address with &.
+// catches the side effect: an assert that passes an address with & as a
+// function argument.
 export function cAssertProblems(label, text, offset = 0) {
   return [...text.matchAll(/\bassert\(([^;]*?)\);/gs)]
-    .filter((m) => /(^|[^&])&(?!&)\s*\w/.test(m[1]))
+    .filter((m) => /[(,]\s*&\s*\w/.test(m[1]))
     .map((m) => `${label}:${offset + text.slice(0, m.index).split('\n').length}: an assert that writes through &. Assign the call first, then assert the result.`);
 }
 
