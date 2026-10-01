@@ -16,8 +16,8 @@ if [ -e "$prefix/thinkthen-toolchain.stamp" ]; then
 fi
 mkdir -p "$archives"
 fetch() {
-	# Rehearsal run 36817514201 lost DNS for cache.ruby-lang.org, which curl's --retry skips.
-	# The release container's curl predates --retry-all-errors, so this loop retries instead.
+	# Rehearsal run 36817514201 lost DNS for cache.ruby-lang.org. curl's --retry skips that error.
+	# The release container's curl lacks --retry-all-errors. This loop retries instead.
 	[ ! -s "$archives/$2" ] || return 0
 	for pause in 10 20 0; do
 		curl -fsSL -o "$archives/$2" "$1" && return 0
