@@ -15,7 +15,7 @@ The 0.1 cut is one checked command plus the README, CHANGELOG and site text.
 
 ## Evidence
 
-- Starts from:
+- Starts from: ADR 0116, ticket 0128 and this ticket's dry run.
   - ADR 0116 item 7: rehearse mode must accept `refs/heads/release/*` at the cut. `sdlc/scripts/release-workflow resolve` refuses any rehearse ref but `refs/heads/main`. Release mode has no branch check; it requires `refs/tags/v*`.
   - Ticket 0128 Phase 4 step 3: the release commit runs `versions --set 0.1.0`, drops the two publish holds, dates `CHANGELOG.md`, and adds the README "Install" section and the site's held lines.
   - Ticket 0128 Phase 1 item 2 and its build record's dry bump (`sdlc/records/0128-phase-1-build.md`). In 2026-09 the dry bump passed the whole ladder at 0.1.0 with five held Rust test edits applied. Those edits waited for ticket 0119, because 0119's audit read those tests. They never landed. 0119 is now Milestone `later`, and its `opens:` list names only `crates/thinkthen/src/engine/deadline_tests*`, so it no longer reads the held tests.
@@ -36,12 +36,12 @@ The 0.1 cut is one checked command plus the README, CHANGELOG and site text.
       - Planted or fixture inputs: the planted crates in `sdlc/scripts/lint`, `libraries/ruby/check.sh` and `libraries/typescript/check.sh`; `policy.py`'s second-ureq plant; `release-registry-self-test.py`'s composer plant; `catalog.py`'s planted archive; `transforms/trials/test.sh`; `crates/thinkthen/src/core/mod.rs`'s version-format table; the recorded `.jsonl` fixtures, which tests read and never compare as tool strings (the 0128 dry bump proved this).
       - Crates and packages that never ship: `conformance/*`, `databases/duckdb/bridge`, the Dart consumers' own `version:` lines, and `site/package.json`, which `versions` skips on purpose.
       - Text, which the cut's text step updates by hand: the READMEs of `libraries/{ada,cobol,csharp,go,jvm,objective-c}`, `libraries/dart/CHANGELOG.md`, `databases/postgresql/NOTES.md`, and `site/examples/install/rust/files/Cargo.toml`. Planning pages and ADR 0112 record history and stay.
-- Keeps:
+- Keeps: every guard and rule this ticket does not name.
   - Every other `resolve` guard: the exact two arguments, the dispatch SHA check, release mode only from a `v*` tag, `versions --tag` in release mode, and the outputs' three lines.
   - Every other `policy.py` rule, including `publish = false` on every other workspace member and every binding crate.
   - `versions`' all-or-nothing write, its refusals, and its skipped files.
   - Each changed test's assertions, apart from the version it reads.
-- Changes:
+- Changes: one workflow rule, two scripts' version handling, and the tests that pin 0.0.1.
   - `sdlc/scripts/release-workflow`: rehearse accepts `refs/heads/main` or a ref matching `^refs/heads/release/[0-9]+\.[0-9]+$`. The refusal reads `rehearse must run from main or a release/X.Y branch, got REF`.
   - `sdlc/scripts/release-archive-self-test.py`, which `workflows --self-test` runs: rehearse succeeds from `refs/heads/release/0.1` with the same three outputs, and is refused from `refs/heads/feature`, `refs/heads/release/next`, `refs/heads/release/0.1/fix` and `refs/tags/v0.1.0`. Release mode is refused from `refs/heads/release/0.1`.
   - `sdlc/scripts/versions`:
@@ -53,10 +53,10 @@ The 0.1 cut is one checked command plus the README, CHANGELOG and site text.
   - C# and JVM Python tests and `libraries/csharp/check.sh` read the version from their own manifest. `package_check.py` builds the header macros and its plant from that version.
   - `release-managed-pair-self-test.py` reads the version from `crates/thinkthen/Cargo.toml` and builds its fixture from it.
   - `sdlc/planning/release-process.md`: section 4's rehearsal line names the release branch; section 5 becomes the cut checklist.
-- Proof:
+- Proof: the focused checks and a second dry run.
   - `python3 sdlc/scripts/versions --self-test` and `versions`; `python3 sdlc/scripts/workflows --self-test` and `workflows`; `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`; `sdlc/scripts/lint` once the load allows.
   - A second dry run on a scratch branch, deleted afterwards: `versions --set 0.1.0` alone gives a tree where `versions`, `versions --self-test`, `workflows --self-test`, `policy.py` and the grep above leave only the copies listed as not failing. The focused tests that read the version run at 0.1.0: the six Rust test files, `release-managed-pair-self-test.py`, and the Go `go vet` compile of `thinkthen.go` where the toolchain is present. The ticket records the result.
-- Defers:
+- Defers: three gaps stay.
   - The full ladder and every surface at 0.1.0. The coordinator's next checkpoint or the cut's own checkpoint runs them. The C#, JVM, Go and Dart surface checks need their toolchains and the coordinator's checkpoint.
   - The cut's text: README, CHANGELOG, binding READMEs, the Dart CHANGELOG and the site lines. Those are words for the cut commit.
   - Dispatching any workflow run.
