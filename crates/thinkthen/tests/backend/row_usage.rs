@@ -28,7 +28,11 @@ fn file(name: &str, text: &str) -> String {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("row-usage");
     fs::create_dir_all(&folder).expect("folder");
     let path = folder.join(name);
-    let staged = folder.join(format!("{name}.{}", std::process::id()));
+    let staged = folder.join(format!(
+        "{name}.{}-{:?}",
+        std::process::id(),
+        std::thread::current().id()
+    ));
     fs::write(&staged, text).expect("staged file");
     fs::rename(&staged, &path).expect("file");
     path.to_string_lossy().into_owned()
