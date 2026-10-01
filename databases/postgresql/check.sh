@@ -5,8 +5,18 @@
 # it for each test with that test's own loopback backend (ticket 0117) and
 # answer cache. No test reaches a paid backend: the server gets a fake key
 # beside a 127.0.0.1 address alone. Exit 0 passes, 77 is "not run".
-# The surfaces rung runs `sh check.sh`, and the steps need bash.
-[ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
+# The surfaces rung runs `sh check.sh`, and the steps need bash 5 outside POSIX mode:
+# EPOCHREALTIME, `exec {fd}>` and process substitution. macOS's sh is bash 3.2 in
+# POSIX mode, so a set BASH_VERSION is not enough (ticket 0375).
+if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
+	if [ -n "${THINKTHEN_PG_CHECK_REEXEC:-}" ]; then
+		echo "not run: databases/postgresql/check.sh needs bash 5 on PATH outside POSIX mode, found ${BASH_VERSION:-no bash}"
+		exit 77
+	fi
+	unset POSIXLY_CORRECT
+	THINKTHEN_PG_CHECK_REEXEC=1 exec bash "$0" "$@"
+fi
+unset THINKTHEN_PG_CHECK_REEXEC
 set -euo pipefail
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 # Retained one-record listener fixtures keep their historical wire identity.

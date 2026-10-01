@@ -306,7 +306,11 @@ host-setup)
 		brew install --force-bottle postgresql@16
 		brew install pkgconf jq openssl@3
 		# python@3.14 comes before the OpenSSL check, since its install may upgrade openssl@3 (ticket 0369).
-		[ "${RELEASE_SMOKE:-0}" != 1 ] || brew install coreutils python@3.14
+		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			brew install coreutils python@3.14 bash
+			# macOS's own bash is 3.2. The PostgreSQL check re-runs itself under PATH's bash (ticket 0375).
+			bash -c '[ "${BASH_VERSINFO[0]}" -ge 5 ]' || fail 'the PostgreSQL check needs bash 5 on PATH'
+		fi
 		. libraries/ruby/toolchain.env
 		case $("$(brew --prefix openssl@3)/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) fail 'OpenSSL host version differs from pin' ;; esac
 		cargo install --locked --version 0.17.0 cargo-pgrx
