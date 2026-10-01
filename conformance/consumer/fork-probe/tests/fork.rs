@@ -8,8 +8,8 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+use std::process::Command;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -152,120 +152,81 @@ fn a_call_total_counts_every_engine_of_the_process() {
     assert_eq!(backend.count(), 3, "the child sent three times");
 }
 
-#[allow(
-    clippy::expect_used,
-    reason = "a failed local certificate fixture must stop this proof"
-)]
-fn tls_certificate_pair(home: &Path) -> (PathBuf, PathBuf, PathBuf) {
-    let (cert, key) = (home.join("cert.pem"), home.join("cert.key"));
-    let created = child::command("openssl", &[])
-        .args(["req", "-x509", "-newkey", "rsa:2048", "-nodes"])
-        .arg("-keyout")
-        .arg(&key)
-        .arg("-out")
-        .arg(&cert)
-        .args([
-            "-days",
-            "1",
-            "-subj",
-            "/CN=localhost",
-            "-addext",
-            "subjectAltName=DNS:localhost",
-        ])
-        .output()
-        .expect("OpenSSL fixture generator");
-    assert!(
-        created.status.success(),
-        "local certificate generator failed"
-    );
-    let (leaf, leaf_key, csr, san) = (
-        home.join("leaf.pem"),
-        home.join("leaf.key"),
-        home.join("leaf.csr"),
-        home.join("leaf.cnf"),
-    );
-    std::fs::write(&san, "subjectAltName=DNS:localhost\n").expect("localhost SAN");
-    let requested = child::command("openssl", &[])
-        .args(["req", "-newkey", "rsa:2048", "-nodes"])
-        .arg("-keyout")
-        .arg(&leaf_key)
-        .arg("-out")
-        .arg(&csr)
-        .args(["-subj", "/CN=localhost"])
-        .output()
-        .expect("OpenSSL leaf generator");
-    assert!(requested.status.success(), "local leaf generator failed");
-    let signed = child::command("openssl", &[])
-        .args(["x509", "-req", "-in"])
-        .arg(&csr)
-        .arg("-CA")
-        .arg(&cert)
-        .arg("-CAkey")
-        .arg(&key)
-        .args(["-set_serial", "1", "-out"])
-        .arg(&leaf)
-        .args(["-days", "1", "-extfile"])
-        .arg(&san)
-        .output()
-        .expect("OpenSSL leaf signer");
-    assert!(signed.status.success(), "local leaf signer failed");
+// A fixed test CA and a `localhost` leaf it signed, valid until 2126. The key
+// guards nothing. The fixture serves TLS itself, so the proof never depends on
+// which `openssl` is on `PATH` (ticket 0371). Made with OpenSSL 3:
+//   openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+//     -keyout ca.key -out ca.pem -days 36500 -subj /CN=fork-probe-test-ca
+//   openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+//     -keyout leaf.key -out leaf.csr -subj /CN=localhost
+//   openssl x509 -req -in leaf.csr -CA ca.pem -CAkey ca.key -set_serial 1 \
+//     -days 36500 -extfile leaf.cnf -out leaf.pem
+// where leaf.cnf holds `subjectAltName=DNS:localhost`.
+const TLS_CA: &[u8] = include_bytes!("tls/ca.pem");
+const TLS_LEAF: &[u8] = include_bytes!("tls/leaf.pem");
+const TLS_LEAF_KEY: &[u8] = include_bytes!("tls/leaf.key");
 
-    (cert, leaf, leaf_key)
-}
-
+/// Serve one HTTPS connection on a parent thread: reply once the request's
+/// head arrives, then return every byte the client sent until it closed.
 #[allow(
     clippy::expect_used,
     reason = "a failed local TLS responder must stop this proof"
 )]
-fn tls_responder(leaf: &Path, leaf_key: &Path) -> (TlsResponder, u16) {
-    let reserved = TcpListener::bind("127.0.0.1:0").expect("free TLS port");
-    let port = reserved.local_addr().expect("TLS port").port();
-    drop(reserved);
-    let address = format!("127.0.0.1:{port}");
-    let mut server = child::command("openssl", &[])
-        .args([
-            "s_server", "-quiet", "-ign_eof", "-naccept", "1", "-accept", &address,
-        ])
-        .arg("-cert")
-        .arg(leaf)
-        .arg("-key")
-        .arg(leaf_key)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .expect("local TLS responder");
-    let answer = "{\"model\":\"local-1\",\"answers\":{\"q1\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}";
-    let reply = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{answer}",
-        answer.len()
-    );
-    server
-        .stdin
-        .as_mut()
-        .expect("responder input")
-        .write_all(reply.as_bytes())
-        .expect("fixed reply");
-    // Wait up to five seconds: a loaded host starts the responder slowly.
-    for _ in 0..500 {
-        if let Ok(probe) = TcpListener::bind(&address) {
-            drop(probe);
-            thread::sleep(Duration::from_millis(10));
-        } else {
-            break;
+fn tls_responder() -> (u16, thread::JoinHandle<String>) {
+    use rustls::pki_types::pem::PemObject;
+    use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let config = rustls::ServerConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .expect("TLS versions")
+        .with_no_client_auth()
+        .with_single_cert(
+            vec![CertificateDer::from_pem_slice(TLS_LEAF).expect("leaf certificate")],
+            PrivateKeyDer::from_pem_slice(TLS_LEAF_KEY).expect("leaf key"),
+        )
+        .expect("TLS server configuration");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("free TLS port");
+    let port = listener.local_addr().expect("TLS port").port();
+    // A broken child fails the proof after 60 s and does not hang it.
+    listener.set_nonblocking(true).expect("polled accept");
+    let served = thread::spawn(move || {
+        let cap = Instant::now() + Duration::from_secs(60);
+        let socket = loop {
+            match listener.accept() {
+                Ok((socket, _)) => break socket,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    assert!(Instant::now() < cap, "no TLS connection within 60 s");
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => unreachable!("TLS accept failed: {error}"),
+            }
+        };
+        socket.set_nonblocking(false).expect("blocking reads");
+        socket
+            .set_read_timeout(Some(Duration::from_secs(60)))
+            .expect("read limit");
+        let connection = rustls::ServerConnection::new(Arc::new(config)).expect("TLS session");
+        let mut stream = rustls::StreamOwned::new(connection, socket);
+        let answer = "{\"model\":\"local-1\",\"answers\":{\"q1\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}";
+        let reply = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{answer}",
+            answer.len()
+        );
+        let (mut sent, mut replied, mut chunk) = (Vec::new(), false, [0_u8; 4096]);
+        // A client that leaves without a TLS goodbye ends the read with an error.
+        while let Ok(read @ 1..) = stream.read(&mut chunk) {
+            sent.extend_from_slice(chunk.get(..read).unwrap_or_default());
+            if !replied && sent.windows(4).any(|end| end == b"\r\n\r\n") {
+                stream.write_all(reply.as_bytes()).expect("fixed reply");
+                stream.flush().expect("fixed reply sent");
+                replied = true;
+            }
         }
-    }
+        String::from_utf8_lossy(&sent).into_owned()
+    });
 
-    (TlsResponder(server), port)
-}
-
-struct TlsResponder(Child);
-
-impl Drop for TlsResponder {
-    fn drop(&mut self) {
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
+    (port, served)
 }
 
 #[test]
@@ -275,8 +236,9 @@ fn a_forked_child_keeps_parsed_tls_roots_after_the_file_changes() {
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     let home = folder("tls-roots");
     std::fs::create_dir(&home).expect("certificate fixture folder");
-    let (cert, leaf, leaf_key) = tls_certificate_pair(&home);
-    let (mut server, port) = tls_responder(&leaf, &leaf_key);
+    let cert = home.join("ca.pem");
+    std::fs::write(&cert, TLS_CA).expect("test CA in its folder");
+    let (port, served) = tls_responder();
 
     let engine = Engine::builder()
         .base_url(&format!("https://localhost:{port}"))
@@ -291,21 +253,7 @@ fn a_forked_child_keeps_parsed_tls_roots_after_the_file_changes() {
     std::fs::write(&cert, b"this is no longer a certificate").expect("change source file");
     in_child(|| answer(engine.decide(&decide(), "after fork")) == Some(Answer::Yes))
         .expect("forked child used the retained roots");
-    for _ in 0..500 {
-        if server.0.try_wait().expect("responder state").is_some() {
-            break;
-        }
-        thread::sleep(Duration::from_millis(10));
-    }
-    assert!(server.0.try_wait().expect("responder state").is_some());
-    let mut requests = String::new();
-    server
-        .0
-        .stdout
-        .take()
-        .expect("request capture")
-        .read_to_string(&mut requests)
-        .expect("request bytes");
+    let requests = served.join().expect("the TLS responder");
     assert_eq!(
         requests.matches("POST /systemone").count(),
         1,
