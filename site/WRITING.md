@@ -169,7 +169,7 @@ The build fails when a script has no caption, a caption has no script, or a scri
 - Every other `thinkthen` function call answers from `recordings/`. The runner adds `--replay recordings/` to a call that names no replay folder and no `--plan`.
 - The run has no key and no base address. It sends nothing and costs nothing.
 - A line that starts with `test` is an assert. When it fails, the example fails.
-- A file under `examples/` that is neither run nor kept must match a line in `examples/SKIP`, with its reason. The site smoke runner does not invoke installed library or SQL samples; it counts them as skipped. Their libraries have strict replay controls, which are separate from this site runner.
+- A file under `examples/` that is neither run nor kept must match a line in `examples/SKIP`, with its reason. The site smoke runner does not invoke installed library or SQL samples; it counts them as skipped. `npm run smoke-bindings` replays each library sample that `examples/REPLAY` lists against its binding, and the build checks its proof. `README.md`, "The binding replay", gives the steps. A new install first call goes in `examples/REPLAY`, and its proof is committed with it.
 
 ### Add an example
 

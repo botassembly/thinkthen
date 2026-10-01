@@ -172,7 +172,7 @@ function main() {
   const problems = [];
   for (const file of walk(root)) {
     const rel = path.relative(root, file);
-    if (['SKIP', 'beatles/bench-pin', 'beatles/deck-pin', 'beatles/folders.json'].includes(rel)) continue;
+    if (['SKIP', 'REPLAY', 'bindings-proof.json', 'beatles/bench-pin', 'beatles/deck-pin', 'beatles/folders.json'].includes(rel)) continue;
     const ext = path.extname(file);
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
