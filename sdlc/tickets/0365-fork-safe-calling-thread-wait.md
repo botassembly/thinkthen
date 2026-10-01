@@ -1,6 +1,6 @@
 # 0365: A forked child on macOS answers on every surface that waits on the calling thread
 
-Status: ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-4. Issue: `sdlc/issues/2026-10-01-macos-forked-children-crash-on-a-channel-wait.md`.
+Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-4. Issue: `sdlc/issues/2026-10-01-macos-forked-children-crash-on-a-channel-wait.md`.
 
 ## Outcome
 
@@ -42,3 +42,11 @@ A host that asks once, forks, and asks again in the child gets an answer in the 
     - TypeScript and the hosts over the C door (Go, C#, the JVM languages, Swift, PHP, Zig, Dart, C++, Ada, Objective-C, COBOL) have no calling-thread wait of their own. They reach the engine through the C door or the Rust API, so the engine change covers them.
     - The command's own waits: its process is never forked by a host after a call. Only its ordered scheduler changes, because it shares `workers::scoped`.
     - `public/options.rs` keeps its bounded attempt channel. Engine workers send into it, and the calling thread drains it without blocking.
+
+## What the build taught us
+
+- The M5 proof at the branch head, 10 runs each: the `fork-probe` cases that crashed now pass in every run; `fork.c` 10 of 10; Python 10 of 10; R `tests/fork.R` 10 of 10; SQLite 9 of 10, the one failure in the parent before the fork on Debt 020's closed connection; DuckDB's `a_forked_child_answers_from_a_zero_total` 10 of 10. The new channel table passed 10 of 10. The same table with `std::sync::mpsc` put in for the channel killed its child with SIGTRAP in 10 of 10 runs, so the table fails on the old wait every time and does not rely on timing.
+- `fork-probe`'s `a_forked_child_keeps_parsed_tls_roots_after_the_file_changes` fails on the M5 before and after this change. Its child does not crash, and its parent asks nothing before the fork. It is filed as `sdlc/issues/2026-10-01-macos-tls-roots-fork-probe-fails.md`.
+- On the Linux lane: `tickets`, `inventory`, `sdlc/scripts/test` (95 s), and the C, Python, R and SQLite checks passed one at a time while the load stayed near 10 to 19.
+- Building on the M5 offline needs each workspace's own lock vendored: the DuckDB bridge pins other versions than the root lock. The DuckDB extension needs the official Rust toolchain in the M5's toolchain cache, because the zerobrew `rustc` ships a standard library for a newer macOS than the extension's 15.0 floor. The zerobrew R's `libR.dylib` carries a stale install name, so the R package's `document` step cannot load; the wrappers ship in the repository, so the M5 run skipped that step.
+- The DuckDB bridge's quick fix copy went away with one import changed from its earlier channel code. A crate channel with std's error types keeps each binding's diff to its import lines.
