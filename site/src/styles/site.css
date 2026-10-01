@@ -321,6 +321,7 @@ pre {
   font-family: var(--mono); font-size: .86rem; line-height: 1.55;
   background: var(--card); color: var(--ink);
   white-space: pre-wrap; overflow-wrap: break-word;
+  tab-size: 4;
 }
 .block { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 0 0 1.2rem; }
 .block .caption {
