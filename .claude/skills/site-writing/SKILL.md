@@ -21,6 +21,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Every code block comes from `site/src/lib/code.mjs`. Pass `Code` a `file` or a `lang`. An article uses example comments, never a Markdown fence.
 - Install: the download script first (`curl -fsSL https://thinkthen.dev/install.sh | sh`), then Homebrew as an option on a Mac.
 - Name no private project and no home path. The repository is public.
+- A blog article follows the deslop and voice guides the brief names, and a fresh reader checks it against both before review.
 
 ## Every code example
 

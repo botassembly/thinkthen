@@ -3,18 +3,13 @@
 import Base from '../../layouts/Base.astro';
 import { POSTS } from '../../data/posts.mjs';
 
-const posts = [
-  {
-    href: '/blog/code-that-understands/',
-    title: 'Code that knows what you mean',
-    blurb: 'Every program I have written can match text. None of them can read it. What changed, and where it breaks.',
-  },
-  ...POSTS.map((p) => ({ href: p.href, title: p.draft ? `${p.title} (draft)` : p.title, blurb: p.blurb })),
-];
+const posts = [...POSTS]
+  .sort((a, b) => b.date.localeCompare(a.date))
+  .map((p) => ({ href: p.href, title: p.draft ? `${p.title} (draft)` : p.title, blurb: p.blurb }));
 ---
 <Base title="Blog" description="Writing about code that knows what you mean.">
   <h1>Blog</h1>
-  <p class="lede">Articles about software that answers questions about text.</p>
+  <p class="lede">Articles about software that answers questions about text. Ian Maurer writes them with AI agents. The agents draft each article against his voice guide, and Ian reviews and edits it before it goes out.</p>
   <div class="grid">
     {posts.map((p) => (
       <a class="tile" href={p.href}><b>{p.title}</b><span>{p.blurb}</span></a>

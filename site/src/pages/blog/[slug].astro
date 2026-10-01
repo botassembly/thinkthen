@@ -17,5 +17,5 @@ const { Content } = post;
     <h1>{post.title}</h1>
     <Content />
   </article>
-  <p class="pagelinks"><a href="/blog/">Read the blog</a> · <a href="/trust/">Test it before you trust it</a></p>
+  <p class="pagelinks">{(post.links || []).map((l) => <><a href={l.href}>{l.text}</a> · </>)}<a href="/blog/">Read the blog</a> · <a href="/trust/">Test it before you trust it</a></p>
 </Base>
