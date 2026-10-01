@@ -1,6 +1,6 @@
 # The bindings and SQL extensions cannot name a backend
 
-Status: open. Filed 2026-10-01 from ticket 0334's Defers line, which no ticket or issue owned. Owner: the queue owner, in 0.2.
+Status: open. Filed 2026-10-01 from ticket 0334's Defers line, which no ticket or issue owned. Owner: the queue owner, in 0.2. Ticket [0377](../tickets/0377-binding-backends.md) carries it and waits for the `release/0.1` cut.
 Kind: idea
 When: 0.2 work starts on main
 Milestone: 0.2
