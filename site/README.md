@@ -23,7 +23,7 @@ npm run build
 5. `scripts/check-binding-proofs.mjs` checks each replayed library sample against its proof. See "The binding replay" below.
 6. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
 7. `scripts/label-tables.mjs` copies each column heading into the cells of a table of three or more columns. On a phone or a tablet every table row stacks into a card, and the label names each cell. The same step marks each code span of 24 characters or fewer outside a code pane with class `short`, so a model name, a flag, a key name or a version never splits across lines.
-8. `scripts/emit-md.mjs` writes a Markdown twin of every page, `dist/llms.txt`, and `dist/llms-full.txt`, which holds every twin in one file.
+8. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
 9. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
 10. `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
 11. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
@@ -31,7 +31,7 @@ npm run build
 13. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
 14. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
 15. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
-16. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt`, the llms files, or the JSON-LD on the home and About pages is wrong. It also fails when two listed pages share a title or a description.
+16. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
 
 The Backends pages read each built-in backend's name, address, key variables and model with `backend('name')` from `src/lib/backends-table.mjs`, which parses the "Named backends" table in `../specification/backends.md`. A name the table lacks fails the build, and `scripts/check-settings.mjs` fails when the built overview disagrees with the table. A live `thinkthen check` cannot replay, so `src/data/backend-checks.mjs` holds each live check a page states, with its date, build and record.
 
@@ -123,17 +123,13 @@ npm run icons
 
 ## The noindex switch
 
-The site is open to search engines. One constant controls it:
+The site stays unlinked until launch, so every page carries `<meta name="robots" content="noindex">`. One constant turns it off:
 
 ```
-src/data/catalog.mjs  ->  export const NOINDEX = false;
+src/data/catalog.mjs  ->  export const NOINDEX = true;
 ```
 
-Set it to `true`, build, and every page carries `<meta name="robots" content="noindex">`. `robots.txt` follows the same constant: it turns every crawler away while `NOINDEX` is true, and names the sitemap while it is false. The 404 and search pages keep `noindex` always.
-
-## The footer and the About page
-
-`src/components/SiteFooter.astro` draws the footer on every page: three columns of links, the exit-code legend, and a band with the mark, the GenomOncology logo and the license. The legend stays in the footer because coloured exit codes show on most pages. `src/data/about.mjs` holds the author's and the company's links and their schema.org nodes. The footer, `/about/` and the home page's JSON-LD read them from there. The GenomOncology logos in `public/brand/` are PNGs at twice their shown size, one for each theme, because the brand folder holds no true vector.
+Set it to `false`, build, and the tag is gone from every page. `robots.txt` follows the same constant: it turns every crawler away while `NOINDEX` is true, and names the sitemap once it is false. The 404 and search pages keep `noindex` always.
 
 ## The palette
 

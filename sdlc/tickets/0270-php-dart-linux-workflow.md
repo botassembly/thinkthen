@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/closed/
 
 # 0270: Gate PHP and Dart source packages in the Linux x86 release workflow
 
-Status: in progress. Combined static implementation accepted at `889c7a94` after [fresh High code review](../records/0270-php-dart-workflow-code-review.md). The direct installed PHP and Dart selectors now pass on the coherent retained 0267 C/PHP/Dart trio, as recorded in [the preserved-package check](../records/0270-preserved-package-selector-check.md). This is execution on prior package bytes. Actual current-source workflow packaging and runner qualification remain open. The aggregate SQL/DataFrame hold remains in force.
+Status: in progress. Combined static implementation accepted at `889c7a94` after [fresh High code review](../records/0270-php-dart-workflow-code-review.md). The direct installed PHP and Dart selectors now pass on the coherent retained 0267 C/PHP/Dart trio, as recorded in [the preserved-package check](../records/0270-preserved-package-selector-check.md). This is execution on prior package bytes. Actual current-source workflow packaging and runner qualification remain open. Ian's SQL and DataFrame redesign intake of 2026-09-29 superseded the SQL/DataFrame hold (`sdlc/planning/work-plan-2026-09-27.md`); the hold named below is history. The remaining proof is the runner run in the rehearsal, ticket 0128 phase 3b.
 
 Milestone: 0.1
 

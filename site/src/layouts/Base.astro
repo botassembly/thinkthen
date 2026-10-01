@@ -1,17 +1,14 @@
 ---
 import '../styles/site.css';
-import { NOINDEX, REPO } from '../data/catalog.mjs';
+import { TAGLINE, NOINDEX, REPO } from '../data/catalog.mjs';
 import { DEFAULT_CARD, routeCard } from '../data/cards.mjs';
-import { ORGANIZATION_LD, PERSON_LD } from '../data/about.mjs';
-import SiteFooter from '../components/SiteFooter.astro';
 
 // `repo` is the one GitHub link a page carries, at its bottom. `image` and
 // `imageAlt` name the page's social card. A page without one takes the card
 // cards.mjs gives its route, or the ThinkThen card. `noindex` marks a page
 // that is never listed: the 404 and search pages. Such a page carries the
 // robots tag, no canonical link, no Markdown twin and no search index mark.
-// `structured` holds a page's own schema.org nodes, as the About page does.
-const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.', repo = REPO, image, imageAlt, noindex = false, structured } = Astro.props;
+const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.', repo = REPO, image, imageAlt, noindex = false } = Astro.props;
 const full = title === 'ThinkThen' ? 'ThinkThen: code that knows what you mean' : `${title} — ThinkThen`;
 const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
@@ -19,9 +16,8 @@ const card = image ? { image, alt: imageAlt || title } : routeCard(here) || DEFA
 const cardImage = new URL(card.image, Astro.site).href;
 const pageUrl = new URL(here, Astro.site).href;
 const home = here === '/';
-// The home page tells search engines what the site and the software are,
-// and who makes it.
-const jsonLd = structured ? JSON.stringify(structured) : home && JSON.stringify([
+// The home page tells search engines what the site and the software are.
+const jsonLd = home && JSON.stringify([
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -43,11 +39,7 @@ const jsonLd = structured ? JSON.stringify(structured) : home && JSON.stringify(
     operatingSystem: 'Linux, macOS',
     license: 'https://opensource.org/licenses/MIT',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-    author: { '@id': PERSON_LD['@id'] },
-    publisher: { '@id': ORGANIZATION_LD['@id'] },
   },
-  { '@context': 'https://schema.org', ...ORGANIZATION_LD },
-  { '@context': 'https://schema.org', ...PERSON_LD },
 ]);
 const nav = [
   ['/install/', 'Install'],
@@ -141,7 +133,14 @@ const nav = [
 <p id="copy-said" class="sr-only" aria-live="polite"></p>
 <main data-pagefind-body={noindex ? undefined : ''}><div class="wrap"><slot /><p class="repo-link">On GitHub: <a href={repo}>{repo.replace('https://', '')}</a></p></div></main>
 
-<SiteFooter mdHref={noindex ? null : mdHref} />
+<footer class="bottom">
+  <div class="wrap">
+    <span>{TAGLINE}</span>
+    <span class="legend">Exit codes: <span class="exit yes">0 yes</span><span class="exit no">1 no</span><span class="exit unsure">3 not sure</span><span class="exit broken">other broken</span><span class="exit plain">0 the run finished</span></span>
+    <span><a href="/trust/">Trust</a> · <a href="/reference/">Reference</a> · <a href="/refusals/">What it will not do</a></span>
+    <span><a href="/version.json">Build proof</a> · <a href="/llms.txt">llms.txt</a>{!noindex && <> · <a href={mdHref}>This page as Markdown</a></>}</span>
+  </div>
+</footer>
 
 <script is:inline>
 (function () {

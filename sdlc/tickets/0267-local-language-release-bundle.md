@@ -6,9 +6,9 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/records/0249-r
 
 # 0267: Require the installed language files in one local Linux release bundle
 
-Status: in progress. Presence code accepted after fresh independent review of `3f22a71d`; its focused refusal fixture runs in routine lint. The coordinator lands this independent correction while keeping the ticket open for its aggregate checkpoint. See [the code review](../records/0267-local-bundle-code-review.md). A one-pin local pack produced 18 of 21 planned archives before the new SQL/DataFrame hold. The complete installed checkpoint is **held and unverified**: no `release-smoke --source-packages` run started. The [preparation](../records/0267-release-bundle-preparation.md) and [held build record](../records/0267-local-bundle-build.md) give the exact boundary. Accepted 0265 and 0266 routes have landed.
+Status: landed. Closed 2026-10-01: ticket 0362 replaced the one-pin bundle. Presence code was accepted after fresh independent review of `3f22a71d`, and its focused refusal fixture runs in routine lint. See [the code review](../records/0267-local-bundle-code-review.md). The one-pin local pack produced 18 of 21 planned archives, and no `release-smoke --source-packages` run started. Ticket 0362 then made `surfaces --publish` pack every surface. Checkpoints `checkpoint/surfaces/2026-10-01-1` and `-2` packed and smoked those packages from one commit each; checkpoint 2's folder holds 22 files. The private Flutter app file moves to the 0.2 idea `sdlc/issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md`. The [preparation](../records/0267-release-bundle-preparation.md) and [build record](../records/0267-local-bundle-build.md) give the exact boundary. Accepted 0265 and 0266 routes have landed.
 
-Milestone: 0.1
+Landed: bb1155c71
 
 ## Concrete gap and bounded outcome
 
@@ -41,3 +41,7 @@ The local bundle selection does not make the eleven files appear in `.github/wor
 - Changes: An explicit Linux x86-64 bundle presence rule and one actual same-pin installed integration run after the remaining pilots land.
 - Proof: Missing/extra/linked family refusals before backend, strict pair checks, one complete local installed smoke with exact outputs and archive/source receipts, and focused script/policy/record checks.
 - Defers: Four-runner workflow wiring and execution, final release pin, registry/account steps, public distribution, other platforms, and closure of original release issues.
+
+## What the build taught us
+
+A one-pin bundle beside the checkpoint duplicated the checkpoint's own packing. Packing every surface in `surfaces --publish` gave release QA the same files from each checkpoint, so the separate bundle check was dropped.

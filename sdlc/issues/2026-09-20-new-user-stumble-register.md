@@ -1,8 +1,8 @@
 # The new-user stumble register
 
-Status: open until launch. Shortened 2026-09-30: rows 1 to 17 are closed, row 9 by ticket 0350 (`8f397e963`), and git history holds their record. Row 19 closed 2026-10-01 by site ticket 0042 (`8c5aabc00`): the Liquid d1 page tells a reader to pass `--timeout 90` on a first `check`. Row 18 belongs to the release ticket 0128. The register holds no pre-0.1 work for the queue owner. Add a row when a stumble is seen. Close a row when its fix lands, and name the commit.
+Status: open until launch. Shortened 2026-09-30: rows 1 to 17 are closed, row 9 by ticket 0350 (`8f397e963`), and git history holds their record. Row 19 closed 2026-10-01 by site ticket 0042 (`8c5aabc00`): the Liquid d1 page tells a reader to pass `--timeout 90` on a first `check`. Row 18 belongs to the release ticket 0128, whose Phase 4 README commit closes it. The register holds no pre-0.1 work for the queue owner. It stays open until launch by design, so it blocks no release. Moved from 0.1 to later on 2026-10-01. Add a row when a stumble is seen. Close a row when its fix lands, and name the commit.
 
-Milestone: 0.1
+Milestone: later
 
 Ian asked on 2026-09-20 for one list of every place a new user stumbles in the first hour with no clear next step, so that the documents and the tool fix each one before the public push.
 

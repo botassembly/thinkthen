@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // A Markdown twin of every page, at the same address with .md added, plus
-// llms.txt and llms-full.txt. All are read from the built pages, so a twin
-// cannot drift from the page it twins. llms-full.txt holds every twin in
-// one file, in the order llms.txt lists them.
+// llms.txt. Both are read from the built pages, so a twin cannot drift from
+// the page it twins.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -225,7 +224,7 @@ for (const file of found) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, body + '\n');
   const first = body.split('\n').find((l) => l && !l.startsWith('#')) || '';
-  list.push({ url, md: route === '/' ? '/index.md' : route + '.md', title, blurb: first.slice(0, 160), body });
+  list.push({ url, md: route === '/' ? '/index.md' : route + '.md', title, blurb: first.slice(0, 160) });
 }
 
 const llms = [
@@ -233,7 +232,7 @@ const llms = [
   '',
   '> ThinkThen: code that knows what you mean. Simple functions that give your software the judgment to handle whatever comes its way. Ten functions, in your scripts, your programs, and your queries.',
   '',
-  'Every page on this site has a Markdown twin at the same address with .md added. https://thinkthen.dev/llms-full.txt holds every twin in one file.',
+  'Every page on this site has a Markdown twin at the same address with .md added.',
   '',
   '## Pages',
   '',
@@ -242,10 +241,4 @@ const llms = [
 ];
 fs.writeFileSync(path.join(DIST, 'llms.txt'), llms.join('\n'));
 
-const full = [
-  llms[0], '', llms[2], '',
-  ...list.map((p) => `---\n\nSource: https://thinkthen.dev${p.url}\n\n${p.body}\n`),
-];
-fs.writeFileSync(path.join(DIST, 'llms-full.txt'), full.join('\n'));
-
-console.log(`wrote ${list.length} Markdown twins, llms.txt and llms-full.txt`);
+console.log(`wrote ${list.length} Markdown twins and llms.txt`);

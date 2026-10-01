@@ -18,25 +18,30 @@ Exit criteria:
 Blockers:
 
 - The rehearsal has not yet passed. Ticket 0128 phase 3b records each attempt.
+- The installed-file checks run no panic or token-cap case. Ticket 0374, in progress in another lane, adds them.
 - Registry setup belongs to the docs team, and Ian approves each outward step.
 - The README overhead line waits on marketing's overhead benchmark.
-- The site replay debt waits on site ticket 0047 slice F and a word check.
 
-Most tickets below (DuckDB, panic diagnostics, language workflows and runner tools) keep open only proofs on the release targets. A clean rehearsal on all four targets supplies those proofs.
+Most DuckDB, language workflow and runner tool tickets below keep open only proofs on the release targets. A clean rehearsal on all four targets supplies those proofs. The rehearsal cannot supply the panic and token-cap proofs alone, because the installed-file checks it runs have no such cases. Tickets 0226, 0227 and 0299 stay in 0.1. Their proof comes from ticket 0374 plus the rehearsal.
+
+Path to 0.1:
+
+1. Ticket 0374 lands the panic and token-cap cases in the installed-file checks.
+2. A clean rehearsal passes on all four targets (ticket 0128 phase 3b).
+3. A fresh checkpoint, the fourth, follows the clean rehearsal. Release QA runs its final round on it.
+4. The release candidate: the coordinator tags it and cuts `release/0.1` (ADR 0116, release-process.md section 5). The release commit lands at that cut, as ticket 0128 phase 4 step 3: `versions --set 0.1.0`, the publish flags dropped, the `CHANGELOG.md` date, the README "Install" section and the site's install lines.
+5. Ian gives the go, and ticket 0128 phase 4 runs the release.
 
 Open items:
 
 - [0128: Release and install for 0.1](../tickets/0128-release-and-install.md)
 - [0149: Give SQL the engine settings and charge every send](../tickets/0149-sql-settings.md)
 - [0157: Expose request size and retry counts through the libraries](../tickets/0157-library-size-and-retry-settings.md)
-- [0201: Move the DuckDB extension to the C++ API](../tickets/0201-duckdb-cpp-api.md)
 - [0222: Batch DuckDB record vectors and warm groups](../tickets/0222-duckdb-record-batching.md)
 - [0224: Find one best unit from an ordered SQL group](../tickets/0224-sql-group-find.md)
 - [0226: Keep caught native panic payloads out of diagnostics](../tickets/0226-native-panic-diagnostics.md)
 - [0227: Keep caught language-binding panic payloads out of diagnostics](../tickets/0227-language-panic-diagnostics.md)
 - [0231: Ship the DuckDB C++ extension on the other release platforms](../tickets/0231-duckdb-release-platforms.md)
-- [0249: Merge the language bindings](../tickets/0249-merge-the-language-bindings.md)
-- [0267: Require the installed language files in one local Linux release bundle](../tickets/0267-local-language-release-bundle.md)
 - [0268: Start the reviewed language archives in the manual release workflow](../tickets/0268-release-workflow-language-packages.md)
 - [0269: Gate Swift and Zig source files in the Linux x86 release workflow](../tickets/0269-swift-zig-linux-workflow.md)
 - [0270: Gate PHP and Dart source packages in the Linux x86 release workflow](../tickets/0270-php-dart-linux-workflow.md)
@@ -44,11 +49,8 @@ Open items:
 - [0272: Prepare C# and JVM managed archives for the Linux x86 release workflow](../tickets/0272-csharp-jvm-linux-workflow.md)
 - [0273: Select and verify Linux x86 language runner tools](../tickets/0273-linux-language-runner-tools.md)
 - [0299 — Estimated input admission total](../tickets/0299-token-cap-contract.md)
-- [The new-user stumble register](../issues/2026-09-20-new-user-stumble-register.md)
 - [Release and install for 0.1](../issues/2026-09-25-release-and-install-for-0-1.md)
 - [README: where to get a key, how to change the backend, and the overhead line](../issues/2026-09-29-readme-key-backend-and-overhead-lines.md)
-- [Checkpoints publish no packages for 16 surfaces](../issues/2026-09-30-checkpoints-publish-no-source-wrapper-packages.md)
-- [The PostgreSQL site samples run under no check, and three status phrases pass the word check](../issues/2026-09-30-site-replay-folders-have-no-fixture.md)
 
 ## 0.2
 
@@ -68,8 +70,10 @@ Windows work has no file on main yet. Ticket 0373, Windows stage 0, is in progre
 
 Open items:
 
+- [A Flutter app file in the release bundle](../issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md)
 - [The bindings and SQL extensions cannot name a backend](../issues/2026-10-01-bindings-and-sql-extensions-name-no-backend.md)
 - [`rank --threshold P` keeps only records at or above a probability](../issues/2026-10-01-rank-keeps-only-records-over-a-threshold.md)
+- [`score --level NAME=MEANING` describes a level on the command line](../issues/2026-10-01-score-levels-described-on-the-command-line.md)
 
 ## later
 
@@ -85,6 +89,7 @@ Open items:
 - [0295 — Polars namespace and SIGINT (F4)](../tickets/0295-polars-namespace-and-sigint.md)
 - [0296 — pandas Series accessor (F5)](../tickets/0296-pandas-series-accessor.md)
 - [0300: Caller-priced cost in call and run facts](../tickets/0300-caller-priced-call-cost.md)
+- [The new-user stumble register](../issues/2026-09-20-new-user-stumble-register.md)
 - [Annotate options from a file or a record](../issues/2026-09-23-annotate-options-from-a-file-or-a-record.md)
 - [Rank by graded relevance: custom weights and rank fusion](../issues/2026-09-24-rank-by-graded-relevance-for-search-reranking.md)
 - [Docs and how-tos owed](../issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md)
@@ -99,6 +104,8 @@ Open items:
 - [OpenTelemetry traces for backend calls, after 0.1](../issues/2026-09-30-opentelemetry-traces-after-0-1.md)
 - [The Polars door cannot test lazy streaming](../issues/2026-09-30-polars-door-cannot-test-lazy-streaming.md)
 - [A proxy service in front of the backends, after 0.1](../issues/2026-09-30-proxy-service-for-shared-limits-and-traces.md)
+- [Three status phrases pass the site word check](../issues/2026-09-30-site-replay-folders-have-no-fixture.md)
 - [About a third of the spec's "no calls" edges show only after a real send, and the spec lags the build in places](../issues/2026-09-30-spec-no-calls-edges-need-a-real-send.md)
 - [The systemone adapter sends criteria descriptions as JSON objects that Ollama refuses](../issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md)
 - [Zig 0.15.2's linker drops constant alignment](../issues/2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md)
+- [`tag` takes a separate cutoff for each label](../issues/2026-10-01-tag-cutoff-per-label.md)

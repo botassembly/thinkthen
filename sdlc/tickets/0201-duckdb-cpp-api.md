@@ -6,9 +6,9 @@ opens: databases/duckdb sdlc/scripts/policy.py sdlc/scripts/surfaces sdlc/script
 
 # 0201: Move the DuckDB extension to the C++ API
 
-Status: in progress. Accepted design, 2026-09-27. The reviewed design is `c7000a4a`; `sdlc/records/0200-0201-design-review.md` records the paired review. Owner: Codex. The staged Linux x86_64 implementation passed final High follow-up review at `493a1461` and is landed. Linux aarch64 and both macOS migrations remain open; the ticket does not claim all-platform completion.
+Status: landed. Closed 2026-10-01. The Linux x86_64 implementation landed after final High review at `493a1461`. Ticket 0231 then moved the other three targets to the C++ extension: Linux ARM64 accepted at `aab8baad`, macOS ARM64 at `a72e62a8`, and Intel macOS built at `c0b464b63` and accepted at `b7cfeca72`. Each target passed its own installed-package proof and fresh High review. The Intel proof ran under Rosetta on the M5. The only proof left is execution on the release runners, including native Intel and macOS 15. Ticket 0231 and the release rehearsal in ticket 0128 phase 3b own it, so this ticket holds nothing open. The accepted design is `c7000a4a`; `sdlc/records/0200-0201-design-review.md` records the paired review.
 
-Milestone: 0.1
+Landed: 4935fb8c4
 
 ## Outcome and authority
 
@@ -129,7 +129,7 @@ The first installed-archive interrupt run found a missing test dependency, not a
 - Keeps: Every shipped SQL function and overload, its types, NULL and error behavior, millisecond deadlines, caller file permissions, committed-data relate boundary, Rust engine and counters, environment key, and stock-host package proof. ADR 0080's new try-details scalar keeps row recovery across the migration.
 - Changes: A pinned C++ extension and Rust C bridge replace raw C DuckDB registration and host access; ordinary scalar bind validates constants while try-details bind retains typed failures as values; `ClientContextState` owns statement signals and the I2 DuckDB time budget.
 - Proof: A stock-host bridge smoke, bind zero-request cases, multi-expression and multi-chunk statement lifetime, prepared and failure cleanup, late SIGINT followed by a successful query, existing loopback and conformance suites, negative version check, and the coordinator-named final functional and packaging checkpoint. Broader surface checks run when the coordinator names a related-ticket checkpoint.
-- Defers: A DuckDB secret type and any upstream report, each with its own authority. Under Ian’s later staged-release approval, Linux aarch64 and both macOS C++ migrations, bind fixes, query-lifetime fixes and host proofs remain open. The Linux x86_64 scope is complete.
+- Defers: A DuckDB secret type and any upstream report, each with its own authority. Under Ian’s later staged-release approval, the Linux aarch64 and both macOS C++ migrations moved to ticket 0231, which landed all three. The release-runner proof of all four targets stays with ticket 0231 and the rehearsal.
 
 The earlier transferred 0167 adapter and rebuilt host backend passed all 20 routine relate cases, but that check did not include the planner source. Ticket 0167 later landed at `c2bc3538` with its accepted paid validation. Merged 0201 commit `3f4a0732` contains the reviewed planner `7855f394`, and the final unpacked Linux archive passed all 20 relate cases again. The final source review remains.
 
