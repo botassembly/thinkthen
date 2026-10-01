@@ -43,6 +43,8 @@ pub(super) struct Bounds {
     /// Whether the host takes rows past a failure. When it does not, a
     /// failed request sends nothing further, as one job would.
     pub(super) continues: bool,
+    /// How long input may pause before the open request goes out.
+    pub(super) pause: Duration,
 }
 
 pub(super) struct Run<'a, A: Asker> {
@@ -54,6 +56,7 @@ pub(super) struct Run<'a, A: Asker> {
     window: usize,
     jobs: usize,
     continues: bool,
+    pause: Duration,
     slots: VecDeque<Slot<A>>,
     /// The place of the window's first input.
     first: usize,
@@ -88,6 +91,7 @@ impl<'a, A: Asker> Run<'a, A> {
             window: bounds.window.max(1),
             jobs: bounds.jobs,
             continues: bounds.continues,
+            pause: bounds.pause,
             slots: VecDeque::new(),
             first: 0,
             waiting: HashMap::new(),
@@ -173,7 +177,7 @@ impl<'a, A: Asker> Run<'a, A> {
     /// Wait for one input or reply, closing the open request at a pause.
     fn receive(&mut self, received: &Receiver<Event<A::Input, A::Error>>, cancel: &Cancel) {
         let wait = if self.packer.is_open() && self.reading {
-            PAUSE
+            self.pause
                 .saturating_sub(self.arrived.elapsed())
                 .max(Duration::from_millis(1))
         } else {
@@ -188,7 +192,7 @@ impl<'a, A: Asker> Run<'a, A> {
                 }
             }
             Err(RecvTimeoutError::Timeout) => {
-                if self.packer.is_open() && self.arrived.elapsed() >= PAUSE {
+                if self.packer.is_open() && self.arrived.elapsed() >= self.pause {
                     self.close();
                 }
             }

@@ -153,6 +153,12 @@ def test_a_frame_keeps_types_and_nested_failures():
     import http.server, json, threading, polars as pl, thinkthen as tt
     seen = []
     class Listener(http.server.BaseHTTPRequestHandler):
+        # Debt 020: ureq may reuse an HTTP/1.0 connection the server closes;
+        # sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+        def end_headers(self):
+            self.send_header("Connection", "close")
+            super().end_headers()
+
         def do_POST(self):
             asked = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             def record(one):

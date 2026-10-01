@@ -22,6 +22,12 @@ def one_record(request):
     return dict(request, state=json.loads(records.pop()), questions=questions) if len(records) == 1 else request
 
 class Handler(http.server.BaseHTTPRequestHandler):
+    # Debt 020: ureq may reuse an HTTP/1.0 connection the server closes;
+    # sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+    def end_headers(self):
+        self.send_header("Connection", "close")
+        super().end_headers()
+
     def do_POST(self):
         body = self.rfile.read(int(self.headers['Content-Length']))
         with self.server.lock:

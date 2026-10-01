@@ -273,6 +273,7 @@ pub(super) fn run(
             &asker,
             packing,
             pipeline::reader(
+                judging.environment.input_pause(),
                 move |asks, port| {
                     thread::spawn(move || feed(records, &asks, &port, &reader_downstream));
                 },

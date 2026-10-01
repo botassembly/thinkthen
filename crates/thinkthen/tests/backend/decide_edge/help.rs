@@ -46,6 +46,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     );
     assert!(!long.contains("THINKTHEN_TEST_RETRY_WAIT_MS"), "{long}");
     assert!(!long.contains("THINKTHEN_TEST_SIGINT_ACK"), "{long}");
+    assert!(!long.contains("THINKTHEN_TEST_INPUT_PAUSE_MS"), "{long}");
     assert!(long.contains("set -e"), "the help warns about set -e");
     assert!(
         long.contains("no or not sure"),

@@ -6,21 +6,19 @@
 //! the batch.
 
 use std::fs;
-use std::io::Write as _;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::process::Output;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::thread;
-use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
 
-use crate::harness::{Canned, Gathering, Listener, Tally, finish, spawn};
+use crate::harness::{Canned, Gathering, Listener, Tally, spawn};
 
 mod audited;
 mod ceiling;
 mod choose;
 mod context;
+mod pause;
 mod portable;
 mod tag_score;
 mod tiers;
@@ -56,7 +54,7 @@ fn row(place: usize) -> String {
     )
 }
 
-fn rows(places: impl Iterator<Item = usize>) -> String {
+pub(super) fn rows(places: impl Iterator<Item = usize>) -> String {
     places.map(row).collect()
 }
 
@@ -262,9 +260,6 @@ fn replay_answers_every_batch() {
     assert_eq!(text(&again.stdout), text(&cached.stdout));
 }
 
-/// A pause row: its name, its extra arguments and its environment.
-type Mode<'a> = (&'a str, &'a [&'a str], &'a [(&'a str, &'a str)]);
-
 #[test]
 fn a_table_shares_one_request_and_filter_prints_its_kept_rows() {
     let listener = Listener::answering(answering).expect("a loopback listener");
@@ -284,52 +279,6 @@ fn a_table_shares_one_request_and_filter_prints_its_kept_rows() {
     assert_eq!(sent.len(), 1, "three rows share one request");
     assert_eq!(places(&sent[0].body).len(), 3);
     assert_eq!(text(&output.stdout), "{\"body\":\"line 2\"}\n");
-}
-
-#[test]
-fn a_pause_sends_the_open_batch() {
-    let typed = folder("typed");
-    let named = folder("named");
-    let modes: [Mode<'_>; 3] = [
-        ("no folder", &["--no-cache"], &[]),
-        ("the default cache", &[], &[("THINKTHEN_CACHE", &named)]),
-        ("a typed folder", &["--cache", &typed], &[]),
-    ];
-    for (name, extra, environment) in modes {
-        let listener = Listener::answering(answering).expect("a loopback listener");
-        let fixed = ["decide", QUESTION, "--lines", "--url", listener.base()];
-        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-        command
-            .env_clear()
-            .env("HOME", folder("home"))
-            .env(KEY.0, KEY.1)
-            .envs(environment.iter().copied())
-            .args(fixed)
-            .args(["--model", "jev-1.13.0"])
-            .args(extra)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        let mut child = command.spawn().expect("the command starts");
-        let mut writer = child.stdin.take().expect("an input pipe");
-        writer
-            .write_all(lines(1..=3).as_bytes())
-            .expect("three records are written");
-        writer.flush().expect("the records reach the pipe");
-        // The count moves before the body is recorded, so wait on the
-        // recorded request itself (ticket 0352).
-        let deadline = Instant::now() + Duration::from_secs(30);
-        let mut sent = listener.requests();
-        while sent.is_empty() && Instant::now() < deadline {
-            thread::sleep(Duration::from_millis(10));
-            sent = listener.requests();
-        }
-        drop(writer);
-        let output = finish(child, name).expect("the command ends");
-        assert_eq!(sent.len(), 1, "{name}: a request while the pipe stays open");
-        assert_eq!(places(&sent[0].body).len(), 3, "{name}");
-        assert_eq!(text(&output.stdout), rows(1..=3), "{name}");
-    }
 }
 
 /// Equal questions in one call are asked once, by ADR 0111 section 2: ten

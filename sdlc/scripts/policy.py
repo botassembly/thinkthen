@@ -2232,6 +2232,33 @@ def check_markers() -> None:
         fail("debt", failure)
 
 
+# Debt 020: ureq may reuse an HTTP/1.0 connection a Python test server is about
+# to close, so every such server says it closes after each reply. The class
+# name is split so this file never matches its own search.
+HANDLER = "BaseHTTP" + "RequestHandler"
+CLOSES = '"Connection", "close"'
+DEBT_020 = "sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md"
+
+
+def loopback_server_failures(sources: dict[str, str]) -> list[str]:
+    return [f"{path} defines a {HANDLER} that does not send {CLOSES}; see {DEBT_020}"
+            for path, text in sorted(sources.items()) if HANDLER in text and CLOSES not in text]
+
+
+def check_loopback_servers() -> None:
+    if not loopback_server_failures({"planted.py": f"class H({HANDLER}):\n    pass\n"}):
+        fail("loopback", "a planted server that keeps its connection open is refused")
+    if loopback_server_failures({"planted.py": f"class H({HANDLER}):\n    x = ({CLOSES})\n"}):
+        fail("loopback", "a planted server that closes each reply is allowed")
+    listed = subprocess.run(["git", "grep", "-l", "-I", "-F", HANDLER, "--", ":!*.md"],
+                            cwd=REPO, capture_output=True, text=True)
+    if listed.returncode > 1:
+        fail("loopback", f"git grep for test servers failed (exit {listed.returncode})")
+    sources = {path: (REPO / path).read_text(encoding="utf-8") for path in listed.stdout.split()}
+    for failure in loopback_server_failures(sources):
+        fail("loopback", failure)
+
+
 def main() -> int:
     check_toolchain()
     check_workspace()
@@ -2255,6 +2282,7 @@ def main() -> int:
     check_recordings()
     check_live_stores()
     check_markers()
+    check_loopback_servers()
     for failure in FAILURES:
         print(failure, file=sys.stderr)
     if FAILURES:

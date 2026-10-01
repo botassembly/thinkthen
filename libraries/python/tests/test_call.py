@@ -357,6 +357,12 @@ def capturing_filter_listener(answer=None, usage=True):
     bodies = []
 
     class Handler(BaseHTTPRequestHandler):
+        # Debt 020: ureq may reuse an HTTP/1.0 connection the server closes;
+        # sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+        def end_headers(self):
+            self.send_header("Connection", "close")
+            super().end_headers()
+
         protocol_version = "HTTP/1.1"
 
         def do_POST(self):

@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender, channel};
+use std::time::Duration;
 
 use crate::core::AttemptObservation;
 use crate::core::Usage;
@@ -129,6 +130,11 @@ pub(crate) trait Host<A: Asker> {
 
     /// Take one input's row, or why it has none, in input order.
     fn row(&mut self, place: usize, result: Result<A::Row, Failed<A::Error>>) -> Flow;
+
+    /// How long input may pause before the open request goes out.
+    fn pause(&self) -> Duration {
+        run::PAUSE
+    }
 }
 
 /// A host whose reader runs on its own thread and answers each ask sent
@@ -136,6 +142,8 @@ pub(crate) trait Host<A: Asker> {
 pub(crate) struct Reader<F> {
     asks: std::sync::mpsc::Sender<()>,
     emit: F,
+    /// A test's pause, which outlasts a stalled reader thread (Debt 030).
+    pause: Option<Duration>,
 }
 
 impl<A: Asker, F: FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow> Host<A> for Reader<F> {
@@ -146,17 +154,23 @@ impl<A: Asker, F: FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow> Host<A
     fn row(&mut self, place: usize, result: Result<A::Row, Failed<A::Error>>) -> Flow {
         (self.emit)(place, result)
     }
+
+    fn pause(&self) -> Duration {
+        self.pause.unwrap_or(run::PAUSE)
+    }
 }
 
-/// Start a reader thread with `start_reader` and emit each row through `emit`.
+/// Start a reader thread with `start_reader` and emit each row through
+/// `emit`. A `pause` replaces the engine's pause; only tests set one.
 pub(crate) fn reader<I, E, F>(
+    pause: Option<Duration>,
     start_reader: impl FnOnce(Receiver<()>, Port<I, E>),
     emit: F,
 ) -> impl FnOnce(Port<I, E>) -> Reader<F> {
     move |port| {
         let (asks, asked) = channel();
         start_reader(asked, port);
-        Reader { asks, emit }
+        Reader { asks, emit, pause }
     }
 }
 
@@ -253,6 +267,7 @@ impl Engine {
                     window,
                     jobs: state.width,
                     continues: packing.continues,
+                    pause: host.pause(),
                 };
                 let packer = Packer::new(limits, model);
                 run::Run::new(asker, call, store, packer, bounds, counts)

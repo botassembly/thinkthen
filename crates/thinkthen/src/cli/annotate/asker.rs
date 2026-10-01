@@ -188,6 +188,7 @@ where
             &asker,
             packing,
             pipeline::reader(
+                judging.environment.input_pause(),
                 move |asks, port: Port<Held, Refused>| {
                     thread::spawn(move || parse.feed(inputs, &asks, &port));
                 },
