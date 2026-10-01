@@ -22,8 +22,11 @@
 //
 // A binding whose toolchain is missing reports "not run" and keeps its old
 // entry. The run needs Rust with the offline Cargo cache, and each
-// binding's own toolchain: a stable Python 3.12 or later with uv and maturin, and
-// R 4.2 or later with dplyr.
+// binding's own toolchain: a stable Python 3.12 or later with uv and maturin,
+// R 4.2 or later with dplyr, g++, gcc with Objective-C, GnuCOBOL, and GNAT.
+// The C++, Objective-C, COBOL and Ada samples link the C door that
+// sdlc/scripts/installed.sh lays out, and the runner compiles each sample
+// once.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -59,6 +62,50 @@ function cargoFolders(manifest) {
     .filter((p) => p.source === null)
     .map((p) => path.relative(repo, path.dirname(p.manifest_path)));
 }
+
+// The C door, built once and laid out as an install would.
+let door = null;
+function cDoor() {
+  if (door) return door;
+  const out = path.join(tmp, 'c-door');
+  const done = run('sh', ['-c', '. sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, out], { cwd: repo });
+  if (done.status !== 0) throw new Error(`native_install failed\n${done.stdout}${done.stderr}`);
+  door = out;
+  return door;
+}
+
+// A binding over the C door: it compiles each sample once to a program
+// in the scratch folder. compile(source, program, n) builds one.
+function native({ folder, tools, versions, compile }) {
+  return {
+    folder,
+    manifest: 'libraries/c/Cargo.toml',
+    build() {
+      for (const tool of [...tools, 'cargo']) if (!has(tool)) return { missing: tool };
+      const n = cDoor();
+      const programs = new Map();
+      const program = (rel) => {
+        if (programs.has(rel)) return programs.get(rel);
+        const dir = path.join(tmp, 'programs', rel);
+        fs.mkdirSync(dir, { recursive: true });
+        const bin = path.join(dir, 'sample');
+        const [cmd, args] = compile(path.join(examples, rel), bin, n, dir);
+        const done = run(cmd, args, { cwd: dir });
+        if (done.status !== 0) throw new Error(`${rel} did not compile\n${done.stdout}${done.stderr}`);
+        programs.set(rel, bin);
+        return bin;
+      };
+      return {
+        toolchain: [...versions(), firstLine('rustc', ['--version'])],
+        prepare: program,
+        command: (file, rel) => [program(rel), []],
+        env: {},
+      };
+    },
+  };
+}
+const linkDoor = (n) => [`-L${n}/lib`, '-lthinkthen', `-Wl,-rpath,${n}/lib`];
+const source = (folder) => path.join(repo, 'libraries', folder);
 
 // Each binding: how to build it once, how to run one sample, and what it
 // builds on. A build returns null when a tool is missing.
@@ -114,10 +161,52 @@ const BINDINGS = {
       };
     },
   },
+  cpp: native({
+    folder: 'libraries/cpp',
+    tools: ['c++'],
+    versions: () => [firstLine('c++', ['--version'])],
+    compile(file, bin, n, dir) {
+      const inc = path.join(dir, 'include', 'thinkthen');
+      fs.mkdirSync(inc, { recursive: true });
+      for (const h of ['door.hpp', 'json.hpp']) fs.copyFileSync(path.join(source('cpp'), 'include', 'thinkthen', h), path.join(inc, h));
+      fs.copyFileSync(path.join(n, 'include', 'thinkthen.h'), path.join(inc, 'thinkthen.h'));
+      return ['c++', ['-std=c++17', '-Wall', '-Wextra', '-Werror', '-I', path.join(dir, 'include'), file, '-o', bin, `-L${n}/lib`, '-l:libthinkthen.so.0', `-Wl,-rpath,${n}/lib`]];
+    },
+  }),
+  'objective-c': native({
+    folder: 'libraries/objective-c',
+    tools: ['gcc'],
+    versions: () => [firstLine('gcc', ['--version'])],
+    compile(file, bin, n) {
+      const src = path.join(source('objective-c'), 'Sources');
+      return ['gcc', ['-std=gnu11', '-x', 'objective-c', `-I${n}/include`, `-I${src}`, path.join(src, 'ThinkThen.m'), path.join(src, 'TTJSON.c'), file, '-o', bin, ...linkDoor(n), '-lobjc', '-pthread', '-lm']];
+    },
+  }),
+  cobol: native({
+    folder: 'libraries/cobol',
+    tools: ['cobc'],
+    versions: () => [firstLine('cobc', ['--version'])],
+    compile(file, bin, n) {
+      const src = source('cobol');
+      return ['cobc', ['-x', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call', '-I', path.join(src, 'copybooks'),
+        '-A', `-include ${n}/include/thinkthen.h -Wno-incompatible-pointer-types -Wno-implicit-function-declaration`,
+        '-o', bin, file, path.join(src, 'src', 'tt_decide.cob'), path.join(src, 'src', 'tt_error.cob'),
+        '-L', `${n}/lib`, '-lthinkthen', '-Q', `-Wl,-rpath,${n}/lib`]];
+    },
+  }),
+  ada: native({
+    folder: 'libraries/ada',
+    tools: ['gnatmake'],
+    versions: () => [firstLine('gnatmake', ['--version'])],
+    compile(file, bin, n, dir) {
+      // GNAT names a unit after its file, so the sample compiles where it is.
+      return ['gnatmake', ['-q', '-gnat2022', '-gnata', `-I${path.join(source('ada'), 'src')}`, file, '-D', dir, '-o', bin, '-largs', ...linkDoor(n)]];
+    },
+  }),
 };
 
 // Which binding runs each page's samples.
-const PAGE_BINDING = { python: 'python', pandas: 'python', r: 'r' };
+const PAGE_BINDING = { python: 'python', pandas: 'python', r: 'r', cpp: 'cpp', 'objective-c': 'objective-c', cobol: 'cobol', ada: 'ada' };
 
 const list = readReplayList(examples).filter((rel) => !only.length || only.some((o) => rel.includes(o)));
 const proofPath = path.join(examples, PROOF_FILE);
@@ -140,7 +229,7 @@ function attempt(rel, binding, answers, keep) {
   else fs.mkdirSync(cwd);
   fs.copyFileSync(path.join(examples, rel), path.join(cwd, path.basename(rel)));
   fs.writeFileSync(path.join(cache, 'thinkthen.jsonl'), [...states, ...answers].map((l) => l.text).join('\n') + '\n');
-  const [cmd, args] = binding.command(path.basename(rel));
+  const [cmd, args] = binding.command(path.basename(rel), rel);
   const env = {
     PATH: process.env.PATH, LC_ALL: 'C.UTF-8', HOME: home,
     XDG_CACHE_HOME: path.join(work, 'xdg-cache'), XDG_CONFIG_HOME: path.join(work, 'xdg-config'),
@@ -167,6 +256,12 @@ for (const rel of list) {
   if (binding.missing) { notRun.push(`${rel}: not run, no ${binding.missing}`); continue; }
   if (binding.error) { failed.push(`${rel}: the ${name} binding did not build\n${binding.error}`); continue; }
 
+  try {
+    binding.prepare?.(rel);
+  } catch (error) {
+    failed.push(`${rel}: ${error.message}`);
+    continue;
+  }
   const whole = attempt(rel, binding, fixture.filter((l) => l.key));
   if (!whole.ok) { failed.push(`${rel}: failed against the whole recording\n${whole.output}`); continue; }
 

@@ -68,6 +68,17 @@ const PACKAGE = {
   r: () => read('libraries/r/thinkthen/DESCRIPTION').match(/^Package:\s*(\S+)/m)[1],
   rust: () => read('crates/thinkthen/Cargo.toml').match(/^name = "(.+)"/m)[1],
 };
+// Each release archive an install line names is one release-pack makes.
+const pack = read('sdlc/scripts/release-pack');
+for (const surface of SURFACES) {
+  for (const [line] of surface.install) {
+    const archive = /^thinkthen-([a-z-]+?)-VERSION-TARGET\.tar\.gz$/.exec(line);
+    if (!archive) continue;
+    const made = archive[1] === 'c' ? pack.includes('pack "thinkthen-c-$V-$TARGET.tar.gz"') : pack.includes(`part_source_wrapper ${archive[1]}`);
+    if (!made) problems.push(`/install/${surface.slug}/: release-pack makes no archive named ${line}.`);
+  }
+}
+
 for (const surface of SURFACES) {
   const name = PACKAGE[surface.slug];
   if (!name) continue;

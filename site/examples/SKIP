@@ -5,6 +5,10 @@
 **/*.R        Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.rs       Host library sample; check against the Rust crate.
 **/*.c        Native sample; compile against the current C header.
+**/*.cpp      Native sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.m        Native sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.cob      Native sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.adb      Native sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.sql      SQL sample; check against the matching installed extension.
 **/*.sql.out  Saved output from a checked database sample.
 REPLAY        The samples smoke-bindings.mjs replays.
