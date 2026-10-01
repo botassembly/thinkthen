@@ -1188,6 +1188,76 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/python/functional/judge.py": {
+    "page": "/install/python/",
+    "sample": "229251e49f650d21dd3c31a660ccf65d1ebb483073dda24ac5f55a04ffbd1cc7",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/python/functional/stream.py": {
+    "page": "/install/python/",
+    "sample": "6038330bc3c248deebac7126fa0ef3682110e7404b90b686515ef7fce23eb1ff",
+    "output": null,
+    "files": {},
+    "answers": {
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/python/functional/tally.py": {
+    "page": "/install/python/",
+    "sample": "3b63711d2df0b40c411fafd76f7f00565082e36b6add7a1d272aa1485afd90b1",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/python"
+      ],
+      "tree": "2b8de1e3fc7b9a476b2f2da700021e2c2c9cc0a5e02ee5b593bfc3630c3bbe0f"
+    },
+    "toolchain": [
+      "Python 3.12.3, pandas 3.0.6, Polars 1.44.2",
+      "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/r/backends.R backend=liquid": {
     "page": "/install/r/",
     "sample": "469affffdb32bf6533ccb81695b9b87dee47299a4ac6957eaefdeab0606535cd",
@@ -1279,6 +1349,28 @@
   "install/r/first-call.R": {
     "page": "/install/r/",
     "sample": "2acab7db7b1497385f4c62684a4a7733af10af9b9b7a1a1339d2d06a56144133",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "crates/thinkthen",
+        "libraries/r",
+        "libraries/r/thinkthen/src/rust"
+      ],
+      "tree": "471b2136f94fc94559cf4127c198a04535f97f399c199c839823f3b9fb940fd4"
+    },
+    "toolchain": [
+      "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/r/functional/judge.R": {
+    "page": "/install/r/",
+    "sample": "4a1d5655bd2788d2d2a15a6cc2b9c07de3a3f146187caf986180c0adc7303b56",
     "output": null,
     "files": {},
     "answers": {

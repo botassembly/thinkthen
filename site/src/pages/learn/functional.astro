@@ -1,0 +1,48 @@
+---
+// Goal: show that a ThinkThen question works as a function over a list,
+// a column or a stream, and that the whole list goes to one call.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { FUNCTIONAL_PIPE_SEE } from '../../data/catalog.mjs';
+import { installSample, run } from '../../data/samples.mjs';
+import { REPO } from '../../data/repo.mjs';
+
+const judge = installSample('python', 'functional/judge');
+const stream = installSample('python', 'functional/stream');
+const tally = installSample('python', 'functional/tally');
+const r = installSample('r', 'functional/judge');
+const pipe = { ...run('functions/filter', '1-lines'), see: FUNCTIONAL_PIPE_SEE };
+const readme = (folder) => `${REPO}/blob/main/libraries/${folder}/README.md`;
+---
+<Base title="Functional patterns" description="Bind a ThinkThen question once, then apply it to a list, a column or a stream. Hand over the whole list, not one call per item.">
+  <h1>Functional patterns</h1>
+  <p class="lede">A ThinkThen question works like a function. Bind the question once. Then apply it to text, a list, a column or a stream.</p>
+
+  <h2>A judge is a question with no input</h2>
+  <p>Call <code>tt.decide</code> with a question and no text. It returns a judge. A judge is a plain Python callable, so <code>map</code>, <code>functools.partial</code> and <code>toolz.pipe</code> take it like any function.</p>
+  <p>Hand the judge the whole list. ThinkThen packs the list into one request. One call per review sends one request per review. <code>tt.plan</code> counts the requests before anything is sent.</p>
+  <Code code={judge.code} file={judge.file} label="Copy the judge sample" />
+
+  <h2>A stream stops when you stop</h2>
+  <p>Give a judge a generator, and it returns a lazy stream. The stream reads ahead a little and packs what it read. When the reader stops, ThinkThen stops sending. Here the reader takes the first complaint and closes the stream.</p>
+  <Code code={stream.code} file={stream.file} label="Copy the stream sample" />
+  <p>A slow source can leave a request half full while it waits. Build the judge with <code>batch=1</code> for a live source.</p>
+
+  <h2>Count every call</h2>
+  <p>A judge built with <code>tally=</code> adds the facts of each call it makes to the tally. This judge read four reviews, then two.</p>
+  <Code code={tally.code} file={tally.file} label="Copy the tally sample" />
+
+  <h2>R</h2>
+  <p><code>tt_decide</code> with no input returns a function. Apply it inside <code>mutate</code>. Each group sends one packed call.</p>
+  <Code code={r.code} file={r.file} label="Copy the R sample" />
+
+  <h2>The shell</h2>
+  <p>The pipe is the same idea. <code>filter</code> reads a stream of lines and keeps the ones whose answer is yes.</p>
+  <Terminal run={pipe} caption={pipe.see} />
+
+  <h2>More</h2>
+  <p>The <a href={readme('python')}>Python README</a> covers judges over Polars and pandas columns, deadlines and cancel tokens. The <a href={readme('r')}>R README</a> covers dbplyr. The <a href={readme('polars')}>Rust Polars README</a> covers lazy expressions. <a href="/learn/caching/">Caching and replay</a> shows why a second run sends nothing.</p>
+
+  <p class="pagelinks"><a href="/install/python/">Python</a> · <a href="/install/r/">R</a> · <a href="/functions/filter/">filter</a></p>
+</Base>

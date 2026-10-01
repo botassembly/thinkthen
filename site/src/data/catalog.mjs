@@ -863,6 +863,16 @@ export const TUTORIAL_SEE = {
   '1-band': "\"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8. decide prints null and exits 3.",
 };
 
+// The captions for the Caching and replay page's scripts.
+export const CACHING_SEE = {
+  '1-replay': 'The answers come from the folder. Nothing is sent, and no key is set.',
+  '2-batch-one': 'One review a request reads the same saved answers and keeps the same two reviews.',
+  '3-unused': 'The folder holds one answer the four reviews never asked for.',
+};
+
+// The Functional patterns page's caption for functions/filter/1-lines.
+export const FUNCTIONAL_PIPE_SEE = 'filter keeps the lines whose answer is yes, in order.';
+
 // The tutorial's caption for functions/decide/1-lines in its stream step.
 export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 3.";
 

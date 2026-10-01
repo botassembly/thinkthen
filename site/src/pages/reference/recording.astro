@@ -22,7 +22,7 @@ const MODES = [
 ---
 <SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'How ThinkThen saves and reuses answers, what makes two questions the same, what --plan and --facts report, and why batching can change an answer.' }} name="Reference">
   <h1>Recording and the answer cache</h1>
-  <p class="lede">ThinkThen saves every good answer, one per question. Ask the same question again and it reads the saved answer instead of sending a request.</p>
+  <p class="lede">ThinkThen saves every good answer, one per question. Ask the same question again and it reads the saved answer instead of sending a request. <a href="/learn/caching/">Caching and replay</a> shows it at work.</p>
 
   <h2 id="plan">--plan</h2>
   <p><code>--plan</code> reads the whole input and prints the first request it would send, then one summary line. It sends nothing and needs no key. The <a href="/install/backends/">Backends page</a> shows the request.</p>

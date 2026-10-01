@@ -1,5 +1,5 @@
 ---
-// Goal: point a new reader to the tutorial and to Beatles Bench.
+// Goal: point a new reader to the tutorial, Beatles Bench and the concept pages.
 import Base from '../../layouts/Base.astro';
 import { PAGES } from '../../data/beatles.mjs';
 
@@ -13,6 +13,8 @@ const talk = PAGES.slice(1);
     <a class="tile" href="/learn/tutorial/"><b>Tutorial</b><span>From the install line to a pipeline that sorts a stream of messages.</span></a>
     <a class="tile" href="/learn/beatles-bench/"><b>Beatles Bench</b><span>The talk as {talk.length} short pages. Each shows one slide and one idea.</span></a>
     <a class="tile" href="/trust/"><b>Test it before you trust it</b><span>Outcomes, thresholds, saved answers, and checking a question against your own records.</span></a>
+    <a class="tile" href="/learn/caching/"><b>Caching and replay</b><span>Ask a question once. Read its saved answer in every later run and every test.</span></a>
+    <a class="tile" href="/learn/functional/"><b>Functional patterns</b><span>Bind a question once, then apply it to a list, a column or a stream.</span></a>
   </div>
 
   <h2>Beatles Bench</h2>
