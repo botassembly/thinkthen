@@ -266,6 +266,7 @@ Each is the agent's decision unless marked the coordinator's. Ian can overturn a
 | A checkout of a branch or a ref in place of the resolved SHA | Exit 1 naming the job |
 | Top-level permissions other than `{}` in `release.yml` | Exit 1 |
 | An unpinned `pip install maturin`, `npm install -g npm`, or `gem update --system` | Exit 1 naming the step |
+| A `registries` job that skips `registry-pack`, rehearsal signing, the pub dry run or the `registry-packages` upload, or a `maven` job that uploads before release signing (ticket 0355) | Exit 1 naming the job |
 
 ### Release surfaces
 
