@@ -75,6 +75,7 @@ const PACKAGE = {
   java: () => maven(),
   kotlin: () => maven(),
   scala: () => maven(),
+  go: () => read('libraries/go/go.mod').match(/^module (\S+)/m)[1],
   csharp: () => read('libraries/csharp/Botassembly.ThinkThen.nuspec').match(/<id>(.+?)<\/id>/)[1],
 };
 // Each release archive an install line names is one release-pack makes.

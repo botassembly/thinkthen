@@ -93,6 +93,29 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/go/first-call.go": {
+    "page": "/install/go/",
+    "sample": "6a20fd9a2353c9faeb346f726d1f65ba4e1c606381cb8597ac9862772100a48a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/go"
+      ],
+      "tree": "07f28c7507e91c7a5cb202c8ff3b73e10278275555365c108557044e1bb929a5"
+    },
+    "toolchain": [
+      "go version go1.22.2 linux/amd64",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/java/FirstCall.java": {
     "page": "/install/java/",
     "sample": "9601925a01c9a9ebaf6e312f1a55eac61f47139cf492c1f8229ecfedeb1703ce",
@@ -283,6 +306,57 @@
     "toolchain": [
       "openjdk version \"21.0.12.1\" 2026-08-18",
       "Scala compiler version 3.9.0 -- Copyright 2002-2026, LAMP/EPFL",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/swift/main.swift": {
+    "page": "/install/swift/",
+    "sample": "f4dbadd4c54118bb5bf91974303bea2c9b2bb50f967fad8f704489dc035b4535",
+    "output": null,
+    "files": {
+      "install/swift/files/Package.swift": "9ddd0c9cef9e259f574604c4e09458edb221e0ca00b426f8fd24c5019fbe9535"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/swift"
+      ],
+      "tree": "d07c74097c8bc103d15ba02cb3fd4b77bd388b36759ff1488389f89f2faa3756"
+    },
+    "toolchain": [
+      "Swift version 6.4 (swift-6.4-RELEASE)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/zig/first-call.zig": {
+    "page": "/install/zig/",
+    "sample": "4b4681f2fad6075cab7846e6042504683f8ce90c1222b1565d0fb631347f00fe",
+    "output": null,
+    "files": {
+      "install/zig/files/build.zig": "6477d431d6b1806670fcff3c82e8c7f4b12c792c922da93e5ba2254a32b1b274",
+      "install/zig/files/build.zig.zon": "0d269e7235393c54474b891ae13e2096938ddf5a52239249326edeb57fd9a9c1"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/zig"
+      ],
+      "tree": "92c39da5312611668eff6ad8e0cba5c6a7c9a123a764915586af7429818e841f"
+    },
+    "toolchain": [
+      "Zig 0.15.2",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   }
