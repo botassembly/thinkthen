@@ -5,9 +5,7 @@
 )]
 
 use std::sync::Arc;
-use thinkthen::{
-    Answer, CancelToken, Engine, ErrorKind, LoadedQuestion, QuestionSet, RecoverableDetails,
-};
+use thinkthen::{CancelToken, Engine, ErrorKind, LoadedQuestion, QuestionSet, RecoverableDetails};
 
 use super::{
     BridgeSettings, BridgeStop, BridgeText, CallScope, Reply, asked, batch, copied_texts, probe,
@@ -264,45 +262,6 @@ fn details(
     Ok(bytes)
 }
 
-fn decisions(
-    engine: &Engine,
-    question: &LoadedQuestion,
-    texts: Vec<String>,
-    kind: i32,
-    scope: CallScope<'_>,
-) -> Result<Vec<u8>, String> {
-    let answers: Vec<(Answer, f64)> = engine
-        .decide_many_with(
-            question,
-            texts,
-            engines::options_for(
-                scope.due,
-                scope.token,
-                scope.total,
-                scope.batch,
-                scope.context,
-            )?,
-        )
-        .map(|row| row.map(|row| (*row.value(), row.probability())))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| engines::call_error(error, scope.total).text)?;
-    if kind == 1 {
-        Ok(answers
-            .into_iter()
-            .flat_map(|(_, value)| value.to_ne_bytes())
-            .collect())
-    } else {
-        Ok(answers
-            .into_iter()
-            .map(|(answer, _)| match answer {
-                Answer::No => 0,
-                Answer::Yes => 1,
-                Answer::Unsure => 2,
-            })
-            .collect())
-    }
-}
-
 enum ScalarAsk {
     Question(LoadedQuestion),
     Set(QuestionSet),
@@ -318,12 +277,11 @@ fn scalar_bytes(
     match (kind, ask) {
         (7, ScalarAsk::Set(set)) => annotate(engine, &set, texts, scope),
         (2, ScalarAsk::Question(question)) => details(engine, &question, texts, scope),
-        (0 | 1, ScalarAsk::Question(question)) => decisions(engine, &question, texts, kind, scope),
         _ => Err("thinkthen defect: the bridge got an unknown scalar kind".to_owned()),
     }
 }
 
-/// Evaluate one grouped decision, probability, details, or annotation call.
+/// Evaluate one grouped details or annotation call.
 ///
 /// # Safety
 /// The question and every entry in `texts` stay readable through this call.

@@ -28,6 +28,10 @@ fn folder(name: &str) -> io::Result<PathBuf> {
 /// because a check that skips rots. Standard output and standard error are
 /// redirected inside the terminal, so the terminal's own echo of the typed
 /// evidence never reaches either file.
+///
+/// The evidence ends with a typed Ctrl-D, as a person ends it, and the pipe
+/// stays open until `script` exits. macOS `script` sends its own Ctrl-D ahead
+/// of input still queued when its standard input closes (ticket 0379).
 fn through_a_terminal(
     arguments: &[&str],
     evidence: &str,
@@ -63,9 +67,10 @@ fn through_a_terminal(
             .stdin
             .take()
             .ok_or_else(|| io::Error::other("no pipe into the terminal"))?;
-        let _typed = typed.write_all(evidence.as_bytes());
+        let _typed = typed.write_all(format!("{evidence}\u{4}").as_bytes());
+        let ran = finish(child, "the terminal run")?;
         drop(typed);
-        if finish(child, "the terminal run")?.status.success() && out.exists() && err.exists() {
+        if ran.status.success() && out.exists() && err.exists() {
             return Ok((fs::read_to_string(&out)?, fs::read_to_string(&err)?));
         }
     }

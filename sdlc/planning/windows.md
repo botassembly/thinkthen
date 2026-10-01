@@ -1,12 +1,13 @@
 # Windows
 
-Status: stage 0 landed through ticket 0373. Stage 1 waits for 0.2 unless Ian pulls it into 0.1. Ian can overturn every stage, verdict and recommendation on this page.
+Status: stage 0 landed through ticket 0373. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Stage 1 has ready tickets 0380 to 0385, which wait for the `release/0.1` cut. Ian can overturn every stage, verdict and recommendation on this page.
 
 This page is the one home of the Windows plan. It holds the stages, the surfaces that stay Unix-only, the verdict for each surface, the decision record, the stage 1 difficulty report and the findings stage 0 leaves open.
 
 ## Decision record
 
 - 2026-10-01, Ian: start Windows stage 0 now. Stage 0 promises users nothing new and must not change Linux or macOS behavior. Stage 1 is assigned to 0.2. Ian may pull stage 1 into 0.1, so stage 0 also measures how hard stage 1 is. Ian can overturn this ruling.
+- 2026-10-01, Ian: keep all Windows work in 0.2. Stage 1 is not pulled into 0.1. This follows the stage 1 report's recommendation below. Ian can overturn this ruling.
 - [ADR 0116](adr/0116-release-branches-cut-at-the-release-candidate.md) item 6: if Ian pulls stage 1 into 0.1, it lands on main before the `release/0.1` cut, and the cut moves later.
 - ADR 0017 and ticket 0062 chose `%APPDATA%\thinkthen\config.json` for the configuration file and `%LOCALAPPDATA%\thinkthen\cache` for the answer cache. Ticket 0360 chose `%LOCALAPPDATA%\thinkthen\usage` for the usage totals. Stage 0 implements these folders.
 - Coordinator default, which Ian can overturn: the target is `x86_64-pc-windows-msvc`. The GNU target and ARM64 wait for stage 3.
@@ -14,7 +15,7 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 ## Stages
 
 0. **Groundwork (ticket 0373, milestone 0.2, landed).** The root workspace and `libraries/c` compile, pass Clippy and pass their tests on `x86_64-pc-windows-msvc`. The hand-started `windows` workflow proves it on `windows-2025`. Nothing ships. No Linux or macOS behavior changes.
-1. **First shipped surfaces (milestone 0.2).** The command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM binding ship for Windows x86-64. The release workflow builds, tests and publishes them. The specification and the README name the Windows folders. Stage 1 also closes findings W1 to W7: the Ctrl-C exit, the Windows privacy checks, the port of the guarded XDG cases and the rest.
+1. **First shipped surfaces (milestone 0.2, tickets 0380 to 0385).** The command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM binding ship for Windows x86-64. The release workflow builds, tests and publishes them. The specification and the README name the Windows folders. Stage 1 also closes findings W1 to W7: the Ctrl-C exit, the Windows privacy checks, the port of the guarded XDG cases and the rest.
 2. **The other bindings and the SQL extensions.** C++, Go, Ruby, R, PHP, Swift, Dart, Zig, the Polars door, and the SQLite and DuckDB extensions. Each loads the stage 1 C DLL or builds the engine as stage 1 does.
 3. **Hardening.** Windows ARM64, finding W8, and the PostgreSQL question.
 
@@ -73,14 +74,14 @@ Sizes count files, changed lines and tickets. They come from the stage 0 build a
 
 ### Shared release work
 
-Every stage 1 surface shares one release change. `release.yml` builds four targets, and the number four is written into `draft`, `verify-family`, the RubyGems platform-gem counts, the PyPI job's wheel count, `npm-assemble`'s addon count and the Homebrew tap. `sdlc/scripts/release-workflow` lists the four targets in its `collect` step's `expected_targets`. A fifth target touches each of them. The command line ticket carries this change, and the others build on it.
+Every stage 1 surface shares one release change. `release.yml` builds four targets, and the number four is written into `draft`, `verify-family`, the RubyGems platform-gem counts, the PyPI job's wheel count, `npm-assemble`'s addon count and the Homebrew tap. `sdlc/scripts/release-workflow` lists the four targets in its `collect` step's `expected_targets`. A fifth target touches each of them. Ticket 0380 slice A adds the Windows target where the command ships. Each other count stays at four until the ticket for its surface raises it. The Homebrew tap and the RubyGems platform gems skip Windows on purpose, and so do the `collect` checks for stage 2 and Unix-only surfaces.
 
 ### Command line
 
 - Files: `release.yml`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-pack` (471 lines of shell; it knows only `darwin` and `linux-gnu` and makes only `.tar.gz`), `release-registry.py`, `release-managed-pair.py`, a new PowerShell installer beside the 206-line `install.sh`, `README.md`, and the checks for each. The findings add `cli/interrupt.rs` (W1), the usage store and `config.rs` privacy checks (W2), and the guarded XDG cases (W6). W1 and W2 need `windows-sys`, so `policy.py` and `deny.toml` change too.
 - Lines: 700 to 1,200.
 - Specification: `specification/recording.md` (the cache, usage and configuration folders), `specification/settings.md` (the configuration home and the Unix-only warning), `specification/question-file.md` (the `XDG_CONFIG_HOME` example). The site pages that name platforms belong to marketing and get a message in `sdlc/inbox`.
-- Release workflow: a fifth matrix target on `windows-2025`, a `.zip` pack, the count of four in each job above, and the installer upload.
+- Release workflow: a fifth matrix target on `windows-2025`, a `.zip` pack, the target lists where the command ships, the Windows skips named above, and the installer upload.
 - New tests: the W6 helper and the ported XDG cases; a Windows Ctrl-C end-to-end case (W1); the Windows privacy refusals (W2); a release-pack case for the `.zip`; an installer smoke on the runner.
 - Linux and macOS risk: **medium**. The release scripts and the count of four are shared, so a mistake there breaks the Unix release.
 - Unknowns: code signing for the `.exe` (SmartScreen warns on unsigned downloads), the installer's home (a `.ps1` script, winget or Scoop), and whether `managed-build` must cover Windows.
@@ -113,7 +114,7 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 - Files: `build-wheel.sh` (it expects a `.so`), the package's loader and classifiers, the tests that use `fork`, `SIGINT` and `resource`, `release.yml`'s wheel count.
 - Lines: 150 to 350.
 - Specification: no page changes. `libraries/python/README.md` names the Windows wheel.
-- Release workflow: a `win_amd64` wheel; the PyPI job's count rises to five.
+- Release workflow: a `win_amd64` wheel; `verify-family`'s wheel count and the PyPI job's count rise to five.
 - New tests: wheel install and smoke on the runner; `cfg`-style skips for the Unix-only cases.
 - Linux and macOS risk: **low to medium**. The wheel script and the count are shared.
 - Unknowns: whether `cibuildwheel` or the present script builds the Windows wheel more simply.
@@ -132,25 +133,33 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 
 ### C\#
 
-- Files: `ThinkThen.cs` (line 45 imports `libthinkthen.so.0` by name), a native library resolver, the NuGet `runtimes/` layout, the tests that use `bwrap`, `flock` and `killpg`.
+- Files: `ThinkThen.cs` (line 45 imports `libthinkthen.so.0` by name), a native library resolver, the tests that use `bwrap`, `flock` and `killpg`.
 - Lines: 150 to 400.
 - Specification: no page changes. `libraries/csharp/README.md` names Windows.
-- Release workflow: a `runtimes/win-x64/native/thinkthen.dll` entry in the package.
+- Release workflow: none. The package ships no native library on any platform; the user installs the C DLL archive from ticket 0381, as `libraries/csharp/README.md` says for Unix.
 - New tests: a load and smoke case on the runner; skips for the Unix-only cases.
 - Linux and macOS risk: **low to medium**. A resolver replaces the fixed name, so it touches the Linux load path.
-- Unknowns: whether `NativeLibrary.SetDllImportResolver` or the plain `runtimes/` probing is enough on every .NET version the binding supports.
+- Unknowns: whether `NativeLibrary.SetDllImportResolver` finds `thinkthen.dll` the same way on every .NET version the binding supports.
 - Tickets: 1.
 
 ### JVM
 
-- Files: `check.sh` (it builds a `:` classpath and expects a `.so`), the jar's native resource layout, the tests that use `bwrap` and `pthread_self`. `Door.java` loads the library from `-Dthinkthen.library`, so it needs no change.
+- Files: `check.sh` (it builds a `:` classpath and expects a `.so`), the tests that use `bwrap` and `pthread_self`. `Door.java` loads the library from `-Dthinkthen.library`, so it needs no change.
 - Lines: 50 to 200.
 - Specification: no page changes. `libraries/jvm/README.md` names Windows.
-- Release workflow: the DLL in the jar's native resources.
+- Release workflow: none. The jars neither fetch nor bundle the library, as `libraries/jvm/README.md` says; the user points `-Dthinkthen.library` at ticket 0381's DLL.
 - New tests: a load and smoke case on the runner; skips for the Unix-only cases.
 - Linux and macOS risk: **low**. The loader is already name-agnostic.
 - Unknowns: none of note.
 - Tickets: 1.
+
+### Main unknowns
+
+Three unknowns carry the most risk in stage 1. Each ticket below names its own.
+
+- **Signing the `.exe`.** SmartScreen warns on an unsigned download. A signing certificate costs money, so it needs Ian's approval. Ticket 0380 brings Ian the options and their costs before slice A, which ships the `.exe`, lands.
+- **Installer packaging.** The home of the installer is open: a `.ps1` script beside `install.sh`, winget or Scoop. Ticket 0380 decides.
+- **Hiding Rust internal symbols in a Windows static library.** `localize.sh` hides the Rust standard library's symbols with `objcopy` on ELF and Mach-O. MSVC has no twin for a COFF static library. Ticket 0381 decides, and may ship the DLL alone first.
 
 ### Totals and recommendation
 
@@ -168,3 +177,20 @@ Every stage 1 surface shares one release change. `release.yml` builds four targe
 Recommendation: **keep stage 1 in 0.2.** Stage 1 touches the release workflow that 0.1 has not yet passed a rehearsal on, and the count of four runs through every publishing job. Pulling it into 0.1 moves the cut later, as ADR 0116 item 6 says, and adds risk to the release that matters most.
 
 The option if Ian wants Windows in 0.1: pull only the command line and the Rust crate (3 to 4 tickets, 730 to 1,280 lines). They give Windows users the command and `cargo add thinkthen` without the binding packages, and they keep the release change to the pack script, the installer and the target count. The bindings follow in 0.2.
+
+Ian's ruling, 2026-10-01: keep all Windows work in 0.2. The smaller option is not taken.
+
+## Stage 1 tickets
+
+Each ticket is ready, carries milestone 0.2, and waits for the `release/0.1` cut. Tickets 0381 to 0385 wait for ticket 0380 slice A, because it adds the fifth release target that the others build on. Tickets 0384 and 0385 also wait for 0381 slice A, which ships the DLL.
+
+| Ticket | Surface | Slices | Lines | Findings |
+| --- | --- | --- | --- | --- |
+| [0380](../tickets/0380-windows-command-line-and-rust-crate.md) | Command line, Rust crate, shared release work | 3 to 4 | 730 to 1,280 | W1 to W7 |
+| [0381](../tickets/0381-windows-c-dll.md) | C DLL | 2 | 400 to 900 | none |
+| [0382](../tickets/0382-windows-python-wheel.md) | Python wheel | 1 to 2 | 150 to 350 | none |
+| [0383](../tickets/0383-windows-node-addon.md) | Node addon | 1 | 100 to 250 | none |
+| [0384](../tickets/0384-windows-csharp.md) | C# | 1 | 150 to 400 | none |
+| [0385](../tickets/0385-windows-jvm.md) | JVM | 1 | 50 to 200 | none |
+
+W8 stays with stage 3.

@@ -242,6 +242,15 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .prose p, .prose ul, .prose ol
 /* A long signature in a note wraps, so the page never scrolls sideways. */
 .note code { white-space: normal; overflow-wrap: anywhere; }
 
+/* A post's video sits under its title at 16:9 and the full text width. A
+   draft with no video shows a plain box of the same shape. */
+.video { margin: 0 0 1.4rem; }
+.video iframe, .video-slot { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
+.video-slot {
+  display: flex; align-items: center; justify-content: center; margin: 0 0 1.4rem;
+  border: 1px dashed var(--line); background: var(--card); color: var(--muted); font-size: .92rem;
+}
+
 table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .93rem; }
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: .85rem; }

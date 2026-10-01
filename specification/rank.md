@@ -91,6 +91,10 @@ jq -c --arg q "$QUERY" '{query: $q, passage: .}' passages.jsonl |
 
 The question stays the same for every record, so one run is one measurement.
 
+## SQL
+
+DuckDB, SQLite and PostgreSQL each have `thinkthen_rank(question, keyed_json[, settings])`. It takes one keyed object of record keys to text, the same input as `thinkthen_decide_many`, and returns one row per record, best first, with columns `key`, `rank` and `probability`. `rank` runs 1, 2, 3 with no gaps. `probability` is the yes probability that orders the rows. The question is literal text, as a plain `decide` question is here, and is never read as a file or JSON. Settings take `model`, `batch`, `context` and `deadline_ms`, and refuse `threshold` and the other question fields before any send. Exact ties keep the order in which the extension hands records to the engine: member order on DuckDB and SQLite, and bytewise key order on PostgreSQL, whose extension reads the object into a sorted map. Each database's README has the details. The per-row `thinkthen_probability` is removed on all three (ticket 0378).
+
 ## Cautions
 
 The method is fixed and printed in the help. A plain or saved `decide` question sorts by the probability of yes. A saved `score` question sorts by its weighted position on the saved levels. Both break exact ties by input order. The tool never compares two records in one question, and it never runs a tournament.

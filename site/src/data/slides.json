@@ -1,9 +1,10 @@
 {
-  "deck": "4595c70095c8535754c602718438a136f0dbc47a",
+  "deck": "0ecbb1c7278c2ca3afc5c7b06507fa91e3431c6a",
   "bench": "af538978aea39c738cc3c4d2a15aaf43c48b3a8a",
   "slides": {
     "beatles-bench": {
       "slide": "title",
+      "deck": "4595c70095c8535754c602718438a136f0dbc47a",
       "sha256": "031e8bbcc3e614f33bc0a9d1e0e2e3a0d640e0bfe46aeb20aa758b2f3982f5fb",
       "card": "268fe760ed1155a44f10dcc7f05b98006df2cbf88634127f0808a44af664248c"
     },
@@ -138,6 +139,11 @@
       "height": 720,
       "sha256": "bbbe99f4b4ca596db38aeafbd169995917ae851376490dd517e7f8cceb4b01ed",
       "card": "8d2eb9d37fb3237a93aa92b6f70ac92c0c2fc4711620f9d30d2c7a9c83e6826d"
+    },
+    "introducing-thinkthen": {
+      "slide": "title",
+      "cardOnly": true,
+      "card": "486608cda8404544208966ee40add534887e96c1af0da4592b1400ed13733a76"
     }
   }
 }

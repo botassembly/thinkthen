@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import socket
 import sys
 
 from helper import Backend, child, environment, expect, main
@@ -13,6 +14,19 @@ from conditional_backend import ConditionalBackend
 
 BANDED = json.dumps({"decide": "Is it red?", "threshold": "0.2:0.8"})
 SCALARS = ("thinkthen_decide", "thinkthen_choose", "thinkthen_score", "thinkthen_tag", "thinkthen_details", "thinkthen_annotate")
+
+
+def test_the_proxy_starts_without_a_reverse_lookup() -> None:
+    """Ticket 0386: a macOS runner stalls about 35 s in socket.getfqdn, so the proxy never calls it."""
+    def refuse(*_args: object) -> str:
+        raise AssertionError("the proxy looked up its own name")
+
+    lookup, socket.getfqdn = socket.getfqdn, refuse
+    try:
+        with ConditionalBackend("http://127.0.0.1:9/v1") as proxy:
+            expect(proxy.base, f"http://127.0.0.1:{proxy.server.server_port}/v1", "the proxy's loopback base")
+    finally:
+        socket.getfqdn = lookup
 
 
 def test_find_preserves_duplicate_positions_and_strict_ties() -> None:
@@ -315,6 +329,7 @@ db = connect()
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
 db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, "Ada", "person"), (2, "Acme", "organization")])
 calls = ["SELECT thinkthen_configure('{}')", "SELECT count(*) FROM thinkthen_decide_many('Is it red?', json_object('7','a red door'))",
+         "SELECT count(*) FROM thinkthen_rank('Is it red?', json_object('7','a red door'))",
          "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
          "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
 calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_details", "thinkthen_warm") for deadline in ("", ", 0")]
@@ -337,7 +352,7 @@ def test_no_message_carries_the_key_or_the_address_credentials() -> None:
     said = json.dumps([busy, refused])
     expect([secret for secret in (SECRET_KEY, USER, PASSWORD) if secret in said], [], f"the sentinels in {said}")
     expect(sum("thinkthen backend: the backend answered with status 503 (retryable: yes)" in str(one)
-               for one in busy["said"]), 9, f"the busy errors in {busy}")
+               for one in busy["said"]), 10, f"the busy errors in {busy}")
     expect("thinkthen usage: THINKTHEN_BASE_URL: a base address carries no user information (retryable: no)" in refused["said"], True, "the refused address")
 
 

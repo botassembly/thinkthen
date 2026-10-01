@@ -5,6 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
+use crate::child::Folder;
 use crate::harness::{Canned, Listener, spawn};
 
 const ANSWERED: &str = concat!(
@@ -21,6 +22,13 @@ fn folder(name: &str) -> PathBuf {
 
 fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
     spawn(arguments, environment, EVIDENCE.as_bytes())
+}
+
+/// Write `text` as the configuration file of a case's root, and return its path.
+#[allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
+fn configure(root: &Path, text: &str) -> PathBuf {
+    Folder::configure(root, text).expect("configuration");
+    Folder::Config.under(root).join("config.json")
 }
 
 fn command(words: &[&str]) -> Vec<String> {
@@ -40,6 +48,9 @@ fn families(set: &Path) -> [Vec<String>; 8] {
     ]
 }
 
+// macOS reads the configuration file from `HOME` alone, so no configuration
+// exists there without a home.
+#[cfg(target_os = "linux")]
 #[test]
 fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
     let root = folder("configuration");
@@ -68,20 +79,20 @@ fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
 #[test]
 fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
     let root = folder("dry-run-disabled-refresh");
-    let config = root.join("thinkthen/config.json");
-    fs::create_dir_all(config.parent().expect("configuration directory"))
-        .expect("configuration directory");
-    fs::write(&config, r#"{"schema":"thinkthen.config/1","cache":false}"#).expect("configuration");
+    let config = configure(&root, r#"{"schema":"thinkthen.config/1","cache":false}"#);
     let listener = Listener::answering(|_| Canned::ok(ANSWERED)).expect("listener");
+    let (moved_config, moved_cache) = (
+        Folder::Config.variable(&root),
+        Folder::Cache.variable(&root),
+    );
+    // Linux runs without a home. macOS reads every folder from `HOME`, so the
+    // folder variables come after the empty one and win there.
     let output = run(
         &["decide", "asks for a refund", "--refresh-cache", "--plan"],
         &[
-            ("XDG_CONFIG_HOME", root.to_str().expect("root")),
-            (
-                "XDG_CACHE_HOME",
-                root.join("cache").to_str().expect("cache"),
-            ),
             ("HOME", ""),
+            (moved_config.0, moved_config.1.as_str()),
+            (moved_cache.0, moved_cache.1.as_str()),
             ("THINKTHEN_BASE_URL", listener.base()),
         ],
     )
@@ -97,18 +108,16 @@ fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
         fs::read(&config).expect("configuration retained"),
         br#"{"schema":"thinkthen.config/1","cache":false}"#
     );
-    assert!(!root.join("cache").exists());
+    assert!(!Folder::Cache.under(&root).exists());
 }
 
 #[test]
 fn command_and_environment_precedence_crosses_all_eight_command_families() {
     let root = folder("configuration-precedence");
-    fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");
-    fs::write(
-        root.join("thinkthen/config.json"),
+    configure(
+        &root,
         r#"{"schema":"thinkthen.config/1","url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#,
-    )
-    .expect("configuration");
+    );
     let set = root.join("questions.json");
     fs::write(
         &set,
@@ -116,8 +125,9 @@ fn command_and_environment_precedence_crosses_all_eight_command_families() {
     )
     .expect("question set");
     let families = families(&set);
+    let moved = Folder::Config.variable(&root);
     let environment = [
-        ("XDG_CONFIG_HOME", root.to_str().expect("root")),
+        (moved.0, moved.1.as_str()),
         ("THINKTHEN_BASE_URL", "http://127.0.0.1:2/v1"),
     ];
     for arguments in families {
@@ -179,17 +189,12 @@ fn command_and_environment_precedence_crosses_all_eight_command_families() {
 #[test]
 fn a_named_cache_enables_storage_over_disabled_configuration() {
     let root = folder("named-cache-precedence");
-    let config = root.join("config");
-    fs::create_dir_all(config.join("thinkthen")).expect("configuration directory");
-    fs::write(
-        config.join("thinkthen/config.json"),
-        r#"{"schema":"thinkthen.config/1","cache":false}"#,
-    )
-    .expect("configuration");
+    configure(&root, r#"{"schema":"thinkthen.config/1","cache":false}"#);
+    let moved = Folder::Config.variable(&root);
     let cache = root.join("named");
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
     let environment = [
-        ("XDG_CONFIG_HOME", config.to_str().expect("config")),
+        (moved.0, moved.1.as_str()),
         ("THINKTHEN_CACHE", cache.to_str().expect("cache")),
         ("THINKTHEN_BASE_URL", listener.base()),
         ("THINKTHEN_API_KEY", "key"),
@@ -217,13 +222,12 @@ fn a_configuration_another_user_can_write_is_warned_about() {
     const WARNING: &str = "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go\n";
     for (mode, says) in [(0o666, WARNING), (0o602, WARNING), (0o664, ""), (0o600, "")] {
         let root = folder(&format!("configuration-mode-{mode:o}"));
-        let path = root.join("thinkthen/config.json");
-        fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");
-        fs::write(&path, r#"{"schema":"thinkthen.config/1"}"#).expect("configuration");
+        let path = configure(&root, r#"{"schema":"thinkthen.config/1"}"#);
         fs::set_permissions(&path, fs::Permissions::from_mode(mode)).expect("mode");
+        let moved = Folder::Config.variable(&root);
         let output = run(
             &["decide", "asks for a refund", "--plan"],
-            &[("XDG_CONFIG_HOME", root.to_str().expect("root"))],
+            &[(moved.0, moved.1.as_str())],
         )
         .expect("dry run");
         assert_eq!(output.status.code(), Some(0), "{mode:o}");

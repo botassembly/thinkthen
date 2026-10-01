@@ -119,7 +119,12 @@ pub(crate) fn question_result(
         For::Choose => "options",
         For::Score => "levels",
         For::Tag => "labels",
-        For::Find => return Err(call::usage("find is not a judgment question")),
+        For::Find | For::Rank => {
+            return Err(call::usage(format!(
+                "{} is not a judgment question",
+                key_for(verb)
+            )));
+        }
     };
     let list = members.map(|held| held.iter().flatten().map(str::to_owned).collect());
     let asked = Given::read_question(argument, key, call::file_directory().as_deref())
@@ -132,7 +137,12 @@ pub(crate) fn question_result(
         For::Choose => QuestionKind::Choose,
         For::Score => QuestionKind::Score,
         For::Tag => QuestionKind::Tag,
-        For::Find => return Err(call::usage("find is not a judgment question")),
+        For::Find | For::Rank => {
+            return Err(call::usage(format!(
+                "{} is not a judgment question",
+                key_for(verb)
+            )));
+        }
     };
     if kind != wanted {
         return Err(call::usage(format!(
@@ -151,6 +161,7 @@ const fn key_for(verb: For) -> &'static str {
         For::Score => "score",
         For::Tag => "tag",
         For::Find => "find",
+        For::Rank => "rank",
     }
 }
 

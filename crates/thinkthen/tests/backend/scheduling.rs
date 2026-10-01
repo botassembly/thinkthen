@@ -84,6 +84,8 @@ fn raw_child(
         std::process::id(),
         CHILDREN.fetch_add(1, Ordering::Relaxed)
     ));
+    // The default cache goes under its own root, away from the shared home.
+    let moved = crate::child::Folder::Cache.variable(&cache_home);
     let mut arguments = vec![
         "decide",
         QUESTION,
@@ -103,7 +105,7 @@ fn raw_child(
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .clear_environment()
         .home(env!("CARGO_TARGET_TMPDIR"))
-        .env("XDG_CACHE_HOME", cache_home)
+        .env(moved.0, moved.1)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args(arguments)
         .stdin(Stdio::piped())

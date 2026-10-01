@@ -360,7 +360,7 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
         ),
         (
             "thinkthen_probability",
-            "thinkthen_probability was removed; read probability from thinkthen_decide_many or thinkthen_choose_many",
+            "thinkthen_probability was removed; order records with thinkthen_rank",
         ),
     ] {
         connection.create_scalar_function(

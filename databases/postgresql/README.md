@@ -14,6 +14,7 @@ The ordinary judgment signature is `question, input[, members][, settings]`. `se
 | `thinkthen_tag(question, input[, members][, settings])` | matching labels as `text[]` |
 | `thinkthen_decide_many`, `thinkthen_choose_many` | keyed `(key, value, probability)` rows |
 | `thinkthen_score_many`, `thinkthen_tag_many` | keyed `(key, value)` rows; probability is not defined for these verbs |
+| `thinkthen_rank(question, keyed_input[, settings])` | keyed `(key, rank, probability)` rows as `text, bigint, double precision`, best first |
 | `thinkthen_plan(question, keyed_input[, settings])` | `jsonb` request-count and byte/token-band preview, with no send |
 | `thinkthen_find(question, units text[][, settings])` | selected original index, value, probability and ordered candidates as `jsonb` |
 | `thinkthen_annotate(set, input[, settings])` | each question's value as `jsonb`; settings apply batch, deadline or the engine's default model |
@@ -22,6 +23,16 @@ The ordinary judgment signature is `question, input[, members][, settings]`. `se
 | `thinkthen_usage()` | this backend's `(requests_sent, cache_answers, input_tokens, output_tokens)` |
 
 Each `_many` input is one `jsonb` object from caller keys to text. Join `d.key = CAST(s.id AS text)`; no array position is inferred. PostgreSQL `jsonb` normalizes repeated object keys before the extension sees them. A scalar judges one row per call; `_many` gives the engine the whole keyed set and packs it according to `batch`. The four keyed functions preserve SQL `NULL` on unresolved values and retain the key. Decide and choose report probability on the row; score and tag refuse a probability request. `thinkthen_plan` returns `records`, `requests`, `estimated_bytes`, an `estimated_input_tokens` lower/upper band, `upper_bound`, and `first_body_utf8`. The plan has no key requirement and no network call; `requests` is before cache answers, refusal splits and retries.
+
+`thinkthen_rank` orders one keyed `jsonb` object by the probability of yes. `rank` runs 1, 2, 3 with no gaps, and `probability` is the yes probability that orders the rows. All the records go to one engine call, packed according to `batch`. Its question is nonblank literal text, including a literal `@` or `{`. Settings take `model`, `batch`, `context` and `deadline_ms`; `threshold`, `true`, `false`, `options`, `levels`, `labels` and `none` raise `usage` before a send. Equal probabilities come back in bytewise key order, not the order written, because the extension reads the object into a sorted map. An empty object or a SQL `NULL` object returns no rows without a send, and a `NULL` question raises `usage`. Build the object with `jsonb_object_agg`, and `ORDER BY rank` again after a join:
+
+```sql
+SELECT t.id, refund.rank, refund.probability
+FROM tickets t
+JOIN thinkthen_rank('Does the writer ask for a refund?',
+                    (SELECT jsonb_object_agg(id, body) FROM tickets)) refund ON refund.key = CAST(t.id AS text)
+ORDER BY refund.rank;
+```
 
 A judgment question is plain text, JSON text starting with `{` after leading white space, or a file named with the first-byte `'@refund.json'` spelling. Bare text, including `refund.json`, is a question and never a path. A question set or recognize/relation spec remains JSON or `@file`. To ask a literal question beginning with `@` or `{`, use a JSON question or named file.
 
@@ -39,7 +50,7 @@ SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency
 FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC;
 ```
 
-The old `thinkthen_warm`, `thinkthen_probability`, positional context, find's positional `none`, and decide array forms raise `usage` with replacement advice. They do not silently send.
+The old `thinkthen_warm`, `thinkthen_probability`, positional context, find's positional `none`, and decide array forms raise `usage` with replacement advice. `thinkthen_probability` points to `thinkthen_rank`. They do not silently send.
 
 ## Constrain a stored answer
 

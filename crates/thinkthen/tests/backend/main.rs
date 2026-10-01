@@ -58,7 +58,8 @@ mod closed_pipe;
 // Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
 #[cfg(unix)]
 mod default_cache;
-#[cfg(target_os = "linux")]
+// Its cases set Unix folder modes (sdlc/planning/windows.md).
+#[cfg(unix)]
 mod default_cache_storage;
 mod distribution_total;
 mod exchange;

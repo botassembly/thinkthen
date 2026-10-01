@@ -1,8 +1,9 @@
 //! One jsonb object makes one packed call and one PostgreSQL tuplestore scan.
+//! A rank takes the same object and returns its keys best first.
 
 use pgrx::datum::JsonB;
 use pgrx::prelude::*;
-use thinkthen::{Details, For, Judgment, Probabilities};
+use thinkthen::{Details, For, Judgment, Probabilities, Question};
 
 use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
@@ -142,6 +143,63 @@ fn tag_many(
                     _ => call::raise(call::usage("thinkthen_tag_many takes a tag question")),
                 };
                 (key, value)
+            })
+            .collect::<Vec<_>>();
+        TableIterator::new(rows)
+    })
+}
+
+/// Order keyed records by the probability of yes, best first. The question is
+/// literal text and takes only `model` among question fields. Ties come back
+/// in bytewise key order, because `forms::keyed` reads the object into a
+/// sorted map.
+#[pg_extern(name = "thinkthen_rank", parallel_restricted)]
+fn rank(
+    question: Option<&str>,
+    input: Option<JsonB>,
+    settings: default!(Option<RawJson>, "NULL"),
+) -> TableIterator<
+    'static,
+    (
+        name!(key, String),
+        name!(rank, i64),
+        name!(probability, f64),
+    ),
+> {
+    call::guarded(|| {
+        let (settings, call) = forms::controls(settings.as_ref(), Named::default());
+        settings
+            .check(For::Rank)
+            .map_err(|error| call::usage(error.to_string()))
+            .or_raise();
+        let text = question
+            .ok_or_else(|| call::usage("the question is empty"))
+            .or_raise();
+        let asked = Question::rank(text).or_raise();
+        let asked = match settings.model() {
+            Some(model) => asked.with_model(model).or_raise(),
+            None => asked,
+        };
+        let records = forms::keyed(input);
+        if records.is_empty() {
+            return TableIterator::new(Vec::new());
+        }
+        call.within(records.len());
+        let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
+        let ranked = call::run(call, move |engine, options| {
+            engine
+                .rank_with(&asked, texts, options)
+                .map(thinkthen::Call::into_value)
+        });
+        let rows = ranked
+            .iter()
+            .zip(1_i64..)
+            .map(|(row, place)| {
+                let key = keys
+                    .get(row.index())
+                    .ok_or_else(|| call::defect("a ranked row lost its record"))
+                    .or_raise();
+                (key.clone(), place, row.probability())
             })
             .collect::<Vec<_>>();
         TableIterator::new(rows)

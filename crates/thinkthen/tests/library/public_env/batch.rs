@@ -11,9 +11,15 @@ fn a_malformed_variable_is_usage_and_an_unreadable_configuration_is_local() {
         said.starts_with("Usage: THINKTHEN_BASE_URL: a base address"),
         "{said}"
     );
-    let config = folder("unreadable");
-    fs::create_dir_all(config.join("thinkthen/config.json")).unwrap();
-    let said = in_child("refused", &[("XDG_CONFIG_HOME", config.to_str().unwrap())]);
+    let root = folder("unreadable");
+    fs::create_dir_all(
+        crate::child::Folder::Config
+            .under(&root)
+            .join("config.json"),
+    )
+    .unwrap();
+    let moved = crate::child::Folder::Config.variable(&root);
+    let said = in_child("refused", &[(moved.0, moved.1.as_str())]);
     assert_eq!(said, "Local: the configuration file could not be read");
     for value in ["0", "-1", "1.5", "abc"] {
         let said = in_child("refused", &[("THINKTHEN_MAX_REQUEST_BYTES", value)]);
@@ -145,11 +151,10 @@ fn a_rate_in_the_configuration_file_paces_the_backend_it_names() {
         Canned::ok(ANSWERED)
     })
     .expect("a loopback listener");
-    let config = folder("paced-config");
-    fs::create_dir_all(config.join("thinkthen")).unwrap();
-    fs::write(
-        config.join("thinkthen/config.json"),
-        format!(
+    let root = folder("paced-config");
+    let moved = crate::child::Folder::configure(
+        &root,
+        &format!(
             r#"{{"schema":"thinkthen.config/1","backend":"local","backends":{{"local":{{"url":"{}","key_env":"LOCAL_KEY","model":"local-1","requests_per_minute":600}}}}}}"#,
             listener.base()
         ),
@@ -158,7 +163,7 @@ fn a_rate_in_the_configuration_file_paces_the_backend_it_names() {
     let said = in_child(
         "paced",
         &[
-            ("XDG_CONFIG_HOME", config.to_str().unwrap()),
+            (moved.0, moved.1.as_str()),
             ("LOCAL_KEY", "sk-paced-config-fixture"),
         ],
     );

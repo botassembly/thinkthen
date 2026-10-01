@@ -1,0 +1,19 @@
+# 0383: Windows stage 1: the Node addon ships for Windows x86-64
+
+Status: ready. It waits for the `release/0.1` cut and for ticket 0380 slice A, which adds the fifth release target. No slice lands on main before the cut (ADR 0116 item 2). Plan: `sdlc/planning/windows.md`, stage 1. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. The coordinator assigns a lane after the cut.
+
+Milestone: 0.2
+
+## Outcome
+
+- The release workflow builds a `win32-x64` addon. `npm-assemble` packs five addons into the one npm package.
+- On Windows the package loads its addon and answers from a loopback backend.
+- `libraries/typescript/README.md` names Windows. Linux and macOS addons are unchanged.
+
+## Evidence
+
+- Starts from: ticket 0373 (stage 0) did not build the addon. `loader.js` refuses `win32`, and its `SHIPPED` list names four platforms. `package.json` limits `os` and `files`. `check.sh` pins the `win32` refusal. The Node pin covers Linux x64 only. The stage 1 report in `sdlc/planning/windows.md` sizes this ticket at 100 to 250 lines and 1 slice, with medium Linux and macOS risk: one npm package carries every platform's addon, so a packing mistake breaks every platform. No experiment preceded this ticket.
+- Keeps: each existing platform's addon name and bytes in the package. The refusal sentence for a platform the package does not ship.
+- Changes: `loader.js` adds `win32-x64` to `SHIPPED`. `package.json` adds Windows to `os` and the addon to `files`. A Windows Node pin. `npm-assemble` takes five addons. The `check.sh` refusal case becomes a load case on the runner.
+- Proof: the load case passes on `windows-2025` and counts loopback requests. An `npm pack` listing holds all five addons, and the Linux and macOS TypeScript checks stay green.
+- Defers: the main unknown, whether the addon needs the MSVC runtime beside it. The builder checks on a clean runner and records the answer in the README.

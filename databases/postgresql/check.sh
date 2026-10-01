@@ -117,6 +117,30 @@ timed() {
 	q -c "DO \$t\$ DECLARE s timestamptz := clock_timestamp(); n bigint; BEGIN $1; RAISE NOTICE 'elapsed %', round(extract(epoch FROM clock_timestamp() - s) * 1000); END \$t\$;" |
 		sed -n 's/.*elapsed \([0-9]*\).*/\1/p'
 }
+# proxy_start NAME COMMAND...: a loopback proxy that prints its port, then reads `quit`
+# from a FIFO and prints its count. Its port lands in PROXYPORT. A proxy that prints no
+# port in 5 s fails the step with its error output, never silently (ticket 0386).
+proxy_start() {
+	PROXYNAME=$1
+	shift
+	rm -f "$RUN/$PROXYNAME.in" && mkfifo "$RUN/$PROXYNAME.in"
+	"$@" <"$RUN/$PROXYNAME.in" >"$RUN/$PROXYNAME.out" 2>"$RUN/$PROXYNAME.err" &
+	PROXYPID=$!
+	exec {PROXYFD}>"$RUN/$PROXYNAME.in"
+	trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
+	for _ in $(seq 100); do [ -s "$RUN/$PROXYNAME.out" ] && break; sleep 0.05; done
+	PROXYPORT=$(head -1 "$RUN/$PROXYNAME.out")
+	[ -n "$PROXYPORT" ] || { echo "the $PROXYNAME printed no port in 5 s" >&2; cat "$RUN/$PROXYNAME.err" >&2; return 1; }
+}
+# proxy_stop: send `quit`, wait, and put the proxy's count in PROXYCOUNT. It sets
+# variables, so a step calls it directly, never inside $(...).
+proxy_stop() {
+	printf 'quit\n' >&"$PROXYFD"
+	wait "$PROXYPID" || { PROXYPID=; echo "the $PROXYNAME failed" >&2; cat "$RUN/$PROXYNAME.err" >&2; return 1; }
+	PROXYPID=
+	exec {PROXYFD}>&-
+	PROXYCOUNT=$(tail -1 "$RUN/$PROXYNAME.out")
+}
 # The pid of the backend running a thinkthen call.
 victim() { q -c "SELECT pid FROM pg_stat_activity WHERE query LIKE '%thinkthen_%' AND pid <> pg_backend_pid() LIMIT 1"; }
 
@@ -372,6 +396,64 @@ keyed_all_four_shapes() {
 	same "$(bcount)" 1
 }
 check keyed_all_four_shapes
+# Ticket 0378: one keyed object ranks best first, with refusals before any send.
+R='Is it a refund?'
+rank_exact_ties_and_types() {
+	fresh case/15-rank-records
+	same "$(q -c "SELECT string_agg(key || ':' || rank || ':' || probability, ' ' ORDER BY rank) FROM thinkthen_rank('How relevant is this?', '{\"0\":\"item 0\",\"1\":\"item 1\",\"2\":\"item 2\"}'::jsonb, '{\"batch\":1}'::json)")" '1:1:0.9 2:2:0.5 0:3:0.2'
+	same "$(bcount)" 3
+	same "$(q -c "SELECT pg_typeof(key)::text || ',' || pg_typeof(rank)::text || ',' || pg_typeof(probability)::text FROM thinkthen_rank('How relevant is this?', '{\"0\":\"item 0\"}'::jsonb, '{\"batch\":1}'::json)")" 'text,bigint,double precision'
+	fresh generic "thinkthen.batch = 'max'"
+	# jsonb hands keys over in bytewise order, so ties follow it, not member order or key length.
+	same "$(q -c "SELECT string_agg(key || ':' || rank, ' ' ORDER BY rank) FROM thinkthen_rank('$R', '{\"z\":\"one\",\"b\":\"two\",\"aa\":\"three\"}'::jsonb)")" 'aa:1 b:2 z:3'
+	same "$(bcount)" 1
+}
+check rank_exact_ties_and_types
+rank_batches_by_the_setting() {
+	local pair
+	# The check sets THINKTHEN_BATCH=1, so `max` stands in for the default here.
+	for pair in max:1 3:3 1:7; do
+		fresh generic "thinkthen.batch = '${pair%:*}'"
+		same "$(q -c "SELECT count(*) || ':' || max(rank) FROM thinkthen_rank('$R', $(rows 7))")" 7:7
+		same "$(bcount)" "${pair#*:}"
+	done
+	fresh generic
+	same "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', $(rows 7), '{\"batch\":3}'::json)")" 7
+	same "$(bcount)" 3
+}
+check rank_batches_by_the_setting
+rank_question_is_literal_and_settings_reach_the_body() {
+	fresh arm/full/capture "thinkthen.batch = 'max'"
+	same "$(q -c "SELECT key || ':' || rank FROM thinkthen_rank('@nofile', '{\"a\":\"refund now\"}'::jsonb)")" 'a:1'
+	same "$(q -c "SELECT string_agg(key, ' ' ORDER BY rank) FROM thinkthen_rank('$R', '{\"a\":\"one\",\"b\":\"two\"}'::jsonb, '{\"model\":\"judge-b\",\"context\":\"shared note\"}'::json)")" 'a b'
+	same "$(bcount)" 2
+	bcapture | python3 -c 'import json,sys
+bodies=[json.loads(body) for body in json.load(sys.stdin)["bodies"]]
+assert len(bodies) == 2, bodies
+assert bodies[0]["questions"]["q1"]["instructions"] == "The text is \"refund now\". @nofile", bodies[0]
+assert bodies[1]["model"] == "judge-b" and json.dumps(bodies[1]).count("shared note") == 1, bodies[1]'
+}
+check rank_question_is_literal_and_settings_reach_the_body
+rank_empty_null_and_refusals_send_nothing() {
+	fresh generic "thinkthen.batch = 'max'"
+	same "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{}'::jsonb)")" 0
+	same "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', NULL)")" 0
+	has "$(q -c "SELECT count(*) FROM thinkthen_rank(NULL, '{\"a\":\"b\"}'::jsonb)")" 'thinkthen usage: the question is empty (retryable: no)'
+	local name value
+	for name in threshold:0.7 'true:"yes"' none:true 'options:["a","b"]'; do
+		value=${name#*:} name=${name%%:*}
+		has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":\"x\"}'::jsonb, '{\"$name\":$value}'::json)")" \
+			"thinkthen usage: the settings key \`$name\` does not belong to this verb (retryable: no)"
+	done
+	has "$(q -c "SELECT count(*) FROM thinkthen_rank('   ', '{\"a\":\"x\"}'::jsonb)")" 'thinkthen usage: a question is text, not white space (retryable: no)'
+	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":4}'::jsonb)")" 'thinkthen usage: keyed input value for a is text (retryable: no)'
+	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"1\":\"one\",\"2\":\"two\",\"3\":\"three\",\"4\":\"  \",\"5\":\"five\",\"6\":\"six\",\"7\":\"seven\"}'::jsonb)")" \
+		'thinkthen usage: evidence is text, not white space (retryable: no)'
+	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":\"x\"}'::jsonb, '{\"deadline_ms\":0}'::json)")" \
+		'thinkthen deadline: the deadline of 0 s passed before the call answered (retryable: no)'
+	same "$(bcount)" 0
+}
+check rank_empty_null_and_refusals_send_nothing
 find_settings_choose_the_model() {
 	fresh arm/full/capture
 	local out
@@ -450,7 +532,7 @@ public_holds_nothing() {
 }
 check public_holds_nothing
 batch_signatures_are_extension_owned_and_private() {
-	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_decide_many(text,jsonb,json)', 'thinkthen_choose_many(text,jsonb,json)', 'thinkthen_score_many(text,jsonb,json)', 'thinkthen_tag_many(text,jsonb,json)', 'thinkthen_plan(text,jsonb,json)']) AND p.pronargdefaults = 1 AND p.prokind = 'f' AND p.proparallel = 'r' AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 5
+	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_decide_many(text,jsonb,json)', 'thinkthen_choose_many(text,jsonb,json)', 'thinkthen_score_many(text,jsonb,json)', 'thinkthen_tag_many(text,jsonb,json)', 'thinkthen_plan(text,jsonb,json)', 'thinkthen_rank(text,jsonb,json)']) AND p.pronargdefaults = 1 AND p.prokind = 'f' AND p.proparallel = 'r' AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 6
 	same "$(q -c "SELECT count(*) FROM pg_proc p WHERE p.oid::regprocedure::text = ANY (ARRAY['thinkthen_decide(text,text,json,text,text,text,text,bigint)', 'thinkthen_choose(text,text,text[],json,text,text,text,text,bigint)', 'thinkthen_score(text,text,text[],json,text,text,text,text,bigint)', 'thinkthen_tag(text,text,text[],json,text,text,text,text,bigint)']) AND p.pronargdefaults >= 6 AND p.proargnames[1] = 'question' AND p.proargnames[2] = 'input'")" 4
 }
 check batch_signatures_are_extension_owned_and_private
@@ -739,7 +821,9 @@ removed_forms_refuse_before_send() {
     out=$(q -c "SELECT thinkthen_warm('$Q', 'one')")
     has "$out" 'thinkthen_warm was removed; pack records with thinkthen_decide_many'
     out=$(q -c "SELECT thinkthen_probability('$Q', 'one')")
-    has "$out" 'thinkthen_probability was removed; read the probability column of thinkthen_decide_many'
+    has "$out" 'thinkthen_probability was removed; order records with thinkthen_rank'
+    out=$(q -c "SELECT thinkthen_probability('$Q', 'one', 'old context')")
+    has "$out" 'thinkthen_probability was removed; order records with thinkthen_rank'
     out=$(q -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['one'])")
     has "$out" 'the array form was removed; pass a keyed jsonb object to thinkthen_decide_many'
     out=$(q -c "SELECT thinkthen_decide('$Q', 'one', 'old context')")
@@ -905,27 +989,16 @@ check try_details_keeps_later_rows
 try_details_keeps_good_after_backend_failure() {
     fresh generic
     pg_stop
-    mkfifo "$RUN/proxy.in"
-    python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence' \
-        <"$RUN/proxy.in" >"$RUN/proxy.out" 2>"$RUN/proxy.err" &
-    PROXYPID=$!
-    exec {PROXYFD}>"$RUN/proxy.in"
-    trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
-    for _ in $(seq 100); do [ -s "$RUN/proxy.out" ] && break; sleep 0.05; done
-    proxyport=$(head -1 "$RUN/proxy.out")
-    [ -n "$proxyport" ]
-    pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+    proxy_start proxy python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence'
+    pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
     out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '$Q', 'private evidence'), (3, '$Q', 'last')),
         measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
         SELECT i::text || ':' || (v->>'status') || ':' || coalesce(v->'error'->>'kind','ok') || ':' ||
             CASE WHEN v::text LIKE '%private evidence%' THEN 'leaked' ELSE 'safe' END FROM measured ORDER BY i")
     same "$out" "$(printf '1:answered:ok:safe\n2:failed:backend:safe\n3:answered:ok:safe')"
     same "$(bcount)" 2
-    printf 'quit\n' >&"$PROXYFD"
-    wait "$PROXYPID"
-    PROXYPID=
-    exec {PROXYFD}>&-
-    same "$(tail -1 "$RUN/proxy.out")" 3
+    proxy_stop
+    same "$PROXYCOUNT" 3
 }
 check try_details_keeps_good_after_backend_failure
 try_details_null_skips_settings() {
@@ -1174,16 +1247,17 @@ echo "== secrecy, signals, preload, panics"
 the_key_never_reaches_the_log() {
 	secret=tt-secret-value-4417
 	fresh generic
-	q -c "CREATE ROLE tt_plain LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text,text,json,text,text,text,text,bigint), thinkthen_usage() TO tt_plain" >/dev/null
+	q -c "CREATE ROLE tt_plain LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text,text,json,text,text,text,text,bigint), thinkthen_rank(text,jsonb,json), thinkthen_usage() TO tt_plain" >/dev/null
 	out=""
 	for role in tt_plain postgres; do
 		out+=$(PGUSER_AS=$role q -c "SET thinkthen.api_key = '$secret'" -c "SELECT thinkthen_decide('$Q', 'a')")
 		out+=$(PGUSER_AS=$role q -c "SELECT count(*) FROM thinkthen_usage()" -c "SET thinkthen.api_key = '$secret'" -c "SELECT thinkthen_decide('$Q', 'a')")
 	done
 	out+=$(PGOPTIONS="-c thinkthen.api_key=$secret" PGUSER_AS=tt_plain q -c "SELECT thinkthen_decide('$Q', 'a')")
+	out+=$(PGUSER_AS=tt_plain q -c "SET thinkthen.api_key = '$secret'" -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":\"x\"}'::jsonb)")
 	has "$out" "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment"
-	same "$(($(grep -oF "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)))" 4
-	same "$(($(grep -oF "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)))" 5
+	same "$(($(grep -oF "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)))" 5
+	same "$(($(grep -oF "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)))" 6
 	hasnt "$out" "$secret"
 	hasnt "$(cat "$LOG")" "$secret"
 	same "$(bcount)" 0
@@ -1246,23 +1320,11 @@ find_proxy_cases() {
 	for mode in duplicate real_tie none_tie max_units max_none; do
 		fresh generic
 		pg_stop
-		rm -f "$RUN/find-proxy.in"
-		mkfifo "$RUN/find-proxy.in"
-		python3 tests/find_cases.py proxy "http://127.0.0.1:$BPORT/generic/v1" "$mode" \
-			<"$RUN/find-proxy.in" >"$RUN/find-proxy.out" 2>"$RUN/find-proxy.err" &
-		PROXYPID=$!
-		exec {PROXYFD}>"$RUN/find-proxy.in"
-		trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
-		for _ in $(seq 100); do [ -s "$RUN/find-proxy.out" ] && break; sleep 0.05; done
-		proxyport=$(head -1 "$RUN/find-proxy.out")
-		[ -n "$proxyport" ]
-		pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+		proxy_start find-proxy python3 tests/find_cases.py proxy "http://127.0.0.1:$BPORT/generic/v1" "$mode"
+		pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
 		python3 tests/find_cases.py verify "$SOCK" "$mode"
-		printf 'quit\n' >&"$PROXYFD"
-		wait "$PROXYPID"
-		PROXYPID=
-		exec {PROXYFD}>&-
-		same "$(tail -1 "$RUN/find-proxy.out")" 1
+		proxy_stop
+		same "$PROXYCOUNT" 1
 	done
 }
 check find_proxy_cases

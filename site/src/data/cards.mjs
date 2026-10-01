@@ -9,9 +9,11 @@ import { PAGES } from './beatles.mjs';
 
 export const DEFAULT_CARD = { image: '/brand/thinkthen-card.png', alt: 'ThinkThen' };
 
-// The card of one Beatles Bench page, by its key in slides.json, or null.
+// The card of one Beatles Bench page, by its key in slides.json, or null. A
+// cardOnly entry belongs to a blog post, which names its card in its own
+// front matter.
 export function slideCard(key) {
-  if (!slides.slides[key]) return null;
+  if (!slides.slides[key] || slides.slides[key].cardOnly) return null;
   const page = PAGES.find((p) => (p.slug || 'beatles-bench') === key);
   const title = page.slug ? page.title : 'Jev, ThinkThen, and Beatles Bench';
   return { image: `/og/${key}.png`, alt: `The talk's slide: ${title}` };

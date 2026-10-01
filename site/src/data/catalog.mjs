@@ -1017,39 +1017,45 @@ export const CONFIGURATION_SEE = {
   '4-file': 'The file names liquid. THINKTHEN_BACKEND outranks the file and names ollama.',
 };
 
-// The business how-tos. Each page runs the scripts in
-// examples/how-tos/<slug>/, and `see` says what to look for in each.
+// The /how-tos/ index shows one section per group, in this order. Each
+// section lists its pages in HOWTOS order. A group with no pages shows
+// nothing.
+export const HOWTO_GROUPS = ['Business teams', 'Data science', 'Ops/Security'];
+
+// The how-tos. Each page runs the scripts in examples/how-tos/<slug>/, and
+// `see` says what to look for in each. `group` names its HOWTO_GROUPS
+// section.
 export const HOWTOS = [
   {
-    slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',
+    slug: 'triage-a-support-inbox', group: 'Business teams', title: 'Triage a support inbox', reader: 'for support teams',
     goal: 'Two commands in a pipe keep the messages that need a reply and label each by kind and urgency.',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
     functions: ['filter', 'annotate'],
     see: { '1-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
   },
   {
-    slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
-    goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
-    said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
-    functions: ['decide'],
-    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it is not sure. It prints null, and a person reads it.' },
-  },
-  {
-    slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
-    goal: 'score finds the unhappy answers and tag names what went wrong in each.',
-    said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
-    functions: ['score', 'tag'],
-    see: { '1-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed. The happy answer drops out.' },
-  },
-  {
-    slug: 'join-two-tables-by-meaning', title: 'Join two tables by meaning', reader: 'for data analysts',
+    slug: 'join-two-tables-by-meaning', group: 'Data science', title: 'Join two tables by meaning', reader: 'for data analysts',
     goal: 'filter joins two tables on meaning when no key and no shared word links them.',
     said: 'Match each ticket to the incident it describes, even when the words differ. The loop pairs every ticket with every incident. `filter` keeps the pairs that match.',
     functions: ['filter'],
     see: { '1-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
   },
   {
-    slug: 'group-alerts-into-incidents', title: 'Group alerts into incidents', reader: 'for on-call engineers',
+    slug: 'code-open-ended-survey-answers', group: 'Data science', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
+    goal: 'score finds the unhappy answers and tag names what went wrong in each.',
+    said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
+    functions: ['score', 'tag'],
+    see: { '1-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed. The happy answer drops out.' },
+  },
+  {
+    slug: 'screen-studies-for-a-review', group: 'Data science', title: 'Screen studies for a review', reader: 'for researchers',
+    goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
+    said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
+    functions: ['decide'],
+    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it is not sure. It prints null, and a person reads it.' },
+  },
+  {
+    slug: 'group-alerts-into-incidents', group: 'Ops/Security', title: 'Group alerts into incidents', reader: 'for on-call engineers',
     goal: 'find picks the open incident a new alert belongs to, or none, and decide confirms the match.',
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
     functions: ['find', 'decide'],
@@ -1059,37 +1065,37 @@ export const HOWTOS = [
     },
   },
   {
-    slug: 'rank-the-inbound-leads', title: 'Rank the inbound leads', reader: 'for sales teams',
+    slug: 'rank-the-inbound-leads', group: 'Business teams', title: 'Rank the inbound leads', reader: 'for sales teams',
     goal: 'Three functions in one pipe drop the noise, order the leads, and route each to a team.',
     said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
     functions: ['filter', 'rank', 'choose'],
     see: { '1-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
   },
   {
-    slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',
-    goal: 'One narrow decide question per rule judges a post against each rule on its own.',
-    said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
-    functions: ['decide'],
-    see: {
-      '1-insult': 'The post calls the author an idiot. decide says true and exits 0.',
-      '2-spam': 'The post is not spam. decide says false and exits 1.',
-    },
-  },
-  {
-    slug: 'check-an-expense-against-the-policy', title: 'Check an expense against the policy', reader: 'for finance staff',
+    slug: 'check-an-expense-against-the-policy', group: 'Business teams', title: 'Check an expense against the policy', reader: 'for finance staff',
     goal: 'find pulls the policy rule that covers an expense, and decide says whether the expense fits it.',
     said: 'Check an expense against your policy. `find` pulls the rule. `decide` says whether the expense fits.',
     functions: ['find', 'decide'],
     see: { '1-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
   },
   {
-    slug: 'split-a-scanned-packet-into-documents', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
+    slug: 'split-a-scanned-packet-into-documents', group: 'Business teams', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
     goal: 'choose names each page and decide marks where a new document starts.',
     said: 'Split a stack of scanned pages into documents. `choose` says what kind each page is. `decide` marks where a new document starts.',
     functions: ['choose', 'decide'],
     see: {
       '1-kinds': 'Three invoice pages and one notice.',
       '2-gaps': 'awk pairs each page with the one before it. The two pages of Invoice 7 stay together. A new document starts at Invoice 8 and at the notice.',
+    },
+  },
+  {
+    slug: 'screen-a-post-before-it-goes-up', group: 'Business teams', title: 'Screen a post before it goes up', reader: 'for community moderators',
+    goal: 'One narrow decide question per rule judges a post against each rule on its own.',
+    said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
+    functions: ['decide'],
+    see: {
+      '1-insult': 'The post calls the author an idiot. decide says true and exits 0.',
+      '2-spam': 'The post is not spam. decide says false and exits 1.',
     },
   },
 ];

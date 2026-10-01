@@ -269,13 +269,10 @@ fn sweep(
     let arguments: Vec<&str> = asked.iter().map(String::as_str).collect();
     // The platform default cache lands inside this case's folder, so the reader
     // below reads every file the default cache wrote.
-    let cache = into.join("cache").to_string_lossy().into_owned();
-    let mut environment = environment(route.keyed);
-    environment.push(("XDG_CACHE_HOME", &cache));
-    // Windows puts the default cache under LOCALAPPDATA.
-    if cfg!(windows) {
-        environment.push(("LOCALAPPDATA", &cache));
-    }
+    let cache = into.join("cache");
+    let moved = crate::child::Folder::Cache.variable(&cache);
+    let mut environment: Vec<(&str, &str)> = environment(route.keyed);
+    environment.push((moved.0, &moved.1));
     let output = spawn(&arguments, &environment, &evidence)?;
 
     assert_eq!(

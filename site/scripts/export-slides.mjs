@@ -13,7 +13,8 @@
 // deck commit to keep a slide the pinned deck dropped. For each entry it writes:
 //
 //   - public/learn/beatles-bench/<page>.webp, 1600 pixels wide. An optional
-//     height keeps only the top of the slide.
+//     height keeps only the top of the slide. An entry marked cardOnly, such
+//     as a blog post's card, gets no webp.
 //   - public/og/<page>.png, the social card, 1200 by 630. The whole slide is
 //     scaled to 630 pixels high and padded left and right on the deck's
 //     background colour, --tt-ground in deck.css. Nothing is cropped.
@@ -67,10 +68,12 @@ fs.mkdirSync(cards, { recursive: true });
 for (const [page, entry] of Object.entries(manifest.slides)) {
   const from = entry.deck || commit;
   const png = show(`slides/${folder(entry.slide, from)}/slide.png`, from);
-  const crop = entry.height ? ['-crop', `1600x${entry.height}+0+0`, '+repage'] : [];
-  const target = path.join(out, `${page}.webp`);
-  execFileSync('convert', ['png:-', '-resize', '1600x900', ...crop, '-quality', '85', `webp:${target}`], { input: png });
-  entry.sha256 = sha(target);
+  if (!entry.cardOnly) {
+    const crop = entry.height ? ['-crop', `1600x${entry.height}+0+0`, '+repage'] : [];
+    const target = path.join(out, `${page}.webp`);
+    execFileSync('convert', ['png:-', '-resize', '1600x900', ...crop, '-quality', '85', `webp:${target}`], { input: png });
+    entry.sha256 = sha(target);
+  }
   const card = path.join(cards, `${page}.png`);
   execFileSync('convert', ['png:-', '-resize', 'x630', '-background', ground[1], '-gravity', 'center',
     '-extent', '1200x630', '-strip', `png:${card}`], { input: png });

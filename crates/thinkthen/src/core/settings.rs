@@ -70,6 +70,8 @@ pub enum For {
     Tag,
     /// Nearest-match search.
     Find,
+    /// Records ordered by the probability of yes.
+    Rank,
 }
 
 impl For {
@@ -79,13 +81,13 @@ impl For {
             Self::Choose => Some(Verb::Choose),
             Self::Score => Some(Verb::Score),
             Self::Tag => Some(Verb::Tag),
-            Self::Find => None,
+            Self::Find | Self::Rank => None,
         }
     }
 
     const fn member_key(self) -> Option<&'static str> {
         match self {
-            Self::Decide | Self::Find => None,
+            Self::Decide | Self::Find | Self::Rank => None,
             Self::Choose => Some("options"),
             Self::Score => Some("levels"),
             Self::Tag => Some("labels"),
@@ -195,7 +197,7 @@ impl Settings {
         if self.none.is_some() && verb != For::Find {
             return Err(SettingsError::WrongVerb("none".into()));
         }
-        if verb == For::Find {
+        if matches!(verb, For::Find | For::Rank) {
             return self.check_find();
         }
         for (key, _) in &self.question_fields {
@@ -272,6 +274,15 @@ impl Settings {
         serde_json::to_string(&Json::Object(fields)).map_err(|_| {
             SettingsError::Question("the settings could not be written as JSON".into())
         })
+    }
+
+    /// The validated `model` question field, absent when the caller named none.
+    pub fn model(&self) -> Option<&str> {
+        let (_, value) = self
+            .question_fields
+            .iter()
+            .find(|(key, _)| key == "model")?;
+        value.as_str()
     }
 
     /// Literal shared context, absent when the caller named none.
