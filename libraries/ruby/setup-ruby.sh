@@ -16,7 +16,8 @@ if [ -e "$prefix/thinkthen-toolchain.stamp" ]; then
 fi
 mkdir -p "$archives"
 fetch() {
-	[ -s "$archives/$2" ] || curl -fsSL --retry 2 -o "$archives/$2" "$1"
+	# Rehearsal run 36817514201 lost DNS for cache.ruby-lang.org, which plain --retry skips.
+	[ -s "$archives/$2" ] || curl -fsSL --retry 2 --retry-all-errors --retry-delay 10 -o "$archives/$2" "$1"
 }
 fetch "$RUBY_URL" "ruby-$RUBY_VERSION.tar.xz"
 fetch "$YAML_URL" yaml-0.2.5.tar.gz

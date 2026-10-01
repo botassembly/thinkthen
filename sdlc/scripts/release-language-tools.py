@@ -15,6 +15,8 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -88,10 +90,23 @@ def verify_digest(path, kind, expected):
         fail(f"{path.name} differs from the pinned {kind}")
 
 
-def fetch(url, path):
+def fetch(url, path, opener=urllib.request.urlopen, pause=time.sleep):
     if path.exists() or path.is_symlink():
         fail(f"download output already exists: {path}")
-    with urllib.request.urlopen(url, timeout=60) as response, path.open("xb") as output:
+    # Rehearsal run 36817514201 met an HTTP 503 here. Only the request retries. No
+    # file exists until a response arrives, so a retry never meets a partial file.
+    for attempt in range(3):
+        try:
+            response = opener(url, timeout=60)
+            break
+        except urllib.error.HTTPError as error:
+            if attempt == 2 or (error.code < 500 and error.code != 429):
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt == 2:
+                raise
+        pause(10 * (attempt + 1))
+    with response, path.open("xb") as output:
         shutil.copyfileobj(response, output)
 
 
