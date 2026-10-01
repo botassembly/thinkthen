@@ -988,7 +988,7 @@ the_total_holds_across_rows() {
 	fresh generic "thinkthen.max_requests_total = 3"
 	out=$(q -c "SELECT count(*) FROM generate_series(1, 10) g WHERE thinkthen_decide('$Q', 'row ' || g)" \
 		-c "SELECT thinkthen_decide('$Q', 'after')")
-	same "$(grep -oF "thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent (retryable: no)" <<<"$out" | wc -l)" 2
+	same "$(($(grep -oF "thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent (retryable: no)" <<<"$out" | wc -l)))" 2
 	same "$(bcount)" 3
 	fresh generic "thinkthen.max_requests_total = 1"
 	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
@@ -1182,8 +1182,8 @@ the_key_never_reaches_the_log() {
 	done
 	out+=$(PGOPTIONS="-c thinkthen.api_key=$secret" PGUSER_AS=tt_plain q -c "SELECT thinkthen_decide('$Q', 'a')")
 	has "$out" "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment"
-	same "$(grep -oF "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)" 4
-	same "$(grep -oF "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)" 5
+	same "$(($(grep -oF "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)))" 4
+	same "$(($(grep -oF "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)))" 5
 	hasnt "$out" "$secret"
 	hasnt "$(cat "$LOG")" "$secret"
 	same "$(bcount)" 0
@@ -1286,7 +1286,8 @@ conformance() {
 	: >"$SCRATCH/not-a-folder"
 	plan_file=$RUN/conformance.plan
 	python3 tests/runner.py plan >"$plan_file"
-	selected=$(wc -l <"$plan_file")
+	# macOS wc pads its count with spaces; arithmetic drops them (ticket 0375).
+	selected=$(($(wc -l <"$plan_file")))
 	while IFS=$'\t' read -r -u 3 id arm setting; do
 		if [ "$arm" != - ]; then
 			fresh "$arm" ${setting:+"${setting//@SCRATCH@/$SCRATCH}"}
