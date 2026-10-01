@@ -350,7 +350,7 @@ def self_test():
          (1, ["versions: missing or malformed required lock conformance/consumer/Cargo.lock; nothing was written"])),
         ("lock-order-set", lambda r: edit(r, "conformance/consumer/Cargo.lock",
                                           f'name = "thinkthen"\nversion = "{version}"',
-                                          f'version = "{version}"\nname = "thinkthen"'), ["--set", "9.8.7"],
+                                          f'version = "{version}"\nname = "thinkthen"'), ["--set", f"{int(major) + 1}.0.0"],
          (1, ["versions: conformance/consumer/Cargo.lock has a package entry the update cannot read; nothing was written"])),
         ("installer-set", lambda r: edit(r, "site/public/install.sh", "#!/bin/sh", "#!/bin/sh "),
          ["--set", "9.8.7"],

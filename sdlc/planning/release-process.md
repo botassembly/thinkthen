@@ -41,7 +41,7 @@ The release branch is named for the major and minor version: `release/0.1`. Tick
    - The binding READMEs that name 0.0.1: `libraries/{ada,cobol,csharp,go,jvm,objective-c}`, and `databases/postgresql/NOTES.md`.
    - The site, through marketing: the held install lines of ticket 0128 phase 1 item 14, and `site/examples/install/rust/files/Cargo.toml`, whose requirement the site smoke patches to the working tree. Marketing then re-runs the bindings proof that pins that file's hash.
 
-   `git grep -n '0\.0\.1'` afterwards finds only the copies ticket 0376 lists as fixtures, plants and history. The coordinator lands the commit.
+   Afterwards, `git grep -nE '(^|[^0-9.])0\.0\.1([^0-9.]|$)|0, 0, 1'` outside `sdlc/records`, `sdlc/tickets`, `sdlc/issues`, `sdlc/planning`, `probes`, locks and `.jsonl` fixtures finds only the copies ticket 0376 lists as not failing at 0.1.0. The coordinator lands the commit.
 3. **Checkpoint and QA on the cut.** The coordinator runs the checkpoint sweep of section 2 on that main commit. Release QA runs its round on it (section 3).
 4. **The cut.** The coordinator tags `rc/0.1.0-rc.1` on that commit under worktrees.md and pushes `release/0.1` from it.
 5. **The rehearsal from the release branch.** Ian dispatches `gh workflow run release.yml --ref release/0.1 -f mode=rehearse`. It passes on all four targets.

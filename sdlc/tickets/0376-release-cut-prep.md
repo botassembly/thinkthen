@@ -52,7 +52,7 @@ The 0.1 cut is one checked command plus the README, CHANGELOG and site text.
     - The self-test's Zig plants and new rows read the current version, so they hold at any version. New rows: a hold kept past 0.0.1, a hold missing at 0.0.1, `--set` dropping both holds, and a Dart lock that differs.
   - `sdlc/scripts/policy.py`: the manifest rules read the version from `crates/thinkthen/Cargo.toml`. The `publish = false` member rule skips `thinkthen`, whose hold `versions` now checks.
   - Rust tests: the five backend tests and `golden.rs` build the tool string from `env!("CARGO_PKG_VERSION")`. `recognize-detailed.json` gains a `$VERSION` placeholder that `stores.rs` fills. `sdlc/ratchet.json` takes the re-measured total.
-  - C# and JVM Python tests and `libraries/csharp/check.sh` read the version from their own manifest. `package_check.py` builds the header macros and its plant from that version.
+  - The C# Python tests and `libraries/csharp/check.sh` read the version from `ThinkThen.csproj`. The JVM Python tests read it from `crates/thinkthen/Cargo.toml` and compare the POM with it. `package_check.py` builds the header macros and its plant from that version.
   - `release-managed-pair-self-test.py` reads the version from `crates/thinkthen/Cargo.toml` and builds its fixture from it.
   - `sdlc/planning/release-process.md`: section 4's rehearsal line names the release branch. Section 5 names the branch `release/0.1`, the X.Y form, and becomes the cut checklist, in this order, each step naming its branch:
     1. The release candidate conditions of ADR 0116 item 3 hold on main.
