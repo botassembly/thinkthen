@@ -9,12 +9,24 @@ export function getStaticPaths() {
 
 const { post } = Astro.props;
 const { Content } = post;
+// A post's `youtube` front matter names a video id. The embed sits under the
+// title, from youtube-nocookie.com, lazy-loaded. A draft with no id shows
+// where the video goes. A post's `card` and `cardAlt` name its social card.
+const video = post.youtube && {
+  embed: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(post.youtube)}`,
+  watch: `https://www.youtube.com/watch?v=${encodeURIComponent(post.youtube)}`,
+};
 ---
-<Base title={post.title} description={post.blurb}>
+<Base title={post.title} description={post.blurb} image={post.card} imageAlt={post.cardAlt}>
   {post.draft && <div class="note" data-draft><span class="status preview">draft</span> A draft for Ian to review. A normal build leaves this post out.</div>}
   <div class="eyebrow">{post.author} · {post.date}</div>
   <article class="prose">
     <h1>{post.title}</h1>
+    {video ? (
+      <figure class="video" data-watch={video.watch}>
+        <iframe src={video.embed} title={`Video: ${post.title}`} loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+      </figure>
+    ) : post.draft && <div class="video-slot">The video goes here.</div>}
     <Content />
   </article>
   <p class="pagelinks">{(post.links || []).map((l) => <><a href={l.href}>{l.text}</a> · </>)}<a href="/blog/">Read the blog</a> · <a href="/trust/">Test it before you trust it</a></p>

@@ -168,6 +168,13 @@ function blocks(node, out) {
       if (rows.length) out.push(rows.join('\n'));
       continue;
     }
+    // A post's video embed stays out of the twin. A plain link to the video
+    // takes its place. A draft's empty video slot leaves nothing.
+    if (kid.tag === 'figure' && cls.includes('video')) {
+      if (kid.attrs['data-watch']) out.push(`[Watch the video](${kid.attrs['data-watch']})`);
+      continue;
+    }
+    if (kid.tag === 'div' && cls.includes('video-slot')) continue;
     if (kid.tag === 'div' && cls.includes('note')) {
       out.push('> ' + tidy(inline(kid)));
       continue;

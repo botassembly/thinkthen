@@ -5,7 +5,8 @@
 // deck must be the one examples/beatles/deck-pin pins, and the recorded bench
 // the one examples/beatles/bench-pin pins. Every image in
 // public/learn/beatles-bench/ and every card in public/og/ must match its
-// record, and every record needs both. Moving the pin, or replacing an image by
+// record, and every record needs both. An entry marked cardOnly needs its
+// card and must have no webp. Moving the pin, or replacing an image by
 // hand, then fails until the slides are exported again from a deck that quotes
 // the new bench.
 //
@@ -44,21 +45,22 @@ if (manifest.bench !== pin) {
   problems.push(`the slides come from a deck that quotes bench ${String(manifest.bench).slice(0, 8)}, and the pages pin ${pin.slice(0, 8)}`);
 }
 // Each folder holds one image per page, recorded under `field`.
-function images(folder, ext, field) {
+function images(folder, ext, field, skip = () => false) {
   const found = fs.readdirSync(folder).filter((n) => n.endsWith(ext)).map((n) => n.slice(0, -ext.length));
   const where = path.relative(site, folder);
   for (const page of found) {
     const entry = manifest.slides[page];
     if (!entry) { problems.push(`${where}/${page}${ext} has no entry`); continue; }
+    if (skip(entry)) { problems.push(`${where}/${page}${ext} belongs to a cardOnly entry`); continue; }
     const sum = crypto.createHash('sha256').update(fs.readFileSync(path.join(folder, `${page}${ext}`))).digest('hex');
     if (sum !== entry[field]) problems.push(`${where}/${page}${ext} differs from the image exported from deck ${String(manifest.deck).slice(0, 8)}`);
   }
-  for (const page of Object.keys(manifest.slides)) {
-    if (!found.includes(page)) problems.push(`${where}/${page}${ext} is missing`);
+  for (const [page, entry] of Object.entries(manifest.slides)) {
+    if (!skip(entry) && !found.includes(page)) problems.push(`${where}/${page}${ext} is missing`);
   }
   return found.length;
 }
-const count = images(dir, '.webp', 'sha256');
+const count = images(dir, '.webp', 'sha256', (entry) => entry.cardOnly);
 images(cards, '.png', 'card');
 
 if (problems.length) {
