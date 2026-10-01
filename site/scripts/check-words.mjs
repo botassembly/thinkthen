@@ -39,7 +39,6 @@ export const RULES = [
 const SETTING_NAME = new RegExp(String.raw`\b(?:Plan|Prune)${GAP}$`);
 
 const ALLOWED = [
-  ['/install/settings/', 'planned', 'cached exchange', 'Settings renders specification/settings.md word for word. "planned" there means the requests a run would send.'],
   ['/install/settings/', 'planned', 'whole-input records', 'Settings renders specification/settings.md word for word. "planned" there means the requests a run would send.'],
 ];
 

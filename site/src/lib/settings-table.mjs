@@ -147,7 +147,7 @@ const NO_EFFECT = /\bno effect\b|^not on this surface\b/;
 // not a setting a reader changes. Its cells cite tickets and say "later".
 // ThinkThen issue 2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md
 // asks for that row to change; show it again once it does.
-export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy', 'Portable call settings (`thinkthen.settings/1`)']);
+export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy', 'Portable call settings']);
 
 export function parseSettings(text) {
   const parts = sections(text);
