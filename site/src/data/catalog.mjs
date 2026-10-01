@@ -546,7 +546,7 @@ export const SURFACES = [
       C_ARCHIVE,
     ],
     particular: [
-      'The `*Bytes` forms, such as `decideBytes`, take the text with its length, so the text may hold NUL bytes.',
+      'The `*Bytes` forms, such as `decideBytes`, take the question with its length and refuse a NUL inside it.',
     ],
   },
   {
@@ -593,6 +593,7 @@ export const SURFACES = [
     settings: '`new Door(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [
       ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
       C_ARCHIVE,
     ],
     particular: [
@@ -611,6 +612,7 @@ export const SURFACES = [
     settings: '`Door(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [
       ['io.github.botassembly:thinkthen-jvm:VERSION:kotlin', 'The Kotlin JAR. Add the Java coordinate beside it.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
       C_ARCHIVE,
     ],
     particular: [
@@ -628,6 +630,7 @@ export const SURFACES = [
     settings: '`Door(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [
       ['io.github.botassembly:thinkthen-jvm:VERSION:scala', 'The Scala JAR. Add the Java coordinate beside it.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
       C_ARCHIVE,
     ],
     particular: [
@@ -645,6 +648,7 @@ export const SURFACES = [
     settings: '`Engine.Open(settingsJson)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [
       ['dotnet add package Botassembly.ThinkThen', 'The NuGet package.'],
+      ['thinkthen-csharp-VERSION-TARGET.tar.gz', 'The package file, from each release. Its folder serves as a local feed.'],
       C_ARCHIVE,
     ],
     particular: [
