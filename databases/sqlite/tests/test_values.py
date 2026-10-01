@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import socket
 import sys
 
 from helper import Backend, child, environment, expect, main
@@ -13,6 +14,19 @@ from conditional_backend import ConditionalBackend
 
 BANDED = json.dumps({"decide": "Is it red?", "threshold": "0.2:0.8"})
 SCALARS = ("thinkthen_decide", "thinkthen_choose", "thinkthen_score", "thinkthen_tag", "thinkthen_details", "thinkthen_annotate")
+
+
+def test_the_proxy_starts_without_a_reverse_lookup() -> None:
+    """Ticket 0386: a macOS runner stalls about 35 s in socket.getfqdn, so the proxy never calls it."""
+    def refuse(*_args: object) -> str:
+        raise AssertionError("the proxy looked up its own name")
+
+    lookup, socket.getfqdn = socket.getfqdn, refuse
+    try:
+        with ConditionalBackend("http://127.0.0.1:9/v1") as proxy:
+            expect(proxy.base, f"http://127.0.0.1:{proxy.server.server_port}/v1", "the proxy's loopback base")
+    finally:
+        socket.getfqdn = lookup
 
 
 def test_find_preserves_duplicate_positions_and_strict_ties() -> None:
