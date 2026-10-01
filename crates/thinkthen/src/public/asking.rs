@@ -2,13 +2,11 @@
 //! 0111 section 4. The public batches, the native vector and the single
 //! calls share it, so one text makes the same questions on every path.
 
-use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, PackError};
-use crate::core::recording::Digest;
-use crate::core::{self, AnswerOutcome, Json, ModelName, Reply, Usage, quoted_plan_of};
+use crate::core::{self, AnswerOutcome, Json, ModelName, quoted_plan_of};
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade;
-use crate::engine::pipeline::{Answered, Asker, Failed};
+use crate::engine::pipeline::{self, Answered, Asker, Failed};
 use crate::public::engine::evidence;
 use crate::public::error::{Error, ErrorKind};
 use crate::public::question::Question;
@@ -91,33 +89,14 @@ impl Asker for Decisions {
     }
 
     fn row(&self, _text: Text, answers: Vec<Answered>) -> Result<Decided, Miss> {
-        let model = answers
-            .first()
-            .map_or("", |answered| &*answered.answered_by);
-        let stored: Vec<_> = answers
-            .iter()
-            .map(|answered| answered.answer.as_deref().map_err(DecodeError::cause))
-            .collect();
-        let outcomes = pack::read(std::slice::from_ref(&self.question), &stored, model)
-            .map_err(|error| Miss::Refused(Error::from(EngineError::from(error))))?;
+        let refused = |error: EngineError| Miss::Refused(Error::from(error));
+        let outcomes = pipeline::read(&self.question, &answers)
+            .map_err(|error| refused(EngineError::from(error)))?;
         let [outcome] = <[AnswerOutcome; 1]>::try_from(outcomes)
             .map_err(|_| Miss::Refused(Error::defect("a question read more than one outcome")))?;
-        let usage = answers
-            .iter()
-            .try_fold(Usage::new(0, 0), |total, answered| {
-                total.checked_plus(answered.usage?)
-            });
-        let model = ModelName::reported(model)
-            .map_err(|_| Miss::Refused(Error::defect("a reply named no model")))?;
-        let keys: Vec<String> = answers.iter().map(|answered| answered.key.hex()).collect();
         let decided = Decided {
-            answered: facade::Answered {
-                reply: Reply::new(model, vec![outcome.clone()], usage),
-                replayed: answers.iter().all(|answered| answered.cached),
-                request: Digest::named(keys.first().cloned().unwrap_or_default()),
-                requests_sent: answers.iter().map(|answered| answered.requests_sent).sum(),
-            },
-            keys,
+            answered: pipeline::receipt(&answers, vec![outcome.clone()]).map_err(refused)?,
+            keys: answers.iter().map(|answered| answered.key.hex()).collect(),
             outcome,
         };
         match decided.outcome {

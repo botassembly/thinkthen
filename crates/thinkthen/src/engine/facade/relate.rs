@@ -1,7 +1,7 @@
 //! Relations between given entities, planned as one ordered set of pair and
 //! menu questions.
 
-use super::each::{Models, summed};
+use super::each::Models;
 use super::{Answered, Asks, Bound, Engine, Request};
 use crate::core::{
     AnswerOutcome, Backend, BackendProfile, ModelName, Plan, Question, RelateAsk, RelateSpec,
@@ -9,6 +9,7 @@ use crate::core::{
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
+use crate::engine::pipeline::RowUsage;
 
 /// All rules share these questions, in order, and the requests they make
 /// with nothing cached.
@@ -133,6 +134,7 @@ impl Engine {
             ..Execution::default()
         };
         let mut models = Models::default();
+        let mut usage = RowUsage::default();
         let bound = Bound::pairs(self.profile());
         let questions = prepared.asks.questions();
         self.ask_each(&prepared.asks, bound, cancel, |place, answered| {
@@ -148,6 +150,7 @@ impl Engine {
                     Ok(())
                 }
             })?;
+            usage.add(answered.reply.usage());
             add_meta(&mut execution, &answered)?;
             let asked = prepared
                 .asked
@@ -175,6 +178,7 @@ impl Engine {
             Ok(())
         })?;
         execution.model = models.model().cloned();
+        execution.usage = usage.total()?;
         Ok(execution)
     }
 }
@@ -202,7 +206,6 @@ fn add_logical(
 }
 
 fn add_meta(execution: &mut Execution, answered: &Answered) -> Result<(), Error> {
-    execution.usage = summed(execution.usage, answered.reply.usage())?;
     execution.replayed &= answered.replayed;
     execution.requests_sent = execution
         .requests_sent
