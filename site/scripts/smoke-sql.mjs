@@ -55,8 +55,23 @@ if (leaked.length) {
   process.exit(2);
 }
 
-const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 26, ...opts });
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-sql-'));
+// An interrupt ends the run and removes the temp folder. Node runs no signal
+// handler while a child runs, so run() also stops when a child ended by
+// SIGINT or SIGTERM. An attempt's shell stops its server first and exits
+// 128 plus the signal's number.
+const STOPS = ['SIGINT', 'SIGTERM'];
+const stop = (signal) => {
+  fs.rmSync(tmp, { recursive: true, force: true });
+  process.exit(128 + os.constants.signals[signal]);
+};
+for (const signal of STOPS) process.on(signal, () => stop(signal));
+const run = (cmd, args, opts = {}) => {
+  const done = spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 26, ...opts });
+  const signal = done.signal ?? STOPS.find((one) => done.status === 128 + os.constants.signals[one]);
+  if (STOPS.includes(signal)) stop(signal);
+  return done;
+};
 const TOOLCHAINS = path.join(os.homedir(), '.cache', 'thinkthen-toolchains');
 
 // Each database: the folder its extension builds from, the Cargo manifest
@@ -149,9 +164,10 @@ const DATABASES = {
       // sample runs in psql as the ordinary role, from the files folder.
       // The extension resolves a relative @ name against the server's data
       // folder before it checks thinkthen.file_directory, so the role cannot
-      // read the first call's '@refund.json'. Until the extension resolves
-      // it inside file_directory, a page with files/ runs as the superuser
-      // with those files copied into the data folder.
+      // read a page's files. Until the extension resolves the name inside
+      // file_directory, a page with files/ runs as the superuser with those
+      // files copied into the data folder: annotate, recognize and the
+      // install page's first call.
       const pgCtl = JSON.stringify(path.join(bin, 'pg_ctl'));
       const script = [
         'd="$HOME/pg"',
@@ -160,7 +176,9 @@ const DATABASES = {
         'printf "listen_addresses = \'\'\\nunix_socket_directories = \'%s\'\\n" "$d/sock" >>"$d/data/postgresql.conf"',
         `${pgCtl} -D "$d/data" -l "$d/server.log" -w -t 20 start >/dev/null || { cat "$d/server.log" >&2; exit 1; }`,
         `trap '${pgCtl} -D "$d/data" -m immediate -w stop >/dev/null' EXIT`,
-        "trap 'exit 130' HUP INT TERM",
+        "trap 'exit 129' HUP",
+        "trap 'exit 130' INT",
+        "trap 'exit 143' TERM",
         `psql -X -q -v ON_ERROR_STOP=1 -h "$d/sock" -U postgres -d postgres -v files="$PWD" -f ${JSON.stringify(setup)} >/dev/null || exit 1`,
         'if [ -n "$superuser" ]; then cp -R . "$d/data/"; role=postgres; else role=reader; fi',
         'psql -X -q -v ON_ERROR_STOP=1 -h "$d/sock" -U "$role" -d postgres -f -',
