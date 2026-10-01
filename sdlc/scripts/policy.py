@@ -633,7 +633,7 @@ def deny_failures(name: str, deny: dict) -> list[str]:
 NONCARGO_MANIFESTS = {
     "libraries/php": ("composer.json", {"name": "botassembly/thinkthen", "type": "library", "license": "MIT"}),
     "libraries/csharp": ("ThinkThen.csproj", {"PackageId": "Botassembly.ThinkThen", "TargetFramework": "net8.0", "Version": "0.0.1"}),
-    "libraries/jvm": ("pom.xml", {"groupId": "io.github.botassembly", "artifactId": "thinkthen-jvm", "version": "0.0.1", "packaging": "pom"}),
+    "libraries/jvm": ("pom.xml", {"groupId": "io.github.botassembly", "artifactId": "thinkthen-jvm", "version": "0.0.1", "packaging": "jar"}),
     "libraries/dart": ("pubspec.yaml", {"name": "thinkthen_dart", "version": "0.0.1"}),
     "libraries/swift": ("Package.swift", {"name": "ThinkThen"}),
     "libraries/zig": ("build.zig.zon", {"name": "thinkthen"}),
