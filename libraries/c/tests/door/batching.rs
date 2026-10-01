@@ -367,6 +367,11 @@ fn direct_c_relate_record_reads_through_the_one_parser() {
         (r#"["Ada","person"]"#.to_owned(), 1, shape),
         (r#"{"name":"Ada"}"#.to_owned(), 1, shape),
         (
+            r#"{"name":1,"text":"Ada","kind":"person"}"#.to_owned(),
+            1,
+            shape,
+        ),
+        (
             r#"{"name":"Ada","name":"Bea","kind":"person"}"#.to_owned(),
             1,
             "a JSON record holds each member name once, and one name arrived twice",
