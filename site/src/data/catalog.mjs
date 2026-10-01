@@ -659,10 +659,10 @@ export const SURFACES = [
   {
     slug: 'go', name: 'Go', deckHeading: null,
     lang: 'go', tab: 'Go',
-    blurb: 'A cgo package over the C library. Each method takes a `context.Context` and returns a `Result` and an `error`.',
+    blurb: 'A cgo package over the C library. Each call that sends takes a `context.Context` and returns a `Result` and an `error`.',
     unsureWord: '`thinkthen.Unsure`',
     facts: '`Decide` returns a `Result`. `.Value` holds the answer, and `.Facts` holds this call\'s run facts as `json.RawMessage`.',
-    errors: 'A failed call returns an `*Error`. Its `Kind` runs from `KindUsage` to `KindDefect`, and it carries `Retryable` and `Message`.',
+    errors: 'A failed native call returns an `*Error`. Its `Kind` runs from `KindUsage` to `KindDefect`, and it carries `Retryable` and `Message`. `ErrEmbeddedNUL` and allocation failures come back as plain errors.',
     settings: '`NewWith(settingsJSON)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [
       ['go get github.com/botassembly/thinkthen/libraries/go', null],
@@ -695,7 +695,7 @@ export const SURFACES = [
   {
     slug: 'zig', name: 'Zig', deckHeading: null,
     lang: 'zig', tab: 'Zig',
-    blurb: 'A Zig 0.15 module over the C library. Each call returns `.ok` or `.failed`.',
+    blurb: 'A Zig 0.15.2 module over the C library. Each call returns `.ok` or `.failed`.',
     unsureWord: '`.unsure`',
     facts: 'An `.ok` holds a `CallResult`. `.value` holds the answer, and `.facts` holds this call\'s run facts as parsed JSON. Free it with `deinit`.',
     errors: 'A `.failed` holds one of six `kind` values and a message. Free it with `engine.freeFailure`.',
