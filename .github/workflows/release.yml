@@ -68,6 +68,13 @@ jobs:
           set -eu
           mkdir -p release-files
           if [ "$(uname -s)" = Linux ]; then
+            # Ticket 0366: log free space and our big folders at each stage.
+            disk() {
+              sdlc/scripts/release-workflow disk "$1" "$HOME/.cargo/registry" "$HOME/.rustup" \
+                "$HOME/.cache/thinkthen-toolchains" "$RUNNER_TEMP/thinkthen-language-managed" \
+                "$RUNNER_TEMP/thinkthen-provenance-x86" "${work:-}" release-files target
+            }
+            disk 'after host setup and language tools'
             export RELEASE_CARGO_REGISTRY="$HOME/.cargo/registry"
             if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
               mkdir -p "$RUNNER_TEMP/thinkthen-provenance-x86"
@@ -77,12 +84,14 @@ jobs:
             fi
             work=$(sdlc/scripts/release-workflow linux-work "$RUNNER_TEMP/thinkthen-container")
             sdlc/scripts/release-container "$work" release-files
+            disk 'after the container'
             if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
               sdlc/scripts/release-workflow c-capture "release-files/thinkthen-c-$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)-$TARGET.tar.gz" "$RUNNER_TEMP/thinkthen-provenance-x86" "$TARGET"
               sdlc/scripts/release-workflow managed-build "$RUNNER_TEMP/thinkthen-provenance-x86" release-files "$TARGET" "$THINKTHEN_RELEASE_EXPECTED_SHA"
+              disk 'after the managed build'
             fi
             sdlc/scripts/release-pack "$TARGET" release-files command first-run
-            df -h / /mnt || true
+            disk 'after the final pack'
           else
             RUBY="$HOME/.cache/thinkthen-toolchains/ruby/3.4.11-$(uname -m)-darwin/bin/ruby"
             PG_CONFIG="$(brew --prefix postgresql@16)/bin/pg_config"

@@ -52,21 +52,35 @@ fi
 check256 "$RUBY_SHA256" "$archives/ruby-$RUBY_VERSION.tar.xz"
 check256 "$YAML_SHA256" "$archives/yaml-0.2.5.tar.gz"
 check512 "$YAML_SHA512" "$archives/yaml-0.2.5.tar.gz"
+# The kept build.XXXX folder holds only logs. The sources build in a scratch folder, which this
+# run removes at exit, because the built tree fills about 770 MB (ticket 0366).
 work=$(mktemp -d "$tools/ruby/build.XXXX")
-tar -xJf "$archives/ruby-$RUBY_VERSION.tar.xz" -C "$work"
-tar -xzf "$archives/yaml-0.2.5.tar.gz" -C "$work"
+scratch_dir source "$tools/ruby/source.XXXX"
+tar -xJf "$archives/ruby-$RUBY_VERSION.tar.xz" -C "$source"
+tar -xzf "$archives/yaml-0.2.5.tar.gz" -C "$source"
 scratch_dir stage "$tools/ruby/stage.XXXX"
-configure="--prefix=$prefix --enable-shared --enable-load-relative --disable-install-doc --with-libyaml-source-dir=$work/yaml-0.2.5 --without-fiddle"
+configure="--prefix=$prefix --enable-shared --enable-load-relative --disable-install-doc --with-libyaml-source-dir=$source/yaml-0.2.5 --without-fiddle"
 if [ -n "${openssl:-}" ]; then
 	configure="$configure --with-openssl-dir=$openssl"
 	[ "$host" != Linux ] || configure="$configure --with-openssl-lib=$openssl/lib64"
 fi
-cd "$work/ruby-$RUBY_VERSION"
+cd "$source/ruby-$RUBY_VERSION"
+# keep_logs: copy Ruby's config.log and each extension's mkmf.log, which say why a step failed or
+# an extension was skipped, into the kept folder.
+keep_logs() {
+	[ ! -f config.log ] || cp -- config.log "$work/"
+	find ext -name mkmf.log | while IFS= read -r log; do
+		name=${log#ext/}
+		cp -- "$log" "$work/mkmf-$(printf '%s' "${name%/mkmf.log}" | tr / -).log"
+	done
+}
 # The words of $configure split on purpose.
 # shellcheck disable=SC2086
-./configure $configure >"$work/configure.log" 2>&1
-make -j 4 >"$work/make.log" 2>&1
-make install DESTDIR="$stage" >"$work/install.log" 2>&1
+{ ./configure $configure >"$work/configure.log" 2>&1 &&
+	make -j 4 >"$work/make.log" 2>&1 &&
+	make install DESTDIR="$stage" >"$work/install.log" 2>&1; } ||
+	{ keep_logs; echo "setup-ruby: the build failed; $work holds the logs" >&2; exit 1; }
+keep_logs
 temp_prefix=$prefix.tmp.$$
 mv "$stage$prefix" "$temp_prefix"
 scratch_remove "$stage"
@@ -75,4 +89,4 @@ scratch_remove "$stage"
 printf 'ruby %s\nyaml %s\nyaml512 %s\nhost %s\nconfigure %s\n' "$RUBY_SHA256" "$YAML_SHA256" "$YAML_SHA512" "$host:$(uname -m)" "$configure" \
 	>"$temp_prefix/thinkthen-toolchain.stamp"
 mv "$temp_prefix" "$prefix"
-echo "setup-ruby: built $prefix; the build folder $work holds the logs"
+echo "setup-ruby: built $prefix; $work holds the build logs"

@@ -761,14 +761,12 @@ def self_test():
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
                       'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned"]
-        else:
-            wanted = ["libraries/ruby/setup-ruby.sh "]
-            if not smoke:
-                musl = target.replace("-gnu", "-musl")
-                wanted = [f"rustup target add --toolchain 1.95.0 {musl}", *wanted]
-        if smoke and "apple" not in target:
-            wanted = ["py313-ready", "uv-install", "uv-check", *wanted,
+        elif smoke:
+            wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
                       "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
+        else:
+            # Ticket 0366: the Linux build job builds Ruby in its container, not on the host.
+            wanted = [f"rustup target add --toolchain 1.95.0 {target.replace('-gnu', '-musl')}"]
         if result.returncode != 0 or calls != wanted:
             bad += 1
             print(f"workflows self-test host-setup {target} smoke={smoke}: exit {result.returncode}, "

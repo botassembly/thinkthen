@@ -8,8 +8,9 @@
 # Without --reuse it builds each file from this checkout. With --reuse it packs the files each
 # surface check already built in its own build folder, which the `surfaces` rung does. It
 # rebuilds only the C library's debug build, with the remaps below, so source wrappers packed
-# with --reuse name that debug C archive (ticket 0362). Every cargo call is locked;
-# fetch first where the network is off.
+# with --reuse name that debug C archive (ticket 0362). Without --reuse or a CARGO_TARGET_DIR,
+# each part builds in a scratch folder that goes once the part is packed (ticket 0366). Every
+# cargo call is locked; fetch first where the network is off.
 set -eu
 reuse=
 [ "${1:-}" != --reuse ] || { reuse=1; shift; }
@@ -440,11 +441,25 @@ part_first_run() {
 }
 
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
+# Ticket 0366: in build mode without a caller's CARGO_TARGET_DIR, each part builds in its own scratch
+# folder, which goes once the part is packed. A run then holds one part's build at a time.
+own_build=
+[ -n "$reuse" ] || [ -n "${CARGO_TARGET_DIR:-}" ] || own_build=1
+duckdb_build=${THINKTHEN_DUCKDB_CPP_BUILD:-}
 for part in "$@"; do
+	if [ -n "$own_build" ]; then
+		scratch_dir part_build
+		CARGO_TARGET_DIR=$part_build THINKTHEN_DUCKDB_CPP_BUILD=${duckdb_build:-$part_build/cpp}
+		export CARGO_TARGET_DIR THINKTHEN_DUCKDB_CPP_BUILD
+	fi
 	case $part in
 	objective-c) part_source_wrapper objective-c ;;
 	command | c | go | cpp | csharp | jvm | swift | zig | php | dart | flutter | ada | cobol | sqlite | duckdb | postgresql | python | typescript | ruby | crate | r) "part_$part" ;;
 	first-run) part_first_run ;;
 	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
 	esac
+	if [ -n "$own_build" ]; then
+		echo "release-pack: $part built $(du -sh "$part_build" | cut -f1); $(df -Ph "$OUT" | awk 'NR == 2 {print $4}') free" >&2
+		scratch_remove "$part_build"
+	fi
 done
