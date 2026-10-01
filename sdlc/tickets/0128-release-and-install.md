@@ -6,7 +6,7 @@ opens: install.sh site/public/install.sh site/src/data/catalog.mjs site/src/page
 
 # 0128: Release and install for 0.1
 
-Status: in progress. Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`), Its held Rust test version edits landed with ticket 0376. Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`) after two code reviews. Phase3a landed after independent High ACCEPT at `3b540d19`; the Ian-dispatched four-runner rehearsal in Phase 3b and Phase 4 remain open. Owner: the Codex release lane under the coordinator's 2026-09-28 go-ahead. Four phases, each its own build, review, and landing.
+Status: in progress. Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`). Its held Rust test version edits landed with ticket 0376. Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`) after two code reviews. Phase3a landed after independent High ACCEPT at `3b540d19`; the Ian-dispatched four-runner rehearsal in Phase 3b and Phase 4 remain open. Owner: the Codex release lane under the coordinator's 2026-09-28 go-ahead. Four phases, each its own build, review, and landing.
 
 Milestone: 0.1
 
