@@ -63,10 +63,10 @@ const ENV = [
 
   <h2 id="locations">Where the files live</h2>
   <table>
-    <tr><th>File</th><th>Linux</th><th>macOS</th></tr>
-    {LOCATIONS.map(([file, linux, mac]) => (
-      <tr><td>{file}</td><td>{linux.map((p, i) => <>{i > 0 && ', else '}<code class="path" set:html={pathHtml(p)} /></>)}</td><td><code class="path" set:html={pathHtml(mac)} /></td></tr>
-    ))}
+    <tr><th>File</th><th>System</th><th>Path</th></tr>
+    {LOCATIONS.flatMap(([file, linux, mac]) => [['Linux', linux], ['macOS', [mac]]].map(([system, paths]) => (
+      <tr><td>{file}</td><td>{system}</td><td>{paths.map((p, i) => <>{i > 0 && ', else '}<code class="path" set:html={pathHtml(p)} /></>)}</td></tr>
+    )))}
   </table>
   <p>ThinkThen has no home-folder variable of its own. <code>HOME</code> and the three XDG variables decide every location.</p>
   <Terminal run={paths} caption={paths.see} />

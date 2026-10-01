@@ -198,11 +198,12 @@ table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: .85rem; }
 
-/* A flag, a key name, an address or a file name in a table stays whole. A
-   path or an address may break after a slash, where src/lib/path.mjs puts a
-   <wbr>. */
+/* A flag, a key name, an address, a path or a file name in a table stays
+   whole while the table has columns. A browser breaks at a <wbr> even in
+   nowrap text, so the <wbr> hides. On a phone or a tablet, a long path or
+   address may break after a slash, where src/lib/path.mjs puts a <wbr>. */
 td code { white-space: nowrap; }
-td code.path { white-space: normal; }
+td code wbr, code.short wbr { display: none; }
 
 /* On a phone or a tablet each table row stacks into a card, and the page
    never scrolls sideways. The first cell leads the card. In a table of three
@@ -232,6 +233,7 @@ td code.path { white-space: normal; }
     color: var(--muted); font-size: .78rem; font-weight: 600;
   }
   td code { white-space: normal; font-size: .84em; }
+  td code:not(.short) wbr { display: inline; }
 }
 
 .grid { display: grid; gap: .8rem; grid-template-columns: minmax(0, 1fr); margin: 1rem 0 1.6rem; }
@@ -377,6 +379,10 @@ ol.talk li { text-wrap: pretty; }
 
 
 p code, li code { white-space: nowrap; }
+/* A short code span never splits, on any screen. scripts/label-tables.mjs
+   marks each span of 24 characters or fewer. The rule outranks every rule
+   above and each page's own style that lets code wrap. */
+code.short { white-space: nowrap !important; }
 /* On a screen narrower than 375 px, a code span in prose too long for the
    line may wrap. Wider screens keep it whole. */
 @media (max-width: 374px) {
