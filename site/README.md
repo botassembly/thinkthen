@@ -60,6 +60,8 @@ A `REPLAY` line may end with `backend=NAME`, as in `install/ruby/backends.rb bac
 
 A function page's library sample sits at `functions/<fn>/<surface>.<ext>`. The runner takes its binding from the file name and runs it under the name `sample.<ext>`, so `polars.py` does not shadow the Polars package. The page shows no output for a library tab, so such a sample fails when it writes to standard output. Its proof entry names the function page.
 
+A function page shows its C and Rust tabs as fragments with no `main`. The runner wraps each one, as a reader would. C keeps its `#include` lines on top, and the rest goes inside `int main(void)`. Rust goes inside `fn main() -> Result<(), Box<dyn std::error::Error>>` and builds with the Rust install page's `Cargo.toml`. A fragment that declares its own `main` fails the runner. The `fragment` field of each surface in `src/data/catalog.mjs` holds the note `CrossView` shows under the C and Rust tabs, which names that `main`.
+
 The runner finds the recorded answers each sample read, and writes `examples/bindings-proof.json`. The store loads the whole fixture, so `narrow()` in `scripts/binding-proofs.mjs` keeps the answers whose question or shared state holds one of the sample's long string literals, or a quoted string inside one. It then drops each kept answer in turn. An answer whose loss fails the sample is one the sample read. Each entry holds the hashes of the sample, its saved output, its `files/`, and each answer it read. It also holds a tree hash of the binding's folder and of each Cargo workspace member it builds on, and the toolchain versions.
 
 `scripts/check-binding-proofs.mjs` runs in every build with Node and git alone. It fails when a listed line has no entry, or a sample, its saved output, a file it reads, or an answer it read changed after its proof. It also fails when a library or SQL sample under `examples/` has no `REPLAY` line. Its `PENDING` list names the samples with no replay. A change in a binding or the engine only warns, and names each page to prove again, so another queue's commit never turns the site build red. The marketing lead reruns `npm run smoke-bindings` at each published checkpoint tag and commits the new proof file. The build cannot check that a run happened, so trust rests on review: the code reviewer reruns `npm run smoke-bindings` and diffs the proof file. The same check fails a registry install line that does not name the package its binding's metadata names. It also fails a release archive name that `sdlc/scripts/release-pack` does not make.
@@ -162,4 +164,4 @@ The tabs on the home page and the cross-view on every function page share one ch
 ## What is not here yet
 
 - A page for any serve mode.
-- A replay for the function pages' Rust and C samples and the SQL samples. `PENDING` in `scripts/check-binding-proofs.mjs` lists them.
+- A replay for the SQL samples. `PENDING` in `scripts/check-binding-proofs.mjs` lists them.

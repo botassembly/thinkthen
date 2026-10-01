@@ -22,6 +22,9 @@ const alias = (slug) => ({
   duckdb: 'SQL', sqlite: 'SQL', postgresql: 'SQL',
 }[slug]);
 
+// A C or Rust sample is a fragment. Its note names the main around it.
+const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
+
 const tabs = SURFACES.map((s) => ({
   slug: s.slug,
   label: s.name,
@@ -46,6 +49,7 @@ const tabs = SURFACES.map((s) => ({
           : <>No Bash example for <code>{fn}</code>.</>}</p>
       )}
       {t.code && <Code code={t.code.code} file={t.code.file} label={`Copy the ${t.surface.name} sample`} />}
+      {t.code && t.surface.fragment && <p class="note">{parts(t.surface.fragment).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>}
       {t.code?.output && <Code code={t.code.output} lang="output" caption={`What ${t.surface.name} printed`} copy={false} />}
       {t.slug !== 'shell' && !t.code && <p class="note">No {t.surface.name} sample for <code>{fn}</code>.</p>}
     </div>

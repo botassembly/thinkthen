@@ -17,8 +17,8 @@ let labels = Question::tag::<Label>(question)?
     .cut()?;
 let message = concat!(
     "Love the new dashboard, ",
-    "but export crashes the app, ",
-    "and I was charged twice.",
+    "but export crashes the app,\n",
+    "and I was charged twice.\n",
 );
 let fitting_labels = tt.tag(&labels, message)?.into_value();
 let expected = [Label::Praise, Label::Bug, Label::Billing];

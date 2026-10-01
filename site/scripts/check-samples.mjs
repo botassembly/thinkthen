@@ -161,6 +161,16 @@ function checkLines(label, rel, lines, ext) {
   return found;
 }
 
+// A C assert never calls a function whose result or side effect the
+// sample uses later, since the call goes when NDEBUG is set. The check
+// catches the side effect: an assert that passes an address with & as a
+// function argument.
+export function cAssertProblems(label, text, offset = 0) {
+  return [...text.matchAll(/\bassert\(([^;]*?)\);/gs)]
+    .filter((m) => /[(,]\s*&\s*\w/.test(m[1]))
+    .map((m) => `${label}:${offset + text.slice(0, m.index).split('\n').length}: an assert that writes through &. Assign the call first, then assert the result.`);
+}
+
 // The code blocks in an article follow the same rules as the examples.
 export function articleProblems(name, text) {
   const found = [];
@@ -181,6 +191,7 @@ export function articleProblems(name, text) {
         if (LIBRARY.has(ext) && PRINT.test(l)) found.push(`src/articles/${name}:${start + j + 1}: a print. Assert the answer instead.`);
       });
       found.push(...namedAnswers(`src/articles/${name}`, block.join('\n'), tag, tag, start));
+      if (ext === '.c') found.push(...cAssertProblems(`src/articles/${name}`, block.join('\n'), start));
       tag = null;
     }
   });
@@ -196,6 +207,7 @@ function main() {
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
     problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
+    if (ext === '.c') problems.push(...cAssertProblems(`examples/${rel}`, text));
     if (ext === '.sh' && /--details\b/.test(text) && !rel.startsWith(DETAILS_PAGE)) problems.push(`examples/${rel}: asks for --details. Only examples under examples/${DETAILS_PAGE} may.`);
   }
 

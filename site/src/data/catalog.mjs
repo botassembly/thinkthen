@@ -507,6 +507,7 @@ export const SURFACES = [
     errors: 'Every call returns a `Result`. Its `Error` names one of six kinds. A started call that fails keeps its facts in `Error::facts()`.',
     settings: '`EngineBuilder` sets each setting. `record` writes a recording to a folder. `replay` answers from that recording and sends nothing, even on a miss.',
     install: [['cargo add thinkthen', null]],
+    fragment: 'Put this code inside `fn main() -> Result<(), Box<dyn std::error::Error>>` and end it with `Ok(())`. `main` returns a `Result`, so `?` compiles.',
     particular: [
       'Calls block. No async runtime comes with it.',
     ],
@@ -521,6 +522,7 @@ export const SURFACES = [
     errors: 'A failed call returns NULL, or a code from `THINKTHEN_EUSAGE` to `THINKTHEN_EDEFECT`. `thinkthen_error_message` reads the message on the same thread.',
     settings: '`thinkthen_engine_new_with` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection. The key stays in `THINKTHEN_API_KEY`.',
     install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
+    fragment: 'Keep the `#include` lines on top. Put the rest inside `int main(void)` and end it with `return 0;`.',
     particular: [
       'The JSON examples parse the `value` and `facts` members with json-c. Install its development headers and link with `pkg-config --cflags --libs json-c` beside libthinkthen.',
       'A failed JSON call returns NULL. A successful `value` can itself be JSON null. Typed calls use a result struct and an error code.',

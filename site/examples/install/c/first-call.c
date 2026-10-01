@@ -25,13 +25,15 @@ int main(void) {
         == json_type_object);
 
     struct json_object *urgency;
-    assert(json_object_object_get_ex(
-        envelope, "value", &urgency));
+    json_bool has_value = json_object_object_get_ex(
+        envelope, "value", &urgency);
+    assert(has_value);
     assert(json_object_get_double(urgency) == 2.0);
 
     struct json_object *facts;
-    assert(json_object_object_get_ex(
-        envelope, "facts", &facts));
+    json_bool has_facts = json_object_object_get_ex(
+        envelope, "facts", &facts);
+    assert(has_facts);
     assert(json_object_get_type(facts)
         == json_type_object);
 

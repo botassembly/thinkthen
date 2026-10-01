@@ -1,4 +1,36 @@
 {
+  "functions/annotate/c.c": {
+    "page": "/functions/annotate/",
+    "sample": "b916cc56637c7f8360dfdc079839bc1cee4c47d3b51e009ecc6c6f50fd859246",
+    "output": null,
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0d62203ae694c4c635c3ac77688c50e9704a64afa66016f1b95effdbb71f6225": "bef59e4059fb49d408abae36724da46e2fafc0e44ede1d7cf53c3f8f223cec9f",
+      "36b62b6c69d7bed9bffbbdcbf2fbe79e9dea7f353fc6aec386d76d45694c6b16": "96e3365d31d812ac8065e8ae7f5b91ec1a2b9fda97adf71ffaf5f834bc9d7f9b",
+      "56251acdc69070d73f32971057de18cad66874b948070679a7a8a13fb84bab89": "9eeb3a1abc4455cb400b30b00027d3ac4efa7efc4ff78a635c9b681239d17ad6",
+      "596935ff43fa061343fd29d6a35f0c3dcb09d130efe950b8981d0e9b1ecb756a": "213e7b6cb25444a073099acd799686f86e896b5525cd9eb8089b48df055701ed",
+      "5c478c658fc6578de71c5fa7b2f19c479194d77d632f135b6b7b59d5cc7f3510": "4662ae0d4885363e0a49135f127f2a263cd7adb8c97cef3edaf16d692993d275",
+      "802ac71993ccd7c65b8fbe4642ddc9082ec8d287c573b45f0b22c40fa4dd967c": "42a7d4cf8b64c9fd6e7eb2c0de1a8c73a00796c218a82e797eae95ae7f40bc62",
+      "939f55001dd95d6d7eb1c92f695537df07e58b1a1816ea705cade5eecc05b884": "589707c37f678d3b3ae968f04b7f71a2db0d9c11d057c19cee78a15b9b42d519",
+      "aec41b4960f2573a970d5110778e201f8af801a6d587ae9b3818ac1cfa8b068b": "0cfe1437fa831438f5b06331edfc448c14a0731edc5b8283364f8d1242e1b04a",
+      "fd1935d425bd0c58c0240db13f404f14d898ce8917d9ca4c10d599e2d380cf59": "c064c19f7f4ef5ab060fc6504ad16dfb9a5714132cb85fb4841b7d3405ea6164"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/annotate/r.R": {
     "page": "/functions/annotate/",
     "sample": "7712d10cbf4d82bdd909bca7948682fd9cad867f909e557babc005416f4145f5",
@@ -60,6 +92,36 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/annotate/rust.rs": {
+    "page": "/functions/annotate/",
+    "sample": "b6684ec2659c5470c9b159d9b5d57cdb7c5ef7e9c2279717dcdb141003f27d9b",
+    "output": null,
+    "files": {
+      "functions/annotate/files/form.json": "6bb5a8e448ebabaf8d932576515b00473ddebfeff6542bc52d4d502dde3a88eb"
+    },
+    "answers": {
+      "0b985aca11a89fe1dac9019fa49f7631459d3c68909eb6a1b91f03c2937a2b08": "58de5770c2c0e88510f0179f3689b947f81aae02b4c03a24249d59990c454a6a",
+      "189f8c82554ee18cdfb8c17de61c0000b9b0b9b7bce083d324e9d943ced8c6bd": "03b6eee6546d84f52937508c940982c5b48b503b75795f98528daabfd00ffce0",
+      "4ec15bd6b3143fc5b8328bf3adadb6180944f90544365c71f44b9894dfbe5499": "6dfb180f036d763be1f4d241b71bea803901936c547be8a1bf6d70cd2ddb4ec3",
+      "694376060a17a2ab5f0967bcd7ad390083f9b256bec26b9940b34005fc9cd19d": "30688a4bb9e422da0f8ee7a941c45271b87dba40d7f0a32369d8b4bd09c2672f",
+      "78f152c9b671cdae3c24c5d2440a30ddd0f618c18a7d25be5be141a6c5e86c6f": "1b382fb273429c60171090ce73a0da600533e6842a007add1824f180f70af778",
+      "93f483c195fdae789d3d415e977aac55a93f9ff8fe4478c178a61fa21b32a43d": "98bf4efe7a3ce19cde06ddbff59239f3a7c740e334530beb71671be8575c6e8c",
+      "a1d20de813f1f6027d2b4a7a5af0fab2f0e479cc2da83748cfa09d763754666f": "bc0eee02454bf6efee147a584092957e47c88deb326f0e5843dfb92656eed276",
+      "e9d30fab7c97f4dab04e473e2a3b93768eff02380b9a20d3291aeec60c7ade40": "6312d38cdfe3557a0060e0cd2fb4433a8d71e4a4dfecb7e0644e9d1dfeee3b25",
+      "ebb41638155be5709ca9cbe72ea57f53daaf75abc91d610c93e6bd55db97b0fa": "d156d1470d3cf007eb49b98bd42f3885b27389ff0a9536daf42b4d557339592e"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/annotate/typescript.ts": {
     "page": "/functions/annotate/",
     "sample": "22f7fb58334d65bad1b13179cfdf5358bd9fb2c1a9c6dfc953fb7be037002dd9",
@@ -87,6 +149,31 @@
     },
     "toolchain": [
       "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/choose/c.c": {
+    "page": "/functions/choose/",
+    "sample": "dc2042a11e4af8dbe49686491aef7e8f4c578e51fa3da19620540fe6eda005f0",
+    "output": null,
+    "files": {},
+    "answers": {
+      "2a07a7d31e5e734544cc52fda8fe1cf32ae08712111f9c2b2b431174bb56dda1": "8176c5c13f312dfb5e4906525d6d8390439920255f3d3aedb618949da473c10d",
+      "86b937fcb7c240a29fcfbb6c5fec7d7944b932b35dd57daf9a50e0d164cb5696": "0b1cd245dbb99ae7791e600ea481b0111ccf4a6054a4d7324ba76fb992b4677e",
+      "cf2e09434276890c98acd6492301f45fdf604a11dfc20c2895d23cba26dbfb16": "d0a9ce8793d2a2b17cb2b2023f45c9577b6130d83e5e1bf7a3ae286a5e20d282",
+      "fc693a8899f4e2391b4d272382c6ebbcd6a1a0e3585789eaa61846e440c377ea": "d4c06daa713e53385f9386bc6532d27ba766ace2bbf976b46bc2dc2545c11da6"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -160,6 +247,28 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/decide/c.c": {
+    "page": "/functions/decide/",
+    "sample": "c1752640b33e808edf25dc80cdf27003dfd851863615208780631679a061da2d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/decide/polars.py": {
     "page": "/functions/decide/",
     "sample": "4c09314bbbbdc7bb64daef87b2a64698de96aeb99e673925bd9d337c391aef10",
@@ -225,6 +334,27 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/decide/rust.rs": {
+    "page": "/functions/decide/",
+    "sample": "d3527b63e3722c76dd345ccafe5935906be57df2cc5e864ea078e4b9516add31",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "b3cdf8b502d527efd48d821f5b61a52e58b6b31a89253e7b27af64937b450e86": "079480c98881ab44035bb339e4702a0adac5755f34b14c7d71b4220304c8ecc1"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/decide/typescript.ts": {
     "page": "/functions/decide/",
     "sample": "856767e3633c8fbe8660f8648429b902893fdfd4278cc1f7af3e95b65754a005",
@@ -243,6 +373,31 @@
     },
     "toolchain": [
       "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/filter/c.c": {
+    "page": "/functions/filter/",
+    "sample": "f42ef7be1573191a2b6e65845f8403115b430ef2dde6615843e08a42bad51a8a",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -317,6 +472,51 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/filter/rust.rs": {
+    "page": "/functions/filter/",
+    "sample": "832b56839ca582b08f86be5b2565ab51674eeb113162c277f6fdb6f1cf4aac03",
+    "output": null,
+    "files": {},
+    "answers": {
+      "041db1b0797659998ff6f572f13a4c36b24af5c2e4814f7fb22eb6826f82424a": "a4a01cc1f2f4856667e079c9b04d9a9d0d04ca5f0e8ef369d92b98cd8eb8b26b",
+      "d54261252759abb9dbb348f508f0a4fa20078ab9af17054e927a608a59d06a08": "e5cbe5c668b80482cbc2ac9478c4bb70547d18017d47c3ac37f5d5230c3e55ed",
+      "e2018162b9b2bf8067a75320fa33d5fd95fbd5544f15b7d2110bc4fed8157d74": "e9efd70847c4afc7fbba117486467b24211b51d430f1cf4c8e2c7136fa0a252a",
+      "fe870f0f866f50ed863214c084754cec1f51b864cdcadf26aac8d98217a5a860": "c4acc6b96d00e71197324d379b62a2075a11b6890ff656ff5c817cb6011e6b35"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/find/c.c": {
+    "page": "/functions/find/",
+    "sample": "4bbd52cd9e7132e3cf270621831ea8b4c24d6fcef4c36e2412bed789d466240e",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/find/python.py": {
     "page": "/functions/find/",
     "sample": "ff64a94d05557d385d74e47a2169c7d8ab3b506a1bcc2f98634cc3d321ef8ae0",
@@ -356,6 +556,26 @@
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/find/rust.rs": {
+    "page": "/functions/find/",
+    "sample": "90aefe3c23e1811e8d6a13dc5dee5e21175257474fdb34548b851d12fc81e68f",
+    "output": null,
+    "files": {},
+    "answers": {
+      "3ddf64be894edf3349e358a5e751763d4fcaf5b219cea43eb6b667ebb0fafc04": "6837dd528af86c64f3fd2c9a117b7cea45fcb44d599a2f1c089057ea5afe818f"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -451,6 +671,28 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/question-file/rust.rs": {
+    "page": "/functions/question-file/",
+    "sample": "e2cd7891918d5dfd905ecde5e57dd591715af86e87772b3c984f70b17a79048f",
+    "output": null,
+    "files": {
+      "functions/question-file/files/refund.json": "4b214f7071fb9f9027aebd02af9df2a38b1249a6aef638ce90a50c45bd1abfe3"
+    },
+    "answers": {
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/question-file/typescript.ts": {
     "page": "/functions/question-file/",
     "sample": "fe13a111c492cc690e864414916e63d12b44580b1a61a3a34d073eae3caf44d8",
@@ -470,6 +712,31 @@
     },
     "toolchain": [
       "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/rank/c.c": {
+    "page": "/functions/rank/",
+    "sample": "290a456a4faffd72b56afd4401e79d6465623e11f4922a2cc6f915f284584c2d",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -520,6 +787,29 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/rank/rust.rs": {
+    "page": "/functions/rank/",
+    "sample": "0cb132fa58238b1daca98fffc3bbd2400725c7de221b229e099b2dd93c9262a9",
+    "output": null,
+    "files": {},
+    "answers": {
+      "31654fe2fb55192c208a6f36fef55b43afd08c6b00b7724818fa19a9085d6515": "d4697850848911d6ab29b873e513eeda37e2633774ccd598c43f6d1f823e44d9",
+      "5a8f96b6cd00532380482b2c4f442f57721313e8623bc2041bb75738c82e63bc": "b66dab0f0603d78a31202428a06737e049e73e5a5c963006244e62da828aa96b",
+      "6de9a156d019e7bab9cbdc1515611fb7b3e53d6a4b6e6cfcad3c546b66d352a9": "5db4e50b91ada6a924a9d03b304d790290e357243fd47b30bdeb49b69e2a2246",
+      "7f6ce927f14f85c2e69f038ea549f62eab8f282de59bffffca93aed78aac3a0c": "b3912492ef880d5b200b881a305b09af9347423d83b99544e2680bf3b6194389"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/rank/typescript.ts": {
     "page": "/functions/rank/",
     "sample": "a066bb6ff22099bdc40f9ef88edc5ff2959e07eca700ccdca452e60117d75f03",
@@ -540,6 +830,47 @@
     },
     "toolchain": [
       "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/recognize/c.c": {
+    "page": "/functions/recognize/",
+    "sample": "17960eff5f66af355d3929cbc2ab7905aca03da6c5b17c69e89457c0c94bd386",
+    "output": null,
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "038467eedbe64182770dbfe591817581a2e4ab2d640ad8401c493698ce27bf0a": "a4b28b88eaadce8782ddc82c9510ef3ed5c5edcffa701c1c4c84bf8decc49102",
+      "1064a86286cff28361cdb90773d26d4c726975e0f5155cb48e8d6ae58e459651": "cb81b47cae9fc19296792cd1c3d918e7de9d99df3531873057e95652bb4202c0",
+      "118ec588fab3050ae5d80a69a3b9bfd05fa3bedd14d7b1a8140f670c11a0f878": "eb90642e4408ad8f06d73fefe071a56be2d156a7e809f1bf17968e5d95c7f119",
+      "20c9a417396e5ef37d77734d8300e0b754419bd8e8409f1825a25fad871e2ea9": "0e3c01ebf14d52b103f94b826085ca5bb2ea2b818a6eba3ebaf009637820aede",
+      "260b44ce27b1ab3426e139d748542d569e86a3d185cb1d17044119b9d0dd557e": "505c5e80c0791ce4ffd03b07d89291489fcb6414796977651b330233b81e57de",
+      "31fcb47e332a53081e71c6469e6679eec4cfb78c2e53ebe455c83c3ee310ec32": "4f78ee517ae3ed89d0df1fecbe3c05982a1126bdf4eea14934bbee8b8b988b11",
+      "58ac9842128b986860aaa5486b5c6314c0d084f697847e35148e9373c7e5cbce": "f4aee43c3918578350171470c64026daeedc89f9000ecff618a5f67f41a16894",
+      "5ab34168c903bd3daddb30a104052788dd6e90d8c9a0b82e0827d7d3b684bbad": "c775003e5a0504cf2d99d7d5e2c0d8f5ef9cd8a3fc6fe27bddf7550084f8bbca",
+      "73a1832e7f0d18829bbfda4080fc1a3ab2e637138729c0bdaf5dcae9bb38e413": "880b86848a0a19bd7d6d3483bb512ecdd6ab77f38967710670690e65ec9dbdf2",
+      "7ca39100e0d53664fdc86e7bf4e328113e56254801107e5ee1dcec6bc567be3e": "513dfbbf70db86f37966bdde0a7af057523055eb97794d590baf2737e97f5147",
+      "7cf1a9509a7f1a570a68d4df44b677c124a5324f52f0e3329f6de4901a077010": "78d91c332962c1e2edacc3a8e360fb4c5a8fca12c56875db73f691201d0d96ed",
+      "9397fa86d6e699ddf7de91e67bb8504d36b322ce944ea07643ac75d6c952590b": "9f1f5b9d8cfd908397ce0233cb7ea4b6a989c774c17f13db01c2fc9313469aeb",
+      "ae60289792b7165a53b400c096f0ba07dd30613d8b9459524d68cead8639cc25": "b162b46e2a3fc2848a8e1c0073647a27fd866a10dd011f3ff3e70924d3ba3382",
+      "d28a7836bb26505cdb37c033b548a0051ebefbc891210e79f5af4364e761f419": "c79428675b99a9d6085877ce9fd5154fd564ec13e3f325e759274a922e8e1b37",
+      "d97758ed6fdebb7b2e7d674eda57373e361c2907d591380a7dadbb5a2c604210": "cae34f4c12c091d373ebd4c0003d2a74ee586357a4a1c52631f817194fbd7a12",
+      "e60872d16c20af6600124feebd18dd43a026e4aba331cd1812d76c4b82c3f0b8": "e0d1f715b7d56bf5a4b414821cb487131358423afd3cb79cd0997a8a0c48a30c",
+      "f0c2c7bc48d67e5b40f6d3903262c100817dfad40e9d32f1f2ae281a8e14a8fa": "a63a01b6644ef441983bd2d0c4c16f1a045024efe264c277ebb0545e5be403fc",
+      "fc9bd1d13a18453ee33a549d01b94b4261d006d181103353f3ad8f6090ff1dd2": "e587d8d03ab1b20013136bdd9b2df15f77d65d2c82dfcbd98bcf60e640f80b6e"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -657,6 +988,45 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/recognize/rust.rs": {
+    "page": "/functions/recognize/",
+    "sample": "4234ed050550ba21bff476bf558dd1a51c59487a56f9f7041fcf39049c0cf284",
+    "output": null,
+    "files": {
+      "functions/recognize/files/names.json": "c7c74a451f88d44ee51b0d50f1e02df77d6e65f29a9aa81c7e538dc2b407124b"
+    },
+    "answers": {
+      "038467eedbe64182770dbfe591817581a2e4ab2d640ad8401c493698ce27bf0a": "a4b28b88eaadce8782ddc82c9510ef3ed5c5edcffa701c1c4c84bf8decc49102",
+      "1064a86286cff28361cdb90773d26d4c726975e0f5155cb48e8d6ae58e459651": "cb81b47cae9fc19296792cd1c3d918e7de9d99df3531873057e95652bb4202c0",
+      "118ec588fab3050ae5d80a69a3b9bfd05fa3bedd14d7b1a8140f670c11a0f878": "eb90642e4408ad8f06d73fefe071a56be2d156a7e809f1bf17968e5d95c7f119",
+      "20c9a417396e5ef37d77734d8300e0b754419bd8e8409f1825a25fad871e2ea9": "0e3c01ebf14d52b103f94b826085ca5bb2ea2b818a6eba3ebaf009637820aede",
+      "260b44ce27b1ab3426e139d748542d569e86a3d185cb1d17044119b9d0dd557e": "505c5e80c0791ce4ffd03b07d89291489fcb6414796977651b330233b81e57de",
+      "31fcb47e332a53081e71c6469e6679eec4cfb78c2e53ebe455c83c3ee310ec32": "4f78ee517ae3ed89d0df1fecbe3c05982a1126bdf4eea14934bbee8b8b988b11",
+      "58ac9842128b986860aaa5486b5c6314c0d084f697847e35148e9373c7e5cbce": "f4aee43c3918578350171470c64026daeedc89f9000ecff618a5f67f41a16894",
+      "5ab34168c903bd3daddb30a104052788dd6e90d8c9a0b82e0827d7d3b684bbad": "c775003e5a0504cf2d99d7d5e2c0d8f5ef9cd8a3fc6fe27bddf7550084f8bbca",
+      "73a1832e7f0d18829bbfda4080fc1a3ab2e637138729c0bdaf5dcae9bb38e413": "880b86848a0a19bd7d6d3483bb512ecdd6ab77f38967710670690e65ec9dbdf2",
+      "7ca39100e0d53664fdc86e7bf4e328113e56254801107e5ee1dcec6bc567be3e": "513dfbbf70db86f37966bdde0a7af057523055eb97794d590baf2737e97f5147",
+      "7cf1a9509a7f1a570a68d4df44b677c124a5324f52f0e3329f6de4901a077010": "78d91c332962c1e2edacc3a8e360fb4c5a8fca12c56875db73f691201d0d96ed",
+      "9397fa86d6e699ddf7de91e67bb8504d36b322ce944ea07643ac75d6c952590b": "9f1f5b9d8cfd908397ce0233cb7ea4b6a989c774c17f13db01c2fc9313469aeb",
+      "ae60289792b7165a53b400c096f0ba07dd30613d8b9459524d68cead8639cc25": "b162b46e2a3fc2848a8e1c0073647a27fd866a10dd011f3ff3e70924d3ba3382",
+      "d28a7836bb26505cdb37c033b548a0051ebefbc891210e79f5af4364e761f419": "c79428675b99a9d6085877ce9fd5154fd564ec13e3f325e759274a922e8e1b37",
+      "d97758ed6fdebb7b2e7d674eda57373e361c2907d591380a7dadbb5a2c604210": "cae34f4c12c091d373ebd4c0003d2a74ee586357a4a1c52631f817194fbd7a12",
+      "e60872d16c20af6600124feebd18dd43a026e4aba331cd1812d76c4b82c3f0b8": "e0d1f715b7d56bf5a4b414821cb487131358423afd3cb79cd0997a8a0c48a30c",
+      "f0c2c7bc48d67e5b40f6d3903262c100817dfad40e9d32f1f2ae281a8e14a8fa": "a63a01b6644ef441983bd2d0c4c16f1a045024efe264c277ebb0545e5be403fc",
+      "fc9bd1d13a18453ee33a549d01b94b4261d006d181103353f3ad8f6090ff1dd2": "e587d8d03ab1b20013136bdd9b2df15f77d65d2c82dfcbd98bcf60e640f80b6e"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/recognize/typescript.ts": {
     "page": "/functions/recognize/",
     "sample": "16f4dd2db58ae488cd2d0bd434e08e1c4bda2ede09b44183e9f340d4fb371182",
@@ -693,6 +1063,55 @@
     },
     "toolchain": [
       "Node v22.22.3",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/relate/c.c": {
+    "page": "/functions/relate/",
+    "sample": "21ce63236eeeaca75604e2504404fb87e05fcbb0880d268004a7d311aeefca6e",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0087671399591fba4e99a4049f29137c6e457a91e836b1975ec58600e99acb1a": "546f32880d7d25b0ed5a3000366d5051d918b0b8f69f3397a6306ed30185d5df",
+      "04e4f05192cb4a14f516e673389120573d3eab59d8004a9486fb2b7427226fc5": "79ba4fe85ebfc090d6bd325f5c750ddb8c9443cd6ad3ec674418ae6a8fbe4799",
+      "0ed28a2ee4d7a5cdec71b8f3139f8acd9ea1dd8452097000485823ee10b41ce4": "6110f2c9d0abe8740b6de2087668be7d1558f2a92d9c2a1d8df1ffd33f7c23b7",
+      "1390f80ce0ddfb5eadeeff5e6cbe9969b106bbc1f7374cd62f8f527c0d39de4d": "5787cf219009492b80696c3d7a2f3a3df7c361b1ef31891c643c3731ac72bb49",
+      "16ed7d6f79a994ac571201c38f3447a1f0a92bc889b3840efb8465eeb5a3bd34": "e4474280722f6dd9e4835bd7d38ddbd8016764691034fce1c4aecb1df9d28df5",
+      "1b1ea07c869f68ae9a86629801c1c0d821efd79b0ced83d38025cdafd2e33d89": "7bb883a3ab7272482ecea459effb2682aea177ea30d2e32afdc7cb64949f35e1",
+      "2ef1c6ba0387a2cd306a1bdaca41bef57ce2f540fb1f3af7e6cf5175049ea620": "b8e9c30d221c1e34bb73479c63ed117e939223995a2a175a49180f8cae1f430f",
+      "2fefe5e33bf0deb9b5d202017be0bb4461470d3909aeac998d196ba37555d4bf": "44387a8ad1648a99773d54c7fde731cde95b556df37d536944579c1df5d3012f",
+      "4936a59732a9e6941b592c7b60d8b0f7959091481becb5e0aee7541fb3c3b344": "e07a3efe8ef5b626ac728b202c52323e39fcab5d171d272b8a6243e4eeb2f0eb",
+      "4beb904b717e7042f1d47688fd4f53b35326e99678fb864da7ef430f27ce7c05": "fc5c3d4a52c1f313c2909a69c7cab9672a4fb15e174b2cd3addca79c93fd3b29",
+      "5f8e61a0dd23495939f060e92188c63c8573c934f93c42884d40e9b8bcd29274": "29be12f29355efacc7ccc684090cd24e2e597c519692a3a1636496c9c21c68c9",
+      "7df35b2dccb0d2dbdc5112f1cf7b38afb3c03e65e3d14635abcf755e08ceccf4": "a8a11a0a30048c63a08369853f8fc325ce03a534f49b983d6e09999dfc99eb3e",
+      "867477da488a3bd78b9d9a9781364479c87a6f4582681fdf030b28c96f0ea12d": "3866505582d902a63a33dd774ecae5a5337ab29a0f591813f0b81b87301954af",
+      "8821183965ce8fb1969820e2c14a1690c29dedf27d8ee65d513a3ffda637bcec": "d5aaa6cdb7ea364ebf546bc867d2cf59954dd66987fb5300cb805ac5ea3fc2c0",
+      "891242907ea3aa3144199296f2b91ecc9d0c8d0e78959f07c5efd8b3772ef611": "5251dc47eda53d2261abab97dc6aa8f25bfbf52c6bfb0071c1f1debda3745990",
+      "8bd3d71b2b53b686e31b2c0f94c440baf31cbe00d53618922c96a8bae2b1a1b6": "02220cdf252ab97124460defe4423842b0e1061e85d5b05aaa2de468ab2e3314",
+      "90e95e5aebac57dfee6e1489ddba5e2f7bbb47f915a0181d787a12c7be0ffbc2": "ad089d01a6e45ff2496c8540c9c521e6fa28e2bb071b8768489408e7e69cfdbb",
+      "9e56579b59f79f6c37d0f852841a710b3c0f35ced0d8b01592e87bd159ebb66f": "113f21675b6bb0f923f92911f92717be806053b8edfc5aa5f18b072bde3e5236",
+      "aceca5319ddd9808739bde03d5b945321368155efffa4826ac6657bada2f3818": "ffa80c616d86838bb11ad44e10defe446484310255a78760302b7aa7eb6107a7",
+      "b11cf8a101a2fc3c8f13d6975eb4166581134aa16e79e99ce41b93ad7230bf3e": "ef6d19efe196cb7186a30cb02b570d6200474b7eb58579cc9c363754a179a006",
+      "b26c4028d9df48adf73e9cabaaa9d946b3885f127076a4af02c875825341cc7c": "5ff2d92ceb30df7b3c098f34d9668bf1f4a0e8f0bb652020d924007b3784e51d",
+      "b9bb17775bebe04daef4a29d06f913baad0aa47719314d747a589c8301b49fae": "1e99adabc33884e91e05dd13a9e2fb0c0c16e7ada6280e3e0747bfdc92767848",
+      "c7d9a486b6f5c00a700fe27d9093dca0649d1eac720a12d4c75a2e2d89706913": "fb24c7ecc6c5085b502847c9697c5eb77da72a50cc01d382bade04d561a806b7",
+      "c81bf838ab8f5fc3d0494797fde887e1e2bf4e8dbf08d2c734aabe9eafbfa5b1": "dfb1dab019fcb1810909b5417eb492bcf9e4a859e6290e5d2c2a24205d0478be",
+      "ec399ff14a56f63431c87abb6bca3105b605c395fbc897f1425a0e248bbe95c9": "3d077117ebc6a8ea5b0ffb60ce3dbcef244e6f174d1e62ded35c3391c9398ddb",
+      "f876a608317fce01f14997033a06b0867e07604c5ba2857fc05a7d7206f6df59": "abe6986981ab28dd2adf2d56ada349b47edea8613b9ddfee05ed43895b3cfc78",
+      "f88f5d0d2846cbccae4bace90a63fb8dd9fec0e7e063e8b1c49c225831a097c8": "7b46d6169ac90a5cd4a65ee5cb7165ba285ba494a4f5f7026fe89edab60aa504",
+      "fb9ffcb9054a450f520c822667bbcc99e92dee22652561d6d5f464530aae8c0e": "5b0c90c83aef01505a4084bc8fed84e697e32edf0d5cdb69053420b32e78b435"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -812,6 +1231,53 @@
     },
     "toolchain": [
       "ruby 3.4.11 (2026-09-23 revision 592f1ffdb3) +PRISM [x86_64-linux]",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/relate/rust.rs": {
+    "page": "/functions/relate/",
+    "sample": "87ed6160d76c4907f8e53f3a175579609c7983a53bc45c724e6e156d20370a21",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0087671399591fba4e99a4049f29137c6e457a91e836b1975ec58600e99acb1a": "546f32880d7d25b0ed5a3000366d5051d918b0b8f69f3397a6306ed30185d5df",
+      "04e4f05192cb4a14f516e673389120573d3eab59d8004a9486fb2b7427226fc5": "79ba4fe85ebfc090d6bd325f5c750ddb8c9443cd6ad3ec674418ae6a8fbe4799",
+      "0ed28a2ee4d7a5cdec71b8f3139f8acd9ea1dd8452097000485823ee10b41ce4": "6110f2c9d0abe8740b6de2087668be7d1558f2a92d9c2a1d8df1ffd33f7c23b7",
+      "1390f80ce0ddfb5eadeeff5e6cbe9969b106bbc1f7374cd62f8f527c0d39de4d": "5787cf219009492b80696c3d7a2f3a3df7c361b1ef31891c643c3731ac72bb49",
+      "16ed7d6f79a994ac571201c38f3447a1f0a92bc889b3840efb8465eeb5a3bd34": "e4474280722f6dd9e4835bd7d38ddbd8016764691034fce1c4aecb1df9d28df5",
+      "1b1ea07c869f68ae9a86629801c1c0d821efd79b0ced83d38025cdafd2e33d89": "7bb883a3ab7272482ecea459effb2682aea177ea30d2e32afdc7cb64949f35e1",
+      "2ef1c6ba0387a2cd306a1bdaca41bef57ce2f540fb1f3af7e6cf5175049ea620": "b8e9c30d221c1e34bb73479c63ed117e939223995a2a175a49180f8cae1f430f",
+      "2fefe5e33bf0deb9b5d202017be0bb4461470d3909aeac998d196ba37555d4bf": "44387a8ad1648a99773d54c7fde731cde95b556df37d536944579c1df5d3012f",
+      "4936a59732a9e6941b592c7b60d8b0f7959091481becb5e0aee7541fb3c3b344": "e07a3efe8ef5b626ac728b202c52323e39fcab5d171d272b8a6243e4eeb2f0eb",
+      "4beb904b717e7042f1d47688fd4f53b35326e99678fb864da7ef430f27ce7c05": "fc5c3d4a52c1f313c2909a69c7cab9672a4fb15e174b2cd3addca79c93fd3b29",
+      "5f8e61a0dd23495939f060e92188c63c8573c934f93c42884d40e9b8bcd29274": "29be12f29355efacc7ccc684090cd24e2e597c519692a3a1636496c9c21c68c9",
+      "7df35b2dccb0d2dbdc5112f1cf7b38afb3c03e65e3d14635abcf755e08ceccf4": "a8a11a0a30048c63a08369853f8fc325ce03a534f49b983d6e09999dfc99eb3e",
+      "867477da488a3bd78b9d9a9781364479c87a6f4582681fdf030b28c96f0ea12d": "3866505582d902a63a33dd774ecae5a5337ab29a0f591813f0b81b87301954af",
+      "8821183965ce8fb1969820e2c14a1690c29dedf27d8ee65d513a3ffda637bcec": "d5aaa6cdb7ea364ebf546bc867d2cf59954dd66987fb5300cb805ac5ea3fc2c0",
+      "891242907ea3aa3144199296f2b91ecc9d0c8d0e78959f07c5efd8b3772ef611": "5251dc47eda53d2261abab97dc6aa8f25bfbf52c6bfb0071c1f1debda3745990",
+      "8bd3d71b2b53b686e31b2c0f94c440baf31cbe00d53618922c96a8bae2b1a1b6": "02220cdf252ab97124460defe4423842b0e1061e85d5b05aaa2de468ab2e3314",
+      "90e95e5aebac57dfee6e1489ddba5e2f7bbb47f915a0181d787a12c7be0ffbc2": "ad089d01a6e45ff2496c8540c9c521e6fa28e2bb071b8768489408e7e69cfdbb",
+      "9e56579b59f79f6c37d0f852841a710b3c0f35ced0d8b01592e87bd159ebb66f": "113f21675b6bb0f923f92911f92717be806053b8edfc5aa5f18b072bde3e5236",
+      "aceca5319ddd9808739bde03d5b945321368155efffa4826ac6657bada2f3818": "ffa80c616d86838bb11ad44e10defe446484310255a78760302b7aa7eb6107a7",
+      "b11cf8a101a2fc3c8f13d6975eb4166581134aa16e79e99ce41b93ad7230bf3e": "ef6d19efe196cb7186a30cb02b570d6200474b7eb58579cc9c363754a179a006",
+      "b26c4028d9df48adf73e9cabaaa9d946b3885f127076a4af02c875825341cc7c": "5ff2d92ceb30df7b3c098f34d9668bf1f4a0e8f0bb652020d924007b3784e51d",
+      "b9bb17775bebe04daef4a29d06f913baad0aa47719314d747a589c8301b49fae": "1e99adabc33884e91e05dd13a9e2fb0c0c16e7ada6280e3e0747bfdc92767848",
+      "c7d9a486b6f5c00a700fe27d9093dca0649d1eac720a12d4c75a2e2d89706913": "fb24c7ecc6c5085b502847c9697c5eb77da72a50cc01d382bade04d561a806b7",
+      "c81bf838ab8f5fc3d0494797fde887e1e2bf4e8dbf08d2c734aabe9eafbfa5b1": "dfb1dab019fcb1810909b5417eb492bcf9e4a859e6290e5d2c2a24205d0478be",
+      "ec399ff14a56f63431c87abb6bca3105b605c395fbc897f1425a0e248bbe95c9": "3d077117ebc6a8ea5b0ffb60ce3dbcef244e6f174d1e62ded35c3391c9398ddb",
+      "f876a608317fce01f14997033a06b0867e07604c5ba2857fc05a7d7206f6df59": "abe6986981ab28dd2adf2d56ada349b47edea8613b9ddfee05ed43895b3cfc78",
+      "f88f5d0d2846cbccae4bace90a63fb8dd9fec0e7e063e8b1c49c225831a097c8": "7b46d6169ac90a5cd4a65ee5cb7165ba285ba494a4f5f7026fe89edab60aa504",
+      "fb9ffcb9054a450f520c822667bbcc99e92dee22652561d6d5f464530aae8c0e": "5b0c90c83aef01505a4084bc8fed84e697e32edf0d5cdb69053420b32e78b435"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -953,6 +1419,52 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "functions/score/rust.rs": {
+    "page": "/functions/score/",
+    "sample": "47ad36d4fdf54db0b816bae715942da59eb2b726392e2dc835dc452864edba88",
+    "output": null,
+    "files": {},
+    "answers": {
+      "b205f0d3e07a45a8791850bfb04c58dbe0ca3001bec7142ea9302deea7ba9448": "96a61fad7987668e4489c3e5d6873f962d4dd891f4e02163a8908673b06bd611",
+      "baec6e1846b43b7457d3375168fccafffbba685ef02189dc06ce93de158b4030": "753a75d0f3445231a8cc452d8258cd3aaed1f3e854edab25bd3725be70002fc6",
+      "e58be80f3ac6be4195b0582e0fc96e296dc7f4bc8b0dc659974eb7933cee7733": "7f8e71fbc4654983e70ec2f545c526bd2e2c7b72457c0cd33241f1e1566c029e"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/tag/c.c": {
+    "page": "/functions/tag/",
+    "sample": "99321a3c466ec0c0bd46eec7d2ac43106b907f15dac7cbe3f7acad3d96864e85",
+    "output": null,
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c"
+      ],
+      "tree": "19ec2f9561c6bee803030d9928442377c74eebc41e88effefb98baeeaec89a6b"
+    },
+    "toolchain": [
+      "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+      "json-c 0.19",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "functions/tag/python.py": {
     "page": "/functions/tag/",
     "sample": "8977f2a4112c34f0307d76fc2a3ea37f6132df34ba27761859fa50ad45541a7a",
@@ -996,6 +1508,28 @@
     },
     "toolchain": [
       "R version 4.3.3 (2024-02-29) -- \"Angel Food Cake\", dplyr 1.1.4",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "functions/tag/rust.rs": {
+    "page": "/functions/tag/",
+    "sample": "5232683cac81388b7577e696cbe06ca959581d2679769237aa21a42d45dbad9e",
+    "output": null,
+    "files": {},
+    "answers": {
+      "36dffff550563c6bbfaff776cf83bcaeaed348bac592d1182edada3500c7f6e4": "420571e01ae0776f5789d74845ebda3657cc8a684b64511369220974073f8b9d",
+      "534304b599cd9a984aa8abab65b62635a301c3a92ffd4f4f0face2c8ba84eb86": "df8f6aed26a58229795744397c7baa0750e37cad558dcea33476e4df650b0c2b",
+      "8ea6816979ec375458b3943c787898785fbac3906e2fadaaccfb2b3c231d88d2": "e4f0d35370cfe52bbcb64c9d90871b920396131f301b40bcbfc58de9c7e1a676"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen"
+      ],
+      "tree": "ac616e31620f1e40965ac465aa57de6faab7db5cf435539db21bd5de2ea23893"
+    },
+    "toolchain": [
+      "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
@@ -1184,7 +1718,7 @@
   },
   "install/c/first-call.c": {
     "page": "/install/c/",
-    "sample": "7093b2e97de40fd1eec585005d8d4088274793a272682a54425dafde583fc04d",
+    "sample": "6643e90bc020cf52474c4c45490f99163638aff98e214fdd39c5048a20215515",
     "output": null,
     "files": {},
     "answers": {

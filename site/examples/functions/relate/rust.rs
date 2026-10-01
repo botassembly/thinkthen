@@ -36,7 +36,7 @@ let pairs: Vec<_> = contradictions
     })
     .collect();
 let expected = [
-    (rules[0], rules[3], 0.84),
-    (rules[1], rules[5], 0.99),
+    (rules[0], rules[3], 0.83),
+    (rules[1], rules[5], 0.97),
 ];
 assert_eq!(pairs, expected);

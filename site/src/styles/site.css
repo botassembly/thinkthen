@@ -180,6 +180,8 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .note, .prose p, .prose ul, .p
   border-left: 3px solid var(--think); background: var(--card);
   padding: .7rem .9rem; margin: 1.1rem 0; color: var(--muted); font-size: .92rem;
 }
+/* A long signature in a note wraps, so the page never scrolls sideways. */
+.note code { white-space: normal; overflow-wrap: anywhere; }
 
 table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .93rem; }
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }

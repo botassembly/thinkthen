@@ -3,6 +3,7 @@
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
+assert(tt);
 
 const char *filter =
     "{\"filter\": \"Is this a complaint?\", "
@@ -24,9 +25,13 @@ assert(parse_error == json_tokener_success);
 assert(result && json_object_get_type(result)
     == json_type_object);
 struct json_object *value;
-assert(json_object_object_get_ex(result, "value", &value));
+json_bool has_value = json_object_object_get_ex(
+    result, "value", &value);
+assert(has_value);
 struct json_object *facts;
-assert(json_object_object_get_ex(result, "facts", &facts));
+json_bool has_facts = json_object_object_get_ex(
+    result, "facts", &facts);
+assert(has_facts);
 assert(facts && json_object_get_type(facts)
     == json_type_object);
 struct json_object *wanted =
@@ -36,3 +41,4 @@ assert(json_object_equal(value, wanted));
 if (wanted) json_object_put(wanted);
 json_object_put(result);
 thinkthen_free_string(complaints_call);
+thinkthen_engine_free(tt);
