@@ -42,4 +42,6 @@ The fork bug: the child crashed with SIGTRAP in 7 of 10 runs. The crash report r
 
 Proof at `f8c47856a`, before the review simplified the answer handoff and raised the ceilings: the full `databases/duckdb/check.sh` passed on Linux (128 cases) and on the M5 (127 cases and the `strace` skip). On the M5, `cargo deny` was stubbed because that host's cargo-deny 0.20.2 lacks `--config`; it ran on Linux. One earlier M5 run failed `sixteen_held_plans_refuse_without_eviction` with 14 of 16 sends held. That case then failed 1 of 40 runs on the fix and 0 of 40 on main. It has failed the same way on main before (see the 2026-09-30 progress log in `cleanup-2026-09-30.md`). Its held sends run on the worker threads, which the fix leaves unchanged.
 
+At the reviewed `f1c59eb79`, the full check passed again on Linux (128 cases) and on the M5 (127 cases and the `strace` skip), and the fork case passed 20 of 20 runs on the M5. `lint` passed in a clean checkout.
+
 Other surfaces wait on channels on the calling thread too. `../2026-10-01-macos-forked-children-crash-on-a-channel-wait.md` owns them.
