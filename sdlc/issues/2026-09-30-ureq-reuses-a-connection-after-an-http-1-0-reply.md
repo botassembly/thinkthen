@@ -20,7 +20,7 @@ Python's `http.server` replies over HTTP/1.0 and closes after each reply. The Du
 
 ## Our workaround
 
-Every tracked file that defines a `BaseHTTPRequestHandler` sends `Connection: close` on every reply. `databases/duckdb/tools/verbs_budget.py` `PackedReplies` sends it in its reply code. The others override `end_headers` to send it first (ticket 0361), so a `send_error` reply carries it twice, which HTTP reads as one list. `sdlc/scripts/policy.py` refuses a handler file without the header.
+Every tracked file that defines a `BaseHTTPRequestHandler` sends `Connection: close` on every reply. `databases/duckdb/tools/verbs_budget.py` `PackedReplies` sends it in its reply code. The others override `end_headers` to send it first (ticket 0361). A `send_error` reply then carries it twice. HTTP reads the two as one list. `sdlc/scripts/policy.py` refuses a handler file without the header.
 
 ## What should happen
 
