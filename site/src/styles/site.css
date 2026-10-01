@@ -188,6 +188,9 @@ footer.bottom .foot-band {
   gap: .9rem 1.4rem; margin-top: 1rem;
 }
 footer.bottom .foot-mark, footer.bottom .foot-maker { display: inline-flex; align-items: center; gap: .55rem; }
+/* The license link sits inside a line of text, so an underline marks it
+   as well as its colour. */
+footer.bottom .foot-band span > a { text-decoration: underline; text-underline-offset: 2px; }
 footer.bottom .foot-mark img { border-radius: 6px; }
 footer.bottom .foot-maker img { height: 24px; width: auto; }
 /* The footer and the About page show the logo drawn for the theme. */
