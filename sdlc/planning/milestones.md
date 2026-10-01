@@ -49,6 +49,7 @@ Open items:
 - [0272: Prepare C# and JVM managed archives for the Linux x86 release workflow](../tickets/0272-csharp-jvm-linux-workflow.md)
 - [0273: Select and verify Linux x86 language runner tools](../tickets/0273-linux-language-runner-tools.md)
 - [0299 — Estimated input admission total](../tickets/0299-token-cap-contract.md)
+- [0374: The installed-file checks prove panic isolation and the token cap](../tickets/0374-installed-panic-and-cap-checks.md)
 - [Release and install for 0.1](../issues/2026-09-25-release-and-install-for-0-1.md)
 - [README: where to get a key, how to change the backend, and the overhead line](../issues/2026-09-29-readme-key-backend-and-overhead-lines.md)
 
