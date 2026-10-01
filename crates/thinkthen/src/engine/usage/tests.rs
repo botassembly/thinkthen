@@ -258,7 +258,9 @@ fn one_write_migrates_every_contaminated_month_without_losing_totals() {
 #[test]
 fn a_failed_retry_sidecar_keeps_the_durable_base_and_warns_once() {
     let folder = folder("retry-sidecar-failure");
-    update(&folder, "2026-09", Counts::default()).expect("baseline");
+    // The counters write this month, so the test reads the month it runs in.
+    let month = super::month_now();
+    update(&folder, &month, Counts::default()).expect("baseline");
     let counters = Counters::new(Some(folder.clone()));
     FAILURE.with(|failure| failure.set(Some(Stage::RetryWrite)));
     counters.attempt_sent(true);
@@ -266,11 +268,11 @@ fn a_failed_retry_sidecar_keeps_the_durable_base_and_warns_once() {
         counters.finish(),
         "the sidecar failure reaches the warning path"
     );
-    let counted = read(&folder, "2026-09").expect("durable base remains readable");
+    let counted = read(&folder, &month).expect("durable base remains readable");
     assert_eq!((counted.month.requests_sent, counted.month.retries), (1, 0));
     counters.attempt_sent(true);
     assert!(counters.finish(), "writer stays failed");
-    let counted = read(&folder, "2026-09").expect("no later persistence");
+    let counted = read(&folder, &month).expect("no later persistence");
     assert_eq!((counted.month.requests_sent, counted.month.retries), (1, 0));
 }
 
