@@ -11,8 +11,9 @@
 //
 // The Pages build cannot read the private deck. When DECK names the deck
 // folder, as the deck's own build.sh does, the check also fails when the
-// deck's slides/, order.txt or PDF differ between deck-pin and the deck's
-// HEAD. A deck change then fails until the slides are exported again.
+// deck's slides/, order.txt or PDF in its working tree differ from deck-pin.
+// Slides rendered and not yet committed fail too, until the slides are
+// exported again from a pinned commit.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -31,8 +32,10 @@ if (manifest.deck !== deckPin) {
   problems.push(`the slides come from deck ${String(manifest.deck).slice(0, 8)}, and deck-pin names ${deckPin.slice(0, 8)}`);
 }
 if (process.env.DECK) {
-  const changed = execFileSync('git', ['-C', process.env.DECK, 'diff', '--name-only', deckPin, 'HEAD', '--',
-    'slides', 'order.txt', '*.pdf'], { encoding: 'utf8' }).trim();
+  const paths = ['slides', 'order.txt', '*.pdf'];
+  const git = (...args) => execFileSync('git', ['-C', process.env.DECK, ...args], { encoding: 'utf8' }).trim();
+  const changed = [git('diff', '--name-only', deckPin, '--', ...paths),
+    git('ls-files', '--others', '--exclude-standard', '--', ...paths)].filter(Boolean).join('\n');
   if (changed) {
     problems.push(`the deck changed after deck-pin ${deckPin.slice(0, 8)}: ${changed.split('\n').length} files under slides/, order.txt or the PDF`);
   }
