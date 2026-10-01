@@ -410,7 +410,7 @@ export const SURFACES = [
     ],
     uninstall: {
       text: 'To remove the download, delete the binary and its receipt. If you set `THINKTHEN_INSTALL_DIR`, delete the same two files there. With Homebrew, run `brew uninstall thinkthen`.',
-      code: 'rm ~/.local/bin/thinkthen ~/.local/bin/thinkthen.install.json',
+      code: 'rm ~/.local/bin/thinkthen \\\n  ~/.local/bin/thinkthen.install.json',
     },
     particular: [
       'Standard input carries the evidence. Standard output carries the answer and nothing else.',
