@@ -553,10 +553,15 @@ fn a_close_before_headers_is_not_sent_again() {
 #[cfg(unix)]
 #[test]
 fn a_refused_port_fails_before_the_first_default_retry_wait() {
-    // Port zero can never listen, so the connection is refused at once. The
-    // wait variable sets a ten-second doubling wait: a retried refusal would
-    // sit through thirty seconds of waits.
-    let base = "http://127.0.0.1:0/v1";
+    // A port that was bound and then freed refuses at once. Linux also refuses
+    // port 0, but macOS answers that with "address not available". The wait
+    // variable sets a ten-second doubling wait: a retried refusal would sit
+    // through thirty seconds of waits.
+    let port = std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .expect("a free port")
+        .port();
+    let base = &format!("http://127.0.0.1:{port}/v1");
     let started = Instant::now();
     let output = spawn(
         &["decide", "asks for a refund", "--url", base],

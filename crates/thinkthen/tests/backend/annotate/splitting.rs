@@ -268,7 +268,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
         "mixed-seed",
         r#"{"version":1,"questions":{"first":{"decide":"first?"},"second":{"decide":"second?"}}}"#,
     );
-    let seed_home = root.join("seed-usage");
+    let seed_home = crate::child::Folder::Usage.variable(&root.join("seed-usage"));
     let seeded = run(
         &seed,
         &two,
@@ -276,12 +276,12 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
         &["--cache", cache.to_str().expect("cache")],
         &[
             ("THINKTHEN_API_KEY", "key"),
-            ("XDG_STATE_HOME", seed_home.to_str().expect("seed usage")),
+            (seed_home.0, seed_home.1.as_str()),
         ],
     );
     assert_eq!(seeded.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 1);
-    let root_name = root.to_string_lossy().into_owned();
+    let state = crate::child::Folder::Usage.variable(&root);
     let output = run(
         &questions,
         &two,
@@ -290,7 +290,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
         &[
             ("THINKTHEN_API_KEY", "key"),
             ("THINKTHEN_TEST_RETRY_WAIT_MS", "1"),
-            ("XDG_STATE_HOME", root_name.as_str()),
+            (state.0, state.1.as_str()),
         ],
     );
     assert_eq!(
@@ -309,7 +309,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
         &two,
         &listener,
         &["--cache", cache.to_str().expect("cache")],
-        &[("XDG_STATE_HOME", root_name.as_str())],
+        &[(state.0, state.1.as_str())],
     );
     assert_eq!(replayed.status.code(), Some(0));
     let replayed: serde_json::Value =
@@ -318,12 +318,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
     assert_eq!(replayed["meta"]["cached"], true);
     assert!(listener.requests().is_empty());
 
-    let status = spawn(
-        &["status", "--json"],
-        &[("XDG_STATE_HOME", root_name.as_str())],
-        b"",
-    )
-    .expect("status");
+    let status = spawn(&["status", "--json"], &[(state.0, state.1.as_str())], b"").expect("status");
     let status: serde_json::Value = serde_json::from_slice(&status.stdout).expect("status JSON");
     // Cache answers count questions: two in the mixed run, three replayed.
     assert_eq!(status["usage"]["this_month"]["requests_sent"], 2);

@@ -81,7 +81,7 @@ fn status_counts_retries_as_a_subset_of_actual_sends() {
     let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("backoff-status");
     let _old = fs::remove_dir_all(&home);
     fs::create_dir_all(&home).expect("private test folder");
-    let cache_home = home.to_str().expect("UTF-8 test folder");
+    let state = crate::child::Folder::Usage.variable(&home);
     let listener = Listener::serving(vec![
         Canned::status(503, "busy").asking("retry-after-ms", "1"),
         Canned::ok(ANSWER),
@@ -91,19 +91,15 @@ fn status_counts_retries_as_a_subset_of_actual_sends() {
         &["decide", "Is it?", "--url", listener.base(), "--no-cache"],
         &[
             ("THINKTHEN_API_KEY", "sk-test"),
-            ("XDG_STATE_HOME", cache_home),
+            (state.0, state.1.as_str()),
         ],
         b"evidence",
     )
     .expect("compiled command");
     assert_eq!(run.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 2);
-    let status = spawn(
-        &["status", "--json"],
-        &[("XDG_STATE_HOME", cache_home)],
-        b"",
-    )
-    .expect("status command");
+    let status =
+        spawn(&["status", "--json"], &[(state.0, state.1.as_str())], b"").expect("status command");
     assert_eq!(status.status.code(), Some(0));
     let status: serde_json::Value = serde_json::from_slice(&status.stdout).expect("status JSON");
     for field in ["this_month", "total"] {

@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Output;
 use std::thread;
 
+use crate::child::Folder;
 use crate::harness::{Canned, Listener, spawn};
 use crate::support::{
     DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, keys, plant_fixture,
@@ -45,14 +46,14 @@ fn usage(status: &Output, name: &str) -> Option<u64> {
 #[test]
 fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
     let root = folder("default-cache-home");
-    let state = root.join("state");
+    let (cache, state) = (Folder::Cache.variable(&root), Folder::Usage.variable(&root));
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
     let base = listener.base().to_owned();
     let environment = [
         ("THINKTHEN_BASE_URL", base.as_str()),
         ("THINKTHEN_API_KEY", "secret-key"),
-        ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
-        ("XDG_STATE_HOME", state.to_str().expect("state root")),
+        (cache.0, cache.1.as_str()),
+        (state.0, state.1.as_str()),
     ];
     for (run_number, expected) in [(1, 1), (2, 0)] {
         let output = run(&["decide", "asks for a refund", "--details"], &environment).expect("run");
@@ -64,7 +65,7 @@ fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
         );
     }
     assert_eq!(listener.requests().len(), 1);
-    assert!(root.join("thinkthen").is_dir());
+    assert!(Folder::Cache.under(&root).is_dir());
 
     let listener =
         Listener::serving(vec![Canned::ok(ANSWERED), Canned::ok(ANSWERED)]).expect("listener");
@@ -72,8 +73,8 @@ fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
     let environment = [
         ("THINKTHEN_BASE_URL", base.as_str()),
         ("THINKTHEN_API_KEY", "secret-key"),
-        ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
-        ("XDG_STATE_HOME", state.to_str().expect("state root")),
+        (cache.0, cache.1.as_str()),
+        (state.0, state.1.as_str()),
     ];
     for _ in 0..2 {
         assert_eq!(
@@ -166,11 +167,12 @@ fn an_enabled_default_cache_without_a_home_has_the_fixed_local_failure() {
 #[test]
 fn rejected_input_creates_no_default_cache() {
     let root = folder("rejected-default-cache");
-    let environment = [("XDG_CACHE_HOME", root.to_str().expect("root"))];
+    let cache = Folder::Cache.variable(&root);
+    let environment = [(cache.0, cache.1.as_str())];
     let one_unit =
         spawn(&["find", "Which unit?"], &environment, b"only one\n").expect("find refusal");
     assert_eq!(one_unit.status.code(), Some(2));
-    assert!(!root.join("thinkthen").exists());
+    assert!(!Folder::Cache.under(&root).exists());
 
     let malformed = spawn(
         &["decide", "asks?", "--jsonl"],
@@ -179,7 +181,7 @@ fn rejected_input_creates_no_default_cache() {
     )
     .expect("record refusal");
     assert_eq!(malformed.status.code(), Some(2));
-    assert!(!root.join("thinkthen").exists());
+    assert!(!Folder::Cache.under(&root).exists());
 }
 
 #[path = "default_cache/usage.rs"]
@@ -274,12 +276,13 @@ fn replay_reads_a_read_only_directory_without_changing_it() {
 fn an_existing_wide_default_cache_is_refused_without_changing_its_mode() {
     use std::os::unix::fs::PermissionsExt as _;
     let root = folder("wide-default-cache");
-    let cache = root.join("thinkthen");
+    let cache = Folder::Cache.under(&root);
     fs::create_dir_all(&cache).expect("cache");
     fs::set_permissions(&cache, fs::Permissions::from_mode(0o755)).expect("mode");
+    let moved = Folder::Cache.variable(&root);
     let output = run(
         &["decide", "asks for a refund"],
-        &[("XDG_CACHE_HOME", root.to_str().expect("root"))],
+        &[(moved.0, moved.1.as_str())],
     )
     .expect("run");
     assert_eq!(output.status.code(), Some(5));

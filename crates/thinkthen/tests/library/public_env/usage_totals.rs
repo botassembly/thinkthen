@@ -4,6 +4,7 @@
 use super::*;
 #[cfg(unix)]
 use crate::child::ChildEnvironment as _;
+use crate::child::Folder;
 
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     let engine = match case {
@@ -43,14 +44,15 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
 
 #[cfg(unix)]
 #[cfg(feature = "cli")]
-/// The command's own `status --json` under this home's state folder.
+/// The command's own `status --json` under this root's usage folder.
 fn status(home: &Path) -> serde_json::Value {
+    let state = Folder::Usage.variable(home);
     let output = run::output(
         Command::new(env!("CARGO_BIN_EXE_thinkthen"))
             .args(["status", "--json"])
             .clear_environment()
-            .env("XDG_STATE_HOME", home.join("state"))
-            .home(home),
+            .home(home)
+            .env(state.0, state.1),
     )
     .expect("status runs");
     assert!(output.status.success());
@@ -81,14 +83,14 @@ fn failing_at(busy: &'static [usize]) -> Listener {
 fn the_command_and_a_seeded_engine_add_to_one_total() {
     let listener = failing_at(&[1]);
     let home = folder("usage-one-total");
-    let state = home.join("state");
+    let (cache, state) = (Folder::Cache.variable(&home), Folder::Usage.variable(&home));
     let evidence = folder("usage-one-total-evidence");
     fs::write(&evidence, format!("{EVIDENCE}\n")).expect("evidence");
     let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["decide", "asks for a refund"])
         .clear_environment()
-        .env("XDG_CACHE_HOME", &home)
-        .env("XDG_STATE_HOME", home.join("state"))
+        .env(cache.0, &cache.1)
+        .env(state.0, &state.1)
         .env("THINKTHEN_BASE_URL", listener.base())
         .stdin(fs::File::open(&evidence).expect("evidence"))
         .stdout(std::process::Stdio::piped())
@@ -104,8 +106,8 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     let seeded = in_child(
         "usage-seeded",
         &[
-            ("XDG_CACHE_HOME", home.to_str().expect("home")),
-            ("XDG_STATE_HOME", state.to_str().expect("state")),
+            (cache.0, cache.1.as_str()),
+            (state.0, state.1.as_str()),
             ("THINKTHEN_BASE_URL", listener.base()),
         ],
     );
@@ -124,10 +126,10 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
 fn a_cached_rerun_sends_nothing_and_adds_a_cache_answer() {
     let listener = listener();
     let home = folder("usage-cached-rerun");
-    let state = home.join("state");
+    let (cache, state) = (Folder::Cache.variable(&home), Folder::Usage.variable(&home));
     let environment = [
-        ("XDG_CACHE_HOME", home.to_str().expect("home")),
-        ("XDG_STATE_HOME", state.to_str().expect("state")),
+        (cache.0, cache.1.as_str()),
+        (state.0, state.1.as_str()),
         ("THINKTHEN_BASE_URL", listener.base()),
     ];
     assert_eq!(
@@ -149,18 +151,18 @@ fn a_cached_rerun_sends_nothing_and_adds_a_cache_answer() {
 fn an_engine_built_by_hand_writes_no_usage() {
     let listener = listener();
     let home = folder("usage-by-hand");
-    let state = home.join("state");
+    let (cache, state) = (Folder::Cache.variable(&home), Folder::Usage.variable(&home));
     let built = in_child(
         "usage-builder",
         &[
-            ("XDG_CACHE_HOME", home.to_str().expect("home")),
-            ("XDG_STATE_HOME", state.to_str().expect("state")),
+            (cache.0, cache.1.as_str()),
+            (state.0, state.1.as_str()),
             (ARGUMENT, listener.base()),
         ],
     );
     assert_eq!(built, "Yes sent 1 cached 0");
     assert_eq!(listener.count(), 1);
-    assert!(!state.join("thinkthen").exists());
+    assert!(!Folder::Usage.under(&home).exists());
 }
 
 /// Main answered over a shared usage folder or a malformed month and lost
@@ -185,7 +187,7 @@ fn an_unreadable_usage_folder_refuses_every_send_and_names_no_path() {
     ] {
         let listener = listener();
         let home = folder(label);
-        let usage = home.join("state/thinkthen");
+        let usage = Folder::Usage.under(&home);
         fs::create_dir_all(&usage).expect("usage folder");
         fs::set_permissions(&usage, fs::Permissions::from_mode(mode)).expect("folder mode");
         if let Some(bytes) = month {
@@ -198,13 +200,11 @@ fn an_unreadable_usage_folder_refuses_every_send_and_names_no_path() {
             }
         }
         let before = entries(&usage);
+        let state = Folder::Usage.variable(&home);
         let refused = in_child(
             "usage-refused",
             &[
-                (
-                    "XDG_STATE_HOME",
-                    home.join("state").to_str().expect("state"),
-                ),
+                (state.0, state.1.as_str()),
                 ("THINKTHEN_BASE_URL", listener.base()),
             ],
         );

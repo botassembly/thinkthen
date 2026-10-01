@@ -3,9 +3,10 @@
 use super::*;
 
 fn configuration(name: &str, body: &str) -> std::path::PathBuf {
-    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    fs::create_dir_all(root.join("thinkthen")).expect("configuration folder");
-    fs::write(root.join("thinkthen/config.json"), body).expect("configuration");
+    let root = crate::facts::fresh_root(name);
+    let config = Folder::Config.under(&root);
+    fs::create_dir_all(&config).expect("configuration folder");
+    fs::write(config.join("config.json"), body).expect("configuration");
     root
 }
 
@@ -22,23 +23,14 @@ fn run(root: &Path, listener: &Listener, input: &[u8], extra: &[&str]) -> std::p
         extra,
     ]
     .concat();
-    spawn(
-        &args,
-        &[
-            KEY,
-            ("XDG_CONFIG_HOME", root.to_str().expect("config path")),
-        ],
-        input,
-    )
-    .expect("priced command")
+    let moved = Folder::Config.variable(root);
+    spawn(&args, &[KEY, (moved.0, moved.1.as_str())], input).expect("priced command")
 }
 
 #[test]
 fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
-    let root = configuration(
-        "facts-priced-config",
-        r#"{"schema":"thinkthen.config/1","usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#,
-    );
+    let prices = r#"{"schema":"thinkthen.config/1","usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#;
+    let root = configuration("facts-priced-config", prices);
     let reply = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
     let good = Listener::serving(vec![Canned::ok(reply)]).expect("listener");
     let complete = run(&root, &good, b"Refund me.", &[]);
@@ -49,7 +41,13 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
     // The blocked usage folder uses a Unix mode.
     #[cfg(unix)]
     {
-        let blocked = crate::facts::unwritable_state("facts-priced-usage-unwritable");
+        // One root holds the prices and a usage folder the writer cannot make.
+        let blocked = configuration("facts-priced-usage-unwritable", prices);
+        crate::facts::block_usage(&blocked);
+        let (config, state) = (
+            Folder::Config.variable(&blocked),
+            Folder::Usage.variable(&blocked),
+        );
         let warned_listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
         let warned = spawn(
             &[
@@ -62,8 +60,8 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
             ],
             &[
                 KEY,
-                ("XDG_CONFIG_HOME", root.to_str().expect("config path")),
-                ("XDG_STATE_HOME", blocked.to_str().expect("usage path")),
+                (config.0, config.1.as_str()),
+                (state.0, state.1.as_str()),
             ],
             b"Still a refund.",
         )

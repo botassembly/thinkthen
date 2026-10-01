@@ -403,7 +403,7 @@ fn an_option_limit_does_not_change_pair_requests() {
 fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-caches");
     let _removed = fs::remove_dir_all(&root);
-    let xdg = root.join("xdg").to_string_lossy().into_owned();
+    let moved = crate::child::Folder::Cache.variable(&root.join("xdg"));
     let named = root.join("named").to_string_lossy().into_owned();
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#;
     for cache in [None, Some(named.as_str())] {
@@ -420,10 +420,7 @@ fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
         if let Some(folder) = cache {
             arguments.extend(["--cache", folder]);
         }
-        let environment = [
-            ("THINKTHEN_API_KEY", "secret"),
-            ("XDG_CACHE_HOME", xdg.as_str()),
-        ];
+        let environment = [("THINKTHEN_API_KEY", "secret"), (moved.0, moved.1.as_str())];
         let first = spawn(&arguments, &environment, input).expect("first run");
         assert_eq!(first.status.code(), Some(0), "{cache:?}");
         assert_eq!(listener.requests().len(), 1, "{cache:?}");

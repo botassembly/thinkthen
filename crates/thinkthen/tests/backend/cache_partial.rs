@@ -7,6 +7,7 @@ use std::path::Path;
 
 use conformance_backend::Backend;
 
+use crate::child::Folder;
 use crate::harness::spawn;
 
 /// A decide question, then a choice, so the arm below fails the choice alone.
@@ -50,13 +51,17 @@ impl Runs {
     }
 
     fn default_cache(&self) -> String {
-        format!("{}/thinkthen", self.home)
+        Folder::Cache
+            .under(Path::new(&self.home))
+            .to_string_lossy()
+            .into_owned()
     }
 
     /// Run once and pin standard output, the exit code and every request so far.
     fn run(&self, arm: &str, verb: &[&str], folder: &[&str], printed: Printed, sent: usize) -> Ran {
         let url = format!("{}{arm}", self.backend.origin());
-        let environment = [KEY, ("XDG_CACHE_HOME", self.home.as_str())];
+        let cache = Folder::Cache.variable(Path::new(&self.home));
+        let environment = [KEY, (cache.0, cache.1.as_str())];
         let arguments = [verb, &["--url", url.as_str()], folder].concat();
         let output = spawn(&arguments, &environment, b"hi")?;
         let stdout = String::from_utf8_lossy(&output.stdout);

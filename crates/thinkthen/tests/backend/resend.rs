@@ -209,8 +209,8 @@ fn a_retried_status_is_still_sent_again() {
 #[test]
 fn a_reset_adds_one_request_and_no_cache_answer_to_status() {
     let root = folder("resend-status");
-    let cache = root.to_string_lossy().into_owned();
-    let environment = [("XDG_STATE_HOME", cache.as_str())];
+    let state = crate::child::Folder::Usage.variable(&root);
+    let environment = [(state.0, state.1.as_str())];
     let listener = failing(Canned::reset).expect("a loopback listener");
 
     let output = decide(&listener, &[], &environment, EVIDENCE).expect("the compiled binary runs");
