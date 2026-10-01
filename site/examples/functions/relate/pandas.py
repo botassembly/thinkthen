@@ -11,7 +11,7 @@ names = pd.DataFrame({
     "kind": ["singer", "singer", "song", "song"],
 })
 who_sings = tt.relate(
-    list(zip(names["name"], names["kind"])),
+    names.to_dict("records"),
     relations={"sings": ("singer", "song")},
 ).value
 sings = [
