@@ -186,6 +186,37 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 
     No runner finished a build, so this run proves no target and does not close R5-37. It published nothing, created no release, draft or tag, and read no secret. Phase 3b stays open.
 
+    **Fifth rehearsal attempt, 2026-09-30.** Under the same approval, the agent dispatched again. The run is [36809341385](https://github.com/botassembly/thinkthen/actions/runs/36809341385) at main `ab4cf0459`.
+
+    | Job | Result | Cause |
+    | --- | --- | --- |
+    | `resolve` | Success | |
+    | `crate` | Failure in the public stop test | Ours: the test's second half reused a backend whose `release` frees every later held reply. The first engine's answer could reach the cache before the second engine looked, so the second engine hit the cache and was never stopped |
+    | `build` (`x86_64-unknown-linux-gnu`) | Failure in the managed language tools step | Ours: `check_jdk` searched PATH for `javac` and found the runner image's own JDK |
+    | `build` (`x86_64-apple-darwin`) | Failure in `cargo pgrx package` | Ours: host setup wrote no pgrx home, so pgrx stopped with "`$PGRX_HOME` does not exist" |
+    | `build` (`aarch64-apple-darwin`) | Failure in `cargo pgrx package` | Ours: the same missing pgrx home. The DuckDB extension built and passed its strip check |
+    | `build` (`aarch64-unknown-linux-gnu`) | Success | Clang built the static musl command on the ARM runner |
+    | Later jobs | Skipped | |
+
+    The quick fix `Land quick fix: the fifth rehearsal's stop test race, JDK pick and macOS pgrx home` answers all four. The stop test's second half holds its own reply on its own backend. With a 200 ms pause before the second engine asks, the old test fails and the new one passes. `check_jdk` uses `THINKTHEN_JDK_HOME` or the pinned package's tree and never searches PATH. Host setup on macOS writes `~/.pgrx/config.toml` when it is missing, as the Linux container does.
+
+    **Sixth rehearsal attempt, 2026-10-01.** The agent dispatched the last run the approval allowed. The run is [36812401623](https://github.com/botassembly/thinkthen/actions/runs/36812401623) at main `9b3f33b76`.
+
+    | Job | Result | Cause |
+    | --- | --- | --- |
+    | `resolve` | Success | |
+    | `crate` | Success | |
+    | `build` (`x86_64-apple-darwin`) | Success | |
+    | `build` (`aarch64-apple-darwin`) | Success | `build.sh` found no exported SQLite name in the DuckDB extension |
+    | `build` (`aarch64-unknown-linux-gnu`) | Success | |
+    | `build` (`x86_64-unknown-linux-gnu`) | Failure in `managed-build` | Ours: the managed tools check demanded `/usr/bin/bwrap`. The build job installs only the JDK packages and runs no bubblewrap consumer |
+    | `registries`, `wheels`, `gems`, `npm-pack`, `smoke`, `draft` | Skipped, since `build` failed | |
+    | Release-only jobs | Skipped, as rehearse mode requires | |
+
+    The JDK fix held: the runner selected `/usr/lib/jvm/java-21-openjdk-amd64` at 21.0.12.1. The quick fix `Land quick fix: the sixth rehearsal's managed tools check drops bubblewrap` removes the bubblewrap line. The smoke job's language tools step still pins bubblewrap before its installed consumers, and the workflows self-test holds that order. No runner has run the fix yet. The same x86 job warned that 95 MB of disk remained before `managed-build`, so the next run may need to free runner disk before the managed packages.
+
+    Three of four targets built in rehearse mode, including both Macs. The registry, wheel, gem, npm, smoke and draft jobs have not run. No failure so far needs a setup step, account or secret from the documentation team. The runs published nothing, created no release, draft or tag, and read no secret. R5-37 needs the smoke job, so it stays open, and Phase 3b stays open.
+
 ## Phase 4: Ian's release run
 
 The agent writes this checklist into `sdlc/records/0128-release-0-1.md` and follows it beside Ian. Every step marked Ian is his. The run happens in one cycle, and nobody edits `release.yml` inside it. A change to `release.yml` restarts the checklist at step 2.
