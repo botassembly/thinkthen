@@ -124,11 +124,13 @@ part_command() {
 			# later no longer export. On a 64-bit target off_t is 64 bits without that define.
 			target_var=$(printf '%s' "$command_target" | tr - _)
 			eval "cc=\${CC_$target_var:-}"
-			if [ -z "$cc" ] && ! command -v "${command_target%%-*}-linux-musl-gcc" >/dev/null; then
+			if [ -z "$cc" ] && ! command -v "${command_target%%-*}-linux-musl-gcc" >/dev/null &&
+				! { [ "$command_target" = x86_64-unknown-linux-musl ] && command -v musl-gcc >/dev/null; }; then
 				command -v clang >/dev/null || { echo 'release-pack: the static command needs clang or a musl gcc' >&2; exit 1; }
 				export "CC_$target_var=clang"
 			fi
-			export "CFLAGS_$target_var=$CFLAGS -DSQLITE_DISABLE_LFS"
+			eval "flags=\${CFLAGS_$target_var:-}"
+			export "CFLAGS_$target_var=${flags:+$flags }-DSQLITE_DISABLE_LFS"
 		;; esac
 		cargo build --locked --quiet --release --package thinkthen --target "$command_target"
 		binary=${CARGO_TARGET_DIR:-$REPO/target}/$command_target/release/thinkthen

@@ -388,6 +388,7 @@ rustc) case $1 in
   --print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
   esac ;;
 cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
+rustup) [ "$1 $2" != 'target add' ] || echo "rustup $*" >> "$FAKE_LOG" ;;
 maturin) echo 'maturin 1.15.0' ;;
 python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
   case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
@@ -758,6 +759,9 @@ def self_test():
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
         else:
             wanted = ["libraries/ruby/setup-ruby.sh "]
+            if not smoke:
+                musl = target.replace("-gnu", "-musl")
+                wanted = [f"rustup target add --toolchain 1.95.0 {musl}", *wanted]
         if smoke and "apple" not in target:
             wanted = ["py313-ready", "uv-install", "uv-check", *wanted,
                       "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
