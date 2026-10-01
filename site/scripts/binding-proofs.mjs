@@ -51,12 +51,66 @@ export function sampleHashes(examples, rel) {
 }
 
 // The fixture's lines. An answer line carries its key, the address it was
-// posted to, and its question.
+// posted to, its question and the text of the shared state it was asked
+// with. A state line carries no key.
 export function fixtureLines(file) {
-  return fs.readFileSync(file, 'utf8').split('\n').filter((l) => l.trim()).map((text) => {
-    const row = JSON.parse(text);
-    return { text, key: row.key ?? null, url: row.url ?? null, question: row.question ?? '' };
-  });
+  const rows = fs.readFileSync(file, 'utf8').split('\n').filter((l) => l.trim()).map((text) => ({ text, row: JSON.parse(text) }));
+  const states = new Map(rows.filter(({ row }) => !row.key).map(({ row }) => [row.sha256, row.state ?? '']));
+  return rows.map(({ text, row }) => ({
+    text, key: row.key ?? null, url: row.url ?? null, question: row.question ?? '', state: row.key ? states.get(row.state) ?? '' : '',
+  }));
+}
+
+// A sample on a function page sits at functions/<fn>/<surface>.<ext>. Every
+// other sample sits at <section>/<surface>/<name>.<ext>.
+export function sampleSurface(rel) {
+  return rel.startsWith('functions/') ? path.basename(rel).replace(/\..*$/, '') : rel.split('/')[1];
+}
+export function samplePage(rel) {
+  return rel.startsWith('functions/') ? `/functions/${rel.split('/')[1]}/` : `/install/${rel.split('/')[1]}/`;
+}
+
+// No key, address, backend or setting from the shell may reach a sample.
+export function leakedVariables(env) {
+  return Object.keys(env).filter((n) => n.startsWith('THINKTHEN_') || ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY'].includes(n));
+}
+
+// The store loads the whole fixture, so it cannot say which answers a sample
+// read. The answers worth keeping first are those whose question or shared
+// state holds one of the sample's string literals of 12 characters or more.
+// A literal that holds JSON, as a C sample's does, also gives each quoted
+// string inside it. `passes(answers)` runs the sample over those answers.
+// The kept answers must pass. Each one is then dropped in turn, and an
+// answer whose loss fails the sample is one it read. Returns the answers
+// read, or a reason the runner cannot tell.
+export function narrow(fixture, text, passes) {
+  const unescape = (s) => s.replace(/\\n/g, '\n').replace(/\\(.)/g, '$1');
+  const whole = [...text.matchAll(/"((?:[^"\\\n]|\\.){12,})"|'((?:[^'\\\n]|\\.){12,})'/g)].map((m) => unescape(m[1] ?? m[2]));
+  const inner = whole.flatMap((l) => [...l.matchAll(/"((?:[^"\\]|\\.){12,})"/g)].map((m) => m[1]));
+  const literals = [...new Set([...whole, ...inner])];
+  let kept = fixture.filter((l) => l.key && literals.some((x) => l.question.includes(x) || l.state.includes(x)));
+  if (!passes(kept)) return { reason: 'the answers whose question or shared state holds one of its literals do not answer it. The runner cannot tell which answers it read.' };
+  for (const line of [...kept]) {
+    const without = kept.filter((l) => l !== line);
+    if (passes(without)) kept = without;
+  }
+  if (!kept.length || !passes(kept)) return { reason: 'the answers it read do not answer it on their own.' };
+  return { kept };
+}
+
+// The library and SQL samples under examples/, outside each page's files/.
+// Every one needs a REPLAY line.
+const SAMPLE = /\.(py|ts|rb|R|rs|c|cpp|m|cob|adb|java|kt|scala|cs|go|swift|zig|php|dart|sql)$/;
+export function librarySamples(examples) {
+  const found = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) { if (e.name !== 'files') walk(p); } else if (SAMPLE.test(e.name)) found.push(path.relative(examples, p));
+    }
+  };
+  walk(examples);
+  return found.sort();
 }
 
 // One hash over every tracked file under the folders, as the working tree

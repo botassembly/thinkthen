@@ -1,7 +1,19 @@
 # The library samples scripts/smoke-bindings.mjs replays, one path a line,
 # relative to examples/. A line that ends with backend=NAME runs its sample
 # with that backend named in the environment. scripts/check-binding-proofs.mjs
-# checks each line's entry in bindings-proof.json in every build.
+# checks each line's entry in bindings-proof.json in every build, and fails
+# when a sample under examples/ has no line here.
+functions/choose/python.py
+functions/decide/polars.py
+functions/filter/python.py
+functions/find/python.py
+functions/question-file/polars.py
+functions/rank/python.py
+functions/recognize/python.py
+functions/relate/python.py
+functions/score/polars.py
+functions/score/python.py
+functions/tag/python.py
 install/ada/backends.adb backend=liquid
 install/ada/backends.adb backend=ollama
 install/ada/backends.adb backend=typesafe
