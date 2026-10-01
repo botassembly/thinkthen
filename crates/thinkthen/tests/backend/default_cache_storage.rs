@@ -66,10 +66,11 @@ fn an_unwritable_cache_folder_refuses_before_the_first_send() {
         .parent()
         .expect("a parent")
         .to_owned();
-    if root.exists() {
-        fs::set_permissions(&home, fs::Permissions::from_mode(0o700)).expect("writable again");
-        fs::remove_dir_all(&root).expect("old fixture");
+    // A fixture left by an older layout blocked the root itself.
+    for folder in [&root, &home] {
+        let _absent = fs::set_permissions(folder, fs::Permissions::from_mode(0o700));
     }
+    let _absent = fs::remove_dir_all(&root);
     fs::create_dir_all(&home).expect("cache home");
     fs::set_permissions(&home, fs::Permissions::from_mode(0o500)).expect("read-only home");
     let moved = Folder::Cache.variable(&root);
