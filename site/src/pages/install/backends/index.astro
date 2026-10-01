@@ -5,6 +5,7 @@ import Terminal from '../../../components/Terminal.astro';
 import { BACKEND_PAGES, KEY_VARIABLE } from '../../../data/catalog.mjs';
 import { run } from '../../../data/samples.mjs';
 import { backends } from '../../../lib/backends-table.mjs';
+import { pathHtml } from '../../../lib/path.mjs';
 import { checkLines } from '../../../data/backend-checks.mjs';
 
 const page = BACKEND_PAGES[0];
@@ -23,20 +24,31 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
   <h2>The built-in backends</h2>
   <p>Name one with <code>--backend NAME</code> or <code>THINKTHEN_BACKEND</code>. Each brings its own address, key variable and model.</p>
   <table class="backends" data-backends>
-    <tr><th>Name</th><th>Address</th><th>Key variable</th><th>Default model</th><th>Last check</th></tr>
+    <tr><th>Name</th><th>Address</th><th>Key variable</th><th>Default model</th></tr>
     {rows.map((r) => (
       <tr data-backend={r.name}>
         <td><a href={r.page.route}><code>{r.name}</code></a></td>
-        <td><code>{r.base}</code></td>
+        <td><code class="path" set:html={pathHtml(r.base)} /></td>
         <td>{r.keys.map((k, i) => <Fragment>{i > 0 && ', then '}<code>{k}</code></Fragment>)}</td>
         <td><code>{r.model}</code></td>
-        <td>{r.checks.map((c, i) => <Fragment>{i > 0 && <br />}{c.date}, <code>{c.model}</code>: {c.link ? <a href={c.link}>{c.critical} critical, {c.warning} warning</a> : `${c.critical} critical, ${c.warning} warning`}</Fragment>)}</td>
       </tr>
     ))}
     <tr data-announced="openai">
       <td><a href="/install/backends/openai/">OpenAI Decisions API</a></td>
-      <td colspan="4">Announced, not released</td>
+      <td colspan="3">Announced, not released</td>
     </tr>
+  </table>
+  <p>This table gives the last <code>thinkthen check</code> of each built-in backend.</p>
+  <table class="backend-checks">
+    <tr><th>Backend</th><th>Date</th><th>Model</th><th>Lines found</th></tr>
+    {rows.flatMap((r) => r.checks.map((c) => (
+      <tr>
+        <td><a href={r.page.route}><code>{r.name}</code></a></td>
+        <td>{c.date}</td>
+        <td><code>{c.model}</code></td>
+        <td>{c.link ? <a href={c.link}>{c.critical} critical, {c.warning} warning</a> : `${c.critical} critical, ${c.warning} warning`}</td>
+      </tr>
+    )))}
   </table>
   <p>Any other server goes in through <a href="/install/backends/system-one/">its address or the configuration file</a>. <a href="https://github.com/botassembly/awesome-thinkthen">Awesome ThinkThen</a> lists more models and servers that pass the check.</p>
 

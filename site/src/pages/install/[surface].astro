@@ -148,7 +148,3 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
   <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>
 </Base>
-<style>
-  /* A long variable name wraps inside its cell, so a phone does not cut it off. */
-  .backend-routes td:last-child code { overflow-wrap: anywhere; }
-</style>

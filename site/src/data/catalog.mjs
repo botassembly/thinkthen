@@ -20,7 +20,7 @@ export const OUTCOMES = [
   { key: 'yes', code: 0, label: 'yes', prints: 'true' },
   { key: 'no', code: 1, label: 'no', prints: 'false' },
   { key: 'unsure', code: 3, label: 'not sure', prints: 'null' },
-  { key: 'broken', code: '2, 4, 5, 6, 7, 70', label: 'broken', prints: 'nothing' },
+  { key: 'broken', code: '2, 4, 5, 6, 7, 70', label: 'broken', prints: null },
 ];
 
 export function outcomeOf(exit) {
@@ -173,7 +173,8 @@ export const FUNCTIONS = [
     takes: 'one yes-or-no question and many records',
     gives: 'the records that pass, byte for byte, in the order they went in',
     requests: 'One request for each record.',
-    args: 'QUESTION or @FILE. It reads one record per line. A pointer from --field or a question file makes it read JSON Lines.',
+    args: 'QUESTION or @FILE',
+    argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
       ['--threshold T', `The bar a record must reach. The default is ${cutOn('filter')}. A band is a usage error.`],
       ['--true TEXT', 'What a yes means, in the words the model reads.'],
@@ -197,7 +198,8 @@ export const FUNCTIONS = [
     takes: 'one yes-or-no question and many records',
     gives: 'every record again, most likely first',
     requests: 'One request for each record. --top trims the printed list and saves nothing.',
-    args: 'QUESTION or @FILE. It reads one record per line. A pointer from --field or a question file makes it read JSON Lines.',
+    args: 'QUESTION or @FILE',
+    argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
       ['--top N', 'Prints the first N records of the order. Every record is still judged.'],
       ['--true TEXT', 'What a yes means, in the words the model reads.'],
@@ -215,7 +217,7 @@ export const FUNCTIONS = [
   {
     name: 'find',
     goal: 'find reads all the lines together and returns the one that answers the question, or none.',
-    primitive: 'Pick one, over the lines of the evidence',
+    primitive: 'Pick one line of the evidence',
     line: 'Pick the one line that best answers a question.',
     takes: 'a question and 2 to 255 lines or records, or 2 to 254 with --none',
     gives: 'the one line that fits best',
@@ -241,13 +243,14 @@ export const FUNCTIONS = [
   {
     name: 'annotate',
     goal: 'annotate answers a saved set of questions for every record and adds one field per question.',
-    primitive: 'Every kind of answer, many at once',
+    primitive: 'Every kind of answer at once',
     line: 'Fill out a form for every record.',
     takes: 'a saved set of questions and your JSON',
     gives: 'the same JSON with one field added per question. Nested fields ride through unchanged',
     requests: 'It sends one request for each record and each part the questions read.',
     toPerson: true,
-    args: 'FILE, the saved question set',
+    args: 'FILE',
+    argsNote: 'The file is a saved question set.',
     options: [
       ...COMMON_OPTIONS,
     ],
@@ -267,7 +270,8 @@ export const FUNCTIONS = [
     takes: 'the evidence and the kinds of name you allow',
     gives: 'each name, its kind, where it sits, and a strength',
     requests: 'It runs three steps. It finds the names. It labels each name with one of your kinds. This step works like choose. When you name a relation, it relates the names. --plan prints the first request it would send.',
-    args: 'KIND..., or one @FILE question file',
+    args: 'KIND... or @FILE',
+    argsNote: 'The file is a question file.',
     options: [
       ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
       ['--threshold T', `Keeps names whose strength reaches this cut. The default is ${cutOn('recognize')}.`],
@@ -285,13 +289,14 @@ export const FUNCTIONS = [
   {
     name: 'relate',
     goal: 'relate asks the model about named entities, one possible edge per pair and rule, or one menu per source for a single rule.',
-    primitive: 'Yes or no for each pair of names, or one choice for each source under a single rule',
+    primitive: 'Yes or no per pair, or pick one',
     line: 'Find relationships among named entities.',
     lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. A rule asks one yes or no question for each pair. In a rules file, a rule marked <code>"single": true</code> asks one choice for each source instead, and gives that source at most one edge. For the links a text states, use <code>recognize --relation</code>.',
     takes: 'one set of named entities and relation rules',
     gives: 'one edge for each related pair, with a probability, and at most one edge per source for a single rule',
     requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. A single rule asks one choice per source instead, with none of these as an option. --plan prints the first request it would send.',
-    args: 'RELATION... as NAME=SOURCE_KIND:TARGET_KIND or a bare NAME, or one @FILE',
+    args: 'RELATION... or @FILE',
+    argsNote: 'Each relation is `NAME=SOURCE_KIND:TARGET_KIND` or a bare `NAME`.',
     options: [
       ['--either', 'Treats every relation as reading the same both ways.'],
       ['--threshold T', `Keeps edges whose probability reaches this cut. The default is ${cutOn('relate')}.`],
@@ -313,7 +318,8 @@ export const FUNCTIONS = [
     line: 'A saved question that six functions accept.',
     lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. Every command that reads the file then asks the same question.',
     requests: 'None of its own. The function that reads it sends the requests.',
-    args: '@FILE in place of the question words, on decide, choose, tag, score, filter, and rank.',
+    args: '@FILE',
+    argsNote: 'It takes the place of the question words on decide, choose, tag, score, filter, and rank.',
     options: [
       ['the verb key', 'One of decide, choose, tag, or score. It names the verb and carries the question text.'],
       ['true, false', 'What a yes and a no mean, for a decide question.'],

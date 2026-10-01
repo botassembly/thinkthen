@@ -12,6 +12,7 @@
   --broken: #7d8a83;  /* other exits */
   --line: #2a3531;
   --shadow: rgba(0, 0, 0, 0.4);
+  --edge: rgba(230, 238, 232, 0.35);
   color-scheme: dark;
 
   /* The code palette, after the deck's code panes. Each colour measures at
@@ -43,6 +44,7 @@
     --broken: #6b746f;
     --line: #e3ded1;
     --shadow: rgba(24, 32, 28, 0.08);
+    --edge: rgba(24, 32, 28, 0.3);
     color-scheme: light;
     --code-number: #b0306a;
     --code-literal: #3355cc;
@@ -60,6 +62,7 @@
   --broken: #6b746f;
   --line: #e3ded1;
   --shadow: rgba(24, 32, 28, 0.08);
+  --edge: rgba(24, 32, 28, 0.3);
   color-scheme: light;
   --code-number: #b0306a;
   --code-literal: #3355cc;
@@ -86,6 +89,9 @@ a:hover { color: var(--think); }
 
 h1, h2, h3 { line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
 h1 { font-size: clamp(1.9rem, 5vw, 2.9rem); margin: 0 0 .5rem; }
+/* A code pane or a slide right under the title keeps the same gap a lede
+   would leave. */
+h1 + :is(.block, .example, .slide, .tabbed) { margin-top: 1.4rem; }
 h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); margin: 2.4rem 0 .7rem; }
 h3 { font-size: 1.08rem; margin: 1.6rem 0 .4rem; }
 p { margin: 0 0 1rem; }
@@ -155,6 +161,9 @@ footer.bottom {
   color: var(--muted); font-size: .88rem;
 }
 footer.bottom .wrap { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; }
+/* Each exit code and its word wrap as one piece. */
+footer.bottom .legend { display: flex; flex-wrap: wrap; gap: 0 .6rem; }
+footer.bottom .legend .exit { white-space: nowrap; margin-right: 0; }
 
 main { flex: 1 0 auto; padding: 2rem 0 1rem; }
 
@@ -162,12 +171,12 @@ main { flex: 1 0 auto; padding: 2rem 0 1rem; }
 
 /* Prose holds a line of 60 to 80 characters. Tables, grids, and code panes
    keep the full width of the wrap. */
-main .wrap > p, main .wrap > ul, main .wrap > ol, .note, .prose p, .prose ul, .prose ol {
+main .wrap > p, main .wrap > ul, main .wrap > ol, .prose p, .prose ul, .prose ol {
   max-width: 72ch;
 }
 
 .lede { font-size: 1.15rem; color: var(--muted); max-width: 64ch; }
-.eyebrow { font-family: var(--mono); font-size: .82rem; color: var(--think); letter-spacing: .04em; }
+.eyebrow { font-family: var(--mono); font-size: .82rem; color: var(--think); letter-spacing: .04em; text-wrap: balance; }
 
 .status {
   display: inline-block; font-family: var(--mono); font-size: .74rem; letter-spacing: .06em;
@@ -176,6 +185,8 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .note, .prose p, .prose ul, .p
 }
 .status.preview { color: var(--think); }
 
+/* A callout box takes the full width of the page. Its right edge lines up
+   with the code panes and tables. */
 .note {
   border-left: 3px solid var(--think); background: var(--card);
   padding: .7rem .9rem; margin: 1.1rem 0; color: var(--muted); font-size: .92rem;
@@ -187,18 +198,59 @@ table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: .85rem; }
 
-/* A wide table scrolls inside itself. The page never scrolls sideways. */
-@media (max-width: 46rem) {
-  table { display: block; width: max-content; max-width: 100%; overflow-x: auto; }
+/* A flag, a key name, an address or a file name in a table stays whole. A
+   path or an address may break after a slash, where src/lib/path.mjs puts a
+   <wbr>. */
+td code { white-space: nowrap; }
+td code.path { white-space: normal; }
+
+/* On a phone or a tablet each table row stacks into a card, and the page
+   never scrolls sideways. The first cell leads the card. In a table of three
+   or more columns, each later cell carries its column heading, which
+   scripts/label-tables.mjs copies in at build time. A row of headings
+   alone hides, since the labels repeat it. A code span may wrap at a space
+   here, and its type is a little smaller, so a long variable fits a phone.
+   A token still too long scrolls inside its cell, and a shadow on the cut
+   edge shows the rest waits there. */
+@media (max-width: 50rem) {
+  table, tbody, tr, td, th { display: block; }
+  table { border-top: 1px solid var(--line); }
+  tr:not(:has(> td)) { display: none; }
+  tr { padding: .55rem 0; border-bottom: 1px solid var(--line); }
+  td, th { border: 0; padding: .1rem 0; overflow-x: auto; }
+  td {
+    background:
+      linear-gradient(to right, var(--ground) 50%, transparent) left / 2rem 100% no-repeat local,
+      linear-gradient(to left, var(--ground) 50%, transparent) right / 2rem 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, var(--edge), transparent) left / .8rem 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, var(--edge), transparent) right / .8rem 100% no-repeat scroll;
+  }
+  tr > :first-child { font-weight: 600; }
+  tr > th:first-child { color: var(--muted); font-size: .8rem; }
+  td[data-label]::before {
+    content: attr(data-label); display: block; margin-top: .3rem;
+    color: var(--muted); font-size: .78rem; font-weight: 600;
+  }
+  td code { white-space: normal; font-size: .84em; }
 }
 
-.grid { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); margin: 1rem 0 1.6rem; }
+.grid { display: grid; gap: .8rem; grid-template-columns: minmax(0, 1fr); margin: 1rem 0 1.6rem; }
+/* Three cards a row on a wide screen, on six tracks. A last row of two
+   splits its row in half. When three cards would leave one alone, the last
+   four sit two by two. No row ends in an empty slot. */
+@media (min-width: 46rem) {
+  .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .grid > * { grid-column: span 2; }
+  .grid:has(> :last-child:nth-child(3n+2)) > :nth-last-child(-n+2),
+  .grid:has(> :last-child:nth-child(3n+1)) > :nth-last-child(-n+4) { grid-column: span 3; }
+  .grid > :only-child { grid-column: span 3; }
+}
 .tile {
   display: block; background: var(--card); border: 1px solid var(--line); border-radius: 10px;
   padding: .85rem 1rem; text-decoration: none; color: var(--ink);
 }
 .tile:hover { border-color: var(--think); color: var(--ink); }
-.tile b { display: block; font-family: var(--mono); font-size: .95rem; color: var(--then); }
+.tile b { display: block; font-family: var(--mono); font-size: .95rem; color: var(--then); text-wrap: balance; }
 .tile span { display: block; color: var(--muted); font-size: .88rem; margin-top: .2rem; }
 
 .facts { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin: 1.4rem 0; }
@@ -276,7 +328,7 @@ button.copy:hover { color: var(--ink); border-color: var(--think); }
 .outcome.no b { color: var(--no); }
 .outcome.unsure b { color: var(--think); }
 .outcome.broken b { color: var(--broken); }
-.outcome span { color: var(--muted); font-size: .86rem; }
+.outcome span { display: block; color: var(--muted); font-size: .86rem; }
 
 .pagelinks { display: flex; gap: .8rem; flex-wrap: wrap; font-size: .9rem; margin: .6rem 0 1.4rem; }
 
@@ -311,9 +363,11 @@ button.copy:hover { color: var(--ink); border-color: var(--think); }
 .slide img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); }
 
 .slide figcaption { color: var(--muted); font-size: .78rem; margin-top: .35rem; }
+.slide a:has(img) { display: block; cursor: zoom-in; }
 .refrain { font-weight: 600; }
 .repo-link { margin-top: 2rem; font-size: .92rem; overflow-wrap: anywhere; }
 ol.talk code { font-size: .95em; }
+ol.talk li { text-wrap: pretty; }
 
 .bench-pager { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin: 2.6rem 0 1rem; }
 .bench-pager a { display: block; border: 1px solid var(--line); border-radius: 10px; padding: .65rem .9rem; text-decoration: none; color: var(--ink); background: var(--card); font-size: .92rem; }
@@ -323,6 +377,11 @@ ol.talk code { font-size: .95em; }
 
 
 p code, li code { white-space: nowrap; }
+/* On a screen narrower than 375 px, a code span in prose too long for the
+   line may wrap. Wider screens keep it whole. */
+@media (max-width: 374px) {
+  p code, li code { white-space: normal; overflow-wrap: anywhere; }
+}
 
 /* --------------------------------------------------------------- settings */
 /* The settings page renders the specification's text, whose code spans can
@@ -387,6 +446,7 @@ header.top form.search button { padding: 0; }
 }
 main form.search { margin: 0 0 1.2rem; flex-wrap: wrap; }
 main form.search input { width: 16rem; }
+.search-browse { color: var(--muted); font-size: .92rem; }
 
 /* Pagefind's own UI, in the site's palette in both themes. */
 .search-page {
@@ -402,3 +462,9 @@ main form.search input { width: 16rem; }
   margin-bottom: 2rem;
 }
 .search-page mark { background: none; color: var(--think); font-weight: 700; }
+/* The field and its buttons use the site's type. A browser gives them a
+   font of its own, and with no Arial installed Chromium paints no text in
+   them. The empty field says what it is for. */
+#search :is(input, button) { font-family: var(--sans); }
+#search input { color: var(--ink); }
+#search input::placeholder { color: var(--muted); opacity: 1; }
