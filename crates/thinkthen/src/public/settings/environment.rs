@@ -16,11 +16,14 @@ impl EngineBuilder {
     /// backend or a configuration entry names, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
     /// `THINKTHEN_BATCH`, `THINKTHEN_MAX_REQUEST_BYTES`,
     /// `THINKTHEN_REQUESTS_PER_MINUTE`,
-    /// `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the XDG cache home, and the
-    /// XDG configuration file. The setters and `build` read no environment.
+    /// `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the XDG cache and state
+    /// homes, and the XDG configuration file. The setters and `build` read no
+    /// environment.
     ///
     /// The engine adds its requests, retries, live tokens and cache answers to
     /// the command's count-only usage totals, which `thinkthen status` reads.
+    /// When the usage folder exists and cannot be read, the engine's first send
+    /// returns [`Error::Local`] naming the file and the fix, and sends nothing.
     ///
     /// # Errors
     ///

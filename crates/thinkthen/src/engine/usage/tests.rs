@@ -15,10 +15,6 @@ use super::{
     recognized_month, year_month,
 };
 
-#[cfg(unix)]
-#[path = "tests/sidecar_optimization.rs"]
-mod sidecar_optimization;
-
 static FOLDERS: AtomicU64 = AtomicU64::new(0);
 /// Exercise the production update with a fresh queue before finalization.
 fn update(path: &std::path::Path, month: &str, delta: Counts) -> std::io::Result<()> {
@@ -124,7 +120,11 @@ fn concurrent_updates_keep_every_count_in_one_monthly_aggregate() {
     let bytes = fs::read(folder.join(format!("{}.json", month_now()))).expect("month");
     let row: Counts = serde_json::from_slice(&bytes).expect("closed row");
     assert_eq!(row.requests_sent, 40);
-    assert!(!String::from_utf8_lossy(&bytes).contains("retries"));
+    assert_eq!(row.retries, 0);
+    assert!(
+        String::from_utf8_lossy(&bytes).contains("\"retries\":0"),
+        "one file holds every count"
+    );
     fs::remove_dir_all(folder).expect("cleanup");
 }
 
@@ -206,95 +206,15 @@ fn rollover_total_and_crash_residue_keep_the_last_complete_months() {
 }
 
 #[test]
-fn one_write_migrates_every_contaminated_month_without_losing_totals() {
-    let folder = folder("legacy-migration");
-    for (month, requests, retries) in [("2026-08", 3, 1), ("2026-09", 5, 2)] {
-        update(&folder, month, Counts::default()).expect("private directory and files");
-        fs::write(
-            folder.join(format!("{month}.json")),
-            format!("{{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":{requests},\"retries\":{retries},\"input_tokens\":7,\"output_tokens\":4,\"cache_answers\":0}}\n"),
-        )
-        .expect("contaminated month");
-        assert!(!folder.join(format!("retries-{month}.json")).exists());
-    }
-    // A crash after migration's sidecar sync leaves both copies with one total.
-    fs::write(
-        folder.join("retries-2026-08.json"),
-        b"{\"schema\":\"thinkthen.usage.retries/1\",\"retries\":1}\n",
-    )
-    .expect("transitional sidecar");
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        fs::set_permissions(
-            folder.join("retries-2026-08.json"),
-            fs::Permissions::from_mode(0o600),
-        )
-        .expect("private sidecar");
-    }
-    let before = read(&folder, "2026-09").expect("transitional read");
-    assert_eq!((before.total.requests_sent, before.total.retries), (8, 3));
-    update(
-        &folder,
-        "2026-09",
-        Counts {
-            requests_sent: 1,
-            retries: 1,
-            ..Counts::default()
-        },
-    )
-    .expect("migrate and count");
-    let after = read(&folder, "2026-09").expect("migrated totals");
-    assert_eq!((after.total.requests_sent, after.total.retries), (9, 4));
-    for month in ["2026-08", "2026-09"] {
-        let value: serde_json::Value =
-            serde_json::from_slice(&fs::read(folder.join(format!("{month}.json"))).expect("row"))
-                .expect("monthly JSON");
-        assert!(value.get("retries").is_none(), "{month}");
-        assert_eq!(value["schema"], "thinkthen.usage/1");
-    }
-}
-
-#[test]
-fn a_failed_retry_sidecar_keeps_the_durable_base_and_warns_once() {
-    let folder = folder("retry-sidecar-failure");
-    // The counters write this month, so the test reads the month it runs in.
-    let month = super::month_now();
-    update(&folder, &month, Counts::default()).expect("baseline");
-    let counters = Counters::new(Some(folder.clone()));
-    FAILURE.with(|failure| failure.set(Some(Stage::RetryWrite)));
-    counters.attempt_sent(true);
-    assert!(
-        counters.finish(),
-        "the sidecar failure reaches the warning path"
-    );
-    let counted = read(&folder, &month).expect("durable base remains readable");
-    assert_eq!((counted.month.requests_sent, counted.month.retries), (1, 0));
-    counters.attempt_sent(true);
-    assert!(counters.finish(), "writer stays failed");
-    let counted = read(&folder, &month).expect("no later persistence");
-    assert_eq!((counted.month.requests_sent, counted.month.retries), (1, 0));
-}
-
-#[test]
-fn an_invalid_older_month_refuses_the_whole_migration_before_any_projection() {
+fn an_invalid_older_month_refuses_the_update_before_any_write() {
     let folder = folder("invalid-old-month");
-    for month in ["2026-07", "2026-08"] {
-        update(&folder, month, Counts::default()).expect("baseline");
-        assert!(!folder.join(format!("retries-{month}.json")).exists());
-    }
-    let july = folder.join("2026-07.json");
-    let august = folder.join("2026-08.json");
-    let contaminated = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":2,\"retries\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
-    fs::write(&july, contaminated).expect("contaminated month");
+    update(&folder, "2026-08", Counts::default()).expect("baseline");
     fs::write(
-        &august,
+        folder.join("2026-08.json"),
         b"{\"schema\":\"thinkthen.usage/2\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n",
     )
     .expect("future schema");
     assert!(update(&folder, "2026-09", Counts::default()).is_err());
-    assert_eq!(fs::read(july).expect("kept month"), contaminated);
-    assert!(!folder.join("retries-2026-07.json").exists());
     assert!(!folder.join("2026-09.json").exists());
 }
 
@@ -330,9 +250,7 @@ fn checked_month_and_total_addition_refuse_overflow_without_replacing_good_state
         u64::MAX
     );
     let august = folder.join("2026-08.json");
-    let sidecar = folder.join("retries-2026-08.json");
     let before_month = fs::read(&august).expect("last good bytes");
-    let before_sidecar = fs::read(&sidecar).expect("last good retry bytes");
     assert!(
         update(
             &folder,
@@ -346,12 +264,7 @@ fn checked_month_and_total_addition_refuse_overflow_without_replacing_good_state
         "individually valid month would overflow the aggregate"
     );
     assert_eq!(fs::read(august).expect("unchanged month"), before_month);
-    assert_eq!(
-        fs::read(sidecar).expect("unchanged sidecar"),
-        before_sidecar
-    );
     assert!(!folder.join("2026-09.json").exists());
-    assert!(!folder.join("retries-2026-09.json").exists());
     assert_eq!(
         read(&folder, "2026-08")
             .expect("readable total")
@@ -362,56 +275,12 @@ fn checked_month_and_total_addition_refuse_overflow_without_replacing_good_state
 }
 
 #[test]
-fn current_month_overflow_refuses_before_migrating_an_older_month() {
-    let folder = folder("overflow-before-migration");
-    update(&folder, "2026-08", Counts::default()).expect("old baseline");
-    update(
-        &folder,
-        "2026-09",
-        Counts {
-            requests_sent: u64::MAX,
-            retries: 1,
-            ..Counts::default()
-        },
-    )
-    .expect("current maximum");
-    let old = folder.join("2026-08.json");
-    assert!(!folder.join("retries-2026-08.json").exists());
-    let contaminated = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":0,\"retries\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
-    fs::write(&old, contaminated).expect("retry-extended older month");
-    let current = folder.join("2026-09.json");
-    let current_sidecar = folder.join("retries-2026-09.json");
-    let current_before = fs::read(&current).expect("current bytes");
-    let retry_before = fs::read(&current_sidecar).expect("current retry bytes");
-
-    assert!(
-        update(
-            &folder,
-            "2026-09",
-            Counts {
-                requests_sent: 1,
-                ..Counts::default()
-            }
-        )
-        .is_err()
-    );
-    assert_eq!(fs::read(old).expect("old bytes"), contaminated);
-    assert!(!folder.join("retries-2026-08.json").exists());
-    assert_eq!(fs::read(current).expect("current bytes"), current_before);
-    assert_eq!(
-        fs::read(current_sidecar).expect("current retry bytes"),
-        retry_before
-    );
-}
-
-#[test]
 fn every_update_stage_warns_once_and_disables_later_persistence() {
     for stage in [
         Stage::Setup,
         Stage::Lock,
         Stage::Validation,
         Stage::Write,
-        Stage::RetryWrite,
         Stage::FileSync,
         Stage::Rename,
         Stage::DirectorySync,
@@ -422,11 +291,7 @@ fn every_update_stage_warns_once_and_disables_later_persistence() {
         }
         let counters = Counters::new(Some(folder.clone()));
         FAILURE.with(|failure| failure.set(Some(stage)));
-        if stage == Stage::RetryWrite {
-            counters.attempt_sent(true);
-        } else {
-            counters.request_sent();
-        }
+        counters.request_sent();
         assert!(counters.finish(), "{stage:?}");
         let after_failure = read(&folder, "2026-09")
             .map(|totals| totals.month.requests_sent)
@@ -450,7 +315,6 @@ fn interrupted_first_write_never_publishes_an_empty_month() {
             !folder.join("2026-09.json").exists(),
             "{stage:?} published a canonical month"
         );
-        assert!(!folder.join("retries-2026-09.json").exists());
     }
 }
 
@@ -463,9 +327,6 @@ fn strict_reader_refuses_symlink_nonregular_and_unsafe_modes() {
         "symlink",
         "directory",
         "month-mode",
-        "sidecar-symlink",
-        "sidecar-mode",
-        "sidecar-schema",
         "lock-mode",
         "folder-mode",
     ] {
@@ -478,7 +339,7 @@ fn strict_reader_refuses_symlink_nonregular_and_unsafe_modes() {
                 ..Counts::default()
             },
         )
-        .expect("baseline with a real sidecar");
+        .expect("baseline");
         let month = folder.join("2026-09.json");
         match case {
             "symlink" => {
@@ -492,21 +353,6 @@ fn strict_reader_refuses_symlink_nonregular_and_unsafe_modes() {
             "month-mode" => {
                 fs::set_permissions(&month, fs::Permissions::from_mode(0o644)).expect("mode")
             }
-            "sidecar-symlink" => {
-                let sidecar = folder.join("retries-2026-09.json");
-                fs::rename(&sidecar, folder.join("retry-target")).expect("target");
-                symlink(folder.join("retry-target"), &sidecar).expect("symlink");
-            }
-            "sidecar-mode" => fs::set_permissions(
-                folder.join("retries-2026-09.json"),
-                fs::Permissions::from_mode(0o644),
-            )
-            .expect("mode"),
-            "sidecar-schema" => fs::write(
-                folder.join("retries-2026-09.json"),
-                b"{\"schema\":\"thinkthen.usage.retries/2\",\"retries\":0}\n",
-            )
-            .expect("future sidecar"),
             "lock-mode" => {
                 fs::set_permissions(folder.join(".lock"), fs::Permissions::from_mode(0o644))
                     .expect("mode")
@@ -518,4 +364,133 @@ fn strict_reader_refuses_symlink_nonregular_and_unsafe_modes() {
         }
         assert!(read(&folder, "2026-09").is_err(), "{case}");
     }
+}
+
+/// QA's case on main: an older build's month file holds `retries` beside a
+/// `retries-` file with another value, and main refused to choose. One file
+/// now holds all five counts, and any `retries-` file is not a month.
+#[cfg(unix)]
+#[test]
+fn one_month_file_holds_every_count_and_an_old_retries_file_is_ignored() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let folder = folder("one-file");
+    update(&folder, "2026-09", Counts::default()).expect("private folder and lock");
+    let month = folder.join("2026-09.json");
+    fs::write(&month, b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":4,\"retries\":2,\"input_tokens\":7,\"output_tokens\":3,\"cache_answers\":1}\n").expect("month");
+    let old = folder.join("retries-2026-09.json");
+    fs::write(
+        &old,
+        b"{\"schema\":\"thinkthen.usage.retries/1\",\"retries\":5}\n",
+    )
+    .expect("old");
+    fs::set_permissions(&old, fs::Permissions::from_mode(0o600)).expect("private");
+    let totals = read(&folder, "2026-09").expect("the month file alone");
+    assert_eq!((totals.month.requests_sent, totals.month.retries), (4, 2));
+    let retry = Counts {
+        requests_sent: 1,
+        retries: 1,
+        ..Counts::default()
+    };
+    update(&folder, "2026-10", retry).expect("a new month");
+    assert_eq!(
+        fs::read_to_string(folder.join("2026-10.json")).expect("written"),
+        "{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"retries\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n"
+    );
+    assert!(!folder.join("retries-2026-10.json").exists());
+    let total = read(&folder, "2026-10").expect("both months").total;
+    assert_eq!((total.requests_sent, total.retries), (5, 3));
+}
+
+/// The writer makes `.lock` before any month, so a folder without one holds
+/// nothing thinkthen wrote. Main refused it, so two runs that started
+/// together on a new folder could refuse each other.
+#[cfg(unix)]
+#[test]
+fn a_folder_without_a_lock_reads_as_zero() {
+    use std::os::unix::fs::DirBuilderExt as _;
+
+    let folder = folder("no-lock");
+    fs::DirBuilder::new()
+        .mode(0o700)
+        .create(&folder)
+        .expect("private folder");
+    let totals = read(&folder, "2026-09").expect("zero");
+    assert_eq!(totals.total, Counts::default());
+    assert!(Counters::new(Some(folder)).check_readable().is_ok());
+}
+
+/// Main waited without end for a held lock. The read now gives up after one
+/// second; status names the lock as busy, and the send check passes.
+#[test]
+fn a_held_lock_is_busy_after_one_second_and_the_send_check_passes() {
+    let folder = folder("held-lock");
+    update(&folder, "2026-09", Counts::default()).expect("baseline");
+    let holder = fs::File::open(folder.join(".lock")).expect("lock");
+    holder.lock().expect("exclusive");
+    let started = std::time::Instant::now();
+    let failure = read(&folder, "2026-09").expect_err("busy");
+    assert!(failure.busy());
+    assert!(started.elapsed() < Duration::from_secs(3));
+    assert_eq!(
+        failure.sentence(Some(&folder)),
+        format!(
+            "cannot read the usage totals: {} is locked by another process. Try again when it finishes.",
+            folder.join(".lock").display()
+        )
+    );
+    assert!(Counters::new(Some(folder)).check_readable().is_ok());
+}
+
+/// The check keeps its result, so a repaired file does not resume counting
+/// mid-process and every later send in the process refuses too.
+#[test]
+fn a_refused_check_stays_refused_and_names_only_the_file() {
+    let folder = folder("kept-refusal");
+    let month = month_now();
+    update(&folder, &month, Counts::default()).expect("baseline");
+    let file = folder.join(format!("{month}.json"));
+    fs::write(&file, b"not JSON").expect("malformed");
+    let counters = Counters::new(Some(folder.clone()));
+    let sentence = format!(
+        "cannot read the usage totals: {month}.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again."
+    );
+    for _ in 0..2 {
+        match counters.check_readable() {
+            Err(Error::UsageUnreadable(said)) => assert_eq!(said, sentence),
+            other => panic!("{other:?}"),
+        }
+    }
+    fs::remove_file(&file).expect("repaired");
+    assert!(counters.check_readable().is_err());
+    assert!(!sentence.contains(&folder.display().to_string()));
+}
+
+#[cfg(unix)]
+#[test]
+fn each_unsafe_sentence_names_the_fix() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let folder = folder("unsafe-sentence");
+    update(&folder, "2026-09", Counts::default()).expect("baseline");
+    let month = folder.join("2026-09.json");
+    fs::set_permissions(&month, fs::Permissions::from_mode(0o644)).expect("mode");
+    let failure = read(&folder, "2026-09").expect_err("unsafe");
+    assert_eq!(
+        failure.sentence(None),
+        "cannot read the usage totals: 2026-09.json has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it out of the usage folder that thinkthen status names."
+    );
+    assert_eq!(
+        failure.sentence(Some(&folder)),
+        format!(
+            "cannot read the usage totals: {} has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.",
+            month.display()
+        )
+    );
+    fs::set_permissions(&month, fs::Permissions::from_mode(0o600)).expect("mode");
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o755)).expect("mode");
+    assert_eq!(
+        read(&folder, "2026-09").expect_err("folder").sentence(None),
+        "cannot read the usage totals: the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside."
+    );
 }

@@ -5,11 +5,12 @@ import Terminal from '../../../components/Terminal.astro';
 import { BACKEND_PAGES, KEY_VARIABLE } from '../../../data/catalog.mjs';
 import { run } from '../../../data/samples.mjs';
 import { backends } from '../../../lib/backends-table.mjs';
+import { checkLines } from '../../../data/backend-checks.mjs';
 
 const page = BACKEND_PAGES[0];
 const plan = run('install/backends', '1-plan');
 const linked = (name) => BACKEND_PAGES.find((p) => p.slug === name);
-const rows = backends().map((b) => ({ ...b, page: linked(b.name) }));
+const rows = backends().map((b) => ({ ...b, page: linked(b.name), checks: checkLines(b.name) }));
 for (const r of rows) {
   if (!r.page) throw new Error(`backends: the table holds ${r.name}, and BACKEND_PAGES has no page for it`);
 }
@@ -22,17 +23,22 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
   <h2>The built-in backends</h2>
   <p>Name one with <code>--backend NAME</code> or <code>THINKTHEN_BACKEND</code>. Each brings its own address, key variable and model.</p>
   <table class="backends" data-backends>
-    <tr><th>Name</th><th>Address</th><th>Key variable</th><th>Default model</th></tr>
+    <tr><th>Name</th><th>Address</th><th>Key variable</th><th>Default model</th><th>Last check</th></tr>
     {rows.map((r) => (
       <tr data-backend={r.name}>
         <td><a href={r.page.route}><code>{r.name}</code></a></td>
         <td><code>{r.base}</code></td>
         <td>{r.keys.map((k, i) => <Fragment>{i > 0 && ', then '}<code>{k}</code></Fragment>)}</td>
         <td><code>{r.model}</code></td>
+        <td>{r.checks.map((c, i) => <Fragment>{i > 0 && <br />}{c.date}, <code>{c.model}</code>: {c.link ? <a href={c.link}>{c.critical} critical, {c.warning} warning</a> : `${c.critical} critical, ${c.warning} warning`}</Fragment>)}</td>
       </tr>
     ))}
+    <tr data-announced="openai">
+      <td><a href="/install/backends/openai/">OpenAI Decisions API</a></td>
+      <td colspan="4">Announced, not released</td>
+    </tr>
   </table>
-  <p>Any other server goes in through <a href="/install/backends/system-one/">its address or the configuration file</a>.</p>
+  <p>Any other server goes in through <a href="/install/backends/system-one/">its address or the configuration file</a>. <a href="https://github.com/botassembly/awesome-thinkthen">Awesome ThinkThen</a> lists more models and servers that pass the check.</p>
 
   <h2>With no backend named</h2>
   <p>A command that names no backend and no address sends every question to <code>{typesafe.base}</code> with <code>{typesafe.model}</code>. It reads the key from <code>{KEY_VARIABLE}</code>. The <a href="/install/backends/typesafe/">TypeSafe Jev page</a> covers that backend.</p>
@@ -40,7 +46,7 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
   <p><code>--plan</code> sends nothing and needs no key. The plan holds the evidence, so treat it with the same care as the request.</p>
 
   <h2>The key</h2>
-  <p>A named backend reads only its own key variables, and the first one that is not blank wins. With no backend named, the key comes from <code>{KEY_VARIABLE}</code>. The command takes no flag and no file for a key. A missing key exits 4, and the message names the variable and never a value.</p>
+  <p>A named backend reads only its own key variables, and the first one that is not blank wins. With no backend named, the key comes from <code>{KEY_VARIABLE}</code>. The command takes no flag and no file for a key. A key that is unset or blank exits 4 at any address but the three local hosts named below. The message names the variable and never a value.</p>
   <p>The key goes only to the address you named. It never shows in a plan, a result, a saved answer, a log line, or an error. An address that holds the key is refused before anything is sent.</p>
   <p>A plain <code>http://</code> address may reach only <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code>. Any other <code>http://</code> host is a usage error, because the key would cross the network in clear text. At those three hosts a request goes out with no key when the key variable is unset, whichever backend is named. Under <code>http://</code> the tool ignores every proxy variable.</p>
   <p>An address with a user name, a query, or a fragment is a usage error. The plan prints the address, and a saved answer keeps it.</p>

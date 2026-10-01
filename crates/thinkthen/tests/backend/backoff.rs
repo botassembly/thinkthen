@@ -88,7 +88,7 @@ fn status_counts_retries_as_a_subset_of_actual_sends() {
         &["decide", "Is it?", "--url", listener.base(), "--no-cache"],
         &[
             ("THINKTHEN_API_KEY", "sk-test"),
-            ("XDG_CACHE_HOME", cache_home),
+            ("XDG_STATE_HOME", cache_home),
         ],
         b"evidence",
     )
@@ -97,7 +97,7 @@ fn status_counts_retries_as_a_subset_of_actual_sends() {
     assert_eq!(listener.requests().len(), 2);
     let status = spawn(
         &["status", "--json"],
-        &[("XDG_CACHE_HOME", cache_home)],
+        &[("XDG_STATE_HOME", cache_home)],
         b"",
     )
     .expect("status command");

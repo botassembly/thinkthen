@@ -5,6 +5,7 @@ install/ada/first_call.adb
 install/cobol/first-call.cob
 install/cpp/first-call.cpp
 install/csharp/FirstCall.cs
+install/go/first-call.go
 install/java/FirstCall.java
 install/kotlin/FirstCall.kt
 install/objective-c/first-call.m
@@ -13,3 +14,5 @@ install/python/first-call.py
 install/r/data-frames.R
 install/r/first-call.R
 install/scala/FirstCall.scala
+install/swift/main.swift
+install/zig/first-call.zig

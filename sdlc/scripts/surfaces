@@ -250,6 +250,11 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	verdict "$mode" "$surface" "$code" || failed=1
 done
 [ "$failed" -eq 0 ] || exit 1
+# A publish packs every surface (ticket 0362), so a surface that did not run stops it.
+if [ -n "$publish_tag" ] && [ -n "$skipped" ]; then
+	echo "surfaces: FAIL publish (${skipped# } did not run)"
+	exit 1
+fi
 # The host's release files, packed from the builds above and each smoked from its install
 # (ticket 0128). release-pack rebuilds only the C library.
 # A surface that did not run built nothing to pack. --release failed it above.
@@ -262,16 +267,23 @@ for surface in $skipped; do
 done
 if [ -n "$unpacked" ]; then
 	echo "surfaces: not run release smoke (${unpacked# } did not run)"
-	[ -z "$publish_tag" ] || { echo 'surfaces: FAIL publish (nothing packed)'; exit 1; }
 	exit 0
 fi
 scratch_dir packed
 code=0
-{ sh sdlc/scripts/release-pack --reuse "$(rustc -vV | sed -n 's/^host: //p')" "$packed" &&
+host=$(rustc -vV | sed -n 's/^host: //p')
+# A publish adds the source wrappers to the default parts, so the smoke checks each pair and install.
+parts=
+[ -z "$publish_tag" ] || parts='command c sqlite duckdb postgresql python typescript ruby first-run go cpp csharp jvm swift zig php dart ada objective-c cobol'
+{ sh sdlc/scripts/release-pack --reuse "$host" "$packed" $parts &&
 	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
 verdict "$mode" "release smoke" "$code"
 if [ -n "$publish_tag" ]; then
 	[ "$code" -eq 0 ] || { echo 'surfaces: FAIL publish (the release smoke did not pass)'; exit 1; }
+	# release-smoke refuses a file no surface packs, so the crate and the R package join after it.
+	# The R check installed both shapes from this commit in the sweep.
+	sh sdlc/scripts/release-pack --reuse "$host" "$packed" crate r 3>&- ||
+		{ echo 'surfaces: FAIL publish (the crate or the R package did not pack)'; exit 1; }
 	[ "$(git rev-parse HEAD)" = "$publish_commit" ] && [ -z "$(git status --porcelain)" ] ||
 		{ echo 'surfaces: FAIL publish (the checkout changed during the run)'; exit 1; }
 	sh sdlc/scripts/publish-builds "$publish_tag" "$publish_root" "$publish_commit" "$packed"

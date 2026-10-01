@@ -29,8 +29,8 @@ def usage_environment(backend: Backend) -> dict[str, str]:
 
 def usage_folder(env: dict[str, str]) -> pathlib.Path:
     if sys.platform == "darwin":
-        return pathlib.Path(env["HOME"]) / "Library/Caches/thinkthen-usage"
-    return pathlib.Path(env["XDG_CACHE_HOME"]) / "thinkthen-usage"
+        return pathlib.Path(env["HOME"]) / "Library/Application Support/thinkthen/usage"
+    return pathlib.Path(env["XDG_STATE_HOME"]) / "thinkthen"
 
 
 def held_lock(env: dict[str, str]) -> int:
@@ -43,7 +43,7 @@ def held_lock(env: dict[str, str]) -> int:
 
 
 def totals(env: dict[str, str]) -> dict:
-    status = subprocess.run([COMMAND, "status", "--json"], env={"PATH": env["PATH"], "HOME": env["HOME"], "XDG_CACHE_HOME": env["XDG_CACHE_HOME"]},
+    status = subprocess.run([COMMAND, "status", "--json"], env={"PATH": env["PATH"], "HOME": env["HOME"], "XDG_STATE_HOME": env["XDG_STATE_HOME"]},
                             capture_output=True, text=True, timeout=30, check=True)
     return json.loads(status.stdout)["usage"]["total"]
 

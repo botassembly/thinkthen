@@ -657,6 +657,59 @@ export const SURFACES = [
     ],
   },
   {
+    slug: 'go', name: 'Go', deckHeading: null,
+    lang: 'go', tab: 'Go',
+    blurb: 'A cgo package over the C library. Each call that sends takes a `context.Context` and returns a `Result` and an `error`.',
+    unsureWord: '`thinkthen.Unsure`',
+    facts: '`Decide` returns a `Result`. `.Value` holds the answer, and `.Facts` holds this call\'s run facts as `json.RawMessage`.',
+    errors: 'A failed native call returns an `*Error`. Its `Kind` runs from `KindUsage` to `KindDefect`, and it carries `Retryable` and `Message`. `ErrEmbeddedNUL` and allocation failures come back as plain errors.',
+    settings: '`NewWith(settingsJSON)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['go get github.com/botassembly/thinkthen/libraries/go', null],
+      ['thinkthen-go-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      'The package finds the C library through `pkg-config`. `PKG_CONFIG_PATH` names the C archive\'s `lib/pkgconfig`.',
+      'A deadline on the context reaches the call as its deadline.',
+    ],
+  },
+  {
+    slug: 'swift', name: 'Swift', deckHeading: null,
+    lang: 'swift', tab: 'Swift',
+    blurb: 'A SwiftPM package over the C library, for Swift 6. Each call returns its answer and its run facts.',
+    unsureWord: '`.unsure`',
+    facts: '`decide` returns a `CallResult`. `.value` holds the answer, and `.facts` holds this call\'s run facts as JSON text.',
+    errors: 'A failed call throws a `DoorFailure`. Its `kind` names usage, backend, deadline, local, cancelled or defect.',
+    settings: '`Engine(settingsJSON:)` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['thinkthen-swift-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      'Add the package with `.package(path:)`. Its product is `ThinkThen`.',
+      'The linker needs the C library\'s folder, through `-Xlinker -L` and `-Xlinker -rpath`.',
+      'Call `close()` once, after every call on the engine ends.',
+    ],
+  },
+  {
+    slug: 'zig', name: 'Zig', deckHeading: null,
+    lang: 'zig', tab: 'Zig',
+    blurb: 'A Zig 0.15.2 module over the C library. Each call returns `.ok` or `.failed`.',
+    unsureWord: '`.unsure`',
+    facts: 'An `.ok` holds a `CallResult`. `.value` holds the answer, and `.facts` holds this call\'s run facts as parsed JSON. Free it with `deinit`.',
+    errors: 'A `.failed` holds one of six `kind` values and a message. Free it with `engine.freeFailure`.',
+    settings: '`Engine.initWithSettings` takes an allocator and the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
+    install: [
+      ['thinkthen-zig-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
+      C_ARCHIVE,
+    ],
+    particular: [
+      '`linkNative` in the build script links the C library. `-Dnative` names the unpacked C archive.',
+      '`std.debug.assert` checks only in Debug and ReleaseSafe builds.',
+    ],
+  },
+  {
     slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB',
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
@@ -765,6 +818,7 @@ export const BACKEND_PAGES = [
   { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
   { slug: 'system-one', title: 'Any System One server', label: 'Any System One server', group: 'Your own' },
   { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
+  { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Announced' },
 ].map((p) => ({ ...p, route: `/install/backends/${p.slug ? `${p.slug}/` : ''}` }));
 
 export const BACKENDS_SEE = {

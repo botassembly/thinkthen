@@ -24,6 +24,9 @@ use storage::{ReadFailure, update};
 pub(crate) struct Counters {
     path: Option<PathBuf>,
     shared: Arc<Shared>,
+    /// The one read before this process's first send (ticket 0360). It keeps
+    /// its result, so after a refusal every later send refuses too.
+    readable: std::sync::OnceLock<Result<(), String>>,
 }
 
 /// What the requests hand the one writer thread, so no request waits on a file.
@@ -55,7 +58,24 @@ impl Counters {
         Self {
             path,
             shared: Arc::default(),
+            readable: std::sync::OnceLock::new(),
         }
+    }
+
+    /// Refuse a send when the usage folder exists and cannot be read, so no
+    /// surface stops counting without a word. A lock another process holds
+    /// past the read's wait passes: it says nothing about the files.
+    pub(crate) fn check_readable(&self) -> Result<(), crate::engine::error::Error> {
+        let Some(path) = self.path.as_deref() else {
+            return Ok(());
+        };
+        self.readable
+            .get_or_init(|| match read(path, &month_now()) {
+                Err(failure) if !failure.busy() => Err(failure.sentence(None)),
+                _ => Ok(()),
+            })
+            .clone()
+            .map_err(crate::engine::error::Error::UsageUnreadable)
     }
 
     /// The usage folder these counters add to, fixed when they were made.
@@ -220,7 +240,6 @@ enum Stage {
     Lock,
     Validation,
     Write,
-    RetryWrite,
     FileSync,
     Rename,
     DirectorySync,

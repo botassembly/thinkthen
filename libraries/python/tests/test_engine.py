@@ -116,14 +116,15 @@ def test_the_environment_seeds_every_unset_setting(backend, tmp_path):
     """Change 13: an engine built with keywords still reads
     ``THINKTHEN_CACHE``. The second call is a cache answer, and the entry
     lands in that folder and not under ``HOME``. ADR 0113: the scratch
-    home holds only the count-only usage totals."""
+    home holds only the count-only usage totals, in its state folder
+    (ticket 0360)."""
     scratch = tmp_path / "home"
     run(SETTINGS + f"""
     engine = tt.Engine(throttle=8, base_url="{backend.base()}")
     engine.decide(late, "one").value, engine.decide(late, "one").value
-    """, child_env(backend, tmp_path, HOME=str(scratch), XDG_CACHE_HOME=str(scratch)))
+    """, child_env(backend, tmp_path, HOME=str(scratch), XDG_STATE_HOME=str(scratch)))
     assert backend.count() == 1
     assert any((tmp_path / "cache").rglob("*"))
     written = [path for path in scratch.rglob("*") if path.is_file()]
-    assert written and all("thinkthen-usage" in path.parts for path in written)
+    assert written and all(path.relative_to(scratch).parts[0] == "thinkthen" for path in written)
     assert not any(b"late" in path.read_bytes() for path in written)

@@ -1,0 +1,9 @@
+---
+// The live checks of one built-in backend, one paragraph each, from
+// src/data/backend-checks.mjs. A check with a ThinkThen record links it.
+import { checkLines } from '../data/backend-checks.mjs';
+
+const { name } = Astro.props;
+const checks = checkLines(name);
+---
+{checks.map((c) => <p>{c.said}{c.link && <Fragment> <a href={c.link}>The record</a> holds the run.</Fragment>}</p>)}

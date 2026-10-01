@@ -87,10 +87,9 @@ fn a_shared_host_caches_only_in_a_private_named_folder() {
         .expect("the platform folder")
         .map(|entry| entry.expect("an entry").file_name())
         .collect();
-    assert_eq!(
-        names,
-        ["thinkthen-usage"],
-        "the platform folder holds only the usage totals"
+    assert!(
+        names.is_empty(),
+        "the platform cache folder stays empty; usage totals live in the state folder: {names:?}"
     );
 }
 

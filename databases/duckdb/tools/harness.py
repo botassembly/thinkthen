@@ -112,11 +112,12 @@ class Backend:
 def child_env(base: str, folder: Path, extra: dict[str, str] | None = None, *, keyless: bool = False) -> dict[str, str]:
     """A child's whole environment: loopback only, fresh XDG folders."""
     folder.mkdir(parents=True, exist_ok=True)
-    for name in ("cache", "config", "home"):
+    for name in ("cache", "config", "home", "state"):
         (folder / name).mkdir(exist_ok=True)
     env = clean_env(**{
         "HOME": str(folder / "home"),
         "XDG_CACHE_HOME": str(folder / "cache"),
+        "XDG_STATE_HOME": str(folder / "state"),
         # Ticket 0318: a SQL host caches only in a folder the operator names.
         "THINKTHEN_CACHE": str(folder / "cache" / "named"),
         "XDG_CONFIG_HOME": str(folder / "config"),
@@ -137,9 +138,9 @@ def guard(env: dict[str, str]) -> None:
     if urlsplit(base).scheme != "http" or urlsplit(base).hostname != "127.0.0.1":
         raise SystemExit(f"harness: refused a child whose backend is not on 127.0.0.1: {base!r}")
     home = Path.home()
-    for name in ("XDG_CACHE_HOME", "XDG_CONFIG_HOME"):
+    for name in ("XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME"):
         value = env.get(name)
-        if not value or Path(value) in (home, home / ".cache", home / ".config"):
+        if not value or Path(value) in (home, home / ".cache", home / ".config", home / ".local/state"):
             raise SystemExit(f"harness: refused a child whose {name} is unset or the user's own")
 
 

@@ -82,6 +82,7 @@ impl From<EngineError> for Failure {
             EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
             EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
+            EngineError::UsageUnreadable(sentence) => Self::UsageUnreadable(sentence),
             EngineError::CacheEntry => Self::CacheEntry,
             EngineError::Defect(message) => Self::Defect(message),
             EngineError::Usage(message) => Self::Usage(message),

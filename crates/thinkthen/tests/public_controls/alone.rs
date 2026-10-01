@@ -18,7 +18,7 @@ pub(super) fn alone(path: &str, body: impl FnOnce()) {
     let binary = std::env::current_exe().expect("this test binary");
     let child = child::command(
         binary.to_str().expect("a UTF-8 test binary path"),
-        &["HOME", "XDG_CACHE_HOME", "TMPDIR"],
+        &["HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME", "TMPDIR"],
     )
     .args([
         "--exact",

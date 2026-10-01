@@ -78,6 +78,17 @@ const CASES = [
   ['direct', 'csharp', 'fail', 'Console.WriteLine(tt.Decide(q, m).Value);', [[1, 'direct']]],
   ['generic', 'csharp', 'fail', 'var response = tt.Decide(q, m);', [[1, 'generic']]],
   ['generic', 'csharp', 'pass', 'const string refund = """\n    {"decide": "Refund?"}\n    """;', []],
+  ['direct', 'go', 'pass', 'isRefund, err := tt.Decide(\n\tctx,\n\tq,\n\tm,\n)\nif isRefund.Value.Outcome != thinkthen.Yes {', []],
+  ['direct', 'go', 'fail', 'if r, _ := tt.Decide(ctx, q, m); r.Value.Outcome == 1 {', [[1, 'direct']]],
+  ['direct', 'go', 'fail', 'fmt.Println(tt.Decide(ctx, q, m))', [[1, 'direct']]],
+  ['generic', 'go', 'fail', 'result, err := tt.Decide(ctx, q, m)', [[1, 'generic']]],
+  ['generic', 'go', 'pass', 'refund := `{"decide": "tt.Decide(x)"}`', []],
+  ['direct', 'swift', 'pass', 'var isRefund = try tt.decide(\n    q,\n    m\n)\nprecondition(isRefund.value.outcome == .yes)', []],
+  ['direct', 'swift', 'fail', 'precondition(try tt.decide(q, m).value.outcome == .yes)', [[1, 'direct']]],
+  ['generic', 'swift', 'fail', 'let answer = try tt.decide(q, m)', [[1, 'generic']]],
+  ['direct', 'zig', 'pass', 'const asked = try tt.decide(q, m, .{});\nstd.debug.assert(is_refund.value.outcome == .yes);', []],
+  ['direct', 'zig', 'fail', 'std.debug.assert((try tt.decide(q, m, .{})).ok.value.outcome == .yes);', [[1, 'direct']]],
+  ['generic', 'zig', 'fail', 'const result = try tt.decide(\n    q,\n    m,\n    .{},\n);', [[1, 'generic']]],
 
   ['direct', 'bash', 'pass', 'is_spam=$(thinkthen decide "$q" < mail.txt)\nif [ "$is_spam" = yes ]; then\n  echo spam\nfi', []],
   ['direct', 'bash', 'fail', 'if thinkthen decide "$q" < mail.txt; then\n  echo spam\nfi', [[1, 'direct']]],
@@ -118,7 +129,7 @@ const CASES = [
 
 // An unknown language throws a TypeError that names it and lists the
 // accepted names. The expected value is the name the message must quote.
-const ACCEPTED = 'Accepted names: bash, sh, python, typescript, ts, ruby, r, rust, c, cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs, sql.';
+const ACCEPTED = 'Accepted names: bash, sh, python, typescript, ts, ruby, r, rust, c, cpp, objective-c, objc, cobol, ada, java, kotlin, scala, csharp, cs, go, swift, zig, sql.';
 function thrown(code, language) {
   try {
     namedAnswerProblems(code, language);

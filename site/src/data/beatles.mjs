@@ -19,7 +19,7 @@
 //
 // Links into the bench use paths on bench main. The bench history may be
 // squashed at launch, and a pinned commit would then stop resolving
-// (sdlc/issues/2026-09-26-the-beatles-bench-section-keeps-its-own-copy.md).
+// (sdlc/issues/closed/2026-09-26-the-beatles-bench-section-keeps-its-own-copy.md).
 
 import { BINDINGS, COUNTS } from './catalog.mjs';
 

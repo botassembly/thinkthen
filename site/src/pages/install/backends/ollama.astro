@@ -7,6 +7,7 @@ import { BACKEND_PAGES, BACKENDS_SEE } from '../../../data/catalog.mjs';
 import { captioned } from '../../../data/samples.mjs';
 import { backend } from '../../../lib/backends-table.mjs';
 import { checkLines } from '../../../data/backend-checks.mjs';
+import CheckLines from '../../../components/CheckLines.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'ollama');
 const b = backend('ollama');
@@ -33,7 +34,7 @@ const checks = checkLines('ollama');
   <p>Ollama refuses a description written as an object. So this backend alone sends each description as its text. An object's <code>what</code> goes, and its other fields stay behind. The plan says so on its first line.</p>
   <Terminal run={plan} caption={plan.see} />
   {checks.length
-    ? <Fragment>{checks.map((c) => <p>{c.said}</p>)}<p>Each warning names a description sent as text. Ollama 0.35 ran on the second port for these checks.</p></Fragment>
+    ? <Fragment><CheckLines name="ollama" /><p>Each warning names a description sent as text. Ollama 0.35 ran on the second port for these checks.</p></Fragment>
     : <p>No live check against Ollama is on record for this page.</p>}
 
   {one && lines ? (

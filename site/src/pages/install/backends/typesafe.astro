@@ -6,12 +6,11 @@ import BackendFacts from '../../../components/BackendFacts.astro';
 import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog.mjs';
 import { captioned } from '../../../data/samples.mjs';
 import { backend } from '../../../lib/backends-table.mjs';
-import { checkLines } from '../../../data/backend-checks.mjs';
+import CheckLines from '../../../components/CheckLines.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'typesafe');
 const b = backend('typesafe');
 const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.typesafe);
-const checks = checkLines('typesafe');
 ---
 <SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Jev from TypeSafe, the backend ThinkThen asks by default: its address, key variable, model, and check.' }} name="Backends">
   <h1>TypeSafe Jev</h1>
@@ -28,7 +27,7 @@ const checks = checkLines('typesafe');
   <h2>Check it</h2>
   <p><code>thinkthen check</code> sends four fixed questions and reports whether the backend answers each one the way ThinkThen needs. The plan shows where they would go.</p>
   <Terminal run={plan} caption={plan.see} />
-  {checks.map((c) => <p>{c.said}</p>)}
+  <CheckLines name="typesafe" />
 
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
 </SidePage>

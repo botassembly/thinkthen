@@ -3,11 +3,12 @@
 # Rust target into OUT, each with a `.sha256` beside it. TARGET is this host's target, since
 # each release target builds on its own runner. The parts are command, c, go, cpp, csharp,
 # jvm, swift, zig, php, dart, flutter, ada, objective-c, cobol, sqlite, duckdb,
-# postgresql, python, typescript, ruby, and first-run; the default
+# postgresql, python, typescript, ruby, first-run, crate, and r; the default
 # keeps its established parts and source wrappers are explicit pilot parts.
 # Without --reuse it builds each file from this checkout. With --reuse it packs the files each
 # surface check already built in its own build folder, which the `surfaces` rung does. It
-# rebuilds only the C library's debug build, with the remaps below. Every cargo call is locked;
+# rebuilds only the C library's debug build, with the remaps below, so source wrappers packed
+# with --reuse name that debug C archive (ticket 0362). Every cargo call is locked;
 # fetch first where the network is off.
 set -eu
 reuse=
@@ -23,7 +24,6 @@ c_built=
 dart_built=
 case " $* " in
 *' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' flutter '* | *' ada '* | *' objective-c '* | *' cobol '*)
-	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
 	if git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 		[ -z "${THINKTHEN_ARCHIVED_SOURCE_TAR:-}${THINKTHEN_ARCHIVED_SOURCE_COMMIT:-}" ] || {
 			echo 'release-pack: archive identity cannot override a repository checkout' >&2; exit 1;
@@ -31,6 +31,7 @@ case " $* " in
 		source_commit=$(git -C "$REPO" rev-parse HEAD)
 		[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
 	else
+		[ -z "$reuse" ] || { echo 'release-pack: archived source does not permit --reuse' >&2; exit 1; }
 		case " $* " in *' go '* | *' cpp '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' ada '* | *' objective-c '* | *' cobol '*) ;; *) echo 'release-pack: archived source permits only selected source wrappers' >&2; exit 1 ;; esac
 		for part in "$@"; do
 			case $part in c | go | cpp | swift | zig | php | dart | ada | objective-c | cobol | sqlite | duckdb | postgresql | python | typescript | ruby) ;;
@@ -118,6 +119,20 @@ part_command() {
 	if [ -n "$reuse" ]; then
 		binary=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
 	else
+		case $command_target in *-linux-musl)
+			# Without a musl gcc, clang compiles the bundled SQLite against glibc's headers.
+			# SQLite's large-file define then names open64 and stat64, which musl 1.2.4 and
+			# later no longer export. On a 64-bit target off_t is 64 bits without that define.
+			target_var=$(printf '%s' "$command_target" | tr - _)
+			eval "cc=\${CC_$target_var:-}"
+			if [ -z "$cc" ] && ! command -v "${command_target%%-*}-linux-musl-gcc" >/dev/null &&
+				! { [ "$command_target" = x86_64-unknown-linux-musl ] && command -v musl-gcc >/dev/null; }; then
+				command -v clang >/dev/null || { echo 'release-pack: the static command needs clang or a musl gcc' >&2; exit 1; }
+				export "CC_$target_var=clang"
+			fi
+			eval "flags=\${CFLAGS_$target_var:-}"
+			export "CFLAGS_$target_var=${flags:+$flags }-DSQLITE_DISABLE_LFS"
+		;; esac
 		cargo build --locked --quiet --release --package thinkthen --target "$command_target"
 		binary=${CARGO_TARGET_DIR:-$REPO/target}/$command_target/release/thinkthen
 	fi
@@ -161,7 +176,7 @@ part_c() {
 		Cflags: -I\${includedir}
 	EOF
 	pack "thinkthen-c-$V-$TARGET.tar.gz" "$folder"
-	[ -n "$reuse" ] || c_built=1
+	c_built=1
 }
 
 part_source_wrapper() {
@@ -396,6 +411,26 @@ part_ruby() {
 	for gem in libraries/ruby/thinkthen-"$V"-*.gem; do keep "$gem"; done
 }
 
+# The crate and the R package name the commit the manifest names, so they need a clean committed tree.
+committed() {
+	[ -z "$(git status --porcelain)" ] || { echo "release-pack: $1 needs a clean committed tree" >&2; exit 1; }
+}
+
+# The thinkthen crate as cargo publishes it. Rust Polars is its `polars` feature.
+part_crate() {
+	committed crate
+	CARGO_TARGET_DIR="$stage/crate-target" cargo package --locked --offline --no-verify --quiet --package thinkthen
+	keep "$stage/crate-target/package/thinkthen-$V.crate"
+}
+
+# The R source package with its crates vendored, built as the R check builds it: from a git archive tree.
+part_r() {
+	committed r
+	tree=$(fresh r-tree)
+	git archive HEAD | tar -x -C "$tree"
+	keep "$(CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="$stage/r-target" "$tree/libraries/r/tools/make-tarball.sh" "$(fresh r)")"
+}
+
 # The README's first run: demo 27's input and its one recorded answer.
 part_first_run() {
 	folder=$(fresh first-run)/thinkthen-first-run
@@ -408,7 +443,7 @@ part_first_run() {
 for part in "$@"; do
 	case $part in
 	objective-c) part_source_wrapper objective-c ;;
-	command | c | go | cpp | csharp | jvm | swift | zig | php | dart | flutter | ada | cobol | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
+	command | c | go | cpp | csharp | jvm | swift | zig | php | dart | flutter | ada | cobol | sqlite | duckdb | postgresql | python | typescript | ruby | crate | r) "part_$part" ;;
 	first-run) part_first_run ;;
 	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
 	esac

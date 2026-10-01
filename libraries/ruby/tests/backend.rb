@@ -5,7 +5,7 @@
 # The engine reads its address and cache from the environment once per
 # process, so every call a test makes runs in a child `ruby` from the pinned
 # prefix. Each child gets its own THINKTHEN_BASE_URL on 127.0.0.1, a fresh
-# cache, HOME, XDG_CACHE_HOME, and XDG_CONFIG_HOME, and a fake key that rides
+# cache, HOME, XDG_CACHE_HOME, XDG_CONFIG_HOME, and XDG_STATE_HOME, and a fake key that rides
 # only beside that loopback address. The real key never reaches a child.
 require "json"
 require "open3"
@@ -143,6 +143,7 @@ module TestBackend
       "THINKTHEN_CACHE" => File.join(root, "cache"),
       "HOME" => File.join(root, "home"),
       "XDG_CACHE_HOME" => File.join(root, "xdg-cache"),
+      "XDG_STATE_HOME" => File.join(root, "xdg-state"),
       "XDG_CONFIG_HOME" => File.join(root, "xdg-config"),
       **extra
     )

@@ -45,12 +45,14 @@ fn usage(status: &Output, name: &str) -> Option<u64> {
 #[test]
 fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
     let root = folder("default-cache-home");
+    let state = root.join("state");
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
     let base = listener.base().to_owned();
     let environment = [
         ("THINKTHEN_BASE_URL", base.as_str()),
         ("THINKTHEN_API_KEY", "secret-key"),
         ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+        ("XDG_STATE_HOME", state.to_str().expect("state root")),
     ];
     for (run_number, expected) in [(1, 1), (2, 0)] {
         let output = run(&["decide", "asks for a refund", "--details"], &environment).expect("run");
@@ -71,6 +73,7 @@ fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
         ("THINKTHEN_BASE_URL", base.as_str()),
         ("THINKTHEN_API_KEY", "secret-key"),
         ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+        ("XDG_STATE_HOME", state.to_str().expect("state root")),
     ];
     for _ in 0..2 {
         assert_eq!(

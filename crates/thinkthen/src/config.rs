@@ -298,10 +298,11 @@ pub(crate) fn cache_path() -> Option<PathBuf> {
     )
 }
 
+/// The usage totals are state. Clearing the cache keeps them (ticket 0360).
 pub(crate) fn usage_path() -> Option<PathBuf> {
     resolve_usage(
         current_platform(),
-        variable("XDG_CACHE_HOME"),
+        variable("XDG_STATE_HOME"),
         variable("HOME"),
     )
 }
@@ -331,10 +332,14 @@ fn resolve_cache(platform: Platform, xdg: Option<String>, home: Option<String>) 
 
 fn resolve_usage(platform: Platform, xdg: Option<String>, home: Option<String>) -> Option<PathBuf> {
     match platform {
-        Platform::Macos => absolute(home).map(|home| home.join("Library/Caches/thinkthen-usage")),
+        // macOS has no state folder. The configuration file shares
+        // `Application Support/thinkthen`, so usage takes a private folder below it.
+        Platform::Macos => {
+            absolute(home).map(|home| home.join("Library/Application Support/thinkthen/usage"))
+        }
         Platform::Linux => absolute(xdg)
-            .map(|home| home.join("thinkthen-usage"))
-            .or_else(|| absolute(home).map(|home| home.join(".cache/thinkthen-usage"))),
+            .map(|home| home.join("thinkthen"))
+            .or_else(|| absolute(home).map(|home| home.join(".local/state/thinkthen"))),
     }
 }
 
@@ -357,160 +362,4 @@ fn variable(name: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    use super::{Config, Platform, resolve_cache, resolve_config, resolve_usage};
-
-    #[test]
-    fn raw_configuration_debug_withholds_the_address() {
-        let config = Config::parse(
-            br#"{"schema":"thinkthen.config/1","url":"http://localhost/config-marker-0210"}"#,
-        )
-        .expect("valid configuration");
-        let shown = format!("{config:?}");
-        assert!(shown.contains("url: Some(\"<withheld>\")"));
-        assert!(!shown.contains("config-marker-0210"));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn another_owner_or_other_write_warns_and_group_write_stays_quiet() {
-        use super::metadata_writable_by_another;
-
-        for (mode, owner, effective, warned) in [
-            (0o644, 1001, 1000, true),
-            (0o600, 1000, 1000, false),
-            (0o664, 1000, 1000, false),
-            (0o775, 1000, 1000, false),
-            (0o707, 1000, 1000, true),
-            (0o700, 1001, 1000, true),
-        ] {
-            assert_eq!(metadata_writable_by_another(mode, owner, effective), warned);
-        }
-    }
-
-    #[test]
-    fn each_refusal_names_its_field_and_never_its_value() {
-        assert!(Config::parse(br#"{"schema":"thinkthen.config/1"}"#).is_ok());
-        let not_closed = "the configuration file is not valid closed JSON";
-        let schema = "configuration field `schema` must be `thinkthen.config/1`";
-        let bytes = "configuration field `cache_bytes` must be a whole number greater than zero";
-        for (text, sentence) in [
-            (r#"{"schema":"thinkthen.config/1""#, not_closed),
-            (r#"["schema"]"#, not_closed),
-            (
-                r#"{"schema":"thinkthen.config/1","cache":true,"cache":false}"#,
-                not_closed,
-            ),
-            (r#"{}"#, schema),
-            (r#"{"schema":"wrong"}"#, schema),
-            (r#"{"schema":1}"#, schema),
-            (
-                r#"{"schema":"thinkthen.config/1","extra":true}"#,
-                "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`",
-            ),
-            (
-                r#"{"schema":"thinkthen.config/1","cache":"/folder"}"#,
-                "configuration field `cache` must be true or false",
-            ),
-            (
-                r#"{"schema":"thinkthen.config/1","url":7}"#,
-                "configuration field `url` must be a string",
-            ),
-            (
-                r#"{"schema":"thinkthen.config/1","model":["m"]}"#,
-                "configuration field `model` must be a string",
-            ),
-            (r#"{"schema":"thinkthen.config/1","cache_bytes":0}"#, bytes),
-            (r#"{"schema":"thinkthen.config/1","cache_bytes":-1}"#, bytes),
-            (
-                r#"{"schema":"thinkthen.config/1","model":"  "}"#,
-                "configuration field `model` must not be blank",
-            ),
-            (
-                r#"{"schema":"thinkthen.config/1","url":"http://example.com"}"#,
-                "configuration field `url` must be a safe backend base",
-            ),
-        ] {
-            let refused = Config::parse(text.as_bytes()).expect_err(text);
-            assert_eq!(refused.message, sentence, "{text}");
-            assert!(!refused.unreadable, "{text}");
-        }
-    }
-
-    #[test]
-    fn linux_and_macos_resolve_config_and_cache_independently() {
-        let cases = [
-            (
-                Platform::Linux,
-                Some("/config"),
-                Some("/cache"),
-                None,
-                "/config/thinkthen/config.json",
-                "/cache/thinkthen",
-            ),
-            (
-                Platform::Linux,
-                Some("relative"),
-                Some("relative"),
-                Some("/home/person"),
-                "/home/person/.config/thinkthen/config.json",
-                "/home/person/.cache/thinkthen",
-            ),
-            (
-                Platform::Macos,
-                Some("/ignored"),
-                Some("/ignored"),
-                Some("/Users/person"),
-                "/Users/person/Library/Application Support/thinkthen/config.json",
-                "/Users/person/Library/Caches/thinkthen",
-            ),
-        ];
-        for (platform, config, cache, home, expected_config, expected_cache) in cases {
-            assert_eq!(
-                resolve_config(platform, config.map(str::to_owned), home.map(str::to_owned)),
-                Some(PathBuf::from(expected_config))
-            );
-            assert_eq!(
-                resolve_cache(platform, cache.map(str::to_owned), home.map(str::to_owned)),
-                Some(PathBuf::from(expected_cache))
-            );
-        }
-        assert_eq!(
-            resolve_config(Platform::Linux, Some("/config".to_owned()), None),
-            Some(PathBuf::from("/config/thinkthen/config.json"))
-        );
-        assert_eq!(resolve_cache(Platform::Linux, None, None), None);
-        assert_eq!(
-            resolve_usage(Platform::Linux, Some("/cache".to_owned()), None),
-            Some(PathBuf::from("/cache/thinkthen-usage"))
-        );
-        assert_eq!(
-            resolve_usage(Platform::Macos, None, Some("/Users/person".to_owned())),
-            Some(PathBuf::from(
-                "/Users/person/Library/Caches/thinkthen-usage"
-            ))
-        );
-        for platform in [Platform::Linux, Platform::Macos] {
-            for unusable in ["", "relative"] {
-                assert_eq!(
-                    resolve_config(
-                        platform,
-                        Some(unusable.to_owned()),
-                        Some(unusable.to_owned())
-                    ),
-                    None
-                );
-                assert_eq!(
-                    resolve_cache(
-                        platform,
-                        Some(unusable.to_owned()),
-                        Some(unusable.to_owned())
-                    ),
-                    None
-                );
-            }
-        }
-    }
-}
+mod tests;

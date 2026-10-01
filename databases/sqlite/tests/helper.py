@@ -120,6 +120,7 @@ def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> 
         keep=("LD_LIBRARY_PATH",),
         THINKTHEN_CACHE=str(scratch / "cache"),
         XDG_CACHE_HOME=str(scratch / "xdg-cache"),
+        XDG_STATE_HOME=str(scratch / "xdg-state"),
         XDG_CONFIG_HOME=str(scratch / "xdg-config"),
         SCRATCH=str(scratch),
     )

@@ -11,7 +11,7 @@ fn a_live_reply_counts_valid_usage_when_its_only_answer_is_refused() {
     let environment = [
         ("THINKTHEN_BASE_URL", listener.base()),
         ("THINKTHEN_API_KEY", "secret-key"),
-        ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+        ("XDG_STATE_HOME", root.to_str().expect("state root")),
     ];
     let refused =
         run(&["decide", "asks for a refund", "--no-cache"], &environment).expect("refused answer");
@@ -36,7 +36,7 @@ fn retries_terminal_failures_and_explicit_replay_have_the_ruled_counts() {
     let environment = [
         ("THINKTHEN_BASE_URL", base.as_str()),
         ("THINKTHEN_API_KEY", "secret-key"),
-        ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+        ("XDG_STATE_HOME", root.to_str().expect("state root")),
     ];
     let retried = run(
         &["decide", "retry", "--no-cache", "--details"],
@@ -68,7 +68,7 @@ fn retries_terminal_failures_and_explicit_replay_have_the_ruled_counts() {
         None,
     )
     .expect("fixture");
-    let replay_environment = [("XDG_CACHE_HOME", root.to_str().expect("cache root"))];
+    let replay_environment = [("XDG_STATE_HOME", root.to_str().expect("state root"))];
     assert_eq!(
         run(
             &[
@@ -107,14 +107,14 @@ fn two_processes_update_one_month_without_losing_a_cache_answer() {
         &[
             ("THINKTHEN_BASE_URL", &base),
             ("THINKTHEN_API_KEY", "secret-key"),
-            ("XDG_CACHE_HOME", fill_root.to_str().expect("fill root")),
+            ("XDG_STATE_HOME", fill_root.to_str().expect("fill root")),
         ],
     )
     .expect("fill");
     assert_eq!(filled.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 1);
     let environment = [
-        ("XDG_CACHE_HOME", root_name.as_str()),
+        ("XDG_STATE_HOME", root_name.as_str()),
         ("THINKTHEN_BASE_URL", &base),
     ];
     thread::scope(|scope| {
@@ -135,7 +135,7 @@ fn two_processes_update_one_month_without_losing_a_cache_answer() {
         assert_eq!(first.join().expect("first thread").status.code(), Some(0));
         assert_eq!(second.join().expect("second thread").status.code(), Some(0));
     });
-    let status = run(&["status", "--json"], &[("XDG_CACHE_HOME", &root_name)]).expect("status");
+    let status = run(&["status", "--json"], &[("XDG_STATE_HOME", &root_name)]).expect("status");
     assert_eq!(usage(&status, "cache_answers"), Some(2));
     assert_eq!(usage(&status, "requests_sent"), Some(0));
     assert_eq!(listener.requests().len(), 0);
@@ -157,7 +157,7 @@ fn packed_annotate_counts_one_exchange_and_one_usage_object() {
     let environment = [
         ("THINKTHEN_BASE_URL", base.as_str()),
         ("THINKTHEN_API_KEY", "secret-key"),
-        ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+        ("XDG_STATE_HOME", root.to_str().expect("state root")),
     ];
     assert_eq!(
         run(
@@ -174,7 +174,7 @@ fn packed_annotate_counts_one_exchange_and_one_usage_object() {
     assert_eq!(usage(&status, "requests_sent"), Some(1));
     assert_eq!(usage(&status, "input_tokens"), Some(20));
     assert_eq!(usage(&status, "output_tokens"), Some(4));
-    let persisted = fs::read_dir(root.join("thinkthen-usage"))
+    let persisted = fs::read_dir(root.join("thinkthen"))
         .expect("usage folder")
         .filter_map(Result::ok)
         .filter(|entry| {
@@ -190,42 +190,65 @@ fn packed_annotate_counts_one_exchange_and_one_usage_object() {
     assert!(!persisted.contains("Second?"));
 }
 
+/// A usage folder thinkthen cannot read refused nothing on main: the run
+/// answered and stopped counting. Now the first send refuses, the whole run
+/// ends with exit 5 before any request, and no row fails alone (ticket 0360).
 #[cfg(unix)]
-#[test]
-fn persistence_failure_warns_once_after_the_unchanged_judgment() {
-    use std::os::unix::fs::PermissionsExt as _;
-
-    let root = folder("usage-warning");
-    let usage_folder = root.join("thinkthen-usage");
-    fs::create_dir_all(&usage_folder).expect("usage folder");
-    fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o755)).expect("unsafe mode");
+#[allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
+fn refused_before_any_send(root: &std::path::Path, key: &str) -> (std::process::Output, usize) {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
-    let base = listener.base().to_owned();
-    let output = run(
-        &["decide", "asks for a refund", "--no-cache"],
+    let records: String = (1..=6)
+        .map(|place| format!("{{\"body\":\"record {place}\"}}\n"))
+        .collect();
+    let output = crate::harness::spawn(
         &[
-            ("THINKTHEN_BASE_URL", base.as_str()),
-            ("THINKTHEN_API_KEY", "secret-warning-key"),
-            ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+            "decide",
+            "asks for a refund",
+            "--jsonl",
+            "--field",
+            "/body",
+            "--jobs",
+            "4",
+            "--batch",
+            "1",
+            "--no-cache",
         ],
+        &[
+            ("THINKTHEN_BASE_URL", listener.base()),
+            ("THINKTHEN_API_KEY", key),
+            ("XDG_STATE_HOME", root.to_str().expect("state root")),
+        ],
+        records.as_bytes(),
     )
     .expect("judgment");
-    assert_eq!(output.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "true\n");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: usage counters could not be updated; check the usage folder permissions and free space\n"
-    );
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("secret-warning-key"));
+    (output, listener.requests().len())
 }
 
 #[cfg(unix)]
 #[test]
-fn a_zero_byte_month_keeps_its_bytes_and_names_the_file_in_the_writer_warning() {
+fn an_unsafe_usage_folder_refuses_the_run_before_any_send() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let root = folder("usage-unsafe-folder");
+    let usage_folder = root.join("thinkthen");
+    fs::create_dir_all(&usage_folder).expect("usage folder");
+    fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o755)).expect("unsafe mode");
+    let (output, requests) = refused_before_any_send(&root, "secret-warning-key");
+    assert_eq!((output.status.code(), requests), (Some(5), 0));
+    assert_eq!(output.stdout, b"");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: cannot read the usage totals: the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.\nthinkthen: stopped at record 1; 0 records finished\n"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_malformed_month_refuses_the_run_and_keeps_its_bytes() {
     use std::os::unix::fs::PermissionsExt as _;
 
     let root = folder("zero-byte-usage-month");
-    let usage_folder = root.join("thinkthen-usage");
+    let usage_folder = root.join("thinkthen");
     fs::create_dir_all(&usage_folder).expect("usage folder");
     fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o700)).expect("private folder");
     let lock = usage_folder.join(".lock");
@@ -235,25 +258,49 @@ fn a_zero_byte_month_keeps_its_bytes_and_names_the_file_in_the_writer_warning() 
     for file in [&lock, &month] {
         fs::set_permissions(file, fs::Permissions::from_mode(0o600)).expect("private file");
     }
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
-    let output = run(
-        &["decide", "asks for a refund", "--no-cache"],
-        &[
-            ("THINKTHEN_BASE_URL", listener.base()),
-            ("THINKTHEN_API_KEY", "secret-zero-byte-key"),
-            ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
-        ],
-    )
-    .expect("judgment");
-    assert_eq!(output.status.code(), Some(0));
-    assert_eq!(output.stdout, b"true\n");
-    assert_eq!(listener.requests().len(), 1);
+    let (output, requests) = refused_before_any_send(&root, "secret-zero-byte-key");
+    assert_eq!((output.status.code(), requests), (Some(5), 0));
+    assert_eq!(output.stdout, b"");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: usage counters could not be updated; local usage file 2026-08.json has invalid contents\n"
+        "thinkthen: cannot read the usage totals: 2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.\nthinkthen: stopped at record 1; 0 records finished\n"
     );
     assert_eq!(fs::read(&month).expect("unchanged month"), b"");
-    assert!(!usage_folder.join("retries-2026-08.json").exists());
+    let planned = crate::harness::spawn(
+        &["decide", "asks for a refund", "--plan"],
+        &[("XDG_STATE_HOME", root.to_str().expect("state root"))],
+        b"evidence",
+    )
+    .expect("plan");
+    assert_eq!(
+        planned.status.code(),
+        Some(0),
+        "a plan sends nothing, so it never refuses"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_month_other_users_can_read_refuses_the_run_and_names_the_unsafe_fix() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let root = folder("usage-shared-month");
+    let usage_folder = root.join("thinkthen");
+    fs::create_dir_all(&usage_folder).expect("usage folder");
+    fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o700)).expect("private folder");
+    let lock = usage_folder.join(".lock");
+    let month = usage_folder.join("2026-08.json");
+    fs::write(&lock, b"").expect("stable lock");
+    fs::write(&month, b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n").expect("month");
+    fs::set_permissions(&lock, fs::Permissions::from_mode(0o600)).expect("private lock");
+    fs::set_permissions(&month, fs::Permissions::from_mode(0o644)).expect("shared month");
+    let (output, requests) = refused_before_any_send(&root, "secret-shared-month-key");
+    assert_eq!((output.status.code(), requests), (Some(5), 0));
+    assert_eq!(output.stdout, b"");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: cannot read the usage totals: 2026-08.json has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it out of the usage folder that thinkthen status names.\nthinkthen: stopped at record 1; 0 records finished\n"
+    );
 }
 
 /// Another process holding the usage lock stops no request: all 16 jobs reach
@@ -267,7 +314,7 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     use crate::harness::{Gathering, finish, start};
 
     let root = folder("usage-lock-held");
-    let usage_folder = root.join("thinkthen-usage");
+    let usage_folder = root.join("thinkthen");
     fs::create_dir_all(&usage_folder).expect("usage folder");
     fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o700)).expect("private");
     let lock = fs::OpenOptions::new()
@@ -293,7 +340,7 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     let environment = [
         ("THINKTHEN_BASE_URL", listener.base()),
         ("THINKTHEN_API_KEY", "secret-key"),
-        ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+        ("XDG_STATE_HOME", root.to_str().expect("state root")),
     ];
     let arguments = ["decide", "asks for a refund", "--jsonl", "--field", "/body"];
     let arguments = [
@@ -328,4 +375,57 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     assert_eq!(usage(&status, "input_tokens"), Some(1408));
     assert_eq!(usage(&status, "output_tokens"), Some(192));
     assert_eq!(usage(&status, "cache_answers"), Some(0));
+}
+
+/// The totals are state. Removing the cache home keeps them. One month file
+/// holds all five counts, and no `retries-` file appears (ticket 0360).
+#[test]
+fn removing_the_cache_home_keeps_the_count_in_one_month_file() {
+    let root = folder("usage-survives-the-cache");
+    let (cache, state) = (root.join("cache"), root.join("state"));
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
+    let environment = [
+        ("THINKTHEN_BASE_URL", listener.base()),
+        ("THINKTHEN_API_KEY", "secret-key"),
+        ("XDG_CACHE_HOME", cache.to_str().expect("cache root")),
+        ("XDG_STATE_HOME", state.to_str().expect("state root")),
+    ];
+    let output = run(&["decide", "asks for a refund"], &environment).expect("run");
+    assert_eq!(output.status.code(), Some(0));
+    assert!(cache.join("thinkthen").is_dir());
+    fs::remove_dir_all(&cache).expect("the cache cleared");
+    let status = run(&["status", "--json"], &environment).expect("status");
+    assert_eq!(usage(&status, "requests_sent"), Some(1));
+    assert_eq!(usage(&status, "input_tokens"), Some(312));
+    let mut names: Vec<String> = fs::read_dir(state.join("thinkthen"))
+        .expect("usage folder")
+        .map(|entry| {
+            entry
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    names.sort();
+    assert_eq!(names.len(), 2, "{names:?}");
+    assert_eq!(names[0], ".lock");
+    let row: serde_json::Value =
+        serde_json::from_slice(&fs::read(state.join("thinkthen").join(&names[1])).expect("month"))
+            .expect("month JSON");
+    assert_eq!(
+        row.as_object()
+            .expect("object")
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>(),
+        [
+            "cache_answers",
+            "input_tokens",
+            "output_tokens",
+            "requests_sent",
+            "retries",
+            "schema"
+        ]
+    );
 }

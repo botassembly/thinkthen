@@ -33,7 +33,10 @@ def main(source: Path, destination: Path, platform: str) -> None:
         raw.write_bytes(data[:-len(footer)])
         subprocess.run(["strip", "-S", "-x", str(raw)], check=True, env=child_env())
         stripped = raw.read_bytes()
-        if str(Path.home()).encode() in stripped:
+        # DuckDB's prebuilt archives name DuckDB's own CI checkout, which equals
+        # a GitHub runner's home by coincidence. Only that upstream prefix is allowed.
+        home = str(Path.home()).encode()
+        if stripped.count(home) != stripped.count(home + b"/work/duckdb/duckdb/"):
             raise SystemExit("duckdb: builder-home path remains in stripped Mach-O")
         raw.write_bytes(stripped + footer)
         os.chmod(raw, 0o644)
