@@ -1,6 +1,7 @@
 //! `thinkthen cache convert DIR`, by ADR 0111 section 9, from the outside.
 #![cfg(feature = "cli")]
 
+use crate::child::ChildEnvironment as _;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -34,8 +35,8 @@ fn scratch(name: &str) -> Try<PathBuf> {
 
 fn convert(folder: &Path, extra: &[&str]) -> Try<(Option<i32>, String)> {
     let output: Output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .arg("cache")
         .arg("convert")
         .arg(folder)

@@ -280,66 +280,82 @@ pub(crate) const fn writable_by_another(_metadata: &fs::Metadata) -> bool {
 enum Platform {
     Linux,
     Macos,
+    Windows,
+}
+
+impl Platform {
+    /// The variables that hold the configuration, cache and usage bases. On
+    /// Windows, ADR 0017 and tickets 0062 and 0360 chose `%APPDATA%` and
+    /// `%LOCALAPPDATA%` (ticket 0373).
+    const fn bases(self) -> [&'static str; 3] {
+        match self {
+            Self::Linux | Self::Macos => ["XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"],
+            Self::Windows => ["APPDATA", "LOCALAPPDATA", "LOCALAPPDATA"],
+        }
+    }
 }
 
 pub(crate) fn path() -> Option<PathBuf> {
-    resolve_config(
-        current_platform(),
-        variable("XDG_CONFIG_HOME"),
-        variable("HOME"),
-    )
+    let platform = current_platform();
+    resolve_config(platform, variable(platform.bases()[0]), variable("HOME"))
 }
 
 pub(crate) fn cache_path() -> Option<PathBuf> {
-    resolve_cache(
-        current_platform(),
-        variable("XDG_CACHE_HOME"),
-        variable("HOME"),
-    )
+    let platform = current_platform();
+    resolve_cache(platform, variable(platform.bases()[1]), variable("HOME"))
 }
 
 /// The usage totals are state. Clearing the cache keeps them (ticket 0360).
 pub(crate) fn usage_path() -> Option<PathBuf> {
-    resolve_usage(
-        current_platform(),
-        variable("XDG_STATE_HOME"),
-        variable("HOME"),
-    )
+    let platform = current_platform();
+    resolve_usage(platform, variable(platform.bases()[2]), variable("HOME"))
 }
 
 fn resolve_config(
     platform: Platform,
-    xdg: Option<String>,
+    base: Option<String>,
     home: Option<String>,
 ) -> Option<PathBuf> {
     match platform {
         Platform::Macos => absolute(home)
             .map(|home| home.join("Library/Application Support/thinkthen/config.json")),
-        Platform::Linux => absolute(xdg)
+        Platform::Linux => absolute(base)
             .map(|home| home.join("thinkthen/config.json"))
             .or_else(|| absolute(home).map(|home| home.join(".config/thinkthen/config.json"))),
+        Platform::Windows => absolute(base).map(|base| base.join("thinkthen").join("config.json")),
     }
 }
 
-fn resolve_cache(platform: Platform, xdg: Option<String>, home: Option<String>) -> Option<PathBuf> {
+fn resolve_cache(
+    platform: Platform,
+    base: Option<String>,
+    home: Option<String>,
+) -> Option<PathBuf> {
     match platform {
         Platform::Macos => absolute(home).map(|home| home.join("Library/Caches/thinkthen")),
-        Platform::Linux => absolute(xdg)
+        Platform::Linux => absolute(base)
             .map(|home| home.join("thinkthen"))
             .or_else(|| absolute(home).map(|home| home.join(".cache/thinkthen"))),
+        Platform::Windows => absolute(base).map(|base| base.join("thinkthen").join("cache")),
     }
 }
 
-fn resolve_usage(platform: Platform, xdg: Option<String>, home: Option<String>) -> Option<PathBuf> {
+fn resolve_usage(
+    platform: Platform,
+    base: Option<String>,
+    home: Option<String>,
+) -> Option<PathBuf> {
     match platform {
         // macOS has no state folder. The configuration file shares
         // `Application Support/thinkthen`, so usage takes a private folder below it.
         Platform::Macos => {
             absolute(home).map(|home| home.join("Library/Application Support/thinkthen/usage"))
         }
-        Platform::Linux => absolute(xdg)
+        Platform::Linux => absolute(base)
             .map(|home| home.join("thinkthen"))
             .or_else(|| absolute(home).map(|home| home.join(".local/state/thinkthen"))),
+        // The cache shares `%LOCALAPPDATA%\thinkthen`, so usage takes its own folder.
+        Platform::Windows => absolute(base).map(|base| base.join("thinkthen").join("usage")),
     }
 }
 
@@ -350,6 +366,8 @@ fn absolute(value: Option<String>) -> Option<PathBuf> {
 const fn current_platform() -> Platform {
     if cfg!(target_os = "macos") {
         Platform::Macos
+    } else if cfg!(windows) {
+        Platform::Windows
     } else {
         Platform::Linux
     }

@@ -189,3 +189,45 @@ fn usage_lives_in_the_state_folder_and_never_follows_the_cache() {
         );
     }
 }
+
+/// `absolute()` uses the host's rule, so a `C:\` base is absolute only on
+/// Windows. Windows reads no `HOME` and no `XDG_` name (ticket 0373).
+#[cfg(windows)]
+#[test]
+fn windows_resolves_config_from_appdata_and_cache_and_usage_from_localappdata() {
+    let roaming = Some(r"C:\Users\person\AppData\Roaming".to_owned());
+    let local = Some(r"C:\Users\person\AppData\Local".to_owned());
+    let home = Some(r"C:\Users\person".to_owned());
+    assert_eq!(
+        resolve_config(Platform::Windows, roaming, home.clone()),
+        Some(PathBuf::from(
+            r"C:\Users\person\AppData\Roaming\thinkthen\config.json"
+        ))
+    );
+    assert_eq!(
+        resolve_cache(Platform::Windows, local.clone(), home.clone()),
+        Some(PathBuf::from(
+            r"C:\Users\person\AppData\Local\thinkthen\cache"
+        ))
+    );
+    assert_eq!(
+        resolve_usage(Platform::Windows, local, home.clone()),
+        Some(PathBuf::from(
+            r"C:\Users\person\AppData\Local\thinkthen\usage"
+        ))
+    );
+    for unusable in [None, Some(String::new()), Some("relative".to_owned())] {
+        assert_eq!(
+            resolve_config(Platform::Windows, unusable.clone(), home.clone()),
+            None
+        );
+        assert_eq!(
+            resolve_cache(Platform::Windows, unusable.clone(), home.clone()),
+            None
+        );
+        assert_eq!(
+            resolve_usage(Platform::Windows, unusable, home.clone()),
+            None
+        );
+    }
+}

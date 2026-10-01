@@ -44,8 +44,14 @@ struct Started(Child, ChildStdin, Receiver<String>, u16);
 type Answer = Option<(String, String)>;
 
 fn start() -> Result<Started, Box<dyn Error>> {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_conformance-backend"))
-        .env_clear()
+    let mut command = Command::new(env!("CARGO_BIN_EXE_conformance-backend"));
+    command.env_clear();
+    // Windows cannot open a socket without `SystemRoot` (ticket 0373).
+    #[cfg(windows)]
+    if let Some(root) = std::env::var_os("SystemRoot") {
+        command.env("SystemRoot", root);
+    }
+    let mut child = command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

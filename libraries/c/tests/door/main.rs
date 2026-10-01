@@ -20,6 +20,7 @@ mod question_file;
 mod settings;
 mod usage;
 
+use crate::child::ChildEnvironment as _;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
@@ -227,7 +228,7 @@ fn start_with(binary: &Path, base: &str, extra: &[(&str, &Path)]) -> Child {
     static RUNS: AtomicUsize = AtomicUsize::new(0);
     let cache = scratch(&format!("cache-{}", RUNS.fetch_add(1, Ordering::Relaxed)));
     Command::new(binary)
-        .env_clear()
+        .clear_environment()
         .env("THINKTHEN_BASE_URL", base)
         .env("THINKTHEN_API_KEY", KEY)
         .env("THINKTHEN_CACHE", &cache)

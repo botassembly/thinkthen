@@ -7,7 +7,7 @@ use std::path::Path;
 use super::{
     Counts, Shared, Stage, make_private_directory, maybe_fail, note_initial_sync, open_private,
     open_stable_lock, open_verified, overflow, pause_after_creation, recognized_month,
-    validate_directory, verify_identity,
+    sync_directory, validate_directory, verify_identity,
 };
 
 const DIRECTORY: &str = "usage directory";
@@ -186,7 +186,7 @@ pub(super) fn update(path: &Path, month: &str, delta: Counts, shared: &Shared) -
     let _prospective_total = total.checked_add(delta).ok_or_else(overflow)?;
     if old.is_none() {
         lock.sync_all()?;
-        directory.sync_all()?;
+        sync_directory(&directory)?;
         note_initial_sync();
     }
     replace(path, &directory, &name, next)
@@ -238,5 +238,5 @@ fn replace(path: &Path, directory: &File, name: &str, counts: Counts) -> io::Res
     maybe_fail(Stage::Rename)?;
     fs::rename(&temporary, path.join(name))?;
     maybe_fail(Stage::DirectorySync)?;
-    directory.sync_all()
+    sync_directory(directory)
 }

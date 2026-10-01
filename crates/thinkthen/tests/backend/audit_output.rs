@@ -2,6 +2,7 @@
 #![cfg(feature = "cli")]
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
+use crate::child::ChildEnvironment as _;
 use crate::measure_support;
 use crate::wait;
 
@@ -104,7 +105,7 @@ fn a_single_question_writes_literal_tuned_bytes_without_touching_the_source_or_s
             "--write-to",
             &output,
         ])
-        .env_clear()
+        .clear_environment()
         .env("THINKTHEN_BASE_URL", listener.base())
         .env("THINKTHEN_API_KEY", "canary-0256")
         .stdin(Stdio::null())

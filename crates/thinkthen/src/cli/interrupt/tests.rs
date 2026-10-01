@@ -1,9 +1,10 @@
 use super::{ACTIONS, Action, Routing, StartError, State};
 use crate::cli::edge::Environment;
 use crate::cli::failure::{Failure, report};
+use crate::test_deadline::child::ChildEnvironment as _;
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, OnceLock, mpsc};
+use std::sync::{Arc, mpsc};
 
 fn routing(cleanup: impl FnOnce() -> Result<(), ()> + Send + 'static) -> Routing {
     Routing::Test(Box::new(cleanup))
@@ -142,6 +143,19 @@ fn cleanup_unwind_emulation_and_route_errors_release_after_arming() {
     }
 }
 
+/// A re-raise on Windows would exit with code 3, "not sure". The real
+/// emulation returns there, so a cancelled run gets 130 back in this same
+/// process (ticket 0373).
+#[cfg(windows)]
+#[test]
+fn a_cancelled_run_on_windows_returns_130_without_a_re_raise() {
+    let state = State::install(|_, _| Ok(()), super::emulate);
+    let (guard, observed) = observed_activation(&state, Ok(()));
+    state.cancel.fire();
+    assert!(matches!(guard.finish(ExitCode::SUCCESS), Ok(code) if code == ExitCode::from(130)));
+    released(&state, observed);
+}
+
 #[cfg(unix)]
 mod unix {
     use super::*;
@@ -152,7 +166,7 @@ mod unix {
     use std::os::unix::{fs::symlink, process::ExitStatusExt as _};
     use std::path::PathBuf;
     use std::process::{Child, ChildStdout, Command, Stdio};
-    use std::sync::mpsc;
+    use std::sync::{OnceLock, mpsc};
     use std::time::{Duration, Instant};
 
     struct Scratch(PathBuf);
@@ -258,7 +272,7 @@ mod unix {
 
     fn child(variable: &str, value: &str) -> (Child, BufReader<ChildStdout>) {
         let mut child = Command::new(std::env::current_exe().expect("test binary"))
-            .env_clear()
+            .clear_environment()
             .args([
                 "--exact",
                 "cli::interrupt::tests::unix::sigint_child",

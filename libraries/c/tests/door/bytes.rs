@@ -10,6 +10,7 @@
 //! door value adds the unit's place and probability, and its unit equals the
 //! command's output.
 
+use crate::child::ChildEnvironment as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -201,8 +202,8 @@ fn built_command() -> PathBuf {
 /// The command's standard output for one input, without a cache.
 fn print(command: &Path, arguments: &[&str], input: &str) -> String {
     let mut child = Command::new(command)
-        .env_clear()
-        .env("HOME", scratch("bytes-home"))
+        .clear_environment()
+        .home(scratch("bytes-home"))
         .env("THINKTHEN_API_KEY", KEY)
         // This byte corpus records one request per record on the command side.
         .env("THINKTHEN_BATCH", "1")

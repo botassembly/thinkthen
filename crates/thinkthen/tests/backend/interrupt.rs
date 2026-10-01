@@ -1,5 +1,6 @@
 //! SIGINT and SIGTERM cooperatively stop new attempts and preserve completed output.
 
+use crate::child::ChildEnvironment as _;
 use conformance_backend::Rendezvous;
 use std::fs;
 use std::io::{self, Write as _};
@@ -61,8 +62,8 @@ impl Drop for Acknowledgment {
 
 fn spawn(arguments: &[&str], input: &[u8], acknowledgment: &Acknowledgment) -> io::Result<Child> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", acknowledgment.0.with_extension("home"))
+        .clear_environment()
+        .home(acknowledgment.0.with_extension("home"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "5000")
         .env("THINKTHEN_TEST_SIGINT_ACK", &acknowledgment.0)
@@ -494,7 +495,7 @@ fn a_carrier_that_cannot_spawn_is_a_defect_and_sends_nothing() {
     let output = crate::child::command("prlimit", &[])
         .args(["--nproc=1:", env!("CARGO_BIN_EXE_thinkthen")])
         .args(["decide", "Is it accepted?", "--model", "local-1"])
-        .env("HOME", &home)
+        .home(&home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .env("THINKTHEN_BASE_URL", listener.base())
         .stdin(Stdio::null())

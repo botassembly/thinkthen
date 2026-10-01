@@ -3,6 +3,7 @@
 //! Width state belongs to the process, so each proof runs in a child copy of
 //! this test binary where no unrelated test shares the gate.
 
+use crate::test_deadline::child::ChildEnvironment as _;
 use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
@@ -49,9 +50,9 @@ pub(crate) fn in_child_at(path: &str) {
             "--nocapture",
             "--test-threads=1",
         ])
-        .env_clear()
+        .clear_environment()
         .env(CHILD, "1")
-        .env("HOME", &home)
+        .home(&home)
         .env("XDG_CACHE_HOME", home.join("cache"))
         .env("XDG_CONFIG_HOME", home.join("config"))
         .env("THINKTHEN_API_KEY", "sk-test-value")

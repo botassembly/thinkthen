@@ -3,13 +3,17 @@
 //! The listener lives in `conformance/backend`, so every binding starts the
 //! same one. Spawning stays here, because only this package's own tests can
 //! name the compiled `thinkthen` binary.
+use crate::child::ChildEnvironment as _;
 use std::io::{self, Write};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex, PoisonError};
 use std::time::Duration;
 
-pub(crate) use conformance_backend::{Canned, Listener, Observed};
+pub(crate) use conformance_backend::{Canned, Listener};
+// Only the Unix signal and scheduling pages wait on an observed request.
+#[cfg(unix)]
+pub(crate) use conformance_backend::Observed;
 
 pub(crate) use crate::wait::finish;
 
@@ -84,8 +88,8 @@ fn command(arguments: &[&str], environment: &[(&str, &str)]) -> Command {
     ));
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
-        .env_clear()
-        .env("HOME", home)
+        .clear_environment()
+        .home(home)
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
         // A stalled reader thread never closes a batch early (Debt 030).
         .env("THINKTHEN_TEST_INPUT_PAUSE_MS", "10000")

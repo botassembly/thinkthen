@@ -1,6 +1,7 @@
 //! The public find boundary over free plans and committed recordings.
 #![cfg(feature = "cli")]
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::io;
 use std::io::Write as _;
@@ -19,8 +20,8 @@ fn feed(stdin: Option<ChildStdin>, input: &[u8]) -> io::Result<()> {
 
 fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -32,8 +33,8 @@ fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
 
 fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::process::ExitStatus> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::null())

@@ -21,6 +21,7 @@ mod shared_host;
 #[path = "public_env/usage_totals.rs"]
 mod usage_totals;
 
+use crate::child::ChildEnvironment as _;
 use crate::run;
 
 use std::fs;
@@ -181,7 +182,7 @@ fn in_child(case: &str, environment: &[(&str, &str)]) -> String {
                 "--ignored",
                 "--test-threads=1",
             ])
-            .env_clear()
+            .clear_environment()
             .env(CASE, case)
             .envs(environment.iter().copied()),
     )
@@ -464,7 +465,7 @@ fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
         command
             .args(["decide", "asks for a refund", "--plan"])
-            .env_clear()
+            .clear_environment()
             .envs(environment)
             .stdin(fs::File::open(config.join("evidence")).unwrap())
             .stdout(std::process::Stdio::piped());

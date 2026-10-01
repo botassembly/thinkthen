@@ -2,6 +2,7 @@
 #![cfg(feature = "cli")]
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
+use crate::child::ChildEnvironment as _;
 use crate::measure_support;
 use crate::wait;
 
@@ -197,7 +198,7 @@ fn case_view_sends_nothing_with_a_configured_backend_and_key() {
     let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["audit", RESULTS, KEY, "--cases"])
         .current_dir(fixtures())
-        .env_clear()
+        .clear_environment()
         .env("THINKTHEN_BASE_URL", listener.base())
         .env("THINKTHEN_API_KEY", "canary-0257")
         .stdin(Stdio::null())

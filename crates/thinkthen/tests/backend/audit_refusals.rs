@@ -7,12 +7,15 @@
     reason = "a failed fixture stops the proof"
 )]
 
+use crate::child::ChildEnvironment as _;
 use crate::measure_support;
 use crate::wait;
 
 use std::fs;
 use std::io::{ErrorKind, Write as _};
 use std::net::TcpListener;
+// The guarded case locks its folder with Unix mode 0o000 where it can.
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -419,6 +422,9 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
     listener.set_nonblocking(true).expect("nonblocking");
     let url = format!("http://{}/v1", listener.local_addr().expect("an address"));
     let before = (tree(&root), tree(&fixtures()));
+    // Windows has no mode bits. There the folder stays readable, and the
+    // send count, the key check and the tree still hold.
+    #[cfg(unix)]
     fs::set_permissions(root.join("locked"), fs::Permissions::from_mode(0o000)).expect("locked");
     let owned = |list: &[&str]| list.iter().map(|word| (*word).to_owned()).collect();
     let mut lines: Vec<(Vec<String>, &str)> = GOLDENS
@@ -450,7 +456,7 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
         command
             .args(&arguments)
-            .env_clear()
+            .clear_environment()
             .current_dir(fixtures())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -483,6 +489,7 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
             );
         }
     }
+    #[cfg(unix)]
     fs::set_permissions(root.join("locked"), fs::Permissions::from_mode(0o755)).expect("unlocked");
     assert_eq!(
         listener.accept().map(|_| ()).map_err(|error| error.kind()),

@@ -1,12 +1,12 @@
 //! Recording preflight, repair, concurrency, and file-size failures.
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
-use std::io::{self, Write as _};
+use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 use std::thread;
 
-use crate::harness::{Canned, Listener, finish, spawn};
+use crate::harness::{Canned, Listener, spawn};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -22,6 +22,7 @@ fn folder(name: &str) -> PathBuf {
     path
 }
 
+#[cfg(unix)]
 fn entries(folder: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(fs::read_dir(folder)?
         .filter_map(Result::ok)
@@ -114,6 +115,10 @@ fn concurrent_record_only_processes_each_send_and_the_later_write_wins() {
 #[cfg(unix)]
 #[test]
 fn a_file_size_limit_returns_the_fixed_failure_and_removes_the_temporary_entry() {
+    use crate::harness::finish;
+    use std::io::Write as _;
+    use std::process::{Command, Stdio};
+
     let recording = folder("recording-file-size-limit");
     fs::create_dir(&recording).expect("recording folder");
     let listener = Listener::answering(|_| Canned::ok(TRUE)).expect("a listener");
@@ -128,8 +133,8 @@ fn a_file_size_limit_returns_the_fixed_failure_and_removes_the_temporary_entry()
         .arg(env!("CARGO_BIN_EXE_thinkthen"))
         .arg(listener.base())
         .arg(&recording)
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

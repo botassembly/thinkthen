@@ -1,6 +1,7 @@
 //! Ticket 0291's C bridge: `thinkthen_plan_json` previews corpus P1 with no
 //! key and no send, and every refusal keeps the out parameters.
 
+use crate::child::ChildEnvironment as _;
 use std::process::Command;
 
 use conformance_backend::Backend;
@@ -15,7 +16,7 @@ fn p1_plans_with_no_key_and_no_send_and_refusals_keep_the_outputs() {
     assert_eq!(BODY.len(), 182, "the independent P1 byte count");
     let backend = Backend::start().expect("a loopback backend");
     let output = Command::new(compile(&crate_dir().join("tests/c/plan.c")))
-        .env_clear()
+        .clear_environment()
         .env(
             "THINKTHEN_BASE_URL",
             format!("{}/generic/v1", backend.origin()),

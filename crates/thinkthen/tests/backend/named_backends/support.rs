@@ -1,5 +1,6 @@
 //! Markers, counting listeners, the counting proxy, and the scratch home.
 
+use crate::child::ChildEnvironment as _;
 use std::io::{BufRead as _, BufReader};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
@@ -171,7 +172,7 @@ impl Home {
     /// A change with an empty value removes the variable.
     pub(crate) fn run(&self, arguments: &[&str], changes: &[(&str, &str)]) -> Output {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-        command.env_clear().args(arguments);
+        command.clear_environment().args(arguments);
         for (name, value) in self.environment() {
             command.env(name, value);
         }

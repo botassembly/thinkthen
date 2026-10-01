@@ -477,5 +477,7 @@ fn each_unsafe_sentence_names_the_fix() {
     );
 }
 
+// Its one case sets Unix modes on the month files.
+#[cfg(unix)]
 #[path = "no_lock_tests.rs"]
 mod no_lock;

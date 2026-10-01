@@ -1,6 +1,7 @@
 //! The compiled binary answers for its own identity.
 #![cfg(feature = "cli")]
 
+use crate::child::ChildEnvironment as _;
 use std::process::Command;
 
 use crate::run;
@@ -9,7 +10,7 @@ use crate::run;
 fn version_flag_prints_the_identity_line_and_exits_zero() {
     let output = run::output(
         Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .env_clear()
+            .clear_environment()
             .arg("--version"),
     )
     .expect("the compiled binary runs");

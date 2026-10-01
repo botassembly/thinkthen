@@ -10,6 +10,8 @@
 use crate::measure_support;
 
 use std::fs;
+// The refusal case makes the question file read-only with Unix mode 0o444.
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::PathBuf;
 
@@ -350,12 +352,15 @@ fn refusals() {
         assert_eq!((code, stdout.as_str(), stderr), (expected, "", sentence));
         assert_eq!(fs::read(&target).expect("the file"), before);
     }
-    fs::set_permissions(&file, fs::Permissions::from_mode(0o444)).expect("read-only");
-    let (code, stdout, stderr) = audit(&[&rows, &key(), "--write", &file], b"");
-    assert_eq!(
-        (code, stdout.as_str(), stderr.as_str()),
-        (5, "", "thinkthen: audit: cannot write the question file\n")
-    );
+    #[cfg(unix)]
+    {
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o444)).expect("read-only");
+        let (code, stdout, stderr) = audit(&[&rows, &key(), "--write", &file], b"");
+        assert_eq!(
+            (code, stdout.as_str(), stderr.as_str()),
+            (5, "", "thinkthen: audit: cannot write the question file\n")
+        );
+    }
     assert_eq!(scratch.read("decide.json"), text);
 }
 

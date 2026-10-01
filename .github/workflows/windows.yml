@@ -68,16 +68,22 @@ jobs:
           cargo fetch --locked
           cargo fetch --locked --manifest-path libraries/c/Cargo.toml
 
+      # Each check runs even after an earlier one fails, so one run shows
+      # every result. The job still fails if any check fails.
       - name: Clippy, root workspace
+        if: ${{ !cancelled() }}
         run: cargo clippy --locked --offline --workspace --all-targets -- -D warnings
 
       - name: Tests, root workspace
-        run: cargo test --locked --offline --workspace --all-targets
+        if: ${{ !cancelled() }}
+        run: cargo test --locked --offline --no-fail-fast --workspace --all-targets
 
       - name: Clippy, libraries/c
+        if: ${{ !cancelled() }}
         working-directory: libraries/c
         run: cargo clippy --locked --offline --all-targets -- -D warnings
 
       - name: Tests, libraries/c
+        if: ${{ !cancelled() }}
         working-directory: libraries/c
-        run: cargo test --locked --offline
+        run: cargo test --locked --offline --no-fail-fast

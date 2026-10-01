@@ -6,6 +6,7 @@
     reason = "a failed fixture stops the proof"
 )]
 
+use crate::child::ChildEnvironment as _;
 use crate::measure_support;
 use crate::wait;
 
@@ -124,13 +125,13 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
         .arg(rows.join("recording"))
         .arg("--input")
         .arg(rows.join("cases.jsonl"))
-        .env_clear()
+        .clear_environment()
         .stdout(Stdio::piped())
         .spawn()
         .expect("decide runs");
     let audit = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["audit", "-", "replay/key.jsonl"])
-        .env_clear()
+        .clear_environment()
         .current_dir(fixtures())
         .stdin(decide.stdout.take().expect("the pipe"))
         .stdout(Stdio::piped())

@@ -208,7 +208,9 @@ fn a_named_cache_enables_storage_over_disabled_configuration() {
 }
 
 /// A configuration any user can write decides where the key goes, so the run
-/// warns. A group bit alone stays quiet, since the usual umask sets it.
+/// warns. A group bit alone stays quiet, since the usual umask sets it. The
+/// check reads Unix modes and owners, so it is Unix-only.
+#[cfg(unix)]
 #[test]
 fn a_configuration_another_user_can_write_is_warned_about() {
     use std::os::unix::fs::PermissionsExt as _;

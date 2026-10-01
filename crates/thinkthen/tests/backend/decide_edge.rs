@@ -1,6 +1,7 @@
 //! The compiled binary at its own edge: usage, the plan, and standard input.
 #![cfg(feature = "cli")]
 
+use crate::child::ChildEnvironment as _;
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -22,8 +23,8 @@ fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io:
     ));
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
-        .env_clear()
-        .env("HOME", home)
+        .clear_environment()
+        .home(home)
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

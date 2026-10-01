@@ -1,7 +1,8 @@
 //! Refusals at the compiled command boundary.
 #![cfg(feature = "cli")]
 
-use std::ffi::{OsStr, OsString};
+use crate::child::ChildEnvironment as _;
+use std::ffi::OsStr;
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -13,8 +14,8 @@ fn run(args: &[&OsStr], input: &[u8]) -> io::Result<Output> {
     let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("hints-{}", RUNS.fetch_add(1, Ordering::Relaxed)));
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", home)
+        .clear_environment()
+        .home(home)
         .env("THINKTHEN_BASE_URL", "http://127.0.0.1:1/v1")
         .args(args)
         .stdin(Stdio::piped())
@@ -98,6 +99,7 @@ fn a_second_argument_says_where_the_evidence_goes() {
     }
     #[cfg(unix)]
     {
+        use std::ffi::OsString;
         use std::os::unix::ffi::OsStringExt as _;
         let invalid = OsString::from_vec(vec![0xff, 0xfe]);
         let args = [

@@ -11,6 +11,7 @@ use crate::engine::facade::{Asks, Bound, Engine, Settings, Storage};
 use crate::engine::http::Key;
 use crate::engine::usage::{self, month_now};
 use crate::failure::{Failure, report};
+use crate::test_deadline::child::ChildEnvironment as _;
 use clap::Parser as _;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -232,7 +233,7 @@ fn steers(name: &std::ffi::OsStr) -> bool {
 /// an empty environment.
 fn test_child(name: &str) -> process::Command {
     let mut command = process::Command::new(std::env::current_exe().expect("test binary"));
-    command.env_clear().args([
+    command.clear_environment().args([
         "--ignored",
         "--exact",
         "--nocapture",

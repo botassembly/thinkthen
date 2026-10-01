@@ -5,6 +5,7 @@
     reason = "a failed local certificate fixture must stop the boundary proof"
 )]
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -174,8 +175,8 @@ fn command(url: &str, ca: Option<&Path>, home: &Path, key: Option<&str>) -> std:
             "local-1",
             "--no-cache",
         ])
-        .env_clear()
-        .env("HOME", home)
+        .clear_environment()
+        .home(home)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -298,8 +299,8 @@ fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
     }
     let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["check", "--url", base, "--plan"])
-        .env_clear()
-        .env("HOME", &fixture.0)
+        .clear_environment()
+        .home(&fixture.0)
         .env("THINKTHEN_CA_BUNDLE", &missing)
         .output()
         .expect("compiled check");
@@ -338,8 +339,8 @@ fn public_environment_and_explicit_builder_share_the_loaded_roots() {
         let server = Server::start("localhost", response);
         let output = Command::new(std::env::current_exe().expect("test executable"))
             .args(["--exact", "ca_bundle::public_tls_child", "--nocapture"])
-            .env_clear()
-            .env("HOME", &fixture.0)
+            .clear_environment()
+            .home(&fixture.0)
             .env("THINKTHEN_TEST_CA_MODE", mode)
             .env(
                 "THINKTHEN_CA_BUNDLE",

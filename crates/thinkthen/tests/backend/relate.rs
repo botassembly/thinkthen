@@ -1,5 +1,6 @@
 //! The compiled relate command against a counted loopback backend.
 
+use crate::child::ChildEnvironment as _;
 use std::{
     fs,
     io::Write as _,
@@ -308,7 +309,7 @@ fn relation_recording_replays_without_a_key_and_keeps_the_same_identity() {
 fn a_closed_output_pipe_ends_the_aggregate_quietly() {
     let listener = Listener::answering(answered).expect("listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
+        .clear_environment()
         .env("THINKTHEN_API_KEY", "secret")
         .args([
             "relate",

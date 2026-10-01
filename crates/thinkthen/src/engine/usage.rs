@@ -374,16 +374,57 @@ fn verify_private_file(path: &Path, file: &File) -> io::Result<()> {
 }
 
 fn open_verified(path: &Path, directory: bool, mode: u32) -> io::Result<File> {
-    let file = File::open(path)?;
+    let file = open_read(path, directory)?;
     verify_identity(path, &file, directory)?;
+    verify_mode(&file, mode)?;
+    Ok(file)
+}
+
+#[cfg(not(windows))]
+fn open_read(path: &Path, _directory: bool) -> io::Result<File> {
+    File::open(path)
+}
+
+/// Windows opens a folder only with `FILE_FLAG_BACKUP_SEMANTICS` (ticket 0373).
+#[cfg(windows)]
+fn open_read(path: &Path, directory: bool) -> io::Result<File> {
+    use std::os::windows::fs::OpenOptionsExt as _;
+    const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+    let mut options = OpenOptions::new();
+    options.read(true);
+    if directory {
+        options.custom_flags(FILE_FLAG_BACKUP_SEMANTICS);
+    }
+    options.open(path)
+}
+
+#[cfg(unix)]
+fn verify_mode(file: &File, mode: u32) -> io::Result<()> {
+    use std::os::unix::fs::PermissionsExt as _;
+    if file.metadata()?.permissions().mode() & 0o777 != mode {
+        return Err(permission());
+    }
+    Ok(())
+}
+
+/// Windows has no mode bits; stage 1 owns its privacy check (ticket 0373).
+#[cfg(not(unix))]
+const fn verify_mode(_file: &File, _mode: u32) -> io::Result<()> {
+    Ok(())
+}
+
+/// Syncs a folder after a rename. Windows cannot flush a folder handle, so
+/// it skips the sync, as `engine/store/convert.rs` does (ticket 0373).
+fn sync_directory(directory: &File) -> io::Result<()> {
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt as _;
-        if file.metadata()?.permissions().mode() & 0o777 != mode {
-            return Err(permission());
-        }
+        directory.sync_all()
     }
-    Ok(file)
+    #[cfg(not(unix))]
+    {
+        let _unsynced = directory;
+        Ok(())
+    }
 }
 
 fn verify_identity(path: &Path, file: &File, directory: bool) -> io::Result<()> {
@@ -395,10 +436,10 @@ fn verify_identity(path: &Path, file: &File, directory: bool) -> io::Result<()> 
             "unsafe usage object",
         ));
     }
-    let opened = file.metadata()?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt as _;
+        let opened = file.metadata()?;
         if (named.dev(), named.ino()) != (opened.dev(), opened.ino()) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -406,6 +447,8 @@ fn verify_identity(path: &Path, file: &File, directory: bool) -> io::Result<()> 
             ));
         }
     }
+    #[cfg(not(unix))]
+    let _unchecked = file;
     Ok(())
 }
 
@@ -423,6 +466,7 @@ fn validate_directory(metadata: &fs::Metadata) -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(unix)]
 fn permission() -> io::Error {
     io::Error::new(io::ErrorKind::PermissionDenied, "unsafe usage mode")
 }

@@ -6,14 +6,16 @@
 
 use conformance_backend::Rendezvous;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
 use std::{fs, path::PathBuf};
 
-use conformance_backend::{Backend as Loopback, Canned, Listener};
+use conformance_backend::{Canned, Listener};
+// The host-signal case sends SIGUSR1 to one thread, which only Unix has.
+#[cfg(unix)]
 use nix::sys::pthread::{pthread_kill, pthread_self};
+#[cfg(unix)]
 use nix::sys::signal::Signal;
 
 use crate::core::adapters::built_in::DecodeError;
@@ -257,8 +259,12 @@ impl Drop for Scratch {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn a_host_signal_on_the_calling_thread_never_fails_a_single_send() {
+    use conformance_backend::Backend as Loopback;
+    use std::sync::atomic::AtomicBool;
+
     let handled = Arc::new(AtomicBool::new(false));
     let _handler =
         signal_hook::flag::register(signal_hook::consts::signal::SIGUSR1, Arc::clone(&handled))

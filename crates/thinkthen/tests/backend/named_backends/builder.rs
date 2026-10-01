@@ -1,6 +1,7 @@
 //! The Rust builder: every pair of tiers, the engine setting included, in
 //! child processes that each start from a cleared environment.
 
+use crate::child::ChildEnvironment as _;
 use std::io::Write as _;
 use std::process::Command;
 
@@ -84,7 +85,7 @@ fn in_child(home: &Home, setters: &str, changes: &[(&str, &str)]) -> Vec<String>
             "--ignored",
             "--test-threads=1",
         ])
-        .env_clear()
+        .clear_environment()
         .env(CASE, setters);
     for (name, value) in home.environment() {
         command.env(name, value);

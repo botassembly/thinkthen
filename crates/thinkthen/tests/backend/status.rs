@@ -1,6 +1,7 @@
 //! The read-only process status surface.
 #![cfg(feature = "cli")]
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::process::Command;
 
@@ -9,8 +10,8 @@ use crate::run;
 fn command(home: &std::path::Path) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
-        .env_clear()
-        .env("HOME", home)
+        .clear_environment()
+        .home(home)
         .env("PATH", std::env::var_os("PATH").unwrap_or_default());
     command
 }

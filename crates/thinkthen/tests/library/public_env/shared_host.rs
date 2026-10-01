@@ -25,6 +25,7 @@ fn with_mode(path: &Path, mode: u32) {
     fs::set_permissions(path, fs::Permissions::from_mode(mode)).expect("mode");
 }
 
+#[cfg(unix)]
 const REFUSED: &str = "Usage: the answer folder belongs to another user or others can write it, so they could choose its answers; make it this process user's own with mode 0700, or name another folder";
 
 #[cfg(unix)]

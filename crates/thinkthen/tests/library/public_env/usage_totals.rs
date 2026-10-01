@@ -2,6 +2,7 @@
 //! usage totals, and one built by hand writes none.
 
 use super::*;
+use crate::child::ChildEnvironment as _;
 
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     let engine = match case {
@@ -45,9 +46,9 @@ fn status(home: &Path) -> serde_json::Value {
     let output = run::output(
         Command::new(env!("CARGO_BIN_EXE_thinkthen"))
             .args(["status", "--json"])
-            .env_clear()
+            .clear_environment()
             .env("XDG_STATE_HOME", home.join("state"))
-            .env("HOME", home),
+            .home(home),
     )
     .expect("status runs");
     assert!(output.status.success());
@@ -80,7 +81,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     fs::write(&evidence, format!("{EVIDENCE}\n")).expect("evidence");
     let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["decide", "asks for a refund"])
-        .env_clear()
+        .clear_environment()
         .env("XDG_CACHE_HOME", &home)
         .env("XDG_STATE_HOME", home.join("state"))
         .env("THINKTHEN_BASE_URL", listener.base())
