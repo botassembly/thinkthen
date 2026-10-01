@@ -139,7 +139,7 @@ Library and SQL details forms carry the same optional warning in `meta`. The pub
 | `question_sha256` | The digest of the exact question the row answers, as [question-file.md](question-file.md) fixes it. The same question typed and read from a file gives one digest, and any override gives another |
 | `url` | The URL that answered |
 | `model` | The model that answered, as the backend reported it |
-| `usage` | The token counts the backend reported. Absent when the backend reports none. A batched row carries an even share of each of the batch's counts, and the earliest records of the batch carry the remainder, by ADR 0048 item 9 |
+| `usage` | The sum of the row's question shares, live or stored, by ADR 0111 section 7. Each answer's share is an even split of its request's reported counts, with the remainder to the earliest questions. Absent when any share lacks counts, as when a reply reported none. When every share has counts and their sum does not fit, the row fails with `the backend reported token counts whose total is too large`, a backend failure that exits 4 on the command |
 | `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Each retry of a retried status adds one. When a too-large batch halves, the refused whole request counts in the first half. A batched row carries its share of its request's attempts by the same rule, by ADR 0048 item 9. On the seven record commands, a row whose question joined another row's send in flight counts no attempt for it, so the rows' counts add up to the sends |
 | `cached` | `true` when the answer came entirely from stored exchanges — a recording or a cache — rather than a live backend |
 | `requests` | The question keys of the answers that produced the result, in answer order, by ADR 0111 section 7 and [recording.md](recording.md#the-question-store). Retries add nothing |
@@ -223,7 +223,7 @@ Read `annotate --details` as a row whose known outer members are `schema`, `inpu
 
 The readable `question` in each answer prints `choose` options and `tag` labels as names. Their descriptions still take part in `meta.questions_sha256`, so identical readable options do not prove two sets identical. Use that digest for resolved question-set identity, and use `request` for the particular exchange that produced an answer. The [canonical question rules](question-file.md#the-canonical-form) define which descriptions and settings enter the digest.
 
-`meta.usage` is the sum of the record's question shares.
+`meta.usage` sums the record's question shares by the rule under `usage` above.
 
 An explicit `annotate --jsonl --details --batch 1 --on-error continue` may
 place a separate error row among successful detailed rows when a question-set
