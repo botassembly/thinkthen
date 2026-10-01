@@ -24,12 +24,12 @@ The command's one-question rows, the public Rust API, the C door and the hosts o
   - A one-question row has more than one share only for `tag`, whose labels each take one wire question (`core/pack.rs` `wire_count`), so the silent overflow is reachable on `tag` when labels land in different requests.
   - `specification/result.md`'s `usage` row says only "Absent when the backend reports none". The contract names no overflow rule for a row.
 - Keeps: every pinned token count, `requests_sent`, `cached`, `requests`, model and error sentence on every surface. `usage_overflow_fails_safely` and `partial_failures_keep_their_question_keys_and_missing_usage_removes_the_total` (`tests/backend/annotate/splitting.rs:332`) pass unchanged. The process totals, `--facts` and the usage files are untouched (`engine/call_facts.rs`, `engine/usage*`). Each row with every share present keeps its exact sum. The check order in each asker stays: read, then the asker's own refusals, then the model, then usage.
-- Changes:
+- Changes: one helper, its callers, and the contract row.
   - New `engine/pipeline/receipt.rs`: `read(question, answers)` reads one question's outcomes from its wire answers; `receipt(answers, outcomes)` builds the `facade::Answered` a row reports (model, outcomes, usage, cached, first key, sends); `RowUsage` adds shares and gives the total by the rule above.
   - `public/asking.rs`, `cli/asking/judged.rs`, `engine/facade/each.rs` and `annotate.rs`'s `QuestionAnswer::read` call `read` and `receipt` in place of their copies.
   - `relate`, `recognize` and `annotate`'s `assemble` add each reply's usage to a `RowUsage` and take its total once the row's answers are in. `summed` goes.
   - `specification/result.md`'s `usage` row states the rule. `CHANGELOG.md` gains one line for the two corrected rows.
-- Proof:
+- Proof: an edge table, one regression per wrong copy, and the gates.
   - An edge table for `RowUsage` beside it: no share, all present, one missing, an overflow, and an overflow before and after a missing share.
   - One outside-in regression for each wrong copy, each failing on main:
     - `tag` on the command, two labels in two requests whose input counts overflow together: exit 4 with the overflow sentence (main printed the row without usage, exit 0). Covers `cli/asking/judged.rs`.
