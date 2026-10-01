@@ -1,6 +1,6 @@
 # Quick Fix qf-installer-test-macos-targets: the installer test runs on macOS
 
-Status: built in lane claude-3 from main `3a5e32b83`. Ian can overturn the platform table.
+Status: built in lane claude-3; fresh review accepted. Rebased on main `3a5e32b83`. Ian can overturn the platform table.
 
 ## Why
 
