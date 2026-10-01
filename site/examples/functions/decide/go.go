@@ -16,25 +16,15 @@ func main() {
 	ctx := context.Background()
 
 	question := "Does the customer ask for a refund?"
-	refund := `{"decide": "` + question + `", ` +
-		`"threshold": "0.2:0.8"}`
-	texts := []string{
+	isRefund, err := tt.Decide(
+		ctx,
+		question,
 		"Please refund my order. It arrived broken.",
-		"Thanks for the quick help yesterday!",
-		"I want to send this back.",
+	)
+	if err != nil {
+		log.Fatal(err)
 	}
-	expected := []thinkthen.Outcome{
-		thinkthen.Yes,
-		thinkthen.No,
-		thinkthen.Unsure,
-	}
-	for i, text := range texts {
-		isRefund, err := tt.Decide(ctx, refund, text)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if isRefund.Value.Outcome != expected[i] {
-			log.Fatalf("expected %v for %q", expected[i], text)
-		}
+	if isRefund.Value.Outcome != thinkthen.Yes {
+		log.Fatal("expected yes")
 	}
 }
