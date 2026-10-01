@@ -111,10 +111,14 @@ fn a_spent_deadline_or_a_fired_cancel_stops_before_reading() {
             .ask_all(
                 &asker,
                 ONE_EACH,
-                host(None, reader(3, &asks), |_, row: Result<usize, Failed<()>>| {
-                    emitted.push(row.map_err(|failed| stop_of(&failed)));
-                    Flow::Stop
-                }),
+                host(
+                    None,
+                    reader(3, &asks),
+                    |_, row: Result<usize, Failed<()>>| {
+                        emitted.push(row.map_err(|failed| stop_of(&failed)));
+                        Flow::Stop
+                    },
+                ),
                 &cancel,
             )
             .expect("the call runs");
@@ -138,10 +142,14 @@ fn a_deadline_starts_no_waiting_request() {
         .ask_all(
             &asker,
             ONE_EACH,
-            host(None, reader(40, &asks), |_, row: Result<usize, Failed<()>>| {
-                emitted.push(row.map_err(|failed| stop_of(&failed)));
-                Flow::Stop
-            }),
+            host(
+                None,
+                reader(40, &asks),
+                |_, row: Result<usize, Failed<()>>| {
+                    emitted.push(row.map_err(|failed| stop_of(&failed)));
+                    Flow::Stop
+                },
+            ),
             &cancel,
         )
         .expect("the call runs");

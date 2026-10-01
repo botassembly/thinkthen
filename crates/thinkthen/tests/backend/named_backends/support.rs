@@ -142,7 +142,10 @@ impl Home {
             ("XDG_CONFIG_HOME".to_owned(), self.path("config")),
             ("XDG_CACHE_HOME".to_owned(), self.path("cache")),
             ("THINKTHEN_TEST_RETRY_WAIT_MS".to_owned(), "1".to_owned()),
-            ("THINKTHEN_TEST_INPUT_PAUSE_MS".to_owned(), "10000".to_owned()),
+            (
+                "THINKTHEN_TEST_INPUT_PAUSE_MS".to_owned(),
+                "10000".to_owned(),
+            ),
         ];
         environment.extend(
             MARKERS
