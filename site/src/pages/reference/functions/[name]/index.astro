@@ -4,6 +4,7 @@ import Base from '../../../../layouts/Base.astro';
 import Terminal from '../../../../components/Terminal.astro';
 import { FUNCTIONS } from '../../../../data/catalog.mjs';
 import { captioned } from '../../../../data/samples.mjs';
+import { REFERENCE_PAGES } from '../../../../data/reference.mjs';
 
 export function getStaticPaths() {
   return FUNCTIONS.map((fn) => ({
@@ -12,6 +13,8 @@ export function getStaticPaths() {
 }
 
 const { fn } = Astro.props;
+// The Reference page that covers this function's edge cases, if one does.
+const edges = REFERENCE_PAGES.find((p) => p.slug === fn.name);
 const runs = captioned(`functions/${fn.name}`, fn.see, true);
 const extra = runs.slice(1);
 ---
@@ -26,5 +29,5 @@ const extra = runs.slice(1);
   </table>
   {extra.length > 0 && <h2>More examples</h2>}
   {extra.map((run) => <Terminal run={run} caption={run.see} />)}
-  <p class="pagelinks"><a href="/install/settings/">Every surface's settings</a></p>
+  <p class="pagelinks"><a href="/install/settings/">Every surface's settings</a>{edges && <> · <a href={edges.route}>{edges.title}</a></>}</p>
 </Base>

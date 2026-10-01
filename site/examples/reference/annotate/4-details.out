@@ -1,0 +1,15 @@
+{
+  "input": {
+    "id": "B-7",
+    "steps": "none given",
+    "report": {
+      "page": "/login",
+      "body": "Steps: click Log in. Nobody gets in."
+    }
+  },
+  "value": {
+    "steps": true,
+    "area": "login",
+    "impact": 1.98
+  }
+}

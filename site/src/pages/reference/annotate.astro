@@ -1,0 +1,51 @@
+---
+// Goal: show where annotate puts each answer for every kind of record, and what happens when a record already holds a question's name, a pointer is missing, or a question fails.
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { FUNCTIONS } from '../../data/catalog.mjs';
+import { REFERENCE_PAGES, referencePage, ANNOTATE_SEE } from '../../data/reference.mjs';
+import { captioned, files, run } from '../../data/samples.mjs';
+
+const page = referencePage('annotate');
+const dir = 'reference/annotate';
+const [lines, clash, plan, details, carryOn] = captioned(dir, ANNOTATE_SEE);
+const [form, onBody] = files(dir);
+const flat = run('functions/annotate', '0-json');
+const flatSee = FUNCTIONS.find((f) => f.name === 'annotate').see['0-json'];
+const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/annotate.md';
+---
+<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: "Where annotate puts each answer, and what happens on a name clash, a missing pointer, or a failed question." }} name="Reference">
+  <h1>annotate's edge cases</h1>
+  <p class="lede"><code>annotate</code> answers a saved set of questions for every record. Where each answer lands depends on the record. This page uses one question set throughout.</p>
+  <Code code={form.text} file={form.name} caption={`${form.name}, three questions`} />
+
+  <h2 id="flat-fields">Flat fields</h2>
+  <p>An object record gains one top-level field per question, named for the question. Every field it already held rides through unchanged. CSV and TSV rows are objects of strings, so they stay flat too.</p>
+  <Terminal run={flat} caption={flatSee} />
+
+  <h2 id="the-wrapper">The wrapper</h2>
+  <p>A record that is not an object has no field to add to. In a stream of records, a text line, a JSON scalar or a JSON array comes back as <code>{'{"input":…,"value":…}'}</code>. The record sits under <code>input</code>, and the named answers sit under <code>value</code>. On one document that is not an object, <code>annotate</code> prints the named answers alone.</p>
+  <Terminal run={lines} caption={lines.see} />
+
+  <h2 id="a-name-clash">A name clash</h2>
+  <p>A question name the record already holds would overwrite the record's own value. <code>annotate</code> refuses that record at exit 2, before any request for it.</p>
+  <Terminal run={clash} caption={clash.see} />
+  <p><code>--plan</code> checks records in order and stops at the first clash. It sends nothing, so a plan finds a clash at no cost. It names only the first clash it meets.</p>
+  <Terminal run={plan} caption={plan.see} />
+
+  <h2 id="details">--details keeps the record under input</h2>
+  <p><code>--details</code> prints each record as <code>input</code>, <code>value</code>, <code>answers</code> and <code>meta</code>. The original record stays whole under <code>input</code>, and the answers sit under <code>value</code>. The two never share a level, so no name can clash. Use it when the records may hold any field name.</p>
+  <Terminal run={details} caption={details.see} />
+
+  <h2 id="on-error-continue">A missing pointer and exit 7</h2>
+  <p>A question may read one part of each record with <code>on</code>, a JSON Pointer. Here each question reads <code>/body</code>.</p>
+  <Code code={onBody.text} file={onBody.name} caption={`${onBody.name}, the same questions on /body`} />
+  <p>A record without that part stops the run at exit 2. <code>--on-error continue</code> skips it instead. It needs <code>--jsonl</code>, <code>--details</code> and <code>--batch 1</code>, and it refuses <code>--plan</code>. It recovers only a missing pointer. The skipped record gets one <code>thinkthen.record-error/1</code> row in its place, and no request goes out for it. Standard error counts the skipped records. A run that skipped any record exits 7.</p>
+  <Terminal run={carryOn} caption={carryOn.see} />
+
+  <h2 id="failed-questions">Failed questions and exit 6</h2>
+  <p>When the backend cannot answer one question, that question fails and the others keep their answers. The failed question's field holds <code>{'{"failed":{"kind":"backend","cause":…}}'}</code>, never <code>null</code>. The run finishes and exits 6. When a run has both failed questions and skipped records, exit 7 wins. A failure is never saved. Under a cache, a later run asks only the failed questions again.</p>
+
+  <p class="pagelinks"><a href="/reference/question-sets/">Question sets</a> · <a href="/functions/annotate/">annotate</a> · <a href={spec}>The annotate specification</a> · <a href="/reference/#exit-codes">Every exit code</a></p>
+</SidePage>
