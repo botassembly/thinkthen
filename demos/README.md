@@ -1,6 +1,6 @@
 # How-tos
 
-Each page here is one real shell job. It gives the input files, the commands, their real output, and what can go wrong. Every green page replays a committed recording, so you can run it with no key and no network. A number is a folder under `demos/`. Start with the first table.
+Each page here is one real shell job. It gives the input files, the commands, their real output, and what can go wrong. Every green page replays a committed recording, so you can run it with no key and no network. Each number names the page's folder under `demos/`.
 
 ## Start with these
 

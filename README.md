@@ -6,7 +6,7 @@
 
 # thinkthen
 
-ThinkThen answers typed questions about text. Ask from a shell script or from your own program, and get back `true`, `false`, a label, or a number. A failed call never looks like an answer.
+ThinkThen answers typed questions about text. Ask from a shell script or from your own program, and get back `true`, `false`, a label, or a number. A failed call never looks like an answer. Use it to gate a script, label records, or grade answers in an eval.
 
 ```sh
 thinkthen decide 'Does the customer ask for money back?' < message.txt
@@ -24,7 +24,9 @@ The exit code is 0 for yes, 1 for no, and 3 for not sure. A shell `if` can branc
 curl -fsSL https://thinkthen.dev/install.sh | sh
 ```
 
-A live run needs a backend and its key. [Backends](https://thinkthen.dev/install/backends/) shows how to get a TypeSafe key or point ThinkThen at another server. Until the first release ships, build the command from a checkout as [CONTRIBUTING.md](https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md) shows.
+Until the first release ships, build the command from a checkout as [CONTRIBUTING.md](https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md) shows.
+
+A live run needs a backend. A hosted backend needs a key. [Backends](https://thinkthen.dev/install/backends/) shows how to get a TypeSafe key or point ThinkThen at another server, such as Ollama on your own machine.
 
 ### Try it with no key
 
@@ -79,7 +81,7 @@ Each folder under [libraries/](https://github.com/botassembly/thinkthen/tree/mai
 - [Lint a change by meaning and fail the build](https://github.com/botassembly/thinkthen/tree/main/demos/43-lint-a-change)
 - [Grade an assistant's answers with a rubric](https://github.com/botassembly/thinkthen/tree/main/demos/14-grade-a-batch)
 
-[All how-tos](https://github.com/botassembly/thinkthen/blob/main/demos/README.md) lists every page. Each one is a real shell job that the gate runs.
+[All how-tos](https://github.com/botassembly/thinkthen/blob/main/demos/README.md) lists every page. Each green one is a real shell job that the gate runs.
 
 ## Your data
 
