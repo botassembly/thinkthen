@@ -93,6 +93,31 @@
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },
+  "install/dart/first_call.dart": {
+    "page": "/install/dart/",
+    "sample": "7ace831daf9aafaf93dc1cd39e69ab5ed7e07fe6f7e28887928eda2c0d458e79",
+    "output": null,
+    "files": {
+      "install/dart/files/pubspec.yaml": "1990c50f61b81edf6028fbbf0753101c6af1b4e542648b5cab84978f9df3ecb1"
+    },
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/dart"
+      ],
+      "tree": "144c45cf537754fcbbdc8491dc671564a748b1c7345ef7cb216adb60a88c3b4e"
+    },
+    "toolchain": [
+      "Dart SDK version: 3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"linux_x64\"",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
   "install/go/first-call.go": {
     "page": "/install/go/",
     "sample": "6a20fd9a2353c9faeb346f726d1f65ba4e1c606381cb8597ac9862772100a48a",
@@ -205,6 +230,29 @@
     "toolchain": [
       "Python 3.12.3, pandas 3.0.6",
       "maturin 1.15.0",
+      "rustc 1.95.0 (59807616e 2026-04-14)"
+    ]
+  },
+  "install/php/first-call.php": {
+    "page": "/install/php/",
+    "sample": "2c2874ca6d2b2a58f3291415a2e7b882f6b5398403b5a472b8887969cadc11f7",
+    "output": null,
+    "files": {},
+    "answers": {
+      "0c9c066f089b995bb2632ae872706e7a899ff6f72264a470017828d3a013b425": "e620c51c215afe284dc11958419ac1291113b18c430a4bb648e077b13bee7720",
+      "ad3a76c4dd4cd8fabe7ef58fa26fe73be9c052987fecad9081782d78cf78b56c": "b7e2af214c2c4827b707d518a3bbc054fd9959dbaaeec77c915b119bd05e4e3d"
+    },
+    "sources": {
+      "folders": [
+        "conformance/backend",
+        "crates/thinkthen",
+        "libraries/c",
+        "libraries/php"
+      ],
+      "tree": "4da8fe3d7d1910dec9aef6efa3df5a1762c2b169228f9c40f90ab35fa7bd7afa"
+    },
+    "toolchain": [
+      "PHP 8.3.6 (cli) (built: Sep  2 2026 12:56:02) (NTS)",
       "rustc 1.95.0 (59807616e 2026-04-14)"
     ]
   },

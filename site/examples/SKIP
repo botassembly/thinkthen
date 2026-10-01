@@ -18,6 +18,9 @@
 **/*.swift    Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.zig      Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
 **/*.zon      The package file a Zig sample builds with.
+**/*.php      Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.dart     Host library sample; smoke-bindings.mjs replays the ones REPLAY lists.
+**/*.yaml     The package file a Dart sample builds with.
 **/*.sql      SQL sample; check against the matching installed extension.
 **/*.sql.out  Saved output from a checked database sample.
 REPLAY        The samples smoke-bindings.mjs replays.
