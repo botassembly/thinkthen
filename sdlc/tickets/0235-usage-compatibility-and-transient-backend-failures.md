@@ -6,7 +6,7 @@ opens: sdlc/issues/closed/2026-09-28-a-newer-usage-file-breaks-an-older-builds-s
 
 # 0235: Keep old usage readers working and retry transient backend failures
 
-Status: implemented and accepted by fresh High code review at `ce9c7b8b`, after accepted design `55137d08`. This verified landing closes both filed defects and the reopened register 53 timeout remainder. The temporary real-old-executable matrix and focused regressions pass. External experiment 346 subsequently passed the old-reader, bounded retry and timeout matrix on the accepted binary. Owner: Codex.
+Status: landed. Implemented and accepted by fresh High code review at `ce9c7b8b`, after accepted design `55137d08`. This verified landing closes both filed defects and the reopened register 53 timeout remainder. The temporary real-old-executable matrix and focused regressions pass. External experiment 346 subsequently passed the old-reader, bounded retry and timeout matrix on the accepted binary. Owner: Codex.
 
 ## Outcome and compatibility boundary
 

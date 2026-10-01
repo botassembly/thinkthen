@@ -6,7 +6,7 @@ opens: sdlc/issues/closed/2026-09-27-audit-writes-the-tuned-bar-in-place.md sdlc
 
 # 0256: Write an audited candidate beside its source
 
-Status: implemented and accepted after fresh Medium code review of `d49bb42cb25c6b9f67ffc83abfcec734df702f59`. The separate-candidate outcome is complete; existing `--write` remains unchanged. [Build proof](../records/0256-audit-output-build.md) records the focused validation and retained limits.
+Status: landed. Implemented and accepted after fresh Medium code review of `d49bb42cb25c6b9f67ffc83abfcec734df702f59`. The separate-candidate outcome is complete; existing `--write` remains unchanged. [Build proof](../records/0256-audit-output-build.md) records the focused validation and retained limits.
 
 ## Outcome
 

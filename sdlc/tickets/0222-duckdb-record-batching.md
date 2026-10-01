@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0094-recoverable-batch-outcomes.md sdlc/tickets/0222-du
 
 # 0222: Batch DuckDB record vectors and warm groups
 
-Status: B13c technical design accepted at `e103c36f`; Ian approved all ten implementation choices, including the public recoverable Rust carrier, in the work plan. Owner: Codex. Linux x86-64 implementation and selected installed-package proof are complete and accepted by fresh High code review at `e7d57bc0`, landed on main `73932ef4`. A selected Apple Silicon M5 installed package from that runtime source awaits artifact review; Linux ARM64, Intel macOS, actual macOS 15 execution and the full 0128 rehearsal remain open. The [preflight](../records/0222-duckdb-batching-preflight.md) preserves its historical source audit. Rust 0212, dynamic details 0230 and offline 0216 are now on main.
+Status: in progress. B13c technical design accepted at `e103c36f`; Ian approved all ten implementation choices, including the public recoverable Rust carrier, in the work plan. Owner: Codex. Linux x86-64 implementation and selected installed-package proof are complete and accepted by fresh High code review at `e7d57bc0`, landed on main `73932ef4`. A selected Apple Silicon M5 installed package from that runtime source awaits artifact review; Linux ARM64, Intel macOS, actual macOS 15 execution and the full 0128 rehearsal remain open. The [preflight](../records/0222-duckdb-batching-preflight.md) preserves its historical source audit. Rust 0212, dynamic details 0230 and offline 0216 are now on main.
 
 Milestone: 0.1
 

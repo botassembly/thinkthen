@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/optio
 
 # 0149: Give SQL the engine settings and charge every send
 
-Status: design accepted 2026-09-27 after fresh independent review of corrected `291d7532`. Owner: Codex. The independent core, SQLite and PostgreSQL slice passed fresh review at `0c987e46`. Fresh High review accepted the Linux DuckDB integration source at `984eb027`, and its installed artifact passed the selected settings and warm checks. The reviewed stage is on main; the full ticket and registers 50/51 remain open for the three retained C API release targets.
+Status: in progress; waits on the rehearsal. Design accepted 2026-09-27 after fresh independent review of corrected `291d7532`. Owner: Codex. The independent core, SQLite and PostgreSQL slice passed fresh review at `0c987e46`. Fresh High review accepted the Linux DuckDB integration source at `984eb027`, and its installed artifact passed the selected settings and warm checks. The DuckDB C++ extension now builds on all four release targets under ticket 0231, which ran the selected settings checks on each installed package. No C API target remains. Registers 50/51 wait only on the release-runner proof from the rehearsal in ticket 0128 phase 3b.
 
 Milestone: 0.1
 

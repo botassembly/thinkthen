@@ -1,6 +1,6 @@
 # 0241: Documentation and website cleanup
 
-Status: accepted at `db7e2418` and integrated. Twelve documentation criteria are fixed; the four partial issues and other-host execution work remain explicit follow-ons. Owner: codex-7 on `ticket/0241-documentation-and-site-cleanup`.
+Status: landed. Accepted at `db7e2418` and integrated. Twelve documentation criteria are fixed; the four partial issues and other-host execution work remain explicit follow-ons. Owner: codex-7 on `ticket/0241-documentation-and-site-cleanup`.
 
 ## Outcome and scope
 

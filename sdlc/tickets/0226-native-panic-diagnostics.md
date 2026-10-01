@@ -4,7 +4,7 @@ opens: sdlc/tickets/0226-native-panic-diagnostics.md sdlc/records/0226-panic-pre
 
 # 0226: Keep caught native panic payloads out of diagnostics
 
-Status: source correction and evidenced Linux x86-64 C/SQLite packages land after fresh independent High code review ACCEPT at `d0709b69`. Owner: Codex. The ticket and linked issue remain open for macOS C/SQLite and retained DuckDB Linux ARM64/macOS installed-package proof. [Code review](../records/0226-code-review.md) and [build record](../records/0226-build.md) distinguish source, child and package evidence. Accepted ADR 0098 preserves current loader lifetime; no all-platform completion is claimed.
+Status: in progress. Source correction and evidenced Linux x86-64 C/SQLite packages land after fresh independent High code review ACCEPT at `d0709b69`. Owner: Codex. The ticket and linked issue remain open for macOS C/SQLite and retained DuckDB Linux ARM64/macOS installed-package proof. [Code review](../records/0226-code-review.md) and [build record](../records/0226-build.md) distinguish source, child and package evidence. Accepted ADR 0098 preserves current loader lifetime; no all-platform completion is claimed.
 
 Milestone: 0.1
 

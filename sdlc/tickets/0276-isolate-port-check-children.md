@@ -4,7 +4,7 @@ Status: complete for the approved library-only batch. Fresh independent Medium c
 
 ## Outcome
 
-Apply ticket [0127's accepted child-environment rule](0127-test-harness-fixes.md) to the 45 library findings in the [port-check issue](../issues/2026-09-29-port-check-children-inherit-the-parent-environment.md). Every affected compiler, export tool, loopback backend, nested Python checker, and installed consumer gets an environment built from named inputs. A check reads one parent variable at a time; it never copies the system environment and removes a few names. Keep each selected toolchain, private scratch home, loader path, package mode, exact request body/count and receipt meaning. Change test/check code only, not product bindings or public APIs. Do not exempt a site from `children` or weaken its rules.
+Apply ticket [0127's accepted child-environment rule](0127-test-harness-fixes.md) to the 45 library findings in the [port-check issue](../issues/closed/2026-09-29-port-check-children-inherit-the-parent-environment.md). Every affected compiler, export tool, loopback backend, nested Python checker, and installed consumer gets an environment built from named inputs. A check reads one parent variable at a time; it never copies the system environment and removes a few names. Keep each selected toolchain, private scratch home, loader path, package mode, exact request body/count and receipt meaning. Change test/check code only, not product bindings or public APIs. Do not exempt a site from `children` or weaken its rules.
 
 This is one library-only batch using the existing Python `child_env` and R `clean_env`, not a new environment framework or ADR. The one DuckDB finding at `databases/duckdb/bridge/src/ffi/tests.rs:76` stays under Ian's SQL/DataFrame hold. The separate 0274 PTY child finding belongs to its author. Clearing the 45 library findings is not a claim that whole-tree `lint` passes.
 
@@ -45,7 +45,7 @@ For backend and consumer children, give the backend only its required `PATH` and
 
 ## Evidence
 
-- Starts from: [0127's accepted rule](0127-test-harness-fixes.md), [the issue](../issues/2026-09-29-port-check-children-inherit-the-parent-environment.md), and the 46-line baseline captured at `target/codex-builds/lint-intake/children.txt` in codex-4; current source is `df69771d`, whose intervening diff has no library-check change.
+- Starts from: [0127's accepted rule](0127-test-harness-fixes.md), [the issue](../issues/closed/2026-09-29-port-check-children-inherit-the-parent-environment.md), and the 46-line baseline captured at `target/codex-builds/lint-intake/children.txt` in codex-4; current source is `df69771d`, whose intervening diff has no library-check change.
 - Keeps: Named toolchain and runtime selection, private homes, loader paths, loopback fake-key/address pairs, source versus extracted package identity, exact body/count checks, negative receipts, and timeout cleanup.
 - Changes: The 26 reported library check files and the one adjacent Go installed ABI launcher build each affected child environment from explicit values and read parent settings one key at a time, reusing the existing Python/R helpers.
 - Proof: One planted real backend/consumer boundary with exact portable result; `children` removes 45 library findings; selected source and extracted-package checks preserve their current receipts; focused syntax/policy/pages/tickets/diff checks pass.

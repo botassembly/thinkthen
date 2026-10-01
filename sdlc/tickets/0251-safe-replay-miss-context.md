@@ -6,7 +6,7 @@ opens: sdlc/tickets/0251-safe-replay-miss-context.md sdlc/records/0251-replay-co
 
 # 0251: Reconcile safe replay miss context with register 102
 
-Status: fresh independent High review accepted `0327a13d`; the coordinator adopts the stated disagreed-approach disposition. No new runtime implementation is claimed. [Preflight](../records/0251-replay-context-preflight.md) uses source `3918bba2` and the original experiment 284/102 criterion; root owns the row and count change.
+Status: landed. Fresh independent High review accepted `0327a13d`; the coordinator adopts the stated disagreed-approach disposition. No new runtime implementation is claimed. [Preflight](../records/0251-replay-context-preflight.md) uses source `3918bba2` and the original experiment 284/102 criterion; root owns the row and count change.
 
 ## Outcome and proposed design
 

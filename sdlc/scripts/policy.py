@@ -55,7 +55,8 @@ ACCEPTED_DEPENDENCIES = {
 ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
 ACCEPTED_DEV_DEPENDENCIES = {
     # ADR 0112: schemars derives the result schema in a unit test.
-    "thinkthen": {"proptest", "conformance-backend", "schemars", "signal-hook"},
+    # Ticket 0372: rustls serves the CA bundle test's own TLS.
+    "thinkthen": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook"},
     "conformance-backend": set(),
 }
 # Ticket 0078: the host signal proofs deliver a signal to one worker thread.

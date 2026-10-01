@@ -6,7 +6,7 @@ opens: sdlc/tickets/0214-python-batching-and-run-facts.md sdlc/records/0214-pyth
 
 # 0214: Batch Python calls and return their run facts
 
-Status: High code/API review accepted source `82e359af`. The branch integrates main `e97d0342` with focused Python consumer proof and received independent integration ACCEPT at `dfc1b5fb` and landed on main. Ian approved ADR 0091's prompt completion receipt and the ten-choice recommendation. 0212 and 0230 are landed prerequisites; 0209 landed at `6dbdf03f`. Owner: Codex.
+Status: landed. High code/API review accepted source `82e359af`. The branch integrates main `e97d0342` with focused Python consumer proof and received independent integration ACCEPT at `dfc1b5fb` and landed on main. Ian approved ADR 0091's prompt completion receipt and the ten-choice recommendation. 0212 and 0230 are landed prerequisites; 0209 landed at `6dbdf03f`. Owner: Codex.
 
 ## Outcome and authority
 

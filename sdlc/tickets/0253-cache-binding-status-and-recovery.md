@@ -6,7 +6,7 @@ opens: sdlc/issues/closed/2026-09-26-a-run-that-sends-nothing-binds-the-default-
 
 # 0253: Show cache binding and teach safe recovery
 
-Status: fresh independent High design review accepted `b88799641d2a95b70dc4364abfc2e88399d08b48`. The coordinator approves implementation under the Lanes claim. Public documentation remains held. Ian can overturn these routine choices within the original outcome. Fresh High code review accepted `2b7ca868be955e479f610e8075a84d4a4e66603d`; the implementation is integrated and its original issue closed. [Preflight](../records/0253-cache-binding-preflight.md) traces main `4fc01f40`, source boundaries, states and proof. Root owns implementation claims and issue movement.
+Status: landed. Fresh independent High design review accepted `b88799641d2a95b70dc4364abfc2e88399d08b48`. The coordinator approves implementation under the Lanes claim. Public documentation remains held. Ian can overturn these routine choices within the original outcome. Fresh High code review accepted `2b7ca868be955e479f610e8075a84d4a4e66603d`; the implementation is integrated and its original issue closed. [Preflight](../records/0253-cache-binding-preflight.md) traces main `4fc01f40`, source boundaries, states and proof. Root owns implementation claims and issue movement.
 
 ## Outcome
 

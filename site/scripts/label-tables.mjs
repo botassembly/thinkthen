@@ -5,11 +5,16 @@
 // every such cell of every built page, and site.css prints it. It runs after
 // astro build. A table whose first row is not all headings, or that has two
 // columns, gets no labels, and neither does a cell that spans columns.
+//
+// The same pass marks each short code span outside a code pane with class
+// "short". A span of SHORT characters or fewer, such as a model name, a flag,
+// a key name or a version, then never splits across lines (site.css).
 
 import fs from 'node:fs';
 import path from 'node:path';
 
 const DIST = path.join(process.cwd(), 'dist');
+const SHORT = 24;
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -19,6 +24,7 @@ function walk(dir) {
 }
 
 const text = (html) => html.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+const chars = (html) => html.replace(/<[^>]+>/g, '').replace(/&(#\d+|#x[\da-f]+|\w+);/gi, '_').length;
 const attr = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
 function label(table) {
@@ -41,12 +47,27 @@ function label(table) {
   return out;
 }
 
+let shorts = 0;
+function markShort(html) {
+  return html.split(/(<pre\b[\s\S]*?<\/pre>)/).map((part, i) => i % 2 ? part : part.replace(
+    /<code\b([^>]*)>([\s\S]*?)<\/code>/g,
+    (whole, rest, inner) => {
+      if (chars(inner) > SHORT || /\bshort\b/.test(rest)) return whole;
+      shorts += 1;
+      const cls = /\bclass="([^"]*)"/.exec(rest);
+      return cls
+        ? `<code${rest.replace(cls[0], `class="${cls[1]} short"`)}>${inner}</code>`
+        : `<code${rest} class="short">${inner}</code>`;
+    },
+  )).join('');
+}
+
 let pages = 0;
 let tables = 0;
 for (const file of walk(DIST)) {
   const body = fs.readFileSync(file, 'utf8');
-  if (!body.includes('<table')) continue;
-  const next = body.replace(/<table\b[\s\S]*?<\/table>/g, (t) => {
+  let next = markShort(body);
+  next = next.replace(/<table\b[\s\S]*?<\/table>/g, (t) => {
     const done = label(t);
     if (done !== t) tables += 1;
     return done;
@@ -56,4 +77,4 @@ for (const file of walk(DIST)) {
     pages += 1;
   }
 }
-console.log(`label-tables: labelled ${tables} tables on ${pages} pages`);
+console.log(`label-tables: labelled ${tables} tables and marked ${shorts} short code spans on ${pages} pages`);

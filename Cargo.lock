@@ -2071,6 +2071,7 @@ dependencies = [
  "polars-core",
  "proptest",
  "rusqlite",
+ "rustls",
  "schemars",
  "serde",
  "serde_json",

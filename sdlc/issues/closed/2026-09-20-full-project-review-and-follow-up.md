@@ -1,6 +1,6 @@
 # Full-project review and follow-up
 
-Status: five foundation defects closed; other follow-up risks planned.
+Status: Closed. Five foundation defects closed; other follow-up risks planned.
 
 ## Scope and snapshot
 

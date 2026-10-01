@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/mod.rs crates/thinkthen/src/engine/request.rs
 
 # 0246: Refuse a known zero-send budget before first cache binding
 
-Status: code accepted at `63d48b96` by a fresh High reviewer and integrated. Register 10 in experiment 284 remains open. Ticket 0228 and ADR 0099 already prevent a missing key from binding an empty folder. This ticket addresses the next demonstrated local refusal without changing ticket 0065's durable before-send authority or the version-one marker.
+Status: landed. Code accepted at `63d48b96` by a fresh High reviewer and integrated. Register 10 in experiment 284 remains open. Ticket 0228 and ADR 0099 already prevent a missing key from binding an empty folder. This ticket addresses the next demonstrated local refusal without changing ticket 0065's durable before-send authority or the version-one marker.
 
 ## Outcome and limit
 

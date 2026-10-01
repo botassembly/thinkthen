@@ -6,7 +6,7 @@ opens: sdlc/tickets/0216-annotate-record-batching.md sdlc/records/0216-batching-
 
 # 0216: Batch annotate records within each on group
 
-Status: B10 code and its recorded 182-case comparison passed independent reviews at `efa2cd9e` and `c61654d4`. The accepted evidence removes only annotate's S1 list exception; the function workload and wider S1 live measurements remain. Pending coordinator landing. Owner: Codex.
+Status: landed. B10 code and its recorded 182-case comparison passed independent reviews at `efa2cd9e` and `c61654d4`. The accepted evidence removes only annotate's S1 list exception; the function workload and wider S1 live measurements remain. Pending coordinator landing. Owner: Codex. Closing note, 2026-10-01: the reviewed code landed on main at bf2a98773.
 
 ## Accepted outcome and retained behavior
 
