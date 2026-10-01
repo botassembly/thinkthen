@@ -30,6 +30,10 @@ jobs:
     timeout-minutes: 120
     env:
       CARGO_TERM_COLOR: never
+      # The default folders resolve under these on Windows. Point them at the
+      # runner's temp folder so no test writes the runner user's real folders.
+      APPDATA: ${{ runner.temp }}\thinkthen-appdata\Roaming
+      LOCALAPPDATA: ${{ runner.temp }}\thinkthen-appdata\Local
 
     steps:
       - name: Check out the commit
@@ -52,19 +56,10 @@ jobs:
           key: windows-${{ hashFiles('Cargo.lock', 'libraries/c/Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: windows-
 
-      # The default folders resolve under APPDATA and LOCALAPPDATA on Windows.
-      # Point both at the runner's temp folder, so no test writes the runner
-      # user's real folders. A job-level env cannot read the runner context.
-      - name: Point the default folders at the runner's temp folder
-        run: |
-          set -eu
-          printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          mkdir -p "$RUNNER_TEMP/thinkthen-appdata/Roaming" "$RUNNER_TEMP/thinkthen-appdata/Local"
-
       - name: Download the locked crates
         run: |
           set -eu
+          mkdir -p "$APPDATA" "$LOCALAPPDATA"
           cargo fetch --locked
           cargo fetch --locked --manifest-path libraries/c/Cargo.toml
 
