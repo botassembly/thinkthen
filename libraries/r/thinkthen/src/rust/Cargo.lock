@@ -415,7 +415,7 @@ dependencies = [
 
 [[package]]
 name = "thinkthen"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "arc-swap",
  "nix",
@@ -429,7 +429,7 @@ dependencies = [
 
 [[package]]
 name = "thinkthen-r"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "extendr-api",
  "serde",

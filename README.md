@@ -27,16 +27,22 @@ The exit code is 0 for yes, 1 for no, and 3 for not sure. A shell `if` can branc
 curl -fsSL https://thinkthen.dev/install.sh | sh
 ```
 
-Until the first release ships, build the command from a checkout as [CONTRIBUTING.md](https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md) shows.
+On a Mac, Homebrew works too:
+
+```sh
+brew install botassembly/thinkthen/thinkthen
+```
+
+With Rust installed, `cargo install thinkthen` builds the command from crates.io.
 
 A live run needs a backend. A hosted backend needs a key. [Backends](https://thinkthen.dev/install/backends/) shows how to get a TypeSafe key or point ThinkThen at another server, such as Ollama on your own machine.
 
 ### Try it with no key
 
-From a checkout of this repository, replay a recorded answer with no key and no network:
+Download the release's sample, then replay its recorded answer with no key and no network:
 
 ```sh
-cd demos/27-test-with-no-network
+curl -fsSL https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz | tar -xz && cd thinkthen-first-run
 thinkthen decide 'Does this report say what the person did before the problem appeared?' \
   --replay recording < report.txt
 ```

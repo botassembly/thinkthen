@@ -4,7 +4,7 @@ pub const LinkMode = enum { shared, static };
 
 fn headerVersionMatches(header: []const u8) bool {
     const names = [_][]const u8{ "THINKTHEN_VERSION_MAJOR", "THINKTHEN_VERSION_MINOR", "THINKTHEN_VERSION_PATCH" };
-    const expected = [_]u32{ 0, 0, 1 };
+    const expected = [_]u32{ 0, 1, 0 };
     var seen = [_]bool{ false, false, false };
     var in_comment = false;
     var lines = std.mem.splitScalar(u8, header, '\n');
@@ -46,9 +46,9 @@ pub fn linkNative(b: *std.Build, exe: *std.Build.Step.Compile, module: *std.Buil
     if (!std.fs.path.isAbsolute(archive)) @panic("-Dnative must name an absolute unpacked C archive directory");
     const header = b.pathJoin(&.{ archive, "include/thinkthen.h" });
     const bytes = std.fs.cwd().readFileAlloc(b.allocator, header, 65536) catch @panic("thinkthen C header missing or unreadable");
-    if (!headerVersionMatches(bytes)) @panic("thinkthen C header does not match package ABI 0.0.1");
+    if (!headerVersionMatches(bytes)) @panic("thinkthen C header does not match package ABI 0.1.0");
     for ([_][]const u8{ "typedef struct thinkthen_answer", "thinkthen_decide_many_opts", "thinkthen_call_opts" }) |needle| {
-        if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 0.0.1");
+        if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 0.1.0");
     }
     const lib = b.pathJoin(&.{ archive, "lib", if (mode == .shared) "libthinkthen.so" else "libthinkthen.a" });
     std.fs.cwd().access(lib, .{}) catch @panic("thinkthen selected native library missing");

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(thinkthen_cpp VERSION 0.0.1 LANGUAGES CXX)
+project(thinkthen_cpp VERSION 0.1.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 if(NOT THINKTHEN_NATIVE_SHARED OR NOT THINKTHEN_NATIVE_STATIC OR NOT THINKTHEN_C_HEADER)

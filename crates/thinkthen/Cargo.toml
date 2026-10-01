@@ -1,6 +1,6 @@
 [package]
 name = "thinkthen"
-version = "0.0.1"
+version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 description = "Semantic commands for the shell: if, grep, and sort that understand meaning"
@@ -10,7 +10,6 @@ homepage = "https://thinkthen.dev"
 readme = "../../README.md"
 keywords = ["classification", "llm", "cli", "text"]
 categories = ["command-line-utilities", "text-processing"]
-publish = false
 
 [[bin]]
 name = "thinkthen"

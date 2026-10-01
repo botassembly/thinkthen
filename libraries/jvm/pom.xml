@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.botassembly</groupId>
   <artifactId>thinkthen-jvm</artifactId>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <packaging>jar</packaging>
   <name>ThinkThen JVM binding</name>
   <description>Java binding for ThinkThen, with Kotlin and Scala callers as the kotlin and scala classifier JARs; install the matching native library separately</description>
