@@ -8,6 +8,9 @@
     "**accepted": "accepted",
     "**accepted**": "accepted"
   },
+  "issueStatusMappings": {
+    "done": "closed"
+  },
   "evidenceFromTicketNumber": 120,
   "closedIssuesFolder": "closed",
   "lanesTable": { "file": "planning/cleanup-2026-09-30.md", "heading": "Lanes" }

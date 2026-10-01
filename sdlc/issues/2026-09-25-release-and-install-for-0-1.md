@@ -69,3 +69,5 @@ Each package was proved on one Linux host with one toolchain version, against sy
 ## Done when
 
 Done when a tagged 0.1.0 release installs from every named channel on a clean machine, and each package passed the replay cases on its own platform before it was published.
+
+Phase 4 also runs each site install page's command once on a clean machine after the first publish. `SURFACES` in `site/src/data/catalog.mjs` holds every line. Owner: ticket 0128's release run. Added 2026-09-30 at the site team's request. A package rename is announced to the site team first, because the site build checks each page's package name against the binding's metadata.

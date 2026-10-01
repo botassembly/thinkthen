@@ -26,8 +26,10 @@ Each batch is one lane's work in one area of files. Landers take `CHANGELOG.md` 
 | Order | Batch | Work | Starts |
 | ---: | --- | --- | --- |
 | 1 | C1 test servers and input pause | One ticket. Every Python loopback test server sends `Connection: close`: Debt 020's workaround list, found with `grep -rl BaseHTTPRequestHandler`. The 50 ms piped input pause becomes settable for tests (Debt 030). | when 0356 lands (Debt 029) |
-| 2 | C2 spec lines | The lines in `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md`: the "Portable call settings" row, "Dry runs" in `recording.md`, and the Rust cell that cites ticket 0291. | when 0360 lands |
-| 3 | Checkpoint 2 | The full surface sweep on one main commit. The coordinator tags it `checkpoint/surfaces/2026-MM-DD-N` when every check passes. | after C1 and C2 land |
+| 2 | C2 spec lines | The lines in `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md`: the "Portable call settings" row, "Dry runs" in `recording.md`, the Rust cell that cites ticket 0291, the settings table's wording for a site reader (item 4), and the `cache_answers` sentences in `recording.md` and `result.md` (item 5). Files: `specification/settings.md`, `specification/recording.md`, `specification/result.md`. Medium. | when 0360 lands |
+| 3 | C3 small command fixes | One ticket, four small issues from the mailroom triage of 2026-09-30. `2026-09-30-check-ignores-the-estimated-token-cap.md` (blocks 0.1): `crates/thinkthen/src/cli/check.rs`, `specification/check.md`, a loopback test. `2026-09-30-blank-max-request-bytes-exits-2.md`: `crates/thinkthen/src/cli/edge.rs`, `specification/settings.md`. `2026-09-30-transforms-score-the-band-low-edge-as-no.md`: `transforms/band/band.jq`, `transforms/score/score.jq`, `transforms/sweep/sweep.jq`, `transforms/trials/trials.jq`, `transforms/trials/test.sh`. `2026-09-30-cache-convert-quote-skips-questions-that-start-the-text-is.md`: `crates/thinkthen/src/core/recording/convert.rs`, `store.rs`, `crates/thinkthen/src/cli/cache.rs`, `specification/recording.md`. Each small. | after C2, which edits `settings.md` and `recording.md` |
+| 4 | C4 checkpoint packages | `2026-09-30-checkpoints-publish-no-source-wrapper-packages.md`: a checkpoint publish packs the 16 source-wrapper, crate and R packages QA asked for. Files: `sdlc/scripts/surfaces`, `sdlc/scripts/release-pack`, `sdlc/scripts/publish-builds`. Medium. | any free lane; it touches no file C1 to C3 touch |
+| 5 | Checkpoint 2 | The full surface sweep on one main commit. The coordinator tags it `checkpoint/surfaces/2026-MM-DD-N` when every check passes. | after C1 to C4 land |
 
 Work outside the lanes:
 
@@ -36,7 +38,7 @@ Work outside the lanes:
 
 ## Every open issue
 
-26 open. Class: **running**, **batch** (C1 or C2), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
+32 open. Class: **running**, **batch** (C1 to C4), **outside** (marketing, Ian, or another team), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
@@ -44,6 +46,11 @@ Work outside the lanes:
 | `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | batch | C1 for the test servers; the product fix waits on upstream |
 | `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | batch | C1 |
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |
+| `2026-09-30-check-ignores-the-estimated-token-cap.md` | yes | batch | C3 |
+| `2026-09-30-blank-max-request-bytes-exits-2.md` | no | batch | C3 |
+| `2026-09-30-transforms-score-the-band-low-edge-as-no.md` | no | batch | C3 |
+| `2026-09-30-cache-convert-quote-skips-questions-that-start-the-text-is.md` | no | batch | C3 |
+| `2026-09-30-checkpoints-publish-no-source-wrapper-packages.md` | no | batch | C4 |
 | `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | outside | marketing |
 | `2026-09-29-docs-page-naming-supported-providers.md` | the Liquid timeout line | outside | marketing |
 | `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing, parts 3 and 4; parts 1 and 2 done |
@@ -66,6 +73,7 @@ Work outside the lanes:
 | `2026-09-30-batch-command-runs-many-questions-in-one-process.md` (idea) | no | after 0.1 | stays an idea |
 | `2026-09-30-opentelemetry-traces-after-0-1.md` (idea) | no | after 0.1 | stays an idea |
 | `2026-09-30-proxy-service-for-shared-limits-and-traces.md` (idea) | no | after 0.1 | stays an idea |
+| `2026-09-30-a-lone-oversized-record-is-sent-anyway.md` (idea) | no | after 0.1 | coordinator default 7 |
 
 Closed by this Quick Fix: `closed/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md`. Its leftover line, the Rust cell that cites ticket 0291, joined the C2 issue.
 
@@ -85,4 +93,6 @@ Taken under the workspace rule to record reviewed choices and proceed. Ian can o
 3. Homebrew stays a Mac option; the curl script covers Linux.
 4. 0290 is withdrawn, and 0295 and 0296 wait until after 0.1.
 5. `Engine::usage` stays per engine, and detailed rows carry `meta.batch_setting` (0347, 0349).
-6. C1 starts after 0356 because both edit binding test fixtures. C2 starts after 0360 because both edit `specification/settings.md`.
+6. C1 starts after 0356 because both edit binding test fixtures. C2 starts after 0360 because both edit `specification/settings.md`. C3 starts after C2 for the same files.
+7. A lone record over the request size setting is still sent, and one backend refusal still stops the file, as `specification/backends.md:24` and `records.md:124` say. A change waits until after 0.1.
+8. `cache_answers` counts only answers from the answer cache; C2 makes the specification say so.
