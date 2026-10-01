@@ -5,9 +5,8 @@
   "slides": {
     "beatles-bench": {
       "slide": "title",
-      "deck": "4595c70095c8535754c602718438a136f0dbc47a",
-      "sha256": "031e8bbcc3e614f33bc0a9d1e0e2e3a0d640e0bfe46aeb20aa758b2f3982f5fb",
-      "card": "268fe760ed1155a44f10dcc7f05b98006df2cbf88634127f0808a44af664248c"
+      "sha256": "9552e0da80398f52886ec7dfa2bf5ba69bcd341bc9c1df9b723c9d88ed4b2fd6",
+      "card": "486608cda8404544208966ee40add534887e96c1af0da4592b1400ed13733a76"
     },
     "strings": {
       "slide": "strings",

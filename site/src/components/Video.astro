@@ -1,0 +1,10 @@
+---
+// A YouTube video, from youtube-nocookie.com and lazy-loaded. `data-watch`
+// gives the Markdown twin a plain link in place of the embed.
+const { id, title } = Astro.props;
+const embed = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+const watch = `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+---
+<figure class="video" data-watch={watch}>
+  <iframe src={embed} title={`Video: ${title}`} loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+</figure>
