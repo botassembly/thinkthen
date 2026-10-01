@@ -1,6 +1,6 @@
 # 0359: the C door's `relate` reads records through the shared parser
 
-Status: in progress. Lane claude-1. Branch `ticket/0359-c-door-relate-shared-reader`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 031, `../issues/2026-09-30-c-door-relate-parses-records-with-its-own-reader.md`, filed by ticket 0354.
+Status: in progress. Lane claude-1. Branch `ticket/0359-c-door-relate-shared-reader`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 031, `../issues/closed/2026-09-30-c-door-relate-parses-records-with-its-own-reader.md`, filed by ticket 0354.
 
 ## Outcome
 

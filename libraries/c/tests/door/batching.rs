@@ -339,3 +339,55 @@ fn direct_c_annotate_record_nests_at_most_127_levels() {
     );
     assert_eq!(listener.count(), 1, "the refused record sends nothing");
 }
+
+/// Debt 031: relate reads each record through the one record parser, so a
+/// record 128 levels deep gets the depth sentence and the door keeps its own
+/// two relate sentences for text that is not JSON and for a wrong shape.
+#[test]
+fn direct_c_relate_record_reads_through_the_one_parser() {
+    let listener = Listener::answering(|_| Canned::ok("{}")).expect("loopback");
+    let base = listener.base();
+    let settings = json!({"base_url":base,"cache":false}).to_string();
+    let rule = r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#;
+    let deep = |depth: usize| {
+        let inner = depth - 1;
+        let nested = format!("{}1{}", "[".repeat(inner), "]".repeat(inner));
+        format!(r#"{{"name":"Ada","kind":"person","x":{nested}}}"#)
+    };
+    let shape = "a relate record is a JSON object with a string name and a string kind";
+    let rows = [
+        (deep(127), 0, r#"{"edges":[]}"#),
+        (
+            deep(128),
+            1,
+            "the JSON nests more than 127 levels of arrays and objects, the most this tool reads",
+        ),
+        ("not json".to_owned(), 1, "a relate record is not JSON"),
+        (r#"["Ada","person"]"#.to_owned(), 1, shape),
+        (r#"{"name":"Ada"}"#.to_owned(), 1, shape),
+        (
+            r#"{"name":"Ada","name":"Bea","kind":"person"}"#.to_owned(),
+            1,
+            "a JSON record holds each member name once, and one name arrived twice",
+        ),
+    ];
+    let mut script = Script::default();
+    script.ask("settings", &[base, &settings]);
+    for (record, _, _) in &rows {
+        script.ask("relate", &[base, rule, record]);
+    }
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let output = run(&driver, "", &script.0);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let got = replies(&output.stdout).expect("framed replies");
+    let wanted: Vec<Reply> = rows
+        .iter()
+        .map(|(_, code, said)| (*code, (*said).to_owned()))
+        .collect();
+    assert_eq!(got[1..], wanted[..]);
+    assert_eq!(
+        listener.count(),
+        0,
+        "one record or a refused one sends nothing"
+    );
+}
