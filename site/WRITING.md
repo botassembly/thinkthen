@@ -143,6 +143,10 @@ Library examples assert the answer (Ian, 2026-10-01). The assert shows the reade
 | Kotlin | `check(Door.outcome(isRefund) == Outcome.YES)` |
 | Scala | `assert(Door.outcome(isRefund) == Outcome.YES)` |
 | C# | `Trace.Assert(isRefund.OutcomeKind == Outcome.Yes);` after `using System.Diagnostics;`. Compare fields, never raw JSON text. |
+| C++ | `assert(is_refund.value.outcome == tt::Outcome::yes);` after `#include <cassert>` |
+| Go | `if isRefund.Value.Outcome != thinkthen.Yes {`, then `log.Fatal("expected yes")` in the block. Go has no assert, so `log.Fatal` ends the run |
+| Swift | `precondition(isRefund.value.outcome == .yes)` |
+| Zig | `std.debug.assert(is_refund.value.outcome == .yes);` |
 
 A library sample prints only when the printed form is the point, such as a stream, a table, a JSON shape, or a data frame. It prints with the language's ordinary print to standard output. Its saved output sits beside it as `<sample>.out`, and the page shows it under the sample. `npm run smoke-bindings` fails a sample that prints something other than its `.out`, and a sample that prints with no `.out`. `node scripts/smoke-bindings.mjs --update <path>` writes the file. Read it before the commit. A sample that prints nothing passes on its asserts.
 

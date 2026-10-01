@@ -6,8 +6,10 @@
 # bindings-proof.json in every build, and fails when a sample under
 # examples/ has no line here.
 functions/annotate/c.c
+functions/annotate/cpp.cpp
 functions/annotate/csharp.cs
 functions/annotate/duckdb.sql
+functions/annotate/go.go
 functions/annotate/java.java
 functions/annotate/kotlin.kt
 functions/annotate/more/duckdb.sql
@@ -21,10 +23,14 @@ functions/annotate/ruby.rb
 functions/annotate/rust.rs
 functions/annotate/scala.scala
 functions/annotate/sqlite.sql
+functions/annotate/swift.swift
 functions/annotate/typescript.ts
+functions/annotate/zig.zig
 functions/choose/c.c
+functions/choose/cpp.cpp
 functions/choose/csharp.cs
 functions/choose/duckdb.sql
+functions/choose/go.go
 functions/choose/java.java
 functions/choose/kotlin.kt
 functions/choose/more/duckdb.sql
@@ -38,10 +44,14 @@ functions/choose/ruby.rb
 functions/choose/rust.rs
 functions/choose/scala.scala
 functions/choose/sqlite.sql
+functions/choose/swift.swift
 functions/choose/typescript.ts
+functions/choose/zig.zig
 functions/decide/c.c
+functions/decide/cpp.cpp
 functions/decide/csharp.cs
 functions/decide/duckdb.sql
+functions/decide/go.go
 functions/decide/java.java
 functions/decide/kotlin.kt
 functions/decide/pandas.py
@@ -53,10 +63,14 @@ functions/decide/ruby.rb
 functions/decide/rust.rs
 functions/decide/scala.scala
 functions/decide/sqlite.sql
+functions/decide/swift.swift
 functions/decide/typescript.ts
+functions/decide/zig.zig
 functions/filter/c.c
+functions/filter/cpp.cpp
 functions/filter/csharp.cs
 functions/filter/duckdb.sql
+functions/filter/go.go
 functions/filter/java.java
 functions/filter/kotlin.kt
 functions/filter/pandas.py
@@ -68,10 +82,14 @@ functions/filter/ruby.rb
 functions/filter/rust.rs
 functions/filter/scala.scala
 functions/filter/sqlite.sql
+functions/filter/swift.swift
 functions/filter/typescript.ts
+functions/filter/zig.zig
 functions/find/c.c
+functions/find/cpp.cpp
 functions/find/csharp.cs
 functions/find/duckdb.sql
+functions/find/go.go
 functions/find/java.java
 functions/find/kotlin.kt
 functions/find/pandas.py
@@ -83,7 +101,9 @@ functions/find/ruby.rb
 functions/find/rust.rs
 functions/find/scala.scala
 functions/find/sqlite.sql
+functions/find/swift.swift
 functions/find/typescript.ts
+functions/find/zig.zig
 functions/question-file/c.c
 functions/question-file/csharp.cs
 functions/question-file/duckdb.sql
@@ -101,8 +121,10 @@ functions/question-file/scala.scala
 functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/c.c
+functions/rank/cpp.cpp
 functions/rank/csharp.cs
 functions/rank/duckdb.sql
+functions/rank/go.go
 functions/rank/java.java
 functions/rank/kotlin.kt
 functions/rank/pandas.py
@@ -114,10 +136,14 @@ functions/rank/ruby.rb
 functions/rank/rust.rs
 functions/rank/scala.scala
 functions/rank/sqlite.sql
+functions/rank/swift.swift
 functions/rank/typescript.ts
+functions/rank/zig.zig
 functions/recognize/c.c
+functions/recognize/cpp.cpp
 functions/recognize/csharp.cs
 functions/recognize/duckdb.sql
+functions/recognize/go.go
 functions/recognize/java.java
 functions/recognize/kotlin.kt
 functions/recognize/more/duckdb.sql
@@ -131,10 +157,14 @@ functions/recognize/ruby.rb
 functions/recognize/rust.rs
 functions/recognize/scala.scala
 functions/recognize/sqlite.sql
+functions/recognize/swift.swift
 functions/recognize/typescript.ts
+functions/recognize/zig.zig
 functions/relate/c.c
+functions/relate/cpp.cpp
 functions/relate/csharp.cs
 functions/relate/duckdb.sql
+functions/relate/go.go
 functions/relate/java.java
 functions/relate/kotlin.kt
 functions/relate/more/duckdb.sql
@@ -148,10 +178,14 @@ functions/relate/ruby.rb
 functions/relate/rust.rs
 functions/relate/scala.scala
 functions/relate/sqlite.sql
+functions/relate/swift.swift
 functions/relate/typescript.ts
+functions/relate/zig.zig
 functions/score/c.c
+functions/score/cpp.cpp
 functions/score/csharp.cs
 functions/score/duckdb.sql
+functions/score/go.go
 functions/score/java.java
 functions/score/kotlin.kt
 functions/score/more/duckdb.sql
@@ -165,10 +199,14 @@ functions/score/ruby.rb
 functions/score/rust.rs
 functions/score/scala.scala
 functions/score/sqlite.sql
+functions/score/swift.swift
 functions/score/typescript.ts
+functions/score/zig.zig
 functions/tag/c.c
+functions/tag/cpp.cpp
 functions/tag/csharp.cs
 functions/tag/duckdb.sql
+functions/tag/go.go
 functions/tag/java.java
 functions/tag/kotlin.kt
 functions/tag/pandas.py
@@ -180,7 +218,9 @@ functions/tag/ruby.rb
 functions/tag/rust.rs
 functions/tag/scala.scala
 functions/tag/sqlite.sql
+functions/tag/swift.swift
 functions/tag/typescript.ts
+functions/tag/zig.zig
 install/ada/backends.adb backend=liquid
 install/ada/backends.adb backend=ollama
 install/ada/backends.adb backend=typesafe

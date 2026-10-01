@@ -171,6 +171,25 @@ const JVM = new Set(['java', 'kotlin', 'scala']);
 const programName = (slug, rel) => (rel.startsWith('functions/') && JVM.has(slug)
   ? `${rel.split('/')[1].replace(/(^|-)(.)/g, (m, dash, c) => c.toUpperCase())}${path.extname(rel)}`
   : path.basename(rel));
+// A function page's Go, Swift or Zig sample builds as a reader would build
+// it in a project of its own. Go names its module after the file, and
+// `go mod init go` fails, so the sample builds as sample.go. Swift and Zig
+// take the install page's project files, which name the first call, so the
+// sample builds under that name.
+const projectFiles = (slug, file) => (dir) => {
+  fs.cpSync(path.join(examples, 'install', slug, 'files'), dir, { recursive: true });
+  return file;
+};
+const PROJECT = {
+  go: () => 'sample.go',
+  swift: projectFiles('swift', 'main.swift'),
+  zig: projectFiles('zig', 'first-call.zig'),
+};
+const functionSampleName = (slug, rel, dir) => {
+  if (!rel.startsWith('functions/')) return path.basename(rel);
+  if (JVM.has(slug)) return programName(slug, rel);
+  return PROJECT[slug] ? PROJECT[slug](dir) : path.basename(rel);
+};
 ARCHIVE.kotlin = ARCHIVE.java;
 ARCHIVE.scala = ARCHIVE.java;
 
@@ -198,7 +217,7 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
         fs.mkdirSync(dir, { recursive: true });
         fs.symlinkSync(n, path.join(dir, 'thinkthen-c'));
         layout(dir);
-        const name = programName(slug, rel);
+        const name = functionSampleName(slug, rel, dir);
         fs.copyFileSync(path.join(examples, rel), path.join(dir, name));
         if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, rel);
         const lines = buildLines(slug, name, true);
