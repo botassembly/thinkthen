@@ -443,7 +443,9 @@ part_first_run() {
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
 # Ticket 0366: in build mode without a caller's CARGO_TARGET_DIR, each part builds in its own scratch
 # folder, which goes once the part is packed. A run then holds one part's build at a time.
-# The last remap wins, so the build folder's own remap keeps its scratch path out of the files.
+# The build folder's remap comes after release-pack's others, so it wins over them. A build script's
+# own HOME remap comes later still, so a TMPDIR under HOME shows as /build/home/... with the scratch
+# name. release-container sets TMPDIR to its run folder, outside HOME.
 own_build=
 [ -n "$reuse" ] || [ -n "${CARGO_TARGET_DIR:-}" ] || own_build=1
 duckdb_build=${THINKTHEN_DUCKDB_CPP_BUILD:-} rust_flags=$RUSTFLAGS c_flags=$CFLAGS cxx_flags=${CXXFLAGS:-}
