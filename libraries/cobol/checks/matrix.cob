@@ -171,7 +171,7 @@ procedure division.
     if outcome not = 1 perform fail-now end-if
     call dyn-free-token using by value token
     move "hold-deadline" to text-input move 13 to text-len
-    move 25 to deadline-ms move 111 to outcome
+    move 1000 to deadline-ms move 111 to outcome
     move "held-deadline" to operation-name
     call "thinkthen_decide_opts" using by value engine
       by reference question-text text-input by value size is 8 text-len deadline-ms no-token

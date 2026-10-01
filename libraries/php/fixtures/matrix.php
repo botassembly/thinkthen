@@ -164,7 +164,7 @@ try {
         $door->fire($token); $door->fire($token);
         failed(fn() => $door->decide('Is it?', 'never-sent', -1, $token), 5);
     } finally { $door->freeToken($token); }
-    failed(fn() => $door->decide('Is it?', 'hold-deadline', 50), 3);
+    failed(fn() => $door->decide('Is it?', 'hold-deadline', 1000), 3);
     check($door->decide('Is it?', 'recovery-scalar')['value']['outcome'] === 1, 'recovery after deadline');
 } finally { $door->close(); }
 check(isset($scalar) && isset($scalar['facts']) && $scalar['facts']['records'] === 1, 'typed facts changed after close');

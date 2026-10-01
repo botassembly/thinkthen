@@ -18,7 +18,7 @@ public class Concurrent {
             try {
                 for (int index=0;index<2;index++) {
                     Path marker=barrier.resolve("arrived-parallel-independent-"+index);
-                    for (int retry=0;retry<1000 && !Files.exists(marker);retry++) Thread.sleep(5);
+                    for (int retry=0;retry<6000 && !Files.exists(marker);retry++) Thread.sleep(5);
                     if (!Files.exists(marker)) throw new AssertionError("both calls must overlap before release");
                 }
             } finally {

@@ -153,7 +153,7 @@ class TestBatchFacts < Minitest::Test
         end
         say [error.kind, error.facts, error.details, error.completion.done?, pending]
         hear
-        say error.completion.result(timeout: 2)
+        say error.completion.result(timeout: 30)
       end
     RUBY
     TestBackend.with(script, arm: "arm/held") do |backend, child|

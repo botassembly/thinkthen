@@ -14,7 +14,7 @@ procedure Package_Bulk is
    end Require;
    procedure Arrive (Name : String) is
    begin
-      for I in 1 .. 2_000 loop
+      for I in 1 .. 6_000 loop
          exit when Ada.Directories.Exists (Barrier & "/arrived-" & Name);
          delay 0.005;
       end loop;
@@ -70,7 +70,7 @@ begin
    begin
       Caller.Start; Arrive ("hold-scalar"); Cancel (Token); Cancel (Token); Release ("hold-scalar");
       -- The task joins at this scope's end before its token is finalized.
-      for I in 1 .. 2_000 loop exit when Caller'Terminated; delay 0.005; end loop;
+      for I in 1 .. 6_000 loop exit when Caller'Terminated; delay 0.005; end loop;
       Require (Caller'Terminated and Kind = Cancelled, "typed held scalar");
    end;
    declare
@@ -89,24 +89,30 @@ begin
    begin
       Caller.Start; Arrive ("hold-bulk-1"); Cancel (Token); Cancel (Token);
       Release ("hold-bulk-1"); Release ("hold-bulk-2");
-      for I in 1 .. 2_000 loop exit when Caller'Terminated; delay 0.005; end loop;
+      for I in 1 .. 6_000 loop exit when Caller'Terminated; delay 0.005; end loop;
       Require (Caller'Terminated and Kind = Cancelled, "typed held bulk");
    end;
    declare
       Kind : Error_Kind := None;
+      Stopped : Boolean := False;
       Answer : Decision;
       task Caller is entry Start; end Caller;
       task body Caller is
          Err : Failure;
       begin
          accept Start;
-         Decide (Client, "Is it?", "hold-deadline", Answer, Facts, Err, Deadline_Ms => 80);
+         Decide (Client, "Is it?", "hold-deadline", Answer, Facts, Err, Deadline_Ms => 1000);
          Kind := Err.Kind;
       end Caller;
    begin
-      Caller.Start; Arrive ("hold-deadline"); delay 0.11; Release ("hold-deadline");
-      for I in 1 .. 2_000 loop exit when Caller'Terminated; delay 0.005; end loop;
-      Require (Caller'Terminated and Kind = Deadline, "typed held deadline");
+      -- The deadline ends the call while the reply is held, so the release
+      -- waits up to 30 s for the caller to end (ticket 0356).
+      Caller.Start; Arrive ("hold-deadline");
+      for I in 1 .. 6_000 loop exit when Caller'Terminated; delay 0.005; end loop;
+      Stopped := Caller'Terminated;
+      Release ("hold-deadline");
+      for I in 1 .. 6_000 loop exit when Caller'Terminated; delay 0.005; end loop;
+      Require (Stopped and Kind = Deadline, "typed held deadline");
    end;
    Decide (Client, "Is it?", "recovery-package", Answers (1), Facts, Error);
    Require (Error.Kind = None and Answers (1).Value = Yes and Fact ("requests_sent") = "1",

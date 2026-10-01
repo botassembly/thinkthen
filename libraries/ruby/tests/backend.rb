@@ -19,6 +19,10 @@ module TestBackend
   BIN = ENV.fetch("THINKTHEN_TEST_BACKEND")
   LIB = File.expand_path("../lib", __dir__)
   FAKE_KEY = "tt-ruby-test-not-a-key"
+  # Millisecond promises run only under the stress profile (ticket 0356).
+  # The routine run proves the same stop by order: the child reports it
+  # while the backend still holds the reply.
+  STRESS = ENV["THINKTHEN_TEST_PROFILE"] == "stress"
 
   # Helpers every child script starts with.
   PRELUDE = <<~RUBY
@@ -30,7 +34,7 @@ module TestBackend
     def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     def ms_since(start) = ((now - start) * 1000).round
     def threads = Dir.children("/proc/self/task").size
-    def settled(expected, within = 10.0)
+    def settled(expected, within = 30.0)
       stop = now + within
       sleep 0.01 until threads == expected || now >= stop
       threads

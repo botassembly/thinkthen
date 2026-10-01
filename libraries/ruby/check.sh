@@ -175,6 +175,10 @@ cargo clippy --locked --offline --all-targets --quiet -- -D warnings
 cargo test --locked --offline --quiet --lib
 if [ "$profile" = stress ]; then
   sh "$LIMIT" 120 "$RUBY" -I lib tests/test_flood.rb || fail "the trap flood failed"
+  # The interrupt files check their millisecond promises only here (ticket 0356).
+  for test in tests/test_interrupt_single.rb tests/test_interrupt_batch.rb; do
+    sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed, stress"
+  done
   echo "check ruby: pass, stress"
   exit 0
 fi

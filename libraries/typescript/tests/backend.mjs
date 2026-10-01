@@ -3,6 +3,7 @@
 // key only beside a 127.0.0.1 address, and nothing else (ticket 0127). No test changes
 // its own environment, because the default engine reads it once.
 import { spawn } from 'node:child_process';
+import { test } from 'node:test';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -92,6 +93,25 @@ export async function ask(backend, body, options) {
   const { code } = await run.exited;
   if (code !== 0 || run.lines.length === 0) throw new Error(`the child exited ${code} with ${JSON.stringify(run.lines)}`);
   return run.lines.at(-1).value;
+}
+
+/** Run BODY twice: the routine test proves order, and its `stress:` twin,
+ * selected only under THINKTHEN_TEST_PROFILE=stress, also checks the timing
+ * (ticket 0356). BODY gets the test context and `timed`. */
+export function timedTest(name, body) {
+  test(name, (t) => body(t, false));
+  test(`stress: ${name}`, (t) => body(t, true));
+}
+
+/** PROMISE's value, or null once MS pass. The timer never outlives the race. */
+export async function within(promise, ms) {
+  let timer;
+  const late = new Promise((done) => { timer = setTimeout(() => done(null), ms); });
+  try {
+    return await Promise.race([promise, late]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Wait until the predicate holds or the time runs out. */

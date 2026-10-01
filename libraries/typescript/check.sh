@@ -117,11 +117,11 @@ sh build-addon.sh
 
 step 'node tests'
 if [ "$profile" = stress ]; then
-    sh "$LIMIT" 300 node --test --test-timeout=30000 --test-name-pattern='^stress:' tests/abort.test.mjs
+    sh "$LIMIT" 300 node --test --test-timeout=60000 --test-name-pattern='^stress:' tests/*.test.mjs
     echo 'typescript: pass, stress'
     exit 0
 fi
-sh "$LIMIT" 300 node --test --test-timeout=30000 --test-skip-pattern='^stress:' tests/*.test.mjs
+sh "$LIMIT" 300 node --test --test-timeout=60000 --test-skip-pattern='^stress:' tests/*.test.mjs
 
 step 'the conformance runner fails a corrupted case and names it'
 for id in 12-score-upper 17-annotate-mixed 27-decide-many; do

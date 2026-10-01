@@ -11,10 +11,6 @@ cd -- "$(dirname -- "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "r: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
-if [ "$profile" = stress ]; then
-  echo 'r: not run: no port load campaign'
-  exit 77
-fi
 here=$PWD
 root=$(cd ../.. && pwd)
 rust=thinkthen/src/rust
@@ -98,6 +94,12 @@ if bash tests/with-backend.sh "$backend" tests/hook.R http://192.0.2.1/v1 >"$scr
 fi
 grep -q "refused 192.0.2.1, which is not a loopback address" "$scratch/guard" && ! grep -q "checks passed" "$scratch/guard" ||
   { cat "$scratch/guard" >&2; exit 1; }
+if [ "$profile" = stress ]; then
+  # interrupt.R checks its 0.5 s promises only here (ticket 0356).
+  THINKTHEN_TEST_PROFILE=stress bash tests/with-backend.sh "$backend" tests/interrupt.R
+  echo "r: pass, stress"
+  exit 0
+fi
 for file in tests/*.R examples/examples.R examples/slide_check.R; do
   [ "$file" = tests/helper.R ] && continue
   bash tests/with-backend.sh "$backend" "$file"

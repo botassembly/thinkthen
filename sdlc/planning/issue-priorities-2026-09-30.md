@@ -42,7 +42,7 @@ Work outside the lanes:
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
-| `2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | running | ticket 0356 |
+| `closed/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | closed | closed by ticket 0356 |
 | `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | batch | C1 for the test servers; the product fix waits on upstream |
 | `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | batch | C1 |
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |

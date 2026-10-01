@@ -18,7 +18,7 @@ void check(bool condition, const char* label) {
 fs::path barrier() { return fs::path(std::getenv("TT_BARRIER_DIR")); }
 void release(const std::string& name) { std::ofstream(barrier() / ("release-" + name)) << "go"; }
 void awaitArrival(const std::string& name) {
-    for (int i = 0; i < 2000; ++i) {
+    for (int i = 0; i < 6000; ++i) {
         if (fs::exists(barrier() / ("arrived-" + name))) return;
         std::this_thread::sleep_for(5ms);
     }
@@ -34,7 +34,7 @@ void held(const tt::Engine& engine, const std::string& name, int expected, bool 
     std::thread worker([&] {
         try {
             if (bulk) tt::many(engine, "Is it?", {name, "hold-bulk-second"}, THINKTHEN_NO_DEADLINE, token.get());
-            else tt::decide(engine, "Is it?", name, expected == 3 ? 35 : THINKTHEN_NO_DEADLINE, token.get());
+            else tt::decide(engine, "Is it?", name, expected == 3 ? 1000 : THINKTHEN_NO_DEADLINE, token.get());
             result.code = -1;
         } catch (const tt::Failure& e) {
             // The error accessors and borrowed facts are copied ON THIS WORKER THREAD.
@@ -81,7 +81,11 @@ void held(const tt::Engine& engine, const std::string& name, int expected, bool 
                 }
             });
             firedFuture.wait(); // Deadline recorded and token fired twice (or canceller failed).
-        } else std::this_thread::sleep_for(100ms);
+        } else {
+            // The deadline ends the call while the reply is held, so the release
+            // waits up to 30 s for the worker's result (ticket 0356).
+            check(captured.wait_for(30s) == std::future_status::ready, "deadline ends the held call before its release");
+        }
         release(name);
         if (bulk) release("hold-bulk-second");
         worker.join();

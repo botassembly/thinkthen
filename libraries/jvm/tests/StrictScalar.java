@@ -19,7 +19,7 @@ public class StrictScalar {
             });
             Path barrier=Path.of(System.getenv("TT_BARRIER_DIR"));
             try {
-                for(int i=0;i<2000&&!Files.exists(barrier.resolve("arrived-"+held));i++)Thread.sleep(5);
+                for(int i=0;i<6000&&!Files.exists(barrier.resolve("arrived-"+held));i++)Thread.sleep(5);
                 if(!Files.exists(barrier.resolve("arrived-"+held)))throw new AssertionError("no held arrival");
                 token.fire();token.fire();Thread.sleep(250);
             } finally {Files.createFile(barrier.resolve("release-"+held));caller.join();}
