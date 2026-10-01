@@ -5,7 +5,7 @@ import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
 import { SURFACES, FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE, BACKEND_ROUTES, OPENAI_ANNOUNCED } from '../../data/catalog.mjs';
-import { captioned, files, firstCall, installSample, sample } from '../../data/samples.mjs';
+import { backendsName, captioned, files, firstCall, installSample, sample } from '../../data/samples.mjs';
 import { buildLines } from '../../data/build-lines.mjs';
 
 export function getStaticPaths() {
@@ -34,7 +34,7 @@ const description = named
   ? `Call Jev and any System One API from ${surface.name} with ThinkThen. OpenAI has announced the OpenAI Decisions API. It is not released yet.`
   : surface.blurb.replace(/`/g, '');
 if (description.length > 160) throw new Error(`/install/${surface.slug}/: the description runs ${description.length} characters, over 160`);
-const backendSample = route === 'env' || route === 'builder' ? installSample(surface.slug, 'backends') : null;
+const backendSample = route === 'env' || route === 'builder' ? installSample(surface.slug, backendsName(surface.slug)) : null;
 const backendBuild = backendSample ? buildLines(surface.slug, backendSample.file) : null;
 const backendBuildText = backendBuild && [...backendBuild.lines, backendBuild.run].map((p) => p.join(' \\\n    ')).join('\n');
 const shellLines = (r) => [
