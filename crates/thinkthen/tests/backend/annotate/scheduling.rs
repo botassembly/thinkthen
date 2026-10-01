@@ -79,12 +79,10 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
     let file = grouped("six-groups", 6);
     for jobs in [1_usize, 4, 32] {
         let usage_home = folder(&format!("global-queue-usage-{jobs}"));
+        let state = crate::child::Folder::Usage.variable(&usage_home);
         let environment = [
             ("THINKTHEN_API_KEY", "sk-test-value"),
-            (
-                "XDG_STATE_HOME",
-                usage_home.to_str().expect("usage state home"),
-            ),
+            (state.0, state.1.as_str()),
         ];
         let gathering = Gathering::new(jobs.min(6));
         let listener = Listener::answering(move |body| {
@@ -325,11 +323,11 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
         Listener::answering(|body| Canned::ok(&all_yes(body, "local-1", 1, 1)).after(20))
             .expect("a listener");
     let file = grouped("broken-pipe", 2);
-    let state_home = folder("broken-pipe-usage");
+    let state = crate::child::Folder::Usage.variable(&folder("broken-pipe-usage"));
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .clear_environment()
         .home(env!("CARGO_TARGET_TMPDIR"))
-        .env("XDG_STATE_HOME", state_home)
+        .env(state.0, state.1)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",
@@ -404,10 +402,11 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     })
     .expect("a listener");
     let file = grouped("closed-pipe-failure", 1);
+    let platform = crate::child::Folder::Cache.variable(&cache.join(".platform"));
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .clear_environment()
         .home(env!("CARGO_TARGET_TMPDIR"))
-        .env("XDG_CACHE_HOME", cache.join(".platform"))
+        .env(platform.0, platform.1)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",
