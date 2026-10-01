@@ -63,6 +63,9 @@ build_loadable_extension(thinkthen " " src/thinkthen.cpp src/find.cpp src/scalar
 target_link_libraries(thinkthen_loadable_extension "${THINKTHEN_RUST_STATICLIB}")
 if(APPLE)
   target_link_libraries(thinkthen_loadable_extension ${DUCKDB_ARCHIVES})
+  # The bridge bundles SQLite for the question store. Keep its names out of
+  # the export table so they cannot bind to the host's or another extension's.
+  target_link_options(thinkthen_loadable_extension PRIVATE "LINKER:-unexported_symbol,_sqlite3_*")
 else()
   target_link_libraries(thinkthen_loadable_extension
     -Wl,--start-group ${DUCKDB_ARCHIVES} -Wl,--end-group dl pthread)

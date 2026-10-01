@@ -416,7 +416,7 @@ esac
         route.chmod(0o755)
         openssl = root / "openssl3/bin/openssl"
         openssl.parent.mkdir(parents=True)
-        openssl.write_text("#!/bin/sh\necho 'OpenSSL 3.6.4 11 Feb 2026'\n")
+        openssl.write_text("#!/bin/sh\necho 'OpenSSL 3.6.3 27 Jan 2026'\n")
         openssl.chmod(0o755)
         for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "xcrun", "brew", "shasum",
                      "python3", "python3.12", "python3.13"):
