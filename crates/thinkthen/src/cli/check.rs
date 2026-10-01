@@ -8,7 +8,7 @@ use std::io::Write;
 use std::process::ExitCode;
 use std::time::Duration;
 
-use crate::cli::args::CheckArguments;
+use crate::cli::args::{CheckArguments, DEFAULT_MAX_RETRIES};
 use crate::cli::edge::{self, Environment};
 use crate::core::adapters::built_in;
 use crate::core::check::{self, Probe, Report};
@@ -19,9 +19,6 @@ use crate::failure::{self, Failure};
 
 /// The check sends only to an address the user named, never the built-in one.
 const NO_ADDRESS: &str = "check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file";
-
-/// The retry count every command defaults to. The check takes no option for it.
-const MAX_RETRIES: u32 = 2;
 
 pub(crate) fn run(
     arguments: &CheckArguments,
@@ -53,7 +50,7 @@ pub(crate) fn run(
             backend,
             profile: None,
             timeout: Duration::from_secs(arguments.timeout),
-            max_retries: MAX_RETRIES,
+            max_retries: DEFAULT_MAX_RETRIES,
             retry_wait: environment.retry_wait(),
             per_minute: environment.per_minute,
             width: None,
@@ -62,7 +59,10 @@ pub(crate) fn run(
             usage: environment.counters(),
         },
         roots,
-    )?;
+    )?
+    // The estimated input cap binds the probes as it binds every live request;
+    // `check` has no flag for it, so only the variable sets it.
+    .with_process_budget(None, environment.estimated_total);
     let mut lines = vec![
         format!("url {}", engine.backend().url().as_str()),
         format!("provider {}", check::PROVIDER),

@@ -76,6 +76,7 @@ cargo $runner --locked --offline --manifest-path conformance/consumer/Cargo.toml
 sh specification/fixtures/question-file/self-test
 sh specification/fixtures/types/self-test
 sh conformance/children/test.sh
+sh transforms/band/test.sh
 sh transforms/compare/test.sh
 sh transforms/cost/test.sh
 sh transforms/monitor/test.sh

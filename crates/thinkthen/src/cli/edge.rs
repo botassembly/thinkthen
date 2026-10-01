@@ -110,7 +110,7 @@ impl Environment {
             base_url: read("THINKTHEN_BASE_URL"),
             backend: read("THINKTHEN_BACKEND"),
             batch: read("THINKTHEN_BATCH"),
-            max_request_bytes: env::var("THINKTHEN_MAX_REQUEST_BYTES").ok(),
+            max_request_bytes: read("THINKTHEN_MAX_REQUEST_BYTES"),
             cache: named_cache
                 .as_ref()
                 .map(PathBuf::from)

@@ -105,7 +105,7 @@ def decide_value($probability; $threshold):
   if ($threshold | type) == "number" then $probability >= $threshold
   else ($threshold | split(":") | map(tonumber)) as $sides
     | if $probability >= $sides[1] then true
-      elif $probability <= $sides[0] then false
+      elif $probability < $sides[0] then false
       else null
       end
   end;
