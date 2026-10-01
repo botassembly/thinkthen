@@ -2,18 +2,30 @@
 # relative to examples/. A line that ends with backend=NAME runs its sample
 # with that backend named in the environment. scripts/check-binding-proofs.mjs
 # checks each line's entry in bindings-proof.json in every build.
+install/ada/backends.adb backend=liquid
+install/ada/backends.adb backend=ollama
+install/ada/backends.adb backend=typesafe
 install/ada/first_call.adb
 install/c/backends.c backend=liquid
 install/c/backends.c backend=ollama
 install/c/backends.c backend=typesafe
 install/c/first-call.c
+install/cobol/backends.cob backend=liquid
+install/cobol/backends.cob backend=ollama
+install/cobol/backends.cob backend=typesafe
 install/cobol/first-call.cob
+install/cpp/backends.cpp backend=liquid
+install/cpp/backends.cpp backend=ollama
+install/cpp/backends.cpp backend=typesafe
 install/cpp/first-call.cpp
 install/csharp/FirstCall.cs
 install/dart/first_call.dart
 install/go/first-call.go
 install/java/FirstCall.java
 install/kotlin/FirstCall.kt
+install/objective-c/backends.m backend=liquid
+install/objective-c/backends.m backend=ollama
+install/objective-c/backends.m backend=typesafe
 install/objective-c/first-call.m
 install/pandas/first-call.py
 install/php/first-call.php
