@@ -458,8 +458,8 @@ mod tests {
             (&outside, Err(&Refused)),
         ];
         for (name, want) in table {
-            let path = resolve(name, Some(&folder));
-            assert_eq!(read_within(&path, 1024, Some(&base)).as_deref(), want, "{name}");
+            let got = read_within(&resolve(name, Some(&folder)), 1024, Some(&base));
+            assert_eq!(got.as_deref(), want, "{name}");
         }
         // With no folder, a relative name keeps the backend's working folder.
         assert_eq!(resolve("refund.json", None), PathBuf::from("refund.json"));
