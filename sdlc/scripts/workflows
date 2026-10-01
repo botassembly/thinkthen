@@ -786,6 +786,31 @@ def self_test():
         if got != wanted:
             bad += 1
             print(f"workflows self-test host Python: wanted {wanted}, got {got}", file=sys.stderr)
+    for name, sudo, mnt_free, wanted_dir in (
+            ("roomy", "exit 0", 900, "/mnt/thinkthen-container"), ("no sudo", "exit 1", 900, "FALLBACK"),
+            ("small", "exit 0", 50, "FALLBACK"), ("missing", "exit 0", None, "FALLBACK")):
+        with tempfile.TemporaryDirectory(prefix="thinkthen-linux-work-") as tmp:
+            root = pathlib.Path(tmp)
+            log = root / "calls"
+            mnt = "exit 1" if mnt_free is None else f"free={mnt_free}"
+            df = ('echo "df $*" >> "$FAKE_LOG"; case $2 in /mnt) %s ;; *) free=100 ;; esac; '
+                  'printf "Filesystem 1024-blocks Used Available Capacity Mounted\\nx 1 1 %%s 1%%%% %%s\\n" '
+                  '"$free" "$2"' % mnt)
+            for tool, body in (("df", df), ("sudo", f'echo "sudo $*" >> "$FAKE_LOG"; {sudo}')):
+                (root / tool).write_text(f"#!/bin/sh\n{body}\n")
+                (root / tool).chmod(0o755)
+            result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "linux-work", "FALLBACK"],
+                                    env={**os.environ, "PATH": f"{root}:/usr/bin:/bin", "FAKE_LOG": str(log)},
+                                    capture_output=True, text=True, timeout=20, check=False)
+            calls = log.read_text().splitlines() if log.exists() else []
+            removed = [call for call in calls if " rm " in f" {call} "]
+            sudo_calls = [call for call in calls if call.startswith("sudo ")]
+            sudo_ok = bool(sudo_calls) if mnt_free and mnt_free > 100 else not sudo_calls
+            if (result.returncode != 0 or result.stdout.strip() != wanted_dir or calls[:1] != ["df -h / /mnt"]
+                    or removed or not sudo_ok):
+                bad += 1
+                print(f"workflows self-test linux-work {name}: exit {result.returncode}, wanted {wanted_dir}, "
+                      f"got {result.stdout.strip()}; calls {calls}; stderr {result.stderr}", file=sys.stderr)
     archive = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-archive-self-test.py")],
                              capture_output=True, text=True)
     if archive.returncode != 0:
@@ -801,7 +826,7 @@ def self_test():
     if registry.returncode != 0:
         bad += 1
         print(f"workflows self-test registry operations: {registry.stdout}{registry.stderr}", file=sys.stderr)
-    total = len(cases) + 4 + len(host_cases) + 4
+    total = len(cases) + 4 + len(host_cases) + 8
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 

@@ -75,12 +75,14 @@ jobs:
               export THINKTHEN_RELEASE_SOURCE_TAR="$RUNNER_TEMP/thinkthen-provenance-x86/source.tar"
               export THINKTHEN_RELEASE_SOURCE_RECEIPT="$RUNNER_TEMP/thinkthen-provenance-x86/source.json"
             fi
-            sdlc/scripts/release-container "$RUNNER_TEMP/thinkthen-container" release-files
+            work=$(sdlc/scripts/release-workflow linux-work "$RUNNER_TEMP/thinkthen-container")
+            sdlc/scripts/release-container "$work" release-files
             if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
               sdlc/scripts/release-workflow c-capture "release-files/thinkthen-c-$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)-$TARGET.tar.gz" "$RUNNER_TEMP/thinkthen-provenance-x86" "$TARGET"
               sdlc/scripts/release-workflow managed-build "$RUNNER_TEMP/thinkthen-provenance-x86" release-files "$TARGET" "$THINKTHEN_RELEASE_EXPECTED_SHA"
             fi
             sdlc/scripts/release-pack "$TARGET" release-files command first-run
+            df -h / /mnt || true
           else
             RUBY="$HOME/.cache/thinkthen-toolchains/ruby/3.4.11-$(uname -m)-darwin/bin/ruby"
             PG_CONFIG="$(brew --prefix postgresql@16)/bin/pg_config"

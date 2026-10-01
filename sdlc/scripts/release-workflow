@@ -110,6 +110,22 @@ install_dart() {
 		fail 'isolated pub cache has another ffi version'
 }
 case ${1:-} in
+linux-work)
+	# Rehearsal run 36812401623 left 95 MB free on the x86 build runner's root disk while the
+	# container built. Hosted Linux runners carry a second disk at /mnt. This prints a folder there
+	# for the container build when /mnt is writable and has more free space than the root disk.
+	# Otherwise it prints FALLBACK. It deletes nothing (worktrees.md rule 11).
+	[ "$#" = 2 ] || fail 'linux-work FALLBACK'
+	df -h / /mnt >&2 || true
+	root_free=$(df -Pk / | awk 'NR == 2 {print $4}')
+	mnt_free=$(df -Pk /mnt 2>/dev/null | awk 'NR == 2 {print $4}')
+	if [ "${mnt_free:-0}" -gt "${root_free:-0}" ] && sudo -n mkdir -p /mnt/thinkthen-container &&
+		sudo -n chown "$(id -u):$(id -g)" /mnt/thinkthen-container; then
+		printf '%s\n' /mnt/thinkthen-container
+	else
+		printf '%s\n' "$2"
+	fi
+	;;
 source-capture)
 	[ "$#" = 3 ] || fail 'source-capture PROVENANCE_DIR SHA'
 	[ "$3" = "$(git rev-parse HEAD)" ] || fail 'checkout differs from resolved SHA'
