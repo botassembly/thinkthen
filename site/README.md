@@ -39,6 +39,14 @@ A page reads a setting's default, range or allowed values with `setting('Name')`
 
 `npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the binding proof check, the code check, the word check, the settings check, the link check, the card check, the head check and the width check on the last build. `scripts/check-widths.mjs` opens every built page in headless Chromium at every width from 320 to 1600 px in steps of 40, and at 375, 768, 820 and 1024 px. It fails when a page scrolls sideways, or when a table or a code pane is wider than its column. It uses `playwright-core` and its matching Chromium. Get the browser once with `npx playwright-core install chromium`.
 
+## Lighthouse
+
+`npm run lighthouse` runs `scripts/lighthouse.mjs` on the last build. It serves `dist/` on a local port and audits twelve pages on Lighthouse's mobile and desktop presets: the home page, Install, the Python install page, the TypeSafe backend page, Reference, the `filter` reference page, the `decide` function page, Learn, a Beatles Bench page, a blog post, the tutorial and the 404 page. It prints each run's performance, accessibility, best practices and SEO scores.
+
+It fails when a run scores below 100 on accessibility or on SEO. While `NOINDEX` is true, every page fails the SEO audit "Page is blocked from indexing" by design, and the 404 page always does. The script lets that one audit fail on those pages and fails on any other SEO audit. A build with `NOINDEX` set to false scores 100 on SEO on every page but the 404 page (ticket 0051). Performance and best practices print and never fail the run, because local timings change with the machine's load.
+
+`npm run check` leaves it out. The 24 runs take about three minutes, three times the rest of the check. The marketing lead runs it before each deploy. `npm run lighthouse -- https://thinkthen.dev` audits the live site instead. It uses the same Chromium as the width check, or the browser `CHROME_PATH` names.
+
 ## Writing a page
 
 Read `WRITING.md` first. It holds the page rules, the code rules, and how an example is added, recorded, and refreshed.
@@ -73,7 +81,7 @@ The replay needs Rust with the offline Cargo cache, a stable Python 3.12 or late
 
 ## Where the Beatles Bench pages come from
 
-The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words. The slides sit in `public/learn/beatles-bench/`. The scripts sit in `examples/beatles/`, and `examples/beatles/bench/` holds the files they read from the bench commit in `examples/beatles/bench-pin`. To copy those files again from a checkout at that commit:
+The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words. The slides sit in `public/learn/beatles-bench/`. `src/pages/learn/beatles-bench/[name]-800.webp.js` writes an 800-pixel copy of each slide at build time, and a phone takes that copy. The scripts sit in `examples/beatles/`, and `examples/beatles/bench/` holds the files they read from the bench commit in `examples/beatles/bench-pin`. To copy those files again from a checkout at that commit:
 
 ```
 BEATLES_BENCH=path/to/beatles-bench npm run pull-bench

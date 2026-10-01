@@ -335,14 +335,15 @@ button.copy:hover { color: var(--ink); border-color: var(--think); }
 /* ---------------------------------------------------------- Beatles Bench */
 
 /* A side list of the section's pages beside the page. Below 60rem the list
-   folds into a menu above the title. */
+   folds into a menu above the title. Each link stands at least 24px tall,
+   the smallest tap target Lighthouse accepts. */
 .bench { display: grid; grid-template-columns: 12.5rem minmax(0, 1fr); gap: 2.2rem; }
 .bench-side { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; font-size: .88rem; padding-top: .3rem; }
 .bench-group { margin: 0 0 1rem; }
 .bench-group-name { font-family: var(--mono); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 .3rem; }
 .bench-group ul { list-style: none; margin: 0; padding: 0; }
 .bench-group li { margin: 0; }
-.bench-group a { display: block; padding: .18rem .5rem; border-left: 2px solid transparent; color: var(--ink); text-decoration: none; line-height: 1.35; }
+.bench-group a { display: block; min-height: 1.5rem; padding: .18rem .5rem; border-left: 2px solid transparent; color: var(--ink); text-decoration: none; line-height: 1.35; }
 .bench-group a.cmd { font-family: var(--mono); font-size: .84rem; }
 .bench-group a:hover { color: var(--think); }
 .bench-group a[aria-current="page"] { border-left-color: var(--think); color: var(--think); }

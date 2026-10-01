@@ -1,0 +1,9 @@
+---
+// A Beatles Bench slide. A phone or a one-dpi screen takes the 800-pixel copy
+// that src/pages/learn/beatles-bench/[name]-800.webp.js writes, and a sharp
+// screen takes the 1600-pixel slide. The slide is the page's largest image,
+// so the browser fetches it first.
+const { src, alt, height = 900 } = Astro.props;
+const small = src.replace(/\.webp$/, '-800.webp');
+---
+<img src={src} srcset={`${small} 800w, ${src} 1600w`} sizes="(min-width: 60rem) 46rem, calc(100vw - 32px)" alt={alt} width="1600" height={height} loading="eager" fetchpriority="high" />

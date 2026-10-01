@@ -11,21 +11,13 @@
 // browser once with `npx playwright-core install chromium`.
 
 import fs from 'node:fs';
-import http from 'node:http';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
+import { DIST, serveDist } from './serve-dist.mjs';
 
-const DIST = path.join(process.cwd(), 'dist');
 const STEPS = Array.from({ length: (1600 - 320) / 40 + 1 }, (_, i) => 320 + i * 40);
 const WIDTHS = [...new Set([...STEPS, 375, 768, 820, 1024])].sort((a, b) => a - b);
 const TABS = 6;
-
-const TYPES = {
-  '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript',
-  '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif',
-  '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.wasm': 'application/wasm',
-};
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -43,19 +35,8 @@ if (!pages.length) {
   process.exit(1);
 }
 
-const server = http.createServer((req, res) => {
-  let rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  if (rel.endsWith('/')) rel += 'index.html';
-  const file = path.join(DIST, rel);
-  if (!file.startsWith(DIST) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-    res.writeHead(404).end();
-    return;
-  }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
-  fs.createReadStream(file).pipe(res);
-});
-await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
-const origin = `http://127.0.0.1:${server.address().port}`;
+const server = await serveDist();
+const { origin } = server;
 
 let browser;
 try {

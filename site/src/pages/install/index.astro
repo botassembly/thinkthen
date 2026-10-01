@@ -3,6 +3,7 @@
 // install page.
 import Base from '../../layouts/Base.astro';
 import InstallLine from '../../components/InstallLine.astro';
+import LinkName from '../../components/LinkName.astro';
 import { SURFACES, BINDINGS, KEY_VARIABLE } from '../../data/catalog.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
@@ -24,7 +25,7 @@ const lists = [
     <Fragment>
       <h2>{heading}</h2>
       <ul class="bindings">
-        {list.map((b) => <li><a href={b.route}>{b.name}</a></li>)}
+        {list.map((b) => <li><a href={b.route}><LinkName name={b.name} /></a></li>)}
       </ul>
     </Fragment>
   ))}

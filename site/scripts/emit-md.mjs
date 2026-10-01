@@ -11,7 +11,8 @@ const VOID = new Set(['br', 'img', 'meta', 'link', 'input', 'hr', 'source', 'are
 const SKIP = new Set(['button', 'script', 'style', 'svg']);
 // The Beatles Bench side list and phone menu repeat on every page. The
 // Settings page's find box and its no-match line work only in a browser.
-const SKIP_CLASS = ['bench-side', 'bench-menu', 'settings-filter', 'settings-none'];
+// Words for a screen reader alone stay out of the twin.
+const SKIP_CLASS = ['bench-side', 'bench-menu', 'settings-filter', 'settings-none', 'sr-only'];
 
 // ------------------------------------------------------------------ the tree
 
@@ -77,7 +78,7 @@ const skipped = (n) => classOf(n).some((c) => SKIP_CLASS.includes(c));
 
 function inline(node) {
   if (node.tag === '#text') return node.text.replace(/\s+/g, ' ');
-  if (SKIP.has(node.tag)) return '';
+  if (SKIP.has(node.tag) || skipped(node)) return '';
   const inner = (node.kids || []).map(inline).join('');
   switch (node.tag) {
     case 'code': return inner.trim() ? '`' + inner.trim() + '`' : '';
