@@ -1,10 +1,10 @@
 LOAD './thinkthen.duckdb_extension';
 
 SELECT
-    body,
+    trim(body, chr(10)) AS body,
     thinkthen_decide('@refund.json', body) AS is_refund
 FROM (VALUES
-    ('Please refund my order. It arrived broken.'),
-    ('Thanks for the quick help yesterday!'),
-    ('I want to send this back.')
+    ('I would like to return this and get ' ||
+     'my money back.' || chr(10)),
+    ('I want to send this back.' || chr(10))
 ) t(body);
