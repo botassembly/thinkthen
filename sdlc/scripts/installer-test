@@ -24,8 +24,13 @@ import threading
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOLS = "awk cat chmod cp curl gzip head mkdir mktemp mv perl rm sed sync tar uname".split()
-MACHINE = {"x86_64": "x86_64-unknown-linux-musl", "aarch64": "aarch64-unknown-linux-musl"}
-TARGET = MACHINE.get(os.uname().machine, "")
+# Each `uname -s` and `uname -m` pair install.sh accepts, and the command archive's target
+# that release-pack publishes for it: static musl on Linux, the Rust target on macOS.
+PLATFORMS = {("Linux", "x86_64"): "x86_64-unknown-linux-musl", ("Linux", "amd64"): "x86_64-unknown-linux-musl",
+             ("Linux", "aarch64"): "aarch64-unknown-linux-musl", ("Linux", "arm64"): "aarch64-unknown-linux-musl",
+             ("Darwin", "x86_64"): "x86_64-apple-darwin", ("Darwin", "arm64"): "aarch64-apple-darwin",
+             ("Darwin", "aarch64"): "aarch64-apple-darwin"}
+TARGET = PLATFORMS.get((os.uname().sysname, os.uname().machine), "")
 STATE = {}
 
 
@@ -40,9 +45,9 @@ def archive(reports):
     return buffer.getvalue()
 
 
-def release(version, checksum="good", reports=None, uploaded=True):
+def release(version, checksum="good", reports=None, uploaded=True, target=None):
     """One release's files, keyed by path under the server root."""
-    name = f"thinkthen-{version}-{TARGET}.tar.gz"
+    name = f"thinkthen-{version}-{target or TARGET}.tar.gz"
     body = archive(reports or f"thinkthen {version}")
     digest = hashlib.sha256(body).hexdigest()
     sums = {"good": f"{digest}  {name}\n", "bare": f"{digest}\n", "wrong": f"{'0' * 64}  {name}\n",
@@ -127,8 +132,8 @@ def installed(root):
     return root / "home/.local/bin"
 
 
-def ok(version, root, path_line=True):
-    out = (f"Downloading thinkthen-{version}-{TARGET}.tar.gz\nChecksum verified.\n"
+def ok(version, root, path_line=True, target=None):
+    out = (f"Downloading thinkthen-{version}-{target or TARGET}.tar.gz\nChecksum verified.\n"
            f"Installed thinkthen {version} to {installed(root)}/thinkthen\n")
     if path_line:
         out += f'Add thinkthen to PATH:\n  export PATH="{installed(root)}:$PATH"\n'
@@ -197,6 +202,11 @@ def cases():
              f'{{\n  "state": "pending",\n  "executable_path": "{installed(r)}/thinkthen",\n'
              f'  "old_sha256": "{hashlib.sha256(OLD.encode()).hexdigest()}",\n  "new_sha256": "{"2" * 64}"\n}}\n'),
          lambda r: ok("0.1.0", r)),
+    ] + [
+        # A stand-in uname proves every shipped platform's archive name on any host.
+        (f"{system} {machine} fetches {target}", [release("0.1.0", target=target)], "v0.1.0",
+         {"uname": (system, machine)}, lambda r: None, lambda r, target=target: ok("0.1.0", r, target=target))
+        for (system, machine), target in PLATFORMS.items()
     ]
 
 
@@ -213,7 +223,7 @@ def after(root, expected):
 
 def main():
     if not TARGET:
-        print(f"installer-test: no case table for machine {os.uname().machine}", file=sys.stderr)
+        print(f"installer-test: no release for {os.uname().sysname} {os.uname().machine}", file=sys.stderr)
         return 1
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Fake)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -223,7 +233,8 @@ def main():
             total += 1
             serve(releases, latest, options.pop("api", True))
             with tempfile.TemporaryDirectory() as tmp:
-                root = pathlib.Path(tmp)
+                # macOS puts the temporary folder under the /var link; install.sh prints the resolved path.
+                root = pathlib.Path(tmp).resolve()
                 setup(root)
                 got = run(shell, server.server_port, root, options.pop("args", ()), **options)
                 if got != expect(root) or not after(root, expect(root)):
