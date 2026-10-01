@@ -247,14 +247,19 @@ def acquisition_cli(root):
     env = os.environ.copy()
     env.update(PATH=str(process_dir) + os.pathsep + env["PATH"], OBSERVE_LOG=str(log),
                OBSERVE_INSTALLED=str(root / "installed"),
-               OBSERVE_METADATA=(f"Package: {package}\nVersion: {version}\nArchitecture: amd64\n"
-                                 "Filename: pool/main/o/openjdk.deb\nSHA256: " + "a" * 64),
+               OBSERVE_METADATA="\n\n".join(
+                   f"Package: {name}\nVersion: {version}\nArchitecture: amd64\n"
+                   "Filename: pool/main/o/openjdk.deb\nSHA256: " + "a" * 64
+                   for name in (package, package + "-headless")),
                # apt-get -s run without root prints this note ahead of its plan.
                OBSERVE_PLAN=("NOTE: This is only a simulation!\n"
                              "      apt-get needs root privileges for real execution.\n"
                              "      Keep also in mind that locking is deactivated,\n"
                              "      so don't depend on the relevance to the real current situation!\n"
-                             f"Reading package lists...\nInst {package} ({version} Ubuntu:24.04/noble-updates [amd64])"))
+                             f"Reading package lists...\nInst {package} ({version} Ubuntu:24.04/noble-updates [amd64])\n"
+                             # apt names both archives that hold one version, and may list broken packages.
+                             f"Inst {package}-headless ({version} Ubuntu:24.04/noble-updates, "
+                             f"Ubuntu:24.04/noble-security [amd64]) [{package}:amd64 ]"))
     # Keep this focused on the acquisition boundary: other installed inputs
     # are represented by the already exercised selected-home fixture.
     script = HERE / "release-language-tools.py"

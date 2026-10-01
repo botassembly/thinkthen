@@ -131,11 +131,14 @@ def selected_plan(plan):
             continue
         if not line.startswith("Inst "):
             continue
+        # apt lists every archive that holds the version, joined by ", ", and may
+        # end the line with the packages the step leaves broken until later steps.
+        archive = r"Ubuntu:24\.04/noble(?:-updates|-security)?"
         match = re.fullmatch(r"Inst ([a-z0-9][a-z0-9+.-]*) (?:\[[^]]+\] )?"
-                             r"\(([^ ()]+) (Ubuntu:24\.04/noble(?:-updates|-security)? \[(?:amd64|all)\])\)",
+                             rf"\(([^ ()]+) {archive}(?:, {archive})* \[(?:amd64|all)\]\)(?: \[[^]]*\])?",
                              line)
         if not match or match[1] in selected:
-            fail("apt plan contains an unrecognized or duplicate selection")
+            fail(f"apt plan contains an unrecognized or duplicate selection: {line}")
         selected[match[1]] = match[2]
     if not selected:
         fail("apt did not produce a package acquisition plan")

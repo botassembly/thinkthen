@@ -73,6 +73,11 @@ plant false false
 expect 1 "release-smoke: the no-key block printed 'false', not true" false good
 plant home true "# $HOME"
 expect 1 "release-smoke: FAIL $archive (the builder's home or the test probe is in thinkthen )" home good
+# DuckDB's prebuilt archives name DuckDB's CI checkout, which a GitHub runner's home matches.
+plant upstream true "# $HOME/work/duckdb/duckdb/src/storage"
+expect 0 "release-smoke: pass $archive and thinkthen-first-run.tar.gz" upstream good
+plant upstream-home true "# $HOME/work/duckdb/duckdb/src $HOME/.cargo"
+expect 1 "release-smoke: FAIL $archive (the builder's home or the test probe is in thinkthen )" upstream-home good
 plant sends true 'curl -s -o /dev/null --max-time 5 https://example.invalid/ || :'
 expect 1 'release-smoke: the no-key block sent 1 requests to the loopback backend' sends good
-echo 'release-smoke command: good, after-release, missing, extra, checksum, sample-line, answer, home and backend cases pinned'
+echo 'release-smoke command: good, after-release, missing, extra, checksum, sample-line, answer, home, DuckDB upstream path and backend cases pinned'

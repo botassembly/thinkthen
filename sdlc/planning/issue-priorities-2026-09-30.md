@@ -46,6 +46,7 @@ Work outside the lanes:
 | `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | batch | C1 for the test servers; the product fix waits on upstream |
 | `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | batch | C1 |
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | batch | C2 |
+| `2026-09-30-duckdb-check-fails-four-tests-on-macos.md` | yes, the macOS DuckDB proof | batch | a lane with the M5 |
 | `2026-09-30-check-ignores-the-estimated-token-cap.md` | yes | batch | C3 |
 | `2026-09-30-blank-max-request-bytes-exits-2.md` | no | batch | C3 |
 | `2026-09-30-transforms-score-the-band-low-edge-as-no.md` | no | batch | C3 |
@@ -58,7 +59,6 @@ Work outside the lanes:
 | `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | outside | ticket 0128; Ian's rehearsal and registry accounts |
 | `2026-09-20-new-user-stumble-register.md` | rows 18, 19 | outside | row 18 ticket 0128; row 19 marketing; none of ours |
 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | outside | the external release QA team's edge list |
-| `2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md` (Debt 026) | if the rehearsal shows a `sqlite3_` name | waits | the rehearsal's macOS DuckDB jobs |
 | `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (Debt 014) | no | waits | upstream ollama |
 | `2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md` (Debt 002) | no | waits | upstream Zig |
 | `2026-09-30-polars-door-cannot-test-lazy-streaming.md` (Debt 004) | no | waits | a user, or clean advisories |
