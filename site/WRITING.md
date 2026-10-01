@@ -29,6 +29,7 @@ Follow these rules when you write or edit any page or code example on this site.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.
 - Page prose carries no interval, calibration error, AUC, or p value.
 - A page names no private project and no home path. This repository is public.
+- A blog article follows the deslop and voice guides the brief names. A fresh reader checks it against both before review. Its byline is Ian Maurer. The blog index carries the one note that agents draft the articles and Ian reviews them.
 
 ## Install lines
 
