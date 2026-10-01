@@ -32,6 +32,7 @@ pub(crate) use relate::RelateArguments;
     disable_version_flag = true,
     arg_required_else_help = true
 )]
+#[cfg_attr(windows, command(bin_name = crate::core::NAME))] // Clap would print `thinkthen.exe` (ticket 0373).
 pub(crate) struct Cli {
     /// Print the version and exit.
     #[arg(short = 'V', long = "version")]

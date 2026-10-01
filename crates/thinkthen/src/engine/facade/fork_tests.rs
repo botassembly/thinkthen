@@ -96,6 +96,9 @@ fn ask_as_parent(engine: &Engine, parent: &super::State) -> Result<(), Error> {
         .map(|_| ())
 }
 
+// Windows has no fork. This proof hung past its bound on the Windows runner
+// (finding W8 in sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_child_beside_a_busy_parent_uses_fresh_state() {
     in_child_at("engine::facade::fork_tests::busy_parent_child");

@@ -1,5 +1,6 @@
 //! The pieces every page of this binary shares: files, runs, and reads.
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -31,8 +32,8 @@ pub(crate) fn written(name: &str, text: &str) -> String {
 /// Run the binary with no environment over the evidence the case names.
 pub(crate) fn run(arguments: &[&str], evidence: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_TEST_INPUT_PAUSE_MS", "10000")
         .args(arguments)
         .stdin(Stdio::piped())
@@ -54,8 +55,8 @@ pub(crate) const CLOSED: &str = "http://127.0.0.1:1/v1";
 /// Run the binary with a key set, over the evidence the case names.
 pub(crate) fn run_with(arguments: &[&str], evidence: &[u8], key: &str) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_TEST_INPUT_PAUSE_MS", "10000")
         .env("THINKTHEN_API_KEY", key)
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")

@@ -2,7 +2,9 @@
 
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, spawn};
+#[cfg(unix)]
+use crate::harness::spawn;
+use crate::harness::{Canned, Listener};
 use crate::support::{decide, digest, encoded_decide, keys};
 
 /// The response a backend gives when it answers the one question that was asked.
@@ -25,6 +27,7 @@ fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
 const KEY: Option<&str> = Some("sk-test-value");
 
 /// The diagnostic a refused connection earns.
+#[cfg(unix)]
 const REFUSED_DIAGNOSTIC: &str = "thinkthen: the backend refused the connection; check that it is running and that --url is correct\n";
 
 #[test]
@@ -546,6 +549,8 @@ fn a_close_before_headers_is_not_sent_again() {
     assert_eq!(output.status.code(), Some(4));
 }
 
+// Windows reports a refused loopback port as unreachable (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_refused_port_fails_before_the_first_default_retry_wait() {
     // Port zero can never listen, so the connection is refused at once. The

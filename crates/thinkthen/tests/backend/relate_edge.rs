@@ -1,6 +1,7 @@
 //! The public relate command boundary.
 #![cfg(feature = "cli")]
 
+use crate::child::ChildEnvironment as _;
 use std::process::Command;
 
 use crate::run;
@@ -33,7 +34,7 @@ fn relate_reads_the_names_recognize_found() {
     let thinkthen = |arguments: &[&str], input: &str| {
         let output = run::output(
             Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-                .env_clear()
+                .clear_environment()
                 .args(arguments)
                 .args(["--url", "https://api.typesafe.ai/v1", "--input"])
                 .arg(folder.join(input)),

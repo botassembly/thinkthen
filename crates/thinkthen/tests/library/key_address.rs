@@ -4,6 +4,7 @@
     reason = "a failed fixture must stop the boundary proof"
 )]
 
+use crate::child::ChildEnvironment as _;
 #[cfg(feature = "cli")]
 use std::fs;
 use std::process::Command;
@@ -83,11 +84,8 @@ fn captured_key_is_checked_and_an_explicit_key_overrides_it() {
             "--exact",
             "key_address::captured_key_is_checked_and_an_explicit_key_overrides_it",
         ])
-        .env_clear()
-        .env(
-            "HOME",
-            std::env::temp_dir().join(format!("thinkthen-key-child-{}", std::process::id())),
-        )
+        .clear_environment()
+        .home(std::env::temp_dir().join(format!("thinkthen-key-child-{}", std::process::id())))
         .env("THINKTHEN_KEY_ADDRESS_CHILD", "1")
         .env("THINKTHEN_API_KEY", "captured-key-0210")
         .output()
@@ -164,8 +162,8 @@ fn command_refuses_before_plan_status_or_recording_output() {
     ] {
         let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
             .args(&args)
-            .env_clear()
-            .env("HOME", &home)
+            .clear_environment()
+            .home(&home)
             .env("THINKTHEN_BASE_URL", &base)
             .env("THINKTHEN_API_KEY", key)
             .output()
@@ -183,8 +181,8 @@ fn command_refuses_before_plan_status_or_recording_output() {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
         command
             .args(["status", "--json"])
-            .env_clear()
-            .env("HOME", &home)
+            .clear_environment()
+            .home(&home)
             .env("THINKTHEN_BASE_URL", listener.base());
         if keyed {
             command.env("THINKTHEN_API_KEY", key);

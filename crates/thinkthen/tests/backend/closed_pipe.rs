@@ -1,4 +1,5 @@
 //! The compiled filter stops asking after its output reader closes.
+use crate::child::ChildEnvironment as _;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
@@ -81,8 +82,8 @@ fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
 fn a_closed_reader_ends_filter_while_its_input_remains_open() {
     let listener = Listener::answering(reply).expect("a loopback listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "filter",

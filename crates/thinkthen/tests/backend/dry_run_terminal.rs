@@ -1,6 +1,7 @@
 //! A compiled dry run at the terminal boundary, with no key or backend.
 #![cfg(all(feature = "cli", unix))]
 
+use crate::child::ChildEnvironment as _;
 use std::process::Command;
 
 #[test]
@@ -98,7 +99,7 @@ assert json.loads(terminal_stdout.splitlines()[0])['input']['framing'] == 'lines
     let output = Command::new("python3")
         .arg("-c")
         .arg(script)
-        .env_clear()
+        .clear_environment()
         .env("PATH", std::env::var_os("PATH").unwrap_or_default())
         .env("THINKTHEN_BIN", env!("CARGO_BIN_EXE_thinkthen"))
         .env("THINKTHEN_TEST_HOME", env!("CARGO_TARGET_TMPDIR"))

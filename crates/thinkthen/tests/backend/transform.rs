@@ -6,14 +6,21 @@
     reason = "a failed fixture stops the proof"
 )]
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
-use std::io::{ErrorKind, Read as _};
-use std::net::TcpListener;
-use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
-use std::time::{Duration, Instant};
+use std::process::{Command, Output};
+// The guarded catalog case plants executable traps and FIFOs, which need Unix.
+#[cfg(unix)]
+use std::{
+    io::{ErrorKind, Read as _},
+    net::TcpListener,
+    os::unix::fs::PermissionsExt as _,
+    process::Stdio,
+    time::{Duration, Instant},
+};
 
+#[cfg(unix)]
 use crate::child;
 use crate::run;
 
@@ -48,7 +55,7 @@ fn catalog(arguments: &[&str], cwd: &Path) -> Output {
     run::output(
         Command::new(env!("CARGO_BIN_EXE_thinkthen"))
             .args(arguments)
-            .env_clear()
+            .clear_environment()
             .current_dir(cwd),
     )
     .expect("the compiled binary runs")
@@ -63,7 +70,7 @@ fn list_prints_the_closed_names_in_byte_order_everywhere() {
                 let output = run::output(
                     Command::new(env!("CARGO_BIN_EXE_thinkthen"))
                         .args(["transform", "list"])
-                        .env_clear()
+                        .clear_environment()
                         .env("LC_ALL", locale)
                         .env("LANG", locale)
                         .current_dir(cwd),
@@ -135,6 +142,7 @@ fn an_unknown_name_is_refused_without_echoing_it() {
 }
 
 /// Every path under a folder with its size, so a change anywhere shows.
+#[cfg(unix)]
 fn tree(root: &Path) -> Vec<(PathBuf, u64)> {
     let mut found = Vec::new();
     let mut pending = vec![root.to_path_buf()];
@@ -156,12 +164,13 @@ fn tree(root: &Path) -> Vec<(PathBuf, u64)> {
 /// Run one catalog command with every recognized variable set to a canary,
 /// only trap programs on `PATH`, standard input held open, and named pipes as
 /// decoy files. Opening a decoy or reading input would hang the command.
+#[cfg(unix)]
 fn guarded(arguments: &[&str], root: &Path, url: &str) -> Output {
     let locked = root.join("locked");
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .args(arguments)
-        .env_clear()
+        .clear_environment()
         .current_dir(root.join("decoys"));
     for variable in [
         "HOME",
@@ -221,6 +230,7 @@ fn guarded(arguments: &[&str], root: &Path, url: &str) -> Output {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn the_catalog_reads_no_setting_input_or_file_and_sends_and_runs_nothing() {
     let root = folder("guarded");

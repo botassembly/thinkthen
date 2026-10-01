@@ -6,6 +6,7 @@
     reason = "shared case fixtures must be complete"
 )]
 
+use crate::child::ChildEnvironment as _;
 use conformance_backend::Backend;
 use serde_json::Value;
 use std::io::Write;
@@ -158,8 +159,8 @@ fn command_settings_match_the_shared_cases() {
             }
             let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
                 .args(&args)
-                .env_clear()
-                .env("HOME", &folder)
+                .clear_environment()
+                .home(&folder)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())

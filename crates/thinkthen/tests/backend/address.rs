@@ -1,6 +1,7 @@
 //! The two variables at the edge: where a request goes, and the key it carries.
 
 use std::io;
+#[cfg(unix)]
 use std::net::{TcpListener, ToSocketAddrs};
 use std::process::Output;
 
@@ -372,6 +373,8 @@ fn a_variable_that_holds_nothing_counts_as_absent() {
 /// With no key, an address the rules cannot prove is this machine stops at
 /// exit 4 before any connection. The short address resolves to the socket we
 /// count, but the backend's textual loopback rule does not admit its spelling.
+// Windows does not resolve the short spelling `127.1`.
+#[cfg(unix)]
 #[test]
 fn a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback() {
     const NO_KEY: &str = "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n";

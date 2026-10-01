@@ -272,6 +272,10 @@ fn sweep(
     let cache = into.join("cache").to_string_lossy().into_owned();
     let mut environment = environment(route.keyed);
     environment.push(("XDG_CACHE_HOME", &cache));
+    // Windows puts the default cache under LOCALAPPDATA.
+    if cfg!(windows) {
+        environment.push(("LOCALAPPDATA", &cache));
+    }
     let output = spawn(&arguments, &environment, &evidence)?;
 
     assert_eq!(

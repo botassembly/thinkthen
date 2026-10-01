@@ -46,31 +46,35 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
     assert_eq!(good.requests().len(), 1);
     assert_eq!(line(&complete)["estimated_cost_usd"], "0.000001");
 
-    let blocked = crate::facts::unwritable_state("facts-priced-usage-unwritable");
-    let warned_listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
-    let warned = spawn(
-        &[
-            "decide",
-            QUESTION,
-            "--facts",
-            "--no-cache",
-            "--url",
-            warned_listener.base(),
-        ],
-        &[
-            KEY,
-            ("XDG_CONFIG_HOME", root.to_str().expect("config path")),
-            ("XDG_STATE_HOME", blocked.to_str().expect("usage path")),
-        ],
-        b"Still a refund.",
-    )
-    .expect("warned command");
-    assert_eq!(warned.status.code(), Some(0));
-    assert_eq!(warned_listener.count(), 1);
-    assert_eq!(line(&warned)["estimated_cost_usd"], "0.000001");
-    assert!(
-        String::from_utf8_lossy(&warned.stderr).contains("usage counters could not be updated")
-    );
+    // The blocked usage folder uses a Unix mode.
+    #[cfg(unix)]
+    {
+        let blocked = crate::facts::unwritable_state("facts-priced-usage-unwritable");
+        let warned_listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
+        let warned = spawn(
+            &[
+                "decide",
+                QUESTION,
+                "--facts",
+                "--no-cache",
+                "--url",
+                warned_listener.base(),
+            ],
+            &[
+                KEY,
+                ("XDG_CONFIG_HOME", root.to_str().expect("config path")),
+                ("XDG_STATE_HOME", blocked.to_str().expect("usage path")),
+            ],
+            b"Still a refund.",
+        )
+        .expect("warned command");
+        assert_eq!(warned.status.code(), Some(0));
+        assert_eq!(warned_listener.count(), 1);
+        assert_eq!(line(&warned)["estimated_cost_usd"], "0.000001");
+        assert!(
+            String::from_utf8_lossy(&warned.stderr).contains("usage counters could not be updated")
+        );
+    }
 
     let retried =
         Listener::serving(vec![Canned::status(503, "busy"), Canned::ok(reply)]).expect("listener");

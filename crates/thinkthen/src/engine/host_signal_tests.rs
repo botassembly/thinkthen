@@ -2,6 +2,7 @@
 //! The file-size proofs run in a child of this binary that skips command
 //! setup, the way an embedding host would call the engine.
 
+use crate::test_deadline::child::ChildEnvironment as _;
 use std::io::{ErrorKind, Read as _, Write as _};
 use std::net::TcpListener;
 use std::sync::Arc;
@@ -60,7 +61,7 @@ fn held_reply() -> (
 fn a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole() {
     let output = crate::test_deadline::output(
         std::process::Command::new(std::env::current_exe().expect("test binary"))
-            .env_clear()
+            .clear_environment()
             .env(HOST_SIGNAL_CHILD, "1")
             .args([
                 "--ignored",

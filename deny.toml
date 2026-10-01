@@ -9,8 +9,8 @@
 
 [graph]
 # The gate runs on Linux and the work is done on Linux and on macOS. The
-# Windows crates in the lock file are never built, and their licenses are
-# allowed below anyway.
+# hand-started `windows` workflow builds the Windows crates in the lock file
+# (ticket 0373). Their licenses are in the list below.
 all-features = true
 
 [advisories]

@@ -15,7 +15,6 @@ type Case<'a> = (&'a str, Option<&'a [u8]>, u32, Result<u64, &'a str>);
 /// read it as zero without looking, so a malformed month passed the send
 /// check and failed the writer after the send (ticket 0367). Its months are
 /// now read without the lock.
-#[cfg(unix)]
 #[test]
 fn a_folder_without_a_lock_reads_its_months_without_the_lock() {
     use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _};

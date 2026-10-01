@@ -1,19 +1,18 @@
 //! The bounds between record input and ordered output.
 
-use conformance_backend::Rendezvous;
+use crate::child::ChildEnvironment as _;
 #[cfg(unix)]
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 use std::io::{self, BufRead, BufReader, Write};
 #[cfg(unix)]
 use std::os::fd::AsFd;
 use std::process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, Observed, finish};
+use crate::harness::{Canned, Listener, finish};
 
 const QUESTION: &str = "Does this report a payment failure?";
 static CHILDREN: AtomicU64 = AtomicU64::new(0);
@@ -22,6 +21,7 @@ fn record(place: usize) -> String {
     format!("{{\"id\":\"R-{place}\",\"body\":\"record {place}\"}}\n")
 }
 
+#[cfg(unix)]
 fn records(count: usize) -> String {
     (1..=count).map(record).collect()
 }
@@ -101,8 +101,8 @@ fn raw_child(
     }
     arguments.extend(extra);
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("XDG_CACHE_HOME", cache_home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args(arguments)
@@ -187,6 +187,10 @@ fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
 #[cfg(unix)]
 #[test]
 fn ordered_output_bounds_every_dispatched_row() {
+    use crate::harness::Observed;
+    use conformance_backend::Rendezvous;
+    use std::sync::Arc;
+
     let release = Arc::new(Rendezvous::new(2));
     let (completed_send, completed) = mpsc::channel();
     let (events_send, events) = mpsc::channel();

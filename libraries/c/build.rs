@@ -3,10 +3,11 @@
 
 fn main() {
     let target = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    let name = if target == "macos" {
-        "-Wl,-install_name,@rpath/libthinkthen.0.dylib"
-    } else {
-        "-Wl,-soname,libthinkthen.so.0"
+    let name = match target.as_str() {
+        "macos" => "-Wl,-install_name,@rpath/libthinkthen.0.dylib",
+        // A Windows DLL has no soname, and the MSVC linker refuses `-Wl` (ticket 0373).
+        "windows" => return,
+        _ => "-Wl,-soname,libthinkthen.so.0",
     };
     println!("cargo::rustc-cdylib-link-arg={name}");
 }

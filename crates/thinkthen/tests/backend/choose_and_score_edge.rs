@@ -1,6 +1,7 @@
 //! The two new verbs at the binary's own edge: usage, the plan, and the help.
 #![cfg(feature = "cli")]
 
+use crate::child::ChildEnvironment as _;
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 
@@ -17,8 +18,8 @@ const LEVELS: [&str; 3] = ["none", "workaround", "blocked"];
 fn run(arguments: &[&str]) -> io::Result<Output> {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -197,7 +198,7 @@ fn a_question_that_is_blank_and_evidence_that_is_blank_are_both_refused() {
 
     let empty = run::output(
         Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .env_clear()
+            .clear_environment()
             .args(["score", "How much disruption?", "none", "blocked", "--plan"]),
     )
     .expect("the compiled binary runs");

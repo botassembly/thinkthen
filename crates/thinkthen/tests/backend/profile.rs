@@ -32,10 +32,21 @@ fn file(name: &str, text: &str) -> PathBuf {
     path
 }
 
-fn profile(name: &str, limits: &str) -> PathBuf {
+fn profile(name: &str, body: &str) -> PathBuf {
+    // Windows refuses quotes and colons in a file name.
+    let limits: String = body
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
     file(
         &format!("{name}-{limits}.json"),
-        &format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}",{limits}}}"#),
+        &format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}",{body}}}"#),
     )
 }
 

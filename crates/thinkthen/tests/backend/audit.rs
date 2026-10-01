@@ -6,6 +6,7 @@
     reason = "a failed fixture stops the proof"
 )]
 
+use crate::child::ChildEnvironment as _;
 use crate::measure_support;
 use crate::wait;
 
@@ -63,11 +64,14 @@ fn every_fixture_keeps_its_checksum() {
                     .iter()
                     .map(|b| format!("{b:02x}"))
                     .collect();
+                // The list names each file with `/`, which Windows writes as `\`.
                 let name = path
                     .strip_prefix(fixtures())
                     .expect("inside")
-                    .to_string_lossy()
-                    .into_owned();
+                    .components()
+                    .map(|part| part.as_os_str().to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join("/");
                 found.push((name, digest));
             }
         }
@@ -124,13 +128,13 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
         .arg(rows.join("recording"))
         .arg("--input")
         .arg(rows.join("cases.jsonl"))
-        .env_clear()
+        .clear_environment()
         .stdout(Stdio::piped())
         .spawn()
         .expect("decide runs");
     let audit = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["audit", "-", "replay/key.jsonl"])
-        .env_clear()
+        .clear_environment()
         .current_dir(fixtures())
         .stdin(decide.stdout.take().expect("the pipe"))
         .stdout(Stdio::piped())

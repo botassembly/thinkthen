@@ -135,6 +135,10 @@ impl Drop for Guard<'_> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(
+    all(not(unix), not(test)),
+    expect(dead_code, reason = "only the Unix routing can fail to start")
+)]
 enum StartError {
     Activation,
     Restoration,
@@ -159,15 +163,17 @@ enum Routing {
 }
 
 impl Routing {
+    #[cfg(unix)]
     fn start(cancel: Cancel<'static>, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
-        #[cfg(unix)]
-        {
-            UnixRouting::start(cancel, acknowledgment).map(Self::Unix)
-        }
-        #[cfg(not(unix))]
-        {
-            Ok(Self::Idle)
-        }
+        UnixRouting::start(cancel, acknowledgment).map(Self::Unix)
+    }
+
+    #[cfg(not(unix))]
+    fn start(
+        _cancel: Cancel<'static>,
+        _acknowledgment: Option<PathBuf>,
+    ) -> Result<Self, StartError> {
+        Ok(Self::Idle)
     }
 
     fn cleanup(self) -> Result<(), ()> {
@@ -359,9 +365,18 @@ fn register(action: Action, state: &State) -> Result<(), ()> {
     Ok(())
 }
 
+#[cfg(unix)]
 fn emulate(state: &State) -> Result<(), ()> {
     let signal = i32::try_from(state.signal.load(Ordering::SeqCst)).map_err(|_error| ())?;
     signal_hook::low_level::emulate_default_handler(signal).map_err(|_error| ())
+}
+
+/// Windows does not re-raise. The C runtime's default SIGINT action exits
+/// with code 3, which means "not sure", so `Guard::finish` returns 130 itself
+/// (ticket 0373).
+#[cfg(not(unix))]
+const fn emulate(_state: &State) -> Result<(), ()> {
+    Ok(())
 }
 
 pub(super) fn activate(environment: &mut Environment) -> Result<Guard<'static>, Failure> {

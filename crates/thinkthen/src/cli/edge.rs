@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use crate::core::{Backend, Reading};
+use crate::engine::usage::open_read;
 
 mod backend;
 mod key;
@@ -268,7 +269,7 @@ pub(crate) fn source<'a>(
     reader: impl Read + Send + 'a,
 ) -> Result<Box<dyn BufRead + Send + 'a>, Failure> {
     match path {
-        Some(path) => opened(File::open(path).map_err(Failure::OpenInput)?),
+        Some(path) => opened(open_read(path).map_err(Failure::OpenInput)?),
         None => Ok(Box::new(BufReader::new(reader))),
     }
 }
@@ -407,7 +408,7 @@ mod deadline_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::{Chunks, Environment, opened, write_line};
+    use super::{Chunks, Environment, open_read, opened, write_line};
     use crate::failure::Failure;
     use std::fs::{self, File};
     use std::io::{Error, ErrorKind, Read as _, Write};
@@ -494,7 +495,7 @@ mod tests {
 
         fs::remove_dir(&path).expect("the replacement leaves");
         fs::create_dir(&path).expect("a directory");
-        let directory = File::open(&path).expect("the directory opens");
+        let directory = open_read(&path).expect("the directory opens");
         fs::remove_dir(&path).expect("the old name leaves");
         fs::write(&path, "replacement file").expect("a file takes the name");
         assert!(matches!(opened(directory), Err(Failure::InputDirectory)));

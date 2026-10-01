@@ -5,6 +5,7 @@
     reason = "a failed fixture setup or a missing field should stop the boundary test"
 )]
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::io;
 use std::io::{BufRead, BufReader, Write};
@@ -82,8 +83,8 @@ fn decide(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
 /// Start `decide` over JSON records without the cache, with standard input left open.
 fn piped(base: &str, jobs: &str) -> io::Result<Child> {
     Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "decide",

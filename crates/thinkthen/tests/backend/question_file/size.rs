@@ -62,7 +62,12 @@ fn a_question_file_of_one_mib_runs_and_one_byte_more_is_refused_before_any_reque
         );
 
         let over = written(&format!("size-{verb}-over"), &padded(text, LIMIT + 1));
-        for file in [over.as_str(), "@/dev/zero"] {
+        let mut files = vec![over.as_str()];
+        // Windows has no endless file like `/dev/zero`.
+        if cfg!(unix) {
+            files.push("@/dev/zero");
+        }
+        for file in files {
             let output = run_with(
                 &[verb, file, "--url", &url, "--no-cache"],
                 evidence.as_bytes(),

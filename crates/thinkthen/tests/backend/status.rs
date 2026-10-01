@@ -1,6 +1,8 @@
 //! The read-only process status surface.
 #![cfg(feature = "cli")]
 
+use crate::child::ChildEnvironment as _;
+#[cfg(unix)]
 use std::fs;
 use std::process::Command;
 
@@ -9,12 +11,14 @@ use crate::run;
 fn command(home: &std::path::Path) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
-        .env_clear()
-        .env("HOME", home)
+        .clear_environment()
+        .home(home)
         .env("PATH", std::env::var_os("PATH").unwrap_or_default());
     command
 }
 
+// It pins the default folders under `HOME`, the Linux folder (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
     let home = std::env::temp_dir().join(format!("thinkthen-status-absent-{}", std::process::id()));
@@ -199,6 +203,8 @@ fn a_retired_marker_is_ignored_and_a_disabled_cache_reports_off() {
     }
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
     let home =

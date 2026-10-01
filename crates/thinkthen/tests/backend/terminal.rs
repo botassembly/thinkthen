@@ -1,5 +1,6 @@
 //! The one line a user sitting at a terminal is told, and its absence in a pipe.
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
@@ -53,7 +54,7 @@ fn through_a_terminal(
     for spelling in spellings {
         let mut child = Command::new("script")
             .args(&spelling)
-            .env_clear()
+            .clear_environment()
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .stderr(Stdio::null())

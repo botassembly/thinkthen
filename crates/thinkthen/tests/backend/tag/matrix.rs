@@ -1,5 +1,6 @@
 //! The `tag` expansion boundary through the compiled command.
 
+use crate::child::ChildEnvironment as _;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 
@@ -266,8 +267,8 @@ fn a_closed_tag_output_pipe_stops_quietly() {
     let listener =
         Listener::answering(|_| Canned::ok(&answer(&[0.9])).after(20)).expect("listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "tag",

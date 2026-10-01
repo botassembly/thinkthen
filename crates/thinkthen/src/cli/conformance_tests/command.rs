@@ -11,6 +11,7 @@ use crate::engine::facade::{Asks, Bound, Engine, Settings, Storage};
 use crate::engine::http::Key;
 use crate::engine::usage::{self, month_now};
 use crate::failure::{Failure, report};
+use crate::test_deadline::child::ChildEnvironment as _;
 use clap::Parser as _;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -232,7 +233,7 @@ fn steers(name: &std::ffi::OsStr) -> bool {
 /// an empty environment.
 fn test_child(name: &str) -> process::Command {
     let mut command = process::Command::new(std::env::current_exe().expect("test binary"));
-    command.env_clear().args([
+    command.clear_environment().args([
         "--ignored",
         "--exact",
         "--nocapture",
@@ -348,6 +349,8 @@ fn probe() {
 }
 
 /// The runner, started under a planted key and address, hides both from its child.
+// Its probe needs the short spelling `127.1`, which Windows does not resolve.
+#[cfg(unix)]
 #[test]
 fn the_runner_hides_a_key_and_an_address_from_its_children() {
     let (url, listener) = quiet();

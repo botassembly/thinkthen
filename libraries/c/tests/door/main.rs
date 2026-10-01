@@ -9,6 +9,11 @@
 //! `include/thinkthen.h`, `-lthinkthen`, and the soname, under
 //! AddressSanitizer with leak checking. Each runs in its own process with a
 //! cleared environment, a loopback address, a fake key, and a fresh cache.
+//!
+//! It builds each program with a Unix `cc` under AddressSanitizer, against a
+//! `.so` or `.dylib` laid out with its soname link, so it runs only on Unix.
+//! Windows stage 1 adds the MSVC path (ticket 0373, `sdlc/planning/windows.md`).
+#![cfg(unix)]
 
 mod bytes;
 mod cases;
@@ -20,6 +25,7 @@ mod question_file;
 mod settings;
 mod usage;
 
+use crate::child::ChildEnvironment as _;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
@@ -227,7 +233,7 @@ fn start_with(binary: &Path, base: &str, extra: &[(&str, &Path)]) -> Child {
     static RUNS: AtomicUsize = AtomicUsize::new(0);
     let cache = scratch(&format!("cache-{}", RUNS.fetch_add(1, Ordering::Relaxed)));
     Command::new(binary)
-        .env_clear()
+        .clear_environment()
         .env("THINKTHEN_BASE_URL", base)
         .env("THINKTHEN_API_KEY", KEY)
         .env("THINKTHEN_CACHE", &cache)

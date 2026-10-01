@@ -6,6 +6,7 @@
     reason = "each test file uses part of the helper, and the walker reads JSON the command printed"
 )]
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -211,7 +212,7 @@ pub(crate) fn fixtures() -> PathBuf {
 pub(crate) fn run(arguments: &[&str], input: &[u8]) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(arguments)
-        .env_clear()
+        .clear_environment()
         .current_dir(fixtures())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -364,7 +365,7 @@ pub(crate) fn repository() -> PathBuf {
 pub(crate) fn replay(folder: &Path, arguments: &[&str], input: &[u8]) -> String {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(arguments)
-        .env_clear()
+        .clear_environment()
         .env("THINKTHEN_BATCH", "1")
         .current_dir(folder)
         .stdin(Stdio::piped())

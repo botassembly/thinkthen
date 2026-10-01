@@ -10,7 +10,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use conformance_backend::Backend;
 
-use crate::harness::{Canned, Listener, spawn};
+#[cfg(unix)]
+use crate::harness::Canned;
+use crate::harness::{Listener, spawn};
 
 const KEY: &str = "sk-check-0121";
 
@@ -284,6 +286,7 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
 }
 
 /// One canned reply per probe, each naming `other-1` whatever model was sent.
+#[cfg(unix)]
 fn other_model() -> Listener {
     let answers = [
         r#""q1":{"type":"noul","noul":0.9}"#,
@@ -297,6 +300,7 @@ fn other_model() -> Listener {
 }
 
 /// The header lines and the model each reply line names.
+#[cfg(unix)]
 fn models(output: &Output) -> (Vec<String>, Vec<String>) {
     let printed = text(&output.stdout);
     let header = printed.lines().skip(1).take(3).map(str::to_owned).collect();
@@ -312,6 +316,8 @@ fn models(output: &Output) -> (Vec<String>, Vec<String>) {
     (header, named.collect())
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_names() {
     let other = ["other-1"; 4].map(str::to_owned).to_vec();

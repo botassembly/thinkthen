@@ -6,6 +6,7 @@
     reason = "a failed fixture setup or a missing field should stop the boundary test"
 )]
 
+use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -326,8 +327,8 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
     let file = grouped("broken-pipe", 2);
     let state_home = folder("broken-pipe-usage");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("XDG_STATE_HOME", state_home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
@@ -404,8 +405,8 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     .expect("a listener");
     let file = grouped("closed-pipe-failure", 1);
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .clear_environment()
+        .home(env!("CARGO_TARGET_TMPDIR"))
         .env("XDG_CACHE_HOME", cache.join(".platform"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([

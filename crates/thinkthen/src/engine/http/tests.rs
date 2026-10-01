@@ -5,6 +5,7 @@ use super::{
 };
 use crate::engine::error::{Error, TransportKind};
 use crate::engine::usage::Counters;
+use crate::test_deadline::whole_request;
 use std::cell::Cell;
 use std::io::{self, Read as _, Write as _};
 use std::net::TcpListener;
@@ -173,8 +174,7 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
     let server_cancel = cancel.clone();
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("request");
-        let mut request = [0_u8; 1024];
-        let _read = stream.read(&mut request).expect("request bytes");
+        whole_request(&mut stream);
         counted.fetch_add(1, Ordering::SeqCst);
         stream
             .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
@@ -286,8 +286,7 @@ fn cancellation_after_reservation_refunds_both_process_charges() {
     listener.set_nonblocking(false).expect("blocking server");
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("fresh request");
-        let mut request = [0_u8; 1024];
-        let _read = stream.read(&mut request).expect("request bytes");
+        whole_request(&mut stream);
         stream
             .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}")
             .expect("reply");
@@ -357,8 +356,7 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
     );
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("first request");
-        let mut body = [0_u8; 1024];
-        let _read = stream.read(&mut body).expect("request bytes");
+        whole_request(&mut stream);
         stream
             .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
             .expect("response");
@@ -394,6 +392,8 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
 }
 
 /// Port zero can never listen, so the refusal is deterministic.
+// Windows reports a refused loopback port as unreachable (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[test]
 fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
     let key = Key::of("sk-test-value");

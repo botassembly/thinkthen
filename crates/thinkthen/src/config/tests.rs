@@ -79,6 +79,8 @@ fn each_refusal_names_its_field_and_never_its_value() {
     }
 }
 
+// The Linux and macOS rows use Unix absolute paths, which Windows reads as relative.
+#[cfg(unix)]
 #[test]
 fn linux_and_macos_resolve_config_and_cache_independently() {
     let cases = [
@@ -144,6 +146,7 @@ fn linux_and_macos_resolve_config_and_cache_independently() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn usage_lives_in_the_state_folder_and_never_follows_the_cache() {
     let home = Some("/home/person");
@@ -186,6 +189,48 @@ fn usage_lives_in_the_state_folder_and_never_follows_the_cache() {
             resolve_usage(platform, state.map(str::to_owned), home.map(str::to_owned)),
             expected.map(PathBuf::from),
             "{state:?} {home:?}"
+        );
+    }
+}
+
+/// `absolute()` uses the host's rule, so a `C:\` base is absolute only on
+/// Windows. Windows reads no `HOME` and no `XDG_` name (ticket 0373).
+#[cfg(windows)]
+#[test]
+fn windows_resolves_config_from_appdata_and_cache_and_usage_from_localappdata() {
+    let roaming = Some(r"C:\Users\person\AppData\Roaming".to_owned());
+    let local = Some(r"C:\Users\person\AppData\Local".to_owned());
+    let home = Some(r"C:\Users\person".to_owned());
+    assert_eq!(
+        resolve_config(Platform::Windows, roaming, home.clone()),
+        Some(PathBuf::from(
+            r"C:\Users\person\AppData\Roaming\thinkthen\config.json"
+        ))
+    );
+    assert_eq!(
+        resolve_cache(Platform::Windows, local.clone(), home.clone()),
+        Some(PathBuf::from(
+            r"C:\Users\person\AppData\Local\thinkthen\cache"
+        ))
+    );
+    assert_eq!(
+        resolve_usage(Platform::Windows, local, home.clone()),
+        Some(PathBuf::from(
+            r"C:\Users\person\AppData\Local\thinkthen\usage"
+        ))
+    );
+    for unusable in [None, Some(String::new()), Some("relative".to_owned())] {
+        assert_eq!(
+            resolve_config(Platform::Windows, unusable.clone(), home.clone()),
+            None
+        );
+        assert_eq!(
+            resolve_cache(Platform::Windows, unusable.clone(), home.clone()),
+            None
+        );
+        assert_eq!(
+            resolve_usage(Platform::Windows, unusable, home.clone()),
+            None
         );
     }
 }

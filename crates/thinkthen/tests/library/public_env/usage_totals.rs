@@ -2,6 +2,8 @@
 //! usage totals, and one built by hand writes none.
 
 use super::*;
+#[cfg(unix)]
+use crate::child::ChildEnvironment as _;
 
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     let engine = match case {
@@ -39,15 +41,16 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     )]
 }
 
+#[cfg(unix)]
 #[cfg(feature = "cli")]
 /// The command's own `status --json` under this home's state folder.
 fn status(home: &Path) -> serde_json::Value {
     let output = run::output(
         Command::new(env!("CARGO_BIN_EXE_thinkthen"))
             .args(["status", "--json"])
-            .env_clear()
+            .clear_environment()
             .env("XDG_STATE_HOME", home.join("state"))
-            .env("HOME", home),
+            .home(home),
     )
     .expect("status runs");
     assert!(output.status.success());
@@ -56,6 +59,7 @@ fn status(home: &Path) -> serde_json::Value {
         .clone()
 }
 
+#[cfg(unix)]
 #[cfg(feature = "cli")]
 /// A listener that answers `503` to the arrivals named, and `ANSWERED` otherwise.
 fn failing_at(busy: &'static [usize]) -> Listener {
@@ -70,6 +74,8 @@ fn failing_at(busy: &'static [usize]) -> Listener {
     .expect("a loopback listener")
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[cfg(feature = "cli")]
 #[test]
 fn the_command_and_a_seeded_engine_add_to_one_total() {
@@ -80,7 +86,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     fs::write(&evidence, format!("{EVIDENCE}\n")).expect("evidence");
     let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["decide", "asks for a refund"])
-        .env_clear()
+        .clear_environment()
         .env("XDG_CACHE_HOME", &home)
         .env("XDG_STATE_HOME", home.join("state"))
         .env("THINKTHEN_BASE_URL", listener.base())
@@ -111,6 +117,8 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     );
 }
 
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+#[cfg(unix)]
 #[cfg(feature = "cli")]
 #[test]
 fn a_cached_rerun_sends_nothing_and_adds_a_cache_answer() {

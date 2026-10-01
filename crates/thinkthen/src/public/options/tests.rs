@@ -1,5 +1,6 @@
 //! Private diagnostic boundary regressions.
 
+use crate::test_deadline::child::ChildEnvironment as _;
 use std::panic::{AssertUnwindSafe, catch_unwind, panic_any};
 use std::process::Command;
 use std::sync::Arc;
@@ -135,7 +136,7 @@ fn diagnostic_boundary_child() {
 #[test]
 fn engine_diagnostics_hide_worker_payloads_and_preserve_host_hook() {
     let output = Command::new(std::env::current_exe().expect("test binary"))
-        .env_clear()
+        .clear_environment()
         .args([
             "--exact",
             "public::options::tests::diagnostic_boundary_child",
