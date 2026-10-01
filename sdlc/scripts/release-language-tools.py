@@ -336,7 +336,35 @@ def sdk_path(name, job, acquire, run=command, get=fetch, env=None):
     return candidate
 
 
-def check_smoke_tools(run=command, bwrap=Path("/usr/bin/bwrap")):
+RESTRICT_USERNS = Path("/proc/sys/kernel/apparmor_restrict_unprivileged_userns")
+
+
+def bwrap_profile(bwrap):
+    # Ubuntu 24.04 ships this form for each program that needs user namespaces.
+    return ("abi <abi/4.0>,\ninclude <tunables/global>\n\n"
+            f'profile bwrap "{bwrap}" flags=(unconfined) {{\n  userns,\n}}\n')
+
+
+def probe_bwrap(job, run, bwrap, restrict=RESTRICT_USERNS):
+    """Prove the pinned bwrap can make a namespace with no network; return how."""
+    probe = [str(bwrap), "--unshare-user", "--unshare-pid", "--unshare-net", "--die-with-parent",
+             "--ro-bind", "/", "/", "--", "/bin/true"]
+    try:
+        run(probe)
+        return "not needed"
+    except RuntimeError:
+        # Rehearsal run 36853575250: ubuntu-24.04 restricts user namespaces to programs with
+        # an AppArmor profile. The profile goes into this job's kernel only (ticket 0369).
+        if not restrict.is_file() or restrict.read_text().strip() != "1":
+            raise
+    profile = job / "bwrap.apparmor"
+    profile.write_text(bwrap_profile(bwrap))
+    run(["sudo", "apparmor_parser", "--replace", str(profile)])
+    run(probe)
+    return "loaded"
+
+
+def check_smoke_tools(job, run=command, bwrap=Path("/usr/bin/bwrap"), restrict=RESTRICT_USERNS):
     versions = {"gprbuild": "GPRBUILD Pro 18.0w", "gnatmake": "GNATMAKE 13.3.0",
                 "gcc": "13.3.0", "cobc": "GnuCOBOL) 4.0-early-dev.0"}
     selected = {}
@@ -364,8 +392,7 @@ def check_smoke_tools(run=command, bwrap=Path("/usr/bin/bwrap")):
         fail("/usr/bin/bwrap differs from the pinned bubblewrap")
     if run(["dpkg-query", "-S", str(bwrap)]).split(":", 1)[0] != "bubblewrap":
         fail("/usr/bin/bwrap package owner differs from pin")
-    run([str(bwrap), "--unshare-user", "--unshare-pid", "--unshare-net", "--die-with-parent",
-         "--ro-bind", "/", "/", "--", "/bin/true"])
+    selected["bwrap_apparmor"] = probe_bwrap(job, run, bwrap, restrict)
     selected["cc"] = str(cc_path)
     selected["bwrap"] = str(bwrap)
     return selected
@@ -393,7 +420,7 @@ def validate_handoff(github_env, github_path):
 
 
 def setup(mode, job, expected_sha, acquire, github_env, github_path, run=command, get=fetch,
-          bwrap=Path("/usr/bin/bwrap")):
+          bwrap=Path("/usr/bin/bwrap"), restrict=RESTRICT_USERNS):
     if mode not in ("managed", "smoke") or platform.system() != "Linux" or platform.machine() != "x86_64":
         fail("language tools support only Linux x86-64 managed or smoke")
     if not re.fullmatch(r"[0-9a-f]{40}", expected_sha) or run(["git", "rev-parse", "HEAD"]) != expected_sha:
@@ -408,7 +435,7 @@ def setup(mode, job, expected_sha, acquire, github_env, github_path, run=command
     dotnet = sdk_path("dotnet", job, acquire, run, get, env)
     kotlin = sdk_path("kotlin", job, acquire, run, get, env)
     scala = sdk_path("scala", job, acquire, run, get, env)
-    selected = check_smoke_tools(run, bwrap) if mode == "smoke" else {}
+    selected = check_smoke_tools(job, run, bwrap, restrict) if mode == "smoke" else {}
     values = {"THINKTHEN_DOTNET": str(dotnet), "THINKTHEN_JDK_HOME": str(jdk),
               "THINKTHEN_KOTLIN_HOME": str(kotlin), "THINKTHEN_SCALA_HOME": str(scala)}
     record = {"mode": mode, "source_commit": expected_sha, "packages": packages,

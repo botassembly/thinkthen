@@ -34,9 +34,15 @@ class Observer:
         self.provider = f"libncurses5-dev (= {tools.PACKAGES['libncurses-dev']}), ncurses-dev"
         self.java_version = "21.0.12"
         self.cc_owner = "gcc-13-x86-64-linux-gnu"
+        self.probe_failures = 0
 
     def __call__(self, args, *, env=None):
         self.calls.append((args, env))
+        if args[0].endswith("bwrap") and "--unshare-net" in args and self.probe_failures:
+            self.probe_failures -= 1
+            raise RuntimeError(f"command failed (1): {args[0]}: bwrap: loopback: Failed RTM_NEWADDR")
+        if args[:2] == ["sudo", "apparmor_parser"]:
+            return ""
         if args == ["git", "rev-parse", "HEAD"]:
             return SHA
         if args[:3] == ["dpkg-query", "-W", "-f=${Version} ${Status}"]:
@@ -129,17 +135,20 @@ def main():
                 assert any(args[0].endswith("bwrap") and "--unshare-user" in args
                            for args, _ in observer.calls)
                 assert all("install" not in args and "update" not in args for args, _ in observer.calls)
+                assert smoke["selected"]["bwrap_apparmor"] == "not needed"
+                assert not any("apparmor_parser" in args for args, _ in observer.calls)
+                bwrap_namespaces(root, observer)
 
                 rogue = root / "rogue/gcc-13"
                 executable(rogue)
                 (root / "bin/cc").unlink()
                 (root / "bin/cc").symlink_to(rogue)
-                must_fail(lambda: tools.check_smoke_tools(observer, root / "bin/bwrap"),
+                must_fail(lambda: tools.check_smoke_tools(root / "smoke", observer, root / "bin/bwrap"),
                           "not the selected GCC 13")
                 (root / "bin/cc").unlink()
                 (root / "bin/cc").symlink_to("gcc-13")
                 observer.cc_owner = "unowned"
-                must_fail(lambda: tools.check_smoke_tools(observer, root / "bin/bwrap"),
+                must_fail(lambda: tools.check_smoke_tools(root / "smoke", observer, root / "bin/bwrap"),
                           "selected cc package owner differs")
                 observer.cc_owner = "gcc-13-x86-64-linux-gnu"
 
@@ -178,7 +187,7 @@ def main():
                 assert not any(args[0].endswith(("/kotlinc", "/scalac")) for args, _ in observer.calls)
                 os.environ["THINKTHEN_DOTNET"] = str(root / "dotnet/dotnet")
 
-                must_fail(lambda: tools.check_smoke_tools(observer, root / "missing-bwrap"),
+                must_fail(lambda: tools.check_smoke_tools(root / "smoke", observer, root / "missing-bwrap"),
                           "/usr/bin/bwrap differs")
                 archive = root / "wrong-archive.zip"
                 archive.write_bytes(b"different SDK bytes")
@@ -298,6 +307,36 @@ def acquisition_cli(root):
         assert Path(env["OBSERVE_INSTALLED"]).exists() == should_install
         assert "-s" in log.read_text(), (label, log.read_text())
         assert ("metadata" in log.read_text()) == (label in ("good", "foreign-snapshot"))
+
+
+def bwrap_namespaces(root, observer):
+    """Rehearsal run 36853575250: a restricted kernel gets a bwrap profile, then the same probe."""
+    restrict = root / "restrict"
+    bwrap = root / "bin/bwrap"
+    for label, setting, failures, loads, refusal in (
+            ("restricted", "1", 1, 1, None),
+            ("unrestricted", "0", 1, 0, "RTM_NEWADDR"),
+            ("absent", None, 1, 0, "RTM_NEWADDR"),
+            ("still failing", "1", 2, 1, "RTM_NEWADDR")):
+        job = root / ("bwrap-" + label.replace(" ", "-"))
+        job.mkdir()
+        restrict.unlink(missing_ok=True)
+        if setting is not None:
+            restrict.write_text(setting + "\n")
+        observer.calls.clear()
+        observer.probe_failures = failures
+        if refusal:
+            must_fail(lambda: tools.check_smoke_tools(job, observer, bwrap, restrict), refusal)
+        else:
+            assert tools.check_smoke_tools(job, observer, bwrap, restrict)["bwrap_apparmor"] == "loaded"
+        parser = [args for args, _ in observer.calls if args[:2] == ["sudo", "apparmor_parser"]]
+        assert parser == [["sudo", "apparmor_parser", "--replace", str(job / "bwrap.apparmor")]] * loads, (label, parser)
+        probes = [args for args, _ in observer.calls if args[0] == str(bwrap) and "--unshare-net" in args]
+        assert len(probes) == 1 + loads, (label, probes)
+        if loads:
+            profile = (job / "bwrap.apparmor").read_text()
+            assert f'profile bwrap "{bwrap}" flags=(unconfined) {{\n  userns,\n}}' in profile, profile
+    observer.probe_failures = 0
 
 
 def fetch_retries():

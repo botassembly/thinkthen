@@ -14,8 +14,11 @@ if [ "$PG_HOST" = Darwin ]; then
 		PG_CONFIG=${PG_CONFIG:-/nonexistent/pg_config}
 	fi
 fi
-PINNED=$(cut -d' ' -f1 runtime.sha256)
-PACKAGE=$TOOLCHAIN/$(awk '{print $2}' runtime.sha256)
+# One pinned server package per CPU (ticket 0369). PINNED is empty on any other CPU.
+case $(uname -m) in x86_64) DEB_ARCH=amd64 ;; aarch64) DEB_ARCH=arm64 ;; *) DEB_ARCH=none ;; esac
+PINNED=$(awk -v name="_$DEB_ARCH.deb" 'substr($2, length($2) - length(name) + 1) == name { print $1 }' runtime.sha256)
+PACKAGE=$TOOLCHAIN/$(awk -v name="_$DEB_ARCH.deb" 'substr($2, length($2) - length(name) + 1) == name { print $2 }' runtime.sha256)
+PACKAGE_URL=$(grep -F "/${PACKAGE##*/}" runtime.url || true)
 VERSION=16.15-0ubuntu0.24.04.1
 EXTRACTED=$TOOLCHAIN/$VERSION
 FAKE_KEY=tt-loopback-fake
@@ -25,7 +28,7 @@ not_run() {
 	if [ "$PG_HOST" = Darwin ]; then
 		echo "setup: install the pinned Homebrew postgresql@16 bottle named in runtime-darwin.env"
 	else
-		echo "fetch: mkdir -p $TOOLCHAIN && cd $TOOLCHAIN && curl -fLO $(cat runtime.url)"
+		echo "fetch: run databases/postgresql/setup.sh once"
 	fi
 	exit 77
 }
@@ -37,7 +40,8 @@ runtime_ready() {
 			command -v "$tool" >/dev/null || not_run "$tool is missing"
 		done
 		[ -x "$PG_CONFIG" ] || not_run "the pinned pg_config at $PG_CONFIG is missing"
-		[ "$("$PG_CONFIG" --version)" = "PostgreSQL $PG_DARWIN_VERSION" ] || not_run "pg_config is not PostgreSQL $PG_DARWIN_VERSION"
+		# The bottle's own line names its builder (ticket 0369).
+		[ "$("$PG_CONFIG" --version)" = "PostgreSQL $PG_DARWIN_VERSION (Homebrew)" ] || not_run "pg_config is not PostgreSQL $PG_DARWIN_VERSION"
 		[ "$(brew list --versions postgresql@16 | awk '{print $2}')" = "$PG_DARWIN_VERSION" ] || not_run "the Homebrew server is not $PG_DARWIN_VERSION"
 		case $(uname -m) in arm64) tag=arm64_sequoia; bottle=$PG_BOTTLE_ARM64_SEQUOIA ;; x86_64) tag=sonoma; bottle=$PG_BOTTLE_X86_64_SONOMA ;; *) not_run "no PostgreSQL bottle for $(uname -m)" ;; esac
 		actual=$(brew info --json=v2 postgresql@16 | python3 -c 'import json,sys; p=json.load(sys.stdin)["formulae"][0]["bottle"]["stable"]["files"][sys.argv[1]]["sha256"]; print(p)' "$tag")
@@ -55,10 +59,16 @@ runtime_ready() {
 		RUNTIME_EXTENSION_DIR=$("$PG_CONFIG" --sharedir)/extension
 		return
 	fi
-	for tool in dpkg-deb cargo-pgrx psql python3; do
+	for tool in dpkg-deb psql python3; do
 		command -v "$tool" >/dev/null || not_run "$tool is missing"
 	done
-	[ "$(cargo pgrx --version)" = "cargo-pgrx 0.17.0" ] || not_run "cargo-pgrx is not 0.17.0: $(cargo pgrx --version)"
+	# cargo-pgrx and the header check below guard a build. The installed-file mode loads a
+	# release archive and builds nothing (ticket 0369).
+	if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
+		command -v cargo-pgrx >/dev/null || not_run "cargo-pgrx is missing"
+		[ "$(cargo pgrx --version)" = "cargo-pgrx 0.17.0" ] || not_run "cargo-pgrx is not 0.17.0: $(cargo pgrx --version)"
+	fi
+	[ -n "$PINNED" ] || not_run "no pinned server package for $(uname -m)"
 	[ -f "$PACKAGE" ] || not_run "the server package $PACKAGE is missing"
 	actual=$(sha256sum "$PACKAGE" | cut -d' ' -f1)
 	[ "$actual" = "$PINNED" ] || not_run "the server package's SHA256 $actual is not the pinned $PINNED"
@@ -66,6 +76,7 @@ runtime_ready() {
 		scratch_dir partial "$EXTRACTED.XXXXXX"
 		dpkg-deb -x "$PACKAGE" "$partial" && mv "$partial" "$EXTRACTED"
 	fi
+	[ -z "${THINKTHEN_ARTIFACT:-}" ] || return 0
 	header=$(/usr/bin/pg_config --version | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
 	server=$("$EXTRACTED/usr/lib/postgresql/16/bin/postgres" -V | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
 	if [ -z "$header" ] || [ "$header" != "$server" ]; then

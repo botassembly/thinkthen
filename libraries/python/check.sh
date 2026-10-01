@@ -21,16 +21,8 @@ not_run() {
 }
 
 command -v uv >/dev/null 2>&1 || not_run "no uv"
-cached_host=$(uv python find --offline 3.13 2>/dev/null || true)
-host=
-for candidate in python3.14 python3.13 "$cached_host" python3.12 python3; do
-	[ -n "$candidate" ] || continue
-	if command -v "$candidate" >/dev/null 2>&1 &&
-		"$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 12) or sys.version_info.releaselevel != "final")' 2>/dev/null; then
-		host=$(command -v "$candidate")
-		break
-	fi
-done
+. ./host.sh
+host=$(python_host)
 [ -n "$host" ] || not_run "no stable Python 3.12 or later (the test pins need it)"
 host_identity=$("$host" -c 'import os, sys; print(os.path.realpath(sys._base_executable), sys.version.split()[0])')
 command -v maturin >/dev/null 2>&1 || not_run "no maturin"

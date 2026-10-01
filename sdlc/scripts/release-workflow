@@ -304,7 +304,8 @@ host-setup)
 		[ "$(shasum -a 256 "$bottle" | awk '{print $1}')" = "$pin" ] || fail 'Homebrew PostgreSQL bottle differs from pin'
 		brew install --force-bottle postgresql@16
 		brew install pkgconf jq openssl@3
-		[ "${RELEASE_SMOKE:-0}" != 1 ] || brew install coreutils
+		# python@3.14 comes before the OpenSSL check, since its install may upgrade openssl@3 (ticket 0369).
+		[ "${RELEASE_SMOKE:-0}" != 1 ] || brew install coreutils python@3.14
 		. libraries/ruby/toolchain.env
 		case $("$(brew --prefix openssl@3)/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) fail 'OpenSSL host version differs from pin' ;; esac
 		cargo install --locked --version 0.17.0 cargo-pgrx
@@ -317,19 +318,32 @@ host-setup)
 		sh libraries/ruby/setup-ruby.sh
 		sh databases/sqlite/setup.sh
 		sh databases/duckdb/tools/setup.sh --fetch
+		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			# setup-python's macOS build cannot load SQLite extensions, and Homebrew's can.
+			# Rehearsal run 36853575250 failed the SQLite examples on both Macs (ticket 0369).
+			sqlite_python=$(brew --prefix python@3.14)/bin/python3.14
+			"$sqlite_python" -c 'import sqlite3; sqlite3.connect(":memory:").enable_load_extension(True)' ||
+				fail "the SQLite check's Python cannot load extensions: $sqlite_python"
+			[ -z "${GITHUB_ENV:-}" ] || printf 'THINKTHEN_PYTHON=%s\n' "$sqlite_python" >>"$GITHUB_ENV"
+		fi
 	else
 		# Linux builds use containers, which build their own Ruby; the native installed smoke needs
 		# the pinned host. A host Ruby in the build job fills about 850 MB unused (ticket 0366).
 		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
 			sh libraries/ruby/setup-ruby.sh
 			sh databases/duckdb/tools/setup.sh --fetch
+			sh databases/sqlite/setup.sh
+			sh databases/postgresql/setup.sh
 		fi
 	fi
 	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
-		command -v python3.12 >/dev/null || fail 'the installed Python smoke needs Python 3.12'
 		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
+		# Fill uv's cache for the Python the check will pick (ticket 0369).
+		. libraries/python/host.sh
+		python=$(python_host)
+		[ -n "$python" ] || fail 'the installed Python smoke needs a stable Python 3.12 or later'
 		scratch_dir seed
-		uv venv --quiet --python "$(command -v python3.12)" "$seed/venv"
+		uv venv --quiet --python "$python" "$seed/venv"
 		uv pip install --quiet --require-hashes --python "$seed/venv/bin/python" -r libraries/python/requirements-dev.txt
 	fi
 	;;
@@ -626,8 +640,14 @@ smoke-bundle)
 	[ "$#" = 4 ] || fail 'smoke-bundle PLATFORM_DIR NPM_DIR OUT'
 	duckdb=$(find "$2" -maxdepth 1 -name "thinkthen-duckdb-$version-*.tar.gz" -print)
 	[ -f "$duckdb" ] || fail 'this target has no DuckDB release archive'
+	# One listing, so no tar writes into a pipe that grep -q closed (ticket 0369).
+	members=$(tar -tzf "$duckdb") || fail "cannot list $duckdb"
 	for needed in ./LICENSE.thinkthen ./LICENSE.duckdb ./NOTICE ./DEPENDENCIES.txt; do
-		tar -tzf "$duckdb" | grep -Fxq "$needed" || fail "DuckDB archive lacks C++ package marker $needed"
+		case "
+$members
+" in *"
+$needed
+"*) ;; *) fail "DuckDB archive lacks C++ package marker $needed" ;; esac
 	done
 	mkdir -p "$4"
 	cp "$2"/* "$4/"
