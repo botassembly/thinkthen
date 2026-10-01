@@ -1,0 +1,36 @@
+# 0364: Small command fixes from the mailroom triage
+
+Status: in progress. Lane claude-2. Branch `ticket/0364-small-command-fixes`. Plan: batch C3 of `sdlc/planning/issue-priorities-2026-09-30.md`. Closes four issues: `2026-09-30-check-ignores-the-estimated-token-cap.md` (blocks 0.1), `2026-09-30-blank-max-request-bytes-exits-2.md`, `2026-09-30-transforms-score-the-band-low-edge-as-no.md` and `2026-09-30-cache-convert-quote-skips-questions-that-start-the-text-is.md`.
+
+## Outcome
+
+- `thinkthen check` honors the estimated input token cap. Under `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=1` it refuses before the first probe with the sentence and exit 2 every asking command gives, and the backend counts zero requests. A probe the cap refuses later stops the check the same way. `check` retries a retried status three times, the default of every command, so four probes make at most sixteen attempts, as `specification/check.md` says.
+- A blank or white-space `THINKTHEN_MAX_REQUEST_BYTES` counts as unset on the command, as every other variable does, and `specification/settings.md` says so.
+- The band, score, sweep and trials transforms count a probability equal to a band's low edge as not sure, as `specification/threshold.md:17-19` and `core/threshold.rs` do.
+- `cache convert --quote` quotes a question that starts "The text is " when the words belong to the question. The summary line counts the answers left in the old form, which a replay on this version cannot use.
+
+## Evidence
+
+- Starts from: main `524be20a6`, after 0363 landed.
+  - `cli/check.rs:51-66` builds its engine without `.with_process_budget(...)`, which `cli/asking.rs:99-104` sets. With no budget, `reserve_send` (`engine/send_budget.rs:91`) reserves nothing. A site run with a cap of 1 sent four probes and 748 input tokens.
+  - `cli/check.rs:24` sets `MAX_RETRIES = 2` under the comment "The retry count every command defaults to". `cli/args.rs:210` defaults `--max-retries` to 3. `specification/check.md:18`, `settings.md`'s Retries row and ADR 0052 all say 3.
+  - `cli/edge.rs:113` reads `THINKTHEN_MAX_REQUEST_BYTES` with `env::var(...).ok()`; every other variable goes through `read()` (`edge.rs:248-250`), which drops a blank value. The library reader already treats a blank value as unset (`public/settings/environment.rs:78`, through `variable`). `tests/backend/batching/ceiling.rs:145` pins `""` as refused.
+  - `transforms/band/band.jq:31` and its header at lines 6-7, `score/score.jq:30`, `sweep/sweep.jq:65` and `:419`, and `trials/trials.jq:108` use `<=` at the low edge. `transforms/trials/test.sh` row "band-low" pins `false` at p = 0.25 under `0.25:0.75`.
+  - `core/recording/convert.rs:200-202` treats any instruction that starts "The text is " as already quoted and quotes none of the exchange. Its doc names the case it guards: a context exchange, whose questions quote their own records. `cli/cache.rs:68-75` prints no sign of answers left in the old form.
+- Keeps: every other `check` line, grade and exit code; `check --plan` sends nothing and reserves nothing. Malformed `THINKTHEN_MAX_REQUEST_BYTES` values still exit 2 with the same sentence, and the flag's refusals are unchanged. The transforms' cut rule (`>=`) and high edge (`>=`) are unchanged. `cache convert` without `--quote` writes the same rows and bytes; a context exchange and a JSON instruction still take no quote; converting twice still writes the same bytes.
+- Changes:
+  - `cli/check.rs`: the engine carries the process budget from `environment.estimated_total`; `check` has no flag for it. The retry count is the command default, named once beside `--max-retries` in `cli/args.rs` and read by both.
+  - `cli/edge.rs`: read the variable through `read()`.
+  - The five transform lines and the band header use `<` at the low edge. `trials/test.sh` row "band-low" expects `null`.
+  - `core/recording/convert.rs`: an instruction counts as already quoted only when it starts with `The text is `, one complete JSON value, and `. `. This covers the record's own JSON, the issue's case, and a context exchange's records, which the issue's narrower rule would quote a second time. A converted answer written only in the old form is marked, and `engine/store/convert.rs` counts it before merging, as it counts `converted`.
+  - `cli/cache.rs`: the summary reads `thinkthen: cache convert: wrote N answers to thinkthen.jsonl, M from old entries, U left unquoted; skipped K entries`.
+  - Specification: `check.md` names the cap; `settings.md`'s Request size row says a blank value counts as unset; `recording.md` states the new quoted test and the summary.
+- Proof:
+  - `check`: a loopback test with `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=1` pins the whole standard error, exit 2, empty standard output and a backend count of 0. A loopback test on a status that is retried pins sixteen requests for four probes.
+  - Blank variable: `ceiling.rs` moves `""` and `"  "` out of the refused list into a case that plans with the default size, exit 0.
+  - Transforms: `trials/test.sh` row "band-low" expects `null`; a band and a score example row at the low edge counts as not sure; the sweep test gains a row at the low edge that is accepted as not sure.
+  - Convert: `cache_convert.rs` gains a case whose question starts "The text is the title"; `--quote` writes its quoted row with origin `quoted` and the summary counts 0 left unquoted. A plain convert of the same folder counts it as left unquoted. The existing context-free and quoted-envelope cases keep their keys. An edge table beside `requote` covers a record-quoted instruction, a context-quoted one, and a user question starting "The text is ".
+  - Checks before landing: `policy.py`, workspace clippy with `-D warnings`, the focused nextest filters for `check`, `batching::ceiling` and `cache_convert`, the four transform test scripts, `tickets`, `settings`, and lint in a clean checkout. No binding or engine path changes, so no surface check runs.
+- Defers: a cap set by flag on `check` (it has no flag); `--timeout` bounding the whole check run, which the issue rules not a bug.
+
+## What the build taught us
