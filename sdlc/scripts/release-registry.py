@@ -277,6 +277,15 @@ def multipart(field_name, filename, data):
     return body, f"multipart/form-data; boundary={boundary}"
 
 
+def central(request, timeout):
+    """One Central Portal call; an HTTP error names its code and reply body, which never holds the token."""
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as reply:
+            return reply.read().decode()
+    except urllib.error.HTTPError as error:
+        raise Refusal(f"Central answered {error.code}: {error.read().decode(errors='replace')[:500]}")
+
+
 def maven_upload(bundle):
     token = base64.b64encode(f"{secret('MAVEN_CENTRAL_USERNAME')}:{secret('MAVEN_CENTRAL_PASSWORD')}".encode()).decode()
     require(bundle.is_file(), "the signed Maven bundle is missing")
@@ -289,19 +298,25 @@ def maven_upload(bundle):
     central = "https://central.sonatype.com/api/v1/publisher"
     request = urllib.request.Request(f"{central}/upload?name={ARTIFACT}-{v}&publishingType=AUTOMATIC", data=body,
                                      method="POST", headers={"Authorization": f"Bearer {token}", "Content-Type": kind})
-    with urllib.request.urlopen(request, timeout=300) as reply:
-        deployment = reply.read().decode().strip()
+    deployment = central(request, 300).strip()
     require(re.fullmatch(r"[0-9a-fA-F-]{36}", deployment), "Central returned no deployment id")
+    print(f"::notice::Maven Central deployment {deployment}")
+    misses = 0
     for _ in range(180):
+        time.sleep(10)
         request = urllib.request.Request(f"{central}/status?id={deployment}", data=b"", method="POST",
                                          headers={"Authorization": f"Bearer {token}"})
-        with urllib.request.urlopen(request, timeout=60) as reply:
-            state = json.load(reply).get("deploymentState")
+        try:
+            state = json.loads(central(request, 60)).get("deploymentState")
+        except (Refusal, urllib.error.URLError, json.JSONDecodeError) as error:
+            misses += 1
+            require(misses < 5, f"Maven deployment {deployment} status failed five times: {error}")
+            continue
         print(f"release-registry: Maven deployment {deployment} is {state}")
         if state in ("PUBLISHING", "PUBLISHED"):
             return
         require(state != "FAILED", f"Maven deployment {deployment} failed validation; see the Central Portal")
-        time.sleep(10)
+        require(state in ("PENDING", "VALIDATING", "VALIDATED"), f"Maven deployment {deployment} has unknown state {state}")
     raise Refusal(f"Maven deployment {deployment} did not publish within 30 minutes")
 
 
@@ -341,7 +356,11 @@ def pub_publish(pub):
     found = status_of(f"https://pub.dev/api/packages/{PUB_NAME}/versions/{v}")
     require(found == 404, f"pub.dev already holds {PUB_NAME} {v}" if found == 200
             else f"pub.dev answered {found} for the version check")
-    result = subprocess.run([dart(), "pub", "publish", "--force"], cwd=pub)
+    # The same temporary copy as the dry run, so no repository ignore file changes what is sent.
+    with tempfile.TemporaryDirectory(prefix="thinkthen-pub-") as tmp:
+        copy = pathlib.Path(tmp) / PUB_NAME
+        shutil.copytree(pub, copy)
+        result = subprocess.run([dart(), "pub", "publish", "--force"], cwd=copy)
     require(result.returncode == 0, f"dart pub publish exited {result.returncode}")
 
 
