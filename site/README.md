@@ -22,7 +22,7 @@ npm run build
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
 5. `scripts/check-binding-proofs.mjs` checks each replayed library sample against its proof. See "The binding replay" below.
 6. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
-7. `scripts/label-tables.mjs` copies each column heading into the cells of a table of three or more columns. On a phone or a tablet every table row stacks into a card, and the label names each cell.
+7. `scripts/label-tables.mjs` copies each column heading into the cells of a table of three or more columns. On a phone or a tablet every table row stacks into a card, and the label names each cell. The same step marks each code span of 24 characters or fewer outside a code pane with class `short`, so a model name, a flag, a key name or a version never splits across lines.
 8. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
 9. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
 10. `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
