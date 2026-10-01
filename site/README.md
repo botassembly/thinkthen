@@ -129,7 +129,9 @@ Code panes add a code palette, after the deck's code panes. Shiki colours every 
 | quoted strings | `#ffb000`, 9.00:1 | `#a56300`, 4.79:1 |
 | numbers | `#ff7eb6`, 6.99:1 | `#b0306a`, 6.04:1 |
 | true, false, null | `#7aa2f7`, 6.54:1 | `#3355cc`, 6.34:1 |
-| comments, heredoc input | `#8a9a90`, 5.58:1 | `#5d6b63`, 5.60:1 |
+| comments, heredoc input, diff headers and ranges | `#8a9a90`, 5.58:1 | `#5d6b63`, 5.60:1 |
+
+A diff's added and removed lines stay in ink, because green and red mean yes and no.
 
 Dark follows the system and is the default. The sun and moon button in the header overrides it, and the choice is kept for the visit.
 

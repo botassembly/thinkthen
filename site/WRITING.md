@@ -38,7 +38,7 @@ Follow these rules when you write or edit any page or code example on this site.
 - A page with no answer key uses no green for right.
 - Brand colours stay in the header and footer. Use no glow and no big coloured boxes.
 - Every coloured mark gets a legend.
-- Code panes are the one exception (Ian, 2026-09-30). A script or code sample carries syntax colour from the code palette in `README.md`. Output panes and plain-text files stay in ink.
+- Code panes are the one exception (Ian, 2026-09-30). A script or code sample carries syntax colour from the code palette in `README.md`. Output panes, plain-text files, and a diff's added and removed lines stay in ink. A diff's headers and ranges are muted.
 - Every code block comes from `src/lib/code.mjs`, through `Code`, `Terminal`, `InstallLine` or an article's example comment. An article holds no Markdown code fence. `scripts/check-code.mjs` fails the build on one.
 
 ## Code examples

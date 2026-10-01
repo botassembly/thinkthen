@@ -32,11 +32,9 @@ export const CODE_THEME = {
     // A shell command name takes the key colour, as the deck's thinkthen
     // command and its cat, echo and printf do.
     { scope: ['entity.name.command'], settings: { foreground: v('key') } },
-    // A diff: headers and ranges muted, added lines green, removed lines
-    // pink. Red would read as "no".
+    // A diff: headers and ranges muted. Added and removed lines stay in
+    // ink, as heredoc input does, because green and red mean yes and no.
     { scope: ['meta.diff.header', 'meta.diff.range'], settings: { foreground: v('comment') } },
-    { scope: ['markup.inserted'], settings: { foreground: v('key') } },
-    { scope: ['markup.deleted'], settings: { foreground: v('number') } },
   ],
 };
 
