@@ -2,7 +2,7 @@
 
 Status: landed
 
-Lane: `worktrees/thinkthen-claude-3`. Branch: `ticket/0370-postgresql-relative-files`.
+Lane: `thinkthen-claude-3`. Branch: `ticket/0370-postgresql-relative-files`.
 
 ## Outcome
 
