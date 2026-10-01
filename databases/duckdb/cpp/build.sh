@@ -70,7 +70,7 @@ if [ -n "${mac_arch:-}" ]; then
 	}
 	python3 "$HERE/strip_macos.py" "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension" "$mac_platform"
 	exports=$(nm -gU "$ROOT/build/thinkthen.duckdb_extension")
-	bridge_exports=$(printf '%s\n' "$exports" | grep -c -E ' (_sqlite3_|__R)' || true)
+	bridge_exports=$(printf '%s\n' "$exports" | grep -c -E ' (_sqlite3_|__R|__ZN.*17h[0-9a-f]{16}E$)' || true)
 	[ "$bridge_exports" = 0 ] || {
 		echo "duckdb: the macOS extension exports $bridge_exports SQLite or Rust names" >&2
 		exit 1
