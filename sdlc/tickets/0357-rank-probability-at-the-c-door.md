@@ -1,6 +1,6 @@
 # 0357: `rank` returns each record's place and probability at the C door
 
-Status: in progress. Lane claude-3. A fresh ticket review found four gaps, all fixed; the build began during that review, so the code review treated all of it as new. The code review found three gaps, all fixed. Branch `ticket/0357-rank-probability-at-the-c-door`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves `../issues/closed/2026-09-30-rank-returns-no-probability-at-the-c-door.md`. Mirrors ticket 0354 slice B, which did the same for `find` (landing `11294af2d`).
+Status: landed. Lane claude-3. A fresh ticket review found four gaps, all fixed; the build began during that review, so the code review treated all of it as new. The code review found three gaps, all fixed, and then accepted. Branch `ticket/0357-rank-probability-at-the-c-door`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves `../issues/closed/2026-09-30-rank-returns-no-probability-at-the-c-door.md`. Mirrors ticket 0354 slice B, which did the same for `find` (landing `11294af2d`).
 
 ## Outcome
 
@@ -48,3 +48,4 @@ struct RankedRow<'a>
 - `Engine::rank_with` already held each row's input place: rows arrive in input order before the sort. The fix kept the place on `Ranked` instead of wrapping records, as Python and Ruby still do.
 - A port's rank check that grows by a line moves that port's line ceiling. Seven ceilings moved, and the ticket first named four; the code review measured all of them.
 - Two port checks shared one branch between `filter` and `rank` (Zig and Objective-C), and PHP shared one case line. Each split in two so the `filter` check stays as it was.
+- Checks on the rebased branch: `sdlc/scripts/test` (131 and 20 passed, 56 type schema cases against the real door), `spec` (24 demos green), workspace clippy with `-D warnings` on all targets, `policy.py`, `tickets`, `inventory`, lint in a clean checkout, the C door tests (32 passed), and the surface checks of C, Go, C++, C#, the JVM family, Dart with Flutter, PHP, Swift, Zig, Ada, Objective-C and COBOL. The JVM check first failed to compile: its rank check reused a pattern name the method already held.
