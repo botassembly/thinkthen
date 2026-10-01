@@ -1,6 +1,6 @@
 # Docs: a providers page, and a page for the Liquid d1 backend
 
-Status: open for marketing's site pages; marketing owns `site/`. Shortened 2026-09-30, and merged the same day with the Liquid d1 page issue, now in `closed/`. Owner: marketing. Close this issue when both pages land.
+Status: open for one line. The site team's Backends pages landed on 2026-09-30 in `6caff8d05`: `/install/backends/` and a page each for `typesafe`, `liquid`, `ollama`, System One servers and other servers. They list no announced provider, since no named announcement is on record, and they skip the Awesome ThinkThen link while its address returns 404; both follow this issue's own rules. Left: the date and result of a live `check` for TypeSafe and Liquid, which waits on `2026-09-30-check-ignores-the-estimated-token-cap.md`. Owner: marketing. Close this issue when that line lands.
 
 Ian asked on 2026-09-29 for a page about providers and which ones ThinkThen supports, including System One providers such as Liquid's d1. He also asked for a page about Liquid's d1 decision model, its API, and how a user signs up. The README names TypeSafe Jev and Liquid d1 and links Awesome ThinkThen. No site page answers "which providers can I use?" `site/src/pages/install/backends.astro` stays vendor-neutral, and no page walks a user from Liquid's console to a working `thinkthen` call.
 
