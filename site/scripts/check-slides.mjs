@@ -1,24 +1,42 @@
 #!/usr/bin/env node
-// A slide image or social card from another bench run fails the build.
-// export-slides.mjs records in src/data/slides.json the bench the deck quoted
-// and the SHA-256 of each page's slide and card. The recorded bench must be the
-// one examples/beatles/bench-pin pins. Every image in
+// A slide image or social card from another deck or bench run fails the build.
+// export-slides.mjs records in src/data/slides.json the deck commit, the bench
+// the deck quoted, and the SHA-256 of each page's slide and card. The recorded
+// deck must be the one examples/beatles/deck-pin pins, and the recorded bench
+// the one examples/beatles/bench-pin pins. Every image in
 // public/learn/beatles-bench/ and every card in public/og/ must match its
 // record, and every record needs both. Moving the pin, or replacing an image by
 // hand, then fails until the slides are exported again from a deck that quotes
 // the new bench.
+//
+// The Pages build cannot read the private deck. When DECK names the deck
+// folder, as the deck's own build.sh does, the check also fails when the
+// deck's slides/, order.txt or PDF differ between deck-pin and the deck's
+// HEAD. A deck change then fails until the slides are exported again.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const dir = path.join(site, 'public', 'learn', 'beatles-bench');
 const cards = path.join(site, 'public', 'og');
 const manifest = JSON.parse(fs.readFileSync(path.join(site, 'src', 'data', 'slides.json'), 'utf8'));
 const pin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'bench-pin'), 'utf8').trim();
+const deckPin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'deck-pin'), 'utf8').trim();
 
 const problems = [];
+if (manifest.deck !== deckPin) {
+  problems.push(`the slides come from deck ${String(manifest.deck).slice(0, 8)}, and deck-pin names ${deckPin.slice(0, 8)}`);
+}
+if (process.env.DECK) {
+  const changed = execFileSync('git', ['-C', process.env.DECK, 'diff', '--name-only', deckPin, 'HEAD', '--',
+    'slides', 'order.txt', '*.pdf'], { encoding: 'utf8' }).trim();
+  if (changed) {
+    problems.push(`the deck changed after deck-pin ${deckPin.slice(0, 8)}: ${changed.split('\n').length} files under slides/, order.txt or the PDF`);
+  }
+}
 if (manifest.bench !== pin) {
   problems.push(`the slides come from a deck that quotes bench ${String(manifest.bench).slice(0, 8)}, and the pages pin ${pin.slice(0, 8)}`);
 }

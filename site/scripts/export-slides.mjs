@@ -5,10 +5,12 @@
 //   DECK=path/to/deck npm run export-slides
 //
 // DECK names the talk's deck folder in its own git checkout. The deck's
-// build.sh renders slides/<NN-name>/slide.png and commits it, and common.py
-// names the bench commit the deck quotes as BENCH_AT. This script reads each
-// slide.png from the deck's HEAD commit and writes two images for each page
-// that src/data/slides.json names:
+// build.sh renders slides/<NN-name>/slide.png and commits it, order.txt gives
+// each slide's number, and common.py names the bench the deck quotes as
+// BENCH_AT. This script reads those files at the deck commit in
+// examples/beatles/deck-pin, never at the checkout's HEAD. An entry in
+// src/data/slides.json names its slide by name, and an entry may name its own
+// deck commit to keep a slide the pinned deck dropped. For each entry it writes:
 //
 //   - public/learn/beatles-bench/<page>.webp, 1600 pixels wide. An optional
 //     height keeps only the top of the slide.
@@ -20,7 +22,7 @@
 // SHA-256 in slides.json. check-slides.mjs checks that record in the build.
 // The cards are committed because the Pages workflow cannot read the deck.
 //
-// It stops unless the deck folder is clean and its BENCH_AT names the commit
+// It stops unless the pinned deck's BENCH_AT names the commit
 // examples/beatles/bench-pin pins. It trusts the deck's build to have rendered
 // the committed slides after BENCH_AT moved. It needs ImageMagick's convert
 // with WebP.
@@ -38,10 +40,16 @@ const deck = process.env.DECK;
 if (!deck) { console.error('export-slides: set DECK to the deck folder'); process.exit(2); }
 
 const git = (...args) => execFileSync('git', ['-C', deck, ...args], { maxBuffer: 1 << 28 });
-if (git('status', '--porcelain', '--', '.').length) { console.error('export-slides: the deck folder has local changes'); process.exit(1); }
-const commit = git('rev-parse', 'HEAD').toString().trim();
+const commit = fs.readFileSync(path.join(site, 'examples', 'beatles', 'deck-pin'), 'utf8').trim();
 const prefix = git('rev-parse', '--show-prefix').toString().trim();
-const show = (rel) => git('show', `${commit}:${prefix}${rel}`);
+const show = (rel, at = commit) => git('show', `${at}:${prefix}${rel}`);
+// The folder of a slide by its name, through order.txt at that commit.
+function folder(name, at) {
+  const names = show('order.txt', at).toString().split('\n').map((l) => l.split('#')[0].trim()).filter(Boolean);
+  const i = names.indexOf(name);
+  if (i < 0) { console.error(`export-slides: deck ${at.slice(0, 8)} has no slide named ${name}`); process.exit(1); }
+  return `${String(i + 1).padStart(2, '0')}-${name}`;
+}
 
 const pin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'bench-pin'), 'utf8').trim();
 const at = /^BENCH_AT = "([0-9a-f]+)"$/m.exec(show('common.py').toString());
@@ -57,12 +65,12 @@ const sha = (p) => crypto.createHash('sha256').update(fs.readFileSync(p)).digest
 const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
 fs.mkdirSync(cards, { recursive: true });
 for (const [page, entry] of Object.entries(manifest.slides)) {
-  const png = show(`slides/${entry.slide}/slide.png`);
+  const from = entry.deck || commit;
+  const png = show(`slides/${folder(entry.slide, from)}/slide.png`, from);
   const crop = entry.height ? ['-crop', `1600x${entry.height}+0+0`, '+repage'] : [];
   const target = path.join(out, `${page}.webp`);
   execFileSync('convert', ['png:-', '-resize', '1600x900', ...crop, '-quality', '85', `webp:${target}`], { input: png });
   entry.sha256 = sha(target);
-  delete entry.deck;
   const card = path.join(cards, `${page}.png`);
   execFileSync('convert', ['png:-', '-resize', 'x630', '-background', ground[1], '-gravity', 'center',
     '-extent', '1200x630', '-strip', `png:${card}`], { input: png });
