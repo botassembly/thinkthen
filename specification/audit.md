@@ -199,9 +199,10 @@ For a single `decide` file, audit also writes `batch` when it writes a threshold
 
 | Case | Standard error line |
 | --- | --- |
-| Lines name more than one model | `thinkthen: audit: kept the model for TARGET; the results name more than one model` |
-| A line names no model | `thinkthen: audit: kept the model for TARGET; a result names no model` |
-| Lines name a blank model | `thinkthen: audit: kept the model for TARGET; a result names a blank model` |
+| Lines name more than one model | `thinkthen: audit: kept the model for the question; the results name more than one model` |
+| A line names no model | `thinkthen: audit: kept the model for the question; a result names no model` |
+| Lines name a blank model | `thinkthen: audit: kept the model for the question; a result names a blank model` |
+| A line names a model with a control character, or white space other than a plain space | `thinkthen: audit: kept the model for the question; a result names a model with a control character or white space but a plain space` |
 
 To undo an in-place `--write`, put the old value back by hand or through version control. A second write from the old results refuses, because the digest moved with the threshold. A crash during bare `--write` could leave a short file; that old form creates no temporary file the user did not name.
 
