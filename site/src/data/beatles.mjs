@@ -1,5 +1,5 @@
 // The Beatles Bench pages under /learn/beatles-bench/, in the order of the
-// talk "Jev, ThinkThen, and Beatles Bench". Each page is a short article: the
+// talk "Introducing ThinkThen". Each page is a short article: the
 // slide, the idea, one example, the same example at another bar, and the
 // lesson. A page with no example shows the slide and the idea. `goal` says
 // what the page must communicate. `lesson` says what the runs showed, and

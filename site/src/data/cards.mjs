@@ -15,7 +15,7 @@ export const DEFAULT_CARD = { image: '/brand/thinkthen-card.png', alt: 'ThinkThe
 export function slideCard(key) {
   if (!slides.slides[key] || slides.slides[key].cardOnly) return null;
   const page = PAGES.find((p) => (p.slug || 'beatles-bench') === key);
-  const title = page.slug ? page.title : 'Jev, ThinkThen, and Beatles Bench';
+  const title = page.slug ? page.title : 'Introducing ThinkThen';
   return { image: `/og/${key}.png`, alt: `The talk's slide: ${title}` };
 }
 
