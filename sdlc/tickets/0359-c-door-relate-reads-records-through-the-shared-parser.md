@@ -1,0 +1,25 @@
+# 0359: the C door's `relate` reads records through the shared parser
+
+Status: in progress. Lane claude-1. Branch `ticket/0359-c-door-relate-shared-reader`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 031, `../issues/2026-09-30-c-door-relate-parses-records-with-its-own-reader.md`, filed by ticket 0354.
+
+## Outcome
+
+The C door's `relate` reads each record through the crate's one JSON record parser, `core::Json::parse`. A relate record nested 128 levels deep is refused with `the JSON nests more than 127 levels of arrays and objects, the most this tool reads`, as every other record path refuses it. A record 127 levels deep is accepted. The door keeps its two relate sentences for text that is not JSON and for a record without a string name and kind.
+
+## Evidence
+
+- Starts from: main `ba1e3cb1c`.
+  - `libraries/c/src/door.rs` `entity()` parses each relate record with `serde_json::from_str` into a `serde_json::Value`. It refuses any parse error as `a relate record is not JSON`. It reads `name`, or `text` when `name` is absent, and `kind`. It refuses a record without both as strings with `a relate record is a JSON object with a string name and a string kind`.
+  - Both door paths reach `entity()` through `door::entities`: the typed `thinkthen_relate` (`ffi.rs`) passes each record as its own string, and the JSON `call` (`call.rs`) passes each raw member of `records`.
+  - `core::Json::parse` (`crates/thinkthen/src/core/json.rs`) is the parser that ticket 0354 slice A named as the one record reader. It refuses a duplicate member name, a number that is not finite, and nesting past 127 levels, each with its own sentence, and everything else as `JsonError::Syntax`. It is crate-private, so the door crate cannot call it.
+  - The crate gives host surfaces `#[doc(hidden)]` public items that stay out of the reviewed public inventory: `Engine::annotate_each_with` and `Details::to_scalar_json` are two.
+  - No binding, site page, specification page or test outside `door.rs` names either door relate sentence.
+- Keeps: the sentence `a relate record is not JSON` for text that is not JSON. The sentence `a relate record is a JSON object with a string name and a string kind` for a non-object or a record missing a string name or kind. Reading `name` first, then `text`, then `kind`. The usage code 1, not retryable, and no send for a refused record. The 255-record cap and its sentence. The C ABI, every other door value and every request body.
+- Changes:
+  - `Entity` (`crates/thinkthen/src/public/relate.rs`) gains `#[doc(hidden)] pub fn from_record(record: &str) -> Result<Entity, Error>`. It parses with `Json::parse`, maps `JsonError::Syntax` to `a relate record is not JSON`, and passes the other `JsonError` sentences through as usage errors. It then reads the name, text and kind as `entity()` reads them today and builds the entity through `Entity::new`. Hidden, it adds no declaration to the public inventory.
+  - `door.rs` `entity()` becomes a call to `Entity::from_record`, and the door drops its `serde_json::Value` use there.
+  - Named behavior change, justified by `specification/records.md`, which says the command, the libraries and the C door read records through one parser. A relate record holding one member name twice is refused with `a JSON record holds each member name once, and one name arrived twice`; today the last one wins. A number too large to be finite is refused with `a JSON number is finite, so `NaN` and `Infinity` are refused`; today it reads as not JSON. A record 128 levels deep gets the depth sentence; today it reads as not JSON.
+  - `sdlc/ratchet.json` rises to the measured source total for the new function.
+  - The debt issue moves to `sdlc/issues/closed/` with `Paid: 2026-09-30` and a `Resolution:` line. `CHANGELOG.md` gains one line.
+- Proof: one edge table through the real typed door function in `libraries/c/tests/door/batching.rs`, beside the annotate depth row from 0354. Each row calls `thinkthen_relate` through `tests/c/driver.c` with one record and pins the exact code and reply. The rows are a record 127 levels deep (code 0, `{"edges":[]}`), 128 levels deep (the depth sentence), text that is not JSON (kept sentence), an array (kept shape sentence), an object without `kind` (kept shape sentence), and a repeated member name (the duplicate sentence). A loopback listener counts zero requests. The existing `relate_reads_what_recognize_found` keeps the `name`, then `text` order. Checks: the C door tests, `policy.py`, `tickets`, `inventory`, clippy with `-D warnings` on the two crates, and lint. No binding source changes, so no binding surface check is owed.
+- Defers: the JSON `call` envelope parses `records` with `serde_json` before `entity()` sees them, so a relate record already deep in the envelope is refused there as `the request is not one JSON object`. That limit belongs to the envelope, not the record reader, and no user reported it. The build files it as a debt issue only if the edge rows show a record under 128 levels refused at the envelope.
