@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <string>
 #include <vector>
 #include <thinkthen/door.hpp>
@@ -20,12 +20,15 @@ int main() {
         R"({"name": "Octopus's Garden", "kind": "song"})",
     };
     auto who_sings = tt::relate(engine, spec, names).value;
+    tt::Json::Array sings;
     for (const auto &edge : who_sings.at("edges")) {
-        auto singer = edge.at("source").at("name");
-        auto song = edge.at("target").at("name");
-        std::cout << singer.get<std::string>() << " sings "
-                  << song.get<std::string>() << " "
-                  << edge.at("probability").get<double>()
-                  << "\n";
+        sings.push_back(tt::Json::Array{
+            edge.at("source").at("name"),
+            edge.at("target").at("name"),
+        });
     }
+    assert(tt::Json(sings) == (tt::Json::Array{
+        tt::Json::Array{"Paul McCartney", "Yesterday"},
+        tt::Json::Array{"Ringo Starr", "Octopus's Garden"},
+    }));
 }

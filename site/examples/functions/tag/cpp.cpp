@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <thinkthen/door.hpp>
 
 int main() {
@@ -17,5 +17,5 @@ int main() {
         {"labels", labels},
         {"evidence", message},
     }).at("value");
-    std::cout << fitting_labels.dump() << "\n";
+    assert(fitting_labels == labels);
 }

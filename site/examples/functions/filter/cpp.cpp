@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <thinkthen/door.hpp>
 
 int main() {
@@ -15,7 +15,7 @@ int main() {
         {"filter", question},
         {"records", reviews},
     }).at("value");
-    for (const auto &complaint : complaints) {
-        std::cout << complaint.get<std::string>() << "\n";
-    }
+    assert(complaints == (tt::Json::Array{
+        reviews.at(1), reviews.at(3),
+    }));
 }

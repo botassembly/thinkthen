@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <string>
 #include <vector>
 #include <thinkthen/door.hpp>
@@ -15,11 +15,14 @@ int main() {
         "Thanks for the quick help yesterday!",
         "I want to send this back.",
     };
-    const char *words[] = {"no", "yes", "unsure"};
-    for (const auto &text : texts) {
-        auto is_refund = tt::decide(engine, refund, text);
-        int outcome = static_cast<int>(
-            is_refund.value.outcome);
-        std::cout << words[outcome] << "\n";
+    std::vector<tt::Outcome> expected = {
+        tt::Outcome::yes,
+        tt::Outcome::no,
+        tt::Outcome::notSure,
+    };
+    for (size_t i = 0; i < texts.size(); i++) {
+        auto is_refund =
+            tt::decide(engine, refund, texts[i]);
+        assert(is_refund.value.outcome == expected[i]);
     }
 }

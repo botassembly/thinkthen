@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <string>
 #include <vector>
 #include <thinkthen/door.hpp>
@@ -19,14 +19,16 @@ int main() {
         "My parcel never came, and now "
         "I cannot log in to track it.",
     };
-    for (const auto &text : texts) {
+    std::vector<tt::Json> expected = {
+        "billing", "shipping", "account", nullptr,
+    };
+    for (size_t i = 0; i < texts.size(); i++) {
         auto owner = tt::call(engine, {
             {"choose", question},
             {"options", teams},
             {"threshold", 0.9},
-            {"evidence", text},
+            {"evidence", texts[i]},
         }).at("value");
-        std::cout << (owner.is_null() ? "null"
-            : owner.get<std::string>()) << "\n";
+        assert(owner == expected[i]);
     }
 }

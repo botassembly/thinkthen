@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <thinkthen/door.hpp>
 
 int main() {
@@ -16,6 +16,5 @@ int main() {
         {"find", question},
         {"units", policy},
     }).at("value");
-    auto unit = refund_deadline.at("unit");
-    std::cout << unit.get<std::string>() << "\n";
+    assert(refund_deadline.at("unit") == policy.at(1));
 }

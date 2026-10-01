@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <thinkthen/door.hpp>
 
 int main() {
@@ -22,13 +22,17 @@ int main() {
     const char *text =
         "Maria Chen joined Northwind Freight in Chicago"
         " last spring.";
-    auto names =
+    auto facts =
         tt::recognize(engine, spec.dump(), text).value;
-    for (const auto &name : names.at("entities")) {
-        auto entity = name.at("text").get<std::string>();
-        auto kind = name.at("kind").get<std::string>();
-        auto strength = name.at("strength").get<double>();
-        std::cout << entity << " " << kind << " "
-                  << strength << "\n";
+    tt::Json::Array names;
+    for (const auto &one : facts.at("entities")) {
+        names.push_back(tt::Json::Array{
+            one.at("text"), one.at("kind"),
+        });
     }
+    assert(tt::Json(names) == (tt::Json::Array{
+        tt::Json::Array{"Maria Chen", "PER"},
+        tt::Json::Array{"Northwind Freight", "ORG"},
+        tt::Json::Array{"Chicago", "LOC"},
+    }));
 }

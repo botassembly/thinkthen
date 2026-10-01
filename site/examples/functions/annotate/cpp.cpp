@@ -1,5 +1,5 @@
+#include <cassert>
 #include <fstream>
-#include <iostream>
 #include <thinkthen/door.hpp>
 
 int main() {
@@ -13,5 +13,9 @@ int main() {
         {"annotate", questions},
         {"records", tt::Json::Array{report}},
     }).at("value");
-    std::cout << triage.dump() << "\n";
+    assert(triage.at(0) == tt::Json({
+        {"steps", true},
+        {"area", "login"},
+        {"impact", 1.98},
+    }));
 }

@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <thinkthen/door.hpp>
 
 int main() {
@@ -16,5 +16,5 @@ int main() {
         {"levels", levels},
         {"evidence", text},
     }).at("value");
-    std::cout << urgency.dump() << "\n";
+    assert(urgency.get<double>() == 2.0);
 }

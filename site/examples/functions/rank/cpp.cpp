@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cassert>
 #include <thinkthen/door.hpp>
 
 int main() {
@@ -17,8 +17,10 @@ int main() {
         {"rank", question},
         {"records", inbox},
     }).at("value");
+    tt::Json::Array order;
     for (const auto &one : by_urgency) {
-        std::cout << one.at("record").get<std::string>()
-                  << "\n";
+        order.push_back(one.at("index"));
     }
+    assert(tt::Json(order)
+        == (tt::Json::Array{1, 3, 2, 0}));
 }
