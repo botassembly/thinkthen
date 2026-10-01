@@ -264,7 +264,7 @@ def secret(name):
 
 def status_of(url):
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=60) as reply:
+        with urllib.request.urlopen(urllib.request.Request(url), timeout=60) as reply:
             return reply.status
     except urllib.error.HTTPError as error:
         return error.code

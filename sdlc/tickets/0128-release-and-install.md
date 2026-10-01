@@ -197,6 +197,8 @@ Once per release: `thinkthen-first-run.tar.gz` and its checksum.
 
 Registries: `thinkthen` on crates.io, which covers the command through `cargo install` and the Rust library. `thinkthen` on PyPI as four abi3 wheels with no source distribution. `thinkthen` on npm as one package that carries all four native addons. `thinkthen` on RubyGems as four platform gems. `thinkthen` on R-universe under `botassembly`. The Homebrew formula lives in `botassembly/homebrew-thinkthen`.
 
+Ticket 0355 adds `Botassembly.ThinkThen` on NuGet, `io.github.botassembly:thinkthen-jvm` on Maven Central, `thinkthen_dart` on pub.dev, `botassembly/thinkthen` on Packagist from the root `composer.json`, and the Go module tag `libraries/go/v<version>`. Its "Needs from the release setup" table lists what those jobs read.
+
 ## Decisions
 
 Each is the agent's decision unless marked the coordinator's. Ian can overturn any of them.
