@@ -107,13 +107,24 @@ pub(crate) fn read_within(
     Ok(text)
 }
 
+/// The file a named path means. A relative name sits inside a set
+/// `thinkthen.file_directory`; with no folder it keeps the backend's working
+/// folder. The confined read still judges the joined path.
+fn resolve(path: &str, directory: Option<&str>) -> PathBuf {
+    match directory {
+        Some(held) if Path::new(path).is_relative() => Path::new(held).join(path),
+        _ => PathBuf::from(path),
+    }
+}
+
 /// Read a file a caller named with `@`. A role without
 /// `pg_read_server_files` reads only inside `thinkthen.file_directory`.
 fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String, Error> {
+    let directory = directory.filter(|held| !held.trim().is_empty());
     let confined = if ffi::may_read_files() {
         None
     } else {
-        match directory.filter(|held| !held.trim().is_empty()) {
+        match directory {
             Some(held) => Some(PathBuf::from(held)),
             None => {
                 return Err(call::usage(
@@ -122,7 +133,7 @@ fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String,
             }
         }
     };
-    read_within(Path::new(path), FILE_CAP, confined.as_deref()).map_err(|error| match error {
+    read_within(&resolve(path, directory), FILE_CAP, confined.as_deref()).map_err(|error| match error {
         CheckedReadError::Refused => Error::new(
             ErrorKind::Local,
             format!(
@@ -421,5 +432,38 @@ mod tests {
         writer.join().expect("the writer joins");
         let _ = std::fs::remove_dir_all(&held);
         assert!(!woke, "a confined read opened a path outside its directory");
+    }
+
+    /// 0370: a relative name resolves inside the folder for every role, and
+    /// the confined read still refuses each way out of it.
+    #[test]
+    fn a_relative_name_resolves_inside_the_directory() {
+        use CheckedReadError::Refused;
+        let held = scratch("relative");
+        let base = held.join("base");
+        std::fs::write(base.join("refund.json"), b"{}").expect("the inside file writes");
+        let secret = held.join("outside/secret.json");
+        std::fs::write(&secret, b"{}").expect("the secret writes");
+        std::os::unix::fs::symlink(&secret, base.join("link-out.json")).expect("link");
+        std::os::unix::fs::symlink(held.join("outside"), base.join("hop")).expect("hop");
+        let folder = base.to_str().expect("the folder is text").to_owned();
+        let inside = format!("{folder}/refund.json");
+        let outside = secret.to_str().expect("the secret is text").to_owned();
+        let table: [(&str, Result<&str, &CheckedReadError>); 6] = [
+            ("refund.json", Ok("{}")),
+            ("../outside/secret.json", Err(&Refused)),
+            ("link-out.json", Err(&Refused)),
+            ("hop/secret.json", Err(&Refused)),
+            (&inside, Ok("{}")),
+            (&outside, Err(&Refused)),
+        ];
+        for (name, want) in table {
+            let path = resolve(name, Some(&folder));
+            assert_eq!(read_within(&path, 1024, Some(&base)).as_deref(), want, "{name}");
+        }
+        // With no folder, a relative name keeps the backend's working folder.
+        assert_eq!(resolve("refund.json", None), PathBuf::from("refund.json"));
+        assert_eq!(resolve(&outside, Some(&folder)), secret);
+        let _ = std::fs::remove_dir_all(&held);
     }
 }
