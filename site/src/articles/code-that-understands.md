@@ -43,7 +43,7 @@ ThinkThen turns Jev's three kinds of answer into [ten functions](/functions/). E
 
 The pipeline returns the original lines beside their answers. It doesn't rewrite them.
 
-Diogo Almeida of TypeSafe [lists decisions Jev could make inside a coding agent](https://x.com/completeskeptic/status/2101894250401271876), such as which tools to load for a step and when the agent is done. Each one is a bounded question of this kind.
+Diogo Almeida of TypeSafe [lists decisions Jev could make inside a coding agent](https://x.com/completeskeptic/status/2101894250401271876), such as which tools to load for a step. Each one is a bounded question of this kind.
 
 `annotate` answers a whole set of questions for every record. A set can mix `decide`, `choose`, `score` and `tag` questions in one file. Here is a set with one yes or no, one pick and one scale, saved as `form.json`:
 

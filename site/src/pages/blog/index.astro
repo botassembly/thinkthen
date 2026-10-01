@@ -9,7 +9,7 @@ const posts = [...POSTS]
 ---
 <Base title="Blog" description="Writing about code that knows what you mean.">
   <h1>Blog</h1>
-  <p class="lede">Articles about software that answers questions about text. Drafted with AI agents against a voice guide, reviewed and edited by Ian.</p>
+  <p class="lede">Articles about software that answers questions about text. These articles are drafted with AI agents against a voice guide, reviewed and edited by Ian.</p>
   <div class="grid">
     {posts.map((p) => (
       <a class="tile" href={p.href}><b>{p.title}</b><span>{p.blurb}</span></a>
