@@ -61,12 +61,12 @@ Work outside the lanes:
 | `closed/2026-09-30-release-host-setup-skips-the-duckdb-bridge-crates.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
 | `closed/2026-09-30-crate-job-library-tests-start-a-command-never-built.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
 | `2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md` (Debt 026) | if the rehearsal shows a `sqlite3_` name | waits | the rehearsal's macOS DuckDB jobs |
-| `2026-09-30-no-routine-gate-runs-the-library-only-tests.md` (Debt 028) | no | waits | a second library-only failure at a rehearsal, or before 0.1 |
+| `closed/2026-09-30-no-routine-gate-runs-the-library-only-tests.md` (Debt 028) | no | closed | the pre-0.1 small quick fix landed |
 | `2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | waits | a binding's surface check fails once under load, or before 0.1 |
 | `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | waits | a piped batching test fails once under load, or the input pause gains a test setting |
-| `2026-09-30-contract-sentences-that-drift-from-the-code.md` | yes | waits | a free lane: one Quick Fix for six sentences, from the system grading |
-| `2026-09-30-cache-prune-older-than-panics-on-a-multi-byte-unit.md` | yes | waits | a free lane: a Quick Fix, from the system grading |
-| `2026-09-30-library-timeout-has-no-upper-bound.md` | if a huge timeout panics | waits | a free lane: one test decides, from the system grading |
+| `closed/2026-09-30-contract-sentences-that-drift-from-the-code.md` | yes | closed | the pre-0.1 small quick fix landed |
+| `closed/2026-09-30-cache-prune-older-than-panics-on-a-multi-byte-unit.md` | yes | closed | the pre-0.1 small quick fix landed |
+| `closed/2026-09-30-library-timeout-has-no-upper-bound.md` | if a huge timeout panics | closed | the pre-0.1 small quick fix landed |
 | `2026-09-30-find-returns-no-probability-in-c-interface-languages.md` | yes | waits | a free lane; release QA; `specification/find.md` promises the probability |
 | `2026-09-30-deep-json-record-refused-as-not-valid-json.md` | yes | waits | a free lane; release QA |
 | `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | waits | a free lane; two spec lines the site shows |
