@@ -12,8 +12,8 @@
 // from a saved recording. A page with no bench folder runs from its own
 // files/, and its recordings come from the talk's deck or a recorded run. `see` gives the
 // caption for each example and `headings` the heading above it. `slideNote`
-// names the build behind a slide whose printed output differs from what the
-// current thinkthen prints in the page's example. `source`
+// names the build or run behind a slide whose printed output differs from what
+// the current thinkthen prints in the page's example. `source`
 // links the bench record behind a number in the prose. Prose marks code with
 // backticks and a link as [text](/route/).
 //
@@ -267,23 +267,24 @@ const ARTICLES = {
   },
 
   relate: {
-    title: "relate asks what Jev knows about each pair.",
-    goal: "relate asks Jev about each pair of names your rules allow, and a higher bar removes wrong and right edges alike.",
+    title: "relate asks what Jev knows about the names.",
+    goal: "relate asks Jev about the names your rules allow, a menu gives each song at most one album, and a higher bar does not remove a confident wrong edge.",
+    slideNote: "The slide shows the talk's run, which asked one yes or no question for each pair. The example below marks the song-to-album rule single, so it asks one menu for each song.",
     idea: [
       "`relate` gets a list of names and their kinds, and no text. Jev answers from what it knows. `recognize --relation` links names by what a text states.",
-      "Here four people, five songs, and three albums go in. The rules file names two relations. `sings` runs from a person to a song. `on_album` runs from a song to an album. `relate` asks one yes or no question for each pair a rule allows. Every answer at 0.5 or more comes out as an edge.",
+      "Here four people, five songs, and three albums go in. The rules file names two relations. `sings` runs from a person to a song, and it asks one yes or no question for each pair. One person sings the lead on many songs. `on_album` runs from a song to an album. A song first appears on one album, so the rule says `\"single\": true`. It asks one menu for each song: which listed album, or none of these. Every answer at 0.5 or more comes out as an edge.",
     ],
     files: {
       'names.jsonl': "names.jsonl, the names in",
       'rules.json': "rules.json, the two rules",
     },
     see: {
-      '1-edges': "Twelve edges come out at the default bar of 0.5.",
-      '2-bar': "At 0.8, seven edges stay.",
+      '1-edges': "Nine edges come out at the default bar of 0.5. Each song gets one album.",
+      '2-bar': "At 0.8, eight edges stay.",
     },
     headings: { '2-bar': "Change the bar" },
-    lesson: "Three of the twelve edges are wrong. Jev puts Yesterday, Something, and Octopus's Garden on Revolver. Each of the three songs also gets its right album. No edge says who sings Taxman. George sings it, and Jev's answer fell under the bar. At 0.8, two wrong edges drop out, and Octopus's Garden on Revolver stays at 0.9. Three right edges drop out as well.",
-    takeaway: "A higher bar removes wrong edges and right ones alike.",
+    lesson: "One of the nine edges is wrong. Jev puts Octopus's Garden on Revolver at 0.91. It first appeared on Abbey Road. No edge says who sings Taxman. George sings it, and Jev's answer fell under the bar. At 0.8, Yesterday on Help! drops out at 0.62, and it is right. The wrong edge stays.",
+    takeaway: "A menu gives each song one album. A higher bar cannot remove a confident wrong answer.",
     link: tree('relate'),
   },
 
