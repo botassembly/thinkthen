@@ -5,6 +5,9 @@ Binding metadata comes from `sdlc/surfaces.txt` and lock entries from every trac
 `Cargo.lock`. The site's `install.sh` must equal the root copy. Skipped on purpose:
 `conformance/`, `site/package.json`, the Ruby and TypeScript checks' planted crates,
 the sealed `probes/churn-0086/Cargo.lock`, and `libraries/c/DESIGN.md`'s history.
+Version 0.0.1 is the unreleased placeholder (ticket 0376). At 0.0.1 the command crate and
+the npm package keep their publish holds; at any other version both are gone, and `--set`
+drops them.
 Usage: versions [--tag vX.Y.Z | --set X.Y.Z | --self-test]
 """
 
@@ -73,7 +76,24 @@ PLACES = [
     ("libraries/cpp/CMakeLists.txt", r'(?m)^project\(thinkthen_cpp VERSION (\S+) LANGUAGES CXX\)$', WHOLE),
     *[(p, r'(?m)^  "version": "([^"]+)",$', WHOLE) for p in
       ("libraries/objective-c/source-package.json", "libraries/cobol/source-package.json")],
+    # Ticket 0376: the copies the 0.1.0 dry run found outside this list.
+    *[("libraries/go/thinkthen.go", rf"(?m)^#if {pattern}", PART[i]) for i, pattern in enumerate([
+        r"THINKTHEN_VERSION_MAJOR != (\d+) \|\|", r"THINKTHEN_VERSION_MAJOR != \d+ \|\| THINKTHEN_VERSION_MINOR != (\d+) \|\|",
+        r"THINKTHEN_VERSION_MAJOR != \d+ \|\| THINKTHEN_VERSION_MINOR != \d+ \|\| THINKTHEN_VERSION_PATCH != (\d+)$"])],
+    ("libraries/go/thinkthen_test.go", r'm\["tool"\] != "thinkthen (\d+\.\d+\.\d+)"', WHOLE),
+    *[(p, r'<PackageReference Include="Botassembly\.ThinkThen" Version="([^"]+)"', WHOLE) for p in
+      ("libraries/csharp/tests/Installed.csproj", "libraries/csharp/tests/Smoke.csproj")],
+    *[(p, rf'(?m)^  {name}:\n(?:    .*\n)*?    version: "([^"]+)"$', WHOLE) for p, name in (
+        ("libraries/dart/flutter/pubspec.lock", "thinkthen_dart"),
+        ("libraries/dart/flutter/example/pubspec.lock", "thinkthen_dart"),
+        ("libraries/dart/flutter/example/pubspec.lock", "thinkthen_flutter"),
+        ("libraries/dart/checks/consumers/alpha/pubspec.lock", "thinkthen_dart"),
+        ("libraries/dart/checks/consumers/bravo/pubspec.lock", "thinkthen_dart"))],
 ]
+PLACEHOLDER = "0.0.1"
+# Each publish hold: a file and a pattern whose one group is the whole hold line.
+HOLDS = [(CRATE, r'(?ms)^\[package\]\n(?:(?!^\[).)*?^(publish = false\n)'),
+         ("libraries/typescript/package.json", r'(?m)^(  "private": true,\n)')]
 
 
 def manifests(root):
@@ -173,6 +193,12 @@ def check(root):
             out.append(f"versions: {path} has no version line the check can read")
         elif found is not None and version is not None and found.group(1) != part(version):
             out.append(f"versions: {path} reads {found.group(1)}, and {CRATE} reads {part(version)}")
+    for path, pattern in HOLDS:
+        held = path in texts and re.search(pattern, texts[path]) is not None
+        if version == PLACEHOLDER and path in texts and not held:
+            out.append(f"versions: {path} lost its publish hold, and {CRATE} reads the placeholder {PLACEHOLDER}")
+        elif version not in (None, PLACEHOLDER) and held:
+            out.append(f"versions: {path} keeps its publish hold, and {CRATE} reads {version}")
     for lock, entries in lock_data.items():
         for name, found in sorted(entries.items()):
             if name in names:
@@ -195,6 +221,10 @@ def set_version(root, new):
         if hit is None:
             return [f"versions: {path} has no version line the check can read; nothing was written"]
         texts[path] = text[:hit.start(1)] + part(new) + text[hit.end(1):]
+    for path, pattern in HOLDS if new != PLACEHOLDER else []:
+        hit = re.search(pattern, texts[path])
+        if hit is not None:
+            texts[path] = texts[path][:hit.start(1)] + texts[path][hit.end(1):]
     entry = re.compile(r'(?m)^(name = "([^"]+)"\nversion = ")([^"]+)(")')
     for lock in locks(root):
         changed = entry.sub(lambda m: m.group(1) + (new if m.group(2) in names else m.group(3)) + m.group(4),
@@ -240,7 +270,26 @@ def self_test():
         file.write_text(file.read_text(encoding="utf-8").replace(old, new, 1), encoding="utf-8")
 
     version = re.search(PACKAGE, (REPO / CRATE).read_text(encoding="utf-8")).group(1)
+    major, minor, patch = version.split(".")
     ok = run(REPO, [])[1][0]
+    private = '  "private": true,\n'
+
+    def placeholder_without_hold(root):
+        # Whatever the version, set the placeholder, keep the npm hold, and drop the crate's.
+        set_version(root, PLACEHOLDER)
+        if private not in (root / "libraries/typescript/package.json").read_text(encoding="utf-8"):
+            edit(root, "libraries/typescript/package.json", '  "main"', private + '  "main"')
+        edit(root, CRATE, "publish = false\n", "")
+
+    def release_with_hold(root):
+        set_version(root, "9.8.7")
+        edit(root, "libraries/typescript/package.json", '  "main"', private + '  "main"')
+
+    def dart_lock(root):
+        path = root / "libraries/dart/flutter/example/pubspec.lock"
+        text = path.read_text(encoding="utf-8")
+        at = text.index("  thinkthen_flutter:\n")
+        path.write_text(text[:at] + text[at:].replace(f'version: "{version}"', 'version: "9.9.9"', 1), encoding="utf-8")
     cases = [
         ("agree", lambda r: None, [], (0, [ok])),
         ("r", lambda r: edit(r, "libraries/r/thinkthen/DESCRIPTION", f"Version: {version}", "Version: 9.9.9"), [],
@@ -253,11 +302,11 @@ def self_test():
         ("dart", lambda r: edit(r, "libraries/dart/flutter/example/pubspec.yaml", f"version: {version}",
                                 "version: 9.9.9"), [],
          (1, [f"versions: libraries/dart/flutter/example/pubspec.yaml reads 9.9.9, and {CRATE} reads {version}"])),
-        ("zig-abi", lambda r: edit(r, "libraries/zig/build.zig", "const expected = [_]u32{ 0, 0, 1 };",
-                                   "const expected = [_]u32{ 0, 0, 2 };"), [],
-         (1, [f"versions: libraries/zig/build.zig reads 2, and {CRATE} reads 1"])),
+        ("zig-abi", lambda r: edit(r, "libraries/zig/build.zig", f"const expected = [_]u32{{ {major}, {minor}, {patch} }};",
+                                   f"const expected = [_]u32{{ {major}, {minor}, {int(patch) + 1} }};"), [],
+         (1, [f"versions: libraries/zig/build.zig reads {int(patch) + 1}, and {CRATE} reads {patch}"])),
         ("zig-diagnostic", lambda r: edit(r, "libraries/zig/build.zig",
-                                          'if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 0.0.1");',
+                                          f'if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI {version}");',
                                           'if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 9.9.9");'), [],
          (1, [f"versions: libraries/zig/build.zig reads 9.9.9, and {CRATE} reads {version}"])),
         ("swift-name", lambda r: edit(r, "libraries/swift/Package.swift", 'name: "ThinkThen",',
@@ -273,6 +322,12 @@ def self_test():
         ("lock", lambda r: edit(r, "conformance/consumer/Cargo.lock", f'name = "thinkthen"\nversion = "{version}"',
                                'name = "thinkthen"\nversion = "9.9.9"'), [],
          (1, [f"versions: conformance/consumer/Cargo.lock pins thinkthen 9.9.9, and {CRATE} reads {version}"])),
+        ("dart-lock", dart_lock, [],
+         (1, [f"versions: libraries/dart/flutter/example/pubspec.lock reads 9.9.9, and {CRATE} reads {version}"])),
+        ("placeholder-without-hold", placeholder_without_hold, [],
+         (1, [f"versions: {CRATE} lost its publish hold, and {CRATE} reads the placeholder {PLACEHOLDER}"])),
+        ("release-with-hold", release_with_hold, [],
+         (1, [f"versions: libraries/typescript/package.json keeps its publish hold, and {CRATE} reads 9.8.7"])),
         ("install", lambda r: edit(r, "site/public/install.sh", "#!/bin/sh", "#!/bin/sh "), [],
          (1, ["versions: site/public/install.sh differs from install.sh"])),
         ("tag", lambda r: None, ["--tag", f"v{version}"], (0, [ok])),
@@ -312,6 +367,8 @@ def self_test():
                 zig = (root / "libraries/zig/build.zig").read_text(encoding="utf-8")
                 if "const expected = [_]u32{ 9, 8, 7 };" not in zig or zig.count("package ABI 9.8.7") != 2:
                     got = (got, "--set did not update Zig's numeric ABI and both diagnostics")
+                if any(re.search(pattern, (root / path).read_text(encoding="utf-8")) for path, pattern in HOLDS):
+                    got = (got, "--set past the placeholder kept a publish hold")
             if expected[0] and argv[:1] == ["--set"] and before != {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}:
                 got = (got, "a refused --set changed a file")
             if got != expected:

@@ -265,8 +265,9 @@ def check_member(name: str) -> dict:
     for field in ("edition", "rust-version"):
         if package.get(field) != INHERITED:
             fail("workspace", f"{name} inherits the workspace {field}")
-    if package.get("publish") is not False:
-        fail("workspace", f"{name} is not publishable while the repository is private")
+    # versions holds the command crate's publish flag to its release state (ticket 0376).
+    if name != "thinkthen" and package.get("publish") is not False:
+        fail("workspace", f"{name} is not publishable")
     if package.get("license") != "MIT":
         fail("workspace", f'{name} declares license = "MIT", as ADR 0015 rules')
     if set(manifest.get("dependencies", {})) != ACCEPTED_DEPENDENCIES[name]:
@@ -631,11 +632,13 @@ def deny_failures(name: str, deny: dict) -> list[str]:
     return []
 
 
+# Every package shares the command crate's version (ticket 0376), so these rules read it.
+VERSION = tomllib.loads((REPO / "crates/thinkthen/Cargo.toml").read_text(encoding="utf-8"))["package"]["version"]
 NONCARGO_MANIFESTS = {
     "libraries/php": ("composer.json", {"name": "botassembly/thinkthen", "type": "library", "license": "MIT"}),
-    "libraries/csharp": ("ThinkThen.csproj", {"PackageId": "Botassembly.ThinkThen", "TargetFramework": "net8.0", "Version": "0.0.1"}),
-    "libraries/jvm": ("pom.xml", {"groupId": "io.github.botassembly", "artifactId": "thinkthen-jvm", "version": "0.0.1", "packaging": "jar"}),
-    "libraries/dart": ("pubspec.yaml", {"name": "thinkthen_dart", "version": "0.0.1"}),
+    "libraries/csharp": ("ThinkThen.csproj", {"PackageId": "Botassembly.ThinkThen", "TargetFramework": "net8.0", "Version": VERSION}),
+    "libraries/jvm": ("pom.xml", {"groupId": "io.github.botassembly", "artifactId": "thinkthen-jvm", "version": VERSION, "packaging": "jar"}),
+    "libraries/dart": ("pubspec.yaml", {"name": "thinkthen_dart", "version": VERSION}),
     "libraries/swift": ("Package.swift", {"name": "ThinkThen"}),
     "libraries/zig": ("build.zig.zon", {"name": "thinkthen"}),
     "libraries/go": ("go.mod", {"module": "github.com/botassembly/thinkthen/libraries/go"}),
@@ -681,18 +684,18 @@ def dart_manifest_failures(source: str | None, flutter_source: str | None,
         return ["libraries/dart and its Flutter consumer hold parseable pubspec mappings"]
     held = []
     expected = {
-        "name": "thinkthen_dart", "version": "0.0.1",
+        "name": "thinkthen_dart", "version": VERSION,
         "repository": "https://github.com/botassembly/thinkthen",
         "environment": {"sdk": ">=3.3.0 <4.0.0"},
         "dependencies": {"ffi": "^2.1.4"},
     }
     if any(package.get(key) != value for key, value in expected.items()) or "publish_to" in package:
         held.append("libraries/dart pubspec names the publishable Dart binding and ffi dependency")
-    flutter_expected = {"name": "thinkthen_flutter", "version": "0.0.1", "publish_to": "none",
+    flutter_expected = {"name": "thinkthen_flutter", "version": VERSION, "publish_to": "none",
                         "dependencies": {"flutter": {"sdk": "flutter"}, "thinkthen_dart": {"path": ".."}}}
     if any(flutter.get(key) != value for key, value in flutter_expected.items()):
         held.append("libraries/dart/flutter stays private and depends on the sibling Dart package")
-    example_expected = {"name": "thinkthen_flutter_example", "version": "0.0.1", "publish_to": "none",
+    example_expected = {"name": "thinkthen_flutter_example", "version": VERSION, "publish_to": "none",
                         "dependencies": {"flutter": {"sdk": "flutter"},
                                          "thinkthen_flutter": {"path": ".."},
                                          "thinkthen_dart": {"path": "../.."}}}
@@ -716,7 +719,7 @@ def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
             package = json.loads(source)
         except (json.JSONDecodeError, TypeError):
             package = None
-        expected = {"name": NONCARGO_MANIFESTS[name][1]["name"], "version": "0.0.1",
+        expected = {"name": NONCARGO_MANIFESTS[name][1]["name"], "version": VERSION,
                     "source_only": True, "native_dependency": "thinkthen-c", "bundles_native": False}
         if package != expected:
             return [f"{name} source manifest names a separate matching C native dependency and no bundled binary"]
@@ -726,7 +729,7 @@ def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
             return ["libraries/go go.mod names the Go 1.22 source module without remote dependencies"]
         return []
     if name == "libraries/cpp":
-        if (not re.search(r'(?m)^project\(thinkthen_cpp VERSION 0\.0\.1 LANGUAGES CXX\)$', source) or
+        if (not re.search(rf'(?m)^project\(thinkthen_cpp VERSION {re.escape(VERSION)} LANGUAGES CXX\)$', source) or
                 not re.search(r'(?m)^cmake_minimum_required\(VERSION 3\.18\)$', source) or
                 'install(EXPORT ThinkThenCppTargets' not in source or
                 'configure_package_config_file(cmake/ThinkThenCppConfig.cmake.in' not in source or
@@ -745,7 +748,7 @@ def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
     if name == "libraries/zig":
         module = re.search(r'(?m)^\s*\.name\s*=\s*\.([A-Za-z_][A-Za-z_0-9]*)\s*,', source)
         if (module is None or module[1] != "thinkthen" or
-                not re.search(r'\.version\s*=\s*"0\.0\.1"', source) or
+                not re.search(rf'\.version\s*=\s*"{re.escape(VERSION)}"', source) or
                 not re.search(r'\.minimum_zig_version\s*=\s*"0\.15\.2"', source) or
                 not re.search(r'\.dependencies\s*=\s*\.\{\s*\}', source) or
                 '"src"' not in source or '"build.zig"' not in source):
