@@ -324,24 +324,24 @@ impl BridgeStop {
 /// One worker's answer. The caller waits on a mutex and condition variable,
 /// never on a channel: on macOS a channel wait parks on a semaphore that a
 /// forked child cannot use, and the child of a host that asked once crashes.
-struct Answer<T>(Mutex<Option<Result<T, String>>>, Condvar);
+type Answer<T> = (Mutex<Option<Result<T, String>>>, Condvar);
 
-const NO_ANSWER: &str = "thinkthen defect: the engine worker ended with no answer";
-
-/// Gives the answer, or a defect when the worker ends without one.
-struct Giver<T>(Arc<Answer<T>>);
+/// Gives the worker's answer when dropped, or a defect when it has none.
+struct Giver<T>(Arc<Answer<T>>, Option<Result<T, String>>);
 
 impl<T> Giver<T> {
-    fn give(&self, result: Result<T, String>) {
-        let mut slot = self.0.0.lock().unwrap_or_else(PoisonError::into_inner);
-        slot.get_or_insert(result);
-        self.0.1.notify_one();
+    fn keep(mut self, result: Result<T, String>) {
+        self.1 = Some(result);
     }
 }
 
 impl<T> Drop for Giver<T> {
     fn drop(&mut self) {
-        self.give(Err(NO_ANSWER.to_owned()));
+        let given = self.1.take().unwrap_or_else(|| {
+            Err("thinkthen defect: the engine worker ended with no answer".to_owned())
+        });
+        *self.0.0.lock().unwrap_or_else(PoisonError::into_inner) = Some(given);
+        self.0.1.notify_one();
     }
 }
 
@@ -358,14 +358,14 @@ pub(crate) fn run_detached<T: Send + 'static>(
     }
     let token = CancelToken::new();
     let owned = token.clone();
-    let answer = Arc::new(Answer(Mutex::new(None), Condvar::new()));
-    let giver = Giver(Arc::clone(&answer));
+    let answer: Arc<Answer<T>> = Arc::new((Mutex::new(None), Condvar::new()));
+    let giver = Giver(Arc::clone(&answer), None);
     std::thread::Builder::new()
         .name("thinkthen-duckdb-call".to_owned())
         .spawn(move || {
-            let result = panic::caught(|| work(owned))
-                .unwrap_or_else(|_| Err("thinkthen defect: the engine worker panicked".to_owned()));
-            giver.give(result);
+            giver.keep(panic::caught(|| work(owned)).unwrap_or_else(|_| {
+                Err("thinkthen defect: the engine worker panicked".to_owned())
+            }));
         })
         .map_err(|_| "thinkthen defect: the engine worker could not start".to_owned())?;
     loop {
@@ -379,7 +379,6 @@ pub(crate) fn run_detached<T: Send + 'static>(
             .wait_timeout_while(slot, Duration::from_millis(10), |slot| slot.is_none())
             .unwrap_or_else(PoisonError::into_inner);
         if let Some(result) = slot.take() {
-            drop(slot);
             if stop.stopped() {
                 token.cancel();
                 return Err(cancelled());

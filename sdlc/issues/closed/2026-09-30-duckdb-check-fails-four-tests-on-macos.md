@@ -1,4 +1,4 @@
-Status: closed 2026-10-01 by the quick fix on `ticket/qf-duckdb-macos-fork-and-test-layouts`. Found on the M5 on 2026-09-30 while confirming Debt 026 at commit `91878c233`. The fork crash was a real macOS bug in the extension; the other three were test assumptions.
+Status: closed 2026-10-01 by the quick fix "Land quick fix: DuckDB waits for answers without a channel, so a macOS forked child answers". Found on the M5 on 2026-09-30 while confirming Debt 026 at commit `91878c233`. The fork crash was a real macOS bug in the extension; the other three were test assumptions.
 
 Kind: bug
 
@@ -40,6 +40,6 @@ The fork bug: the child crashed with SIGTRAP in 7 of 10 runs. The crash report r
 
 `run_detached` now waits on a `Mutex` and `Condvar`, which use pthread calls and no Mach port. The worker still reports a defect if it ends without an answer. With the fix, the fork case passed 19 of 20 runs on the M5. The one failure came in the parent before the fork: the backend closed a pooled connection, the race Debt 020 records.
 
-Proof at `f8c47856a`: the full `databases/duckdb/check.sh` passed on Linux (128 cases) and on the M5 (127 cases and the `strace` skip). On the M5, `cargo deny` was stubbed because that host's cargo-deny 0.20.2 lacks `--config`; it ran on Linux. One earlier M5 run failed `sixteen_held_plans_refuse_without_eviction` with 14 of 16 sends held. That case then failed 1 of 40 runs on the fix and 0 of 40 on main. It has failed the same way on main before (see the 2026-09-30 progress log in `cleanup-2026-09-30.md`). Its held sends run on the worker threads, which the fix leaves unchanged.
+Proof at `f8c47856a`, before the review simplified the answer handoff and raised the ceilings: the full `databases/duckdb/check.sh` passed on Linux (128 cases) and on the M5 (127 cases and the `strace` skip). On the M5, `cargo deny` was stubbed because that host's cargo-deny 0.20.2 lacks `--config`; it ran on Linux. One earlier M5 run failed `sixteen_held_plans_refuse_without_eviction` with 14 of 16 sends held. That case then failed 1 of 40 runs on the fix and 0 of 40 on main. It has failed the same way on main before (see the 2026-09-30 progress log in `cleanup-2026-09-30.md`). Its held sends run on the worker threads, which the fix leaves unchanged.
 
 Other surfaces wait on channels on the calling thread too. `../2026-10-01-macos-forked-children-crash-on-a-channel-wait.md` owns them.
