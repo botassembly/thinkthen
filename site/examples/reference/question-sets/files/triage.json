@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "threshold": "0.2:0.8",
+  "questions": {
+    "urgent": {
+      "decide": "Does the customer need an answer today?",
+      "on": ["/subject", "/body"]
+    },
+    "team": {
+      "choose": "Which team owns this?",
+      "options": {
+        "billing": "Invoices, fees, and refunds.",
+        "shipping": "Parcels and delivery."
+      },
+      "on": "/body"
+    }
+  }
+}

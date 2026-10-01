@@ -1,0 +1,13 @@
+{
+  "urgent": [
+    "/subject",
+    "/body"
+  ],
+  "team": [
+    "/body"
+  ]
+}
+{
+  "q1": "The text is {\"subject\":\"Refund\",\"body\":\"Please refund the fee.\"}. Does the customer need an answer today?",
+  "q2": "The text is \"Please refund the fee.\". Which team owns this?"
+}

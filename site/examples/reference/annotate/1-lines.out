@@ -1,0 +1,8 @@
+{
+  "input": "Steps: click Log in. Nobody gets in.",
+  "value": {
+    "steps": true,
+    "area": "login",
+    "impact": 1.98
+  }
+}

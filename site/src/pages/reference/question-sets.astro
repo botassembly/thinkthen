@@ -1,0 +1,45 @@
+---
+// Goal: give the rules a question set for annotate follows, and show how on picks the part of each record a question reads.
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { REFERENCE_PAGES, referencePage, QUESTION_SETS_SEE } from '../../data/reference.mjs';
+import { captioned, files } from '../../data/samples.mjs';
+
+const page = referencePage('question-sets');
+const dir = 'reference/question-sets';
+const [plan] = captioned(dir, QUESTION_SETS_SEE);
+const [triage] = files(dir);
+const [form] = files('reference/annotate');
+const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/annotate.md#the-question-set';
+---
+<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'The rules a question set for annotate follows, and how on picks the part of each record a question reads.' }} name="Reference">
+  <h1>Question sets</h1>
+  <p class="lede">A question set is one JSON file that holds every question <code>annotate</code> asks of each record.</p>
+  <Code code={form.text} file={form.name} caption={`${form.name}, the smallest useful set: three questions and nothing else`} />
+  <p>A set may also carry a top-level threshold and say which part of each record a question reads.</p>
+  <Code code={triage.text} file={triage.name} caption={`${triage.name}, a band for every decide question, and on`} />
+
+  <h2 id="top-level">The top level</h2>
+  <ul>
+    <li><code>version</code> is the number 1.</li>
+    <li><code>questions</code> holds the questions, each under its name.</li>
+    <li><code>threshold</code> applies to every <code>decide</code> question that names none. Here <code>urgent</code> takes the band 0.2:0.8.</li>
+    <li><code>profile</code> names the backend profile the thresholds were set for.</li>
+    <li><code>batch</code> is <code>"max"</code> or a whole number above 0. A flag or <code>THINKTHEN_BATCH</code> outranks it.</li>
+  </ul>
+  <p>Those five keys are the only ones allowed. The set names no address, model or output format.</p>
+
+  <h2 id="questions">Each question</h2>
+  <p>A name uses lowercase letters, digits and underscores, and is not empty. The name becomes the answer's field in the output. Each question has the shape of one <a href="/functions/question-file/">question file</a>: one of <code>decide</code>, <code>choose</code>, <code>tag</code> or <code>score</code>, with its own options, levels and threshold. A question may not carry <code>batch</code> or its own <code>profile</code>.</p>
+
+  <h2 id="on">on</h2>
+  <p><code>on</code> picks the part of the record a question reads. It is one JSON Pointer or a list of them, read inside the record or inside what <code>--field</code> selected. Several pointers send one object, keyed by the last part of each pointer. Two pointers that end in the same name are an error in the file. A question with no <code>on</code> reads the whole record, or what <code>--field</code> selected.</p>
+  <Terminal run={plan} caption={plan.see} />
+  <p>A text record has no parts, so a question with <code>on</code> refuses it at exit 2. Under <code>--lines</code>, such a set is refused before any input is read.</p>
+
+  <h2 id="refusals">What the file refuses</h2>
+  <p>An unknown key anywhere in the file, a missing <code>questions</code> object, a wrong <code>version</code> and a bad name each stop the run at exit 5, before any request. The message names the key at fault.</p>
+
+  <p class="pagelinks"><a href="/reference/annotate/">annotate's edge cases</a> · <a href="/functions/question-file/">Question files</a> · <a href={spec}>The question-set specification</a></p>
+</SidePage>

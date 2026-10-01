@@ -4,8 +4,8 @@
 //
 //   - No line over 60 characters, apart from the exempt lines below.
 //   - A library sample asserts. It never prints.
-//   - No example asks for --details. Pages may name it (checklist ruling of
-//     2026-09-30); examples wait for the annotate edge cases.
+//   - No example asks for --details, except on the annotate edge-case page
+//     under examples/reference/annotate/ (checklist ruling of 2026-09-30).
 //   - Each function page opens with one command example of 10 to 25
 //     lines, script and output together (Ian, 2026-09-28).
 //   - Code carries no comments.
@@ -29,6 +29,10 @@ const here = fileURLToPath(import.meta.url);
 const site = path.resolve(path.dirname(here), '..');
 const root = path.join(site, 'examples');
 const bench = path.join(root, 'beatles', 'bench');
+
+// The one page whose examples may ask for --details.
+const DETAILS_PAGE = 'reference/annotate/';
+
 const WIDTH = 60;
 // The lines a function page's example may show, script and output together.
 const EXAMPLE_LINES = { min: 10, max: 25 };
@@ -49,6 +53,11 @@ const EXEMPT = [
     name: 'a record filter printed whole',
     why: 'filter prints each record it keeps byte for byte.',
     test: (line, file) => file === 'how-tos/join-two-tables-by-meaning/1-join.out',
+  },
+  {
+    name: 'the annotate clash refusal',
+    why: 'thinkthen annotate prints its name-clash refusal as one line, and the page quotes it exactly.',
+    test: (line, file) => file.startsWith('reference/annotate/') && file.endsWith('.out') && /^thinkthen: the record already holds `[a-z0-9_]+`, so that question cannot be appended$/.test(line),
   },
   {
     name: 'the diff warning',
@@ -163,7 +172,7 @@ function main() {
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
     problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
-    if (ext === '.sh' && /--details\b/.test(text)) problems.push(`examples/${rel}: asks for --details. Examples leave it out for now.`);
+    if (ext === '.sh' && /--details\b/.test(text) && !rel.startsWith(DETAILS_PAGE)) problems.push(`examples/${rel}: asks for --details. Only examples under examples/${DETAILS_PAGE} may.`);
   }
 
   const lineCount = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\n+$/, '').split('\n').length : 0);
