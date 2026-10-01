@@ -6,6 +6,9 @@ use super::super::{Counters, read};
 use super::folder;
 use crate::engine::error::Error;
 
+/// A label, the month's bytes if any, its mode, and the sent count or sentence.
+type Case<'a> = (&'a str, Option<&'a [u8]>, u32, Result<u64, &'a str>);
+
 /// The writer makes `.lock` before any month, so a folder without one holds
 /// nothing thinkthen wrote. Ticket 0360 refused such a folder, so two runs
 /// that started together on a new folder could refuse each other; main then
@@ -20,7 +23,7 @@ fn a_folder_without_a_lock_reads_its_months_without_the_lock() {
     let valid = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":2,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
     let malformed = "cannot read the usage totals: 2026-09.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.";
     let unsafe_mode = "cannot read the usage totals: 2026-09.json has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it out of the usage folder that thinkthen status names.";
-    let cases: [(&str, Option<&[u8]>, u32, Result<u64, &str>); 5] = [
+    let cases: [Case<'_>; 5] = [
         ("empty", None, 0o600, Ok(0)),
         ("valid", Some(valid), 0o600, Ok(2)),
         ("garbage", Some(b"garbage\n"), 0o600, Err(malformed)),

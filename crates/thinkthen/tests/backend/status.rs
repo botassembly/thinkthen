@@ -310,40 +310,35 @@ fn a_malformed_usage_month_reports_unavailable_counts_and_the_fix() {
     let with_lock: &[(&str, &[u8])] = &[(".lock", b""), ("2026-09.json", b"")];
     let without_lock: &[(&str, &[u8])] = &[("2026-09.json", b"garbage\n")];
     for (label, files) in [("strict", with_lock), ("strict-no-lock", without_lock)] {
-        malformed_status(label, files);
+        let (home, usage) = planted(label, files);
+        let month = files.last().map(|(_, bytes)| *bytes).unwrap_or_default();
+        let output = run::output(command(&home).args(["status", "--json"])).expect("status");
+        assert_eq!(output.status.code(), Some(0), "{label}");
+        let sentence = format!(
+            "thinkthen: cannot read the usage totals: {} has invalid contents. Move it aside, and counting starts again.\n",
+            usage.join("2026-09.json").display()
+        );
+        assert_eq!(String::from_utf8_lossy(&output.stderr), sentence, "{label}");
+        let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
+        assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
+        assert_eq!(value["usage"]["total"], serde_json::Value::Null);
+        assert_eq!(
+            value["cache"]["path"],
+            home.join(".cache/thinkthen").to_string_lossy().as_ref()
+        );
+        let human = run::output(command(&home).arg("status")).expect("human status");
+        assert_eq!(human.status.code(), Some(0));
+        assert_eq!(String::from_utf8_lossy(&human.stderr), sentence);
+        let text = String::from_utf8(human.stdout).expect("text");
+        assert!(text.ends_with("month_requests_sent unavailable\nmonth_retries unavailable\nmonth_input_tokens unavailable\nmonth_output_tokens unavailable\nmonth_cache_answers unavailable\ntotal_requests_sent unavailable\ntotal_retries unavailable\ntotal_input_tokens unavailable\ntotal_output_tokens unavailable\ntotal_cache_answers unavailable\n"), "{text}");
+        assert_eq!(fs::read(usage.join("2026-09.json")).expect("after"), month);
+        assert!(!usage.join(".update.tmp").exists());
+        assert_eq!(
+            usage.join(".lock").exists(),
+            files.iter().any(|(name, _)| *name == ".lock"),
+            "{label}: status made a lock"
+        );
     }
-}
-
-#[cfg(unix)]
-fn malformed_status(label: &str, files: &[(&str, &[u8])]) {
-    let (home, usage) = planted(label, files);
-    let month = files.last().map(|(_, bytes)| *bytes).unwrap_or_default();
-    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
-    assert_eq!(output.status.code(), Some(0), "{label}");
-    let sentence = format!(
-        "thinkthen: cannot read the usage totals: {} has invalid contents. Move it aside, and counting starts again.\n",
-        usage.join("2026-09.json").display()
-    );
-    assert_eq!(String::from_utf8_lossy(&output.stderr), sentence, "{label}");
-    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
-    assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
-    assert_eq!(value["usage"]["total"], serde_json::Value::Null);
-    assert_eq!(
-        value["cache"]["path"],
-        home.join(".cache/thinkthen").to_string_lossy().as_ref()
-    );
-    let human = run::output(command(&home).arg("status")).expect("human status");
-    assert_eq!(human.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&human.stderr), sentence);
-    let text = String::from_utf8(human.stdout).expect("text");
-    assert!(text.ends_with("month_requests_sent unavailable\nmonth_retries unavailable\nmonth_input_tokens unavailable\nmonth_output_tokens unavailable\nmonth_cache_answers unavailable\ntotal_requests_sent unavailable\ntotal_retries unavailable\ntotal_input_tokens unavailable\ntotal_output_tokens unavailable\ntotal_cache_answers unavailable\n"), "{text}");
-    assert_eq!(fs::read(usage.join("2026-09.json")).expect("after"), month);
-    assert!(!usage.join(".update.tmp").exists());
-    assert_eq!(
-        usage.join(".lock").exists(),
-        files.iter().any(|(name, _)| *name == ".lock"),
-        "{label}: status made a lock"
-    );
 }
 
 /// Another process holding the usage lock makes status wait at most one
