@@ -46,7 +46,10 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# shellcheck disable=SC2046 # pkg-config prints flags to split.
 	cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror $(pkg-config --cflags thinkthen) tests/c/driver.c \
 		$(pkg-config --libs thinkthen) -Wl,-rpath,"$libdir" -o "$cache/driver"
-	cd ../.. && backend_start && cd libraries/c
+	# backend_start builds into the root workspace's relative target folder.
+	cd ../..
+	backend_start
+	cd libraries/c
 	base=http://127.0.0.1:$port/generic/v1 question='{"decide":"asks for a refund"}' text='Refund me.'
 	ask() {
 		folder=$1

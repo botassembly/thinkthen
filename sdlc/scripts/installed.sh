@@ -70,18 +70,19 @@ native_install() {
 # The C library anchors the read: a read that finds neither libc nor libSystem fails.
 own_panic_hook() {
 	case $(uname -s) in
-	Darwin) own_tools='otool nm' own_libc=libSystem ;;
-	*) own_tools='readelf nm' own_libc=libc.so.6 ;;
+	Darwin) own_tools='otool nm' own_libc=libSystem own_mac=1 ;;
+	*) own_tools='readelf nm' own_libc=libc.so.6 own_mac= ;;
 	esac
 	for own_tool in $own_tools; do
 		command -v "$own_tool" >/dev/null 2>&1 || { echo "not run: no $own_tool to read ${1##*/}" >&2; exit 77; }
 	done
-	if [ "$(uname -s)" = Darwin ]; then
+	if [ -n "$own_mac" ]; then
 		own_needed=$(otool -L "$1") && own_imported=$(nm -u "$1") && own_exported=$(nm -gU "$1") ||
 			{ echo "FAIL ${1##*/} cannot be read" >&2; exit 1; }
 	else
-		own_needed=$(readelf -d "$1" | sed -n 's/.*(NEEDED).*\[\(.*\)\]$/\1/p') && own_imported=$(nm -D --undefined-only "$1") &&
+		own_needed=$(readelf -d "$1") && own_imported=$(nm -D --undefined-only "$1") &&
 			own_exported=$(nm -D --defined-only "$1") || { echo "FAIL ${1##*/} cannot be read" >&2; exit 1; }
+		own_needed=$(printf '%s\n' "$own_needed" | sed -n 's/.*(NEEDED).*\[\(.*\)\]$/\1/p')
 	fi
 	printf '%s\n' "$own_needed" | grep -q "$own_libc" || { echo "FAIL ${1##*/} names no $own_libc" >&2; exit 1; }
 	! printf '%s\n' "$own_needed" | grep -q 'libstd-' || { echo "FAIL ${1##*/} links a Rust standard library" >&2; exit 1; }

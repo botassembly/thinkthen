@@ -43,8 +43,12 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     # Ticket 0374: the installed addon keeps its own panic hook, and the token cap variable
     # refuses before any send, counted at the test's own backend.
     own_panic_hook "$project/node_modules/thinkthen/thinkthen-$expected.node"
-    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 \
-        --test-name-pattern='^the token cap variable refuses a call before any request$' tests/settings.test.mjs)
+    # A renamed test would match nothing and pass, so its own ok line is pinned.
+    capped=$(cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 --test-reporter=tap \
+        --test-name-pattern='^the token cap variable refuses a call before any request$' tests/settings.test.mjs) ||
+        fail "the token cap test failed, installed"
+    printf '%s\n' "$capped" | grep -qx 'ok 1 - the token cap variable refuses a call before any request' ||
+        fail "the token cap test did not run, installed"
     echo 'typescript: pass, installed'
     exit 0
 fi

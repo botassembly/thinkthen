@@ -168,8 +168,10 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   # Ticket 0374: the loaded extension keeps its own panic hook, and the token cap variable
   # refuses before any send, counted at the test's own backend.
   own_panic_hook "$("$RUBY" -e 'require "thinkthen"; puts $LOADED_FEATURES.grep(%r{/thinkthen/thinkthen\.(so|bundle)\z})')"
-  sh "$LIMIT" 120 "$RUBY" -I lib tests/test_engine_settings.rb -n test_the_token_cap_variable_refuses_before_any_request ||
+  # A renamed test would run nothing and pass, so the one run is pinned.
+  capped=$(sh "$LIMIT" 120 "$RUBY" -I lib tests/test_engine_settings.rb -n test_the_token_cap_variable_refuses_before_any_request) ||
     fail "the token cap test failed, installed"
+  case $capped in *"1 runs, "*" 0 failures, 0 errors, "*) ;; *) fail "the token cap test did not run once, installed" ;; esac
   echo "check ruby: pass, installed"
   exit 0
 fi
