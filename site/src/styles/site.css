@@ -156,14 +156,59 @@ button:focus-visible, a:focus-visible, summary:focus-visible {
   outline: 2px solid var(--think); outline-offset: 2px;
 }
 
+/* The footer is a short sitemap: three columns of links, the exit-code
+   legend, then a band with the mark, the maker and the license. On a phone
+   the columns sit two across and the band stacks. */
 footer.bottom {
-  border-top: 1px solid var(--line); margin-top: 3.5rem; padding: 1.4rem 0 2.5rem;
-  color: var(--muted); font-size: .88rem;
+  border-top: 1px solid var(--line); background: var(--card); margin-top: 3.5rem;
+  padding: 2rem 0 2.2rem; color: var(--muted); font-size: .88rem;
 }
-footer.bottom .wrap { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; }
+footer.bottom a { color: var(--ink); text-decoration: none; }
+footer.bottom a:hover { color: var(--think); text-decoration: underline; }
+footer.bottom .foot-cols {
+  display: grid; gap: 1.4rem 1rem; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+footer.bottom .foot-head {
+  margin: 0 0 .5rem; font-family: var(--mono); font-size: .76rem; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+}
+footer.bottom ul { list-style: none; margin: 0; padding: 0; }
+footer.bottom li { margin: .3rem 0; }
+footer.bottom li a { display: inline-flex; align-items: center; gap: .4rem; vertical-align: top; }
+footer.bottom li .icon { display: block; }
+footer.bottom .icon { flex: none; color: var(--muted); }
 /* Each exit code and its word wrap as one piece. */
-footer.bottom .legend { display: flex; flex-wrap: wrap; gap: 0 .6rem; }
+footer.bottom .legend {
+  display: flex; flex-wrap: wrap; gap: 0 .6rem; margin: 1.6rem 0 0; padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
 footer.bottom .legend .exit { white-space: nowrap; margin-right: 0; }
+footer.bottom .foot-band {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .9rem 1.4rem; margin-top: 1rem;
+}
+footer.bottom .foot-mark, footer.bottom .foot-maker { display: inline-flex; align-items: center; gap: .55rem; }
+footer.bottom .foot-mark img { border-radius: 6px; }
+footer.bottom .foot-maker img { height: 24px; width: auto; }
+/* The footer and the About page show the logo drawn for the theme. */
+:is(footer.bottom, .about-logo) .on-light { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) :is(footer.bottom, .about-logo) .on-dark { display: none; }
+  :root:not([data-theme="dark"]) :is(footer.bottom, .about-logo) .on-light { display: inline; }
+}
+:root[data-theme="light"] :is(footer.bottom, .about-logo) .on-dark { display: none; }
+:root[data-theme="light"] :is(footer.bottom, .about-logo) .on-light { display: inline; }
+:root[data-theme="dark"] :is(footer.bottom, .about-logo) .on-dark { display: inline; }
+:root[data-theme="dark"] :is(footer.bottom, .about-logo) .on-light { display: none; }
+/* The About page's links to the author and his company. */
+.about-links { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
+.about-links a { display: inline-flex; align-items: center; gap: .45rem; }
+.about-logo { display: inline-block; margin: .2rem 0 .8rem; }
+.about-logo img { height: 32px; width: auto; }
+@media (max-width: 40rem) {
+  footer.bottom .foot-cols { grid-template-columns: 1fr 1fr; }
+  footer.bottom .foot-band { flex-direction: column; align-items: flex-start; }
+}
 
 main { flex: 1 0 auto; padding: 2rem 0 1rem; }
 
@@ -198,11 +243,12 @@ table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: .85rem; }
 
-/* A flag, a key name, an address or a file name in a table stays whole. A
-   path or an address may break after a slash, where src/lib/path.mjs puts a
-   <wbr>. */
+/* A flag, a key name, an address, a path or a file name in a table stays
+   whole while the table has columns. A browser breaks at a <wbr> even in
+   nowrap text, so the <wbr> hides. On a phone or a tablet, a long path or
+   address may break after a slash, where src/lib/path.mjs puts a <wbr>. */
 td code { white-space: nowrap; }
-td code.path { white-space: normal; }
+td code wbr, code.short wbr { display: none; }
 
 /* On a phone or a tablet each table row stacks into a card, and the page
    never scrolls sideways. The first cell leads the card. In a table of three
@@ -232,6 +278,7 @@ td code.path { white-space: normal; }
     color: var(--muted); font-size: .78rem; font-weight: 600;
   }
   td code { white-space: normal; font-size: .84em; }
+  td code:not(.short) wbr { display: inline; }
 }
 
 .grid { display: grid; gap: .8rem; grid-template-columns: minmax(0, 1fr); margin: 1rem 0 1.6rem; }
@@ -244,6 +291,13 @@ td code.path { white-space: normal; }
   .grid:has(> :last-child:nth-child(3n+2)) > :nth-last-child(-n+2),
   .grid:has(> :last-child:nth-child(3n+1)) > :nth-last-child(-n+4) { grid-column: span 3; }
   .grid > :only-child { grid-column: span 3; }
+}
+/* Ten cards, such as the ten functions, sit two by five on a phone or a
+   tablet and five by two on a wide screen. No width leaves one alone. */
+.grid:has(> :nth-child(10):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid:has(> :nth-child(10):last-child) > :nth-child(n) { grid-column: auto; }
+@media (min-width: 60rem) {
+  .grid:has(> :nth-child(10):last-child) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 .tile {
   display: block; background: var(--card); border: 1px solid var(--line); border-radius: 10px;
@@ -378,6 +432,10 @@ ol.talk li { text-wrap: pretty; }
 
 
 p code, li code { white-space: nowrap; }
+/* A short code span never splits, on any screen. scripts/label-tables.mjs
+   marks each span of 24 characters or fewer. The rule outranks every rule
+   above and each page's own style that lets code wrap. */
+code.short { white-space: nowrap !important; }
 /* On a screen narrower than 375 px, a code span in prose too long for the
    line may wrap. Wider screens keep it whole. */
 @media (max-width: 374px) {

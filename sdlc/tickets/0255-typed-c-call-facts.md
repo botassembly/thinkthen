@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md librar
 
 # 0255: Give typed C calls their own facts
 
-Status: implemented and accepted by fresh High code/API review at `41114d202329d93f0abbe5538c79453e20235dc9`. The coordinator integrated the reviewed source and focused Linux installed proof. ADR 0101 preserves the legacy bare exports; other platform packages and the broader facts issue remain open. High design review accepted `d97f2735` before implementation.
+Status: landed. Implemented and accepted by fresh High code/API review at `41114d202329d93f0abbe5538c79453e20235dc9`. The coordinator integrated the reviewed source and focused Linux installed proof. ADR 0101 preserves the legacy bare exports; other platform packages and the broader facts issue remain open. High design review accepted `d97f2735` before implementation.
 
 ## Outcome and retained contract
 

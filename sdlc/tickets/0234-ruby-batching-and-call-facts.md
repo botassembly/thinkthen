@@ -6,7 +6,7 @@ opens: sdlc/issues/closed/2026-09-26-batching-design.md sdlc/issues/2026-09-26-e
 
 # 0234: Batch Ruby calls and return their call facts
 
-Status: High code review accepted `c513b98a`; merged current main `73932ef4` and passed focused Ruby integration proof. Integrated with the verified landing; B12e is complete. The Ruby part of J6 is proved; R and release-package proof remain separately tracked. The High design reviewer accepted `4b9bde49`; build source began at main `fa6774b1`. Owner: Codex. The [preflight](../records/0234-ruby-batching-preflight.md) maps the original paths and inherited behavior; the [build record](../records/0234-ruby-batching-build.md) and [review record](../records/0234-ruby-batching-code-review.md) give the checks and acceptance. Ruby source is unchanged from the accepted commit across the merge.
+Status: landed. High code review accepted `c513b98a`; merged current main `73932ef4` and passed focused Ruby integration proof. Integrated with the verified landing; B12e is complete. The Ruby part of J6 is proved; R and release-package proof remain separately tracked. The High design reviewer accepted `4b9bde49`; build source began at main `fa6774b1`. Owner: Codex. The [preflight](../records/0234-ruby-batching-preflight.md) maps the original paths and inherited behavior; the [build record](../records/0234-ruby-batching-build.md) and [review record](../records/0234-ruby-batching-code-review.md) give the checks and acceptance. Ruby source is unchanged from the accepted commit across the merge.
 
 ## Outcome and retained behavior
 

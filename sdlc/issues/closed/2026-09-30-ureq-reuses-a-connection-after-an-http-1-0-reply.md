@@ -1,3 +1,5 @@
+# ureq reuses a connection after an HTTP/1.0 reply
+
 Status: closed on 2026-10-01 by Ian's ruling. The bug touches only our own HTTP/1.0 test servers, and they send `Connection: close`, which `policy.py` enforces. No real backend replies over HTTP/1.0. No upstream report is filed. The never-resend rule stays, which was option 1 below. The workaround stays in place.
 
 Kind: debt

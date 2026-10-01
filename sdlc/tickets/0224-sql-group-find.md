@@ -4,7 +4,7 @@ opens: sdlc/tickets/0224-sql-group-find.md sdlc/records/0224-sql-find-preflight.
 
 # 0224: Find one best unit from an ordered SQL group
 
-Status: **Linux SQLite, PostgreSQL and DuckDB slices complete; remaining target work stays open.** Fresh High reviews accepted SQLite `d482ed6a` and PostgreSQL `f59bd3d5`, and Linux DuckDB `fb9009aa`, each with independent installed cases 18/19 and host edge checks. Their product source merged unchanged. Ian already approved ADR 0096. See [SQLite review](../records/0224-sqlite-code-review.md), [PostgreSQL review](../records/0224-postgresql-code-review.md) and [current DuckDB preflight](../records/0224-duckdb-find-preflight.md). This is not whole-ticket or new-platform completion.
+Status: in progress. **Linux SQLite, PostgreSQL and DuckDB slices complete; remaining target work stays open.** Fresh High reviews accepted SQLite `d482ed6a` and PostgreSQL `f59bd3d5`, and Linux DuckDB `fb9009aa`, each with independent installed cases 18/19 and host edge checks. Their product source merged unchanged. Ian already approved ADR 0096. See [SQLite review](../records/0224-sqlite-code-review.md), [PostgreSQL review](../records/0224-postgresql-code-review.md) and [current DuckDB preflight](../records/0224-duckdb-find-preflight.md). This is not whole-ticket or new-platform completion.
 
 Milestone: 0.1
 

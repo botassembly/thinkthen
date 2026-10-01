@@ -1,6 +1,6 @@
 # The library drops a question file's calibration profile
 
-Status: Open pending 0203 review and landing. Filed 2026-09-26 by the queue owner from local experiment 273, report 04, finding I1. Ticket 0148's settings sweep found the same gap and promised this file. It is filed now so the gap is findable before 0148 lands. Blocks 0.1 under goal 3: a library must match the command. 0148 says the fix waits for files ticket 0146 holds.
+Status: Closed by ticket 0203, landed at 5261cb939. Earlier status: Open pending 0203 review and landing. Filed 2026-09-26 by the queue owner from local experiment 273, report 04, finding I1. Ticket 0148's settings sweep found the same gap and promised this file. It is filed now so the gap is findable before 0148 lands. Blocks 0.1 under goal 3: a library must match the command. 0148 says the fix waits for files ticket 0146 holds.
 
 ## What happens
 

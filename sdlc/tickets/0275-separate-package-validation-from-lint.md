@@ -26,7 +26,7 @@ For the focused builder check, run shell/Python syntax and `workflows --self-tes
 
 ## Evidence
 
-- Starts from: [open lint/package issue](../issues/2026-09-29-lint-runs-the-full-package-validation.md), current `lint` and `package` at main `1b1f09d70`, [0104 stale-crate proof](../records/0104-quick-fix-fresh-package-before-check.md), and the [preparation trace](../records/0275-lint-package-preparation.md).
+- Starts from: [open lint/package issue](../issues/closed/2026-09-29-lint-runs-the-full-package-validation.md), current `lint` and `package` at main `1b1f09d70`, [0104 stale-crate proof](../records/0104-quick-fix-fresh-package-before-check.md), and the [preparation trace](../records/0275-lint-package-preparation.md).
 - Keeps: All present package trust checks, the separate default/no-default private probes, stale-archive refusal, bounded lint guards, offline execution, and the release graph's manual/resolved-source/publication controls.
 - Changes: Removes the full package campaign from routine lint, relocates its adversarial stale crate into the explicit package script, and makes that script a required release `crate` step before upload.
 - Proof: Static fixture plants for missing, reordered and bypassed package steps, exact unconditional command/order and workflow graph checks without compilation; focused syntax/policy checks; one named integrated routine lint checkpoint after cleanup merge; separate package execution only at an explicit matching-input checkpoint.

@@ -2,7 +2,7 @@
 
 Status: open. Filed 2026-09-30 on Ian's request. Owner: none until 0.1 ships.
 Kind: idea
-When: after the 0.1 release.
+When: after the 0.1 release
 Milestone: later
 
 Today each verb asks one question of many records. A benchmark of many different questions starts one process per question, so the requests-a-minute pacer, the question cache and request batching each cover only one case, and the processes add their rates together.

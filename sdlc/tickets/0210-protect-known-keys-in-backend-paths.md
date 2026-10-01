@@ -6,7 +6,7 @@ opens: sdlc/tickets/0210-protect-known-keys-in-backend-paths.md sdlc/records/021
 
 # 0210: Refuse a backend address that contains the configured key
 
-Status: implementation and corrected source accepted by the same fresh High reviewer at `e6462d04`; complete and landed with this closure. Owner: Codex. Ian approved the optional-key snapshot at `a2c9057a`. Register 106 is closed for the demonstrated effective-key collision. [Build evidence](../records/0210-build.md), [code review](../records/0210-code-review.md), and the [post-settings preflight](../records/0210-post-settings-preflight.md) record the source and proof.
+Status: landed. Implementation and corrected source accepted by the same fresh High reviewer at `e6462d04`; complete and landed with this closure. Owner: Codex. Ian approved the optional-key snapshot at `a2c9057a`. Register 106 is closed for the demonstrated effective-key collision. [Build evidence](../records/0210-build.md), [code review](../records/0210-code-review.md), and the [post-settings preflight](../records/0210-post-settings-preflight.md) record the source and proof.
 
 ## Evidence
 

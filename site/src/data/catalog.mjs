@@ -7,7 +7,7 @@
 export const TAGLINE = 'ThinkThen: code that knows what you mean';
 
 // Set to false the day the site is linked from anywhere.
-export const NOINDEX = true;
+export const NOINDEX = false;
 
 export const KEY_VARIABLE = 'THINKTHEN_API_KEY';
 

@@ -1,5 +1,4 @@
 //! Genuine localhost TLS trust and bounded named-bundle refusals (ticket 0211).
-#![cfg(target_os = "linux")]
 #![allow(
     clippy::expect_used,
     clippy::panic,
@@ -12,21 +11,53 @@ use std::net::TcpListener;
 #[cfg(feature = "cli")]
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::{Child, Command, Stdio};
+use std::process::Command;
+#[cfg(feature = "cli")]
+use std::process::Stdio;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 #[cfg(feature = "cli")]
 use thinkthen::{Engine, ErrorKind};
 use thinkthen::{EngineBuilder, Question};
 
-use crate::child;
-
 const KEY: &str = "sk-local-ca-0211";
 const RESPONSE: &str = "{\"model\":\"local-1\",\"answers\":{\"q1\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}";
 const RESPONSE_ALT: &str = "{\"model\":\"local-2\",\"answers\":{\"q1\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}";
 
+// Fixed test certificates, valid until 2126. The keys guard nothing. The test
+// serves TLS itself, so the proof never depends on which `openssl` is on
+// `PATH` (ticket 0372). The two CAs share one subject. Made with OpenSSL 3:
+//   openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+//     -keyout ca.key -out ca.pem -days 36500 -subj /CN=thinkthen-test-ca
+//   openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+//     -keyout wrong.key -out wrong.pem -days 36500 -subj /CN=thinkthen-test-ca
+// then, for each leaf NAME and HOST (localhost and localhost, other-host and
+// other.invalid), with NAME.cnf holding `subjectAltName=DNS:HOST`:
+//   openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+//     -keyout NAME.key -out NAME.csr -subj /CN=localhost
+//   openssl x509 -req -in NAME.csr -CA ca.pem -CAkey ca.key -set_serial 1 \
+//     -days 36500 -extfile NAME.cnf -out NAME.pem
+const CA: &[u8] = include_bytes!("tls/ca.pem");
+const WRONG_CA: &[u8] = include_bytes!("tls/wrong.pem");
+/// The named leaf's certificate and key.
+fn leaf(name: &str) -> (&'static [u8], &'static [u8]) {
+    match name {
+        "localhost" => (
+            include_bytes!("tls/localhost.pem"),
+            include_bytes!("tls/localhost.key"),
+        ),
+        "other-host" => (
+            include_bytes!("tls/other-host.pem"),
+            include_bytes!("tls/other-host.key"),
+        ),
+        _ => panic!("unknown test leaf {name}"),
+    }
+}
+
+/// A temporary folder holding copies of both test CAs, so a test may remove one.
 struct Fixture(PathBuf);
 
 impl Fixture {
@@ -38,69 +69,13 @@ impl Fixture {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&path).expect("fresh certificate fixture folder");
+        fs::write(path.join("ca.pem"), CA).expect("test CA copy");
+        fs::write(path.join("wrong.pem"), WRONG_CA).expect("wrong CA copy");
         Self(path)
     }
 
     fn at(&self, name: &str) -> PathBuf {
         self.0.join(name)
-    }
-
-    fn ca(&self, name: &str) {
-        let key = self.at(&format!("{name}.key"));
-        let pem = self.at(&format!("{name}.pem"));
-        openssl(&[
-            "req",
-            "-x509",
-            "-newkey",
-            "rsa:2048",
-            "-nodes",
-            "-keyout",
-            key.to_str().expect("fixture path"),
-            "-out",
-            pem.to_str().expect("fixture path"),
-            "-days",
-            "1",
-            "-subj",
-            "/CN=thinkthen-test-ca",
-        ]);
-    }
-
-    fn leaf(&self, name: &str, host: &str) {
-        let key = self.at(&format!("{name}.key"));
-        let csr = self.at(&format!("{name}.csr"));
-        let pem = self.at(&format!("{name}.pem"));
-        let san = self.at(&format!("{name}.cnf"));
-        fs::write(&san, format!("subjectAltName=DNS:{host}\n")).expect("SAN file");
-        openssl(&[
-            "req",
-            "-newkey",
-            "rsa:2048",
-            "-nodes",
-            "-keyout",
-            key.to_str().expect("fixture path"),
-            "-out",
-            csr.to_str().expect("fixture path"),
-            "-subj",
-            "/CN=localhost",
-        ]);
-        openssl(&[
-            "x509",
-            "-req",
-            "-in",
-            csr.to_str().expect("fixture path"),
-            "-CA",
-            self.at("ca.pem").to_str().expect("fixture path"),
-            "-CAkey",
-            self.at("ca.key").to_str().expect("fixture path"),
-            "-set_serial",
-            "1",
-            "-out",
-            pem.to_str().expect("fixture path"),
-            "-days",
-            "1",
-            "-extfile",
-            san.to_str().expect("fixture path"),
-        ]);
     }
 }
 
@@ -110,90 +85,80 @@ impl Drop for Fixture {
     }
 }
 
-fn openssl(args: &[&str]) {
-    let output = child::command("openssl", &[])
-        .args(args)
-        .output()
-        .expect("OpenSSL 3 available");
-    assert!(output.status.success(), "OpenSSL fixture command failed");
-}
-
+/// One HTTPS connection served on a test thread with the named leaf.
 struct Server {
-    child: Child,
     url: String,
+    served: thread::JoinHandle<String>,
 }
 
 impl Server {
-    fn start(fixture: &Fixture, leaf: &str, response: &str) -> Self {
-        let address = TcpListener::bind("127.0.0.1:0").expect("reserve port");
-        let port = address.local_addr().expect("bound address").port();
-        drop(address);
-        let accept = format!("127.0.0.1:{port}");
-        let mut child = child::command("openssl", &[])
-            .args([
-                "s_server", "-quiet", "-ign_eof", "-naccept", "1", "-accept", &accept,
-            ])
-            .arg("-cert")
-            .arg(fixture.at(&format!("{leaf}.pem")))
-            .arg("-key")
-            .arg(fixture.at(&format!("{leaf}.key")))
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .expect("local TLS responder");
-        let payload = format!(
+    fn start(name: &str, response: &str) -> Self {
+        use rustls::pki_types::pem::PemObject;
+        use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+
+        let (cert, key) = leaf(name);
+        let config = rustls::ServerConfig::builder_with_provider(Arc::new(
+            rustls::crypto::ring::default_provider(),
+        ))
+        .with_safe_default_protocol_versions()
+        .expect("TLS versions")
+        .with_no_client_auth()
+        .with_single_cert(
+            vec![CertificateDer::from_pem_slice(cert).expect("leaf certificate")],
+            PrivateKeyDer::from_pem_slice(key).expect("leaf key"),
+        )
+        .expect("TLS server configuration");
+        // The listener is bound before the client learns its port and stays held.
+        let listener = TcpListener::bind("127.0.0.1:0").expect("free TLS port");
+        let port = listener.local_addr().expect("TLS port").port();
+        listener.set_nonblocking(true).expect("polled accept");
+        let reply = format!(
             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response}",
             response.len()
         );
-        child
-            .stdin
-            .as_mut()
-            .expect("responder input")
-            .write_all(payload.as_bytes())
-            .expect("canned response");
-        for _ in 0..100 {
-            if let Some(status) = child.try_wait().expect("responder state") {
-                panic!("local TLS responder exited before binding: {status}");
-            }
-            match TcpListener::bind(&accept) {
-                Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => break,
-                Ok(probe) => drop(probe),
-                Err(error) => panic!("local TLS bind check failed: {error}"),
-            }
-            thread::sleep(Duration::from_millis(10));
-        }
         Self {
-            child,
             url: format!("https://localhost:{port}"),
+            served: thread::spawn(move || serve(&listener, config, &reply)),
         }
     }
 
-    fn finish(mut self) -> String {
-        for _ in 0..100 {
-            if self.child.try_wait().expect("responder state").is_some() {
-                let mut sent = String::new();
-                self.child
-                    .stdout
-                    .take()
-                    .expect("captured requests")
-                    .read_to_string(&mut sent)
-                    .expect("request text");
-                return sent;
-            }
-            thread::sleep(Duration::from_millis(10));
-        }
-        let _ = self.child.kill();
-        let _ = self.child.wait();
-        panic!("local TLS responder did not finish");
+    fn finish(self) -> String {
+        self.served.join().expect("the TLS responder")
     }
 }
 
-impl Drop for Server {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+/// Accept one connection, reply once the request's head arrives, and return
+/// every byte the client sent. A broken client fails the test after 60 s.
+fn serve(listener: &TcpListener, config: rustls::ServerConfig, reply: &str) -> String {
+    let cap = Instant::now() + Duration::from_secs(60);
+    let socket = loop {
+        match listener.accept() {
+            Ok((socket, _)) => break socket,
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                assert!(Instant::now() < cap, "no TLS connection within 60 s");
+                thread::sleep(Duration::from_millis(10));
+            }
+            Err(error) => panic!("TLS accept failed: {error}"),
+        }
+    };
+    socket.set_nonblocking(false).expect("blocking reads");
+    socket
+        .set_read_timeout(Some(Duration::from_secs(60)))
+        .expect("read limit");
+    let connection = rustls::ServerConnection::new(Arc::new(config)).expect("TLS session");
+    let mut stream = rustls::StreamOwned::new(connection, socket);
+    let (mut sent, mut replied, mut chunk) = (Vec::new(), false, [0_u8; 4096]);
+    // A refused handshake, or a client that leaves without a TLS goodbye,
+    // ends the read with an error.
+    while let Ok(read @ 1..) = stream.read(&mut chunk) {
+        sent.extend_from_slice(chunk.get(..read).unwrap_or_default());
+        if !replied && sent.windows(4).any(|end| end == b"\r\n\r\n") {
+            stream.write_all(reply.as_bytes()).expect("fixed reply");
+            stream.flush().expect("fixed reply sent");
+            replied = true;
+        }
     }
+    String::from_utf8_lossy(&sent).into_owned()
 }
 
 #[cfg(feature = "cli")]
@@ -234,17 +199,13 @@ fn command(url: &str, ca: Option<&Path>, home: &Path, key: Option<&str>) -> std:
 #[test]
 fn genuine_tls_trust_replaces_default_and_keeps_hostname_verification() {
     let fixture = Fixture::new();
-    fixture.ca("ca");
-    fixture.ca("wrong");
-    fixture.leaf("localhost", "localhost");
-    fixture.leaf("other-host", "other.invalid");
     for (leaf, bundle, success) in [
         ("localhost", None, false),
         ("localhost", Some("ca.pem"), true),
         ("localhost", Some("wrong.pem"), false),
         ("other-host", Some("ca.pem"), false),
     ] {
-        let server = Server::start(&fixture, leaf, RESPONSE);
+        let server = Server::start(leaf, RESPONSE);
         let output = command(
             &server.url,
             bundle.map(|name| fixture.at(name)).as_deref(),
@@ -277,7 +238,6 @@ fn genuine_tls_trust_replaces_default_and_keeps_hostname_verification() {
 #[test]
 fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
     let fixture = Fixture::new();
-    fixture.ca("ca");
     let base = "https://localhost:1";
     let missing = fixture.at("missing.pem");
     let replay = fixture.at("absent-recording");
@@ -318,12 +278,7 @@ fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
             b"-----BEGIN CERTIFICATE-----\nAA==\n".to_vec(),
         ),
         ("oversize.pem", vec![b'A'; 2 * 1024 * 1024 + 1]),
-        (
-            "too-many.pem",
-            fs::read(fixture.at("ca.pem"))
-                .expect("valid CA")
-                .repeat(257),
-        ),
+        ("too-many.pem", CA.repeat(257)),
     ] {
         let path = fixture.at(name);
         fs::write(&path, contents).expect("bad CA fixture");
@@ -374,15 +329,13 @@ fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
 #[test]
 fn public_environment_and_explicit_builder_share_the_loaded_roots() {
     let fixture = Fixture::new();
-    fixture.ca("ca");
-    fixture.leaf("localhost", "localhost");
     for mode in ["env", "explicit"] {
         let response = if mode == "explicit" {
             RESPONSE_ALT
         } else {
             RESPONSE
         };
-        let server = Server::start(&fixture, "localhost", response);
+        let server = Server::start("localhost", response);
         let output = Command::new(std::env::current_exe().expect("test executable"))
             .args(["--exact", "ca_bundle::public_tls_child", "--nocapture"])
             .env_clear()

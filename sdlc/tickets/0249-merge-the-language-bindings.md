@@ -6,9 +6,9 @@ opens: libraries sdlc/issues sdlc/tickets
 
 # 0249: Merge the language bindings
 
-Status: **source integration complete; all eleven packages reviewed and integrated; original release follow-ups remain open**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). Nothing is published and no release CI is configured. The package build records under `sdlc/records/0249-*` hold current proof and remaining host criteria.
+Status: landed. Closed 2026-10-01: the outcome is met. All eleven packages, covering thirteen languages, were reviewed and integrated; the [integration closure](../records/0249-integration-closure.md) records it. The release follow-ups are not this ticket's work. They are the same items as the "What every package still needs" list and the language table in `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`, which ticket 0128 and the workflow tickets 0268 to 0273 own. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). Nothing is published and no release CI is configured. The package build records under `sdlc/records/0249-*` hold current proof and remaining host criteria.
 
-Milestone: 0.1
+Landed: 38b5e9fbc
 
 Number corrected from 0247 during queue intake because the existing DuckDB lane holds 0247 and the usage-persistence design holds 0248. Scope is retained; the later explicit authorization above releases the start hold. This handoff consolidates existing J8 rows; it is not another independent issue.
 
@@ -18,7 +18,7 @@ Number corrected from 0247 during queue intake because the existing DuckDB lane 
 - Keeps: accepted C result envelopes, packed batches, entities-only relation state, default retries, subset cache identity and exact per-gate arrival counts. The drift issue records their confirmation.
 - Changes: integrates reviewed package copies into libraries, adds each actual binding to the root README and supplies its existing J8 contract and package proof.
 - Proof: rebuild the selected package at the final source pin, retain exact request multisets and planted negatives, exercise the J1 corpus through the public binding and record each actual host and artifact hash.
-- Defers: publication and registry/account changes, unproved host targets, unrelated website work and unrelated experimental changes outside the reviewed integration scope.
+- Defers: to the release-and-install issue and ticket 0128: publication and registry/account changes, unproved host targets, unrelated website work and unrelated experimental changes outside the reviewed integration scope.
 
 ## Integration plan at `a16da4a5`
 

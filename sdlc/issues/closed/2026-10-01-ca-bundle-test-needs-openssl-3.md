@@ -1,4 +1,4 @@
-Status: open. Found on 2026-10-01 while building ticket 0371. Owner: the queue owner.
+Status: closed 2026-10-01 by ticket 0372 "Land 0372: the CA bundle library test serves its own TLS and passes on macOS". The test now reads committed certificates and serves TLS from rustls, and it passes on the M5 with LibreSSL first on `PATH`. Found on 2026-10-01 while building ticket 0371. Owner: the queue owner.
 
 Kind: bug
 

@@ -6,6 +6,12 @@ Kind: debt
 
 Pay when: before the next checkpoint tag, which needs every surface green on one commit.
 
+Debt: 033
+
+Severity: high
+
+Paid: 2026-09-30
+
 Keeping it means `surfaces` reports PHP as failed after a three-minute wait, so a break in it can land unseen.
 
 ## The problem
