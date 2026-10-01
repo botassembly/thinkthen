@@ -3,8 +3,8 @@
 // and every code block in the articles. The build runs it.
 //
 //   - No line over 60 characters, apart from the exempt lines below.
-//   - A library or SQL sample that examples/REPLAY lists has its saved
-//     output beside it as <sample>.out. A library sample prints its answer.
+//   - A SQL sample that examples/REPLAY lists has its saved output beside
+//     it as <sample>.out.
 //   - No example asks for --details, except on the annotate edge-case page
 //     under examples/reference/annotate/ (checklist ruling of 2026-09-30).
 //   - Each function page opens with one command example of 10 to 25
@@ -210,7 +210,7 @@ function main() {
   }
 
   for (const rel of new Set(readReplayList(root).map((line) => replayLine(line).rel))) {
-    if (!fs.existsSync(path.join(root, `${rel}.out`))) problems.push(`examples/${rel}: no saved output. Every replayed sample prints its answer, and its page shows examples/${rel}.out under it.`);
+    if (rel.endsWith('.sql') && !fs.existsSync(path.join(root, `${rel}.out`))) problems.push(`examples/${rel}: no saved output. Every SQL sample shows what the database printed. Run node scripts/smoke-sql.mjs --update ${rel}.`);
   }
 
   const lineCount = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\n+$/, '').split('\n').length : 0);

@@ -2,48 +2,16 @@
 // Goal: show in one screen what ThinkThen does, with one real call in the
 // reader's language.
 import Base from '../layouts/Base.astro';
-import Terminal from '../components/Terminal.astro';
-import Code from '../components/Code.astro';
-import InstallLine from '../components/InstallLine.astro';
-import { CODE_FUNCTIONS, SURFACES, HOWTOS, FUNCTIONS, COUNTS } from '../data/catalog.mjs';
-import { captioned, firstCall } from '../data/samples.mjs';
+import CrossView from '../components/CrossView.astro';
+import { CODE_FUNCTIONS, HOWTOS, COUNTS } from '../data/catalog.mjs';
 
-const tabs = [
-  { label: 'Bash', alias: 'Bash', surface: 'shell' },
-  { label: 'Python', alias: 'Python', surface: 'python' },
-  { label: 'TypeScript', alias: 'TypeScript', surface: 'typescript' },
-  { label: 'Ruby', alias: 'Ruby', surface: 'ruby' },
-  { label: 'R', alias: 'R', surface: 'r' },
-  { label: 'Rust', alias: 'Rust', surface: 'rust' },
-  { label: 'SQL', alias: 'SQL', surface: 'duckdb' },
-];
-
-const bash = captioned('functions/filter', FUNCTIONS.find((f) => f.name === 'filter').see)[0];
-const surfaceOf = (slug) => SURFACES.find((s) => s.slug === slug);
 const sixHowtos = HOWTOS.slice(0, 6);
 ---
 <Base title="ThinkThen">
   <h1>Code that knows what you mean.</h1>
   <p class="lede">Simple functions that give your software judgment. Hand one a message, ask "Is this a complaint?", and get back yes, no, or not sure.</p>
 
-  <div class="tabbed" data-fallback="Bash">
-    <div class="tabs" role="tablist">
-      {tabs.map((t) => (
-        <button type="button" role="tab" data-lang={t.label} data-alias={t.alias} aria-selected={t.label === 'Bash'}>{t.label}</button>
-      ))}
-    </div>
-    <div class="cell" data-lang="Bash">
-      <Terminal run={bash} caption={bash.see} />
-      <InstallLine line={surfaceOf('shell').install[0][0]} caption="Install the command" />
-      <InstallLine line={surfaceOf('shell').install[1][0]} caption="Or with Homebrew, an option on a Mac" />
-    </div>
-    {tabs.slice(1).map((t) => (
-      <div class="cell" data-lang={t.label} hidden>
-        <Code code={firstCall(t.surface).code} file={firstCall(t.surface).file} label={`Copy the ${surfaceOf(t.surface).name} sample`} />
-        <InstallLine line={surfaceOf(t.surface).install[0][0]} caption={`Install it for ${surfaceOf(t.surface).name}`} />
-      </div>
-    ))}
-  </div>
+  <CrossView fn="filter" install />
   <p class="pagelinks"><a href="/install/">Every binding and backend</a></p>
 
   <p><code>decide</code> is an if that understands. <code>filter</code> is a grep that understands. <code>rank</code> is a sort that understands. Every answer rests on the model's probabilities. On <code>decide</code>, a band sends anything between its two sides back as not sure. A person reads those.</p>

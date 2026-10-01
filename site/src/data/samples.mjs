@@ -109,13 +109,15 @@ export function firstCall(surface) {
   return { file, code: code.replace(/\n+$/, ''), output: text(`install/${surface}/${file}.out`)?.replace(/\n+$/, '') ?? null };
 }
 
-// Another install sample on a surface's page, such as R's data frames.
+// Another install sample on a surface's page, such as R's data frames,
+// with what it printed.
 export function installSample(surface, name) {
   const ext = EXT[surface];
   const code = text(`install/${surface}/${name}.${ext}`);
   if (code === undefined) throw new Error(`samples: examples/install/${surface}/${name}.${ext} is missing`);
   const cut = name.lastIndexOf('/');
-  return { file: `${name.slice(cut + 1)}.${ext}`, folder: cut < 0 ? null : name.slice(0, cut), code: code.replace(/\n+$/, '') };
+  const output = text(`install/${surface}/${name}.${ext}.out`)?.replace(/\n+$/, '') ?? null;
+  return { file: `${name.slice(cut + 1)}.${ext}`, folder: cut < 0 ? null : name.slice(0, cut), code: code.replace(/\n+$/, ''), output };
 }
 
 // The library sample for a function on a surface, with the output a
