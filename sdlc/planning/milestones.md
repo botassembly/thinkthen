@@ -69,6 +69,7 @@ Windows work has no file on main yet. Ticket 0373, Windows stage 0, is in progre
 
 Open items:
 
+- [0377: Each language binding and SQL extension names a backend in code](../tickets/0377-binding-backends.md)
 - [A Flutter app file in the release bundle](../issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md)
 - [The bindings and SQL extensions cannot name a backend](../issues/2026-10-01-bindings-and-sql-extensions-name-no-backend.md)
 - [`rank --threshold P` keeps only records at or above a probability](../issues/2026-10-01-rank-keeps-only-records-over-a-threshold.md)
