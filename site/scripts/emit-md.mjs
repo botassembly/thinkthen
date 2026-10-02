@@ -130,7 +130,8 @@ function blocks(node, out) {
         const part = (test) => tidy(inline(find(a, test) || { tag: '#text', text: '' })).replace(/\*/g, '');
         const code = part((n) => n.tag === 'b');
         const label = part((n) => n.tag === 'span');
-        return `- ${code}: [${label}](${a.attrs.href || ''}), ${part((n) => n.tag === 'small')}`;
+        const when = part((n) => n.tag === 'small').replace(`${code} · `, '');
+        return `- ${code}: [${label}](${a.attrs.href || ''}), ${when}`;
       });
       out.push(rows.join('\n'));
       continue;
