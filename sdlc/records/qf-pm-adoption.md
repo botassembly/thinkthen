@@ -53,4 +53,4 @@ No. pm reads `milestones.md` for each milestone's outcome and blockers, so it de
 
 ## Review and integration
 
-Fresh code review: see the landing commit's `Review:` trailer. No build or gate ran; the change touches only records configuration.
+A fresh code review accepted `32225fd0e`. It checked each key against pm's source, the status split, the glob's reach and this record. No build or gate ran, because the change touches only records configuration.
