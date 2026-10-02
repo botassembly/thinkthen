@@ -7,7 +7,7 @@ goal: "Introduce ThinkThen: code asks a model one bounded question about text, g
 blurb: "ThinkThen lets code act on what text means. Ask one bounded question, get yes, no, one option or a number, and branch on it. Ten functions, 24 bindings, MIT."
 card: /og/introducing-thinkthen.png
 cardAlt: "The talk's title slide: Introducing ThinkThen, October 1, 2026"
-youtube: tUwiSvdOTiI
+youtube: YbzrlpAyCV4
 links:
   - { href: "/install/", text: "Install ThinkThen" }
   - { href: "/functions/", text: "The ten functions" }
