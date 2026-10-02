@@ -6,9 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/resul
 
 # 0157: Expose request size and retry counts through the libraries
 
-Status: in progress; waits on the rehearsal. Staged implementation landed after fresh High review accepted source `85180c3f`. Owner: Codex. Six libraries, SQLite, PostgreSQL and Linux x86-64 DuckDB passed the focused settings integration checkpoint. The DuckDB C++ extension now builds on all four release targets under ticket 0231, which ran the request-size checks on each installed package. No C API target remains. Only the release-runner proof from the rehearsal in ticket 0128 phase 3b remains.
-
-Milestone: 0.1
+Status: landed 2026-10-02. Release rehearsal runs 36945370940 (main `94d0500c0`), 36998358908 (main `f65faea4e`) and 37010060315 (`release/0.1` at `4e880cdf6`) passed every job through `draft` on all four targets. Release QA round 5 on `checkpoint/surfaces/2026-10-02-1` (`4e880cdf6`) was clean. In run 37010060315 the smoke jobs are 110863135525 (x86 Linux), 110863135686 (ARM Linux), 110863135603 (Apple Silicon, `macos-15`) and 110863135461 (Intel Mac, `macos-15-intel`). The library and SQL archives passed their installed checks on all four release runners. The request-size and retry-count code is the shared engine, and its settings corpus ran on each target's DuckDB archive under ticket 0231's native installed proofs. The rehearsal ran the shipped archives on the release runners, including native Intel and `macos-15`, which was the only remaining proof. Before this close the status read: in progress; waits on the rehearsal. Staged implementation landed after fresh High review accepted source `85180c3f`. Owner: Codex. Six libraries, SQLite, PostgreSQL and Linux x86-64 DuckDB passed the focused settings integration checkpoint. The DuckDB C++ extension now builds on all four release targets under ticket 0231, which ran the request-size checks on each installed package. No C API target remains. Only the release-runner proof from the rehearsal in ticket 0128 phase 3b remains.
 
 ## Outcome and authority
 
