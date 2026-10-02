@@ -2,7 +2,7 @@
 
 Every release of every surface shares one version number.
 
-## 0.1.0 (2026-10-01)
+## 0.1.0 (2026-10-02)
 
 The first public release. ThinkThen answers typed questions about text. It returns `true`, `false`, a label, a number, or a ranked list. A failed call never looks like an answer.
 
