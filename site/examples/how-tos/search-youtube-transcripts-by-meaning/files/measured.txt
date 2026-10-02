@@ -7,3 +7,4 @@ The rows copy the run's cost.txt, with narrower spacing.
 rank-excited.txt    0.4 s  61031 input tokens  $0.00256
 rank-problem.txt    0.4 s  62199 input tokens  $0.00261
 filter-problem.txt  0.3 s  62199 input tokens  $0.00261
+filter-problem.txt kept 4 of the 292 passages.

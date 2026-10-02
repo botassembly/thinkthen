@@ -17,7 +17,7 @@ import path from 'node:path';
 
 const dist = path.resolve(process.argv[2] || 'dist');
 
-const LANGS = new Set(['bash', 'json', 'jsonl', 'jq', 'diff', 'python', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'xml', 'go', 'swift', 'zig', 'php', 'dart', 'yaml', 'toml', 'sql']);
+const LANGS = new Set(['bash', 'awk', 'json', 'jsonl', 'jq', 'diff', 'python', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'xml', 'go', 'swift', 'zig', 'php', 'dart', 'yaml', 'toml', 'sql']);
 
 // Blocks whose code holds no token the theme colours, keyed by page and
 // the block's first line, with the reason. Every block on the site has a
@@ -49,7 +49,9 @@ const seenPlain = new Set();
 for (const file of pages) {
   const page = path.relative(dist, file);
   const html = fs.readFileSync(file, 'utf8');
-  for (const m of html.matchAll(/(<pre\b[^>]*>)([\s\S]*?)<\/pre>/g)) {
+  // An attribute value may hold a raw >, as a script with a redirect does
+  // after the Markdown pipeline serializes it.
+  for (const m of html.matchAll(/(<pre\b(?:"[^"]*"|'[^']*'|[^>"'])*>)([\s\S]*?)<\/pre>/g)) {
     const [, tag, body] = m;
     const lang = attr(tag, 'data-lang');
     const first = (attr(tag, 'data-copy') ?? decode(body.replace(/<[^>]+>/g, ''))).split('\n')[0].trim();

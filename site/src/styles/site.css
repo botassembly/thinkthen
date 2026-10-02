@@ -250,6 +250,17 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .prose p, .prose ul, .prose ol
   display: flex; align-items: center; justify-content: center; margin: 0 0 1.4rem;
   border: 1px dashed var(--line); background: var(--card); color: var(--muted); font-size: .92rem;
 }
+/* A video card in an article: a thumbnail served from this site, the
+   title, and the channel. It opens the video on YouTube. */
+.video-card {
+  display: flex; align-items: center; gap: .9rem; margin: 0 0 .7rem; padding: .6rem;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  text-decoration: none; color: var(--ink);
+}
+.video-card:hover { border-color: var(--think); color: var(--ink); }
+.video-card img { flex: none; width: 8rem; height: auto; aspect-ratio: 16 / 9; border-radius: 6px; }
+.video-card b { display: block; font-size: .98rem; }
+.video-card span span { display: block; color: var(--muted); font-size: .86rem; margin-top: .15rem; }
 
 table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .93rem; }
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }

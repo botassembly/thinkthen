@@ -175,6 +175,13 @@ function blocks(node, out) {
       continue;
     }
     if (kid.tag === 'div' && cls.includes('video-slot')) continue;
+    // An article's video card becomes a plain link with its title and channel.
+    if (kid.tag === 'a' && cls.includes('video-card')) {
+      const title = tidy(inline(find(kid, (n) => n.tag === 'b') || { tag: '#text', text: '' })).replace(/\*/g, '');
+      const channel = tidy(inline(find(kid, (n) => n.tag === 'span' && n.kids.every((k) => k.tag === '#text')) || { tag: '#text', text: '' }));
+      out.push(`[${title}](${kid.attrs.href || ''}), ${channel}`);
+      continue;
+    }
     if (kid.tag === 'div' && cls.includes('note')) {
       out.push('> ' + tidy(inline(kid)));
       continue;
