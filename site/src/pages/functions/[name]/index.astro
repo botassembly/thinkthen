@@ -1,44 +1,32 @@
 ---
 // Goal: show one function's plain call, value, and exit code first, then
-// its full options and more examples lower down.
+// its own flags and more examples lower down.
 import Base from '../../../layouts/Base.astro';
-import Terminal from '../../../components/Terminal.astro';
 import Code from '../../../components/Code.astro';
 import CrossView from '../../../components/CrossView.astro';
-import { FUNCTIONS, HOWTOS, SURFACES, TAB_GROUPS } from '../../../data/catalog.mjs';
-import { captioned, files, sample, moreSamples } from '../../../data/samples.mjs';
+import MoreExamples from '../../../components/MoreExamples.astro';
+import { FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
+import { flagsOf } from '../../../data/flags.mjs';
+import { examplesOf } from '../../../data/fn-examples.mjs';
 import { beatlesPageFor } from '../../../data/beatles.mjs';
 import { slideCard } from '../../../data/cards.mjs';
-import { REFERENCE_PAGES } from '../../../data/reference.mjs';
+import { inlineHtml } from '../../../lib/settings-table.mjs';
 
 export function getStaticPaths() {
   return FUNCTIONS.map((fn) => ({ params: { name: fn.name }, props: { fn } }));
 }
 
 const { fn } = Astro.props;
-// The Reference page that covers this function's edge cases, if one does.
-const edges = REFERENCE_PAGES.find((p) => p.slug === fn.name);
 if (!fn.goal) throw new Error(`functions: ${fn.name} has no goal`);
-const page = `functions/${fn.name}`;
-const all = captioned(page, fn.see, true);
-const inputs = files(page);
-const first = all[0];
+const { first, openingInputs } = examplesOf(fn);
 const howtos = HOWTOS.filter((h) => fn.howtos.includes(h.slug));
 const title = fn.title || fn.name;
 const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
 // The same function on Beatles Bench, where every answer is known.
 const bench = beatlesPageFor(fn.name);
 const card = slideCard(fn.name);
-const extra = all.slice(1);
-// The bigger library samples sit under Reference, in tab order.
-const order = TAB_GROUPS.flatMap((g) => g.slugs);
-const more = moreSamples(fn.name, fn.moreSee, order)
-  .map((m) => ({ ...m, name: SURFACES.find((s) => s.slug === m.surface).name }));
-// A file shows next to the samples that read it: under the opening tabs
-// when an opening sample names it, and under More examples otherwise.
-const opening = [first?.command ?? '', ...order.map((slug) => sample(fn.name, slug)?.code ?? '')].join('\n');
-const openingInputs = inputs.filter((file) => opening.includes(file.name));
-const moreInputs = inputs.filter((file) => !opening.includes(file.name));
+const reference = `/reference/functions/${fn.name}/`;
+// A flag's `short` text leaves out what function pages leave out, such as --details.
 // Each argument in the signature is code. The words between stay prose, so
 // a phone can break the line between arguments.
 const signature = fn.args.split(/( or |, then )/).map((part, i) => ({ code: i % 2 === 0, part }));
@@ -72,21 +60,14 @@ const note = (fn.argsNote || '').split('`').map((part, i) => ({ code: i % 2 === 
   <h2 id="reference">Reference</h2>
   <p>The command takes {signature.map((x) => x.code ? <code>{x.part}</code> : x.part)}.{fn.argsNote && <>{' '}{note.map((x) => x.code ? <code>{x.part}</code> : x.part)}</>}</p>
   <table>
-    <tr><th>Option</th><th>What it does</th></tr>
-    {fn.options.map(([opts, what]) => (
-      <tr><td>{opts.split(', ').map((opt, i) => <>{i > 0 && ', '}<code>{opt}</code></>)}</td><td>{what}</td></tr>
+    <tr><th>{fn.notAFunction ? 'Key' : 'Flag'}</th><th>What it does</th></tr>
+    {flagsOf(fn).map((f) => (
+      <tr><td>{f.spec.split(', ').map((opt, i) => <>{i > 0 && ', '}<code>{opt}</code></>)}</td><td set:html={inlineHtml(f.short ?? f.what)} /></tr>
     ))}
   </table>
-  {(extra.length > 0 || more.length > 0) && <h3>More examples</h3>}
-  {moreInputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the examples below read`} />)}
-  {extra.map((run) => <Terminal run={run} caption={run.see} />)}
-  {more.map((m) => (
-    <>
-      <Code code={m.code} file={m.file} caption={`${m.name}: ${m.see}`} label={`Copy the ${m.name} sample`} />
-      {m.output && <Code code={m.output} lang="output" caption={`What ${m.name} printed`} copy={false} />}
-    </>
-  ))}
-  <p class="pagelinks"><a href="/install/settings/">Every surface's settings</a>{edges && <> · <a href={edges.route}>{edges.title}</a></>}</p>
+  {!fn.notAFunction && <p>Every function also takes the global flags. The <a href={reference}><code>{title}</code> reference</a> lists them with every default, range and exit code.</p>}
+  <MoreExamples fn={fn} />
+  <p class="pagelinks"><a href={reference}>The full <code>{title}</code> reference</a> · <a href="/install/settings/">Every surface's settings</a></p>
 
   {howtos.length > 0 && (
     <>

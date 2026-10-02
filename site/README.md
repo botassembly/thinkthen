@@ -20,18 +20,19 @@ npm run build
 2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, saved output for each SQL sample, whole details, no comments, and a goal on every page.
 3. `scripts/check-slides.mjs` checks that the Beatles Bench slides come from a deck that quotes the pinned bench.
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
-5. `scripts/check-binding-proofs.mjs` checks each replayed library sample against its proof. See "The binding replay" below.
-6. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
-7. `scripts/label-tables.mjs` copies each column heading into the cells of a table of three or more columns. On a phone or a tablet every table row stacks into a card, and the label names each cell. The same step marks each code span of 24 characters or fewer outside a code pane with class `short`, so a model name, a flag, a key name or a version never splits across lines.
-8. `scripts/emit-md.mjs` writes a Markdown twin of every page, `dist/llms.txt`, and `dist/llms-full.txt`, which holds every twin in one file.
-9. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
-10. `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
-11. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
-12. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
-13. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
-14. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
-15. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
-16. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt`, the llms files, or the JSON-LD on the home and About pages is wrong. It also fails when two listed pages share a title or a description.
+5. `scripts/check-flags.mjs` compares each function's flag data in `src/data/catalog.mjs` and `src/data/flags.mjs` with `thinkthen <fn> --help`. It fails on a flag the help shows and the data lacks, and on one the data lists and the help lacks.
+6. `scripts/check-binding-proofs.mjs` checks each replayed library sample against its proof. See "The binding replay" below.
+7. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
+8. `scripts/label-tables.mjs` copies each column heading into the cells of a table of three or more columns. On a phone or a tablet every table row stacks into a card, and the label names each cell. The same step marks each code span of 24 characters or fewer outside a code pane with class `short`, so a model name, a flag, a key name or a version never splits across lines.
+9. `scripts/emit-md.mjs` writes a Markdown twin of every page, `dist/llms.txt`, and `dist/llms-full.txt`, which holds every twin in one file.
+10. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
+11. `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
+12. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
+13. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
+14. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
+15. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
+16. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
+17. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt`, the llms files, or the JSON-LD on the home and About pages is wrong. It also fails when two listed pages share a title or a description.
 
 The Backends pages read each built-in backend's name, address, key variables and model with `backend('name')` from `src/lib/backends-table.mjs`, which parses the "Named backends" table in `../specification/backends.md`. A name the table lacks fails the build, and `scripts/check-settings.mjs` fails when the built overview disagrees with the table. A live `thinkthen check` cannot replay, so `src/data/backend-checks.mjs` holds each live check a page states, with its date, build and record.
 

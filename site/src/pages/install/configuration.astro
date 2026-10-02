@@ -1,9 +1,10 @@
 ---
-// Goal: say which value wins, every environment variable ThinkThen reads, and where its configuration file, cache and usage totals live on Linux and macOS.
+// Goal: say which value wins, every environment variable ThinkThen reads, and where its configuration file, cache and usage totals live on Linux and macOS, and what status prints.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
 import { CONFIGURATION_SEE } from '../../data/catalog.mjs';
+import { STATUS_SEE } from '../../data/reference.mjs';
 import { captioned, files } from '../../data/samples.mjs';
 import { parseSettings, inlineHtml, setting } from '../../lib/settings-table.mjs';
 import { backends } from '../../lib/backends-table.mjs';
@@ -14,6 +15,7 @@ const dir = 'install/configuration';
 const [first] = parseSettings(table).precedence;
 const [paths, moved, relative, file] = captioned(dir, CONFIGURATION_SEE);
 const [config] = files(dir);
+const [statusRun] = captioned('reference/status', STATUS_SEE);
 const card = (name) => setting(name).href;
 const PRUNE = setting('Prune target');
 
@@ -91,6 +93,7 @@ const ENV = [
 
   <h2 id="status">See it all</h2>
   <p><code>thinkthen status</code> prints the resolved configuration path, backend, address, model and key variable, and where each value came from. It also prints whether a key is set, the cache path and size, the usage path, and the usage this month and in all. It opens no connection. <code>status --json</code> prints the same facts as one <code>thinkthen.status/2</code> object. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md#the-options">recording specification</a> lists its fields.</p>
+  <Terminal run={statusRun} caption={statusRun.see} />
 
   <p class="pagelinks"><a href="/install/settings/">Every setting and its default</a> · <a href="/install/backends/">Backends</a> · <a href="/reference/">Reference</a></p>
 </Base>

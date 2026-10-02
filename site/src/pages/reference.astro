@@ -1,223 +1,50 @@
 ---
-// Goal: list everything the command takes and prints, for a reader or an agent
-// writing a pipeline.
+// Goal: point a reader or an agent at the one reference page that covers the function, file or tool in hand.
 import SidePage from '../layouts/SidePage.astro';
-import { CODE_FUNCTIONS } from '../data/catalog.mjs';
-import { setting } from '../lib/settings-table.mjs';
-import { REFERENCE_PAGES, STATUS_SEE } from '../data/reference.mjs';
-import Terminal from '../components/Terminal.astro';
-import { captioned } from '../data/samples.mjs';
-import { backends } from '../lib/backends-table.mjs';
+import { REFERENCE_PAGES } from '../data/reference.mjs';
 
-// Every row on this page comes from specification/. The one example is
-// the status run in The cache, which shows the thinkthen.status/2 shape
-// the specification defines. The other runs live on the function pages
-// and the tutorial.
-// Every default, range and allowed value comes from
-// specification/settings.md through setting().
-const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
-const takes = (name) => lower(setting(name).allowed);
-const dflt = (name) => lower(setting(name).default);
-const cutOn = (fn) => setting('Threshold').defaultOn(fn);
-const noCut = (fn) => (cutOn(fn) === 'none' ? 'n/a' : cutOn(fn));
-const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-const frameOn = (fn, rest) => setting('Framing').defaultOn(fn, { rest });
-const CUT = setting('Threshold').bounds;
-const count = (name, noun) => `${setting(name).range.min} to ${setting(name).range.max} ${noun}`;
-const THROTTLE = setting('Throttle');
-const [statusRun] = captioned('reference/status', STATUS_SEE);
-// A default shows as code when it is one value. Words after a semicolon,
-// and a default that is a sentence, stay in the prose font.
-const escape = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const valueHtml = (text) => {
-  const [head, ...tail] = String(text).split('; ');
-  if (/\s/.test(head)) return escape(text);
-  return `<code>${escape(head)}</code>${tail.map((t) => `; ${escape(t)}`).join('')}`;
+// The cards come from the same list as the side list, so the two never differ.
+const functions = REFERENCE_PAGES.filter((p) => p.fn && !p.fn.notAFunction);
+const questionFile = REFERENCE_PAGES.find((p) => p.fn?.notAFunction);
+const across = REFERENCE_PAGES.filter((p) => p.group === 'Across functions');
+const tools = REFERENCE_PAGES.filter((p) => p.group === 'Tools');
+const ABOUT = {
+  answers: 'When an answer is yes, no, not sure, or a number, and every exit code.',
+  'question-sets': 'The rules a question set for annotate follows.',
+  recording: 'The answer cache, recording, replay and pruning.',
+  audit: 'Grade saved answers against an answer key and suggest a bar.',
+  diff: 'Show which saved answers changed between two runs or two cuts.',
+  check: 'Check that a backend works with this tool, over four fixed requests.',
+  transform: 'List or print the built-in jq transforms.',
 };
-
-const GLOBAL = [
-  ['--plan', 'none', 'Checks the whole input, prints the first request it would send and a summary line, and sends nothing. It needs no key.', dflt('Plan preview')],
-  ['--url BASE', 'an address', 'The server\'s base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
-  ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
-  ['--timeout SECONDS', takes('Timeout').split(';')[0].replace(/^command: /, ''), 'Covers one attempt from connect to last byte. Other values exit 2.', setting('Timeout').number],
-  ['--max-retries N', takes('Retries'), 'How many times a retried status is sent again. A transport failure is never sent again.', setting('Retries').default],
-  ['--record DIR', takes('Recording'), 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', dflt('Recording')],
-  ['--replay DIR', takes('Recording'), 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', dflt('Recording')],
-  ['--cache DIR', takes('Recording'), 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', dflt('Recording')],
-  ['--no-cache', 'none', 'Turns off the answer cache for one run, both lookup and writing. It never turns off usage counting.', dflt('Answer cache')],
-  ['--profile FILE', takes('Backend profile'), 'Applies local byte and question limits before a request leaves, and names the profile in use. It selects neither address nor model.', dflt('Backend profile')],
-  ['--input FILE', takes('Input file'), 'Reads the evidence from a file instead of standard input. It names a path. It never names a framing.', dflt('Input file')],
-];
-
-const FRAMING = [
-  ['none', 'The whole input is one text document and one record.'],
-  ['--lines', 'Each line is one text record. A trailing newline ends the last record.'],
-  ['--jsonl', 'Each line is one JSON value and one record. No blank lines.'],
-  ['--csv', 'The first logical row is a header. Each later row becomes one JSON object of string cells.'],
-  ['--tsv', 'The CSV rules, with a tab delimiter.'],
-];
-
-const FRAMING_BY_FN = [
-  ['decide, choose, tag, score, annotate', `${cap(frameOn('decide', true))} by default. All four framing flags are accepted.`],
-  ['filter, rank', `${cap(frameOn('filter'))} by default, or JSON Lines when a pointer is given. All four framing flags are accepted. One document is not a stream.`],
-  ['find', `--${frameOn('find')} by default, or --jsonl. CSV and TSV are refused as unexpected arguments.`],
-];
-
-const EXITS = [
-  [0, 'yes', 'The command finished. On a single piece of evidence, decide answers yes.'],
-  [1, 'no', 'A single piece of evidence under decide answers no. No other function exits 1.'],
-  [2, 'broken', 'A usage error or an input error. The failing record sent nothing.'],
-  [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
-  [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a key that is unset or blank at any address other than localhost, 127.0.0.1 or [::1], evidence past the token limit, and a critical line in a check report.'],
-  [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
-  [6, 'broken', 'annotate or relate only. The run finished with at least one valid and one failed question. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
-  [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row. When a run has both failed questions and such rows, 7 wins over 6.'],
-  [70, 'broken', 'A defect in the tool. Its message begins "defect:".'],
-  ['130, 143', 'broken', 'SIGINT or SIGTERM stopped the command. It ends by that signal, and the shell reports 128 plus the signal number.'],
-];
-
-const BARE = [
-  ['decide', 'true, false, or null.'],
-  ['choose', 'A JSON string, or null. --raw prints the bare label.'],
-  ['tag', 'A JSON array of every label that reaches the bar, including [].'],
-  ['score', 'A JSON number.'],
-  ['find', 'The selected line or JSONL record as it arrived. Nothing when --none wins or ties.'],
-  ['filter', 'Each kept line or JSONL record as it arrived, in input order. A kept table row prints as compact JSON.'],
-  ['rank', 'Every line or record again, most likely yes first. With a saved score question, rank @FILE puts the highest score first.'],
-  ['annotate', 'One JSON object per record.'],
-];
-
-const COUNTS = [
-  ['decide', 'none', 'A cut or a band. decide is the one function that takes both.', cutOn('decide')],
-  ['choose', count('Options', 'options'), 'A cut only. A band is a usage error.', `${cutOn('choose')}; the winning label comes back`],
-  ['tag', count('Labels', 'labels'), 'A cut only, applied to each label on its own. A band is refused.', cutOn('tag')],
-  ['score', `${count('Levels', 'levels')}, lowest first`, 'None. score has no threshold.', noCut('score')],
-  ['filter', 'none', 'A cut only. A band is exit 2 from the command line and exit 5 from a question file.', cutOn('filter')],
-  ['rank', 'none', 'None. rank refuses a threshold on the command line and in a question file.', noCut('rank')],
-  ['find', '2 to 255 lines or records, or 2 to 254 with --none', 'None.', 'n/a'],
-  ['annotate', 'a question set file', 'Each question carries its own. A top-level threshold applies to every decide question that names none.', 'per question'],
-  ['recognize', 'optional kinds', 'A cut on printed name strength; a separate relation cut applies to edges.', cutOn('recognize')],
-  ['relate', 'relation rules', 'A cut on each edge’s probability of yes.', cutOn('relate')],
-];
 ---
-<SidePage pages={REFERENCE_PAGES} page={{ ...REFERENCE_PAGES[0], description: 'Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.' }} name="Reference">
+<SidePage pages={REFERENCE_PAGES} page={{ ...REFERENCE_PAGES[0], description: 'One reference page for each function, the question file, the pages that cover every function, and the tools.' }} name="Reference">
   <h1>Reference</h1>
-  <p class="lede">Everything the <code>thinkthen</code> command takes and prints. Read this page before you write a pipeline, and hand it to an agent. <a href="/reference/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number.</p>
+  <p class="lede">Each function has one reference page. It holds the function's arguments, its own flags, the global flags, its input and output, its exit codes and its limits. Read it top to bottom, or hand it to an agent.</p>
 
-  <h2>The ten functions</h2>
-  <table>
-    <tr><th>Function</th><th>What it does</th><th>Kind of answer</th><th>Requests</th></tr>
-    {CODE_FUNCTIONS.map((fn) => (
-      <tr>
-        <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></td>
-        <td>{fn.line}</td>
-        <td>{fn.primitive}</td>
-        <td>{fn.requests}</td>
-      </tr>
+  <h2 id="functions">The ten functions</h2>
+  <div class="grid">
+    {functions.map((p) => (
+      <a class="tile" href={p.route}><b>{p.label}</b><span>{p.fn.line}</span></a>
     ))}
-  </table>
+  </div>
 
-  <h2 id="arguments-and-thresholds">Arguments and thresholds</h2>
-  <p>A threshold is a cut on the quantity each function names. You set it; the tool never reports one. A cut is one number. Only <code>decide</code> takes a band, written <code>LOW:HIGH</code>. A recognized name’s printed strength is a computed product, not a probability.</p>
-  <table>
-    <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
-    {COUNTS.map(([fn, args, rule, dflt]) => (
-      <tr><td><code>{fn}</code></td><td>{args}</td><td>{rule}</td><td set:html={valueHtml(dflt)} /></tr>
+  <h2 id="question-files">Question files</h2>
+  <p>A question file holds one saved question. Write <code>@FILE</code> in place of the question words. The <a href={questionFile.route}>question file reference</a> gives its keys and exit codes.</p>
+
+  <h2 id="across-functions">Across functions</h2>
+  <div class="grid">
+    {across.map((p) => (
+      <a class="tile" href={p.route}><b>{p.title}</b><span>{ABOUT[p.slug]}</span></a>
     ))}
-  </table>
-  <p>With p as the probability of yes:</p>
-  <table>
-    <tr><th>Form</th><th>Accepted</th><th>Yes</th><th>No</th><th>Not sure</th></tr>
-    <tr><td>none given</td><td></td><td>p ≥ {cutOn('decide')}</td><td>p &lt; {cutOn('decide')}</td><td>never</td></tr>
-    <tr><td><code>--threshold T</code></td><td>{CUT.above} &lt; T ≤ {CUT.atMost}</td><td>p ≥ T</td><td>p &lt; T</td><td>never</td></tr>
-    <tr><td><code>--threshold LOW:HIGH</code></td><td>{CUT.above} ≤ LOW &lt; HIGH ≤ {CUT.atMost}</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
-  </table>
-  <p>The high side is inclusive. A probability exactly at <code>LOW</code> is not sure. A cut of 0 is refused. A band low of 0 is accepted. <code>--threshold {cutOn('decide')}</code> and no threshold name the same rule. A percent such as <code>90</code>, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.</p>
-  <p>The cut applies to the probability of yes on <code>decide</code> and each record under <code>filter</code>, the winning option’s probability on <code>choose</code>, each label’s independent yes probability under <code>tag</code>, each name’s printed strength under <code>recognize</code>, and each relation edge’s yes probability under <code>recognize</code> or <code>relate</code>. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/threshold.md">threshold contract</a> defines every boundary.</p>
+  </div>
 
-  <h2>Global flags</h2>
-  <p>Every function accepts all of these. The <a href="/install/settings/">settings page</a> lists every setting on every surface, with its default.</p>
-  <table>
-    <tr><th>Flag</th><th>Takes</th><th>What it does</th><th>Default</th></tr>
-    {GLOBAL.map(([flag, takes, does, dflt]) => (
-      <tr><td><code>{flag}</code></td><td>{takes}</td><td>{does}</td><td set:html={valueHtml(dflt)} /></tr>
+  <h2 id="tools">Tools</h2>
+  <div class="grid">
+    {tools.map((p) => (
+      <a class="tile" href={p.route}><b>{p.title}</b><span>{ABOUT[p.slug]}</span></a>
     ))}
-  </table>
-  <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
-  <p>TypeSafe documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/closed/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Set <code>requests_per_minute</code> on the backend, or <code>THINKTHEN_REQUESTS_PER_MINUTE</code>, to stay under the limit.</p>
-  <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
-
-  <h2>Framing a stream</h2>
-  <p>The four framing flags are mutually exclusive. The tool never guesses a framing from a filename.</p>
-  <table>
-    <tr><th>Flag</th><th>One record is</th></tr>
-    {FRAMING.map(([flag, what]) => (<tr><td><code>{flag}</code></td><td>{what}</td></tr>))}
-  </table>
-  <table>
-    <tr><th>Function</th><th>What it accepts</th></tr>
-    {FRAMING_BY_FN.map(([fns, what]) => (<tr><td>{fns.split(', ').map((fn, i) => <>{i > 0 && ', '}<code>{fn}</code></>)}</td><td>{what}</td></tr>))}
-  </table>
-
-  <h3><code>--field POINTER</code></h3>
-  <p>A JSON Pointer, RFC 6901. It names the part of each record the model sees. Only the pointed value leaves the machine.</p>
-  <ul>
-    <li>Under <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> it reads the pointer in each record.</li>
-    <li>With no framing flag it reads the whole input as one JSON value and takes the pointer inside it. There is no separate JSON framing flag.</li>
-    <li>On <code>filter</code> and <code>rank</code>, a pointer with no framing flag reads JSON Lines instead. A question file's <code>on</code> does the same.</li>
-    <li>Under <code>--lines</code> it is a usage error. A text line has no members.</li>
-    <li>It may repeat. Several pointers build an evidence object, each member keyed by the last part of its pointer. Two members that would share one key are a usage error.</li>
-    <li>A pointer that finds nothing is an input error for that record, exit 2, before any request for it.</li>
-    <li><code>$.body</code>, <code>#/id</code>, a wildcard, and a negative index are refused, and the message names RFC 6901.</li>
-    <li>A pointed value that is not a string is serialized as compact JSON and sent as text. With no <code>--field</code>, a JSONL, CSV, or TSV record is serialized whole.</li>
-  </ul>
-
-  <h3>CSV and TSV</h3>
-  <p>Both require a header. Every cell becomes a JSON string, including an empty cell and text that looks like a number, a boolean, a null, an array, or an object. Header order becomes key order. A header name may hold whitespace, but it may not be blank, hold a control character, or exactly duplicate another. One UTF-8 byte order mark is ignored at the start of the first header name and nowhere else. Every data row must carry the header's field count. A header with no data rows is a successful empty dataset and sends no request. Empty input is exit 2. Every output from CSV or TSV input is JSONL.</p>
-  <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
-
-  <h2>Limits</h2>
-  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. TypeSafe published both numbers on 2026-09-19 for its hosted service. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> lists them. They belong to the backend and not to the tool.</p>
-  <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
-
-  <h2>What one row looks like</h2>
-  <table>
-    <tr><th>Function</th><th>Standard output</th></tr>
-    {BARE.map(([fn, out]) => (<tr><td><code>{fn}</code></td><td>{out}</td></tr>))}
-  </table>
-  <p>In record mode, a <code>decide</code>, <code>choose</code>, <code>tag</code>, or <code>score</code> row is <code>{'{"input":RECORD,"value":ANSWER}'}</code>, in that key order. <code>filter</code>, <code>rank</code>, and <code>find</code> keep returning records. Every result is compact and sits on one line.</p>
-  <p><code>annotate</code> in record mode adds one top-level field per question to an object record. A line, a JSON scalar, or a JSON array keeps its parsed record under <code>input</code> and its named answers under <code>value</code>. CSV and TSV rows are objects, and they stay flat.</p>
-
-  <h2 id="exit-codes">Exit codes</h2>
-  <table>
-    <tr><th>Code</th><th>What it means</th></tr>
-    {EXITS.map(([code, outcome, what]) => (
-      <tr><td><span class={`exit ${outcome}`}>{code}</span></td><td>{what}</td></tr>
-    ))}
-  </table>
-  <p>Code 8 is reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6 or 7, or <code>relate</code> exits 6. A valid answer on standard output can sit beside exit 1, 3, 6, or 7.</p>
-
-  <h2>The environment</h2>
-  <p>The <a href="/install/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads.</p>
-  <p>With no backend named, the key comes from <code>THINKTHEN_API_KEY</code>. <code>--backend</code>, <code>THINKTHEN_BACKEND</code> or the configuration file's <code>backend</code> names a backend. A named backend reads only its own key variables, and the first one that is not blank wins:</p>
-  <ul>
-    {backends().map((b) => (
-      <li><code>{b.name}</code> reads {b.keys.map((k, i) => <Fragment>{i > 0 && ', then '}<code>{k}</code></Fragment>)}.</li>
-    ))}
-  </ul>
-  <p>The command line comes first, then the environment, then the configuration file. The first of these that names a backend or an address decides. So <code>THINKTHEN_BASE_URL</code> in the shell outranks the configuration file's <code>backend</code>, and the key then comes from <code>THINKTHEN_API_KEY</code>. With both <code>--backend</code> and <code>--url</code>, the backend's key variables apply at that address.</p>
-  <p>With the key unset or blank, a request to <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code> goes out with no key and no <code>Authorization</code> header. At any other address, the command exits 4. The <a href="/install/backends/">Backends page</a> gives the rest of the key rules.</p>
-
-  <h2 id="the-cache">The cache</h2>
-  <p><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, the cache key, recording and replay, and pruning. The <a href="/install/configuration/#usage-totals">usage totals</a> and <a href="/install/configuration/#status"><code>thinkthen status</code></a> are on the Configuration page. <code>status --json</code> prints one <code>thinkthen.status/2</code> object. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md#the-options">recording specification</a> lists its fields.</p>
-  <Terminal run={statusRun} caption={statusRun.see} />
-
-  <h2>The configuration file</h2>
-  <p>The <a href="/install/configuration/#configuration-file">Configuration page</a> gives its path, its fields, and the rules ThinkThen reads it by.</p>
-
-  <p>A list given on the command line replaces the file's whole list. The two never merge. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>
-
-  <h2>Question files</h2>
-  <p>A question file holds one saved question. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> holds many questions. The <a href="/functions/question-file/">question file page</a> carries the keys and the exit codes.</p>
+  </div>
 
   <p class="pagelinks"><a href="/learn/tutorial/">Take the tutorial</a> · <a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
 </SidePage>

@@ -261,6 +261,9 @@ th { color: var(--muted); font-weight: 600; font-size: .85rem; }
    address may break after a slash, where src/lib/path.mjs puts a <wbr>. */
 td code { white-space: nowrap; }
 td code wbr, code.short wbr { display: none; }
+/* A flag table holds flags too long to stay whole beside four columns.
+   There a long flag or default may wrap, and a short one still never splits. */
+table.flags td code:not(.short) { white-space: normal; overflow-wrap: anywhere; }
 
 /* On a phone or a tablet each table row stacks into a card, and the page
    never scrolls sideways. The first cell leads the card. In a table of three

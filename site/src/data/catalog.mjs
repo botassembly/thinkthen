@@ -14,6 +14,7 @@ export const KEY_VARIABLE = 'THINKTHEN_API_KEY';
 export { REPO } from './repo.mjs';
 import { setting } from '../lib/settings-table.mjs';
 import { backend } from '../lib/backends-table.mjs';
+import { flag, lower, cutOn, CUT, LIST_RULE } from './flags.mjs';
 
 // The four outcomes. One color each, everywhere a number or an answer shows.
 export const OUTCOMES = [
@@ -30,32 +31,20 @@ export function outcomeOf(exit) {
   return 'broken';
 }
 
-// The backend and cache options every shipped function takes, from
-// specification/backends.md and specification/recording.md. Each default and
-// range comes from specification/settings.md through setting().
-const THROTTLE = setting('Throttle');
-const cutOn = (fn) => setting('Threshold').defaultOn(fn);
-
-const BACKEND_OPTIONS = [
-  ['--model NAME', `The model the request carries. Name a version to pin a run. The default is ${setting('Model').default}.`],
-  ['--url BASE', 'The server\'s base address. It outranks THINKTHEN_BASE_URL.'],
-  ['--timeout SECONDS', `How long one attempt may take. The default is ${setting('Timeout').number}.`],
-  ['--max-retries N', `How many times a retried status is sent again. A transport failure is never sent again. The default is ${setting('Retries').default}.`],
-  ['--record DIR', 'Calls the backend and saves each exchange in DIR.'],
-  ['--replay DIR', 'Answers from DIR alone, with no key and no network.'],
-  ['--cache DIR', 'Answers from DIR when it can and saves new exchanges there.'],
-  ['--no-cache', 'Turns off the answer cache for one run.'],
-  ['--profile FILE', 'Applies local backend limits and names the calibration profile in use.'],
+// Each function's own flags, with each default and range from
+// specification/settings.md through setting(). flags.mjs holds the flags
+// several functions share, and the global flags every function takes.
+const CUT_TAKES = `a number above ${CUT.above} and at most ${CUT.atMost}`;
+const TEXT = setting('What true and false mean');
+const MEANS = [
+  flag('--true TEXT', TEXT.allowed.toLowerCase(), TEXT.default.toLowerCase(), 'One sentence that says what a yes means, sent beside the question.'),
+  flag('--false TEXT', TEXT.allowed.toLowerCase(), TEXT.default.toLowerCase(), 'One sentence that says what a no means.'),
 ];
-
-const COMMON_OPTIONS = [
-  ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
-  ['--plan', 'Prints the plan and sends nothing. It needs no key.'],
-  ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick at most one.'],
-  ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
-  ['--jobs N', `How many requests run at once, from ${THROTTLE.range.min} to ${THROTTLE.range.max}. The default is ${THROTTLE.default}. It works on a stream of records, annotate on one document, and relate on one entity set.`],
-  ...BACKEND_OPTIONS,
-];
+const QUIET = flag('--quiet', 'nothing', 'off', 'Prints nothing. The exit code carries the answer. It works on one document only.');
+// The shared flags every record function takes. find takes none of them.
+const RECORD_FLAGS = ['--csv', '--tsv', '--context', '--batch', '--max-request-bytes', '--jobs'];
+// recognize and relate do not batch records.
+const SET_FLAGS = ['--csv', '--tsv', '--max-request-bytes', '--jobs'];
 
 // The failure codes every function shares, from specification/channels.md.
 // A function's own list puts its answers first and then these.
@@ -79,15 +68,14 @@ export const FUNCTIONS = [
     takes: 'one question and one piece of evidence',
     gives: 'true, false, or null',
     toPerson: true,
-    requests: 'One request for one piece of evidence. One request for each record in a stream.',
+    requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE',
     options: [
-      ['--threshold T or LOW:HIGH', `The bar the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle is not sure. The default is ${cutOn('decide')}.`],
-      ['--true TEXT', 'What a yes means, in the words the model reads.'],
-      ['--false TEXT', 'What a no means.'],
-      ['--quiet', 'Prints nothing. The exit code carries the answer.'],
-      ...COMMON_OPTIONS,
+      flag('--threshold T or LOW:HIGH', `${CUT_TAKES}, or a band LOW:HIGH`, cutOn('decide'), 'The bar the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle answers not sure.'),
+      ...MEANS,
+      QUIET,
     ],
+    shared: RECORD_FLAGS,
     exits: [[0, 'yes'], [1, 'no'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'On one piece of evidence, a probability inside the band prints null and exits 3. In a stream, that record prints null and the run exits 0.',
     howtos: ['screen-studies-for-a-review', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
@@ -107,16 +95,16 @@ export const FUNCTIONS = [
     takes: `one question, one piece of evidence, and ${setting('Options').range.min} to ${setting('Options').range.max} options`,
     gives: 'one of your options, or null',
     toPerson: true,
-    requests: 'One request for one piece of evidence. One request for each record in a stream.',
+    requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then OPTION...',
     options: [
-      ['--threshold T', `The bar the winning option must reach. One number only. A band is a usage error. ${cutOn('choose') === 'none' ? 'There is no default' : `The default is ${cutOn('choose')}`}.`],
-      ['--option LABEL=DESCRIPTION', 'One option and what it means. It may repeat, and it replaces the positional options.'],
-      ['--options POINTER', 'Takes the options from each record. It needs --jsonl.'],
-      ['--raw', 'Prints the label without quotation marks.'],
-      ['--quiet', 'Prints nothing. The exit code says whether an option came back.'],
-      ...COMMON_OPTIONS,
+      flag('--threshold T', CUT_TAKES, cutOn('choose'), 'The bar the winning option must reach. One number only. A band is a usage error.'),
+      flag('--option LABEL=DESCRIPTION', 'a label and what it means, and it may repeat', 'none', `One option and what it means. It replaces the positional options. ${LIST_RULE}`),
+      flag('--options POINTER', 'an RFC 6901 pointer', 'none', 'Takes the options from each record. It needs `--jsonl`.'),
+      flag('--raw', 'nothing', 'off', 'Prints the label without quotation marks. CSV and TSV refuse it.'),
+      flag('--quiet', 'nothing', 'off', 'Prints nothing. The exit code says whether an option came back. It works on one document only.'),
     ],
+    shared: RECORD_FLAGS,
     exits: [[0, 'an option came back'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'On one piece of evidence, a pick under the threshold or an exact tie at the top prints null and exits 3. In a stream, the run exits 0. choose never exits 1.',
     howtos: ['rank-the-inbound-leads', 'split-a-scanned-packet-into-documents'],
@@ -136,13 +124,13 @@ export const FUNCTIONS = [
     line: 'Name every label that fits.',
     takes: `one question, one piece of evidence, and ${setting('Labels').range.min} to ${setting('Labels').range.max} labels`,
     gives: 'the labels that fit, as a list',
-    requests: 'Every label rides in one request. One request for one piece of evidence, whatever the label count.',
+    requests: 'Every label rides in one request. One request for one piece of evidence, whatever the label count. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then LABEL...',
     options: [
-      ['--threshold T', `The bar every label must reach on its own. The default is ${cutOn('tag')}. A band is refused.`],
-      ['--label LABEL=DESCRIPTION', 'A label and what it means. It may repeat, and it replaces the positional labels.'],
-      ...COMMON_OPTIONS,
+      flag('--threshold T', CUT_TAKES, cutOn('tag'), 'The bar every label must reach on its own. A band is refused.'),
+      flag('--label LABEL=DESCRIPTION', 'a label and what it means, and it may repeat', 'none', `A label and what it means. It replaces the positional labels. ${LIST_RULE}`),
     ],
+    shared: RECORD_FLAGS,
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'A label under the threshold is left out. An empty list is a good answer and exits 0.',
     howtos: ['code-open-ended-survey-answers'],
@@ -158,11 +146,10 @@ export const FUNCTIONS = [
     line: 'Place the evidence on a scale you name.',
     takes: `one question, one piece of evidence, and ${setting('Levels').range.min} to ${setting('Levels').range.max} levels, least first`,
     gives: 'a number along your levels. The first level is 0',
-    requests: 'One request for one piece of evidence. One request for each record in a stream.',
+    requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then LEVEL...',
-    options: [
-      ...COMMON_OPTIONS,
-    ],
+    options: [],
+    shared: RECORD_FLAGS,
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads. Do not use it to decide yes or no.',
     howtos: ['code-open-ended-survey-answers'],
@@ -177,20 +164,20 @@ export const FUNCTIONS = [
   },
   {
     name: 'filter',
+    streamOnly: true,
     goal: 'filter keeps the records where the answer is yes, unchanged and in order.',
     primitive: 'Yes or no, per record',
     line: 'Keep the records where the answer is yes.',
     takes: 'one yes-or-no question and many records',
     gives: 'the records that pass, byte for byte, in the order they went in',
-    requests: 'One request for each record.',
+    requests: 'Records share requests by default. --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE',
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
-      ['--threshold T', `The bar a record must reach. The default is ${cutOn('filter')}. A band is a usage error.`],
-      ['--true TEXT', 'What a yes means, in the words the model reads.'],
-      ['--false TEXT', 'What a no means.'],
-      ...COMMON_OPTIONS,
+      flag('--threshold T', CUT_TAKES, cutOn('filter'), 'The bar a record must reach to be kept. A band is a usage error.'),
+      ...MEANS,
     ],
+    shared: RECORD_FLAGS,
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'No record sets the exit code. A record under the threshold is dropped.',
     howtos: ['triage-a-support-inbox', 'join-two-tables-by-meaning', 'rank-the-inbound-leads'],
@@ -202,20 +189,20 @@ export const FUNCTIONS = [
   },
   {
     name: 'rank',
+    streamOnly: true,
     goal: 'rank sorts every record by how likely the answer is yes, and drops none.',
     primitive: 'Yes or no, per record',
     line: 'Sort records by how likely the answer is yes.',
     takes: 'one yes-or-no question and many records',
     gives: 'every record again, most likely first',
-    requests: 'One request for each record. --top trims the printed list and saves nothing.',
+    requests: 'Records share requests by default. --batch 1 asks one record a request. --top trims the printed list and saves nothing.',
     args: 'QUESTION or @FILE',
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
-      ['--top N', 'Prints the first N records of the order. Every record is still judged.'],
-      ['--true TEXT', 'What a yes means, in the words the model reads.'],
-      ['--false TEXT', 'What a no means.'],
-      ...COMMON_OPTIONS,
+      flag('--top N', lower(setting('Top').allowed), lower(setting('Top').default), 'Prints the first N records of the order. Every record is still judged, so it saves no request.'),
+      ...MEANS,
     ],
+    shared: RECORD_FLAGS,
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'rank takes no threshold. It drops nothing, and nothing is not sure. The sort happens on this machine.',
     howtos: ['rank-the-inbound-leads'],
@@ -226,6 +213,7 @@ export const FUNCTIONS = [
   },
   {
     name: 'find',
+    streamOnly: true,
     goal: 'find reads all the lines together and returns the one that answers the question, or none.',
     primitive: 'Pick one line of the evidence',
     line: 'Pick the one line that best answers a question.',
@@ -234,13 +222,9 @@ export const FUNCTIONS = [
     requests: 'It sends one request for the whole document.',
     args: 'QUESTION',
     options: [
-      ['--none', 'Lets it answer that nothing fits. It then prints nothing and exits 3.'],
-      ['--lines, --jsonl', `How the lines are framed. --${setting('Framing').defaultOn('find')} is the default. CSV and TSV are refused.`],
-      ['--field POINTER', 'Names the part of each record to read.'],
-      ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
-      ['--plan', 'Prints the plan and sends nothing.'],
-      ...BACKEND_OPTIONS,
+      flag('--none', 'nothing', 'off', 'Lets it answer that nothing fits. It then prints nothing and exits 3.'),
     ],
+    shared: [],
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],
     unsure: 'Without --none, find must pick a line. When nothing fits, the line it picks is wrong. --none lets it say nothing fits.',
     howtos: ['group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
@@ -257,14 +241,15 @@ export const FUNCTIONS = [
     line: 'Fill out a form for every record.',
     takes: 'a saved set of questions and your JSON',
     gives: 'the same JSON with one field added per question. Nested fields ride through unchanged',
-    requests: 'It sends one request for each record and each part the questions read.',
+    requests: 'On one document it sends one request for each part the questions read. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     toPerson: true,
     args: 'FILE',
     argsNote: 'The file is a saved question set.',
     options: [
-      ...COMMON_OPTIONS,
+      flag('--on-error POLICY', '`continue`', 'stop at the first failed record', 'Skips a record whose question set `on` pointer finds nothing, and prints one error row in its place. It needs `--jsonl`, `--details` and `--batch 1`, and `--plan` refuses it. Every other failure still stops the run.', { short: 'Skips a record whose question set `on` pointer finds nothing, and prints one error row in its place. The reference page gives the flags it needs.' }),
     ],
-    exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], ...COMMON_EXITS.map(([code, what]) => [code, code === 5 ? 'the question set could not be read' : what])],
+    shared: RECORD_FLAGS,
+    exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], [7, 'the run finished and skipped records under --on-error continue'], ...COMMON_EXITS.map(([code, what]) => [code, code === 5 ? 'the question set could not be read' : what])],
     unsure: 'Each question carries its own threshold. One question set can mix cuts and bands. A question the backend could not answer is marked failed and counted. It never turns into null.',
     howtos: ['triage-a-support-inbox'],
     see: {
@@ -287,12 +272,13 @@ export const FUNCTIONS = [
     args: 'KIND... or @FILE',
     argsNote: 'The file is a question file.',
     options: [
-      ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
-      ['--threshold T', `Keeps names whose strength reaches this cut. The default is ${cutOn('recognize')}.`],
-      ['--relation NAME=SOURCE:TARGET', 'Also links the names it finds.'],
-      ['--relation-threshold T', `Keeps relation edges whose probability reaches this cut. The default is ${setting('Relation threshold').number}.`],
-      ...COMMON_OPTIONS,
+      flag('--kind KIND=DESCRIPTION', 'a kind and what it means, and it may repeat', 'none', 'One kind and what it means. With no kinds, every name has the kind `ENTITY`.'),
+      flag('--threshold T', CUT_TAKES, cutOn('recognize'), 'Keeps names whose strength reaches this cut.'),
+      flag('--relation NAME=SOURCE:TARGET', 'a rule, and it may repeat', 'none', 'Also links the names it finds. A bare NAME relates any two kinds.'),
+      flag('--relation-threshold T', CUT_TAKES, setting('Relation threshold').number, 'Keeps relation edges whose probability reaches this cut.'),
+      flag('--max-text-bytes N', `${setting('Recognize text limit').allowed}`, `${setting('Recognize text limit').default} bytes`, 'The largest text it takes, in UTF-8 bytes. A longer text exits 2 before any request.'),
     ],
+    shared: SET_FLAGS,
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
@@ -317,11 +303,11 @@ export const FUNCTIONS = [
     args: 'RELATION... or @FILE',
     argsNote: 'Each relation is `NAME=SOURCE_KIND:TARGET_KIND` or a bare `NAME`.',
     options: [
-      ['--either', 'Treats every relation as reading the same both ways.'],
-      ['--threshold T', `Keeps edges whose probability reaches this cut. The default is ${cutOn('relate')}.`],
-      ['--kind-field POINTER', 'Reads each entity\'s kind from this pointer.'],
-      ...COMMON_OPTIONS,
+      flag('--either', 'nothing', 'off', 'Treats every relation as reading the same both ways.'),
+      flag('--threshold T', CUT_TAKES, cutOn('relate'), 'Keeps edges whose probability reaches this cut.'),
+      flag('--kind-field POINTER', 'an RFC 6901 pointer', setting('Kind pointer').default, 'Reads each entity\'s kind from this pointer.'),
     ],
+    shared: SET_FLAGS,
     exits: [[0, 'the run finished'], [6, 'the run finished with failed questions'], ...COMMON_EXITS],
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
@@ -344,13 +330,13 @@ export const FUNCTIONS = [
     args: '@FILE',
     argsNote: 'It takes the place of the question words on decide, choose, tag, score, filter, and rank.',
     options: [
-      ['the verb key', 'One of decide, choose, tag, or score. It names the verb and carries the question text.'],
-      ['true, false', 'What a yes and a no mean, for a decide question.'],
-      ['options, labels', 'A list, or a map from label to what it means.'],
-      ['levels', 'The scale, lowest first.'],
-      ['threshold', 'A cut, or a band written LOW:HIGH.'],
-      ['on', 'One JSON Pointer, or a list of them.'],
-      ['model, profile', 'The model to ask and the calibration profile to apply.'],
+      flag('the verb key', '', '', 'One of decide, choose, tag, or score. It names the verb and carries the question text.'),
+      flag('true, false', '', '', 'What a yes and a no mean, for a decide question.'),
+      flag('options, labels', '', '', 'A list, or a map from label to what it means.'),
+      flag('levels', '', '', 'The scale, lowest first.'),
+      flag('threshold', '', '', 'A cut, or a band written LOW:HIGH.'),
+      flag('on', '', '', 'One JSON Pointer, or a list of them.'),
+      flag('model, profile', '', '', 'The model to ask and the calibration profile to apply.'),
     ],
     exits: [[5, 'the file could not be read, is not one JSON object, or breaks a rule'], [2, 'the command names the wrong verb for the file']],
     unsure: 'A band in the file marks the middle answers not sure. Send those to a person.',
