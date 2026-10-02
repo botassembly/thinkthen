@@ -4,7 +4,7 @@ Status: open for five parts: full detail on every verb, backend time and request
 
 Milestone: later
 
-Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: tickets 0300 and 0302 for items 2 and 3, ticket 0314 slice 4 for item 1, marketing for item 6.
+Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: tickets 0300 and 0302 for items 2 and 3, ticket 0314 slice 4 for item 1, the builder for item 6.
 
 Ian ruled on 2026-09-26 that library results carry `facts` on every call, with no setting and no second call. `--facts` controls only what the command line prints. Ian can overturn this ruling.
 
@@ -47,6 +47,6 @@ Register 61 asked that per-record token shares carry a name saying they are even
 
 ## 6. Docs
 
-Each surface's README names `facts`. The site shows no raw HTTP exchange with its `usage`, and no site page says where a library or SQL call's run facts come from. Both belong to marketing, which owns `site/`.
+Each surface's README names `facts`. The site shows no raw HTTP exchange with its `usage`, and no site page says where a library or SQL call's run facts come from. Both belong to the builder, which owns `site/`.
 
 Target-package and runner qualification belongs to `2026-09-25-release-and-install-for-0-1.md`.

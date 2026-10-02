@@ -27,7 +27,7 @@ Ticket 0360 reads the usage totals once before a process's first send and refuse
 
 The writer then stops for the rest of the process (`crates/thinkthen/src/engine/usage.rs`, `Queue.failed`). The command prints its fixed warning at exit (`crates/thinkthen/src/cli/mod.rs`). `Engine::finish_usage` discards the result (`crates/thinkthen/src/engine/facade/finish.rs`), so the libraries, the C door and the SQL extensions say nothing.
 
-## For marketing
+## Site pages for the builder
 
 Several `site/` pages and example outputs still show the old `thinkthen-usage` folder under the cache home:
 

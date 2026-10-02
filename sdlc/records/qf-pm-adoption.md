@@ -4,7 +4,7 @@ Lane claude-1, branch `ticket/quick-fix-pm-adoption`, off origin/main `4e880cdf6
 
 ## Changes to `sdlc/pm.json`
 
-- `mailroom` is not declared in the public `sdlc/pm.json`. pm needs `mailroom.repo` as a local checkout path. That path differs on each workstation, and the absolute form would publish a home-folder path. Quick Fix `qf-pm-mailroom-path` removed it. Until pm can take the path from the environment or user configuration, pm reads mail from the invoked repository, and `pm send` from thinkthen refuses. The coordinator sends checkpoint mail by hand in the mailroom checkout meanwhile. The pm team was asked.
+- `sdlc/pm.json` declares the mailroom as `{"repo": "sdlc", "name": "thinkthen"}`. The relative `repo` names a sibling checkout called `sdlc`, so the file holds no machine path. Quick Fix `qf-pm-mailroom-path` had removed an earlier absolute path. `PM_MAILROOM_REPO` overrides the declaration on any machine. Where no sibling checkout exists, pm's mail commands fail with a clear message, and `pm send` writes nothing.
 - `milestones` points at `planning/milestones.md` with the values `0.1`, `0.2` and `later`.
 - The `ready` and `in progress` mappings go. pm now tallies both states natively (`TICKET_STATUSES` in `src/records/status.ts`), and `pm counts` shows 7 ready and 17 in progress where it showed 26 open.
 - The five `**`-prefixed mappings go. pm strips emphasis before it reads a status token (`statusToken`). Status, issue and ticket counts did not change when they went.

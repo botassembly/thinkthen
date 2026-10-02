@@ -27,5 +27,9 @@
   },
   "todoExcludes": [
     "libraries/dart/flutter/example/linux/flutter/**"
-  ]
+  ],
+  "mailroom": {
+    "repo": "sdlc",
+    "name": "thinkthen"
+  }
 }
