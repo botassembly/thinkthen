@@ -106,20 +106,20 @@ runtime_open() {
 
 BIN=.runtime/tree/usr/lib/postgresql/16/bin
 
-# Copy the extracted tree, install the module from $1 and the extension files from $2,
-# and make a cluster.
+# Copy the extracted tree, install the module from $1 and the extension files of
+# EXT_VERSION from $2, and make a cluster. $2 can keep an earlier version's SQL.
 runtime_install() {
 	if [ "$PG_HOST" = Darwin ]; then
 		RUNTIME_LIBRARY_DIR=$("$PG_CONFIG" --pkglibdir)
 		[ ! -e "$RUNTIME_LIBRARY_DIR/thinkthen.so" ] && [ ! -e "$RUNTIME_LIBRARY_DIR/thinkthen.dylib" ] && [ ! -e "$RUNTIME_EXTENSION_DIR/thinkthen.control" ] || {
 			echo 'runtime.sh: a thinkthen extension already occupies the Homebrew PostgreSQL keg' >&2; return 1;
 		}
-		cp "$2"/thinkthen* "$RUNTIME_EXTENSION_DIR/"
+		cp "$2/thinkthen.control" "$2/thinkthen--$EXT_VERSION.sql" "$RUNTIME_EXTENSION_DIR/"
 		cp "$1"/thinkthen.* "$RUNTIME_LIBRARY_DIR/"
 		BIN=$EXTRACTED/bin
 	else
 	rm -rf .runtime/tree && mkdir -p .runtime/tree && cp -a "$EXTRACTED/." .runtime/tree/
-	cp "$2"/thinkthen* .runtime/tree/usr/share/postgresql/16/extension/
+	cp "$2/thinkthen.control" "$2/thinkthen--$EXT_VERSION.sql" .runtime/tree/usr/share/postgresql/16/extension/
 	cp "$1"/thinkthen.* .runtime/tree/usr/lib/postgresql/16/lib/
 	BIN=$(pwd)/.runtime/tree/usr/lib/postgresql/16/bin
 	RUNTIME_EXTENSION_DIR=$(pwd)/.runtime/tree/usr/share/postgresql/16/extension
