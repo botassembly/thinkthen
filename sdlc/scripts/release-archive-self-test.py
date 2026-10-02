@@ -72,6 +72,23 @@ def main():
                    str(base / "legacy"), "first-run", cwd=source), "", success=True)
         if not (base / "legacy/thinkthen-first-run.tar.gz").is_file():
             raise AssertionError("gitless legacy archive missing")
+        # The draft requires every target's first-run archive to match byte for byte, and rehearsal run
+        # 36937157758 failed on owner, time, order and gzip header differences. A rebuild after new
+        # file times and a looser umask must give the same bytes and the fixed entry metadata.
+        for path in (source / "demos/27-test-with-no-network").rglob("*"):
+            os.utime(path, (1_700_000_000, 1_700_000_000))
+        expect(run("sh", "-c", 'umask 002 && exec sh "$0" "$@"', str(source / "sdlc/scripts/release-pack"),
+                   host, str(base / "again"), "first-run", cwd=source), "", success=True)
+        first_run = (base / "legacy/thinkthen-first-run.tar.gz").read_bytes()
+        with tarfile.open(fileobj=io.BytesIO(first_run), mode="r:gz") as packed:
+            entries = [(entry.name, entry.mode, entry.uid, entry.gid, entry.uname, entry.mtime)
+                       for entry in packed.getmembers()]
+        if (first_run != (base / "again/thinkthen-first-run.tar.gz").read_bytes() or first_run[4:9] != bytes(5)
+                or entries != [("thinkthen-first-run", 0o755, 0, 0, "", 0),
+                               ("thinkthen-first-run/recording", 0o755, 0, 0, "", 0),
+                               ("thinkthen-first-run/recording/thinkthen.jsonl", 0o644, 0, 0, "", 0),
+                               ("thinkthen-first-run/report.txt", 0o644, 0, 0, "", 0)]):
+            raise AssertionError(("first-run archive is not reproducible", entries))
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "unselected"), "go", cwd=source), "archived source tar path must be absolute")
 
