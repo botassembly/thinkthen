@@ -20,7 +20,9 @@ Blockers, refreshed 2026-10-02:
 - Registry setup belongs to the docs team and Ian. Ian approves each outward step. Ticket 0128's "Ian's setup list" names the steps.
 - Two docs team asks of 2026-10-01 still change `release.yml`. The `nuget` job must move to NuGet trusted publishing; today it reads `secrets.NUGET_API_KEY`, which will not exist. The pub.dev upload must move to a job started by Ian's `v0.1.0` tag push; today the `pub` job uses Google Cloud, which Ian ruled out. Owner: the queue owner, on main, then cherry-picked to `release/0.1`. A change to `release.yml` restarts ticket 0128's Phase 4 checklist at step 2, so one more rehearsal from `release/0.1` follows.
 
-The 2026-10-02 sweep closed every 0.1 ticket that waited only on release-target proof. Ticket 0374's installed-file cases ran on all four release runners in run 37010060315. The sweep also closed the README issue: its overhead sentence landed in `248bc6aa4`.
+The 2026-10-02 sweep closed twelve 0.1 tickets that waited only on release-target proof. Ticket 0374's installed-file cases ran on all four release runners in run 37010060315. The sweep also closed the README issue. Its overhead sentence landed in `248bc6aa4`.
+
+Tickets 0149 and 0157 stay open for one proof. The shared SQL settings corpus, the request-size case and the library retry-count case have not run on native Intel macOS or macOS 15. Ticket 0231 ran them on macOS 26, with Intel under Rosetta. The rehearsal's installed modes do not run them. The gap does not break 0.1, because the code is the shared engine and every proof that ran passed. Owner: Codex. Either the installed modes gain those cases before the next rehearsal, or the coordinator records acceptance of the existing proof.
 
 Path to 0.1:
 
@@ -28,14 +30,16 @@ Path to 0.1:
 2. Done: a clean rehearsal passed on all four targets (ticket 0128 phase 3b). Run 36945370940 passed on main `94d0500c0` at version 0.0.1. Run 36998358908 passed on main `f65faea4e` at version 0.1.0.
 3. Done: the checkpoint `checkpoint/surfaces/2026-10-02-1` was tagged on `4e880cdf6`. Release QA round 5 ran on it and was clean.
 4. Done: ticket 0387 landed the release commit at `ff7120f89`. The coordinator tagged `rc/0.1.0-rc.1` on `4e880cdf6` and cut `release/0.1` there. Run 37010060315 passed from `release/0.1`.
-5. Left: the `nuget` and `pub` workflow changes above, cherry-picked to `release/0.1`, then one more rehearsal from `release/0.1` (queue owner). Registry setup and the arming switch (docs team and Ian). Ian's go: he tags `v0.1.0`, dispatches release mode and approves each publish job. Ticket 0128 phase 4 steps 5 to 9 follow, including the history reset and the public install checks.
+5. Left: the `nuget` and `pub` workflow changes above, cherry-picked to `release/0.1`, then one more rehearsal from `release/0.1` (queue owner). Registry setup and the arming switch (docs team and Ian). The 0149 and 0157 proof above (Codex). Ian's go: he tags `v0.1.0`, dispatches release mode and approves each publish job. Ticket 0128 phase 4 steps 5 to 9 follow, including the history reset and the public install checks.
 
 Open items:
 
 - [0128: Release and install for 0.1](../tickets/0128-release-and-install.md)
+- [0149: Give SQL the engine settings and charge every send](../tickets/0149-sql-settings.md)
+- [0157: Expose request size and retry counts through the libraries](../tickets/0157-library-size-and-retry-settings.md)
 - [Release and install for 0.1](../issues/2026-09-25-release-and-install-for-0-1.md)
 
-Closed 2026-10-02 by the release rehearsals: 0149, 0157, 0222, 0224, 0226, 0227, 0231, 0268, 0269, 0270, 0271, 0272, 0273 and 0299, and the issue [README: where to get a key, how to change the backend, and the overhead line](../issues/closed/2026-09-29-readme-key-backend-and-overhead-lines.md).
+Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268, 0269, 0270, 0271, 0272, 0273 and 0299, and the issue [README: where to get a key, how to change the backend, and the overhead line](../issues/closed/2026-09-29-readme-key-backend-and-overhead-lines.md).
 
 ## 0.2
 
