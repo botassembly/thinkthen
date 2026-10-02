@@ -6,7 +6,7 @@ Status: built in lane claude-3; fresh review accepted. Ian can overturn the stor
 
 Release rehearsal run 36937157758 passed every build and all four smoke jobs for the first time. The `draft` job then stopped in `release-workflow collect` with "first-run differs between targets". `collect` requires each target's `thinkthen-first-run.tar.gz` and its `.sha256` to match byte for byte.
 
-All four copies differed, although their two files held the same bytes. `release-pack` packed the archive with the host's `tar -czf`:
+All four copies differed. Each held the same `report.txt` and `recording/thinkthen.jsonl` bytes. `release-pack` packed the archive with the host's `tar -czf`:
 
 - Owners: `runner/runner` on Linux and `runner/staff` on macOS.
 - Entry times: each runner's build time, 19:05 to 19:30.
@@ -17,7 +17,7 @@ All four copies differed, although their two files held the same bytes. `release
 
 `release-pack`'s first-run part writes the archive with Python's `tarfile`, in USTAR form. It holds `thinkthen-first-run/`, `recording/` and its files in sorted order, then `report.txt`. Every entry has owner 0, no owner names, time 0, and mode 755 for folders or executables and 644 for other files. The gzip layer has time 0, no file name, and stored deflate blocks. Compressed blocks would depend on each runner's zlib build. The archive grows from about 720 bytes to 10,263 bytes. The `collect` comparison is unchanged.
 
-The extracted layout is the same as before. Each consumer runs `tar -xzf` and then `cd thinkthen-first-run`. The old leading `./` entry is gone.
+The extracted layout is the same as before. Each consumer extracts `thinkthen-first-run/` and reads the files inside it. The old leading `./` entry is gone.
 
 ## Checks
 
