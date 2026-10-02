@@ -44,7 +44,7 @@ function videoTile(spec) {
   }
   if (!fs.existsSync(path.join(pub, 'video', `${id}.jpg`))) throw new Error(`video: public/video/${id}.jpg is missing`);
   const watch = `https://www.youtube.com/watch?v=${id}`;
-  return `<li><a class="video-tile" href="${esc(watch)}"><img src="/video/${id}.jpg" alt="" width="96" height="54"><b>${esc(code)}</b> <span class="video-label">${esc(label)}</span> <small>${esc(date)} · ${esc(length)}</small></a></li>`;
+  return `<li><a class="video-tile" href="${esc(watch)}"><img src="/video/${id}.jpg" alt="" width="96" height="54"><span class="video-label">${esc(label)}</span> <small><b>${esc(code)}</b> · ${esc(date)} · ${esc(length)}</small></a></li>`;
 }
 
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8').replace(/\n+$/, '');

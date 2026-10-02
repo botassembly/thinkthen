@@ -256,25 +256,27 @@ main .wrap.reading { max-width: calc(72ch + 32px); }
   display: flex; align-items: center; justify-content: center; margin: 0 0 1.4rem;
   border: 1px dashed var(--line); background: var(--card); color: var(--muted); font-size: .92rem;
 }
-/* A row of video tiles in an article. Each tile shows a small thumbnail
-   served from this site, a short code, a label, and the date and length in
-   its corner. It opens the video on YouTube. On a narrow phone the tiles
-   shrink and the label wraps. */
+/* A row of video tiles in an article. Each tile puts a small thumbnail
+   served from this site on the left. The label sits at the top right, and
+   the short code, date and length sit at the bottom right. It opens the
+   video on YouTube. On a phone the tiles stack, one per line. */
 .video-row {
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: .5rem;
   list-style: none; margin: 0 0 1.4rem; padding: 0;
 }
 .video-row li { margin: 0; min-width: 0; }
 .video-tile {
-  display: flex; flex-direction: column; height: 100%; padding: .4rem .4rem .3rem;
+  display: grid; grid-template-columns: 4rem minmax(0, 1fr); grid-template-rows: 1fr auto;
+  column-gap: .5rem; height: 100%; padding: .35rem;
   background: var(--card); border: 1px solid var(--line); border-radius: 8px;
   text-decoration: none; color: var(--ink); font-size: .82rem; line-height: 1.25;
 }
 .video-tile:hover { border-color: var(--think); color: var(--ink); }
-.video-tile img { display: block; width: 100%; max-width: 6rem; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; margin-bottom: .3rem; }
-.video-tile b { color: var(--think); }
+.video-tile img { grid-row: 1 / 3; align-self: center; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; }
 .video-tile .video-label { hyphens: auto; overflow-wrap: break-word; }
-.video-tile small { margin-top: auto; padding-top: .2rem; align-self: flex-end; text-align: right; color: var(--muted); font-size: .66rem; }
+.video-tile small { align-self: end; justify-self: end; text-align: right; color: var(--muted); font-size: .66rem; }
+.video-tile b { color: var(--think); }
+@media (max-width: 36rem) { .video-row { grid-auto-flow: row; } }
 
 table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .93rem; }
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
