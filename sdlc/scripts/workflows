@@ -4,7 +4,12 @@
 Ian ruled that no push starts a workflow and that releases publish only through a
 run he starts and approves. PyYAML's safe loader reads each workflow, and each
 broken rule prints one line. The rules sit beside the code that checks them, and
-ticket 0128's "The workflow check" table lists them. Usage: workflows [--self-test]
+ticket 0128's "The workflow check" table lists them.
+
+A tag object's SHA and a commit's SHA are both 40 hex digits, and only GitHub knows
+which one a pin names. The gate stays offline, so `--remote-pins` asks GitHub by hand
+before a release dispatch (ticket 0391).
+Usage: workflows [--self-test | --remote-pins]
 """
 
 import os
@@ -27,6 +32,8 @@ UNPINNED = [
     (re.compile(r"gem install[^\n]*\brubygems-update\b(?! -v)"), "installs gem with no version"),
 ]
 RESOLVED = "${{ needs.resolve.outputs.sha }}"
+NPM_PUBLISH = re.compile(r"\bnpm publish\b([^\n]*)")
+NPM_VALUE_FLAGS = {"--access", "--tag", "--registry", "--otp", "--workspace", "-w"}
 # Release containers build offline from the crates host-setup fetches. Every tracked
 # lock file joins that fetch list or this table, which says why no release build reads it.
 UNFETCHED_LOCKS = {
@@ -61,6 +68,36 @@ def images(node, key=None):
         yield node
 
 
+def npm_publish_specs(run):
+    """Each `npm publish` package argument that npm would not read as a file path."""
+    for match in NPM_PUBLISH.finditer(run):
+        words = match.group(1).split()
+        while words and words[0].startswith("-"):
+            words = words[2:] if words[0] in NPM_VALUE_FLAGS else words[1:]
+        spec = words[0].strip("\"'") if words else ""
+        if spec and not spec.startswith(("./", "../", "/")):
+            yield spec
+
+
+def remote_pins(folder):
+    """Ask GitHub whether each pinned action SHA is a commit; a tag object's SHA fails at run time."""
+    out = []
+    pins = sorted({step["uses"] for path in sorted(folder.glob("*.y*ml"))
+                   for _, _, step in steps(yaml.safe_load(path.read_text(encoding="utf-8")) or {})
+                   if PINNED.match(step.get("uses") or "")})
+    for uses in pins:
+        action, sha = uses.split("@")
+        repo = "/".join(action.split("/")[:2])
+        commit = subprocess.run(["gh", "api", f"repos/{repo}/git/commits/{sha}", "--silent"], capture_output=True)
+        if commit.returncode == 0:
+            continue
+        tag = subprocess.run(["gh", "api", f"repos/{repo}/git/tags/{sha}", "--jq", ".tag + \" points to \" + .object.sha"],
+                             capture_output=True, text=True)
+        out.append(f"{uses} is a tag object ({tag.stdout.strip()}); pin the commit" if tag.returncode == 0
+                   else f"{uses} names no commit in {repo}")
+    return out
+
+
 def every(name, doc, text):
     out = []
     triggers = doc.get("on", doc.get(True))
@@ -75,6 +112,8 @@ def every(name, doc, text):
         run = step.get("run") or ""
         if EXPANDED.search(run):
             out.append(f"{name}: job {job} expands an input or event value inside run; pass it through env")
+        for spec in npm_publish_specs(run):
+            out.append(f"{name}: job {job} publishes {spec}; npm reads a bare relative path as a GitHub repository, so start it with ./")
         for command in re.findall(r"docker run(?:[^\n]*\\\n)*[^\n]*", run):
             if not DIGEST.search(command) and "${{ matrix." not in command:
                 out.append(f"{name}: job {job} runs an image with no digest")
@@ -742,6 +781,9 @@ def self_test():
         ("language-smoke-setup", "release.yml",
          lambda t: t.replace('run: python3 sdlc/scripts/release-language-tools.py smoke', 'run: echo skipped'),
          ["release.yml: x86 smoke must select pinned language tools before installed consumers"]),
+        ("npm-bare-path", "release.yml",
+         lambda t: t.replace('npm publish "./npm-dist/thinkthen-$VERSION.tgz" --provenance', 'npm publish npm-dist/*.tgz --provenance'),
+         ["release.yml: job npm publishes npm-dist/*.tgz; npm reads a bare relative path as a GitHub repository, so start it with ./"]),
     ]
     bad = 0
     for name, file, plant, expected in cases:
@@ -754,7 +796,7 @@ def self_test():
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
                 # Keep each planted rule independent after the real release.yml lands.
                 source = ((REPO / ".github/workflows/release.yml").read_text()
-                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
+                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-", "npm-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:
@@ -876,6 +918,10 @@ def self_test():
 def main(argv):
     if argv == ["--self-test"]:
         return self_test()
+    if argv == ["--remote-pins"]:
+        out = remote_pins(REPO / ".github/workflows")
+        print("\n".join(out) if out else "workflows: every pinned action names a commit", file=sys.stderr if out else sys.stdout)
+        return 1 if out else 0
     out = check(REPO / ".github/workflows")
     out += fetch_gaps((REPO / "sdlc/scripts/release-workflow").read_text(encoding="utf-8"))
     if not out:

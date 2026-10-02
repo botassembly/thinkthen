@@ -52,7 +52,8 @@ After the cut, main carries 0.1.0 and takes 0.2 work. The 0.2 cut sets the next 
 ## 6. The release
 
 1. The real release is dispatched only on Ian's go.
-2. Release mode runs from a `v*` tag. Each publish job waits for Ian's approval in the GitHub `release` environment (ticket 0128).
+2. Before the dispatch, the coordinator runs `sdlc/scripts/workflows --remote-pins`. It asks GitHub whether each pinned action names a commit. A pin that names a tag object passes the offline gate and fails only in the release run (ticket 0391).
+3. Release mode runs from a `v*` tag. Each publish job waits for Ian's approval in the GitHub `release` environment (ticket 0128).
 
 ## 7. Registries and the site
 
