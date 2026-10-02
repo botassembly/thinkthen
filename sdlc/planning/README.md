@@ -4,7 +4,7 @@
 
 - `design-study.md`: what thinkthen is, what version one holds, how it fits, and what waits on Ian. A study until he rules.
 - `rust-standards.md`: how the code is judged, rule by rule, with the enforcing tool.
-- [ownership.md](ownership.md): who owns which folders. Marketing owns `site/`.
+- [ownership.md](ownership.md): who owns what. The queue owner owns the whole repo.
 - [worktrees.md](worktrees.md): how lanes are claimed and freed.
 - [ticket-preparation.md](ticket-preparation.md): how a ticket is prepared and reviewed.
 - [release-process.md](release-process.md): the coordinator's release process, from checkpoints to the release. The one home of that process.
