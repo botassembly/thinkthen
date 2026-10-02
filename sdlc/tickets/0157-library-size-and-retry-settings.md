@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/resul
 
 # 0157: Expose request size and retry counts through the libraries
 
-Status: in progress; waits on the rehearsal. Staged implementation landed after fresh High review accepted source `85180c3f`. Owner: Codex. Six libraries, SQLite, PostgreSQL and Linux x86-64 DuckDB passed the focused settings integration checkpoint. The DuckDB C++ extension now builds on all four release targets under ticket 0231, which ran the request-size checks on each installed package. No C API target remains. Only the release-runner proof from the rehearsal in ticket 0128 phase 3b remains.
+Status: in progress; one proof remains. Rehearsal runs 36945370940, 36998358908 and 37010060315 passed every job through `draft` on all four targets on 2026-10-02. The library and SQL archives passed their installed checks on every runner. What remains: no request-size case and no library retry-count case has run on native Intel macOS or on macOS 15. Ticket 0231 ran the request-size checks on macOS 26, with Intel under Rosetta, and the rehearsal's installed modes run neither case. Two ways close it: add the request-size case and one retry-count case to the installed modes so the next rehearsal runs them, or record the coordinator's acceptance of the existing proof. This gap does not break 0.1: the code is the shared engine, and every proof that ran passed. Owner: Codex. Before this sweep the status read: in progress; waits on the rehearsal. Staged implementation landed after fresh High review accepted source `85180c3f`. Six libraries, SQLite, PostgreSQL and Linux x86-64 DuckDB passed the focused settings integration checkpoint.
 
 Milestone: 0.1
 

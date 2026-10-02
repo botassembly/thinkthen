@@ -10,46 +10,36 @@ Outcome: the first public release, on every registry, with every surface and bin
 
 Exit criteria:
 
-1. A clean release rehearsal: every job passes through `draft`.
-2. Release QA's latest round is clean on the latest checkpoint.
+1. Done: a clean release rehearsal. Every job passed through `draft` in runs 36945370940, 36998358908 and 37010060315.
+2. Done: release QA's round 5 was clean on `checkpoint/surfaces/2026-10-02-1` (`4e880cdf6`).
 3. The docs team has finished registry setup: PyPI, npm, crates.io, RubyGems, NuGet, Maven, pub.dev and the Homebrew tap.
 4. Ian gives the go to dispatch the real release.
 
-Blockers:
+Blockers, refreshed 2026-10-02:
 
-- The rehearsal has not yet passed. Ticket 0128 phase 3b records each attempt.
-- Registry setup belongs to the docs team, and Ian approves each outward step.
-- The README overhead line waits on marketing's overhead benchmark.
+- Registry setup belongs to the docs team and Ian. Ian approves each outward step. Ticket 0128's "Ian's setup list" names the steps.
+- Two docs team asks of 2026-10-01 still change `release.yml`. The `nuget` job must move to NuGet trusted publishing; today it reads `secrets.NUGET_API_KEY`, which will not exist. The pub.dev upload must move to a job started by Ian's `v0.1.0` tag push; today the `pub` job uses Google Cloud, which Ian ruled out. Owner: the queue owner, on main, then cherry-picked to `release/0.1`. A change to `release.yml` restarts ticket 0128's Phase 4 checklist at step 2, so one more rehearsal from `release/0.1` follows.
 
-Most DuckDB, language workflow and runner tool tickets below keep open only proofs on the release targets. A clean rehearsal on all four targets supplies those proofs. Ticket 0374 added panic-isolation and token-cap cases to the installed-file checks the rehearsal runs. Tickets 0226, 0227 and 0299 stay in 0.1. Their proof comes from ticket 0374 plus the rehearsal.
+The 2026-10-02 sweep closed twelve 0.1 tickets that waited only on release-target proof. Ticket 0374's installed-file cases ran on all four release runners in run 37010060315. The sweep also closed the README issue. Its overhead sentence landed in `248bc6aa4`.
+
+Tickets 0149 and 0157 stay open for one proof. The shared SQL settings corpus, the request-size case and the library retry-count case have not run on native Intel macOS or macOS 15. Ticket 0231 ran them on macOS 26, with Intel under Rosetta. The rehearsal's installed modes do not run them. The gap does not break 0.1, because the code is the shared engine and every proof that ran passed. Owner: Codex. Either the installed modes gain those cases before the next rehearsal, or the coordinator records acceptance of the existing proof.
 
 Path to 0.1:
 
 1. Done: ticket 0374 landed the panic and token-cap cases in the installed-file checks.
-2. A clean rehearsal passes on all four targets (ticket 0128 phase 3b).
-3. A fresh checkpoint, the fourth, follows the clean rehearsal. Release QA runs its final round on it.
-4. The release candidate: the coordinator tags it and cuts `release/0.1` (ADR 0116, release-process.md section 5). The release commit lands at that cut, as ticket 0128 phase 4 step 3: `versions --set 0.1.0`, the publish flags dropped, the `CHANGELOG.md` date, the README "Install" section and the site's install lines.
-5. Ian gives the go, and ticket 0128 phase 4 runs the release.
+2. Done: a clean rehearsal passed on all four targets (ticket 0128 phase 3b). Run 36945370940 passed on main `94d0500c0` at version 0.0.1. Run 36998358908 passed on main `f65faea4e` at version 0.1.0.
+3. Done: the checkpoint `checkpoint/surfaces/2026-10-02-1` was tagged on `4e880cdf6`. Release QA round 5 ran on it and was clean.
+4. Done: ticket 0387 landed the release commit at `ff7120f89`. The coordinator tagged `rc/0.1.0-rc.1` on `4e880cdf6` and cut `release/0.1` there. Run 37010060315 passed from `release/0.1`.
+5. Left: the `nuget` and `pub` workflow changes above, cherry-picked to `release/0.1`, then one more rehearsal from `release/0.1` (queue owner). Registry setup and the arming switch (docs team and Ian). The 0149 and 0157 proof above (Codex). Ian's go: he tags `v0.1.0`, dispatches release mode and approves each publish job. Ticket 0128 phase 4 steps 5 to 9 follow, including the history reset and the public install checks.
 
 Open items:
 
 - [0128: Release and install for 0.1](../tickets/0128-release-and-install.md)
 - [0149: Give SQL the engine settings and charge every send](../tickets/0149-sql-settings.md)
 - [0157: Expose request size and retry counts through the libraries](../tickets/0157-library-size-and-retry-settings.md)
-- [0222: Batch DuckDB record vectors and warm groups](../tickets/0222-duckdb-record-batching.md)
-- [0224: Find one best unit from an ordered SQL group](../tickets/0224-sql-group-find.md)
-- [0226: Keep caught native panic payloads out of diagnostics](../tickets/0226-native-panic-diagnostics.md)
-- [0227: Keep caught language-binding panic payloads out of diagnostics](../tickets/0227-language-panic-diagnostics.md)
-- [0231: Ship the DuckDB C++ extension on the other release platforms](../tickets/0231-duckdb-release-platforms.md)
-- [0268: Start the reviewed language archives in the manual release workflow](../tickets/0268-release-workflow-language-packages.md)
-- [0269: Gate Swift and Zig source files in the Linux x86 release workflow](../tickets/0269-swift-zig-linux-workflow.md)
-- [0270: Gate PHP and Dart source packages in the Linux x86 release workflow](../tickets/0270-php-dart-linux-workflow.md)
-- [0271: Prepare Ada, GNU Objective-C and COBOL for the Linux x86 release workflow](../tickets/0271-ada-objc-cobol-linux-workflow.md)
-- [0272: Prepare C# and JVM managed archives for the Linux x86 release workflow](../tickets/0272-csharp-jvm-linux-workflow.md)
-- [0273: Select and verify Linux x86 language runner tools](../tickets/0273-linux-language-runner-tools.md)
-- [0299 — Estimated input admission total](../tickets/0299-token-cap-contract.md)
 - [Release and install for 0.1](../issues/2026-09-25-release-and-install-for-0-1.md)
-- [README: where to get a key, how to change the backend, and the overhead line](../issues/2026-09-29-readme-key-backend-and-overhead-lines.md)
+
+Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268, 0269, 0270, 0271, 0272, 0273 and 0299, and the issue [README: where to get a key, how to change the backend, and the overhead line](../issues/closed/2026-09-29-readme-key-backend-and-overhead-lines.md).
 
 ## 0.2
 
@@ -63,7 +53,7 @@ Exit criteria, a coordinator default Ian can overturn:
 
 Blockers:
 
-- The `release/0.1` cut. Only work that cannot change 0.1 behavior lands before it.
+- None since 2026-10-02. The coordinator cut `release/0.1` at `4e880cdf6`, so 0.2 work lands on main. A fix that 0.1 needs is cherry-picked to `release/0.1` (ADR 0116).
 
 Windows work follows [windows.md](windows.md):
 
