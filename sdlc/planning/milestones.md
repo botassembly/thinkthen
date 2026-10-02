@@ -12,17 +12,19 @@ Exit criteria:
 
 1. Done: a clean release rehearsal. Every job passed through `draft` in runs 36945370940, 36998358908 and 37010060315.
 2. Done: release QA's round 5 was clean on `checkpoint/surfaces/2026-10-02-1` (`4e880cdf6`).
-3. The docs team has finished registry setup: PyPI, npm, crates.io, RubyGems, NuGet, Maven, pub.dev and the Homebrew tap.
-4. Ian gives the go to dispatch the real release.
+3. Done: registry setup for every registry the release workflow publishes to. crates.io, PyPI, npm and RubyGems are set up. NuGet publishes by trusted publishing. pub.dev holds `thinkthen_dart` 0.0.1 under its publisher, with automated publishing enabled. Maven Central has its namespace verified, its secrets set and its signing key on the public key servers. The Homebrew tap repo `botassembly/homebrew-thinkthen` exists with its deploy key. The `release` environment has required reviewers and a `v*` tag policy. The `v-tags` ruleset is in place, and `RELEASE_ARMED` is `true`.
+4. Done: tickets 0149 and 0157 are closed.
+5. Ian gives the go to dispatch the real release.
+
+R-universe and Packagist are not set up. The release workflow has no job for either one, because each reads the published repository. Their setup does not block 0.1 and moves to right after the 0.1 release. Ticket 0128's R-universe and Packagist install checks move with it.
 
 Blockers, refreshed 2026-10-02:
 
-- Registry setup belongs to the docs team and Ian. Ian approves each outward step. Ticket 0128's "Ian's setup list" names the steps.
-- Ticket 0389 moves the `nuget` and `pub` jobs to trusted publishing. Its owner lands it on main and cherry-picks the landing to `release/0.1`. pub.dev publishes from the release-mode dispatch on Ian's `v0.1.0` tag. A change to `release.yml` restarts ticket 0128's Phase 4 checklist at step 2, so one more rehearsal from `release/0.1` follows.
+- Ticket 0389 moved the `nuget` and `pub` jobs to trusted publishing. It landed on main and on `release/0.1`. pub.dev publishes from the release-mode dispatch on Ian's `v0.1.0` tag. A change to `release.yml` restarts ticket 0128's Phase 4 checklist at step 2, so one more rehearsal from `release/0.1` follows.
 
 The 2026-10-02 sweep closed twelve 0.1 tickets that waited only on release-target proof. Ticket 0374's installed-file cases ran on all four release runners in run 37010060315. The sweep also closed the README issue. Its overhead sentence landed in `248bc6aa4`.
 
-Tickets 0149 and 0157 stay open for one proof. The shared SQL settings corpus, the request-size case and the library retry-count case have not run on native Intel macOS or macOS 15. Ticket 0231 ran them on macOS 26, with Intel under Rosetta. The rehearsal's installed modes do not run them. The gap does not break 0.1, because the code is the shared engine and every proof that ran passed. Owner: Codex. Either the installed modes gain those cases before the next rehearsal, or the coordinator records acceptance of the existing proof.
+Tickets 0149 and 0157 closed on 2026-10-02 on the coordinator's ruling. Ticket 0231's macOS 26 proof, with Intel under Rosetta, is enough for 0.1. Rehearsal runs 36998358908 and 37010060315 also built and smoked on the `macos-15` and `macos-15-intel` runners.
 
 Path to 0.1:
 
@@ -30,16 +32,15 @@ Path to 0.1:
 2. Done: a clean rehearsal passed on all four targets (ticket 0128 phase 3b). Run 36945370940 passed on main `94d0500c0` at version 0.0.1. Run 36998358908 passed on main `f65faea4e` at version 0.1.0.
 3. Done: the checkpoint `checkpoint/surfaces/2026-10-02-1` was tagged on `4e880cdf6`. Release QA round 5 ran on it and was clean.
 4. Done: ticket 0387 landed the release commit at `ff7120f89`. The coordinator tagged `rc/0.1.0-rc.1` on `4e880cdf6` and cut `release/0.1` there. Run 37010060315 passed from `release/0.1`.
-5. Left: ticket 0389 on main and cherry-picked to `release/0.1`, then one more rehearsal from `release/0.1` (queue owner). Registry setup and the arming switch (docs team and Ian). The 0149 and 0157 proof above (Codex). Ian's go: he tags `v0.1.0`, dispatches release mode and approves each publish job. Ticket 0128 phase 4 steps 5 to 9 follow, including the history reset and the public install checks.
+5. Done: ticket 0389 landed on main and on `release/0.1`. Registry setup and the arming switch are done. Tickets 0149 and 0157 closed.
+6. Left: one more rehearsal from `release/0.1` (queue owner). Ian's go: he tags `v0.1.0`, dispatches release mode and approves each publish job. Ticket 0128 phase 4 steps 5 to 9 follow, including the history reset and the public install checks.
 
 Open items:
 
 - [0128: Release and install for 0.1](../tickets/0128-release-and-install.md)
-- [0149: Give SQL the engine settings and charge every send](../tickets/0149-sql-settings.md)
-- [0157: Expose request size and retry counts through the libraries](../tickets/0157-library-size-and-retry-settings.md)
 - [Release and install for 0.1](../issues/2026-09-25-release-and-install-for-0-1.md)
 
-Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268, 0269, 0270, 0271, 0272, 0273 and 0299, and the issue [README: where to get a key, how to change the backend, and the overhead line](../issues/closed/2026-09-29-readme-key-backend-and-overhead-lines.md).
+Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268, 0269, 0270, 0271, 0272, 0273 and 0299, and the issue [README: where to get a key, how to change the backend, and the overhead line](../issues/closed/2026-09-29-readme-key-backend-and-overhead-lines.md). Closed 2026-10-02 on the coordinator's ruling: [0149](../tickets/0149-sql-settings.md) and [0157](../tickets/0157-library-size-and-retry-settings.md).
 
 ## 0.2
 
