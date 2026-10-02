@@ -14,7 +14,7 @@ const { Content } = post;
 // under the title. A draft with no id shows where the video goes. A post's
 // `card` and `cardAlt` name its social card.
 ---
-<Base title={post.title} description={post.blurb} image={post.card} imageAlt={post.cardAlt}>
+<Base title={post.title} description={post.blurb} image={post.card} imageAlt={post.cardAlt} reading>
   {post.draft && <div class="note" data-draft><span class="status preview">draft</span> A draft for Ian to review. A normal build leaves this post out.</div>}
   <div class="eyebrow">{post.author} · {post.date}</div>
   <article class="prose">

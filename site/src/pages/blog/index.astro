@@ -7,7 +7,7 @@ const posts = [...POSTS]
   .sort((a, b) => b.date.localeCompare(a.date))
   .map((p) => ({ href: p.href, title: p.draft ? `${p.title} (draft)` : p.title, blurb: p.blurb }));
 ---
-<Base title="Blog" description="Writing about code that knows what you mean.">
+<Base title="Blog" description="Writing about code that knows what you mean." reading>
   <h1>Blog</h1>
   <p class="lede">Articles about software that answers questions about text. These articles are drafted with AI agents against a voice guide, reviewed and edited by Ian.</p>
   <div class="grid">

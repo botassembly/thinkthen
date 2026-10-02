@@ -1014,7 +1014,8 @@ export const HOWTO_GROUPS = ['Business teams', 'Data science', 'Ops/Security'];
 
 // The how-tos. Each page runs the scripts in examples/how-tos/<slug>/, and
 // `see` says what to look for in each. `group` names its HOWTO_GROUPS
-// section.
+// section. An optional `files` maps the files/ names the page shows, in
+// order, to their captions. Without it, the page shows every file.
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', group: 'Business teams', title: 'Triage a support inbox', reader: 'for support teams',
@@ -1086,6 +1087,23 @@ export const HOWTOS = [
     see: {
       '1-insult': 'The post calls the author an idiot. decide says true and exits 0.',
       '2-spam': 'The post is not spam. decide says false and exits 1.',
+    },
+  },
+  {
+    slug: 'search-youtube-transcripts-by-meaning', group: 'Data science', title: 'Search YouTube transcripts by meaning', reader: 'for anyone who learns from talks',
+    goal: 'rank orders the passages of a talk by how well each answers a question, and filter keeps the ones that do.',
+    said: 'Ask a question of a talk, and find the passages that answer it. `paste` joins the caption lines into passages. `rank` puts the best answers first. `filter` keeps the passages that answer yes.',
+    functions: ['rank', 'filter'],
+    files: {
+      'fetch.sh': 'fetch.sh downloads the automatic captions of a YouTube talk with yt-dlp. Change the id to search another talk.',
+      'vtt-to-lines.awk': 'vtt-to-lines.awk writes one timed line per caption. Automatic captions repeat each line as it scrolls, so it keeps only the lines that carry new words.',
+      'measured.txt': 'measured.txt records the full experiment. ThinkThen searched three whole talks, 292 passages, in under half a second per question. Each question cost about a quarter of a cent.',
+    },
+    see: {
+      '1-lines': 'transcript.txt holds 200 timed lines from the talk Introducing ThinkThen, in the form fetch.sh writes. They cover the first four minutes and the minutes from 15:45 on. The speaker corrected these captions by hand.',
+      '2-passages': 'awk drops the time from every line but the first of each ten. paste joins each ten lines into one passage of about 20 seconds. The 200 lines make 20 passages.',
+      '3-rank': 'rank judges all 20 passages and prints the three most likely to answer yes. The top passage says a large language model could always do this work, but slowly and at a higher cost. The next two say it is zero shot and needs no labels or training.',
+      '4-filter': 'filter keeps a passage when its answer is yes at the default cut of 0.5. This question asks for more, and one passage clears the cut. Use rank to explore and filter to keep.',
     },
   },
 ];

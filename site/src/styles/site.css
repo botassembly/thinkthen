@@ -121,9 +121,10 @@ header.top .on-light { display: none; }
 
 header.top nav { display: flex; gap: .95rem; flex-wrap: wrap; font-size: .92rem; }
 
-/* On a phone the nav takes its own row and the theme button stays beside the
-   wordmark. */
-@media (max-width: 40rem) {
+/* On a phone or a small tablet the nav takes its own row and the theme
+   button stays beside the wordmark. Below 48rem one row cannot hold the
+   wordmark, the nav, the search and the theme button. */
+@media (max-width: 48rem) {
   header.top .wrap { gap: .5rem 1rem; padding-top: .55rem; padding-bottom: .55rem; min-height: 0; }
   header.top nav { order: 3; flex: 1 0 100%; }
 }
@@ -223,6 +224,11 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .prose p, .prose ul, .prose ol
   max-width: 72ch;
 }
 
+/* An article or a how-to sets everything in one column as wide as a line
+   of prose. Text, video, code panes, tiles and images share both edges.
+   The 32px is the wrap's padding. Reference pages keep the wide wrap. */
+main .wrap.reading { max-width: calc(72ch + 32px); }
+
 .lede { font-size: 1.15rem; color: var(--muted); max-width: 64ch; }
 .eyebrow { font-family: var(--mono); font-size: .82rem; color: var(--think); letter-spacing: .04em; text-wrap: balance; }
 
@@ -250,6 +256,25 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .prose p, .prose ul, .prose ol
   display: flex; align-items: center; justify-content: center; margin: 0 0 1.4rem;
   border: 1px dashed var(--line); background: var(--card); color: var(--muted); font-size: .92rem;
 }
+/* A row of video tiles in an article. Each tile shows a small thumbnail
+   served from this site, a short code, a label, and the date and length in
+   its corner. It opens the video on YouTube. On a narrow phone the tiles
+   shrink and the label wraps. */
+.video-row {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: .5rem;
+  list-style: none; margin: 0 0 1.4rem; padding: 0;
+}
+.video-row li { margin: 0; min-width: 0; }
+.video-tile {
+  display: flex; flex-direction: column; height: 100%; padding: .4rem .4rem .3rem;
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  text-decoration: none; color: var(--ink); font-size: .82rem; line-height: 1.25;
+}
+.video-tile:hover { border-color: var(--think); color: var(--ink); }
+.video-tile img { display: block; width: 100%; max-width: 6rem; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; margin-bottom: .3rem; }
+.video-tile b { color: var(--think); }
+.video-tile .video-label { hyphens: auto; overflow-wrap: break-word; }
+.video-tile small { margin-top: auto; padding-top: .2rem; align-self: flex-end; text-align: right; color: var(--muted); font-size: .66rem; }
 
 table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .93rem; }
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }

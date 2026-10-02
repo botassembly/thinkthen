@@ -16,6 +16,10 @@
 // deck's slides/, order.txt or PDF in its working tree differ from deck-pin.
 // Slides rendered and not yet committed fail too, until the slides are
 // exported again from a pinned commit.
+//
+// A blog article's card can come from the social deck instead.
+// src/data/social-cards.json records each such card's slide and SHA-256,
+// and the card must match it.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,6 +30,7 @@ const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const dir = path.join(site, 'public', 'learn', 'beatles-bench');
 const cards = path.join(site, 'public', 'og');
 const manifest = JSON.parse(fs.readFileSync(path.join(site, 'src', 'data', 'slides.json'), 'utf8'));
+const social = JSON.parse(fs.readFileSync(path.join(site, 'src', 'data', 'social-cards.json'), 'utf8'));
 const pin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'bench-pin'), 'utf8').trim();
 const deckPin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'deck-pin'), 'utf8').trim();
 
@@ -45,15 +50,23 @@ if (process.env.DECK) {
 if (manifest.bench !== pin) {
   problems.push(`the slides come from a deck that quotes bench ${String(manifest.bench).slice(0, 8)}, and the pages pin ${pin.slice(0, 8)}`);
 }
+const sha256 = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+for (const [page, entry] of Object.entries(social)) {
+  const card = path.join(cards, `${page}.png`);
+  if (manifest.slides[page]) problems.push(`public/og/${page}.png has an entry in slides.json and in social-cards.json`);
+  else if (!fs.existsSync(card)) problems.push(`public/og/${page}.png is missing`);
+  else if (sha256(card) !== entry.sha256) problems.push(`public/og/${page}.png differs from ${entry.slide}`);
+}
 // Each folder holds one image per page, recorded under `field`.
 function images(folder, ext, field, skip = () => false) {
-  const found = fs.readdirSync(folder).filter((n) => n.endsWith(ext)).map((n) => n.slice(0, -ext.length));
+  const found = fs.readdirSync(folder).filter((n) => n.endsWith(ext)).map((n) => n.slice(0, -ext.length))
+    .filter((n) => !(field === 'card' && social[n]));
   const where = path.relative(site, folder);
   for (const page of found) {
     const entry = manifest.slides[page];
     if (!entry) { problems.push(`${where}/${page}${ext} has no entry`); continue; }
     if (skip(entry)) { problems.push(`${where}/${page}${ext} belongs to a cardOnly entry`); continue; }
-    const sum = crypto.createHash('sha256').update(fs.readFileSync(path.join(folder, `${page}${ext}`))).digest('hex');
+    const sum = sha256(path.join(folder, `${page}${ext}`));
     if (sum !== entry[field]) problems.push(`${where}/${page}${ext} differs from the image exported from deck ${String(manifest.deck).slice(0, 8)}`);
   }
   for (const [page, entry] of Object.entries(manifest.slides)) {
@@ -63,7 +76,7 @@ function images(folder, ext, field, skip = () => false) {
 }
 const pdf = path.join(dir, 'jev-thinkthen-beatles-bench.pdf');
 if (!fs.existsSync(pdf)) problems.push(`${path.relative(site, pdf)} is missing`);
-else if (crypto.createHash('sha256').update(fs.readFileSync(pdf)).digest('hex') !== manifest.pdf) {
+else if (sha256(pdf) !== manifest.pdf) {
   problems.push(`${path.relative(site, pdf)} differs from the PDF exported from deck ${String(manifest.deck).slice(0, 8)}`);
 }
 const count = images(dir, '.webp', 'sha256', (entry) => entry.cardOnly);

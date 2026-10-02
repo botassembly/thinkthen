@@ -14,7 +14,17 @@ export function getStaticPaths() {
 const { howto } = Astro.props;
 const page = `how-tos/${howto.slug}`;
 const runs = captioned(page, howto.see);
-const inputs = files(page);
+// A how-to with `files` shows only the files it names, in that order, each
+// with its own caption. The scripts still read every file in files/.
+const all = files(page);
+const named = (name) => {
+  const file = all.find((f) => f.name === name);
+  if (!file) throw new Error(`how-tos: ${howto.slug} names ${name}, and files/ has no such file`);
+  return { ...file, caption: howto.files[name] };
+};
+const inputs = howto.files
+  ? Object.keys(howto.files).map(named)
+  : all.map((f) => ({ ...f, caption: `${f.name}, a file the commands read` }));
 
 // Copy fields mark code with backticks. The page shows it as code; the
 // meta description drops the marks.
@@ -22,12 +32,12 @@ const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text
 const plain = (text) => text.replaceAll('`', '');
 if (!howto.goal) throw new Error(`how-tos: ${howto.slug} has no goal`);
 ---
-<Base title={howto.title} description={plain(howto.said)}>
+<Base title={howto.title} description={plain(howto.said)} reading>
   <div class="eyebrow">{howto.reader}</div>
   <h1>{howto.title}</h1>
   <p class="lede">{parts(howto.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
 
-  {inputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the commands read`} />)}
+  {inputs.map((file) => <Code code={file.text} file={file.name} caption={file.caption} />)}
   {runs.map((run) => <Terminal run={run} caption={run.see} />)}
 
   <h2>The functions it uses</h2>
