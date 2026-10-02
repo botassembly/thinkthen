@@ -1,5 +1,5 @@
 name: thinkthen_dart
-version: 0.1.0
+version: 0.1.1
 description: Thin typed Dart FFI bindings for the ThinkThen C interface.
 repository: https://github.com/botassembly/thinkthen
 environment:

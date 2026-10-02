@@ -1,7 +1,7 @@
 Package: thinkthen
 Type: Package
 Title: The ThinkThen Verbs for R
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: person("Ian", "Maurer", role = c("aut", "cre"), email = "imaurer@gmail.com")
 Description: The eight verbs (decide, choose, score, tag, filter, rank,
     find, annotate) plus recognize and relate, with a tt_ prefix, over the
