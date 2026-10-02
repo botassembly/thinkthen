@@ -39,6 +39,7 @@ elif host == "ignore":
 elif host == "default":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 con = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+con.execute("SET enable_progress_bar = false")
 con.execute(f"LOAD '{extension}'")
 print(json.dumps({"loaded": len(seen)}), flush=True)
 for line in sys.stdin:
@@ -164,6 +165,7 @@ import json, signal, sys, threading
 import duckdb
 signal.signal(signal.SIGINT, lambda number, frame: None)
 con = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+con.execute("SET enable_progress_bar = false")
 con.execute(f"LOAD '{sys.argv[1]}'")
 con.execute("SET GLOBAL thinkthen_throttle = 8")
 queries = json.loads(sys.argv[2])
@@ -352,6 +354,7 @@ action.flags = SA_SIGINFO
 if libc.sigaction(2, ctypes.byref(action), None) != 0:
     raise SystemExit("sigaction failed")
 con = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+con.execute("SET enable_progress_bar = false")
 con.execute(f"LOAD '{sys.argv[1]}'")
 print("loaded", flush=True)
 sys.stdin.readline()
@@ -386,6 +389,7 @@ import signal, sys, threading
 import duckdb
 signal.signal(signal.SIGINT, lambda number, frame: None)
 con = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+con.execute("SET enable_progress_bar = false")
 con.execute(f"LOAD '{sys.argv[1]}'")
 stop = threading.Event()
 def churn():

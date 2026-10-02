@@ -23,6 +23,7 @@ import duckdb
 EXT = sys.argv[1]
 def db(path=":memory:", **config):
     con = duckdb.connect(path, config={"allow_unsigned_extensions": "true", **config})
+    con.execute("SET enable_progress_bar = false")
     con.execute(f"LOAD '{EXT}'")
     return con
 def staff(con, people, table="t"):
@@ -106,6 +107,7 @@ def a_read_only_file_keeps_caller_permissions_and_committed_data():
 path = sys.argv[2] + "/a.db"
 a = db(path); staff(a, 2); a.close()
 a = duckdb.connect(path, read_only=True, config={"allow_unsigned_extensions": "true"})
+a.execute("SET enable_progress_bar = false")
 a.execute(f"LOAD '{EXT}'")
 allowed = edges(a)
 a.execute("CREATE TEMP TABLE only_here AS SELECT 9 AS id, 'Uncommitted' AS name, 'person' AS kind")
