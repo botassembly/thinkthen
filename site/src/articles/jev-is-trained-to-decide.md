@@ -6,14 +6,14 @@ date: "2026-10-02"
 goal: "Explain why people are excited about Jev: it is faster and cheaper, and the big bet is that a model trained for calibrated decisions beats one trained to please people."
 blurb: "Jev is faster and cheaper, and potentially better. The big bet: software needs a model trained to make calibrated decisions, and chat models were trained to please people."
 card: /og/jev-is-trained-to-decide.png
-cardAlt: "Jev is trained to decide. RLHF chat models please humans. RLVR reasoning models optimize benchmarks. RLCD trains Jev for programmatic use, with a calibrated probability of 0.84 over a threshold of 0.7. Fast, cheap, better at decisions."
+cardAlt: "Jev is trained to decide. RLHF chat models please humans. RLVR reasoning models optimize benchmarks. RLCD trains Jev for programmatic use, with a calibrated probability of 0.84 over a threshold of 0.7. Faster and cheaper. Better at decisions is the bet."
 links:
   - { href: "/how-tos/search-youtube-transcripts-by-meaning/", text: "Search YouTube transcripts by meaning" }
 ---
 
 People are excited about Jev because it is faster and cheaper, and potentially better. You can measure faster and cheaper today. Better is a bet.
 
-Here is the bet. Large language models were trained with a human in the loop. They learned to give answers people like. Agents, automation and software need something else. They need a model optimized for making decisions. TypeSafe trains Jev for that. Nobody has proven yet that this approach wins. That is the big bet, and it is why people are excited.
+Here is the bet. Large language models were trained with a human in the loop. That training is called RLHF. They learned to give answers people like. Agents, automation and software need something else. They need a model optimized for making decisions. TypeSafe trains Jev for that, with a method it calls RLCD. Nobody has proven yet that this approach wins. That is the big bet, and it is why people are excited.
 
 <!-- video: YbzrlpAyCV4 | TT | ThinkThen introduction | 2026-10-01 | 24:38 -->
 <!-- video: cFx9Z3ZXca0 | LS | Latent Space Pod | 2026-09-21 | 2:22:22 -->
@@ -29,7 +29,7 @@ You can check speed and cost today. The bet is about how the model is trained.
 
 ## Chat models are trained to please you
 
-A chat model learns from people's feedback. People rate its answers, and the model learns to give the answers people like. That training is called RLHF. Diogo puts it in three words: "[RLHF] is please humans" ([LS 1:23:12](https://youtu.be/cFx9Z3ZXca0?t=4992)).
+A chat model learns from people's feedback. People rate its answers, and the model learns to give the answers people like. Diogo puts it in three words: "[RLHF] is please humans" ([LS 1:23:12](https://youtu.be/cFx9Z3ZXca0?t=4992)).
 
 Pleasing people has a cost. A Latent Space host asked whether chat models are "collapsing towards what you want to hear the most … instead of like their own internal confidence about a thing" ([LS 7:15](https://youtu.be/cFx9Z3ZXca0?t=435)). Diogo answered with the problem he says "no one paid attention to": "the downsides of [RLHF], in particular, mode dropping" ([LS 7:39](https://youtu.be/cFx9Z3ZXca0?t=459)).
 
@@ -61,7 +61,7 @@ Ask Jev to pick, and it gives each tool a probability. Say the search tool gets 
 
 ## Will the bet pay off?
 
-I think it will. Most of the work I want to automate is a chain of small decisions. Each decision needs an honest answer and an honest sense of how sure it is. A model trained to please me can't give me the second part. A model trained to be calibrated can.
+I think it will. Most of the work I want to automate is a chain of small decisions. Each decision needs an honest answer and an honest sense of how sure it is. A model trained to please me can't give me the second part. A model trained to be calibrated should.
 
 Calibration is still a claim until you check it on your own cases. Label some real examples and measure before you pick a threshold. [Test it before you trust it](/trust/) shows how.
 
