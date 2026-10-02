@@ -56,3 +56,11 @@ Milestone: 0.1
 
 - `--remote-pins` as a hand-run check before dispatch rather than a step inside the release workflow.
 - Keeping 0.1.0 on main after the 0.1.1 bump, per release-process.md section 5.
+
+## What the build taught us
+
+- The rehearsal never ran a publish step, so three of the five failures were in lines no run had executed. A dry run on the exact publish command is the cheapest way to execute such a line early. npm offers a dry run; NuGet and the PyPI action do not, so their fixes rest on source reading and stubbed tests until the release run.
+- A tag object's SHA looks exactly like a commit's. `actions/checkout` and most JavaScript actions resolve either one, so the mistake shows only in an action that names its Docker image by the ref.
+- NuGet answered 400 with its reason in the status line, and `nuget-push` printed only the code. nuget.org's push policies live in NuGetGallery's source, and the default subscription named the missing header.
+- `release-archive-self-test.py` packs from the committed tree. Run with an uncommitted version bump, it reads 0.1.1 from the working tree and packs 0.1.0, then fails its "own build folders" case. Committed, it passes.
+- Proof run here: `workflows --self-test` 71 of 71; `workflows`; `workflows --remote-pins`, which names the old pin on main's `release.yml` and passes on this branch; `release-registry-self-test.py` 34 of 34, with the header and the key scrub each proven by removing it; `lint` with the private-names list (35 names, none found); and `tickets`. On a scratch copy of `release/0.1` with the bump committed: `versions`, `versions --tag v0.1.1`, `versions --self-test`, `release-registry-self-test.py`, `release-archive-self-test.py` and `workflows`.
