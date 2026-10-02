@@ -1014,7 +1014,8 @@ export const HOWTO_GROUPS = ['Business teams', 'Data science', 'Ops/Security'];
 
 // The how-tos. Each page runs the scripts in examples/how-tos/<slug>/, and
 // `see` says what to look for in each. `group` names its HOWTO_GROUPS
-// section.
+// section. An optional `files` maps the files/ names the page shows, in
+// order, to their captions. Without it, the page shows every file.
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', group: 'Business teams', title: 'Triage a support inbox', reader: 'for support teams',
@@ -1100,7 +1101,7 @@ export const HOWTOS = [
     see: {
       '1-lines': 'transcript.txt holds 200 timed lines from the talk Introducing ThinkThen, in the form fetch.sh writes. They cover the first four minutes and the minutes from 15:45 on. The speaker corrected these captions by hand.',
       '2-passages': 'awk drops the time from every line but the first of each ten. paste joins each ten lines into one passage of about 20 seconds. The 200 lines make 20 passages.',
-      '3-rank': 'rank judges all 20 passages and prints the three most likely to answer yes. The top passage says a large language model could always do this work, but slowly and at a higher cost. The next two say Jev needs no labels and no training.',
+      '3-rank': 'rank judges all 20 passages and prints the three most likely to answer yes. The top passage says a large language model could always do this work, but slowly and at a higher cost. The next two say it's zero shot and needs no labels or training.',
       '4-filter': 'filter keeps a passage when its answer is yes at the default cut of 0.5. This question asks for more, and one passage clears the cut. Use rank to explore and filter to keep.',
     },
   },

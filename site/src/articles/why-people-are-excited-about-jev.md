@@ -30,13 +30,13 @@ A Latent Space host said Jev took "the faster but cheaper side of the quadrant" 
 
 **You don't train it.** Jev is zero-shot. In my talk I said that means "you don't have to do what you'd have to do in the past with machine learning models" ([1:57](https://youtu.be/YbzrlpAyCV4?t=117)). You don't label data, train a model, or host it. You write the question in plain words.
 
-**It's built for code.** Diogo describes a "class of models where the goal is for code to be the consumer" ([Latent Space, 5:32](https://youtu.be/cFx9Z3ZXca0?t=332)). On a16z his pitch is a complaint: "my favorite elevator pitch for Jev is where the [expletive] is all the automation?" ([1:41](https://youtu.be/Ut3LOjKNJaE?t=101)). His answer is "[TypeSafe] is making AI for software" ([2:12](https://youtu.be/Ut3LOjKNJaE?t=132)).
+**It's built for code.** Diogo describes a "class of models where the goal is for code to be the consumer" ([Latent Space, 5:32](https://youtu.be/cFx9Z3ZXca0?t=332)). I found that line by reading the transcript, not from the ranking. On a16z his pitch is a complaint: "my favorite elevator pitch for Jev is where the [expletive] is all the automation?" ([1:41](https://youtu.be/Ut3LOjKNJaE?t=101)). His answer is "[TypeSafe] is making AI for software" ([2:12](https://youtu.be/Ut3LOjKNJaE?t=132)).
 
 TypeSafe also explained it well. In my talk I gave them credit for more than the model: "they've told a good story" ([1:03](https://youtu.be/YbzrlpAyCV4?t=63)).
 
 So what problem does it solve best? Small judgments about text, at volume, inside software. Triage an alert. Route a ticket. Keep the log lines that matter. Pick which model should handle a task. In my talk I said "people are very excited about the idea of … doing model selection" ([16:23](https://youtu.be/YbzrlpAyCV4?t=983)). A big model could always do these jobs. Jev makes them cheap enough to run on every record.
 
-Diogo gave the sharpest version when he compared how models are trained. I found it by reading the transcript, not from the ranking. "[RLHF] is please humans" ([1:23:12](https://youtu.be/cFx9Z3ZXca0?t=4992)). "RLCD is make it reliable for … programmatic use" ([1:23:30](https://youtu.be/cFx9Z3ZXca0?t=5010)). RLCD is TypeSafe's name for how it trains Jev.
+Diogo gave the sharpest version when he compared how models are trained. The ranking missed it. I found it by reading the transcript. "[RLHF] is please humans" ([1:23:12](https://youtu.be/cFx9Z3ZXca0?t=4992)). "RLCD is make it reliable for … programmatic use" ([1:23:30](https://youtu.be/cFx9Z3ZXca0?t=5010)). RLCD is TypeSafe's name for its training goal.
 
 ## How I found it
 
@@ -58,7 +58,7 @@ Here are the same steps on part of my talk. `paste` joins every ten lines into o
 
 <!-- example: how-tos/search-youtube-transcripts-by-meaning/3-rank -->
 
-The top passage holds the line about large language models being slow and expensive. The next two say you don't need to train it.
+The top passage holds the line about large language models being slow and expensive. The next two say it's zero shot and needs no labels or training.
 
 Across all three talks, I joined every 20 lines into a passage and got 292 passages. I asked "Does this passage explain why people are excited about Jev?" These are the top seven, with a short quote from each:
 
@@ -68,7 +68,7 @@ Across all three talks, I joined every 20 lines into a passage and got 292 passa
 | 2 | [Introducing ThinkThen, 1:38](https://youtu.be/YbzrlpAyCV4?t=98) | Ian Maurer | "it's zero shot" |
 | 3 | [Latent Space, 54:02](https://youtu.be/cFx9Z3ZXca0?t=3242) | the host | "you've done the faster but cheaper side of the quadrant" |
 | 4 | [Latent Space, 52:27](https://youtu.be/cFx9Z3ZXca0?t=3147) | Diogo Almeida | "It is the best thing at intelligence per dollar …" |
-| 5 | [Latent Space, 1:35:46](https://youtu.be/cFx9Z3ZXca0?t=5746) | Diogo Almeida | "I'm also anti-demos. I want to make sure that it works reliably." |
+| 5 | [Latent Space, 1:35:46](https://youtu.be/cFx9Z3ZXca0?t=5746) | Diogo Almeida | "… I'm also anti-demos. I want to make sure that it works reliably." |
 | 6 | [Introducing ThinkThen, 0:50](https://youtu.be/YbzrlpAyCV4?t=50) | Ian Maurer | "extremely low cost, extremely fast" |
 | 7 | [Latent Space, 12:37](https://youtu.be/cFx9Z3ZXca0?t=757) | Diogo Almeida | "we are back to like early internet energy" |
 
