@@ -250,17 +250,25 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .prose p, .prose ul, .prose ol
   display: flex; align-items: center; justify-content: center; margin: 0 0 1.4rem;
   border: 1px dashed var(--line); background: var(--card); color: var(--muted); font-size: .92rem;
 }
-/* A video card in an article: a thumbnail served from this site, the
-   title, and the channel. It opens the video on YouTube. */
-.video-card {
-  display: flex; align-items: center; gap: .9rem; margin: 0 0 .7rem; padding: .6rem;
-  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-  text-decoration: none; color: var(--ink);
+/* A row of video tiles in an article. Each tile shows a small thumbnail
+   served from this site, a short code, a label, and the date and length in
+   its corner. It opens the video on YouTube. On a narrow phone the tiles
+   shrink and the label wraps. */
+.video-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: .5rem;
+  list-style: none; margin: 0 0 1.4rem; padding: 0;
 }
-.video-card:hover { border-color: var(--think); color: var(--ink); }
-.video-card img { flex: none; width: 8rem; height: auto; aspect-ratio: 16 / 9; border-radius: 6px; }
-.video-card b { display: block; font-size: .98rem; }
-.video-card span span { display: block; color: var(--muted); font-size: .86rem; margin-top: .15rem; }
+.video-row li { margin: 0; min-width: 0; }
+.video-tile {
+  display: flex; flex-direction: column; height: 100%; padding: .4rem .4rem .3rem;
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  text-decoration: none; color: var(--ink); font-size: .82rem; line-height: 1.25;
+}
+.video-tile:hover { border-color: var(--think); color: var(--ink); }
+.video-tile img { display: block; width: 100%; max-width: 6rem; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; margin-bottom: .3rem; }
+.video-tile b { color: var(--think); }
+.video-tile .video-label { overflow-wrap: anywhere; }
+.video-tile small { margin-top: auto; padding-top: .2rem; align-self: flex-end; text-align: right; color: var(--muted); font-size: .66rem; }
 
 table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .93rem; }
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }

@@ -123,6 +123,18 @@ function blocks(node, out) {
       if (line) out.push(line);
       continue;
     }
+    // An article's row of video tiles becomes a list of plain links.
+    if (kid.tag === 'ul' && cls.includes('video-row')) {
+      const rows = (kid.kids || []).filter((k) => k.tag === 'li').map((li) => {
+        const a = find(li, (n) => n.tag === 'a') || { kids: [], attrs: {} };
+        const part = (test) => tidy(inline(find(a, test) || { tag: '#text', text: '' })).replace(/\*/g, '');
+        const code = part((n) => n.tag === 'b');
+        const label = part((n) => n.tag === 'span');
+        return `- ${code}: [${label}](${a.attrs.href || ''}), ${part((n) => n.tag === 'small')}`;
+      });
+      out.push(rows.join('\n'));
+      continue;
+    }
     if (kid.tag === 'ul' || kid.tag === 'ol') {
       const rows = (kid.kids || []).filter((k) => k.tag === 'li')
         .map((li, i) => (kid.tag === 'ol' ? `${i + 1}. ` : '- ') + tidy(inline(li)));
@@ -175,13 +187,6 @@ function blocks(node, out) {
       continue;
     }
     if (kid.tag === 'div' && cls.includes('video-slot')) continue;
-    // An article's video card becomes a plain link with its title and channel.
-    if (kid.tag === 'a' && cls.includes('video-card')) {
-      const title = tidy(inline(find(kid, (n) => n.tag === 'b') || { tag: '#text', text: '' })).replace(/\*/g, '');
-      const channel = tidy(inline(find(kid, (n) => n.tag === 'span' && n.kids.every((k) => k.tag === '#text')) || { tag: '#text', text: '' }));
-      out.push(`[${title}](${kid.attrs.href || ''}), ${channel}`);
-      continue;
-    }
     if (kid.tag === 'div' && cls.includes('note')) {
       out.push('> ' + tidy(inline(kid)));
       continue;
