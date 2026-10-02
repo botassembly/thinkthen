@@ -37,6 +37,8 @@ UNFETCHED_LOCKS = {
 }
 # Each registry job publishes in release mode only; `publish` waits for all of them (ticket 0355).
 OUTWARD_REGISTRIES = ("crates", "pypi", "npm", "rubygems", "tap", "nuget", "maven", "pub")
+# These registries take the run's OIDC token in place of a stored key (ticket 0389).
+TRUSTED_REGISTRIES = ("crates", "pypi", "npm", "rubygems", "nuget", "pub")
 ARMED_STEP = {"env": {"RELEASE_ARMED": "${{ vars.RELEASE_ARMED }}"},
               "run": '[ "$RELEASE_ARMED" = true ]'}
 
@@ -308,6 +310,8 @@ def release(name, doc):
             out.append(f"{name}: job {job} holds id-token or a secret outside environment release")
         if job in outward and environment != "release":
             out.append(f"{name}: job {job} must use environment release")
+        if job in TRUSTED_REGISTRIES and (permissions.get("id-token") != "write" or "secrets." in text):
+            out.append(f"{name}: job {job} must publish by trusted publishing: id-token write and no secret")
     for job, spec, step in steps(doc):
         uses = step.get("uses") or ""
         if "cache" in uses or "cache" in (step.get("with") or {}):
@@ -525,6 +529,7 @@ jobs:
     needs: [resolve, draft]
     if: inputs.mode == 'release'
     environment: release
+    permissions: {id-token: write}
     steps:
       - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
         run: '[ "$RELEASE_ARMED" = true ]'
@@ -532,6 +537,7 @@ jobs:
     needs: [resolve, draft]
     if: inputs.mode == 'release'
     environment: release
+    permissions: {id-token: write}
     steps:
       - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
         run: '[ "$RELEASE_ARMED" = true ]'
@@ -539,6 +545,7 @@ jobs:
     needs: [resolve, draft]
     if: inputs.mode == 'release'
     environment: release
+    permissions: {id-token: write}
     steps:
       - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
         run: '[ "$RELEASE_ARMED" = true ]'
@@ -556,8 +563,12 @@ jobs:
     steps:
       - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
         run: '[ "$RELEASE_ARMED" = true ]'
-      - env: {NUGET_API_KEY: "${{ secrets.NUGET_API_KEY }}"}
+      - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841
+        id: login
+        with: {user: "${{ vars.NUGET_USER }}"}
+      - env: {NUGET_API_KEY: "${{ steps.login.outputs.NUGET_API_KEY }}"}
         run: sdlc/scripts/release-workflow nuget-push registry/nuget/x.nupkg
+    permissions: {id-token: write}
   maven:
     needs: [resolve, draft]
     if: inputs.mode == 'release'
@@ -663,6 +674,14 @@ def self_test():
           "release.yml: job nuget must use environment release"]),
         ("pub-rehearse", "release.yml", lambda t: t.replace("  pub:\n    needs: [resolve, draft]\n    if: inputs.mode == 'release'\n", "  pub:\n    needs: [resolve, draft]\n"),
          ["release.yml: job pub must require release mode"]),
+        ("nuget-secret", "release.yml",
+         lambda t: t.replace('"${{ steps.login.outputs.NUGET_API_KEY }}"', '"${{ secrets.NUGET_API_KEY }}"'),
+         ["release.yml: job nuget must publish by trusted publishing: id-token write and no secret"]),
+        ("pub-no-oidc", "release.yml",
+         lambda t: t.replace("  pub:\n    needs: [resolve, draft]\n    if: inputs.mode == 'release'\n    environment: release\n"
+                             "    permissions: {id-token: write}\n",
+                             "  pub:\n    needs: [resolve, draft]\n    if: inputs.mode == 'release'\n    environment: release\n"),
+         ["release.yml: job pub must publish by trusted publishing: id-token write and no secret"]),
         ("maturin", "release.yml", lambda t: t.replace("maturin==1.9.6", "maturin"),
          ["release.yml: job build installs maturin with no version"]),
         ("go-cpp-build-sha", "release.yml",

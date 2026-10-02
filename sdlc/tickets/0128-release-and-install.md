@@ -258,7 +258,7 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 
     These runs are the macOS proof of record for both chips. The Ruby gem built and passed its installed check on both Macs, so error-index row R5-37 closes. Release QA round 5 on `checkpoint/surfaces/2026-10-02-1` (`4e880cdf6`) was clean. Phase 4 steps 2, 3 and 4 are done: run 36998358908 is the rehearsal on main, ticket 0387 landed the release commit at `ff7120f89`, and run 37010060315 is the rehearsal from `release/0.1`.
 
-    Two docs team asks of 2026-10-01 still change `release.yml`: `inbox/thinkthen/2026-10-01-nuget-trusted-publishing.md` moves the `nuget` job to trusted publishing, and `inbox/thinkthen/2026-10-01-pub-dev-publishes-on-tag-push.md` moves the pub.dev upload to a tag-push job. Today the `nuget` job reads `secrets.NUGET_API_KEY`, which will not exist, and the `pub` job uses Google Cloud, which Ian ruled out. A change to `release.yml` restarts the Phase 4 checklist at step 2, so a new rehearsal from `release/0.1` follows that change.
+    Ticket 0389 answered the two docs team asks of 2026-10-01. The `nuget` job logs in through NuGet trusted publishing and reads no secret. The `pub` job takes its pub.dev token from the run's OIDC token through `dart-lang/setup-dart` and uses no Google Cloud. pub.dev accepts the release-mode dispatch from the `v*` tag once its `workflow_dispatch` box is ticked, so no tag-push job was needed. A change to `release.yml` restarts the Phase 4 checklist at step 2, so a new rehearsal from `release/0.1` follows that change.
 
 ## Phase 4: Ian's release run
 
@@ -362,6 +362,7 @@ Each is the agent's decision unless marked the coordinator's. Ian can overturn a
 | Top-level permissions other than `{}` in `release.yml` | Exit 1 |
 | An unpinned `pip install maturin`, `npm install -g npm`, or `gem update --system` | Exit 1 naming the step |
 | A `registries` job that skips `registry-pack`, rehearsal signing, the pub dry run or the `registry-packages` upload, or a `maven` job that uploads before release signing (ticket 0355) | Exit 1 naming the job |
+| A trusted-publishing job (`crates`, `pypi`, `npm`, `rubygems`, `nuget`, `pub`) without `id-token: write`, or one that reads a secret (ticket 0389) | Exit 1 naming the job |
 
 ### Release surfaces
 
@@ -489,7 +490,14 @@ One-time setup, in the order the phases need it:
 5. The trusted publishers: add `botassembly/thinkthen`, workflow `release.yml`, and environment `release` as a trusted publisher on crates.io, PyPI, npm, and RubyGems. Each registry's owner page holds this setting. The [official crates.io API](https://crates.io/api/v1/crates/thinkthen) and [sparse index entry](https://index.crates.io/th/in/thinkthen) showed an existing `thinkthen` 0.0.1 release on 2026-09-28. Verify Ian's ownership and attach the publisher to that existing crate; no first-publish bootstrap is needed. The local `publish = false` flag does not establish registry state. The [crates.io trusted-publishing RFC](https://github.com/rust-lang/rfcs/blob/master/text/3691-trusted-publishing-cratesio.md) explains why a genuinely uncreated crate would require an initial owner publish before this publisher could be configured.
 6. The tap key: create the public repository `botassembly/homebrew-thinkthen`. Add a write deploy key to it and store the private half as the `release` environment secret `TAP_DEPLOY_KEY`.
 7. R-universe: create `botassembly/botassembly.r-universe.dev` with a `packages.json` that names `thinkthen` at subfolder `libraries/r/thinkthen`, tracking the latest release. Install the R-universe GitHub app on it.
-8. The arming switch: set the `release` environment variable `RELEASE_ARMED` to `true`, last, after items 5 to 7.
+8. NuGet trusted publishing (ticket 0389). The `nuget` job reads no key.
+   1. On nuget.org, open the menu under your name and choose Trusted Publishing. Check that one policy is active with owner `botassembly`, repository owner `botassembly`, repository `thinkthen`, workflow file `release.yml` and environment `release`. You made it on 2026-10-01. If it shows as temporarily active, restart its seven-day window on that page shortly before the release run.
+   2. In GitHub, open Settings, Environments, `release`, and add the environment variable `NUGET_USER` with the value `imaurer`. It must be the nuget.org profile name of the person who made the policy, not an email address. It is a variable, not a secret.
+9. pub.dev trusted publishing (ticket 0389). The `pub` job reads no key and uses no Google Cloud.
+   1. Upload a placeholder `thinkthen_dart` by hand, because pub.dev offers automated publishing only for a package that exists. The docs team prepares it from `libraries/dart` with the pubspec version set to `0.0.1`; main reads `0.1.0`, and the `pub` job refuses a version pub.dev already holds. Run `dart pub publish` in that folder, signed in with your Google account.
+   2. On the package's Admin tab, move it to the verified publisher the docs team set up.
+   3. On the same Admin tab, under Automated publishing, choose "Enable publishing from GitHub Actions". Enter repository `botassembly/thinkthen` and tag pattern `v{{version}}`. Tick "Enable publishing from `workflow_dispatch` events" and leave "push events" unticked: the release run is a dispatch from tag `v0.1.0`. Tick "Require GitHub Actions environment" and enter `release`. Save.
+10. The arming switch: set the `release` environment variable `RELEASE_ARMED` to `true`, last, after items 5 to 9.
 
 His steps during the release run, in Phase 4:
 
