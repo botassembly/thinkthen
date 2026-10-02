@@ -67,6 +67,6 @@ Calibration is still a claim until you check it on your own cases. Label some re
 
 <!-- video: Ut3LOjKNJaE | How Jev Turns AI Into Software That Gets Things Done | a16z -->
 
-I used ThinkThen to find these quotes. It ranked every passage of the three talks by how well it explained why people are excited about Jev. It found the speed and cost lines directly and showed me where to read. I found the rest by reading the transcripts. The how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) runs a smaller version of the experiment on my talk, with its code and what the full run cost.
+I used ThinkThen to find these quotes. It ranked every passage of the three talks by how well it explained why people are excited about Jev. It found the lines I quote from my talk about speed, cost and tool choice, and Diogo's a16z line about programming against Jev. It also pointed me to the parts of the Latent Space talk about intelligence per dollar. I found the training quotes and my line about confidence by reading the transcripts. The how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) runs a smaller version of the experiment on my talk, with its code and what the full run cost.
 
 Words in brackets fix a caption error or fit a quote into my sentence. An ellipsis marks words I cut.
