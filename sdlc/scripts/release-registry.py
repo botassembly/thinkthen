@@ -325,13 +325,17 @@ def nuget_push(nupkg):
     key = secret("NUGET_API_KEY")
     require(nupkg.is_file(), "the nupkg is missing")
     body, kind = multipart("package", nupkg.name, nupkg.read_bytes())
+    # nuget.org's default push policy answers 400 to a push without protocol 4.1.0 or newer (ticket 0391).
     request = urllib.request.Request("https://www.nuget.org/api/v2/package", data=body, method="PUT",
-                                     headers={"X-NuGet-ApiKey": key, "Content-Type": kind})
+                                     headers={"X-NuGet-ApiKey": key, "X-NuGet-Protocol-Version": "4.1.0",
+                                              "Content-Type": kind})
     try:
         with urllib.request.urlopen(request, timeout=300) as reply:
             require(reply.status in (200, 201, 202), f"NuGet answered {reply.status}")
     except urllib.error.HTTPError as error:
-        raise Refusal("NuGet already holds this version" if error.code == 409 else f"NuGet answered {error.code}")
+        # NuGet puts its reason in the status line and the body; neither should hold the key, and both lose it here.
+        said = f"{error.reason}: {error.read().decode(errors='replace').replace(key, '[key]')[:500]}".replace(key, "[key]")
+        raise Refusal(f"NuGet answered {error.code} {said}")
     print(f"release-registry: pushed {nupkg.name}")
 
 

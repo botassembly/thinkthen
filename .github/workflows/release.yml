@@ -146,6 +146,11 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {pattern: 'platform-*', path: platform}
       - run: sdlc/scripts/release-workflow npm-assemble platform npm-dist
+      # The npm job publishes this same path with this same npm; the dry run proves npm reads it as a file.
+      - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: |
+          npm install --global npm@11.6.4
+          npm publish --dry-run "./npm-dist/thinkthen-$VERSION.tgz" --access public
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: npm-package, path: npm-dist/, if-no-files-found: error, retention-days: 7}
 
@@ -322,7 +327,7 @@ jobs:
           mkdir dist
           cp platform/*/thinkthen-*.whl dist/
           [ "$(find dist -name '*.whl' | wc -l)" -eq 4 ]
-      - uses: pypa/gh-action-pypi-publish@106e0b0b7c337fa67ed433972f777c6357f78598 # v1.13.0
+      - uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
 
   npm:
     needs: [resolve, draft]
@@ -337,9 +342,11 @@ jobs:
         with: {node-version: '22.22.3', registry-url: 'https://registry.npmjs.org'}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: npm-package, path: npm-dist}
-      - run: |
+      # A leading ./ makes npm read a file; npm-dist/x.tgz reads as a GitHub repository.
+      - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: |
           npm install --global npm@11.6.4
-          npm publish npm-dist/*.tgz --provenance --access public
+          npm publish "./npm-dist/thinkthen-$VERSION.tgz" --provenance --access public
 
   rubygems:
     needs: [resolve, draft]
