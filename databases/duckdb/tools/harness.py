@@ -152,6 +152,8 @@ databases = {}
 def database(name):
     if name not in databases:
         databases[name] = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+        # DuckDB prints a \r-led progress line to a piped stdout after 2 s; the readers parse each line.
+        databases[name].execute("SET enable_progress_bar = false")
         databases[name].execute(f"LOAD '{extension}'")
     return databases[name]
 database("A")

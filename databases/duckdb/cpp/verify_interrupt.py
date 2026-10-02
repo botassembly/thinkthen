@@ -24,6 +24,7 @@ import duckdb, json, signal, sys, time
 seen = []
 signal.signal(signal.SIGINT, lambda number, frame: seen.append(number))
 con = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+con.execute("SET enable_progress_bar = false")
 con.execute("LOAD '" + sys.argv[1] + "'")
 def slow(value: bool) -> bool:
     print(json.dumps({"inside_slow": True}), flush=True)

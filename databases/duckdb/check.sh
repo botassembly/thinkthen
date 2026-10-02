@@ -60,6 +60,7 @@ if [ "$profile" = smoke ]; then
 	cd "$installed"
 	"$PY" -c 'import os, sys, duckdb
 db = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+db.execute("SET enable_progress_bar = false")
 db.execute(f"LOAD \x27{sys.argv[1]}\x27")
 (value,), = db.execute("SELECT thinkthen_decide(?, ?)",
                        [os.environ["THINKTHEN_TEST_SMOKE_QUESTION"], os.environ["THINKTHEN_TEST_SMOKE_TEXT"]]).fetchall()

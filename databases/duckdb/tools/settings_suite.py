@@ -265,6 +265,7 @@ import concurrent.futures, json, sys
 import duckdb
 def opened(limit):
     db = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+    db.execute("SET enable_progress_bar = false")
     db.execute(f"LOAD '{sys.argv[1]}'")
     db.execute("SET thinkthen_throttle = 16")
     db.execute(f"SET thinkthen_max_requests = {limit}")
@@ -621,6 +622,7 @@ import json, os, sys, time
 import duckdb
 def opened():
     database = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+    database.execute("SET enable_progress_bar = false")
     database.execute(f"LOAD '{sys.argv[1]}'")
     return database
 def usage(database):
