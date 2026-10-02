@@ -1,0 +1,42 @@
+---
+// annotate's edge cases, on its reference page: where each answer lands for
+// every kind of record, and what happens on a name clash, a missing pointer,
+// or a failed question. The runs live in examples/reference/annotate/.
+import Terminal from './Terminal.astro';
+import Code from './Code.astro';
+import { ANNOTATE_SEE } from '../data/reference.mjs';
+import { captioned, files } from '../data/samples.mjs';
+
+const dir = 'reference/annotate';
+const [lines, clash, plan, details, carryOn] = captioned(dir, ANNOTATE_SEE);
+const [form, onBody] = files(dir);
+---
+<h2 id="edge-cases">Edge cases</h2>
+<p>Where each answer lands depends on the record. The runs in this section use one question set.</p>
+<Code code={form.text} file={form.name} caption={`${form.name}, three questions`} />
+
+<h3 id="flat-fields">Flat fields</h3>
+<p>An object record gains one top-level field per question, named for the question. Every field it already held rides through unchanged. CSV and TSV rows are objects of strings. They stay flat too. The first run on this page shows a nested record riding through.</p>
+
+<h3 id="the-wrapper">The wrapper</h3>
+<p>A record that is not an object has no field to add to. In a stream of records, a text line, a JSON scalar or a JSON array comes back as <code>{'{"input":…,"value":…}'}</code>. The record sits under <code>input</code>, and the named answers sit under <code>value</code>. On one document that is not an object, <code>annotate</code> prints the named answers alone.</p>
+<Terminal run={lines} caption={lines.see} />
+
+<h3 id="a-name-clash">A name clash</h3>
+<p>A question name the record already holds would overwrite the record's own value. <code>annotate</code> refuses that record at exit 2, before any request for it.</p>
+<Terminal run={clash} caption={clash.see} />
+<p><code>--plan</code> checks records in order and stops at the first clash. It sends nothing. A plan finds a clash at no cost. It names only the first clash it meets.</p>
+<Terminal run={plan} caption={plan.see} />
+
+<h3 id="details-keeps-the-record">--details keeps the record under input</h3>
+<p><code>--details</code> prints each record as <code>input</code>, <code>value</code>, <code>answers</code> and <code>meta</code>. The original record stays whole under <code>input</code>, and the answers sit under <code>value</code>. The two never share a level, so no name can clash. Use it when the records may hold any field name.</p>
+<Terminal run={details} caption={details.see} />
+
+<h3 id="on-error-continue">A missing pointer and exit 7</h3>
+<p>A question may read one part of each record with <code>on</code>, a JSON Pointer. Here each question reads <code>/body</code>.</p>
+<Code code={onBody.text} file={onBody.name} caption={`${onBody.name}, the same questions on /body`} />
+<p>A record without that part stops the run at exit 2. <code>--on-error continue</code> skips it instead. It needs <code>--jsonl</code>, <code>--details</code> and <code>--batch 1</code>, and it refuses <code>--plan</code>. It recovers only a missing pointer. The skipped record gets one <code>thinkthen.record-error/1</code> row in its place, and no request goes out for it. Standard error counts the skipped records. A run that skipped any record exits 7.</p>
+<Terminal run={carryOn} caption={carryOn.see} />
+
+<h3 id="failed-questions">Failed questions and exit 6</h3>
+<p>When the backend cannot answer one question, that question fails and the others keep their answers. The failed question's field holds <code>{'{"failed":{"kind":"backend","cause":…}}'}</code>, never <code>null</code>. <code>null</code> means not sure. The run finishes and exits 6. When a reply holds no usable answer at all, the run stops at exit 4. It prints none of that record's answers, even those another <code>on</code> group answered. When a run has both failed questions and skipped records, exit 7 wins. A failure is never saved. Under a cache, a later run asks only the failed questions again.</p>

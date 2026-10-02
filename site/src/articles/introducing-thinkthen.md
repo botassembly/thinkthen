@@ -43,7 +43,7 @@ Add a band, and the middle gets its own answer. Here the band runs from 0.2 to 0
 
 <!-- example: functions/decide/2-case -->
 
-Not sure exits 3, so a person reads it. A failure gets its own [exit code](/reference/#exit-codes), such as 4 when the backend fails. A failure never looks like an answer.
+Not sure exits 3, so a person reads it. A failure gets its own [exit code](/reference/answers/#exit-codes), such as 4 when the backend fails. A failure never looks like an answer.
 
 ## No training data to start
 
