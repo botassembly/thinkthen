@@ -8,6 +8,7 @@
 
 import { FUNCTIONS } from './catalog.mjs';
 import { setting } from '../lib/settings-table.mjs';
+import { cutOn, CUT, LIST_RULE } from './flags.mjs';
 
 const nameOf = (fn) => fn.title || fn.name;
 
@@ -31,8 +32,7 @@ export const referencePage = (slug) => {
 
 // ------------------------------------------------------------ thresholds
 
-const cutOn = (fn) => setting('Threshold').defaultOn(fn);
-export const CUT = setting('Threshold').bounds;
+export { CUT };
 export const DEFAULT_CUT = cutOn('decide');
 
 // What one function's cut applies to, and its default. A function with no
@@ -42,8 +42,8 @@ export const THRESHOLDS = {
   choose: { rule: 'A cut only. A band is a usage error. The cut applies to the winning option\'s probability.', dflt: cutOn('choose') },
   tag: { rule: 'A cut only, applied to each label\'s own probability of yes. A band is refused.', dflt: cutOn('tag') },
   filter: { rule: 'A cut only, applied to each record\'s probability of yes. A band is exit 2 from the command line and exit 5 from a question file.', dflt: cutOn('filter') },
-  annotate: { band: true, rule: 'Each question in the set carries its own threshold. A top-level `threshold` applies to every `decide` question that names none. One set can mix cuts and bands.', dflt: 'per question' },
-  recognize: { rule: 'A cut on each name\'s printed strength. Strength is a computed product, not a probability. `--relation-threshold` is a separate cut on each relation edge\'s probability of yes.', dflt: cutOn('recognize') },
+  annotate: { band: true, rule: 'Each question in the set carries its own `threshold` key. A top-level `threshold` applies to every `decide` question that names none. One set can mix cuts and bands. A cut is a number, such as `"threshold": 0.8`. A band is a string, such as `"threshold": "0.1:0.9"`.', dflt: 'per question' },
+  recognize: { rule: 'A cut on each name\'s printed strength. ThinkThen computes strength as a product. It is not a probability. `--relation-threshold` is a separate cut on each relation edge\'s probability of yes.', dflt: cutOn('recognize') },
   relate: { rule: 'A cut on each edge\'s probability of yes. An edge exactly at the cut is kept.', dflt: cutOn('relate') },
 };
 
@@ -51,7 +51,6 @@ export const THRESHOLDS = {
 
 // What each positional argument takes, past the signature in catalog.mjs.
 const range = (name) => `${setting(name).range.min} to ${setting(name).range.max}`;
-const LIST_RULE = 'A list typed beside `@FILE` replaces the file\'s whole list. The two never merge.';
 const TYPED = 'A value typed beside `@FILE` replaces the file\'s value.';
 export const ARGUMENTS = {
   decide: `\`QUESTION\` is one argument that names one visible fact. \`@FILE\` reads a saved \`decide\` question from a question file instead. ${TYPED} A question that must begin with \`@\` is written in a file.`,
@@ -59,7 +58,7 @@ export const ARGUMENTS = {
   tag: `\`QUESTION\` frames the labels, or \`@FILE\` names a question file. Each \`LABEL\` is judged on its own, ${range('Labels')} of them, in request and output order. ${LIST_RULE}`,
   score: `\`QUESTION\` names what is being placed, or \`@FILE\` names a question file. The levels come lowest first, ${range('Levels')} of them. The first level is 0. ${LIST_RULE}`,
   filter: `\`QUESTION\` is asked of each record. \`@FILE\` names a saved \`decide\` question instead. ${TYPED}`,
-  rank: `\`QUESTION\` is asked of each record. \`@FILE\` names a saved \`decide\` or \`score\` question instead. A \`score\` file ranks by its weighted level position.`,
+  rank: `\`QUESTION\` is asked of each record. \`@FILE\` names a saved \`decide\` or \`score\` question instead. A \`score\` file ranks by its weighted level position. \`rank\` refuses a threshold on the command line and in a question file.`,
   find: '`QUESTION` is the question the selected line or record best answers. It is one argument. Quote a question of several words.',
   annotate: '`FILE` is a saved question set: one JSON file of named questions. Each question names its verb, and it may carry its own threshold.',
   recognize: `Each \`KIND\` is one kind of name to look for, ${range('Kinds')} of them. With no kinds, every name has the kind \`ENTITY\`. \`none of these\`, \`ENTITY\` and \`ANY\` are reserved. \`@FILE\` names a \`recognize\` question file instead.`,

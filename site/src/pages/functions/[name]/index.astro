@@ -26,6 +26,7 @@ const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
 const bench = beatlesPageFor(fn.name);
 const card = slideCard(fn.name);
 const reference = `/reference/functions/${fn.name}/`;
+// A flag's `short` text leaves out what function pages leave out, such as --details.
 // Each argument in the signature is code. The words between stay prose, so
 // a phone can break the line between arguments.
 const signature = fn.args.split(/( or |, then )/).map((part, i) => ({ code: i % 2 === 0, part }));
@@ -61,7 +62,7 @@ const note = (fn.argsNote || '').split('`').map((part, i) => ({ code: i % 2 === 
   <table>
     <tr><th>{fn.notAFunction ? 'Key' : 'Flag'}</th><th>What it does</th></tr>
     {flagsOf(fn).map((f) => (
-      <tr><td>{f.spec.split(', ').map((opt, i) => <>{i > 0 && ', '}<code>{opt}</code></>)}</td><td set:html={inlineHtml(f.what)} /></tr>
+      <tr><td>{f.spec.split(', ').map((opt, i) => <>{i > 0 && ', '}<code>{opt}</code></>)}</td><td set:html={inlineHtml(f.short ?? f.what)} /></tr>
     ))}
   </table>
   {!fn.notAFunction && <p>Every function also takes the global flags. The <a href={reference}><code>{title}</code> reference</a> lists them with every default, range and exit code.</p>}

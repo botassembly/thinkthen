@@ -14,7 +14,7 @@ export const KEY_VARIABLE = 'THINKTHEN_API_KEY';
 export { REPO } from './repo.mjs';
 import { setting } from '../lib/settings-table.mjs';
 import { backend } from '../lib/backends-table.mjs';
-import { flag } from './flags.mjs';
+import { flag, lower, cutOn, CUT, LIST_RULE } from './flags.mjs';
 
 // The four outcomes. One color each, everywhere a number or an answer shows.
 export const OUTCOMES = [
@@ -34,8 +34,6 @@ export function outcomeOf(exit) {
 // Each function's own flags, with each default and range from
 // specification/settings.md through setting(). flags.mjs holds the flags
 // several functions share, and the global flags every function takes.
-const cutOn = (fn) => setting('Threshold').defaultOn(fn);
-const CUT = setting('Threshold').bounds;
 const CUT_TAKES = `a number above ${CUT.above} and at most ${CUT.atMost}`;
 const TEXT = setting('What true and false mean');
 const MEANS = [
@@ -47,9 +45,6 @@ const QUIET = flag('--quiet', 'nothing', 'off', 'Prints nothing. The exit code c
 const RECORD_FLAGS = ['--csv', '--tsv', '--context', '--batch', '--max-request-bytes', '--jobs'];
 // recognize and relate do not batch records.
 const SET_FLAGS = ['--csv', '--tsv', '--max-request-bytes', '--jobs'];
-// A list typed beside @FILE replaces the question file's whole list.
-const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
-const LIST_RULE = 'A list typed beside `@FILE` replaces the question file\'s whole list. The two never merge.';
 
 // The failure codes every function shares, from specification/channels.md.
 // A function's own list puts its answers first and then these.
@@ -73,7 +68,7 @@ export const FUNCTIONS = [
     takes: 'one question and one piece of evidence',
     gives: 'true, false, or null',
     toPerson: true,
-    requests: 'One request for one piece of evidence. One request for each record in a stream.',
+    requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE',
     options: [
       flag('--threshold T or LOW:HIGH', `${CUT_TAKES}, or a band LOW:HIGH`, cutOn('decide'), 'The bar the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle answers not sure.'),
@@ -100,7 +95,7 @@ export const FUNCTIONS = [
     takes: `one question, one piece of evidence, and ${setting('Options').range.min} to ${setting('Options').range.max} options`,
     gives: 'one of your options, or null',
     toPerson: true,
-    requests: 'One request for one piece of evidence. One request for each record in a stream.',
+    requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then OPTION...',
     options: [
       flag('--threshold T', CUT_TAKES, cutOn('choose'), 'The bar the winning option must reach. One number only. A band is a usage error.'),
@@ -129,7 +124,7 @@ export const FUNCTIONS = [
     line: 'Name every label that fits.',
     takes: `one question, one piece of evidence, and ${setting('Labels').range.min} to ${setting('Labels').range.max} labels`,
     gives: 'the labels that fit, as a list',
-    requests: 'Every label rides in one request. One request for one piece of evidence, whatever the label count.',
+    requests: 'Every label rides in one request. One request for one piece of evidence, whatever the label count. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then LABEL...',
     options: [
       flag('--threshold T', CUT_TAKES, cutOn('tag'), 'The bar every label must reach on its own. A band is refused.'),
@@ -151,7 +146,7 @@ export const FUNCTIONS = [
     line: 'Place the evidence on a scale you name.',
     takes: `one question, one piece of evidence, and ${setting('Levels').range.min} to ${setting('Levels').range.max} levels, least first`,
     gives: 'a number along your levels. The first level is 0',
-    requests: 'One request for one piece of evidence. One request for each record in a stream.',
+    requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then LEVEL...',
     options: [],
     shared: RECORD_FLAGS,
@@ -169,12 +164,13 @@ export const FUNCTIONS = [
   },
   {
     name: 'filter',
+    streamOnly: true,
     goal: 'filter keeps the records where the answer is yes, unchanged and in order.',
     primitive: 'Yes or no, per record',
     line: 'Keep the records where the answer is yes.',
     takes: 'one yes-or-no question and many records',
     gives: 'the records that pass, byte for byte, in the order they went in',
-    requests: 'One request for each record.',
+    requests: 'Records share requests by default. --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE',
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
@@ -193,12 +189,13 @@ export const FUNCTIONS = [
   },
   {
     name: 'rank',
+    streamOnly: true,
     goal: 'rank sorts every record by how likely the answer is yes, and drops none.',
     primitive: 'Yes or no, per record',
     line: 'Sort records by how likely the answer is yes.',
     takes: 'one yes-or-no question and many records',
     gives: 'every record again, most likely first',
-    requests: 'One request for each record. --top trims the printed list and saves nothing.',
+    requests: 'Records share requests by default. --batch 1 asks one record a request. --top trims the printed list and saves nothing.',
     args: 'QUESTION or @FILE',
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
@@ -216,6 +213,7 @@ export const FUNCTIONS = [
   },
   {
     name: 'find',
+    streamOnly: true,
     goal: 'find reads all the lines together and returns the one that answers the question, or none.',
     primitive: 'Pick one line of the evidence',
     line: 'Pick the one line that best answers a question.',
@@ -243,12 +241,12 @@ export const FUNCTIONS = [
     line: 'Fill out a form for every record.',
     takes: 'a saved set of questions and your JSON',
     gives: 'the same JSON with one field added per question. Nested fields ride through unchanged',
-    requests: 'It sends one request for each record and each part the questions read.',
+    requests: 'On one document it sends one request for each part the questions read. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     toPerson: true,
     args: 'FILE',
     argsNote: 'The file is a saved question set.',
     options: [
-      flag('--on-error POLICY', '`continue`', 'stop at the first failed record', 'Skips a record whose question set `on` pointer finds nothing, and prints one error row in its place. It needs `--jsonl`, `--details` and `--batch 1`, and `--plan` refuses it. Every other failure still stops the run.'),
+      flag('--on-error POLICY', '`continue`', 'stop at the first failed record', 'Skips a record whose question set `on` pointer finds nothing, and prints one error row in its place. It needs `--jsonl`, `--details` and `--batch 1`, and `--plan` refuses it. Every other failure still stops the run.', { short: 'Skips a record whose question set `on` pointer finds nothing, and prints one error row in its place. The reference page gives the flags it needs.' }),
     ],
     shared: RECORD_FLAGS,
     exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], [7, 'the run finished and skipped records under --on-error continue'], ...COMMON_EXITS.map(([code, what]) => [code, code === 5 ? 'the question set could not be read' : what])],

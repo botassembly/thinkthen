@@ -13,9 +13,17 @@
 import { setting } from '../lib/settings-table.mjs';
 import { backends } from '../lib/backends-table.mjs';
 
-export const flag = (spec, takes, dflt, what) => ({ spec, takes, default: dflt, what });
+export const flag = (spec, takes, dflt, what, extra = {}) => ({ spec, takes, default: dflt, what, ...extra });
 
-const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+export const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+// The default cut on one function, and the ends a cut may take.
+export const cutOn = (fn) => setting('Threshold').defaultOn(fn);
+export const CUT = setting('Threshold').bounds;
+// A list typed beside @FILE replaces the question file's whole list.
+export const LIST_RULE = 'A list typed beside `@FILE` replaces the question file\'s whole list. The two never merge.';
+// A flag that a function refuses on one document says so only on a
+// function that reads one document.
+const ON_ONE_DOCUMENT = 'On one document it is a usage error.';
 const dflt = (name) => lower(setting(name).default);
 const THROTTLE = setting('Throttle');
 
@@ -35,10 +43,10 @@ export const GLOBAL_FLAGS = [
   flag('--model NAME', 'a model name', setting('Model').default, 'The model the request carries. Name a version to pin a run.'),
   flag('--record DIR', 'a folder', dflt('Recording'), 'Calls the backend for every request and writes each exchange into DIR. The folder is created when absent.'),
   flag('--replay DIR', 'a folder', dflt('Recording'), 'Answers from DIR alone. No connection opens, and no key is needed. A missing answer exits 5.'),
-  flag('--cache DIR', 'a folder', 'the default answer cache', 'Replays DIR and records into it. It is `--record DIR` and `--replay DIR` together, so it stands beside neither.'),
+  flag('--cache DIR', 'a folder', 'the default answer cache', 'Replays DIR and records into it. It is exactly `--record DIR --replay DIR`. Beside either of those it is a usage error.'),
   flag('--no-cache', 'nothing', 'off', 'Turns off the answer cache for one run, both lookup and writing. It never turns off usage counting.'),
   flag('--refresh-cache', 'nothing', 'off', 'Sends each request live and replaces its saved answer in the cache.'),
-  flag('--timeout SECONDS', '1 to 86400 whole seconds', setting('Timeout').number, 'Bounds one attempt from connect to last byte, and each wait before a retry. Another value exits 2.'),
+  flag('--timeout SECONDS', lower(setting('Timeout').allowed.split(';')[0].replace(/^command: /i, '')), setting('Timeout').number, 'Bounds one attempt from connect to last byte, and each wait before a retry. Another value exits 2.'),
   flag('--max-retries N', lower(setting('Retries').allowed), setting('Retries').default, 'How many times a retried status is sent again. A transport failure is never sent again.'),
 ];
 
@@ -46,7 +54,7 @@ export const SHARED_FLAGS = {
   '--csv': flag('--csv', 'nothing', 'off', 'Reads a comma-separated table with a required header row. Every cell is a string, and every result is JSON Lines.'),
   '--tsv': flag('--tsv', 'nothing', 'off', 'Reads a tab-separated table with a required header row. The CSV rules apply.'),
   '--context': flag('--context FILE', 'a readable UTF-8 file that is not blank', dflt('Context'), 'Shares the exact contents of FILE as evidence for every batch of records.'),
-  '--batch': flag('--batch N or max', lower(setting('Batch').allowed), setting('Batch').default, '`max` fills each request to the backend\'s limits. `--batch 1` asks one record a request. Records that share one request can affect each other\'s answers. It beats `THINKTHEN_BATCH`, which beats a question file\'s `batch`. On one document it is a usage error.'),
+  '--batch': flag('--batch N or max', lower(setting('Batch').allowed), setting('Batch').default, '`max` fills each request to the backend\'s limits. `--batch 1` asks one record a request. Records that share one request can affect each other\'s answers. It beats `THINKTHEN_BATCH`, which beats a question file\'s `batch`.', { oneDocument: ON_ONE_DOCUMENT }),
   '--max-request-bytes': flag('--max-request-bytes N', 'a whole number of 1 or more', dflt('Request size'), 'Closes or splits a request before it passes N bytes. A single record or question still goes alone. It beats `THINKTHEN_MAX_REQUEST_BYTES`.'),
   '--jobs': flag('--jobs N', `${THROTTLE.range.min} to ${THROTTLE.range.max}`, THROTTLE.default, 'The most requests in flight at once. A run opens up to one connection for each. It sets no limit on requests a minute.'),
 };
@@ -58,7 +66,8 @@ export const namesOf = (spec) => spec.match(/--[a-z][a-z0-9-]*/g) || [];
 export function flagsOf(fn) {
   const shared = (fn.shared || []).map((name) => {
     if (!SHARED_FLAGS[name]) throw new Error(`flags: ${fn.name} names no shared flag ${name}`);
-    return SHARED_FLAGS[name];
+    const f = SHARED_FLAGS[name];
+    return f.oneDocument && !fn.streamOnly ? { ...f, what: `${f.what} ${f.oneDocument}` } : f;
   });
   return [...fn.options, ...shared];
 }

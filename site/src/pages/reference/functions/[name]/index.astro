@@ -36,8 +36,11 @@ const names = new Set([...own, ...GLOBAL_FLAGS].flatMap((f) => namesOf(f.spec)))
 const framings = Object.keys(FRAMING).filter((f) => names.has(f));
 const cut = THRESHOLDS[name];
 // A question set holds its thresholds as keys. The other functions take the flag.
-const thr = name === 'annotate' ? '"threshold":' : '--threshold';
-const oneDocument = isFn && !['filter', 'rank', 'find', 'relate'].includes(name);
+// A band in a question set is a JSON string.
+const setKey = name === 'annotate';
+const thr = setKey ? '"threshold":' : '--threshold';
+const band = setKey ? '"threshold": "LOW:HIGH"' : '--threshold LOW:HIGH';
+const oneDocument = isFn && !fn.streamOnly && name !== 'relate';
 const THROTTLE = setting('Throttle');
 // A default shows as code when it is one value, and as prose when it is words.
 const valueHtml = (text) => (/\s/.test(String(text)) ? inlineHtml(String(text)) : `<code>${inlineHtml(String(text))}</code>`);
@@ -50,7 +53,7 @@ const jobsScope = name === 'annotate'
   ? 'It also acts on one document, where the questions can make several requests.'
   : name === 'relate'
     ? 'It acts on the one set of names, where each relation makes its own requests.'
-    : 'It acts in record mode. On one document it is a usage error.';
+    : oneDocument ? 'It acts in record mode. On one document it is a usage error.' : 'It acts in record mode.';
 const description = isFn
   ? `Every argument, flag, default, input rule, output shape and exit code of ${name}.`
   : 'Every key and exit code of a question file.';
@@ -120,12 +123,16 @@ const description = isFn
             <tr><th>Form</th><th>Accepted</th><th>Yes</th><th>No</th><th>Not sure</th></tr>
             <tr><td>none given</td><td></td><td>p ≥ {DEFAULT_CUT}</td><td>p &lt; {DEFAULT_CUT}</td><td>never</td></tr>
             <tr><td><code>{thr} T</code></td><td>{CUT.above} &lt; T ≤ {CUT.atMost}</td><td>p ≥ T</td><td>p &lt; T</td><td>never</td></tr>
-            <tr><td><code>{thr} LOW:HIGH</code></td><td>{CUT.above} ≤ LOW &lt; HIGH ≤ {CUT.atMost}</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
+            <tr><td><code>{band}</code></td><td>{CUT.above} ≤ LOW &lt; HIGH ≤ {CUT.atMost}</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
           </table>
           <p>The high side is inclusive. A probability exactly at <code>LOW</code> is not sure. A band low of 0 is accepted. <code>{thr} {DEFAULT_CUT}</code> and no threshold name the same rule.</p>
         </>
       )}
-      <p>A cut of 0 is refused. {cut.band ? 'A percent such as 90, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.' : 'A percent such as 90, a band, and a number that is not finite are all usage errors before any request.'}</p>
+      <p>A cut of 0 is refused. {setKey
+        ? 'A percent such as 90, a reversed band, an empty side, and a number that is not finite make the question set invalid. The run exits 5 before any request.'
+        : cut.band
+          ? 'A percent such as 90, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.'
+          : 'A percent such as 90, a band, and a number that is not finite are all usage errors before any request.'}</p>
       <p>The cut applies to the probability of yes on <code>decide</code> and each record under <code>filter</code>, the winning option’s probability on <code>choose</code>, each label’s independent yes probability under <code>tag</code>, each name’s printed strength under <code>recognize</code>, and each relation edge’s yes probability under <code>recognize</code> or <code>relate</code>. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/threshold.md">threshold contract</a> defines every boundary.</p>
     </>
   )}
@@ -221,6 +228,7 @@ const description = isFn
     <li>The <a href="/install/settings/">settings page</a> gives every setting on every surface, with its default.</li>
     <li><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, recording, replay and pruning.</li>
     <li>The <a href="/install/configuration/#configuration-file">configuration file</a> names the default backend, address and model.</li>
+    <li>The <a href="/install/configuration/#usage-totals">usage totals</a> count requests and tokens on this machine, and <a href="/install/configuration/#status"><code>thinkthen status</code></a> prints them.</li>
     {isFn ? <li>A <a href="/reference/functions/question-file/">question file</a> saves one question with its threshold.</li> : <li><a href="/reference/question-sets/">Question sets</a> hold many questions for <code>annotate</code>.</li>}
     {name === 'annotate' && <li><a href="/reference/question-sets/">Question sets</a> give the rules a question set follows.</li>}
   </ul>
