@@ -1,6 +1,6 @@
 # 0391: Fix the PyPI, npm and NuGet publish steps that failed in the 0.1.0 release
 
-Status: in progress. Lane claude-3. Branch `ticket/0391-publish-step-fixes`. Parent: ticket 0128 phase 4. Cherry-picked to `release/0.1` under ADR 0116 item 5.
+Status: landed. Lane claude-3. Branch `ticket/0391-publish-step-fixes`. Parent: ticket 0128 phase 4. Cherry-picked to `release/0.1` under ADR 0116 item 5.
 
 Milestone: 0.1
 
@@ -64,3 +64,8 @@ Milestone: 0.1
 - NuGet answered 400 with its reason in the status line, and `nuget-push` printed only the code. nuget.org's push policies live in NuGetGallery's source, and the default subscription named the missing header.
 - `release-archive-self-test.py` packs from the committed tree. Run with an uncommitted version bump, it reads 0.1.1 from the working tree and packs 0.1.0, then fails its "own build folders" case. Committed, it passes.
 - Proof run here: `workflows --self-test` 71 of 71; `workflows`; `workflows --remote-pins`, which names the old pin on main's `release.yml` and passes on this branch; `release-registry-self-test.py` 35 of 35, with the header, the key scrub and the scrub before the 500-character cut each proven by removing it; `lint` with the private-names list (35 names, none found); and `tickets`. On a scratch copy of `release/0.1` with the bump committed: `versions`, `versions --tag v0.1.1`, `versions --self-test`, `release-registry-self-test.py`, `release-archive-self-test.py` and `workflows`.
+
+## Review
+
+- Ticket review: six findings were fixed, then ACCEPT. They covered the checkpoint and rehearsal before the tag, npm 11 for the dry run, the 0.1.x release steps with the changelog on main, the leftovers of the partial release, the Go proxy claim, and the grep and NuGet wording.
+- Code review: two findings were fixed, then ACCEPT. The key is now scrubbed before the 500-character cut, and the npm path parser reads `.`, `..` and shell separators.
