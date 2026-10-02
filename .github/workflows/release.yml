@@ -381,7 +381,7 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
-    permissions: {contents: read, actions: read}
+    permissions: {contents: read, actions: read, id-token: write}
     steps:
       - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
         run: '[ "$RELEASE_ARMED" = true ]'
@@ -389,7 +389,11 @@ jobs:
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: registry-packages, path: registry}
-      - env: {NUGET_API_KEY: "${{ secrets.NUGET_API_KEY }}"}
+      # Trusted publishing: the run's OIDC token buys a one-hour key, so the login sits just before the push.
+      - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        id: login
+        with: {user: "${{ vars.NUGET_USER }}"}
+      - env: {NUGET_API_KEY: "${{ steps.login.outputs.NUGET_API_KEY }}"}
         run: sdlc/scripts/release-workflow nuget-push registry/nuget/Botassembly.ThinkThen.*.nupkg
 
   maven:
@@ -427,20 +431,11 @@ jobs:
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: registry-packages, path: registry}
-      - run: sdlc/scripts/release-workflow dart-tools x86_64-unknown-linux-gnu "$RUNNER_TEMP/thinkthen-registry-dart"
-      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
-        id: auth
-        with:
-          workload_identity_provider: ${{ vars.PUB_DEV_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.PUB_DEV_SERVICE_ACCOUNT }}
-          token_format: id_token
-          id_token_audience: https://pub.dev
-          id_token_include_email: true
-          create_credentials_file: false
-      - env: {PUB_TOKEN: "${{ steps.auth.outputs.id_token }}"}
-        run: |
-          "$TT_DART" pub token add https://pub.dev --env-var PUB_TOKEN
-          sdlc/scripts/release-workflow pub-publish registry/pub/thinkthen_dart
+      # pub.dev trusted publishing: setup-dart turns the run's OIDC token into the pub.dev token.
+      # pub.dev accepts this workflow_dispatch run because it runs on the v* tag ref.
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        with: {sdk: '3.13.4'}
+      - run: sdlc/scripts/release-workflow pub-publish registry/pub/thinkthen_dart
 
   publish:
     needs: [resolve, draft, crates, pypi, npm, rubygems, tap, nuget, maven, pub]
