@@ -34,7 +34,11 @@ fi
 [ -d "$tree" ] || { echo "package.sh: no packaged tree at $tree; run check.sh or package.sh without --reuse" >&2; exit 1; }
 set -- "$tree$("$PG_CONFIG" --pkglibdir)"/thinkthen.*
 [ $# -eq 1 ] && [ -f "$1" ] || { echo "package.sh: want one thinkthen module in $tree, found: $*" >&2; exit 1; }
+# The tree can keep the SQL of an earlier version, so this packs only the control file's version.
+share=$tree$("$PG_CONFIG" --sharedir)/extension
+version=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
+cmp -s thinkthen.control "$share/thinkthen.control" || { echo "package.sh: $share/thinkthen.control differs from thinkthen.control; rebuild the tree" >&2; exit 1; }
+[ -f "$share/thinkthen--$version.sql" ] || { echo "package.sh: no thinkthen--$version.sql in $share; rebuild the tree" >&2; exit 1; }
 mkdir -p "$out/lib" "$out/extension"
 cp -- "$1" "$out/lib/"
-cp -- "$tree$("$PG_CONFIG" --sharedir)"/extension/thinkthen.control \
-	"$tree$("$PG_CONFIG" --sharedir)"/extension/thinkthen--*.sql "$out/extension/"
+cp -- "$share/thinkthen.control" "$share/thinkthen--$version.sql" "$out/extension/"
