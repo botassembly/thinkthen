@@ -3,8 +3,8 @@ title: "Jev is trained to decide"
 slug: jev-is-trained-to-decide
 author: Ian Maurer
 date: "2026-10-02"
-goal: "Answer a friend's question about why people are excited about Jev: it is fast, cheap and better at decisions, because TypeSafe trains it toward calibrated probabilities that code can act on."
-blurb: "A friend asked me why people are excited about Jev. It is fast and cheap. It is also better at decisions than a chat model, because TypeSafe trains it to give a calibrated probability your code can act on."
+goal: "Explain why people are excited about Jev: it is fast, cheap and better at decisions, because TypeSafe trains it toward calibrated probabilities that code can act on."
+blurb: "Why are people excited about Jev? It is fast and cheap. It is also better at decisions than a chat model, because TypeSafe trains it to give a calibrated probability your code can act on."
 card: /og/jev-is-trained-to-decide.png
 cardAlt: "Jev is trained to decide. RLHF chat models please humans. RLVR reasoning models optimize benchmarks. RLCD trains Jev for programmatic use, with a calibrated probability of 0.84 over a threshold of 0.7. Fast, cheap, better at decisions."
 links:
@@ -12,13 +12,7 @@ links:
   - { href: "/how-tos/search-youtube-transcripts-by-meaning/", text: "Search YouTube transcripts by meaning" }
 ---
 
-A friend of mine asked me this on LinkedIn:
-
-> Hey, long time no talk. What are you seeing with Jev? Why are people excited about it? I'm having a hard time understanding what problem it optimally solves.
-
-It's a fair question. Jev is a classifier, and we've had classifiers for decades.
-
-My short answer: Jev is fast, cheap, and better. It's better at the thing large language models do poorly. That thing is making decisions.
+People are excited about Jev for three reasons. It's fast, it's cheap, and it's better. It's better at the thing large language models do poorly. That thing is making decisions.
 
 ## Fast and cheap
 
@@ -74,6 +68,6 @@ Calibration is still a claim until you check it on your own cases. Label some re
 
 <!-- video: Ut3LOjKNJaE | How Jev Turns AI Into Software That Gets Things Done | a16z -->
 
-I asked ThinkThen to rank the transcripts. The how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) shows the method. The ranking found the Latent Space lines at 6:43, 7:15, 9:58, 1:23:12 and 1:23:17, the a16z line at 27:43, and my line at 5:37. I found the other lines by reading the transcripts.
+I used ThinkThen to find most of these quotes. It ranked every passage of the three transcripts by how well it explained why people are excited about Jev. The how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) has the experiment, its code and what it cost.
 
-Automatic captions name no speaker, and they spell Jev as "Jeff" and "Jeb". I checked each speaker by reading around the quote. Words in brackets fix a caption error or fit a quote into my sentence. An ellipsis marks words I cut. I quote my own talk from captions I corrected by hand.
+Words in brackets fix a caption error or fit a quote into my sentence. An ellipsis marks words I cut.
