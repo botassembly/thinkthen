@@ -32,7 +32,7 @@ const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text
 const plain = (text) => text.replaceAll('`', '');
 if (!howto.goal) throw new Error(`how-tos: ${howto.slug} has no goal`);
 ---
-<Base title={howto.title} description={plain(howto.said)}>
+<Base title={howto.title} description={plain(howto.said)} reading>
   <div class="eyebrow">{howto.reader}</div>
   <h1>{howto.title}</h1>
   <p class="lede">{parts(howto.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
