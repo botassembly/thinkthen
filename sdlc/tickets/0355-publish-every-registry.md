@@ -60,7 +60,7 @@ The documentation team owns these accounts and settings. Ian decides when Action
 | `maven` | `MAVEN_CENTRAL_GPG_PRIVATE_KEY` (ASCII-armored), `MAVEN_CENTRAL_GPG_PASSPHRASE`; the public key on a public keyserver | `release` environment secrets |
 | `maven` | Namespace `io.github.botassembly` verified in the Central Portal | account |
 | `pub` | pub.dev automated publishing from GitHub Actions: repository `botassembly/thinkthen`, tag pattern `v{{version}}`, `workflow_dispatch` events, environment `release` (ticket 0389) | account |
-| `pub` | One manual first upload of `thinkthen_dart` by its uploader, because pub.dev shows the automated-publishing settings only on a package that exists. It uses an earlier or pre-release version such as `0.1.0-dev.1`, never the release version: `pub` refuses a version pub.dev already holds, and `publish` waits for `pub`. Then the package admin page enables publishing from GitHub Actions | account |
+| `pub` | One manual first upload of `thinkthen_dart` by its uploader, because pub.dev shows the automated-publishing settings only on a package that exists. It uses an earlier version such as `0.0.1`, never the release version: `pub` refuses a version pub.dev already holds, and `publish` waits for `pub`. Then the package admin page enables publishing from GitHub Actions | account |
 | none | Packagist: this repository submitted and its GitHub hook installed; the hook reads each `v*` tag the moment it exists | account |
 | none | R-universe: `botassembly/botassembly.r-universe.dev` with `packages.json` naming `thinkthen`, `url` this repository, `subdir` `libraries/r/thinkthen` and `"branch": "*release"`, and the R-universe GitHub app | account |
 | `publish` | nothing new; the Go tag uses the job's `GITHUB_TOKEN` | none |

@@ -46,3 +46,13 @@ Milestone: 0.1
 - The pub.dev route: a release-mode dispatch from the `v*` tag, with pub.dev's `workflow_dispatch` box ticked. The docs team's tag-push job remains the alternative; it would need Ian to allow a second trigger.
 - `NUGET_USER` as a `release` environment variable rather than the name written in the workflow.
 - `setup-dart` without a hash check in the `pub` job. The alternative keeps `dart-tools` and fetches the pub.dev token with a short `curl` to the runner's OIDC endpoint, adding no action.
+
+## What the build taught us
+
+- dart.dev's automated-publishing page still says pub.dev accepts only a tag push. pub.dev's server has accepted a `workflow_dispatch` run on a tag ref since 2024, behind its own admin checkbox. The server source settled the question, and the docs team's separate tag-push job proved unnecessary. Ticket 0355 had taken the page at its word and built a Google Cloud route for the same reason.
+- The fixture in `sdlc/scripts/workflows` gave `crates`, `npm` and `rubygems` no `id-token: write`, so a rule over every trusted-publishing job needed the fixture to match the real workflow first.
+- Proof run here: `workflows --self-test` 70 of 70, `workflows`, `release-registry-self-test.py`, `release-managed-pair-self-test.py`, `release-language-tools-self-test.py`, `release-archive-self-test.py`, `tickets`, and `lint` with the private-names list. Lint's "Killed" line comes from the `time-limit` self-test in `surfaces`, which kills its own planted process. No workflow ran; the first runner proof is the release run, after one more rehearsal from `release/0.1`.
+
+## Review
+
+- Ticket review: four findings (the lost Dart hash check, the exact pub.dev settings, ticket 0355's remaining Google lines, and the silent token step); fixed, then ACCEPT.
