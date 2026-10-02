@@ -17,10 +17,6 @@
     "heading": "Lanes"
   },
   "recordNaming": "ticket",
-  "mailroom": {
-    "repo": "/home/ian/workspace/repos/sdlc",
-    "name": "thinkthen"
-  },
   "milestones": {
     "file": "planning/milestones.md",
     "values": [
