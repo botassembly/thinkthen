@@ -56,3 +56,4 @@ Milestone: 0.1
 ## Review
 
 - Ticket review: four findings (the lost Dart hash check, the exact pub.dev settings, ticket 0355's remaining Google lines, and the silent token step); fixed, then ACCEPT.
+- Code review: two findings (the milestone line spoke of the cherry-pick as done, and 0355's lesson lacked a pointer); fixed.

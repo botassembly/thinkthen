@@ -76,7 +76,7 @@ Ticket 0389 replaced the Google Cloud route after Ian ruled it out on 2026-10-01
 
 ## What the build taught us
 
-- pub.dev's GitHub trusted publishing accepts only a run started by a tag push, and its automated settings appear only on a package that already exists. A dispatch-only release therefore needs the Google Cloud service account route and one earlier manual upload.
+- pub.dev's GitHub trusted publishing accepts only a run started by a tag push, and its automated settings appear only on a package that already exists. A dispatch-only release therefore needs the Google Cloud service account route and one earlier manual upload. Ticket 0389 found that pub.dev's server also accepts a `workflow_dispatch` run on a tag ref, so the Google route is gone.
 - Packagist reads only a root `composer.json`, and proxy.golang.org reads only a tag prefixed with the module's folder. Both facts were missing from the registration notes. Packagist also publishes the moment the tag exists, outside the approvals.
 - The packed release archives are the right source for registry packages. `registry-pack` read the real `release-pack c csharp jvm dart` output on this host, rehearsal signing verified six Maven files, and the pub dry run reported 0 warnings. A planted missing CHANGELOG made the dry run fail.
 - Proof run here: `workflows --self-test` 64 of 64, `release-registry-self-test.py` 31 of 31, `release-managed-pair-self-test.py`, the JVM surface check, `policy.py`, `tickets`, `versions`, and `lint` in a clean clone. `policy.py` pinned the POM packaging and needed the same change. The first runner proof waits for the next rehearsal.
