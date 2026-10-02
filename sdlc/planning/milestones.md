@@ -16,7 +16,7 @@ Exit criteria:
 4. Done: tickets 0149 and 0157 are closed.
 5. Ian gives the go to dispatch the real release.
 
-R-universe and Packagist are set up. The registry repo `botassembly/botassembly.r-universe.dev` exists, and Ian installed the R-universe GitHub app on `botassembly`. Packagist lists `botassembly/thinkthen`, and its GitHub webhook works; its last delivery returned 202. The release workflow has no job for either one. Each picks up the `v0.1.0` tag by itself. Ticket 0128's R-universe and Packagist install checks stay in Phase 4 step 8.
+R-universe and Packagist are set up. The registry repo `botassembly/botassembly.r-universe.dev` exists, and Ian installed the R-universe GitHub app on `botassembly`. Packagist lists `botassembly/thinkthen`, and its GitHub webhook works; its last delivery returned 202. The release workflow has no job for either one. Packagist reads the `v0.1.0` tag through its webhook. R-universe builds from the published GitHub release. Ticket 0128's Phase 4 step 8 includes the R-universe and Packagist install checks.
 
 Blockers, refreshed 2026-10-02:
 

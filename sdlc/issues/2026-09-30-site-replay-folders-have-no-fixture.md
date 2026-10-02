@@ -21,6 +21,6 @@ Keeping it lets three status phrases back onto the site with no check failing.
 - Site tickets 0038 and 0043 replay every binding's install and backends samples, 77 in all, through `npm run smoke-bindings`.
 - Part 4, except one item: `check-words` refuses preview, planned and beta, the pandas page exists, and `check-links.mjs` fails on a code tag after a table.
 
-## 4. Three status phrases (site owner)
+## 4. Three status phrases (builder)
 
-`site/scripts/check-words.mjs` refuses preview, planned and beta. It does not refuse "ships first", "not run yet" or "comes with 0.1", which this part named. No page uses them today. Done when the site owner adds the three phrases to `check-words`, or records why not. Close this issue then.
+`site/scripts/check-words.mjs` refuses preview, planned and beta. It does not refuse "ships first", "not run yet" or "comes with 0.1", which this part named. No page uses them today. Done when the builder adds the three phrases to `check-words`, or records why not. Close this issue then.
