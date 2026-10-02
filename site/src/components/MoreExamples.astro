@@ -1,0 +1,21 @@
+---
+// One function's further runs and bigger library samples, under a heading
+// at the level the page asks for. The function page and the reference page
+// both show them from src/data/fn-examples.mjs.
+import Terminal from './Terminal.astro';
+import Code from './Code.astro';
+import { examplesOf } from '../data/fn-examples.mjs';
+
+const { fn, level = 'h3' } = Astro.props;
+const { extra, more, moreInputs } = examplesOf(fn);
+const Heading = level;
+---
+{(extra.length > 0 || more.length > 0) && <Heading id="more-examples">More examples</Heading>}
+{moreInputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the examples below read`} />)}
+{extra.map((run) => <Terminal run={run} caption={run.see} />)}
+{more.map((m) => (
+  <>
+    <Code code={m.code} file={m.file} caption={`${m.name}: ${m.see}`} label={`Copy the ${m.name} sample`} />
+    {m.output && <Code code={m.output} lang="output" caption={`What ${m.name} printed`} copy={false} />}
+  </>
+))}
