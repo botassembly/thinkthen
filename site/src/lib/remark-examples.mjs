@@ -77,19 +77,18 @@ export default function remarkExamples() {
       for (const child of node.children) {
         const v = child.type === 'html' && /^<!--\s*video:\s*(.+?)\s*-->$/.exec(child.value.trim());
         if (v) {
-          if (!row) kids.push(row = { type: 'html', tiles: [] });
-          row.tiles.push(videoTile(v[1]));
+          if (!row) kids.push(row = { type: 'html', value: '' });
+          row.value += videoTile(v[1]);
           continue;
         }
+        if (row) row.value = `<ul class="video-row">${row.value}</ul>`;
         row = null;
         const m = child.type === 'html' && /^<!--\s*(example|file|install):\s*(\S+)\s*-->$/.exec(child.value.trim());
         if (m) { kids.push(...expand(m[1], m[2])); continue; }
         walk(child);
         kids.push(child);
       }
-      for (const kid of kids) {
-        if (kid.tiles) { kid.value = `<ul class="video-row">${kid.tiles.join('')}</ul>`; delete kid.tiles; }
-      }
+      if (row) row.value = `<ul class="video-row">${row.value}</ul>`;
       node.children = kids;
     };
     walk(tree);

@@ -65,6 +65,6 @@ Calibration is still a claim until you check it on your own cases. Label some re
 
 ## How I found these quotes
 
-I put this article together with ThinkThen, as the how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) shows. ThinkThen found the lines from my talk about speed, cost and tool choice. It found Diogo's a16z line about programming against Jev. It pointed me to the Latent Space passage about intelligence per dollar. I found the training quotes and my line about confidence by reading the transcripts.
+I put this article together with ThinkThen. The how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) shows the search. ThinkThen found the lines from my talk about speed, cost and tool choice. It found Diogo's a16z line about programming against Jev. It pointed me to the Latent Space passage about intelligence per dollar. I found the training quotes and my line about confidence by reading the transcripts.
 
 Words in brackets fix a caption error or fit a quote into my sentence. An ellipsis marks words I cut.

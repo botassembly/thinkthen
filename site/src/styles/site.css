@@ -255,7 +255,7 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .prose p, .prose ul, .prose ol
    its corner. It opens the video on YouTube. On a narrow phone the tiles
    shrink and the label wraps. */
 .video-row {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: .5rem;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: .5rem;
   list-style: none; margin: 0 0 1.4rem; padding: 0;
 }
 .video-row li { margin: 0; min-width: 0; }
@@ -267,7 +267,7 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .prose p, .prose ul, .prose ol
 .video-tile:hover { border-color: var(--think); color: var(--ink); }
 .video-tile img { display: block; width: 100%; max-width: 6rem; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; margin-bottom: .3rem; }
 .video-tile b { color: var(--think); }
-.video-tile .video-label { overflow-wrap: anywhere; }
+.video-tile .video-label { hyphens: auto; overflow-wrap: break-word; }
 .video-tile small { margin-top: auto; padding-top: .2rem; align-self: flex-end; text-align: right; color: var(--muted); font-size: .66rem; }
 
 table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .93rem; }
