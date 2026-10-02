@@ -434,12 +434,44 @@ part_r() {
 	keep "$(CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="$stage/r-target" "$tree/libraries/r/tools/make-tarball.sh" "$(fresh r)")"
 }
 
-# The README's first run: demo 27's input and its one recorded answer.
+# The README's first run: demo 27's input and its one recorded answer. Every target builds this
+# archive, and the release draft requires the four copies to match byte for byte. Each entry has a
+# fixed name order, mode, owner and time. The gzip layer holds stored deflate blocks with a zero
+# time and no name, since zlib builds compress the same input to different bytes.
 part_first_run() {
-	folder=$(fresh first-run)/thinkthen-first-run
-	mkdir -p "$folder"
-	cp -R demos/27-test-with-no-network/report.txt demos/27-test-with-no-network/recording "$folder/"
-	pack thinkthen-first-run.tar.gz "${folder%/*}"
+	python3 - "$OUT/thinkthen-first-run.tar.gz" demos/27-test-with-no-network <<'EOF'
+import io, os, struct, sys, tarfile, zlib
+
+out, demo = sys.argv[1:]
+buffer = io.BytesIO()
+with tarfile.open(fileobj=buffer, mode="w", format=tarfile.USTAR_FORMAT) as archive:
+    def add(relative):
+        path = os.path.join(demo, relative)
+        info = tarfile.TarInfo("thinkthen-first-run/" + relative)
+        if os.path.isdir(path):
+            info.type, info.mode = tarfile.DIRTYPE, 0o755
+            archive.addfile(info)
+            for name in sorted(os.listdir(path)):
+                add(relative + "/" + name)
+        else:
+            with open(path, "rb") as file:
+                data = file.read()
+            info.size, info.mode = len(data), 0o755 if os.access(path, os.X_OK) else 0o644
+            archive.addfile(info, io.BytesIO(data))
+    info = tarfile.TarInfo("thinkthen-first-run")
+    info.type, info.mode = tarfile.DIRTYPE, 0o755
+    archive.addfile(info)
+    add("recording")
+    add("report.txt")
+data = buffer.getvalue()
+blocks = [data[start:start + 65535] for start in range(0, len(data), 65535)]
+with open(out, "wb") as file:
+    file.write(b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff")
+    for index, block in enumerate(blocks):
+        file.write(bytes([index == len(blocks) - 1]) + struct.pack("<HH", len(block), len(block) ^ 0xFFFF) + block)
+    file.write(struct.pack("<II", zlib.crc32(data), len(data) & 0xFFFFFFFF))
+EOF
+	(cd -- "$OUT" && sha256 thinkthen-first-run.tar.gz >thinkthen-first-run.tar.gz.sha256)
 }
 
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
