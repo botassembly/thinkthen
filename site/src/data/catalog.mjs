@@ -1097,6 +1097,7 @@ export const HOWTOS = [
     files: {
       'fetch.sh': 'fetch.sh downloads the automatic captions of a YouTube talk with yt-dlp. Change the id to search another talk.',
       'vtt-to-lines.awk': 'vtt-to-lines.awk writes one timed line per caption. Automatic captions repeat each line as it scrolls, so it keeps only the lines that carry new words.',
+      'measured.txt': 'measured.txt records the full experiment. ThinkThen searched three whole talks, 292 passages, in under half a second per question. Each question cost about a quarter of a cent.',
     },
     see: {
       '1-lines': 'transcript.txt holds 200 timed lines from the talk Introducing ThinkThen, in the form fetch.sh writes. They cover the first four minutes and the minutes from 15:45 on. The speaker corrected these captions by hand.',

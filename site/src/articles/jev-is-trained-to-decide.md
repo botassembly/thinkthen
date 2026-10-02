@@ -8,11 +8,10 @@ blurb: "Why are people excited about Jev? It is fast and cheap. It is also bette
 card: /og/jev-is-trained-to-decide.png
 cardAlt: "Jev is trained to decide. RLHF chat models please humans. RLVR reasoning models optimize benchmarks. RLCD trains Jev for programmatic use, with a calibrated probability of 0.84 over a threshold of 0.7. Fast, cheap, better at decisions."
 links:
-  - { href: "/trust/", text: "Test it before you trust it" }
   - { href: "/how-tos/search-youtube-transcripts-by-meaning/", text: "Search YouTube transcripts by meaning" }
 ---
 
-People are excited about Jev for three reasons. It's fast, it's cheap, and it's better. It's better at the thing large language models do poorly. That thing is making decisions.
+People are excited about Jev for three reasons. It's fast, it's cheap, and it makes better decisions. Large language models make decisions poorly.
 
 ## Fast and cheap
 
@@ -28,7 +27,7 @@ A chat model learns from people's feedback. People rate its answers, and the mod
 
 Pleasing people has a cost. A Latent Space host asked whether chat models are "collapsing towards what you want to hear the most … instead of like their own internal confidence about a thing" ([7:15](https://youtu.be/cFx9Z3ZXca0?t=435)). Diogo answered with the problem he says "no one paid attention to": "the downsides of [RLHF], in particular, mode dropping" ([7:39](https://youtu.be/cFx9Z3ZXca0?t=459)).
 
-Mode dropping means the model stops giving the rare answers. It "drop[s] the minority classes and just do[es] the really common ones" ([9:22](https://youtu.be/cFx9Z3ZXca0?t=562)). The model still sounds sure. Its sense of how sure it should be is gone. Diogo calls the effect "total poison" for "the probability distributions" ([9:47](https://youtu.be/cFx9Z3ZXca0?t=587)). His conclusion: "this is why strings are so bad at … [decision-making]" ([9:58](https://youtu.be/cFx9Z3ZXca0?t=598)).
+Mode dropping means the model stops giving the rare answers. Diogo compares it to GANs, an older kind of image model. GANs "drop the minority classes and just do the really common ones" ([9:22](https://youtu.be/cFx9Z3ZXca0?t=562)). The chat model still sounds sure. Its sense of how sure it should be is gone. Diogo calls the effect "total poison" for "the probability distributions" ([9:47](https://youtu.be/cFx9Z3ZXca0?t=587)). His conclusion: "this is why strings are so bad at … [decision-making]" ([9:58](https://youtu.be/cFx9Z3ZXca0?t=598)).
 
 Reasoning models have their own goal. "RLVR is optimized benchmarks" ([1:23:17](https://youtu.be/cFx9Z3ZXca0?t=4997)). They learn to get checkable answers right.
 
@@ -68,6 +67,6 @@ Calibration is still a claim until you check it on your own cases. Label some re
 
 <!-- video: Ut3LOjKNJaE | How Jev Turns AI Into Software That Gets Things Done | a16z -->
 
-I used ThinkThen to find most of these quotes. It ranked every passage of the three transcripts by how well it explained why people are excited about Jev. The how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) has the experiment, its code and what it cost.
+I used ThinkThen to find these quotes. It ranked every passage of the three talks by how well it explained why people are excited about Jev. It found the speed and cost lines directly and showed me where to read. I found the rest by reading the transcripts. The how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) runs a smaller version of the experiment on my talk, with its code and what the full run cost.
 
 Words in brackets fix a caption error or fit a quote into my sentence. An ellipsis marks words I cut.
