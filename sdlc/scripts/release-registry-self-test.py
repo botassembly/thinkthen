@@ -204,6 +204,47 @@ def upload_cases(bundle):
     return out
 
 
+def nuget_cases(nupkg):
+    """Drive nuget_push against stubbed replies: the headers it sends and what a refusal prints."""
+    import importlib.util
+    import urllib.error
+    spec = importlib.util.spec_from_file_location("registry", REPO / "sdlc/scripts/release-registry.py")
+    registry = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(registry)
+    key = "planted-nuget-key"
+    out = []
+    for name, code, reason, body, wanted in (
+            ("nuget-pushed", 201, None, b"", (f"release-registry: pushed {nupkg.name}", "4.1.0", key)),
+            ("nuget-400", 400, "A client version '4.1.0' or higher is required to be able to push packages",
+             b"echo " + key.encode(), "NuGet answered 400 A client version '4.1.0' or higher is required to be able to push packages: echo [key]"),
+            ("nuget-400-long", 400, "Bad Request", b"x" * 490 + key.encode(),
+             "NuGet answered 400 Bad Request: " + "x" * 490 + "[key]"),
+            ("nuget-409", 409, "Conflict", b"The package ID is reserved.",
+             "NuGet answered 409 Conflict: The package ID is reserved.")):
+        sent = []
+
+        def urlopen(request, timeout, code=code, reason=reason, body=body):
+            sent.append((request.get_header("X-nuget-protocol-version"), request.get_header("X-nuget-apikey")))
+            if code >= 400:
+                raise urllib.error.HTTPError(request.full_url, code, reason, {}, io.BytesIO(body))
+            reply = Reply(b"")
+            reply.status = code
+            return reply
+        registry.urllib.request.urlopen = urlopen
+        os.environ["NUGET_API_KEY"] = key
+        printed = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(printed):
+                registry.nuget_push(nupkg)
+            got = (printed.getvalue().strip(), *sent[0])
+        except registry.Refusal as refusal:
+            got = str(refusal)
+        finally:
+            os.environ.pop("NUGET_API_KEY", None)
+        out.append((name, got, wanted))
+    return out
+
+
 def main():
     v = version()
     bad = 0
@@ -288,6 +329,7 @@ def main():
         checks += go_tag_cases()
         (root / "bundle.zip").write_bytes(b"zip")
         checks += upload_cases(root / "bundle.zip")
+        checks += nuget_cases(root / f"out/nuget/Botassembly.ThinkThen.{v}.nupkg")
         for name, got, wanted in checks:
             if got != wanted:
                 bad += 1
