@@ -217,6 +217,8 @@ def nuget_cases(nupkg):
             ("nuget-pushed", 201, None, b"", (f"release-registry: pushed {nupkg.name}", "4.1.0", key)),
             ("nuget-400", 400, "A client version '4.1.0' or higher is required to be able to push packages",
              b"echo " + key.encode(), "NuGet answered 400 A client version '4.1.0' or higher is required to be able to push packages: echo [key]"),
+            ("nuget-400-long", 400, "Bad Request", b"x" * 490 + key.encode(),
+             "NuGet answered 400 Bad Request: " + "x" * 490 + "[key]"),
             ("nuget-409", 409, "Conflict", b"The package ID is reserved.",
              "NuGet answered 409 Conflict: The package ID is reserved.")):
         sent = []

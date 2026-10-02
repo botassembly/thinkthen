@@ -334,7 +334,7 @@ def nuget_push(nupkg):
             require(reply.status in (200, 201, 202), f"NuGet answered {reply.status}")
     except urllib.error.HTTPError as error:
         # NuGet puts its reason in the status line and the body; neither should hold the key, and both lose it here.
-        said = f"{error.reason}: {error.read().decode(errors='replace')[:500]}".replace(key, "[key]")
+        said = f"{error.reason}: {error.read().decode(errors='replace').replace(key, '[key]')[:500]}".replace(key, "[key]")
         raise Refusal(f"NuGet answered {error.code} {said}")
     print(f"release-registry: pushed {nupkg.name}")
 

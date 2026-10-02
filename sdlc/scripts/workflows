@@ -71,11 +71,11 @@ def images(node, key=None):
 def npm_publish_specs(run):
     """Each `npm publish` package argument that npm would not read as a file path."""
     for match in NPM_PUBLISH.finditer(run):
-        words = match.group(1).split()
+        words = re.split(r"&&|\|\||[;|]", match.group(1))[0].split()
         while words and words[0].startswith("-"):
             words = words[2:] if words[0] in NPM_VALUE_FLAGS else words[1:]
         spec = words[0].strip("\"'") if words else ""
-        if spec and not spec.startswith(("./", "../", "/")):
+        if spec and spec not in (".", "..") and not spec.startswith(("./", "../", "/")):
             yield spec
 
 
