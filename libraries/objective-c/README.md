@@ -22,11 +22,11 @@ gcc -std=gnu11 -x objective-c -I /absolute/native/include -I /absolute/objc/Sour
 ./example
 ```
 
-On Ubuntu 24.04 the GNU Objective-C compiler and runtime are `gobjc gcc libobjc4`; no Foundation is required. Running this checkout's `check.sh` also requires Node and Python with `jsonschema`. A consuming project must install or name the matching native library and its runtime search path. The archive instructions below describe local pilot files, not public release assets.
+On Ubuntu 24.04 the GNU Objective-C compiler and runtime are `gobjc gcc libobjc4`; no Foundation is required. Running this checkout's `check.sh` also requires Node and Python with `jsonschema`. A consuming project must install or name the matching native library and its runtime search path. The archive instructions below describe the files each GitHub release ships.
 
 ## Install from independently supplied archives
 
-Unpack the local `thinkthen-objective-c-0.0.1-x86_64-unknown-linux-gnu.tar.gz` and the *separate matching* `thinkthen-c-0.0.1-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest. The C archive supplies `include/thinkthen.h` and `lib/libthinkthen.so` (soname `libthinkthen.so.0`); the wrapper takes its C header from there and ships none. Never use a C library from another build. GNU Objective-C (`gobjc` version 4:13.2.0-7ubuntu1; gobjc-13 13.3.0), GCC, libobjc4, glibc, pthreads and the separately built Rust C native library are required. On Ubuntu 24.04 install `gobjc gcc libobjc4` (native build requires Rust 1.95 and offline locked Cargo dependencies). Example:
+Unpack the release's `thinkthen-objective-c-0.1.0-x86_64-unknown-linux-gnu.tar.gz` and the *separate matching* `thinkthen-c-0.1.0-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest. The C archive supplies `include/thinkthen.h` and `lib/libthinkthen.so` (soname `libthinkthen.so.0`); the wrapper takes its C header from there and ships none. Never use a C library from another build. GNU Objective-C (`gobjc` version 4:13.2.0-7ubuntu1; gobjc-13 13.3.0), GCC, libobjc4, glibc, pthreads and the separately built Rust C native library are required. On Ubuntu 24.04 install `gobjc gcc libobjc4` (native build requires Rust 1.95 and offline locked Cargo dependencies). Example:
 
 ```
 gcc -std=gnu11 -x objective-c -I native/include -I package/Sources \
@@ -34,7 +34,7 @@ gcc -std=gnu11 -x objective-c -I native/include -I package/Sources \
   -L native/lib -Wl,-rpath,/absolute/path/to/native/lib -lthinkthen -lobjc -pthread -lm -o example
 ```
 
-The future release path: GitHub Actions `ubuntu-24.04` builds source checks and native archive, checks its hashes/ABI, attaches platform-specific native binaries to a GitHub Release, and publishes an Objective-C source package for direct download. The queue owner decides publication, toolchain pins, and distribution routes. No public native archive has shipped yet.
+The release workflow builds the source package and the native archive on GitHub Actions `ubuntu-24.04`, checks their hashes and ABI, and attaches both to the GitHub release for direct download.
 
 ## Contract
 

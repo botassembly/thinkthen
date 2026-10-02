@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <PackageId>Botassembly.ThinkThen</PackageId>
-    <Version>0.0.1</Version>
+    <Version>0.1.0</Version>
     <Authors>ThinkThen contributors</Authors>
     <Description>Linux C ABI facade; install matching native archive separately</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>

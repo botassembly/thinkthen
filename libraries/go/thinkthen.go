@@ -8,7 +8,7 @@ package thinkthen
 #include <stdlib.h>
 #include <pthread.h>
 #include "thinkthen.h"
-#if THINKTHEN_VERSION_MAJOR != 0 || THINKTHEN_VERSION_MINOR != 0 || THINKTHEN_VERSION_PATCH != 1
+#if THINKTHEN_VERSION_MAJOR != 0 || THINKTHEN_VERSION_MINOR != 1 || THINKTHEN_VERSION_PATCH != 0
 #error header does not match package ABI
 #endif
 static unsigned long native_thread(void) { return (unsigned long)pthread_self(); }

@@ -58,4 +58,4 @@ R CMD INSTALL -l rlib thinkthen    # builds the crate with cargo --locked --offl
 
 `tools/make-tarball.sh` runs inside a `git archive` tree and builds a source tarball with the `thinkthen` crate and every registry crate vendored. It installs with an empty cargo home and no network.
 
-Nothing is published: no CRAN and no R-universe. `NOTES.md` holds the rulings and the measured behavior.
+R-universe builds and serves the package under `botassembly` from each GitHub release. CRAN holds no copy. `NOTES.md` holds the rulings and the measured behavior.

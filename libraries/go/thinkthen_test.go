@@ -166,7 +166,7 @@ func TestMatrix(t *testing.T) {
 			}
 			hex := regexp.MustCompile(`^[0-9a-f]{64}$`)
 			if len(m) != 9 || !reqOK || len(req) != 1 || !digestOK || !hex.MatchString(digest) || !hex.MatchString(requestDigest) ||
-				m["tool"] != "thinkthen 0.0.1" || m["url"] != os.Getenv("THINKTHEN_BASE_URL")+"/systemone" ||
+				m["tool"] != "thinkthen 0.1.0" || m["url"] != os.Getenv("THINKTHEN_BASE_URL")+"/systemone" ||
 				m["model"] != "jev-1.13.0" || m["requests_sent"] != float64(1) || m["cached"] != false || m["failed_questions"] != float64(0) ||
 				!usageOK || !reflect.DeepEqual(usage, map[string]any{"input_tokens": float64(1), "output_tokens": float64(1)}) {
 				t.Fatalf("details metadata changed: %v", value)

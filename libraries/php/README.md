@@ -1,6 +1,6 @@
 # ThinkThen for PHP
 
-This source package targets PHP 8.3 CLI with FFI enabled (`php -d ffi.enable=1`). Its package gate runs on Linux x86_64 glibc. It is not published. On Ubuntu 24.04 install `php8.3-cli php8.3-common`; the latter contains ffi.so. `php -m` alone can omit FFI; test `php -d ffi.enable=1 -r 'var_dump(class_exists("FFI"));'`. Composer reads `composer.json` and checks `php >=8.3`, `ext-ffi`.
+This source package targets PHP 8.3 CLI with FFI enabled (`php -d ffi.enable=1`). Its package gate runs on Linux x86_64 glibc. Packagist publishes it as `botassembly/thinkthen`. On Ubuntu 24.04 install `php8.3-cli php8.3-common`; the latter contains ffi.so. `php -m` alone can omit FFI; test `php -d ffi.enable=1 -r 'var_dump(class_exists("FFI"));'`. Composer reads `composer.json` and checks `php >=8.3`, `ext-ffi`.
 
 Run the local product gate with `sh libraries/php/check.sh 0` from the repository root. It starts counted loopback backends. By default it uses `/usr/bin/php8.3`, `/usr/bin/python3`, `/usr/bin/bwrap`, `/usr/bin/flock`, and `/usr/bin/git`; set `THINKTHEN_PHP_BIN`, `THINKTHEN_PYTHON_BIN`, `THINKTHEN_BWRAP_BIN`, `THINKTHEN_FLOCK_BIN`, or `THINKTHEN_GIT_BIN` to executable absolute paths when those tools live elsewhere. It returns 77 for a missing host tool or PHP FFI extension. The native build uses the named heavy lock and offline Cargo cache.
 
@@ -34,4 +34,4 @@ A PHP FFI call blocks the ordinary single-threaded VM. This wrapper supports pre
 
 ## Release work
 
-The release ticket owns CI, other hosts, native archives and Packagist publication. This source package and its local build outputs are not release assets.
+Each GitHub release ships `thinkthen-php-VERSION-x86_64-unknown-linux-gnu.tar.gz` beside the matching C archive. Other hosts remain separate work. Local build outputs are not release assets.

@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "thinkthen"
-version = "0.0.1"
+version = "0.1.0"
 description = "Semantic judgments over text for Python, through the thinkthen engine"
 readme = "README.md"
 license = { text = "MIT" }
