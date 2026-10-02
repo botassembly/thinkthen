@@ -1,0 +1,9 @@
+Measured 2026-10-02 with thinkthen 0.1.0 and jev-1.13.0.
+Three whole talks, 292 passages of 20 caption lines each.
+Each run sent every answer live with --refresh-cache.
+Cost is input tokens at $0.042 per million.
+The rows copy the run's cost.txt, with narrower spacing.
+
+rank-excited.txt    0.4 s  61031 input tokens  $0.00256
+rank-problem.txt    0.4 s  62199 input tokens  $0.00261
+filter-problem.txt  0.3 s  62199 input tokens  $0.00261

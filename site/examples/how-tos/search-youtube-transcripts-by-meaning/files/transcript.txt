@@ -1,0 +1,200 @@
+[0:00] Hello, my name is Ian Maurer. I'm the CTO
+[0:02] of GenomOncology and I'm here to
+[0:03] introduce ThinkThen, my new library for
+[0:06] interacting with system one models like
+[0:09] Jev. Uh when dealing with strings,
+[0:12] programs or code sees just characters,
+[0:16] right? They don't actually have the
+[0:17] understanding of the underlying meaning
+[0:19] of those characters. For instance, they
+[0:20] might see the word Abbey Road, but they
+[0:22] don't know that Abbey Road is an album or
+[0:24] the song Octopus's Garden appeared on
+[0:26] that album or Ringo Starr was the singer
+[0:30] of it. Um, and models like Jev, so Jev
+[0:34] from TypeSafe was just announced two
+[0:36] weeks ago on September 15th or so. And
+[0:39] what that what Jev is is a collection of
+[0:41] three classifiers, a single classifier,
+[0:44] a multiclassifier, and a multilabler.
+[0:46] And that uh API that they provided is
+[0:50] extremely low cost, extremely fast, and
+[0:53] really unlocks a variety of of use
+[0:55] cases. Now, while it's very similar to
+[0:57] machine learning algorithms and and
+[0:59] models that we've had for a long time,
+[1:01] uh they've done a couple things uh
+[1:03] really interesting. One, they've told a
+[1:05] good story. Like they've actually
+[1:06] explained to people what the value of it
+[1:08] is, how it contrasts with with LLMs uh and
+[1:11] they've made it clear that, you know,
+[1:13] these types of predictive decision
+[1:15] making is that, you know, LLMs aren't as
+[1:18] strong at as as, you know, a competing
+[1:20] classifier like Jev. Uh, they've also,
+[1:23] compared to the, you know, prior
+[1:25] generations of of classifiers, they've
+[1:27] made it very easy to use by having a
+[1:29] hosted service, you know, with high high
+[1:32] availability and and and high and very
+[1:36] performant and very easy to use. And
+[1:38] it's zero shot meaning that you can
+[1:40] basically ask it questions um and it'll
+[1:42] start answering with you know basically
+[1:45] near frontier level of intelligence
+[1:47] right I would say it's you know the GPT
+[1:49] uh 6 L level of intelligence or some of
+[1:52] the flash models it's around that level
+[1:54] of intelligence um and that means with
+[1:57] being zero-shot that does means that you
+[1:59] don't have to do what you'd have to do
+[2:01] in the past with machine learning models
+[2:02] which is label data train a model uh and
+[2:06] and do set up inference and hosting
+[2:08] So it really just reduces the, you know,
+[2:10] the activation energy and the the level
+[2:12] of expertise you need. And so you can
+[2:14] see here that taking some text like
+[2:15] octopus's garden and asking Jev, you
+[2:18] know, who sang it, uh, it can do the the
+[2:20] choose operation in 60 milliseconds for,
+[2:22] you know, a fraction of a penny and get
+[2:25] happens in this case happens to get the
+[2:26] right answer. And now, you know, I'm
+[2:28] comparing it here to the four-minute
+[2:29] mile because, you know, they've kind of
+[2:32] done something that hadn't been done
+[2:33] before, but really set to the market,
+[2:36] hey, this is something that's
+[2:37] interesting. Uh people have rallied
+[2:39] behind it and competitors honestly have
+[2:41] just kind of come pouring out of out of
+[2:43] the woodwork already to compete with
+[2:45] Jev. Uh including, you know, OpenAI who
+[2:48] just announced their decisions API two
+[2:50] days ago. So you know I'm was very
+[2:53] interested in Jev and wanted to
+[2:55] incorporate it into our software and I
+[2:57] saw a need. The need is you know
+[2:59] basically how do we operationalize this
+[3:02] stuff around something more than just
+[3:04] these three primitives.
+[3:06] Uh I started with a data set to start
+[3:08] playing with uh because we we deal with
+[3:10] a lot of healthcare information. I can't
+[3:12] start sending that to a a new service
+[3:14] like Jev uh without a bunch of paperwork
+[3:16] being signed. And so I created a data
+[3:18] set called the Beatles bench which
+[3:20] basically has strings in it right for
+[3:22] songs and albums and and singers and and
+[3:24] and times and that's up on a public
+[3:27] website if anyone wants to leverage it
+[3:29] for their testing. And so I used it to
+[3:32] test uh this new this new functionality
+[3:35] that I've created 10 functions. Uh the
+[3:37] idea is that it's called ThinkThen
+[3:39] which means you know that your software
+[3:41] can ThinkThen take an action right
+[3:43] ThinkThen decide ThinkThen filter rank
+[15:45] And so then taking these functions how
+[15:47] do you apply them right what are the use
+[15:49] cases so the first set of use cases and
+[15:51] this is actually some of it was informed
+[15:53] by a blog post from the CEO of of Jev's
+[15:56] company TypeSafe, Diogo, uh and
+[16:00] he put out a
+[16:02] document and so some of these are
+[16:04] actually harvested from that uh but you
+[16:06] people are excited about agent harnesses
+[16:08] and how prediction models or decision
+[16:10] models like like Jev could be used uh
+[16:12] to to to make make them more efficient,
+[16:15] right? or make them more effective or
+[16:17] have guardrails like permissions or tool
+[16:19] choice or context like what should we
+[16:22] how do we summarize things or hide
+[16:23] things uh which model to use people are
+[16:27] very excited about the idea of like
+[16:28] doing model selection should I use a
+[16:30] smart model or or a cheap model for this
+[16:32] particular work and you can do you can
+[16:34] do those types of work with a classifier
+[16:36] that's that's how you make those
+[16:38] decisions quick and cheaply um but you
+[16:40] can you know parallelize work and check
+[16:43] to see if something's uh safe uh is you
+[16:46] know is the agent spinning out of
+[16:47] control is and is is the agent done
+[16:49] right or is and then is the answer
+[16:51] better or worse or what have you. These
+[16:53] are all good uses of a of a classifier
+[16:56] like Jev used in a you know a set of
+[17:00] functions like type think
+[17:02] and so then you can also write ops and
+[17:05] security scripts as well right so triage
+[17:07] of alerts and failure routing grep is a
+[17:11] you know classic Unix command you can
+[17:13] basically do grep by meaning instead of grep
+[17:15] by keyword or even vector grep I've seen
+[17:18] before this is now a way of grepping
+[17:20] your your or searching your a file for
+[17:23] the lines that are the most important.
+[17:25] In an LLM, you can actually give this
+[17:26] tool to an LLM. It's a command line
+[17:28] tool. You can say, "Hey, use ThinkThen
+[17:30] to search these files. Find the files
+[17:32] that are most relevant for me based on
+[17:34] this question and then within those
+[17:36] files, find me the the lines or of text
+[17:38] that are most relevant because
+[17:40] everything in agents are is about saving
+[17:42] context. Um, you know, reducing the
+[17:44] amount of text that they actually load
+[17:46] into their memory and their into their
+[17:47] working into their working memory. And
+[17:50] then, you know, you and DevOps and
+[17:52] security there's lots of things around
+[17:54] you know looking at logs and assessing
+[17:57] you know something suspicious or not uh
+[17:59] looking at you know you know did did
+[18:01] Jenkins fail did your tests fail and is
+[18:03] that failure due to a bug or is that
+[18:06] just a flaky test these are the types of
+[18:08] questions and meaning that you could ask
+[18:10] a you know a system one model that's in
+[18:14] a cheap manner right you could always do
+[18:16] this with a large language model it just
+[18:17] was slow and expensive with Jev it makes
+[18:21] it a lot a lot faster and a lot easier
+[18:24] to to to do when something is costs a
+[18:26] fraction of a se of a cent and and takes
+[18:28] 60 seconds 60 milliseconds to run and
+[18:32] then data science right so that's why
+[18:34] getting this embedded into SQLite and
+[18:37] Postgres and DuckDB and and Polars and
+[18:40] pandas that was a top priority for me is
+[18:42] because this this has a world of of
+[18:44] value for for folks there those 10
+[18:47] functions just to get started can can
+[18:49] help you with a variety of things with
+[18:51] regards to labeling your data,
+[18:53] extracting information, structured
+[18:55] information out of unstructured
+[18:56] information and you know counting things
+[18:59] or whatever it is. So
+[19:01] um you know data science is is is a
+[19:03] great use for uh system one models like
+[19:06] Jev and and ThinkThen hopefully makes
+[19:09] that easy for people to do. And then you
+[19:12] know retrieval I talked about retrieval
+[19:14] earlier like the classification and
+[19:15] meaning. Um I I see Jev as basically a
+[19:18] new way of doing retrieval or a new way
+[19:21] of making your retrieval better. Right?
+[19:22] So we've had keyword-based retrievable
+[19:24] TF-IDF BM25 for years and they're very
+[19:27] effective semantic vector search is was
+[19:30] very exciting three or four years ago. I
+[19:33] think people are a little bit uh a

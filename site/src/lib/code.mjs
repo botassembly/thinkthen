@@ -13,7 +13,7 @@ import { exitMark } from '../data/catalog.mjs';
 import { CODE_THEME, JQ_GRAMMAR } from './code-theme.mjs';
 
 const BY_EXT = {
-  '.sh': 'bash', '.json': 'json', '.jsonl': 'jsonl', '.jq': 'jq', '.diff': 'diff',
+  '.sh': 'bash', '.awk': 'awk', '.json': 'json', '.jsonl': 'jsonl', '.jq': 'jq', '.diff': 'diff',
   '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.r': 'r', '.rs': 'rust',
   '.c': 'c', '.cpp': 'cpp', '.m': 'objective-c', '.cob': 'cobol',
   '.adb': 'ada', '.java': 'java', '.kt': 'kotlin', '.scala': 'scala',
@@ -25,7 +25,7 @@ const BY_EXT = {
 // uses, once.
 const highlighter = await createHighlighter({
   themes: [CODE_THEME],
-  langs: ['bash', 'json', 'jsonl', 'diff', 'python', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'xml', 'go', 'swift', 'zig', 'php', 'dart', 'yaml', 'toml', 'sql', JQ_GRAMMAR],
+  langs: ['bash', 'awk', 'json', 'jsonl', 'diff', 'python', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'xml', 'go', 'swift', 'zig', 'php', 'dart', 'yaml', 'toml', 'sql', JQ_GRAMMAR],
 });
 
 export const esc = (s) => String(s)
