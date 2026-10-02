@@ -33,7 +33,7 @@ Each batch is one lane's work in one area of files. Landers take `CHANGELOG.md` 
 
 Work outside the lanes:
 
-- **Marketing, owner of `site/`.** The reference page, the providers page's live `check` line once C3 lands, parts 3 and 4 of the site replay issue, and the overhead benchmark for the README line.
+- **The queue owner, for `site/` (marketing owned it until 2026-10-02).** The reference page, the providers page's live `check` line once C3 lands, parts 3 and 4 of the site replay issue, and the overhead benchmark for the README line.
 - **Ian.** The release rehearsal, then phase 4 and the registry accounts.
 
 ## Every open issue

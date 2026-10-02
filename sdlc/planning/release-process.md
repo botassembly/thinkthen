@@ -39,7 +39,7 @@ The release branch is named for the major and minor version: `release/0.1`. Tick
    - `CHANGELOG.md`: date the 0.1.0 heading. `libraries/dart/CHANGELOG.md` gains a 0.1.0 heading.
    - `README.md`: the "Install" section of ticket 0128 phase 1 item 12.
    - The binding READMEs that name 0.0.1: `libraries/{ada,cobol,csharp,go,jvm,objective-c}`, and `databases/postgresql/NOTES.md`.
-   - The site, through marketing: the held install lines of ticket 0128 phase 1 item 14, and `site/examples/install/rust/files/Cargo.toml`, whose requirement the site smoke patches to the working tree. Marketing then re-runs the bindings proof that pins that file's hash.
+   - The site: the held install lines of ticket 0128 phase 1 item 14, and `site/examples/install/rust/files/Cargo.toml`, whose requirement the site smoke patches to the working tree. The queue owner then re-runs the bindings proof that pins that file's hash.
 
    Afterwards, `git grep -nE '(^|[^0-9.])0\.0\.1([^0-9.]|$)|0, 0, 1'` outside `sdlc/records`, `sdlc/tickets`, `sdlc/issues`, `sdlc/planning`, `probes`, locks and `.jsonl` fixtures finds only the copies ticket 0376 lists as not failing at 0.1.0. The coordinator lands the commit.
 3. **Checkpoint and QA on the cut.** The coordinator runs the checkpoint sweep of section 2 on that main commit. Release QA runs its round on it (section 3).
@@ -56,4 +56,4 @@ After the cut, main carries 0.1.0 and takes 0.2 work. The 0.2 cut sets the next 
 
 ## 7. Registries and the site
 
-The docs team owns registry accounts and setup steps (ruling 15 of [cleanup-2026-09-30.md](cleanup-2026-09-30.md)) and the site (`site/`). The registries are PyPI, npm, crates.io, RubyGems, NuGet, Maven, pub.dev and the Homebrew tap. The queue owner owns the code and the release workflow. [ownership.md](ownership.md) names the folders.
+The queue owner owns the code, the release workflow, the site (`site/`) and the registry setup steps since Ian's ruling of 2026-10-02. Ian holds the registry logins. The docs team owned the setup steps before that (ruling 15 of [cleanup-2026-09-30.md](cleanup-2026-09-30.md)). The registries are PyPI, npm, crates.io, RubyGems, NuGet, Maven, pub.dev and the Homebrew tap. [ownership.md](ownership.md) names the folders.
