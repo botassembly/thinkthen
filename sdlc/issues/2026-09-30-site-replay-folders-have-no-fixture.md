@@ -1,10 +1,10 @@
 # Three status phrases pass the site word check
 
-Status: open for one item of part 4, owed by the site owner (marketing). Parts 1, 2 and 3 are done. Part 3 landed with site ticket 0047 slice F (`e474b27c2`), which replays the PostgreSQL samples. Found on 2026-09-30 by running the site smoke against main `acebf3044`. Marketing owns `site/` (`sdlc/planning/ownership.md`). Merged on 2026-09-30 with the site samples issue, now in `closed/`. Moved from 0.1 to later on 2026-10-01: the open item changes no product behavior and no page uses the phrases, so it does not block a release.
+Status: open for one item of part 4, owed by the builder. Parts 1, 2 and 3 are done. Part 3 landed with site ticket 0047 slice F (`e474b27c2`), which replays the PostgreSQL samples. Found on 2026-09-30 by running the site smoke against main `acebf3044`. The builder owns `site/` (`sdlc/planning/ownership.md`). Merged on 2026-09-30 with the site samples issue, now in `closed/`. Moved from 0.1 to later on 2026-10-01: the open item changes no product behavior and no page uses the phrases, so it does not block a release.
 
 Kind: debt
 
-Pay when: the site owner next changes `site/scripts/check-words.mjs`.
+Pay when: the builder next changes `site/scripts/check-words.mjs`.
 
 Debt: 007
 
