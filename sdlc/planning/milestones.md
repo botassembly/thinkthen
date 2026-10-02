@@ -16,7 +16,7 @@ Exit criteria:
 4. Done: tickets 0149 and 0157 are closed.
 5. Ian gives the go to dispatch the real release.
 
-R-universe and Packagist are not set up. The release workflow has no job for either one, because each reads the published repository. Their setup does not block 0.1 and moves to right after the 0.1 release.
+R-universe and Packagist are not set up. The release workflow has no job for either one, because each reads the published repository. Their setup does not block 0.1 and moves to right after the 0.1 release. Ticket 0128's R-universe and Packagist install checks move with it.
 
 Blockers, refreshed 2026-10-02:
 
