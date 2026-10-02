@@ -146,9 +146,11 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {pattern: 'platform-*', path: platform}
       - run: sdlc/scripts/release-workflow npm-assemble platform npm-dist
-      # The npm job publishes this same path; the dry run proves npm reads it as a file.
+      # The npm job publishes this same path with this same npm; the dry run proves npm reads it as a file.
       - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
-        run: npm publish --dry-run "./npm-dist/thinkthen-$VERSION.tgz" --access public
+        run: |
+          npm install --global npm@11.6.4
+          npm publish --dry-run "./npm-dist/thinkthen-$VERSION.tgz" --access public
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: npm-package, path: npm-dist/, if-no-files-found: error, retention-days: 7}
 

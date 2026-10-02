@@ -49,6 +49,13 @@ The release branch is named for the major and minor version: `release/0.1`. Tick
 
 After the cut, main carries 0.1.0 and takes 0.2 work. The 0.2 cut sets the next version. The coordinator cherry-picks each fix from main to the release branch (ADR 0116 item 5).
 
+A 0.1.x release follows the same branch rule (ticket 0391):
+
+1. Each fix lands on main and is cherry-picked to `release/0.1` with a `Cherry-picked-from: <sha>` trailer (ADR 0116 item 5). The 0.1.x entries in `CHANGELOG.md` and `libraries/dart/CHANGELOG.md` land with a fix, so main's changelog records every release.
+2. The version bump lands only on `release/0.1`, as its own commit: `sdlc/scripts/versions --set 0.1.x` and the hand-written copies of step 2 that name the old version. Main keeps its version.
+3. The step 2 `git grep`, with the old version in place of 0.0.1, finds only history: changelog headings, test fixtures that name a fixed version, and `gate.yml`'s `MUSTMATCH_VERSION`, which pins a test tool.
+4. The checkpoint of step 3 and the rehearsal of step 5 run on the bumped head of `release/0.1`. Then Ian tags it.
+
 ## 6. The release
 
 1. The real release is dispatched only on Ian's go.
