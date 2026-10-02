@@ -25,9 +25,9 @@ This is pre-0.1 item 11 in `sdlc/planning/grading-2026-09-30/README.md` and item
 - `draft` also needs `registries`, so a registry package that fails its check stops the draft.
 - `registries` and the new outward jobs that download artifacts hold `actions: read`. The Dart they use comes from the new `dart-tools` operation, the same pinned Dart 3.13.4 download and checksum that `php-dart-tools` uses, now one shared function. `nuget` and `maven` need no .NET or Maven install: Python's standard library sends the requests.
 - New outward jobs, each `needs: [resolve, draft]`, `if: inputs.mode == 'release'`, environment `release`, with the armed first step:
-  - `nuget`: pushes the nupkg with `NUGET_API_KEY` through NuGet's push endpoint. A 409 for an existing version fails the job.
+  - `nuget`: pushes the nupkg with `NUGET_API_KEY` through NuGet's push endpoint. A 409 for an existing version fails the job. Ticket 0389 replaced the stored key with NuGet trusted publishing; the key is now the one-hour key from `NuGet/login`.
   - `maven`: refuses when the version is already on `repo1.maven.org`, signs the bundle with `MAVEN_CENTRAL_GPG_PRIVATE_KEY` and `MAVEN_CENTRAL_GPG_PASSPHRASE`, and uploads it with `POST https://central.sonatype.com/api/v1/publisher/upload?name=...&publishingType=AUTOMATIC`. The request carries `Authorization: Bearer` with base64 of `MAVEN_CENTRAL_USERNAME:MAVEN_CENTRAL_PASSWORD` and the multipart field `bundle`. It then prints the deployment id as a notice and polls `POST /api/v1/publisher/status?id=` every 10 s for up to 30 minutes, tolerating four failed status calls in a row. It fails on an unknown state. It succeeds on `PUBLISHING` or `PUBLISHED`, fails on `FAILED`, and keeps waiting on `PENDING`, `VALIDATING` and `VALIDATED`. A re-run after a partial run whose deployment is still pending in the Portal passes the `repo1` check and fails at Central's validation; that is acceptable, and the Portal shows the first deployment.
-  - `pub`: refuses when pub.dev already holds the version, gets a Google identity token through `google-github-actions/auth` pinned to the v3.0.0 commit (`token_format: id_token`, `id_token_audience: https://pub.dev`, `id_token_include_email: true`) with `id-token: write`, adds it with `dart pub token add https://pub.dev --env-var`, and runs `dart pub publish --force` on a temporary copy of the packed package folder, the same way the dry run does.
+  - `pub`: refuses when pub.dev already holds the version, gets a Google identity token through `google-github-actions/auth` pinned to the v3.0.0 commit (`token_format: id_token`, `id_token_audience: https://pub.dev`, `id_token_include_email: true`) with `id-token: write`, adds it with `dart pub token add https://pub.dev --env-var`, and runs `dart pub publish --force` on a temporary copy of the packed package folder, the same way the dry run does. Ticket 0389 replaced the Google token with pub.dev's own trusted publishing through `dart-lang/setup-dart`.
 - `publish` also needs `nuget`, `maven` and `pub`. Before it turns the draft into the release, it creates the Go module tag `libraries/go/v<version>` at the resolved commit, because the module lives in a subfolder and proxy.golang.org reads only a tag with that prefix. It refuses a tag at another commit and keeps one at the same commit.
 
 `sdlc/scripts/release-workflow` gains these operations:
@@ -55,18 +55,17 @@ The documentation team owns these accounts and settings. Ian decides when Action
 
 | Job | Reads | Kind |
 | --- | --- | --- |
-| `nuget` | `NUGET_API_KEY`, scoped to push new packages and new versions under `Botassembly.`, since 0.1 is the first push | `release` environment secret |
+| `nuget` | `NUGET_USER`, the nuget.org profile name of the person who made the trusted publishing policy for `botassembly/thinkthen`, `release.yml`, environment `release` (ticket 0389) | `release` environment variable, and the policy on nuget.org |
 | `maven` | `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD` (the Central Portal user token pair) | `release` environment secrets |
 | `maven` | `MAVEN_CENTRAL_GPG_PRIVATE_KEY` (ASCII-armored), `MAVEN_CENTRAL_GPG_PASSPHRASE`; the public key on a public keyserver | `release` environment secrets |
 | `maven` | Namespace `io.github.botassembly` verified in the Central Portal | account |
-| `pub` | `PUB_DEV_WORKLOAD_IDENTITY_PROVIDER`, `PUB_DEV_SERVICE_ACCOUNT` | `release` environment variables |
-| `pub` | A Google Cloud project with a workload identity pool and provider that trust `botassembly/thinkthen`, and a service account the provider may impersonate | account |
-| `pub` | One manual first upload of `thinkthen_dart` by its uploader, because pub.dev shows the automated-publishing settings only on a package that exists. It uses an earlier or pre-release version such as `0.1.0-dev.1`, never the release version: `pub` refuses a version pub.dev already holds, and `publish` waits for `pub`. Then the package admin page enables publishing with that service account | account |
+| `pub` | pub.dev automated publishing from GitHub Actions: repository `botassembly/thinkthen`, tag pattern `v{{version}}`, `workflow_dispatch` events, environment `release` (ticket 0389) | account |
+| `pub` | One manual first upload of `thinkthen_dart` by its uploader, because pub.dev shows the automated-publishing settings only on a package that exists. It uses an earlier version such as `0.0.1`, never the release version: `pub` refuses a version pub.dev already holds, and `publish` waits for `pub`. Then the package admin page enables publishing from GitHub Actions | account |
 | none | Packagist: this repository submitted and its GitHub hook installed; the hook reads each `v*` tag the moment it exists | account |
 | none | R-universe: `botassembly/botassembly.r-universe.dev` with `packages.json` naming `thinkthen`, `url` this repository, `subdir` `libraries/r/thinkthen` and `"branch": "*release"`, and the R-universe GitHub app | account |
 | `publish` | nothing new; the Go tag uses the job's `GITHUB_TOKEN` | none |
 
-pub.dev's GitHub trusted publishing accepts only a run started by a tag push. Ian ruled on 2026-09-22 that only `workflow_dispatch` starts a workflow. The `pub` job therefore uses pub.dev's Google Cloud service account route, which a dispatched run can use and which stores no secret. Ian can overturn this by allowing one tag-push workflow for pub.dev.
+Ticket 0389 replaced the Google Cloud route after Ian ruled it out on 2026-10-01. pub.dev's server accepts a `workflow_dispatch` run on a tag ref when the package admin allows that event, so the dispatched release run publishes by pub.dev's own trusted publishing. NuGet moved to trusted publishing in the same ticket.
 
 ## What Ian can overturn
 
@@ -77,7 +76,7 @@ pub.dev's GitHub trusted publishing accepts only a run started by a tag push. Ia
 
 ## What the build taught us
 
-- pub.dev's GitHub trusted publishing accepts only a run started by a tag push, and its automated settings appear only on a package that already exists. A dispatch-only release therefore needs the Google Cloud service account route and one earlier manual upload.
+- pub.dev's GitHub trusted publishing accepts only a run started by a tag push, and its automated settings appear only on a package that already exists. A dispatch-only release therefore needs the Google Cloud service account route and one earlier manual upload. Ticket 0389 found that pub.dev's server also accepts a `workflow_dispatch` run on a tag ref, so the Google route is gone.
 - Packagist reads only a root `composer.json`, and proxy.golang.org reads only a tag prefixed with the module's folder. Both facts were missing from the registration notes. Packagist also publishes the moment the tag exists, outside the approvals.
 - The packed release archives are the right source for registry packages. `registry-pack` read the real `release-pack c csharp jvm dart` output on this host, rehearsal signing verified six Maven files, and the pub dry run reported 0 warnings. A planted missing CHANGELOG made the dry run fail.
 - Proof run here: `workflows --self-test` 64 of 64, `release-registry-self-test.py` 31 of 31, `release-managed-pair-self-test.py`, the JVM surface check, `policy.py`, `tickets`, `versions`, and `lint` in a clean clone. `policy.py` pinned the POM packaging and needed the same change. The first runner proof waits for the next rehearsal.

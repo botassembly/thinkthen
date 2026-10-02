@@ -18,7 +18,7 @@ Exit criteria:
 Blockers, refreshed 2026-10-02:
 
 - Registry setup belongs to the docs team and Ian. Ian approves each outward step. Ticket 0128's "Ian's setup list" names the steps.
-- Two docs team asks of 2026-10-01 still change `release.yml`. The `nuget` job must move to NuGet trusted publishing; today it reads `secrets.NUGET_API_KEY`, which will not exist. The pub.dev upload must move to a job started by Ian's `v0.1.0` tag push; today the `pub` job uses Google Cloud, which Ian ruled out. Owner: the queue owner, on main, then cherry-picked to `release/0.1`. A change to `release.yml` restarts ticket 0128's Phase 4 checklist at step 2, so one more rehearsal from `release/0.1` follows.
+- Ticket 0389 moves the `nuget` and `pub` jobs to trusted publishing. Its owner lands it on main and cherry-picks the landing to `release/0.1`. pub.dev publishes from the release-mode dispatch on Ian's `v0.1.0` tag. A change to `release.yml` restarts ticket 0128's Phase 4 checklist at step 2, so one more rehearsal from `release/0.1` follows.
 
 The 2026-10-02 sweep closed twelve 0.1 tickets that waited only on release-target proof. Ticket 0374's installed-file cases ran on all four release runners in run 37010060315. The sweep also closed the README issue. Its overhead sentence landed in `248bc6aa4`.
 
@@ -30,7 +30,7 @@ Path to 0.1:
 2. Done: a clean rehearsal passed on all four targets (ticket 0128 phase 3b). Run 36945370940 passed on main `94d0500c0` at version 0.0.1. Run 36998358908 passed on main `f65faea4e` at version 0.1.0.
 3. Done: the checkpoint `checkpoint/surfaces/2026-10-02-1` was tagged on `4e880cdf6`. Release QA round 5 ran on it and was clean.
 4. Done: ticket 0387 landed the release commit at `ff7120f89`. The coordinator tagged `rc/0.1.0-rc.1` on `4e880cdf6` and cut `release/0.1` there. Run 37010060315 passed from `release/0.1`.
-5. Left: the `nuget` and `pub` workflow changes above, cherry-picked to `release/0.1`, then one more rehearsal from `release/0.1` (queue owner). Registry setup and the arming switch (docs team and Ian). The 0149 and 0157 proof above (Codex). Ian's go: he tags `v0.1.0`, dispatches release mode and approves each publish job. Ticket 0128 phase 4 steps 5 to 9 follow, including the history reset and the public install checks.
+5. Left: ticket 0389 on main and cherry-picked to `release/0.1`, then one more rehearsal from `release/0.1` (queue owner). Registry setup and the arming switch (docs team and Ian). The 0149 and 0157 proof above (Codex). Ian's go: he tags `v0.1.0`, dispatches release mode and approves each publish job. Ticket 0128 phase 4 steps 5 to 9 follow, including the history reset and the public install checks.
 
 Open items:
 
