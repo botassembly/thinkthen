@@ -12,8 +12,7 @@ const [lines, clash, plan, details, carryOn] = captioned(dir, ANNOTATE_SEE);
 const [form, onBody] = files(dir);
 ---
 <h2 id="edge-cases">Edge cases</h2>
-<p>Where each answer lands depends on the record. The runs in this section use one question set.</p>
-<Code code={form.text} file={form.name} caption={`${form.name}, three questions`} />
+<p>Where each answer lands depends on the record. The runs in this section use <code>{form.name}</code>, the question set at the top of this page.</p>
 
 <h3 id="flat-fields">Flat fields</h3>
 <p>An object record gains one top-level field per question, named for the question. Every field it already held rides through unchanged. CSV and TSV rows are objects of strings. They stay flat too. The first run on this page shows a nested record riding through.</p>

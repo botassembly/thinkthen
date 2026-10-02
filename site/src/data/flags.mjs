@@ -47,7 +47,7 @@ export const SHARED_FLAGS = {
   '--tsv': flag('--tsv', 'nothing', 'off', 'Reads a tab-separated table with a required header row. The CSV rules apply.'),
   '--context': flag('--context FILE', 'a readable UTF-8 file that is not blank', dflt('Context'), 'Shares the exact contents of FILE as evidence for every batch of records.'),
   '--batch': flag('--batch N or max', lower(setting('Batch').allowed), setting('Batch').default, '`max` fills each request to the backend\'s limits. `--batch 1` asks one record a request. Records that share one request can affect each other\'s answers. It beats `THINKTHEN_BATCH`, which beats a question file\'s `batch`. On one document it is a usage error.'),
-  '--max-request-bytes': flag('--max-request-bytes N', 'a whole number of 1 or more', dflt('Request size'), 'Closes a batch before its request passes N bytes. A single record still goes alone. It beats `THINKTHEN_MAX_REQUEST_BYTES`.'),
+  '--max-request-bytes': flag('--max-request-bytes N', 'a whole number of 1 or more', dflt('Request size'), 'Closes or splits a request before it passes N bytes. A single record or question still goes alone. It beats `THINKTHEN_MAX_REQUEST_BYTES`.'),
   '--jobs': flag('--jobs N', `${THROTTLE.range.min} to ${THROTTLE.range.max}`, THROTTLE.default, 'The most requests in flight at once. A run opens up to one connection for each. It sets no limit on requests a minute.'),
 };
 

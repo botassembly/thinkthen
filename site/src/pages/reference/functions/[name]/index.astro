@@ -35,12 +35,16 @@ const own = flagsOf(fn);
 const names = new Set([...own, ...GLOBAL_FLAGS].flatMap((f) => namesOf(f.spec)));
 const framings = Object.keys(FRAMING).filter((f) => names.has(f));
 const cut = THRESHOLDS[name];
+// A question set holds its thresholds as keys. The other functions take the flag.
+const thr = name === 'annotate' ? '"threshold":' : '--threshold';
 const oneDocument = isFn && !['filter', 'rank', 'find', 'relate'].includes(name);
 const THROTTLE = setting('Throttle');
 // A default shows as code when it is one value, and as prose when it is words.
 const valueHtml = (text) => (/\s/.test(String(text)) ? inlineHtml(String(text)) : `<code>${inlineHtml(String(text))}</code>`);
 // Each argument in the signature is code. The words between stay prose.
 const signature = fn.args.split(/( or |, then )/).map((part, i) => ({ code: i % 2 === 0, part }));
+// A function's own codes, then the signal codes every function shares.
+const exits = isFn ? [...fn.exits, [SIGNALS.code, SIGNALS.what]] : fn.exits;
 const exitClass = (code) => (code === 0 ? 'yes' : code === 1 ? 'no' : code === 3 ? 'unsure' : 'broken');
 const jobsScope = name === 'annotate'
   ? 'It also acts on one document, where the questions can make several requests.'
@@ -58,7 +62,7 @@ const description = isFn
   ) : (
     <p class="lede">{fn.line} You give it {fn.takes}. You get back {fn.gives}.</p>
   )}
-  <p>{fn.requests}</p>
+  {isFn && <p>{fn.requests}</p>}
   {openingInputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the examples read`} />)}
   {first && <Terminal run={first} caption={first.see} />}
 
@@ -70,19 +74,21 @@ const description = isFn
   {own.length > 0 && (
     <>
       <h2 id="flags">{isFn ? 'Its own flags' : 'Its keys'}</h2>
-      <table>
-        {isFn
-          ? <tr><th>Flag</th><th>Takes</th><th>Default</th><th>What it does</th></tr>
-          : <tr><th>Key</th><th>What it holds</th></tr>}
-        {own.map((f) => (
-          <tr>
-            <td>{f.spec.split(', ').map((opt, i) => <>{i > 0 && ', '}<code>{opt}</code></>)}</td>
-            {isFn && <td set:html={inlineHtml(f.takes)} />}
-            {isFn && <td set:html={valueHtml(f.default)} />}
-            <td set:html={inlineHtml(f.what)} />
-          </tr>
-        ))}
-      </table>
+      {isFn ? (
+        <table>
+          <tr><th>Flag</th><th>Takes</th><th>Default</th><th>What it does</th></tr>
+          {own.map((f) => (
+            <tr><td>{f.spec.split(', ').map((opt, i) => <>{i > 0 && ', '}<code>{opt}</code></>)}</td><td set:html={inlineHtml(f.takes)} /><td set:html={valueHtml(f.default)} /><td set:html={inlineHtml(f.what)} /></tr>
+          ))}
+        </table>
+      ) : (
+        <table>
+          <tr><th>Key</th><th>What it holds</th></tr>
+          {own.map((f) => (
+            <tr><td>{f.spec.split(', ').map((opt, i) => <>{i > 0 && ', '}<code>{opt}</code></>)}</td><td set:html={inlineHtml(f.what)} /></tr>
+          ))}
+        </table>
+      )}
       {names.has('--jobs') && (
         <p id="jobs"><code>--jobs N</code> runs from {THROTTLE.range.min} to {THROTTLE.range.max} and defaults to {THROTTLE.default}. {jobsScope} TypeSafe documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/closed/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Set <code>requests_per_minute</code> on the backend, or <code>THINKTHEN_REQUESTS_PER_MINUTE</code>, to stay under the limit.</p>
       )}
@@ -106,20 +112,20 @@ const description = isFn
     <>
       <h2 id="thresholds">Thresholds</h2>
       <p set:html={inlineHtml(cut.rule)} />
-      <p>{cut.dflt === 'none' ? 'There is no default cut. ' : cut.dflt !== 'per question' && <>The default is <code>{cut.dflt}</code>. </>}<code>--threshold T</code> takes a number above {CUT.above} and at most {CUT.atMost}. A value at or above T passes, and a value under T fails.</p>
+      <p>{cut.dflt === 'none' ? 'There is no default cut. ' : cut.dflt !== 'per question' && <>The default is <code>{cut.dflt}</code>. </>}<code>{thr} T</code> takes a number above {CUT.above} and at most {CUT.atMost}. A value at or above T passes, and a value under T fails.</p>
       {cut.band && (
         <>
           <p>A band, written <code>LOW:HIGH</code>, adds a middle answer. With p as the probability of yes:</p>
           <table>
             <tr><th>Form</th><th>Accepted</th><th>Yes</th><th>No</th><th>Not sure</th></tr>
             <tr><td>none given</td><td></td><td>p ≥ {DEFAULT_CUT}</td><td>p &lt; {DEFAULT_CUT}</td><td>never</td></tr>
-            <tr><td><code>--threshold T</code></td><td>{CUT.above} &lt; T ≤ {CUT.atMost}</td><td>p ≥ T</td><td>p &lt; T</td><td>never</td></tr>
-            <tr><td><code>--threshold LOW:HIGH</code></td><td>{CUT.above} ≤ LOW &lt; HIGH ≤ {CUT.atMost}</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
+            <tr><td><code>{thr} T</code></td><td>{CUT.above} &lt; T ≤ {CUT.atMost}</td><td>p ≥ T</td><td>p &lt; T</td><td>never</td></tr>
+            <tr><td><code>{thr} LOW:HIGH</code></td><td>{CUT.above} ≤ LOW &lt; HIGH ≤ {CUT.atMost}</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
           </table>
-          <p>The high side is inclusive. A probability exactly at <code>LOW</code> is not sure. A band low of 0 is accepted. <code>--threshold {DEFAULT_CUT}</code> and no threshold name the same rule.</p>
+          <p>The high side is inclusive. A probability exactly at <code>LOW</code> is not sure. A band low of 0 is accepted. <code>{thr} {DEFAULT_CUT}</code> and no threshold name the same rule.</p>
         </>
       )}
-      <p>A cut of 0 is refused. A percent such as <code>90</code>, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.</p>
+      <p>A cut of 0 is refused. {cut.band ? 'A percent such as 90, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.' : 'A percent such as 90, a band, and a number that is not finite are all usage errors before any request.'}</p>
       <p>The cut applies to the probability of yes on <code>decide</code> and each record under <code>filter</code>, the winning option’s probability on <code>choose</code>, each label’s independent yes probability under <code>tag</code>, each name’s printed strength under <code>recognize</code>, and each relation edge’s yes probability under <code>recognize</code> or <code>relate</code>. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/threshold.md">threshold contract</a> defines every boundary.</p>
     </>
   )}
@@ -177,10 +183,9 @@ const description = isFn
   <h2 id="exit-codes">Exit codes</h2>
   <table>
     <tr><th>Code</th><th>What it means</th></tr>
-    {fn.exits.map(([code, what]) => (
+    {exits.map(([code, what]) => (
       <tr><td><span class={`exit ${exitClass(code)}`}>{code}</span></td><td>{what}</td></tr>
     ))}
-    {isFn && <tr><td><span class="exit broken">{SIGNALS.code}</span></td><td>{SIGNALS.what}</td></tr>}
   </table>
   {isFn && <p>{RUN_RULE} A completed run exits 0 unless a code above says otherwise. A valid answer on standard output can sit beside a code other than 0. <a href="/reference/answers/#exit-codes">Every exit code</a> lists the codes of all the functions.</p>}
 
@@ -211,7 +216,7 @@ const description = isFn
   <h2 id="read-more">Read more</h2>
   <ul>
     <li>The <a href={`/functions/${name}/`}><code>{title}</code> page</a> opens with one plain call in every language.</li>
-    {howtos.map((h) => <li><a href={`/how-tos/${h.slug}/`}>{h.title}</a> uses <code>{title}</code> for a real job.</li>)}
+    {howtos.length > 0 && <li>These how-tos use <code>{title}</code> for a real job: {howtos.map((h, i) => <>{i > 0 && (i === howtos.length - 1 ? ' and ' : ', ')}<a href={`/how-tos/${h.slug}/`}>{h.title}</a></>)}.</li>}
     <li><a href="/reference/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number.</li>
     <li>The <a href="/install/settings/">settings page</a> gives every setting on every surface, with its default.</li>
     <li><a href="/reference/recording/">Recording and the answer cache</a> covers the answer cache, recording, replay and pruning.</li>
