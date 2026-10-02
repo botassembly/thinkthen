@@ -2,14 +2,7 @@
   "statusMappings": {
     "landed": "complete",
     "done": "complete",
-    "ready": "open",
-    "in progress": "open",
     "resolved": "closed",
-    "**accepted": "accepted",
-    "**accepted**": "accepted",
-    "**complete": "complete",
-    "**done": "complete",
-    "**done**": "complete",
     "deferred": "open"
   },
   "issueStatusMappings": {
@@ -19,6 +12,24 @@
   },
   "evidenceFromTicketNumber": 120,
   "closedIssuesFolder": "closed",
-  "lanesTable": { "file": "planning/cleanup-2026-09-30.md", "heading": "Lanes" },
-  "recordNaming": "ticket"
+  "lanesTable": {
+    "file": "planning/cleanup-2026-09-30.md",
+    "heading": "Lanes"
+  },
+  "recordNaming": "ticket",
+  "mailroom": {
+    "repo": "/home/ian/workspace/repos/sdlc",
+    "name": "thinkthen"
+  },
+  "milestones": {
+    "file": "planning/milestones.md",
+    "values": [
+      "0.1",
+      "0.2",
+      "later"
+    ]
+  },
+  "todoExcludes": [
+    "libraries/dart/flutter/example/linux/flutter/**"
+  ]
 }
