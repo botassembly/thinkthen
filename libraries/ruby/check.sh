@@ -18,6 +18,17 @@ LIMIT=$repo/sdlc/scripts/time-limit
 
 fail() { echo "check ruby: $*" >&2; exit 1; }
 not_run() { echo "check ruby: not run: $*"; exit 77; }
+# Ticket 0394: a macOS gem names no macOS version, so a Ruby on any macOS
+# version takes it. RubyGems matches arm64-darwin-24 only to darwin 24.
+gem_platform() {
+  "$RUBY" -rrubygems/package -e 'platform = Gem::Package.new(ARGV[0]).spec.platform
+    exit unless platform.os == "darwin"
+    abort "the macOS gem #{platform} names macOS version #{platform.version}" if platform.version
+    %w[23 24 25].each do |darwin|
+      host = Gem::Platform.new("#{platform.cpu}-darwin-#{darwin}")
+      abort "the gem #{platform} does not match #{host}" unless platform === host
+    end' "$1" || fail "the gem platform check failed on ${1##*/}"
+}
 
 # The file checks. The retired Docker build (R7-10, R4-8) and fixture build
 # (R4-9, R5-13) stay gone, cargo never reaches the network (R7-3), the
@@ -155,6 +166,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   # The copy sits inside the check's own plant folder, which its cleanup removes.
   . "$repo/sdlc/scripts/installed.sh"
   installed_tests "$repo" libraries/ruby "$plant"
+  gem_platform "$THINKTHEN_ARTIFACT"
   "$prefix/bin/gem" install --local --silent --no-document --install-dir "$scratch/gems" "$THINKTHEN_ARTIFACT"
   cd "$scratch/libraries/ruby"
   export GEM_PATH="$scratch/gems"
@@ -205,5 +217,6 @@ sh "$LIMIT" 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
   abort "ThinkThen::VERSION is #{ThinkThen::VERSION}, the engine is #{version}" unless ThinkThen::VERSION == version
   abort "the gem holds #{spec.files.sort}" unless spec.files.sort == files.sort
 ' || fail "the gem check failed"
+for gem in thinkthen-*.gem; do gem_platform "$gem"; done
 sh "$LIMIT" 120 "$RUBY" -I lib tests/slide_sample.rb || fail "the slide sample failed"
 echo "check ruby: pass"

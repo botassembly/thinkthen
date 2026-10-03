@@ -17,8 +17,11 @@ Gem::Specification.new do |spec|
   }
   spec.license = "MIT"
   # A platform gem: it carries the extension built on this host, under the
-  # name this host's Ruby loads.
-  spec.platform = Gem::Platform::CURRENT
+  # name this host's Ruby loads. A macOS gem names no macOS version.
+  # RubyGems matches arm64-darwin-24 only to darwin 24, so a Ruby on another
+  # macOS would install the 0.0.1 placeholder (ticket 0394).
+  local = Gem::Platform.local
+  spec.platform = local.os == "darwin" ? Gem::Platform.new([local.cpu, local.os]) : local
   extension = "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}"
   raise "#{extension} is missing; run build.sh" unless File.file?(File.expand_path(extension, __dir__))
 
