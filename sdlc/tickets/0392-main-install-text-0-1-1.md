@@ -1,6 +1,6 @@
 # 0392: Move main's public install text to 0.1.1 and redeploy the site
 
-Status: in progress. Lane claude-4. Branch `ticket/0392-main-install-text-0-1-1`. Parent: ticket 0391's deferred follow-up.
+Status: landed. Lane claude-4. Branch `ticket/0392-main-install-text-0-1-1`. Parent: ticket 0391's deferred follow-up.
 
 Milestone: 0.1
 
@@ -20,7 +20,7 @@ Milestone: 0.1
 
 - Starts from: ThinkThen 0.1.1 is published, and the GitHub release `v0.1.1` is Latest. Ticket 0391's Defers: "After 0.1.1 publishes, a follow-up on main moves those public install lines to 0.1.1; until then nobody should deploy Pages." `release/0.1` commit `18458f33b` bumped these copies on the release branch. `9463cef05` re-proved the Rust install samples there. On main `81062bd31`, `check-binding-proofs.mjs` warns that 34 pages need proving again and fails the strict mode the Pages workflow runs. `CHANGELOG.md` and `libraries/dart/CHANGELOG.md` on main already hold the 0.1.1 entries, from ticket 0391. The README's Install section names no version. The site's catalog writes `VERSION` in archive names, so only the Rust `Cargo.toml` and `install.sh` carry a number. `https://botassembly.r-universe.dev/api/packages/thinkthen` answered 404 on 2026-10-03, and the universe lists no package yet.
 - Keeps: every version file `versions` checks, `release/0.1`, the measured line in the YouTube how-to that records the 0.1.0 run, every sample's code and saved output, and the Pages workflow.
-- Changes: `install.sh`, `site/public/install.sh`, six binding READMEs, `site/examples/install/rust/files/Cargo.toml`, `site/src/data/catalog.mjs`, `site/examples/bindings-proof.json`, `sdlc/planning/release-process.md`, the issue line, and this ticket.
+- Changes: `install.sh`, `site/public/install.sh`, six binding READMEs, `site/examples/install/rust/files/Cargo.toml`, `site/src/data/catalog.mjs`, the install table's markup and style, `site/examples/bindings-proof.json`, `sdlc/planning/release-process.md`, the issue line, and this ticket.
 - Proof: offline checks only. No live call.
   - `python3 sdlc/scripts/versions`.
   - `node scripts/smoke-bindings.mjs` on each stale sample and every Rust sample, then `node scripts/check-binding-proofs.mjs --strict`.
@@ -35,3 +35,8 @@ Milestone: 0.1
 - `"0.1"` in the site's Rust `Cargo.toml` in place of an exact `"0.1.1"`.
 
 ## What the build taught us
+
+- A binding's proof hashes its whole folder, README included. A README-only change on main stales every page that binding serves. Here six README edits and the 0.1.0 work since the cut made 34 pages stale.
+- The smoke refuses any key variable in the shell, not only `THINKTHEN_` ones. Unset `LIQUIDAI_API_KEY` and `TYPESAFE_API_KEY` too. `smoke-bindings.mjs` then replayed 143 samples offline, and the strict check reports 350 samples matching their proofs and no page to prove again.
+- The R line runs past its column at 920 and 960 px, and `check-widths` caught it. The install table's code now wraps at a space, so each address stays whole.
+- R-universe answered 404 for the package on 2026-10-03. Its registry names `libraries/r/thinkthen` on the latest release.
