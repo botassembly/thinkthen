@@ -58,4 +58,4 @@ R CMD INSTALL -l rlib thinkthen    # builds the crate with cargo --locked --offl
 
 `tools/make-tarball.sh` runs inside a `git archive` tree and builds a source tarball with the `thinkthen` crate and every registry crate vendored. It installs with an empty cargo home and no network.
 
-R-universe builds and serves the package under `botassembly` from each GitHub release. CRAN holds no copy. `NOTES.md` holds the rulings and the measured behavior.
+R-universe builds and serves the package under `botassembly` from each GitHub release. CRAN holds no copy. macOS and Windows get a built package from `https://botassembly.r-universe.dev`. On Linux that address serves the source package, which needs Rust's `cargo` and `rustc`. A Linux machine without Rust installs the built package from `https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/`, or `resolute-aarch64` on ARM. `NOTES.md` holds the rulings and the measured behavior.
