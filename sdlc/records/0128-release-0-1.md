@@ -9,11 +9,11 @@ Ticket 0128 phase 4 names this record. It records the three release runs, what e
 | 1. Ian's setup list | Ian | Done. Milestone 0.1 exit criterion 3 lists the registry setup. Ian added the crates.io, RubyGems, PyPI and npm trusted publishers between the two runs |
 | 2. Rehearsal on main | Ian | Done: run 36998358908 on main `f65faea4e` |
 | 3. The release commit | Agent, coordinator | Done: ticket 0387 at `ff7120f89` |
-| 4. Rehearsal on the release commit | Ian | Done: run 37010060315 from `release/0.1` at `4e880cdf6`. For 0.1.1, run 37048376945 from `release/0.1` at `18458f33b`. For 0.1.2, run 37126990511 from `release/0.1` at `08328c9c0` |
+| 4. Rehearsal on the release commit | Ian | Done: run 37010060315 from `release/0.1` at `4e880cdf6`. For 0.1.1, run 37048376945 from `release/0.1` at `18458f33b`. For 0.1.2, run 37126990511 from `release/0.1` at `abac3ce61`, the commit before ticket 0395's cherry-pick |
 | 5. Tag and dispatch | Ian, agent | Done three times: `v0.1.0` at `b691a2bc6` (run 37035814818), `v0.1.1` at `9463cef05` (run 37059415069) and `v0.1.2` at `08328c9c0` (run 37130570517). The agent tagged and dispatched 0.1.2 under Ian's approval of 2026-10-03 |
 | 6. Approve each publish job and check each registry | Ian, agent | Done for 0.1.1 and 0.1.2. For 0.1.2, Ian's first approval did not register; at Ian's "approve it", the agent approved the `release` environment. The registry list below gives each result |
 | 7. Run `pages.yml` | Agent | Done. Pages run 37141801797 deployed main `8f5310e9c` (ticket 0396) on 2026-10-03, and the live `install.sh` names 0.1.2 |
-| 8. The public install checks | Agent | Done 2026-10-03. Every live channel installs 0.1.1 and answers offline, except `gem install` on macOS. See "Public install checks" below |
+| 8. The public install checks | Agent | Done 2026-10-03. Every live channel installs 0.1.1 and answers offline, except `gem install` on macOS and R-universe. With 0.1.2, `gem install` on macOS passed on the M5. R-universe has not built 0.1.2 yet. See "Public install checks" and the 0.1.2 section below |
 | 9. Delete the four local registry tokens and the rehearsal drafts | Ian | Done. Every rehearsal draft is deleted. Ian said on 2026-10-03 that he made no upload tokens, so none exist to delete |
 
 ## 0.1.0: run 37035814818
@@ -42,7 +42,7 @@ The release page holds the command, C, SQLite, DuckDB and PostgreSQL 16 archives
 
 ## 0.1.2: run 37130570517
 
-Ticket 0394 drops the macOS version from the macOS gem platforms, so one gem serves every macOS. Ticket 0395 makes the R package build on R-universe: `tools/config.R` runs `cargo update --workspace`, and `check.sh` builds against a crates.io stand-in. Both landed on main and were cherry-picked to `release/0.1`, and the 0.1.2 bump landed there alone. Checkpoint `checkpoint/surfaces/2026-10-03-1` passed on `abac3ce61`. Rehearsal 37126990511 from `release/0.1` at `08328c9c0` was clean, and its two Mac smoke jobs installed the new `arm64-darwin` and `x86_64-darwin` gems. The agent tagged `v0.1.2` at `08328c9c0` and dispatched release mode.
+Ticket 0394 drops the macOS version from the macOS gem platforms, so one gem serves every macOS. Ticket 0395 makes the R package build on R-universe: `tools/config.R` runs `cargo update --workspace`, and `check.sh` builds against a crates.io stand-in. Both landed on main and were cherry-picked to `release/0.1`, and the 0.1.2 bump landed there alone. Checkpoint `checkpoint/surfaces/2026-10-03-1` passed on `abac3ce61`. Rehearsal 37126990511 from `release/0.1` at `abac3ce61` was clean, and its two Mac smoke jobs installed the new `arm64-darwin` and `x86_64-darwin` gems. Ticket 0395's cherry-pick then landed as `08328c9c0`. Neither the checkpoint nor the rehearsal ran it. The release run built and smoked `08328c9c0` itself, and the R package's first real test is its R-universe build. The agent tagged `v0.1.2` at `08328c9c0` and dispatched release mode.
 
 Every build, smoke and publish job passed on the first attempt. The `publish` job made GitHub release v0.1.2 public and created tag `libraries/go/v0.1.2`.
 

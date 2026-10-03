@@ -6,7 +6,7 @@ opens: install.sh site/public/install.sh site/src/data/catalog.mjs site/src/page
 
 # 0128: Release and install for 0.1
 
-Status: done. 0.1.2 published on every registry from tag `v0.1.2` in run 37130570517, GitHub release v0.1.2 is public and Latest, and Pages deployed main's 0.1.2 install text. Phase 4 steps 1 to 9 are done. The public install checks passed on every channel; the macOS gem passed with 0.1.2. Ian dropped the retained history step and confirmed that no local registry tokens exist. R-universe's first 0.1.2 build and the `ruby` placeholder gem are tracked in the release record `sdlc/records/0128-release-0-1.md`. Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`). Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`). Phase3a landed after independent High ACCEPT at `3b540d19`. Phase 3b rehearsal runs 36945370940, 36998358908 and 37010060315 passed. Owner: the queue owner.
+Status: done. 0.1.2 published on every registry from tag `v0.1.2` in run 37130570517, GitHub release v0.1.2 is public and Latest, and Pages deployed main's 0.1.2 install text. Phase 4 steps 1 to 9 are done. The public install checks passed on every live channel except the macOS gem, which passed with 0.1.2, and R-universe, which has not built 0.1.2 yet. Ian left the retained history step to the agent, and the agent dropped it. Ian confirmed that no local registry tokens exist. R-universe's first 0.1.2 build and the `ruby` placeholder gem are tracked in the release record `sdlc/records/0128-release-0-1.md`. Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`). Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`). Phase3a landed after independent High ACCEPT at `3b540d19`. Phase 3b rehearsal runs 36945370940, 36998358908 and 37010060315 passed. Owner: the queue owner.
 
 Milestone: 0.1
 
@@ -28,7 +28,7 @@ The coordinator's rulings of 2026-09-25 on the first review also govern it. The 
 
 ## Retained history step
 
-The tracked-tree private-name cleanup passed fresh review at `dfd6130c`; the external 30-entry guard found no tracked-path or tracked-file hit. The original issue is closed for that cleanup. Ian's 2026-09-26 ruling still requires a fresh one-commit history before public release, after the configured guard passes and Ian names the go-live commit. This unperformed step belongs to Phase 4. Closing the cleanup issue does not authorize the reset or public release.
+The tracked-tree private-name cleanup passed fresh review at `dfd6130c`; the external 30-entry guard found no tracked-path or tracked-file hit. The original issue is closed for that cleanup. Ian's 2026-09-26 ruling asked for a fresh one-commit history before public release. The repository went public with its full history. On 2026-10-03 Ian left the step to the agent, and the agent dropped it, because the tags, the Go module proxy and the registries' provenance now name its commits. The release record's "Closed decisions" holds the reasoning.
 
 ## The one rule on outward steps
 
