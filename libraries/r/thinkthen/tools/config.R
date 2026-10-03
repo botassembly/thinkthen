@@ -48,6 +48,10 @@ if (.tarball_shape) {
   # lock names thinkthen only as a path package, and cargo drops that entry
   # once the manifest stops naming the path, so `--package thinkthen` would
   # match nothing (ticket 0395). `--workspace` adds the missing entry.
+  if (!nzchar(Sys.which("cargo"))) {
+    stop("thinkthen builds from source with Rust's cargo and rustc, and cargo is not on PATH. ",
+      "Install Rust, or install R-universe's built package for this platform")
+  }
   if (system2("cargo", c("update", "--workspace", "--manifest-path", "src/rust/Cargo.toml")) != 0) {
     stop("cargo could not resolve thinkthen ", .version, " from crates.io")
   }
