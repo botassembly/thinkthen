@@ -25,14 +25,14 @@ Milestone: 0.1
 - Changes: `libraries/r/` only.
   - `libraries/r/thinkthen/tools/config.R`: `cargo update --workspace` and a comment saying why `--package thinkthen` cannot match.
   - `libraries/r/check.sh`: the outside step builds a directory source from the tarball's `vendor/registry` and the packed crate, replaces crates-io with it in the private cargo home, and checks the lock's `thinkthen` source and the unchanged pins.
-- Proof:
+- Proof: the R check, two container builds on blue, and the record checks.
   - `bash libraries/r/check.sh` passes on this branch. With `config.R` put back to `--package thinkthen`, its outside step fails with the R-universe error.
   - On blue, in `--rm` `rocker/r-ver:4.6` containers running `R CMD build` and then `R CMD INSTALL` of the tarball, with the image removed afterwards:
     - Against real crates.io: the `v0.1.1` package folder with this branch's `config.R` installs and loads 0.1.1. crates.io has no 0.1.2 until the release publishes, so 0.1.1 is the newest real proof.
     - At 0.1.2: the cherry-picked `release/0.1` package folder installs and loads 0.1.2. Its cargo home replaces crates-io with a directory source of `cargo package`'s 0.1.2 crate and its vendored dependencies, as the check does.
   - `python3 sdlc/scripts/tickets` and `sdlc/scripts/lint` with the private-names list.
   - On the new `release/0.1` head, `bash libraries/r/check.sh`.
-- Defers:
+- Defers: the runs only a published 0.1.2 can make.
   - R-universe's own rebuild. It runs only after the `v0.1.2` release publishes.
   - The other R-universe jobs (Windows, macOS, Wasm, Linux binaries and docs). They were skipped because the source job failed, so 0.1.2 is their first run.
   - The `sed: can't read .../man/*.Rd` line in the same log. The package ships no man pages; R-universe continued past it.
