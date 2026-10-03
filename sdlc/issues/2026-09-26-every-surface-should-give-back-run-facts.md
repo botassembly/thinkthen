@@ -32,6 +32,7 @@ Still open from Ian's 2026-09-23 ruling to keep the times:
 - `command_ms`: the whole run's time minus the exchanges.
 - The attempt record on every typed host beyond Rust and C JSON.
 - A chat adapter's `server_s`, from the body's `created` and the time in its `id`, if a chat adapter ships.
+- No `server_ms` on live attempts. The docs team's paid run of 2026-10-01 on checkpoint `surfaces/2026-10-01-2` (`bfc180a10`) made 242 calls through Rust and all 14 C-interface bindings. Every attempt carried `wall_ms` and `request_id`, and none carried `server_ms`. Either Jev stopped sending `x-envoy-upstream-service-time`, sends it twice, or the parse drops it; ADR 0109 leaves `server_ms` out in the first two cases. One live `decide` from a test build that logs the response header names would tell. That call needs Ian's authorization. If Jev changed, ADR 0109 records it and the site's overhead page drops its sentence. Filed 2026-10-03 from the docs message "Live attempts carried no server time on 2026-10-01".
 
 ## 3. Caller-priced cost on the remaining hosts
 

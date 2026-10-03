@@ -27,7 +27,7 @@ done
 ## Anti-goals
 
 - No configuration file and no dotfile. Each costs a read at start and lets one command answer twice on two machines.
-- No daemon and no `serve`. `specification/roadmap.md` declined both, and record mode serves the loop.
+- No daemon and no `serve`. `specification/roadmap.md` declined both, and record mode serves the loop. The proxy of Ian's 2026-10-02 ruling is a second program, not a command mode (`../../issues/2026-09-30-proxy-service-for-shared-limits-and-traces.md`).
 - No wrapper script as the install path. It adds a process start and swallows the exit code.
 - No rule in the parser or the printer. A rule with a second home drifts from the libraries.
 - No caller parses standard error. Every failure class earns an exit code.
