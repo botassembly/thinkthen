@@ -377,7 +377,7 @@ dependencies = [
 
 [[package]]
 name = "thinkthen"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "arc-swap",
  "nix",
@@ -391,7 +391,7 @@ dependencies = [
 
 [[package]]
 name = "thinkthen-c"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "conformance-backend",
  "rusqlite",

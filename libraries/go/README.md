@@ -1,6 +1,6 @@
 # ThinkThen for Go
 
-This Go 1.22 cgo source module calls the separately installed ThinkThen C library. Rust retains question grammar, judgment, scheduling and transport. The package gate runs on Linux x86_64. Each GitHub release tags the module as `libraries/go/v0.1.1` and ships the matching C archive.
+This Go 1.22 cgo source module calls the separately installed ThinkThen C library. Rust retains question grammar, judgment, scheduling and transport. The package gate runs on Linux x86_64. Each GitHub release tags the module as `libraries/go/v0.1.2` and ships the matching C archive.
 
 ## Build and use a matching local copy
 
@@ -14,10 +14,10 @@ cp libraries/c/include/thinkthen.h "$NATIVE/include/"
 cp libraries/c/target/debug/libthinkthen_c.so "$NATIVE/lib/libthinkthen.so"
 sh libraries/c/localize.sh libraries/c/target/debug/libthinkthen_c.a "$NATIVE/lib/libthinkthen.a"
 ln -sfn libthinkthen.so "$NATIVE/lib/libthinkthen.so.0"
-printf 'prefix=%s\nName: thinkthen\nDescription: ThinkThen C ABI\nVersion: 0.1.1\nLibs: -L${prefix}/lib -lthinkthen\nCflags: -I${prefix}/include\n' "$NATIVE" > "$NATIVE/lib/pkgconfig/thinkthen.pc"
+printf 'prefix=%s\nName: thinkthen\nDescription: ThinkThen C ABI\nVersion: 0.1.2\nLibs: -L${prefix}/lib -lthinkthen\nCflags: -I${prefix}/include\n' "$NATIVE" > "$NATIVE/lib/pkgconfig/thinkthen.pc"
 ```
 
-In a separate Go project, `go get github.com/botassembly/thinkthen/libraries/go@v0.1.1` adds the released module. To build against this checkout instead, add `require github.com/botassembly/thinkthen/libraries/go v0.1.1` and `replace github.com/botassembly/thinkthen/libraries/go => /absolute/path/to/this/checkout/libraries/go` to its `go.mod`. Set `PKG_CONFIG_PATH="$NATIVE/lib/pkgconfig"`, `CGO_ENABLED=1`, `GOPROXY=off`, `GOTOOLCHAIN=local`, and `LD_LIBRARY_PATH="$NATIVE/lib"` when building and running. The [example](examples/decide/main.go) imports the product module path. Match the native header and library to the same source revision. Shared-library relocation needs an explicit loader policy. Static-C mode links the C archive but still depends on Linux system libraries.
+In a separate Go project, `go get github.com/botassembly/thinkthen/libraries/go@v0.1.2` adds the released module. To build against this checkout instead, add `require github.com/botassembly/thinkthen/libraries/go v0.1.2` and `replace github.com/botassembly/thinkthen/libraries/go => /absolute/path/to/this/checkout/libraries/go` to its `go.mod`. Set `PKG_CONFIG_PATH="$NATIVE/lib/pkgconfig"`, `CGO_ENABLED=1`, `GOPROXY=off`, `GOTOOLCHAIN=local`, and `LD_LIBRARY_PATH="$NATIVE/lib"` when building and running. The [example](examples/decide/main.go) imports the product module path. Match the native header and library to the same source revision. Shared-library relocation needs an explicit loader policy. Static-C mode links the C archive but still depends on Linux system libraries.
 
 `sh libraries/go/check.sh 0` runs the offline product gate with a counted loopback backend. It checks the current 31-export header/library match, four copied module consumers, exact request bodies, the public result corpus, settings precedence, and planted failures. It does not call a paid backend.
 

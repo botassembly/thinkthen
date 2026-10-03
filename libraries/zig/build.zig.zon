@@ -1,6 +1,6 @@
 .{
     .name = .thinkthen,
-    .version = "0.1.1",
+    .version = "0.1.2",
     .fingerprint = 0x9a6362d755a3e020,
     .minimum_zig_version = "0.15.2",
     .dependencies = .{},

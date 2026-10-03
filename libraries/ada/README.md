@@ -1,6 +1,6 @@
 # ThinkThen Ada
 
-GNAT 13.3 / gprbuild, Linux x86_64 glibc. This is the source package for the Linux Ada binding. Each GitHub release ships `thinkthen-ada-0.1.1-x86_64-unknown-linux-gnu.tar.gz` beside a separate `thinkthen-c-0.1.1-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest before installing. The native archive contains the header, shared library and soname link, static archive, pkg-config file and LICENSE. Ada links the native library; it does not compile the C header. Keep the library available through a trusted rpath or LD_LIBRARY_PATH, not a world-writable directory.
+GNAT 13.3 / gprbuild, Linux x86_64 glibc. This is the source package for the Linux Ada binding. Each GitHub release ships `thinkthen-ada-0.1.2-x86_64-unknown-linux-gnu.tar.gz` beside a separate `thinkthen-c-0.1.2-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest before installing. The native archive contains the header, shared library and soname link, static archive, pkg-config file and LICENSE. Ada links the native library; it does not compile the C header. Keep the library available through a trusted rpath or LD_LIBRARY_PATH, not a world-writable directory.
 
 From a source checkout, build the native library and Ada package before copying their outputs into a project (or take the matching versioned archives from the same GitHub release):
 

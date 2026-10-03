@@ -510,7 +510,7 @@ dependencies = [
 
 [[package]]
 name = "thinkthen"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "arc-swap",
  "nix",
@@ -524,7 +524,7 @@ dependencies = [
 
 [[package]]
 name = "thinkthen-typescript"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "napi",
  "napi-build",

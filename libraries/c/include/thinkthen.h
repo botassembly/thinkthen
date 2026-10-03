@@ -1,5 +1,5 @@
 /*
- * thinkthen.h — the C door to the thinkthen engine, version 0.1.1.
+ * thinkthen.h — the C door to the thinkthen engine, version 0.1.2.
  *
  * One archive per platform ships this header, the shared library, and the
  * static library. Every language that cannot bind Rust
@@ -64,11 +64,11 @@
 extern "C" {
 #endif
 
-/* Version 0.1.1, the version of the library this header ships with.
+/* Version 0.1.2, the version of the library this header ships with.
  * Version 0.1.0 is the first release. */
 #define THINKTHEN_VERSION_MAJOR 0
 #define THINKTHEN_VERSION_MINOR 1
-#define THINKTHEN_VERSION_PATCH 1
+#define THINKTHEN_VERSION_PATCH 2
 
 /*
  * The return codes, one per error kind, and zero for success. A failure

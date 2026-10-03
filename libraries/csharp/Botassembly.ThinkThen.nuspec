@@ -1,4 +1,4 @@
 <?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-  <metadata><id>Botassembly.ThinkThen</id><version>0.1.1</version><authors>ThinkThen contributors</authors><description>Linux x64 C ABI facade; separate native release archive required</description><license type="file">LICENSE</license><readme>README.md</readme><dependencies><group targetFramework="net8.0" /></dependencies></metadata>
+  <metadata><id>Botassembly.ThinkThen</id><version>0.1.2</version><authors>ThinkThen contributors</authors><description>Linux x64 C ABI facade; separate native release archive required</description><license type="file">LICENSE</license><readme>README.md</readme><dependencies><group targetFramework="net8.0" /></dependencies></metadata>
 </package>

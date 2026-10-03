@@ -5,7 +5,7 @@
 
 [package]
 name = "thinkthen-typescript"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 rust-version = "1.95.0"
 description = "The Node-API addon behind the thinkthen package for Node"

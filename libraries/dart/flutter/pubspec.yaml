@@ -1,5 +1,5 @@
 name: thinkthen_flutter
-version: 0.1.1
+version: 0.1.2
 publish_to: none
 description: Flutter-facing package for the separate ThinkThen Dart FFI binding.
 environment:
