@@ -440,7 +440,7 @@ export const SURFACES = [
     facts: '`Call.facts` counts this call.',
     errors: 'Every failure raises a `ThinkThenError`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `Cancelled`.',
     settings: '`tt.Engine` takes each setting as a keyword and reads the environment for the rest. `record=` writes a recording to a folder. `replay=` answers from that recording with no connection.',
-    install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
+    install: [['pip install thinkthen', 'Python 3.10 or later.'], ['uv add thinkthen', null]],
     particular: [
       'A list goes in and `Call.value` holds the answered list. The list crosses into the engine once.',
       '`tt.question()` builds a question that carries its own threshold. Reuse it wherever you ask.',
@@ -501,7 +501,7 @@ export const SURFACES = [
     facts: '`Call#facts` counts this call.',
     errors: 'Every failure raises a `ThinkThen::Error`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `CancelledError`.',
     settings: '`Engine.new` takes each setting as a keyword and reads the environment for the rest. `record:` writes a recording to a folder. `replay:` answers from that recording with no connection.',
-    install: [['gem install thinkthen', null]],
+    install: [['gem install thinkthen', 'Ruby 3.4.']],
     particular: ['Any Enumerable crosses to the engine once.'],
   },
   {
@@ -804,7 +804,10 @@ export const SURFACES = [
     facts: '`thinkthen_usage()` gives the totals for the process.',
     errors: 'A failure is an error whose text starts `thinkthen <kind>: `. It never reads as `NULL`.',
     settings: '`SET thinkthen_record` writes a recording to a folder. `SET thinkthen_replay` answers from that recording with no connection.',
-    install: [['duckdb -unsigned', 'The `-unsigned` flag lets DuckDB load a local extension file. The query loads that file first.']],
+    install: [
+      ['thinkthen-duckdb-VERSION-TARGET.tar.gz', 'The extension for DuckDB v1.5.5, from each release. Unpack it where DuckDB runs.'],
+      ['duckdb -unsigned', 'The `-unsigned` flag lets DuckDB load a local extension file. The query loads that file first.'],
+    ],
     particular: ['DuckDB hands the extension up to 2,048 rows at a time. One call judges those rows together, and `SET thinkthen_max_requests` caps that call.'],
   },
   {
@@ -815,7 +818,10 @@ export const SURFACES = [
     facts: '`thinkthen_usage()` gives the totals for the process.',
     errors: 'A failure is an error whose text starts `thinkthen <kind>: `. The message follows, and the text ends with `(retryable: yes)` or `(retryable: no)`.',
     settings: '`thinkthen_configure` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
-    install: [['.load ./thinkthen', null]],
+    install: [
+      ['thinkthen-sqlite-VERSION-TARGET.tar.gz', 'The extension, from each release. Rename `libthinkthen0.so` to `thinkthen.so`, or `libthinkthen0.dylib` to `thinkthen.dylib` on a Mac. It needs SQLite 3.50.0 or newer.'],
+      ['.load ./thinkthen', null],
+    ],
     particular: [
       'Only a query you type can call its functions. A view or trigger in an untrusted schema cannot call them to spend requests or read files.',
     ],
@@ -828,7 +834,10 @@ export const SURFACES = [
     facts: '`thinkthen_usage()` gives the totals for the process.',
     errors: 'A failed call raises its named error. `thinkthen_try_details` returns a failure as `jsonb` instead.',
     settings: '`SET thinkthen.record` writes a recording to a folder. `SET thinkthen.replay` answers from that recording with no connection.',
-    install: [['CREATE EXTENSION thinkthen;', null]],
+    install: [
+      ['thinkthen-postgresql16-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 16, from each release. Copy the file in `lib/` to `pg_config --pkglibdir`. Copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
+      ['CREATE EXTENSION thinkthen;', null],
+    ],
     particular: [
       'A question file carries a band. The not-sure rows come back NULL, and a person reads them.',
       'pg_cancel_backend and statement_timeout stop a call. A request already sent still completes and is billed.',

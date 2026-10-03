@@ -13,7 +13,7 @@ Ticket 0128 phase 4 names this record. It records the two release runs, what eac
 | 5. Tag and dispatch | Ian | Done twice: `v0.1.0` at `b691a2bc6` (run 37035814818) and `v0.1.1` at `9463cef05` (run 37059415069) |
 | 6. Approve each publish job and check each registry | Ian, agent | Done for 0.1.1. The registry list below gives each result |
 | 7. Run `pages.yml` | Ian | Open. On main, the usage comment in `install.sh` and `site/public/install.sh` and `site/examples/install/rust/files/Cargo.toml` still name 0.1.0. Pages deploys after a main change moves them to 0.1.1 |
-| 8. The public install checks | Agent | Open. See "Public install checks" below |
+| 8. The public install checks | Agent | Done 2026-10-03. Every live channel installs 0.1.1 and answers offline, except `gem install` on macOS. See "Public install checks" below |
 | 9. Delete the four local registry tokens and the rehearsal drafts | Ian | Partly done. Every rehearsal draft is deleted. This record has no confirmation that the local registry tokens are deleted |
 
 ## 0.1.0: run 37035814818
@@ -61,11 +61,42 @@ The release page holds the command, C, SQLite, DuckDB and PostgreSQL 16 archives
 
 The install-check builder owns this section and ticket 0128 phase 4 step 8. It writes its results here. This record's author leaves this section to that builder.
 
-Results: not yet recorded.
+Results, 2026-10-03. Each check installed one channel the way its README or install page says, read the version, and replayed the release's first-run sample with no key and no network. The Linux checks ran in fresh x86-64 containers from public images, one per channel, removed afterwards. The macOS checks ran on the M5, an Apple Silicon Mac on macOS 26.4, in scratch folders removed afterwards. The library checks called `decide` with the sample's question and `report.txt`, with the engine's replay setting on the sample's `recording` folder. Every answer was true with `requests_sent` 0. Each library's no-key call failed with the usage error `no key is set; configure an API key for the engine (THINKTHEN_API_KEY)`.
+
+| Channel | Install | Where | Version seen | Result |
+| --- | --- | --- | --- | --- |
+| Download script | `curl -fsSL https://thinkthen.dev/install.sh \| sh` | Ubuntu 24.04; macOS 26 | `thinkthen 0.1.1` | Pass |
+| Homebrew | `brew install botassembly/thinkthen/thinkthen` | Linuxbrew image | `thinkthen 0.1.1` | Pass. The M5 has no Homebrew. Each of the formula's four URLs matches its sha256 and the release's `.sha256` file |
+| Cargo | `cargo install thinkthen` | Rust 1.99 | `thinkthen 0.1.1` | Pass |
+| crates.io library | `cargo add thinkthen` | Rust 1.99 | `cargo tree`: 0.1.1 | Pass |
+| PyPI | `pip install thinkthen`, `uv add thinkthen` | Python 3.13 on Linux and macOS | 0.1.1 | Pass |
+| npm | `npm install thinkthen` | Node 22 on Linux, Node 26 on macOS | 0.1.1 | Pass |
+| RubyGems | `gem install thinkthen` | Ruby 3.4.11 on Linux | 0.1.1 `x86_64-linux` | Pass |
+| RubyGems | `gem install thinkthen` | Ruby 3.4.6 on macOS 26 | 0.0.1 `ruby` | Fail. RubyGems matches `arm64-darwin-24` only to darwin 24, and macOS 26 is darwin 25. Ticket 0394 |
+| NuGet | `dotnet add package Botassembly.ThinkThen --version 0.1.1`, with the C archive | .NET 8 | 0.1.1 | Pass |
+| Maven Central | `io.github.botassembly:thinkthen-jvm:0.1.1`, with the C archive | Java 21, Maven 3 | 0.1.1 | Pass. The Kotlin and Scala classifier JARs resolve |
+| pub.dev | `dart pub add thinkthen_dart`, with the C archive | Dart stable | 0.1.1 | Pass |
+| Packagist | `composer require botassembly/thinkthen`, with the C archive | PHP 8.3 with FFI | v0.1.1 | Pass |
+| Go | `go get github.com/botassembly/thinkthen/libraries/go@v0.1.1`, with the C archive | Go 1.27 | v0.1.1 | Pass |
+| R-universe | none yet | | | Not built. Its last update ran on 2026-10-02, before any release existed, and failed to find `*release`. It had not run again by the time of these checks |
+| C library | `thinkthen-c-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | gcc on Ubuntu 24.04 | header and `thinkthen.pc`: 0.1.1 | Pass |
+| SQLite | `thinkthen-sqlite-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | SQLite 3.50.4 | archive name only | Pass. Ubuntu 24.04's SQLite 3.45.1 refuses the extension with a message naming 3.50.0 |
+| DuckDB | `thinkthen-duckdb-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | DuckDB 1.5.5 | `extension_version` 0.1.1 | Pass |
+| PostgreSQL 16 | `thinkthen-postgresql16-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | PostgreSQL 16.15 | `extversion` 0.1.1 | Pass |
+
+All 41 release files match their `.sha256` files.
+
+Findings:
+
+1. The macOS gems name darwin 24, so a Ruby on any other macOS installs the 0.0.1 placeholder. Ticket 0394 drops the version from the macOS gem platform. Users get the fix with 0.1.2.
+2. The placeholders catch older hosts with no message. Ruby 3.3 on Linux installs the 0.0.1 `ruby` gem. macOS's own Python 3.9 installs the 0.0.1 PyPI release. The open placeholder issue holds the choices, and a yank is Ian's step.
+3. The install pages for SQLite, DuckDB and PostgreSQL named no release archive and no steps to place it. The Python and Ruby pages named no version floor. This Quick Fix adds each.
+4. The R page's line pointed at CRAN, which holds no copy. Ticket 0392 points it at R-universe.
+5. Python 0.1.1 has no `thinkthen.__version__`. The package metadata gives the version.
 
 ## What stays open
 
-- Phase 4 step 8, the public install checks, above.
+- Ticket 0394 and a 0.1.2 release: `gem install thinkthen` on macOS. R-universe has not built the package yet.
 - Phase 4 step 7: Pages deploys once main's install lines name 0.1.1.
 - Phase 4 step 9: Ian confirms the four local registry tokens are deleted. Trusted publishing needs none of them.
 - The history reset. Ian's ruling of 2026-09-26 (ticket 0128, "Retained history step") asked for a fresh one-commit history before public release. The reset did not happen, and the repository is public with its full history. The tags `v0.1.0`, `v0.1.1` and `libraries/go/v0.1.1`, the Go module proxy and the registries' provenance statements now name existing commits, so a reset would break them. This is Ian's decision: drop the step, or reset knowing what it breaks.
