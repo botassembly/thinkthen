@@ -9,7 +9,7 @@ Status: built in lane claude-2, branch `ticket/quick-fix-release-0-1-records`, o
 ## Change
 
 - `sdlc/records/0128-release-0-1.md` records the 0.1.0 run 37035814818 and the 0.1.1 run 37059415069, what each registry holds, and what stays open. Its "Public install checks" section is the install-check builder's to fill.
-- Ticket 0128's status says it is done except Phase 4 step 8, the public install checks, and step 7, the Pages deploy.
+- Ticket 0128's status says it is done except Phase 4 step 8, the public install checks; step 7, the Pages deploy; Ian's confirmation that the local registry tokens are deleted; and Ian's decision on the retained history step.
 - milestones.md marks the 0.1 exit criteria met and lists the new 0.2 and later items.
 - Ticket 0393, reserved with `pm ticket new`: npm publishes through staged publishing.
 - Sixteen new issues, each answering a mail ask: the `rank --details` null value, the search features, the help gaps, the glossary, outside-agent reporting, the doc-test gate, `native_install` and `CARGO_TARGET_DIR`, the pandas and DuckDB binding gaps, the RubyGems placeholder, five draft functions and tools, the command's overhead, and the bench's moved runs.
