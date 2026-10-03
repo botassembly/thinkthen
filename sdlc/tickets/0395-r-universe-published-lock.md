@@ -24,6 +24,7 @@ Milestone: 0.1
 - Keeps: the three shapes and how `config.R` picks them; the published shape's `=VERSION` rewrite and its single-path-dependency guard; `Makevars`' `--locked` build; the tarball and repository shapes' `--locked --offline` builds; `check.sh`'s rule that every `cargo build|test|clippy|run|vendor|package|fetch` call carries `--locked --offline`; the outside step's offline run, its empty target, and its answer check.
 - Changes: `libraries/r/` only.
   - `libraries/r/thinkthen/tools/config.R`: `cargo update --workspace` and a comment saying why `--package thinkthen` cannot match.
+  - `libraries/r/ratchet.R.json`: the R line ceiling rises from 2475 to 2478 for that comment.
   - `libraries/r/check.sh`: the outside step builds a directory source from the tarball's `vendor/registry` and its `vendor/thinkthen`, replaces crates-io with it in the private cargo home, and checks the lock's `thinkthen` source and the unchanged pins. A directory source needs `.cargo-checksum.json` in each crate folder. The vendored crates carry theirs, and the step writes `{"files":{},"package":null}` for `thinkthen`, so its lock entry has a registry `source` and no `checksum` line. The step no longer runs its own `cargo package` or links the builder's registry cache.
 - Proof: the R check, two container builds on blue, and the record checks.
   - `bash libraries/r/check.sh` passes on this branch. With `config.R` put back to `--package thinkthen`, its outside step fails with the R-universe error.
@@ -42,3 +43,15 @@ Milestone: 0.1
 - Building the published shape against crates.io with network, rather than vendoring every crate into the GitHub tree. R-universe source builds have network, and ticket 0128 chose this shape.
 
 ## What the build taught us
+
+Results, 2026-10-03:
+
+- `bash libraries/r/check.sh` passed on this branch. The planted revert of `config.R` to `--package thinkthen` failed the outside step with `error: package ID specification `thinkthen` did not match any packages` and `Error: cargo could not resolve thinkthen 0.1.0 from crates.io`, the R-universe failure.
+- Container on blue, real crates.io: the `v0.1.1` folder with this branch's `config.R` printed `Adding thinkthen v0.1.1`, built, and loaded 0.1.1. The lock diff added only `source = "registry+..."` and the crates.io `checksum` line to the `thinkthen` entry.
+- Container on blue, stand-in at 0.1.2: the `release/0.1` folder with this branch's `config.R` printed `Adding thinkthen v0.1.2`, built, and loaded 0.1.2. The lock diff added only the registry `source` line.
+- `sdlc/scripts/lint` with the private-names list and `python3 sdlc/scripts/tickets` passed.
+
+The build taught us:
+
+- A `[patch.crates-io]` path is not a stand-in for a registry. Cargo treats a patched crate as a path package, so lock behavior that depends on the source kind passes under a patch and fails against crates.io. A directory source that replaces crates-io behaves like the registry and still runs offline.
+- `cargo update --package NAME` matches only packages already in the lock that cargo loads. A sourceless path entry is gone once the manifest drops the path, so a path-to-registry switch needs `--workspace`.
