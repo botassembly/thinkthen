@@ -44,8 +44,11 @@ if (.tarball_shape) {
   if (sum(.engine) != 1) stop("src/rust/Cargo.toml must name the thinkthen path dependency once")
   .manifest[.engine] <- sprintf('thinkthen = { version = "=%s", default-features = false, features = ["bundled-sqlite"] }', .version)
   writeLines(.manifest, "src/rust/Cargo.toml")
-  # The lock gains the registry entry and keeps every other pin.
-  if (system2("cargo", c("update", "--package", "thinkthen", "--manifest-path", "src/rust/Cargo.toml")) != 0) {
+  # The lock gains the registry entry and keeps every other pin. The shipped
+  # lock names thinkthen only as a path package, and cargo drops that entry
+  # once the manifest stops naming the path, so `--package thinkthen` would
+  # match nothing (ticket 0395). `--workspace` adds the missing entry.
+  if (system2("cargo", c("update", "--workspace", "--manifest-path", "src/rust/Cargo.toml")) != 0) {
     stop("cargo could not resolve thinkthen ", .version, " from crates.io")
   }
 } else {
