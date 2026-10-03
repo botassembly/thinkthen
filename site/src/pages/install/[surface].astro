@@ -55,7 +55,7 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
   <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
 
   <h2>Install</h2>
-  <table>
+  <table class="install">
     <tr><th>Channel</th>{notes && <th>Note</th>}</tr>
     {surface.install.map(([line, note]) => (
       <tr><td><code>{line}</code></td>{notes && <td>{parts(note || '').map((x) => x.code ? <code>{x.part}</code> : x.part)}</td>}</tr>

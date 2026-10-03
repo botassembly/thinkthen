@@ -55,6 +55,7 @@ A 0.1.x release follows the same branch rule (ticket 0391):
 2. The version bump lands only on `release/0.1`, as its own commit: `sdlc/scripts/versions --set 0.1.x` and the hand-written copies of step 2 that name the old version. Main keeps its version.
 3. The step 2 `git grep`, with the old version in place of 0.0.1, finds only history: changelog headings, test fixtures that name a fixed version, and `gate.yml`'s `MUSTMATCH_VERSION`, which pins a test tool.
 4. The checkpoint of step 3 and the rehearsal of step 5 run on the bumped head of `release/0.1`. Then Ian tags it.
+5. After the 0.1.x release publishes, a ticket on main moves main's public install text to 0.1.x (ticket 0392): the `install.sh` usage comment and its site copy, the release names in the binding READMEs, and the site. Main's version metadata keeps its version, so `versions` still passes on main. A line that names the checkout's own build, such as the Go README's local `pkg-config` file, keeps main's version. The site's Rust `Cargo.toml` asks for `"0.1"`. Cargo then takes the newest published 0.1.x, and the site smoke still builds it against main's crate through its Cargo patch. The site then proves its stale pages again and redeploys from main.
 
 ## 6. The release
 

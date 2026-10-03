@@ -2,7 +2,7 @@
 # Install the thinkthen command from a GitHub release (ticket 0128).
 #
 #   curl -fsSL https://thinkthen.dev/install.sh | sh
-#   curl -fsSL https://thinkthen.dev/install.sh | sh -s -- --version 0.1.0
+#   curl -fsSL https://thinkthen.dev/install.sh | sh -s -- --version 0.1.1
 #
 # It installs to ~/.local/bin, or THINKTHEN_INSTALL_DIR. It refuses a missing or
 # wrong checksum, a staged binary that reports another version, and a symlinked

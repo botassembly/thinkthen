@@ -513,7 +513,7 @@ export const SURFACES = [
     facts: '`$facts` counts this call.',
     errors: 'Each failure arrives as an R condition named for its kind, such as `thinkthen_usage`. Each condition carries `retryable`.',
     settings: '`tt_engine()` takes each setting as an argument and reads the environment for the rest. `record =` writes a recording to a folder. `replay =` answers from that recording with no connection.',
-    install: [['install.packages("thinkthen")', null]],
+    install: [['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'R-universe builds the package from each release.']],
     particular: [
       'A column goes in and the answered column is in `$value`.',
     ],
