@@ -1,6 +1,6 @@
 # 0396: Move main's public install text to 0.1.2
 
-Status: review. Lane claude-0. Branch `ticket/0396-main-install-text-0-1-2`. Parent: release-process.md section 5, step 5 of the 0.1.x list.
+Status: landed. Lane claude-0. Branch `ticket/0396-main-install-text-0-1-2`. Parent: release-process.md section 5, step 5 of the 0.1.x list.
 
 Milestone: 0.1
 
@@ -32,3 +32,7 @@ Milestone: 0.1
 ## What the build taught us
 
 - The non-strict check named 22 install pages. The strict check also flagged 117 function-page samples, since engine and binding changes since 0.1.1 staled them. `smoke-bindings.mjs` replayed 163 samples offline, and the strict check reports 350 samples matching their proofs and no page to prove again.
+
+## Review
+
+- Ticket and code review: one fresh read-only reviewer read both. ACCEPT, with no findings. In a clean checkout, `check-binding-proofs.mjs --strict` matched 350 samples and `sdlc/scripts/lint` passed.
