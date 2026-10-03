@@ -13,7 +13,7 @@ Ticket 0128 phase 4 names this record. It records the three release runs, what e
 | 5. Tag and dispatch | Ian, agent | Done three times: `v0.1.0` at `b691a2bc6` (run 37035814818), `v0.1.1` at `9463cef05` (run 37059415069) and `v0.1.2` at `08328c9c0` (run 37130570517). The agent tagged and dispatched 0.1.2 under Ian's approval of 2026-10-03 |
 | 6. Approve each publish job and check each registry | Ian, agent | Done for 0.1.1 and 0.1.2. For 0.1.2, Ian's first approval did not register; at Ian's "approve it", the agent approved the `release` environment. The registry list below gives each result |
 | 7. Run `pages.yml` | Agent | Done. Pages run 37141801797 deployed main `8f5310e9c` (ticket 0396) on 2026-10-03, and the live `install.sh` names 0.1.2 |
-| 8. The public install checks | Agent | Done 2026-10-03. Every live channel installs 0.1.1 and answers offline, except `gem install` on macOS and R-universe. With 0.1.2, `gem install` on macOS passed on the M5. R-universe has not built 0.1.2 yet. See "Public install checks" and the 0.1.2 section below |
+| 8. The public install checks | Agent | Done 2026-10-03. Every live channel installs 0.1.1 and answers offline, except `gem install` on macOS and R-universe. With 0.1.2, `gem install` on macOS passed on the M5. R-universe built 0.1.2, and its Linux binary installed with no Rust in a fresh R 4.6.1 container. See "Public install checks" and the 0.1.2 section below |
 | 9. Delete the four local registry tokens and the rehearsal drafts | Ian | Done. Every rehearsal draft is deleted. Ian said on 2026-10-03 that he made no upload tokens, so none exist to delete |
 
 ## 0.1.0: run 37035814818
@@ -46,6 +46,8 @@ Ticket 0394 drops the macOS version from the macOS gem platforms, so one gem ser
 
 Every build, smoke and publish job passed on the first attempt. The `publish` job made GitHub release v0.1.2 public and created tag `libraries/go/v0.1.2`.
 
+R-universe synced after the release went public. Its build run 37142825335 passed. In a fresh `rocker/r-ver` container with R 4.6.1 and no cargo, `install.packages("thinkthen")` from `https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/` installed 0.1.2, and `library(thinkthen)` loaded it. The plain address `https://botassembly.r-universe.dev` served the source package there, which failed for lack of cargo. The container and its image were removed afterwards.
+
 The M5 check, 2026-10-03: with Ruby 3.4.11 on macOS 26, `gem install thinkthen` in a scratch gem folder installed `thinkthen-0.1.2-arm64-darwin`, and `require "thinkthen"` loaded it. The scratch folder was removed.
 
 ## What each registry holds
@@ -62,7 +64,7 @@ The M5 check, 2026-10-03: with Ruby 3.4.11 on macOS 26, `gem install thinkthen` 
 | Homebrew | `botassembly/homebrew-thinkthen` formula | 0.1.2 |
 | Packagist | `botassembly/thinkthen` | v0.1.2 |
 | Go | tag `libraries/go/v0.1.2` | 0.1.2 |
-| R-universe | `botassembly` | not built yet. Its last sync ran at 13:36 UTC on 2026-10-03, before v0.1.2 published |
+| R-universe | `thinkthen` under `botassembly` | 0.1.2. Build run 37142825335 in `r-universe/botassembly` built the source package and every Linux, macOS and Windows binary. Only the WebAssembly build failed. ThinkThen does not ship that target |
 | GitHub | release v0.1.2 | public, Latest |
 
 Each registry also keeps its earlier 0.1 versions.
@@ -88,7 +90,7 @@ Results, 2026-10-03. Each check installed one channel the way its README or inst
 | pub.dev | `dart pub add thinkthen_dart`, with the C archive | Dart stable | 0.1.1 | Pass |
 | Packagist | `composer require botassembly/thinkthen`, with the C archive | PHP 8.3 with FFI | v0.1.1 | Pass |
 | Go | `go get github.com/botassembly/thinkthen/libraries/go@v0.1.1`, with the C archive | Go 1.27 | v0.1.1 | Pass |
-| R-universe | none yet | | | Not built. Its last update ran on 2026-10-02, before any release existed, and failed to find `*release`. It had not run again by the time of these checks |
+| R-universe | none yet | | | Not built for 0.1.1. R-universe built 0.1.2, as the 0.1.2 section records. Its last update ran on 2026-10-02, before any release existed, and failed to find `*release`. It had not run again by the time of these checks |
 | C library | `thinkthen-c-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | gcc on Ubuntu 24.04 | header and `thinkthen.pc`: 0.1.1 | Pass |
 | SQLite | `thinkthen-sqlite-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | SQLite 3.50.4 | archive name only | Pass. Ubuntu 24.04's SQLite 3.45.1 refuses the extension with a message naming 3.50.0 |
 | DuckDB | `thinkthen-duckdb-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | DuckDB 1.5.5 | `extension_version` 0.1.1 | Pass |
@@ -106,7 +108,7 @@ Findings:
 
 ## What stays open
 
-- R-universe: R-universe syncs on its own schedule, and its last sync ran before v0.1.2 published. The 0.1.1 build failed on the lock problem that ticket 0395 fixes in 0.1.2. The queue owner checks the next 0.1.2 build and records it here
+- The R install line on Linux. R-universe serves Linux the source package, which needs Rust's `cargo` and `rustc`. The Linux binaries live at a separate address. A quick fix names that address on the install page and makes the package say when cargo is missing.
 - Issue `2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md`: the `ruby` platform gem on RubyGems is still the 0.0.1 placeholder. A host with no platform gem, or a Ruby older than 3.4, installs it with no message. Ian has no RubyGems yank step today, and he ruled on 2026-10-03 that this waits unless it is a security problem. It is not one: the placeholder holds no code that runs.
 - Ticket 0393: npm publishes with staged publishing, so Ian can turn direct publishing off again on npmjs.com.
 - Issue `2026-10-03-polars-deadline-test-races-its-deadline-under-load.md`: one Polars test failed once under load during the 0.1.2 checkpoint.
