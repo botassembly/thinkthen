@@ -8,19 +8,17 @@ Every open ticket and open issue carries a `Milestone:` line with `0.1`, `0.2` o
 
 Outcome: the first public release, on every registry, with every surface and binding (ruling 10 of [cleanup-2026-09-30.md](cleanup-2026-09-30.md)).
 
-Exit criteria:
+Exit criteria, all met on 2026-10-03. 0.1.1 is published on every registry, and GitHub release v0.1.1 is public. The record is [0128-release-0-1.md](../records/0128-release-0-1.md).
 
 1. Done: a clean release rehearsal. Every job passed through `draft` in runs 36945370940, 36998358908 and 37010060315.
 2. Done: release QA's round 5 was clean on `checkpoint/surfaces/2026-10-02-1` (`4e880cdf6`).
 3. Done: registry setup for every registry the release workflow publishes to. crates.io, PyPI, npm and RubyGems are set up. NuGet publishes by trusted publishing. pub.dev holds `thinkthen_dart` 0.0.1 under its publisher, with automated publishing enabled. Maven Central has its namespace verified, its secrets set and its signing key on the public key servers. The Homebrew tap repo `botassembly/homebrew-thinkthen` exists with its deploy key. The `release` environment has required reviewers and a `v*` tag policy. The `v-tags` ruleset is in place, and `RELEASE_ARMED` is `true`.
 4. Done: tickets 0149 and 0157 are closed.
-5. Ian gives the go to dispatch the real release.
+5. Done: Ian gave the go. Release run 37035814818 from `v0.1.0` published only Maven Central, pub.dev and the Homebrew tap. Release run 37059415069 from `v0.1.1` published every registry, after Ian allowed direct publishing on npm for the rerun.
 
 R-universe and Packagist are set up. The registry repo `botassembly/botassembly.r-universe.dev` exists, and Ian installed the R-universe GitHub app on `botassembly`. Packagist lists `botassembly/thinkthen`, and its GitHub webhook works; its last delivery returned 202. The release workflow has no job for either one. Packagist reads the `v0.1.0` tag through its webhook. R-universe builds from the published GitHub release. Ticket 0128's Phase 4 step 8 includes the R-universe and Packagist install checks.
 
-Blockers, refreshed 2026-10-02:
-
-- Ticket 0389 moved the `nuget` and `pub` jobs to trusted publishing. It landed on main and on `release/0.1`. pub.dev publishes from the release-mode dispatch on Ian's `v0.1.0` tag. A change to `release.yml` restarts ticket 0128's Phase 4 checklist at step 2, so one more rehearsal from `release/0.1` follows.
+Blockers, refreshed 2026-10-03: none. Ticket 0128 waits only on its public install checks, Phase 4 step 8, and the Pages deploy that follows.
 
 The 2026-10-02 sweep closed twelve 0.1 tickets that waited only on release-target proof. Ticket 0374's installed-file cases ran on all four release runners in run 37010060315. The sweep also closed the README issue. Its overhead sentence landed in `248bc6aa4`.
 
@@ -33,7 +31,8 @@ Path to 0.1:
 3. Done: the checkpoint `checkpoint/surfaces/2026-10-02-1` was tagged on `4e880cdf6`. Release QA round 5 ran on it and was clean.
 4. Done: ticket 0387 landed the release commit at `ff7120f89`. The coordinator tagged `rc/0.1.0-rc.1` on `4e880cdf6` and cut `release/0.1` there. Run 37010060315 passed from `release/0.1`.
 5. Done: ticket 0389 landed on main and on `release/0.1`. Registry setup and the arming switch are done. Tickets 0149 and 0157 closed.
-6. Left: one more rehearsal from `release/0.1` (queue owner). Ian's go: he tags `v0.1.0`, dispatches release mode and approves each publish job. Ticket 0128 phase 4 steps 5 to 9 follow, including the history reset and the public install checks.
+6. Done: ticket 0391 fixed the PyPI, npm and NuGet steps that failed in the 0.1.0 run. Checkpoint `checkpoint/surfaces/2026-10-02-2` and rehearsal 37048376945 passed on `release/0.1`. Ian tagged `v0.1.1` at `9463cef05`, and run 37059415069 published it.
+7. Left: the public install checks of ticket 0128 phase 4 step 8, then the Pages deploy.
 
 Open items:
 
@@ -71,12 +70,23 @@ Open items:
 - [0383: Windows stage 1: the Node addon ships for Windows x86-64](../tickets/0383-windows-node-addon.md)
 - [0384: Windows stage 1: the C# package loads the Windows DLL](../tickets/0384-windows-csharp.md)
 - [0385: Windows stage 1: the JVM binding loads the Windows DLL](../tickets/0385-windows-jvm.md)
+- [0393: npm publishes through staged publishing](../tickets/0393-npm-staged-publishing.md)
 - [A Flutter app file in the release bundle](../issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md)
 - [The bindings and SQL extensions cannot name a backend](../issues/2026-10-01-bindings-and-sql-extensions-name-no-backend.md)
 - [`rank --threshold P` keeps only records at or above a probability](../issues/2026-10-01-rank-keeps-only-records-over-a-threshold.md)
 - [`score --level NAME=MEANING` describes a level on the command line](../issues/2026-10-01-score-levels-described-on-the-command-line.md)
 - [SQL named forms `thinkthen_rank` and `thinkthen_filter`](../issues/2026-10-01-sql-names-for-rank-and-filter.md)
 - [SQLite `thinkthen_find` drops its `model` setting](../issues/2026-10-01-sqlite-find-drops-its-model-setting.md)
+- [`rank --details` prints `"value": null` on every row](../issues/2026-10-03-rank-details-prints-value-null.md)
+- [Search features: positions, several questions, and grep-style output](../issues/2026-10-03-search-features-positions-several-questions-and-grep-style-output.md)
+- [Help and warning gaps from the transcript how-to](../issues/2026-10-03-help-gaps-from-the-transcript-how-to.md)
+- [A glossary for call, request and decision](../issues/2026-10-03-glossary-call-request-decision.md)
+- [AGENTS.md tells outside agents how to report](../issues/2026-10-03-agents-md-tells-outside-agents-how-to-report.md)
+- [The doc tests gate each checkpoint and each release](../issues/2026-10-03-doc-tests-gate-checkpoints-and-releases.md)
+- [`native_install` loses the C library when `CARGO_TARGET_DIR` is set](../issues/2026-10-03-native-install-ignores-cargo-target-dir.md)
+- [The pandas binding refuses a Series on four functions, and DuckDB's recognize takes no kind descriptions](../issues/2026-10-03-pandas-series-and-duckdb-recognize-descriptions.md)
+- [The `ruby` platform gem on RubyGems is still the 0.0.1 placeholder](../issues/2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md)
+- Draft functions, each waiting on its experiment: [link](../issues/2026-10-03-draft-function-link.md), [verify](../issues/2026-10-03-draft-function-verify.md), [extract](../issues/2026-10-03-draft-function-extract.md), [navigate](../issues/2026-10-03-draft-function-navigate.md), and the [Markdown repair tool](../issues/2026-10-03-draft-markdown-repair-tool.md)
 
 ## later
 
@@ -106,9 +116,11 @@ Open items:
 - [A batch command that runs many questions in one process, after 0.1](../issues/2026-09-30-batch-command-runs-many-questions-in-one-process.md)
 - [OpenTelemetry traces for backend calls, after 0.1](../issues/2026-09-30-opentelemetry-traces-after-0-1.md)
 - [The Polars door cannot test lazy streaming](../issues/2026-09-30-polars-door-cannot-test-lazy-streaming.md)
-- [A proxy service in front of the backends, after 0.1](../issues/2026-09-30-proxy-service-for-shared-limits-and-traces.md)
+- [The proxy: a second program that serves the functions](../issues/2026-09-30-proxy-service-for-shared-limits-and-traces.md)
 - [Three status phrases pass the site word check](../issues/2026-09-30-site-replay-folders-have-no-fixture.md)
 - [About a third of the spec's "no calls" edges show only after a real send, and the spec lags the build in places](../issues/2026-09-30-spec-no-calls-edges-need-a-real-send.md)
 - [The systemone adapter sends criteria descriptions as JSON objects that Ollama refuses](../issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md)
 - [Zig 0.15.2's linker drops constant alignment](../issues/2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md)
 - [`tag` takes a separate cutoff for each label](../issues/2026-10-01-tag-cutoff-per-label.md)
+- [The command's own time: the usage fsync and a new connection per run](../issues/2026-10-03-command-overhead-fsync-and-connection.md)
+- [Two site paths point at bench runs that left the bench's main branch](../issues/2026-10-03-site-bench-paths-point-at-deleted-runs.md)
