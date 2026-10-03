@@ -1,6 +1,6 @@
 # 0395: Fix the R package's published-shape lock update that failed on R-universe
 
-Status: in progress. Lane claude-3. Branch `ticket/0395-r-universe-published-lock`. Parent: ticket 0128 phase 4. Cherry-picked to `release/0.1` under ADR 0116 item 5, so the fix ships in 0.1.2.
+Status: in progress. Lane claude-3. Branch `ticket/0395-r-universe-published-lock`. Parent: ticket 0128 phase 4. To be cherry-picked to `release/0.1` under ADR 0116 item 5, so the fix ships in 0.1.2.
 
 Milestone: 0.1
 
@@ -9,7 +9,7 @@ Milestone: 0.1
 1. In the published shape, `libraries/r/thinkthen/tools/config.R` syncs the shim's lock with `cargo update --workspace` after it rewrites the engine dependency from a path to `=VERSION` on crates.io. The lock gains the registry `thinkthen` entry and keeps every other pin. The `cargo build --locked` in `Makevars` then succeeds.
 2. R-universe's two steps succeed on a clean copy of `libraries/r/thinkthen`: `R CMD build`, then `R CMD INSTALL` of the tarball, with network and an empty cargo home.
 3. The outside-the-repository step of `libraries/r/check.sh` serves the engine the way crates.io does. A private cargo home replaces crates-io with a local directory source. That source holds the tarball's vendored registry tree and `cargo package`'s copy of `thinkthen`. The step stays offline.
-4. The step also checks that the lock's `thinkthen` entry comes from the crates.io registry and that every package keeps its version.
+4. The step also checks that the lock's `thinkthen` entry names the crates.io registry as its source and that no package appears, goes, or changes version. The stand-in holds one version of each crate, so this offline check guards against a dropped or added package. Only the container run against real crates.io shows cargo keeping a pin it could have raised.
 
 ## Evidence
 
@@ -24,11 +24,11 @@ Milestone: 0.1
 - Keeps: the three shapes and how `config.R` picks them; the published shape's `=VERSION` rewrite and its single-path-dependency guard; `Makevars`' `--locked` build; the tarball and repository shapes' `--locked --offline` builds; `check.sh`'s rule that every `cargo build|test|clippy|run|vendor|package|fetch` call carries `--locked --offline`; the outside step's offline run, its empty target, and its answer check.
 - Changes: `libraries/r/` only.
   - `libraries/r/thinkthen/tools/config.R`: `cargo update --workspace` and a comment saying why `--package thinkthen` cannot match.
-  - `libraries/r/check.sh`: the outside step builds a directory source from the tarball's `vendor/registry` and the packed crate, replaces crates-io with it in the private cargo home, and checks the lock's `thinkthen` source and the unchanged pins.
+  - `libraries/r/check.sh`: the outside step builds a directory source from the tarball's `vendor/registry` and its `vendor/thinkthen`, replaces crates-io with it in the private cargo home, and checks the lock's `thinkthen` source and the unchanged pins. A directory source needs `.cargo-checksum.json` in each crate folder. The vendored crates carry theirs, and the step writes `{"files":{},"package":null}` for `thinkthen`, so its lock entry has a registry `source` and no `checksum` line. The step no longer runs its own `cargo package` or links the builder's registry cache.
 - Proof: the R check, two container builds on blue, and the record checks.
   - `bash libraries/r/check.sh` passes on this branch. With `config.R` put back to `--package thinkthen`, its outside step fails with the R-universe error.
   - On blue, in `--rm` `rocker/r-ver:4.6` containers running `R CMD build` and then `R CMD INSTALL` of the tarball, with the image removed afterwards:
-    - Against real crates.io: the `v0.1.1` package folder with this branch's `config.R` installs and loads 0.1.1. crates.io has no 0.1.2 until the release publishes, so 0.1.1 is the newest real proof.
+    - Against real crates.io: the `v0.1.1` package folder with this branch's `config.R` installs and loads 0.1.1. crates.io has no 0.1.2 until the release publishes, so 0.1.1 is the newest real proof. The run diffs the tarball's `Cargo.lock` against the lock after configure, and only the `thinkthen` entry changes.
     - At 0.1.2: the cherry-picked `release/0.1` package folder installs and loads 0.1.2. Its cargo home replaces crates-io with a directory source of `cargo package`'s 0.1.2 crate and its vendored dependencies, as the check does.
   - `python3 sdlc/scripts/tickets` and `sdlc/scripts/lint` with the private-names list.
   - On the new `release/0.1` head, `bash libraries/r/check.sh`.
