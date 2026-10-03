@@ -1,6 +1,6 @@
 # 0128: the 0.1 release
 
-Ticket 0128 phase 4 names this record. It records the two release runs, what each registry holds, and what stays open. Ticket 0391 fixed the failures of the first run.
+Ticket 0128 phase 4 names this record. It records the three release runs, what each registry holds, and what stays open. Ticket 0391 fixed the failures of the first run.
 
 ## The checklist
 
@@ -9,12 +9,12 @@ Ticket 0128 phase 4 names this record. It records the two release runs, what eac
 | 1. Ian's setup list | Ian | Done. Milestone 0.1 exit criterion 3 lists the registry setup. Ian added the crates.io, RubyGems, PyPI and npm trusted publishers between the two runs |
 | 2. Rehearsal on main | Ian | Done: run 36998358908 on main `f65faea4e` |
 | 3. The release commit | Agent, coordinator | Done: ticket 0387 at `ff7120f89` |
-| 4. Rehearsal on the release commit | Ian | Done: run 37010060315 from `release/0.1` at `4e880cdf6`. For 0.1.1, run 37048376945 from `release/0.1` at `18458f33b` |
-| 5. Tag and dispatch | Ian | Done twice: `v0.1.0` at `b691a2bc6` (run 37035814818) and `v0.1.1` at `9463cef05` (run 37059415069) |
-| 6. Approve each publish job and check each registry | Ian, agent | Done for 0.1.1. The registry list below gives each result |
-| 7. Run `pages.yml` | Ian | Open. On main, the usage comment in `install.sh` and `site/public/install.sh` and `site/examples/install/rust/files/Cargo.toml` still name 0.1.0. Pages deploys after a main change moves them to 0.1.1 |
+| 4. Rehearsal on the release commit | Ian | Done: run 37010060315 from `release/0.1` at `4e880cdf6`. For 0.1.1, run 37048376945 from `release/0.1` at `18458f33b`. For 0.1.2, run 37126990511 from `release/0.1` at `08328c9c0` |
+| 5. Tag and dispatch | Ian, agent | Done three times: `v0.1.0` at `b691a2bc6` (run 37035814818), `v0.1.1` at `9463cef05` (run 37059415069) and `v0.1.2` at `08328c9c0` (run 37130570517). The agent tagged and dispatched 0.1.2 under Ian's approval of 2026-10-03 |
+| 6. Approve each publish job and check each registry | Ian, agent | Done for 0.1.1 and 0.1.2. For 0.1.2, Ian's first approval did not register; at Ian's "approve it", the agent approved the `release` environment. The registry list below gives each result |
+| 7. Run `pages.yml` | Agent | PAGES_PENDING |
 | 8. The public install checks | Agent | Done 2026-10-03. Every live channel installs 0.1.1 and answers offline, except `gem install` on macOS. See "Public install checks" below |
-| 9. Delete the four local registry tokens and the rehearsal drafts | Ian | Partly done. Every rehearsal draft is deleted. This record has no confirmation that the local registry tokens are deleted |
+| 9. Delete the four local registry tokens and the rehearsal drafts | Ian | Done. Every rehearsal draft is deleted. Ian said on 2026-10-03 that he made no upload tokens, so none exist to delete |
 
 ## 0.1.0: run 37035814818
 
@@ -40,22 +40,32 @@ Ticket 0391 fixed the PyPI pin, the npm path and the NuGet header on main. The f
 
 The release page holds the command, C, SQLite, DuckDB and PostgreSQL 16 archives for all four targets, each with a `.sha256` file. It also holds the wheels, the gems, the npm package, the first-run sample and the Linux x86-64 language packages. The extension files are named `thinkthen-duckdb-0.1.1-<target>.tar.gz`, `thinkthen-sqlite-0.1.1-<target>.tar.gz` and `thinkthen-postgresql16-0.1.1-<target>.tar.gz`. The targets are `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `x86_64-apple-darwin` and `aarch64-apple-darwin`.
 
+## 0.1.2: run 37130570517
+
+Ticket 0394 drops the macOS version from the macOS gem platforms, so one gem serves every macOS. Ticket 0395 makes the R package build on R-universe: `tools/config.R` runs `cargo update --workspace`, and `check.sh` builds against a crates.io stand-in. Both landed on main and were cherry-picked to `release/0.1`, and the 0.1.2 bump landed there alone. Checkpoint `checkpoint/surfaces/2026-10-03-1` passed on `abac3ce61`. Rehearsal 37126990511 from `release/0.1` at `08328c9c0` was clean, and its two Mac smoke jobs installed the new `arm64-darwin` and `x86_64-darwin` gems. The agent tagged `v0.1.2` at `08328c9c0` and dispatched release mode.
+
+Every build, smoke and publish job passed on the first attempt. The `publish` job made GitHub release v0.1.2 public and created tag `libraries/go/v0.1.2`.
+
+The M5 check, 2026-10-03: with Ruby 3.4.11 on macOS 26, `gem install thinkthen` in a scratch gem folder installed `thinkthen-0.1.2-arm64-darwin`, and `require "thinkthen"` loaded it. The scratch folder was removed.
+
 ## What each registry holds
 
 | Registry | Name | Version |
 | --- | --- | --- |
-| crates.io | `thinkthen` | 0.1.1 |
-| PyPI | `thinkthen`, four abi3 wheels | 0.1.1 |
-| npm | `thinkthen` | 0.1.1 |
-| RubyGems | `thinkthen`, four platform gems | 0.1.1. The `ruby` platform gem is still the 0.0.1 placeholder |
-| NuGet | `Botassembly.ThinkThen` | 0.1.1 |
-| Maven Central | `io.github.botassembly:thinkthen-jvm` | 0.1.0 and 0.1.1 |
-| pub.dev | `thinkthen_dart` | 0.1.1 |
-| Homebrew | `botassembly/homebrew-thinkthen` formula | 0.1.1 |
-| Packagist | `botassembly/thinkthen` | v0.1.0 and v0.1.1 |
-| Go | tag `libraries/go/v0.1.1` | 0.1.1 |
-| R-universe | `botassembly` | building from the 0.1.1 release |
-| GitHub | release v0.1.1 | public, Latest |
+| crates.io | `thinkthen` | 0.1.2 |
+| PyPI | `thinkthen`, four abi3 wheels | 0.1.2 |
+| npm | `thinkthen` | 0.1.2 |
+| RubyGems | `thinkthen`, gems for `x86_64-linux`, `aarch64-linux`, `x86_64-darwin` and `arm64-darwin` | 0.1.2. The `ruby` platform gem is still the 0.0.1 placeholder |
+| NuGet | `Botassembly.ThinkThen` | 0.1.2 |
+| Maven Central | `io.github.botassembly:thinkthen-jvm` | 0.1.2 |
+| pub.dev | `thinkthen_dart` | 0.1.2 |
+| Homebrew | `botassembly/homebrew-thinkthen` formula | 0.1.2 |
+| Packagist | `botassembly/thinkthen` | v0.1.2 |
+| Go | tag `libraries/go/v0.1.2` | 0.1.2 |
+| R-universe | `botassembly` | R_UNIVERSE_PENDING |
+| GitHub | release v0.1.2 | public, Latest |
+
+Each registry also keeps its earlier 0.1 versions.
 
 ## Public install checks
 
@@ -96,9 +106,12 @@ Findings:
 
 ## What stays open
 
-- Ticket 0394 and a 0.1.2 release: `gem install thinkthen` on macOS. R-universe has not built the package yet.
-- Phase 4 step 7: Pages deploys once main's install lines name 0.1.1.
-- Phase 4 step 9: Ian confirms the four local registry tokens are deleted. Trusted publishing needs none of them.
-- The history reset. Ian's ruling of 2026-09-26 (ticket 0128, "Retained history step") asked for a fresh one-commit history before public release. The reset did not happen, and the repository is public with its full history. The tags `v0.1.0`, `v0.1.1` and `libraries/go/v0.1.1`, the Go module proxy and the registries' provenance statements now name existing commits, so a reset would break them. This is Ian's decision: drop the step, or reset knowing what it breaks.
+- R-universe: R_UNIVERSE_OPEN
+- Issue `2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md`: the `ruby` platform gem on RubyGems is still the 0.0.1 placeholder. A host with no platform gem, or a Ruby older than 3.4, installs it with no message. Ian has no RubyGems yank step today, and he ruled on 2026-10-03 that this waits unless it is a security problem. It is not one: the placeholder holds no code that runs.
 - Ticket 0393: npm publishes with staged publishing, so Ian can turn direct publishing off again on npmjs.com.
-- Issue `2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md`: the `ruby` platform gem on RubyGems is still the 0.0.1 placeholder.
+- Issue `2026-10-03-polars-deadline-test-races-its-deadline-under-load.md`: one Polars test failed once under load during the 0.1.2 checkpoint.
+
+## Closed decisions
+
+- The history reset. Ian's ruling of 2026-09-26 asked for a fresh one-commit history before public release. The repository went public with its full history, and the tags, the Go module proxy and the registries' provenance statements now name its commits. On 2026-10-03 Ian left the choice to the agent. The agent dropped the step, because a reset would break every published 0.1 version's provenance.
+- The local registry tokens. Ian made none, so phase 4 step 9 has nothing to delete. Trusted publishing needs no token.
