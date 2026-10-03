@@ -130,21 +130,33 @@ R_LIBS="$scratch/lib:$libs" Rscript -e 'stopifnot(startsWith(find.package("think
   { echo "r: the facts run would load thinkthen from outside the tarball install" >&2; exit 1; }
 R_LIBS="$scratch/lib:$libs" bash tests/with-backend.sh "$backend" tests/facts.R
 
-echo "== r: outside the repository, against the packed crate with no network (ticket 0128)"
+echo "== r: outside the repository, against a stand-in for crates.io with no network (tickets 0128, 0395)"
 # R-universe builds this package's folder alone. The copy has no repository
 # around it, so the published shape asks crates.io for the engine. A private
-# CARGO_HOME's [patch.crates-io] points that at `cargo package`'s copy of the
-# crate, wherever R builds, and CARGO_NET_OFFLINE refuses any fetch.
-mkdir -p "$scratch/outside" "$scratch/home" "$scratch/crate" "$scratch/outside-lib"
-ln -s "${CARGO_HOME:-$HOME/.cargo}/registry" "$scratch/home/registry"
-(cd "$root" && CARGO_TARGET_DIR="$scratch/target" cargo package --locked --offline --no-verify --allow-dirty --quiet --package thinkthen)
-tar -xzf "$scratch"/target/package/thinkthen-*.crate -C "$scratch/crate" --strip-components=1
+# CARGO_HOME replaces crates-io with a directory source: the tarball's vendored
+# registry tree plus its packed thinkthen crate. Cargo sees thinkthen as a
+# registry package, as on crates.io, and CARGO_NET_OFFLINE refuses any fetch.
+# A [patch.crates-io] path would keep the lock's path entry and hide 0395.
+mkdir -p "$scratch/outside" "$scratch/home" "$scratch/stand-in" "$scratch/outside-lib"
+tar -xzf "$tarball" -C "$scratch/stand-in" thinkthen/src/rust/vendor
+registry=$scratch/stand-in/thinkthen/src/rust/vendor/registry
+mv "$scratch/stand-in/thinkthen/src/rust/vendor/thinkthen" "$registry/thinkthen"
+printf '{"files":{},"package":null}\n' >"$registry/thinkthen/.cargo-checksum.json"
+printf '[source.crates-io]\nreplace-with = "stand-in"\n\n[source.stand-in]\ndirectory = "%s"\n' "$registry" >"$scratch/home/config.toml"
 cp -R "$scratch/tree/libraries/r/thinkthen" "$scratch/outside/thinkthen"
-printf '[patch.crates-io]\nthinkthen = { path = "%s" }\n' "$scratch/crate" >"$scratch/home/config.toml"
 (cd "$scratch/outside" && RUSTUP_TOOLCHAIN=$pinned CARGO_HOME="$scratch/home" CARGO_TARGET_DIR="$scratch/outside-target" CARGO_NET_OFFLINE=true \
   R CMD INSTALL -l "$scratch/outside-lib" thinkthen >"$scratch/outside.log" 2>&1) ||
   { cat "$scratch/outside.log" >&2; exit 1; }
 grep -q '^thinkthen = { version = "=' "$scratch/outside/thinkthen/src/rust/Cargo.toml" ||
   { echo "the outside build kept the path dependency" >&2; exit 1; }
+# The lock names the registry engine, and no package appears, goes, or moves.
+# The stand-in holds one version of each crate, so only the container proof of
+# ticket 0395 shows cargo keeping a pin it could have raised.
+lock=$scratch/outside/thinkthen/src/rust/Cargo.lock
+grep -A2 '^name = "thinkthen"$' "$lock" | grep -qx 'source = "registry+https://github.com/rust-lang/crates.io-index"' ||
+  { echo "the outside build's lock does not take thinkthen from crates.io" >&2; exit 1; }
+pins() { awk '/^name = /{ n = $3 } /^version = /{ print n, $3 }' "$1" | sort; }
+[ "$(pins "$scratch/tree/libraries/r/thinkthen/src/rust/Cargo.lock")" = "$(pins "$lock")" ] ||
+  { echo "the outside build changed a locked package" >&2; exit 1; }
 R_LIBS="$scratch/outside-lib:$libs" bash tests/with-backend.sh "$backend" "$scratch/answer.R"
 echo "r: check passed"
