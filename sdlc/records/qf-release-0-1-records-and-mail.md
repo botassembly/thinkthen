@@ -12,7 +12,7 @@ Status: built in lane claude-2, branch `ticket/quick-fix-release-0-1-records`, o
 - Ticket 0128's status says it is done except Phase 4 step 8, the public install checks, and step 7, the Pages deploy.
 - milestones.md marks the 0.1 exit criteria met and lists the new 0.2 and later items.
 - Ticket 0393, reserved with `pm ticket new`: npm publishes through staged publishing.
-- Fifteen new issues, each answering a mail ask: the `rank --details` null value, the search features, the help gaps, the glossary, outside-agent reporting, the doc-test gate, `native_install` and `CARGO_TARGET_DIR`, the pandas and DuckDB binding gaps, the RubyGems placeholder, five draft functions and tools, the command's overhead, and the bench's moved runs.
+- Sixteen new issues, each answering a mail ask: the `rank --details` null value, the search features, the help gaps, the glossary, outside-agent reporting, the doc-test gate, `native_install` and `CARGO_TARGET_DIR`, the pandas and DuckDB binding gaps, the RubyGems placeholder, five draft functions and tools, the command's overhead, and the bench's moved runs.
 - The proxy issue is rewritten with Ian's decisions of 2026-10-02. `ten-use-cases.md` and `libraries/command.md` point at it. `specification/roadmap.md` changes in the first change outside `sdlc/`, as the issue says.
 - The run-facts issue gains the missing `server_ms` item.
 

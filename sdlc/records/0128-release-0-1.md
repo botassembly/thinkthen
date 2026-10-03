@@ -12,9 +12,9 @@ Ticket 0128 phase 4 names this record. It records the two release runs, what eac
 | 4. Rehearsal on the release commit | Ian | Done: run 37010060315 from `release/0.1` at `4e880cdf6`. For 0.1.1, run 37048376945 from `release/0.1` at `18458f33b` |
 | 5. Tag and dispatch | Ian | Done twice: `v0.1.0` at `b691a2bc6` (run 37035814818) and `v0.1.1` at `9463cef05` (run 37059415069) |
 | 6. Approve each publish job and check each registry | Ian, agent | Done for 0.1.1. The registry list below gives each result |
-| 7. Run `pages.yml` | Ian | Open. Main still names 0.1.0 in its install lines. Pages deploys after a main change moves them to 0.1.1 |
+| 7. Run `pages.yml` | Ian | Open. On main, the usage comment in `install.sh` and `site/public/install.sh` and `site/examples/install/rust/files/Cargo.toml` still name 0.1.0. Pages deploys after a main change moves them to 0.1.1 |
 | 8. The public install checks | Agent | Open. See "Public install checks" below |
-| 9. Delete the rehearsal drafts | Ian | Done. Every rehearsal draft is deleted |
+| 9. Delete the four local registry tokens and the rehearsal drafts | Ian | Partly done. Every rehearsal draft is deleted. This record has no confirmation that the local registry tokens are deleted |
 
 ## 0.1.0: run 37035814818
 
@@ -67,5 +67,7 @@ Results: not yet recorded.
 
 - Phase 4 step 8, the public install checks, above.
 - Phase 4 step 7: Pages deploys once main's install lines name 0.1.1.
+- Phase 4 step 9: Ian confirms the four local registry tokens are deleted. Trusted publishing needs none of them.
+- The history reset. Ian's ruling of 2026-09-26 (ticket 0128, "Retained history step") asked for a fresh one-commit history before public release. The reset did not happen, and the repository is public with its full history. The tags `v0.1.0`, `v0.1.1` and `libraries/go/v0.1.1`, the Go module proxy and the registries' provenance statements now name existing commits, so a reset would break them. This is Ian's decision: drop the step, or reset knowing what it breaks.
 - Ticket 0393: npm publishes with staged publishing, so Ian can turn direct publishing off again on npmjs.com.
 - Issue `2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md`: the `ruby` platform gem on RubyGems is still the 0.0.1 placeholder.
