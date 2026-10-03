@@ -107,7 +107,9 @@ for (const surface of SURFACES) {
   for (const [line] of surface.install) {
     const archive = /^thinkthen-([a-z0-9-]+?)-VERSION-TARGET\.tar\.gz$/.exec(line);
     if (!archive) continue;
-    const made = pack.includes(`pack "thinkthen-${archive[1]}-$V-$TARGET.tar.gz"`) || pack.includes(`part_source_wrapper ${archive[1]}`);
+    // A wrapper name ends at a space or a semicolon, so a prefix such as co never matches cobol.
+    const wrapper = new RegExp(`part_source_wrapper ${archive[1]}[ ;]`);
+    const made = pack.includes(`pack "thinkthen-${archive[1]}-$V-$TARGET.tar.gz"`) || wrapper.test(pack);
     if (!made) problems.push(`/install/${surface.slug}/: release-pack makes no archive named ${line}.`);
   }
 }
