@@ -1,6 +1,6 @@
 # 0394: macOS gems install on every macOS version
 
-Status: ready. Reserved 2026-10-03 from the 0.1.1 public install checks. Needs a 0.1.2 release to reach users.
+Status: in progress. Branch `ticket/0394-darwin-gem-platform`. Reserved 2026-10-03 from the 0.1.1 public install checks. A fresh ticket review returned four findings, all answered, then ACCEPT. Needs a 0.1.2 release to reach users.
 
 Milestone: 0.1
 
@@ -45,3 +45,6 @@ Milestone: 0.1
 - The loader's own message on macOS 14 and older.
 
 ## What the build taught us
+
+- `Gem::Platform::CURRENT` is the string `"current"`, not a platform. The first draft called `.os` on it, which would have broken every gem build. The gemspec now reads `Gem::Platform.local`. The stubbed-host proof caught it: stubbing the constant made `Specification#platform=` resolve the host again, so the proof stubs `Gem::Platform.local` instead.
+- Proof as run on the Beelink: `sh libraries/ruby/check.sh` passed with the pinned Ruby 3.4.11 and built `thinkthen-0.1.0-x86_64-linux.gem`. The gemspec with `Gem::Platform.local` stubbed gave `arm64-darwin-24` to `arm64-darwin`, `x86_64-darwin-24` to `x86_64-darwin`, `arm64-darwin-25` to `arm64-darwin`, and kept `x86_64-linux` and `aarch64-linux`. The new `gem_platform` check failed on the published `thinkthen-0.1.1-arm64-darwin-24.gem` and `thinkthen-0.1.1-x86_64-darwin-24.gem` with `the macOS gem arm64-darwin-24 names macOS version 24`. It passed on `thinkthen-0.1.1-x86_64-linux.gem` and on a copy of the arm64 gem re-platformed to `arm64-darwin`.
