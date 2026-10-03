@@ -22,8 +22,9 @@ Milestone: 0.1
   - Why the gate passed: `check.sh`'s outside step (ticket 0128) served the engine through `[patch.crates-io] thinkthen = { path = ... }`. A patch is a path source, so the old sourceless entry survived and `cargo update --package thinkthen` matched it. The check never saw a registry `thinkthen`.
   - Experiment: the same container build with `cargo update --workspace` in place of `--package thinkthen` downloaded `thinkthen v0.1.1` from crates.io, built, installed and loaded 0.1.1.
 - Keeps: the three shapes and how `config.R` picks them; the published shape's `=VERSION` rewrite and its single-path-dependency guard; `Makevars`' `--locked` build; the tarball and repository shapes' `--locked --offline` builds; `check.sh`'s rule that every `cargo build|test|clippy|run|vendor|package|fetch` call carries `--locked --offline`; the outside step's offline run, its empty target, and its answer check.
-- Changes: `libraries/r/` only.
+- Changes: `libraries/r/` and one changelog line.
   - `libraries/r/thinkthen/tools/config.R`: `cargo update --workspace` and a comment saying why `--package thinkthen` cannot match.
+  - `CHANGELOG.md`: the 0.1.2 entry, outside `libraries/r` but text only.
   - `libraries/r/ratchet.R.json`: the R line ceiling rises from 2475 to 2478 for that comment.
   - `libraries/r/check.sh`: the outside step builds a directory source from the tarball's `vendor/registry` and its `vendor/thinkthen`, replaces crates-io with it in the private cargo home, and checks the lock's `thinkthen` source and the unchanged pins. A directory source needs `.cargo-checksum.json` in each crate folder. The vendored crates carry theirs, and the step writes `{"files":{},"package":null}` for `thinkthen`, so its lock entry has a registry `source` and no `checksum` line. The step no longer runs its own `cargo package` or links the builder's registry cache.
 - Proof: the R check, two container builds on blue, and the record checks.

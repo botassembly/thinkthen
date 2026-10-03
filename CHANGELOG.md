@@ -6,6 +6,8 @@ Every release of every surface shares one version number.
 
 The macOS Ruby gems name no macOS version. `gem install thinkthen` on macOS 26 installed the 0.0.1 placeholder, because the 0.1.1 gems matched only darwin 24 (ticket 0394). The gems still need macOS 15.0.
 
+The R package builds on R-universe again. The 0.1.1 source build stopped in configure with `cargo could not resolve thinkthen 0.1.1 from crates.io`, because the lock update named a package the lock no longer held (ticket 0395).
+
 ## 0.1.1 (2026-10-02)
 
 This release fixes the PyPI, npm and NuGet publish steps. 0.1.0 reached only Maven Central, pub.dev and the Homebrew tap. Every surface carries the same code as 0.1.0.
