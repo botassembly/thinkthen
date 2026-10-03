@@ -7,6 +7,8 @@ RubyGems holds `thinkthen` 0.1.1 as four platform gems: `x86_64-linux`, `aarch64
 
 On a platform with no matching gem, such as Windows, `gem install thinkthen` falls back to the newest `ruby` platform gem and installs the 0.0.1 placeholder. A user then gets a gem that does nothing, with no message saying why.
 
+The 0.1.1 public install checks reached the placeholder two more ways. Ruby 3.3 on Linux installed it, because the platform gems need Ruby 3.4. Ruby 3.4.6 on macOS 26 installed it too, because the 0.1.1 macOS gems matched only darwin 24. Ticket 0394 fixes the macOS case. The Ruby floor stays, and the install page now names Ruby 3.4.
+
 Choices:
 
 1. Yank the 0.0.1 placeholder. `gem install` on another platform then fails with RubyGems' own "could not find a valid gem" message. Ian holds the RubyGems login, so the yank is his step. A yank cannot be undone by republishing the same version.
