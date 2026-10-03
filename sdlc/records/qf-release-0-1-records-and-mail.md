@@ -1,6 +1,6 @@
 # Quick Fix qf-release-0-1-records-and-mail: record the 0.1 release and file the open mail asks
 
-Status: built in lane claude-2, branch `ticket/quick-fix-release-0-1-records`, off origin/main `81062bd31`. Records only. Ian can overturn any milestone placement or proposed default here.
+Status: built in lane claude-2, branch `ticket/quick-fix-release-0-1-records`, off origin/main `81062bd31`. A fresh read-only review returned four findings, then one more; all are fixed, and the recheck returned ACCEPT. Records only. Ian can overturn any milestone placement or proposed default here.
 
 ## Why
 
