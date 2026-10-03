@@ -42,9 +42,11 @@ The release page holds the command, C, SQLite, DuckDB and PostgreSQL 16 archives
 
 ## 0.1.2: run 37130570517
 
-Ticket 0394 drops the macOS version from the macOS gem platforms, so one gem serves every macOS. Ticket 0395 makes the R package build on R-universe: `tools/config.R` runs `cargo update --workspace`, and `check.sh` builds against a crates.io stand-in. Both landed on main and were cherry-picked to `release/0.1`, and the 0.1.2 bump landed there alone. Checkpoint `checkpoint/surfaces/2026-10-03-1` passed on `abac3ce61`. Rehearsal 37126990511 from `release/0.1` at `abac3ce61` was clean, and its two Mac smoke jobs installed the new `arm64-darwin` and `x86_64-darwin` gems. Ticket 0395's cherry-pick then landed as `08328c9c0`. Neither the checkpoint nor the rehearsal ran it. The release run built and smoked `08328c9c0` itself, and the R package's first real test is its R-universe build. That build passed. The agent tagged `v0.1.2` at `08328c9c0` and dispatched release mode.
+Ticket 0394 drops the macOS version from the macOS gem platforms, so one gem serves every macOS. Ticket 0395 makes the R package build on R-universe: `tools/config.R` runs `cargo update --workspace`, and `check.sh` builds against a crates.io stand-in. Both landed on main and were cherry-picked to `release/0.1`, and the 0.1.2 bump landed there alone. Checkpoint `checkpoint/surfaces/2026-10-03-1` passed on `abac3ce61`. Rehearsal 37126990511 from `release/0.1` at `abac3ce61` was clean, and its two Mac smoke jobs installed the new `arm64-darwin` and `x86_64-darwin` gems. Ticket 0395's cherry-pick then landed as `08328c9c0`. Neither the checkpoint nor the rehearsal ran it. The release run built and smoked `08328c9c0` itself, and the R package's first real test is its R-universe build. The agent tagged `v0.1.2` at `08328c9c0` and dispatched release mode.
 
 Every build, smoke and publish job passed on the first attempt. The `publish` job made GitHub release v0.1.2 public and created tag `libraries/go/v0.1.2`.
+
+R-universe synced after the release went public. Its build run 37142825335 passed. In a fresh `rocker/r-ver` container with R 4.6.1 and no cargo, `install.packages("thinkthen")` from `https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/` installed 0.1.2, and `library(thinkthen)` loaded it. The plain address `https://botassembly.r-universe.dev` served the source package there, which failed for lack of cargo. The container and its image were removed afterwards.
 
 The M5 check, 2026-10-03: with Ruby 3.4.11 on macOS 26, `gem install thinkthen` in a scratch gem folder installed `thinkthen-0.1.2-arm64-darwin`, and `require "thinkthen"` loaded it. The scratch folder was removed.
 
@@ -62,7 +64,7 @@ The M5 check, 2026-10-03: with Ruby 3.4.11 on macOS 26, `gem install thinkthen` 
 | Homebrew | `botassembly/homebrew-thinkthen` formula | 0.1.2 |
 | Packagist | `botassembly/thinkthen` | v0.1.2 |
 | Go | tag `libraries/go/v0.1.2` | 0.1.2 |
-| R-universe | `thinkthen` under `botassembly` | 0.1.2. Build run 37142825335 in `r-universe/botassembly` built the source package and every Linux, macOS and Windows binary. Only the WebAssembly build failed, a target ThinkThen does not ship |
+| R-universe | `thinkthen` under `botassembly` | 0.1.2. Build run 37142825335 in `r-universe/botassembly` built the source package and every Linux, macOS and Windows binary. Only the WebAssembly build failed. ThinkThen does not ship that target |
 | GitHub | release v0.1.2 | public, Latest |
 
 Each registry also keeps its earlier 0.1 versions.
@@ -88,7 +90,7 @@ Results, 2026-10-03. Each check installed one channel the way its README or inst
 | pub.dev | `dart pub add thinkthen_dart`, with the C archive | Dart stable | 0.1.1 | Pass |
 | Packagist | `composer require botassembly/thinkthen`, with the C archive | PHP 8.3 with FFI | v0.1.1 | Pass |
 | Go | `go get github.com/botassembly/thinkthen/libraries/go@v0.1.1`, with the C archive | Go 1.27 | v0.1.1 | Pass |
-| R-universe | none yet | | | Not built for 0.1.1; 0.1.2 built (see the 0.1.2 section). Its last update ran on 2026-10-02, before any release existed, and failed to find `*release`. It had not run again by the time of these checks |
+| R-universe | none yet | | | Not built for 0.1.1. R-universe built 0.1.2, as the 0.1.2 section records. Its last update ran on 2026-10-02, before any release existed, and failed to find `*release`. It had not run again by the time of these checks |
 | C library | `thinkthen-c-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | gcc on Ubuntu 24.04 | header and `thinkthen.pc`: 0.1.1 | Pass |
 | SQLite | `thinkthen-sqlite-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | SQLite 3.50.4 | archive name only | Pass. Ubuntu 24.04's SQLite 3.45.1 refuses the extension with a message naming 3.50.0 |
 | DuckDB | `thinkthen-duckdb-0.1.1-x86_64-unknown-linux-gnu.tar.gz` | DuckDB 1.5.5 | `extension_version` 0.1.1 | Pass |
