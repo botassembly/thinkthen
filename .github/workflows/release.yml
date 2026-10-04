@@ -285,12 +285,14 @@ jobs:
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: provenance-x86, path: provenance}
+      - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
+      - run: ruby -c thinkthen.rb
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODE: ${{ inputs.mode }}
           NAME: ${{ needs.resolve.outputs.name }}
           SHA: ${{ needs.resolve.outputs.sha }}
-          VERSION: ${{ needs.resolve.outputs.version }}
         run: |
           for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin; do
             sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"
@@ -299,8 +301,6 @@ jobs:
             sdlc/scripts/release-workflow ada-objc-cobol-gate "platform/platform-$target" "$target" "$SHA"
             sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
           done
-          sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
-          ruby -c thinkthen.rb
           sdlc/scripts/release-workflow collect platform npm-dist all-files
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
 

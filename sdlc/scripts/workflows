@@ -318,11 +318,20 @@ def release(name, doc):
     collect = (collect_step or {}).get("run")
     formula = 'sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb'
     syntax = 'ruby -c thinkthen.rb'
-    commands = [line.strip() for line in (collect or "").splitlines()]
-    if (collect is None or formula not in commands or syntax not in commands or
-            not collect.index(formula) < collect.index(syntax) < collect.index("release-workflow collect") or
-            (collect_step.get("env") or {}).get("VERSION") != "${{ needs.resolve.outputs.version }}" or
-            collect_step.get("if") is not None or collect_step.get("continue-on-error") is not None):
+    draft = jobs.get("draft", {})
+    formula_step = next((i for i, step in enumerate(draft_steps)
+                         if step == {"env": {"VERSION": "${{ needs.resolve.outputs.version }}"},
+                                     "run": formula}), None)
+    syntax_step = next((i for i, step in enumerate(draft_steps)
+                        if step == {"run": syntax}), None)
+    collection_step = next((i for i, step in enumerate(draft_steps) if step is collect_step), None)
+    if (any(i is None for i in (formula_step, syntax_step, collection_step)) or
+            not formula_step < syntax_step < collection_step or
+            draft.get("if") is not None or draft.get("continue-on-error") is not None or
+            (draft.get("defaults") or {}).get("run") is not None or
+            (doc.get("defaults") or {}).get("run") is not None or
+            (collect_step or {}).get("if") is not None or
+            (collect_step or {}).get("continue-on-error") is not None):
         out.append(f"{name}: draft must render and syntax-check the resolved tap formula before collection")
 
     if collect is not None and ("release-workflow go-cpp-gate \"platform/platform-$target\" \"$target\" \"$SHA\"" not in collect
@@ -590,12 +599,14 @@ jobs:
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: provenance-x86, path: provenance}
+      - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
+      - run: ruby -c thinkthen.rb
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODE: ${{ inputs.mode }}
           NAME: ${{ needs.resolve.outputs.name }}
           SHA: ${{ needs.resolve.outputs.sha }}
-          VERSION: ${{ needs.resolve.outputs.version }}
         run: |
           for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin; do
             sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"
@@ -604,8 +615,6 @@ jobs:
             sdlc/scripts/release-workflow ada-objc-cobol-gate "platform/platform-$target" "$target" "$SHA"
             sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
           done
-          sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
-          ruby -c thinkthen.rb
           sdlc/scripts/release-workflow collect platform npm-dist all-files
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
 
@@ -710,12 +719,24 @@ def self_test():
          ["release.yml: job wheels installs twine with no version"]),
         ("dry-wheel-bypass", "release.yml", lambda t: t.replace('      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl\n', '      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl\n        continue-on-error: true\n'),
          ["release.yml: job wheels must verify four wheels, install pinned twine, and check strictly in order"]),
-        ("dry-tap-bypass", "release.yml", lambda t: t.replace('          ruby -c thinkthen.rb\n', '          ruby -c thinkthen.rb || true\n'),
+        ("dry-tap-bypass", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb || true\n'),
          ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
-        ("dry-tap-missing", "release.yml", lambda t: t.replace('          sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb\n', ''),
+        ("dry-tap-missing", "release.yml", lambda t: t.replace('        run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb\n', ''),
          ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
-        ("dry-tap-order", "release.yml", lambda t: t.replace('          sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb\n', '')
-         .replace('          sdlc/scripts/release-workflow collect platform npm-dist all-files\n', '          sdlc/scripts/release-workflow collect platform npm-dist all-files\n          sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb\n'),
+        ("dry-tap-order", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '')
+         .replace('  crates:\n', '      - run: ruby -c thinkthen.rb\n  crates:\n', 1),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-false-shell", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: |\n          if false; then\n            ruby -c thinkthen.rb\n          fi\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-errexit", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: |\n          set +e\n          ruby -c thinkthen.rb\n          set -e\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-ignored-job", "release.yml", lambda t: t.replace('  draft:\n', '  draft:\n    continue-on-error: true\n', 1),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-skipped-step", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb\n        if: false\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-ignored-step", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb\n        continue-on-error: true\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-custom-shell", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb\n        shell: true {0}\n'),
          ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
         ("crate-missing", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n', ''),
          ["release.yml: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order"]),

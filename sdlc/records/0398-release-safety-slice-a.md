@@ -14,11 +14,11 @@ Twine 6.2.0 exists on [PyPI](https://pypi.org/project/twine/6.2.0/) and supports
 
 ## Review
 
-Fresh ticket review `review_0398_ticket` returned ACCEPT for slice A. Its conclusion requires preserving the fifth Windows target when merging later Windows work. This candidate keeps the existing four Unix archives and four wheels. A fresh code review remains pending. The builder will fix findings before landing.
+Fresh ticket review `review_0398_ticket` returned ACCEPT for slice A. Its conclusion requires preserving the fifth Windows target when merging later Windows work. This candidate keeps the existing four Unix archives and four wheels. The first fresh code review found that the Homebrew guard accepted shell control flow that skipped or ignored the syntax check, and accepted an ignored draft job failure. The builder split rendering and syntax into exact standalone steps, refused job and step bypasses, and added planted regressions. A fresh review of the correction remains pending.
 
 ## Proof
 
-- `python3 sdlc/scripts/workflows --self-test`: 81/81 cases hold. New plants remove or misplace the Cargo dry run, ignore or condition it, remove the strict wheel check, unpin Twine, ignore a wheel failure, remove or misplace formula rendering, and ignore its syntax failure. Each pins its refusal.
+- `python3 sdlc/scripts/workflows --self-test`: 87/87 cases hold. New plants remove or misplace the Cargo dry run, ignore or condition it, remove the strict wheel check, unpin Twine, ignore a wheel failure, remove or misplace formula rendering, and ignore its syntax failure. Additional review regressions wrap the syntax check in `if false`, disable and restore `errexit`, ignore the draft job, skip or ignore the syntax step, and substitute a shell. Each pins its refusal.
 - `python3 sdlc/scripts/release-archive-self-test.py`: passes. Four synthetic archives produce the exact prior formula bytes. Ruby reports `Syntax OK`. Missing archive, mismatched checksum and mismatched version fail with exit 1 and their pinned refusal. The renderer runs with an explicit environment containing no key variables.
 - `python3 sdlc/scripts/workflows`: passes on the real workflow files.
 - `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`: passes; 254 resolved packages checked.
@@ -28,8 +28,12 @@ Fresh ticket review `review_0398_ticket` returned ACCEPT for slice A. Its conclu
 
 ## What the build taught us
 
-The formula renderer needs no deploy key and no remote access. Running it before cloning also preserves the existing early archive refusal. Workflow substring checks alone would accept `ruby -c ... || true`; the guard therefore requires the exact command line, and a plant proves the refusal. The formula test uses the prior template as an independent byte oracle.
+The formula renderer needs no deploy key and no remote access. Running it before cloning also preserves the existing early archive refusal. Workflow line checks alone accept a syntax command inside `if false` or between `set +e` and `set -e`. Exact standalone rendering and syntax steps avoid interpreting arbitrary shell control flow. The guard also refuses skipped or ignored jobs and steps, custom step shells and altered shell defaults. The formula test uses the prior template as an independent byte oracle.
 
 ## Deferred proof
 
 No workflow was dispatched, no registry upload ran, and no deploy key or provider credential was read. The authorized local implementation supplies offline proof only. The next rehearsal needs Ian's dispatch approval and will prove Cargo's registry dry run, actual wheel metadata and the runner's Ruby syntax check. Trusted publishers still require release mode. Slices B and C remain open. The coordinator owns the main baseline gates and landing.
+
+## Review correction proof
+
+After the correction, `python3 sdlc/scripts/workflows --self-test` passes all 87 cases with exit 0. This includes the unchanged archive formula and syntax table. `python3 sdlc/scripts/workflows` passes on the actual workflows. `git diff --check` passes. No Rust or renderer code changed in the correction, so the prior policy, shell syntax and scoped lint receipts remain applicable. No full checkpoint or live run was repeated.
