@@ -20,7 +20,7 @@ A new page either joins the `demos/` list under ADR 0018 or becomes a site how-t
 19. **Split one file into piles by a `choose` label.** Ian asked for it on 2026-09-20. The capability works: replaying how-to 21's recording, `choose ... --details` piped through `jq -r '[.value, (.input|tostring)] | @tsv'` and `awk -F'\t' '{print $2 > ($1".out.jsonl")}'` wrote one file per label. No how-to shows it. Moved here from the stumble register on 2026-09-30.
 20. **Exit code 1 under `set -e`.** One page: the `if` form, the `||` form, what `--raw` prints, and a host that treats exit 2 as a block.
 21. **Terminal recordings** scripted with VHS under `--replay`.
-22. **A published skill file** that teaches an agent the verbs, the exit codes and `--plan`.
+22. **A published skill file** that teaches an agent the verbs, the exit codes and `--plan`. [Ticket 0419](../tickets/0419-official-skill-for-agents.md) owns this item for 0.2 after fresh ticket acceptance on 2026-10-04. Other items retain this issue’s later milestone.
 23. **Site search and a sitemap.** This one belongs to the builder.
 24. **SQL and frame contract pages.** From withdrawn ticket 0290: a count and dialect table in each SQL README, DuckDB's macros (ticket 0286) in its README, SQLite's and PostgreSQL's one-call-per-row limit, and the Python frame pages' lazy limits. Each claim names the test that proves it.
 

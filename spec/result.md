@@ -2,6 +2,8 @@
 
 [specification/result.md](../specification/result.md) names each command's detailed row in its compatibility table. This page holds that table to rows the binary writes. It replays one command from each command's demo with `--details`, so no key and no network are needed. It then holds every `thinkthen.result/1` example row on the contract page to the same table. Each example row's fence names its command as the second word of the info string.
 
+The replayed CLI find winner carries position. The illustrative find row omits it. The compatibility table marks that CLI member optional and accepts both rows without adding a required member to shared host results.
+
 A finding names where the row came from, its command, and the member or verb that disagrees. The page expects no findings.
 
 ```bash
