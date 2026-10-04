@@ -232,8 +232,8 @@ pub(crate) struct DecideArguments {
     /// written in a file.
     pub(crate) question: String,
 
-    /// Taken so the command can say where the evidence goes.
-    #[arg(value_name = "EVIDENCE", hide = true)]
+    /// Read these files in order; cannot accompany --input.
+    #[arg(value_name = "FILE")]
     pub(crate) extra: Vec<OsString>,
 
     /// What a yes and a no mean.
@@ -298,8 +298,8 @@ pub(crate) struct FilterArguments {
     /// value typed beside it replaces the file's value.
     pub(crate) question: String,
 
-    /// Taken so the command can say where the evidence goes.
-    #[arg(value_name = "EVIDENCE", hide = true)]
+    /// Read these files in order; cannot accompany --input.
+    #[arg(value_name = "FILE")]
     pub(crate) extra: Vec<OsString>,
 
     /// One cut T on the probability of yes. A band is a usage error. It defaults to 0.5.
@@ -336,8 +336,8 @@ pub(crate) struct RankArguments {
     /// ranks by its weighted level position; typed meanings fit decide only.
     pub(crate) question: String,
 
-    /// Taken so the command can say where the evidence goes.
-    #[arg(value_name = "EVIDENCE", hide = true)]
+    /// Read these files in order; cannot accompany --input.
+    #[arg(value_name = "FILE")]
     pub(crate) extra: Vec<OsString>,
 
     /// Print the first N records of the order, from 1 upward.
