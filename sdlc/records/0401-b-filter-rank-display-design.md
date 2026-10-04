@@ -1,6 +1,6 @@
 # 0401 slice B: Display filter and rank locations, scores and neighbors
 
-Status: proposed for fresh independent design review. Base: `a82a9877a`, the slice A landing. Lane: claude-0. Branch: `ticket/0401-rank-search-flags`. This record makes the accepted [ticket contract](../tickets/0401-rank-search-flags.md) implementable. No implementation has started.
+Status: accepted for implementation. Fresh independent design review accepted `63b87c0cf`. The coordinator adopted score-before-location prefixes, window-first prefixes and independent physical CRLF groups. Base: `a82a9877a`, the slice A landing. Lane: claude-0. Branch: `ticket/0401-rank-search-flags`. This record makes the accepted [ticket contract](../tickets/0401-rank-search-flags.md) implementable. Implementation follows the accepted design.
 
 The outcome is a CLI text view for filter and rank. Filter keeps one decide question, one cut and input order. Rank keeps its existing stable ordering, saved score ordering, top retention and empty stdout on failure. Find display belongs to C. Question sets, turns and the Rust API belong to D. Core, engine, bindings, SQL, provider requests and shared workflows need no changes in B.
 
