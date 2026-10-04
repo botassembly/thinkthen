@@ -1,7 +1,11 @@
 # A release needs two environment approvals and an 80-minute wait
 
-Status: open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: the queue owner.
+Status: open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: the queue owner. Both approvals stay as safety gates under the docs team's 2026-10-04 ranking. No standing patch-release approval is wanted. Items 2 and 4 remain debt.
 Milestone: 0.2
+Kind: debt
+Debt: 037
+Severity: low
+Pay when: a user or a release needs it.
 
 Release mode waits for one `release` approval before the eight publish jobs. Then `publish` waits for a second approval before it makes the GitHub release public and creates the Go tag. The approval comes about 80 minutes after the dispatch, once the builds and smokes finish. For 0.1.2, Ian's first approval did not register, and the run waited an hour before anyone noticed.
 

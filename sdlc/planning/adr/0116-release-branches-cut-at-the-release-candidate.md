@@ -1,6 +1,6 @@
 # ADR 0116: Release branches are cut at the release candidate
 
-- Status: **Accepted** on Ian's approval of 2026-10-01. Ian can overturn each item.
+- Status: **Accepted** on Ian's approval of 2026-10-01. The amendment of 2026-10-04 freezes release/0.1. Ian can overturn each item.
 - Date: 2026-10-01
 
 ## Context
@@ -24,3 +24,9 @@ The coordinator's steps around this rule live in [release-process.md](../release
 - 0.2 work can start the day the cut happens. Nothing waits for the 0.1 release itself.
 - A fix that main has outgrown may not cherry-pick cleanly. Its ticket then names the conflict and the change made on the release branch.
 - Until the cut, Windows stage 0 must prove it changes no 0.1 behavior.
+
+## Amendment, 2026-10-04: no 0.1.x releases
+
+Ian ruled that there are no 0.1.x patch releases. `release/0.1` is frozen, and nothing is cherry-picked to it. Items 4 and 5 no longer apply to 0.1. Every fix lands on main and ships in 0.2. Ticket 0397 moves main to 0.2.0 at once. Main moves to the next version immediately after each release, while public install text keeps naming the latest published release.
+
+Items 1 to 3 and 7 stand for the 0.2 cut. The two release approvals remain safety gates. No standing patch-release approval is wanted. Ian can overturn this ruling.

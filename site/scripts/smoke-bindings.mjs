@@ -142,6 +142,16 @@ ARCHIVE.rust = (dir) => {
   fs.writeFileSync(path.join(dir, '.cargo/config.toml'), `[patch.crates-io]\nthinkthen = { path = ${JSON.stringify(path.join(repo, 'crates/thinkthen'))} }\n\n[net]\noffline = true\n`);
   fs.copyFileSync(path.join(repo, 'Cargo.lock'), path.join(dir, 'Cargo.lock'));
 };
+// Cargo patches apply only within the requirement. The page names the
+// published release, so only its scratch manifest follows the working tree.
+function rustRequirement(dir) {
+  const version = fs.readFileSync(path.join(repo, 'crates/thinkthen/Cargo.toml'), 'utf8').match(/^version = "(\d+\.\d+)\.\d+"/m);
+  if (!version) throw new Error('the working crate has no release version');
+  const manifest = path.join(dir, 'Cargo.toml');
+  const text = fs.readFileSync(manifest, 'utf8');
+  if (!/^thinkthen = "[^"\n]+"$/m.test(text)) throw new Error('the Rust sample has no thinkthen requirement');
+  fs.writeFileSync(manifest, text.replace(/^thinkthen = "[^"\n]+"$/m, `thinkthen = "${version[1]}"`));
+}
 // The function pages show C and Rust as fragments with no main. The runner
 // puts each one inside main, as a reader would. C keeps its #include lines
 // on top. Rust builds with the Rust install page's Cargo.toml.
@@ -224,6 +234,7 @@ function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c
         const name = buildName(slug, rel, dir);
         fs.copyFileSync(path.join(examples, rel), path.join(dir, name));
         if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, name);
+        if (slug === 'rust') rustRequirement(dir);
         const lines = buildLines(slug, name, true);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });

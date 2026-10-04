@@ -1,11 +1,11 @@
 # Each patch release costs two hand passes on the site proofs and install text
 
-Status: open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: the queue owner.
+Status: open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: ticket 0402, the docs story, per the docs team's 2026-10-04 ranking. Item 1 is moot under Ian's no-patch-release ruling. Item 2 remains once per release.
 Milestone: 0.2
 Kind: debt
 Debt: 035
 Severity: medium
-Pay when: before the next release that changes a version.
+Pay when: before the 0.2 release.
 
 Keeping it costs a builder hour or more for every release, and a missed pass leaves the site naming the old version.
 
@@ -19,7 +19,7 @@ Small source edits stale pages the same way. One four-line R change staled 18 R 
 To evaluate:
 
 1. The proof hash leaves out version-only lines, or the version files, so a bump stales nothing.
-2. A script does release-process section 5 step 5: it moves the install text to a named version and checks that nothing else changed.
+2. A script carries out release-process section 5 step 2's install updates: it moves the install text to a named version and checks that nothing else changed.
 3. Whether the install text can read the latest release at build time, so main never names a version.
 
 Issue `2026-10-03-doc-tests-gate-checkpoints-and-releases.md` owns gating releases on the proofs. This issue owns the cost of keeping them fresh.
