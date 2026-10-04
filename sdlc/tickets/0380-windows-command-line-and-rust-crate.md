@@ -1,6 +1,6 @@
 # 0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64
 
-Status: ready. It waits for the `release/0.1` cut. It changes the release workflow, so no slice lands on main before the cut (ADR 0116 item 2). Plan: `sdlc/planning/windows.md`, stage 1. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. The coordinator assigns a lane after the cut.
+Status: in progress. Slice A offline implementation and all 350 site replays pass; final receipt review and landing follow. Windows runner proof and slices B–D remain. The `release/0.1` cut and ticket 0397 are landed. Fresh ticket review accepted the plan on 2026-10-04. Physical lane: claude-1. Plan: `sdlc/planning/windows.md`, stage 1. Shared workflow edits wait for ticket 0398 slice A and the coordinator's signal.
 
 Milestone: 0.2
 
@@ -27,10 +27,10 @@ Milestone: 0.2
   - Slice B, the installer: a Windows installer beside `install.sh`, its README section and an installer smoke on the runner.
   - Slice C, W1 and W2: a console control handler in `cli/interrupt.rs`, ACL privacy checks in the usage store and `config.rs`, `windows-sys` in `policy.py` and `deny.toml`. Windows refusal sentences for the usage folder.
   - Slice D, W3 to W7: the refused-port sentence, the closed-reader stop, the `127.1` test addresses, the per-platform folder helper and the ported XDG cases, and the `clippy.toml` warning.
-  - Specification: `specification/recording.md`, `specification/settings.md` and `specification/question-file.md` name the Windows folders. The site pages that name platforms belong to marketing; send a message to `sdlc/inbox`.
+  - Specification: `specification/recording.md`, `specification/settings.md` and `specification/question-file.md` name the Windows folders. The queue owner also updates the site pages that name platforms, under the current ownership ruling.
 - Proof: a rehearsal passes on all five targets with zero "not run" for the command. A `release-pack` case for the `.zip`. An installer smoke on `windows-2025`. A Windows Ctrl-C end-to-end case through `GenerateConsoleCtrlEvent` (W1). The Windows privacy refusals (W2). The W3 to W5 tests named in `windows.md` pass on Windows without a guard. The ported XDG cases pass on Windows and Linux (W6). Clippy on Windows prints no warning (W7). Each slice keeps the Linux and macOS release self-tests green.
 - Defers: the main unknowns, each decided inside this ticket or escalated.
-  - Code signing for `thinkthen.exe`. SmartScreen warns on unsigned downloads. A certificate costs money, so the builder brings Ian the options and costs before slice A, which ships the `.exe`, lands.
+  - Code signing for `thinkthen.exe`. SmartScreen warns on unsigned downloads. The coordinator presented the signing options and costs. Ian authorized unsigned development implementation; public distribution awaits his signing ruling.
   - The installer's home: a `.ps1` script, winget or Scoop. The builder picks the simplest that works and records why.
   - Whether `managed-build` must cover Windows.
   - W8, the busy-parent fork proof, waits for stage 3.
@@ -40,3 +40,10 @@ Milestone: 0.2
 
 - Slice A touches release files every target uses. Run the release self-tests and `workflows --self-test` before each push. A wrong count breaks the Unix release.
 - Rehearsals need Ian's approval, as in `sdlc/planning/release-process.md` section 4.
+
+## What the build taught us
+
+- The archived release proof checks every source file against Git HEAD. Commit a changed packer before running this proof; copying an uncommitted packer into an archive correctly fails the source identity check.
+- Windows command packaging needs a separate archive format and executable suffix. Keep those changes in the Windows arm, and leave Unix command tar names and payloads unchanged.
+
+- Crate metadata changes the documentation proof identity even without Rust source changes. The full canonical replay refreshed 308 language and 42 SQL samples; strict verification reports all 350 current, and the final site build passes. Windows runner proof remains separate.

@@ -9,6 +9,9 @@ import io
 import hashlib
 import tarfile
 import tempfile
+import hashlib
+import struct
+import zipfile
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -161,6 +164,8 @@ def main():
         # file times and a looser umask must give the same bytes and the fixed entry metadata.
         for path in (source / "demos/27-test-with-no-network").rglob("*"):
             os.utime(path, (1_700_000_000, 1_700_000_000))
+            if path.is_file():
+                path.chmod(0o755)  # Model Windows accepting X_OK for every regular data file.
         expect(run("sh", "-c", 'umask 002 && exec sh "$0" "$@"', str(source / "sdlc/scripts/release-pack"),
                    host, str(base / "again"), "first-run", cwd=source), "", success=True)
         first_run = (base / "legacy/thinkthen-first-run.tar.gz").read_bytes()
@@ -173,6 +178,9 @@ def main():
                                ("thinkthen-first-run/recording/thinkthen.jsonl", 0o644, 0, 0, "", 0),
                                ("thinkthen-first-run/report.txt", 0o644, 0, 0, "", 0)]):
             raise AssertionError(("first-run archive is not reproducible", entries))
+        for path in (source / "demos/27-test-with-no-network").rglob("*"):
+            if path.is_file():
+                path.chmod(0o644)
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "unselected"), "go", cwd=source), "archived source tar path must be absolute")
 
@@ -348,6 +356,23 @@ def main():
             else:
                 folder.mkdir()
                 (folder / f"fixture-{target}.bin").write_bytes(b"existing target file")
+        windows = platform / "platform-x86_64-pc-windows-msvc"
+        windows.mkdir()
+        binary = bytearray(128)
+        binary[:2] = b"MZ"
+        struct.pack_into("<I", binary, 60, 64)
+        binary[64:68] = b"PE\0\0"
+        struct.pack_into("<H", binary, 68, 0x8664)
+        struct.pack_into("<H", binary, 86, 2)
+        struct.pack_into("<H", binary, 88, 0x20B)
+        win_zip = windows / f"thinkthen-{version}-x86_64-pc-windows-msvc.zip"
+        with zipfile.ZipFile(win_zip, "w") as output:
+            output.writestr("thinkthen.exe", binary)
+        sample = windows / "thinkthen-first-run.tar.gz"
+        sample.write_bytes(first_run)
+        for file in (win_zip, sample):
+            file.with_name(file.name + ".sha256").write_text(
+                f"{hashlib.sha256(file.read_bytes()).hexdigest()}  {file.name}\n")
         npm = base / "npm"
         npm.mkdir()
         (npm / f"thinkthen-{version}.tgz").write_bytes(b"fixture npm")
@@ -358,7 +383,8 @@ def main():
                           for kind in parts for suffix in ("", ".sha256")}
         expected_files |= {f"fixture-{target}.bin" for target in
                            (other_target, "aarch64-apple-darwin", "x86_64-apple-darwin")}
-        expected_files |= {f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256"}
+        expected_files |= {f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256",
+                           win_zip.name, win_zip.name + ".sha256", sample.name, sample.name + ".sha256"}
         if {file.name for file in collected.iterdir()} != expected_files:
             raise AssertionError("collect omitted or added a selected fixture file")
         extra_go = platform / f"platform-{host}/thinkthen-go-extra.zip"

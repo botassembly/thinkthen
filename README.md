@@ -32,6 +32,10 @@ brew install botassembly/thinkthen/thinkthen
 
 With Rust installed, `cargo install thinkthen` builds the command from crates.io.
 
+Windows x86-64 support starts with 0.2. Download `thinkthen-VERSION-x86_64-pc-windows-msvc.zip` from the [release page](https://github.com/botassembly/thinkthen/releases), extract it, and run `thinkthen.exe` in PowerShell. Development builds are unsigned. The Windows installer follows in the next stage of this release work.
+
+Windows reads `%APPDATA%\thinkthen\config.json`, stores cached answers in `%LOCALAPPDATA%\thinkthen\cache`, and stores count-only usage totals in `%LOCALAPPDATA%\thinkthen\usage`.
+
 A live run needs a backend. A hosted backend needs a key. [Backends](https://thinkthen.dev/install/backends/) shows how to get a TypeSafe key or point ThinkThen at another server, such as Ollama on your own machine.
 
 ### Try it with no key
@@ -70,6 +74,8 @@ The [specification](https://github.com/botassembly/thinkthen/blob/main/specifica
 ## Languages
 
 Every language uses the same Rust engine. Each page below gives the install line and a first call.
+
+The Rust crate supports Linux, macOS and Windows x86-64. Add it to a Rust project with `cargo add thinkthen`. Windows bindings follow the command and crate; the Windows command archive contains `thinkthen.exe` alone.
 
 | Kind | Install pages |
 | --- | --- |

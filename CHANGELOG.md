@@ -6,6 +6,8 @@ Every release of every surface shares one version number.
 
 Version 0.2 is in progress on main.
 
+The release workflow adds a Windows x86-64 command ZIP and checks the packed Rust crate on Windows. Windows bindings follow in later release work. Development command builds are unsigned.
+
 ## 0.1.2 (2026-10-03)
 
 The macOS Ruby gems name no macOS version. `gem install thinkthen` on macOS 26 installed the 0.0.1 placeholder, because the 0.1.1 gems matched only darwin 24 (ticket 0394). The gems still need macOS 15.0.

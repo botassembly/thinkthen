@@ -36,6 +36,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+# Stage 1 Windows ships only the command; these wrapper packages stay on Linux x86.
 TARGET = "x86_64-unknown-linux-gnu"
 GROUP, ARTIFACT = "io.github.botassembly", "thinkthen-jvm"
 NUGET_ID, PUB_NAME = "Botassembly.ThinkThen", "thinkthen_dart"
