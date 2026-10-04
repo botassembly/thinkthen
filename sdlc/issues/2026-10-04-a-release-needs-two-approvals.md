@@ -7,6 +7,7 @@ Release mode waits for one `release` approval before the eight publish jobs. The
 
 To evaluate:
 
-1. Whether `publish` can run without a second approval once the publish jobs pass, because it publishes nothing new to a registry.
+1. Whether `publish` can run without a second approval once the publish jobs pass. It makes the GitHub release public and creates the Go tag `libraries/go/vX`, which the Go proxy keeps forever, so the gate may be worth keeping.
 2. A notice when the run reaches the approval, so the approver does not have to watch for it.
-3. Whether the release run can reuse the rehearsal's built and smoked files for the same commit, so the approval comes minutes after the dispatch.
+3. Ticket 0393 adds an npmjs.com approval for staged publishing. Count it in the approval total.
+4. Whether the release run can reuse the rehearsal's built and smoked files for the same commit, so the approval comes minutes after the dispatch.

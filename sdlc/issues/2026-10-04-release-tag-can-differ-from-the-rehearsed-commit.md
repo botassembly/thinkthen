@@ -11,4 +11,5 @@ To evaluate:
 
 1. Release mode refuses a tag whose commit has no passing rehearsal run and no checkpoint tag.
 2. Or the release run counts as the rehearsal, so any commit can be tagged, and the checkpoint sweep joins the release run.
-3. Which surfaces a release run's smoke does not cover, as the R package's published shape was not covered.
+3. Issue `2026-10-03-doc-tests-gate-checkpoints-and-releases.md`, items 2 and 3, gates checkpoints and releases on the doc tests. A tag check here should share its mechanism.
+4. Which surfaces a release run's smoke does not cover, as the R package's published shape was not covered.

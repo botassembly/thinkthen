@@ -8,7 +8,7 @@ After each release, the queue owner installed every channel by hand: Linux conta
 1. The macOS gems named darwin 24, so `gem install` on macOS 26 took the 0.0.1 placeholder (ticket 0394, fixed in 0.1.2).
 2. R-universe served Linux the source package, which needs Rust. The site named no Linux route (quick fix `67d27b7d1`).
 
-They also found that hosts below the version floors fall back to the 0.0.1 placeholders with no message: Ruby 3.3, and macOS's own Python 3.9.
+They also found that hosts below the version floors fall back to the 0.0.1 placeholders with no message: Ruby 3.3, and macOS's own Python 3.9. Issue `2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md` owns the placeholders. This issue owns only checking for them.
 
 The release smoke installs the built files, not the published packages. Nothing repeats these checks for the next release.
 

@@ -5,7 +5,7 @@ Milestone: 0.2
 
 crates.io, PyPI, npm, RubyGems, NuGet and pub.dev publish through trusted publishing and keep no secret. Two jobs still read secrets from the `release` environment:
 
-1. `maven` reads a Maven Central username, password and GPG signing key. Ian plans to make a new Maven Central token, and the queue owner swaps it in.
+1. `maven` reads a Maven Central username, password and GPG signing key.
 2. `tap` reads `TAP_DEPLOY_KEY`, a deploy key with write access to `botassembly/homebrew-thinkthen`.
 
 Nothing records when either secret expires or was last rotated. An expired token fails only during a release.
