@@ -12,7 +12,16 @@ The shared Rust engine supplies all ten functions. The public surfaces do not ye
 
 Product pin: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`. Product paths under crates, libraries, databases, conformance and specification match that pin. Windows work and search implementation are in flight and are excluded. The earlier `e760432c80dc22501fa51694964f2eeec5b8e63e` checkpoint passed offline test, specification, all 21 registry surfaces and 19 packed-file checks. The checkpoint then published 22 files plus their checksum and manifest. Its pushed checkpoint is `checkpoint/surfaces/2026-10-04-1`. The later landing changes release files; it does not invalidate unchanged engine/binding source evidence.
 
-The canonical corpus has 55 cases. Routine surfaces select 32 IDs. Generic C JSON wrappers use a separate 29-case runtime/type corpus; they do not thereby execute all 55 canonical cases. JVM gate entries expand into Java, Kotlin and Scala; JavaScript runtime and TypeScript declarations are separate contracts. pandas, Python Polars, Rust Polars eager/lazy and Flutter are explicit variants. A cell's source-confirmed assertion is not a new execution receipt. Unsupported injections and unselected extended cases retain their exclusions.
+The canonical corpus has 55 cases. Routine surfaces select 32 IDs. Generic C JSON wrappers use a separate 29-case runtime/type corpus; they do not thereby execute all 55 canonical cases. JVM gate entries expand into Java, Kotlin and Scala; JavaScript runtime and TypeScript declarations are separate contracts. pandas, Python Polars, Rust Polars eager/lazy and Flutter are explicit variants. A cell's source-confirmed assertion is not a new execution receipt. Unsupported injections and unselected extended cases retain their exclusions. The C and SQL proof profiles explicitly separate corpus/selector membership from eligible executable IDs. A selected ID can still be excluded by its host runner.
+
+| Runner | Omitted canonical cases | Source and reason |
+| --- | --- | --- |
+| C | 25-defect-fault; 18-annotate-two-groups | [SKIPPED list](../../libraries/c/tests/door/cases.rs): no public defect injection; legacy separate-group requests |
+| SQLite | 25-defect-fault; 18-annotate-two-groups | [NOT_RUN and form](../../databases/sqlite/tests/conformance.py): no SQL invariant injection; legacy separate-group requests |
+| DuckDB | 25-defect-fault; 18-annotate-two-groups | [NOT_RUN and reason](../../databases/duckdb/tools/conformance.py): separate private panic-boundary proof; legacy separate-group requests |
+| PostgreSQL | 25-defect-fault; 18-annotate-two-groups; 23-cancelled-fault | [NOT_RUN list](../../databases/postgresql/tests/runner.py): separate panic probe, legacy separate-group requests and no SQL token for this cancellation injection |
+
+These cases did not execute through those runners. A separate panic or host-cancellation test does not turn an omitted canonical case into a passing canonical case. Every affected cell repeats its runner exclusions and source anchor, plus the cell-specific eligible/excluded IDs.
 
 No provider, credential, install, registry publication or experiment dispatch occurred. Probes used synthetic or committed public replies through counted loopback listeners. All new probes and logs remain in ignored owned `target/audit0405/`. Existing binary carriers were reused; no fresh full gate or independent rebuild is claimed.
 
@@ -77,7 +86,7 @@ Generic C JSON convenience differences do not remove a typed C route where one e
 
 ## Verification
 
-Focused reused CLI carrier: 23 keeping cases, three hints cases, eight shared-context cases, one counted cross-function replay case and one counted find cache case all passed. Public carrier: ten contracts cases, three details cases and one changed-context replay case passed. Fresh first-answer reviewer independently reproduced all 36 CLI and 14 public cases and the counted probes.
+Focused reused CLI carrier: 23 keeping cases, three hints cases, eight shared-context cases, one counted cross-function replay case and one counted find cache case all passed. Public carrier: ten contracts cases, three details cases and one changed-context replay case passed. Fresh first-answer reviewer independently reproduced all 36 CLI and 14 public cases and the counted probes. The full-audit reviewer additionally confirmed 280 unique valid cells, an empty product diff, three public details tests and one changed-context replay test. Review required explicit C/SQL corpus execution exclusions and removal of stale 0403 signing wording; both record corrections are prepared for a fresh acceptance.
 
 Disposable replay listener counts remained 1 (decide), 2 (choose), 3 (tag), 4 (filter), 5 (rank), 6 (score), 7 (find), 8 (annotate) and 9 (relate). Recognition stayed at two across cut increase/restoration. The outputs and exit codes appear in `target/audit0405/reapply-results.json` and `recognize-reapply-results.json`. Source traces establish the relation-stage limitation; no broader no-send inference is made.
 

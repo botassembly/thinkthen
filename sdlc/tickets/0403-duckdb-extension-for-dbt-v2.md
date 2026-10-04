@@ -16,7 +16,7 @@ Lane: 3, after ticket 0402, per the 0.2 lane order Ian approved on 2026-10-04. S
 
 0.2 ships several DuckDB versions, two at first.
 
-Until Ian rules, 0.2 documents dbt v1 with `duckdb` 1.5.5 as its dbt path. The v1.5.4 build ships either way, and Ian's ruling changes nothing in this ticket. Under this default, item 7 of the approved scope, "so it loads", is not met in dbt v2: dbt v2 refuses any unsigned extension. The open question below holds the three options.
+0.2 documents dbt v1 with `duckdb` 1.5.5 as its dbt route. The v1.5.4 unsigned build serves compatible stock DuckDB users; it does not make dbt v2 load an unsigned extension. Ian approved the separate post-core signed community-listing follow-up in [0415](0415-signed-duckdb-community-listing.md). This ticket retains version compatibility ownership. Listing preparation has its own review, and external submission or spend remains separately authorized.
 
 ## Evidence
 

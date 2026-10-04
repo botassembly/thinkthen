@@ -4579,7 +4579,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1205",
+      "proof": "v1646",
       "cell_id": "cell-241"
     },
     {
@@ -4598,7 +4598,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1208",
+      "proof": "v1647",
       "cell_id": "cell-242"
     },
     {
@@ -4617,7 +4617,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1211",
+      "proof": "v1648",
       "cell_id": "cell-243"
     },
     {
@@ -4636,7 +4636,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1214",
+      "proof": "v1649",
       "cell_id": "cell-244"
     },
     {
@@ -4655,7 +4655,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1218",
+      "proof": "v1650",
       "cell_id": "cell-245"
     },
     {
@@ -4674,7 +4674,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1222",
+      "proof": "v1651",
       "cell_id": "cell-246"
     },
     {
@@ -4693,7 +4693,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1228",
+      "proof": "v1652",
       "cell_id": "cell-247"
     },
     {
@@ -4712,7 +4712,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1232",
+      "proof": "v1653",
       "cell_id": "cell-248"
     },
     {
@@ -4731,7 +4731,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1236",
+      "proof": "v1654",
       "cell_id": "cell-249"
     },
     {
@@ -4750,7 +4750,7 @@
       "per_record_context": "v1202",
       "five_layers": "v1203",
       "stored_answer_reread": "v1204",
-      "proof": "v1240",
+      "proof": "v1655",
       "cell_id": "cell-250"
     },
     {
@@ -4769,7 +4769,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1254",
+      "proof": "v1656",
       "cell_id": "cell-251"
     },
     {
@@ -4788,7 +4788,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1257",
+      "proof": "v1657",
       "cell_id": "cell-252"
     },
     {
@@ -4807,7 +4807,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1260",
+      "proof": "v1658",
       "cell_id": "cell-253"
     },
     {
@@ -4826,7 +4826,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1263",
+      "proof": "v1659",
       "cell_id": "cell-254"
     },
     {
@@ -4845,7 +4845,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1269",
+      "proof": "v1660",
       "cell_id": "cell-255"
     },
     {
@@ -4864,7 +4864,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1273",
+      "proof": "v1661",
       "cell_id": "cell-256"
     },
     {
@@ -4883,7 +4883,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1279",
+      "proof": "v1662",
       "cell_id": "cell-257"
     },
     {
@@ -4902,7 +4902,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1283",
+      "proof": "v1663",
       "cell_id": "cell-258"
     },
     {
@@ -4921,7 +4921,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1287",
+      "proof": "v1664",
       "cell_id": "cell-259"
     },
     {
@@ -4940,7 +4940,7 @@
       "per_record_context": "v1251",
       "five_layers": "v1252",
       "stored_answer_reread": "v1253",
-      "proof": "v1291",
+      "proof": "v1665",
       "cell_id": "cell-260"
     },
     {
@@ -4959,7 +4959,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1305",
+      "proof": "v1666",
       "cell_id": "cell-261"
     },
     {
@@ -4978,7 +4978,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1308",
+      "proof": "v1667",
       "cell_id": "cell-262"
     },
     {
@@ -4997,7 +4997,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1311",
+      "proof": "v1668",
       "cell_id": "cell-263"
     },
     {
@@ -5016,7 +5016,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1314",
+      "proof": "v1669",
       "cell_id": "cell-264"
     },
     {
@@ -5035,7 +5035,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1320",
+      "proof": "v1670",
       "cell_id": "cell-265"
     },
     {
@@ -5054,7 +5054,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1324",
+      "proof": "v1671",
       "cell_id": "cell-266"
     },
     {
@@ -5073,7 +5073,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1330",
+      "proof": "v1672",
       "cell_id": "cell-267"
     },
     {
@@ -5092,7 +5092,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1334",
+      "proof": "v1673",
       "cell_id": "cell-268"
     },
     {
@@ -5111,7 +5111,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1338",
+      "proof": "v1674",
       "cell_id": "cell-269"
     },
     {
@@ -5130,7 +5130,7 @@
       "per_record_context": "v1302",
       "five_layers": "v1303",
       "stored_answer_reread": "v1304",
-      "proof": "v1342",
+      "proof": "v1675",
       "cell_id": "cell-270"
     },
     {
@@ -5149,7 +5149,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1356",
+      "proof": "v1676",
       "cell_id": "cell-271"
     },
     {
@@ -5168,7 +5168,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1359",
+      "proof": "v1677",
       "cell_id": "cell-272"
     },
     {
@@ -5187,7 +5187,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1362",
+      "proof": "v1678",
       "cell_id": "cell-273"
     },
     {
@@ -5206,7 +5206,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1365",
+      "proof": "v1679",
       "cell_id": "cell-274"
     },
     {
@@ -5225,7 +5225,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1371",
+      "proof": "v1680",
       "cell_id": "cell-275"
     },
     {
@@ -5244,7 +5244,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1375",
+      "proof": "v1681",
       "cell_id": "cell-276"
     },
     {
@@ -5263,7 +5263,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1381",
+      "proof": "v1682",
       "cell_id": "cell-277"
     },
     {
@@ -5282,7 +5282,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1385",
+      "proof": "v1683",
       "cell_id": "cell-278"
     },
     {
@@ -5301,7 +5301,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1389",
+      "proof": "v1684",
       "cell_id": "cell-279"
     },
     {
@@ -5320,7 +5320,7 @@
       "per_record_context": "v1353",
       "five_layers": "v1354",
       "stored_answer_reread": "v1355",
-      "proof": "v1393",
+      "proof": "v1685",
       "cell_id": "cell-280"
     }
   ],
@@ -5508,14 +5508,6 @@
       "sources": [
         "libraries/c/src/call.rs:267",
         "libraries/c/src/call.rs:354"
-      ]
-    },
-    "v023": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/cpp/include/thinkthen/door.hpp:130",
-        "libraries/c/src/call.rs:267"
       ]
     },
     "v024": {
@@ -5876,14 +5868,6 @@
       "libraries/csharp/src/ThinkThen.cs:203",
       "libraries/c/src/call.rs:267"
     ],
-    "v067": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/csharp/src/ThinkThen.cs:203",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v068": {
       "classification": "unproved",
       "existing_runner": "libraries/csharp/tests/public_types.py",
@@ -6176,14 +6160,6 @@
       "libraries/go/thinkthen.go:348",
       "libraries/c/src/call.rs:267"
     ],
-    "v103": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/go/thinkthen.go:348",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v104": {
       "classification": "unproved",
       "existing_runner": "libraries/go/fixtures/type_cases.py",
@@ -6476,14 +6452,6 @@
       "libraries/jvm/door/thinkthen/Door.java:195",
       "libraries/c/src/call.rs:267"
     ],
-    "v139": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/jvm/door/thinkthen/Door.java:195",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v140": {
       "classification": "unproved",
       "existing_runner": "libraries/jvm/tests/public_types.py",
@@ -6747,14 +6715,6 @@
       "libraries/jvm/kotlin/KotlinCaller.kt:11",
       "libraries/c/src/call.rs:267"
     ],
-    "v173": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/jvm/kotlin/KotlinCaller.kt:11",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v174": {
       "classification": "confirmed behavior",
       "value": "Generic JSON call; no dedicated named function",
@@ -6928,14 +6888,6 @@
       "libraries/jvm/scala/ScalaCaller.scala:12",
       "libraries/c/src/call.rs:267"
     ],
-    "v199": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/jvm/scala/ScalaCaller.scala:12",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v200": {
       "classification": "confirmed behavior",
       "value": "Generic JSON call; no dedicated named function",
@@ -7138,14 +7090,6 @@
       "libraries/swift/Sources/ThinkThen/ThinkThen.swift:189",
       "libraries/c/src/call.rs:267"
     ],
-    "v227": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/swift/Sources/ThinkThen/ThinkThen.swift:189",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v228": {
       "classification": "unproved",
       "existing_runner": "libraries/swift/Tests/fixtures/public_types.py",
@@ -7438,14 +7382,6 @@
       "libraries/zig/src/thinkthen.zig:145",
       "libraries/c/src/call.rs:267"
     ],
-    "v263": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/zig/src/thinkthen.zig:145",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v264": {
       "classification": "unproved",
       "existing_runner": "libraries/zig/Tests/public_types.py",
@@ -7738,14 +7674,6 @@
       "libraries/php/src/ThinkThen.php:160",
       "libraries/c/src/call.rs:267"
     ],
-    "v299": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/php/src/ThinkThen.php:160",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v300": {
       "classification": "unproved",
       "existing_runner": "libraries/php/fixtures/type_cases.py",
@@ -8038,14 +7966,6 @@
       "libraries/dart/lib/src/door.dart:706",
       "libraries/c/src/call.rs:267"
     ],
-    "v335": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/dart/lib/src/door.dart:706",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v336": {
       "classification": "unproved",
       "existing_runner": "libraries/dart/checks/public_types.py",
@@ -8338,14 +8258,6 @@
       "libraries/objective-c/Sources/ThinkThen.h:50",
       "libraries/c/src/call.rs:267"
     ],
-    "v371": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/objective-c/Sources/ThinkThen.h:50",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v372": {
       "classification": "unproved",
       "existing_runner": "libraries/objective-c/checks/public_types.py",
@@ -8638,14 +8550,6 @@
       "libraries/ada/src/thinkthen.ads:70",
       "libraries/c/src/call.rs:267"
     ],
-    "v407": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/ada/src/thinkthen.ads:70",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v408": {
       "classification": "unproved",
       "existing_runner": "libraries/ada/checks/public_types.py",
@@ -8938,14 +8842,6 @@
       "libraries/cobol/src/tt_call.cob:48",
       "libraries/c/src/call.rs:267"
     ],
-    "v443": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/cobol/src/tt_call.cob:48",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v444": {
       "classification": "unproved",
       "existing_runner": "libraries/cobol/checks/public_types.py",
@@ -9403,15 +9299,6 @@
     "v492": {
       "classification": "confirmed behavior",
       "value": "One shared string for eligible many-record four judgments/filter/rank; scalar, find, annotate, recognize, relate reject separate context.",
-      "sources": [
-        "libraries/typescript/index.js:391",
-        "libraries/typescript/index.js:1",
-        "libraries/typescript/src/door/result.rs:91"
-      ]
-    },
-    "v493": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
       "sources": [
         "libraries/typescript/index.js:391",
         "libraries/typescript/index.js:1",
@@ -10342,15 +10229,6 @@
         "libraries/typescript/src/door/result.rs:91"
       ]
     },
-    "v589": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/typescript/index.js:391",
-        "libraries/typescript/index.d.ts:1",
-        "libraries/typescript/src/door/result.rs:91"
-      ]
-    },
     "v590": {
       "classification": "confirmed behavior",
       "value": "Host Engine constructors expose native record/replay/cache/backend/model settings; uses same engine store. THINKTHEN_BACKEND/config supports named entries. Existing ticket 0377 owns missing code-level named backend selection.",
@@ -11155,15 +11033,6 @@
     "v678": {
       "classification": "confirmed behavior",
       "value": "One shared string for eligible many-record four judgments/filter/rank; scalar, find, annotate, recognize, relate reject separate context.",
-      "sources": [
-        "libraries/python/thinkthen/__init__.py:448",
-        "libraries/python/thinkthen/__init__.py:1",
-        "libraries/python/src/engine.rs:343"
-      ]
-    },
-    "v679": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
       "sources": [
         "libraries/python/thinkthen/__init__.py:448",
         "libraries/python/thinkthen/__init__.py:1",
@@ -12153,15 +12022,6 @@
     "v776": {
       "classification": "confirmed behavior",
       "value": "One shared string for eligible many-record four judgments/filter/rank; scalar, find, annotate, recognize, relate reject separate context.",
-      "sources": [
-        "libraries/ruby/lib/thinkthen.rb:230",
-        "libraries/ruby/lib/thinkthen.rb:1",
-        "libraries/ruby/src/call.rs:1"
-      ]
-    },
-    "v777": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
       "sources": [
         "libraries/ruby/lib/thinkthen.rb:230",
         "libraries/ruby/lib/thinkthen.rb:1",
@@ -13164,15 +13024,6 @@
         "libraries/r/thinkthen/src/rust/src/calls.rs:178"
       ]
     },
-    "v876": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/r/thinkthen/R/thinkthen.R:558",
-        "libraries/r/thinkthen/R/thinkthen.R:1",
-        "libraries/r/thinkthen/src/rust/src/calls.rs:178"
-      ]
-    },
     "v877": {
       "classification": "confirmed behavior",
       "value": "Host Engine constructors expose native record/replay/cache/backend/model settings; uses same engine store. THINKTHEN_BACKEND/config supports named entries. Existing ticket 0377 owns missing code-level named backend selection.",
@@ -14032,14 +13883,6 @@
         "libraries/python/src/input.rs:19"
       ]
     },
-    "v966": {
-      "classification": "design gap",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/python/thinkthen/judge.py:1",
-        "libraries/python/src/input.rs:19"
-      ]
-    },
     "v967": {
       "classification": "design gap",
       "value": "One candidate choice plus optional none; no saved question tuning.",
@@ -14234,14 +14077,6 @@
         "crates/thinkthen/src/public/frame.rs:52"
       ]
     },
-    "v992": {
-      "classification": "design gap",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "crates/thinkthen/src/public/frame.rs:1",
-        "crates/thinkthen/src/public/frame.rs:52"
-      ]
-    },
     "v993": {
       "classification": "design gap",
       "value": "One candidate choice plus optional none; no saved question tuning.",
@@ -14365,15 +14200,6 @@
       "libraries/dart/lib/src/door.dart:706",
       "libraries/c/src/call.rs:267"
     ],
-    "v1009": {
-      "classification": "confirmed behavior",
-      "value": "Yes-probability descending stable order; plain string question; no saved score-rank or description/model override on question.",
-      "sources": [
-        "libraries/dart/flutter/lib/thinkthen_flutter.dart:1",
-        "libraries/dart/lib/src/door.dart:706",
-        "libraries/c/src/call.rs:267"
-      ]
-    },
     "v1010": {
       "classification": "confirmed behavior",
       "value": "Exported Dart Door provides raw JSON capability; facade has no named function",
@@ -14815,15 +14641,6 @@
         "crates/thinkthen/src/cli/judge.rs"
       ]
     },
-    "v1054": {
-      "classification": "confirmed behavior",
-      "value": "Stable descending yes probability; CLI top and saved score ranking. Rust/C/SQL top can be caller slicing/LIMIT; saved score rank missing.",
-      "sources": [
-        "crates/thinkthen/src/cli/args.rs",
-        "crates/thinkthen/src/cli/asking.rs",
-        "crates/thinkthen/src/cli/judge.rs"
-      ]
-    },
     "v1055": {
       "classification": "confirmed behavior",
       "value": "Every returned row has yes probability (or CLI score distribution under details). Native observer reports questions. C J1 and SQL rank lack full generic stage details.",
@@ -14928,16 +14745,6 @@
     "v1065": {
       "classification": "confirmed behavior",
       "value": "CLI @file and Rust loaders where grammar admits; C typed loader or raw parsed question; SQL @file/JSON except literal rank/find. Host file loading is an edge adapter.",
-      "sources": [
-        "crates/thinkthen/src/cli/args.rs",
-        "crates/thinkthen/src/cli/asking.rs",
-        "crates/thinkthen/src/cli/judge.rs",
-        "crates/thinkthen/src/cli/find.rs"
-      ]
-    },
-    "v1066": {
-      "classification": "design gap",
-      "value": "CLI choose --options pointer changes candidates per record; SQL scalar members expression can vary per row. Rust/C and integrated binding many-record choose capture one option set; no equivalent per-record option envelope.",
       "sources": [
         "crates/thinkthen/src/cli/args.rs",
         "crates/thinkthen/src/cli/asking.rs",
@@ -15230,16 +15037,6 @@
         "crates/thinkthen/src/cli/recognize.rs"
       ]
     },
-    "v1094": {
-      "classification": "design gap",
-      "value": "CLI choose --options pointer changes candidates per record; SQL scalar members expression can vary per row. Rust/C and integrated binding many-record choose capture one option set; no equivalent per-record option envelope.",
-      "sources": [
-        "crates/thinkthen/src/cli/args.rs",
-        "crates/thinkthen/src/cli/asking.rs",
-        "crates/thinkthen/src/cli/judge.rs",
-        "crates/thinkthen/src/cli/recognize.rs"
-      ]
-    },
     "v1095": {
       "classification": "design gap",
       "value": "No record/context pair input in a batch. Eligible calls can be composed as contextual singleton many calls; SQL scalar context expression can vary per row. Embedding context into evidence changes the item representation.",
@@ -15382,16 +15179,6 @@
     "v1107": {
       "classification": "confirmed behavior",
       "value": "CLI @file and Rust loaders where grammar admits; C typed loader or raw parsed question; SQL @file/JSON except literal rank/find. Host file loading is an edge adapter.",
-      "sources": [
-        "crates/thinkthen/src/cli/args.rs",
-        "crates/thinkthen/src/cli/asking.rs",
-        "crates/thinkthen/src/cli/judge.rs",
-        "crates/thinkthen/src/cli/relate.rs"
-      ]
-    },
-    "v1108": {
-      "classification": "design gap",
-      "value": "CLI choose --options pointer changes candidates per record; SQL scalar members expression can vary per row. Rust/C and integrated binding many-record choose capture one option set; no equivalent per-record option envelope.",
       "sources": [
         "crates/thinkthen/src/cli/args.rs",
         "crates/thinkthen/src/cli/asking.rs",
@@ -15779,16 +15566,6 @@
         "crates/thinkthen/src/public/options.rs"
       ]
     },
-    "v1141": {
-      "classification": "confirmed behavior",
-      "value": "Stable descending yes probability; CLI top and saved score ranking. Rust/C/SQL top can be caller slicing/LIMIT; saved score rank missing.",
-      "sources": [
-        "crates/thinkthen/src/public/question.rs",
-        "crates/thinkthen/src/public/builders.rs",
-        "crates/thinkthen/src/public/bulk.rs",
-        "crates/thinkthen/src/public/options.rs"
-      ]
-    },
     "v1142": {
       "classification": "confirmed behavior",
       "value": "Every returned row has yes probability (or CLI score distribution under details). Native observer reports questions. C J1 and SQL rank lack full generic stage details.",
@@ -16142,17 +15919,6 @@
         "crates/thinkthen/src/public/recognize.rs"
       ]
     },
-    "v1173": {
-      "classification": "design gap",
-      "value": "CLI choose --options pointer changes candidates per record; SQL scalar members expression can vary per row. Rust/C and integrated binding many-record choose capture one option set; no equivalent per-record option envelope.",
-      "sources": [
-        "crates/thinkthen/src/public/question.rs",
-        "crates/thinkthen/src/public/builders.rs",
-        "crates/thinkthen/src/public/bulk.rs",
-        "crates/thinkthen/src/public/options.rs",
-        "crates/thinkthen/src/public/recognize.rs"
-      ]
-    },
     "v1174": {
       "classification": "design gap",
       "value": "No record/context pair input in a batch. Eligible calls can be composed as contextual singleton many calls; SQL scalar context expression can vary per row. Embedding context into evidence changes the item representation.",
@@ -16306,17 +16072,6 @@
     "v1186": {
       "classification": "confirmed behavior",
       "value": "CLI @file and Rust loaders where grammar admits; C typed loader or raw parsed question; SQL @file/JSON except literal rank/find. Host file loading is an edge adapter.",
-      "sources": [
-        "crates/thinkthen/src/public/question.rs",
-        "crates/thinkthen/src/public/builders.rs",
-        "crates/thinkthen/src/public/bulk.rs",
-        "crates/thinkthen/src/public/options.rs",
-        "crates/thinkthen/src/public/relate.rs"
-      ]
-    },
-    "v1187": {
-      "classification": "design gap",
-      "value": "CLI choose --options pointer changes candidates per record; SQL scalar members expression can vary per row. Rust/C and integrated binding many-record choose capture one option set; no equivalent per-record option envelope.",
       "sources": [
         "crates/thinkthen/src/public/question.rs",
         "crates/thinkthen/src/public/builders.rs",
@@ -16485,49 +16240,6 @@
         "libraries/c/src/settings.rs"
       ]
     },
-    "v1205": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "01-decide-yes-captured",
-        "02-decide-no",
-        "03-decide-band-unsure",
-        "04-decide-band-yes",
-        "05-decide-meanings",
-        "20-usage-fault",
-        "21-backend-fault",
-        "22-local-fault",
-        "23-cancelled-fault",
-        "24-deadline-fault",
-        "25-defect-fault",
-        "27-decide-many",
-        "28-decide-many-repeated-texts",
-        "29-usage-json-text",
-        "30-local-question-file",
-        "40-decide-counters"
-      ],
-      "routine_case_ids": [
-        "01-decide-yes-captured",
-        "02-decide-no",
-        "03-decide-band-unsure",
-        "20-usage-fault",
-        "21-backend-fault",
-        "22-local-fault",
-        "23-cancelled-fault",
-        "24-deadline-fault",
-        "25-defect-fault",
-        "40-decide-counters"
-      ],
-      "extended_case_ids": [
-        "04-decide-band-yes",
-        "05-decide-meanings",
-        "27-decide-many",
-        "28-decide-many-repeated-texts",
-        "29-usage-json-text",
-        "30-local-question-file"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1206": {
       "classification": "confirmed behavior",
       "value": "Option names and ordered string/object descriptions; CLI inline --option and files.",
@@ -16545,22 +16257,6 @@
         "libraries/c/src/door.rs",
         "libraries/c/src/settings.rs"
       ]
-    },
-    "v1208": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "06-choose-billing",
-        "07-choose-unsure",
-        "08-choose-tie"
-      ],
-      "routine_case_ids": [
-        "06-choose-billing",
-        "07-choose-unsure",
-        "08-choose-tie"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1209": {
       "classification": "confirmed behavior",
@@ -16580,23 +16276,6 @@
         "libraries/c/src/settings.rs"
       ]
     },
-    "v1211": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "09-tag-two",
-        "10-tag-none",
-        "33-tag-threshold-excludes"
-      ],
-      "routine_case_ids": [
-        "09-tag-two",
-        "10-tag-none"
-      ],
-      "extended_case_ids": [
-        "33-tag-threshold-excludes"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1212": {
       "classification": "confirmed behavior",
       "value": "All levels described or all bare; files/JSON maps and Rust ScoreBuilder::level(name, Option<Description>) support descriptions. CLI positional levels are bare (existing 0.2 idea owns --level).",
@@ -16614,23 +16293,6 @@
         "libraries/c/src/door.rs",
         "libraries/c/src/settings.rs"
       ]
-    },
-    "v1214": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "11-score-middle",
-        "12-score-upper",
-        "32-score-equal-distribution"
-      ],
-      "routine_case_ids": [
-        "11-score-middle",
-        "32-score-equal-distribution"
-      ],
-      "extended_case_ids": [
-        "12-score-upper"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1215": {
       "classification": "confirmed behavior",
@@ -16659,35 +16321,9 @@
         "libraries/c/src/settings.rs"
       ]
     },
-    "v1218": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "13-filter-records",
-        "14-filter-none",
-        "26-filter-empty-list"
-      ],
-      "routine_case_ids": [
-        "13-filter-records",
-        "26-filter-empty-list"
-      ],
-      "extended_case_ids": [
-        "14-filter-none"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1219": {
       "classification": "design gap",
       "value": "CLI saved decide criteria or score descriptions; Rust/C/SQL named rank accepts plain yes/no wording only.",
-      "sources": [
-        "libraries/c/src/call.rs",
-        "libraries/c/src/door.rs",
-        "libraries/c/src/settings.rs"
-      ]
-    },
-    "v1220": {
-      "classification": "confirmed behavior",
-      "value": "Stable descending yes probability; CLI top and saved score ranking. Rust/C/SQL top can be caller slicing/LIMIT; saved score rank missing.",
       "sources": [
         "libraries/c/src/call.rs",
         "libraries/c/src/door.rs",
@@ -16702,22 +16338,6 @@
         "libraries/c/src/door.rs",
         "libraries/c/src/settings.rs"
       ]
-    },
-    "v1222": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "15-rank-records",
-        "16-rank-stable-tie",
-        "31-usage-rank-blank-question"
-      ],
-      "routine_case_ids": [
-        "15-rank-records",
-        "16-rank-stable-tie",
-        "31-usage-rank-blank-question"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1223": {
       "classification": "confirmed behavior",
@@ -16764,20 +16384,6 @@
         "libraries/c/src/settings.rs"
       ]
     },
-    "v1228": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "18-find-second",
-        "19-find-none"
-      ],
-      "routine_case_ids": [
-        "18-find-second",
-        "19-find-none"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1229": {
       "classification": "confirmed behavior",
       "value": "Each member decide/choose/tag/score description follows its question grammar.",
@@ -16804,35 +16410,6 @@
         "libraries/c/src/door.rs",
         "libraries/c/src/settings.rs"
       ]
-    },
-    "v1232": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "17-annotate-mixed",
-        "17-annotate-partial",
-        "18-annotate-two-groups",
-        "34-annotate-repeated-texts",
-        "35-annotate-score-repeated-texts",
-        "36-annotate-two-columns",
-        "37-annotate-choose-one",
-        "38-annotate-score-one",
-        "39-annotate-tag-one"
-      ],
-      "routine_case_ids": [
-        "17-annotate-mixed",
-        "17-annotate-partial",
-        "36-annotate-two-columns"
-      ],
-      "extended_case_ids": [
-        "18-annotate-two-groups",
-        "34-annotate-repeated-texts",
-        "35-annotate-score-repeated-texts",
-        "37-annotate-choose-one",
-        "38-annotate-score-one",
-        "39-annotate-tag-one"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1233": {
       "classification": "confirmed behavior",
@@ -16861,39 +16438,6 @@
         "libraries/c/src/settings.rs"
       ]
     },
-    "v1236": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "41-offsets-past-an-accent-and-an-emoji",
-        "42-recognize-C01-relations",
-        "43-recognize-C02-relations",
-        "44-recognize-C12-relations",
-        "45-recognize-C13-relations",
-        "46-recognize-C14-relations",
-        "47-recognize-C18-relations",
-        "48-recognize-C24-relations",
-        "49-recognize-C33-relations",
-        "50-recognize-C40-relations",
-        "53-recognize-either"
-      ],
-      "routine_case_ids": [
-        "41-offsets-past-an-accent-and-an-emoji",
-        "42-recognize-C01-relations",
-        "53-recognize-either"
-      ],
-      "extended_case_ids": [
-        "43-recognize-C02-relations",
-        "44-recognize-C12-relations",
-        "45-recognize-C13-relations",
-        "46-recognize-C14-relations",
-        "47-recognize-C18-relations",
-        "48-recognize-C24-relations",
-        "49-recognize-C33-relations",
-        "50-recognize-C40-relations"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1237": {
       "classification": "confirmed behavior",
       "value": "Complete entity set with names/kinds; CLI JSON array or explicit JSONL/pointers, Rust Entity list, C entity JSON records, SQL table/keyed entity query. Adding/removing an entity changes the item.",
@@ -16920,20 +16464,6 @@
         "libraries/c/src/door.rs",
         "libraries/c/src/settings.rs"
       ]
-    },
-    "v1240": {
-      "classification": "unproved",
-      "existing_runner": "libraries/c/tests/door/cases.rs",
-      "exact_canonical_case_ids": [
-        "51-same-kind-alerts",
-        "52-cross-kind-staff"
-      ],
-      "routine_case_ids": [
-        "51-same-kind-alerts",
-        "52-cross-kind-staff"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1241": [
       "databases/duckdb/bridge/src/ffi/portable_many/ffi.rs",
@@ -17048,49 +16578,6 @@
         "databases/duckdb/src/engines.rs"
       ]
     },
-    "v1254": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "01-decide-yes-captured",
-        "02-decide-no",
-        "03-decide-band-unsure",
-        "04-decide-band-yes",
-        "05-decide-meanings",
-        "20-usage-fault",
-        "21-backend-fault",
-        "22-local-fault",
-        "23-cancelled-fault",
-        "24-deadline-fault",
-        "25-defect-fault",
-        "27-decide-many",
-        "28-decide-many-repeated-texts",
-        "29-usage-json-text",
-        "30-local-question-file",
-        "40-decide-counters"
-      ],
-      "routine_case_ids": [
-        "01-decide-yes-captured",
-        "02-decide-no",
-        "03-decide-band-unsure",
-        "20-usage-fault",
-        "21-backend-fault",
-        "22-local-fault",
-        "23-cancelled-fault",
-        "24-deadline-fault",
-        "25-defect-fault",
-        "40-decide-counters"
-      ],
-      "extended_case_ids": [
-        "04-decide-band-yes",
-        "05-decide-meanings",
-        "27-decide-many",
-        "28-decide-many-repeated-texts",
-        "29-usage-json-text",
-        "30-local-question-file"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1255": {
       "classification": "confirmed behavior",
       "value": "Option names and ordered string/object descriptions; CLI inline --option and files.",
@@ -17108,22 +16595,6 @@
         "databases/duckdb/README.md",
         "databases/duckdb/src/engines.rs"
       ]
-    },
-    "v1257": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "06-choose-billing",
-        "07-choose-unsure",
-        "08-choose-tie"
-      ],
-      "routine_case_ids": [
-        "06-choose-billing",
-        "07-choose-unsure",
-        "08-choose-tie"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1258": {
       "classification": "confirmed behavior",
@@ -17143,23 +16614,6 @@
         "databases/duckdb/src/engines.rs"
       ]
     },
-    "v1260": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "09-tag-two",
-        "10-tag-none",
-        "33-tag-threshold-excludes"
-      ],
-      "routine_case_ids": [
-        "09-tag-two",
-        "10-tag-none"
-      ],
-      "extended_case_ids": [
-        "33-tag-threshold-excludes"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1261": {
       "classification": "confirmed behavior",
       "value": "All levels described or all bare; files/JSON maps and Rust ScoreBuilder::level(name, Option<Description>) support descriptions. CLI positional levels are bare (existing 0.2 idea owns --level).",
@@ -17177,23 +16631,6 @@
         "databases/duckdb/README.md",
         "databases/duckdb/src/engines.rs"
       ]
-    },
-    "v1263": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "11-score-middle",
-        "12-score-upper",
-        "32-score-equal-distribution"
-      ],
-      "routine_case_ids": [
-        "11-score-middle",
-        "32-score-equal-distribution"
-      ],
-      "extended_case_ids": [
-        "12-score-upper"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1264": {
       "classification": "confirmed behavior",
@@ -17240,35 +16677,9 @@
         "databases/duckdb/src/engines.rs"
       ]
     },
-    "v1269": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "13-filter-records",
-        "14-filter-none",
-        "26-filter-empty-list"
-      ],
-      "routine_case_ids": [
-        "13-filter-records",
-        "26-filter-empty-list"
-      ],
-      "extended_case_ids": [
-        "14-filter-none"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1270": {
       "classification": "design gap",
       "value": "CLI saved decide criteria or score descriptions; Rust/C/SQL named rank accepts plain yes/no wording only.",
-      "sources": [
-        "databases/duckdb/bridge/src/ffi/portable_many/ffi.rs",
-        "databases/duckdb/README.md",
-        "databases/duckdb/src/engines.rs"
-      ]
-    },
-    "v1271": {
-      "classification": "confirmed behavior",
-      "value": "Stable descending yes probability; CLI top and saved score ranking. Rust/C/SQL top can be caller slicing/LIMIT; saved score rank missing.",
       "sources": [
         "databases/duckdb/bridge/src/ffi/portable_many/ffi.rs",
         "databases/duckdb/README.md",
@@ -17283,22 +16694,6 @@
         "databases/duckdb/README.md",
         "databases/duckdb/src/engines.rs"
       ]
-    },
-    "v1273": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "15-rank-records",
-        "16-rank-stable-tie",
-        "31-usage-rank-blank-question"
-      ],
-      "routine_case_ids": [
-        "15-rank-records",
-        "16-rank-stable-tie",
-        "31-usage-rank-blank-question"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1274": {
       "classification": "confirmed behavior",
@@ -17345,20 +16740,6 @@
         "databases/duckdb/src/engines.rs"
       ]
     },
-    "v1279": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "18-find-second",
-        "19-find-none"
-      ],
-      "routine_case_ids": [
-        "18-find-second",
-        "19-find-none"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1280": {
       "classification": "confirmed behavior",
       "value": "Each member decide/choose/tag/score description follows its question grammar.",
@@ -17385,35 +16766,6 @@
         "databases/duckdb/README.md",
         "databases/duckdb/src/engines.rs"
       ]
-    },
-    "v1283": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "17-annotate-mixed",
-        "17-annotate-partial",
-        "18-annotate-two-groups",
-        "34-annotate-repeated-texts",
-        "35-annotate-score-repeated-texts",
-        "36-annotate-two-columns",
-        "37-annotate-choose-one",
-        "38-annotate-score-one",
-        "39-annotate-tag-one"
-      ],
-      "routine_case_ids": [
-        "17-annotate-mixed",
-        "17-annotate-partial",
-        "36-annotate-two-columns"
-      ],
-      "extended_case_ids": [
-        "18-annotate-two-groups",
-        "34-annotate-repeated-texts",
-        "35-annotate-score-repeated-texts",
-        "37-annotate-choose-one",
-        "38-annotate-score-one",
-        "39-annotate-tag-one"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1284": {
       "classification": "confirmed behavior",
@@ -17442,39 +16794,6 @@
         "databases/duckdb/src/engines.rs"
       ]
     },
-    "v1287": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "41-offsets-past-an-accent-and-an-emoji",
-        "42-recognize-C01-relations",
-        "43-recognize-C02-relations",
-        "44-recognize-C12-relations",
-        "45-recognize-C13-relations",
-        "46-recognize-C14-relations",
-        "47-recognize-C18-relations",
-        "48-recognize-C24-relations",
-        "49-recognize-C33-relations",
-        "50-recognize-C40-relations",
-        "53-recognize-either"
-      ],
-      "routine_case_ids": [
-        "41-offsets-past-an-accent-and-an-emoji",
-        "42-recognize-C01-relations",
-        "53-recognize-either"
-      ],
-      "extended_case_ids": [
-        "43-recognize-C02-relations",
-        "44-recognize-C12-relations",
-        "45-recognize-C13-relations",
-        "46-recognize-C14-relations",
-        "47-recognize-C18-relations",
-        "48-recognize-C24-relations",
-        "49-recognize-C33-relations",
-        "50-recognize-C40-relations"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1288": {
       "classification": "confirmed behavior",
       "value": "Complete entity set with names/kinds; CLI JSON array or explicit JSONL/pointers, Rust Entity list, C entity JSON records, SQL table/keyed entity query. Adding/removing an entity changes the item.",
@@ -17501,20 +16820,6 @@
         "databases/duckdb/README.md",
         "databases/duckdb/src/engines.rs"
       ]
-    },
-    "v1291": {
-      "classification": "unproved",
-      "existing_runner": "databases/duckdb/tools/conformance.py",
-      "exact_canonical_case_ids": [
-        "51-same-kind-alerts",
-        "52-cross-kind-staff"
-      ],
-      "routine_case_ids": [
-        "51-same-kind-alerts",
-        "52-cross-kind-staff"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1292": [
       "databases/postgresql/src/scalar.rs",
@@ -17642,49 +16947,6 @@
         "databases/postgresql/src/find.rs"
       ]
     },
-    "v1305": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "01-decide-yes-captured",
-        "02-decide-no",
-        "03-decide-band-unsure",
-        "04-decide-band-yes",
-        "05-decide-meanings",
-        "20-usage-fault",
-        "21-backend-fault",
-        "22-local-fault",
-        "23-cancelled-fault",
-        "24-deadline-fault",
-        "25-defect-fault",
-        "27-decide-many",
-        "28-decide-many-repeated-texts",
-        "29-usage-json-text",
-        "30-local-question-file",
-        "40-decide-counters"
-      ],
-      "routine_case_ids": [
-        "01-decide-yes-captured",
-        "02-decide-no",
-        "03-decide-band-unsure",
-        "20-usage-fault",
-        "21-backend-fault",
-        "22-local-fault",
-        "23-cancelled-fault",
-        "24-deadline-fault",
-        "25-defect-fault",
-        "40-decide-counters"
-      ],
-      "extended_case_ids": [
-        "04-decide-band-yes",
-        "05-decide-meanings",
-        "27-decide-many",
-        "28-decide-many-repeated-texts",
-        "29-usage-json-text",
-        "30-local-question-file"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1306": {
       "classification": "confirmed behavior",
       "value": "Option names and ordered string/object descriptions; CLI inline --option and files.",
@@ -17704,22 +16966,6 @@
         "databases/postgresql/src/lib.rs",
         "databases/postgresql/src/find.rs"
       ]
-    },
-    "v1308": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "06-choose-billing",
-        "07-choose-unsure",
-        "08-choose-tie"
-      ],
-      "routine_case_ids": [
-        "06-choose-billing",
-        "07-choose-unsure",
-        "08-choose-tie"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1309": {
       "classification": "confirmed behavior",
@@ -17741,23 +16987,6 @@
         "databases/postgresql/src/find.rs"
       ]
     },
-    "v1311": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "09-tag-two",
-        "10-tag-none",
-        "33-tag-threshold-excludes"
-      ],
-      "routine_case_ids": [
-        "09-tag-two",
-        "10-tag-none"
-      ],
-      "extended_case_ids": [
-        "33-tag-threshold-excludes"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1312": {
       "classification": "confirmed behavior",
       "value": "All levels described or all bare; files/JSON maps and Rust ScoreBuilder::level(name, Option<Description>) support descriptions. CLI positional levels are bare (existing 0.2 idea owns --level).",
@@ -17777,23 +17006,6 @@
         "databases/postgresql/src/lib.rs",
         "databases/postgresql/src/find.rs"
       ]
-    },
-    "v1314": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "11-score-middle",
-        "12-score-upper",
-        "32-score-equal-distribution"
-      ],
-      "routine_case_ids": [
-        "11-score-middle",
-        "32-score-equal-distribution"
-      ],
-      "extended_case_ids": [
-        "12-score-upper"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1315": {
       "classification": "confirmed behavior",
@@ -17845,36 +17057,9 @@
         "databases/postgresql/src/find.rs"
       ]
     },
-    "v1320": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "13-filter-records",
-        "14-filter-none",
-        "26-filter-empty-list"
-      ],
-      "routine_case_ids": [
-        "13-filter-records",
-        "26-filter-empty-list"
-      ],
-      "extended_case_ids": [
-        "14-filter-none"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1321": {
       "classification": "design gap",
       "value": "CLI saved decide criteria or score descriptions; Rust/C/SQL named rank accepts plain yes/no wording only.",
-      "sources": [
-        "databases/postgresql/src/scalar.rs",
-        "databases/postgresql/src/keyed.rs",
-        "databases/postgresql/src/lib.rs",
-        "databases/postgresql/src/find.rs"
-      ]
-    },
-    "v1322": {
-      "classification": "confirmed behavior",
-      "value": "Stable descending yes probability; CLI top and saved score ranking. Rust/C/SQL top can be caller slicing/LIMIT; saved score rank missing.",
       "sources": [
         "databases/postgresql/src/scalar.rs",
         "databases/postgresql/src/keyed.rs",
@@ -17891,22 +17076,6 @@
         "databases/postgresql/src/lib.rs",
         "databases/postgresql/src/find.rs"
       ]
-    },
-    "v1324": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "15-rank-records",
-        "16-rank-stable-tie",
-        "31-usage-rank-blank-question"
-      ],
-      "routine_case_ids": [
-        "15-rank-records",
-        "16-rank-stable-tie",
-        "31-usage-rank-blank-question"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1325": {
       "classification": "confirmed behavior",
@@ -17958,20 +17127,6 @@
         "databases/postgresql/src/find.rs"
       ]
     },
-    "v1330": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "18-find-second",
-        "19-find-none"
-      ],
-      "routine_case_ids": [
-        "18-find-second",
-        "19-find-none"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1331": {
       "classification": "confirmed behavior",
       "value": "Each member decide/choose/tag/score description follows its question grammar.",
@@ -18001,35 +17156,6 @@
         "databases/postgresql/src/lib.rs",
         "databases/postgresql/src/find.rs"
       ]
-    },
-    "v1334": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "17-annotate-mixed",
-        "17-annotate-partial",
-        "18-annotate-two-groups",
-        "34-annotate-repeated-texts",
-        "35-annotate-score-repeated-texts",
-        "36-annotate-two-columns",
-        "37-annotate-choose-one",
-        "38-annotate-score-one",
-        "39-annotate-tag-one"
-      ],
-      "routine_case_ids": [
-        "17-annotate-mixed",
-        "17-annotate-partial",
-        "36-annotate-two-columns"
-      ],
-      "extended_case_ids": [
-        "18-annotate-two-groups",
-        "34-annotate-repeated-texts",
-        "35-annotate-score-repeated-texts",
-        "37-annotate-choose-one",
-        "38-annotate-score-one",
-        "39-annotate-tag-one"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1335": {
       "classification": "confirmed behavior",
@@ -18061,39 +17187,6 @@
         "databases/postgresql/src/find.rs"
       ]
     },
-    "v1338": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "41-offsets-past-an-accent-and-an-emoji",
-        "42-recognize-C01-relations",
-        "43-recognize-C02-relations",
-        "44-recognize-C12-relations",
-        "45-recognize-C13-relations",
-        "46-recognize-C14-relations",
-        "47-recognize-C18-relations",
-        "48-recognize-C24-relations",
-        "49-recognize-C33-relations",
-        "50-recognize-C40-relations",
-        "53-recognize-either"
-      ],
-      "routine_case_ids": [
-        "41-offsets-past-an-accent-and-an-emoji",
-        "42-recognize-C01-relations",
-        "53-recognize-either"
-      ],
-      "extended_case_ids": [
-        "43-recognize-C02-relations",
-        "44-recognize-C12-relations",
-        "45-recognize-C13-relations",
-        "46-recognize-C14-relations",
-        "47-recognize-C18-relations",
-        "48-recognize-C24-relations",
-        "49-recognize-C33-relations",
-        "50-recognize-C40-relations"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1339": {
       "classification": "confirmed behavior",
       "value": "Complete entity set with names/kinds; CLI JSON array or explicit JSONL/pointers, Rust Entity list, C entity JSON records, SQL table/keyed entity query. Adding/removing an entity changes the item.",
@@ -18123,20 +17216,6 @@
         "databases/postgresql/src/lib.rs",
         "databases/postgresql/src/find.rs"
       ]
-    },
-    "v1342": {
-      "classification": "unproved",
-      "existing_runner": "databases/postgresql/tests/runner.py",
-      "exact_canonical_case_ids": [
-        "51-same-kind-alerts",
-        "52-cross-kind-staff"
-      ],
-      "routine_case_ids": [
-        "51-same-kind-alerts",
-        "52-cross-kind-staff"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1343": [
       "databases/sqlite/src/scalars.rs",
@@ -18264,49 +17343,6 @@
         "databases/sqlite/src/scalars/find.rs"
       ]
     },
-    "v1356": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "01-decide-yes-captured",
-        "02-decide-no",
-        "03-decide-band-unsure",
-        "04-decide-band-yes",
-        "05-decide-meanings",
-        "20-usage-fault",
-        "21-backend-fault",
-        "22-local-fault",
-        "23-cancelled-fault",
-        "24-deadline-fault",
-        "25-defect-fault",
-        "27-decide-many",
-        "28-decide-many-repeated-texts",
-        "29-usage-json-text",
-        "30-local-question-file",
-        "40-decide-counters"
-      ],
-      "routine_case_ids": [
-        "01-decide-yes-captured",
-        "02-decide-no",
-        "03-decide-band-unsure",
-        "20-usage-fault",
-        "21-backend-fault",
-        "22-local-fault",
-        "23-cancelled-fault",
-        "24-deadline-fault",
-        "25-defect-fault",
-        "40-decide-counters"
-      ],
-      "extended_case_ids": [
-        "04-decide-band-yes",
-        "05-decide-meanings",
-        "27-decide-many",
-        "28-decide-many-repeated-texts",
-        "29-usage-json-text",
-        "30-local-question-file"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1357": {
       "classification": "confirmed behavior",
       "value": "Option names and ordered string/object descriptions; CLI inline --option and files.",
@@ -18326,22 +17362,6 @@
         "databases/sqlite/src/tables.rs",
         "databases/sqlite/src/scalars/find.rs"
       ]
-    },
-    "v1359": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "06-choose-billing",
-        "07-choose-unsure",
-        "08-choose-tie"
-      ],
-      "routine_case_ids": [
-        "06-choose-billing",
-        "07-choose-unsure",
-        "08-choose-tie"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1360": {
       "classification": "confirmed behavior",
@@ -18363,23 +17383,6 @@
         "databases/sqlite/src/scalars/find.rs"
       ]
     },
-    "v1362": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "09-tag-two",
-        "10-tag-none",
-        "33-tag-threshold-excludes"
-      ],
-      "routine_case_ids": [
-        "09-tag-two",
-        "10-tag-none"
-      ],
-      "extended_case_ids": [
-        "33-tag-threshold-excludes"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1363": {
       "classification": "confirmed behavior",
       "value": "All levels described or all bare; files/JSON maps and Rust ScoreBuilder::level(name, Option<Description>) support descriptions. CLI positional levels are bare (existing 0.2 idea owns --level).",
@@ -18399,23 +17402,6 @@
         "databases/sqlite/src/tables.rs",
         "databases/sqlite/src/scalars/find.rs"
       ]
-    },
-    "v1365": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "11-score-middle",
-        "12-score-upper",
-        "32-score-equal-distribution"
-      ],
-      "routine_case_ids": [
-        "11-score-middle",
-        "32-score-equal-distribution"
-      ],
-      "extended_case_ids": [
-        "12-score-upper"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1366": {
       "classification": "confirmed behavior",
@@ -18467,36 +17453,9 @@
         "databases/sqlite/src/scalars/find.rs"
       ]
     },
-    "v1371": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "13-filter-records",
-        "14-filter-none",
-        "26-filter-empty-list"
-      ],
-      "routine_case_ids": [
-        "13-filter-records",
-        "26-filter-empty-list"
-      ],
-      "extended_case_ids": [
-        "14-filter-none"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1372": {
       "classification": "design gap",
       "value": "CLI saved decide criteria or score descriptions; Rust/C/SQL named rank accepts plain yes/no wording only.",
-      "sources": [
-        "databases/sqlite/src/scalars.rs",
-        "databases/sqlite/src/many.rs",
-        "databases/sqlite/src/tables.rs",
-        "databases/sqlite/src/scalars/find.rs"
-      ]
-    },
-    "v1373": {
-      "classification": "confirmed behavior",
-      "value": "Stable descending yes probability; CLI top and saved score ranking. Rust/C/SQL top can be caller slicing/LIMIT; saved score rank missing.",
       "sources": [
         "databases/sqlite/src/scalars.rs",
         "databases/sqlite/src/many.rs",
@@ -18513,22 +17472,6 @@
         "databases/sqlite/src/tables.rs",
         "databases/sqlite/src/scalars/find.rs"
       ]
-    },
-    "v1375": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "15-rank-records",
-        "16-rank-stable-tie",
-        "31-usage-rank-blank-question"
-      ],
-      "routine_case_ids": [
-        "15-rank-records",
-        "16-rank-stable-tie",
-        "31-usage-rank-blank-question"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1376": {
       "classification": "confirmed behavior",
@@ -18580,20 +17523,6 @@
         "databases/sqlite/src/scalars/find.rs"
       ]
     },
-    "v1381": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "18-find-second",
-        "19-find-none"
-      ],
-      "routine_case_ids": [
-        "18-find-second",
-        "19-find-none"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1382": {
       "classification": "confirmed behavior",
       "value": "Each member decide/choose/tag/score description follows its question grammar.",
@@ -18623,35 +17552,6 @@
         "databases/sqlite/src/tables.rs",
         "databases/sqlite/src/scalars/find.rs"
       ]
-    },
-    "v1385": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "17-annotate-mixed",
-        "17-annotate-partial",
-        "18-annotate-two-groups",
-        "34-annotate-repeated-texts",
-        "35-annotate-score-repeated-texts",
-        "36-annotate-two-columns",
-        "37-annotate-choose-one",
-        "38-annotate-score-one",
-        "39-annotate-tag-one"
-      ],
-      "routine_case_ids": [
-        "17-annotate-mixed",
-        "17-annotate-partial",
-        "36-annotate-two-columns"
-      ],
-      "extended_case_ids": [
-        "18-annotate-two-groups",
-        "34-annotate-repeated-texts",
-        "35-annotate-score-repeated-texts",
-        "37-annotate-choose-one",
-        "38-annotate-score-one",
-        "39-annotate-tag-one"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1386": {
       "classification": "confirmed behavior",
@@ -18683,39 +17583,6 @@
         "databases/sqlite/src/scalars/find.rs"
       ]
     },
-    "v1389": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "41-offsets-past-an-accent-and-an-emoji",
-        "42-recognize-C01-relations",
-        "43-recognize-C02-relations",
-        "44-recognize-C12-relations",
-        "45-recognize-C13-relations",
-        "46-recognize-C14-relations",
-        "47-recognize-C18-relations",
-        "48-recognize-C24-relations",
-        "49-recognize-C33-relations",
-        "50-recognize-C40-relations",
-        "53-recognize-either"
-      ],
-      "routine_case_ids": [
-        "41-offsets-past-an-accent-and-an-emoji",
-        "42-recognize-C01-relations",
-        "53-recognize-either"
-      ],
-      "extended_case_ids": [
-        "43-recognize-C02-relations",
-        "44-recognize-C12-relations",
-        "45-recognize-C13-relations",
-        "46-recognize-C14-relations",
-        "47-recognize-C18-relations",
-        "48-recognize-C24-relations",
-        "49-recognize-C33-relations",
-        "50-recognize-C40-relations"
-      ],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
-    },
     "v1390": {
       "classification": "confirmed behavior",
       "value": "Complete entity set with names/kinds; CLI JSON array or explicit JSONL/pointers, Rust Entity list, C entity JSON records, SQL table/keyed entity query. Adding/removing an entity changes the item.",
@@ -18745,20 +17612,6 @@
         "databases/sqlite/src/tables.rs",
         "databases/sqlite/src/scalars/find.rs"
       ]
-    },
-    "v1393": {
-      "classification": "unproved",
-      "existing_runner": "databases/sqlite/tests/conformance.py",
-      "exact_canonical_case_ids": [
-        "51-same-kind-alerts",
-        "52-cross-kind-staff"
-      ],
-      "routine_case_ids": [
-        "51-same-kind-alerts",
-        "52-cross-kind-staff"
-      ],
-      "extended_case_ids": [],
-      "scope": "Existing conformance case definition/runner evidence, not an independent execution receipt for each capability. Prior 21-surface routine checkpoint proves only selected runner scope; audit focused CLI/public receipts are separate."
     },
     "v1394": {
       "classification": "confirmed behavior",
@@ -20915,6 +19768,1783 @@
         "databases/sqlite/src/tables.rs",
         "databases/sqlite/src/scalars/find.rs"
       ]
+    },
+    "v1646": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "25-defect-fault",
+        "40-decide-counters"
+      ],
+      "extended_case_ids": [
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "25-defect-fault",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file",
+        "40-decide-counters"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [
+        "25-defect-fault"
+      ],
+      "executable_corpus_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file",
+        "40-decide-counters"
+      ],
+      "executable_routine_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "40-decide-counters"
+      ],
+      "executable_extended_case_ids": [
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file"
+      ]
+    },
+    "v1647": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "executable_routine_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1648": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "09-tag-two",
+        "10-tag-none"
+      ],
+      "extended_case_ids": [
+        "33-tag-threshold-excludes"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "09-tag-two",
+        "10-tag-none",
+        "33-tag-threshold-excludes"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "09-tag-two",
+        "10-tag-none",
+        "33-tag-threshold-excludes"
+      ],
+      "executable_routine_case_ids": [
+        "09-tag-two",
+        "10-tag-none"
+      ],
+      "executable_extended_case_ids": [
+        "33-tag-threshold-excludes"
+      ]
+    },
+    "v1649": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "11-score-middle",
+        "32-score-equal-distribution"
+      ],
+      "extended_case_ids": [
+        "12-score-upper"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "11-score-middle",
+        "12-score-upper",
+        "32-score-equal-distribution"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "11-score-middle",
+        "12-score-upper",
+        "32-score-equal-distribution"
+      ],
+      "executable_routine_case_ids": [
+        "11-score-middle",
+        "32-score-equal-distribution"
+      ],
+      "executable_extended_case_ids": [
+        "12-score-upper"
+      ]
+    },
+    "v1650": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "13-filter-records",
+        "26-filter-empty-list"
+      ],
+      "extended_case_ids": [
+        "14-filter-none"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "13-filter-records",
+        "14-filter-none",
+        "26-filter-empty-list"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "13-filter-records",
+        "14-filter-none",
+        "26-filter-empty-list"
+      ],
+      "executable_routine_case_ids": [
+        "13-filter-records",
+        "26-filter-empty-list"
+      ],
+      "executable_extended_case_ids": [
+        "14-filter-none"
+      ]
+    },
+    "v1651": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "executable_routine_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1652": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "executable_routine_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1653": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "36-annotate-two-columns"
+      ],
+      "extended_case_ids": [
+        "18-annotate-two-groups",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "18-annotate-two-groups",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "36-annotate-two-columns",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [
+        "18-annotate-two-groups"
+      ],
+      "executable_corpus_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "36-annotate-two-columns",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "executable_routine_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "36-annotate-two-columns"
+      ],
+      "executable_extended_case_ids": [
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ]
+    },
+    "v1654": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "53-recognize-either"
+      ],
+      "extended_case_ids": [
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations",
+        "53-recognize-either"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations",
+        "53-recognize-either"
+      ],
+      "executable_routine_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "53-recognize-either"
+      ],
+      "executable_extended_case_ids": [
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations"
+      ]
+    },
+    "v1655": {
+      "classification": "unproved",
+      "existing_runner": "libraries/c/tests/door/cases.rs",
+      "routine_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No public internal-defect injection through the C door.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with current packed-group request behavior."
+      },
+      "runner_exclusion_source": "libraries/c/tests/door/cases.rs:39",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "executable_routine_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1656": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "25-defect-fault",
+        "40-decide-counters"
+      ],
+      "extended_case_ids": [
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "25-defect-fault",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file",
+        "40-decide-counters"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [
+        "25-defect-fault"
+      ],
+      "executable_corpus_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file",
+        "40-decide-counters"
+      ],
+      "executable_routine_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "40-decide-counters"
+      ],
+      "executable_extended_case_ids": [
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file"
+      ]
+    },
+    "v1657": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "executable_routine_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1658": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "09-tag-two",
+        "10-tag-none"
+      ],
+      "extended_case_ids": [
+        "33-tag-threshold-excludes"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "09-tag-two",
+        "10-tag-none",
+        "33-tag-threshold-excludes"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "09-tag-two",
+        "10-tag-none",
+        "33-tag-threshold-excludes"
+      ],
+      "executable_routine_case_ids": [
+        "09-tag-two",
+        "10-tag-none"
+      ],
+      "executable_extended_case_ids": [
+        "33-tag-threshold-excludes"
+      ]
+    },
+    "v1659": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "11-score-middle",
+        "32-score-equal-distribution"
+      ],
+      "extended_case_ids": [
+        "12-score-upper"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "11-score-middle",
+        "12-score-upper",
+        "32-score-equal-distribution"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "11-score-middle",
+        "12-score-upper",
+        "32-score-equal-distribution"
+      ],
+      "executable_routine_case_ids": [
+        "11-score-middle",
+        "32-score-equal-distribution"
+      ],
+      "executable_extended_case_ids": [
+        "12-score-upper"
+      ]
+    },
+    "v1660": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "13-filter-records",
+        "26-filter-empty-list"
+      ],
+      "extended_case_ids": [
+        "14-filter-none"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "13-filter-records",
+        "14-filter-none",
+        "26-filter-empty-list"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "13-filter-records",
+        "14-filter-none",
+        "26-filter-empty-list"
+      ],
+      "executable_routine_case_ids": [
+        "13-filter-records",
+        "26-filter-empty-list"
+      ],
+      "executable_extended_case_ids": [
+        "14-filter-none"
+      ]
+    },
+    "v1661": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "executable_routine_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1662": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "executable_routine_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1663": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "36-annotate-two-columns"
+      ],
+      "extended_case_ids": [
+        "18-annotate-two-groups",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "18-annotate-two-groups",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "36-annotate-two-columns",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [
+        "18-annotate-two-groups"
+      ],
+      "executable_corpus_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "36-annotate-two-columns",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "executable_routine_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "36-annotate-two-columns"
+      ],
+      "executable_extended_case_ids": [
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ]
+    },
+    "v1664": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "53-recognize-either"
+      ],
+      "extended_case_ids": [
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations",
+        "53-recognize-either"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations",
+        "53-recognize-either"
+      ],
+      "executable_routine_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "53-recognize-either"
+      ],
+      "executable_extended_case_ids": [
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations"
+      ]
+    },
+    "v1665": {
+      "classification": "unproved",
+      "existing_runner": "databases/duckdb/tools/conformance.py",
+      "routine_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "Private panic-boundary proof replaces the retired public internal-invariant injection.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/duckdb/tools/conformance.py:34",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "executable_routine_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1666": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "25-defect-fault",
+        "40-decide-counters"
+      ],
+      "extended_case_ids": [
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "25-defect-fault",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file",
+        "40-decide-counters"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [
+        "23-cancelled-fault",
+        "25-defect-fault"
+      ],
+      "executable_corpus_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "24-deadline-fault",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file",
+        "40-decide-counters"
+      ],
+      "executable_routine_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "24-deadline-fault",
+        "40-decide-counters"
+      ],
+      "executable_extended_case_ids": [
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file"
+      ]
+    },
+    "v1667": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "executable_routine_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1668": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "09-tag-two",
+        "10-tag-none"
+      ],
+      "extended_case_ids": [
+        "33-tag-threshold-excludes"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "09-tag-two",
+        "10-tag-none",
+        "33-tag-threshold-excludes"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "09-tag-two",
+        "10-tag-none",
+        "33-tag-threshold-excludes"
+      ],
+      "executable_routine_case_ids": [
+        "09-tag-two",
+        "10-tag-none"
+      ],
+      "executable_extended_case_ids": [
+        "33-tag-threshold-excludes"
+      ]
+    },
+    "v1669": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "11-score-middle",
+        "32-score-equal-distribution"
+      ],
+      "extended_case_ids": [
+        "12-score-upper"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "11-score-middle",
+        "12-score-upper",
+        "32-score-equal-distribution"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "11-score-middle",
+        "12-score-upper",
+        "32-score-equal-distribution"
+      ],
+      "executable_routine_case_ids": [
+        "11-score-middle",
+        "32-score-equal-distribution"
+      ],
+      "executable_extended_case_ids": [
+        "12-score-upper"
+      ]
+    },
+    "v1670": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "13-filter-records",
+        "26-filter-empty-list"
+      ],
+      "extended_case_ids": [
+        "14-filter-none"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "13-filter-records",
+        "14-filter-none",
+        "26-filter-empty-list"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "13-filter-records",
+        "14-filter-none",
+        "26-filter-empty-list"
+      ],
+      "executable_routine_case_ids": [
+        "13-filter-records",
+        "26-filter-empty-list"
+      ],
+      "executable_extended_case_ids": [
+        "14-filter-none"
+      ]
+    },
+    "v1671": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "executable_routine_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1672": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "executable_routine_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1673": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "36-annotate-two-columns"
+      ],
+      "extended_case_ids": [
+        "18-annotate-two-groups",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "18-annotate-two-groups",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "36-annotate-two-columns",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [
+        "18-annotate-two-groups"
+      ],
+      "executable_corpus_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "36-annotate-two-columns",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "executable_routine_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "36-annotate-two-columns"
+      ],
+      "executable_extended_case_ids": [
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ]
+    },
+    "v1674": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "53-recognize-either"
+      ],
+      "extended_case_ids": [
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations",
+        "53-recognize-either"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations",
+        "53-recognize-either"
+      ],
+      "executable_routine_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "53-recognize-either"
+      ],
+      "executable_extended_case_ids": [
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations"
+      ]
+    },
+    "v1675": {
+      "classification": "unproved",
+      "existing_runner": "databases/postgresql/tests/runner.py",
+      "routine_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside boundary reaches a defect; separate panic-probe covers XX000.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior.",
+        "23-cancelled-fault": "SQL has no cancellation token for this corpus injection; separate host cancellation tests cover it."
+      },
+      "runner_exclusion_source": "databases/postgresql/tests/runner.py:31",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "executable_routine_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1676": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "25-defect-fault",
+        "40-decide-counters"
+      ],
+      "extended_case_ids": [
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "25-defect-fault",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file",
+        "40-decide-counters"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [
+        "25-defect-fault"
+      ],
+      "executable_corpus_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file",
+        "40-decide-counters"
+      ],
+      "executable_routine_case_ids": [
+        "01-decide-yes-captured",
+        "02-decide-no",
+        "03-decide-band-unsure",
+        "20-usage-fault",
+        "21-backend-fault",
+        "22-local-fault",
+        "23-cancelled-fault",
+        "24-deadline-fault",
+        "40-decide-counters"
+      ],
+      "executable_extended_case_ids": [
+        "04-decide-band-yes",
+        "05-decide-meanings",
+        "27-decide-many",
+        "28-decide-many-repeated-texts",
+        "29-usage-json-text",
+        "30-local-question-file"
+      ]
+    },
+    "v1677": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "executable_routine_case_ids": [
+        "06-choose-billing",
+        "07-choose-unsure",
+        "08-choose-tie"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1678": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "09-tag-two",
+        "10-tag-none"
+      ],
+      "extended_case_ids": [
+        "33-tag-threshold-excludes"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "09-tag-two",
+        "10-tag-none",
+        "33-tag-threshold-excludes"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "09-tag-two",
+        "10-tag-none",
+        "33-tag-threshold-excludes"
+      ],
+      "executable_routine_case_ids": [
+        "09-tag-two",
+        "10-tag-none"
+      ],
+      "executable_extended_case_ids": [
+        "33-tag-threshold-excludes"
+      ]
+    },
+    "v1679": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "11-score-middle",
+        "32-score-equal-distribution"
+      ],
+      "extended_case_ids": [
+        "12-score-upper"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "11-score-middle",
+        "12-score-upper",
+        "32-score-equal-distribution"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "11-score-middle",
+        "12-score-upper",
+        "32-score-equal-distribution"
+      ],
+      "executable_routine_case_ids": [
+        "11-score-middle",
+        "32-score-equal-distribution"
+      ],
+      "executable_extended_case_ids": [
+        "12-score-upper"
+      ]
+    },
+    "v1680": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "13-filter-records",
+        "26-filter-empty-list"
+      ],
+      "extended_case_ids": [
+        "14-filter-none"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "13-filter-records",
+        "14-filter-none",
+        "26-filter-empty-list"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "13-filter-records",
+        "14-filter-none",
+        "26-filter-empty-list"
+      ],
+      "executable_routine_case_ids": [
+        "13-filter-records",
+        "26-filter-empty-list"
+      ],
+      "executable_extended_case_ids": [
+        "14-filter-none"
+      ]
+    },
+    "v1681": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "executable_routine_case_ids": [
+        "15-rank-records",
+        "16-rank-stable-tie",
+        "31-usage-rank-blank-question"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1682": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "executable_routine_case_ids": [
+        "18-find-second",
+        "19-find-none"
+      ],
+      "executable_extended_case_ids": []
+    },
+    "v1683": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "36-annotate-two-columns"
+      ],
+      "extended_case_ids": [
+        "18-annotate-two-groups",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "18-annotate-two-groups",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "36-annotate-two-columns",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [
+        "18-annotate-two-groups"
+      ],
+      "executable_corpus_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "36-annotate-two-columns",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ],
+      "executable_routine_case_ids": [
+        "17-annotate-mixed",
+        "17-annotate-partial",
+        "36-annotate-two-columns"
+      ],
+      "executable_extended_case_ids": [
+        "34-annotate-repeated-texts",
+        "35-annotate-score-repeated-texts",
+        "37-annotate-choose-one",
+        "38-annotate-score-one",
+        "39-annotate-tag-one"
+      ]
+    },
+    "v1684": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "53-recognize-either"
+      ],
+      "extended_case_ids": [
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations"
+      ],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations",
+        "53-recognize-either"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations",
+        "53-recognize-either"
+      ],
+      "executable_routine_case_ids": [
+        "41-offsets-past-an-accent-and-an-emoji",
+        "42-recognize-C01-relations",
+        "53-recognize-either"
+      ],
+      "executable_extended_case_ids": [
+        "43-recognize-C02-relations",
+        "44-recognize-C12-relations",
+        "45-recognize-C13-relations",
+        "46-recognize-C14-relations",
+        "47-recognize-C18-relations",
+        "48-recognize-C24-relations",
+        "49-recognize-C33-relations",
+        "50-recognize-C40-relations"
+      ]
+    },
+    "v1685": {
+      "classification": "unproved",
+      "existing_runner": "databases/sqlite/tests/conformance.py",
+      "routine_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "extended_case_ids": [],
+      "scope": "Corpus IDs and routine/extended IDs describe corpus and selector membership only. Executable IDs remove the runner exclusions explicitly listed here. Excluded IDs did not run and are not covered by the passing checkpoint. No independent execution receipt for every capability is claimed. Separate internal-defect/cancellation tests do not make the omitted corpus case executed.",
+      "corpus_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "runner_exclusions": {
+        "25-defect-fault": "No outside SQL boundary reaches an internal invariant failure.",
+        "18-annotate-two-groups": "Legacy separate-group exchanges conflict with ADR0111 packed-group request behavior."
+      },
+      "runner_exclusion_source": "databases/sqlite/tests/conformance.py:30",
+      "excluded_cell_case_ids": [],
+      "executable_corpus_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "executable_routine_case_ids": [
+        "51-same-kind-alerts",
+        "52-cross-kind-staff"
+      ],
+      "executable_extended_case_ids": []
     }
   }
 }
