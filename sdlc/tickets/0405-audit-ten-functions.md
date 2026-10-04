@@ -1,6 +1,6 @@
 # 0405: Audit the ten functions across every surface before 0.2 hardens
 
-Status: in progress. Findings and planning tickets prepared; full independent review pending. Read-only validation; no product behavior changes. Ian requested this audit on 2026-10-04. It precedes ticket 0401 implementation. Run it in physical lane claude-0 after the baseline package checkpoint.
+Status: landed. Complete audit accepted for landing at `33dc12e9a2d812055f99aac423010724756add08`. Read-only validation; no product behavior changes. Ian requested this audit on 2026-10-04. It precedes ticket 0401 implementation. Run it in physical lane claude-0 after the baseline package checkpoint.
 
 Milestone: 0.2
 
@@ -28,3 +28,5 @@ Each confirmed gap becomes a separate ticket or a named debt record. CLI, Rust a
 ## What the build taught us
 
 The first answer received fresh ACCEPT at e37b7150. The complete [report](../records/0405-audit-report.md) and [280-cell matrix](../records/0405-surface-matrix.md) distinguish source support, selected conformance evidence, unproved host paths and design gaps. Typed score descriptions and relation reads already exist. Cache question identity excludes free cuts even though metadata digests include them. Recognition relation-stage dependencies limit blanket no-send claims. Amended 0401 and gap tickets 0406–0414 and question-set follow-ups 0417–0418 remain planning until fresh review. Separate planning asks 0415 and 0416 are not audit findings.
+
+Fresh full-audit review accepted `33dc12e9a2d812055f99aac423010724756add08` after verifying all 280 cells, all 40 C/SQL execution profiles, unchanged product paths and four focused public details/context tests. The audit outcome is complete. Implementation belongs to the separate tickets.

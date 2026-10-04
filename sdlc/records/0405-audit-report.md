@@ -1,6 +1,6 @@
 # 0405: Audit the ten functions before 0.2 hardens
 
-Status: complete findings prepared for independent review. Product source, specifications and existing tests remain unchanged. The first search answer received fresh ACCEPT at `e37b7150e278255adcd81ef25ba6985517b5cb22`. The full audit and resulting planning tickets still need fresh review before landing.
+Status: complete. Fresh independent review accepted `33dc12e9a2d812055f99aac423010724756add08`. Product source, specifications and existing tests remain unchanged. The first search answer received separate fresh ACCEPT at `e37b7150e278255adcd81ef25ba6985517b5cb22`. Resulting implementation tickets remain open.
 
 ## Verdict
 
@@ -86,11 +86,11 @@ Generic C JSON convenience differences do not remove a typed C route where one e
 
 ## Verification
 
-Focused reused CLI carrier: 23 keeping cases, three hints cases, eight shared-context cases, one counted cross-function replay case and one counted find cache case all passed. Public carrier: ten contracts cases, three details cases and one changed-context replay case passed. Fresh first-answer reviewer independently reproduced all 36 CLI and 14 public cases and the counted probes. The full-audit reviewer additionally confirmed 280 unique valid cells, an empty product diff, three public details tests and one changed-context replay test. Review required explicit C/SQL corpus execution exclusions and removal of stale 0403 signing wording; both record corrections are prepared for a fresh acceptance.
+Focused reused CLI carrier: 23 keeping cases, three hints cases, eight shared-context cases, one counted cross-function replay case and one counted find cache case all passed. Public carrier: ten contracts cases, three details cases and one changed-context replay case passed. Fresh first-answer reviewer independently reproduced all 36 CLI and 14 public cases and the counted probes. The full-audit reviewer additionally confirmed 280 unique valid cells, an empty product diff, three public details tests and one changed-context replay test. Review required explicit C/SQL corpus execution exclusions and removal of stale 0403 signing wording; both record corrections received fresh ACCEPT at `33dc12e9a2d812055f99aac423010724756add08`.
 
 Disposable replay listener counts remained 1 (decide), 2 (choose), 3 (tag), 4 (filter), 5 (rank), 6 (score), 7 (find), 8 (annotate) and 9 (relate). Recognition stayed at two across cut increase/restoration. The outputs and exit codes appear in `target/audit0405/reapply-results.json` and `recognize-reapply-results.json`. Source traces establish the relation-stage limitation; no broader no-send inference is made.
 
-Builder verification passed: 280 unique cells, 28 surfaces and ten functions; every referenced value and source/runner path exists. Ticket validation reports zero failures; changed-file link findings are zero; git diff --check passes. New-text private-name and home-path counts are zero. New text is checked for public naming without printing forbidden names. The candidate's fresh reviewer must check every finding/owner and retain unproved labels where no per-cell run exists.
+Builder verification passed: 280 unique cells, 28 surfaces and ten functions; every referenced value and source/runner path exists. Ticket validation reports zero failures; changed-file link findings are zero; git diff --check passes. New-text private-name and home-path counts are zero. New text is checked for public naming without printing forbidden names. The fresh reviewer verified all 280 cells, all 40 corrected C/SQL execution profiles, source references and planning owners. Unproved per-host paths retain their unproved classification.
 
 ## Search and independent planning
 
