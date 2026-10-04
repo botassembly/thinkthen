@@ -38,3 +38,7 @@ ADR 0017's amendment of 2026-09-24 renames the width to the throttle. A profile 
 ## Amendment, 2026-09-26: ADR 0048 batches records
 
 ADR 0048 adds the batch setting to calibration identity through the question file's `batch`. Unlike `profile`, `batch` stays out of the question and question-set digest, by Ian's ruling. Ian can overturn this.
+
+## Ticket 0400 amendment, 2026-10-04
+
+Ticket 0400 slice A accepts the provider setup format in [ADR 0117](0117-provider-setups-extend-the-backend-entry.md). Slice B will allow the selected backend entry to supply the existing closed profile below an explicit profile and above none. Profiles keep their current type, limits, warnings, digest rules and pre-lookup validation; they select no address, key, model, rate or throttle. The parser remains unchanged in slice A.
