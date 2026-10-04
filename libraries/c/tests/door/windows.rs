@@ -134,6 +134,7 @@ fn msvc_asan_proves_instrumentation_before_ownership_checks() {
         "MSVC ASan instrumentation/runtime not established: {}",
         text(&output.stderr)
     );
+    std::fs::remove_file(probe.with_extension("obj")).expect("remove negative object");
     std::fs::remove_file(probe).expect("remove negative executable");
     for name in [
         "nulls",

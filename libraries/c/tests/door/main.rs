@@ -203,7 +203,7 @@ fn the_examples_print_their_pinned_answers() {
 /// The C rows: the argument rules, the `_opts` twins, two threads' messages
 /// (R1-9), engine-owned failures (R2-16), a call after thread-local
 /// teardown (R2-7), and a forked child. Each program checks itself and says
-/// nothing when it passes; ASan and LSan report on standard error.
+/// nothing when it passes; Unix ASan and LSan report on standard error.
 #[test]
 fn every_c_row_holds_under_the_sanitizer() {
     for name in ["nulls", "opts", "threads", "engines", "atexit", "fork"] {

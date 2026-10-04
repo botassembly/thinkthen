@@ -166,6 +166,21 @@ def archives(root):
         except OSError:
             pass
     assert C.HEADER.is_file() and binary.is_file()
+    FIXTURE['create'](root, VERSION)
+    archive_bytes = archive.read_bytes()
+    smoke = runpy.run_path(str(Path(__file__).with_name('release-windows-c-smoke.py')))
+    owned_temporary = tempfile.TemporaryDirectory
+    folders = []
+    def capture_scratch(*args, **kwargs):
+        owned = owned_temporary(*args, **kwargs)
+        folders.append(Path(owned.name))
+        return owned
+    with mock.patch.object(smoke['C'], 'run', side_effect=ValueError('cl.exe failed (exit 48)')):
+        with mock.patch.object(tempfile, 'TemporaryDirectory', capture_scratch):
+            refused(lambda: smoke['consume'](archive), 'cl.exe failed (exit 48)')
+    assert folders and all(not folder.exists() for folder in folders)
+    assert archive.read_bytes() == archive_bytes, 'consumer setup failure changed caller archive'
+
 
 
 def pack_routing(root):
@@ -181,6 +196,7 @@ def pack_routing(root):
     include = source / 'libraries/c/include'
     include.mkdir()
     shutil.copyfile(C.HEADER, include / 'thinkthen.h')
+    shutil.copytree(REPO / 'demos/27-test-with-no-network', source / 'demos/27-test-with-no-network')
     tools = root / 'tools'
     tools.mkdir()
     saved_dll = root / 'saved.dll'
@@ -233,6 +249,15 @@ def pack_routing(root):
         assert result.returncode == 0, result.stderr
         assert C.check(destination / f'thinkthen-c-{VERSION}-{C.TARGET}.zip')
         assert not list(scratch.iterdir()), 'packer retained owned staging'
+    default_output = root / 'default-output'
+    result = subprocess.run(['sh', str(scripts / 'release-pack'), C.TARGET, str(default_output)],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert {path.name for path in default_output.iterdir()} == {
+        f'thinkthen-{VERSION}-{C.TARGET}.zip', f'thinkthen-{VERSION}-{C.TARGET}.zip.sha256',
+        f'thinkthen-c-{VERSION}-{C.TARGET}.zip', f'thinkthen-c-{VERSION}-{C.TARGET}.zip.sha256',
+        'thinkthen-first-run.tar.gz', 'thinkthen-first-run.tar.gz.sha256'}
+    assert not list(scratch.iterdir())
     # Real tool failure propagates through the real packer and cleans scratch.
     (tools / 'lib.exe').write_text('#!/bin/sh\nexit 47\n')
     failed = root / 'failed'
