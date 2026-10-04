@@ -106,7 +106,7 @@ The proposed implementation, review boundaries and manual run controls live in [
 - The fill value `{}`.
 - The defaults `pplx-decider-v1-27b` and `typesafe/jev-1.13`.
 
-## Build lessons and actual checks
+## What the build taught us
 
 The coordinator ran each reviewed manual job once on `4349b91b3` on 2026-10-04. Both exited 0 with critical 0 and warning 0. [The build record](../records/0399-backend-path-build.md#actual-manual-provider-receipts) retains the actual transcripts, model identities and spend limits. Successful replies report a combined usage cost of $0.000098326; attempt counts are not printed, so this is not an exact total bill. The pair retains its conservative $0.20 allowance and charged 20000 durable reserved tokens. No extra paid call is authorized here.
 
