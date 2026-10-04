@@ -1,7 +1,7 @@
 # 0398 slice B: Published install checks
 
 Date: 2026-10-04
-Status: offline slice B implementation complete; fresh integrated code review and hosted runner proof pending
+Status: offline slice B implementation received fresh ACCEPT at fc4d842b0e627a9e4f96088f4bcff32e7a9e6246; hosted runner proof remains pending
 Ticket: `sdlc/tickets/0398-release-safety.md`
 Starting revision: `58aee391b351297568aa68ca4ac8f0fdb19fe414`
 

@@ -1,6 +1,6 @@
 # 0398: Release safety: publish dry runs, install checks after publishing, and a rehearsed tag
 
-Status: in progress. Slice A accepted for landing at `c6762b93f6e81e7970c1fd7e51e2a07163fbcdb8`; slices B and C remain. Lane 2, its first item. Parent: Ian's 0.2 plan of 2026-10-04, lane 2 "release safety". It closes `sdlc/issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md`, `sdlc/issues/2026-10-04-public-install-checks-are-done-by-hand.md` and `sdlc/issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md`. It needs no other ticket. It lands after ticket 0397 in the lane order.
+Status: in progress. Slice A landed through `ff047d8c50ce39ed9ab0acd22695c4960a963d38`. Slice B offline implementation received fresh ACCEPT at `fc4d842b0e627a9e4f96088f4bcff32e7a9e6246`; landing follows. Slice C and approved hosted proof remain. Lane 2, its first item. Parent: Ian's 0.2 plan of 2026-10-04, lane 2 "release safety". It closes `sdlc/issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md`, `sdlc/issues/2026-10-04-public-install-checks-are-done-by-hand.md` and `sdlc/issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md`. It needs no other ticket. It lands after ticket 0397 in the lane order.
 
 Milestone: 0.2
 

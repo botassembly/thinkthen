@@ -1,6 +1,6 @@
 # 0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64
 
-Status: in progress. Slice A offline implementation and all 350 site replays pass; final receipt review and landing follow. Windows runner proof and slices B–D remain. The `release/0.1` cut and ticket 0397 are landed. Fresh ticket review accepted the plan on 2026-10-04. Physical lane: claude-1. Plan: `sdlc/planning/windows.md`, stage 1. Shared workflow edits wait for ticket 0398 slice A and the coordinator's signal.
+Status: in progress. Slice A landed through `115bb95b20111f3f73688157584ff2f4736171ff` after fresh receipt review and all 350 actual site replays. Windows runner proof and slices B–D remain. The `release/0.1` cut and ticket 0397 are landed. Fresh ticket review accepted the plan on 2026-10-04. Physical lane: claude-1. Plan: `sdlc/planning/windows.md`, stage 1. Shared workflow edits wait for ticket 0398 slice A and the coordinator's signal.
 
 Milestone: 0.2
 
