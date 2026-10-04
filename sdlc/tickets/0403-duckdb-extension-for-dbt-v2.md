@@ -1,0 +1,83 @@
+# 0403: The DuckDB extension ships a build for DuckDB v1.5.4, the version dbt v2 ships
+
+Status: ready. Not started. It changes the release workflow's DuckDB package, so a rehearsal under Ian's approval proves it before the 0.2 release.
+
+Milestone: 0.2
+
+Lane: 3, after ticket 0402, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0403-duckdb-extension-for-dbt-v2`.
+
+## Outcome
+
+1. Each DuckDB release archive holds one extension file per supported DuckDB version: v1.5.5, as today, and v1.5.4, the version dbt v2 embeds. Each file's footer names its own DuckDB version.
+2. The archive lays the files out as a DuckDB extension repository, `v1.5.4/<platform>/thinkthen.duckdb_extension` and `v1.5.5/<platform>/thinkthen.duckdb_extension`. `INSTALL thinkthen FROM '<folder>'; LOAD thinkthen;` picks the file that matches the running DuckDB. A file can also load by its path.
+3. The stock DuckDB v1.5.4 CLI and Python module load the v1.5.4 file with unsigned extensions allowed, and every SQL function answers as it does on v1.5.5. Each DuckDB version refuses the other version's file with DuckDB's own version sentence.
+4. `DUCKDB_VERSIONS` in `databases/duckdb/tools/version.env` is the one list. A build check fails when the `site/src/data/catalog.mjs` install text or `databases/duckdb/README.md` omits a listed version.
+5. The install page and `databases/duckdb/README.md` say which DuckDB versions the archive serves, and that dbt v1 with `duckdb` 1.5.5 loads it today. They say that dbt v2 loads only signed extensions, and that this file is unsigned.
+
+0.2 ships several DuckDB versions, two at first.
+
+Until Ian rules, 0.2 documents dbt v1 with `duckdb` 1.5.5 as its dbt path. The v1.5.4 build ships either way, and Ian's ruling changes nothing in this ticket. Under this default, item 7 of the approved scope, "so it loads", is not met in dbt v2: dbt v2 refuses any unsigned extension. The open question below holds the three options.
+
+## Evidence
+
+- Starts from: experiment 0011 (`botassembly/thinkthen-exp`, `experiments/0011-thinkthen-in-dbt/README.md`), the docs message "Experiments need the DuckDB extension file" of 2026-10-02, ADR 0081, and the 0.2 scope Ian approved on 2026-10-04, item 7.
+  - Experiment 0011, probe P0a: dbt v2 (`dbt-oss 2.0.5`) embeds DuckDB v1.5.4 through its own ADBC driver, `libadbc_driver_duckdb-1.5.4.so`.
+  - Probe P0e: the released 0.1.1 extension, loaded in dbt v2, fails with "The file was built specifically for DuckDB version 'v1.5.5' and can only be loaded with that version of DuckDB. (this version of DuckDB is 'v1.5.4')".
+  - Probe P0c: dbt v2 refuses `allow_unsigned_extensions` in its profile `settings`, with "Cannot change allow_unsigned_extensions setting while database is running". dbt v2 applies profile settings after the database starts, and its bundled driver exposes no start-time option. So dbt v2 loads no unsigned extension, whatever DuckDB version it was built for.
+  - Probe P0b: a signed community `json` extension built for v1.5.5 loads in dbt v2's v1.5.4. That extension uses DuckDB's stable C API, which DuckDB keeps compatible across patch releases.
+  - The working path: dbt v1 (`dbt-core 1.12.5`, `dbt-duckdb 1.11.0`, `duckdb` 1.5.5) loaded the released 0.1.1 extension through `config_options`. One build tagged and scored 306 songs for $0.0075, and a second build sent 0 requests.
+  - The docs message answer: GitHub release v0.1.1 holds `thinkthen-duckdb-0.1.1-TARGET.tar.gz` and its `.sha256` for four targets. The file is unsigned and built for DuckDB v1.5.5.
+  - What the extension ABI requires. The extension uses DuckDB's C++ API (ADR 0081). Its footer names ABI `CPP`, the platform, the DuckDB version and the extension version, which `databases/duckdb/cpp/verify_footer.py` checks. DuckDB loads a C++ extension only when the footer's DuckDB version equals its own. `databases/duckdb/cpp/verify_package.py` already proves both refusals on every check: the stock v1.5.5 host refuses a footer patched to `v1.5.4`, and the pinned stock v1.5.4 host refuses the v1.5.5 file. ADR 0081 says the package builds one binary per DuckDB version and platform, and its metadata names both. The C++ extension also links DuckDB's static archives (`databases/duckdb/cpp/CMakeLists.txt`), so a build is tied to one release's source and archives.
+  - Why not the stable C API. One C API file could load across patch releases, as probe P0b shows. The closed issue `sdlc/issues/closed/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md` records that the C API's scalar bind returned garbage and crashed on v1.5.5, and ADR 0081 moved the product to the C++ API for bind and query lifecycle. A port back would rewrite the surface and lose bind-time validation.
+  - Today's build. `databases/duckdb/tools/version.env` holds one pin, `DUCKDB_VERSION=v1.5.5`, with its source commit `d8cdaa33f` and the CLI and static archive digests for four platforms. It already pins the v1.5.4 CLI on all four platforms as `DUCKDB_OLDER_*`, for the refusal check. `databases/duckdb/tools/setup.sh --fetch` puts everything under one folder named for the one pin, `duckdb/v1.5.5/` (line 53): the v1.5.5 CLI, the source, the static archives, the suites' Python in `duckdb/v1.5.5/venv` (line 101), and the v1.5.4 CLI in `duckdb/v1.5.5/older-host/` (lines 73 to 77). `site/scripts/smoke-sql.mjs` (line 107) hard-codes `duckdb/v1.5.5`. `verify_package.py` reads the v1.5.4 CLI digest through `OLDER_KEYS` (lines 16 to 24) and patches the literals `v1.5.5` and `v1.5.4` (line 61). `databases/duckdb/cpp/build.sh` reads the one pin and writes `build/artifacts/cpp/<target>/thinkthen.duckdb_extension`. `databases/duckdb/cpp/CMakeLists.txt` refuses any source commit but v1.5.5's and reads one archive manifest per platform (`cpp/archive-sha256*.txt`). `databases/duckdb/tools/requirements.txt` pins `duckdb==1.5.5` for the suites' Python.
+  - The release path. `.github/workflows/release.yml` runs `sdlc/scripts/release-pack "$TARGET" release-files` on each of the four targets. `part_duckdb` in `release-pack` builds once, checks the ELF or Mach-O architecture, runs `verify_footer.py` against `DUCKDB_VERSION`, writes `LICENSE.duckdb` and a `NOTICE` that names one DuckDB version, and packs `thinkthen-duckdb-$V-$TARGET.tar.gz` with the file at the top. `sdlc/scripts/release-workflow` fetches the DuckDB tools for the smoke and checks the archive's `LICENSE.thinkthen`, `LICENSE.duckdb`, `NOTICE` and `DEPENDENCIES.txt` in `smoke-bundle`. `databases/duckdb/check.sh` with `THINKTHEN_ARTIFACT` loads the unpacked file by its path. `site/src/data/catalog.mjs` describes the archive as "The extension for DuckDB v1.5.5", and `site/scripts/smoke-sql.mjs` loads it on the pinned 1.5.5 CLI.
+- Keeps: the v1.5.5 build, its pins, digests and checks, and every SQL function, setting and error sentence. One archive per target, under the name `thinkthen-duckdb-$V-$TARGET.tar.gz`, so `release-workflow`'s counts, `publish-builds` and `check-binding-proofs.mjs`'s archive-name check stay as they are. The static archive digest checks, the footer checks, the macOS export check (ticket 0388), the panic hook check (ticket 0374), and the offline build under the heavy lock. Every suite still runs on a loopback backend with a fake key. The extension stays unsigned. `release/0.1` stays frozen.
+- Changes: two slices.
+  - Slice A, the build.
+    - `databases/duckdb/tools/version.env`: a `DUCKDB_VERSIONS="v1.5.5 v1.5.4"` list, newest first. Each version gets its source commit and its static archive digest for each of the four platforms. The v1.5.4 CLI pins move from `DUCKDB_OLDER_*` to per-version names. The refusal check then pairs each version with the other.
+    - `databases/duckdb/cpp/archive-sha256*.txt`: one manifest per version and platform. The builder fetches the official v1.5.4 static archives and records their digests. If DuckDB published no v1.5.4 static archive for a platform, the builder stops that platform and reports it.
+    - `databases/duckdb/tools/setup.sh --fetch` fetches every listed version into its own `duckdb/<version>/` folder, each with its CLI, source, static archives and its own `venv`. The `older-host/` folder goes. `--target` and `--inputs` keep their output for the newest version.
+    - `site/scripts/smoke-sql.mjs` reads the newest version from `version.env` in place of its `duckdb/v1.5.5` literal. `verify_package.py` drops `OLDER_KEYS` and the two literals and reads each version's CLI digest from `version.env`.
+    - `databases/duckdb/cpp/build.sh` takes the version from `THINKTHEN_DUCKDB_VERSION`, defaulting to the newest, and writes `build/artifacts/cpp/<version>/<target>/thinkthen.duckdb_extension`. `CMakeLists.txt` reads the pinned commit and manifest for that version from cache variables in place of its v1.5.5 literals.
+    - The C++ sources under `databases/duckdb/cpp/src/` compile against both versions. If a v1.5.4 header differs, the builder records the difference in `databases/duckdb/NOTES.md` and keeps one source with the smallest guard.
+    - `databases/duckdb/cpp/verify_package.py` takes each built file with its own host and the other host. It loads each in its matching stock CLI and Python module, and requires the other version to refuse it with DuckDB's version sentence. It also loads each through `INSTALL thinkthen FROM '<folder>'` from a local repository folder.
+    - `databases/duckdb/tools/requirements-v1.5.4.txt` pins `duckdb==1.5.4` for a second suite Python. `check.sh` builds both versions, runs the stock CLI call and `verify_package.py` on both, and runs `tools/conformance.py`, `tools/rank_suite.py` and the find and portable selections its installed mode names on v1.5.4. The full suites stay on v1.5.5.
+  - Slice B, the package, the release and the pages.
+    - `part_duckdb` in `sdlc/scripts/release-pack` builds each listed version, runs `verify_footer.py` on each against its own version, and packs both files in the repository layout of outcome 2. `NOTICE` names each DuckDB version. `LICENSE.duckdb` and the third-party notices come from each version's source; one copy stays when they match byte for byte.
+    - `databases/duckdb/tools/release_pack_cases.py` gains the planted cases below.
+    - `sdlc/scripts/release-workflow`: `smoke-bundle` requires one extension file per listed version at its repository path. The release smoke and `check.sh`'s installed mode load each file from the unpacked archive in its matching stock CLI.
+    - `sdlc/scripts/publish-builds` describes the archive's two files.
+    - `site/src/data/catalog.mjs` reads the versions for the install line text, and the DuckDB install page shows the `INSTALL ... FROM` form. `site/scripts/smoke-sql.mjs` loads the v1.5.5 file as the install page lays it out. `databases/duckdb/README.md`, `databases/duckdb/cpp/README.md` and `site/README.md` name both versions and the dbt v1 and dbt v2 state of outcome 5.
+- Proof: offline checks after `tools/setup.sh --fetch` has cached both versions' tools. No proof sends a request beyond loopback.
+  - `sh databases/duckdb/check.sh` routine profile: both builds; the stock v1.5.4 CLI and the stock v1.5.5 CLI each answer `true` to `thinkthen_decide` over loopback with their own file; each refuses the other's file, and the check pins the sentence "can only be loaded with that version of DuckDB" and the running version for both pairs.
+  - `verify_package.py` on both files: the local repository load picks the file that matches the running version. A planted repository that holds only the v1.5.5 file makes the v1.5.4 host fail to install, which proves the pick reads the version folder.
+  - `tools/conformance.py`, `tools/rank_suite.py` and the named find and portable cases pass on the v1.5.4 Python module.
+  - `release_pack_cases.py` planted cases: an archive with no v1.5.4 file fails; a v1.5.4 file in the `v1.5.5/` folder fails on its footer; a file whose footer platform differs from its folder fails; a `NOTICE` that names one version fails.
+  - `sdlc/scripts/release-pack x86_64-unknown-linux-gnu duckdb`, then `THINKTHEN_ARTIFACT=<archive> sh databases/duckdb/check.sh`, loads both files from the unpacked archive. The same runs on an Apple Silicon Mac for `aarch64-apple-darwin`.
+  - `npm run smoke-sql` in `site/` passes with its saved outputs unchanged.
+  - A version list check, run in `check.sh` and in `npm run build`: a planted `DUCKDB_VERSIONS` with a third version fails because the `catalog.mjs` install text and `databases/duckdb/README.md` do not name it, and the real list passes.
+  - A release rehearsal under Ian's approval passes `release-files` on all four targets with zero "not run", and the record names the run.
+  - By hand, not a gate: the experiments team reruns experiment 0011's probe P0e with the new v1.5.4 file. The version sentence should be gone and the signature refusal should remain. The ticket records the result.
+- Defers: the signed load path for dbt v2, a dbt package, versions beyond the two, and Windows.
+  - Signing. DuckDB checks signatures only against its own keys, so dbt v2 loads ThinkThen only as a signed DuckDB community extension, or after dbt v2 gains a start-time `allow_unsigned_extensions` path. Both are external commitments. Ian decides; see the open question below.
+  - dbt v2's driver is dbt's own build of DuckDB v1.5.4. A C++ extension that loads in stock v1.5.4 may still meet a build difference there. Only a signed load in dbt v2 can prove it.
+  - A published dbt package with the macros from experiment 0011's `dbt1/macros/thinkthen.sql`, and the four other gaps experiment 0011's answer 6 lists.
+  - A DuckDB version policy beyond 0.2. The default: each release serves the newest DuckDB release at its cut plus the version the current dbt v2 embeds. Each new DuckDB release costs one pin set, four archive manifests and one more build per target.
+  - A Windows DuckDB build. Windows stage 1 does not include the SQL extensions.
+
+## Open question for Ian
+
+dbt v2 loads only signed extensions, and DuckDB signs only its own and community extensions. This ticket makes the version match. It cannot make dbt v2 load the file.
+
+1. Submit ThinkThen to DuckDB's community extensions. DuckDB's CI then builds and signs each release for the DuckDB versions it supports. The listing is public, and the build must fit DuckDB's CI, Rust bridge included. Cost: a separate ticket to fit the build to DuckDB's CI, plus an ongoing public commitment.
+2. Ask dbt for a start-time setting that allows unsigned extensions. It costs little, and dbt sets the timing.
+3. Ship 0.2 with dbt v1 documented as the dbt path, and decide signing after 0.2.
+
+Recommendation: 3 for 0.2. This ticket's v1.5.4 build serves stock DuckDB 1.5.4 users now, and it is the file option 2 would load. Under option 1, DuckDB's CI builds and signs the extension, and only slice A's source compatibility work carries over. Choose 1 after 0.2 if dbt v2 users matter to the launch.
+
+## What Ian can overturn
+
+- One archive per target holding both versions in DuckDB's repository layout, in place of one archive per DuckDB version.
+- Two DuckDB versions in 0.2, and the version policy default above.
+- Staying on the C++ API in place of a stable C API port.
+- Running the full suites on v1.5.5 only, with conformance, rank, find and portable cases on v1.5.4.
