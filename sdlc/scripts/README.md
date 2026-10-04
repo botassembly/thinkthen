@@ -59,3 +59,9 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/live --status
 Status must report 476,000,000 allowed and 429,118 charged. A failure before rename leaves the old authority. A failure after rename and before initialization disables both launchers. `--init` refuses while `state.json` exists, and every new action refuses if it reappears. Do not edit the authority by hand after migration.
 
 The ceiling in `sdlc/ratchet.json` equals the measured Rust total. A raise records what grew, why it earns its lines, and where duplication was checked first.
+
+## Windows installer development proof
+
+`windows-installer-test.py --powershell PATH` runs the actual installer functions through a PowerShell parser and loopback download fixtures. Linux proves only the portable version, transport, bounded download, checksum, ZIP and PE boundaries. It prints that Windows installation, NTFS, ACL and sharing proof did not run. A host prepared outside the gate may be named explicitly; the gate downloads or installs no tool.
+
+On an approved Windows runner, run `python sdlc/scripts/windows-installer-test.py --binary PACKED-COMMAND --version VERSION`. The default requires both Windows PowerShell 5.1 and PowerShell 7. The binary must come from the freshly verified Windows release ZIP. The native fixture checks private file access, sharing refusal, actual partial destination states, retained snapshots, interrupted-state refusal and full loopback installations under both hosts. Hand-started workflow dispatch and public publication remain coordinator decisions.

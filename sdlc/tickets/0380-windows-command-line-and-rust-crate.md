@@ -1,6 +1,6 @@
 # 0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64
 
-Status: in progress. Slice A landed through `115bb95b20111f3f73688157584ff2f4736171ff` after fresh receipt review and all 350 actual site replays. Windows runner proof and slices B–D remain. Slice B design in `sdlc/records/0380-b-installer-design.md` addresses the first review's partial-replacement and existing-file privacy findings and awaits fresh independent review; code has not started. The `release/0.1` cut and ticket 0397 are landed. Fresh ticket review accepted the plan on 2026-10-04. Physical lane: claude-1. Plan: `sdlc/planning/windows.md`, stage 1. Shared workflow edits wait for the coordinator's signal; ticket 0398 slice C owns its workflow guard.
+Status: in progress. Slice A landed through `115bb95b20111f3f73688157584ff2f4736171ff` after fresh receipt review and all 350 actual site replays. Windows runner proof and slices B–D remain. Slice B design in `sdlc/records/0380-b-installer-design.md` passed fresh independent review at `fe0bf809c98789e33b25caf1fc5d497172b4305f`. The installer implementation and portable boundary proof are prepared in `sdlc/records/0380-b-installer-build.md`; fresh code review and native Windows proof remain pending. The `release/0.1` cut and ticket 0397 are landed. Fresh ticket review accepted the plan on 2026-10-04. Physical lane: claude-1. Plan: `sdlc/planning/windows.md`, stage 1. Shared workflow edits wait for the coordinator's signal; ticket 0398 slice C owns its workflow guard.
 
 Milestone: 0.2
 

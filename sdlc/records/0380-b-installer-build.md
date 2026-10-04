@@ -1,0 +1,41 @@
+# 0380 slice B: Windows development installer build
+
+Status: review candidate. Native Windows proof and shared workflow integration remain pending. This record claims no Windows execution. Public signing and distribution remain open. No workflow was dispatched and no site was deployed.
+
+## Prior evidence and retained behavior
+
+The accepted design is `sdlc/records/0380-b-installer-design.md` at `fe0bf809c98789e33b25caf1fc5d497172b4305f`. Slice A provides the Windows command ZIP and PE target checks. Stage 0 provides Windows build evidence, not installer evidence. The Unix installer and its site copy remain byte-for-byte unchanged. Its existing 50-case fixture still passes under dash and bash. Current Unix install examples remain on 0.1.2. Release target and language family counts remain unchanged.
+
+## Changes
+
+`install.ps1` accepts explicit or latest versions starting with 0.2. It selects the first complete non-draft, non-prerelease Windows release. Downloads use numeric loopback or HTTPS addresses, checked redirects, finite timeouts, bounded streaming and transient-only retries. It checks the exact checksum record before parsing the ZIP. It rejects extra entries, unsafe names, encryption, unsupported compression, special file attributes and oversized members. It validates PE32+ x86-64 executable headers before writing or running the stage. The bounded version child gets no inherited ThinkThen settings or API keys.
+
+The script creates private directories with a native Windows security descriptor supplied to CreateDirectory at creation. This avoids the different .NET directory ACL creation APIs on PowerShell 5.1 and 7. Existing target directories and files must pass owner, access-list and reparse checks. It checks both existing executable and receipt file owners and access lists before reading or hashing either. It never repairs existing permissions. The persistent lock serializes installers without a delete-and-recreate race.
+
+Each run owns a unique flat scratch directory under the target. It prepares and flushes verified original snapshots and both receipt candidates before replacement. Every replacement of an existing file supplies a distinct backup. Every replacement exception inspects the actual destination, stage and backup. Caught failures restore the original command first and its original receipt second. Failed restoration retains verified snapshots, attempts to retain pending receipt evidence, reports absent receipts and preserves the primary error. A later invocation refuses an absent upgraded command or absent receipt beside earlier scratch. It never opens, restores or deletes another invocation's snapshots. Cleanup checks ownership and the entire flat inventory before removing files. It refuses the real lane, unowned siblings and injected children.
+
+The README gives an unsigned checkout development route with a supplied mirror and states that public 0.2 assets may not exist. The site script copy matches the root source. The installer prints session-only PATH advice and manual persistent instructions. It edits no PATH, profile, registry, execution policy or runtime configuration.
+
+## Proof
+
+`windows-installer-test.py` runs actual installer function ASTs from `install.ps1`; it does not duplicate installer policy in Python. Its Python side creates ZIP/PE edge cases and serves counted loopback responses. PowerShell 7.6.6 on Linux passed 88 checks for version spelling, transport, release selection, bounded and partial downloads, redirect refusal, transient retries, checksums, ZIP inventory and attributes, encryption/compression, PE target/header bounds and cleanup ownership plants. The harness compiles the actual C# helper. It explicitly reports that native installation, NTFS, ACL and sharing proof did not run.
+
+The portable fixture caught acceptance of a trailing newline by a dollar-anchored version regular expression. The source now uses an absolute end anchor. Inspection through the actual PowerShell host also showed that PowerShell 7 deserializes receipt integers as Int64. The receipt validator accepts integer 1 from both supported runtimes and rejects noninteger schema values.
+
+The prepared native fixture requires a freshly packed real executable and both Windows PowerShell 5.1 and PowerShell 7. It covers executable probing, private child-file refusal, sharing refusal, partial 1176/1177 destination states, original snapshot verification, interrupted absent-upgrade and absent-receipt refusal, unowned/reparse cleanup plants, first installation, upgrade, supported pending states, binary and installed-receipt replacement exceptions, and rollback-exception snapshot retention. These native checks have not run. Fault hooks change actual native filenames before throwing; they model documented partial states rather than merely throwing before an operation.
+
+Focused retained checks: Unix installer 50/50 under dash and bash; Windows release packer self-test passed; versions check passed with 70 places on 0.2.0; relative documentation links passed. Final lint result will be appended before handoff.
+
+## Tool preparation, outside the offline gate
+
+An official portable PowerShell host was prepared only in ignored `target/windows-installer-tools/7.6.6`. GitHub's PowerShell release API selected version 7.6.6. The Linux x64 archive SHA-256 was `ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc`. The API digest matched the official `hashes.sha256` sidecar, whose SHA-256 was `388b105a0f329ef7ce9739166ca8e86d3fee6d31698137099e0558c9eb63c9f5`. The downloaded archive matched both before extraction. No shared or global tool was installed. The network download was tool preparation, not a gate result. All installer fixture requests used loopback. No gate contacted a provider, registry or remote service.
+
+The final lint uses a copied, inspected Cargo wrapper under `target/0380b-lint`. It makes all cargo commands offline with two jobs. Only lint's exact owned `/tmp` planted local Git dependency fixture may call cargo fetch without the offline flag. The copied guard permits only that local file dependency and no registry dependencies. TMPDIR remains in owned `/tmp`, outside the checkout. The compiler cache wrapper is disabled and installed tool directories remain on PATH.
+
+## Deferred proof and integration
+
+The coordinator retains the shared workflow edit boundary while ticket 0398 slice C owns its guard. The coordinator cleared `release-windows-smoke.py` integration after ticket 0398 slice C passed fresh review. The smoke now runs both-host native boundaries against the checked packed executable, installs through a counted loopback release server with both hosts, then applies its existing exact version, replay and zero-request token-cap proof to each installed command. Shared workflow wiring remains held. No native proof can be claimed until an approved `windows-2025` dispatch runs both hosts. Public release and signing need their separate ruling. Malformed-receipt, process timeout/output, child environment and concurrent-installer cases are prepared but unexecuted, along with foreign-owner and junction-ancestor cases. The child fixtures compile a bounded trusted surrogate with the installed .NET Framework compiler, never a downloaded compiler. The foreign-owner plant uses the runner administrator group as an eligible foreign owner; inability to set that owner fails the native fixture rather than silently skipping it. The prepared fixtures and portable results do not close those gaps.
+
+The script does not claim a two-file atomic transaction, power-loss durability, administrator resistance or protection against another process running as the same user. Windows ARM64, GNU, machine-wide installs, non-NTFS volumes, automatic PATH management and earlier scratch cleanup remain outside this slice.
+
+The first scoped lint completed with exit 0. Its bare `Killed` diagnostic belongs to the existing registry cancellation plant in `surfaces`; the plant checks that its process tree stops. This is not a missed gate. Final post-integration lint remains pending.
