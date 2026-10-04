@@ -336,8 +336,9 @@ pub(crate) struct FilterArguments {
 pub(crate) struct RankArguments {
     /// The question asked of each record, or `@` and the path of a question file.
     ///
-    /// As `@FILE` it is a saved `decide` or `score` question. A score file
-    /// ranks by its weighted level position; typed meanings fit decide only.
+    /// As `@FILE` it is a saved `decide`, `score`, or ordered decide set.
+    /// A score file ranks by weighted level position. Sets take turns by
+    /// saved member order; typed meanings fit single decide questions only.
     pub(crate) question: String,
 
     /// Read these files in order; cannot accompany --input.

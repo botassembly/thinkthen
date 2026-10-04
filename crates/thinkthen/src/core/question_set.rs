@@ -11,7 +11,7 @@ use crate::core::digest::Canonical;
 use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::Question;
-use crate::core::question_file::{QuestionFile, QuestionFileError, Typed, Verb, resolve};
+use crate::core::question_file::QuestionFileError;
 use crate::core::records::{Framing, Reading, ReadingError, RecordError};
 use crate::core::render::{RenderError, json_line};
 use crate::core::text::Evidence;
@@ -157,87 +157,12 @@ pub(crate) struct QuestionSet {
 impl QuestionSet {
     /// Parse and resolve one question set without touching a file.
     pub(crate) fn parse(text: &str) -> Result<Self, QuestionSetError> {
-        let value = Json::parse(text).map_err(json_error)?;
-        let Json::Object(members) = &value else {
-            return Err(QuestionSetError::NotObject);
-        };
-        if value.member("questions").is_none() {
-            return Err(QuestionSetError::MissingQuestions);
-        }
-        for (key, _) in members {
-            if !["version", "threshold", "profile", "questions", "batch"].contains(&key.as_str()) {
-                return Err(QuestionSetError::UnknownKey(key.clone()));
-            }
-        }
-        match value.member("version") {
-            Some(Json::Number(number)) if number.as_u64() == Some(1) => {}
-            _ => {
-                return Err(QuestionSetError::Shape {
-                    path: "version".to_owned(),
-                    wanted: "is the number 1",
-                });
-            }
-        }
-        let inherited = threshold(&value)?;
-        let profile = profile(&value)?;
-        let Some(Json::Object(entries)) = value.member("questions") else {
-            return Err(QuestionSetError::Shape {
-                path: "questions".to_owned(),
-                wanted: "is an object",
-            });
-        };
-        if entries.is_empty() {
-            return Err(QuestionSetError::Empty);
-        }
-        let mut questions = Vec::with_capacity(entries.len());
-        for (name, held) in entries {
-            check_name(name)?;
-            let Json::Object(fields) = held else {
-                return Err(QuestionSetError::Shape {
-                    path: format!("questions.{name}"),
-                    wanted: "is one question object",
-                });
-            };
-            if let Some((key, _)) = fields
-                .iter()
-                .find(|(key, _)| matches!(key.as_str(), "model" | "profile"))
-            {
-                return Err(QuestionSetError::UnknownKey(format!(
-                    "questions.{name}.{key}"
-                )));
-            }
-            let written = json_line(held).map_err(|_| QuestionSetError::Render)?;
-            let file = QuestionFile::parse(&written).map_err(|error| nested(name, error))?;
-            let typed = Typed {
-                threshold: (file.verb() == Verb::Decide && !file.has_threshold())
-                    .then(|| inherited.map(|rule| rule.to_string()))
-                    .flatten(),
-                ..Typed::default()
-            };
-            let resolved = resolve(file.verb(), None, Some(&file), &typed)
-                .map_err(|error| nested(name, error))?;
-            pointer_clash(name, resolved.on())?;
-            let on = if resolved.on().is_empty() {
-                vec![Pointer::new("").map_err(|_| QuestionSetError::Render)?]
-            } else {
-                resolved.on().to_vec()
-            };
-            let question = resolved
-                .question()
-                .cloned()
-                .ok_or(QuestionSetError::Render)?;
-            questions.push(NamedQuestion {
-                name: name.clone(),
-                question,
-                threshold: resolved.threshold(),
-                on,
-            });
-        }
-        Ok(Self {
-            questions,
-            profile,
-            batch: value.member("batch").cloned(),
-        })
+        parsing::parse(text, false)
+    }
+
+    /// Admit only decide members without authored cuts or pointers.
+    pub(crate) fn parse_rank(text: &str) -> Result<Self, QuestionSetError> {
+        parsing::parse(text, true)
     }
 
     /// Name built questions, in order, each reading the whole record.
@@ -509,3 +434,5 @@ pub(crate) fn check_name(name: &str) -> Result<(), QuestionSetError> {
     }
     Ok(())
 }
+
+mod parsing;

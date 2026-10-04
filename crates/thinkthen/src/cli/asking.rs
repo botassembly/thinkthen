@@ -28,6 +28,7 @@ mod context;
 mod folders;
 mod judged;
 mod plan;
+mod rank_set;
 mod reading;
 mod row;
 
@@ -109,10 +110,12 @@ pub(crate) fn engine(
 /// Every verb but `choose --options` asks the same question of every record.
 /// `--options` names a pointer, and each record holds its own candidate list
 /// there, so the question is built again for each one.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) enum Asks {
     /// One question, asked of every record.
     Fixed(Question),
+    /// Ordered decide questions, each asking about the same evidence.
+    Set(crate::core::QuestionSet),
     /// A pick whose options each record carries at this pointer.
     FromRecord {
         /// The question the model receives.
@@ -122,11 +125,28 @@ pub(crate) enum Asks {
     },
 }
 
+impl std::fmt::Debug for Asks {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Set(set) => formatter
+                .debug_struct("Set")
+                .field("questions", &set.questions().len())
+                .finish_non_exhaustive(),
+            Self::Fixed(question) => formatter.debug_tuple("Fixed").field(question).finish(),
+            Self::FromRecord { text, pointer } => formatter
+                .debug_struct("FromRecord")
+                .field("text", text)
+                .field("pointer", pointer)
+                .finish(),
+        }
+    }
+}
+
 impl Asks {
     /// The verb a replay failure over one document names.
     const fn verb(&self) -> &'static str {
         match self {
-            Self::Fixed(Question::Decide { .. }) => "decide",
+            Self::Set(_) | Self::Fixed(Question::Decide { .. }) => "decide",
             Self::Fixed(Question::Tag { .. }) => "tag",
             Self::Fixed(Question::Score { .. }) => "score",
             Self::Fixed(Question::Choose { .. }) | Self::FromRecord { .. } => "choose",
@@ -137,10 +157,21 @@ impl Asks {
     fn of(&self, record: &Record) -> Result<Question, Failure> {
         match self {
             Self::Fixed(question) => Ok(question.clone()),
+            Self::Set(_) => Err(Failure::Defect("a set is not one question")),
             Self::FromRecord { text, pointer } => Ok(Question::Choose {
                 text: text.clone(),
                 options: record.choices(pointer)?,
             }),
+        }
+    }
+    fn questions(&self, record: &Record) -> Result<Vec<Question>, Failure> {
+        match self {
+            Self::Set(set) => Ok(set
+                .questions()
+                .iter()
+                .map(|member| member.question().clone())
+                .collect()),
+            _ => self.of(record).map(|question| vec![question]),
         }
     }
 }
@@ -244,11 +275,12 @@ pub(crate) fn run(
     })?;
     let mismatch = match batch {
         Some(running) => {
-            let running = if settled.text().as_json().as_str().is_some() {
-                running
-            } else {
-                Setting::Records(NonZeroUsize::MIN)
-            };
+            let running =
+                if matches!(asks, Asks::Set(_)) || settled.text().as_json().as_str().is_some() {
+                    running
+                } else {
+                    Setting::Records(NonZeroUsize::MIN)
+                };
             Mismatch::new(settled.profile(), profile.as_ref()).with_batch(tuned_for, running)
         }
         None => Mismatch::new(settled.profile(), profile.as_ref()),

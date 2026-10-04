@@ -10,6 +10,8 @@ mod asking;
 mod batch;
 mod builders;
 mod bulk;
+mod rank_set;
+pub use rank_set::RankSet;
 mod choice;
 mod engine;
 mod error;
@@ -62,7 +64,7 @@ pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, DoorReply,
     Facts, Found, Judgment, NamedProbability, ObservedRow, Picked, Probabilities, QuestionDetail,
-    Ranked, RankedRow, RecordObservation, Row, Tally, TallyStart, Usage,
+    Ranked, RankedRow, RecordObservation, Row, SetRanked, Tally, TallyStart, Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;

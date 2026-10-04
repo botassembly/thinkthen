@@ -12,7 +12,7 @@ thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER
 
 A stream of records. With no framing flag it reads lines, or JSON Lines when a pointer names part of each record. The pointer comes from `--field` or from a question file's `on`. `--lines`, `--jsonl`, `--csv`, or `--tsv` names the framing outright. `--input FILE` reads a file instead of standard input. A blank text line is skipped, as [records.md](records.md) gives. That page also gives the pointer rules.
 
-`QUESTION` is one argument. Plain text asks the same yes/no question of each record. `@FILE` reads one saved `decide` or `score` question. A saved `score` question supplies its ordered levels and descriptions; `rank` uses the same weighted position on those levels that `score` prints. `--true TEXT` and `--false TEXT` say what yes and no mean for plain text or a saved `decide` question. They are refused beside a saved `score` question before any request is sent.
+`QUESTION` is one argument. Plain text asks the same yes/no question of each record. `@FILE` reads one saved `decide` or `score` question, or an ordered decide question set. A saved `score` question supplies its ordered levels and descriptions; `rank` uses the same weighted position on those levels that `score` prints. `--true TEXT` and `--false TEXT` say what yes and no mean for plain text or a saved `decide` question. They are refused beside a saved `score` question before any request is sent.
 
 By default a stream of records shares requests, filling each to the smaller of the request-size setting and a backend profile limit. `--max-request-bytes N` sets that size for this command, with `THINKTHEN_MAX_REQUEST_BYTES` next and 96,000 bytes at every address by default; see [settings.md](settings.md). The evidence of every request is one fixed sentence, and each record appears once, inside its own question. Every run moves a few answers, and batching moves a few more. ADR 0055 records local experiment 275, which asked four yes/no questions over the 306 Beatles songs. It ran each batched form three times on the same bytes and once on each of three shuffled record orders. The batched form stayed within 4 right answers across repeats and orders on every task. It never fell more than 3 right answers below one song a request. On "It appears on the album Abbey Road" it scored 283 to 287 right of 306, where one title a request scored 286. It sent 11,468 input tokens for the 306 titles, where one title a request sent 88,933. Its one measured loss came on "It was released before 1965", against the earlier batch form, which listed every record in the evidence. That form scored 276 to 283 right in the table's own order and 258 to 270 over shuffled orders. The quoted form scored 255 to 259, and one title a request scored 253. `--batch 1` asks one record a request, in the same quoted form.
 
@@ -23,6 +23,32 @@ Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JS
 `rank` prints only after the input ends. Without `--top`, it holds every scored record for the final order. With `--top N`, it keeps at most N winning output rows while it judges every record; a bounded number of input and completed batches may also be in flight. This bounds retained row count, not the bytes of a large individual record. An endless stream has to be cut into windows upstream, because it never reaches a final order.
 
 It also prints no order while an earlier record or batch is still waiting for a slow reply or retry. Later answers may be ready, but `rank` needs every answer before it can sort. [records.md](records.md) explains the ordered window, attempt timeout and absence of a whole-run deadline.
+
+## Rank question sets
+
+The CLI and Rust crate accept a saved version-one set of named decide questions:
+
+```json
+{"version":1,"questions":{"billing":{"decide":"Does this explain the billing problem?"},"recovery":{"decide":"Does this explain how to recover?"}}}
+```
+
+Save it as `search.json` and run `thinkthen rank @search.json --top 5 < passages.txt`. Names follow annotate's lowercase letter, digit and underscore grammar and keep their authored order. Only decide members are admitted. Empty sets, score and other kinds, duplicate or unknown keys, authored top-level or member `threshold`, and every authored member `on` are refused at exit 5. Even an explicit default cut, `"on":""` or `"on":[""]` is refused before normalization. Top-level `batch` and calibration `profile` retain their usual meanings. Nested batch, model and profile settings remain prohibited. The command reads the question file once, capped at 1 MiB, and never retries a failed parse as another grammar. Plain question text remains literal.
+
+The set owns its member meanings. `--true` or `--false` beside a set exits 2 with `` `rank` with a question set takes no --true or --false; put meanings in each member ``. `--field` selects the same evidence for all members. Model, backend, shared context, framing, windows and display follow the existing record path and its conflicts.
+
+Every admitted record is judged against every member. Each member sorts independently by descending yes probability with stable input-order ties. The merge visits depth zero across members in saved order, then depth one, and so on. A duplicate consumes that visit; it never refills from the same member. Only the first appearance of each original input identity is emitted. Equal text at different positions and repeated source occurrences remain distinct items. Top applies after this merge.
+
+For independently ranked lists `first = [0,1,2]` and `second = [0,2,1]`, the merged order is `[0,1,2]` and selecting members are `[first,first,second]`. The selecting member supplies the probability and receipt. Probabilities across different questions are never compared; displayed scores may rise across the merged order.
+
+Default output prints each selected original once without a question label. `--scores` displays the selecting member's probability. Set details add `question_name` to that member's ordinary rank detail, retaining its decide verb, yes/no answer, null threshold and value, single-question digest and own request/usage/cache metadata. They neither use a set digest nor sum other members' receipts. One-member sets retain the corresponding single-question output, wire body and cache keys; details add only the member name.
+
+With top K and M members, at most M×K member candidates are retained, plus bounded in-flight work. Merge deduplication stores at most K emitted identities. This bounds counts, not bytes or judgments: every record and member is still judged. Without top, all member lists remain until successful completion. A failed member, input, transport, strict replay or cancellation fails the whole rank with empty stdout. Successful facts count N original records, while request/token/cache facts cover the combined call.
+
+Recording and cache identities remain per question. Individual member recordings replay under a set when all keys exist. Member renaming, reordering, top and display choices reuse stored answers. Missing strict replay keys fail locally before sends; normal cache mode sends only missing questions. Quoting and packing remain per member, including structured wording.
+
+Rust provides `RankSet::from_json`, capped `RankSet::load`, `Engine::rank_set` and `rank_set_with`. `SetRanked<T>` exposes original zero-based `index`, borrowed `input`, `into_input`, selecting `probability` and `question_name`. Originals need no Clone, Send or Serialize bound and move once. Rust returns the whole merged order; callers can take its prefix. One shared cancellation, deadline, interrupt, observer, batching and spend control covers the call. Question observations retain all member probabilities and receipts, named and indexed by original input. Debug withholds originals and names.
+
+SQL question sets remain separate work in ticket 0417 for 0.2. C and language binding sets remain later work in 0418. These existing surfaces continue to accept their single-question routes.
 
 ## Options
 
@@ -114,7 +140,7 @@ DuckDB, SQLite and PostgreSQL each have `thinkthen_rank(question, keyed_json[, s
 
 ## Cautions
 
-The method is fixed and printed in the help. A plain or saved `decide` question sorts by the probability of yes. A saved `score` question sorts by its weighted position on the saved levels. Both break exact ties by input order. The tool never compares two records in one question, and it never runs a tournament.
+The method is fixed and printed in the help. A plain or saved single `decide` question sorts by the probability of yes. A saved `score` question sorts by its weighted position on the saved levels. Both break exact ties by input order. The tool never compares two records in one question, and it never runs a tournament.
 
 When a run spans batches, `rank` compares reported yes probabilities or weighted score values as-is, though the records had different request neighbours. `--batch 1` puts each record in its own request, without promising that separate replies have the same calibration or repeat identically.
 

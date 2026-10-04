@@ -38,3 +38,21 @@ The engine's width is the limit on requests in flight at once. It holds per load
 A bare `cargo test` builds every example, then runs `tests/examples.rs`. `cargo test --test examples` alone would run stale programs. It starts a loopback backend for each program, runs the program in its own process, and compares its output with the `.txt` file beside it. The loopback backend's generic arm answers every question by a fixed rule: the first option, level, label, or yes gets 0.9. The pinned text shows that rule's answers. A model would answer differently.
 
 `check.sh` is this surface's entry in the surface rung, `sdlc/scripts/surfaces`. It runs the formatter, Clippy, and the tests. It then runs the slide against the rung's own loopback backend. That run proves the port the rung hands every surface.
+
+## Rank a saved question set
+
+`RankSet::from_json` and `RankSet::load` admit ordered decide sets without authored thresholds or member pointers. `Engine::rank_set(&set, records)` and `rank_set_with` judge every member over every input, sort each member stably, then take turns at each depth in saved member order. Duplicates consume visits and each original input position appears once. Rust returns the full order; take its prefix for a top selection.
+
+`SetRanked<T>` owns the original and provides `index()`, `input()`, `into_input()`, `probability()` and `question_name()`. The probability belongs to the selecting member. Originals need no Clone, Send or Serialize implementation. One CallOptions and one facts report cover the whole call; records count inputs, not member answers. Question observations retain every named member answer and receipt. Any member failure fails the whole call. Existing `rank`, `Ranked` and `RankedRow` stay unchanged. SQL sets belong to ticket 0417 for 0.2; C and language sets belong to 0418 later.
+
+```rust
+let set = thinkthen::RankSet::from_json(
+    r#"{"version":1,"questions":{"billing":{"decide":"Billing issue?"},"recovery":{"decide":"Recovery steps?"}}}"#,
+)?;
+let ranked = engine.rank_set(&set, ["First passage", "Second passage"])?;
+for row in ranked.value().iter().take(5) {
+    let _ = (row.index(), row.input(), row.question_name(), row.probability());
+}
+```
+
+The CLI contract and executable replay examples live in [rank](../../specification/rank.md#rank-question-sets) and [rank sets](../../spec/rank-sets.md).

@@ -22,7 +22,7 @@ Every structural setting of a question has two homes. One is an option on the co
 
 ## Naming a file
 
-The first argument of `decide`, `choose`, `tag`, `score`, `filter`, and `rank` is the question. `filter` reads a `decide` file. `rank` reads a `decide` file for yes/no ordering or a `score` file for graded ordering. In every case the argument is question text, or `@` and a path to a question file.
+The first argument of `decide`, `choose`, `tag`, `score`, `filter`, and `rank` is the question. `filter` reads a `decide` file. `rank` reads a `decide` file for yes/no ordering, a `score` file for graded ordering, or an ordered decide question set under the [rank admission and turns contract](rank.md#rank-question-sets). A rank set takes no authored threshold or member `on`; `--field` supplies common evidence selection. In every case the argument is question text, or `@` and a path to a question file.
 
 ```sh
 thinkthen decide @refund.json < message.txt

@@ -196,6 +196,7 @@ pub(crate) fn filter(
         &arguments.display,
         tiers(&arguments.batching, file),
         &settled,
+        fixed(&settled)?,
         None,
         environment,
         input,
@@ -227,13 +228,14 @@ pub(crate) fn rank(
                 .ok_or(Failure::TopIsZero)
         })
         .transpose()?;
-    let (settled, file) = asked::rank(arguments)?;
+    let (settled, file, set) = asked::rank(arguments)?;
     over_kept(
         Keeping::Ordered,
         &arguments.common,
         &arguments.display,
         tiers(&arguments.batching, file),
         &settled,
+        set.map_or_else(|| fixed(&settled), |set| Ok(Asks::Set(set)))?,
         top,
         environment,
         input,
@@ -276,6 +278,7 @@ fn over_kept(
     display: &crate::cli::display::Arguments,
     batch: Tiers<'_>,
     settled: &Resolved,
+    asks: Asks,
     top: Option<usize>,
     environment: &Environment,
     input: impl Read + Send + 'static,
@@ -295,7 +298,7 @@ fn over_kept(
     run(
         Asked {
             common,
-            asks: fixed(settled)?,
+            asks,
             settled,
             view: View {
                 quiet: false,

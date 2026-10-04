@@ -164,13 +164,15 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 
 The CLI adds optional `position` to detailed line, JSONL, window, and document rows from `decide`, `filter`, `rank`, `choose`, `tag`, `score`, `find`, and `annotate`. It carries `file` (a path string, or `null` for stdin), `first`, and `last` (one-based physical lines). Each file restarts its line count. Text windows span their first through last physical lines; JSONL records span one line. A selected find candidate spans one physical line. An unresolved find result has no selected source and omits position. Find positions are CLI metadata; shared C, Rust and SQL typed Find results keep their existing members. CSV and TSV positions remain deferred. Default-document runs with several named files add `input_file` to each detailed `decide`, `choose`, `tag`, or `score` result. These members are CLI metadata and remain optional for library results and rows without a location. File access preserves the original operating-system path. JSON path strings preserve valid UTF-8 and use lossy display only for invalid UTF-8, replacing those bytes with the replacement character.
 
+CLI rank-set details add optional `question_name`, naming the member that first selected the original. The answer probability, question digest and request/usage/cache receipt belong only to that member. `question.verb` remains decide; value and threshold are null. Ordinary rank omits the name. Rust's additive `SetRanked<T>` carries its name and probability without changing `Ranked<T>` or shared C/SQL shapes. Question observations keep every member answer with its original input index. Set facts count original records once.
+
 The generated [result schema](result.schema.json) derives the shared Rust result types. Its `decisionDetails`, `findDetails` and `annotateDetails` definitions admit additive members, including this CLI metadata. The schema does not require these members on shared library results.
 
 | Command | `question.verb` | Members | `meta` members |
 | --- | --- | --- | --- |
 | `decide` | `decide` | `schema` `position?` `input_file?` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
 | `filter` | `decide` | `schema` `position?` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
-| `rank` | `decide`, `score` | `schema` `position?` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
+| `rank` | `decide`, `score` | `schema` `question_name?` `position?` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
 | `choose` | `choose` | `schema` `position?` `input_file?` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
 | `tag` | `tag` | `schema` `position?` `input_file?` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
 | `score` | `score` | `schema` `position?` `input_file?` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `context_sha256?` |
@@ -199,6 +201,12 @@ The preceding row is a `decide --details` example. An ordinary yes/no ranked det
 
 ```json rank
 {"schema":"thinkthen.result/1","value":null,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this help diagnose the failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
+```
+
+A set-ranked row carries the selecting member name, keeping that member's probability and receipt:
+
+```json rank-set
+{"schema":"thinkthen.result/1","value":null,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this help diagnose the failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0},"question_name":"billing"}
 ```
 
 A graded rank row instead keeps the numeric score under `value`, a `score` question and answer, and a null threshold.

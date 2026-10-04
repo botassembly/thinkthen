@@ -96,6 +96,7 @@ pub(crate) struct Output<'a> {
     usage: &'a Counters,
     model_guard: bool,
     run_model: Option<ModelName>,
+    members: Vec<Vec<(usize, Judged)>>,
 }
 
 enum Mode<'a> {
@@ -148,6 +149,7 @@ impl Output<'_> {
             display: crate::cli::display::Display::default(),
             model_guard: false,
             run_model: None,
+            members: Vec::new(),
         }
     }
 
@@ -167,6 +169,7 @@ impl Output<'_> {
             display: crate::cli::display::Display::default(),
             model_guard: false,
             run_model: None,
+            members: Vec::new(),
         }
     }
 
@@ -190,7 +193,7 @@ impl Output<'_> {
         self.model_guard = true;
     }
 
-    pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
+    fn check_model(&mut self, judged: &Judged) -> Result<(), Failure> {
         // A row the store answered wholly names no live model, so it takes
         // no part in the check, by ADR 0111 section 4.
         if let (true, Some(model)) = (self.model_guard, judged.model.as_ref()) {
@@ -200,6 +203,11 @@ impl Output<'_> {
                 Some(_) => {}
             }
         }
+        Ok(())
+    }
+
+    pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
+        self.check_model(&judged)?;
         let result = match &mut self.mode {
             Mode::Streaming(writer) => {
                 if let Some(mismatch) = &judged.profile_mismatch {
@@ -227,6 +235,9 @@ impl Output<'_> {
     }
 
     pub(crate) fn ended(&mut self) -> Result<(), Failure> {
+        if !self.members.is_empty() {
+            return self.end_members();
+        }
         let Mode::Ordered {
             held,
             top,
@@ -372,3 +383,8 @@ pub(super) mod ordered;
 mod top_tests;
 #[cfg(test)]
 pub(crate) mod width_tests;
+
+mod rank_set;
+
+#[cfg(test)]
+mod rank_set_0401_tests;
