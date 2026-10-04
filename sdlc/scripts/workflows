@@ -139,6 +139,7 @@ def release(name, doc):
     if set(inputs) != {"mode"} or inputs["mode"].get("options") != ["rehearse", "release"]:
         out.append(f"{name}: dispatch must have only mode with rehearse and release choices")
     jobs = doc.get("jobs") or {}
+    out += windows_release_rules(name, jobs)
     required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "draft",
                 "crates", "pypi", "npm", "rubygems", "tap", "nuget", "maven", "pub", "publish"}
     if set(jobs) != required:
@@ -395,6 +396,52 @@ def release(name, doc):
         for pattern, why in UNPINNED:
             if pattern.search(step.get("run") or ""):
                 out.append(f"{name}: job {job} {why}")
+    return out
+
+
+def windows_release_rules(name, jobs):
+    """The fifth command target must build and smoke without claiming Unix bindings."""
+    out = []
+    target = "x86_64-pc-windows-msvc"
+    unix = {"x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
+            "aarch64-apple-darwin", "x86_64-apple-darwin"}
+    for kind in ("build", "smoke"):
+        job = jobs.get(kind, {})
+        matrix = ((job.get("strategy") or {}).get("matrix") or {}).get("include")
+        if matrix is None:  # The minimal release graph fixture has no matrix.
+            continue
+        windows = [entry for entry in matrix if entry.get("target") == target]
+        if ({entry.get("target") for entry in matrix} != unix | {target}
+                or len(matrix) != 5 or len(windows) != 1 or windows[0].get("runner") != "windows-2025"):
+            out.append(f"{name}: {kind} must include exactly the four Unix targets and Windows x86-64 on windows-2025")
+        if ((job.get("defaults") or {}).get("run") or {}).get("shell") != "bash":
+            out.append(f"{name}: {kind} must select bash for the Windows target")
+        active = [step for step in job.get("steps", []) if not step.get("continue-on-error")]
+        text = "\n".join(step.get("run", "") for step in active)
+        if "core.autocrlf false" not in text or "LOCALAPPDATA=" not in text or "APPDATA=" not in text:
+            out.append(f"{name}: {kind} must preserve Windows fixture bytes and isolate default folders")
+        if kind == "build":
+            for command in ("cargo clippy --locked --offline --workspace --all-targets -- -D warnings",
+                            "cargo test --locked --offline --no-fail-fast --workspace --all-targets",
+                            'sdlc/scripts/release-pack "$TARGET" release-files command first-run',
+                            "release-windows-command.py platform release-files"):
+                if command not in text:
+                    out.append(f"{name}: build must check and pack the Windows command: {command}")
+        else:
+            smoke = [step for step in active if step.get("run") ==
+                     "python3 sdlc/scripts/release-windows-smoke.py platform --crate-dir crate-dist"
+                     and step.get("if") == f"matrix.target == '{target}'"]
+            if len(smoke) != 1:
+                out.append(f"{name}: smoke must run the Windows command and packed Rust crate")
+            for step in active:
+                run = step.get("run", "")
+                if ("release-workflow smoke-bundle" in run or
+                        re.search(r"release-workflow (?:go-cpp|swift-zig|php-dart|ada-objc-cobol|managed)-gate", run)):
+                    if step.get("if") != f"matrix.target != '{target}'":
+                        out.append(f"{name}: smoke must exclude Windows from Unix binding gates and consumers")
+    draft = "\n".join(step.get("run", "") for step in jobs.get("draft", {}).get("steps", []))
+    if target in draft and f'[ "$target" != {target} ] || continue' not in draft:
+        out.append(f"{name}: draft must skip Windows binding families before collection")
     return out
 
 
@@ -879,6 +926,23 @@ def self_test():
         ("language-smoke-setup", "release.yml",
          lambda t: t.replace('run: python3 sdlc/scripts/release-language-tools.py smoke', 'run: echo skipped'),
          ["release.yml: x86 smoke must select pinned language tools before installed consumers"]),
+        ("windows-matrix", "release.yml",
+         lambda t: t.replace("runner: windows-2025", "runner: windows-2022"),
+         ["release.yml: build must include exactly the four Unix targets and Windows x86-64 on windows-2025",
+          "release.yml: smoke must include exactly the four Unix targets and Windows x86-64 on windows-2025"]),
+        ("windows-smoke", "release.yml",
+         lambda t: t.replace("python3 sdlc/scripts/release-windows-smoke.py platform --crate-dir crate-dist", "echo skipped"),
+         ["release.yml: smoke must run the Windows command and packed Rust crate"]),
+        ("windows-binding-skip", "release.yml",
+         lambda t: t.replace("if: matrix.target != 'x86_64-pc-windows-msvc'", "if: runner.os == 'Linux'"),
+         ["release.yml: smoke must exclude Windows from Unix binding gates and consumers"] * 6),
+        ("windows-draft-skip", "release.yml",
+         lambda t: t.replace('[ "$target" != x86_64-pc-windows-msvc ] || continue', "echo skipped"),
+         ["release.yml: draft must skip Windows binding families before collection"]),
+        ("windows-shell", "release.yml",
+         lambda t: t.replace("defaults: {run: {shell: bash}}", "defaults: {run: {shell: pwsh}}"),
+         ["release.yml: build must select bash for the Windows target",
+          "release.yml: smoke must select bash for the Windows target"]),
         ("npm-bare-path", "release.yml",
          lambda t: t.replace('npm publish "./npm-dist/thinkthen-$VERSION.tgz" --provenance', 'npm publish npm-dist/*.tgz --provenance'),
          ["release.yml: job npm publishes npm-dist/*.tgz; npm reads a bare relative path as a GitHub repository, so start it with ./"]),
@@ -894,7 +958,7 @@ def self_test():
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
                 # Keep each planted rule independent after the real release.yml lands.
                 source = ((REPO / ".github/workflows/release.yml").read_text()
-                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-", "npm-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
+                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-", "npm-", "windows-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:
@@ -1008,7 +1072,12 @@ def self_test():
     if registry.returncode != 0:
         bad += 1
         print(f"workflows self-test registry operations: {registry.stdout}{registry.stderr}", file=sys.stderr)
-    total = len(cases) + 4 + len(host_cases) + 8
+    windows = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-windows-command-self-test.py")],
+                             capture_output=True, text=True)
+    if windows.returncode != 0:
+        bad += 1
+        print(f"workflows self-test Windows command: {windows.stdout}{windows.stderr}", file=sys.stderr)
+    total = len(cases) + 4 + len(host_cases) + 9
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 

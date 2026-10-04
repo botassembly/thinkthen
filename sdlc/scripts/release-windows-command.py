@@ -62,15 +62,37 @@ def check(archive):
         executable(source.read(member))
 
 
+def platform(folder, version):
+    """Reject stage 2 artifacts and incomplete Windows command bundles."""
+    name = f"thinkthen-{version}-{TARGET}.zip"
+    wanted = {name, name + ".sha256", "thinkthen-first-run.tar.gz", "thinkthen-first-run.tar.gz.sha256"}
+    if folder.is_symlink() or not folder.is_dir():
+        raise ValueError("Windows platform folder is missing or linked")
+    if {path.name for path in folder.iterdir()} != wanted:
+        raise ValueError("Windows platform must hold exactly the command ZIP and first-run sample with checksums")
+    check(folder / name)
+    sample = folder / "thinkthen-first-run.tar.gz"
+    sidecar = folder / (sample.name + ".sha256")
+    if any(path.is_symlink() or not path.is_file() for path in (sample, sidecar)):
+        raise ValueError("first-run sample or checksum is missing or linked")
+    if sidecar.read_text().strip() != f"{hashlib.sha256(sample.read_bytes()).hexdigest()}  {sample.name}":
+        raise ValueError("first-run sample differs from its checksum")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("pack", "check"))
-    parser.add_argument("paths", nargs="+", type=Path)
+    parser.add_argument("action", choices=("pack", "check", "platform"))
+    parser.add_argument("paths", nargs="+")
     args = parser.parse_args()
-    if len(args.paths) != (2 if args.action == "pack" else 1):
-        parser.error("pack needs BINARY ARCHIVE; check needs ARCHIVE")
+    if len(args.paths) != (1 if args.action == "check" else 2):
+        parser.error("pack needs BINARY ARCHIVE; check needs ARCHIVE; platform needs FOLDER VERSION")
     try:
-        pack(*args.paths) if args.action == "pack" else check(*args.paths)
+        if args.action == "platform":
+            platform(Path(args.paths[0]), args.paths[1])
+        elif args.action == "pack":
+            pack(*(Path(path) for path in args.paths))
+        else:
+            check(Path(args.paths[0]))
     except (ValueError, OSError, zipfile.BadZipFile, RuntimeError) as error:
         print(f"release-windows-command: {error}", file=sys.stderr)
         return 1

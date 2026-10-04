@@ -9,11 +9,15 @@ import struct
 import subprocess
 import tempfile
 import zipfile
+import warnings
+import sys
 
 
 REPO = Path(__file__).resolve().parents[2]
 TARGET = "x86_64-pc-windows-msvc"
 SCRIPT = REPO / "sdlc/scripts/release-windows-command.py"
+VERSION = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
+               if line.startswith('version = "'))
 
 
 def run(*args, env=None):
@@ -41,11 +45,39 @@ def checksum(path):
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n")
 
 
+def host_setup(base):
+    """The native Windows setup fetches the root lock without acquiring Unix tools."""
+    tools = base / "host-tools"
+    tools.mkdir()
+    bodies = {
+        "rustc": f'''case $1 in
+-vV) printf 'host: {TARGET}\\n' ;;
+--version) echo 'rustc 1.95.0 (59807616e 2026-04-14)' ;;
+--print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
+esac''',
+        "rustup": 'echo "rustup $*" >> "$WINDOWS_HOST_LOG"',
+        "cargo": 'echo "cargo $*" >> "$WINDOWS_HOST_LOG"',
+        "python3": f'''[ "$1" = - ] || {{ echo 'refuse acquiring Python packages in fixture' >&2; exit 92; }}
+exec '{sys.executable}' "$@"''',
+    }
+    for tool, body in bodies.items():
+        (tools / tool).write_text("#!/bin/sh\n" + body + "\n")
+        (tools / tool).chmod(0o755)
+    log = base / "host-calls"
+    env = os.environ | {"PATH": str(tools) + os.pathsep + os.environ["PATH"],
+                        "RUSTUP_HOME": str(base / "rustup"), "WINDOWS_HOST_LOG": str(log)}
+    expect(run("sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", TARGET, env=env))
+    assert log.read_text().splitlines() == [
+        "rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt",
+        "cargo fetch --locked --manifest-path Cargo.toml"]
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="thinkthen-windows-pack-") as temporary:
         base = Path(temporary)
+        host_setup(base)
         binary = base / "thinkthen.exe"
-        archive = base / f"thinkthen-0.2.0-{TARGET}.zip"
+        archive = base / f"thinkthen-{VERSION}-{TARGET}.zip"
         binary.write_bytes(pe())
         expect(run("python3", str(SCRIPT), "pack", str(binary), str(archive)))
         first = archive.read_bytes()
@@ -71,7 +103,8 @@ def main():
         expect(run("python3", str(SCRIPT), "check", str(archive)), 1, "not a zip file")
         for members in (("thinkthen.exe", "extra"), ("../thinkthen.exe",),
                         ("thinkthen.exe", "thinkthen.exe"), ()):
-            with zipfile.ZipFile(archive, "w") as output:
+            with warnings.catch_warnings(), zipfile.ZipFile(archive, "w") as output:
+                warnings.simplefilter("ignore", UserWarning)
                 for name in members:
                     output.writestr(name, pe())
             checksum(archive)
@@ -97,13 +130,14 @@ def main():
             shutil.copy2(REPO / "sdlc/scripts" / name, scripts / name)
         crate = source / "crates/thinkthen"
         crate.mkdir(parents=True)
-        (crate / "Cargo.toml").write_text('[package]\nversion = "0.2.0"\n')
+        (crate / "Cargo.toml").write_text(f'[package]\nversion = "{VERSION}"\n')
         tools = base / "tools"
         tools.mkdir()
         (tools / "rustc").write_text(f"#!/bin/sh\nprintf 'host: {TARGET}\\n'\n")
         (tools / "cargo").write_text(
             '#!/bin/sh\nmkdir -p "$CARGO_TARGET_DIR/' + TARGET + '/release"\n'
             'cp "$WINDOWS_TEST_BINARY" "$CARGO_TARGET_DIR/' + TARGET + '/release/thinkthen.exe"\n')
+        (tools / "cygpath").write_text('#!/bin/sh\nprintf "%s\\n" "$2"\n')
         for tool in tools.iterdir():
             tool.chmod(0o755)
         build = base / "build"
@@ -120,6 +154,54 @@ def main():
             expect(run("python3", str(SCRIPT), "check", str(packed)))
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET,
                    str(base / "unsupported"), "python", env=env), 2, "not a Windows stage 1 command part")
+        # Five-target collection includes Windows and refuses bad Windows assets before copying.
+        platforms = base / "platforms"
+        for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
+                       "x86_64-apple-darwin", "aarch64-apple-darwin"):
+            folder = platforms / f"platform-{target}"
+            folder.mkdir(parents=True)
+            (folder / f"fixture-{target}").write_bytes(b"Unix retained")
+        windows = platforms / f"platform-{TARGET}"
+        shutil.copytree(base / "release", windows)
+        sample = windows / "thinkthen-first-run.tar.gz"
+        sample.write_bytes(b"sample")
+        checksum(sample)
+        npm = base / "npm"
+        npm.mkdir()
+        version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
+                       if line.startswith('version = "'))
+        for suffix in ("", ".sha256"):
+            (npm / f"thinkthen-{version}.tgz{suffix}").write_text("npm fixture")
+        gate = REPO / "sdlc/scripts/release-workflow"
+        collected = base / "collected"
+        expect(run("sh", str(gate), "collect", str(platforms), str(npm), str(collected)))
+        assert {path.name for path in collected.iterdir()} == {
+            archive.name, archive.name + ".sha256", sample.name, sample.name + ".sha256",
+            f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256",
+            "fixture-x86_64-unknown-linux-gnu", "fixture-aarch64-unknown-linux-gnu",
+            "fixture-x86_64-apple-darwin", "fixture-aarch64-apple-darwin"}
+        mutations = (("missing ZIP", lambda: (windows / archive.name).unlink(),
+                      "exactly the command ZIP"),
+                     ("extra stage 2 binding", lambda: (windows / "thinkthen-c-extra.tar.gz").write_bytes(b"C"),
+                      "exactly the command ZIP"),
+                     ("bad checksum", lambda: (windows / (archive.name + ".sha256")).write_text("bad"),
+                      "differs from its checksum"),
+                     ("malformed ZIP", lambda: (windows / archive.name).write_bytes(b"not ZIP"),
+                      "differs from its checksum"))
+        for index, (name, mutate, sentence) in enumerate(mutations):
+            originals = {path.name: path.read_bytes() for path in windows.iterdir()}
+            mutate()
+            refused = base / f"refused-{index}"
+            expect(run("sh", str(gate), "collect", str(platforms), str(npm), str(refused)), 1, sentence)
+            assert not refused.exists(), f"{name} created output before verification"
+            for path in windows.iterdir():
+                path.unlink()
+            for name, data in originals.items():
+                (windows / name).write_bytes(data)
+        missing = platforms / "absent"
+        windows.rename(missing)
+        expect(run("sh", str(gate), "collect", str(platforms), str(npm), str(base / "absent-output")),
+               1, "unexpected platform folder absent")
     print("Windows command release self-test: passed")
 
 

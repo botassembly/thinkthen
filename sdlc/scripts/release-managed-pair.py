@@ -156,6 +156,8 @@ def check_source(path, receipt_path, selected):
     return source_bytes
 
 
+# Windows command releases do not include the C or managed family at this stage.
+# Tickets 0381, 0384 and 0385 add that family with their own target proof.
 def check_c(path, receipt_path, target, version):
     captured = receipt(receipt_path, ("name", "sha256"))
     name = f"thinkthen-c-{version}-{target}.tar.gz"

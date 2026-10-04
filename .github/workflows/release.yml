@@ -43,13 +43,25 @@ jobs:
           - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm}
           - {target: aarch64-apple-darwin, runner: macos-15}
           - {target: x86_64-apple-darwin, runner: macos-15-intel}
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025}
+    defaults: {run: {shell: bash}}
     runs-on: ${{ matrix.runner }}
     permissions: {contents: read}
     env:
       MACOSX_DEPLOYMENT_TARGET: '15.0'
     steps:
+      - name: Keep Windows line endings as committed
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - name: Isolate Windows default folders
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        run: |
+          set -eu
+          printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/thinkthen-appdata/Roaming" "$RUNNER_TEMP/thinkthen-appdata/Local"
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         if: runner.os == 'macOS'
         with: {python-version: '3.13'}
@@ -69,7 +81,12 @@ jobs:
         run: |
           set -eu
           mkdir -p release-files
-          if [ "$(uname -s)" = Linux ]; then
+          if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+            cargo clippy --locked --offline --workspace --all-targets -- -D warnings
+            cargo test --locked --offline --no-fail-fast --workspace --all-targets
+            CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$TARGET" release-files command first-run
+            python3 sdlc/scripts/release-windows-command.py platform release-files "$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)"
+          elif [ "$(uname -s)" = Linux ]; then
             # Ticket 0366: log free space and our big folders at each stage.
             disk() {
               sdlc/scripts/release-workflow disk "$1" "$HOME/.cargo/registry" "$HOME/.rustup" \
@@ -202,12 +219,24 @@ jobs:
           - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm}
           - {target: aarch64-apple-darwin, runner: macos-15}
           - {target: x86_64-apple-darwin, runner: macos-15-intel}
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025}
+    defaults: {run: {shell: bash}}
     runs-on: ${{ matrix.runner }}
     permissions: {contents: read, actions: read}
     env: {MACOSX_DEPLOYMENT_TARGET: '15.0'}
     steps:
+      - name: Keep Windows line endings as committed
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - name: Isolate Windows default folders
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        run: |
+          set -eu
+          printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/thinkthen-appdata/Roaming" "$RUNNER_TEMP/thinkthen-appdata/Local"
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with: {python-version: '3.13'}
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
@@ -246,31 +275,41 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         with: {name: provenance-x86, path: provenance}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: crate-package, path: crate-dist}
       - name: Require the selected Go/C++ family
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow go-cpp-gate platform "$TARGET" "$SHA"
       - name: Require the selected Swift/Zig family
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow swift-zig-gate platform "$TARGET" "$SHA"
       - name: Require the selected PHP/Dart family
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow php-dart-gate platform "$TARGET" "$SHA"
       - name: Require the selected Ada/Objective-C/COBOL family
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow ada-objc-cobol-gate platform "$TARGET" "$SHA"
       - name: Require the selected managed family and original receipts
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow managed-gate platform "$TARGET" "$SHA" provenance
       - env: {TARGET: "${{ matrix.target }}", THINKTHEN_HEAVY_LOCK: "${{ runner.temp }}/thinkthen-release-smoke.lock"}
+        if: matrix.target != 'x86_64-pc-windows-msvc'
         run: |
           sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
           sdlc/scripts/release-smoke smoke-files
           sdlc/scripts/installer-test
           sdlc/scripts/release-workflow installer-smoke smoke-files
           sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
+      - name: Smoke the Windows command and packed Rust crate
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        run: python3 sdlc/scripts/release-windows-smoke.py platform --crate-dir crate-dist
 
   draft:
     needs: [resolve, smoke, registries]
@@ -294,7 +333,9 @@ jobs:
           NAME: ${{ needs.resolve.outputs.name }}
           SHA: ${{ needs.resolve.outputs.sha }}
         run: |
-          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin; do
+          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc; do
+            # Stage 2 bindings and Unix-only families have no Windows release.
+            [ "$target" != x86_64-pc-windows-msvc ] || continue
             sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"
             sdlc/scripts/release-workflow swift-zig-gate "platform/platform-$target" "$target" "$SHA"
             sdlc/scripts/release-workflow php-dart-gate "platform/platform-$target" "$target" "$SHA"

@@ -1,6 +1,6 @@
 # 0380 slice A: Add the Windows command release target
 
-Status: in progress. Built in physical lane claude-1 from origin/main after 0397, at e760432c80dc22501fa51694964f2eeec5b8e63e. Fresh ticket review accepted. Independent ZIP packing and documentation are built; the shared release workflow changes wait for 0398 slice A and the coordinator's signal. This record does not claim the fifth target is complete or runner-proven.
+Status: in progress. Built in physical lane claude-1 from origin/main after 0397, at e760432c80dc22501fa51694964f2eeec5b8e63e. Fresh ticket review accepted. The first WIP commit rebased over 0398 slice A at ff047d8c50ce39ed9ab0acd22695c4960a963d38. The coordinator then authorized shared workflow edits. The fifth target is built and awaits fresh code review and Windows runner proof.
 
 `release-pack` accepts `x86_64-pc-windows-msvc`, builds or reuses `thinkthen.exe`, and writes a ZIP containing that one executable and its SHA-256 sidecar. Windows accepts only the command, first-run sample and crate parts at this stage. Unix target names, command payloads, archive format and default parts retain their prior paths.
 
@@ -11,3 +11,7 @@ The focused self-test runs the real packer with a synthetic Windows host and Car
 Signing remains Ian's public release choice. This work permits unsigned development output. It enrolls in no signing service, spends nothing, dispatches no workflow and publishes no release. The Windows installer and runtime findings remain later slices of 0380.
 
 Lessons: the archived release self-test verifies the entire archived source against Git HEAD, so the candidate packer must be committed before that proof runs. Windows source positions and library release work do not belong in this packaging slice.
+
+The build and smoke matrices now include the fifth target on `windows-2025`. Windows uses Bash, keeps repository line endings, isolates APPDATA and LOCALAPPDATA, fetches only the root workspace, and runs offline Clippy, workspace tests and command packing. Installed smoke checks the ZIP executable and an offline installation of the packed Rust crate. Each reports the version, replays the first-run answer and proves token-cap refusal with zero requests at a loopback listener. Windows collection verifies exact command and sample inventory before creating output. Unix binding gates skip Windows explicitly. Four wheels, addons, gems and Homebrew targets remain unchanged. The 0398 dry Cargo/Twine checks and exact Homebrew guards are retained.
+
+Windows folders now appear in the recording, settings and question-file contracts. The metadata change records supported crate platforms without asking docs.rs to cross-compile bundled SQLite. The optional public installer, runtime findings W1 to W7 and signing choice remain their assigned follow-up work. No Windows runner was dispatched in this session.

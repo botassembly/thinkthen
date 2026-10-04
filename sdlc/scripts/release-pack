@@ -94,8 +94,18 @@ esac
 # The source and Cargo cache can sit outside HOME in a release container.
 # Remap all three origins before packaging a library's panic/debug locations.
 cargo_home=${CARGO_HOME:-$HOME/.cargo}
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$REPO=/build/source --remap-path-prefix=$cargo_home=/build/cargo --remap-path-prefix=$HOME=/build/home"
-CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=/build/home"
+source_remap=$REPO cargo_remap=$cargo_home home_remap=$HOME
+if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+	# Rust on Windows reports native paths; Git Bash paths cannot match them.
+	source_remap=$(cygpath -m "$REPO") cargo_remap=$(cygpath -m "$cargo_home") home_remap=$(cygpath -m "$HOME")
+fi
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo --remap-path-prefix=$home_remap=/build/home"
+if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
+	CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=/build/home"
+else
+	# MSVC does not accept the Unix compiler's file-prefix-map flags.
+	CFLAGS=${CFLAGS:-}
+fi
 export RUSTFLAGS CFLAGS
 . sdlc/scripts/scratch.sh
 scratch_dir stage
@@ -504,8 +514,11 @@ for part in "$@"; do
 	if [ -n "$own_build" ]; then
 		scratch_dir part_build
 		CARGO_TARGET_DIR=$part_build THINKTHEN_DUCKDB_CPP_BUILD=${duckdb_build:-$part_build/cpp}
-		RUSTFLAGS="$rust_flags --remap-path-prefix=$part_build=/build/target"
-		CFLAGS="$c_flags -ffile-prefix-map=$part_build=/build/target"
+		build_remap=$part_build
+		[ "$TARGET" != x86_64-pc-windows-msvc ] || build_remap=$(cygpath -m "$part_build")
+		RUSTFLAGS="$rust_flags --remap-path-prefix=$build_remap=/build/target"
+		CFLAGS=$c_flags
+		[ "$TARGET" = x86_64-pc-windows-msvc ] || CFLAGS="$c_flags -ffile-prefix-map=$part_build=/build/target"
 		CXXFLAGS="${cxx_flags:+$cxx_flags }-ffile-prefix-map=$part_build=/build/target"
 		export CARGO_TARGET_DIR THINKTHEN_DUCKDB_CPP_BUILD RUSTFLAGS CFLAGS CXXFLAGS
 	fi
