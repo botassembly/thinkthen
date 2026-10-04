@@ -2,7 +2,9 @@
 """Offline private-process startup, identity, shutdown and retention proof (0398B)."""
 import io
 import json
+import os
 from pathlib import Path
+import select
 import shutil
 import subprocess
 import sys
@@ -22,7 +24,7 @@ class PostgresLifecycle(unittest.TestCase):
         cls.seed = tempfile.TemporaryDirectory(prefix='thinkthen-pg-fixture-')
         root = Path(cls.seed.name)
         source = root / 'postmaster.c'
-        source.write_text('#include <unistd.h>\nint main(void) { for (;;) pause(); }\n')
+        source.write_text('#include <unistd.h>\nint main(void) { if (write(1, "ready\\n", 6) != 6) return 1; for (;;) pause(); }\n')
         cls.server = root / 'postgres'
         subprocess.run(['cc', source, '-o', cls.server], env=clean_environment(root), check=True, capture_output=True)
 
@@ -171,7 +173,12 @@ class PgFixture(Check):
         command = self.binary / 'postgres'
         if self.bad_identity == 'runtime': command = self.server
         data = self.data if self.bad_identity != 'arguments' else self.root / 'unowned'
-        self.child = subprocess.Popen([command, '-D', data, '-k', self.socket], env=self.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.child = subprocess.Popen([command, '-D', data, '-k', self.socket], env=self.env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        # The child declares readiness from main, after exec has populated its
+        # executable and arguments. Never publish a ready PID during that race.
+        if not select.select([self.child.stdout], [], [], 5)[0] or os.read(self.child.stdout.fileno(), 6) != b'ready\n':
+            raise Failure('fixture postmaster did not declare readiness')
+        self.child.stdout.close()
         fields = [str(self.child.pid), str(self.data), '1', '5432', str(self.socket), '', '0', 'ready']
         if self.bad_identity == 'pid-path': fields[1] = str(self.root / 'unowned')
         if self.bad_identity == 'socket': fields[4] = str(self.root / 'unowned')
@@ -198,6 +205,7 @@ class PgFixture(Check):
         if self.child is not None:
             if self.child.poll() is None: self.child.terminate()
             self.child.wait()
+            if self.child.stdout is not None: self.child.stdout.close()
 
 
 if __name__ == '__main__':
