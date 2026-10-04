@@ -1,6 +1,6 @@
 # Execute the real transaction and cleanup ASTs against failing I/O boundaries.
 # This proves error preservation, not native Windows filesystem behavior.
-param([string] $Installer)
+param([string] $Installer, [ValidateSet('transaction', 'replacement', 'committed', 'uncommitted')] [string] $Mode = 'transaction', [string] $FixtureRoot = '')
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 $tokens = $null; $errors = $null
@@ -26,8 +26,68 @@ Add-Type -TypeDefinition @'
 public class ThinkThenFailingErrorWriter : System.IO.TextWriter {
     public override System.Text.Encoding Encoding { get { return System.Text.Encoding.UTF8; } }
     public override void WriteLine(string value) { throw new System.IO.IOException("DIAGNOSTIC ERROR"); }
+    public override void WriteLine(string format, object first, object second) { throw new System.IO.IOException("DIAGNOSTIC ERROR"); }
 }
 '@
+if ($Mode -in @('committed', 'uncommitted')) {
+    $entry = @($ast.EndBlock.Statements | Where-Object { $_ -is [System.Management.Automation.Language.TryStatementAst] })
+    if ($entry.Count -ne 1) { throw 'Expected the actual installer entry point.' }
+    function Invoke-ThinkThenInstall {
+        $script:Committed = $Mode -eq 'committed'
+        throw 'OUTPUT ERROR'
+    }
+    $Version = '0.2.0'
+    [Console]::SetError([ThinkThenFailingErrorWriter]::new())
+    & ([scriptblock]::Create($entry[0].Extent.Text))
+    return
+}
+if ($Mode -eq 'replacement') {
+    foreach ($name in @('Commit-File', 'Restore-File', 'Get-ReplacementState')) {
+        $function = @($ast.EndBlock.Statements | Where-Object {
+            $_ -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $_.Name -ceq $name
+        })
+        if ($function.Count -ne 1) { throw ('Expected the actual installer function: ' + $name) }
+        . ([scriptblock]::Create($function[0].Extent.Text))
+    }
+    function Assert-Ancestors {}
+    function Assert-Private {}
+    function Get-Attributes { return $null }
+    function Get-CurrentDigest {
+        if ($script:Replacing) { throw 'INSPECTION ERROR' }
+        return 'old'
+    }
+    function Get-FileHashPrivate { return 'original' }
+    function Write-PrivateFile {}
+    function Invoke-FileReplace { $script:Replacing = $true; throw 'PRIMARY REPLACEMENT ERROR' }
+    $script:InstallDirectory = $FixtureRoot; $script:Scratch = $FixtureRoot
+    $script:Owned = [System.Collections.Generic.HashSet[string]]::new()
+    $snapshot = Join-Path $FixtureRoot ('replacement-snapshot-' + [guid]::NewGuid().ToString('D'))
+    $file = [System.IO.File]::Open($snapshot, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+    try { $file.WriteByte(1) } finally { $file.Dispose() }
+    $priorWriter = [Console]::Error
+    $writer = [ThinkThenFailingErrorWriter]::new()
+    [Console]::SetError($writer)
+    try {
+        foreach ($operation in @('commit', 'restore')) {
+            $script:Replacing = $false; $script:LastReplacementState = @{}
+            $actual = ''
+            try {
+                if ($operation -eq 'commit') { Commit-File 'stage' 'destination' 'old' }
+                else { Restore-File 'destination' $snapshot 'original' }
+            } catch { $actual = $_.Exception.Message }
+            if ($actual -cne 'PRIMARY REPLACEMENT ERROR') { throw ('Expected primary replacement error; returned: ' + $actual) }
+            if ($script:LastReplacementState.Count -ne 3 -or
+                @($script:LastReplacementState.Values | Where-Object { $_ -cne 'uninspectable' }).Count -ne 0) {
+                throw 'Replacement inspection did not retain all three uninspectable states.'
+            }
+        }
+    } finally {
+        [Console]::SetError($priorWriter); $writer.Dispose()
+        [System.IO.File]::Delete($snapshot) # This fixture created this exact file.
+    }
+    [Console]::WriteLine('Actual Commit-File and Restore-File ASTs preserve the primary error and all 3 inspection states despite a failing error stream; native Windows proof NOT RUN.')
+    return
+}
 function Commit-File { throw 'PRIMARY COMMIT ERROR' }
 function Restore-File { throw 'ROLLBACK ERROR' }
 function Write-PrivateFile {}

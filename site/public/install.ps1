@@ -429,7 +429,10 @@ function Get-ReplacementState([string] $Destination, [string] $Stage, [string] $
     foreach ($path in @($Destination, $Stage, $Backup)) {
         if (-not $path) { continue }
         try { $state[$path] = Get-CurrentDigest $path }
-        catch { $state[$path] = 'uninspectable'; [Console]::Error.WriteLine("Recovery inspection failed for {0}: {1}", $path, $_.Exception.Message) }
+        catch {
+            $state[$path] = 'uninspectable'
+            try { [Console]::Error.WriteLine("Recovery inspection failed for {0}: {1}", $path, $_.Exception.Message) } catch {}
+        }
     }
     return $state
 }
@@ -611,7 +614,7 @@ function Invoke-ThinkThenInstall([string] $RequestedVersion) {
 # Entry point. Fixtures load the actual function ASTs without executing this call.
 try { Invoke-ThinkThenInstall $Version }
 catch {
-    [Console]::Error.WriteLine('thinkthen install: ' + $_.Exception.Message)
+    try { [Console]::Error.WriteLine('thinkthen install: ' + $_.Exception.Message) } catch {}
     if ($script:Committed) { exit 0 }
     exit 1
 }

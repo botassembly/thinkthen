@@ -215,9 +215,15 @@ def main():
                 env = {key: value for key, value in os.environ.items()
                        if not key.upper().startswith('THINKTHEN_') and not key.upper().endswith('_API_KEY')}
                 for host in hosts:
-                    subprocess.run([host, '-NoProfile', '-NonInteractive', '-File',
-                                    str(REPO / 'sdlc/scripts/windows-installer-recovery-test.ps1'),
-                                    '-Installer', str(REPO / 'install.ps1')], env=env, check=True, timeout=30)
+                    for mode in ('transaction', 'replacement', 'committed', 'uncommitted'):
+                        recovery = subprocess.run([host, '-NoProfile', '-NonInteractive', '-File',
+                                                   str(REPO / 'sdlc/scripts/windows-installer-recovery-test.ps1'),
+                                                   '-Installer', str(REPO / 'install.ps1'), '-Mode', mode,
+                                                   '-FixtureRoot', str(root)], env=env, timeout=30)
+                        expected = 1 if mode == 'uncommitted' else 0
+                        if recovery.returncode != expected:
+                            raise RuntimeError(f'actual recovery AST {mode} exited {recovery.returncode}, expected {expected}')
+                    print('Actual entry point AST: committed output/diagnostic failure exits 0; uncommitted failure exits 1; native Windows proof NOT RUN')
                     call = [host, '-NoProfile', '-NonInteractive', '-File', str(REPO / 'sdlc/scripts/windows-installer-boundaries.ps1'),
                             '-Installer', str(REPO / 'install.ps1'), '-Cases', str(case_file), '-FixtureRoot', str(root)]
                     if args.binary:
