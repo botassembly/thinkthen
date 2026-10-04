@@ -5,7 +5,7 @@ Status: **Settled** for version one, by ADR 0007.
 Keeps the records whose evidence reaches the mark.
 
 ```text
-thinkthen filter QUESTION [--lines|--jsonl|--csv|--tsv] [--threshold T] [--field POINTER] [--details|-n|--scores|--around N] [BACKEND]
+thinkthen filter QUESTION [--lines|--jsonl|--csv|--tsv] [--threshold T] [--field POINTER] [--details] [-n] [--scores] [--around N] [BACKEND]
 ```
 
 `QUESTION` is the question text, or `@` and the path of a question file holding one `decide` question. [question-file.md](question-file.md) gives the grammar and the precedence, and `--true TEXT` and `--false TEXT` say what a yes and a no mean, exactly as they do on `decide`.

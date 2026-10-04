@@ -5,7 +5,7 @@ Status: **Settled** for version one, by ADR 0007.
 Prints records in order of the probability of yes, or of the weighted value from a saved `score` question.
 
 ```text
-thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER] [--details|-n|--scores|--around N] [BACKEND]
+thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER] [--details] [-n] [--scores] [--around N] [BACKEND]
 ```
 
 ## What it reads
