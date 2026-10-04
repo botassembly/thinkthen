@@ -3,7 +3,7 @@
 - Status: accepted for ticket 0400 slice A. The format received fresh independent design acceptance. This revision refreshes source baselines and the existing 0399 receipts only. The accepted API choices are unchanged. Fresh independent record review accepted all seven frozen preparation artifacts before this copy.
 - Date: 2026-10-04
 
-Source baseline: main `57de974e81fed7d1fb94d166d39253b4b30e70b2`. Ticket 0399 landed through `4cf69467320fe0d0508ca574da24ef161b0fe9d2` and supplies paths and BothSides behavior; its source candidate `d9bca78dac6def9bbded04089a5c4198ade5d9da` is retained as historical evidence. Its owning [build record](../../records/0399-backend-path-build.md#actual-manual-provider-receipts) records the two once-only actual provider checks on 2026-10-04. ADR 0117 is free on both commits. The coordinator copied this slice after 0399 landed and fresh record review accepted the preparation. This draft authorizes no paid work.
+Historical preparation baseline: main `57de974e81fed7d1fb94d166d39253b4b30e70b2`. Current slice A source baseline is `4cf69467320fe0d0508ca574da24ef161b0fe9d2`. Ticket 0399 landed through `4cf69467320fe0d0508ca574da24ef161b0fe9d2` and supplies paths and BothSides behavior; its source candidate `d9bca78dac6def9bbded04089a5c4198ade5d9da` is retained as historical evidence. Its owning [build record](../../records/0399-backend-path-build.md#actual-manual-provider-receipts) records the two once-only actual provider checks on 2026-10-04. ADR 0117 is free on both commits. The coordinator copied this slice after 0399 landed and fresh record review accepted the preparation. This draft authorizes no paid work.
 
 ## Slice boundaries
 

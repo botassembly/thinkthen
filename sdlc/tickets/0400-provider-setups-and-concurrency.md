@@ -133,7 +133,7 @@ The accepted [ADR 0117](../planning/adr/0117-provider-setups-extend-the-backend-
 
 ## Four-slice preparation record
 
-This exact amendment is proposed against main `57de974e81fed7d1fb94d166d39253b4b30e70b2` and accepted 0399 candidate `d9bca78dac6def9bbded04089a5c4198ade5d9da`. Ticket 0399 remains unlanded; its owning record preserves the two actual checks executed once on 2026-10-04. Slice A follows 0399 landing and fresh read-only record review. ADR 0117 and the evidence table preserve the independently accepted API scope. The new setup fields remain unsupported until slice B. No new paid call is authorized.
+Preparation used historical main `57de974e81fed7d1fb94d166d39253b4b30e70b2` and accepted 0399 candidate `d9bca78dac6def9bbded04089a5c4198ade5d9da`. Ticket 0399 has landed through `4cf69467320fe0d0508ca574da24ef161b0fe9d2`, the current slice A baseline. Its owning record preserves the two actual checks executed once on 2026-10-04. Slice A follows that landing and fresh read-only record review. ADR 0117 and the evidence table preserve the independently accepted API scope. The new setup fields remain unsupported until slice B. No new paid call is authorized.
 
 ## What the build taught us
 
