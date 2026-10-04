@@ -154,7 +154,7 @@ fn later_backend_failure_keeps_filter_groups_and_leaves_rank_empty() -> io::Resu
             b"-- 0.9\n1:first\n2-fail\n",
         ),
     ];
-    let respond = |body| {
+    let respond = |body: &[u8]| {
         if text(body).contains("fail") {
             Canned::status(400, "secret provider body")
         } else {
