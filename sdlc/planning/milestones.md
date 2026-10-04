@@ -78,6 +78,16 @@ Windows work follows [windows.md](windows.md):
 
 Open items:
 
+- [0406: Rank questions preserve criteria and score ordering across core surfaces](../tickets/0406-rank-question-equivalence.md)
+- [0407: Supply independent context for each record](../tickets/0407-per-record-context.md)
+- [0408: Expose complete question probabilities through C JSON and SQL details](../tickets/0408-j1-full-probabilities.md)
+- [0409: Match TypeScript rank and find declarations to runtime](../tickets/0409-typescript-rank-find-contract.md)
+- [0410: Complete dataframe function coverage](../tickets/0410-column-function-equivalence.md)
+- [0413: Supply candidate options independently for each record](../tickets/0413-options-per-record-equivalence.md)
+- [0414: Define separate context on aggregate functions](../tickets/0414-separate-shared-context.md)
+- [0416: Move backend checking under the backend namespace](../tickets/0416-backend-command-namespace.md)
+- [0417: SQL rank accepts a question set](../tickets/0417-sql-rank-question-sets.md)
+
 
 - [0419: Official ThinkThen skill for agents](../tickets/0419-official-skill-for-agents.md), the separately reviewed promotion of docs item 22. It changes documentation and preserves empty-find behavior.
 - [0377: Each language binding and SQL extension names a backend in code](../tickets/0377-binding-backends.md)
@@ -118,6 +128,11 @@ Exit criteria: none. An item moves to a numbered milestone when its trigger fire
 Blockers: none.
 
 Open items:
+
+- [0411: Prove changed reading rules on every binding route](../tickets/0411-binding-reading-replay-proof.md)
+- [0412: Document R index adapters in the binding contract](../tickets/0412-r-result-contract.md)
+- [0415: Prepare a signed DuckDB community extension listing](../tickets/0415-signed-duckdb-community-listing.md)
+- [0418: Language rank accepts a question set](../tickets/0418-binding-rank-question-sets.md)
 
 - [0119: Functional audit of the engine tests](../tickets/0119-mutation-audit-of-the-engine-tests.md)
 - [0295 — Polars namespace and SIGINT (F4)](../tickets/0295-polars-namespace-and-sigint.md)
