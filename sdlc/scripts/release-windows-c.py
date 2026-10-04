@@ -162,6 +162,7 @@ def pack(stage, archive):
     with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as out:
         for name, data in zip(MEMBERS, contents):
             member = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
+            member.create_system = 3
             member.compress_type = zipfile.ZIP_DEFLATED
             member.external_attr = 0o100644 << 16
             out.writestr(member, data)

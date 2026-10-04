@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Portable 0381 A regressions. Synthetic files are not native Windows proof."""
 import copy
+import contextlib
+import io
 import os
 import shutil
 from pathlib import Path
@@ -113,6 +115,9 @@ def archives(root):
     assert C.check(archive)[1] == FIXTURE['pe']()
     FIXTURE['create'](root, VERSION)
     assert first == archive.read_bytes()
+    with mock.patch.object(C.zipfile.sys, 'platform', 'win32'):
+        FIXTURE['create'](root, VERSION)
+    assert first == archive.read_bytes(), '0381_C_ZIP_HOST_METADATA_DIFFERS'
     original = C.check(archive)
     for members, cause in [(C.MEMBERS + ('extra',), 'exactly header'),
                            (C.MEMBERS[:-1], 'exactly header'),
@@ -288,10 +293,36 @@ def pack_routing(root):
     assert saved_library.is_file() and saved_dll.is_file()
 
 
+def msvc_setup_routing(root):
+    variables = {'PATH': 'pinned-tools', 'SystemRoot': 'system', 'TEMP': str(root), 'TMP': str(root),
+                 'ProgramFiles(x86)': str(root / 'Program Files'), 'CL': 'masked-warning',
+                 '_CL_': 'masked-warning', 'LINK': 'masked-link', 'FAKE_SERVICE_API_KEY': 'fake-credential'}
+    expected = {name: value for name, value in variables.items()
+                if name not in ('CL', '_CL_', 'LINK', 'FAKE_SERVICE_API_KEY')}
+    output = io.StringIO()
+    setup = root / 'Visual Studio/VC/Auxiliary/Build/vcvarsall.bat'
+    def compiler_environment(command, **options):
+        assert command == f'cmd.exe /d /s /c ""{setup}" x64 >nul && set"'
+        assert options['env'] == expected and options['timeout'] == 60 and options['check'] is True
+        return subprocess.CompletedProcess(command, 0,
+            'PATH=x64-tools\nINCLUDE=inc\nLIB=libs\nLIBPATH=libpath\nCL=masked-warning\nFAKE_SERVICE_API_KEY=fake-credential\n', '')
+    with mock.patch.dict(os.environ, variables, clear=True):
+        with mock.patch.object(Path, 'is_file', return_value=True):
+            with mock.patch.object(subprocess, 'check_output', return_value=str(root / 'Visual Studio')) as finder:
+                with mock.patch.object(subprocess, 'run', side_effect=compiler_environment):
+                    with contextlib.redirect_stdout(output):
+                        runpy.run_path(str(Path(__file__).with_name('release-msvc.py')))
+    assert finder.call_args.kwargs['env'] == expected and finder.call_args.kwargs['timeout'] == 60
+    assert finder.call_args.args[0][1:] == ['-latest', '-products', '*', '-requires',
+        'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationPath']
+    assert output.getvalue().splitlines() == ['PATH=x64-tools', 'INCLUDE=inc', 'LIB=libs', 'LIBPATH=libpath']
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-0381-portable-') as temporary:
         archives(Path(temporary))
         pack_routing(Path(temporary))
+        msvc_setup_routing(Path(temporary))
     plants = workflow_plants()
     print(f'Windows C portable self-test: archive/header/export refusals and {plants} workflow plants passed; native proof pending')
 
