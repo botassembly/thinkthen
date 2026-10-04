@@ -90,11 +90,11 @@ struct RankSet
 fn RankSet::from_json(&str) -> Result<RankSet, Error>
 fn RankSet::load(impl AsRef<Path>) -> Result<RankSet, Error>
 struct SetRanked<T>
-fn SetRanked<T>::index(&self) -> usize
-fn SetRanked<T>::input(&self) -> &T
-fn SetRanked<T>::into_input(self) -> T
-fn SetRanked<T>::probability(&self) -> f64
-fn SetRanked<T>::question_name(&self) -> &str
+fn SetRanked::index(&self) -> usize
+fn SetRanked::input(&self) -> &T
+fn SetRanked::into_input(self) -> T
+fn SetRanked::probability(&self) -> f64
+fn SetRanked::question_name(&self) -> &str
 fn Engine::rank_set<I>(&self, &RankSet, I) -> Result<Call<Vec<SetRanked<I::Item>>>, Error> where I: IntoIterator, I::Item: Evidence
 fn Engine::rank_set_with<I>(&self, &RankSet, I, CallOptions<'_>) -> Result<Call<Vec<SetRanked<I::Item>>>, Error> where I: IntoIterator, I::Item: Evidence
 ```
