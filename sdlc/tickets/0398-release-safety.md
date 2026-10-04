@@ -1,0 +1,102 @@
+# 0398: Release safety: publish dry runs, install checks after publishing, and a rehearsed tag
+
+Status: ready. Lane 2, its first item. Parent: Ian's 0.2 plan of 2026-10-04, lane 2 "release safety". It closes `sdlc/issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md`, `sdlc/issues/2026-10-04-public-install-checks-are-done-by-hand.md` and `sdlc/issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md`. It needs no other ticket. It lands after ticket 0397 in the lane order.
+
+Milestone: 0.2
+
+## Outcome
+
+1. Slice A. A rehearsal runs every publish step that has a dry run, and publishes nothing. crates.io gets `cargo publish --dry-run`. npm and pub.dev keep the dry runs they have. PyPI gets `twine check --strict` on the four wheels, and the Homebrew tap gets its formula rendered and checked. The release process names the registries with no dry run: PyPI's upload, RubyGems, NuGet, Maven Central's upload, the tap's push, the GitHub release and the Go tag. It also names the check no rehearsal can make, that each trusted publisher exists.
+2. Slice B. After `publish` passes, the release run starts a separate install-check workflow on its own. It installs every channel from its live registry on fresh runners, reads the version, and replays the first-run sample with no key. A channel that installs the 0.0.1 placeholder or another version fails with a sentence naming both versions. The workflow can also be dispatched by hand for any published version.
+3. Slice C. Release mode refuses a `v*` tag whose commit has no successful rehearsal run of `release.yml`. The refusal comes in `resolve`, before any build, and names the commit.
+4. Gates stay offline. Each slice has an offline edge table in the existing self-tests. The live parts are proved by a rehearsal, one hand dispatch of the install check against 0.1.2, and the 0.2 release run.
+
+## Evidence
+
+- Starts from: the three 0.1 release runs in `sdlc/records/0128-release-0-1.md` and the three issues this ticket closes. No experiment preceded this ticket.
+  - 0.1.0, run 37035814818, was the first run of every publish step. Five of eight failed. crates.io and RubyGems had no trusted publisher. PyPI's action was pinned to a tag object. `npm publish` read a bare relative path as a GitHub repository. NuGet answered 400 because the push sent no protocol header. Maven Central, pub.dev and the tap published 0.1.0, so the next release had to be 0.1.1.
+  - Ticket 0391 fixed three of those. `workflows --remote-pins` checks the pins by hand. The `npm-pack` job dry-runs `npm publish` on the same `./npm-dist/thinkthen-$VERSION.tgz` path. `release-registry-self-test.py`'s `nuget_cases` pins the `X-NuGet-Protocol-Version: 4.1.0` header offline. The two trusted-publisher failures, and 0.1.1's npm "OIDC permission denied" in job 111040245433, came from registry settings. No dry run in this ticket would have caught them.
+  - 0.1.2: checkpoint `checkpoint/surfaces/2026-10-03-1` and rehearsal 37126990511 ran on `abac3ce61`. Ticket 0395's cherry-pick landed as `08328c9c0`, and `v0.1.2` was tagged there. No rehearsal ran `08328c9c0`. Every rehearsal draft has since been deleted (record 0128, step 9), so a draft release cannot serve as the evidence. The workflow run history keeps every run.
+  - The hand install checks of 2026-10-03 found two defects every release job had passed. The macOS gems named darwin 24, so macOS 26 took the 0.0.1 placeholder (ticket 0394). R-universe served Linux the source package, which needs Rust. Record 0128's "Public install checks" table lists 18 channel rows and the commands used. Each check read the version and replayed the first-run sample with `requests_sent` 0.
+  - `.github/workflows/release.yml` today: `crate` runs `sh sdlc/scripts/package`, whose last packing step is `cargo package --locked --offline`. It never asks crates.io. `npm-pack` runs `npm publish --dry-run`. `registries` runs `release-workflow registry-pack`, `maven-sign registry/maven rehearse` with a throwaway key, and `pub-dry-run`, which runs `dart pub publish --dry-run`. `wheels` and `gems` only count files with `verify-family`. `tap` renders the formula and pushes it in one operation, behind `TAP_DEPLOY_KEY`. The nine outward jobs run only in release mode, in environment `release`, behind the `RELEASE_ARMED` step.
+  - `sdlc/scripts/workflows` refuses `id-token: write` or any secret outside environment `release`, and fixes the release job graph to 18 named jobs. So a rehearsal, which runs no job in environment `release`, can neither exchange an OIDC token nor read the Maven secrets. Each environment job waits for approval. TestPyPI and Maven Central's validate-then-drop upload both need one of those, so neither fits a rehearsal that "must still publish nothing and need no approval" (the rehearsal issue, item 3).
+  - `release-workflow resolve` checks the mode against the ref. Rehearse runs from `refs/heads/main` or `refs/heads/release/X.Y`, and release runs from `refs/tags/v*`. It then checks the checkout against `GITHUB_SHA` and runs `versions`. A release dispatched from a branch fails in `resolve`, so a successful run from a branch is always a rehearsal. `release-archive-self-test.py`'s `resolve_outputs` pins the outputs and the refusal sentences. `workflows --self-test` runs it.
+  - `release-workflow installer-smoke` and `crate-smoke` already install built files and replay the first-run sample with an empty home and no key. `release-smoke` checks `thinkthen-first-run.tar.gz` against its `.sha256` file.
+- Keeps: every guard the release workflow has.
+  - Rehearse mode publishes nothing, holds no `id-token`, reads no secret except `GITHUB_TOKEN`, and asks for no approval.
+  - The nine outward jobs, their order, environment `release`, the `RELEASE_ARMED` first step, trusted publishing, and both approvals. The docs team's ranking of 2026-10-04 keeps the two approvals as a safety gate.
+  - The `npm-pack` dry run and the bare-path refusal of ticket 0391. The pub dry run. Maven signing with a throwaway key in rehearsal.
+  - `resolve`'s ref rules and its refusal sentences, word for word.
+  - `workflows --remote-pins` as a hand step before dispatch.
+- Changes: three slices. Each lands with its own proof.
+  - Slice A, publish dry runs.
+    - `crate` job: after `sh sdlc/scripts/package`, run `cargo publish --dry-run --locked --package thinkthen`. The job holds no token. Cargo resolves against the crates.io index and stops before the upload. `workflows`' crate route rule requires this step after `package`.
+    - `wheels` job: install a pinned twine and run `twine check --strict` on the four wheels. Add twine to `workflows`' `UNPINNED` table so an unpinned install is refused.
+    - Homebrew tap: split `release-workflow tap` into `tap-formula VERSION PLATFORM_ROOT OUT`, which renders `Formula/thinkthen.rb` with no key and no network, and `tap`, which renders through `tap-formula` and then clones, commits and pushes. `draft` runs `tap-formula` on its downloaded platform folders before `collect`, and checks the formula with `ruby -c`. The release job keeps its present behavior.
+    - The registries with no dry run keep what they have: PyPI's upload, RubyGems' `gem push`, NuGet's push, Maven Central's upload, the tap's push, the GitHub release in `publish`, and the Go tag. A comment at the top of `release.yml` names them. It replaces "Deliberate 0.1 release only", which no longer fits.
+    - `sdlc/planning/release-process.md` section 4: what a rehearsal checks for each registry, what it cannot check, and that each trusted publisher is proved only by the release run.
+  - Slice B, install checks after publishing.
+    - A new `.github/workflows/install-check.yml`. It starts only on `workflow_dispatch`, with one input, `version`. It uses top-level `permissions: {}`, `contents: read` per job, no environment, no `id-token` and no secret. It is pinned like the other workflows. The input reaches `run` only through `env`. Its runners are `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, `macos-15-intel`, and the newest macOS runner GitHub offers, which covers the macOS 26 gem case. The table below says which channel runs where.
+    - A new `sdlc/scripts/install-check CHANNEL VERSION`, one case per channel in record 0128's table. Each installs into a scratch home, reads the version, and replays `thinkthen-first-run.tar.gz` from the GitHub release with no key. Commands and libraries check `true`. Libraries also check `requests_sent` 0. The check step is a separate function, so the self-test can drive it.
+    - The matrix runs each channel only where record 0128's hand checks ran it, with the tools those checks needed. Runner defaults are too old for several channels: Ubuntu 24.04's SQLite 3.45.1 refuses the extension, which needs 3.50.0. Each job installs its pinned tools with the setup actions the workflows already pin, or from the tool's own release archive. The builder may add a runner to a row. A row may not drop one.
+
+      | Channel | Runners | Pinned tool setup |
+      | --- | --- | --- |
+      | Download script | all five | curl and tar from the image |
+      | Homebrew | `ubuntu-24.04`, newest macOS | the runner's Homebrew |
+      | `cargo install`, `cargo add` | all five | Rust 1.95.0 through rustup |
+      | pip, uv | all five | Python 3.13, uv 0.9.17 |
+      | npm | all five | Node 22.22.3 |
+      | RubyGems | all five | Ruby 3.4.11 |
+      | NuGet, with the C archive | `ubuntu-24.04` | .NET 8 |
+      | Maven Central, with the C archive | `ubuntu-24.04` | Java 21, Maven 3 |
+      | pub.dev, with the C archive | `ubuntu-24.04` | Dart 3.13.4 |
+      | Packagist, with the C archive | `ubuntu-24.04` | PHP 8.3 with FFI, Composer |
+      | Go module, with the C archive | `ubuntu-24.04` | Go, pinned as `go-cpp-tools` pins it |
+      | R-universe Linux binary | `ubuntu-24.04`, in a `rocker/r-ver` 4.6 container pinned by digest | R 4.6, the `resolute` binary address |
+      | C archive | `ubuntu-24.04` | gcc and pkg-config from the image |
+      | SQLite archive | `ubuntu-24.04` | SQLite 3.50.4 or newer, from sqlite.org |
+      | DuckDB archive | `ubuntu-24.04` | DuckDB 1.5.5 |
+      | PostgreSQL 16 archive | `ubuntu-24.04` | PostgreSQL 16.15 from the PGDG packages |
+
+      "All five" means `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, `macos-15-intel` and the newest macOS. The language packages and database archives over the C library ship for Linux x86-64 only, so they run there alone.
+    - The channels that index on their own schedule are R-universe, the Go proxy and Packagist. Each checks its index first. A missing version fails with "<channel> does not list thinkthen <version> yet; dispatch install-check again later", so a late index reads differently from a broken package.
+    - `release.yml`'s `publish` job gains `actions: write` and a last step, `gh workflow run install-check.yml --ref "$NAME" -f version="$VERSION"`. GitHub starts a `workflow_dispatch` sent with `GITHUB_TOKEN`. The job graph stays at 18 jobs.
+    - `sdlc/scripts/workflows`: install-check rules (dispatch only, no environment, no `id-token`, no secret, `contents: read`), and a rule that `publish` dispatches it last. Its docstring says every workflow runs only by hand. It becomes: every workflow starts only on `workflow_dispatch`, and only `publish` dispatches another workflow, `install-check.yml`. Ticket 0128's "The workflow check" table gains the same rule and the install-check rules.
+    - `release-process.md` section 6: the install check runs after `publish`, and the coordinator records its run in the release's ticket. A late index gets one hand dispatch later.
+  - Slice C, a rehearsed tag.
+    - `release-workflow resolve`, release mode only: after the ref and checkout checks, read `gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?head_sha=$GITHUB_SHA&status=success&per_page=100"`. Parse it with `python3`, not `jq`, so the self-test's fake `gh` only prints JSON. The check accepts one run whose `head_sha` equals `GITHUB_SHA`, whose `conclusion` is `success`, and whose `head_branch` is `main` or `release/X.Y`. Otherwise it fails with "release-workflow: no successful rehearsal ran on <sha>; dispatch rehearse mode on that commit first". A failed `gh` call fails with "release-workflow: could not read the rehearsal runs for <sha>". A success from a `v*` tag does not count, because that was a release run.
+    - `release.yml`'s `resolve` job gains `actions: read` and `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` on the resolve step. `workflows` requires both and refuses any write permission on `resolve`.
+    - The lander adds a Status sentence to `sdlc/issues/2026-10-03-doc-tests-gate-checkpoints-and-releases.md`: it now owns the checkpoint-tag check in `resolve`, the item this ticket's closed release-tag issue carried.
+    - `release-process.md` sections 5 and 6: release mode enforces the rehearsal. A tag must name the commit a clean rehearsal ran.
+- Proof: offline tables in the gates, then three live checks outside the gates.
+  - Slice A, offline:
+    - `python3 sdlc/scripts/workflows --self-test` with planted cases. A `crate` job without the publish dry run, or with it before `package`, is refused. A `wheels` job without `twine check --strict` is refused, and so is an unpinned twine install. A `draft` job that runs `tap-formula` after `collect`, or not at all, is refused. Each case pins its one refusal line.
+    - A `tap-formula` edge table in `release-archive-self-test.py`, from planted archives and `.sha256` files. Four good archives give the exact formula text the `tap` operation writes today, byte for byte. A missing archive, a checksum mismatch and a version that differs from the crate each give one pinned refusal sentence and exit 1. No key is read.
+    - `python3 sdlc/scripts/workflows` passes on the real files.
+  - Slice B, offline:
+    - `workflows --self-test` planted cases. An install-check workflow that starts on `push`, holds `id-token: write`, reads a secret, names an environment, or expands `inputs.version` inside `run` is refused. A `publish` job without the dispatch step is refused. Each case pins its line.
+    - An edge table for `install-check`'s check step, run from `workflows --self-test`. Fake installed commands and fake library results stand in for the installs. A right version with a `true` replay passes. The 0.0.1 placeholder gives "installed thinkthen 0.0.1, wanted <version>". Another version gives the same sentence with that version. A `false` or `null` replay fails, and so does a library result with `requests_sent` above 0. A late index gives the late-index sentence. Each case pins the output and the exit code.
+  - Slice C, offline:
+    - `release-archive-self-test.py`'s `resolve_outputs` puts a fake `gh` first on `PATH`. A success from `main` at the commit passes, and so does a success from `release/0.1`. These refuse with the pinned sentence and exit 1: no runs; a `failure` conclusion; a success from `refs/tags/v0.2.0`; a success whose `head_sha` names another commit. A `gh` that exits 1 gives the "could not read" sentence. Rehearse mode never calls `gh`, and the fake logs each call to prove it.
+    - `workflows --self-test`: a `resolve` job without `actions: read`, without `GH_TOKEN`, or with `contents: write` is refused.
+  - `sdlc/scripts/lint` and `python3 sdlc/scripts/tickets`.
+  - Live, outside the gates, each recorded in this ticket with its run number:
+    - The next rehearsal from main, under Ian's approval as release-process section 4 sets out. It passes the crates.io dry run, `twine check` and the tap formula. It publishes nothing and asks for no environment approval.
+    - One hand dispatch of `install-check.yml` against the published 0.1.2, under Ian's approval like a rehearsal. It publishes nothing and reads only public registries. Every row of slice B's channel table passes on each of its runners, including RubyGems on the newest macOS and the R-universe Linux binary.
+    - Slice C's query, by hand and read-only, before landing. For `abac3ce61` it finds rehearsal 37126990511. For `08328c9c0` it finds no rehearsal, so 0.1.2's tag would have been refused.
+    - The 0.2 release run proves the rest. `resolve` accepts the rehearsed tag. `publish` starts the install check, and every row of the channel table passes. Each trusted publisher is first proved here, as before.
+- Defers: what stays out.
+  - A rehearsal check that each trusted publisher exists. It needs an OIDC token, which `workflows` allows only in environment `release`, behind an approval. A separate `rehearse` environment with `id-token` and no reviewers would change that rule. It is Ian's call and is not proposed here.
+  - TestPyPI and a validate-then-drop Maven Central upload. Each needs its own trusted publisher or the Maven secrets, so each needs an approved environment. The same holds for a test NuGet feed, which needs a stored key, so it needs environment `release`.
+  - A checkpoint tag check in release mode. Issue `2026-10-03-doc-tests-gate-checkpoints-and-releases.md` items 2 and 3 gate checkpoints and releases on the doc tests. That work can add a checkpoint check beside slice C's rehearsal check in `resolve`.
+  - Install checks on hosts below each version floor, such as Ruby 3.3 and macOS's Python 3.9. They would fail until issue `2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md` settles the placeholders. That issue owns them.
+  - Windows rows in the install check. Ticket 0380 adds the Windows runner and channels when it ships Windows.
+  - Staged npm publishing. Ticket 0393 owns it. Whichever of 0393 and this ticket lands second keeps the `npm-pack` dry run in step with the `npm` job.
+  - Two issues stay separate. `2026-10-04-r-install-on-linux-and-before-release.md` stays open for its docs item and for building the R source tarball before the release goes public. Slice B covers only R-universe's binary install after publishing. The lander adds a Status sentence saying so. `2026-10-04-two-release-secrets-remain.md` stays open. Its third item, a rehearsal check that each secret is still accepted, would need environment `release` and an approval in every rehearsal. Its other items are registry setup decisions. The docs team's ranking of 2026-10-04 keeps both issues as debt until a user or a release needs them.
+
+## What Ian can overturn
+
+- No rehearsal check of trusted publishers, and no `rehearse` environment.
+- The install check as a separate workflow that `publish` starts, rather than jobs inside `release.yml`.
+- Counting a rehearsal whose failed jobs were rerun to success as clean.

@@ -47,6 +47,17 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 Outcome: Windows support and the first features after 0.1. 0.2 work lands on main after the `release/0.1` cut (ADR 0116).
 
+Ian approved the 0.2 scope and lane order on 2026-10-04. 0.2 ships when release safety, the backends, the search flags on rank, extract, the recipes with their numbers, and Windows stage 1 have landed. The proxy, the hosted screens, the decision store, link, verify and qualify as functions, Markdown repair, tables and the navigate command are not in 0.2. There are no 0.1.x patch releases; ticket 0397 freezes `release/0.1`.
+
+Lanes, in order:
+
+- First, in any free lane: [0397: Main moves to 0.2.0 and release/0.1 freezes](../tickets/0397-main-moves-to-0-2-0.md).
+- Lane 1: Windows, tickets 0380 to 0385 below and what follows them.
+- Lane 2: [0398: Release safety](../tickets/0398-release-safety.md), then [0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides](../tickets/0399-backend-path-perplexity-openrouter.md), then [0400: One setup format per provider and a default throttle of 8](../tickets/0400-provider-setups-and-concurrency.md), then 0377 below. 0400 slice A must be usable before the experiments team's new-model day run in the week of 2026-10-05.
+- Lane 3: [0401: Search flags on rank](../tickets/0401-rank-search-flags.md), then [0402: The docs tell one story](../tickets/0402-docs-tell-one-story.md), then [0403: The DuckDB extension ships a build for DuckDB v1.5.4](../tickets/0403-duckdb-extension-for-dbt-v2.md).
+- Gaps in any lane: [0404: Tech debt cut, with tests held to behavior](../tickets/0404-tech-debt-and-tests-held-to-behavior.md).
+- Waiting on experiments: extract (its own function or a mode of annotate), the "none" wording for choose, and each recipe's measured numbers.
+
 Exit criteria, a coordinator default Ian can overturn:
 
 1. Every item below lands or moves to `later`.
