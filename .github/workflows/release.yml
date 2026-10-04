@@ -1,6 +1,8 @@
-# Deliberate 0.1 release only. A dispatch never publishes without the release
+# A dispatch never publishes without the release
 # environment, RELEASE_ARMED, and a separate approval for each outward job.
 # Packagist and R-universe have no job: each reads the published repository.
+# Rehearsal cannot dry-run PyPI upload, gem push, NuGet push, Maven upload,
+# the tap push, the GitHub release, or the Go tag. Trusted publishers need a release run.
 name: release
 
 on:
@@ -122,6 +124,8 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {pattern: 'platform-*', path: platform}
       - run: sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.whl' 4
+      - run: python3 -m pip install 'twine==6.2.0'
+      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl
 
   gems:
     needs: [resolve, build]
@@ -164,6 +168,7 @@ jobs:
       - run: rustup toolchain install 1.95.0 --profile minimal
       - run: cargo fetch --locked
       - run: sh sdlc/scripts/package
+      - run: cargo publish --dry-run --locked --package thinkthen
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error, retention-days: 7}
 
@@ -280,6 +285,9 @@ jobs:
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: provenance-x86, path: provenance}
+      - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
+      - run: ruby -c thinkthen.rb
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODE: ${{ inputs.mode }}

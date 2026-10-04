@@ -26,6 +26,7 @@ PINNED = re.compile(r"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$")
 DIGEST = re.compile(r"@sha256:[0-9a-f]{64}")
 EXPANDED = re.compile(r"\$\{\{\s*(inputs\.|github\.event\.)")
 UNPINNED = [
+    (re.compile(r"pip3? install[^\n]*\btwine\b(?!==)"), "installs twine with no version"),
     (re.compile(r"pip3? install[^\n]*\bmaturin\b(?!==)"), "installs maturin with no version"),
     (re.compile(r"npm (?:install|i) (?:-g|--global) npm(?!@\d)"), "installs npm with no version"),
     (re.compile(r"gem update --system(?! \d)"), "updates gem with no version"),
@@ -175,6 +176,20 @@ def release(name, doc):
     if (crate.get("if") is not None or crate.get("continue-on-error") is not None
             or any(i is None for i in route) or route != sorted(set(route))):
         out.append(f"{name}: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order")
+    dry = crate_step(lambda step: step.get("run") == "cargo publish --dry-run --locked --package thinkthen")
+    if all(i is not None for i in route) and (dry is None or not route[3] < dry < route[4]):
+        out.append(f"{name}: job crate must dry-run cargo publish after package and before upload")
+    wheel_job = jobs.get("wheels", {})
+    wheel_steps = wheel_job.get("steps") or []
+    wheel_runs = [(i, step.get("run")) for i, step in enumerate(wheel_steps)
+                  if step.get("if") is None and step.get("continue-on-error") is None]
+    verify = next((i for i, run in wheel_runs if run == "sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.whl' 4"), None)
+    twine_install = next((i for i, run in wheel_runs if run and re.fullmatch(r"python3 -m pip install ['\"]?twine(?:==[0-9.]+)?['\"]?", run)), None)
+    twine_check = next((i for i, run in wheel_runs if run == "python3 -m twine check --strict platform/*/thinkthen-*.whl"), None)
+    if (wheel_job.get("if") is not None or wheel_job.get("continue-on-error") is not None or
+            any(i is None for i in (verify, twine_install, twine_check)) or
+            not verify < twine_install < twine_check):
+        out.append(f"{name}: job wheels must verify four wheels, install pinned twine, and check strictly in order")
     for job, active_version, condition in (("build", "3.10", "runner.os == 'macOS'"),
                                            ("smoke", "3.12", None)):
         job_steps = jobs.get(job, {}).get("steps") or []
@@ -301,6 +316,24 @@ def release(name, doc):
     collect_step = next((step for step in draft_steps
                     if "release-workflow collect" in (step.get("run") or "")), None)
     collect = (collect_step or {}).get("run")
+    formula = 'sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb'
+    syntax = 'ruby -c thinkthen.rb'
+    draft = jobs.get("draft", {})
+    formula_step = next((i for i, step in enumerate(draft_steps)
+                         if step == {"env": {"VERSION": "${{ needs.resolve.outputs.version }}"},
+                                     "run": formula}), None)
+    syntax_step = next((i for i, step in enumerate(draft_steps)
+                        if step == {"run": syntax}), None)
+    collection_step = next((i for i, step in enumerate(draft_steps) if step is collect_step), None)
+    if (any(i is None for i in (formula_step, syntax_step, collection_step)) or
+            not formula_step < syntax_step < collection_step or
+            draft.get("if") is not None or draft.get("continue-on-error") is not None or
+            (draft.get("defaults") or {}).get("run") is not None or
+            (doc.get("defaults") or {}).get("run") is not None or
+            (collect_step or {}).get("if") is not None or
+            (collect_step or {}).get("continue-on-error") is not None):
+        out.append(f"{name}: draft must render and syntax-check the resolved tap formula before collection")
+
     if collect is not None and ("release-workflow go-cpp-gate \"platform/platform-$target\" \"$target\" \"$SHA\"" not in collect
                             or collect.index("release-workflow go-cpp-gate") > collect.index("release-workflow collect")
                             or (collect_step.get("env") or {}).get("SHA") != RESOLVED):
@@ -524,7 +557,12 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with: {ref: "${{ needs.resolve.outputs.sha }}"}
       - run: python3 -m pip install maturin==1.9.6
-  wheels: {needs: [resolve, build]}
+  wheels:
+    needs: [resolve, build]
+    steps:
+      - run: sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.whl' 4
+      - run: python3 -m pip install 'twine==6.2.0'
+      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl
   npm-pack: {needs: [resolve, build]}
   gems: {needs: [resolve, build]}
   crate:
@@ -535,6 +573,7 @@ jobs:
       - run: rustup toolchain install 1.95.0 --profile minimal
       - run: cargo fetch --locked
       - run: sh sdlc/scripts/package
+      - run: cargo publish --dry-run --locked --package thinkthen
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error}
   registries:
@@ -550,10 +589,35 @@ jobs:
   draft:
     needs: [resolve, smoke, registries]
     runs-on: ubuntu-24.04
-    permissions: {contents: write}
+    permissions: {contents: write, actions: read}
     steps:
-      - run: gh release create "$TAG" --draft
-        env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*', path: platform}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: npm-package, path: npm-dist}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: provenance-x86, path: provenance}
+      - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
+      - run: ruby -c thinkthen.rb
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODE: ${{ inputs.mode }}
+          NAME: ${{ needs.resolve.outputs.name }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin; do
+            sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"
+            sdlc/scripts/release-workflow swift-zig-gate "platform/platform-$target" "$target" "$SHA"
+            sdlc/scripts/release-workflow php-dart-gate "platform/platform-$target" "$target" "$SHA"
+            sdlc/scripts/release-workflow ada-objc-cobol-gate "platform/platform-$target" "$target" "$SHA"
+            sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
+          done
+          sdlc/scripts/release-workflow collect platform npm-dist all-files
+          sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
+
   pypi:
     needs: [resolve, draft]
     if: inputs.mode == 'release'
@@ -640,6 +704,40 @@ def self_test():
     cases = [
         ("real", None, None, []),
         ("release-ok", "release.yml", lambda t: t, []),
+        ("dry-crate-missing", "release.yml", lambda t: t.replace('      - run: cargo publish --dry-run --locked --package thinkthen\n', ''),
+         ["release.yml: job crate must dry-run cargo publish after package and before upload"]),
+        ("dry-crate-order", "release.yml", lambda t: t.replace('      - run: cargo publish --dry-run --locked --package thinkthen\n', '')
+         .replace('      - run: sh sdlc/scripts/package\n', '      - run: cargo publish --dry-run --locked --package thinkthen\n      - run: sh sdlc/scripts/package\n'),
+         ["release.yml: job crate must dry-run cargo publish after package and before upload"]),
+        ("dry-crate-bypass", "release.yml", lambda t: t.replace('      - run: cargo publish --dry-run --locked --package thinkthen\n', '      - run: cargo publish --dry-run --locked --package thinkthen || true\n'),
+         ["release.yml: job crate must dry-run cargo publish after package and before upload"]),
+        ("dry-crate-conditional", "release.yml", lambda t: t.replace('      - run: cargo publish --dry-run --locked --package thinkthen\n', '      - run: cargo publish --dry-run --locked --package thinkthen\n        if: false\n'),
+         ["release.yml: job crate must dry-run cargo publish after package and before upload"]),
+        ("dry-wheel-missing", "release.yml", lambda t: t.replace('      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl\n', ''),
+         ["release.yml: job wheels must verify four wheels, install pinned twine, and check strictly in order"]),
+        ("dry-wheel-unpinned", "release.yml", lambda t: t.replace("twine==6.2.0", "twine"),
+         ["release.yml: job wheels installs twine with no version"]),
+        ("dry-wheel-bypass", "release.yml", lambda t: t.replace('      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl\n', '      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl\n        continue-on-error: true\n'),
+         ["release.yml: job wheels must verify four wheels, install pinned twine, and check strictly in order"]),
+        ("dry-tap-bypass", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb || true\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-missing", "release.yml", lambda t: t.replace('        run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb\n', ''),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-order", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '')
+         .replace('  crates:\n', '      - run: ruby -c thinkthen.rb\n  crates:\n', 1),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-false-shell", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: |\n          if false; then\n            ruby -c thinkthen.rb\n          fi\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-errexit", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: |\n          set +e\n          ruby -c thinkthen.rb\n          set -e\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-ignored-job", "release.yml", lambda t: t.replace('  draft:\n', '  draft:\n    continue-on-error: true\n', 1),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-skipped-step", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb\n        if: false\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-ignored-step", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb\n        continue-on-error: true\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        ("dry-tap-custom-shell", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb\n        shell: true {0}\n'),
+         ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
         ("crate-missing", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n', ''),
          ["release.yml: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order"]),
         ("crate-order", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n', '')

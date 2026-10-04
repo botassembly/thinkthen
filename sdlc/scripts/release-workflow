@@ -768,10 +768,9 @@ draft)
 	fi
 	gh release upload "$name" "$files"/*
 	;;
-tap)
-	[ "$#" = 3 ] || fail 'tap VERSION PLATFORM_ROOT'
+tap-formula)
+	[ "$#" = 4 ] || fail 'tap-formula VERSION PLATFORM_ROOT OUT'
 	[ "$2" = "$version" ] || fail 'tap version differs from resolved version'
-	[ -n "${TAP_DEPLOY_KEY:-}" ] || fail 'the release deploy key is missing'
 	platform=$(CDPATH='' cd -- "$3" && pwd)
 	for target in x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin; do
 		case $target in *linux-musl) folder=${target%-musl}-gnu ;; *) folder=$target ;; esac
@@ -785,18 +784,7 @@ tap)
 		aarch64-apple-darwin) mac_arm=$(sha256 "$file" | awk '{print $1}') ;;
 		esac
 	done
-	scratch_dir work
-	umask 077
-	printf '%s\n' "$TAP_DEPLOY_KEY" >"$work/key"
-	printf '%s\n' 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' >"$work/known_hosts"
-	GIT_SSH_COMMAND="ssh -i $work/key -o UserKnownHostsFile=$work/known_hosts -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
-	export GIT_SSH_COMMAND
-	git clone --quiet git@github.com:botassembly/homebrew-thinkthen.git "$work/tap"
-	default=$(git -C "$work/tap" symbolic-ref --short refs/remotes/origin/HEAD)
-	default=${default#origin/}
-	mkdir -p "$work/tap/Formula"
-	formula=$work/tap/Formula/thinkthen.rb
-	[ ! -f "$formula" ] || ! grep -Fq "version \"$version\"" "$formula" || fail 'the tap already holds this version'
+	formula=$4
 	cat >"$formula" <<EOF
 class Thinkthen < Formula
   desc "Semantic judgments over text"
@@ -829,6 +817,25 @@ class Thinkthen < Formula
   end
 end
 EOF
+	;;
+tap)
+	[ "$#" = 3 ] || fail 'tap VERSION PLATFORM_ROOT'
+	[ "$2" = "$version" ] || fail 'tap version differs from resolved version'
+	[ -n "${TAP_DEPLOY_KEY:-}" ] || fail 'the release deploy key is missing'
+	scratch_dir work
+	sh "$repo/sdlc/scripts/release-workflow" tap-formula "$2" "$3" "$work/thinkthen.rb"
+	umask 077
+	printf '%s\n' "$TAP_DEPLOY_KEY" >"$work/key"
+	printf '%s\n' 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' >"$work/known_hosts"
+	GIT_SSH_COMMAND="ssh -i $work/key -o UserKnownHostsFile=$work/known_hosts -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
+	export GIT_SSH_COMMAND
+	git clone --quiet git@github.com:botassembly/homebrew-thinkthen.git "$work/tap"
+	default=$(git -C "$work/tap" symbolic-ref --short refs/remotes/origin/HEAD)
+	default=${default#origin/}
+	mkdir -p "$work/tap/Formula"
+	formula=$work/tap/Formula/thinkthen.rb
+	[ ! -f "$formula" ] || ! grep -Fq "version \"$version\"" "$formula" || fail 'the tap already holds this version'
+	cp "$work/thinkthen.rb" "$formula"
 	git -C "$work/tap" add Formula/thinkthen.rb
 	git -C "$work/tap" diff --cached --quiet && fail 'the tap formula has no change'
 	git -C "$work/tap" -c user.name='GitHub Actions' -c user.email='github-actions[bot]@users.noreply.github.com' commit -qm "Update thinkthen to $version"

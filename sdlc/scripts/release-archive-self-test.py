@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import io
+import hashlib
 import tarfile
 import tempfile
 
@@ -46,11 +47,94 @@ def resolve_outputs(commit, version):
             raise AssertionError(("resolve refusal", mode, ref, result.returncode, result.stdout, result.stderr))
 
 
+def tap_formula(version):
+    # Pin the former tap's rendered bytes independently of the extracted renderer.
+    template = """class Thinkthen < Formula
+  desc "Semantic judgments over text"
+  homepage "https://thinkthen.dev"
+  version "$version"
+  license "MIT"
+
+  if OS.mac?
+    if Hardware::CPU.arm?
+      url "https://github.com/botassembly/thinkthen/releases/download/v$version/thinkthen-$version-aarch64-apple-darwin.tar.gz"
+      sha256 "$mac_arm"
+    else
+      url "https://github.com/botassembly/thinkthen/releases/download/v$version/thinkthen-$version-x86_64-apple-darwin.tar.gz"
+      sha256 "$mac_intel"
+    end
+  elsif Hardware::CPU.arm?
+    url "https://github.com/botassembly/thinkthen/releases/download/v$version/thinkthen-$version-aarch64-unknown-linux-musl.tar.gz"
+    sha256 "$linux_arm"
+  else
+    url "https://github.com/botassembly/thinkthen/releases/download/v$version/thinkthen-$version-x86_64-unknown-linux-musl.tar.gz"
+    sha256 "$linux_intel"
+  end
+
+  def install
+    bin.install "thinkthen"
+  end
+
+  test do
+    assert_match "thinkthen $version", shell_output("#{bin}/thinkthen --version")
+  end
+end
+"""
+    with tempfile.TemporaryDirectory(prefix="thinkthen-tap-formula-") as temporary:
+        root = Path(temporary)
+        platform = root / "platform"
+        hashes = {}
+        archives = []
+        for target, variable in (("x86_64-unknown-linux-musl", "linux_intel"),
+                                 ("aarch64-unknown-linux-musl", "linux_arm"),
+                                 ("x86_64-apple-darwin", "mac_intel"),
+                                 ("aarch64-apple-darwin", "mac_arm")):
+            folder = target.replace("-musl", "-gnu")
+            archive = platform / f"platform-{folder}/thinkthen-{version}-{target}.tar.gz"
+            archive.parent.mkdir(parents=True)
+            archive.write_bytes(f"fixture archive for {target}\n".encode())
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            archive.with_name(archive.name + ".sha256").write_text(f"{digest}  {archive.name}\n")
+            hashes[variable] = digest
+            archives.append(archive)
+        output = root / "thinkthen.rb"
+        # No key variables, credential files or outbound commands participate.
+        env = {"PATH": "/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C"}
+        command = ("sh", str(REPO / "sdlc/scripts/release-workflow"), "tap-formula", version, str(platform), str(output))
+        result = run(*command, env=env)
+        wanted = template.replace("$version", version)
+        for variable, digest in hashes.items():
+            wanted = wanted.replace(f"${variable}", digest)
+        if result.returncode != 0 or result.stdout or result.stderr or output.read_text() != wanted:
+            raise AssertionError(("tap formula bytes", result.returncode, result.stdout, result.stderr))
+        syntax = run("ruby", "-c", str(output), env=env)
+        if syntax.returncode != 0 or syntax.stdout != "Syntax OK\n":
+            raise AssertionError(("tap formula syntax", syntax.returncode, syntax.stdout, syntax.stderr))
+        archive = archives[0]
+        original = archive.read_bytes()
+        archive.unlink()
+        result = run(*command, env=env)
+        sentence = f"release-workflow: tap archive {archive} is missing\n"
+        if result.returncode != 1 or result.stdout or result.stderr != sentence:
+            raise AssertionError(("missing tap archive", result.returncode, result.stdout, result.stderr))
+        archive.write_bytes(b"wrong bytes")
+        result = run(*command, env=env)
+        sentence = f"release-workflow: tap archive {archive} differs from its checksum\n"
+        # The checksum tool may add its own diagnostic before the pinned refusal.
+        if result.returncode != 1 or result.stdout or not result.stderr.endswith(sentence):
+            raise AssertionError(("bad tap checksum", result.returncode, result.stdout, result.stderr))
+        archive.write_bytes(original)
+        result = run(*command[:3], "0.0.0", *command[4:], env=env)
+        if result.returncode != 1 or result.stdout or result.stderr != "release-workflow: tap version differs from resolved version\n":
+            raise AssertionError(("tap version", result.returncode, result.stdout, result.stderr))
+
+
 def main():
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
     version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
                    if line.startswith('version = "'))
     resolve_outputs(commit, version)
+    tap_formula(version)
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
     if host != "x86_64-unknown-linux-gnu":
         print(f"release archive self-test: skipped synthetic C fixture on {host}")
