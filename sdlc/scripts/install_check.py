@@ -21,7 +21,7 @@ class Failure(Exception):
 
 
 def validate_version(version):
-    if not VERSION.fullmatch(version):
+    if not isinstance(version, str) or not VERSION.fullmatch(version):
         raise Failure("version must be three whole numbers separated by dots")
     return tuple(map(int, version.split('.')))
 
@@ -62,7 +62,7 @@ def clean_environment(home):
            "GEM_HOME": str(home / "gems"), "GEM_PATH": str(home / "gems"),
            "NUGET_PACKAGES": str(home / "nuget"), "DOTNET_CLI_HOME": str(home / "dotnet"),
            "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "GOTOOLCHAIN": "local",
-           "HOMEBREW_NO_AUTO_UPDATE": "1", "HOMEBREW_NO_ANALYTICS": "1",
+           "HOMEBREW_NO_AUTO_UPDATE": "1", "HOMEBREW_NO_ANALYTICS": "1", "GIT_CONFIG_NOSYSTEM": "1",
            "HOMEBREW_NO_INSTALL_CLEANUP": "1", "HOMEBREW_CACHE": str(home / "brew-cache"),
            "npm_config_cache": str(home / "npm-cache"), "R_LIBS_USER": str(home / "r-library")}
     return env

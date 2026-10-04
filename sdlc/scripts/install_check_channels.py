@@ -49,7 +49,7 @@ def native_call(check, command):
 def homebrew(check):
     tap = check.root / 'public-tap'
     check.run('git', 'clone', 'https://github.com/botassembly/homebrew-tap.git', tap)
-    revisions = check.run('git', '-C', tap, 'log', '--format=%H', '--all', '--', 'Formula/thinkthen.rb').splitlines()
+    revisions = check.run('git', '-C', tap, 'log', '--format=%H', '--diff-filter=AM', '--all', '--', 'Formula/thinkthen.rb').splitlines()
     history = (check.run('git', '-C', tap, 'show', f'{revision}:Formula/thinkthen.rb') for revision in revisions)
     formula = selected_formula(history, check.version)
     selected = check.root / 'selected-tap'

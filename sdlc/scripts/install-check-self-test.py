@@ -134,6 +134,16 @@ class RefusalTable(unittest.TestCase):
             self.refusal('R-universe lists thinkthen 0.1.2 only as source; a Linux binary is required', r_universe, check)
             self.assertEqual(check.commands, [])
 
+    def test_r_binary_address_rejects_source_archive(self):
+        with tempfile.TemporaryDirectory() as own:
+            check = Fixture(Path(own), 'r-universe')
+            check.text = lambda url, name: 'Package: thinkthen\nVersion: 0.1.2\n'
+            archive = check.root / 'thinkthen_0.1.2.tar.gz'
+            packed(archive, {'thinkthen/DESCRIPTION': b'Package: thinkthen\nVersion: 0.1.2\n', 'thinkthen/src/source.rs': b'fixture'})
+            check.fetch = lambda url, destination: archive
+            self.refusal('R-universe binary address returned a source archive; a Linux binary is required', r_universe, check)
+            self.assertEqual(check.commands, [])
+
     def test_workflow_cells(self):
         import yaml
         workflow = Path(__file__).resolve().parents[2] / '.github/workflows/install-check.yml'

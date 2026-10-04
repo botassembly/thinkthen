@@ -15,9 +15,9 @@ Homebrew reads the full public tap history and installs the selected historical 
 
 ## Focused offline proof
 
-The independent edge table passes nine test methods. It covers all eighteen channels' answer and version contract, wrong versions, placeholders, false, null, missing and nonzero requests, invalid version rejection before installer imports, delayed indexes, superseded R versions, source-only R refusal, current and historical Homebrew selection, absent historical formulas, archive checksum and path escape refusals, exact SQLite load routing, clean environments and all forty-seven workflow cells. The fixture installers run no external package command.
+The independent edge table passes ten test methods. It covers all eighteen channels' answer and version contract, wrong versions, placeholders, false, null, missing and nonzero requests, invalid version rejection before installer imports, delayed indexes, superseded R versions, source-only R refusal, current and historical Homebrew selection, absent historical formulas, archive checksum and path escape refusals, exact SQLite load routing, clean environments and all forty-seven workflow cells. The fixture installers run no external package command.
 
-The real workflow validator, ticket check, catalog check and child-environment check pass. C, Node, Ruby and PHP consumer syntax checks pass. The Rust consumer compiles against the local public API through offline Cargo in a lane lock and a user systemd scope with 6 GiB high and 8 GiB maximum memory. These checks do not establish public registry or hosted runner acceptance.
+The real workflow validator, ticket check, catalog check and child-environment check pass. C, Node, Ruby and PHP consumer syntax checks pass. The Rust consumer compiles against the local public API through offline Cargo in a lane lock and a user systemd scope with 6 GiB high and 8 GiB maximum memory. The same local Rust consumer replays the repository's recorded first-run question and returns `{"value":true,"requests_sent":0}` with a clean scratch home and offline Cargo. These checks do not establish public registry or hosted runner acceptance.
 
 ## Verified tool sources
 
