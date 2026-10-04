@@ -69,5 +69,7 @@ const MODES = [
     <li>A saved question holds the evidence. ThinkThen creates <code>thinkthen.sqlite</code> with mode 0600, so only its owner can read it.</li>
   </ul>
 
+  <p>Windows keeps aggregate usage counts in <code>%LOCALAPPDATA%\thinkthen\usage</code>. Its folder and recognized files must be owned by your user and grant access only to your user and Windows SYSTEM. ThinkThen creates missing objects privately and refuses unsafe existing objects before sending. A later count update failure keeps the judgment and prints a warning. These checks cover usage counts. The named answer-folder permission check remains Unix-only.</p>
+
   <p class="pagelinks"><a href="/install/configuration/">Configuration</a> · <a href={spec('recording')}>The recording specification</a> · <a href="/reference/answers/#exit-codes">Every exit code</a></p>
 </SidePage>

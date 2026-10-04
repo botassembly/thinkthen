@@ -40,7 +40,10 @@ const fn refused_price(message: &'static str) -> ConfigError {
 
 pub(crate) const DEFAULT_CACHE_BYTES: u64 = 100_000_000;
 
+#[cfg(not(windows))]
 const SHARED_BACKENDS: &str = "the configuration file is writable by another user, so its `backends` are refused; keep it writable by its owner alone";
+#[cfg(windows)]
+const SHARED_BACKENDS: &str = "another user owns the configuration file or its Windows access permissions allow another user to change it, so its `backends` are refused; keep it owned by your user and writable only by your user and Windows SYSTEM";
 const UNKNOWN: &str = "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`";
 const SCHEMA: &str = "configuration field `schema` must be `thinkthen.config/1`";
 const CACHE_BYTES: &str =
@@ -90,8 +93,12 @@ impl Config {
         let Some(path) = path else {
             return Ok(Self::default());
         };
-        let bytes = match fs::read(path) {
-            Ok(bytes) => bytes,
+        #[cfg(not(windows))]
+        let read = fs::read(path).map(|bytes| (bytes, ()));
+        #[cfg(windows)]
+        let read = crate::windows::files::configuration(path);
+        let (bytes, _shared) = match read {
+            Ok(read) => read,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(Self::default());
             }
@@ -104,7 +111,11 @@ impl Config {
             }
         };
         let mut parsed = Self::parse(&bytes)?;
-        parsed.shared = fs::metadata(path).is_ok_and(|metadata| writable_by_another(&metadata));
+        #[cfg(not(windows))]
+        let shared = fs::metadata(path).is_ok_and(|metadata| writable_by_another(&metadata));
+        #[cfg(windows)]
+        let shared = _shared;
+        parsed.shared = shared;
         if parsed.shared && !parsed.named.is_empty() {
             // Another user could name any variable here, and so send any secret in the environment.
             return Err(refused(SHARED_BACKENDS));

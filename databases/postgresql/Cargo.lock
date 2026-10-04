@@ -1182,6 +1182,7 @@ dependencies = [
  "sha2",
  "thiserror",
  "ureq",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

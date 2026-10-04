@@ -1,6 +1,7 @@
 //! The library and command implementation for `thinkthen`.
 
-#![forbid(unsafe_code)]
+#![cfg_attr(not(windows), forbid(unsafe_code))]
+#![cfg_attr(windows, deny(unsafe_code))]
 #![cfg_attr(
     not(feature = "cli"),
     allow(
@@ -23,6 +24,9 @@ compile_error!(
 mod core;
 
 mod config;
+
+#[cfg(windows)]
+mod windows;
 
 mod engine;
 

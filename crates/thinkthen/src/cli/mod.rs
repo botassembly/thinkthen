@@ -90,11 +90,11 @@ pub fn entry() -> ExitCode {
     };
     if environment.config().shared() {
         let mut writer = stderr.lock();
-        let _unwritten = writeln!(
-            writer,
-            "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go"
-        )
-        .and_then(|()| writer.flush());
+        #[cfg(not(windows))]
+        let warning = "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go";
+        #[cfg(windows)]
+        let warning = "thinkthen: another user owns the configuration file or its Windows access permissions allow another user to change it; it decides where the key and evidence go";
+        let _unwritten = writeln!(writer, "{warning}").and_then(|()| writer.flush());
     }
     let activation = match interrupt::activate(&mut environment) {
         Ok(activation) => activation,

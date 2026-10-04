@@ -7,6 +7,7 @@ problem. The standard library is the only import.
 
 from __future__ import annotations
 
+import copy
 import json
 import pathlib
 import posixpath
@@ -52,7 +53,7 @@ ACCEPTED_DEPENDENCIES = {
     },
     "conformance-backend": {"serde", "serde_json"},
 }
-ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
+ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set()}
 ACCEPTED_DEV_DEPENDENCIES = {
     # ADR 0112: schemars derives the result schema in a unit test.
     # Ticket 0372: rustls serves the CA bundle test's own TLS.
@@ -60,7 +61,7 @@ ACCEPTED_DEV_DEPENDENCIES = {
     "conformance-backend": set(),
 }
 # Ticket 0078: the host signal proofs deliver a signal to one worker thread.
-ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
+ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set()}
 # Ticket 0092 rules that a test-only, unpublished member may sit beside the
 # crate: the loopback backend every surface's tests start. It is held to the
 # same lints, license, size, and dependency tables as the crate.
@@ -141,6 +142,10 @@ ACCEPTED_CRATE_ROOT_ATTRIBUTES = {
         "#![forbid(clippy::allow_attributes_without_reason)]",
     ),
     "crates/thinkthen/src/main.rs": ("#![forbid(unsafe_code)]",),
+    "crates/thinkthen/src/lib.rs": (
+        "#![cfg_attr(not(windows), forbid(unsafe_code))]",
+        "#![cfg_attr(windows, deny(unsafe_code))]",
+    ),
 }
 
 BYTES = "thinkthen-core must receive bytes from its caller"
@@ -256,11 +261,86 @@ def check_workspace() -> None:
         fail("lints", "the workspace Clippy lint table matches the accepted copy")
 
 
+WINDOWS_PRODUCTION_SPEC = {
+    "version": "=0.61.2",
+    "default-features": False,
+    "features": ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization",
+                 "Win32_Storage_FileSystem", "Win32_System_Threading"],
+}
+WINDOWS_TEST_SPEC = {
+    "version": "=0.61.2", "default-features": False, "features": ["Win32_System_Console"],
+}
+
+
+def thinkthen_lint_failures(manifest: dict) -> list[str]:
+    root = read_toml("Cargo.toml").get("workspace", {}).get("lints", {})
+    expected = {**root, "rust": {**root.get("rust", {}), "unsafe_code": "deny"}}
+    return (["thinkthen uses the entire root lint table with only unsafe_code changed to deny"]
+            if manifest.get("lints") != expected else [])
+
+
+def windows_manifest_failures(manifest: dict) -> list[str]:
+    target = manifest.get("target", {})
+    windows = target.get("cfg(windows)", {})
+    held = []
+    if set(target) != {"cfg(unix)", "cfg(windows)"}:
+        held.append("only the accepted Unix and Windows target tables are declared")
+    if windows != {"dependencies": {"windows-sys": WINDOWS_PRODUCTION_SPEC},
+                   "dev-dependencies": {"windows-sys": WINDOWS_TEST_SPEC}}:
+        held.append("Windows dependencies use exactly the reviewed production and test specifications")
+    unix = target.get("cfg(unix)", {})
+    if set(unix) != {"dependencies", "dev-dependencies"} or any(
+            set(unix.get(kind, {})) != {"nix"} for kind in ("dependencies", "dev-dependencies")):
+        held.append("the Unix target contains only the accepted nix dependencies")
+    for kind in ("dependencies", "dev-dependencies", "build-dependencies"):
+        if any(name == "windows-sys" or (isinstance(spec, dict) and spec.get("package") == "windows-sys")
+               for name, spec in manifest.get(kind, {}).items()):
+            held.append("windows-sys is declared only under cfg(windows)")
+    return held
+
+
+def check_windows_manifest(manifest: dict) -> None:
+    for failure in windows_manifest_failures(manifest):
+        fail("dependencies", failure)
+    baseline = copy.deepcopy(manifest)
+    baseline.setdefault("target", {})["cfg(windows)"] = {
+        "dependencies": {"windows-sys": copy.deepcopy(WINDOWS_PRODUCTION_SPEC)},
+        "dev-dependencies": {"windows-sys": copy.deepcopy(WINDOWS_TEST_SPEC)},
+    }
+    for changed in ({"version": "0.61.2"}, {"optional": True}, {"default-features": True},
+                    {"features": WINDOWS_PRODUCTION_SPEC["features"] + ["Win32_System_Console"]},
+                    {"features": WINDOWS_PRODUCTION_SPEC["features"] + ["Win32_Networking_WinSock"]}):
+        plant = copy.deepcopy(baseline)
+        plant["target"]["cfg(windows)"]["dependencies"]["windows-sys"].update(changed)
+        if "Windows dependencies use exactly the reviewed production and test specifications" not in windows_manifest_failures(plant):
+            fail("dependencies", f"the Windows specification plant {changed} is refused for its cause")
+    plant = copy.deepcopy(baseline)
+    plant["target"]["cfg(not(windows))"] = plant["target"].pop("cfg(windows)")
+    if "only the accepted Unix and Windows target tables are declared" not in windows_manifest_failures(plant):
+        fail("dependencies", "a non-Windows native dependency declaration is refused for its target")
+    for group, key, value in (("rust", "unsafe_code", "allow"), ("clippy", "unwrap_used", "allow")):
+        plant = copy.deepcopy(manifest)
+        plant.setdefault("lints", {}).setdefault(group, {})[key] = value
+        if not thinkthen_lint_failures(plant):
+            fail("lints", f"a changed package lint {key} is refused")
+
+
+def normal_dependencies(manifest: dict) -> dict:
+    """Include every target's normal dependencies in the core purity scan."""
+    dependencies = dict(manifest.get("dependencies", {}))
+    for table in manifest.get("target", {}).values():
+        dependencies.update(table.get("dependencies", {}))
+    return dependencies
+
+
 def check_member(name: str) -> dict:
     """Hold one member to the shared lints, license, and dependency tables."""
     manifest = read_toml(f"{MEMBERS[name]}/Cargo.toml")
     package = manifest.get("package", {})
-    if manifest.get("lints") != INHERITED:
+    if name == "thinkthen":
+        for failure in thinkthen_lint_failures(manifest):
+            fail("lints", failure)
+    elif manifest.get("lints") != INHERITED:
         fail("lints", f"{name} inherits the workspace lint table")
     for field in ("edition", "rust-version"):
         if package.get(field) != INHERITED:
@@ -272,12 +352,12 @@ def check_member(name: str) -> dict:
         fail("workspace", f'{name} declares license = "MIT", as ADR 0015 rules')
     if set(manifest.get("dependencies", {})) != ACCEPTED_DEPENDENCIES[name]:
         fail("dependencies", f"{name} declares the accepted direct dependency set")
-    target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
+    target = {key for table in manifest.get("target", {}).values() for key in table.get("dependencies", {})}
     if set(target) != ACCEPTED_TARGET_DEPENDENCIES[name]:
         fail("dependencies", f"{name} declares the accepted target dependency set")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES[name]:
         fail("dependencies", f"{name} declares the accepted development dependency set")
-    target_dev = manifest.get("target", {}).get("cfg(unix)", {}).get("dev-dependencies", {})
+    target_dev = {key for table in manifest.get("target", {}).values() for key in table.get("dev-dependencies", {})}
     if set(target_dev) != ACCEPTED_TARGET_DEV_DEPENDENCIES[name]:
         fail("dependencies", f"{name} declares the accepted target development dependency set")
     return manifest
@@ -288,6 +368,7 @@ def check_crates() -> None:
     if backend.get("features") or backend.get("target"):
         fail("dependencies", "the conformance backend declares no feature and no target table")
     manifest = check_member("thinkthen")
+    check_windows_manifest(manifest)
     target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
     # Ticket 0078 masks signals. Ticket 0162 polls stdout for a closed pipe.
     # The configuration owner warning reads the effective Unix user.
@@ -992,8 +1073,8 @@ def rust_char_end(text: str, quote: int) -> int | None:
     return place + 1 if place < len(text) and text[place] == "'" else None
 
 
-def rust_tokens(text: str) -> list[str]:
-    """Lex the Rust tokens policy needs, skipping comments and every literal."""
+def rust_tokens(text: str, literals: bool = False) -> list[str]:
+    """Skip comments and literals, retaining literal tokens only for attributes."""
     tokens = []
     place = 0
     while place < len(text):
@@ -1016,10 +1097,13 @@ def rust_tokens(text: str) -> list[str]:
             continue
         raw = re.match(r"(?:br|cr|r)(#+)?\"", text[place:])
         if raw:
+            start = place
             hashes = raw.group(1) or ""
             place += raw.end()
             end = text.find('"' + hashes, place)
             place = len(text) if end < 0 else end + len(hashes) + 1
+            if literals:
+                tokens.append(text[start:place])
             continue
         prefix = 1 if text.startswith(("b\"", "c\"", "b'"), place) else 0
         quote = text[place + prefix] if place + prefix < len(text) else ""
@@ -1033,6 +1117,8 @@ def rust_tokens(text: str) -> list[str]:
                     break
                 else:
                     end += 1
+            if literals:
+                tokens.append(text[place:end])
             place = end
             continue
         if quote == "'":
@@ -1143,7 +1229,7 @@ def token_path_at(tokens: list[str], place: int, path: tuple[str, ...]) -> bool:
 
 
 # Core depends on none of the outer modules.
-CORE_REFUSED_ROOTS = {"engine", "cli", "public"}
+CORE_REFUSED_ROOTS = {"engine", "cli", "public", "windows"}
 
 
 def direct_root_references(tokens: list[str], refused: set[str] = CORE_REFUSED_ROOTS) -> set[str]:
@@ -1272,7 +1358,7 @@ def core_dependency_failures(text: str, dependencies: dict) -> list[str]:
 def check_core_policy() -> None:
     core = REPO / "crates/thinkthen/src/core"
     manifest = read_toml("crates/thinkthen/Cargo.toml")
-    dependencies = manifest.get("dependencies", {})
+    dependencies = normal_dependencies(manifest)
     for source in sorted(core.rglob("*.rs")):
         text = source.read_text(encoding="utf-8")
         held = core_policy_failures(text)
@@ -1314,6 +1400,7 @@ def check_core_policy() -> None:
         ("use crate::ROOT as p;", ["import", "reference"]),
         ("use crate::{ROOT as p};", ["import"]),
         ("use crate::{core::Answer, ROOT::{self as p}};", ["import"]),
+        ("use crate::{ROOT::{self as platform, privacy}};", ["import"]),
         ("use crate::{\n    ROOT::{Item},\n};", ["import"]),
         ("use super::super::ROOT as p;", ["import", "reference"]),
         ("super::super::ROOT::Item::new();", ["reference"]),
@@ -1324,7 +1411,7 @@ def check_core_policy() -> None:
         ("// crate::ROOT::Item", []),
         ('const EXAMPLE: &str = "use crate::ROOT as hidden;";', []),
     )
-    for root in ("engine", "cli", "public"):
+    for root in sorted(CORE_REFUSED_ROOTS):
         causes = {"reference": f"reverse reference to {root}", "import": f"reverse import of {root}", "glob": glob}
         for text, expected in root_plants:
             if core_policy_failures(text.replace("ROOT", root)) != [causes[name] for name in expected]:
@@ -1344,6 +1431,10 @@ def check_core_policy() -> None:
         fail("core", "comments, literals, lifetimes, and internal imports remain allowed")
     dependency_plants = (
         (dependencies, "use clap::Parser;", ["clap"]),
+        (dependencies, "windows_sys::Win32::Foundation::HANDLE", ["windows-sys"]),
+        (dependencies, "use windows_sys as native;", ["windows-sys"]),
+        (dependencies, "use {windows_sys::{self as native, Win32}};", ["windows-sys"]),
+        (dependencies, "nix::unistd::geteuid();", ["nix"]),
         (dependencies, "use clap as parser;", ["clap"]),
         (dependencies, "use {clap as parser};", ["clap"]),
         (dependencies, "use {clap::{self as parser, Parser}};", ["clap"]),
@@ -1797,6 +1888,125 @@ def check_facade() -> None:
             fail("facade", f"the facade control {text!r} in {relative} stays allowed")
 
 
+WINDOWS_UNSAFE_LEAVES = {
+    "crates/thinkthen/src/windows/security/ffi.rs": "windows",
+    "crates/thinkthen/src/windows/files/ffi.rs": "windows",
+    "crates/thinkthen/tests/windows/ffi.rs": "all(windows, test)",
+}
+
+
+def rust_attributes(tokens: list[str]) -> list[tuple[bool, list[str]]]:
+    """Read complete attributes after the comment and literal aware lexer."""
+    attributes = []
+    place = 0
+    while place < len(tokens):
+        if tokens[place] != "#":
+            place += 1
+            continue
+        start = place + 1
+        inner = start < len(tokens) and tokens[start] == "!"
+        start += int(inner)
+        if start >= len(tokens) or tokens[start] != "[":
+            place += 1
+            continue
+        end, depth = start + 1, 1
+        while end < len(tokens) and depth:
+            depth += int(tokens[end] == "[") - int(tokens[end] == "]")
+            end += 1
+        attributes.append((inner, tokens[start + 1:end - 1]))
+        place = end
+    return attributes
+
+
+def windows_unsafe_failures(sources: dict[str, str]) -> list[str]:
+    """Confine unsafe tokens and lint allowances to the three reviewed leaves."""
+    held = []
+    for relative, text in sources.items():
+        tokens = rust_tokens(text)
+        leaf = relative in WINDOWS_UNSAFE_LEAVES
+        if "unsafe" in tokens and not leaf:
+            held.append(f"{relative}: unsafe outside the reviewed Windows FFI leaves")
+        attributes = rust_attributes(rust_tokens(text, literals=True))
+        allowances = []
+        for inner, body in attributes:
+            if not ({"allow", "expect"} & set(body)) or not (
+                    {"unsafe_code", "unsafe_op_in_unsafe_fn"} & set(body)):
+                continue
+            valid = (leaf and inner and len(body) == 8 and
+                     body[:6] == ["allow", "(", "unsafe_code", ",", "reason", "="] and body[-1] == ")")
+            if valid:
+                try:
+                    reason = json.loads(body[6])
+                    valid = isinstance(reason, str) and bool(reason.strip())
+                except ValueError:
+                    valid = False
+            if not valid:
+                held.append(f"{relative}: unsafe lint allowance outside the exact reasoned leaf attribute")
+            allowances.append(valid)
+        if leaf:
+            if allowances != [True]:
+                held.append(f"{relative}: exactly one reasoned unsafe allowance is required")
+            required = (rust_tokens(f"cfg({WINDOWS_UNSAFE_LEAVES[relative]})"),
+                        rust_tokens("deny(unsafe_op_in_unsafe_fn)"))
+            for body in required:
+                if attributes.count((True, body)) != 1:
+                    held.append(f"{relative}: the Windows target guard and unsafe operation deny are required")
+    for relative, expected in ACCEPTED_CRATE_ROOT_ATTRIBUTES.items():
+        if relative not in sources:
+            continue
+        attributes = rust_attributes(rust_tokens(sources[relative], literals=True))
+        for attribute in expected:
+            required = rust_attributes(rust_tokens(attribute, literals=True))[0]
+            if attributes.count(required) != 1:
+                held.append(f"{relative}: the accepted crate-root attribute is required")
+    return held
+
+
+def check_windows_unsafe() -> None:
+    sources = {source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
+               for folder in MEMBERS.values() for source in (REPO / folder).rglob("*.rs")
+               if "target" not in source.relative_to(REPO).parts}
+    for relative in WINDOWS_UNSAFE_LEAVES:
+        if relative not in sources:
+            fail("unsafe", f"{relative}: the reviewed FFI leaf exists")
+    for failure in windows_unsafe_failures(sources):
+        fail("unsafe", failure)
+    for relative in ("crates/thinkthen/src/cli/planted.rs", "crates/thinkthen/src/engine/planted.rs",
+                     "crates/thinkthen/src/unrelated/ffi.rs", "crates/thinkthen/tests/planted.rs"):
+        for text, cause in (("unsafe fn planted() {}", "unsafe outside the reviewed Windows FFI leaves"),
+                            ('#![allow(unsafe_code, reason = "planted")]\n', "unsafe lint allowance"),
+                            ('#[cfg_attr(windows, allow(unsafe_code, reason = "planted"))]\nfn f() {}', "unsafe lint allowance"),
+                            ('#[expect(unsafe_code, reason = "planted")]\nfn f() {}', "unsafe lint allowance")):
+            if not any(cause in failure for failure in windows_unsafe_failures({relative: text})):
+                fail("unsafe", f"the planted {relative} is refused for {cause}")
+    for relative, guard in WINDOWS_UNSAFE_LEAVES.items():
+        good = (f'#![cfg({guard})]\n#![allow(unsafe_code, reason = "reviewed ownership boundary")]\n'
+                '#![deny(unsafe_op_in_unsafe_fn)]\nfn f() { unsafe {} }\n')
+        if windows_unsafe_failures({relative: good}):
+            fail("unsafe", f"the exact confined leaf {relative} is admitted")
+        for bad in (good.replace(f"#![cfg({guard})]", "#![cfg(windows)]" if "test" in guard else ""),
+                    good.replace('reason = "reviewed ownership boundary"', 'reason = " "'),
+                    good.replace("#![deny(unsafe_op_in_unsafe_fn)]", ""),
+                    good + '#[cfg_attr(test, allow(unsafe_code, reason = "planted"))]\nfn extra() {}\n',
+                    good.replace("allow(unsafe_code,", "allow(unsafe_code, unused,")):
+            if not windows_unsafe_failures({relative: bad}):
+                fail("unsafe", f"a widened or unguarded leaf {relative} is refused")
+    for relative, expected in ACCEPTED_CRATE_ROOT_ATTRIBUTES.items():
+        good = "\n".join(expected)
+        for attribute in expected:
+            if not any("accepted crate-root attribute" in failure for failure in
+                       windows_unsafe_failures({relative: good.replace(attribute, "")})):
+                fail("unsafe", f"removal of {relative}'s root guard is refused")
+    library = "crates/thinkthen/src/lib.rs"
+    linux_plant = "\n".join(ACCEPTED_CRATE_ROOT_ATTRIBUTES[library]) + "\n#[cfg(not(windows))]\nunsafe fn planted() {}"
+    if not any("unsafe outside the reviewed Windows FFI leaves" in failure for failure in
+               windows_unsafe_failures({library: linux_plant})):
+        fail("unsafe", "a Linux unsafe plant beside the preserved library forbid is refused")
+    control = '// unsafe {}\n/* #![allow(unsafe_code)] */\nconst S: &str = r#"unsafe fn f() {}"#;'
+    if windows_unsafe_failures({"crates/thinkthen/src/planted.rs": control}):
+        fail("unsafe", "comments and literal examples remain admitted")
+
+
 def check_crate_roots() -> None:
     for relative, attributes in ACCEPTED_CRATE_ROOT_ATTRIBUTES.items():
         try:
@@ -2052,8 +2262,8 @@ def check_dependencies() -> None:
 # and build edges. Dev edges stay out, because the tests use `signal-hook`.
 COMMAND_ONLY = {"clap", "csv-core", "signal-hook"}
 GRAPH_PLANTS = (
-    '[target."cfg(windows)".dependencies]\nclap = "4.6.7"\n',
-    '[build-dependencies]\nclap = "4.6.7"\n',
+    ('[target."cfg(windows)".dependencies]', 'clap = "4.6.7"'),
+    ('[build-dependencies]', 'clap = "4.6.7"'),
 )
 GRAPH_FILES = (
     "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "conformance/backend/Cargo.toml",
@@ -2105,12 +2315,15 @@ def check_library_graph() -> None:
                     encoding="utf-8",
                 )
             manifest = root / "crates/thinkthen/Cargo.toml"
-            manifest.write_text(manifest.read_text(encoding="utf-8") + "\n" + plant, encoding="utf-8")
+            text = manifest.read_text(encoding="utf-8")
+            header, entry = plant
+            text = text.replace(header, header + "\n" + entry, 1) if header in text else text + "\n" + header + "\n" + entry + "\n"
+            manifest.write_text(text, encoding="utf-8")
             planted = library_direct(root, "--offline")
             if isinstance(planted, str):
                 fail("dependencies", f"the planted graph reads through cargo tree: {planted}")
             elif not graph_failures(planted):
-                fail("dependencies", f"the planted graph {plant.splitlines()[0]!r} is refused")
+                fail("dependencies", f"the planted graph {plant[0]!r} is refused")
 
 HEADER_WORDS = ("header", "authorization", "api-key", "api_key", "x-api-key", "cookie")
 
@@ -2273,6 +2486,7 @@ def main() -> int:
     check_polars_feature()
     check_postgresql_binding()
     check_crate_roots()
+    check_windows_unsafe()
     check_core_policy()
     check_engine_policy()
     check_catalog_policy()
