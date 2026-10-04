@@ -1,6 +1,6 @@
 # The R package has no Linux install for most hosts and no proof before release
 
-Status: open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: the queue owner.
+Status: open. Ticket 0398 slice B implements only the R-universe binary install check after publishing. The Linux install documentation and source-tarball proof before release remain open. Filed 2026-10-04 by the queue owner from the 0.1 releases. Owner: the queue owner.
 Milestone: 0.2
 
 R-universe built 0.1.2 in run 37142825335 in `r-universe/botassembly`. Its plain address serves Linux the source package, which needs Rust's `cargo` and `rustc`. R-universe's package listing shows built Linux packages only for Ubuntu 26.04 ("resolute"), for R-release 4.6 and R-devel. Quick fix `67d27b7d1` names the built package's address on the install page, but the page does not name Ubuntu 26.04. Other distributions and older Ubuntu releases must build from source.

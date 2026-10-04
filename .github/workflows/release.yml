@@ -498,7 +498,7 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
-    permissions: {contents: write}
+    permissions: {contents: write, actions: write}
     steps:
       - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
         run: '[ "$RELEASE_ARMED" = true ]'
@@ -506,3 +506,5 @@ jobs:
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", NAME: "${{ needs.resolve.outputs.name }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow publish "$NAME" "$SHA"
+      - env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", NAME: "${{ needs.resolve.outputs.name }}", VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: gh workflow run install-check.yml --ref "$NAME" -f version="$VERSION"
