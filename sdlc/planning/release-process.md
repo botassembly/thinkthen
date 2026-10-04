@@ -60,7 +60,7 @@ The release branch is named for the major and minor version: `release/0.2` for 0
 3. **Checkpoint and QA on the cut.** The coordinator runs the checkpoint sweep of section 2 on that main commit. Release QA runs its round on it (section 3).
 4. **The cut.** The coordinator tags `rc/0.2.0-rc.1` on that commit under worktrees.md and pushes `release/0.2` from it.
 5. **The rehearsal from the release branch.** Ian dispatches `gh workflow run release.yml --ref release/0.2 -f mode=rehearse`. It passes on all four targets.
-6. **Ian's go.** Ian tags `v0.2.0` on the head of `release/0.2` and dispatches release mode from the tag. Section 6 and ticket 0128 phase 4 continue from there.
+6. **Ian's go.** Ian tags `v0.2.0` on the head of `release/0.2` and dispatches release mode from the tag. The tag must name the exact commit of a successful rehearsal. Section 6 and ticket 0128 phase 4 continue from there.
 
 There are no 0.1.x releases. `release/0.1` is frozen, and nothing is cherry-picked to it. Every fix lands on main and ships in the next release. Right after a release, main moves to the next version. Ticket 0397 moves main to 0.2.0 under Ian's ruling of 2026-10-04.
 
@@ -70,7 +70,7 @@ Main's public install text names the latest published release until the next rel
 
 1. The real release is dispatched only on Ian's go.
 2. Before the dispatch, the coordinator runs `sdlc/scripts/workflows --remote-pins`. It asks GitHub whether each pinned action names a commit. A pin that names a tag object passes the offline gate and fails only in the release run (ticket 0391).
-3. Release mode runs from a `v*` tag. Each publish job waits for Ian's approval in the GitHub `release` environment (ticket 0128).
+3. Release mode runs from a `v*` tag. Resolve refuses before any build unless that exact commit has a completed successful `release.yml` dispatch from main or a numeric `release/X.Y` branch. A successful tag run does not count. An unreadable run history refuses. Rehearse mode reads no run history. Each publish job waits for Ian's approval in the GitHub `release` environment (ticket 0128).
 4. After publishing the GitHub release and Go module tag, `publish` dispatches `install-check.yml` from that release tag with the resolved version (ticket 0398 slice B). The separate workflow reads public channels with only `contents: read`. It has no environment approval, OIDC token or secret. The coordinator records its run and every channel result in the release's ticket.
 5. A late Go proxy, Packagist or older R-universe index gets one hand dispatch later. R-universe keeps only its current version. A superseded request reports the requested and listed versions and gets no retry advice. Its Linux check accepts only the resolute R 4.6 binary. Hosted runner proof remains pending an approved manual check.
 

@@ -144,6 +144,23 @@ def release(name, doc):
     if set(inputs) != {"mode"} or inputs["mode"].get("options") != ["rehearse", "release"]:
         out.append(f"{name}: dispatch must have only mode with rehearse and release choices")
     jobs = doc.get("jobs") or {}
+    resolve = jobs.get("resolve", {})
+    expected_source = {"id": "source", "env": {"MODE": "${{ inputs.mode }}",
+                       "REF": "${{ github.ref }}", "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
+                       "run": 'sdlc/scripts/release-workflow resolve "$MODE" "$REF" >> "$GITHUB_OUTPUT"'}
+    expected_checkout = {"uses": "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+                         "with": {"ref": "${{ github.sha }}", "persist-credentials": False}}
+    expected_outputs = {key: "${{ steps.source.outputs." + key + " }}" for key in ("sha", "version", "name")}
+    if (resolve.get("permissions") != {"contents": "read", "actions": "read"}
+            or resolve.get("outputs") != expected_outputs
+            or resolve.get("steps") != [expected_checkout, expected_source]
+            or any(key in resolve for key in ("if", "continue-on-error", "env", "environment", "defaults"))
+            or "env" in doc
+            or (doc.get("defaults") or {}).get("run") is not None):
+        out.append(f"{name}: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN")
+    for job, spec in jobs.items():
+        if job not in ("resolve", "draft", "publish") and "GH_TOKEN" in yaml.safe_dump(spec):
+            out.append(f"{name}: job {job} must not receive GH_TOKEN; only resolve, draft and publish may")
     out += windows_release_rules(name, jobs)
     out += publish_dispatch(name, doc)
     required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "draft",
@@ -595,14 +612,14 @@ permissions: {}
 jobs:
   resolve:
     runs-on: ubuntu-24.04
-    permissions: {contents: read}
-    outputs: {sha: "${{ steps.sha.outputs.sha }}"}
-    env: {MODE: "${{ inputs.mode }}"}
+    permissions: {contents: read, actions: read}
+    outputs: {sha: "${{ steps.source.outputs.sha }}", version: "${{ steps.source.outputs.version }}", name: "${{ steps.source.outputs.name }}"}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with: {ref: "${{ github.sha }}"}
-      - id: sha
-        run: echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+        with: {ref: "${{ github.sha }}", persist-credentials: false}
+      - id: source
+        env: {MODE: "${{ inputs.mode }}", REF: "${{ github.ref }}", GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+        run: sdlc/scripts/release-workflow resolve "$MODE" "$REF" >> "$GITHUB_OUTPUT"
   build:
     needs: resolve
     runs-on: ubuntu-24.04
@@ -764,6 +781,43 @@ def self_test():
     cases = [
         ("real", None, None, []),
         ("release-ok", "release.yml", lambda t: t, []),
+        ("resolve-inherited-token", "release.yml", lambda t: yaml.safe_dump(yaml.safe_load(t) | {
+            "env": {"GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"}}),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-inherited-shell", "release.yml", lambda t: yaml.safe_dump(yaml.safe_load(t) | {
+            "env": {"BASH_ENV": "/tmp/inherited-shell"}}),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-output", "release.yml", lambda t: t.replace('steps.source.outputs.sha', 'github.sha', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-token-build", "release.yml", lambda t: t.replace('  build:\n', '  build:\n    env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}\n', 1),
+         ["release.yml: job build must not receive GH_TOKEN; only resolve, draft and publish may"]),
+        ("resolve-actions", "release.yml", lambda t: t.replace('contents: read, actions: read', 'contents: read', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-token", "release.yml", lambda t: t.replace(', GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"', '', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-write", "release.yml", lambda t: t.replace('contents: read, actions: read', 'contents: write, actions: read', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN",
+          "release.yml: job resolve holds contents: write; only draft and publish may"]),
+        ("resolve-actions-write", "release.yml", lambda t: t.replace('contents: read, actions: read', 'contents: read, actions: write', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN",
+          "release.yml: job resolve holds actions: write; only publish may dispatch install-check"]),
+        ("resolve-id-token", "release.yml", lambda t: t.replace('contents: read, actions: read', 'contents: read, actions: read, id-token: write', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN",
+          "release.yml: job resolve holds id-token or a secret outside environment release"]),
+        ("resolve-job-token", "release.yml", lambda t: t.replace('  resolve:\n', '  resolve:\n    env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}\n', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-skipped", "release.yml", lambda t: t.replace('  resolve:\n', '  resolve:\n    if: false\n', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-ignored", "release.yml", lambda t: t.replace('  resolve:\n', '  resolve:\n    continue-on-error: true\n', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-step-skipped", "release.yml", lambda t: t.replace('      - id: source\n', '      - id: source\n        if: false\n', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-step-ignored", "release.yml", lambda t: t.replace('      - id: source\n', '      - id: source\n        continue-on-error: true\n', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-shell", "release.yml", lambda t: t.replace('      - id: source\n', '      - id: source\n        shell: true {0}\n', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-bypass", "release.yml", lambda t: t.replace('resolve "$MODE" "$REF" >> "$GITHUB_OUTPUT"', 'resolve "$MODE" "$REF" >> "$GITHUB_OUTPUT" || true', 1),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
         ("dry-crate-missing", "release.yml", lambda t: t.replace('      - run: cargo publish --dry-run --locked --package thinkthen\n', ''),
          ["release.yml: job crate must dry-run cargo publish after package and before upload"]),
         ("dry-crate-order", "release.yml", lambda t: t.replace('      - run: cargo publish --dry-run --locked --package thinkthen\n', '')
@@ -971,7 +1025,7 @@ def self_test():
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
                 # Keep each planted rule independent after the real release.yml lands.
                 source = ((REPO / ".github/workflows/release.yml").read_text()
-                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-", "npm-", "windows-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
+                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-", "npm-", "windows-", "resolve-inherited-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:

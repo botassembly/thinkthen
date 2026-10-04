@@ -19,7 +19,7 @@ permissions: {}
 jobs:
   resolve:
     runs-on: ubuntu-24.04
-    permissions: {contents: read}
+    permissions: {contents: read, actions: read}
     outputs:
       sha: ${{ steps.source.outputs.sha }}
       version: ${{ steps.source.outputs.version }}
@@ -31,6 +31,7 @@ jobs:
         env:
           MODE: ${{ inputs.mode }}
           REF: ${{ github.ref }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sdlc/scripts/release-workflow resolve "$MODE" "$REF" >> "$GITHUB_OUTPUT"
 
   build:

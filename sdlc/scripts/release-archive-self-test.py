@@ -2,6 +2,10 @@
 """Focused gitless release input proof. Cargo and Docker only stand in for builds."""
 
 import os
+import json
+import runpy
+import sys
+from unittest import mock
 from pathlib import Path
 import shutil
 import subprocess
@@ -27,27 +31,116 @@ def expect(result, text, success=False):
 
 
 def resolve_outputs(commit, version):
-    # release.yml appends resolve's standard output to GITHUB_OUTPUT, which takes only name=value lines.
+    repository = "botassembly/thinkthen"
+    good = {"head_sha": commit, "head_branch": "main", "event": "workflow_dispatch",
+            "status": "completed", "conclusion": "success", "path": ".github/workflows/release.yml"}
+    page = lambda runs: json.dumps({"total_count": len(runs), "workflow_runs": runs})
     rehearsal = f"v{version}-rehearsal-{commit[:7]}"
-    for mode, ref, name in (("rehearse", "refs/heads/main", rehearsal),
-                            ("rehearse", "refs/heads/release/0.1", rehearsal),
-                            ("release", f"refs/tags/v{version}", f"v{version}")):
-        result = run("sh", str(REPO / "sdlc/scripts/release-workflow"), "resolve", mode, ref,
-                     env=os.environ | {"GITHUB_SHA": commit})
-        wanted = f"sha={commit}\nversion={version}\nname={name}\n"
-        if result.returncode or result.stdout != wanted or "versions: " not in result.stderr:
-            raise AssertionError(("resolve outputs", mode, result.returncode, result.stdout, result.stderr))
-    # ADR 0116 item 7: rehearse runs from main or release/X.Y alone, and release only from a v* tag.
-    for mode, ref, wanted in (
-            ("rehearse", "refs/heads/feature", "rehearse must run from main or a release/X.Y branch"),
-            ("rehearse", "refs/heads/release/next", "rehearse must run from main or a release/X.Y branch"),
-            ("rehearse", "refs/heads/release/0.1/fix", "rehearse must run from main or a release/X.Y branch"),
-            ("rehearse", "refs/tags/v0.1.0", "rehearse must run from main or a release/X.Y branch"),
-            ("release", "refs/heads/release/0.1", "release must run from a v* tag")):
-        result = run("sh", str(REPO / "sdlc/scripts/release-workflow"), "resolve", mode, ref,
-                     env=os.environ | {"GITHUB_SHA": commit})
-        if result.returncode != 1 or result.stdout or result.stderr != f"release-workflow: {wanted}, got {ref}\n":
-            raise AssertionError(("resolve refusal", mode, ref, result.returncode, result.stdout, result.stderr))
+    with tempfile.TemporaryDirectory(prefix="thinkthen-resolve-") as temporary:
+        root = Path(temporary)
+        receipt = root / "calls.jsonl"
+        gh = root / "gh"
+        gh.write_text(f"#!{sys.executable}\n" + """import json, os, sys
+with open(os.environ['GH_TEST_RECEIPT'], 'a') as log:
+    log.write(json.dumps(sys.argv[1:]) + '\\n')
+sys.stdout.write(os.environ['GH_TEST_RESPONSE'])
+sys.stderr.write('must not expose API diagnostics')
+sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
+""")
+        gh.chmod(0o755)
+        env = {"PATH": f"{root}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C",
+               "GITHUB_SHA": commit, "GITHUB_REPOSITORY": repository,
+               "GH_TEST_RECEIPT": str(receipt), "GH_TEST_RESPONSE": page([good])}
+        endpoint = (f"repos/{repository}/actions/workflows/release.yml/runs?head_sha={commit}"
+                    "&status=success&event=workflow_dispatch&per_page=100")
+        expected_call = ["api", "--method", "GET", "--paginate", "-H",
+                         "Accept: application/vnd.github+json", endpoint]
+
+        def check(mode, ref, response=page([good]), exit_code=0, error=None, override=None):
+            receipt.write_text("")
+            result = run("sh", str(REPO / "sdlc/scripts/release-workflow"), "resolve", mode, ref,
+                         env=env | {"GH_TEST_RESPONSE": response, "GH_TEST_EXIT": str(exit_code)}
+                         | (override or {}))
+            calls = [json.loads(line) for line in receipt.read_text().splitlines()]
+            queried = mode == "release" and error not in ("before-query",)
+            if calls != ([expected_call] if queried else []):
+                raise AssertionError(("resolve query", mode, ref, calls))
+            if error is None:
+                name = rehearsal if mode == "rehearse" else f"v{version}"
+                wanted = f"sha={commit}\nversion={version}\nname={name}\n"
+                if result.returncode or result.stdout != wanted or "versions: " not in result.stderr:
+                    raise AssertionError(("resolve outputs", mode, result.returncode, result.stdout, result.stderr))
+            elif error != "before-query":
+                sentence = (f"release-workflow: could not read the rehearsal runs for {commit}\n"
+                            if error == "read" else f"release-workflow: no successful rehearsal ran on {commit}; "
+                            "dispatch rehearse mode on that commit first\n")
+                if result.returncode != 1 or result.stdout or not result.stderr.endswith(sentence):
+                    raise AssertionError(("resolve refusal", result.returncode, result.stdout, result.stderr))
+            else:
+                if result.returncode != 1 or result.stdout:
+                    raise AssertionError(("early resolve refusal", result.returncode, result.stdout, result.stderr))
+            return result
+
+        check("rehearse", "refs/heads/main")
+        check("rehearse", "refs/heads/release/0.1")
+        check("release", f"refs/tags/v{version}")
+        for branch in ("main", "release/0.1", "release/12.34"):
+            for prefix in ("", f"{repository}/"):
+                for suffix in ("", f"@{branch}", f"@refs/heads/{branch}"):
+                    check("release", f"refs/tags/v{version}",
+                          page([good | {"head_branch": branch, "path": prefix + good['path'] + suffix}]))
+        check("release", f"refs/tags/v{version}", page([good | {"run_attempt": 2}]))
+        check("release", f"refs/tags/v{version}", page([]) + "\n" + page([good]))
+        for changes in ({"conclusion": "failure"}, {"conclusion": False}, {"conclusion": None},
+                        {"head_sha": "0" * 40}, {"head_branch": "v0.1.2"},
+                        {"head_branch": "refs/tags/v0.2.0"}, {"head_branch": "feature"},
+                        {"head_branch": "release/next"}, {"head_branch": None},
+                        {"event": "push"}, {"status": "in_progress"},
+                        {"path": ".github/workflows/other.yml"}, {"path": None}, {"path": 1},
+                        {"path": "other/repository/" + good['path']},
+                        {"path": good['path'] + "@refs/tags/v0.2.0"},
+                        {"path": good['path'] + "@release/0.1"},
+                        {"path": good['path'] + "@main@main"}):
+            check("release", f"refs/tags/v{version}", page([good | changes]), error="absent")
+        for missing in good:
+            check("release", f"refs/tags/v{version}",
+                  page([{key: value for key, value in good.items() if key != missing}]), error="absent")
+        check("release", f"refs/tags/v{version}", page([]), error="absent")
+        for malformed in ("", "{", "[]", "null", "{}", page([good]) + "{", page([good]) + "garbage",
+                          json.dumps({"total_count": True, "workflow_runs": []}),
+                          json.dumps({"total_count": -1, "workflow_runs": []}),
+                          json.dumps({"total_count": 1, "workflow_runs": [None]})):
+            check("release", f"refs/tags/v{version}", malformed, error="read")
+        check("release", f"refs/tags/v{version}", page([good]), exit_code=1, error="read")
+        for mode, ref, wanted in (
+                ("rehearse", "refs/heads/feature", "rehearse must run from main or a release/X.Y branch"),
+                ("rehearse", "refs/heads/release/next", "rehearse must run from main or a release/X.Y branch"),
+                ("rehearse", "refs/heads/release/0.1/fix", "rehearse must run from main or a release/X.Y branch"),
+                ("rehearse", "refs/tags/v0.1.0", "rehearse must run from main or a release/X.Y branch"),
+                ("release", "refs/heads/release/0.1", "release must run from a v* tag")):
+            result = check(mode, ref, error="before-query")
+            if result.stderr != f"release-workflow: {wanted}, got {ref}\n":
+                raise AssertionError(("resolve ref sentence", result.stderr))
+        result = check("release", f"refs/tags/v{version}", error="before-query",
+                       override={"GITHUB_SHA": "0" * 40})
+        if result.stderr != "release-workflow: checkout differs from dispatch SHA\n":
+            raise AssertionError(("resolve checkout sentence", result.stderr))
+        check("release", "refs/tags/v9.9.9", error="before-query")
+        check("unknown", "refs/heads/main", error="before-query")
+
+    # Timeout/missing executable proof uses the real helper's public entry point without waiting.
+    helper = runpy.run_path(str(REPO / "sdlc/scripts/release-rehearsal.py"))
+    historical = good | {"head_sha": "abac3ce61bf1188b40cbc3c2ef0a0589eb247c86",
+                         "head_branch": "release/0.1", "id": 37126990511, "workflow_id": 369147892}
+    tag_run = good | {"head_sha": "08328c9c04574719b9e93900dd8fa46ad3b645b4",
+                      "head_branch": "v0.1.2", "id": 37130570517, "workflow_id": 369147892}
+    if not helper['eligible'](historical, historical['head_sha'], repository) or helper['eligible'](tag_run, tag_run['head_sha'], repository):
+        raise AssertionError("historical rehearsal/tag distinction")
+    for failure in (subprocess.TimeoutExpired("gh", 60), FileNotFoundError("gh")):
+        with mock.patch.dict(os.environ, {"GITHUB_SHA": commit, "GITHUB_REPOSITORY": repository}), \
+                mock.patch("subprocess.run", side_effect=failure), mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            if helper['main']() != 1 or stderr.getvalue() != f"release-workflow: could not read the rehearsal runs for {commit}\n":
+                raise AssertionError(("helper transport error", stderr.getvalue()))
 
 
 def tap_formula(version):
