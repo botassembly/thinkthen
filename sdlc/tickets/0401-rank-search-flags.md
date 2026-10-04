@@ -1,6 +1,6 @@
 # 0401: Search flags on rank: files, windows, line numbers, neighbors, scores and several questions
 
-Status: in progress. Slice A ticket review corrections are recorded; implementation awaits acceptance.
+Status: in progress. Slice A ticket review corrections are accepted at `2afd99d65364ebc4dd49258ed31f9990d6b460c4`. No product code exists. Implementation waits for ticket 0405 to answer filter, rank and grep and amend this scope as needed.
 
 Milestone: 0.2
 
