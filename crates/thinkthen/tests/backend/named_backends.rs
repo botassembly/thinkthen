@@ -26,5 +26,7 @@ mod paths_0399;
 mod precedence;
 #[path = "named_backends/rate.rs"]
 mod rate;
+#[path = "named_backends/replay_0399.rs"]
+mod replay_0399;
 #[path = "named_backends/support.rs"]
 mod support;

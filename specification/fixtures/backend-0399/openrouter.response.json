@@ -1,0 +1,7 @@
+{
+  "id": "fixture-only-substituted-request-id-0399",
+  "provider": "TypeSafe",
+  "model": "typesafe/jev-1.13-20260917",
+  "answers": { "q1": { "type": "noul", "noul": 0.93 } },
+  "usage": { "input_tokens": 285, "output_tokens": 39, "cost": 0.00001197 }
+}
