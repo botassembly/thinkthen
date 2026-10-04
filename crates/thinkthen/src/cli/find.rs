@@ -271,14 +271,7 @@ fn rendered(
         })
         .transpose()?;
     let mut line = if common.details {
-        let value = place
-            .map(|place| {
-                units
-                    .get(place)
-                    .map(|unit| unit.record.clone())
-                    .ok_or(Failure::Defect("a find selection is outside its units"))
-            })
-            .transpose()?;
+        let value = unit.map(|unit| unit.record.clone());
         let meta = Meta::new(
             env!("CARGO_PKG_VERSION"),
             find.question_sha256()
@@ -294,17 +287,13 @@ fn rendered(
         );
         Some(json_line(&find.result(value, selected, meta))?)
     } else {
-        place
-            .map(|place| {
-                let unit = units
-                    .get(place)
-                    .ok_or(Failure::Defect("a find selection is outside its units"))?;
-                reading
-                    .as_it_arrived(&unit.bytes)
-                    .map(str::to_owned)
-                    .map_err(|error| Failure::record(error, true))
-            })
-            .transpose()?
+        unit.map(|unit| {
+            reading
+                .as_it_arrived(&unit.bytes)
+                .map(str::to_owned)
+                .map_err(|error| Failure::record(error, true))
+        })
+        .transpose()?
     };
     if common.details {
         intake::locate(&mut line, position.as_ref())?;
