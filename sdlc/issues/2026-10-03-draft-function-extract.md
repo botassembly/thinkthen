@@ -1,12 +1,12 @@
-# Draft function: extract, with a table mode
+# Recipe: Rules propose, the model confirms
 
-Status: open. Draft. Filed 2026-10-03 from the docs message "Proxy, terms and function drafts decided" and its addenda, on Ian's product decisions of 2026-10-02. No build work until the experiment reports. Owner: the queue owner.
+Status: open. Recipe draft. Ian dropped extract as a function on 2026-10-04 in the change to the docs lane-order message. This relabels the extract draft filed on 2026-10-03. Owner: the queue owner. Ticket 0402 owns the recipe page and harness. The page remains draft until its measured numbers publish.
 Kind: idea
-When: experiment 0008 and 0009 reports
+When: the experiments team's experiment 4 reports
 Milestone: 0.2
 
-`extract` would pull values out of the text. It works like `recognize`: tag the pieces, then classify each span by field, keeping one value per field. `annotate` differs, because its answers come from options written in advance.
+Regular expressions or a dictionary match with Aho-Corasick find candidates. Decide or choose confirms the true positives. Choose takes options per record; candidate-finding code belongs to the recipe. This uses the existing functions and introduces no extract function or annotate mode.
 
-Its table mode replaces the separate table tool of the first draft. It adds same-row, same-column and same-cell pair questions, the way `relate` adds relations after `recognize`.
+Experiment 4 measures this pattern against recognize alone and supplies the recipe's numbers. The recipe cites the accepted report and separates its small replayed example from the measured run. Ticket 0413 retains ownership of audited per-record candidate-option gaps; this relabeling makes no new support claim.
 
-The experiments repository's experiment 0008 tests the form mode, and experiment 0009 tests the table mode.
+The former form and table modes are not 0.2 implementation work. Tables remain outside 0.2. The recipe waits on evidence, not a new function design.

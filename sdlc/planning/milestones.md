@@ -47,7 +47,7 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 Outcome: Windows support and the first features after 0.1. 0.2 work lands on main after the `release/0.1` cut (ADR 0116).
 
-Ian approved the 0.2 scope and lane order on 2026-10-04. 0.2 ships when release safety, the backends, the search flags on rank, extract, the recipes with their numbers, and Windows stage 1 have landed. The proxy, the hosted screens, the decision store, link, verify and qualify as functions, Markdown repair, tables and the navigate command are not in 0.2. There are no 0.1.x patch releases; ticket 0397 freezes `release/0.1`.
+Ian approved the 0.2 scope and lane order on 2026-10-04. 0.2 ships when release safety, the backends, the search flags, the recipes with their numbers, and Windows stage 1 have landed. Ian dropped extract as a function on 2026-10-04. 0.2 retains the ten functions. The proxy, the hosted screens, the decision store, link, verify and qualify as functions, Markdown repair, tables and the navigate command are not in 0.2. There are no 0.1.x patch releases; ticket 0397 freezes `release/0.1`.
 
 Lanes, in order:
 
@@ -56,7 +56,7 @@ Lanes, in order:
 - Lane 2: [0398: Release safety](../tickets/0398-release-safety.md), then [0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides](../tickets/0399-backend-path-perplexity-openrouter.md), then [0400: One setup format per provider and a default throttle of 8](../tickets/0400-provider-setups-and-concurrency.md), then 0377 below. 0400 slice A must be usable before the experiments team's new-model day run in the week of 2026-10-05.
 - Lane 3: [0405: Audit the ten functions](../tickets/0405-audit-ten-functions.md) first on Ian's 2026-10-04 update. Answer filter, rank and grep before implementation of [0401: Search flags on rank](../tickets/0401-rank-search-flags.md), then [0402: The docs tell one story](../tickets/0402-docs-tell-one-story.md), then [0403: The DuckDB extension ships a build for DuckDB v1.5.4](../tickets/0403-duckdb-extension-for-dbt-v2.md).
 - Gaps in any lane: [0404: Tech debt cut, with tests held to behavior](../tickets/0404-tech-debt-and-tests-held-to-behavior.md).
-- Waiting on experiments: extract (its own function or a mode of annotate), the "none" wording for choose, and each recipe's measured numbers.
+- Waiting on experiments: the "none" wording for choose and each recipe's measured numbers. [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) uses rules to find candidates and decide or choose to confirm them. Experiment 4 supplies its comparison with recognize alone.
 
 Completed foundation: [0397](../tickets/0397-main-moves-to-0-2-0.md) moves main to 0.2.0 and freezes `release/0.1`.
 
@@ -104,7 +104,9 @@ Open items:
 - [The `ruby` platform gem on RubyGems is still the 0.0.1 placeholder](../issues/2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md)
 - [The Polars deadline test races its own deadline under load](../issues/2026-10-03-polars-deadline-test-races-its-deadline-under-load.md)
 - Release process, from the 0.1 releases: [the rehearsal never runs the publish steps](../issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md), [the public install checks are done by hand](../issues/2026-10-04-public-install-checks-are-done-by-hand.md), [the release tag can name an unrehearsed commit](../issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md), [each patch release costs two hand passes](../issues/2026-10-04-each-patch-release-costs-two-hand-passes.md), [the R package's Linux install and pre-release proof](../issues/2026-10-04-r-install-on-linux-and-before-release.md), [two release secrets remain](../issues/2026-10-04-two-release-secrets-remain.md), and [a release needs two approvals](../issues/2026-10-04-a-release-needs-two-approvals.md)
-- Draft functions, each waiting on its experiment: [link](../issues/2026-10-03-draft-function-link.md), [verify](../issues/2026-10-03-draft-function-verify.md), [extract](../issues/2026-10-03-draft-function-extract.md), [navigate](../issues/2026-10-03-draft-function-navigate.md), and the [Markdown repair tool](../issues/2026-10-03-draft-markdown-repair-tool.md)
+- Remaining drafts, each waiting on its experiment: [link](../issues/2026-10-03-draft-function-link.md), [verify](../issues/2026-10-03-draft-function-verify.md), [navigate](../issues/2026-10-03-draft-function-navigate.md), and the [Markdown repair tool](../issues/2026-10-03-draft-markdown-repair-tool.md)
+
+- Recipe draft: [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md). Ticket 0402 owns its page after the experiment reports measured numbers. It replaces the extract function draft.
 
 ## later
 
