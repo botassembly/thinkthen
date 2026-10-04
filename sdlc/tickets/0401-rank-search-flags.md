@@ -100,3 +100,5 @@ fn Engine::rank_set_with<I>(&self, &RankSet, I, CallOptions<'_>) -> Result<Call<
 ```
 
 Slice D builds the accepted [frozen design](../records/0401-d-rank-set-design.md) against landed C `fea3a6fbc46b68ccc33a28e35eb0c4eb48329df9` in lane0. Fresh candidate review and coordinator checkpoints remain pending. SQL question sets belong to 0417 for 0.2; C and language sets belong to 0418 later.
+
+The D frozen-source review found that preview added each set member as an input slot, unlike runtime's single add per original record. The correction gathers member entries first and adds once. Its independent counted loopback witness pins the exact first body and complete byte/token summary against three runtime requests with both text members; mixed quoting retains its state cuts in both member orders. Ordinary single-question identity, runtime merge/bounds and whole-call controls remain protected. Exact correction growth and focused receipts are in the [D build record](../records/0401-d-rank-set-build.md). Fresh parent review and the merged checkpoint remain pending.

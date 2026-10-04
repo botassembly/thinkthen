@@ -350,3 +350,116 @@ fn first_structured_member_does_not_change_selecting_text_members_batch_metadata
     );
     Ok(())
 }
+
+fn preview_matches_counted_requests(set: &str, mixed: bool) -> io::Result<()> {
+    let question = saved("rank-set-preview", set)?;
+    let listener = Listener::answering(crate::intake_0401::answer)?;
+    let preview = call(
+        &listener,
+        &question,
+        &["--batch", "1", "--plan"],
+        b"alpha\nbeta\ngamma\n",
+    )?;
+    assert_eq!(preview.status.code(), Some(0), "{}", text(&preview.stderr));
+    assert_eq!(listener.connections(), 0);
+    assert!(listener.requests().is_empty());
+    let lines: Vec<_> = text(&preview.stdout).lines().map(str::to_owned).collect();
+    assert_eq!(lines.len(), 2);
+    let document: serde_json::Map<String, Value> = serde_json::from_str(&lines[0])?;
+    let raw: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
+        serde_json::from_str(&lines[0])?;
+    let runtime = call(
+        &listener,
+        &question,
+        &["--batch", "1"],
+        b"alpha\nbeta\ngamma\n",
+    )?;
+    assert_eq!(runtime.status.code(), Some(0), "{}", text(&runtime.stderr));
+    assert_eq!(runtime.stdout, b"alpha\nbeta\ngamma\n");
+    let requests = listener.requests();
+    let per_record = if mixed { 2 } else { 1 };
+    assert_eq!(requests.len(), 3 * per_record);
+    assert_eq!(raw["request"].get().as_bytes(), requests[0].body);
+    assert_eq!(
+        document["request"],
+        serde_json::from_slice::<Value>(&requests[0].body)?
+    );
+    for (group, record) in requests.chunks(per_record).zip(["alpha", "beta", "gamma"]) {
+        let bodies: Vec<Value> = group
+            .iter()
+            .map(|request| serde_json::from_slice(&request.body).expect("request"))
+            .collect();
+        assert_member_evidence(&bodies, record, mixed);
+    }
+    let bytes: usize = requests.iter().map(|request| request.body.len()).sum();
+    let summary: Value = serde_json::from_str(&lines[1])?;
+    assert_eq!(
+        summary,
+        serde_json::json!({
+            "records":3,"requests":3 * per_record,"estimated_bytes":bytes,
+            "estimated_input_tokens":{"lower":bytes * 516 / 1000,"upper":(bytes * 908).div_ceil(1000)},
+            "upper_bound":false
+        })
+    );
+    Ok(())
+}
+
+#[test]
+fn preview_packs_two_text_members_once_per_record_and_matches_runtime() -> io::Result<()> {
+    preview_matches_counted_requests(SET, false)
+}
+
+#[test]
+fn preview_keeps_mixed_member_quoting_and_runtime_packing_in_both_orders() -> io::Result<()> {
+    for set in [
+        r#"{"version":1,"questions":{"text":{"decide":"Ready?"},"json":{"decide":{"check":"Ready?"}}}}"#,
+        r#"{"version":1,"questions":{"json":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
+    ] {
+        preview_matches_counted_requests(set, true)?;
+    }
+    Ok(())
+}
+
+fn assert_member_evidence(bodies: &[Value], record: &str, mixed: bool) {
+    let instructions: Vec<_> = bodies
+        .iter()
+        .flat_map(|body| {
+            body["questions"]
+                .as_object()
+                .expect("questions")
+                .values()
+                .map(|q| &q["instructions"])
+        })
+        .collect();
+    assert_eq!(
+        instructions.len(),
+        2,
+        "both members judge each original record"
+    );
+    let texts: Vec<_> = instructions.iter().filter_map(|q| q.as_str()).collect();
+    assert_eq!(texts.len(), if mixed { 1 } else { 2 });
+    assert!(texts.iter().all(|q| q.contains(&format!("\"{record}\""))));
+    if mixed {
+        let structured = bodies
+            .iter()
+            .find(|body| {
+                body["questions"]
+                    .as_object()
+                    .expect("questions")
+                    .values()
+                    .any(|q| q["instructions"].is_object())
+            })
+            .expect("structured request");
+        assert_eq!(structured["state"], record);
+        assert!(
+            instructions
+                .iter()
+                .any(|q| **q == serde_json::json!({"check":"Ready?"}))
+        );
+        assert!(texts[0].contains("Ready?"));
+    } else {
+        for member in ["First?", "Second?"] {
+            assert!(texts.iter().any(|q| q.contains(member)));
+        }
+    }
+}
