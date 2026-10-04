@@ -571,7 +571,7 @@ function Invoke-ThinkThenInstall([string] $RequestedVersion) {
                 Restore-File $receiptPath $receiptSnapshot $oldReceiptHash
             } catch {
                 $retain = $true
-                [Console]::Error.WriteLine('Recovery could not restore the original installation: ' + $_.Exception.Message)
+                try { [Console]::Error.WriteLine('Recovery could not restore the original installation: ' + $_.Exception.Message) } catch {}
                 # Restore pending evidence when possible. Its old/new digests
                 # describe the failed transaction, never a guessed installed state.
                 try {
@@ -579,9 +579,16 @@ function Invoke-ThinkThenInstall([string] $RequestedVersion) {
                     $pending = [ordered] @{ schema_version = 1; state = 'pending'; executable_path = $installed; version = $RequestedVersion; old_sha256 = $oldHash; new_sha256 = $newHash }
                     Write-PrivateFile $pendingRecovery ([System.Text.Encoding]::UTF8.GetBytes(($pending | ConvertTo-Json -Compress)))
                     Commit-File $pendingRecovery $receiptPath (Get-CurrentDigest $receiptPath)
-                } catch { [Console]::Error.WriteLine('Pending receipt recovery failed: ' + $_.Exception.Message) }
-                if ($null -eq (Get-Attributes $receiptPath)) { [Console]::Error.WriteLine('Receipt is absent. Manual recovery is required.') }
-                [Console]::Error.WriteLine('Retained recovery artifacts: ' + $script:Scratch)
+                } catch { try { [Console]::Error.WriteLine('Pending receipt recovery failed: ' + $_.Exception.Message) } catch {} }
+                # Receipt inspection and diagnostics must not replace the first failure.
+                try {
+                    if ($null -eq (Get-Attributes $receiptPath)) {
+                        try { [Console]::Error.WriteLine('Receipt is absent. Manual recovery is required.') } catch {}
+                    }
+                } catch {
+                    try { [Console]::Error.WriteLine('Receipt inspection failed. Manual recovery is required: ' + $_.Exception.Message) } catch {}
+                }
+                try { [Console]::Error.WriteLine('Retained recovery artifacts: ' + $script:Scratch) } catch {}
             }
             throw $primary
         }
@@ -595,7 +602,7 @@ function Invoke-ThinkThenInstall([string] $RequestedVersion) {
     } finally {
         if ($script:Scratch -and -not $retain) {
             try { Remove-OwnedScratch $script:Scratch }
-            catch { [Console]::Error.WriteLine('Cleanup left owned scratch for inspection: ' + $_.Exception.Message) }
+            catch { try { [Console]::Error.WriteLine('Cleanup left owned scratch for inspection: ' + $_.Exception.Message) } catch {} }
         }
         if ($lock) { $lock.Dispose() }
     }

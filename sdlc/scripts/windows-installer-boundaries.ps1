@@ -205,9 +205,20 @@ if ($NativeBinary) {
     $pathBefore = $env:PATH
     $env:THINKTHEN_INSTALL_SENTINEL = 'must not reach version probe'
     $env:FAKE_SERVICE_API_KEY = 'fixture-sentinel'
+    # Keep the real file writer; inject only a repair-candidate write failure
+    # after the native receipt rollback hook has left its destination absent.
+    $script:OriginalWriteFile = (Get-Command Write-PrivateFile).ScriptBlock
+    $script:Scenario = ''
+    function Write-PrivateFile([string] $Path, [byte[]] $Bytes) {
+        if ($script:Scenario -eq 'rollback-receipt-absent' -and [System.IO.Path]::GetFileName($Path).StartsWith('recovery-pending-')) {
+            throw 'RECOVERY CANDIDATE WRITE ERROR'
+        }
+        & $script:OriginalWriteFile $Path $Bytes
+    }
     foreach ($scenario in @('first', 'upgrade', 'pending-old', 'pending-new', 'pending-absent-first',
-                            'receipt-first-failure', 'binary-1177', 'installed-receipt-1177',
-                            'after-binary', 'rollback-failure')) {
+                            'pending-preflight-mismatch', 'pending-receipt-1176', 'pending-receipt-1177',
+                            'pending-receipt-after', 'binary-1177', 'installed-receipt-1177',
+                            'after-binary', 'rollback-command-absent', 'rollback-receipt-absent')) {
         $target = Join-Path $FixtureRoot ('installed space ' + [char] 0x3a9 + '-' + [guid]::NewGuid().ToString('D'))
         New-PrivateDirectory $target
         $env:THINKTHEN_INSTALL_DIR = $target
@@ -222,7 +233,7 @@ if ($NativeBinary) {
         $oldDigest = Get-BytesHash $older
         $newDigest = Get-BytesHash $raw
         $originalReceipt = ''
-        if ($scenario -notin @('first', 'pending-absent-first', 'receipt-first-failure')) {
+        if ($scenario -notin @('first', 'pending-absent-first', 'pending-preflight-mismatch')) {
             Write-PrivateFile $exe $older
             $previous = [ordered] @{ schema_version=1; state='installed'; executable_path=$exe; version=$ReleaseVersion; old_sha256=''; new_sha256=$oldDigest }
             if ($scenario -in @('pending-old', 'pending-new')) {
@@ -235,45 +246,98 @@ if ($NativeBinary) {
             $previous = [ordered] @{ schema_version=1; state='pending'; executable_path=$exe; version=$ReleaseVersion; old_sha256=''; new_sha256=$newDigest }
             Write-PrivateFile $receiptName ([System.Text.Encoding]::UTF8.GetBytes(($previous | ConvertTo-Json -Compress)))
         }
-        $script:Scenario = $scenario; $script:ReplaceNumber = 0
+        $script:Scenario = $scenario
+        $script:CommitFaults = 0; $script:RollbackFaults = 0
+        $script:FaultState = @{}
+        $primaryMessage = 'PRIMARY COMMIT ERROR: ' + $scenario
         function Invoke-FileReplace([string] $Stage, [string] $Destination, [string] $Backup) {
-            $script:ReplaceNumber++
             $file = [System.IO.Path]::GetFileName($Stage)
+            if ($file -eq 'pending.json' -and $script:Scenario -in @('pending-receipt-1176', 'pending-receipt-1177', 'pending-receipt-after', 'rollback-receipt-absent')) {
+                $script:CommitFaults++
+                if ($script:Scenario -eq 'pending-receipt-1177') { [System.IO.File]::Move($Destination, $Backup) }
+                elseif ($script:Scenario -ne 'pending-receipt-1176') { [System.IO.File]::Replace($Stage, $Destination, $Backup, $false) }
+                $script:FaultState = Get-ReplacementState $Destination $Stage $Backup
+                if ($script:Scenario -in @('pending-receipt-after', 'rollback-receipt-absent')) { throw $primaryMessage }
+                $code = if ($script:Scenario -eq 'pending-receipt-1177') { 1177 } else { 1176 }
+                throw [System.ComponentModel.Win32Exception]::new($code, $primaryMessage)
+            }
             if ($script:Scenario -eq 'binary-1177' -and $file -eq 'command.exe') {
+                $script:CommitFaults++
                 [System.IO.File]::Move($Destination, $Backup)
-                throw [System.ComponentModel.Win32Exception]::new(1177)
+                throw [System.ComponentModel.Win32Exception]::new(1177, $primaryMessage)
             }
             if ($script:Scenario -eq 'installed-receipt-1177' -and $file -eq 'installed.json') {
+                $script:CommitFaults++
                 [System.IO.File]::Move($Destination, $Backup)
-                throw [System.ComponentModel.Win32Exception]::new(1177)
+                throw [System.ComponentModel.Win32Exception]::new(1177, $primaryMessage)
             }
-            if ($script:Scenario -eq 'rollback-failure' -and ($file -eq 'command.exe' -or $file.StartsWith('restore-'))) {
-                [System.IO.File]::Replace($Stage, $Destination, $Backup, $false)
-                throw 'primary planted replacement failure'
+            if ($file.StartsWith('restore-') -and $script:Scenario -in @('rollback-command-absent', 'rollback-receipt-absent')) {
+                $script:RollbackFaults++
+                # Model a partial rollback replacement: move the destination to
+                # its supplied backup and fail before restoring the old bytes.
+                [System.IO.File]::Move($Destination, $Backup)
+                $script:FaultState = Get-ReplacementState $Destination $Stage $Backup
+                throw [System.ComponentModel.Win32Exception]::new(1177, 'ROLLBACK REPLACEMENT ERROR')
             }
             [System.IO.File]::Replace($Stage, $Destination, $Backup, $false)
-            if ($script:Scenario -eq 'after-binary' -and $file -eq 'command.exe') { throw 'primary after-binary failure' }
+            if ($script:Scenario -in @('after-binary', 'rollback-command-absent') -and $file -eq 'command.exe') {
+                $script:CommitFaults++
+                throw $primaryMessage
+            }
         }
-        # First installation uses nonoverwriting Move, so force preparation
-        # refusal with an invalid checksum independently of Replace hooks.
-        if ($scenario -eq 'receipt-first-failure') {
+        # This is a preflight refusal, distinct from the pending.json commit
+        # faults above. No native replacement is expected for this case.
+        if ($scenario -eq 'pending-preflight-mismatch') {
             $invalid = [ordered] @{ schema_version=1; state='pending'; executable_path=$exe; version=$ReleaseVersion; old_sha256=$oldDigest; new_sha256=$newDigest }
             Write-PrivateFile $receiptName ([System.Text.Encoding]::UTF8.GetBytes(($invalid | ConvertTo-Json -Compress)))
-            Refuses { Invoke-ThinkThenInstall $ReleaseVersion } 'first receipt mismatch refuses'
-            Check ($null -eq (Get-Attributes $exe)) 'first receipt refusal leaves command absent'
+            Refuses { Invoke-ThinkThenInstall $ReleaseVersion } 'preflight pending mismatch refuses'
+            Check ($script:CommitFaults -eq 0) 'preflight mismatch reaches no replacement hook'
+            Check ($null -eq (Get-Attributes $exe)) 'preflight receipt refusal leaves command absent'
             continue
         }
-        if ($scenario -in @('binary-1177', 'installed-receipt-1177', 'after-binary', 'rollback-failure')) {
-            Refuses { Invoke-ThinkThenInstall $ReleaseVersion } ('full installer caught failure ' + $scenario)
-            Check ((Get-FileHashPrivate $exe) -ceq $oldDigest) ('old bytes after caught failure ' + $scenario)
-            if ($scenario -eq 'rollback-failure') {
-                Check ([System.IO.Directory]::Exists($script:Scratch)) 'rollback exception retains current verified snapshots'
-                Check ((Get-FileHashPrivate (Join-Path $script:Scratch 'original-command.exe')) -ceq $oldDigest) 'retained original command snapshot'
-                Check ((Read-Receipt $receiptName $exe).state -ceq 'pending') 'failed rollback retains pending evidence'
+        if ($scenario -in @('pending-receipt-1176', 'pending-receipt-1177', 'pending-receipt-after',
+                            'binary-1177', 'installed-receipt-1177', 'after-binary',
+                            'rollback-command-absent', 'rollback-receipt-absent')) {
+            $originalErrorWriter = [Console]::Error
+            $diagnostics = [System.IO.StringWriter]::new()
+            [Console]::SetError($diagnostics)
+            $actual = ''
+            try {
+                try { Invoke-ThinkThenInstall $ReleaseVersion } catch { $actual = $_.Exception.Message }
+            } finally { [Console]::SetError($originalErrorWriter) }
+            Check ($actual -ceq $primaryMessage) ('full installer preserves primary commit error ' + $scenario)
+            Check ($script:CommitFaults -eq 1) ('fault reaches the commit boundary ' + $scenario)
+            if ($scenario.StartsWith('pending-receipt-')) {
+                Check ($script:FaultState.Count -eq 3) ('pending receipt partial state inspected ' + $scenario)
+                if ($scenario -eq 'pending-receipt-1177') { Check ($script:FaultState[$receiptName] -ceq '') 'first pending receipt replacement left receipt absent' }
+            }
+            if ($scenario -in @('rollback-command-absent', 'rollback-receipt-absent')) {
+                Check ($script:RollbackFaults -eq 1) ('fault reaches the actual rollback replacement ' + $scenario)
+                $retainedScratch = $script:Scratch
+                Check ([System.IO.Directory]::Exists($retainedScratch)) 'failed rollback retains current verified snapshots'
+                Check ((Get-FileHashPrivate (Join-Path $retainedScratch 'original-command.exe')) -ceq $oldDigest) 'retained original command snapshot matches original bytes'
+                Check ((Get-FileHashPrivate (Join-Path $retainedScratch 'original-receipt.json')) -ceq (Get-BytesHash ([System.Text.Encoding]::UTF8.GetBytes($originalReceipt)))) 'retained original receipt snapshot matches original bytes'
+                Check ($diagnostics.ToString().Contains('Retained recovery artifacts: ' + $retainedScratch)) 'failed rollback reports retained path'
+                if ($scenario -eq 'rollback-command-absent') {
+                    Check ($null -eq (Get-Attributes $exe)) 'partial rollback leaves command absent'
+                    Check ($script:FaultState[$exe] -ceq '') 'rollback inspection observes absent command'
+                    $pending = Read-Receipt $receiptName $exe
+                    Check ($pending.state -ceq 'pending' -and $pending.old_sha256 -ceq $oldDigest -and $pending.new_sha256 -ceq $newDigest) 'absent command retains accurate pending receipt'
+                } else {
+                    Check ((Get-FileHashPrivate $exe) -ceq $oldDigest) 'receipt rollback failure preserves original command'
+                    Check ($null -eq (Get-Attributes $receiptName)) 'partial receipt rollback leaves receipt absent'
+                    Check ($script:FaultState[$receiptName] -ceq '') 'rollback inspection observes absent receipt'
+                    Check ($diagnostics.ToString().Contains('Receipt is absent. Manual recovery is required.')) 'unrecoverable absent receipt is reported'
+                }
+                Refuses { Invoke-ThinkThenInstall $ReleaseVersion } ('next invocation refuses interrupted absent destination ' + $scenario)
+                Check ((Get-FileHashPrivate (Join-Path $retainedScratch 'original-command.exe')) -ceq $oldDigest) 'next invocation retains verified recovery snapshot'
+                Check ([System.IO.Directory]::Exists($retainedScratch)) 'next invocation does not clean prior recovery artifacts'
             } else {
+                Check ((Get-FileHashPrivate $exe) -ceq $oldDigest) ('old command bytes after caught failure ' + $scenario)
                 Check ([System.IO.File]::ReadAllText($receiptName) -ceq $originalReceipt) ('original receipt bytes restored ' + $scenario)
                 Check (-not [System.IO.Directory]::Exists($script:Scratch)) ('caught recovery cleans only owned scratch ' + $scenario)
             }
+            $diagnostics.Dispose()
         } else {
             Invoke-ThinkThenInstall $ReleaseVersion
             Check ((Get-FileHashPrivate $exe) -ceq $newDigest) ('installed bytes ' + $scenario)
