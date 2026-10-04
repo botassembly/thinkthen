@@ -73,6 +73,31 @@ exec '{sys.executable}' "$@"''',
         "cargo fetch --locked --manifest-path Cargo.toml"]
 
 
+def interruption_routing(smoke, base):
+    """The hook passes the supplied path exactly and selects only its ignored fixture."""
+    binary = base / "packed command" / "thinkthen.exe"
+    binary.parent.mkdir()
+    binary.write_bytes(pe())
+    calls = []
+    original = smoke.run
+    try:
+        smoke.run = lambda args, env, **options: calls.append((args, env, options))
+        smoke.interrupt(binary, {"CARGO_NET_OFFLINE": "true"})
+        assert calls == [(["cargo", "test", "--locked", "--offline", "-p", "thinkthen", "--test", "windows",
+                          "interrupt::release_binary_console_interrupt", "--", "--exact", "--ignored"],
+                          {"CARGO_NET_OFFLINE": "true", "THINKTHEN_WINDOWS_RELEASE_BINARY": str(binary.absolute())},
+                          {"timeout": 600})]
+        try:
+            smoke.interrupt(base / "absent.exe", {})
+        except RuntimeError as error:
+            assert "regular exact executable" in str(error)
+        else:
+            raise AssertionError("absent release executable reached cargo")
+        assert len(calls) == 1
+    finally:
+        smoke.run = original
+
+
 def main():
     # The command smoke must send the recording's bytes through a Windows pipe unchanged.
     spec = importlib.util.spec_from_file_location("windows_smoke", REPO / "sdlc/scripts/release-windows-smoke.py")
@@ -83,6 +108,7 @@ def main():
               os.environ.copy(), text=evidence, output=evidence.hex())
     with tempfile.TemporaryDirectory(prefix="thinkthen-windows-pack-") as temporary:
         base = Path(temporary)
+        interruption_routing(smoke, base)
         host_setup(base)
         binary = base / "thinkthen.exe"
         archive = base / f"thinkthen-{VERSION}-{TARGET}.zip"
