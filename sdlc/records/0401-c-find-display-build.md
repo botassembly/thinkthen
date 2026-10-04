@@ -24,13 +24,13 @@ The initial lint attempts identified the executable example naming rule and then
 
 All builds and checks use user systemd scopes with MemoryMax 12 GiB and MemorySwapMax 1 GiB. Cargo uses two jobs. Focused final checks and lint use an owned clean HOME and Cargo configuration with offline networking and shared cached registry sources. No provider, credential-file read, full test, full specification, full surfaces or actual site replay run was performed by this builder.
 
-## Exact source growth
+## Original source growth before the backend rebase
 
 The ratchet moves from 111,656 to 112,223 nonblank Rust lines, a measured increase of 567. Production increases by 82: find adds 71 for private Unit/Rendered metadata, source preparation and selected position/score handling; arguments add 2 and the shared emitter adds 9. Snapshot visibility adds no line. Reusing the already validated candidate removed repeated index checks and reduced the final source total by 11.
 
 Tests add 485 lines: two registrations and new modules of 246 and 237 nonblank lines. Each changed Rust file remains below 500. Find has 307, display has 151, find arguments have 147, snapshot has 74 and the test entrypoint has 196. The test estimate grew because the regressions independently cover full-source bounds, immutable ordinary and around output, none/tie details, wire evidence, cache identity, lossy paths and broken pipes. The builder checked find, shared display and snapshot for duplicate framing and output logic. The implementation reuses both shared facilities and removes duplicated candidate lookup. The tests reuse existing loopback, child, folder and stored-key helpers and add no dependency or cap override.
 
-## Remaining checkpoint and retained gaps
+## Builder checkpoint handoff before coordinator runs
 
 The coordinator must run the named full test, specification, surfaces and actual canonical site replay checkpoints after fresh source acceptance. Rust changes invalidate replay receipts; no hash or receipt was edited by hand. Native Windows execution was not performed. Existing empty-find behavior remains: no output, no requests and exit 0, including every new text view. This slice does not change that behavior. Position remains CLI metadata and adds no public host shape. Multiquestion rank, foreign host APIs and deferred input modes remain with their owning slices and tickets.
 
