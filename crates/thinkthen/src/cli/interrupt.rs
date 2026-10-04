@@ -136,7 +136,7 @@ impl Drop for Guard<'_> {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(
-    all(not(unix), not(test)),
+    all(not(unix), not(windows), not(test)),
     expect(dead_code, reason = "only the Unix routing can fail to start")
 )]
 enum StartError {
@@ -156,6 +156,8 @@ impl StartError {
 enum Routing {
     #[cfg(not(unix))]
     Idle,
+    #[cfg(windows)]
+    Windows(windows::Carrier),
     #[cfg(unix)]
     Unix(UnixRouting),
     #[cfg(test)]
@@ -168,7 +170,15 @@ impl Routing {
         UnixRouting::start(cancel, acknowledgment).map(Self::Unix)
     }
 
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    fn start(cancel: Cancel<'static>, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
+        match acknowledgment {
+            Some(path) => windows::Carrier::start(cancel, path).map(Self::Windows),
+            None => Ok(Self::Idle),
+        }
+    }
+
+    #[cfg(not(any(unix, windows)))]
     fn start(
         _cancel: Cancel<'static>,
         _acknowledgment: Option<PathBuf>,
@@ -180,6 +190,8 @@ impl Routing {
         match self {
             #[cfg(not(unix))]
             Self::Idle => Ok(()),
+            #[cfg(windows)]
+            Self::Windows(carrier) => carrier.cleanup(),
             #[cfg(unix)]
             Self::Unix(unix) => unix.cleanup(),
             #[cfg(test)]
@@ -257,13 +269,13 @@ fn restore(original: &nix::sys::signal::SigSet) -> Result<(), ()> {
     original.thread_set_mask().map_err(|_error| ())
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 struct Acknowledgment {
     path: Option<PathBuf>,
     failed: Arc<AtomicBool>,
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 impl Acknowledgment {
     fn new(path: Option<PathBuf>) -> Self {
         Self {
@@ -343,10 +355,7 @@ fn register(action: Action, state: &State) -> Result<(), ()> {
     use signal_hook::consts::signal::{SIGINT, SIGTERM};
     for signal in [SIGINT, SIGTERM] {
         let registered = match action {
-            Action::ConditionalDefault => signal_hook::flag::register_conditional_default(
-                signal,
-                Arc::clone(&state.default_armed),
-            ),
+            Action::ConditionalDefault => conditional_default(signal, state),
             Action::Cancel => {
                 signal_hook::flag::register_usize(
                     signal,
@@ -363,6 +372,24 @@ fn register(action: Action, state: &State) -> Result<(), ()> {
         registered.map(|_id| ()).map_err(|_error| ())?;
     }
     Ok(())
+}
+
+fn conditional_default(signal: i32, state: &State) -> std::io::Result<signal_hook::SigId> {
+    #[cfg(windows)]
+    {
+        let code = if signal == signal_hook::consts::signal::SIGTERM {
+            143
+        } else {
+            130
+        };
+        signal_hook::flag::register_conditional_shutdown(
+            signal,
+            code,
+            Arc::clone(&state.default_armed),
+        )
+    }
+    #[cfg(not(windows))]
+    signal_hook::flag::register_conditional_default(signal, Arc::clone(&state.default_armed))
 }
 
 #[cfg(unix)]
@@ -385,3 +412,9 @@ pub(super) fn activate(environment: &mut Environment) -> Result<Guard<'static>, 
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(windows)]
+mod windows;
+
+#[cfg(all(test, windows))]
+mod windows_tests;

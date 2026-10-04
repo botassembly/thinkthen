@@ -59,6 +59,10 @@ impl ReadFailure {
         };
         let elsewhere = folder.is_none() && self.name != DIRECTORY;
         let head = "cannot read the usage totals";
+        #[cfg(not(windows))]
+        let advice = "Make it private to your user (folder 0700, files 0600)";
+        #[cfg(windows)]
+        let advice = "Make it owned by your user and restrict its Windows access permissions to your user and Windows SYSTEM";
         match self.source.kind() {
             io::ErrorKind::TimedOut => format!(
                 "{head}: {subject} is locked by another process. Try again when it finishes."
@@ -70,10 +74,10 @@ impl ReadFailure {
                 "{head}: {subject} has invalid contents. Move it aside, and counting starts again."
             ),
             _ if elsewhere => format!(
-                "{head}: {subject} has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it out of the usage folder that thinkthen status names."
+                "{head}: {subject} has unsafe or unreadable state. {advice}, or move it out of the usage folder that thinkthen status names."
             ),
             _ => format!(
-                "{head}: {subject} has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside."
+                "{head}: {subject} has unsafe or unreadable state. {advice}, or move it aside."
             ),
         }
     }

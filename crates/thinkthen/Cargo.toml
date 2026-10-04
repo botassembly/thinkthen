@@ -44,8 +44,31 @@ signal-hook = { version = "0.3.18", optional = true }
 thiserror = "2.0.20"
 ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 
-[lints]
-workspace = true
+# Ticket 0380 C confines unsafe to the reviewed Windows FFI leaves.
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unexpected_cfgs = "forbid"
+unreachable_pub = "forbid"
+unsafe_code = "deny"
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+disallowed_macros = "allow"
+disallowed_methods = "allow"
+disallowed_types = "allow"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"
 
 [dev-dependencies]
 conformance-backend = { path = "../../conformance/backend" }
@@ -68,3 +91,9 @@ nix = { version = "0.29", default-features = false, features = ["poll", "signal"
 name = "polars"
 path = "tests/polars/main.rs"
 required-features = ["polars"]
+
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "=0.61.2", default-features = false, features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Threading"] }
+
+[target."cfg(windows)".dev-dependencies]
+windows-sys = { version = "=0.61.2", default-features = false, features = ["Win32_System_Console"] }
