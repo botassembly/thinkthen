@@ -1,6 +1,6 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: in progress. Slice A passed fresh source and specification reviews, the coordinator's full tests and specification checks, and all 350 actual site replays with strict verification. Final receipt review and landing remain. The amended scope received fresh acceptance before implementation. Slices B, C and D remain open.
+Status: in progress. Slice A landed through `a82a9877a`. Slice B received fresh source acceptance at `be6e9bfcb`; its rebase onto main preserved the reviewed product patch byte for byte. The coordinator's full test, specification and actual site replay checkpoint is running. Slices C and D remain open.
 
 Milestone: 0.2
 

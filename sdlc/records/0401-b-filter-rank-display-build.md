@@ -1,6 +1,6 @@
 # 0401 slice B: Display filter and rank locations, scores and neighbors
 
-Status: candidate for fresh independent source review. The design review accepted `63b87c0cf`, and the coordinator adopted its exact byte choices. The branch already descended from main `a389291b5` when implementation began; rebasing onto that commit preserved the accepted design. Required lint passed at exit 0 on `b27e255c6`. The review correction below changes tests only. Slices C and D remain separate.
+Status: fresh source review accepted `be6e9bfcb`. Rebase onto main `ddfcbc74c` produced `0d5854510` with an identical product patch. The coordinator's named full test, specification and actual site replay checkpoint is running. Slices C and D remain separate.
 
 Filter and rank own `-n`/`--line-number`, `--scores` and `--around N`. The output boundary adds scores before locations and prints independent physical neighbor groups. Filter retains membership and input order. Rank retains stable ordering, saved score ordering, top retention and empty stdout after any failed record. Ordinary record bytes and JSON details retain their existing paths when the flags are absent. Text display refuses details, CSV and TSV before sending.
 
