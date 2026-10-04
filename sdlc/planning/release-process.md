@@ -28,6 +28,22 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 3. Rehearsals repeat until every job passes through `draft` on all four targets with zero "not run".
 4. Ticket 0128 records each attempt and its result.
 
+A rehearsal checks the publish inputs for each registry (ticket 0398 slice A):
+
+| Registry | Rehearsal proof | What waits for release mode |
+| --- | --- | --- |
+| crates.io | `cargo publish --dry-run --locked --package thinkthen` after source packaging | Upload and trusted publisher |
+| PyPI | `twine check --strict` on all four wheels | Upload and trusted publisher |
+| npm | `npm publish --dry-run` on the exact packed file | Upload and trusted publisher |
+| RubyGems | Four checked platform gems | `gem push` and trusted publisher |
+| NuGet | Packed package and offline protocol checks | Push and trusted publisher |
+| Maven Central | Packed artifacts and signatures from a throwaway rehearsal key | Upload with the release signing key |
+| pub.dev | `dart pub publish --dry-run` | Upload and trusted publisher |
+| Homebrew tap | Rendered formula from four checked Unix archives, then `ruby -c` | Tap clone, commit and push |
+| GitHub release and Go module | Draft assets and installed-file replay | Public release and Go tag |
+
+Rehearsals hold no OIDC token, use no registry secrets, and require no environment approval. No dry run proves that a trusted publisher exists. Only the release run proves that registry setting. PyPI upload, RubyGems push, NuGet push, Maven Central upload, the tap push, the public GitHub release and the Go tag have no publish dry run in this workflow. Packagist and R-universe read the published repository and have no release job.
+
 ## 5. The release candidate and the release branch
 
 [ADR 0116](adr/0116-release-branches-cut-at-the-release-candidate.md) defines the release candidate and the cut. Its 2026-10-04 amendment freezes `release/0.1`.

@@ -1,6 +1,6 @@
 # 0398: Release safety: publish dry runs, install checks after publishing, and a rehearsed tag
 
-Status: ready. Lane 2, its first item. Parent: Ian's 0.2 plan of 2026-10-04, lane 2 "release safety". It closes `sdlc/issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md`, `sdlc/issues/2026-10-04-public-install-checks-are-done-by-hand.md` and `sdlc/issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md`. It needs no other ticket. It lands after ticket 0397 in the lane order.
+Status: in progress. Slice A candidate; slices B and C remain. Lane 2, its first item. Parent: Ian's 0.2 plan of 2026-10-04, lane 2 "release safety". It closes `sdlc/issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md`, `sdlc/issues/2026-10-04-public-install-checks-are-done-by-hand.md` and `sdlc/issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md`. It needs no other ticket. It lands after ticket 0397 in the lane order.
 
 Milestone: 0.2
 
@@ -100,3 +100,9 @@ Milestone: 0.2
 - No rehearsal check of trusted publishers, and no `rehearse` environment.
 - The install check as a separate workflow that `publish` starts, rather than jobs inside `release.yml`.
 - Counting a rehearsal whose failed jobs were rerun to success as clean.
+
+## What the build taught us
+
+Slice A starts from `e760432c80dc22501fa51694964f2eeec5b8e63e`. Fresh ticket review accepted the slice on 2026-10-04. The Homebrew renderer can reuse the former formula bytes without reading a deploy key. The publish operation renders before cloning the tap, so missing or corrupt archives still fail before a remote operation. Four Unix archives and four wheels remain the expected families. The workflow job graph still has eighteen jobs. A future Windows landing adds its own family without reducing these checks.
+
+Offline checks cover missing, misplaced, conditional and ignored dry runs. Registry acceptance and trusted-publisher setup remain unproved until an authorized rehearsal and release. No workflow was dispatched for this slice. The build record is `sdlc/records/0398-release-safety-slice-a.md`.
