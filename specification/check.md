@@ -2,7 +2,7 @@
 
 Status: **Settled** by ticket 0121.
 
-`thinkthen check` answers one question: does the backend at an address you name work with this tool? It sends four fixed requests to `BASE/systemone`, one after another. Each finding is critical or a warning. The check exits 0 only when nothing is critical, so a script or a list of backends can trust the exit code. The report opens with the address, the provider, and the models, and it prints each decoded reply.
+`thinkthen check` answers one question: does the backend at an address you name work with this tool? It sends four fixed requests to the backend’s path under the base, `systemone` unless the backend names another path, one after another. Each finding is critical or a warning. The check exits 0 only when nothing is critical, so a script or a list of backends can trust the exit code. The report opens with the address, the provider, and the models, and it prints each decoded reply.
 
 Each request is built by the production question grammar and written by the production encoder. The engine sends it with the production transport, retry rule, and key rule. The production decoder reads the reply. A critical finding therefore means what a real run would meet, and it carries the sentence a real run would print.
 

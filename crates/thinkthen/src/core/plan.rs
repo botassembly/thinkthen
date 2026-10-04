@@ -13,9 +13,11 @@ pub(crate) struct EmptyPlanError;
 /// How a backend's descriptions travel (ADR 0115 section 3).
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum Descriptions {
-    /// Each description exactly as authored. Every backend but `ollama`.
+    /// Each description exactly as authored.
     #[default]
     Authored,
+    /// Authored descriptions with an empty object for a missing yes-or-no side.
+    BothSides,
     /// Each description as text: an object's `what`, and no empty or null
     /// description. A temporary Ollama-only workaround; the adapter's backend
     /// table names its debt issue.

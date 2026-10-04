@@ -1,0 +1,15 @@
+# Ticket 0399 manual checks
+
+Status: prepared; never executed by the builder. The coordinator owns execution after fresh High review of source and these exact files. The accepted controls are [the design](../../planning/0399-backend-path-design.md). Ian authorized this pair under a combined $1 ceiling.
+
+Each shell job starts with `#!/bin/sh`, clears generic credentials and ambient address, backend, model and rate overrides, sets the child's actual estimated-input limit to 10000 and replaces itself with exactly one check. The binary is this checkout's `target/debug/thinkthen`. No job supplies an address override. The coordinator first verifies that binary matches the reviewed commit.
+
+The launcher reads only the selected named ambient variable in memory, rejects missing credentials without printing values, passes an environment-only generic bridge to `live --max-tokens 10000 JOB` and preserves the selected named variable. Its environment excludes every other provider variable. It creates a fresh owner-only scratch home for configuration, cache and count-only usage. It never reads a credential file or writes a key. The shell job removes the generic bridge before the check reads its named variable.
+
+The coordinator captures `sdlc/scripts/live --status` before and after each invocation without editing the Git common-directory ledger. Execute `sdlc/manual/0399/launch.py perplexity` and then `sdlc/manual/0399/launch.py openrouter` by hand, once each. Preserve exit codes and transcripts. Stop after a failed or timed-out invocation; never rerun automatically. A missing usage field remains unknown. Retain the full conservative allowance for a failed check.
+
+Immediately before execution, verify the published prices and input ceilings from https://docs.perplexity.ai/docs/decisions/quickstart and https://openrouter.ai/typesafe/jev-1.13. At the design's checked prices, sixteen attempts at each full published ceiling bound Perplexity at $0.16777216 and OpenRouter at $0.021504. Their pair allowance is $0.18927616; reserve $0.20 of the $1 authority. Refuse if updated input, output or request charges exceed remaining authority or published evidence is unavailable. Token reservations are not measured cost or provider tokens.
+
+The builder's keyless previews preserve exact host, posting path, fixed model and all four bodies under `target/0399-keyless/`. Perplexity bodies have 253, 326, 300 and 725 bytes; four attempts each estimate 5836 input tokens. OpenRouter bodies have 262, 324, 298 and 745 bytes; four attempts each estimate 5924. Recompute from the reviewed binary's exact `check --plan` output before execution. Any mismatch requires offline correction and review rather than a larger reservation.
+
+Outside-in loopback tests prove zero sends at the child's cap of 1 and sixteen retry-status sends under its 10000 cap for each selected backend. They do not authorize provider calls. A passing real check must exit 0 and print `critical 0` before its receipt can populate site `CHECKS` and unblock landing.

@@ -960,6 +960,8 @@ export const BACKEND_PAGES = [
   { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Built in' },
   { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Built in' },
   { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
+  { slug: 'perplexity', title: 'Perplexity Decisions', label: 'Perplexity Decisions', group: 'Built in' },
+  { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Built in' },
   { slug: 'system-one', title: 'Any System One server', label: 'Any System One server', group: 'Your own' },
   { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
   { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Announced' },

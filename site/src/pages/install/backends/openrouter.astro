@@ -1,0 +1,21 @@
+---
+import SidePage from '../../../layouts/SidePage.astro';
+import BackendFacts from '../../../components/BackendFacts.astro';
+import CheckLines from '../../../components/CheckLines.astro';
+import { BACKEND_PAGES } from '../../../data/catalog.mjs';
+import { backend } from '../../../lib/backends-table.mjs';
+const b = backend('openrouter');
+const page = BACKEND_PAGES.find((p) => p.slug === b.name);
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'OpenRouter through ThinkThen: address, model, key variable and check.' }} name="Backends">
+  <h1>OpenRouter</h1>
+  <p class="lede">Select this backend with <code>--backend {b.name}</code>.</p>
+  <BackendFacts name={b.name} />
+  <p>Put your provider key in <code>{b.keys[0]}</code>. ThinkThen reads this variable when you select the backend.</p>
+  <h2>Check the connection</h2>
+  <p>Run <code>thinkthen check --backend {b.name} --timeout 90</code>. A preview with <code>--plan</code> needs no key and sends nothing.</p>
+  <CheckLines name={b.name} />
+  <p>OpenRouter requires both sides when a yes-or-no question has criteria. ThinkThen preserves your descriptions and sends an empty object for a missing side. Questions without descriptions omit criteria.</p>
+  <p>The <a href="https://openrouter.ai/typesafe/jev-1.13">provider documentation</a> was checked on 2026-10-04. Read the provider's terms before sending sensitive text.</p>
+  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
+</SidePage>

@@ -85,11 +85,15 @@ pub(crate) struct NoulCriteria {
 }
 
 impl NoulCriteria {
-    fn described(yes: Option<&Json>, no: Option<&Json>) -> Option<Self> {
+    fn described(yes: Option<&Json>, no: Option<&Json>, form: Descriptions) -> Option<Self> {
         let described =
             |value: Option<&Json>| value.filter(|held| !matches!(held, Json::Null)).cloned();
-        let yes = described(yes);
-        let no = described(no);
+        let mut yes = described(yes);
+        let mut no = described(no);
+        if form == Descriptions::BothSides && (yes.is_some() || no.is_some()) {
+            yes.get_or_insert_with(|| Json::Object(Vec::new()));
+            no.get_or_insert_with(|| Json::Object(Vec::new()));
+        }
         (yes.is_some() || no.is_some()).then_some(Self { yes, no })
     }
 }
@@ -235,7 +239,7 @@ fn questions(plan: &Plan) -> Result<Questions, EncodeError> {
                         wire_name(written.len()),
                         RequestQuestion::Noul {
                             instructions,
-                            criteria: NoulCriteria::described(description.as_ref(), None),
+                            criteria: NoulCriteria::described(description.as_ref(), None, form),
                         },
                     ));
                 }
@@ -262,7 +266,7 @@ fn sent(form: Descriptions, held: Option<&Json>) -> Result<Option<Json>, EncodeE
     let Some(held) = held else {
         return Ok(None);
     };
-    if form == Descriptions::Authored {
+    if form != Descriptions::Text {
         return Ok(Some(held.clone()));
     }
     Ok(match held {
@@ -375,7 +379,11 @@ impl RequestQuestion {
         Ok(Some(match question {
             Question::Decide { text, yes, no } => Self::Noul {
                 instructions: text.as_json().clone(),
-                criteria: NoulCriteria::described(meaning(yes)?.as_ref(), meaning(no)?.as_ref()),
+                criteria: NoulCriteria::described(
+                    meaning(yes)?.as_ref(),
+                    meaning(no)?.as_ref(),
+                    form,
+                ),
             },
             Question::Choose { text, options } => Self::Choice {
                 instructions: text.as_json().clone(),

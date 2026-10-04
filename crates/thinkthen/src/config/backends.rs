@@ -14,11 +14,9 @@ use crate::core::{Backend, DEFAULT_MODEL, MAX_PER_MINUTE, ModelName, Named, name
 const BUILT_IN: &str =
     "a configuration entry for a built-in backend holds `requests_per_minute` and nothing else";
 const NAME: &str = "configuration field `backends` holds a name that is not 1 to 32 lowercase letters, digits, and hyphens";
-const EXTRA: &str =
-    "configuration backend entries hold only `url`, `key_env`, `model`, and `requests_per_minute`";
+const EXTRA: &str = "configuration backend entries hold only `url`, `path`, `key_env`, `model`, and `requests_per_minute`";
 const MISSING: &str = "configuration backend entries need `url`, `key_env`, and `model`";
-const STRINGS: &str =
-    "configuration backend entries are objects whose `url`, `key_env`, and `model` are strings";
+const STRINGS: &str = "configuration backend entries are objects whose `url`, `path`, `key_env`, and `model` are strings";
 const URL: &str = "configuration backend field `url` must be a safe backend base";
 const KEY_ENV: &str = "configuration backend field `key_env` names an environment variable: a capital letter or underscore, then capital letters, digits, and underscores";
 const MODEL: &str = "configuration backend field `model` must be a model name, not blank";
@@ -65,7 +63,7 @@ fn entry(name: &str, value: &Value) -> Result<Named, ConfigError> {
     if fields.keys().any(|field| {
         !matches!(
             field.as_str(),
-            "url" | "key_env" | "model" | "requests_per_minute"
+            "url" | "path" | "key_env" | "model" | "requests_per_minute"
         )
     }) {
         return Err(refused(EXTRA));
@@ -85,8 +83,22 @@ fn entry(name: &str, value: &Value) -> Result<Named, ConfigError> {
     if ModelName::new(model).is_err() {
         return Err(refused(MODEL));
     }
+    let path = match fields.get("path") {
+        None => None,
+        Some(Value::String(path)) if named::valid_path(path) => Some(path.as_str()),
+        Some(Value::String(_)) => {
+            return Err(refused(
+                "configuration backend field `path` must be one or more segments of letters, digits, and `-._~@`, joined by `/`",
+            ));
+        }
+        Some(_) => return Err(refused(STRINGS)),
+    };
     let per_minute = fields.get("requests_per_minute").map(rate).transpose()?;
-    Ok(Named::new(name, url, key_env, model).with_per_minute(per_minute))
+    let entry = Named::new(name, url, key_env, model).with_per_minute(per_minute);
+    Ok(match path {
+        Some(path) => entry.with_path(path),
+        None => entry,
+    })
 }
 
 /// A JSON whole number from 1 to 60,000, the variable's range.
@@ -162,11 +174,11 @@ mod tests {
             ),
             (
                 entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","key":"{marker}"}}"#)),
-                "configuration backend entries hold only `url`, `key_env`, `model`, and `requests_per_minute`",
+                "configuration backend entries hold only `url`, `path`, `key_env`, `model`, and `requests_per_minute`",
             ),
             (
                 entry(r#"{"url":"http://127.0.0.1/v1","key_env":7,"model":"m"}"#),
-                "configuration backend entries are objects whose `url`, `key_env`, and `model` are strings",
+                "configuration backend entries are objects whose `url`, `path`, `key_env`, and `model` are strings",
             ),
             (
                 entry(&format!(r#"{{"url":"http://example.com/{marker}","key_env":"K","model":"m"}}"#)),

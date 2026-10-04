@@ -1,0 +1,21 @@
+---
+import SidePage from '../../../layouts/SidePage.astro';
+import BackendFacts from '../../../components/BackendFacts.astro';
+import CheckLines from '../../../components/CheckLines.astro';
+import { BACKEND_PAGES } from '../../../data/catalog.mjs';
+import { backend } from '../../../lib/backends-table.mjs';
+const b = backend('perplexity');
+const page = BACKEND_PAGES.find((p) => p.slug === b.name);
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Perplexity Decisions through ThinkThen: address, model, key variable and check.' }} name="Backends">
+  <h1>Perplexity Decisions</h1>
+  <p class="lede">Select this backend with <code>--backend {b.name}</code>.</p>
+  <BackendFacts name={b.name} />
+  <p>Put your provider key in <code>{b.keys[0]}</code>. ThinkThen reads this variable when you select the backend.</p>
+  <h2>Check the connection</h2>
+  <p>Run <code>thinkthen check --backend {b.name} --timeout 90</code>. A preview with <code>--plan</code> needs no key and sends nothing.</p>
+  <CheckLines name={b.name} />
+  <p>Perplexity accepts one-sided yes-or-no criteria. Its Decisions route is distinct from the default System One route.</p>
+  <p>The <a href="https://docs.perplexity.ai/docs/decisions/quickstart">provider documentation</a> was checked on 2026-10-04. Read the provider's terms before sending sensitive text.</p>
+  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
+</SidePage>

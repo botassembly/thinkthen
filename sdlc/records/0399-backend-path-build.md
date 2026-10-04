@@ -1,0 +1,27 @@
+# 0399 backend paths and complete criteria
+
+Status: in progress. Offline source candidate awaits fresh High code and manual-job review. Actual provider checks and final site proof remain required before landing. The builder executed no paid call, read no credential file and inspected no ambient key value.
+
+Fresh High design acceptance is recorded in [0399-design-review.md](0399-design-review.md). The accepted design is unchanged. The implementation preserves `Backend::resolve` and adds the internal named-path resolver. Configuration validates the exact relative grammar before joining. Named and built-in paths determine the existing resolved URL identity. Perplexity uses `decisions`; OpenRouter uses `systemone` and `BothSides`. BothSides preserves authored values, fills one absent or null side with `{}`, and omits criteria when neither side remains. The request encoder remains the sole transformation owner.
+
+The host guard, key tiers, existing wire forms, request-rate identity, decoder, cache and recording formats remain unchanged. The new pure rate regression proves an unnamed Perplexity base posting to the default path does not inherit the Decisions-path rate. Public contracts, the site table reader and backend pages describe the new rows and the custom-name migration. Site `CHECKS` deliberately contains no fabricated passing receipt.
+
+## Executed offline proof
+
+Eight new outside-in regressions pass in `crates/thinkthen/tests/backend/named_backends/paths_0399.rs`. They count paths and authorization selection, cover nested and 128-byte paths, refuse invalid encodings and types without values, count zero connections for all new cross-provider host pairs including normalized hosts, pin BothSides decide and tag edge tables, retain choose and score bytes, prove described-cache separation and bare-cache sharing, and exercise an OpenRouter-like schema refusal. The schema check exits 0 with eight ok rows and no warnings; the unnamed path fails noul and mixed as expected. Exact BothSides check bodies are pinned in `specification/fixtures/check/requests-both-sides.jsonl`.
+
+Both selected backends send zero requests under a child estimated-input cap of 1. Each sends sixteen retry-status requests under its 10000 cap. These are loopback proofs. They do not establish real provider success or measured spend. Two new pure path/rate regressions pass in `core/backend/named/path_tests_0399.rs`. The existing named-backend suite passed after the path change and retained default and text request fixture pins.
+
+`CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`, the candidate binary's `sdlc/scripts/settings` and `sdlc/scripts/tickets` pass. Settings initially saw the installed older binary and reported its missing window flag; placing this checkout's binary first on PATH gives 63 rows, 65 flags and zero failures. No unrelated window change was made.
+
+The ratchet rises from 110630 to 111166, a net 536 nonblank Rust lines. The new outside-in file has 416 nonblank lines; the pure regression file has 43. Remaining growth adds path plumbing, the built-in rows, grammar validation and BothSides encoding. I searched the existing named-backend helpers, request encoder and test mimics for duplication and reused the existing Home, counting listener, proxy and serializer. Existing fixture pins and regression tables remain. Every Rust file remains under 500 nonblank lines.
+
+The exact keyless plans match the reviewed design: Perplexity body bytes 253, 326, 300, 725 and four-attempt estimate 5836; OpenRouter 262, 324, 298, 745 and estimate 5924. Plans are preserved in `target/0399-keyless/`. The manual shell jobs, launcher and coordinator instructions are in [sdlc/manual/0399](../manual/0399/README.md). Shell syntax and launcher AST checks pass; no launcher or shell job has been executed.
+
+Required lint runs in a user scope with MemoryMax 12G and MemorySwapMax 1G, two Cargo jobs, empty RUSTC_WRAPPER, explicit installed-tool PATH and TMPDIR `/tmp/thinkthen-0399-lint` outside the checkout. A local Cargo fixture wrapper validates its exact fetch arguments, the owned TMPDIR, the planted manifest's sole file-backed git dependency and absence of dependency-of-dependency entries before permitting that local fixture fetch. Every other Cargo call forces offline mode. The wrapper is local build output under `target/0399-lint/`; it admits no remote fetch.
+
+## Pending proof
+
+Required lint result awaits completion. The coordinator names the full test, specification and strict 350-example checkpoint. Source changes stale binding receipts; refresh those samples before claiming strict proof. Site dependencies are absent in this checkout, and the deliberate `checkLines('perplexity')` check fails because no actual receipt exists. The site build and check therefore remain pending, not passed.
+
+The coordinator must obtain fresh High acceptance for the source, these exact jobs and the ambient-only launcher, then reverify current official pricing and ceilings before executing the already authorized pair. [Manual instructions](../manual/0399/README.md) retain the combined $1 authority, the $0.18927616 conservative pair allowance, sequential single invocations and the no-automatic-rerun rule. Landing waits for both actual exit-0 and critical-0 receipts, truthful CHECKS entries and final required checks.
