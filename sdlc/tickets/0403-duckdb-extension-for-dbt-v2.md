@@ -16,7 +16,7 @@ Lane: 3, after ticket 0402, per the 0.2 lane order Ian approved on 2026-10-04. S
 
 0.2 ships several DuckDB versions, two at first.
 
-Until Ian rules, 0.2 documents dbt v1 with `duckdb` 1.5.5 as its dbt path. The v1.5.4 build ships either way, and Ian's ruling changes nothing in this ticket. Under this default, item 7 of the approved scope, "so it loads", is not met in dbt v2: dbt v2 refuses any unsigned extension. The open question below holds the three options.
+0.2 documents dbt v1 with `duckdb` 1.5.5 as its dbt route. The v1.5.4 unsigned build serves compatible stock DuckDB users; it does not make dbt v2 load an unsigned extension. Ian approved the separate post-core signed community-listing follow-up in [0415](0415-signed-duckdb-community-listing.md). This ticket retains version compatibility ownership. Listing preparation has its own review, and external submission or spend remains separately authorized.
 
 ## Evidence
 
@@ -59,21 +59,15 @@ Until Ian rules, 0.2 documents dbt v1 with `duckdb` 1.5.5 as its dbt path. The v
   - A release rehearsal under Ian's approval passes `release-files` on all four targets with zero "not run", and the record names the run.
   - By hand, not a gate: the experiments team reruns experiment 0011's probe P0e with the new v1.5.4 file. The version sentence should be gone and the signature refusal should remain. The ticket records the result.
 - Defers: the signed load path for dbt v2, a dbt package, versions beyond the two, and Windows.
-  - Signing. DuckDB checks signatures only against its own keys, so dbt v2 loads ThinkThen only as a signed DuckDB community extension, or after dbt v2 gains a start-time `allow_unsigned_extensions` path. Both are external commitments. Ian decides; see the open question below.
+  - Signing. DuckDB checks signatures only against its own keys, so dbt v2 loads ThinkThen only as a signed DuckDB community extension, or after dbt v2 gains a start-time `allow_unsigned_extensions` path. External submission remains separate. Ian approved the post-core listing preparation; see Signing disposition below.
   - dbt v2's driver is dbt's own build of DuckDB v1.5.4. A C++ extension that loads in stock v1.5.4 may still meet a build difference there. Only a signed load in dbt v2 can prove it.
   - A published dbt package with the macros from experiment 0011's `dbt1/macros/thinkthen.sql`, and the four other gaps experiment 0011's answer 6 lists.
   - A DuckDB version policy beyond 0.2. The default: each release serves the newest DuckDB release at its cut plus the version the current dbt v2 embeds. Each new DuckDB release costs one pin set, four archive manifests and one more build per target.
   - A Windows DuckDB build. Windows stage 1 does not include the SQL extensions.
 
-## Open question for Ian
+## Signing disposition
 
-dbt v2 loads only signed extensions, and DuckDB signs only its own and community extensions. This ticket makes the version match. It cannot make dbt v2 load the file.
-
-1. Submit ThinkThen to DuckDB's community extensions. DuckDB's CI then builds and signs each release for the DuckDB versions it supports. The listing is public, and the build must fit DuckDB's CI, Rust bridge included. Cost: a separate ticket to fit the build to DuckDB's CI, plus an ongoing public commitment.
-2. Ask dbt for a start-time setting that allows unsigned extensions. It costs little, and dbt sets the timing.
-3. Ship 0.2 with dbt v1 documented as the dbt path, and decide signing after 0.2.
-
-Recommendation: 3 for 0.2. This ticket's v1.5.4 build serves stock DuckDB 1.5.4 users now, and it is the file option 2 would load. Under option 1, DuckDB's CI builds and signs the extension, and only slice A's source compatibility work carries over. Choose 1 after 0.2 if dbt v2 users matter to the launch.
+Ian approved a separate signed DuckDB community-listing follow-up after 0.2 core lands. [0415](0415-signed-duckdb-community-listing.md) owns its build integration and reviewable submission preparation. This ticket owns version compatibility only. Keep dbt v1 as the documented 0.2 route. No external submission or spend follows from either planning record.
 
 ## What Ian can overturn
 
