@@ -1,7 +1,7 @@
 # 0398 slice A: Check publish inputs during rehearsal
 
 Date: 2026-10-04
-Status: candidate for fresh code review
+Status: COMPLETE. Slice A implementation accepted; runner proof waits for an authorized rehearsal.
 Starting revision: `e760432c80dc22501fa51694964f2eeec5b8e63e`
 Ticket: `sdlc/tickets/0398-release-safety.md`
 Lane: `claude-2`
@@ -14,7 +14,7 @@ Twine 6.2.0 exists on [PyPI](https://pypi.org/project/twine/6.2.0/) and supports
 
 ## Review
 
-Fresh ticket review `review_0398_ticket` returned ACCEPT for slice A. Its conclusion requires preserving the fifth Windows target when merging later Windows work. This candidate keeps the existing four Unix archives and four wheels. The first fresh code review found that the Homebrew guard accepted shell control flow that skipped or ignored the syntax check, and accepted an ignored draft job failure. The builder split rendering and syntax into exact standalone steps, refused job and step bypasses, and added planted regressions. A fresh review of the correction remains pending.
+Fresh ticket review `review_0398_ticket` returned ACCEPT for slice A. Its conclusion requires preserving the fifth Windows target when merging later Windows work. This candidate keeps the existing four Unix archives and four wheels. The first fresh code review found that the Homebrew guard accepted shell control flow that skipped or ignored the syntax check, and accepted an ignored draft job failure. The builder split rendering and syntax into exact standalone steps, refused job and step bypasses, and added planted regressions. The fresh reviewer accepted corrected candidate `c6762b93f6e81e7970c1fd7e51e2a07163fbcdb8`. The coordinator independently verified all 87 workflow self-tests and the real workflow validation.
 
 ## Proof
 
@@ -37,3 +37,5 @@ No workflow was dispatched, no registry upload ran, and no deploy key or provide
 ## Review correction proof
 
 After the correction, `python3 sdlc/scripts/workflows --self-test` passes all 87 cases with exit 0. This includes the unchanged archive formula and syntax table. `python3 sdlc/scripts/workflows` passes on the actual workflows. `git diff --check` passes. No Rust or renderer code changed in the correction, so the prior policy, shell syntax and scoped lint receipts remain applicable. No full checkpoint or live run was repeated.
+
+Landed: c6762b93f6e81e7970c1fd7e51e2a07163fbcdb8
