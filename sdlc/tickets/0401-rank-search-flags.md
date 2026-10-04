@@ -1,6 +1,6 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: in progress. Slice A passed fresh source and specification reviews, the coordinator's full tests and specification checks, and all 350 actual site replays with strict verification. Final receipt review and landing remain. The amended scope received fresh acceptance before implementation. Slices B, C and D remain open.
+Status: in progress. Slice A landed through `a82a9877a`. Slice B received fresh source acceptance at `be6e9bfcb`; its rebase onto main preserved the reviewed product patch byte for byte. The coordinator's full test, specification, all 350 actual site replays, strict proof and final site checkpoint passed. Final receipt review and B landing remain. Slices C and D remain open.
 
 Milestone: 0.2
 
@@ -76,3 +76,5 @@ Repeated --input and unambiguous positional routes; multi-file JSON carrier; all
 Slice A shares one edge intake iterator across the seven commands. It opens all named files first and initializes each table header before admitting an item. File positions travel separately from global pipeline labels. Text windows reuse the existing bounded chunks and record parser. CLI result metadata appends positions without rewriting the existing result members. The four default-document functions need a distinct multi-document completion mode so a later input or backend failure cannot inherit the first answer's exit code.
 
 The old loose-argument hint remains on find. The seven new routes replace it where positional files are now valid. Recognize and relate keep their single-input guards and hide the unsupported window option. Slice A leaves display flags, find display and question-set rank untouched. The full checkpoint and actual 350 site replay receipts are recorded in [the slice A build record](../records/0401-a-shared-intake-build.md).
+
+Slice B keeps one immutable original-byte snapshot only for neighbor views. The same snapshot frames requests and supplies physical neighbors; repeated source occurrences need their own private identity. Output decoration reuses the stored ordering value and changes no provider bytes or cache key. A draining listener accessor must be captured once before both count and content assertions. Independent wrong-body plants now prove the neighbor and context assertions fail. The full checkpoint and actual 350 replay receipts are in [the slice B record](../records/0401-b-filter-rank-display-build.md). C and D remain open.

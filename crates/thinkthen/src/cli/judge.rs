@@ -193,6 +193,7 @@ pub(crate) fn filter(
     over_kept(
         Keeping::Passing,
         &arguments.common,
+        &arguments.display,
         tiers(&arguments.batching, file),
         &settled,
         None,
@@ -230,6 +231,7 @@ pub(crate) fn rank(
     over_kept(
         Keeping::Ordered,
         &arguments.common,
+        &arguments.display,
         tiers(&arguments.batching, file),
         &settled,
         top,
@@ -271,6 +273,7 @@ fn views(refused: &Refused, keeping: Keeping) -> Result<(), Failure> {
 fn over_kept(
     keeping: Keeping,
     common: &Common,
+    display: &crate::cli::display::Arguments,
     batch: Tiers<'_>,
     settled: &Resolved,
     top: Option<usize>,
@@ -283,6 +286,7 @@ fn over_kept(
         Keeping::Ordered => Output::ordered(writer, top, environment.usage()),
         _ => Output::streaming(writer, environment.usage()),
     };
+    output.display(display.clone());
     let context = match keeping {
         Keeping::Passing => ReplayContext::Filter,
         Keeping::Ordered => ReplayContext::Rank,

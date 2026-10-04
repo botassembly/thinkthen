@@ -2,6 +2,9 @@
 
 use std::collections::VecDeque;
 use std::io::{BufRead, Read};
+
+mod snapshot;
+pub(crate) use snapshot::Snapshot;
 use std::path::PathBuf;
 
 use serde::Serialize;
@@ -16,9 +19,11 @@ use crate::table::{Kind, Rows};
 /// A display location, independent of the pipeline's global label.
 #[derive(Clone, Serialize)]
 pub(crate) struct Position {
-    file: Option<String>,
-    first: usize,
-    last: usize,
+    pub(crate) file: Option<String>,
+    pub(crate) first: usize,
+    pub(crate) last: usize,
+    #[serde(skip)]
+    pub(crate) source: usize,
 }
 
 pub(crate) enum Data {
@@ -33,6 +38,7 @@ pub(crate) struct Item {
 }
 
 struct TextSource {
+    source: usize,
     file: Option<PathBuf>,
     chunks: Chunks<Box<dyn BufRead + Send>>,
     line: usize,
@@ -77,6 +83,7 @@ impl TextSource {
         self.line += count;
         Piece {
             position: Some(Position {
+                source: self.source,
                 file: self
                     .file
                     .as_ref()
@@ -140,6 +147,16 @@ impl Intake {
         input: impl Read + Send + 'static,
         has_on: bool,
     ) -> Result<Self, Failure> {
+        Self::prepare(common, reading, input, has_on, false).map(|(intake, _)| intake)
+    }
+
+    pub(crate) fn prepare(
+        common: &Common,
+        reading: &Reading,
+        input: impl Read + Send + 'static,
+        has_on: bool,
+        snapshot: bool,
+    ) -> Result<(Self, Option<Snapshot>), Failure> {
         let window = window(common, has_on)?;
         let opened = if common.input.is_empty() {
             vec![(None, edge::source(None, input)?)]
@@ -153,28 +170,38 @@ impl Intake {
                 })
                 .collect::<Result<Vec<_>, _>>()?
         };
+        let (opened, snapshot) = if snapshot {
+            Snapshot::prepare(opened)?
+        } else {
+            (opened, None)
+        };
         let kind = common
             .csv
             .then_some(Kind::Csv)
             .or(common.tsv.then_some(Kind::Tsv));
         let sources = opened
             .into_iter()
-            .map(|(file, reader)| match kind {
+            .enumerate()
+            .map(|(source, (file, reader))| match kind {
                 Some(kind) => Rows::new(reader, kind).map(|rows| Source::Table(Box::new(rows))),
                 None => Ok(Source::Text(TextSource {
+                    source,
                     file,
                     chunks: Chunks::new(reader, reading.streams()),
                     line: 0,
                 })),
             })
             .collect::<Result<VecDeque<_>, _>>()?;
-        Ok(Self {
-            sources,
-            reading: reading.clone(),
-            window,
-            windowed: common.window.is_some(),
-            global: 0,
-        })
+        Ok((
+            Self {
+                sources,
+                reading: reading.clone(),
+                window,
+                windowed: common.window.is_some(),
+                global: 0,
+            },
+            snapshot,
+        ))
     }
 }
 

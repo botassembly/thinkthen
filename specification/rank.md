@@ -5,7 +5,7 @@ Status: **Settled** for version one, by ADR 0007.
 Prints records in order of the probability of yes, or of the weighted value from a saved `score` question.
 
 ```text
-thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER] [--details] [BACKEND]
+thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER] [--details] [-n] [--scores] [--around N] [BACKEND]
 ```
 
 ## What it reads
@@ -31,6 +31,9 @@ It also prints no order while an earlier record or batch is still waiting for a 
 | `--top N` | Prints the first `N` records of the order. It saves no requests, because every record is judged before anything is sorted | All records |
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees | The whole record |
+| `-n`, `--line-number` | Prefix physical locations in the text view | Off |
+| `--scores` | Show the ordering value beside ranked text | Off |
+| `--around N` | Show independent physical neighbor groups from a bounded source snapshot | Off |
 | `--details` | Prints one result object for each record it prints | Off |
 | `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--input FILE` | Reads the records from a file | Standard input |
@@ -46,6 +49,20 @@ It also prints no order while an earlier record or batch is still waiting for a 
 A line or JSONL record is written back as it arrived: nothing is re-encoded, and the line ending is written as a line feed. A CSV or TSV row is written as a compact JSON object in header order. A run that stops at a failed record has printed nothing at all, and the line on standard error says so.
 
 For a yes/no question, the request and answer are those of `decide`; a recording made by `decide` over the same records and request settings replays here. Its detailed rows have `question.verb: decide`, `answer.kind: yes_no`, `threshold: null`, and `value: null`. The probability used for ordering is under `answer`. For a saved `score` question, the request is the same as `score` over the same records at equal framing and batch settings. Its detailed rows have `question.verb: score`, `answer.kind: score`, the weighted number under `value`, and `threshold: null`. The original record remains under `input` in either form.
+
+## Text display
+
+`-n` or `--line-number` prefixes each selected record with its first physical line number and a colon. Stdin and one named file print `7:alpha`. Several named source arguments print `FILE:7:alpha`, including repeated arguments naming the same file. Numbering restarts in each file. Paths use the lossy display spelling described in [records.md](records.md). A window receives the prefix on its first physical line only.
+
+`--scores` prefixes the ordinary record with the ordering number and one space. The score comes before the location: `0.8 7:alpha`. Rust prints the finite number without fixed decimal rounding. Ordinary rank displays the yes probability. A saved score question displays the weighted level value used for ordering, rather than confidence or the provider's score field.
+
+`--around N` prints each selected record as an independent group. N is an ASCII whole number of at least zero. A group starts with `--` on its own line, or `-- SCORE` with `--scores`. It includes N physical lines before and after the selected record or window, clamped to that source. Adjacent groups repeat overlapping lines. With `-n`, selected physical lines use `LINE:` and neighbors use `LINE-`; several sources add `FILE:`. Every physical line in a selected window uses a colon. Blank neighbors remain visible. The physical view removes each terminating LF and its preceding CR, then writes LF. It preserves all other bytes. A trailing LF makes no phantom line. Scores appear only on the delimiter.
+
+Any text display flag with `--details` exits 2 with `text display flags cannot accompany --details`. CSV and TSV refuse any text display flag at exit 2 with `text display flags need lines or JSONL, not CSV or TSV`. JSONL prints the complete original row, retaining spacing even when a pointer selects the evidence. Display does not change the provider's `--context`, request bodies or cache keys. `--plan` validates the flags and snapshot bound and retains ordinary plan output.
+
+With `--around`, the command opens every source, then snapshots at most 16,777,216 original bytes across all sources before its first request. Blank bytes and original line endings count; repeated paths count each occurrence. One additional byte exits 2 with `--around reads at most 16 MiB across all input sources`, printing no selected output and sending nothing. The snapshot supplies both later items and neighbors if a file changes during the run. No spool file is created. Neighbor bytes are not parsed as additional evidence. The ordinary parser still refuses a malformed row when it reaches it. Without `--around`, intake stays lazy and these display flags impose no combined source bound.
+
+A later failure leaves rank stdout empty, including saved score rank and `--top`. Ranking remains stable; display groups are rendered only after successful completion and top selection.
 
 ## Exit codes
 

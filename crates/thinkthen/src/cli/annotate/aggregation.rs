@@ -47,6 +47,7 @@ pub(super) fn finish(
     Ok(Judged {
         model: None,
         printed: Some(printed),
+        position: None,
         outcome: Outcome::Yes,
         replayed,
         order_value: None,

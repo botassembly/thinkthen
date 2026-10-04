@@ -37,6 +37,7 @@ pub(crate) fn missed(at: usize, pointer: &str) -> Result<Judged, Failure> {
     Ok(Judged {
         model: None,
         printed: Some(printed),
+        position: None,
         outcome: Outcome::Yes,
         replayed: false,
         order_value: None,

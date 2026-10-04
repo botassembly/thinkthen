@@ -41,6 +41,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     let judged = crate::schedule::Judged {
         model: None,
         printed: Some(body.clone()),
+        position: None,
         outcome: crate::core::Outcome::Yes,
         order_value: Some(0.91),
         replayed: false,
@@ -61,6 +62,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         .take(crate::schedule::Judged {
             model: None,
             printed: Some(body.clone()),
+            position: None,
             outcome: crate::core::Outcome::Yes,
             order_value: Some(0.91),
             replayed: false,

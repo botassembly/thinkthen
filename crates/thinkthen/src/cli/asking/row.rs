@@ -87,6 +87,7 @@ impl Judging<'_> {
         Ok(Judged {
             model: Some(judged.answered.reply.model().clone()),
             printed,
+            position: context.position.cloned(),
             outcome,
             replayed,
             order_value,

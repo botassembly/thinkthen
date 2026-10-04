@@ -175,6 +175,9 @@ export const FUNCTIONS = [
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
       flag('--threshold T', CUT_TAKES, cutOn('filter'), 'The bar a record must reach to be kept. A band is a usage error.'),
+      flag('-n, --line-number', 'nothing', lower(setting('Line numbers').default), 'Prefixes physical line numbers. Several named sources also show the filename.'),
+      flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the yes probability, or the weighted value of a saved score question on rank.'),
+      flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints independent groups with N physical neighbors on either side. Snapshots all sources before sending. Text display flags refuse details, CSV and TSV.'),
       ...MEANS,
     ],
     shared: RECORD_FLAGS,
@@ -200,6 +203,9 @@ export const FUNCTIONS = [
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
       flag('--top N', lower(setting('Top').allowed), lower(setting('Top').default), 'Prints the first N records of the order. Every record is still judged, so it saves no request.'),
+      flag('-n, --line-number', 'nothing', lower(setting('Line numbers').default), 'Prefixes physical line numbers. Several named sources also show the filename.'),
+      flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the yes probability, or the weighted value of a saved score question on rank.'),
+      flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints independent groups with N physical neighbors on either side. Snapshots all sources before sending. Text display flags refuse details, CSV and TSV.'),
       ...MEANS,
     ],
     shared: RECORD_FLAGS,

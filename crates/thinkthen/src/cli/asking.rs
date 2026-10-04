@@ -216,6 +216,7 @@ pub(crate) fn run(
     let profile = profile::read(common)?;
     crate::cli::intake::window(common, !settled.on().is_empty())?;
     let reading = read_by(common, settled, keeping)?;
+    output.validate_display(common)?;
     let documents = !reading.streams() && common.input.len() > 1;
     if documents && (view.raw || view.quiet) {
         return Err(Failure::Usage(
@@ -252,8 +253,14 @@ pub(crate) fn run(
         }
         None => Mismatch::new(settled.profile(), profile.as_ref()),
     };
-    let source =
-        crate::cli::intake::Intake::new(common, &reading, input, !settled.on().is_empty())?;
+    let (source, snapshot) = crate::cli::intake::Intake::prepare(
+        common,
+        &reading,
+        input,
+        !settled.on().is_empty(),
+        output.neighbors(),
+    )?;
+    output.snapshot(snapshot);
     let configuration = JudgingInput {
         common,
         environment,
