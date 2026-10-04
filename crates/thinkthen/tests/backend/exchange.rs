@@ -145,7 +145,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#""url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
                 r#""requests_sent":1,"cached":false,"requests":["{key}"],"failed_questions":0,"#,
-                r#""attempts":[{{"ordinal":1,"request_sha256":"{request}","wall_ms":0,"outcome":"ok","status":200}}]}}}}"#,
+                r#""attempts":[{{"ordinal":1,"request_sha256":"{request}","wall_ms":0,"outcome":"ok","status":200}}]}},"position":{{"file":null,"first":1,"last":1}}}}"#,
                 "\n",
             ),
             url = detailed.url(),

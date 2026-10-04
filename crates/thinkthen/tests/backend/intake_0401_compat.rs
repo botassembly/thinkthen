@@ -143,6 +143,24 @@ fn trailing_words_name_missing_files_and_never_run_instructions() -> io::Result<
         assert!(output.stdout.is_empty());
         assert!(text(&output.stderr).contains("--input could not be opened"));
     }
+    let output = spawn(
+        &[
+            "decide",
+            "Clear?",
+            "--url",
+            listener.base(),
+            "--no-cache",
+            "--",
+            "--threshold",
+            "-.5",
+        ],
+        &[],
+        b"Refund me please.",
+    )?;
+    assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
+    assert!(text(&output.stderr).starts_with("thinkthen: --input could not be opened: "));
+    assert!(!text(&output.stderr).contains("--threshold"));
     assert_eq!(listener.connections(), 0);
     Ok(())
 }
