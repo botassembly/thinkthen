@@ -11,6 +11,9 @@ readme = "../../README.md"
 keywords = ["classification", "llm", "cli", "text"]
 categories = ["command-line-utilities", "text-processing"]
 
+[package.metadata.thinkthen]
+supported-platforms = ["linux", "macos", "windows-x86_64-msvc"]
+
 [[bin]]
 name = "thinkthen"
 path = "src/main.rs"

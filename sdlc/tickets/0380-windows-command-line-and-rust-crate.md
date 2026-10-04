@@ -1,6 +1,6 @@
 # 0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64
 
-Status: ready. It waits for the `release/0.1` cut. It changes the release workflow, so no slice lands on main before the cut (ADR 0116 item 2). Plan: `sdlc/planning/windows.md`, stage 1. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. The coordinator assigns a lane after the cut.
+Status: in progress, slice A. The `release/0.1` cut and ticket 0397 are landed. Fresh ticket review accepted the plan on 2026-10-04. Physical lane: claude-1. Plan: `sdlc/planning/windows.md`, stage 1. Shared workflow edits wait for ticket 0398 slice A and the coordinator's signal.
 
 Milestone: 0.2
 
@@ -40,3 +40,8 @@ Milestone: 0.2
 
 - Slice A touches release files every target uses. Run the release self-tests and `workflows --self-test` before each push. A wrong count breaks the Unix release.
 - Rehearsals need Ian's approval, as in `sdlc/planning/release-process.md` section 4.
+
+## What the build taught us
+
+- The archived release proof checks every source file against Git HEAD. Commit a changed packer before running this proof; copying an uncommitted packer into an archive correctly fails the source identity check.
+- Windows command packaging needs a separate archive format and executable suffix. Keep those changes in the Windows arm, and leave Unix command tar names and payloads unchanged.
