@@ -167,3 +167,7 @@ The workspace rules say configuration choices take a supported default, recorded
 Ticket 0399 adds the `perplexity` and `openrouter` rows in specification/backends.md. Every built-in names its posting path. Added configuration entries may supply a validated 1 to 128 byte relative `path`; its default is `systemone`. Named resolution retains that path at an address override. The unnamed path remains `systemone`. Key selection, normalized host guarding and tier ordering remain unchanged. Built-in configuration entries still accept only a rate. Existing custom entries using either new built-in name must be renamed or removed.
 
 The accepted design is [0399-backend-path-design.md](../0399-backend-path-design.md). Actual provider checks remain required before landing. Ian can overturn these defaults.
+
+## Ticket 0400 amendment, 2026-10-04
+
+Ticket 0400 slice A accepts the extended read-only backend entry in [ADR 0117](0117-provider-setups-extend-the-backend-entry.md). Slice B will add atomic prices, an inline existing profile and added-entry BothSides. Built-ins will accept any nonempty legal subset of rate, atomic prices and profile, while retaining fixed transport, keys, model and wire form. Existing owner-only, secrecy, host-guard, tier, cache and rate rules remain. The parser remains unchanged in slice A.
