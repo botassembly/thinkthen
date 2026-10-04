@@ -17,6 +17,7 @@ use crate::core::plan::Descriptions;
 pub(crate) struct Named {
     name: String,
     base: String,
+    path: String,
     keys: Vec<String>,
     model: String,
     descriptions: Descriptions,
@@ -46,11 +47,18 @@ impl Named {
         Self {
             name: name.to_owned(),
             base: base.to_owned(),
+            path: crate::core::adapters::built_in::ENDPOINT_PATH.to_owned(),
             keys: vec![key.to_owned()],
             model: model.to_owned(),
             descriptions: Descriptions::Authored,
             per_minute: None,
         }
+    }
+
+    /// Use a relative path already validated by the configuration reader.
+    pub(crate) fn with_path(mut self, path: &str) -> Self {
+        self.path = path.to_owned();
+        self
     }
 
     /// Pace this backend at the rate its configuration entry sets.
@@ -68,6 +76,7 @@ impl Named {
             .map(|built_in| Self {
                 name: built_in.name.to_owned(),
                 base: built_in.base.to_owned(),
+                path: built_in.path.to_owned(),
                 keys: built_in.keys.iter().map(|&key| key.to_owned()).collect(),
                 model: built_in.model.to_owned(),
                 descriptions: built_in.descriptions,
@@ -202,10 +211,11 @@ impl Choice<'_> {
                     backend.with_per_minute(rate)
                 })
             }
-            Some(named) => Backend::resolve(
+            Some(named) => Backend::resolve_path(
                 Some(self.url.unwrap_or(&named.base)),
                 None,
                 asked.unwrap_or(&named.model),
+                &named.path,
             )
             .map(|backend| {
                 backend
@@ -218,8 +228,13 @@ impl Choice<'_> {
     /// The rate of the rated built-in whose own base posts to this backend's URL.
     fn unnamed_rate(&self, backend: &Backend) -> Option<NonZeroU32> {
         let posts_here = |entry: &&Named| {
-            Backend::resolve(Some(&entry.base), None, backend.model().as_str())
-                .is_ok_and(|base| base.url() == backend.url())
+            Backend::resolve_path(
+                Some(&entry.base),
+                None,
+                backend.model().as_str(),
+                &entry.path,
+            )
+            .is_ok_and(|base| base.url() == backend.url())
         };
         self.rated.iter().find(posts_here)?.per_minute
     }
@@ -308,3 +323,18 @@ fn comparable(host: &str) -> String {
 
 #[cfg(test)]
 mod tests;
+
+/// Whether a suffix uses the configuration's relative segment grammar.
+pub(crate) fn valid_path(path: &str) -> bool {
+    (1..=128).contains(&path.len())
+        && path.split('/').all(|segment| {
+            !segment.is_empty()
+                && !matches!(segment, "." | "..")
+                && segment.bytes().all(|byte| {
+                    byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~' | b'@')
+                })
+        })
+}
+
+#[cfg(test)]
+mod path_tests_0399;

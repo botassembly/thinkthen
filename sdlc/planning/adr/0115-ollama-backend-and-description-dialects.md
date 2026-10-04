@@ -114,3 +114,9 @@ Ian's ruling above settles the Ollama-only scope, the warning and the removal co
 2. A loopback built-in base does not count as another built-in's host for ADR 0114 section 5.
 3. Under `text`, an object sends its `what`, and any other object or list sends its compact JSON text.
 4. The cache keeps caching Ollama answers under a tag name, as it does for every model name except `jev-latest`.
+
+## Amendment, 2026-10-04: ticket 0399
+
+Ticket 0399 adds `BothSides` for OpenRouter. It preserves authored strings, objects and arrays, and fills a missing or null yes-or-no side with `{}` whenever the other side remains. It omits criteria when neither side remains. Decide and described tag labels follow this rule. Choose and score retain their bytes. This satisfies a server schema requirement, drops no fields and creates no workaround debt or warning. The encoder owns the transformation; cache and recording identity continue to follow the bytes sent.
+
+The accepted design is [0399-backend-path-design.md](../0399-backend-path-design.md). Actual provider checks remain required before landing. Ian can overturn these defaults.

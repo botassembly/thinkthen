@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const HEADER = ['Name', 'Base', 'Key variables, first nonblank wins', 'Model', 'Descriptions'];
+const HEADER = ['Name', 'Base', 'Path', 'Key variables, first nonblank wins', 'Model', 'Descriptions'];
 
 function specPath() {
   for (let dir = process.cwd(); ; dir = path.dirname(dir)) {
@@ -32,15 +32,16 @@ export function parseBackends(text) {
   const rows = [];
   for (const line of lines.slice(head + 2)) {
     if (!line.startsWith('|')) break;
-    const [name, base, keys, model, descriptions] = cells(line);
+    const [name, base, postingPath, keys, model, descriptions] = cells(line);
     const row = {
       name: ticked(name)[0],
       base: ticked(base)[0],
+      path: ticked(postingPath)[0],
       keys: ticked(keys),
       model: ticked(model)[0],
       text: /^as text/.test(descriptions),
     };
-    if (!row.name || !row.base || !row.keys.length || !row.model) throw new Error(`backends.md: a Named backends row lacks a name, base, key or model: ${line}`);
+    if (!row.name || !row.base || !row.path || !row.keys.length || !row.model) throw new Error(`backends.md: a Named backends row lacks a name, base, key or model: ${line}`);
     rows.push(row);
   }
   if (!rows.length) throw new Error('backends.md: the Named backends table has no rows');

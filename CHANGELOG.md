@@ -6,6 +6,8 @@ Every release of every surface shares one version number.
 
 Version 0.2 is in progress on main.
 
+Named backends add `perplexity` and `openrouter`. Configuration entries may set a relative posting `path`. OpenRouter preserves descriptions and fills a missing yes-or-no side with `{}`. Existing configured entries named `perplexity` or `openrouter` must be renamed or removed because those names now select built-ins; a built-in configuration entry accepts only `requests_per_minute`.
+
 The release workflow adds a Windows x86-64 command ZIP and checks the packed Rust crate on Windows. Windows bindings follow in later release work. Development command builds are unsigned.
 
 ## 0.1.2 (2026-10-03)

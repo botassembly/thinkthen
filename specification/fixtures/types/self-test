@@ -11,4 +11,7 @@ fi
 # ADR 0113: the C door's engines write a scratch usage folder, never the real one.
 . "$HERE/../../../sdlc/scripts/scratch.sh"
 usage_home
+# C from_env reads configuration even when the corpus supplies a loopback base.
+scratch_dir config_home
+export XDG_CONFIG_HOME="$config_home"
 python3 "$HERE/check.py"

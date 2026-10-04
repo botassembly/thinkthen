@@ -127,8 +127,18 @@ impl Backend {
         base: Option<&str>,
         model: &str,
     ) -> Result<Self, BackendError> {
+        Self::resolve_path(url, base, model, built_in::ENDPOINT_PATH)
+    }
+
+    /// Resolve a named backend at its validated relative posting path.
+    pub(crate) fn resolve_path(
+        url: Option<&str>,
+        base: Option<&str>,
+        model: &str,
+        path: &str,
+    ) -> Result<Self, BackendError> {
         Ok(Self {
-            url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE))?,
+            url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE), path)?,
             model: ModelName::new(model)?,
             descriptions: Descriptions::Authored,
             request_size: DEFAULT_REQUEST_SIZE,
@@ -243,7 +253,7 @@ impl Backend {
 /// ends in, so both are dropped before the path is added. A scheme is read
 /// without regard to case and written back in lower case, so one exchange
 /// keeps one recording digest whatever case the caller typed.
-fn address(base: &str) -> Result<Url, BackendError> {
+fn address(base: &str, path: &str) -> Result<Url, BackendError> {
     let base = base.trim();
     if base.is_empty() {
         return Err(BackendError::Blank(BlankTextError::Url));
@@ -265,10 +275,7 @@ fn address(base: &str) -> Result<Url, BackendError> {
         return Err(BackendError::KeyInClear);
     }
     let rest = canonical_rest(rest, host);
-    Ok(Url::new(format!(
-        "{scheme}{rest}/{}",
-        built_in::ENDPOINT_PATH
-    ))?)
+    Ok(Url::new(format!("{scheme}{rest}/{path}"))?)
 }
 
 /// Lowercase literal ASCII letters in an unbracketed host and keep every other byte.

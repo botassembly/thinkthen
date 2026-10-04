@@ -23,6 +23,18 @@ export const CHECKS = {
       source: `${RECORDS}/issues/closed/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md`,
     },
   ],
+  openrouter: [
+    {
+      model: 'typesafe/jev-1.13', date: '2026-10-04', commit: '4349b91b3', exit: 0, critical: 0, warning: 0,
+      source: `${RECORDS}/records/0399-backend-path-build.md`,
+    },
+  ],
+  perplexity: [
+    {
+      model: 'pplx-decider-v1-27b', date: '2026-10-04', commit: '4349b91b3', exit: 0, critical: 0, warning: 0,
+      source: `${RECORDS}/records/0399-backend-path-build.md`,
+    },
+  ],
   ollama: [
     { model: 'nimble', date: '2026-09-30', commit: 'e8f2804fe', exit: 0, critical: 0, warning: 3, source: 'site' },
     { model: 'tev1', date: '2026-09-30', commit: 'e8f2804fe', exit: 0, critical: 0, warning: 3, source: 'site' },

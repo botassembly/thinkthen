@@ -161,3 +161,9 @@ The workspace rules say configuration choices take a supported default, recorded
 3. `THINKTHEN_API_KEY` stays off the named path. Letting it outrank a backend's variable would send one provider's key to another whenever both are set, as on Ian's machine today.
 4. The refusal covers the built-in key variables, not `THINKTHEN_API_KEY`. The README's Liquid setup keeps working.
 5. The library and SQL `backend` setting outranks the configuration file, as every engine setting does today.
+
+## Amendment, 2026-10-04: ticket 0399
+
+Ticket 0399 adds the `perplexity` and `openrouter` rows in specification/backends.md. Every built-in names its posting path. Added configuration entries may supply a validated 1 to 128 byte relative `path`; its default is `systemone`. Named resolution retains that path at an address override. The unnamed path remains `systemone`. Key selection, normalized host guarding and tier ordering remain unchanged. Built-in configuration entries still accept only a rate. Existing custom entries using either new built-in name must be renamed or removed.
+
+The accepted design is [0399-backend-path-design.md](../0399-backend-path-design.md). Actual provider checks remain required before landing. Ian can overturn these defaults.

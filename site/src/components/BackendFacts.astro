@@ -10,6 +10,7 @@ const code = (s) => `<code>${s}</code>`;
 const rows = [
   ['Backend name', code(b.name)],
   ['Address', code(b.base)],
+  ['Posting path', code(b.path)],
   [b.keys.length > 1 ? 'Key variables' : 'Key variable', b.keys.map(code).join(', then ') + (notes.key ? `, ${notes.key}` : '')],
   ['Default model', code(b.model) + (notes.model ? `. ${notes.model}` : '')],
 ];
