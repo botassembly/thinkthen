@@ -10,6 +10,10 @@ use windows_sys::Win32::System::Console::{
     AttachConsole, CTRL_C_EVENT, FreeConsole, GenerateConsoleCtrlEvent, SetConsoleCtrlHandler,
 };
 
+#[allow(
+    dead_code,
+    reason = "identity-only native unit inclusion uses the independent file query"
+)]
 pub(crate) fn inject(process: u32) -> io::Result<()> {
     // SAFETY: These console calls hold no Rust pointers or borrowed state. This
     // subprocess owns its console attachment; FreeConsole also permits a child

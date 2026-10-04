@@ -1,5 +1,7 @@
 //! Native console proof; subprocess helpers are excluded from routine selection.
 use super::{Environment, Routing, State};
+use crate::test_deadline::child;
+use child::ChildEnvironment as _;
 use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode, Stdio};
@@ -30,6 +32,7 @@ impl Drop for Scratch {
 fn child(scratch: &Scratch, mode: &str) -> process::Owned {
     let mut command = Command::new(std::env::current_exe().expect("test executable"));
     command
+        .clear_environment()
         .args([
             "--exact",
             "cli::interrupt::windows_tests::signal_child",

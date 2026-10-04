@@ -141,6 +141,13 @@ impl Drop for Guard<'_> {
 )]
 enum StartError {
     Activation,
+    #[cfg_attr(
+        all(windows, not(test)),
+        expect(
+            dead_code,
+            reason = "Windows acknowledgment routing changes no signal mask"
+        )
+    )]
     Restoration,
 }
 

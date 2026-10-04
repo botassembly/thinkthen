@@ -76,6 +76,18 @@ def smoke(binary, sample, env, version):
     print(f"Windows command smoke: {binary.name} reports {version}, replays true and sends 0 requests")
 
 
+def interrupt(binary, env):
+    """Run native console proof against the exact checked packed executable."""
+    binary = binary.absolute()
+    if not binary.is_file() or binary.is_symlink():
+        raise RuntimeError("release interruption requires one regular exact executable")
+    supplied = env | {"THINKTHEN_WINDOWS_RELEASE_BINARY": str(binary)}
+    run(["cargo", "test", "--locked", "--offline", "-p", "thinkthen", "--test", "windows",
+         "interrupt::release_binary_console_interrupt", "--", "--exact", "--ignored"],
+        supplied, timeout=600)
+    print("Windows packed command interruption: actual isolated Ctrl-C returned 130 with one request")
+
+
 @contextmanager
 def installer_release(platform, version):
     """Serve only the verified command archive and sidecar through loopback."""
@@ -165,6 +177,7 @@ def main():
         run(["python", str(REPO / "sdlc/scripts/windows-installer-test.py"), "--binary",
              str(root / "command/thinkthen.exe"), "--version", version], env, timeout=600)
         installed_smoke(args.platform, sample, env, version, root)
+        interrupt(root / "command/thinkthen.exe", env)
         if args.crate_dir:
             wanted = args.crate_dir / f"thinkthen-{version}.crate"
             if list(args.crate_dir.glob("*.crate")) != [wanted] or wanted.is_symlink():

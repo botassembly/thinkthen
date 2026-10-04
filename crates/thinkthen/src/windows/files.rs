@@ -67,3 +67,6 @@ pub(crate) fn configuration(path: &Path) -> io::Result<(Vec<u8>, bool)> {
     verify_identity(path, &file, false)?;
     Ok((bytes, shared))
 }
+
+#[cfg(test)]
+mod tests;

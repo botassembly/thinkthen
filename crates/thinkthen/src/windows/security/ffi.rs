@@ -254,6 +254,9 @@ fn inspect_acl(
     // SAFETY: header is bounded. Unaligned read avoids assuming the descriptor offset alignment.
     let header = unsafe { ptr::read_unaligned(acl) };
     let size = usize::from(header.AclSize);
+    if header.AceCount == 0 {
+        return Err(super::super::permission());
+    }
     if size < size_of::<ACL>() || !contains(allocation.0, length, acl.cast(), size) {
         return Err(super::super::permission());
     }

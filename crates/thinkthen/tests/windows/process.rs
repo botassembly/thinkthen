@@ -1,3 +1,4 @@
+use super::child::ChildEnvironment as _;
 use std::io;
 use std::os::windows::process::CommandExt as _;
 use std::path::Path;
@@ -22,8 +23,11 @@ impl Owned {
             .expect("child state")
             .is_none()
     }
-    pub(crate) fn finish(mut self) -> io::Result<Output> {
-        let deadline = Instant::now() + Duration::from_secs(30);
+    pub(crate) fn finish(self) -> io::Result<Output> {
+        self.finish_after(Duration::from_secs(30))
+    }
+    pub(crate) fn finish_after(mut self, limit: Duration) -> io::Result<Output> {
+        let deadline = Instant::now() + limit;
         loop {
             if self.0.as_mut().expect("owned child").try_wait()?.is_some() {
                 return self.0.take().expect("owned child").wait_with_output();
@@ -60,6 +64,7 @@ pub(crate) fn wait(path: &Path) {
 pub(crate) fn inject(process: u32, helper: &str) {
     let mut command = Command::new(std::env::current_exe().expect("test executable"));
     command
+        .clear_environment()
         .args(["--exact", helper, "--ignored", "--nocapture"])
         .env("THINKTHEN_CONSOLE_INJECT_PID", process.to_string());
     assert!(

@@ -73,6 +73,7 @@ impl Drop for Scratch {
 pub(crate) fn powershell(path: &Path, script: &str) -> String {
     let mut command = Command::new("powershell.exe");
     command
+        .clear_environment()
         .args([
             "-NoProfile",
             "-NonInteractive",

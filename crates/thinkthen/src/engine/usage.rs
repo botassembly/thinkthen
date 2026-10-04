@@ -1,8 +1,5 @@
 //! Private process counters and durable count-only monthly aggregates.
 
-#[cfg(not(windows))]
-use std::fs::OpenOptions;
-use std::fs::{self, File};
 use std::io;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
