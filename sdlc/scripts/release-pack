@@ -475,7 +475,8 @@ with tarfile.open(fileobj=buffer, mode="w", format=tarfile.USTAR_FORMAT) as arch
         else:
             with open(path, "rb") as file:
                 data = file.read()
-            info.size, info.mode = len(data), 0o755 if os.access(path, os.X_OK) else 0o644
+            # This sample holds data only. Windows X_OK does not mean Unix execute bits.
+            info.size, info.mode = len(data), 0o644
             archive.addfile(info, io.BytesIO(data))
     info = tarfile.TarInfo("thinkthen-first-run")
     info.type, info.mode = tarfile.DIRTYPE, 0o755

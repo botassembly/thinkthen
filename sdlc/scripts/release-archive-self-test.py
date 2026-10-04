@@ -164,6 +164,8 @@ def main():
         # file times and a looser umask must give the same bytes and the fixed entry metadata.
         for path in (source / "demos/27-test-with-no-network").rglob("*"):
             os.utime(path, (1_700_000_000, 1_700_000_000))
+            if path.is_file():
+                path.chmod(0o755)  # Model Windows accepting X_OK for every regular data file.
         expect(run("sh", "-c", 'umask 002 && exec sh "$0" "$@"', str(source / "sdlc/scripts/release-pack"),
                    host, str(base / "again"), "first-run", cwd=source), "", success=True)
         first_run = (base / "legacy/thinkthen-first-run.tar.gz").read_bytes()
@@ -176,6 +178,9 @@ def main():
                                ("thinkthen-first-run/recording/thinkthen.jsonl", 0o644, 0, 0, "", 0),
                                ("thinkthen-first-run/report.txt", 0o644, 0, 0, "", 0)]):
             raise AssertionError(("first-run archive is not reproducible", entries))
+        for path in (source / "demos/27-test-with-no-network").rglob("*"):
+            if path.is_file():
+                path.chmod(0o644)
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "unselected"), "go", cwd=source), "archived source tar path must be absolute")
 
