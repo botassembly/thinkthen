@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import posixpath
 from pathlib import Path
 import re
 import subprocess
@@ -161,12 +162,40 @@ def verify_checksum(archive, text):
 
 def extract_archive(archive, destination):
     with tarfile.open(archive) as packed:
-        # Release archives contain regular files/directories only; refuse path and link escapes.
+        entries = {}
+        sentence = f"release asset {archive.name} contains an unsafe entry"
         for entry in packed.getmembers():
             path = Path(entry.name)
-            if path.is_absolute() or '..' in path.parts or not (entry.isfile() or entry.isdir()):
-                raise Failure(f"release asset {archive.name} contains an unsafe entry")
-        packed.extractall(destination, filter="data")
+            name = str(path)
+            if path.is_absolute() or '..' in path.parts or name in entries or not (
+                    entry.isfile() or entry.isdir() or entry.issym() or entry.islnk()):
+                raise Failure(sentence)
+            entries[name] = entry
+        for name, entry in entries.items():
+            # A link may point only to a regular member of this archive. Directory
+            # aliases could redirect later extraction, so refuse links in parents.
+            if any(str(parent) in entries and (entries[str(parent)].issym() or entries[str(parent)].islnk())
+                   for parent in Path(name).parents):
+                raise Failure(sentence)
+            seen = set()
+            while entry.issym() or entry.islnk():
+                if name in seen or Path(entry.linkname).is_absolute():
+                    raise Failure(sentence)
+                seen.add(name)
+                hard_link = entry.islnk()
+                parent = str(Path(name).parent) if entry.issym() else '.'
+                name = posixpath.normpath(posixpath.join(parent, entry.linkname))
+                if name == '..' or name.startswith('../') or name not in entries:
+                    raise Failure(sentence)
+                entry = entries[name]
+                if hard_link and not entry.isfile():
+                    raise Failure(sentence)
+            if seen and not entry.isfile():
+                raise Failure(sentence)
+        try:
+            packed.extractall(destination, filter="data")
+        except (tarfile.TarError, OSError) as error:
+            raise Failure(sentence) from error
 
 
 def main(argv=None):

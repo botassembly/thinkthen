@@ -8,6 +8,7 @@ from install_check import Failure, check_index, validate_version
 from install_check_consumers import write_consumer
 
 TARGET = 'x86_64-unknown-linux-gnu'
+HOMEBREW_TAP = 'https://github.com/botassembly/homebrew-thinkthen.git'
 
 
 def selected_formula(history, version):
@@ -46,17 +47,26 @@ def native_call(check, command):
     return check.response(*command, check.root / 'settings.json', check.root / 'request.json')
 
 
-def homebrew(check):
-    tap = check.root / 'public-tap'
-    check.run('git', 'clone', 'https://github.com/botassembly/homebrew-tap.git', tap)
-    revisions = check.run('git', '-C', tap, 'log', '--format=%H', '--diff-filter=AM', '--all', '--', 'Formula/thinkthen.rb').splitlines()
-    history = (check.run('git', '-C', tap, 'show', f'{revision}:Formula/thinkthen.rb') for revision in revisions)
-    formula = selected_formula(history, check.version)
+def local_tap(check, formula):
     selected = check.root / 'selected-tap'
     (selected / 'Formula').mkdir(parents=True)
     (selected / 'Formula/thinkthen.rb').write_text(formula)
     check.run('git', 'init', selected)
-    # Homebrew links a local tap; this never changes or publishes the public tap.
+    check.run('git', '-C', selected, 'add', 'Formula/thinkthen.rb')
+    check.run('git', '-C', selected, '-c', 'user.name=Install check',
+              '-c', 'user.email=install-check@localhost', '-c', 'commit.gpgsign=false',
+              'commit', '-m', 'Select requested formula')
+    return selected
+
+
+def homebrew(check):
+    tap = check.root / 'public-tap'
+    check.run('git', 'clone', HOMEBREW_TAP, tap)
+    revisions = check.run('git', '-C', tap, 'log', '--format=%H', '--diff-filter=AM', '--all', '--', 'Formula/thinkthen.rb').splitlines()
+    history = (check.run('git', '-C', tap, 'show', f'{revision}:Formula/thinkthen.rb') for revision in revisions)
+    formula = selected_formula(history, check.version)
+    selected = local_tap(check, formula)
+    # Homebrew clones this committed local repository. No tap is published.
     if 'installcheck/selected' in check.run('brew', 'tap').splitlines():
         raise Failure('Homebrew check tap already exists; refusing to replace it')
     check.run('brew', 'tap', 'installcheck/selected', selected)

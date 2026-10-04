@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from install_check import CHANNELS, Check, Failure, check_index, check_result, clean_environment, extract_archive, validate_version, verify_checksum
-from install_check_channels import INSTALLERS, dcf_packages, homebrew, r_universe, selected_formula, sqlite
+from install_check_channels import INSTALLERS, dcf_packages, homebrew, local_tap, r_universe, selected_formula, sqlite
 
 
 class RefusalTable(unittest.TestCase):
@@ -72,8 +72,62 @@ class RefusalTable(unittest.TestCase):
                 installed, reply, _ = homebrew(check)
             check_result('0.1.2', installed, reply)
             self.assertEqual((check.root / 'selected-tap/Formula/thinkthen.rb').read_text(), old)
+            self.assertIn(('git', 'clone', 'https://github.com/botassembly/homebrew-thinkthen.git', str(check.root / 'public-tap')), check.commands)
             self.assertIn(('brew', 'install', 'installcheck/selected/thinkthen'), check.commands)
             self.assertEqual(check.commands[-1], ('brew', 'untap', 'installcheck/selected'))
+
+    def test_selected_homebrew_formula_survives_real_local_clone(self):
+        formulas = ['class Thinkthen < Formula\n  version "0.2.0"\nend\n',
+                    'class Thinkthen < Formula\n  version "0.1.2"\nend\n']
+        for version, expected in zip(('0.2.0', '0.1.2'), formulas):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as own:
+                check = Check(Path(own), 'homebrew', version)
+                selected = local_tap(check, selected_formula(formulas, version))
+                cloned = check.root / 'brew-clone'
+                check.run('git', 'clone', selected, cloned)
+                self.assertEqual((cloned / 'Formula/thinkthen.rb').read_text(), expected)
+                self.assertEqual(check.run('git', '-C', cloned, 'status', '--porcelain'), '')
+
+    def test_shipped_c_layout_with_safe_links(self):
+        with tempfile.TemporaryDirectory() as own:
+            root = Path(own)
+            archive = root / 'thinkthen-c-0.2.0-x86_64-unknown-linux-gnu.tar.gz'
+            # release-pack ships an ELF soname alias alongside its real library.
+            with tarfile.open(archive, 'w:gz') as tar:
+                item = tarfile.TarInfo('./lib/libthinkthen.so'); item.size = len(b'library'); tar.addfile(item, io.BytesIO(b'library'))
+                for name, target, kind in (
+                        ('./lib/libthinkthen.so.0', 'libthinkthen.so', tarfile.SYMTYPE),
+                        ('./lib/libthinkthen-link.so', './lib/libthinkthen.so', tarfile.LNKTYPE),
+                        ('./lib/alias.so', '../lib/libthinkthen.so.0', tarfile.SYMTYPE)):
+                    item = tarfile.TarInfo(name); item.type = kind; item.linkname = target; tar.addfile(item)
+            destination = root / 'extracted'; destination.mkdir()
+            extract_archive(archive, destination)
+            for name in ('libthinkthen.so.0', 'libthinkthen-link.so', 'alias.so'):
+                self.assertEqual((destination / 'lib' / name).read_bytes(), b'library')
+            self.assertEqual((destination / 'lib/libthinkthen.so.0').readlink(), Path('libthinkthen.so'))
+
+    def test_link_escape_cycles_and_directory_aliases(self):
+        with tempfile.TemporaryDirectory() as own:
+            root = Path(own); archive = root / 'archive.tar.gz'
+            cases = [
+                [('lib/alias', '../../outside', tarfile.SYMTYPE)],
+                [('lib/alias', '/outside', tarfile.SYMTYPE)],
+                [('lib/alias', '../outside', tarfile.LNKTYPE)],
+                [('first', 'second', tarfile.SYMTYPE), ('second', 'first', tarfile.SYMTYPE)],
+                [('alias', 'directory', tarfile.SYMTYPE)],
+                [('directory/link', '../file', tarfile.SYMTYPE), ('root-hardlink', 'directory/link', tarfile.LNKTYPE)],
+                [('alias', 'file', tarfile.SYMTYPE), ('alias/child', 'file', tarfile.SYMTYPE)],
+            ]
+            for links in cases:
+                with self.subTest(links=links):
+                    with tarfile.open(archive, 'w:gz') as tar:
+                        directory = tarfile.TarInfo('directory'); directory.type = tarfile.DIRTYPE; tar.addfile(directory)
+                        file = tarfile.TarInfo('file'); file.size = 4; tar.addfile(file, io.BytesIO(b'safe'))
+                        for name, target, kind in links:
+                            item = tarfile.TarInfo(name); item.type = kind; item.linkname = target; tar.addfile(item)
+                    destination = root / 'extracted'; destination.mkdir(exist_ok=True)
+                    self.refusal('release asset archive.tar.gz contains an unsafe entry', extract_archive, archive, destination)
+                    self.assertEqual(list(destination.iterdir()), [])
 
     def test_archive_identity_and_escape(self):
         with tempfile.TemporaryDirectory() as own:
