@@ -12,6 +12,8 @@ import zipfile
 import warnings
 import sys
 import importlib.util
+import contextlib
+import io
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -82,7 +84,8 @@ def interruption_routing(smoke, base):
     original = smoke.run
     try:
         smoke.run = lambda args, env, **options: calls.append((args, env, options))
-        smoke.interrupt(binary, {"CARGO_NET_OFFLINE": "true"})
+        with contextlib.redirect_stdout(io.StringIO()):
+            smoke.interrupt(binary, {"CARGO_NET_OFFLINE": "true"})
         assert calls == [(["cargo", "test", "--locked", "--offline", "-p", "thinkthen", "--test", "windows",
                           "interrupt::release_binary_console_interrupt", "--", "--exact", "--ignored"],
                           {"CARGO_NET_OFFLINE": "true", "THINKTHEN_WINDOWS_RELEASE_BINARY": str(binary.absolute())},

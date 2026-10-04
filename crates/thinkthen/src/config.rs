@@ -94,13 +94,10 @@ impl Config {
             return Ok(Self::default());
         };
         #[cfg(not(windows))]
-        let read = fs::read(path).map(|bytes| {
-            let shared = fs::metadata(path).is_ok_and(|metadata| writable_by_another(&metadata));
-            (bytes, shared)
-        });
+        let read = fs::read(path).map(|bytes| (bytes, ()));
         #[cfg(windows)]
         let read = crate::windows::files::configuration(path);
-        let (bytes, shared) = match read {
+        let (bytes, _shared) = match read {
             Ok(read) => read,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(Self::default());
@@ -114,6 +111,10 @@ impl Config {
             }
         };
         let mut parsed = Self::parse(&bytes)?;
+        #[cfg(not(windows))]
+        let shared = fs::metadata(path).is_ok_and(|metadata| writable_by_another(&metadata));
+        #[cfg(windows)]
+        let shared = _shared;
         parsed.shared = shared;
         if parsed.shared && !parsed.named.is_empty() {
             // Another user could name any variable here, and so send any secret in the environment.
