@@ -155,6 +155,7 @@ def release(name, doc):
             or resolve.get("outputs") != expected_outputs
             or resolve.get("steps") != [expected_checkout, expected_source]
             or any(key in resolve for key in ("if", "continue-on-error", "env", "environment", "defaults"))
+            or "env" in doc
             or (doc.get("defaults") or {}).get("run") is not None):
         out.append(f"{name}: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN")
     for job, spec in jobs.items():
@@ -780,6 +781,12 @@ def self_test():
     cases = [
         ("real", None, None, []),
         ("release-ok", "release.yml", lambda t: t, []),
+        ("resolve-inherited-token", "release.yml", lambda t: yaml.safe_dump(yaml.safe_load(t) | {
+            "env": {"GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"}}),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
+        ("resolve-inherited-shell", "release.yml", lambda t: yaml.safe_dump(yaml.safe_load(t) | {
+            "env": {"BASH_ENV": "/tmp/inherited-shell"}}),
+         ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
         ("resolve-output", "release.yml", lambda t: t.replace('steps.source.outputs.sha', 'github.sha', 1),
          ["release.yml: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN"]),
         ("resolve-token-build", "release.yml", lambda t: t.replace('  build:\n', '  build:\n    env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}\n', 1),
@@ -1018,7 +1025,7 @@ def self_test():
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
                 # Keep each planted rule independent after the real release.yml lands.
                 source = ((REPO / ".github/workflows/release.yml").read_text()
-                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-", "npm-", "windows-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
+                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-", "npm-", "windows-", "resolve-inherited-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:

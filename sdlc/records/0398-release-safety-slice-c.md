@@ -23,3 +23,7 @@ The coordinator's manual primary API queries found rehearsal 37126990511 on `aba
 ## Remaining proof
 
 Slice A/B hosted proof and the exact approved rehearsal remain open. This guard does not prove trusted publishers or checkpoint coverage. The coordinator will request an exact reviewed run after the candidate lands. The doc-test issue retains checkpoint enforcement. Service failure, deleted history or the API search limit can require another rehearsal. Ian's release approvals remain.
+
+## Review correction
+
+Fresh High code review found that a workflow-level environment could pass the validator and make GH_TOKEN available to build jobs. The validator now pins the accepted absence of workflow-level env. Two plants modify the actual release workflow object with inherited GH_TOKEN and BASH_ENV and require the exact resolve refusal. Existing job-specific token checks remain. Focused workflow proof passes 112/112 cases, including both new plants and all prior cases. A fresh required scoped lint receipt follows for this correction.
