@@ -10,6 +10,10 @@ use crate::core::{
 
 use crate::args::{Common, FindArguments};
 use crate::asking::{self, Folders};
+use crate::cli::{
+    display::Display,
+    intake::{self, Position, Snapshot},
+};
 use crate::edge::{self, Environment};
 use crate::engine::facade::{self, Found};
 use crate::failure::{Failure, ReplayContext};
@@ -20,10 +24,13 @@ pub(crate) fn run(
     arguments: &FindArguments,
     environment: &Environment,
     input: impl Read + Send + 'static,
-    writer: impl Write,
+    mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let common = &arguments.common.as_common();
     common.check_plan_name()?;
+    let mut display = Display::default();
+    display.arguments = arguments.display.clone();
+    display.validate(common)?;
     let framing = if common.jsonl {
         Framing::Jsonl
     } else {
@@ -63,12 +70,12 @@ pub(crate) fn run(
         })
         .transpose()?;
     let most = if arguments.none { 254 } else { 255 };
-    let units = read_units(
+    let units = input_units(
+        common,
+        input,
+        &mut display,
         &reading,
-        edge::source(common.input.first().map(std::path::PathBuf::as_path), input)?,
-        most,
-        arguments.none,
-        recording,
+        (most, arguments.none, recording),
     )?;
     if units.is_empty() {
         return Ok(ExitCode::SUCCESS);
@@ -78,10 +85,7 @@ pub(crate) fn run(
             none: arguments.none,
         });
     }
-    let evidence: Vec<_> = units
-        .iter()
-        .map(|(_, _, evidence)| evidence.clone())
-        .collect();
+    let evidence: Vec<_> = units.iter().map(|unit| unit.evidence.clone()).collect();
     let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
         .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?;
     if common.dry_run {
@@ -98,12 +102,15 @@ pub(crate) fn run(
     let found = engine.find(&find, environment.cancel()).map_err(|error| {
         Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len()))
     })?;
-    let (line, resolved) = rendered(common, &find, &backend, &reading, &units, found)?;
-    if let Some(line) = line {
-        edge::write_line(writer, &line)?;
-    }
+    let rendered = rendered(common, &find, &backend, &reading, &units, found)?;
+    display.emit_row(
+        &mut writer,
+        rendered.line.as_deref(),
+        rendered.position.as_ref(),
+        rendered.score,
+    )?;
     environment.usage().record_done();
-    Ok(if resolved {
+    Ok(if rendered.resolved {
         ExitCode::SUCCESS
     } else {
         ExitCode::from(3)
@@ -147,11 +154,52 @@ fn planned(
     Ok(ExitCode::SUCCESS)
 }
 
-type Unit = (Vec<u8>, Record, Evidence);
+fn input_units(
+    common: &Common,
+    input: impl Read + Send + 'static,
+    display: &mut Display,
+    reading: &Reading,
+    (most, none, recording): (usize, bool, bool),
+) -> Result<Vec<Unit>, Failure> {
+    let path = common.input.first();
+    let mut source = edge::source(path.map(std::path::PathBuf::as_path), input)?;
+    if display.around.is_some() {
+        let (opened, snapshot) = Snapshot::prepare(vec![(path.cloned(), source)])?;
+        source = opened
+            .into_iter()
+            .next()
+            .ok_or(Failure::Defect("a find snapshot has no source"))?
+            .1;
+        display.snapshot = snapshot;
+    }
+    read_units(
+        reading,
+        source,
+        path.map(|path| path.to_string_lossy().into_owned()),
+        most,
+        none,
+        recording,
+    )
+}
+
+struct Unit {
+    bytes: Vec<u8>,
+    record: Record,
+    evidence: Evidence,
+    position: Position,
+}
+
+struct Rendered {
+    line: Option<String>,
+    resolved: bool,
+    position: Option<Position>,
+    score: Option<f64>,
+}
 
 fn read_units(
     reading: &Reading,
     source: Box<dyn std::io::BufRead + Send>,
+    file: Option<String>,
     most: usize,
     none: bool,
     recording: bool,
@@ -175,7 +223,18 @@ fn read_units(
         let evidence = reading
             .evidence(&record)
             .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
-        units.push((bytes, record, evidence));
+        let line = units.len() + 1;
+        units.push(Unit {
+            bytes,
+            record,
+            evidence,
+            position: Position {
+                file: file.clone(),
+                first: line,
+                last: line,
+                source: 0,
+            },
+        });
     }
     Ok(units)
 }
@@ -187,19 +246,36 @@ fn rendered(
     reading: &Reading,
     units: &[Unit],
     found: Found,
-) -> Result<(Option<String>, bool), Failure> {
+) -> Result<Rendered, Failure> {
     let Found {
         selection: selected,
         answered,
     } = found;
     let reply = &answered.reply;
     let place = selected.selected();
-    let line = if common.details {
+    let unit = place
+        .map(|place| {
+            units
+                .get(place)
+                .ok_or(Failure::Defect("a find selection is outside its units"))
+        })
+        .transpose()?;
+    let position = unit.map(|unit| unit.position.clone());
+    let score = place
+        .map(|place| {
+            selected
+                .probabilities()
+                .get(place)
+                .map(|(_, probability)| *probability)
+                .ok_or(Failure::Defect("a find selection carries no probability"))
+        })
+        .transpose()?;
+    let mut line = if common.details {
         let value = place
             .map(|place| {
                 units
                     .get(place)
-                    .map(|unit| unit.1.clone())
+                    .map(|unit| unit.record.clone())
                     .ok_or(Failure::Defect("a find selection is outside its units"))
             })
             .transpose()?;
@@ -224,13 +300,21 @@ fn rendered(
                     .get(place)
                     .ok_or(Failure::Defect("a find selection is outside its units"))?;
                 reading
-                    .as_it_arrived(&unit.0)
+                    .as_it_arrived(&unit.bytes)
                     .map(str::to_owned)
                     .map_err(|error| Failure::record(error, true))
             })
             .transpose()?
     };
-    Ok((line, place.is_some()))
+    if common.details {
+        intake::locate(&mut line, position.as_ref())?;
+    }
+    Ok(Rendered {
+        line,
+        resolved: place.is_some(),
+        position,
+        score,
+    })
 }
 
 fn stopped(place: usize, recording: bool, cause: Failure) -> Failure {

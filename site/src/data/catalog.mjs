@@ -229,6 +229,9 @@ export const FUNCTIONS = [
     args: 'QUESTION',
     options: [
       flag('--none', 'nothing', 'off', 'Lets it answer that nothing fits. It then prints nothing and exits 3.'),
+      flag('-n, --line-number', 'nothing', lower(setting('Line numbers').default), 'Prefixes the selected physical line number. One named file omits its filename.'),
+      flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the winning candidate probability, independently of confidence.'),
+      flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints one group with N physical neighbors on either side from an immutable snapshot. Every valid neighbor already belongs to the aggregate candidate request. Text display flags refuse details.'),
     ],
     shared: [],
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],

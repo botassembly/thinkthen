@@ -22,6 +22,9 @@ pub(crate) struct FindArguments {
     #[arg(long)]
     pub(crate) none: bool,
 
+    #[command(flatten)]
+    pub(crate) display: crate::cli::display::Arguments,
+
     /// Options shared with the request machinery that `find` actually accepts.
     #[command(flatten)]
     pub(crate) common: FindCommon,

@@ -5,7 +5,7 @@ Status: **Settled** by ADRs 0015 and 0030. Both accepted live gates passed.
 Picks the unit that best answers a question, out of a set the model sees all at once.
 
 ```text
-thinkthen find QUESTION [--lines|--jsonl] [--field POINTER] [--none] [--details] [BACKEND]
+thinkthen find QUESTION [--lines|--jsonl] [--field POINTER] [--none] [--details] [-n] [--scores] [--around N] [BACKEND]
 ```
 
 ## What it reads
@@ -57,6 +57,16 @@ The generated unit id is `u` and the unit's one-based input position, zero-padde
 ## Exit codes
 
 0 when a unit was chosen, 3 under `--none` when the model says that nothing fits, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. An empty input exits 0 with no output and no request. Without `--none` the verb never exits 3.
+
+## Text display
+
+Settled by ticket 0401. `-n` or `--line-number` prefixes the selected unit with its physical line number and `:`. One named file omits its filename. `--scores` prefixes the winning candidate probability and one space. The number uses the stored probability's shortest round-trip spelling. It is independent of confidence and provider choice. Equal highest real candidates select the first input index; a highest tie involving `none` prints nothing.
+
+`--around N` emits one independent group, starting with `--` on its own line, or `-- SCORE` with scores. It includes N physical lines on either side, clamped to the source. With line numbers the selected line uses `:` and neighbors use `-`. Each line drops LF and its preceding CR and receives one output LF. All valid neighbors are already aggregate candidates. Display adds no candidate, field or bytes to the request. JSONL pointers still send only pointed evidence while the display retains complete original rows.
+
+N takes ASCII digits and can be zero. Invalid or overflowing values refuse at exit 2 with `--around takes an ASCII whole number of at least 0`. All three text flags refuse `--details` with `text display flags cannot accompany --details`. Around zero counts as present. Only around reads one immutable original-byte snapshot before parsing. Exactly 16 MiB passes; one more byte refuses with `--around reads at most 16 MiB across all input sources`. It writes no spool. Ordinary and scores-only input keeps the existing aggregate count and byte diagnostics. Blank text and malformed JSONL candidates still refuse before the aggregate send.
+
+A real winner under `--details` appends `position: {file,first,last}`. Stdin uses file null; a named file uses its display path. First and last equal the selected physical line. Unresolved none has no position. Empty input prints nothing, sends nothing and exits 0 with every view. Unresolved none prints no text or delimiter and exits 3. Plan validates the view and snapshot but keeps its ordinary output and request bytes.
 
 ## Examples
 

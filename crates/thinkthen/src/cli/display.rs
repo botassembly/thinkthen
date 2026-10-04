@@ -1,4 +1,4 @@
-//! Filter and rank text decoration at the output boundary.
+//! Filter, rank and find text decoration at the output boundary.
 
 use std::io::{ErrorKind, Write};
 
@@ -16,7 +16,7 @@ pub(crate) struct Arguments {
     #[arg(short = 'n', long)]
     pub(crate) line_number: bool,
 
-    /// Print the yes probability, or saved score ordering value.
+    /// Print the selected record's score.
     #[arg(long)]
     pub(crate) scores: bool,
 
@@ -80,22 +80,32 @@ impl Display {
     }
 
     pub(crate) fn emit(&self, writer: &mut dyn Write, judged: &Judged) -> Result<bool, Failure> {
-        let Some(printed) = judged.printed.as_deref() else {
+        self.emit_row(
+            writer,
+            judged.printed.as_deref(),
+            judged.position.as_ref(),
+            judged.order_value,
+        )
+    }
+
+    pub(crate) fn emit_row(
+        &self,
+        writer: &mut dyn Write,
+        printed: Option<&str>,
+        position: Option<&Position>,
+        score: Option<f64>,
+    ) -> Result<bool, Failure> {
+        let Some(printed) = printed else {
             return Ok(true);
         };
         if !self.arguments.line_number && !self.arguments.scores && self.around.is_none() {
             return edge::write_line(writer, printed);
         }
-        let position = judged
-            .position
-            .as_ref()
-            .ok_or(Failure::Defect("a displayed row carries no position"))?;
+        let position = position.ok_or(Failure::Defect("a displayed row carries no position"))?;
         let score = if self.arguments.scores {
             format!(
                 "{}",
-                judged
-                    .order_value
-                    .ok_or(Failure::Defect("a displayed row carries no ordering value",))?
+                score.ok_or(Failure::Defect("a displayed row carries no ordering value",))?
             )
         } else {
             String::new()

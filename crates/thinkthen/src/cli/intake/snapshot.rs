@@ -14,7 +14,7 @@ pub(crate) struct Snapshot {
 }
 
 impl Snapshot {
-    pub(super) fn prepare(opened: Opened) -> Result<(Opened, Option<Self>), Failure> {
+    pub(crate) fn prepare(opened: Opened) -> Result<(Opened, Option<Self>), Failure> {
         let mut remaining = MAX_RECORD_BYTES;
         let mut sources = Vec::new();
         let mut readers: Opened = Vec::new();
