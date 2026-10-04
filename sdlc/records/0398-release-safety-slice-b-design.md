@@ -1,7 +1,7 @@
 # 0398 slice B: Install-check design
 
 Date: 2026-10-04
-Status: fresh slice B ticket review ACCEPT at `58aee391b351297568aa68ca4ac8f0fdb19fe414`; independent build in progress
+Status: fresh slice B ticket review ACCEPT at `58aee391b351297568aa68ca4ac8f0fdb19fe414`; offline implementation complete; fresh integrated code review pending
 Starting revision: `ff047d8c50ce39ed9ab0acd22695c4960a963d38`
 Ticket: `sdlc/tickets/0398-release-safety.md`
 Lane: `claude-2`

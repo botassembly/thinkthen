@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Every workflow runs only by hand and runs only reviewed code (ticket 0128).
+"""Every workflow starts on workflow_dispatch and runs reviewed code (0128, 0398).
+
+Only release.yml publish dispatches another workflow, install-check.yml.
 
 Ian ruled that no push starts a workflow and that releases publish only through a
 run he starts and approves. PyYAML's safe loader reads each workflow, and each
@@ -20,6 +22,8 @@ import sys
 import tempfile
 
 import yaml
+
+from install_check_workflow import install_workflow, other_dispatches, publish_dispatch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PINNED = re.compile(r"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$")
@@ -126,6 +130,7 @@ def every(name, doc, text):
         for tool in ("cargo-public-api", "PUBLIC_API_TOOLCHAIN"):
             if tool not in runs or "sdlc/scripts/install" not in runs:
                 out.append(f"{name}: no step installs {tool} from the pins in sdlc/scripts/install")
+    out += other_dispatches(name, doc)
     return out
 
 
@@ -140,6 +145,7 @@ def release(name, doc):
         out.append(f"{name}: dispatch must have only mode with rehearse and release choices")
     jobs = doc.get("jobs") or {}
     out += windows_release_rules(name, jobs)
+    out += publish_dispatch(name, doc)
     required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "draft",
                 "crates", "pypi", "npm", "rubygems", "tap", "nuget", "maven", "pub", "publish"}
     if set(jobs) != required:
@@ -484,6 +490,8 @@ def check(folder, lint_text=None):
         out += every(path.name, doc, text)
         if path.name == "release.yml":
             out += release(path.name, doc)
+        if path.name == "install-check.yml":
+            out += install_workflow(path.name, doc)
     if lint_text is None:
         lint_text = (REPO / "sdlc/scripts/lint").read_text(encoding="utf-8")
     if (re.search(r"(?m)^[ \t]*(?:sh[ \t]+)?sdlc/scripts/package(?:[ \t]|$)", lint_text)
@@ -740,9 +748,14 @@ jobs:
     needs: [resolve, draft, crates, pypi, npm, rubygems, tap, nuget, maven, pub]
     if: inputs.mode == 'release'
     environment: release
+    permissions: {contents: write, actions: write}
     steps:
       - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
         run: '[ "$RELEASE_ARMED" = true ]'
+      - env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", NAME: "${{ needs.resolve.outputs.name }}", SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: sdlc/scripts/release-workflow publish "$NAME" "$SHA"
+      - env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", NAME: "${{ needs.resolve.outputs.name }}", VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: gh workflow run install-check.yml --ref "$NAME" -f version="$VERSION"
 """
 
 
@@ -1077,7 +1090,15 @@ def self_test():
     if windows.returncode != 0:
         bad += 1
         print(f"workflows self-test Windows command: {windows.stdout}{windows.stderr}", file=sys.stderr)
-    total = len(cases) + 4 + len(host_cases) + 9
+    for fixture in ("install-check-workflow-self-test.py", "install-check-self-test.py"):
+        result = subprocess.run([sys.executable, str(REPO / "sdlc/scripts" / fixture)],
+                                capture_output=True, text=True)
+        if result.returncode != 0:
+            bad += 1
+            print(f"workflows self-test {fixture}: {result.stdout}{result.stderr}", file=sys.stderr)
+        else:
+            print(result.stdout.strip() or result.stderr.strip())
+    total = len(cases) + 4 + len(host_cases) + 11
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 

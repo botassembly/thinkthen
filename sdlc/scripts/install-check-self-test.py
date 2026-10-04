@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from install_check import CHANNELS, Check, Failure, check_index, check_result, clean_environment, extract_archive, validate_version, verify_checksum
+from install_check import CHANNELS, Check, Failure, check_index, check_result, main as install_main, clean_environment, extract_archive, validate_version, verify_checksum
 from install_check_channels import INSTALLERS, dcf_packages, homebrew, local_tap, r_universe, selected_formula, sqlite
 
 
@@ -34,6 +34,38 @@ class RefusalTable(unittest.TestCase):
                     self.refusal('replay must report requests_sent 0', check_result, '0.1.2', '0.1.2', {'value': True, 'requests_sent': requests})
                 self.refusal('replay must report requests_sent 0', check_result, '0.1.2', '0.1.2', {'value': True, 'facts': 'placeholder'})
                 self.refusal('replay did not return true', check_result, '0.1.2', '0.1.2', 'placeholder')
+
+    def test_real_fake_command_exit_and_receipt_table(self):
+        table = [('0.1.2', True, 0, 0, ''),
+                 ('0.0.1', True, 0, 1, 'installed thinkthen 0.0.1, wanted 0.1.2'),
+                 ('0.1.3', True, 0, 1, 'installed thinkthen 0.1.3, wanted 0.1.2'),
+                 ('0.1.2', False, 0, 1, 'replay did not return true'),
+                 ('0.1.2', None, 0, 1, 'replay did not return true'),
+                 ('0.1.2', True, 1, 1, 'replay must report requests_sent 0')]
+        for version, value, requests, wanted_exit, failure in table:
+            def fixture_install(check):
+                command = check.root / 'fake-thinkthen'
+                program = 'import json, sys\n'
+                program += f'if "--version" in sys.argv: print("thinkthen {version}")\n'
+                program += 'else:\n assert "--replay" in sys.argv and "--cache" not in sys.argv\n'
+                program += f' print({json.dumps(value)!r})\n'
+                program += f' print({json.dumps({"requests_sent": requests})!r}, file=sys.stderr)\n'
+                command.write_text('#!' + sys.executable + '\n' + program)
+                command.chmod(0o755)
+                installed, reply = check.command_replay(command)
+                return installed, reply, 'fixture installed binary'
+            with self.subTest(version=version, value=value, requests=requests):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with patch('install_check_tools.prepare'), patch.object(Check, 'prepare_sample', prepare_sample), \
+                     patch('install_check_channels.install', fixture_install), patch('sys.stdout', stdout), patch('sys.stderr', stderr):
+                    got = install_main(['download', '0.1.2'])
+                self.assertEqual(got, wanted_exit)
+                if failure:
+                    self.assertEqual(stdout.getvalue(), '')
+                    self.assertEqual(stderr.getvalue(), f'install-check: {failure}\n')
+                else:
+                    self.assertEqual(stderr.getvalue(), '')
+                    self.assertEqual(stdout.getvalue(), 'install-check: download thinkthen 0.1.2: true, requests_sent 0; version proof: fixture installed binary\n')
 
     def test_invalid_versions_before_side_effects(self):
         for version in ('v0.1.2', '0.1', '0.01.2', '-1.2.3', '0.1.2\n', '$(touch nope)', '0.1.2;echo bad'):

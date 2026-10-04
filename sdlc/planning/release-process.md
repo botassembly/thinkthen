@@ -71,6 +71,8 @@ Main's public install text names the latest published release until the next rel
 1. The real release is dispatched only on Ian's go.
 2. Before the dispatch, the coordinator runs `sdlc/scripts/workflows --remote-pins`. It asks GitHub whether each pinned action names a commit. A pin that names a tag object passes the offline gate and fails only in the release run (ticket 0391).
 3. Release mode runs from a `v*` tag. Each publish job waits for Ian's approval in the GitHub `release` environment (ticket 0128).
+4. After publishing the GitHub release and Go module tag, `publish` dispatches `install-check.yml` from that release tag with the resolved version (ticket 0398 slice B). The separate workflow reads public channels with only `contents: read`. It has no environment approval, OIDC token or secret. The coordinator records its run and every channel result in the release's ticket.
+5. A late Go proxy, Packagist or older R-universe index gets one hand dispatch later. R-universe keeps only its current version. A superseded request reports the requested and listed versions and gets no retry advice. Its Linux check accepts only the resolute R 4.6 binary. Hosted runner proof remains pending an approved manual check.
 
 ## 7. Registries and the site
 

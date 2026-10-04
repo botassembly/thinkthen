@@ -352,6 +352,9 @@ Each is the agent's decision unless marked the coordinator's. Ian can overturn a
 | A workflow with `push`, `pull_request`, `schedule`, or `workflow_run` | Exit 1 naming the file and the trigger |
 | A `uses:` pinned to a tag or a branch | Exit 1 naming the file and the step |
 | A container image without a digest | Exit 1 naming the file and the image |
+| A workflow dispatch outside the exact final `publish` step that starts `install-check.yml` from the resolved release name and version (ticket 0398) | Exit 1 naming the file and job |
+| An install-check workflow with an environment, secret, permissions beyond `contents: read`, an input expanded inside `run`, a dropped Unix channel or runner, or a skipped or ignored replay | Exit 1 naming the file and boundary |
+| `publish` without `actions: write`, with it on another job, or without a successful publish immediately before its final unconditional install-check dispatch | Exit 1 naming the job |
 | `${{ inputs.mode }}` inside a `run:` block | Exit 1 naming the step |
 | `gate.yml` without the public API tool or the dated nightly | Exit 1 naming the missing tool |
 | `release.yml` with a cache step | Exit 1 naming the step |
