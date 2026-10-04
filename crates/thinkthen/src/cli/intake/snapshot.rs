@@ -61,18 +61,19 @@ impl Snapshot {
             if line > last {
                 break;
             }
-            if line >= first {
-                let raw = bytes
-                    .get(start..end)
-                    .ok_or(Failure::Defect("a source line interval is invalid"))?;
-                let raw = raw
-                    .strip_suffix(b"\n")
-                    .map_or(raw, |raw| raw.strip_suffix(b"\r").unwrap_or(raw));
-                if !emit(line, raw)? {
-                    return Ok(false);
-                }
-            }
+            let raw = bytes
+                .get(start..end)
+                .ok_or(Failure::Defect("a source line interval is invalid"))?;
             start = end;
+            if line < first {
+                continue;
+            }
+            let raw = raw
+                .strip_suffix(b"\n")
+                .map_or(raw, |raw| raw.strip_suffix(b"\r").unwrap_or(raw));
+            if !emit(line, raw)? {
+                return Ok(false);
+            }
         }
         Ok(true)
     }
