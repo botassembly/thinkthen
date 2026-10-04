@@ -23,8 +23,16 @@ def declarations(header):
         raise ValueError('unterminated header comment')
     code = re.sub(r'/\*.*?\*/|//[^\n]*', ' ', header, flags=re.S)
     code = re.sub(r'^\s*#.*$', '', code, flags=re.M)
+    for statement in code.split(';'):
+        statement = statement.strip()
+        if ('thinkthen_' in statement and '(' not in statement and
+                not statement.startswith(('typedef ', '}')) and '{' not in statement):
+            raise ValueError('malformed header declaration')
     names = []
     for match in re.finditer(r'\b(thinkthen_\w*)\s*\(', code):
+        prefix = re.split(r'[;{}]', code[:match.start()])[-1].strip()
+        if not prefix or prefix.startswith('typedef ') or any(char in prefix for char in '()='):
+            raise ValueError('malformed header declaration')
         tail = code[match.end():]
         if not re.match(r'[^();{}]+\)\s*;', tail):
             raise ValueError('malformed header declaration')

@@ -140,6 +140,7 @@ def archives(root):
     assert C.declarations('/* thinkthen_hidden(void); */ void thinkthen_z(void); int thinkthen_a(int n);') == [
         'thinkthen_a', 'thinkthen_z']
     for text, cause in [('/*', 'unterminated'), ('void thinkthen_a(void); void thinkthen_a(void);', 'duplicate'),
+                        ('int thinkthen_bad;', 'malformed'), ('typedef int thinkthen_bad(void);', 'malformed'),
                         ('int thinkthen_bad(', 'malformed'), ('int thinkthen_bad();', 'malformed')]:
         refused(lambda: C.declarations(text), cause)
     saved = 'ordinal hint RVA      name\n      1    0 00001000 thinkthen_a\n      2    1 00001020 other_export\n\n Summary\n'

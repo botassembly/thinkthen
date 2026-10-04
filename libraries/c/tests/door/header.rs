@@ -11,6 +11,15 @@ fn block_comment(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Result
     Err("unterminated header comment")
 }
 
+fn missing_prototype(statement: &str) -> bool {
+    let statement = statement.trim();
+    statement.contains("thinkthen_")
+        && !statement.contains('(')
+        && !statement.starts_with("typedef ")
+        && !statement.contains('{')
+        && !statement.starts_with('}')
+}
+
 /// Read plain C function declarations; refuse ambiguous or incomplete input.
 pub(crate) fn declarations(header: &str) -> Result<Vec<String>, &'static str> {
     let mut code = String::new();
@@ -32,6 +41,9 @@ pub(crate) fn declarations(header: &str) -> Result<Vec<String>, &'static str> {
         .filter(|line| !line.trim_start().starts_with('#'))
         .collect::<Vec<_>>()
         .join("\n");
+    if code.split(';').any(missing_prototype) {
+        return Err("malformed header declaration");
+    }
     let mut names = BTreeSet::new();
     for (at, _) in code.match_indices("thinkthen_") {
         let tail = code.get(at..).ok_or("invalid declaration offset")?;
@@ -61,7 +73,11 @@ pub(crate) fn declarations(header: &str) -> Result<Vec<String>, &'static str> {
             .next()
             .unwrap_or_default()
             .trim();
-        if prefix.is_empty() || prefix.contains(['(', ')', '=']) || name == "thinkthen_" {
+        if prefix.is_empty()
+            || prefix.starts_with("typedef ")
+            || prefix.contains(['(', ')', '='])
+            || name == "thinkthen_"
+        {
             return Err("malformed header declaration");
         }
         if !names.insert(name.to_owned()) {
@@ -92,6 +108,14 @@ mod tests {
                 "duplicate header declaration",
             ),
             ("void thinkthen_a(void)", "malformed header declaration"),
+            (
+                "int thinkthen_bad; void thinkthen_a(void);",
+                "malformed header declaration",
+            ),
+            (
+                "typedef int thinkthen_bad(void);",
+                "malformed header declaration",
+            ),
             ("void thinkthen_a();", "malformed header declaration"),
             ("void thinkthen_a((void));", "malformed header declaration"),
         ] {

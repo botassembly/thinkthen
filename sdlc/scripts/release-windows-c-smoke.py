@@ -46,7 +46,7 @@ def consume(archive):
                 response = json.dumps({'model': 'jev-1.13.0', 'answers': {
                     name: {'type': 'noul', 'noul': 0.9} for name in request['questions']}}).encode()
                 self.send_response(200)
-                self.send_header('Connection', 'close')
+                self.send_header("Connection", "close")
                 self.send_header('Content-Length', str(len(response)))
                 self.end_headers()
                 self.wfile.write(response)
