@@ -42,9 +42,6 @@ pub(crate) fn run(
     let roots = environment.roots()?;
     let probes = check::probes(backend.model(), backend.descriptions())
         .ok_or(Failure::Defect("a check probe no longer parses"))?;
-    if arguments.dry_run {
-        say_dropped_detail(probes.iter().any(|probe| probe.drops_detail))?;
-    }
     let profile = choice.setup(&backend).1;
     let engine = Engine::with_roots(
         Settings {
@@ -64,6 +61,12 @@ pub(crate) fn run(
     // The estimated input cap binds the probes as it binds every live request;
     // `check` has no flag for it, so only the variable sets it.
     .with_process_budget(None, environment.estimated_total);
+    for probe in &probes {
+        engine.check_plan(&probe.plan)?;
+    }
+    if arguments.dry_run {
+        say_dropped_detail(probes.iter().any(|probe| probe.drops_detail))?;
+    }
     let mut lines = vec![
         format!("url {}", engine.backend().url().as_str()),
         format!("provider {}", check::PROVIDER),

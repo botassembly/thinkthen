@@ -122,3 +122,112 @@ fn selected_setup_does_not_hide_an_invalid_unselected_entry() {
     assert!(!said(&out).1.contains("invalid-marker"));
     assert_eq!(target.count(), 0);
 }
+
+#[test]
+fn check_preflights_every_fixed_probe_under_the_selected_setup_before_sending_or_planning() {
+    let bodies = include_str!("../../../../../specification/fixtures/check/requests.jsonl");
+    let first_bytes = bodies.lines().next().expect("first probe").len();
+    let second_bytes = bodies.lines().nth(1).expect("choice probe").len();
+    let cases = [
+        (
+            "max_request_bytes",
+            first_bytes,
+            "request bytes",
+            second_bytes,
+        ),
+        ("max_request_bytes", 1, "request bytes", first_bytes),
+        // The first three probes fit; the fixed mixed probe has five wire questions.
+        ("max_questions", 1, "questions", 5),
+        // The first probe fits, but the choice probe needs three options.
+        ("max_options", 2, "options", 3),
+        ("max_evidence_bytes", 1, "evidence bytes", 53),
+    ];
+    for (field, limit, words, actual) in cases {
+        let home = Home::new("check-profile-0400");
+        let target = listener();
+        let profile =
+            json!({"schema":"thinkthen.backend-profile/1","name":"probe-limit",field:limit});
+        home.config(
+            &json!({"schema":"thinkthen.config/1","backends":{"small":{
+                "url":target.base(),"key_env":"LOCAL_D1_KEY","model":"jev-1.13.0","profile":profile
+            }}})
+            .to_string(),
+        );
+        for plan in [false, true] {
+            let mut args = vec!["check", "--backend", "small"];
+            if plan {
+                args.push("--plan");
+            }
+            let out = home.run(&args, &[]);
+            assert_eq!(
+                out.status.code(),
+                Some(2),
+                "{field}, plan={plan}: {}",
+                said(&out).1
+            );
+            assert_eq!(said(&out).0, "");
+            assert_eq!(
+                said(&out).1,
+                format!(
+                    "thinkthen: profile probe-limit allows at most {limit} {words}; this request has {actual}\n"
+                )
+            );
+            assert_eq!(target.count(), 0, "{field}, plan={plan}");
+        }
+        // At a non-loopback address a missing key would otherwise fail first.
+        home.config(&json!({"schema":"thinkthen.config/1","backends":{"small":{
+            "url":"https://probe.example.invalid/v1","key_env":"LOCAL_D1_KEY","model":"jev-1.13.0","profile":profile
+        }}}).to_string());
+        let proxy = Proxy::start();
+        let out = home.run(
+            &["check", "--backend", "small"],
+            &[("LOCAL_D1_KEY", ""), ("HTTPS_PROXY", &proxy.url)],
+        );
+        assert_eq!(out.status.code(), Some(2));
+        assert_eq!(said(&out).0, "");
+        assert_eq!(
+            said(&out).1,
+            format!(
+                "thinkthen: profile probe-limit allows at most {limit} {words}; this request has {actual}\n"
+            )
+        );
+        assert_eq!(proxy.count(), 0);
+        home.assert_no_marker_in_files();
+    }
+}
+
+#[test]
+fn an_explicit_command_profile_still_outranks_the_setup_request_limit() {
+    let home = Home::new("explicit-request-profile-0400");
+    let target = listener();
+    home.config(
+        &json!({"schema":"thinkthen.config/1","backend":"small","backends":{"small":{
+            "url":target.base(),"key_env":"LOCAL_D1_KEY","model":"m",
+            "profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_request_bytes":1}
+        }}})
+        .to_string(),
+    );
+    let profile = home.path("explicit.json");
+    std::fs::write(
+        &profile,
+        r#"{"schema":"thinkthen.backend-profile/1","name":"explicit","max_request_bytes":4096}"#,
+    )
+    .expect("explicit profile");
+    let input = home.evidence(&["alpha"]);
+    let out = home.run(
+        &[
+            "decide",
+            "a refund?",
+            "--input",
+            &input,
+            "--profile",
+            &profile,
+            "--no-cache",
+        ],
+        &[],
+    );
+    assert_eq!(out.status.code(), Some(0), "{}", said(&out).1);
+    assert_eq!(said(&out).0, "true\n");
+    assert_eq!(target.count(), 1);
+    home.assert_no_marker_in_files();
+}

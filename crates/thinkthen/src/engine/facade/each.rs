@@ -212,6 +212,38 @@ impl Asker for Each<'_> {
 }
 
 impl Engine {
+    /// Admit one fixed request without splitting it, before keys or transport.
+    /// `check` validates all its probes this way before sending the first.
+    pub(crate) fn check_plan(&self, plan: &Plan) -> Result<(), Error> {
+        let Some(profile) = self.profile() else {
+            return Ok(());
+        };
+        let asks = pack::asks(self.backend.url(), plan)
+            .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
+        let first = asks.first().ok_or(Error::Defect("a plan asks nothing"))?;
+        let body = crate::core::adapters::built_in::encode(plan)
+            .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
+        let limits = PackLimits {
+            ceiling: self.backend.ceiling(),
+            profile: Some(profile.clone()),
+            inputs: usize::MAX,
+            questions: None,
+            context: false,
+        };
+        let options = asks.iter().map(pipeline::options).max().unwrap_or(0);
+        if let Some((kind, limit, actual)) =
+            limits.over(&first.state, body.len(), asks.len(), options)
+        {
+            return Err(Error::ProfileLimit(crate::core::ProfileLimit {
+                name: profile.name().clone(),
+                kind,
+                limit,
+                actual,
+            }));
+        }
+        Ok(())
+    }
+
     /// Ask every question, packing requests within `bound`, and hand each
     /// one-answer reply on in question order. A question that cannot go
     /// alone refuses the call before any send. The first failure in question
