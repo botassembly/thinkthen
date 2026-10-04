@@ -120,3 +120,7 @@ Every decision lands in `sdlc/`: an ADR, an issue, or a ticket. Tickets are numb
 - **Gain**: a line that a secrecy or privacy claim needs a test over every verb and both the success and failure path, not one representative case.
 - **Lose**: nothing factual needs removing; both corrections above are additions to already-accurate text, not replacements.
 - **Consider**: since `thinkthen` now ships `transforms/` (`jq`) as load-bearing, first-class artifacts, `rust-standards.md` (a Rust-only document) is the wrong home for the `jq` lessons — they belong in `AGENTS.md` or a `transforms/README.md`, which is where the proposed `AGENTS.md` above puts the one universal rule (never use `//` for a three-way branch).
+
+## 2026-10-04: Audit host contracts separately from the common engine
+
+0405 found that typed score descriptions and relation reads already existed despite an older product note. Trace the accepted parser and the complete executable path before turning a premise into a ticket. Keep metadata digests separate from request/cache identity. Record exact selected-case and packed-file proof scope; a published file count is not an individual test count. Name host adapters, generic JSON versus typed routes and changed-rule strict-replay proof separately. Recognition can introduce previously unasked downstream relations when its entity cut changes. Bound display snapshots in memory; a read-only audit does not authorize implicit spool files.

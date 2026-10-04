@@ -1,6 +1,6 @@
 # 0405: Answer filter, rank and grep before search changes
 
-Status: findings prepared for fresh review. Product implementation remains blocked on the audit's accepted scope.
+Status: first answer accepted at `e37b7150e278255adcd81ef25ba6985517b5cb22` by fresh independent review. The reviewer reproduced 36 CLI and 14 public tests and the counted probes. Amended 0401 slices still require separate fresh ticket review before product implementation.
 
 Snapshot: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`. The audit branch changes records only. Windows release safety and ticket 0401 are in flight and are not shipped behavior.
 
@@ -33,7 +33,7 @@ Without new flags, decide, choose, score and tag still read a whole document. Fi
 
 Several named inputs without a window retain each command's chosen framing. The four default-document value functions judge each named file as its own document; they do not concatenate documents and change the item. Their multi-file output needs an explicit documented carrier, because printing several scalar document results loses the association with the file. This is a design gap to resolve in the intake slice. Reject new ambiguous combinations until that carrier is settled. Shared intake does not authorize changing saved question digests, request keys, default output or old one-file behavior.
 
-`--around` requires an explicit bound on retained display bytes. Filter needs a bounded before-buffer and delayed after-lines while retaining its streamed failure prefix. Rank already holds selected output; surrounding content must use bounded owned input snapshots, not reread a file that could change during the call. Find already owns its bounded set. Overlapping neighbor groups need deterministic separation and duplication rules. A rendered neighbor is display context, never provider shared context.
+`--around` requires an explicit bound on retained display bytes. Filter needs a bounded before-buffer and delayed after-lines while retaining its streamed failure prefix. Rank already holds selected output; surrounding content must use bounded owned input snapshots, not reread a file that could change during the call. Bounded snapshots mean bounded memory. No implicit scratch or spool writes follow from this proposal. Find already owns its bounded set. Overlapping neighbor groups need deterministic separation and duplication rules. A rendered neighbor is display context, never provider shared context.
 
 ## Code and compatibility cost
 
