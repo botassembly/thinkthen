@@ -1,6 +1,6 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: in progress. Slice A is built and awaits fresh code review. The first 0405 search answer received fresh ACCEPT at `e37b7150e278255adcd81ef25ba6985517b5cb22`. This amended scope replaces the earlier rank-only slices and needs fresh ticket review before implementation. Prior Slice A acceptance applies only to its retained compatible details.
+Status: in progress. Slice A passed fresh source and specification reviews, the coordinator's full tests and specification checks, and all 350 actual site replays with strict verification. Final receipt review and landing remain. The amended scope received fresh acceptance before implementation. Slices B, C and D remain open.
 
 Milestone: 0.2
 
@@ -75,4 +75,4 @@ Repeated --input and unambiguous positional routes; multi-file JSON carrier; all
 
 Slice A shares one edge intake iterator across the seven commands. It opens all named files first and initializes each table header before admitting an item. File positions travel separately from global pipeline labels. Text windows reuse the existing bounded chunks and record parser. CLI result metadata appends positions without rewriting the existing result members. The four default-document functions need a distinct multi-document completion mode so a later input or backend failure cannot inherit the first answer's exit code.
 
-The old loose-argument hint remains on find. The seven new routes replace it where positional files are now valid. Recognize and relate keep their single-input guards and hide the unsupported window option. Slice A leaves display flags, find display and question-set rank untouched. Full checkpoint and site-proof replay receipts remain with the coordinator.
+The old loose-argument hint remains on find. The seven new routes replace it where positional files are now valid. Recognize and relate keep their single-input guards and hide the unsupported window option. Slice A leaves display flags, find display and question-set rank untouched. The full checkpoint and actual 350 site replay receipts are recorded in [the slice A build record](../records/0401-a-shared-intake-build.md).
