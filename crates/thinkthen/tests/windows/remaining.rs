@@ -10,33 +10,8 @@ use std::fs;
 use std::process::{Command, Stdio};
 
 #[test]
-fn retained_native_directory_cannot_be_replaced_and_distinct_leaf_ids_differ() {
+fn independent_month_and_lock_full_native_ids_differ() {
     let (scratch, listener) = privacy::initialized();
-    use std::os::windows::fs::OpenOptionsExt as _;
-    let directory = fs::OpenOptions::new()
-        .read(true)
-        .share_mode(
-            windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ
-                | windows_sys::Win32::Storage::FileSystem::FILE_SHARE_WRITE,
-        )
-        .custom_flags(windows_sys::Win32::Storage::FileSystem::FILE_FLAG_BACKUP_SEMANTICS)
-        .open(scratch.usage())
-        .expect("retained directory");
-    let original = super::ffi::identity(&directory).expect("native original ID");
-    let bytes = fs::read(privacy::month(&scratch)).expect("month bytes");
-    let attempted = fs::rename(scratch.usage(), scratch.0.join("replaced-usage"));
-    assert!(
-        attempted.is_err(),
-        "no delete sharing must exclude directory replacement"
-    );
-    assert_eq!(
-        super::ffi::identity(&directory).expect("retained ID"),
-        original
-    );
-    assert_eq!(
-        fs::read(privacy::month(&scratch)).expect("retained month"),
-        bytes
-    );
     let month = fs::File::open(privacy::month(&scratch)).expect("independent month");
     let lock = fs::File::open(scratch.usage().join(".lock")).expect("independent lock");
     let month_id = super::ffi::identity(&month).expect("month full native ID");

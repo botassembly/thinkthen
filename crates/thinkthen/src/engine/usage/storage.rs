@@ -165,6 +165,8 @@ pub(super) fn update(path: &Path, month: &str, delta: Counts, shared: &Shared) -
     maybe_fail(Stage::Setup)?;
     make_private_directory(path)?;
     let directory = open_verified(path, true, 0o700)?;
+    #[cfg(all(test, windows))]
+    crate::windows::checkpoint::observe(crate::windows::checkpoint::Point::Directory, &directory);
     let lock_path = path.join(".lock");
     let (lock, created) = open_stable_lock(&lock_path)?;
     pause_after_creation(created);
@@ -230,6 +232,8 @@ fn read_counts(file: &mut File) -> io::Result<Counts> {
 fn replace(path: &Path, directory: &File, name: &str, counts: Counts) -> io::Result<()> {
     let temporary = path.join(".update.tmp");
     let mut file = open_private(&temporary, true)?;
+    #[cfg(all(test, windows))]
+    crate::windows::checkpoint::observe(crate::windows::checkpoint::Point::Temporary, &file);
     file.set_len(0)?;
     file.seek(SeekFrom::Start(0))?;
     maybe_fail(Stage::Write)?;

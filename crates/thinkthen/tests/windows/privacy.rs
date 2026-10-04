@@ -33,7 +33,7 @@ pub(super) fn month(scratch: &Scratch) -> std::path::PathBuf {
         .expect("recognized month")
 }
 #[test]
-fn native_creation_and_child_replacement_keep_exact_counts_and_private_access() {
+fn native_creation_and_monthly_replacement_keep_exact_counts_and_private_access() {
     let (scratch, listener) = initialized();
     for path in [
         scratch.usage(),
@@ -42,22 +42,7 @@ fn native_creation_and_child_replacement_keep_exact_counts_and_private_access() 
     ] {
         support::assert_private(&path);
     }
-    use std::os::windows::fs::OpenOptionsExt as _;
-    let retained = fs::OpenOptions::new()
-        .read(true)
-        .share_mode(
-            windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ
-                | windows_sys::Win32::Storage::FileSystem::FILE_SHARE_WRITE,
-        )
-        .custom_flags(windows_sys::Win32::Storage::FileSystem::FILE_FLAG_BACKUP_SEMANTICS)
-        .open(scratch.usage())
-        .expect("retained directory without delete sharing");
-    let original = super::ffi::identity(&retained).expect("independent directory identity");
     assert_eq!(live(&scratch, &listener).status.code(), Some(0));
-    assert_eq!(
-        super::ffi::identity(&retained).expect("retained identity"),
-        original
-    );
     assert_eq!(listener.requests().len(), 2);
     let totals = support::status(&scratch);
     assert_eq!(totals["usage"]["total"]["requests_sent"], 2);
@@ -97,7 +82,24 @@ fn foreign_usage_grants_and_owners_refuse_before_any_additional_request() {
             let output = live(&scratch, &listener);
             assert_eq!(output.status.code(), Some(5), "{object} {grant}");
             assert_eq!(listener.requests().len(), 1);
-            assert!(String::from_utf8_lossy(&output.stderr).contains(support::ADVICE));
+            let subject = match object {
+                "root" => "the usage folder that thinkthen status names",
+                "lock" => ".lock",
+                _ => path
+                    .file_name()
+                    .expect("month filename")
+                    .to_str()
+                    .expect("month name"),
+            };
+            let ending = if object == "root" {
+                "aside"
+            } else {
+                "out of the usage folder that thinkthen status names"
+            };
+            let sentence = format!(
+                "thinkthen: cannot read the usage totals: {subject} has unsafe or unreadable state. Make it owned by your user and restrict its Windows access permissions to your user and Windows SYSTEM, or move it {ending}.\n"
+            );
+            assert_eq!(output.stderr, sentence.as_bytes());
             assert_eq!(support::descriptor(&path), before);
             if let Some(bytes) = bytes {
                 assert_eq!(fs::read(&path).expect("unchanged bytes"), bytes);
