@@ -15,6 +15,8 @@ The coordinator's unauthenticated reads found the public source `PACKAGES` and p
 
 Ticket 0398 slice B owns the path and fixture correction before its hosted install check. Fresh build and review remain required. A direct archive read under the correct `src/contrib` path, using both the plain filename and indexed `Path`, returned HTTP 403 with Cloudflare code 1010 through `urllib`. A later `curl -q -I -L` request to `src/contrib/thinkthen_0.1.2.tar.gz` followed HTTP 302 to HTTP 200. Production fetch uses curl, so the urllib response reflects a client-policy difference and establishes no archive-unavailability finding. The confirmed consumer defect is the missing `src/contrib` suffix for the index and archive URLs. No R install or archive-body download ran; failed prefix reads stopped after at most 64 response bytes. Hosted proof remains pending. No install-check workflow dispatch is authorized by this preflight.
 
+The lane retains these read-only receipts under ignored build output: `target/0398b-r-contrib-preflight/index-read.json` records the index's 404 and corrected 200 with version and Built metadata; `target/0398b-r-contrib-preflight/archive-head.log` records curl's archive HEAD redirect and final 200. The records above preserve their conclusion without publishing scratch artifacts.
+
 To evaluate:
 
 1. The install page and the R README name Ubuntu 26.04 for the built package, and say what other Linux hosts need.
