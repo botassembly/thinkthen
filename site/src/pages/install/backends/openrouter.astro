@@ -17,5 +17,8 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <CheckLines name={b.name} />
   <p>OpenRouter requires both sides when a yes-or-no question has criteria. ThinkThen preserves your descriptions and sends an empty object for a missing side. Questions without descriptions omit criteria.</p>
   <p>The <a href="https://openrouter.ai/typesafe/jev-1.13">provider documentation</a> was checked on 2026-10-04. Read the provider's terms before sending sensitive text.</p>
+  <h2>Price and limits</h2>
+  <p>On 2026-10-04, <a href="https://openrouter.ai/typesafe/jev-1.13">OpenRouter's Jev 1.13 page</a> listed $0.042 per million input tokens, free output and a 32,000-token context window. ThinkThen's own request limits still apply.</p>
+  <p>The backend paces nothing unless the configuration file sets <code>requests_per_minute</code>. That rate applies to one process. Concurrent processes each get their own rate.</p>
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
 </SidePage>
