@@ -68,6 +68,21 @@ namespace ThinkThenInstall {
                 if (!CreateDirectory(path, ref attrs)) throw new Win32Exception(Marshal.GetLastWin32Error());
             } finally { LocalFree(descriptor); }
         }
+        [DllImport("kernel32.dll", EntryPoint="CreateFileW", CharSet=CharSet.Unicode, SetLastError=true)]
+        static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string path, uint access, uint share, ref SecurityAttributes attributes, uint creation, uint flags, IntPtr template);
+        public static FileStream NewFile(string path, string sid, bool readWrite) {
+            IntPtr descriptor; uint size;
+            if (!ConvertStringSecurityDescriptorToSecurityDescriptor("O:" + sid + "D:P(A;;FA;;;" + sid + ")(A;;FA;;;SY)", 1, out descriptor, out size))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            try {
+                SecurityAttributes attrs = new SecurityAttributes();
+                attrs.Length = Marshal.SizeOf(typeof(SecurityAttributes)); attrs.Descriptor = descriptor;
+                Microsoft.Win32.SafeHandles.SafeFileHandle handle = CreateFile(path, readWrite ? 0xc0000000u : 0x40000000u, 0, ref attrs, 1, 0x80, IntPtr.Zero);
+                if (handle.IsInvalid) { int code = Marshal.GetLastWin32Error(); handle.Dispose(); throw new Win32Exception(code); }
+                try { return new FileStream(handle, readWrite ? FileAccess.ReadWrite : FileAccess.Write, 65536, false); }
+                catch { handle.Dispose(); throw; }
+            } finally { LocalFree(descriptor); }
+        }
         static async Task<string> Capture(StreamReader reader) {
             char[] buffer = new char[512]; StringBuilder text = new StringBuilder(); int count;
             while ((count = await reader.ReadAsync(buffer, 0, buffer.Length)) != 0) {
@@ -266,6 +281,8 @@ function Assert-Private([string] $Path, [bool] $Directory) {
     if ($null -eq $attrs -or ($attrs -band [System.IO.FileAttributes]::ReparsePoint) -or
         [bool] ($attrs -band [System.IO.FileAttributes]::Directory) -ne $Directory) { throw "Refusing a missing, linked or nonregular path: $Path" }
     $acl = Get-Acl -LiteralPath $Path
+    $rawAcl = [System.Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)
+    if ($null -eq $rawAcl.DiscretionaryAcl) { throw "Path has an unrestricted access list. Inspect it or choose a new install directory: $Path" }
     if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $script:UserSid) { throw "Path has a foreign owner. Inspect it or choose a new install directory: $Path" }
     foreach ($rule in $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])) {
         if ($rule.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow -and $rule.IdentityReference.Value -notin @($script:UserSid, 'S-1-5-18')) { throw "Path allows another identity. Inspect it or choose a new install directory: $Path" }
@@ -279,6 +296,8 @@ function Assert-Ancestors([string] $Path) {
         if ($null -ne $attrs) {
             if (($attrs -band [System.IO.FileAttributes]::ReparsePoint) -or -not ($attrs -band [System.IO.FileAttributes]::Directory)) { throw "Refusing a linked or non-directory ancestor: $current" }
             $acl = Get-Acl -LiteralPath $current
+            $rawAcl = [System.Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)
+            if ($null -eq $rawAcl.DiscretionaryAcl) { throw "Refusing an ancestor with unrestricted access: $current" }
             $owner = $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
             if ($owner -notin @($script:UserSid, 'S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')) { throw "Refusing a foreign-owned ancestor: $current" }
             # WriteData alone permits a child name, but does not replace an
@@ -335,7 +354,7 @@ function Get-FileHashPrivate([string] $Path) {
 function Write-PrivateFile([string] $Path, [byte[]] $Bytes) {
     Assert-Ancestors ([System.IO.Path]::GetDirectoryName($Path))
     Assert-Private ([System.IO.Path]::GetDirectoryName($Path)) $true
-    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+    $stream = [ThinkThenInstall.Native]::NewFile($Path, $script:UserSid, $false)
     $script:Owned.Add($Path) | Out-Null
     try { $stream.Write($Bytes, 0, $Bytes.Length); $stream.Flush($true) } finally { $stream.Dispose() }
     Assert-Private $Path $false
@@ -498,8 +517,10 @@ function Invoke-ThinkThenInstall([string] $RequestedVersion) {
         Assert-Ancestors $script:InstallDirectory
         Assert-Private $script:InstallDirectory $true
         if ($null -ne (Get-Attributes $lockPath)) { Assert-Private $lockPath $false }
-        # OpenOrCreate cannot overwrite a lock and leaves its name persistent.
-        $lock = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+        # Supply file owner and access rules at creation even under an elevated
+        # token whose default file owner would be the Administrators group.
+        if ($null -eq (Get-Attributes $lockPath)) { $lock = [ThinkThenInstall.Native]::NewFile($lockPath, $script:UserSid, $true) }
+        else { $lock = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None) }
         Assert-Private $lockPath $false
         # Inspect both FILE owners and access lists before any read or hash.
         foreach ($path in @($installed, $receiptPath)) {

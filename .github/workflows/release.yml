@@ -308,7 +308,7 @@ jobs:
           sdlc/scripts/installer-test
           sdlc/scripts/release-workflow installer-smoke smoke-files
           sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
-      - name: Smoke the Windows command and packed Rust crate
+      - name: Prove the Windows installer and smoke the command and packed Rust crate
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: python3 sdlc/scripts/release-windows-smoke.py platform --crate-dir crate-dist
 

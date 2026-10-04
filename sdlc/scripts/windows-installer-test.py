@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 import threading
 import zipfile
+import warnings
 
 REPO = Path(__file__).resolve().parents[2]
 NAME = 'thinkthen-0.2.0-x86_64-pc-windows-msvc.zip'
@@ -33,7 +34,8 @@ def pe():
 
 def archive(names=('thinkthen.exe',), *, mode=0o100755, dos=0, binary=None):
     output = io.BytesIO()
-    with zipfile.ZipFile(output, 'w') as target:
+    with warnings.catch_warnings(), zipfile.ZipFile(output, 'w') as target:
+        warnings.filterwarnings('ignore', message="Duplicate name: 'thinkthen.exe'", category=UserWarning)
         for name in names:
             entry = zipfile.ZipInfo(name)
             entry.external_attr = mode << 16 | dos
@@ -169,10 +171,24 @@ class Server(http.server.BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--self-test', action='store_true', help='verify fixture construction and identical installer copies; does not prove Windows execution')
     parser.add_argument('--powershell', action='append', help='host executable; repeat to check both hosts')
     parser.add_argument('--binary', type=Path, help='freshly packed real executable for native Windows boundaries')
     parser.add_argument('--version', default='0.2.0')
     args = parser.parse_args()
+    if (REPO / 'install.ps1').read_bytes() != (REPO / 'site/public/install.ps1').read_bytes():
+        parser.error('site installer copy differs from root source')
+    if args.self_test:
+        with tempfile.TemporaryDirectory(prefix='thinkthen-installer-construction-') as temporary:
+            root = Path(temporary)
+            table = cases(root, 'http://127.0.0.1:1')
+            json.loads(json.dumps(table))
+            with zipfile.ZipFile(io.BytesIO(archive())) as source:
+                assert source.namelist() == ['thinkthen.exe'] and source.read('thinkthen.exe') == pe()
+            assert sum(case['kind'] == 'download' for case in table) == 8
+            assert any(case['label'] == 'encrypted' and not case['ok'] for case in table)
+        print(f'Windows installer fixtures: {len(table)} cases constructed; root/site copies match; Windows execution NOT RUN')
+        return
     hosts = args.powershell or ([shutil.which('powershell'), shutil.which('pwsh')] if os.name == 'nt' else [shutil.which('pwsh')])
     if not all(hosts):
         if os.name == 'nt':

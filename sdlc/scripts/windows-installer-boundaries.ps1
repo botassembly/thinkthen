@@ -160,6 +160,9 @@ if ($NativeBinary) {
         $script:Owned.Add($probe) | Out-Null
         & $compiler /nologo /target:exe /platform:x64 ("/out:" + $probe) $source | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'Could not compile native version-probe fixture.' }
+        $probeAcl = Get-Acl -LiteralPath $probe
+        $probeAcl.SetOwner([System.Security.Principal.SecurityIdentifier]::new($script:UserSid))
+        Set-Acl -LiteralPath $probe -AclObject $probeAcl
         Assert-Private $probe $false
         $env:THINKTHEN_PROBE_SENTINEL = 'fixture'; $env:FIXTURE_API_KEY = 'fixture'
         if ($mode -eq 'good') { Check ([ThinkThenInstall.Native]::Probe($probe) -ceq "thinkthen 0.2.0`r`n") 'version child strips settings and keys' }
@@ -191,7 +194,7 @@ if ($NativeBinary) {
     Check (-not [System.IO.Directory]::Exists($script:Scratch)) 'owned flat cleanup succeeds'
     $env:THINKTHEN_INSTALL_DIR = $nativeRoot
     $nativeLock = Join-Path $nativeRoot '.thinkthen-install.lock'
-    $held = [System.IO.File]::Open($nativeLock, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+    $held = [ThinkThenInstall.Native]::NewFile($nativeLock, $script:UserSid, $true)
     try { Refuses { Invoke-ThinkThenInstall $ReleaseVersion } 'concurrent installer refuses before receipt or command replacement' }
     finally { $held.Dispose() }
     Check ((Get-FileHashPrivate $original) -ceq $old) 'concurrent refusal preserves command'
