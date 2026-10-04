@@ -45,10 +45,11 @@ pub(crate) fn run(
     if arguments.dry_run {
         say_dropped_detail(probes.iter().any(|probe| probe.drops_detail))?;
     }
+    let profile = choice.setup(&backend).1;
     let engine = Engine::with_roots(
         Settings {
             backend,
-            profile: None,
+            profile,
             timeout: Duration::from_secs(arguments.timeout),
             max_retries: DEFAULT_MAX_RETRIES,
             retry_wait: environment.retry_wait(),

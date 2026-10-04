@@ -3,7 +3,7 @@
 
 use super::{Environment, key};
 use crate::core::named::{self, Choice};
-use crate::core::{Backend, DEFAULT_MODEL};
+use crate::core::{Backend, BackendProfile, DEFAULT_MODEL};
 use crate::failure::Failure;
 
 impl Environment {
@@ -43,6 +43,8 @@ impl Environment {
         asked: Option<&str>,
     ) -> Result<Backend, Failure> {
         let backend = choice.backend(asked, self.model().unwrap_or(DEFAULT_MODEL))?;
+        self.usage
+            .set_prices(choice.setup(&backend).0.or(self.config.prices()));
         choice.guard(&backend)?;
         self.key.check(
             &backend,
@@ -50,6 +52,18 @@ impl Environment {
             choice.named.as_ref().map(named::Named::name),
         )?;
         Ok(backend)
+    }
+
+    /// Select local setup limits after the final posting URL is resolved.
+    pub(crate) fn setup_profile(
+        &self,
+        common: &crate::args::Common,
+        backend: &Backend,
+    ) -> Result<Option<BackendProfile>, Failure> {
+        Ok(self
+            .choose(common.backend.as_deref(), common.url.as_deref())?
+            .setup(backend)
+            .1)
     }
 
     /// Whether the settled backend is a named one.

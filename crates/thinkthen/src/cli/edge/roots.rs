@@ -14,7 +14,7 @@ impl Environment {
             .transpose()
             .map_err(|error| match error {
                 RootsError::Usage(message) => Failure::Usage(message),
-                RootsError::Local(message) => Failure::Configuration(message),
+                RootsError::Local(message) => Failure::Configuration(message.to_owned()),
             })
     }
 }

@@ -9,7 +9,7 @@ use std::fmt;
 
 use super::{EngineBuilder, Secret};
 use crate::core::named::{self, Named};
-use crate::core::{Backend, DEFAULT_MODEL, ModelName};
+use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, ModelName, Prices};
 use crate::public::error::Error;
 
 /// What `from_env` captured below the engine settings: the environment tier,
@@ -21,6 +21,7 @@ pub(super) struct Captured {
     pub(super) config_url: Option<String>,
     pub(super) config_backend: Option<String>,
     pub(super) config_model: Option<ModelName>,
+    pub(super) prices: Option<Prices>,
     pub(super) configured: Vec<Named>,
     /// Each named variable that was set and nonblank.
     pub(super) keys: BTreeMap<String, Secret>,
@@ -45,6 +46,8 @@ impl fmt::Debug for Captured {
 /// The resolved backend, the key it sends, and the variable a missing key names.
 pub(super) struct Selected {
     pub(super) backend: Backend,
+    pub(super) prices: Option<Prices>,
+    pub(super) profile: Option<BackendProfile>,
     pub(super) key: Option<Secret>,
     pub(super) variable: String,
 }
@@ -99,7 +102,10 @@ impl EngineBuilder {
                     .find_map(|name| captured.keys.get(*name).cloned())
             }
         };
+        let (prices, profile) = choice.setup(&backend);
         Ok(Selected {
+            prices: prices.or(captured.prices),
+            profile,
             backend,
             key,
             variable: choice.key_variable().to_owned(),

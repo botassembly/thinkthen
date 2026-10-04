@@ -382,6 +382,8 @@ impl EngineBuilder {
             backend,
             key,
             variable,
+            prices,
+            profile: setup_profile,
         } = self.selected()?;
         let backend = backend.with_request_size(self.max_request_bytes);
         if backend.address_contains_key(key.as_ref().map(|Secret(value)| value.as_ref())) {
@@ -408,7 +410,8 @@ impl EngineBuilder {
                 }
                 Profile::Inline(profile) => Ok(profile.clone()),
             })
-            .transpose()?;
+            .transpose()?
+            .or(setup_profile);
         let settings = Settings {
             backend,
             profile: profile.clone(),
@@ -436,7 +439,7 @@ impl EngineBuilder {
             ),
             (profile, roots),
             batch,
-            self.prices,
+            self.prices.or(prices),
         )
     }
 

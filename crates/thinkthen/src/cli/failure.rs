@@ -184,7 +184,7 @@ pub(crate) enum Failure {
     RecordingPathIsFile,
     DefaultCacheUnavailable,
     DefaultCachePrivate,
-    Configuration(&'static str),
+    Configuration(String),
     CacheEntry,
     /// The caller's key list could not be read; its path is withheld.
     UsedManifestUnreadable,
@@ -367,7 +367,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             "the default cache folder is not private; set its permissions to 0700 or use --no-cache"
                 .to_owned(),
         ),
-        Failure::Configuration(message) => (5, (*message).to_owned()),
+        Failure::Configuration(message) => (5, message.clone()),
         Failure::CacheEntry => (5, "the cache contains a malformed final entry".to_owned()),
         Failure::UsedManifestUnreadable => (5, "the --used key file could not be read".to_owned()),
         Failure::ConvertFolder => (5, "cache convert takes an existing folder, and the one named is missing or not a folder".to_owned()),

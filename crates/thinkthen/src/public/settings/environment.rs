@@ -33,14 +33,13 @@ impl EngineBuilder {
     pub fn from_env() -> Result<Self, Error> {
         let config = Config::read(config::path().as_deref()).map_err(|refused| {
             if refused.unreadable {
-                Error::local(refused.message)
+                Error::local(refused.message.into_owned())
             } else {
-                Error::usage(refused.message)
+                Error::usage(refused.message.into_owned())
             }
         })?;
         let named = variable("THINKTHEN_CACHE")?.map(PathBuf::from);
         let mut builder = Self::new();
-        builder.prices = config.prices();
         builder.seeded = Some(Seeded {
             platform: named.is_none(),
             folder: named.or_else(config::cache_path),
@@ -53,6 +52,7 @@ impl EngineBuilder {
                 .map_err(|error| Error::usage(format!("THINKTHEN_BASE_URL: {error}")))?;
         }
         builder.captured = Captured {
+            prices: config.prices(),
             base_url,
             backend: variable("THINKTHEN_BACKEND")?,
             config_url: config.url().map(str::to_owned),

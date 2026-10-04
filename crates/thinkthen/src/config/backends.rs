@@ -4,17 +4,20 @@
 //! and a model. Any entry, a built-in's included, may set `requests_per_minute`
 //! (ticket 0343). The file never holds a key, and no refusal repeats a value.
 
+use serde_json::value::RawValue;
+use std::collections::BTreeMap;
 use std::num::NonZeroU32;
 
 use serde_json::{Map, Value};
 
 use super::{ConfigError, refused};
-use crate::core::{Backend, DEFAULT_MODEL, MAX_PER_MINUTE, ModelName, Named, named};
+use crate::core::{
+    Backend, BackendProfile, DEFAULT_MODEL, MAX_PER_MINUTE, ModelName, Named, Prices, named,
+};
 
-const BUILT_IN: &str =
-    "a configuration entry for a built-in backend holds `requests_per_minute` and nothing else";
+const BUILT_IN: &str = "a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`";
 const NAME: &str = "configuration field `backends` holds a name that is not 1 to 32 lowercase letters, digits, and hyphens";
-const EXTRA: &str = "configuration backend entries hold only `url`, `path`, `key_env`, `model`, and `requests_per_minute`";
+const EXTRA: &str = "configuration backend entries hold only `url`, `path`, `key_env`, `model`, `requests_per_minute`, `both_sides`, `usd_per_million_input`, `usd_per_million_output`, and `profile`";
 const MISSING: &str = "configuration backend entries need `url`, `key_env`, and `model`";
 const STRINGS: &str = "configuration backend entries are objects whose `url`, `path`, `key_env`, and `model` are strings";
 const URL: &str = "configuration backend field `url` must be a safe backend base";
@@ -28,7 +31,7 @@ const BACKEND: &str =
 /// Check every entry, in name order, and the `backend` field against them.
 pub(super) fn read(
     backend: Option<&str>,
-    entries: Option<&Map<String, Value>>,
+    entries: Option<&BTreeMap<String, Box<RawValue>>>,
 ) -> Result<Vec<Named>, ConfigError> {
     let mut named = Vec::new();
     for (name, value) in entries.into_iter().flatten() {
@@ -42,28 +45,49 @@ pub(super) fn read(
     Ok(named)
 }
 
-fn entry(name: &str, value: &Value) -> Result<Named, ConfigError> {
+fn entry(name: &str, raw: &RawValue) -> Result<Named, ConfigError> {
+    let value: Value = serde_json::from_str(raw.get()).map_err(|_| refused(STRINGS))?;
+    let profile: BTreeMap<String, Box<RawValue>> =
+        serde_json::from_str(raw.get()).unwrap_or_default();
+    let profile = profile.get("profile").map(|raw| raw.get());
     if let Some(built_in) = Named::built_in(name) {
-        // Only the rate: a built-in keeps its base, key variables, and model.
-        return match value {
-            Value::Object(fields) if fields.len() == 1 => fields
-                .get("requests_per_minute")
-                .ok_or_else(|| refused(BUILT_IN))
-                .and_then(rate)
-                .map(|rate| built_in.with_per_minute(Some(rate))),
-            _ => Err(refused(BUILT_IN)),
+        let Value::Object(fields) = &value else {
+            return Err(refused(BUILT_IN));
         };
+        if fields.is_empty()
+            || fields.keys().any(|field| {
+                !matches!(
+                    field.as_str(),
+                    "requests_per_minute"
+                        | "usd_per_million_input"
+                        | "usd_per_million_output"
+                        | "profile"
+                )
+            })
+        {
+            return Err(refused(BUILT_IN));
+        }
+        return setup(built_in, fields, profile);
     }
+
     if !named::valid_name(name) {
         return Err(refused(NAME));
     }
-    let Value::Object(fields) = value else {
+    let Value::Object(fields) = &value else {
         return Err(refused(STRINGS));
     };
     if fields.keys().any(|field| {
         !matches!(
             field.as_str(),
-            "url" | "path" | "key_env" | "model" | "requests_per_minute"
+            "url"
+                | "path"
+                | "key_env"
+                | "model"
+                | "requests_per_minute"
+                | "both_sides"
+                | "usd_per_million_input"
+                | "usd_per_million_output"
+                | "profile"
         )
     }) {
         return Err(refused(EXTRA));
@@ -93,12 +117,60 @@ fn entry(name: &str, value: &Value) -> Result<Named, ConfigError> {
         }
         Some(_) => return Err(refused(STRINGS)),
     };
-    let per_minute = fields.get("requests_per_minute").map(rate).transpose()?;
-    let entry = Named::new(name, url, key_env, model).with_per_minute(per_minute);
-    Ok(match path {
-        Some(path) => entry.with_path(path),
-        None => entry,
-    })
+    let entry = Named::new(name, url, key_env, model);
+    setup(
+        match path {
+            Some(path) => entry.with_path(path),
+            None => entry,
+        },
+        fields,
+        profile,
+    )
+}
+
+/// Parse the shared settings once; built-in transport overrides were already refused.
+fn setup(
+    entry: Named,
+    fields: &Map<String, Value>,
+    profile: Option<&str>,
+) -> Result<Named, ConfigError> {
+    let both_sides = match fields.get("both_sides") {
+        None => false,
+        Some(Value::Bool(value)) => *value,
+        Some(_) => {
+            return Err(refused(
+                "configuration backend field `both_sides` must be true or false",
+            ));
+        }
+    };
+    let prices = match (
+        fields.get("usd_per_million_input"),
+        fields.get("usd_per_million_output"),
+    ) {
+        (None, None) => None,
+        (Some(Value::String(input)), Some(Value::String(output))) => Prices::parse(input, output),
+        _ => None,
+    };
+    if prices.is_none()
+        && (fields.contains_key("usd_per_million_input")
+            || fields.contains_key("usd_per_million_output"))
+    {
+        return Err(refused(
+            "configuration backend fields `usd_per_million_input` and `usd_per_million_output` come together as decimal strings from 0 through 1000000 with at most six fractional digits",
+        ));
+    }
+    let profile = profile
+        .map(|text| {
+            BackendProfile::parse(text).map_err(|error| ConfigError {
+                message: format!("configuration backend field `profile` {error}").into(),
+                unreadable: false,
+                price: None,
+            })
+        })
+        .transpose()?;
+    Ok(entry
+        .with_per_minute(fields.get("requests_per_minute").map(rate).transpose()?)
+        .with_setup(prices, profile, both_sides))
 }
 
 /// A JSON whole number from 1 to 60,000, the variable's range.
@@ -132,7 +204,7 @@ mod tests {
         };
         let good =
             r#"{"url":"http://127.0.0.1:8080/v1","key_env":"LOCAL_D1_KEY","model":"d1:free"}"#;
-        let built_in = "a configuration entry for a built-in backend holds `requests_per_minute` and nothing else";
+        let built_in = "a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`";
         let parsed = Config::parse(entry(good).as_bytes()).expect("a valid entry");
         assert_eq!(parsed.named().len(), 1);
         assert!(
@@ -174,7 +246,7 @@ mod tests {
             ),
             (
                 entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","key":"{marker}"}}"#)),
-                "configuration backend entries hold only `url`, `path`, `key_env`, `model`, and `requests_per_minute`",
+                "configuration backend entries hold only `url`, `path`, `key_env`, `model`, `requests_per_minute`, `both_sides`, `usd_per_million_input`, `usd_per_million_output`, and `profile`",
             ),
             (
                 entry(r#"{"url":"http://127.0.0.1/v1","key_env":7,"model":"m"}"#),
@@ -302,7 +374,7 @@ mod tests {
                 .expect("other-write");
             let read = Config::read(Some(&path));
             assert_eq!(
-                read.as_ref().err().map(|error| error.message),
+                read.as_ref().err().map(|error| error.message.as_ref()),
                 refused.then_some("the configuration file is writable by another user, so its `backends` are refused; keep it writable by its owner alone"),
                 "{text}"
             );

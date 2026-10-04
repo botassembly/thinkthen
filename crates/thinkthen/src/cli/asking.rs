@@ -213,7 +213,7 @@ pub(crate) fn run(
     if request_size.is_some() {
         environment.warn_request_size(&backend)?;
     }
-    let profile = profile::read(common)?;
+    let profile = profile::read(common, environment, &backend)?;
     crate::cli::intake::window(common, !settled.on().is_empty())?;
     let reading = read_by(common, settled, keeping)?;
     output.validate_display(common)?;

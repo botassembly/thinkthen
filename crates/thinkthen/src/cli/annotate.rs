@@ -75,7 +75,7 @@ pub(crate) fn run(
     if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
-    let profile = profile::read(&arguments.common)?;
+    let profile = profile::read(&arguments.common, environment, &backend)?;
     let mismatch = Mismatch::new(set.profile(), profile.as_ref());
     crate::cli::intake::window(&arguments.common, set.first_part().is_some())?;
     let reading = reading(&arguments.common)?;

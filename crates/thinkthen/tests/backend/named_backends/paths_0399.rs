@@ -455,7 +455,7 @@ fn new_builtin_names_preserve_the_rate_only_configuration_contract() {
         assert_eq!(out.status.code(), Some(5));
         assert_eq!(
             said(&out).1,
-            "thinkthen: a configuration entry for a built-in backend holds `requests_per_minute` and nothing else\n"
+            "thinkthen: a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n"
         );
         let rated =
             json!({"schema":"thinkthen.config/1","backends":{name:{"requests_per_minute":60}}});

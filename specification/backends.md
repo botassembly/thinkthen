@@ -66,7 +66,7 @@ The configuration file may name more backends under `backends`, each with `url`,
 
 An added entry's `path` defaults to `systemone`. A path has 1 to 128 bytes. It holds one or more segments joined by `/`; each segment uses ASCII letters, digits and `-._~@` and is neither `.` nor `..`. Leading, trailing and doubled slashes, percent encoding, queries, fragments and spaces are refused. The value-free path refusal exits 5 with `configuration backend field `path` must be one or more segments of letters, digits, and `-._~@`, joined by `/``. A non-string path uses the entry type refusal, which names `url`, `path`, `key_env` and `model`. The base keeps its existing prefix, loses trailing slashes, and gains exactly one slash and the suffix. A named backend keeps its path when an address override wins. The unnamed address keeps `systemone`. No CLI path option or public Rust path setter exists.
 
-Any entry may set `requests_per_minute`, a whole number from 1 to 60,000, and the selected backend's rate paces its posting address (ruling 14, ticket 0343). A built-in's name may appear under `backends` holding only `requests_per_minute`; that paces the built-in and keeps its base, key variables, and model. No backend has a rate of its own, so nothing is paced unless the file or `THINKTHEN_REQUESTS_PER_MINUTE` sets a rate. The variable outranks the file. With no backend named, a run whose posting address is a built-in's own base takes that built-in's rate, so `"typesafe": {"requests_per_minute": 1000}` paces a run that names nothing, and an unnamed run whose `THINKTHEN_BASE_URL` is Liquid's address takes the `liquid` rate. An added entry's rate applies only when a tier names that entry. The limit holds within one process: separate processes each get the full rate, so N processes can send N times it. A refused rate exits 5 with `configuration backend field `requests_per_minute` must be a whole number from 1 to 60000`; a built-in's entry holding anything else exits 5 with `a configuration entry for a built-in backend holds `requests_per_minute` and nothing else`. Neither repeats a value.
+Any entry may set `requests_per_minute`, a whole number from 1 to 60,000, and the selected backend's rate paces its posting address (ruling 14, ticket 0343). A built-in's name may appear under `backends` with any nonempty subset of `requests_per_minute`, an atomic caller-price pair and `profile`; its transport, key variables, model and wire form stay fixed. No backend has a rate of its own, so nothing is paced unless the file or `THINKTHEN_REQUESTS_PER_MINUTE` sets a rate. The variable outranks the file. With no backend named, a run whose posting address is a built-in's own base takes that built-in's rate, so `"typesafe": {"requests_per_minute": 1000}` paces a run that names nothing, and an unnamed run whose `THINKTHEN_BASE_URL` is Liquid's address takes the `liquid` rate. An added entry's rate applies only when a tier names that entry. The limit holds within one process: separate processes each get the full rate, so N processes can send N times it. A refused rate exits 5 with `configuration backend field `requests_per_minute` must be a whole number from 1 to 60000`; a built-in's entry holding anything else exits 5 with `a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile``. Neither repeats a value.
 
 ```json
 {
@@ -206,3 +206,61 @@ The vendor also sends `choice`, `score`, and `legend` beside the probabilities. 
 Settled by ADR 0009 item 2, accepted in ADR 0010. The adapter keeps the full distribution and the vendor's `confidence` field. Both reach `answer` in the result, as [result.md](result.md) describes. A saved run can then be swept at another rule with no second request.
 
 The cut on `choose` stays on the winning option's probability. That number exists on every backend, and a reader can say what it means. Most of the vendor's own pages cut on `confidence` instead, and the formula behind `confidence` is unpublished. A live sweep of both against labels settles whether the rule changes.
+
+## Provider setups
+
+Settled by [ADR 0117](../sdlc/planning/adr/0117-provider-setups-extend-the-backend-entry.md), ticket 0400 slice B.
+
+The read-only `backends` map also supplies caller prices and local profiles. An added entry requires `url`, `key_env` and `model`, with optional `path`, `requests_per_minute`, `both_sides`, `usd_per_million_input`, `usd_per_million_output` and `profile`. `both_sides` is a boolean, default false, and reuses the BothSides form described above. Built-ins accept any nonempty subset of rate, the atomic price pair and profile. An empty built-in entry is refused; `url`, `path`, `key_env`, `model` and `both_sides` overrides are always refused for built-ins.
+
+Prices occur together as decimal strings from 0 through 1000000 with at most six fractional digits, including zero. Signs, exponents, whitespace, numbers and null are refused. An inline profile is exactly the existing closed `thinkthen.backend-profile/1` object; its parser and preflight rules apply unchanged. A selected setup may supply the running profile name for calibration warnings. The file remains owner-writable only whenever it holds backend entries, and it never contains a key.
+
+Explicit prices from a builder or native/C price setting outrank the selected setup pair, then the file's top-level pair, then none. An explicit profile file or JSON setting outranks the setup profile, then none. Later explicit profile setters replace earlier ones. Setter order relative to backend/address/model does not change either precedence. A named setup keeps its prices/profile when explicit address or model settings override its defaults.
+
+An unnamed route inherits only from a built-in entry whose own canonical posting URL exactly equals the final posting URL, including the path. A host, base prefix, custom alias or ignored lower-tier name does not match. The default unnamed TypeSafe route can inherit the configured TypeSafe prices/profile. An unnamed custom address uses top-level prices and no implicit profile. Selection changes no unnamed key, model, path or wire rule. A bare Rust builder captures no setup; `from_env()` captures configuration once and later setters/build read no environment. Prices and profiles add no cache or recording identity component. Profile refusal still happens before lookup or send; cached/replayed answers do not become paid usage.
+
+Malformed fields exit 5 without repeating values. The price-pair sentence is `configuration backend fields `usd_per_million_input` and `usd_per_million_output` come together as decimal strings from 0 through 1000000 with at most six fractional digits`. The boolean sentence is `configuration backend field `both_sides` must be true or false`. Profile errors begin `configuration backend field `profile` ` followed by the existing parser's reason. No default tariff, rate, throttle, image input or new built-in is introduced.
+
+```json
+{
+  "schema": "thinkthen.config/1",
+  "backends": {
+    "perplexity": {
+      "requests_per_minute": 600,
+      "usd_per_million_input": "0.04",
+      "usd_per_million_output": "0",
+      "profile": {
+        "schema": "thinkthen.backend-profile/1",
+        "name": "perplexity",
+        "max_questions": 128,
+        "max_options": 255,
+        "max_request_bytes": 33554432
+      }
+    },
+    "local-strict": {
+      "url": "http://127.0.0.1:8080/v1",
+      "path": "systemone",
+      "key_env": "LOCAL_SERVER_KEY",
+      "model": "example-model",
+      "both_sides": true,
+      "profile": {
+        "schema": "thinkthen.backend-profile/1",
+        "name": "local-strict",
+        "max_request_bytes": 96000
+      }
+    }
+  }
+}
+```
+
+The local row illustrates syntax only and makes no compatibility claim. The Perplexity profile does not raise the existing engine request ceiling; the published 262144-token ceiling is recorded separately and not represented as a byte approximation. Its published score-level ceiling remains subject to existing score constraints, not a new profile field.
+
+Official facts in the table were checked on 2026-10-04. The [owning evidence record](../sdlc/records/0400-provider-format-evidence.md) retains official source links and limits of these observations. The [0399 build record](../sdlc/records/0399-backend-path-build.md#actual-manual-provider-receipts) owns the two once-only hosted checks. These rows establish only the recorded routes/models; this parser slice runs no hosted checks. Local-server and new-model measured pages remain slice D.
+
+| Provider | How ThinkThen reaches it | Base | Path | Key variable | Model | Published limits | Published price | Reads images | Needs both sides | Suggested settings | Check or run on record |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| TypeSafe | typesafe | https://api.typesafe.ai/v1 | systemone | TYPESAFE_API_KEY | jev-1.13.0 | Retained 1200 requests/minute; current rate not re-established | Current tariff unverified | Unverified | No | Optional rate 1200 for short records | Prior passing check; no new run |
+| Liquid | liquid | https://api.liquid.ai/decisions/v1 | systemone | LIQUIDAI_API_KEY then LIQUID_API_KEY | d1:free | Free-tier rate unverified | Retained direct calls billed zero; current tariff unverified | Unverified | No | Jobs 4 or fewer and resume if stalled; no inferred rate | 2026-10-02 direct check; 52/1501 retries |
+| Ollama | ollama | http://localhost:11434/v1 | systemone | OLLAMA_API_KEY; optional on loopback | nimble | v0.35.0+; text body 64 KiB; context model-dependent | Retained local runs no API charge; hardware excluded | Documented for vision models; unverified in retained runs | Fixed Text workaround | Server-capacity dependent | Retained nimble/tev variants, experiment 0004 |
+| Perplexity | perplexity | https://api.perplexity.ai/v1 | decisions | PERPLEXITY_API_KEY | pplx-decider-v1-27b | 10 requests/sec per organization; 128 questions; 255 options; 10 score levels; under 262144 input tokens; 32 MiB body | $0.04/M input; output free | Documented; ThinkThen sends none | No | Optional process-local rate 600; other clients share allowance | 0399 check 2026-10-04: exit 0, critical 0, warning 0; requested/served pplx-decider-v1-27b |
+| OpenRouter | openrouter | https://openrouter.ai/api/v1 | systemone | OPENROUTER_API_KEY | typesafe/jev-1.13 | 32000-token context | $0.042/M input; output free | Unverified for tested model | Fixed BothSides | Timeout 120s when stalls appear | 0399 check 2026-10-04: exit 0, critical 0, warning 0; requested typesafe/jev-1.13, served typesafe/jev-1.13-20260917 |

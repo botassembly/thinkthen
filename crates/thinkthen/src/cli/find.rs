@@ -51,7 +51,7 @@ pub(crate) fn run(
         common.url.as_deref(),
         common.model.as_deref(),
     )?;
-    let profile = profile::read(common)?;
+    let profile = profile::read(common, environment, &backend)?;
     let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
