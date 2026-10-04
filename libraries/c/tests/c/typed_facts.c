@@ -1,6 +1,6 @@
 /* Installed C ABI proof for the eight owned-facts typed entry points. */
 #include <stdint.h>
-#include <pthread.h>
+#include "platform.h"
 #include <stdio.h>
 #include <string.h>
 #include <thinkthen.h>
@@ -35,13 +35,14 @@ struct worker {
     size_t length;
     int code;
 };
-static void *other_caller(void *opaque) {
+static THREAD_RESULT other_caller(void *opaque) {
     struct worker *one = opaque;
     one->code = thinkthen_decide_with_facts(one->engine, "Is this a complaint?",
                 "one", 3, &one->answer, &one->facts, &one->length);
-    return NULL;
+    return THREAD_DONE;
 }
 int main(void) {
+    binary_streams();
     thinkthen_engine *tt = thinkthen_engine_new_with("{\"batch\":1}");
     check(tt != NULL, "engine builds");
     if (tt == NULL) return 1;
@@ -73,9 +74,11 @@ int main(void) {
           legacy.outcome == answer.outcome && legacy.probability == answer.probability,
           "legacy scalar keeps the same result");
     struct worker other = {.engine = tt};
-    pthread_t thread;
-    check(pthread_create(&thread, NULL, other_caller, &other) == 0, "second caller starts");
-    check(pthread_join(thread, NULL) == 0, "second caller joins");
+    THREAD_TYPE thread;
+    if (fixture_start(&thread, other_caller, &other) != 0) {
+        check(0, "second caller starts"); thinkthen_engine_free(tt); return 1;
+    }
+    check(fixture_join(thread) == 0, "second caller joins");
     check(other.code == THINKTHEN_OK && other.answer.outcome == THINKTHEN_YES,
           "second caller has its own result");
     facts(f, fl, 1, 1); f = NULL;

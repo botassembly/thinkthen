@@ -15,9 +15,19 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 #include <thinkthen.h>
 
 int main(void) {
+#ifdef _WIN32
+    if (_setmode(_fileno(stdin), _O_BINARY) == -1 ||
+        _setmode(_fileno(stdout), _O_BINARY) == -1 ||
+        _setmode(_fileno(stderr), _O_BINARY) == -1) return 1;
+#endif
     /* The slide's context. */
     const char *text = "I want a refund for order 9";
     const char *texts[3] = {

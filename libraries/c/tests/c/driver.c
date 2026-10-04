@@ -32,6 +32,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 #include <thinkthen.h>
 
 enum { MOST = 300 };
@@ -42,6 +47,23 @@ static size_t lengths[MOST];
 static void fail(const char *what) {
     fprintf(stderr, "driver: %s\n", what);
     exit(1);
+}
+
+static void environment_value(const char *name, const char *value) {
+#ifdef _WIN32
+    if (_putenv_s(name, value) != 0) fail("environment update failed");
+#else
+    if (setenv(name, value, 1) != 0) fail("environment update failed");
+#endif
+}
+static char *copy_string(const char *value) {
+#ifdef _WIN32
+    char *copy = _strdup(value);
+#else
+    char *copy = strdup(value);
+#endif
+    if (copy == NULL) fail("string allocation failed");
+    return copy;
 }
 
 static void read_field(size_t place) {
@@ -168,6 +190,11 @@ static void answer(thinkthen_engine *tt, const char *verb, size_t count) {
 }
 
 int main(void) {
+#ifdef _WIN32
+    if (_setmode(_fileno(stdin), _O_BINARY) == -1 ||
+        _setmode(_fileno(stdout), _O_BINARY) == -1 ||
+        _setmode(_fileno(stderr), _O_BINARY) == -1) return 1;
+#endif
     char verb[16];
     size_t count = 0;
     thinkthen_engine *tt = NULL;
@@ -180,7 +207,7 @@ int main(void) {
             read_field(place);
         }
         if (strcmp(verb, "env") == 0) {
-            setenv(fields[0], fields[1], 1);
+            environment_value(fields[0], fields[1]);
             free(fields[0]);
             free(fields[1]);
             thinkthen_engine_free(tt);
@@ -192,8 +219,8 @@ int main(void) {
         if (strcmp(verb, "settings") == 0) {
             thinkthen_engine_free(tt);
             free(base);
-            base = strdup(fields[0]);
-            setenv("THINKTHEN_BASE_URL", base, 1);
+            base = copy_string(fields[0]);
+            environment_value("THINKTHEN_BASE_URL", base);
             tt = thinkthen_engine_new_with(fields[1]);
             if (tt == NULL) {
                 const char *message = thinkthen_error_message(NULL);
@@ -208,8 +235,8 @@ int main(void) {
         if (tt == NULL || strcmp(base, fields[0]) != 0) {
             thinkthen_engine_free(tt);
             free(base);
-            base = strdup(fields[0]);
-            setenv("THINKTHEN_BASE_URL", base, 1);
+            base = copy_string(fields[0]);
+            environment_value("THINKTHEN_BASE_URL", base);
             tt = thinkthen_engine_new();
         }
         if (tt == NULL) {

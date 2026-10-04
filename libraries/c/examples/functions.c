@@ -12,6 +12,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 #include <thinkthen.h>
 
 static const char *outcome_text(int outcome) {
@@ -73,6 +78,11 @@ static void door(const thinkthen_engine *tt, const char *label, const char *requ
 }
 
 int main(void) {
+#ifdef _WIN32
+    if (_setmode(_fileno(stdin), _O_BINARY) == -1 ||
+        _setmode(_fileno(stdout), _O_BINARY) == -1 ||
+        _setmode(_fileno(stderr), _O_BINARY) == -1) return 1;
+#endif
     thinkthen_engine *tt = thinkthen_engine_new_with("{\"batch\":1}");
     if (tt == NULL) {
         fprintf(stderr, "the engine did not build\n");

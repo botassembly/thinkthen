@@ -17,7 +17,10 @@ fn decide_replies(driver: &Path, base: &str, settings: &str, home: &Path) -> Vec
         driver,
         base,
         &script.0,
-        &[("HOME", home), ("XDG_STATE_HOME", home)],
+        &[(
+            child::Folder::Usage.variable(home).0,
+            Path::new(&child::Folder::Usage.variable(home).1),
+        )],
     );
     replies(&output.stdout).expect("replies")
 }
@@ -30,11 +33,7 @@ fn decide_once(driver: &Path, base: &str, settings: &str, home: &Path) -> (i32, 
 
 /// This home's usage folder (ticket 0360).
 fn usage_folder(home: &Path) -> std::path::PathBuf {
-    if cfg!(target_os = "macos") {
-        home.join("Library/Application Support/thinkthen/usage")
-    } else {
-        home.join("thinkthen")
-    }
+    child::Folder::Usage.under(home)
 }
 
 /// The one month file under this home's usage folder.

@@ -19,6 +19,7 @@ import zipfile
 
 
 REPO = Path(__file__).resolve().parents[2]
+C_FIXTURE = __import__('runpy').run_path(str(REPO / 'sdlc/scripts/release-windows-c-fixture.py'))
 
 
 def run(*args, cwd=REPO, env=None):
@@ -461,6 +462,7 @@ def main():
         win_zip = windows / f"thinkthen-{version}-x86_64-pc-windows-msvc.zip"
         with zipfile.ZipFile(win_zip, "w") as output:
             output.writestr("thinkthen.exe", binary)
+        c_zip = C_FIXTURE["create"](windows, version)
         sample = windows / "thinkthen-first-run.tar.gz"
         sample.write_bytes(first_run)
         for file in (win_zip, sample):
@@ -477,9 +479,23 @@ def main():
         expected_files |= {f"fixture-{target}.bin" for target in
                            (other_target, "aarch64-apple-darwin", "x86_64-apple-darwin")}
         expected_files |= {f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256",
-                           win_zip.name, win_zip.name + ".sha256", sample.name, sample.name + ".sha256"}
+                           c_zip.name, c_zip.name + ".sha256", win_zip.name, win_zip.name + ".sha256", sample.name, sample.name + ".sha256"}
         if {file.name for file in collected.iterdir()} != expected_files:
             raise AssertionError("collect omitted or added a selected fixture file")
+        original_c = c_zip.read_bytes()
+        for plant in ('missing', 'malformed'):
+            if plant == 'missing':
+                c_zip.unlink()
+            else:
+                c_zip.write_bytes(b'not ZIP')
+                C_FIXTURE['C'].checksum(c_zip)
+            refused = base / ('refused-windows-c-' + plant)
+            result = run('sh', gate, 'collect', str(platform), str(npm), str(refused))
+            expect(result, 'exactly the command ZIP' if plant == 'missing' else 'not a zip file')
+            if result.returncode != 1 or refused.exists():
+                raise AssertionError('C collection refusal did not precede output creation')
+            c_zip.write_bytes(original_c)
+            C_FIXTURE['C'].checksum(c_zip)
         extra_go = platform / f"platform-{host}/thinkthen-go-extra.zip"
         extra_go.write_bytes(b"unselected release asset")
         expect(run("sh", gate, "go-cpp-gate", str(extra_go.parent), host, commit),
