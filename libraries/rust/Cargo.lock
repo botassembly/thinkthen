@@ -259,7 +259,7 @@ dependencies = [
 
 [[package]]
 name = "rust-examples"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "conformance-backend",
  "thinkthen",
@@ -385,7 +385,7 @@ dependencies = [
 
 [[package]]
 name = "thinkthen"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arc-swap",
  "nix",

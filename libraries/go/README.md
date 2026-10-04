@@ -14,7 +14,7 @@ cp libraries/c/include/thinkthen.h "$NATIVE/include/"
 cp libraries/c/target/debug/libthinkthen_c.so "$NATIVE/lib/libthinkthen.so"
 sh libraries/c/localize.sh libraries/c/target/debug/libthinkthen_c.a "$NATIVE/lib/libthinkthen.a"
 ln -sfn libthinkthen.so "$NATIVE/lib/libthinkthen.so.0"
-printf 'prefix=%s\nName: thinkthen\nDescription: ThinkThen C ABI\nVersion: 0.1.0\nLibs: -L${prefix}/lib -lthinkthen\nCflags: -I${prefix}/include\n' "$NATIVE" > "$NATIVE/lib/pkgconfig/thinkthen.pc"
+printf 'prefix=%s\nName: thinkthen\nDescription: ThinkThen C ABI\nVersion: 0.2.0\nLibs: -L${prefix}/lib -lthinkthen\nCflags: -I${prefix}/include\n' "$NATIVE" > "$NATIVE/lib/pkgconfig/thinkthen.pc"
 ```
 
 In a separate Go project, `go get github.com/botassembly/thinkthen/libraries/go@v0.1.2` adds the released module. To build against this checkout instead, add `require github.com/botassembly/thinkthen/libraries/go v0.1.2` and `replace github.com/botassembly/thinkthen/libraries/go => /absolute/path/to/this/checkout/libraries/go` to its `go.mod`. Set `PKG_CONFIG_PATH="$NATIVE/lib/pkgconfig"`, `CGO_ENABLED=1`, `GOPROXY=off`, `GOTOOLCHAIN=local`, and `LD_LIBRARY_PATH="$NATIVE/lib"` when building and running. The [example](examples/decide/main.go) imports the product module path. Match the native header and library to the same source revision. Shared-library relocation needs an explicit loader policy. Static-C mode links the C archive but still depends on Linux system libraries.

@@ -1,3 +1,7 @@
+## 0.2.0 (unreleased)
+
+Version 0.2 is in progress on main.
+
 ## 0.1.2
 
 The 0.1.2 release fixes the macOS Ruby gems. The Dart package is unchanged. Take the C library from `thinkthen-c-0.1.2-TARGET.tar.gz` on the same GitHub release.

@@ -1,6 +1,7 @@
 # 0397: Main moves to 0.2.0 and release/0.1 freezes
 
-Status: ready. Lane: any free lane, before the three 0.2 lanes start. Parent: Ian's ruling of 2026-10-04 on the 0.2 plan. It closes no issue. It narrows `sdlc/issues/2026-10-04-each-patch-release-costs-two-hand-passes.md` and `sdlc/issues/2026-10-04-a-release-needs-two-approvals.md`.
+Status: landed. Lane: claude-0, before the three 0.2 lanes start. Parent: Ian's ruling of 2026-10-04 on the 0.2 plan. It closes no issue. It narrows `sdlc/issues/2026-10-04-each-patch-release-costs-two-hand-passes.md` and `sdlc/issues/2026-10-04-a-release-needs-two-approvals.md`.
+Landed: 8bd84282b2d4218e64b07f471d3df75df699c203
 
 Milestone: 0.2
 
@@ -75,3 +76,13 @@ Milestone: 0.2
 - Keeping the two `thinkthen.h` history sentences at 0.1.0.
 - The Dart changelog heading now, not at the release commit.
 - Leaving `release/0.1` unprotected on GitHub.
+
+## What the build taught us
+
+- A 0.2.0 Cargo patch cannot satisfy the public page's 0.1 requirement. Before the smoke change, the Rust install samples and decide fragment failed offline with that mismatch. One helper now rewrites only scratch manifests after each page or fragment is prepared. All three regression samples pass, while the source and built page keep the published 0.1 requirement.
+- The release archive self-test archives HEAD and compares its files against the working version. A version bump must be committed before this test runs. Before the commit, its archive-name check failed. After the commit, all 71 workflow self-tests and lint passed without changing the test.
+- The version bump changes hashed engine and binding trees, so all 350 receipts across 34 pages require replay. The language and SQL runners both rewrite one proof file. Parallel runs need their completed receipts preserved separately and merged by their disjoint sample types before the strict check.
+- The warm lane had no site dependencies. `npm ci --offline --no-audit --no-fund` restored them from cache. The release CLI build and full site build pass offline. The built installer still names 0.1.2.
+- The complete offline replays passed: 308 language samples and 42 SQL samples. Their completed receipts were merged by sample type. The strict check reports 350 matching samples, zero pages to prove again and no warning. No sample code, saved output, recording or release/0.1 commit changed.
+
+Proof: [0397 build record](../records/0397-main-moves-to-0-2-0.md). The coordinator owns the fresh review and the first full test, specification and surface checkpoint after landing.

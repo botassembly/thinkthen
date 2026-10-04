@@ -58,6 +58,8 @@ Lanes, in order:
 - Gaps in any lane: [0404: Tech debt cut, with tests held to behavior](../tickets/0404-tech-debt-and-tests-held-to-behavior.md).
 - Waiting on experiments: extract (its own function or a mode of annotate), the "none" wording for choose, and each recipe's measured numbers.
 
+Completed foundation: [0397](../tickets/0397-main-moves-to-0-2-0.md) moves main to 0.2.0 and freezes `release/0.1`.
+
 Exit criteria, a coordinator default Ian can overturn:
 
 1. Every item below lands or moves to `later`.
@@ -66,7 +68,7 @@ Exit criteria, a coordinator default Ian can overturn:
 
 Blockers:
 
-- None since 2026-10-02. The coordinator cut `release/0.1` at `4e880cdf6`, so 0.2 work lands on main. A fix that 0.1 needs is cherry-picked to `release/0.1` (ADR 0116).
+- None. `release/0.1` is frozen under Ian's ruling of 2026-10-04. Main carries 0.2.0 (ticket 0397). Fixes land on main and ship in 0.2.
 
 Windows work follows [windows.md](windows.md):
 
@@ -75,6 +77,7 @@ Windows work follows [windows.md](windows.md):
 - Windows stage 1: the command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM ship for Windows x86-64, and findings W1 to W7 close. The stage 1 report in [windows.md](windows.md#stage-1-difficulty-report) sizes it at 9 to 11 tickets' worth of work and 1,600 to 3,400 lines. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Tickets 0380 to 0385 carry it, in slices. Each waits for the `release/0.1` cut. 0381 to 0385 wait for 0380 slice A, and 0384 and 0385 also wait for 0381 slice A.
 
 Open items:
+
 
 - [0377: Each language binding and SQL extension names a backend in code](../tickets/0377-binding-backends.md)
 - [0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64](../tickets/0380-windows-command-line-and-rust-crate.md)
