@@ -84,11 +84,15 @@ fn original_byte_budget_counts_blanks_endings_and_all_source_occurrences() -> io
     let two = two.to_str().expect("path");
     let mut whole = half.clone();
     whole.extend_from_slice(&half);
+    let full = place.join("full");
+    fs::write(&full, &whole)?;
+    let full = full.to_str().expect("path");
     for verb in ["filter", "rank"] {
         for flags in [
             vec!["--around", "0"],
             vec!["--around", "0", one, two],
             vec!["--around", "0", one, one],
+            vec!["--around", "0", full],
         ] {
             let listener = Listener::answering(answer)?;
             let output = call(&listener, verb, &flags, &whole)?;
@@ -99,7 +103,22 @@ fn original_byte_budget_counts_blanks_endings_and_all_source_occurrences() -> io
         let listener = Listener::answering(answer)?;
         whole.push(b'\n');
         let output = call(&listener, verb, &["--around", "0"], &whole)?;
+        fs::write(full, &whole)?;
+        let named = call(&listener, verb, &["--around", "0", full], b"")?;
+        assert_eq!(named.status.code(), Some(2));
+        let plan = call(&listener, verb, &["--around", "0", "--plan", full], b"")?;
+        assert_eq!(plan.status.code(), Some(2));
+        assert!(plan.stdout.is_empty());
+        assert_eq!(listener.connections(), 0);
         whole.pop();
+        fs::write(full, &whole)?;
+        let mut beyond = whole.clone();
+        beyond.extend_from_slice(b"hit\n");
+        let lazy_listener = Listener::answering(answer)?;
+        let lazy = call(&lazy_listener, verb, &["-n", "--scores"], &beyond)?;
+        assert_eq!(lazy.status.code(), Some(0), "{}", text(&lazy.stderr));
+        assert_eq!(lazy.stdout, b"0.9 3:hit\n");
+        assert_eq!(lazy_listener.requests().len(), 1);
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
         assert_eq!(listener.connections(), 0);
