@@ -22,7 +22,7 @@ Without an explicit record mode, each named file is one document on decide, choo
 
 A window never crosses a file boundary. Internal physical line feeds remain; only the final record-ending LF and an immediately preceding CR are removed. A final short window is one item. Empty files make no windows and send nothing. All-whitespace windows are skipped after size validation, and their lines still advance positions. A joined item retains the existing 16 MiB record limit.
 
-Detailed line and document results include `position: {"file":FILE,"first":FIRST,"last":LAST}`. Stdin has a null file. First and last are inclusive physical line numbers. CSV and TSV positions remain absent. Locations never enter question digests, request keys or provider requests.
+Detailed line and document results include `position: {"file":FILE,"first":FIRST,"last":LAST}`. Stdin has a null file. First and last are inclusive physical line numbers. CSV and TSV positions remain absent. JSON file names in `position` and `input_file` use human display strings. Non-UTF-8 names replace invalid bytes with the replacement character; file access retains the original operating-system path. Locations never enter question digests, request keys or provider requests.
 
 | Flag | What one record is |
 | --- | --- |

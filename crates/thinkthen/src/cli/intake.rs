@@ -16,7 +16,7 @@ use crate::table::{Kind, Rows};
 /// A display location, independent of the pipeline's global label.
 #[derive(Clone, Serialize)]
 pub(crate) struct Position {
-    file: Option<PathBuf>,
+    file: Option<String>,
     first: usize,
     last: usize,
 }
@@ -77,7 +77,10 @@ impl TextSource {
         self.line += count;
         Piece {
             position: Some(Position {
-                file: self.file.clone(),
+                file: self
+                    .file
+                    .as_ref()
+                    .map(|path| path.to_string_lossy().into_owned()),
                 first,
                 last: self.line.max(first),
             }),

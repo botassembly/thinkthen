@@ -6,6 +6,147 @@ use serde_json::json;
 use std::fs;
 use std::io;
 
+#[cfg(unix)]
+#[test]
+fn non_utf8_file_names_keep_answers_and_use_display_strings() -> io::Result<()> {
+    use crate::child::ChildEnvironment as _;
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt as _;
+    use std::process::Command;
+
+    let place = folder("non-utf8")?;
+    let one = place.join(OsString::from_vec(b"one-\xff".to_vec()));
+    let two = place.join(OsString::from_vec(b"two-\xfe".to_vec()));
+    fs::write(&one, "one\n")?;
+    fs::write(&two, "two\n")?;
+    let set = place.join("set.json");
+    fs::write(
+        &set,
+        r#"{"version":1,"questions":{"ok":{"decide":"Clear?"}}}"#,
+    )?;
+    for verb in [
+        "decide", "filter", "rank", "choose", "score", "tag", "annotate",
+    ] {
+        let listener = Listener::answering(answer)?;
+        let question = if verb == "annotate" {
+            set.to_str().expect("path")
+        } else {
+            "Clear?"
+        };
+        let labels: &[&str] = match verb {
+            "choose" | "score" => &["a", "b"],
+            "tag" => &["a"],
+            _ => &[],
+        };
+        for (details, multiple) in [(false, false), (true, false), (false, true), (true, true)] {
+            let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+            command
+                .clear_environment()
+                .home(place.join("home"))
+                .args([verb, question])
+                .args(labels)
+                .args(["--url", listener.base(), "--model", "local-1", "--no-cache"])
+                .arg("--input")
+                .arg(&one);
+            if details {
+                command.arg("--details");
+            }
+            if multiple {
+                command.arg("--input").arg(&two);
+            }
+            let output = command.output()?;
+            assert_eq!(
+                output.status.code(),
+                Some(0),
+                "{verb}: {}",
+                text(&output.stderr)
+            );
+            let printed = text(&output.stdout);
+            assert_named_output(&printed, verb, details, multiple, [&one, &two]);
+        }
+        // Names and display flags do not change the actual evidence sent.
+        assert!(
+            listener.requests().iter().all(|request| {
+                let body = text(&request.body);
+                !body.contains("one-") && !body.contains("two-")
+            }),
+            "{verb}"
+        );
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn assert_named_output(
+    printed: &str,
+    verb: &str,
+    details: bool,
+    multiple: bool,
+    paths: [&std::path::Path; 2],
+) {
+    if !details && !multiple {
+        let expected = match verb {
+            "decide" => "true\n",
+            "filter" | "rank" => "one\n",
+            "choose" => "\"a\"\n",
+            "score" => "0.8\n",
+            "tag" => "[\"a\"]\n",
+            _ => "{\"ok\":true}\n",
+        };
+        assert_eq!(printed, expected, "{verb}");
+    } else if details || matches!(verb, "decide" | "choose" | "score" | "tag") {
+        let rows: Vec<serde_json::Value> = printed
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("result"))
+            .collect();
+        assert_eq!(rows.len(), if multiple { 2 } else { 1 }, "{verb}");
+        for (row, path) in rows.iter().zip(paths) {
+            let display = path.to_string_lossy();
+            if details {
+                assert_eq!(row["position"], json!({"file":display,"first":1,"last":1}));
+            }
+            if multiple && matches!(verb, "decide" | "choose" | "score" | "tag") {
+                assert_eq!(row["input_file"], json!(display));
+            }
+        }
+    } else {
+        assert_eq!(
+            printed,
+            if verb == "annotate" {
+                "{\"ok\":true}\n{\"ok\":true}\n"
+            } else {
+                "one\ntwo\n"
+            }
+        );
+    }
+}
+
+#[test]
+fn trailing_words_name_missing_files_and_never_run_instructions() -> io::Result<()> {
+    let place = folder("missing-positionals")?;
+    let missing = place.join("missing");
+    let listener = Listener::answering(answer)?;
+    for question in ["a", "if"] {
+        let output = spawn(
+            &[
+                "decide",
+                question,
+                missing.to_str().expect("path"),
+                "--url",
+                listener.base(),
+                "--no-cache",
+            ],
+            &[],
+            b"Refund me please.",
+        )?;
+        assert_eq!(output.status.code(), Some(5));
+        assert!(output.stdout.is_empty());
+        assert!(text(&output.stderr).contains("--input could not be opened"));
+    }
+    assert_eq!(listener.connections(), 0);
+    Ok(())
+}
+
 #[test]
 fn single_file_and_stdin_keep_each_commands_original_bytes_and_requests() -> io::Result<()> {
     let place = folder("compat")?;
