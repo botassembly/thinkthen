@@ -160,6 +160,27 @@ def main():
             assert {path.name for path in out.iterdir()} == {archive.name, sidecar.name}
             assert packed.read_bytes() == first
             expect(run("python3", str(SCRIPT), "check", str(packed)))
+        # The default runner path uses a scratch build instead of a caller's target directory.
+        scratch = base / "scratch"
+        scratch.mkdir()
+        own_env = {key: value for key, value in env.items() if key != "CARGO_TARGET_DIR"}
+        own_env["TMPDIR"] = str(scratch)
+        own = base / "own-build"
+        expect(run("sh", str(scripts / "release-pack"), TARGET, str(own), "command", env=own_env))
+        expect(run("python3", str(SCRIPT), "check", str(own / archive.name)))
+        assert not list(scratch.iterdir()), "scratch Windows build was retained"
+        # Model two spellings of a Windows build folder. The native spelling alone has the binary.
+        native = base / "native-build"
+        (native / "debug").mkdir(parents=True)
+        shutil.copy2(binary, native / "debug/thinkthen.exe")
+        (build / "debug/thinkthen.exe").unlink()
+        (tools / "cygpath").write_text(
+            '#!/bin/sh\ncase "$2" in "$WINDOWS_POSIX_BUILD") printf "%s\\n" "$WINDOWS_NATIVE_BUILD" ;; '
+            '*) printf "%s\\n" "$2" ;; esac\n')
+        mapped_env = env | {"WINDOWS_POSIX_BUILD": str(build), "WINDOWS_NATIVE_BUILD": str(native)}
+        mapped = base / "native-output"
+        expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET, str(mapped), "command", env=mapped_env))
+        expect(run("python3", str(SCRIPT), "check", str(mapped / archive.name)))
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET,
                    str(base / "unsupported"), "python", env=env), 2, "not a Windows stage 1 command part")
         # Five-target collection includes Windows and refuses bad Windows assets before copying.
