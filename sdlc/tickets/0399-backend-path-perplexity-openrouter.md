@@ -1,6 +1,8 @@
 # 0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides
 
-Status: complete. Fresh High design review accepted `f752bb15d` on 2026-10-04. Fresh High source review accepted `5a2aa3323`; fresh Medium fixture review accepted `4349b91b3`. Both coordinator-run manual checks passed once on `4349b91b3`. Latest-main full tests, specification, required lint, all 350 actual documentation replays, strict proof and final site build passed. Final receipt review precedes landing. Lane: claude-2, after ticket 0398 (release safety), on Ian's lane order of 2026-10-04. Offline design preparation may proceed while 0398's hosted proof waits. Amends ADR 0114 sections 1, 2 and 6, and ADR 0115 section 3. Closes no existing issue; the findings come from experiment 0003. The queue owner approves implementation after fresh design review.
+Status: landed. Fresh High design review accepted `f752bb15d` on 2026-10-04. Fresh High source review accepted `5a2aa3323`; fresh Medium fixture review accepted `4349b91b3`. Both coordinator-run manual checks passed once on `4349b91b3`. Latest-main full tests, specification, required lint, all 350 actual documentation replays, strict proof and final site build passed. Fresh final receipt review accepted `ae0c78001`; the coordinator publishes this reviewed candidate through the landing merge. Lane: claude-2, after ticket 0398 (release safety), on Ian's lane order of 2026-10-04. Offline design preparation may proceed while 0398's hosted proof waits. Amends ADR 0114 sections 1, 2 and 6, and ADR 0115 section 3. Closes no existing issue; the findings come from experiment 0003. The queue owner approves implementation after fresh design review.
+
+Landed: ae0c78001
 
 Milestone: 0.2
 
