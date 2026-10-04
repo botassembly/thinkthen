@@ -98,6 +98,10 @@ source_remap=$REPO cargo_remap=$cargo_home home_remap=$HOME
 if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 	# Rust on Windows reports native paths; Git Bash paths cannot match them.
 	source_remap=$(cygpath -m "$REPO") cargo_remap=$(cygpath -m "$cargo_home") home_remap=$(cygpath -m "$HOME")
+	if [ -n "${CARGO_TARGET_DIR:-}" ]; then
+		CARGO_TARGET_DIR=$(cygpath -m "$CARGO_TARGET_DIR")
+		export CARGO_TARGET_DIR
+	fi
 fi
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo --remap-path-prefix=$home_remap=/build/home"
 if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
@@ -516,7 +520,10 @@ for part in "$@"; do
 		scratch_dir part_build
 		CARGO_TARGET_DIR=$part_build THINKTHEN_DUCKDB_CPP_BUILD=${duckdb_build:-$part_build/cpp}
 		build_remap=$part_build
-		[ "$TARGET" != x86_64-pc-windows-msvc ] || build_remap=$(cygpath -m "$part_build")
+		if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+			build_remap=$(cygpath -m "$part_build")
+			CARGO_TARGET_DIR=$build_remap
+		fi
 		RUSTFLAGS="$rust_flags --remap-path-prefix=$build_remap=/build/target"
 		CFLAGS=$c_flags
 		[ "$TARGET" = x86_64-pc-windows-msvc ] || CFLAGS="$c_flags -ffile-prefix-map=$part_build=/build/target"
