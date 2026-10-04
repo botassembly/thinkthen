@@ -48,7 +48,7 @@ def workflow_plants():
             assert any(label in error for error in failures), (key, replacement, failures)
             cases += 1
     for kind in ('build', 'smoke'):
-        for plant in ('missing-setup', 'late-setup', 'wrong-target', 'disabled-route', 'masked-route', 'job-disabled'):
+        for plant in ('missing-setup', 'late-setup', 'wrong-target', 'disabled-route', 'masked-route', 'wrong-route-target', 'job-disabled'):
             jobs = copy.deepcopy(original)
             steps = jobs[kind]['steps']
             setup = next(step for step in steps if step.get('run') == ROUTES['SETUP'])
@@ -62,12 +62,32 @@ def workflow_plants():
                 setup['if'] = "matrix.target == 'x86_64-unknown-linux-gnu'"
             elif plant == 'disabled-route':
                 route['if'] = 'false'
+            elif plant == 'wrong-route-target':
+                route['if'] = "matrix.target == 'x86_64-unknown-linux-gnu'"
             elif plant == 'masked-route':
                 route['continue-on-error'] = True
             else:
                 jobs[kind]['if'] = 'false'
             failures = ROUTES['rules']('release.yml', jobs)
-            assert any('Windows' in error for error in failures), (kind, plant, failures)
+            if plant in ('disabled-route', 'masked-route', 'wrong-route-target'):
+                cause = 'Windows C packing' if kind == 'build' else 'Windows downloaded C consumption'
+            elif plant == 'job-disabled':
+                cause = f'Windows C {kind} job must execute'
+            else:
+                cause = f'Windows {kind} must select x64 MSVC'
+            assert any(cause in error for error in failures), (kind, plant, failures)
+            cases += 1
+    for kind, boundary in [('build', 'upload'), ('smoke', 'download')]:
+        for plant in ('missing', 'misordered'):
+            jobs = copy.deepcopy(original)
+            steps = jobs[kind]['steps']
+            asset = next(step for step in steps if (step.get('with') or {}).get('name') == 'platform-${{ matrix.target }}')
+            steps.remove(asset)
+            if plant == 'misordered':
+                steps.insert(0, asset) if kind == 'build' else steps.append(asset)
+            failures = ROUTES['rules']('release.yml', jobs)
+            cause = 'verify before upload' if kind == 'build' else 'download before archive consumption'
+            assert any(cause in error for error in failures), (boundary, plant, failures)
             cases += 1
     windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())['jobs']
     assert ROUTES['standalone']('windows.yml', windows) == []

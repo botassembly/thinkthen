@@ -235,8 +235,11 @@ def exports(output):
 
 def inspect(stage, consumer=None):
     expected = declarations((stage / MEMBERS[0]).read_text())
-    if exports(run(['dumpbin.exe', '/nologo', '/exports', str(stage / MEMBERS[1])])) != expected:
+    report = run(['dumpbin.exe', '/nologo', '/exports', str(stage / MEMBERS[1])])
+    if exports(report) != expected:
         raise ValueError('DLL exports differ from header declarations')
+    print(report)
+    print(run(['dumpbin.exe', '/nologo', '/dependents', str(stage / MEMBERS[1])]))
     for name in MEMBERS[1:]:
         report = run(['dumpbin.exe', '/nologo', '/headers', str(stage / name)])
         if '8664 machine (x64)' not in report or '14C machine' in report:

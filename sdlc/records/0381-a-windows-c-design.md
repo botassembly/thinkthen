@@ -2,7 +2,7 @@
 
 Status: accepted by the fresh High design review. Accepted source SHA-256: `f5d6f3155e8a94747d4d13d7bb15eff740ed11db2c91f1adaa19b307668d68f3`. The implementation starts at landed main `6d26206aa8861490cc6540b6bafafc08e3249c3c` under the subsequent lane assignment. Historical baseline/unlanded statements below describe design review time; 0380 C source has since landed, with source and canonical receipts complete and native Windows proof still pending. No rebase or copied unlanded patch is needed.
 
-The following accepted text is preserved from the frozen proposal. Implementation and platform review are separate from design acceptance.
+The following accepted text is preserved exactly from the frozen proposal, including historical status wording. Implementation and platform review are separate from design acceptance.
 
 **Corrected frozen design: ticket 0381, slice A — Windows x86-64 C DLL.**
 
@@ -310,4 +310,6 @@ This design uses read-only inspection of workspace/repository instructions, [tic
 
    After lane assignment and implementation, run focused portable workflow/collection/packing checks and affected C checks. Run offline policy before fresh Rust code review. The coordinator names checkpoints before full `test`, `spec` or `surfaces`. Required Linux/macOS checks protect unchanged Unix behavior. Native Windows evidence requires separately approved dispatch of the exact reviewed commit and recorded outputs.
 
-Ian can overturn the archive layout, explicit import-library production, sanitizer limitation acceptance and DLL-only staging choice. **The corrected design received fresh acceptance; native proof remains pending.**
+Ian can overturn the archive layout, explicit import-library production, sanitizer limitation acceptance and DLL-only staging choice. **This corrected design is frozen for fresh acceptance; implementation and native proof remain pending.**
+
+Implementation note: the assigned baseline is the landed 0380 C commit named above. The native source door retains a separate normal MSVC sanitizer test under the binding policy; it requires its owned negative before claiming C-consumer coverage. Portable receipts remain separate from pending native Windows execution.
