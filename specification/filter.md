@@ -31,6 +31,9 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | `--threshold T` | A single cut on the probability of yes. The band form is a usage error. See [threshold.md](threshold.md) | `0.5` |
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees. See [records.md](records.md) | The whole record |
+| `-n`, `--line-number` | Prefix physical locations in the text view | Off |
+| `--scores` | Show the yes probability beside selected text | Off |
+| `--around N` | Show independent physical neighbor groups from a bounded source snapshot | Off |
 | `--details` | Prints one result object per kept record in place of the kept records | Off |
 | `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--input FILE` | Reads the records from a file | Standard input |

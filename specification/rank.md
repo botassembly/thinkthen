@@ -31,6 +31,9 @@ It also prints no order while an earlier record or batch is still waiting for a 
 | `--top N` | Prints the first `N` records of the order. It saves no requests, because every record is judged before anything is sorted | All records |
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees | The whole record |
+| `-n`, `--line-number` | Prefix physical locations in the text view | Off |
+| `--scores` | Show the ordering value beside ranked text | Off |
+| `--around N` | Show independent physical neighbor groups from a bounded source snapshot | Off |
 | `--details` | Prints one result object for each record it prints | Off |
 | `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--input FILE` | Reads the records from a file | Standard input |

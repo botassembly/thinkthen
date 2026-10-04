@@ -171,6 +171,7 @@ fn saved_score_labels_use_weighted_levels_and_cache_hits_without_sends() -> io::
     ];
     let plain = spawn(&fixed, &[], b"a\nb\n")?;
     assert_eq!(plain.stdout, b"a\nb\n");
+    assert_eq!(listener.requests().len(), 2);
     let count = listener.connections();
     let shown = spawn(
         &[
@@ -183,6 +184,7 @@ fn saved_score_labels_use_weighted_levels_and_cache_hits_without_sends() -> io::
     )?;
     assert_eq!(shown.status.code(), Some(0), "{}", text(&shown.stderr));
     assert_eq!(shown.stdout, b"-- 1.5\n1:a\n");
+    assert!(listener.requests().is_empty());
     assert_eq!(listener.connections(), count);
     Ok(())
 }
@@ -275,7 +277,9 @@ fn saved_score_backend_failure_keeps_rank_empty_under_every_text_view() -> io::R
             if text(body).contains("fail") {
                 Canned::status(400, "secret response")
             } else {
-                answer(body)
+                Canned::ok(
+                    r#"{"model":"local-1","answers":{"q1":{"type":"score","score":0.8,"confidence":0.9,"legend":{"0":"low","1":"high"},"probabilities":{"0":0.2,"1":0.8}}}}"#,
+                )
             }
         })?;
         let output = spawn(
@@ -301,7 +305,7 @@ fn saved_score_backend_failure_keeps_rank_empty_under_every_text_view() -> io::R
         )?;
         assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
         assert!(output.stdout.is_empty());
-        assert_eq!(listener.connections(), 2);
+        assert_eq!(listener.requests().len(), 2, "{}", text(&output.stderr));
         assert!(!text(&output.stderr).contains("secret response"));
     }
     Ok(())
