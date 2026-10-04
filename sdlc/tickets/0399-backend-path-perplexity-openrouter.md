@@ -1,6 +1,6 @@
 # 0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides
 
-Status: in progress. Fresh High design review accepted `f752bb15d` on 2026-10-04. Offline implementation proceeds; actual manual checks and final proof remain pending. Lane: claude-2, after ticket 0398 (release safety), on Ian's lane order of 2026-10-04. Offline design preparation may proceed while 0398's hosted proof waits. Amends ADR 0114 sections 1, 2 and 6, and ADR 0115 section 3. Closes no existing issue; the findings come from experiment 0003. The queue owner approves implementation after fresh design review.
+Status: in progress. Fresh High design review accepted `f752bb15d` on 2026-10-04. Fresh High source review accepted `5a2aa3323`; fresh Medium fixture review accepted `4349b91b3`. Both coordinator-run manual checks passed once on `4349b91b3`. Final site and strict proof remain pending. Lane: claude-2, after ticket 0398 (release safety), on Ian's lane order of 2026-10-04. Offline design preparation may proceed while 0398's hosted proof waits. Amends ADR 0114 sections 1, 2 and 6, and ADR 0115 section 3. Closes no existing issue; the findings come from experiment 0003. The queue owner approves implementation after fresh design review.
 
 Milestone: 0.2
 
@@ -105,3 +105,9 @@ The proposed implementation, review boundaries and manual run controls live in [
 - `openrouter` as a built-in. The alternative leaves it a configured entry and lets the entry turn on both sides (ticket 0400 slice A). The built-in costs the experiments team one configuration edit.
 - The fill value `{}`.
 - The defaults `pplx-decider-v1-27b` and `typesafe/jev-1.13`.
+
+## Build lessons and actual checks
+
+The coordinator ran each reviewed manual job once on `4349b91b3` on 2026-10-04. Both exited 0 with critical 0 and warning 0. [The build record](../records/0399-backend-path-build.md#actual-manual-provider-receipts) retains the actual transcripts, model identities and spend limits. Successful replies report a combined usage cost of $0.000098326; attempt counts are not printed, so this is not an exact total bill. The pair retains its conservative $0.20 allowance and charged 20000 durable reserved tokens. No extra paid call is authorized here.
+
+The coordinator's full test and specification proof uses an owned empty HOME with explicit build-cache homes. It does not prove default-HOME fixture independence. The remaining ambient configuration problem is [Debt 038](../issues/2026-10-04-local-test-fixtures-read-ambient-configuration.md), owned by the next reviewed fixture-isolation slice related to 0404. Runtime configuration refusal remains correct and unchanged. The saved OpenRouter replay fixture reconstructs retained response fields and explicitly substitutes a fixture-only identifier; it is not a complete raw capture.
