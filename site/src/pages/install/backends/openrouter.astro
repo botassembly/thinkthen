@@ -1,4 +1,5 @@
 ---
+// Goal: Select OpenRouter and check its System One route.
 import SidePage from '../../../layouts/SidePage.astro';
 import BackendFacts from '../../../components/BackendFacts.astro';
 import CheckLines from '../../../components/CheckLines.astro';
@@ -13,7 +14,7 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <BackendFacts name={b.name} />
   <p>Put your provider key in <code>{b.keys[0]}</code>. ThinkThen reads this variable when you select the backend.</p>
   <h2>Check the connection</h2>
-  <p>Run <code>thinkthen check --backend {b.name} --timeout 90</code>. A preview with <code>--plan</code> needs no key and sends nothing.</p>
+  <p>Run <code>thinkthen check --backend {b.name} --timeout 90</code>. A run with <code>--plan</code> needs no key and sends nothing.</p>
   <CheckLines name={b.name} />
   <p>The 2026-10-04 check asked <code>typesafe/jev-1.13</code>; all four successful replies named <code>typesafe/jev-1.13-20260917</code>. This check establishes no result for other models or routes.</p>
   <p>OpenRouter requires both sides when a yes-or-no question has criteria. ThinkThen preserves your descriptions and sends an empty object for a missing side. Questions without descriptions omit criteria.</p>
