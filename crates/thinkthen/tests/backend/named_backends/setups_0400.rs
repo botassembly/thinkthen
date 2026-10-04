@@ -15,8 +15,8 @@ fn config(home: &Home, base: &str, fields: Value) {
     let mut entry = json!({"url":base,"key_env":"LOCAL_D1_KEY","model":"m"});
     entry
         .as_object_mut()
-        .unwrap()
-        .extend(fields.as_object().unwrap().clone());
+        .expect("an entry object")
+        .extend(fields.as_object().expect("setup field object").clone());
     home.config(&json!({"schema":"thinkthen.config/1","usd_per_million_input":"1","usd_per_million_output":"0","backends":{"small":entry}}).to_string());
 }
 
@@ -180,7 +180,7 @@ fn named_prices_survive_address_model_overrides_unnamed_uses_top_level_and_bytes
 #[test]
 #[ignore = "parent executes this with an isolated captured environment"]
 fn builder_child_0400() {
-    let case = std::env::var("THINKTHEN_TEST_SETUP_CASE").unwrap();
+    let case = std::env::var("THINKTHEN_TEST_SETUP_CASE").expect("the parent selects a case");
     let mut builder = if case == "bare" {
         Engine::builder()
     } else {
@@ -193,7 +193,7 @@ fn builder_child_0400() {
         builder = builder.backend("small").unwrap();
     }
     builder = builder
-        .base_url(&std::env::var("THINKTHEN_BASE_URL").unwrap())
+        .base_url(&std::env::var("THINKTHEN_BASE_URL").expect("the parent supplies a loopback URL"))
         .unwrap()
         .model("override")
         .unwrap();
@@ -255,7 +255,7 @@ fn captured_builder_price_provenance_and_explicit_profile_setters() {
 }
 
 fn builder_child(home: &Home, base: &str, case: &str) -> std::process::Output {
-    let mut command = Command::new(std::env::current_exe().unwrap());
+    let mut command = Command::new(std::env::current_exe().expect("this test binary"));
     command
         .clear_environment()
         .args([
@@ -270,7 +270,7 @@ fn builder_child(home: &Home, base: &str, case: &str) -> std::process::Output {
     for (name, value) in home.environment() {
         command.env(name, value);
     }
-    let out = crate::run::output(&mut command).unwrap();
+    let out = crate::run::output(&mut command).expect("the child runs");
     assert!(out.status.success(), "{}", said(&out).0);
     out
 }
@@ -283,7 +283,7 @@ fn both_sides_reuses_wire_form_and_profiles_prices_keep_recording_identity() {
         config(
             &home,
             target.base(),
-            json!({"both_sides":both,"path":"nested/decisions"}),
+            json!({"both_sides":both,"path":"nested/decisions","requests_per_minute":60000,"usd_per_million_input":"2","usd_per_million_output":"0","profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":100}}),
         );
         let out = ask(
             &home,
