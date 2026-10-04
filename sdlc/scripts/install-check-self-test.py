@@ -76,6 +76,60 @@ class RefusalTable(unittest.TestCase):
             self.assertIn(('brew', 'install', 'installcheck/selected/thinkthen'), check.commands)
             self.assertEqual(check.commands[-1], ('brew', 'untap', 'installcheck/selected'))
 
+    def test_homebrew_cleanup_owns_only_its_formula_and_tap(self):
+        with tempfile.TemporaryDirectory() as own:
+            check = BrewFixture(Path(own))
+            installed, reply, _ = homebrew(check)
+            check_result(check.version, installed, reply)
+            self.assertEqual(check.formulas, {'other/existing/tool'})
+            self.assertEqual(check.taps, {'other/existing'})
+            self.assertEqual(check.commands[-2:], [('brew', 'uninstall', '--formula', 'installcheck/selected/thinkthen'),
+                                                   ('brew', 'untap', 'installcheck/selected')])
+        for prior in ('thinkthen', 'other/existing/thinkthen', 'installcheck/selected/thinkthen'):
+            with self.subTest(prior=prior), tempfile.TemporaryDirectory() as own:
+                check = BrewFixture(Path(own)); check.formulas.add(prior)
+                self.refusal('Homebrew thinkthen formula already exists; refusing to replace it', homebrew, check)
+                self.assertIn(prior, check.formulas)
+                self.assertFalse(any(command[1] in ('install', 'uninstall', 'untap') for command in check.commands))
+                self.assertFalse((check.root / 'selected-tap').exists())
+        with tempfile.TemporaryDirectory() as own:
+            check = BrewFixture(Path(own)); check.taps.add('installcheck/selected')
+            self.refusal('Homebrew check tap already exists; refusing to replace it', homebrew, check)
+            self.assertEqual(check.commands, [('brew', 'tap')])
+
+    def test_homebrew_cleanup_preserves_primary_failures(self):
+        for failure in ('install', 'replay', 'version'):
+            for cleanup_fails in (False, True):
+                with self.subTest(failure=failure, cleanup_fails=cleanup_fails), tempfile.TemporaryDirectory() as own:
+                    check = BrewFixture(Path(own)); check.failure = failure; check.fail_uninstall = cleanup_fails
+                    sentence = {'install': 'fixture install failed', 'replay': 'fixture replay failed',
+                                'version': 'installed thinkthen 0.1.3, wanted 0.1.2'}[failure]
+                    diagnostic = io.StringIO()
+                    with patch('sys.stderr', diagnostic): self.refusal(sentence, homebrew, check)
+                    if cleanup_fails:
+                        self.assertEqual(diagnostic.getvalue(), 'install-check: Homebrew cleanup also failed: fixture uninstall failed\n')
+                        self.assertNotIn(('brew', 'untap', 'installcheck/selected'), check.commands)
+                    else:
+                        self.assertEqual(diagnostic.getvalue(), '')
+                        self.assertNotIn('installcheck/selected/thinkthen', check.formulas)
+                        self.assertNotIn('installcheck/selected', check.taps)
+        with tempfile.TemporaryDirectory() as own:
+            check = BrewFixture(Path(own)); check.failure = 'replay'; check.fail_untap = True
+            diagnostic = io.StringIO()
+            with patch('sys.stderr', diagnostic): self.refusal('fixture replay failed', homebrew, check)
+            self.assertEqual(diagnostic.getvalue(), 'install-check: Homebrew cleanup also failed: fixture untap failed\n')
+
+    def test_homebrew_cleanup_failure_after_success_refuses_success(self):
+        for operation in ('uninstall', 'untap'):
+            with self.subTest(operation=operation), tempfile.TemporaryDirectory() as own:
+                check = BrewFixture(Path(own)); setattr(check, 'fail_' + operation, True)
+                self.refusal(f'Homebrew cleanup failed: fixture {operation} failed', homebrew, check)
+        with tempfile.TemporaryDirectory() as own:
+            check = BrewFixture(Path(own)); check.failure = 'install-before-files'
+            self.refusal('fixture install failed', homebrew, check)
+            self.assertNotIn(('brew', 'uninstall', '--formula', 'installcheck/selected/thinkthen'), check.commands)
+            self.assertNotIn('installcheck/selected', check.taps)
+
     def test_selected_homebrew_formula_survives_real_local_clone(self):
         formulas = ['class Thinkthen < Formula\n  version "0.2.0"\nend\n',
                     'class Thinkthen < Formula\n  version "0.1.2"\nend\n']
@@ -233,6 +287,45 @@ class Fixture(Check):
         for key, output in self.outputs.items():
             if key in command: return output
         return ''
+
+
+class BrewFixture(Fixture):
+    """Behave like Homebrew: installed formulae make plain untap refuse."""
+    def __init__(self, root):
+        super().__init__(root, 'homebrew')
+        self.taps = {'other/existing'}
+        self.formulas = {'other/existing/tool'}
+        self.failure = None
+        self.fail_uninstall = self.fail_untap = False
+        self.outputs = {'log': 'old', 'old:Formula/thinkthen.rb': 'class Thinkthen < Formula\n  version "0.1.2"\nend\n'}
+
+    def run(self, *args, cwd=None, input=None):
+        result = super().run(*args, cwd=cwd, input=input)
+        command = tuple(str(arg) for arg in args)
+        if command[0] != 'brew': return result
+        operation = command[1]
+        if operation == 'tap':
+            if len(command) == 2: return '\n'.join(sorted(self.taps))
+            self.taps.add(command[2])
+        elif operation == 'list': return '\n'.join(sorted(self.formulas))
+        elif operation == 'install':
+            if self.failure != 'install-before-files': self.formulas.add(command[2])
+            if self.failure in ('install', 'install-before-files'): raise Failure('fixture install failed')
+        elif operation == '--prefix': return str(self.root / 'installed')
+        elif operation == 'uninstall':
+            if self.fail_uninstall: raise Failure('fixture uninstall failed')
+            self.formulas.remove(command[3])
+        elif operation == 'untap':
+            if any(name.startswith(command[2] + '/') for name in self.formulas):
+                raise Failure('fixture refuses untap while formula installed')
+            if self.fail_untap: raise Failure('fixture untap failed')
+            self.taps.remove(command[2])
+        return ''
+
+    def command_replay(self, command):
+        if self.failure == 'replay': raise Failure('fixture replay failed')
+        version = '0.1.3' if self.failure == 'version' else self.version
+        return version, {'value': True, 'requests_sent': 0}
 
 
 def packed(path, files):

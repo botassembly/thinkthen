@@ -3,8 +3,9 @@ import json
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
-from install_check import Failure, check_index, validate_version
+from install_check import Failure, check_index, check_result, validate_version
 from install_check_consumers import write_consumer
 
 TARGET = 'x86_64-unknown-linux-gnu'
@@ -60,6 +61,13 @@ def local_tap(check, formula):
 
 
 def homebrew(check):
+    tap_name = 'installcheck/selected'
+    formula_name = tap_name + '/thinkthen'
+    if tap_name in check.run('brew', 'tap').splitlines():
+        raise Failure('Homebrew check tap already exists; refusing to replace it')
+    previous = check.run('brew', 'list', '--formula', '--full-name').splitlines()
+    if any(name.rsplit('/', 1)[-1] == 'thinkthen' for name in previous):
+        raise Failure('Homebrew thinkthen formula already exists; refusing to replace it')
     tap = check.root / 'public-tap'
     check.run('git', 'clone', HOMEBREW_TAP, tap)
     revisions = check.run('git', '-C', tap, 'log', '--format=%H', '--diff-filter=AM', '--all', '--', 'Formula/thinkthen.rb').splitlines()
@@ -67,16 +75,29 @@ def homebrew(check):
     formula = selected_formula(history, check.version)
     selected = local_tap(check, formula)
     # Homebrew clones this committed local repository. No tap is published.
-    if 'installcheck/selected' in check.run('brew', 'tap').splitlines():
-        raise Failure('Homebrew check tap already exists; refusing to replace it')
-    check.run('brew', 'tap', 'installcheck/selected', selected)
+    check.run('brew', 'tap', tap_name, selected)
+    primary = None
     try:
-        check.run('brew', 'install', 'installcheck/selected/thinkthen')
-        command = Path(check.run('brew', '--prefix', 'installcheck/selected/thinkthen')) / 'bin/thinkthen'
+        check.run('brew', 'install', formula_name)
+        command = Path(check.run('brew', '--prefix', formula_name)) / 'bin/thinkthen'
         installed, reply = check.command_replay(command)
+        check_result(check.version, installed, reply)
         return installed, reply, 'installed binary'
+    except (Failure, OSError, subprocess.TimeoutExpired) as error:
+        primary = error
+        raise
     finally:
-        check.run('brew', 'untap', 'installcheck/selected')
+        try:
+            # Both the tap and formula were absent before this run. Remove only
+            # the exact formula from our tap, including a partially failed install.
+            present = check.run('brew', 'list', '--formula', '--full-name').splitlines()
+            if formula_name in present:
+                check.run('brew', 'uninstall', '--formula', formula_name)
+            check.run('brew', 'untap', tap_name)
+        except (Failure, OSError, subprocess.TimeoutExpired) as cleanup:
+            if primary is None:
+                raise Failure(f'Homebrew cleanup failed: {cleanup}') from cleanup
+            print(f'install-check: Homebrew cleanup also failed: {cleanup}', file=sys.stderr)
 
 
 def python(check, uv=False):
