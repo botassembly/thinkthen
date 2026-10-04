@@ -100,40 +100,45 @@ fn original_byte_budget_counts_blanks_endings_and_all_source_occurrences() -> io
             assert!(output.stdout.is_empty());
             assert_eq!(listener.connections(), 0);
         }
-        let listener = Listener::answering(answer)?;
-        whole.push(b'\n');
-        let output = call(&listener, verb, &["--around", "0"], &whole)?;
-        fs::write(full, &whole)?;
-        let named = call(&listener, verb, &["--around", "0", full], b"")?;
-        assert_eq!(named.status.code(), Some(2));
-        let plan = call(&listener, verb, &["--around", "0", "--plan", full], b"")?;
-        assert_eq!(plan.status.code(), Some(2));
-        assert!(plan.stdout.is_empty());
-        assert_eq!(listener.connections(), 0);
-        whole.pop();
-        fs::write(full, &whole)?;
-        let mut beyond = whole.clone();
-        beyond.extend_from_slice(b"hit\n");
-        let lazy_listener = Listener::answering(answer)?;
-        let lazy = call(&lazy_listener, verb, &["-n", "--scores"], &beyond)?;
-        assert_eq!(lazy.status.code(), Some(0), "{}", text(&lazy.stderr));
-        assert_eq!(lazy.stdout, b"0.9 3:hit\n");
-        assert_eq!(lazy_listener.requests().len(), 1);
-        assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
-        assert_eq!(listener.connections(), 0);
-        assert!(
-            text(&output.stderr).contains("--around reads at most 16 MiB across all input sources")
-        );
-        fs::write(&two, [&half[..], b"\n"].concat())?;
+        check_overflow_and_lazy_intake(verb, full, &mut whole)?;
+        fs::write(two, [&half[..], b"\n"].concat())?;
         let output = call(&listener, verb, &["--around", "0", one, two], b"")?;
         assert_eq!(output.status.code(), Some(2));
         assert_eq!(listener.connections(), 0);
-        fs::write(&two, &half)?;
+        fs::write(two, &half)?;
         let output = call(&listener, verb, &["--around", "0"], b"")?;
         assert_eq!(output.status.code(), Some(0));
         assert!(output.stdout.is_empty());
     }
+    Ok(())
+}
+
+fn check_overflow_and_lazy_intake(verb: &str, full: &str, whole: &mut Vec<u8>) -> io::Result<()> {
+    let listener = Listener::answering(answer)?;
+    whole.push(b'\n');
+    let output = call(&listener, verb, &["--around", "0"], &*whole)?;
+    fs::write(full, &*whole)?;
+    let named = call(&listener, verb, &["--around", "0", full], b"")?;
+    assert_eq!(named.status.code(), Some(2));
+    let plan = call(&listener, verb, &["--around", "0", "--plan", full], b"")?;
+    assert_eq!(plan.status.code(), Some(2));
+    assert!(plan.stdout.is_empty());
+    assert_eq!(listener.connections(), 0);
+    whole.pop();
+    fs::write(full, &*whole)?;
+    let mut beyond = whole.clone();
+    beyond.extend_from_slice(b"hit\n");
+    let lazy_listener = Listener::answering(answer)?;
+    let lazy = call(&lazy_listener, verb, &["-n", "--scores"], &beyond)?;
+    assert_eq!(lazy.status.code(), Some(0), "{}", text(&lazy.stderr));
+    assert_eq!(lazy.stdout, b"0.9 3:hit\n");
+    assert_eq!(lazy_listener.requests().len(), 1);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(listener.connections(), 0);
+    assert!(
+        text(&output.stderr).contains("--around reads at most 16 MiB across all input sources")
+    );
     Ok(())
 }
 
@@ -148,15 +153,16 @@ fn later_backend_failure_keeps_filter_groups_and_leaves_rank_empty() -> io::Resu
             b"-- 0.9\n1:first\n2-fail\n",
         ),
     ];
+    let respond = |body| {
+        if text(body).contains("fail") {
+            Canned::status(400, "secret provider body")
+        } else {
+            answer(body)
+        }
+    };
     for verb in ["filter", "rank"] {
         for (flags, prefix) in views {
-            let listener = Listener::answering(|body| {
-                if text(body).contains("fail") {
-                    Canned::status(400, "secret provider body")
-                } else {
-                    answer(body)
-                }
-            })?;
+            let listener = Listener::answering(respond)?;
             let output = call(&listener, verb, flags, b"first\nfail\n")?;
             assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
             assert_eq!(output.stdout, if verb == "filter" { *prefix } else { b"" });

@@ -227,7 +227,7 @@ fn invalid_utf8_paths_keep_access_and_lossy_display_and_neighbor_bytes() -> io::
     fs::write(&file, b"hit\n\xff\n")?;
     let listener = Listener::answering(answer)?;
     let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    command.clear_environment().home(place.join("home")).args(&[
+    command.clear_environment().home(place.join("home")).args([
         "filter",
         "Is it clear?",
         "--url",
