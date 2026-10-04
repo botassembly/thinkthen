@@ -68,3 +68,11 @@ The pushed correction source commit is `432ce1124f1944c5113e89aae26b252b0f7a94a2
 ## Deferred proof and boundaries
 
 Fresh independent candidate review remains required. Parent-named full test/spec/surfaces, C-door/Polars/public compatibility, canonical actual350 replay/strict/site, native host and release proof remain deferred. The parent controls rebase onto newer main. This lane does not cherry-pick 0400 or Windows work and does not change default concurrency. SQL 0417 remains 0.2; foreign 0418 remains later; 0406 single-question surface parity is separate. Score members, filter sets, alternate merges, fingerprint changes and new providers remain outside D.
+
+## Accepted preview correction and Windows integration
+
+Fresh independent High review accepted corrected candidate `6696815ec60f302cad91813d6ffd206763db6b3b` and source `432ce1124f1944c5113e89aae26b252b0f7a94a2`. Its receipt is `/tmp/thinkthen-0401d-preview-review-cli-02nyg3e3/review.md`. The preview now adds each original record once after gathering member questions. Counted runtime regressions compare exact first-body bytes and complete summaries for both mixed-member orders. The fresh reviewer found no remaining source findings.
+
+The coordinator rebased onto Windows main `6d26206aa8861490cc6540b6bafafc08e3249c3c`, producing `a84525024`. Only exact Rust ratchets conflicted; measured totals during the preserved commits were 116971, 116992 and 117102. Final total is 117102: main 114995 plus D growth 2107. Added/deleted product lines are identical before and after rebase, SHA-256 `089a1a200cafb7713e44eab18c8e49c75155aeede039dbc3b86fc0ed9e4a4f7b`. Patches remain in `target/0401d-{before,after}-windows.patch`.
+
+Offline policy, exact ratchet, 84 distinct focused Rust cases and the three executable rank-set/result contract blocks passed on the Windows integration. `target/0401d-windows-focus.log` has SHA-256 `bb8435ee4d489d3e4e2bd00ebe4eadefba763355b25b2a5d0faf3d2090ae69dd`. This focused receipt does not claim the final provider-integrated source, renewed full lint, full checkpoint or canonical documentation replay. The provider landing, final rebase, review and checkpoint remain pending. No new live call or native/release dispatch ran.
