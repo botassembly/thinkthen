@@ -2,6 +2,9 @@ use super::support::{self, Scratch};
 use conformance_backend::{Canned, Listener};
 use std::fs;
 
+const SHARED_WARNING: &str = "thinkthen: another user owns the configuration file or its Windows access permissions allow another user to change it; it decides where the key and evidence go\n";
+const NAMED_REFUSAL: &str = "thinkthen: another user owns the configuration file or its Windows access permissions allow another user to change it, so its `backends` are refused; keep it owned by your user and writable only by your user and Windows SYSTEM\n";
+
 pub(super) fn live(scratch: &Scratch, listener: &Listener) -> std::process::Output {
     scratch.run(&[
         "decide",
@@ -133,9 +136,12 @@ fn status_and_plan_keep_their_no_send_contract_beside_unsafe_usage() {
     assert_eq!(output.status.code(), Some(0));
     let report: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
     assert!(report["usage"]["total"].is_null());
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains(support::ADVICE));
-    assert!(stderr.contains(scratch.usage().to_str().expect("fixture path")));
+    let sentence = format!(
+        "thinkthen: cannot read the usage totals: {} has unsafe or unreadable state. {}\n",
+        scratch.usage().display(),
+        support::ADVICE
+    );
+    assert_eq!(output.stderr, sentence.as_bytes());
     assert_eq!(
         scratch
             .run(&[
@@ -164,7 +170,6 @@ fn malformed_private_month_keeps_invalid_content_advice() {
 }
 #[test]
 fn native_configuration_writer_policy_warns_and_refuses_named_backends_without_leaking_values() {
-    let warning = "thinkthen: another user owns the configuration file or its Windows access permissions allow another user to change it; it decides where the key and evidence go";
     for (grant, foreign_owner, shared) in [
         ("(A;;FR;;;WD)", false, false),
         ("(A;;FW;;;WD)", false, true),
@@ -184,15 +189,19 @@ fn native_configuration_writer_policy_warns_and_refuses_named_backends_without_l
         let output = scratch.run(&["status", "--json"]);
         assert_eq!(output.status.code(), Some(0));
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr).contains(warning),
-            shared
+            output.stderr,
+            if shared {
+                SHARED_WARNING.as_bytes()
+            } else {
+                b""
+            }
         );
         fs::write(scratch.config(), r#"{"schema":"thinkthen.config/1","backends":{"fixture":{"url":"http://127.0.0.1:1","key_env":"FIXTURE_NAMED_KEY","model":"secret-model-fixture"}}}"#).expect("named config");
         let listener = Listener::answering(|_| Canned::ok(support::ANSWER)).expect("loopback");
         let output = live(&scratch, &listener);
         if shared {
             assert_eq!(output.status.code(), Some(5));
-            assert!(String::from_utf8_lossy(&output.stderr).contains("its `backends` are refused"));
+            assert_eq!(output.stderr, NAMED_REFUSAL.as_bytes());
         }
         assert_eq!(listener.requests().len(), usize::from(!shared));
         let printed = format!(
@@ -247,7 +256,7 @@ fn null_configuration_dacl_is_shared_and_named_backends_are_refused() {
     let output = live(&scratch, &listener);
     assert_eq!(output.status.code(), Some(5));
     assert_eq!(listener.requests().len(), 0);
-    assert!(String::from_utf8_lossy(&output.stderr).contains("its `backends` are refused"));
+    assert_eq!(output.stderr, NAMED_REFUSAL.as_bytes());
 }
 
 #[test]

@@ -52,14 +52,13 @@ impl Drop for Owned {
 }
 pub(crate) fn wait(path: &Path) {
     let deadline = Instant::now() + Duration::from_secs(30);
-    while !path.exists() {
-        assert!(
-            Instant::now() < deadline,
-            "Windows child did not acknowledge readiness"
-        );
+    while Instant::now() < deadline {
+        if matches!(std::fs::read(path), Ok(byte) if byte == b"1") {
+            return;
+        }
         std::thread::sleep(Duration::from_millis(10));
     }
-    assert_eq!(std::fs::read(path).expect("marker"), b"1");
+    panic!("Windows child did not acknowledge readiness with the complete marker byte");
 }
 pub(crate) fn inject(process: u32, helper: &str) {
     let mut command = Command::new(std::env::current_exe().expect("test executable"));
