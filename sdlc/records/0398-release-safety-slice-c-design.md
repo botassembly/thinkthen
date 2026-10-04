@@ -1,7 +1,7 @@
 # 0398 slice C: Require a rehearsal on the release commit
 
 Date: 2026-10-04
-Status: design amended after fresh review; fresh acceptance required before implementation
+Status: fresh High design review ACCEPT at `ebfa557cae241ee134b52a25a24af40854e511c8`; implementation proceeds under that contract
 Starting revision: `b780323909505450743af30d8bea2ee07a51e65b`
 Ticket: `sdlc/tickets/0398-release-safety.md`
 Lane: `claude-2`, branch `ticket/0398-release-safety`
@@ -38,6 +38,6 @@ Extend the existing `release-archive-self-test.py` resolve edge table with fake 
 
 Add workflow plants for missing actions permission/token, extra write/id-token permission, token at job scope, skipped or ignored resolve and bypassed source command. Retain every prior plant. Run focused archive and workflow self-tests, real-file workflow validation, ticket validation and the required scoped lint after implementation. No full checkpoint is authorized for design.
 
-The coordinator owns the manual read-only history query before landing: rehearsal `37126990511` for `abac3ce61`, and absence of a rehearsal for `08328c9c0`, the 0.1.2 release commit. The coordinator already confirmed run `37126990511`: `head_sha` is `abac3ce61bf1188b40cbc3c2ef0a0589eb247c86`, `head_branch` is `release/0.1`, `path` is `.github/workflows/release.yml`, `event` is `workflow_dispatch`, `status` is `completed`, `conclusion` is `success`, and `workflow_id` is `369147892`. The 0.1.2 absence query remains with the coordinator. This design has made no authenticated metadata call or dispatch. No rehearsal, install-check or approval dispatch is authorized yet. The coordinator will request an exact reviewed run once a concrete main candidate exists.
+The coordinator owns the manual read-only history query before landing: rehearsal `37126990511` for `abac3ce61`, and absence of an eligible branch rehearsal for `08328c9c0`, the 0.1.2 release commit. The coordinator already confirmed run `37126990511`: `head_sha` is `abac3ce61bf1188b40cbc3c2ef0a0589eb247c86`, `head_branch` is `release/0.1`, `path` is `.github/workflows/release.yml`, `event` is `workflow_dispatch`, `status` is `completed`, `conclusion` is `success`, and `workflow_id` is `369147892`. The coordinator also queried `08328c9c04574719b9e93900dd8fa46ad3b645b4`. Run `37130570517` is a successful completed dispatch of the same workflow, but its `head_branch` is `v0.1.2`. It supplies no eligible branch rehearsal. The offline tag-success case retains this distinction. This design has made no authenticated metadata call or dispatch. No rehearsal, install-check or approval dispatch is authorized yet. The coordinator will request an exact reviewed run once a concrete main candidate exists.
 
 Slice A and B source changes are accepted and landed. Hosted rehearsal and install-check proof remain open. Slice C adds a fail-closed release guard; metadata retention, service failure or the search limit can require a new rehearsal. This work does not prove trusted publishers, add checkpoint enforcement or replace Ian's release approvals. Ticket 0401 remains in lane 0. Preserve lane build folders.
