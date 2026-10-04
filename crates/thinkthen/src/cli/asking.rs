@@ -15,7 +15,7 @@ use crate::core::{
 };
 
 use crate::args::Common;
-use crate::edge::{self, Environment};
+use crate::edge::Environment;
 use crate::engine::Width;
 use crate::engine::facade::{Engine, Settings, Storage};
 use crate::failure::Failure;
@@ -23,7 +23,6 @@ use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
 use crate::public::AttemptObservation;
 use crate::schedule::{self, Output};
-use crate::table::Kind as TableKind;
 
 mod context;
 mod folders;
@@ -42,6 +41,7 @@ struct RowContext<'a> {
     arrived: Option<&'a [u8]>,
     requests: Vec<String>,
     attempts: Vec<AttemptObservation>,
+    position: Option<&'a crate::cli::intake::Position>,
 }
 
 /// Build the one engine a command calls, from what the command resolved.
@@ -214,7 +214,14 @@ pub(crate) fn run(
         environment.warn_request_size(&backend)?;
     }
     let profile = profile::read(common)?;
+    crate::cli::intake::window(common, !settled.on().is_empty())?;
     let reading = read_by(common, settled, keeping)?;
+    let documents = !reading.streams() && common.input.len() > 1;
+    if documents && (view.raw || view.quiet) {
+        return Err(Failure::Usage(
+            "multiple documents cannot accompany --raw or --quiet",
+        ));
+    }
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
@@ -245,7 +252,8 @@ pub(crate) fn run(
         }
         None => Mismatch::new(settled.profile(), profile.as_ref()),
     };
-    let source = edge::source(common.input.as_deref(), input)?;
+    let source =
+        crate::cli::intake::Intake::new(common, &reading, input, !settled.on().is_empty())?;
     let configuration = JudgingInput {
         common,
         environment,
@@ -256,6 +264,7 @@ pub(crate) fn run(
         view,
         keeping,
         streams: reading.streams(),
+        documents,
         profile,
         mismatch,
         context,
@@ -273,13 +282,6 @@ pub(crate) fn run(
     judged::run(configuration, &reading, source, batch, output)
 }
 
-fn table_kind(common: &Common) -> Option<TableKind> {
-    common
-        .csv
-        .then_some(TableKind::Csv)
-        .or_else(|| common.tsv.then_some(TableKind::Tsv))
-}
-
 /// One question over one engine, asked of every record in turn.
 struct Judging<'a> {
     environment: &'a Environment,
@@ -289,6 +291,7 @@ struct Judging<'a> {
     view: View,
     keeping: Keeping,
     streams: bool,
+    documents: bool,
     mismatch: Mismatch,
     context: Option<Context>,
 }
@@ -303,6 +306,7 @@ struct JudgingInput<'a> {
     view: View,
     keeping: Keeping,
     streams: bool,
+    documents: bool,
     sources: Option<Sources>,
     profile: Option<BackendProfile>,
     mismatch: Mismatch,
@@ -321,6 +325,7 @@ impl Judging<'_> {
             view,
             keeping,
             streams,
+            documents,
             sources: _,
             profile,
             mismatch,
@@ -334,6 +339,7 @@ impl Judging<'_> {
             view,
             keeping,
             streams,
+            documents,
             mismatch,
             context,
         })

@@ -2,12 +2,11 @@
 //! question pipeline, by ADR 0111 section 4. A record thread frames records
 //! on each ask, and each row comes back in input order.
 
-use std::io::BufRead;
 use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use super::{Asks, Judging, JudgingInput, RowContext, table_kind};
+use super::{Asks, Judging, JudgingInput, RowContext};
 use crate::core::pack::{self, Ask, PackError};
 use crate::core::{
     AnswerOutcome, BackendProfile, BatchError, Descriptions, Evidence, ModelName, Plan, Reading,
@@ -20,49 +19,43 @@ use crate::failure::Failure;
 use crate::failure::context::Limits;
 use crate::judge::Keeping;
 use crate::schedule::{Judged, Output, Placed};
-use crate::table::Rows as TableRows;
 
 /// One framed record, and the bytes it arrived as when it arrived as a line.
 pub(super) struct Held {
     pub(super) record: Record,
     pub(super) arrived: Option<Vec<u8>>,
     pub(super) at: usize,
+    pub(super) position: Option<crate::cli::intake::Position>,
 }
 
 pub(super) type Records = Box<dyn Iterator<Item = Result<Held, Placed>> + Send>;
 
 /// Frame the input as records: table rows, lines, or one document.
 pub(super) fn records(
-    configuration: &JudgingInput<'_>,
+    _configuration: &JudgingInput<'_>,
     reading: &Reading,
-    source: Box<dyn BufRead + Send>,
+    source: crate::cli::intake::Intake,
 ) -> Result<Records, Failure> {
-    if let Some(kind) = table_kind(configuration.common) {
-        let rows = TableRows::new(source, kind)?;
-        return Ok(Box::new(rows.enumerate().map(|(place, row)| {
-            row.map(|record| Held {
-                record,
-                arrived: None,
-                at: place + 1,
-            })
-            .map_err(|error| Placed::at(error, place + 1))
-        })));
-    }
     let reading = reading.clone();
     let streams = reading.streams();
-    Ok(Box::new(
-        edge::numbered(edge::Chunks::new(source, streams), &reading).map(move |(at, bytes)| {
-            let bytes = bytes.map_err(|error| Placed::at(error, at))?;
-            let record = reading
-                .record(&bytes)
-                .map_err(|error| Placed::at(Failure::record(error, streams), at))?;
-            Ok(Held {
-                record,
-                arrived: Some(bytes),
-                at,
-            })
-        }),
-    ))
+    Ok(Box::new(source.map(move |item| {
+        let item = item?;
+        let (record, arrived) = match item.data {
+            crate::cli::intake::Data::Record(record) => (record, None),
+            crate::cli::intake::Data::Bytes(bytes) => {
+                let record = reading
+                    .record(&bytes)
+                    .map_err(|error| Placed::at(Failure::record(error, streams), item.at))?;
+                (record, Some(bytes))
+            }
+        };
+        Ok(Held {
+            record,
+            arrived,
+            at: item.at,
+            position: item.position,
+        })
+    })))
 }
 
 /// What one record's plan needs besides the record.
@@ -211,6 +204,7 @@ impl JudgeAsker<'_> {
                 arrived: held.arrived.as_deref(),
                 requests: answers.iter().map(|answered| answered.key.hex()).collect(),
                 attempts,
+                position: held.position.as_ref(),
             },
         )?;
         if judgment.answered.replayed {
@@ -224,17 +218,22 @@ impl JudgeAsker<'_> {
 pub(super) fn run(
     configuration: JudgingInput<'_>,
     reading: &Reading,
-    source: Box<dyn BufRead + Send>,
+    source: crate::cli::intake::Intake,
     setting: Option<Setting>,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let records = records(&configuration, reading, source)?;
     let streams = reading.streams();
+    let documents = configuration.documents;
     let context = configuration.context.as_ref().map(super::Context::evidence);
-    let inputs = setting.and_then(|setting| match setting {
-        Setting::Records(most) => Some(most.get()),
-        Setting::Max => None,
-    });
+    let inputs = if !streams {
+        Some(1)
+    } else {
+        setting.and_then(|setting| match setting {
+            Setting::Records(most) => Some(most.get()),
+            Setting::Max => None,
+        })
+    };
     if configuration.common.dry_run {
         return super::plan::packed(&configuration, reading, records, context, inputs, output);
     }
@@ -287,7 +286,7 @@ pub(super) fn run(
     }
     match ended.stop {
         // A stop after one document's row changes nothing it printed.
-        Some(_) if !streams && ended.finished > 0 => Ok(super::exit_code(
+        Some(_) if !streams && !documents && ended.finished > 0 => Ok(super::exit_code(
             ended.outcome.unwrap_or(crate::core::Outcome::Unresolved),
         )),
         Some(stop) if !streams => Err(stop
@@ -301,7 +300,7 @@ pub(super) fn run(
             held: matches!(judging.keeping, Keeping::Ordered),
             cause: Box::new(stop.cause),
         }),
-        None if !streams => Ok(super::exit_code(
+        None if !streams && !documents => Ok(super::exit_code(
             ended.outcome.unwrap_or(crate::core::Outcome::Unresolved),
         )),
         None => {

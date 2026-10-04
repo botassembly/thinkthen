@@ -13,6 +13,7 @@ pub(crate) const DEFAULT_MAX_RETRIES: u32 = 3;
 mod annotate;
 mod batching;
 mod command;
+mod common;
 mod debug;
 mod find;
 mod relate;
@@ -71,7 +72,11 @@ pub(crate) struct Common {
 
     /// Read the records from FILE instead of from standard input.
     #[arg(long, value_name = "FILE")]
-    pub(crate) input: Option<PathBuf>,
+    pub(crate) input: Vec<PathBuf>,
+
+    /// Join N physical text lines into each item, within each file.
+    #[arg(long, value_name = "N")]
+    pub(crate) window: Option<String>,
 
     /// Take each line as one text record.
     ///
@@ -214,32 +219,6 @@ pub(crate) struct Common {
     /// How many times a retried status is sent again. A transport failure is never sent again.
     #[arg(long, value_name = "N", default_value_t = DEFAULT_MAX_RETRIES, hide_short_help = true)]
     pub(crate) max_retries: u32,
-}
-
-impl Common {
-    pub(crate) fn check_plan_name(&self) -> Result<(), crate::failure::Failure> {
-        if self.retired_dry_run {
-            return Err(crate::failure::Failure::Usage(
-                "--dry-run was renamed --plan",
-            ));
-        }
-        Ok(())
-    }
-
-    /// The record framing the command line asked for.
-    pub(crate) const fn framing(&self) -> Framing {
-        if self.lines {
-            Framing::Lines
-        } else if self.jsonl {
-            Framing::Jsonl
-        } else if self.csv {
-            Framing::Csv
-        } else if self.tsv {
-            Framing::Tsv
-        } else {
-            Framing::Document
-        }
-    }
 }
 
 /// Everything `decide` was asked, before any of it is read.
@@ -586,7 +565,7 @@ mod annotate_tests {
             panic!("annotate command");
         };
         assert_eq!(arguments.questions.to_string_lossy(), "checks.json");
-        assert!(arguments.extra_input.is_none());
+        assert!(arguments.extra_input.is_empty());
         assert!(arguments.common.jsonl);
         assert_eq!(arguments.common.field, ["/body"]);
         assert_eq!(arguments.common.jobs, Some(4));

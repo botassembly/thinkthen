@@ -33,7 +33,14 @@ pub(crate) fn run(
         .with_request_size(request_size);
     environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common)?;
-    let source = crate::edge::source(arguments.common.input.as_deref(), input)?;
+    let source = crate::edge::source(
+        arguments
+            .common
+            .input
+            .first()
+            .map(std::path::PathBuf::as_path),
+        input,
+    )?;
     let entities = input::read(source, settled.framing, &settled.spec)?;
     if entities.is_empty() {
         return Ok(ExitCode::SUCCESS);

@@ -1,6 +1,6 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: in progress. Planning only; no product code exists. The first 0405 search answer received fresh ACCEPT at `e37b7150e278255adcd81ef25ba6985517b5cb22`. This amended scope replaces the earlier rank-only slices and needs fresh ticket review before implementation. Prior Slice A acceptance applies only to its retained compatible details.
+Status: in progress. Slice A is built and awaits fresh code review. The first 0405 search answer received fresh ACCEPT at `e37b7150e278255adcd81ef25ba6985517b5cb22`. This amended scope replaces the earlier rank-only slices and needs fresh ticket review before implementation. Prior Slice A acceptance applies only to its retained compatible details.
 
 Milestone: 0.2
 
@@ -69,3 +69,9 @@ Expose an additive Rust rank_set API with input index, probability and question 
 ## What Ian can overturn
 
 Repeated --input and unambiguous positional routes; multi-file JSON carrier; all-whitespace-window skip; 16 MiB bound for around snapshots; independent overlap groups; score meaning and text/details conflicts; turns and its deduplication rule; additive position member. Changes need contract review before code.
+
+## What the build taught us
+
+Slice A shares one edge intake iterator across the seven commands. It opens all named files first and initializes each table header before admitting an item. File positions travel separately from global pipeline labels. Text windows reuse the existing bounded chunks and record parser. CLI result metadata appends positions without rewriting the existing result members. The four default-document functions need a distinct multi-document completion mode so a later input or backend failure cannot inherit the first answer's exit code.
+
+The old loose-argument hint remains on find. The seven new routes replace it where positional files are now valid. Recognize and relate keep their single-input guards and hide the unsupported window option. Slice A leaves display flags, find display and question-set rank untouched. Full checkpoint and site-proof replay receipts remain with the coordinator.

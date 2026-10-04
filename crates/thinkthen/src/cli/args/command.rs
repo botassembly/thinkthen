@@ -347,6 +347,44 @@ pub(crate) struct PruneArguments {
 }
 
 impl Command {
+    /// Settle positional file routes before opening any evidence.
+    pub(crate) fn route_inputs(&mut self) -> Result<(), crate::failure::Failure> {
+        use crate::failure::Failure;
+        let (common, paths) = match self {
+            Self::Decide(a) => (
+                &mut a.common,
+                a.extra.drain(..).map(PathBuf::from).collect(),
+            ),
+            Self::Filter(a) => (
+                &mut a.common,
+                a.extra.drain(..).map(PathBuf::from).collect(),
+            ),
+            Self::Rank(a) => (
+                &mut a.common,
+                a.extra.drain(..).map(PathBuf::from).collect(),
+            ),
+            Self::Annotate(a) => (&mut a.common, std::mem::take(&mut a.extra_input)),
+            Self::Recognize(a) => {
+                if a.common.input.len() > 1 || a.common.window.is_some() {
+                    return Err(Failure::Usage("recognize takes one input and no --window"));
+                }
+                return Ok(());
+            }
+            Self::Relate(a) => {
+                if a.common.input.len() > 1 || a.common.window.is_some() {
+                    return Err(Failure::Usage("relate takes one input and no --window"));
+                }
+                return Ok(());
+            }
+            _ => return Ok(()),
+        };
+        if !paths.is_empty() && !common.input.is_empty() {
+            return Err(Failure::Usage("positional files cannot accompany --input"));
+        }
+        common.input.extend(paths);
+        Ok(())
+    }
+
     /// Whether a one-question verb received a loose second argument.
     pub(crate) fn stray(&self) -> bool {
         match self {
@@ -393,16 +431,16 @@ impl Command {
     /// The input file one command named, if any.
     pub(crate) fn input(&self) -> Option<&std::path::Path> {
         match self {
-            Self::Decide(arguments) => arguments.common.input.as_deref(),
-            Self::Choose(arguments) => arguments.common.input.as_deref(),
-            Self::Tag(arguments) => arguments.common.input.as_deref(),
-            Self::Score(arguments) => arguments.common.input.as_deref(),
-            Self::Filter(arguments) => arguments.common.input.as_deref(),
-            Self::Rank(arguments) => arguments.common.input.as_deref(),
+            Self::Decide(arguments) => arguments.common.input.first().map(PathBuf::as_path),
+            Self::Choose(arguments) => arguments.common.input.first().map(PathBuf::as_path),
+            Self::Tag(arguments) => arguments.common.input.first().map(PathBuf::as_path),
+            Self::Score(arguments) => arguments.common.input.first().map(PathBuf::as_path),
+            Self::Filter(arguments) => arguments.common.input.first().map(PathBuf::as_path),
+            Self::Rank(arguments) => arguments.common.input.first().map(PathBuf::as_path),
             Self::Find(arguments) => arguments.common.input.as_deref(),
-            Self::Annotate(arguments) => arguments.common.input.as_deref(),
-            Self::Recognize(arguments) => arguments.common.input.as_deref(),
-            Self::Relate(arguments) => arguments.common.input.as_deref(),
+            Self::Annotate(arguments) => arguments.common.input.first().map(PathBuf::as_path),
+            Self::Recognize(arguments) => arguments.common.input.first().map(PathBuf::as_path),
+            Self::Relate(arguments) => arguments.common.input.first().map(PathBuf::as_path),
             Self::Cache(_)
             | Self::Status(_)
             | Self::Check(_)

@@ -82,7 +82,7 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
     assert_eq!(
         rows,
         vec![
-            json!({"schema":"thinkthen.result/1","input":{"id":"a","body":"first"},
+            json!({"schema":"thinkthen.result/1","position":{"file":null,"first":1,"last":1},"input":{"id":"a","body":"first"},
             "value":{"urgent":true},"answers":{"urgent":{"value":true,
                 "question":{"verb":"decide","text":"Is this urgent?"},
                 "answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,
@@ -92,7 +92,7 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
                 "cached":false,"requests":[first],"failed_questions":0}}),
             json!({"schema":"thinkthen.record-error/1","at":2,
             "failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}),
-            json!({"schema":"thinkthen.result/1","input":{"id":"c","body":"third"},
+            json!({"schema":"thinkthen.result/1","position":{"file":null,"first":3,"last":3},"input":{"id":"c","body":"third"},
             "value":{"urgent":false},"answers":{"urgent":{"value":false,
                 "question":{"verb":"decide","text":"Is this urgent?"},
                 "answer":{"kind":"yes_no","probability":0.1},"threshold":0.5,
@@ -218,7 +218,7 @@ fn details_preserve_shadowed_input_while_bare_mode_refuses_it() -> io::Result<()
     let request = keys(listener.url(), FIRST_REQUEST.as_bytes()).remove(0);
     assert_eq!(
         row,
-        json!({"schema":"thinkthen.result/1",
+        json!({"schema":"thinkthen.result/1","position":{"file":null,"first":1,"last":1},
         "input":{"urgent":"original","body":"first"},"value":{"urgent":true},
         "answers":{"urgent":{"value":true,
             "question":{"verb":"decide","text":"Is this urgent?"},

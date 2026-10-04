@@ -23,7 +23,7 @@ impl Judging<'_> {
             Value::Score(position) => Some(*position),
             _ => judged.answer.yes(),
         };
-        let printed =
+        let mut printed =
             if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {
                 // Ordinary rank has no cut and therefore no yes/no value.
                 // Graded rank keeps the score value that orders its records.
@@ -78,6 +78,12 @@ impl Judging<'_> {
             } else {
                 Some(json_line(&judged.value)?)
             };
+        if self.view.details {
+            crate::cli::intake::locate(&mut printed, context.position)?;
+        }
+        if self.documents {
+            crate::cli::intake::document(&mut printed, context.position, self.view.details)?;
+        }
         Ok(Judged {
             model: Some(judged.answered.reply.model().clone()),
             printed,

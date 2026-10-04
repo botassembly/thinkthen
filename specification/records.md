@@ -6,7 +6,23 @@ The default input is one text document. A record stream turns a command into a m
 
 ## Where the input comes from
 
-`--input FILE` reads a file. Without it the tool reads standard input. `--input` names a path and never a framing.
+`--input FILE` reads a file. Without a named source the tool reads standard input. `--input` names a path and never a framing.
+
+Version 0.2 lets `decide`, `filter`, `rank`, `choose`, `score`, `tag` and `annotate` repeat `--input FILE` in argument order. Decide, filter, rank and annotate also accept positional input files after the question or question set. Positional files cannot accompany `--input`. Choose, score and tag retain positional labels and levels; they never infer a file from an existing path. `-` names a literal file. Find, recognize and relate keep their existing single-file input contract.
+
+Every named source is opened and its file kind checked before any request. CSV and TSV validate each file's required header before any request. Content failures still stop when the failing item is read. Each file keeps its own physical line numbers, starting at one. Pipeline labels remain global across files and include skipped physical lines.
+
+### Several documents
+
+Without an explicit record mode, each named file is one document on decide, choose, score and tag. A run with several files prints one JSONL carrier per file: `{"input_file":FILE,"value":VALUE}`. With `--details`, `input_file` joins the existing result members. Such a completed run exits 0, including false and null answers. A later empty document or backend failure preserves completed output and returns the actual failure code. Empty documents remain input refusals. Multi-document runs refuse `--quiet` and `--raw` before sending. One file and stdin retain their scalar output and answer exits.
+
+### Text-line windows
+
+`--window N` joins up to N physical text lines into each item on the seven functions above. N is an ASCII whole number of at least one. This option explicitly selects line framing on default-document functions. It refuses JSONL, CSV, TSV, `--field` and resolved saved `on` pointers before sending. Annotate admits windows only for a question set without `on`.
+
+A window never crosses a file boundary. Internal physical line feeds remain; only the final record-ending LF and an immediately preceding CR are removed. A final short window is one item. Empty files make no windows and send nothing. All-whitespace windows are skipped after size validation, and their lines still advance positions. A joined item retains the existing 16 MiB record limit.
+
+Detailed line and document results include `position: {"file":FILE,"first":FIRST,"last":LAST}`. Stdin has a null file. First and last are inclusive physical line numbers. CSV and TSV positions remain absent. Locations never enter question digests, request keys or provider requests.
 
 | Flag | What one record is |
 | --- | --- |

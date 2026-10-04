@@ -71,7 +71,14 @@ pub(crate) fn run(
     }
     let reading = Reading::new(arguments.common.framing(), pointers)?;
     schedule::jobs_of(arguments.common.jobs, reading.streams())?;
-    let source = edge::source(arguments.common.input.as_deref(), input)?;
+    let source = edge::source(
+        arguments
+            .common
+            .input
+            .first()
+            .map(std::path::PathBuf::as_path),
+        input,
+    )?;
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
     let backend = environment
         .resolve(
