@@ -1,6 +1,6 @@
 # 0401 slice B: Display filter and rank locations, scores and neighbors
 
-Status: fresh source review accepted `be6e9bfcb`. Rebase onto main `ddfcbc74c` produced `0d5854510` with an identical product patch. The coordinator's named full test, specification and actual site replay checkpoint is running. Slices C and D remain separate.
+Status: fresh source review accepted `be6e9bfcb`. Rebase onto main `ddfcbc74c` produced `0d5854510` with an identical product patch. The coordinator's named full test, specification, actual site replay and final site checkpoint passed. Final receipt review and landing remain. Slices C and D remain separate.
 
 Filter and rank own `-n`/`--line-number`, `--scores` and `--around N`. The output boundary adds scores before locations and prints independent physical neighbor groups. Filter retains membership and input order. Rank retains stable ordering, saved score ordering, top retention and empty stdout after any failed record. Ordinary record bytes and JSON details retain their existing paths when the flags are absent. Text display refuses details, CSV and TSV before sending.
 
@@ -22,7 +22,7 @@ The final receipts remain in owned build output `target/0401b/focused.log`, `kee
 
 ## Size and lessons
 
-The exact Rust total rises from 110630 to 111647 nonblank lines: 275 source lines and 742 test lines. Every Rust file remains below 500 nonblank lines; the repository maximum remains 499. The first build commit prose mistakenly named 111624 while its committed exact ratchet was 111617. The final measured value above supersedes that prose.
+The exact Rust total rises from 110630 to 111656 nonblank lines: 275 source lines and 751 test lines. Every Rust file remains below 500 nonblank lines; the repository maximum remains 499. The first build commit prose mistakenly named 111624 while its committed exact ratchet was 111617. The final measured value above supersedes that prose.
 
 I inspected the source-opening and output-emission paths for duplication. The snapshot preparation replaces the shared opening block and preserves one text constructor. Streaming and ranked rows reuse one display writer. Tests reuse existing intake answers, process spawning, owned folders and stored-key inspection. The extra assertions protect bytes, source identity, spend and failure behavior. No dependency, cap or lint rule was weakened. The nesting correction advances the scan cursor once before skipping early lines; it adds no suppression. The boundary table separates overflow/lazy checks and places its response closure outside nested cases.
 
@@ -41,3 +41,15 @@ Temporary plants replaced the captured request body with wrong observed content 
 The correction adds nine net nonblank test lines. The exact measured ratchet is 111656, up 1026 from the 110630 baseline: 275 source lines and 751 test lines. I checked the existing request parity case and both corrected assertions for duplicated helpers; each corrected case now parses its captured body directly. No production source, dependency, cap, provider format or saved site proof receipt changed. Tests affect the site source hash, so the coordinator still owns actual replay and strict verification.
 
 The restored correction passed all 16 display cases, policy and the exact ratchet on `119b56655`. Required lint passed at exit 0 on that commit. It completed policy, planted checks, all ratchets, offline dependency checks, formatting, all-target Clippy, Rust documentation and the 569-item public API inventory. Final correction receipts remain in `target/0401b/review-fix-focused.log`, `review-fix-policy.log` and `review-fix-lint.log`. The same allowed environment, verified local-file fixture wrapper, offline two-job Cargo, installed tool paths, empty compiler wrapper, outside-checkout temporary directory and 12 GiB/1 GiB resource limits applied. No Rust change follows this checked correction. Fresh source re-review and the coordinator's checkpoint remain before landing.
+
+## Coordinator checkpoint
+
+Fresh source re-review accepted `be6e9bfcb` after the draining-listener assertion fixes. Rebase onto main `ddfcbc74c` produced `0d5854510` with a byte-identical product patch. Later commits before the checkpoint conclusion change records only.
+
+The named full test passed all 1343 workspace tests with 25 existing skips, 134 library-only tests with four skips, and 21 consumer tests with three skips. Type/C door, live-wrapper fixtures and binding smokes passed. Specification checks passed 60 pages with one skip, all 12 settings plants, the probe fixtures and all 24 green demos. The required lint receipt remains the builder's final source correction run.
+
+The first site attempt selected system Node 18.19.1 and stopped before the language replays. The corrected owned runner selects installed Node 22.22.3. Canonical `npm run test-docs` then replayed all 308 language and 42 SQL samples from saved answers. Its strict check and the separate strict check both report 350 matching proofs and zero stale pages. The final site build passed. The committed proof file matches the actual runner artifact byte for byte; no hash was rewritten manually. No provider call, workflow dispatch or publication formed part of this checkpoint.
+
+Owned output `target/0401b-checkpoint-final/` retains `test.log`, `spec.log`, `test-docs.log`, `final-proof.json`, `strict.log` and `site-build.log`. The allow-listed run used a lane lock, two offline Cargo jobs, an empty compiler wrapper and systemd user limits of 12 GiB memory and 1 GiB swap. The checkpoint covers B's command display and its actual site receipts. It claims no new all-surface release checkpoint and does not close C or D.
+
+The separately reviewed recipe record and minimal ticket 0402 evidence amendment received fresh ACCEPT at `00d01fc28`. They preserve the reviewed completed-report limits and the separate experiment 4 requirement. They change no product code or site output.
