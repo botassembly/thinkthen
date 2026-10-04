@@ -32,6 +32,10 @@ impl Output<'_> {
                 .members
                 .get_mut(member)
                 .ok_or(Failure::Defect("a rank lost its member"))?;
+            if limit.is_none() {
+                held.push((index, row));
+                continue;
+            }
             let place = held.partition_point(|(_, earlier)| {
                 earlier
                     .order_value
@@ -53,16 +57,33 @@ impl Output<'_> {
         let Mode::Ordered { top, writer, .. } = &mut self.mode else {
             return Err(Failure::Defect("a set rank must hold output"));
         };
+        for rows in &mut self.members {
+            rows.sort_by(|(_, one), (_, other)| {
+                other
+                    .order_value
+                    .unwrap_or_default()
+                    .total_cmp(&one.order_value.unwrap_or_default())
+            });
+        }
         let lists = self
             .members
             .iter()
             .map(|member| member.iter().map(|(index, _)| *index).collect())
             .collect::<Vec<_>>();
+        // Preserve ranked identities in lists, then index the same bounded
+        // payloads for lookup without a scan for every emitted original.
+        for rows in &mut self.members {
+            rows.sort_unstable_by_key(|(index, _)| *index);
+        }
         for (index, member) in turns(&lists, *top) {
             let row = self
                 .members
                 .get(member)
-                .and_then(|rows| rows.iter().find(|(at, _)| *at == index))
+                .and_then(|rows| {
+                    rows.binary_search_by_key(&index, |(at, _)| *at)
+                        .ok()
+                        .and_then(|place| rows.get(place))
+                })
                 .map(|(_, row)| row)
                 .ok_or(Failure::Defect("a merged rank lost its record"))?;
             if let Some(mismatch) = &row.profile_mismatch {

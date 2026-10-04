@@ -24,7 +24,7 @@ pub(crate) fn ranking(of: &[f64], top: Option<usize>) -> Vec<usize> {
 /// Identity is the original input index, and top follows first appearances.
 /// Deduplication stores only emitted identities, bounded by top when present.
 pub(crate) fn turns(lists: &[Vec<usize>], top: Option<usize>) -> Vec<(usize, usize)> {
-    let mut seen = std::collections::HashSet::new();
+    let mut seen = std::collections::BTreeSet::new();
     let mut selected = Vec::new();
     let limit = top.unwrap_or(usize::MAX);
     for depth in 0..lists.iter().map(Vec::len).max().unwrap_or(0) {
