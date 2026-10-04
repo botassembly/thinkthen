@@ -7,6 +7,12 @@ R-universe built 0.1.2 in run 37142825335 in `r-universe/botassembly`. Its plain
 
 The R package's published shape is built for real only by R-universe, after the release is public. `check.sh` covers it with a crates.io stand-in (ticket 0395). The 0.1.1 R-universe build failed that way, and the defect shipped. R-universe syncs on its own schedule, so the first build can come hours after the release.
 
+## Read-only preflight, 2026-10-04
+
+The coordinator's unauthenticated reads found the public source `PACKAGES` and package API available with HTTP 200 and version 0.1.2. The package API's `API_binaries` lists a successful resolute x86_64 R 4.6.1 build from run `37142825335`. At the exact installed-package base `https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/`, however, `PACKAGES`, `PACKAGES.gz`, `PACKAGES.rds` and `thinkthen_0.1.2.tar.gz` each returned HTTP 404. Each binary read was limited to 64 response bytes. No package download or R install ran.
+
+[R-universe's official binary-install documentation](https://docs.r-universe.dev/install/binaries.html) still specifies this address pattern. The serving-path result conflicts with the successful-build API evidence. It establishes neither a missing build nor source-only availability. Hosted ticket 0398 slice B proof remains pending. No install-check workflow dispatch is authorized by this preflight.
+
 To evaluate:
 
 1. The install page and the R README name Ubuntu 26.04 for the built package, and say what other Linux hosts need.
