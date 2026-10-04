@@ -7,6 +7,7 @@ import subprocess
 import sys
 from install_check import Failure, check_index, check_result, validate_version
 from install_check_consumers import write_consumer
+from install_check_postgresql import stop_postgres
 
 TARGET = 'x86_64-unknown-linux-gnu'
 HOMEBREW_TAP = 'https://github.com/botassembly/homebrew-thinkthen.git'
@@ -291,16 +292,28 @@ def postgresql(check):
     data, socket = check.root / 'pg-data', check.root / 'pg-socket'
     socket.mkdir(mode=0o700)
     check.run(binary / 'initdb', '-D', data, '-A', 'trust', '--no-locale', '-E', 'UTF8')
-    check.run(binary / 'pg_ctl', '-D', data, '-l', check.root / 'postgres.log', '-o', f"-k {socket} -c listen_addresses=''", 'start', '-w')
+    primary = None
     try:
+        check.run(binary / 'pg_ctl', '-D', data, '-l', check.root / 'postgres.log', '-o', f"-k {socket} -c listen_addresses=''", 'start', '-w')
         sql = f'CREATE EXTENSION thinkthen; SET thinkthen.replay={sql_quote(check.sample / "recording")}; SET thinkthen.cache=\'off\';\n'
         sql += "SELECT extversion FROM pg_extension WHERE extname='thinkthen';\n"
         sql += f'SELECT thinkthen_details({sql_quote((check.sample / "question.txt").read_text())},{sql_quote((check.sample / "report.txt").read_text())});\n'
         lines = check.run(binary / 'psql', '-XAt', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-d', 'postgres', input=sql).splitlines()
         details = json.loads(lines[-1])
-        return lines[-2], {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}, 'installed SQL extension version'
+        reply = {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}
+        check_result(check.version, lines[-2], reply)
+        return lines[-2], reply, 'installed SQL extension version'
+    except Exception as error:
+        primary = error
+        raise
     finally:
-        check.run(binary / 'pg_ctl', '-D', data, 'stop', '-m', 'fast', '-w')
+        try:
+            stop_postgres(check, data, socket, binary)
+        except Exception as cleanup:
+            check.retain_scratch = True
+            if primary is None:
+                raise Failure(f'PostgreSQL cleanup failed: {cleanup}') from cleanup
+            print(f'install-check: PostgreSQL cleanup also failed: {cleanup}', file=sys.stderr)
 
 
 def download(check):

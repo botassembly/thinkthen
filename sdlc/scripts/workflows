@@ -1090,7 +1090,8 @@ def self_test():
     if windows.returncode != 0:
         bad += 1
         print(f"workflows self-test Windows command: {windows.stdout}{windows.stderr}", file=sys.stderr)
-    for fixture in ("install-check-workflow-self-test.py", "install-check-self-test.py"):
+    for fixture in ("install-check-workflow-self-test.py", "install-check-self-test.py",
+                    "install-check-postgresql-self-test.py"):
         result = subprocess.run([sys.executable, str(REPO / "sdlc/scripts" / fixture)],
                                 capture_output=True, text=True)
         if result.returncode != 0:
@@ -1098,7 +1099,7 @@ def self_test():
             print(f"workflows self-test {fixture}: {result.stdout}{result.stderr}", file=sys.stderr)
         else:
             print(result.stdout.strip() or result.stderr.strip())
-    total = len(cases) + 4 + len(host_cases) + 11
+    total = len(cases) + 4 + len(host_cases) + 12
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 

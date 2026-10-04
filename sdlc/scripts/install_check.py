@@ -77,6 +77,7 @@ class Check:
         self.project = root / "consumer"
         self.project.mkdir()
         self.native = None
+        self.retain_scratch = False
 
     def run(self, *args, cwd=None, input=None):
         result = subprocess.run([str(arg) for arg in args], cwd=cwd or self.project, env=self.env,
@@ -207,13 +208,23 @@ def main(argv=None):
         validate_version(version)
         from install_check_channels import install
         from install_check_tools import prepare
-        with tempfile.TemporaryDirectory(prefix="thinkthen-install-check-") as owned:
-            check = Check(Path(owned), channel, version)
-            prepare(check)
-            check.prepare_sample()
-            installed, reply, proof = install(check)
-            check_result(version, installed, reply)
-            print(f"install-check: {channel} thinkthen {version}: true, requests_sent 0; version proof: {proof}")
+        # Keep a private cluster's files if shutdown cannot be verified. Explicit
+        # cleanup removes only this run's freshly created directory after proof.
+        scratch = tempfile.TemporaryDirectory(prefix="thinkthen-install-check-", delete=False)
+        with scratch as owned:
+            check = None
+            try:
+                check = Check(Path(owned), channel, version)
+                prepare(check)
+                check.prepare_sample()
+                installed, reply, proof = install(check)
+                check_result(version, installed, reply)
+                print(f"install-check: {channel} thinkthen {version}: true, requests_sent 0; version proof: {proof}")
+            finally:
+                if check is not None and check.retain_scratch:
+                    print(f"install-check: retained PostgreSQL scratch at {owned}; shutdown was not verified", file=sys.stderr)
+                else:
+                    scratch.cleanup()
         return 0
     except (Failure, OSError, subprocess.TimeoutExpired) as error:
         print(f"install-check: {error}", file=sys.stderr)
