@@ -1,7 +1,7 @@
 # 0398 slice B: Install-check design
 
 Date: 2026-10-04
-Status: proposed; fresh ticket review must accept before product code
+Status: fresh slice B ticket review ACCEPT at `58aee391b351297568aa68ca4ac8f0fdb19fe414`; independent build in progress
 Starting revision: `ff047d8c50ce39ed9ab0acd22695c4960a963d38`
 Ticket: `sdlc/tickets/0398-release-safety.md`
 Lane: `claude-2`
@@ -26,7 +26,7 @@ The Go proxy and Packagist check their indexes before installing. Missing reques
 
 ## Order and review
 
-The first fresh slice B ticket review returned the three findings addressed above: historical Homebrew selection, superseded R-universe versions and SQLite proof qualification. This amendment needs a new ACCEPT before product code starts.
+The first fresh slice B ticket review returned the three findings addressed above: historical Homebrew selection, superseded R-universe versions and SQLite proof qualification. The fresh amendment review returned ACCEPT at `58aee391b351297568aa68ca4ac8f0fdb19fe414` before product code started.
 
 After ACCEPT, build independent new files and their offline tests. Shared release workflow, release helper and validator edits wait for Windows slice A to land or for the coordinator's explicit handoff. Then rebase, add the final publish dispatch step and its narrowly scoped permission, add workflow refusal plants and update release records. Retain the eighteen-job release graph and Windows work. The completed main baseline on `e760432c8` remains applicable; no full checkpoint repeats for design preparation.
 

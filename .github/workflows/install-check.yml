@@ -1,0 +1,127 @@
+name: Check published installs
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published version (three numbers separated by dots)
+        required: true
+        type: string
+permissions: {}
+jobs:
+  portable:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-15-intel, macos-26]
+        channel: [download, cargo-install, cargo-add, pip, uv, npm, rubygems]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Set up Rust
+        if: matrix.channel == 'cargo-install' || matrix.channel == 'cargo-add'
+        run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Set up uv
+        if: matrix.channel == 'uv'
+        run: python3 -m pip install uv==0.9.17
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: matrix.channel == 'npm'
+        with:
+          node-version: '22.22.3'
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8
+        if: matrix.channel == 'rubygems'
+        with:
+          ruby-version: '3.4.11'
+      - name: Install and replay
+        env:
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ matrix.channel }}
+        run: python3 sdlc/scripts/install-check "$CHANNEL" "$VERSION"
+  homebrew:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, macos-26]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Install and replay
+        env:
+          VERSION: ${{ inputs.version }}
+        run: python3 sdlc/scripts/install-check homebrew "$VERSION"
+  linux:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [nuget, maven, pub, packagist, go, c, sqlite, duckdb, postgresql]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        if: matrix.channel == 'nuget'
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        if: matrix.channel == 'maven'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Maven 3
+        if: matrix.channel == 'maven'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes maven
+          mvn --version | head -1 | grep 'Apache Maven 3\.'
+      - name: Set up PHP 8.3 and Composer
+        if: matrix.channel == 'packagist'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes php8.3-cli php8.3-common composer
+          php -r 'if (PHP_MAJOR_VERSION !== 8 || PHP_MINOR_VERSION !== 3 || !extension_loaded("FFI")) exit(1);'
+      - name: Set up PostgreSQL host dependencies
+        if: matrix.channel == 'postgresql'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libllvm19 libpq5 libldap2 libicu74
+      - name: Install and replay
+        env:
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ matrix.channel }}
+        run: python3 sdlc/scripts/install-check "$CHANNEL" "$VERSION"
+  r-universe:
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    container: rocker/r-ver:4.6.1@sha256:268e4c559c905a78519793f1a8c9ec5c8051a6ac98a16cbf489135ccdad330bb
+    steps:
+      - name: Set up consumer host
+        run: |
+          apt-get update
+          apt-get install --yes python3 curl git
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Install and replay
+        env:
+          VERSION: ${{ inputs.version }}
+        run: python3 sdlc/scripts/install-check r-universe "$VERSION"
