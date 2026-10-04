@@ -7,6 +7,7 @@ fn row(name: &str, probability: Option<f64>) -> Judged {
     Judged {
         model: None,
         printed: Some(name.to_owned()),
+        position: None,
         outcome: Outcome::Yes,
         replayed: false,
         order_value: probability,

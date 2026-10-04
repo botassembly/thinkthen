@@ -61,6 +61,22 @@ mod default_cache;
 // Its cases set Unix folder modes (sdlc/planning/windows.md).
 #[cfg(unix)]
 mod default_cache_storage;
+#[allow(
+    clippy::expect_used,
+    reason = "fixture failures stop the CLI byte proof"
+)]
+mod display_0401;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "fixture failures and checked stored keys stop the identity proof"
+)]
+mod display_0401_identity;
+#[allow(
+    clippy::expect_used,
+    reason = "fixture failures stop the CLI safety proof"
+)]
+mod display_0401_safety;
 mod distribution_total;
 mod exchange;
 #[allow(

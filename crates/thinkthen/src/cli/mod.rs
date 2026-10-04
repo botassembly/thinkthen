@@ -8,6 +8,7 @@ mod audit;
 pub(crate) mod cache;
 mod check;
 mod diff;
+pub(crate) mod display;
 pub(crate) mod edge;
 mod facts;
 pub(crate) mod failure;

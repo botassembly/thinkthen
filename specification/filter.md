@@ -5,7 +5,7 @@ Status: **Settled** for version one, by ADR 0007.
 Keeps the records whose evidence reaches the mark.
 
 ```text
-thinkthen filter QUESTION [--lines|--jsonl|--csv|--tsv] [--threshold T] [--field POINTER] [--details] [BACKEND]
+thinkthen filter QUESTION [--lines|--jsonl|--csv|--tsv] [--threshold T] [--field POINTER] [--details|-n|--scores|--around N] [BACKEND]
 ```
 
 `QUESTION` is the question text, or `@` and the path of a question file holding one `decide` question. [question-file.md](question-file.md) gives the grammar and the precedence, and `--true TEXT` and `--false TEXT` say what a yes and a no mean, exactly as they do on `decide`.
@@ -46,6 +46,20 @@ A band is refused wherever it came from. A band typed on the command line is a u
 A line or JSONL record that `filter` keeps is written back as it arrived: nothing is re-encoded, odd spacing and a trailing space survive, and the line ending is written as a line feed. A CSV or TSV row is written as a compact JSON object in header order. A run that stops at a failed record has already printed a prefix of its output.
 
 The request, the result object, and the stored answers are those of `decide`, so a recording made by `decide` over the same records replays here.
+
+## Text display
+
+`-n` or `--line-number` prefixes each selected record with its first physical line number and a colon. Stdin and one named file print `7:alpha`. Several named source arguments print `FILE:7:alpha`, including repeated arguments naming the same file. Numbering restarts in each file. Paths use the lossy display spelling described in [records.md](records.md). A window receives the prefix on its first physical line only.
+
+`--scores` prefixes the ordinary record with the ordering number and one space. The score comes before the location: `0.8 7:alpha`. Rust prints the finite number without fixed decimal rounding. Filter displays the yes probability used by its cut.
+
+`--around N` prints each selected record as an independent group. N is an ASCII whole number of at least zero. A group starts with `--` on its own line, or `-- SCORE` with `--scores`. It includes N physical lines before and after the selected record or window, clamped to that source. Adjacent groups repeat overlapping lines. With `-n`, selected physical lines use `LINE:` and neighbors use `LINE-`; several sources add `FILE:`. Every physical line in a selected window uses a colon. Blank neighbors remain visible. The physical view removes each terminating LF and its preceding CR, then writes LF. It preserves all other bytes. A trailing LF makes no phantom line. Scores appear only on the delimiter.
+
+Any text display flag with `--details` exits 2 with `text display flags cannot accompany --details`. CSV and TSV refuse any text display flag at exit 2 with `text display flags need lines or JSONL, not CSV or TSV`. JSONL prints the complete original row, retaining spacing even when a pointer selects the evidence. Display does not change the provider's `--context`, request bodies or cache keys. `--plan` validates the flags and snapshot bound and retains ordinary plan output.
+
+With `--around`, the command opens every source, then snapshots at most 16,777,216 original bytes across all sources before its first request. Blank bytes and original line endings count; repeated paths count each occurrence. One additional byte exits 2 with `--around reads at most 16 MiB across all input sources`, printing no selected output and sending nothing. The snapshot supplies both later items and neighbors if a file changes during the run. No spool file is created. Neighbor bytes are not parsed as additional evidence. The ordinary parser still refuses a malformed row when it reaches it. Without `--around`, intake stays lazy and these display flags impose no combined source bound.
+
+A later failure preserves completed filter records and groups.
 
 ## Exit codes
 

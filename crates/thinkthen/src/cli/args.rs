@@ -318,6 +318,10 @@ pub(crate) struct FilterArguments {
     #[command(flatten)]
     pub(crate) refused: Refused,
 
+    /// Text locations, scores and physical neighbors.
+    #[command(flatten)]
+    pub(crate) display: crate::cli::display::Arguments,
+
     /// How many records of a stream share one request.
     #[command(flatten)]
     pub(crate) batching: Batching,
@@ -358,6 +362,10 @@ pub(crate) struct RankArguments {
     /// The two views `rank` refuses in its own words.
     #[command(flatten)]
     pub(crate) refused: Refused,
+
+    /// Text locations, scores and physical neighbors.
+    #[command(flatten)]
+    pub(crate) display: crate::cli::display::Arguments,
 
     /// How many records of a stream share one request.
     #[command(flatten)]

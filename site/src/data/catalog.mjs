@@ -99,6 +99,9 @@ export const FUNCTIONS = [
     args: 'QUESTION or @FILE, then OPTION...',
     options: [
       flag('--threshold T', CUT_TAKES, cutOn('choose'), 'The bar the winning option must reach. One number only. A band is a usage error.'),
+      flag('-n, --line-number', 'nothing', lower(setting('Line numbers').default), 'Prefixes physical line numbers. Several named sources also show the filename.'),
+      flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the yes probability, or the weighted value of a saved score question on rank.'),
+      flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints independent groups with N physical neighbors on either side. Snapshots all sources before sending. Text display flags refuse details, CSV and TSV.'),
       flag('--option LABEL=DESCRIPTION', 'a label and what it means, and it may repeat', 'none', `One option and what it means. It replaces the positional options. ${LIST_RULE}`),
       flag('--options POINTER', 'an RFC 6901 pointer', 'none', 'Takes the options from each record. It needs `--jsonl`.'),
       flag('--raw', 'nothing', 'off', 'Prints the label without quotation marks. CSV and TSV refuse it.'),
@@ -200,6 +203,9 @@ export const FUNCTIONS = [
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
       flag('--top N', lower(setting('Top').allowed), lower(setting('Top').default), 'Prints the first N records of the order. Every record is still judged, so it saves no request.'),
+      flag('-n, --line-number', 'nothing', lower(setting('Line numbers').default), 'Prefixes physical line numbers. Several named sources also show the filename.'),
+      flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the yes probability, or the weighted value of a saved score question on rank.'),
+      flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints independent groups with N physical neighbors on either side. Snapshots all sources before sending. Text display flags refuse details, CSV and TSV.'),
       ...MEANS,
     ],
     shared: RECORD_FLAGS,

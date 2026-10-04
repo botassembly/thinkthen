@@ -192,3 +192,9 @@ A run over the rate limit gets a 429, and [backends.md](backends.md) fixes the r
 ## A loop over files has no budget
 
 A per-record judgment is a paid request, and a run has no request cap. A loop over a folder of files sits outside even that, because each file is its own run. The help shows `find -print0 | xargs -0 -n 1 -P 4` beside the cost warning.
+
+## Filter and rank neighbor snapshots
+
+Filter and rank own `-n`/`--line-number`, `--scores` and `--around N`. Their text views refuse `--details`, CSV and TSV. [filter.md](filter.md) and [rank.md](rank.md) define exact prefixes, delimiters and score meanings. Locations are physical and file-local. Several named source arguments show a filename only with `-n`. A repeated pathname retains an independent source occurrence. This private identity adds no result JSON member.
+
+Only `--around` consumes all source bytes before the first request. Its immutable snapshot accepts exactly 16 MiB across all source occurrences and refuses one more original byte before decoding. It counts CR, LF and blanks. Open/read failures retain their existing safe error classes. The same snapshot supplies framed items and byte neighbors; file mutation cannot change either. No spool is written. The renderer scans bounded bytes without a line-offset table and expands groups only at output. Top rank retains winner rows rather than expanded groups. The source cap does not bound the process's total memory. Stdin is consumed before sending in this view. Ordinary content failures retain filter's completed prefix and rank's empty failure output.

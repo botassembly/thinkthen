@@ -222,6 +222,7 @@ fn judged_record(
     Ok(schedule::Judged {
         model: None,
         printed: Some(line),
+        position: None,
         outcome: Outcome::Yes,
         replayed: !aggregate.live,
         order_value: None,

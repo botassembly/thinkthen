@@ -8,7 +8,6 @@ use std::sync::mpsc::Receiver;
 use std::thread;
 
 use crate::core::{ModelName, Outcome, Withheld, ranking};
-use crate::edge;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::Engine;
 use crate::engine::usage::Counters;
@@ -52,6 +51,7 @@ impl From<Failure> for Placed {
 pub(crate) struct Judged {
     pub(crate) model: Option<ModelName>,
     pub(crate) printed: Option<String>,
+    pub(crate) position: Option<crate::cli::intake::Position>,
     pub(crate) outcome: Outcome,
     pub(crate) replayed: bool,
     pub(crate) order_value: Option<f64>,
@@ -92,6 +92,7 @@ impl fmt::Debug for Judged {
 /// Where the command sends engine results in their ordered callback.
 pub(crate) struct Output<'a> {
     mode: Mode<'a>,
+    display: crate::cli::display::Display,
     usage: &'a Counters,
     model_guard: bool,
     run_model: Option<ModelName>,
@@ -144,6 +145,7 @@ impl Output<'_> {
         Output {
             mode: Mode::Streaming(writer),
             usage,
+            display: crate::cli::display::Display::default(),
             model_guard: false,
             run_model: None,
         }
@@ -162,9 +164,26 @@ impl Output<'_> {
                 writer,
             },
             usage,
+            display: crate::cli::display::Display::default(),
             model_guard: false,
             run_model: None,
         }
+    }
+
+    pub(crate) fn display(&mut self, arguments: crate::cli::display::Arguments) {
+        self.display.arguments = arguments;
+    }
+
+    pub(crate) fn validate_display(&mut self, common: &crate::args::Common) -> Result<(), Failure> {
+        self.display.validate(common)
+    }
+
+    pub(crate) const fn neighbors(&self) -> bool {
+        self.display.around.is_some()
+    }
+
+    pub(crate) fn snapshot(&mut self, snapshot: Option<crate::cli::intake::Snapshot>) {
+        self.display.snapshot = snapshot;
     }
 
     pub(crate) fn guard_models(&mut self) {
@@ -186,10 +205,7 @@ impl Output<'_> {
                 if let Some(mismatch) = &judged.profile_mismatch {
                     mismatch.print_once()?;
                 }
-                match judged.printed.as_deref() {
-                    Some(line) => edge::write_line(&mut **writer, line),
-                    None => Ok(true),
-                }
+                self.display.emit(&mut **writer, &judged)
             }
             Mode::Ordered {
                 held,
@@ -232,7 +248,7 @@ impl Output<'_> {
             })
             .collect::<Result<Vec<f64>, Failure>>()?;
         for place in ranking(&odds, *top) {
-            let Some(line) = held.get(place).and_then(|judged| judged.printed.as_deref()) else {
+            let Some(judged) = held.get(place) else {
                 continue;
             };
             if let Some(mismatch) = held
@@ -241,7 +257,7 @@ impl Output<'_> {
             {
                 mismatch.print_once()?;
             }
-            if !edge::write_line(&mut **writer, line)? {
+            if !self.display.emit(&mut **writer, judged)? {
                 return Ok(());
             }
         }
