@@ -32,7 +32,16 @@ brew install botassembly/thinkthen/thinkthen
 
 With Rust installed, `cargo install thinkthen` builds the command from crates.io.
 
-Windows x86-64 support starts with 0.2. Download `thinkthen-VERSION-x86_64-pc-windows-msvc.zip` from the [release page](https://github.com/botassembly/thinkthen/releases), extract it, and run `thinkthen.exe` in PowerShell. Development builds are unsigned. The Windows installer follows in the next stage of this release work.
+Windows x86-64 support starts with 0.2. Development builds are unsigned. Public signing and distribution remain open; a public 0.2 archive may not exist yet. From a reviewed development checkout, use a supplied development mirror in Windows PowerShell 5.1 or PowerShell 7:
+
+```powershell
+$env:THINKTHEN_INSTALL_BASE = 'https://your-development-mirror.example'
+.\install.ps1 -Version 0.2.0
+```
+
+Review `install.ps1` before running it. If your host execution policy refuses the script, follow your organization's policy; the installer changes no execution policy. It installs `thinkthen.exe` and a receipt under `%LOCALAPPDATA%\Programs\thinkthen`, or the absolute local NTFS directory named by `THINKTHEN_INSTALL_DIR`. It verifies the archive checksum and executable version. Checksums do not establish publisher identity.
+
+The installer prints the full command path and a PATH command for the current session. For future sessions, add its directory through Windows environment settings. It changes no profile, registry or runtime configuration. To remove it, delete `thinkthen.exe`, `thinkthen.install.json` and `.thinkthen-install.lock` from the install directory. If interrupted recovery artifacts remain, inspect them before removing them or retrying. The script's Windows runner proof remains pending.
 
 Windows reads `%APPDATA%\thinkthen\config.json`, stores cached answers in `%LOCALAPPDATA%\thinkthen\cache`, and stores count-only usage totals in `%LOCALAPPDATA%\thinkthen\usage`.
 

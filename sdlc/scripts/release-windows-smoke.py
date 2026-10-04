@@ -2,8 +2,11 @@
 """Smoke the installed Windows command and optionally the packed Rust crate."""
 
 import argparse
+from contextlib import contextmanager
 import http.server
 import os
+import json
+import shutil
 from pathlib import Path
 import subprocess
 import tarfile
@@ -73,6 +76,67 @@ def smoke(binary, sample, env, version):
     print(f"Windows command smoke: {binary.name} reports {version}, replays true and sends 0 requests")
 
 
+@contextmanager
+def installer_release(platform, version):
+    """Serve only the verified command archive and sidecar through loopback."""
+    name = f"thinkthen-{version}-{COMMAND.TARGET}.zip"
+    prefix = f"/botassembly/thinkthen/releases/download/v{version}/"
+    payloads = {prefix + file: (platform / file).read_bytes() for file in (name, name + ".sha256")}
+    payloads["/repos/botassembly/thinkthen/releases"] = json.dumps([
+        dict(tag_name="v" + version, draft=False, prerelease=False,
+             assets=[dict(name=name), dict(name=name + ".sha256")])]).encode()
+    requests = []
+
+    class Release(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            requests.append(self.path)
+            data = payloads.get(self.path)
+            if data is None:
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, *_args):
+            pass
+
+    with http.server.ThreadingHTTPServer(("127.0.0.1", 0), Release) as server:
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            yield f"http://127.0.0.1:{server.server_port}", requests, prefix + name
+        finally:
+            server.shutdown()
+            thread.join()
+
+
+def installed_smoke(platform, sample, env, version, root):
+    """Install with both supported hosts, then smoke each resulting command."""
+    hosts = [(host, shutil.which(host)) for host in ("powershell", "pwsh")]
+    if any(path is None for _, path in hosts):
+        raise RuntimeError("installer smoke requires both Windows PowerShell 5.1 and PowerShell 7")
+    with installer_release(platform, version) as (base, requests, asset):
+        for host, path in hosts:
+            target = root / ("installed-" + host)
+            install_env = env | {"THINKTHEN_INSTALL_BASE": base, "THINKTHEN_INSTALL_API": base,
+                                 "THINKTHEN_INSTALL_DIR": str(target)}
+            before = len(requests)
+            run([path, "-NoProfile", "-NonInteractive", "-File", str(REPO / "install.ps1"),
+                 "-Version", version], install_env)
+            if requests[before:] != [asset, asset + ".sha256"]:
+                raise RuntimeError("explicit installer version requested unexpected release data")
+            receipt = json.loads((target / "thinkthen.install.json").read_text())
+            if receipt["state"] != "installed" or receipt["version"] != version:
+                raise RuntimeError("installer did not commit its installed receipt")
+            if {file.name for file in target.iterdir()} != {"thinkthen.exe", "thinkthen.install.json", ".thinkthen-install.lock"}:
+                raise RuntimeError("installer left an unexpected target inventory")
+            smoke(target / "thinkthen.exe", sample, env, version)
+            print(f"Windows installer smoke: {host} installed the checked archive with 2 loopback downloads")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("platform", type=Path)
@@ -98,7 +162,9 @@ def main():
         with tarfile.open(args.platform / "thinkthen-first-run.tar.gz") as archive:
             archive.extractall(root / "sample", filter="data")
         sample = root / "sample/thinkthen-first-run"
-        smoke(root / "command/thinkthen.exe", sample, env, version)
+        run(["python", str(REPO / "sdlc/scripts/windows-installer-test.py"), "--binary",
+             str(root / "command/thinkthen.exe"), "--version", version], env, timeout=600)
+        installed_smoke(args.platform, sample, env, version, root)
         if args.crate_dir:
             wanted = args.crate_dir / f"thinkthen-{version}.crate"
             if list(args.crate_dir.glob("*.crate")) != [wanted] or wanted.is_symlink():

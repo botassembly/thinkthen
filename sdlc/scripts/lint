@@ -112,6 +112,7 @@ python3 sdlc/scripts/versions
 python3 sdlc/scripts/workflows --self-test
 python3 sdlc/scripts/workflows
 python3 sdlc/scripts/installer-test
+python3 sdlc/scripts/windows-installer-test.py --self-test
 # Ticket 0267: absent and unexpected source-package files refuse before the backend.
 sh sdlc/scripts/release-smoke-source-packages-test
 # Ticket 0319: the command-only smoke refuses each planted fault by name and passes a good folder.
