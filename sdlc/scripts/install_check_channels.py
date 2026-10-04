@@ -210,7 +210,7 @@ def go(check):
 
 
 def r_universe(check):
-    base = 'https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6'
+    base = 'https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/src/contrib'
     packages = dcf_packages(check.text(base + '/PACKAGES', 'r-binary-index'))
     entry = packages.get('thinkthen')
     if entry is None:
