@@ -1,6 +1,6 @@
 # 0380 slice B: Windows development installer build
 
-Status: source accepted at `046ed382b8` by fresh independent High review. The source-preserving rebase is `f71282573`; the local full test, specification and site checkpoint passed. Final receipt review and landing remain. Native Windows proof remains pending an approved dispatch; public signing and distribution remain open.
+Status: slice B landed through `3c811971a` after fresh source and final receipt acceptance and its coordinator checkpoint. The following sections retain historical preparation evidence. Native Windows proof remains pending; public signing and distribution remain open.
 
 ## Prior evidence and retained behavior
 

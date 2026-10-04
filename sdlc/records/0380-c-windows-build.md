@@ -1,6 +1,6 @@
 # 0380 slice C Windows interruption and privacy build
 
-Status: source and consumer lock correction accepted before the latest rebase. The combined candidate awaits its coordinator checkpoint and final receipt review. Native Windows execution, release dispatch and W1/W2 closure remain pending.
+Status: source, consumer lock correction and merged Linux checkpoint accepted by their checks. The exact final receipt awaits fresh independent review before slice C landing. Native Windows execution, release dispatch and W1/W2 closure remain pending.
 
 The exact accepted design is [0380-c-windows-design.md](0380-c-windows-design.md), SHA-256 `b4fd9f157caf78fbe3d77dde541cfbf1a4d65f2ef2c29364d8a25c58b41c34ce`. [0380-c-windows-risk.md](0380-c-windows-risk.md) records the fresh independent High design acceptance and native ownership, DACL secrecy, unsafe-boundary and cancellation risk before implementation. This lane rebased onto main `57de974e81fed7d1fb94d166d39253b4b30e70b2` before its focused checks.
 
@@ -67,3 +67,24 @@ The changed shared CLI registry and display context merits focused find-display 
 The latest merged check completed with exit 0: all 93 selected cases passed, including ten find-display and safety cases in addition to the prior 83 focused cases. Policy, exact 114995 ratchet, formatting, library-only build, portable release routing and required lint passed. Clippy and documentation denied warnings; the inventory checked 569 declared items and refused four plants. The Linux native-test no-run excludes Windows bodies and establishes no native compilation or execution. Local receipt `/tmp/thinkthen-0380c-checks/0401-merged-checks.log` has SHA-256 `2d1f95ad517c56649ff297b8b49be17ca2d44941ad570767967c641b0f00d097`; its owned scope is inactive. The original failure snapshot and all prior review/receipt records remain retained.
 
 The separately saved prior coordinator retry logs have SHA-256 `571f8f91d75e5a238a63a1c40df8a2da7b1c7f276c370c85a3ddb6e8a29d2b57` for `/tmp/thinkthen-0380c-checks/root-test-after-consumer-lock-fix.log` and `d59c40b6726af22163fcd7fcd0861b83b445787afd42afcb7cb4d2b4925dd97f` for `root-spec-after-consumer-lock-fix.log`. These remain prior-candidate evidence. The coordinator owns the new merged checkpoint and canonical site proof before landing; W1/W2 and native dispatch remain pending.
+
+
+## Final merged coordinator checkpoint
+
+The coordinator named and ran the full checkpoint on clean product candidate `4ffb0c7f1cefe00b90c38ea88d3c24ec3356ba2c`, based on main `fea3a6fbc46b68ccc33a28e35eb0c4eb48329df9`. Full test passed 1365 workspace cases with 25 skips, 134 library-only cases with 4 skips and 21 external-consumer cases with 3 skips. The specification passed 62 pages with 1 skip and 24 green demos with 0 red. These receipts supersede the earlier snapshots for this merged candidate and retain the original lock failure.
+
+Routine smoke did not run Dart, TypeScript, Ruby, DuckDB, SQLite or R under the isolated home. The separate canonical `npm run test-docs` actually replayed all 308 language and 42 SQL examples from this candidate with available toolchains; its strict proof matched 350 samples with 0 stale pages. The separate strict check and final site build passed. `site/examples/bindings-proof.json` is runner-generated; no proof hash was edited by hand. A byte-identical local copy is `target/0380c-checkpoint-final/final-proof.json`.
+
+| Retained receipt | SHA-256 |
+| --- | --- |
+| `target/0380c-checkpoint-final/test-after-0401-merge.log` | `f3e9a5952e33229249be72c88c9187e1620e9042af68e6f09c2f87692323ba1f` |
+| `target/0380c-checkpoint-final/spec-after-0401-merge.log` | `e014d051b70c464563cba370b3048edf4cc39fefccc7076dbd789ed443e5a1cc` |
+| `target/0380c-checkpoint-final/test-docs.log` | `25eef4d8e3083ca2228f1442de8bd8016979d19ad4222883eba1e339daba1b24` |
+| `target/0380c-checkpoint-final/strict.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0380c-checkpoint-final/site-build.log` | `21bfefc2789c7e6d80e8abb318dbeed345d0b40eb217fb1a1432e40631d9caa7` |
+
+The test/specification and canonical site runs used separate owned scopes capped at 12 GiB memory and 1 GiB swap, two Cargo jobs, offline ordinary Cargo and lane-owned output/locks. No live provider call, stress campaign, native Windows runner, release dispatch, approval or publication ran. The actual ratchet remains 114995, with retained Windows growth 2123 over current main 112872.
+
+## What the build taught us
+
+Every current downstream locked consumer must receive a new target dependency even when the current host cannot execute that target. The first full run exposed two omitted locks; the bounded correction and repeated checkpoint prove the current consumer inventory without rewriting historical probes. Fresh source acceptance and byte-identical product rebases remain separate from executed Linux evidence. The actual site replay closes stale documentation proof; it does not substitute for native console, owner/DACL, NTFS, prepared-handle or packed-binary execution. Those remain open for the reviewed native proof path.
