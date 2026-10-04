@@ -33,3 +33,13 @@ Tests add 485 lines: two registrations and new modules of 246 and 237 nonblank l
 ## Remaining checkpoint and retained gaps
 
 The coordinator must run the named full test, specification, surfaces and actual canonical site replay checkpoints after fresh source acceptance. Rust changes invalidate replay receipts; no hash or receipt was edited by hand. Native Windows execution was not performed. Existing empty-find behavior remains: no output, no requests and exit 0, including every new text view. This slice does not change that behavior. Position remains CLI metadata and adds no public host shape. Multiquestion rank, foreign host APIs and deferred input modes remain with their owning slices and tickets.
+
+## Result-shape checkpoint correction
+
+The coordinator rebased the accepted C product onto main `4cf694673`, producing `4996f49f4` with exactly preserved product additions and deletions. Policy passed at the combined actual ratchet of 112,872. The coordinator's full test checkpoint passed 1,365 workspace cases with 25 skipped, 134 library cases with four skipped and 21 consumer cases with three skipped.
+
+The specification checkpoint stopped at Result shapes: 61 page cases passed, one failed and one skipped. The retained log is `target/0401c-checkpoint-final/spec.log`. The actual finding was `replayed find: member position is not in the table`. The C implementation and find contract already admitted selected CLI position, but the shared result compatibility table and its introductory metadata prose omitted find.
+
+The bounded correction adds optional `position?` to the find compatibility row and names find in the CLI metadata prose. It explicitly omits position for unresolved find and retains existing shared C, Rust and SQL typed Find members. The generated findDetails schema already permits additive members and does not require position, so neither schema nor Rust source changed. The executable result-shape fixture already accepts optional members by stripping a trailing question mark from allowed names. Its replayed CLI winner includes position and its illustrative find example omits it. Both fixtures remain intact; the page now explains why both are accepted.
+
+The focused `mustmatch test spec/result.md` passed its one Result shapes case under an offline user resource scope. This checks all 20 replayed and illustrative rows against the ten-command table. The original full checkpoint supplies the failing-before evidence. The build taught us to reconcile additive CLI metadata with the compatibility table, rather than changing shared typed host shapes or relaxing the fixture's unknown-member check. The coordinator owns fresh review of this correction, the full specification retry and canonical site proofs.
