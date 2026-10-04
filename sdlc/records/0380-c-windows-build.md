@@ -1,6 +1,6 @@
 # 0380 slice C Windows interruption and privacy build
 
-Status: source, consumer lock correction and merged Linux checkpoint accepted by their checks. The exact final receipt awaits fresh independent review before slice C landing. Native Windows execution, release dispatch and W1/W2 closure remain pending.
+Status: source, consumer lock correction and merged Linux checkpoint accepted by their checks. Fresh independent final receipt review accepted `e65d2152e726565960c67335b2e34bb00da35060` before slice C landing. Native Windows execution, release dispatch and W1/W2 closure remain pending.
 
 The exact accepted design is [0380-c-windows-design.md](0380-c-windows-design.md), SHA-256 `b4fd9f157caf78fbe3d77dde541cfbf1a4d65f2ef2c29364d8a25c58b41c34ce`. [0380-c-windows-risk.md](0380-c-windows-risk.md) records the fresh independent High design acceptance and native ownership, DACL secrecy, unsafe-boundary and cancellation risk before implementation. This lane rebased onto main `57de974e81fed7d1fb94d166d39253b4b30e70b2` before its focused checks.
 
@@ -88,3 +88,5 @@ The test/specification and canonical site runs used separate owned scopes capped
 ## What the build taught us
 
 Every current downstream locked consumer must receive a new target dependency even when the current host cannot execute that target. The first full run exposed two omitted locks; the bounded correction and repeated checkpoint prove the current consumer inventory without rewriting historical probes. Fresh source acceptance and byte-identical product rebases remain separate from executed Linux evidence. The actual site replay closes stale documentation proof; it does not substitute for native console, owner/DACL, NTFS, prepared-handle or packed-binary execution. Those remain open for the reviewed native proof path.
+
+Fresh final receipt review returned ACCEPT for `e65d2152e726565960c67335b2e34bb00da35060`. It independently verified product preservation, all 28 native-file hashes, all 11 recorded receipt hashes, the exact ratchet and caps, the generated 350-entry proof copy and strict proof. The following acceptance-record update changes only records; product and proof bytes remain identical. Native gaps remain open.
