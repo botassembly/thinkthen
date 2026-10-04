@@ -24,7 +24,7 @@ Fresh ticket review `review_0398_ticket` returned ACCEPT for slice A. Its conclu
 - `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`: passes; 254 resolved packages checked.
 - `python3 sdlc/scripts/tickets`: zero failures.
 - `sh -n sdlc/scripts/release-workflow` and `git diff --check`: pass.
-- Full `sdlc/scripts/lint`: running under a user systemd scope with MemoryHigh 6 GiB, MemoryMax 8 GiB, one compiler worker, offline Cargo and the lane 2 heavy lock. The final receipt will be recorded before handoff.
+- Full `sdlc/scripts/lint`: passes with exit 0 under a user systemd scope with MemoryHigh 6 GiB, MemoryMax 8 GiB, one compiler worker, offline Cargo and the lane 2 heavy lock. Clippy, docs and the inventory pass; the inventory checked 569 declared items and refused four plants.
 
 ## What the build taught us
 
