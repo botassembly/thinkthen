@@ -19,7 +19,7 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <p>The <a href="https://docs.perplexity.ai/docs/decisions/quickstart">provider documentation</a> was checked on 2026-10-04. Read the provider's terms before sending sensitive text.</p>
   <h2>Price and limits</h2>
   <p>On 2026-10-04, <a href="https://docs.perplexity.ai/docs/decisions/quickstart#pricing">Perplexity's published price</a> was $0.04 per million input tokens. Output tokens were free, with no per-request fee.</p>
-  <p>The <a href="https://docs.perplexity.ai/docs/decisions/quickstart#request-limits">published request limits</a> allow 128 questions, fewer than 262,144 input tokens and a body of at most 32 MiB. ThinkThen's own request limits still apply.</p>
+  <p>The <a href="https://docs.perplexity.ai/docs/decisions/quickstart#request-limits">published request limits</a> allow 128 questions, fewer than 262,144 input tokens and a body of at most 32 MiB. A choice has at most 255 options and a score has at most ten levels. ThinkThen's own request limits still apply.</p>
   <h2>Pace requests</h2>
   <p>The backend paces nothing unless the configuration file sets <code>requests_per_minute</code>. Add <code>"perplexity": &#123;"requests_per_minute": 600&#125;</code> under <code>backends</code> to pace one process at ten requests a second.</p>
   <p>Perplexity's <a href="https://docs.perplexity.ai/docs/decisions/quickstart#rate-limits">published organization limit</a> is ten requests a second. Multiple processes share that provider limit, while each ThinkThen process gets its own configured rate. Divide the allowance across processes when they run together. Perplexity also limits token bursts, so a request can reach a provider limit before the request rate does.</p>
