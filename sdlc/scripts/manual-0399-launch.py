@@ -13,7 +13,7 @@ variable = SELECTED[name]
 key = os.environ.get(variable, "")
 if not key.strip():
     sys.exit("0399: selected named key variable is unset or blank")
-repo = Path(__file__).resolve().parents[3]
+repo = Path(__file__).resolve().parents[2]
 # Fresh owner-only configuration prevents a pre-existing custom backend name.
 # The coordinator retains this scratch directory with the run receipts.
 scratch = Path(tempfile.mkdtemp(prefix=f"thinkthen-0399-{name}-"))

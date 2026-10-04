@@ -259,21 +259,48 @@ fn schema_listener() -> Listener {
         if questions.values().any(|q| q["type"] == "noul" && q.get("criteria").is_some_and(|c| c.get("false").is_none_or(Value::is_null))) {
             return Canned::status(400, r#"{"detail":"both sides required"}"#);
         }
-        let answers = questions.iter().map(|(name, q)| {
-            let answer = if q["type"] == "noul" { json!({"type":"noul","noul":0.92}) } else {
-                let keys = match &q["criteria"] {
-                    Value::Object(c) => c.keys().cloned().collect::<Vec<_>>(),
-                    Value::Array(c) => (0..c.len()).map(|n| n.to_string()).collect(),
-                    _ => panic!("criteria"),
-                };
-                let count = keys.len();
-                let probabilities = keys.into_iter().enumerate().map(|(i,k)| (k,json!(if i == 0 {0.9} else {0.1 / (count - 1) as f64}))).collect::<serde_json::Map<_,_>>();
-                json!({"type":q["type"],"probabilities":probabilities,"confidence":0.9})
-            };
-            (name.clone(), answer)
-        }).collect::<serde_json::Map<_,_>>();
+        let answers = questions.iter().map(|(name,q)| (name.clone(), schema_answer(q))).collect::<serde_json::Map<_,_>>();
         Canned::ok(&json!({"model":request["model"],"answers":answers,"id":"reply0399","provider":"fixture","usage":{"input_tokens":9,"output_tokens":3,"cost":0.0001}}).to_string())
     }).expect("schema listener")
+}
+
+fn schema_answer(q: &Value) -> Value {
+    if q["type"] == "noul" {
+        return json!({"type":"noul","noul":0.92});
+    }
+    let keys = match &q["criteria"] {
+        Value::Object(c) => c.keys().cloned().collect::<Vec<_>>(),
+        Value::Array(c) => (0..c.len()).map(|n| n.to_string()).collect(),
+        _ => panic!("criteria"),
+    };
+    let count = keys.len();
+    let probabilities = keys
+        .into_iter()
+        .enumerate()
+        .map(|(i, k)| {
+            let share = if i == 0 {
+                0.9
+            } else {
+                0.1 / (count - 1) as f64
+            };
+            (k, json!(share))
+        })
+        .collect::<serde_json::Map<_, _>>();
+    json!({"type":q["type"],"probabilities":probabilities,"confidence":0.9})
+}
+
+fn fill_tag_sides(body: &mut Value) {
+    for q in body["questions"]
+        .as_object_mut()
+        .expect("questions")
+        .values_mut()
+    {
+        if let Some(c) = q.get_mut("criteria") {
+            c.as_object_mut()
+                .expect("criteria")
+                .insert("false".into(), json!({}));
+        }
+    }
 }
 
 #[test]
@@ -400,17 +427,7 @@ fn tag_fills_each_described_label_and_choice_and_score_keep_authored_bytes() {
         }
         if verb == "tag" {
             let mut expected = bodies[1].clone();
-            for q in expected["questions"]
-                .as_object_mut()
-                .expect("questions")
-                .values_mut()
-            {
-                if let Some(c) = q.get_mut("criteria") {
-                    c.as_object_mut()
-                        .expect("criteria")
-                        .insert("false".into(), json!({}));
-                }
-            }
+            fill_tag_sides(&mut expected);
             assert_eq!(bodies[0], expected);
             assert_eq!(
                 bodies[0]["questions"]
@@ -426,4 +443,37 @@ fn tag_fills_each_described_label_and_choice_and_score_keep_authored_bytes() {
         }
     }
     assert_eq!(target.count(), 0);
+}
+
+#[test]
+fn new_builtin_names_preserve_the_rate_only_configuration_contract() {
+    let home = Home::new("names-0399");
+    for name in ["perplexity", "openrouter"] {
+        let custom = json!({"schema":"thinkthen.config/1","backends":{name:{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}}});
+        home.config(&custom.to_string());
+        let out = home.run(&["check", "--backend", name, "--plan"], &[]);
+        assert_eq!(out.status.code(), Some(5));
+        assert_eq!(
+            said(&out).1,
+            "thinkthen: a configuration entry for a built-in backend holds `requests_per_minute` and nothing else\n"
+        );
+        let rated =
+            json!({"schema":"thinkthen.config/1","backends":{name:{"requests_per_minute":60}}});
+        home.config(&rated.to_string());
+        let out = home.run(&["check", "--backend", name, "--plan"], &[]);
+        assert_eq!(out.status.code(), Some(0), "{}", said(&out).1);
+        let (url, model) = if name == "perplexity" {
+            (
+                "https://api.perplexity.ai/v1/decisions",
+                "pplx-decider-v1-27b",
+            )
+        } else {
+            (
+                "https://openrouter.ai/api/v1/systemone",
+                "typesafe/jev-1.13",
+            )
+        };
+        assert!(said(&out).0.contains(&format!("url {url}\n")));
+        assert!(said(&out).0.contains(&format!("model sent {model}\n")));
+    }
 }
