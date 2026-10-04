@@ -2,6 +2,12 @@
 
 Status: open. Filed 2026-10-03 from the surfaces checkpoint sweep of 2026-10-03 on `release/0.1`. Owner: the queue owner.
 Milestone: 0.2
+Kind: debt
+Debt: 036
+Severity: low
+Pay when: the next checkpoint sweep, or a second failure.
+
+A flaky test teaches people to rerun failures instead of reading them.
 
 `deadline::a_deadline_stops_a_score_column_mid_batch` in `crates/thinkthen/tests/polars/deadline.rs` failed once during that sweep and passed on rerun. The sweep ran many suites at once on one host.
 
