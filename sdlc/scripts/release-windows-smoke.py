@@ -22,7 +22,10 @@ QUESTION = "Does this report say what the person did before the problem appeared
 
 
 def run(args, env, *, text=None, code=0, output=None, timeout=180):
-    result = subprocess.run(args, env=env, input=text, capture_output=True, text=True, timeout=timeout)
+    # A Windows text-mode stdin converts LF to CRLF and changes replay identity.
+    payload = text.encode("utf-8") if isinstance(text, str) else text
+    raw = subprocess.run(args, env=env, input=payload, capture_output=True, timeout=timeout)
+    result = subprocess.CompletedProcess(raw.args, raw.returncode, raw.stdout.decode("utf-8"), raw.stderr.decode("utf-8"))
     if result.returncode != code or (output is not None and result.stdout.strip() != output):
         raise RuntimeError(f"{args[0]} exited {result.returncode}: {result.stdout}{result.stderr}")
     return result
@@ -35,7 +38,10 @@ def smoke(binary, sample, env, version):
     class Counter(http.server.BaseHTTPRequestHandler):
         def do_POST(self):
             requests.append(self.path)
-            self.send_error(500, "unexpected request in offline release smoke")
+            self.send_response(500)
+            self.send_header("Connection", "close")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
 
         def do_CONNECT(self):
             self.do_POST()
@@ -53,7 +59,7 @@ def smoke(binary, sample, env, version):
                          "NO_PROXY": "", "no_proxy": ""}
             run([str(binary), "--version"], env, output=f"thinkthen {version}")
             run([str(binary), "decide", QUESTION, "--replay", str(sample / "recording"),
-                 "--no-cache"], env, text=(sample / "report.txt").read_text(), output="true")
+                 "--no-cache"], env, text=(sample / "report.txt").read_bytes(), output="true")
             cap = env | {"THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL": "10"}
             refused = run([str(binary), "decide", "Is it?", "--no-cache", "--url", url + "/generic/v1"],
                           cap, text="evidence", code=2, output="")

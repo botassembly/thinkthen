@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 import warnings
 import sys
+import importlib.util
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -73,6 +74,13 @@ exec '{sys.executable}' "$@"''',
 
 
 def main():
+    # The command smoke must send the recording's bytes through a Windows pipe unchanged.
+    spec = importlib.util.spec_from_file_location("windows_smoke", REPO / "sdlc/scripts/release-windows-smoke.py")
+    smoke = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(smoke)
+    evidence = b"first\nsecond\r\nlast"
+    smoke.run([sys.executable, "-c", "import sys; print(sys.stdin.buffer.read().hex())"],
+              os.environ.copy(), text=evidence, output=evidence.hex())
     with tempfile.TemporaryDirectory(prefix="thinkthen-windows-pack-") as temporary:
         base = Path(temporary)
         host_setup(base)
