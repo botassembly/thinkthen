@@ -267,7 +267,7 @@ fn a_missing_questions_wrapper_wins_over_an_unknown_top_level_key() {
 }
 
 #[test]
-fn likely_path_mistakes_name_the_input_option_and_the_swap() {
+fn positional_input_and_swapped_paths_keep_distinct_routes() {
     let questions = questions();
     let evidence = set("plain-evidence", r#"{"body":"hello"}"#);
     let second_path = spawn(
@@ -281,11 +281,9 @@ fn likely_path_mistakes_name_the_input_option_and_the_swap() {
         b"",
     )
     .expect("the command runs");
-    assert_eq!(second_path.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&second_path.stderr),
-        "thinkthen: the second path is input; write it as `--input FILE`\n"
-    );
+    assert_eq!(second_path.status.code(), Some(0));
+    assert!(second_path.stderr.is_empty());
+    assert!(String::from_utf8_lossy(&second_path.stdout).contains("hello"));
 
     let swapped = spawn(
         &[

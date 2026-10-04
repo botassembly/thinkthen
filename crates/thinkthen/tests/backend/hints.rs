@@ -87,32 +87,7 @@ fn a_guessed_verb_names_the_function_that_does_the_job() {
 #[test]
 fn a_second_argument_says_where_the_evidence_goes() {
     const MESSAGE: &str = "thinkthen: the question is one argument and each option takes one value; quote a question of several words, and send evidence on standard input or as `--input FILE`\n";
-    for verb in ["decide", "filter", "rank", "find"] {
-        check(&[verb, "Q?", "README.md", "--no-cache"], b"", MESSAGE);
-    }
-    for args in [
-        &["decide", "Is", "this", "urgent"][..],
-        &["decide", "Q?", "--jsonl", "--field", "/a", "/b"],
-        &["decide", "Q?", "--input", "a.txt", "b.txt"],
-    ] {
-        check(args, b"", MESSAGE);
-    }
-    #[cfg(unix)]
-    {
-        use std::ffi::OsString;
-        use std::os::unix::ffi::OsStringExt as _;
-        let invalid = OsString::from_vec(vec![0xff, 0xfe]);
-        let args = [
-            OsStr::new("decide"),
-            OsStr::new("Q?"),
-            invalid.as_os_str(),
-            OsStr::new("--no-cache"),
-        ];
-        let output = run(&args, b"").expect("binary runs");
-        assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
-        assert_eq!(String::from_utf8_lossy(&output.stderr), MESSAGE);
-    }
+    check(&["find", "Q?", "README.md", "--no-cache"], b"", MESSAGE);
 }
 
 #[test]

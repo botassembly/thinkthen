@@ -28,7 +28,7 @@ const dflt = (name) => lower(setting(name).default);
 const THROTTLE = setting('Throttle');
 
 export const GLOBAL_FLAGS = [
-  flag('--input FILE', lower(setting('Input file').allowed), dflt('Input file'), 'Reads the evidence from FILE instead of standard input. It names a path. It never names a framing.'),
+  flag('--input FILE', lower(setting('Input file').allowed), dflt('Input file'), 'Reads the evidence from FILE instead of standard input. Decide, filter, rank, choose, score, tag and annotate can repeat it in argument order. Other functions take one file. It never names a framing.'),
   flag('--lines', 'nothing', 'off', 'Takes each line as one text record. Input below gives the framing this function reads by default.'),
   flag('--jsonl', 'nothing', 'off', 'Takes each line as one JSON record.'),
   flag('--field POINTER', 'an RFC 6901 pointer, and it may repeat', dflt('Evidence pointer'), 'Sends only the part of each record the pointer names. Several pointers send one object of the parts. Input below gives every rule.'),
@@ -51,6 +51,7 @@ export const GLOBAL_FLAGS = [
 ];
 
 export const SHARED_FLAGS = {
+  '--window': flag('--window N', lower(setting('Text-line window').allowed), dflt('Text-line window'), 'Joins N physical text lines per item within each file. A final short window remains one item. Blank lines stay inside each window; a window containing only white space is skipped. It takes no JSON or table framing, evidence pointer, or saved `on`.'),
   '--csv': flag('--csv', 'nothing', 'off', 'Reads a comma-separated table with a required header row. Every cell is a string, and every result is JSON Lines.'),
   '--tsv': flag('--tsv', 'nothing', 'off', 'Reads a tab-separated table with a required header row. The CSV rules apply.'),
   '--context': flag('--context FILE', 'a readable UTF-8 file that is not blank', dflt('Context'), 'Shares the exact contents of FILE as evidence for every batch of records.'),

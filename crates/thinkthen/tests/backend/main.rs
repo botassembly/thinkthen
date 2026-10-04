@@ -71,6 +71,18 @@ mod exchange;
 mod facts;
 mod find;
 mod from_record;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "fixture setup and checked JSON rows stop the intake boundary proof"
+)]
+mod intake_0401;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "fixture setup and measured requests stop the compatibility proof"
+)]
+mod intake_0401_compat;
 #[cfg(unix)]
 mod interrupt;
 mod json_syntax;

@@ -12,9 +12,9 @@ pub(crate) struct AnnotateArguments {
     /// A JSON question set containing the named questions to ask.
     pub(crate) questions: PathBuf,
 
-    /// A likely input file written without `--input`.
-    #[arg(value_name = "INPUT", hide = true)]
-    pub(crate) extra_input: Option<PathBuf>,
+    /// Read these files in order; cannot accompany --input.
+    #[arg(value_name = "FILE")]
+    pub(crate) extra_input: Vec<PathBuf>,
 
     /// Taken so the command can explain that thresholds belong to questions.
     #[arg(long, value_name = "T", hide = true, allow_negative_numbers = true)]

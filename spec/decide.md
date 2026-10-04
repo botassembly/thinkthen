@@ -187,9 +187,14 @@ for gone in --status "--min-prob 0.9" --plan "--backend jev" "--adapter systemon
   printf 'x' | thinkthen decide 'asks for a refund' --plan $gone >/dev/null 2>&1 || status=$?
   echo "$status" | mustmatch "2"
 done
+```
+
+A word after the question takes the positional-file route. Here `if` is the question and `asks for a refund` names a missing input file. The plan preflight classifies that missing input as a local error. The counted-listener regression proves that the refusal sends no request.
+
+```bash
 status=0
 printf 'x' | thinkthen decide if 'asks for a refund' --plan >/dev/null 2>&1 || status=$?
-echo "$status" | mustmatch "2"
+echo "$status" | mustmatch "5"
 ```
 
 An explicit profile refuses an oversized request before a key or connection. The request limit counts the UTF-8 bytes of the whole body, and the record rides inside its question. The evidence limit counts each record's UTF-8 bytes after selection. It also counts the state, which is the fixed sentence or the context.

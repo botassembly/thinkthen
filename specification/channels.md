@@ -26,17 +26,17 @@ Status: **Settled** for version one, by ADR 0007, amended by ADR 0048.
 
 The grammar is the verb, then the question, then what the verb needs. No verb has a hidden default question. Options may sit before or after the operands, and `--` ends option parsing. A question that begins with a dash follows `--`.
 
-`decide`, `filter`, `rank` and `find` take one question, and each option takes one value. A loose word is refused at exit 2: `the question is one argument and each option takes one value; quote a question of several words, and send evidence on standard input or as `--input FILE``.
+`decide`, `filter`, `rank` and `find` take one question, and each option takes one value. Decide, filter and rank accept subsequent positional files; annotate accepts them after its question set. These routes cannot accompany `--input`. Choose, score and tag keep their positional label lists. Find refuses a loose word at exit 2: `the question is one argument and each option takes one value; quote a question of several words, and send evidence on standard input or as `--input FILE``.
 
 An unknown option is a usage error. So is a repeated single-value option, and so is an option that cannot act in the chosen mode. Every one of them exits 2 before any request goes out.
 
-Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--plan`. The list names every one. Each verb's page says which of them it takes.
+Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--window N`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--plan`. The list names every one. Each verb's page says which of them it takes.
 
 Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, `--jobs N`, `--facts`, and `--batch N` and `--context FILE` on `decide`, `filter`, `rank`, `choose`, `tag` and `score`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there.
 
 ## Standard input
 
-Without `--input FILE` the evidence comes from standard input. When standard input is a terminal, the tool writes one line on standard error that says it is reading evidence from the terminal and how to end it, so a person does not read a waiting command as a hung one. The line never appears in a pipe, in a redirection, or under `--input`, and standard output is the same either way.
+Without a named input file the evidence comes from standard input. When standard input is a terminal, the tool writes one line on standard error that says it is reading evidence from the terminal and how to end it, so a person does not read a waiting command as a hung one. The line never appears in a pipe, in a redirection, or under `--input`, and standard output is the same either way.
 
 ## Standard output
 
@@ -69,6 +69,8 @@ Code 8 stays reserved. One function maps every error to its exit code. Exit 6 pr
 `recognize` exits 0 for every complete result, including no names. It never uses 1 or 3. A failed step-1, step-2, or relation request exits 4 and prints no partial value for that input. A text over `--max-text-bytes`, 600,000 bytes by default, exits 2 before any request.
 
 `relate` exits 0 for a complete result, including no accepted edges. Recoverable mixed logical failure prints the buffered partial result and exits 6. If no valid logical answer remains, it exits 4 with no output. [relate.md](relate.md) fixes its aggregate behavior.
+
+An explicit multi-file default-document invocation also reports the run: completed decide, choose, score and tag runs exit 0, while each JSONL carrier preserves its value. Such runs refuse --quiet and --raw. A later failure keeps completed output and its actual error exit.
 
 In record mode the exit code reports the run. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. `annotate` exits 6 when a completed run contains one or more failed questions; good answers and failed markers both print. Its explicit missing-pointer continuation exits 7 after one or more error rows. A valid answer on standard output can accompany exit 1, 3, 6, or 7, so a script that wants the value reads it and then reads `$?`.
 

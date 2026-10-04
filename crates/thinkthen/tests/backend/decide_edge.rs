@@ -169,14 +169,7 @@ fn every_option_the_old_surface_carried_is_a_usage_error() {
         assert!(output.stdout.is_empty(), "{arguments:?}");
     }
 
-    // The old grammar named the verb after the command, and it is gone too.
-    let output = run(
-        &["decide", "if", "asks for a refund", "--plan"],
-        &[],
-        b"Refund me please.",
-    )
-    .expect("the compiled binary runs");
-    assert_eq!(output.status.code(), Some(2));
+    // Trailing operands now name input files; 0401 pins missing-file refusal.
 }
 
 #[test]
@@ -370,11 +363,7 @@ mod help;
 
 #[test]
 fn an_unknown_word_is_a_usage_error_and_never_an_instruction() {
-    for arguments in [
-        &["decide", "a", "b"][..],
-        &["think", "about", "it"][..],
-        &["decide"][..],
-    ] {
+    for arguments in [&["think", "about", "it"][..], &["decide"][..]] {
         let output = run(arguments, &[], b"Refund me please.").expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");

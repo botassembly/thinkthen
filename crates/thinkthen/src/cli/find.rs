@@ -65,7 +65,7 @@ pub(crate) fn run(
     let most = if arguments.none { 254 } else { 255 };
     let units = read_units(
         &reading,
-        edge::source(common.input.as_deref(), input)?,
+        edge::source(common.input.first().map(std::path::PathBuf::as_path), input)?,
         most,
         arguments.none,
         recording,

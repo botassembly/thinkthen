@@ -147,6 +147,13 @@ const description = isFn
       </table>
       <p>The framing flags are mutually exclusive. The tool never guesses a framing from a filename. <code>--input FILE</code> reads the same input from a file. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request. Invalid UTF-8 in a record is exit 5.</p>
 
+      {names.has('--window') && <>
+        <p>Repeat <code>--input FILE</code> to read files in argument order. Decide, filter, rank and annotate also accept files after their question or question set. These positional files cannot accompany <code>--input</code>. Choose, score and tag keep positional labels and levels.</p>
+        <p><code>--window N</code> joins physical text lines within each file. It keeps internal line feeds and removes the final record ending. A window never crosses a file boundary. Empty files send nothing. Windows refuse JSON and table framing, <code>--field</code> and saved <code>on</code> pointers. Each joined item keeps the record byte limit.</p>
+        <p>Detailed text and document results carry <code>position</code> with <code>file</code>, <code>first</code> and <code>last</code>. Each file starts at line one. Stdin uses a null file. Table rows carry no position.</p>
+        {['decide', 'choose', 'score', 'tag'].includes(name) && <p>Without record framing, several named files produce one JSON line per document: <code>input_file</code> names the file and <code>value</code> carries the answer. Details add <code>input_file</code> to the full result. A completed run exits 0, including false or null answers. A later failure keeps completed output and returns its error code. Several documents refuse <code>--raw</code> and <code>--quiet</code>.</p>}
+      </>}
+
       <h3 id="field"><code>--field POINTER</code></h3>
       {name === 'relate' ? (
         <p><code>--field</code> names the pointer to each entity's name, and <code>--kind-field</code> the pointer to its kind. They default to <code>/name</code> and <code>/kind</code>. Each value must be a string that is not blank. A name that <code>recognize</code> found carries <code>text</code> in place of <code>name</code>, and <code>relate</code> reads it. Under <code>--lines</code> neither pointer applies.</p>

@@ -42,7 +42,7 @@ const MEANS = [
 ];
 const QUIET = flag('--quiet', 'nothing', 'off', 'Prints nothing. The exit code carries the answer. It works on one document only.');
 // The shared flags every record function takes. find takes none of them.
-const RECORD_FLAGS = ['--csv', '--tsv', '--context', '--batch', '--max-request-bytes', '--jobs'];
+const RECORD_FLAGS = ['--window', '--csv', '--tsv', '--context', '--batch', '--max-request-bytes', '--jobs'];
 // recognize and relate do not batch records.
 const SET_FLAGS = ['--csv', '--tsv', '--max-request-bytes', '--jobs'];
 

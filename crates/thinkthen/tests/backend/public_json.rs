@@ -3,7 +3,7 @@
 //! Every shared case that asks one whole text with a single judgment, an
 //! `annotate` set, `recognize`, or `relate` runs through the compiled command
 //! and through the public API on the same case arm. `Details::to_json` must
-//! equal the `--details` line. `value_json`, `Recognized::to_json`, and each
+//! equal the shared judgment members of the `--details` line. `value_json`, `Recognized::to_json`, and each
 //! `Edge::to_json` must equal the bare output. Other tests check what the
 //! command prints; this one holds the library to the same bytes.
 
@@ -162,7 +162,7 @@ fn flagged(flags: impl Iterator<Item = bool>, json: &str) -> Result<(), String> 
     }
 }
 
-/// One single judgment's `Details::to_json` against the command's `--details`.
+/// Compare every judgment byte after checking the CLI-only input position.
 fn details(
     engine: &Engine,
     question: &LoadedQuestion,
@@ -177,7 +177,19 @@ fn details(
     };
     let details = details.map_err(|error| error.to_string())?;
     let command = without("attempts", &command(case, path, base, text, true)?);
-    same(details.value().to_json() + "\n", &command)
+    let last = text.bytes().filter(|&b| b == b'\n').count()
+        + usize::from(!text.is_empty() && !text.ends_with('\n'));
+    let suffix = format!(
+        ",\"position\":{{\"file\":null,\"first\":1,\"last\":{}}}}}\n",
+        last.max(1)
+    );
+    let shared = command
+        .strip_suffix(&suffix)
+        .ok_or_else(|| format!("the command has no matching input position: {command}"))?;
+    same(
+        details.value().to_json() + "\n",
+        &(shared.to_owned() + "}\n"),
+    )
 }
 
 /// One `meta` list left out of a line. The command's `meta.attempts` is a

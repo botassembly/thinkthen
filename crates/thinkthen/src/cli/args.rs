@@ -13,6 +13,7 @@ pub(crate) const DEFAULT_MAX_RETRIES: u32 = 3;
 mod annotate;
 mod batching;
 mod command;
+mod common;
 mod debug;
 mod find;
 mod relate;
@@ -71,7 +72,11 @@ pub(crate) struct Common {
 
     /// Read the records from FILE instead of from standard input.
     #[arg(long, value_name = "FILE")]
-    pub(crate) input: Option<PathBuf>,
+    pub(crate) input: Vec<PathBuf>,
+
+    /// Join N physical text lines into each item, within each file.
+    #[arg(long, value_name = "N")]
+    pub(crate) window: Option<String>,
 
     /// Take each line as one text record.
     ///
@@ -216,32 +221,6 @@ pub(crate) struct Common {
     pub(crate) max_retries: u32,
 }
 
-impl Common {
-    pub(crate) fn check_plan_name(&self) -> Result<(), crate::failure::Failure> {
-        if self.retired_dry_run {
-            return Err(crate::failure::Failure::Usage(
-                "--dry-run was renamed --plan",
-            ));
-        }
-        Ok(())
-    }
-
-    /// The record framing the command line asked for.
-    pub(crate) const fn framing(&self) -> Framing {
-        if self.lines {
-            Framing::Lines
-        } else if self.jsonl {
-            Framing::Jsonl
-        } else if self.csv {
-            Framing::Csv
-        } else if self.tsv {
-            Framing::Tsv
-        } else {
-            Framing::Document
-        }
-    }
-}
-
 /// Everything `decide` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct DecideArguments {
@@ -253,8 +232,8 @@ pub(crate) struct DecideArguments {
     /// written in a file.
     pub(crate) question: String,
 
-    /// Taken so the command can say where the evidence goes.
-    #[arg(value_name = "EVIDENCE", hide = true)]
+    /// Read these files in order; cannot accompany --input.
+    #[arg(value_name = "FILE")]
     pub(crate) extra: Vec<OsString>,
 
     /// What a yes and a no mean.
@@ -319,8 +298,8 @@ pub(crate) struct FilterArguments {
     /// value typed beside it replaces the file's value.
     pub(crate) question: String,
 
-    /// Taken so the command can say where the evidence goes.
-    #[arg(value_name = "EVIDENCE", hide = true)]
+    /// Read these files in order; cannot accompany --input.
+    #[arg(value_name = "FILE")]
     pub(crate) extra: Vec<OsString>,
 
     /// One cut T on the probability of yes. A band is a usage error. It defaults to 0.5.
@@ -357,8 +336,8 @@ pub(crate) struct RankArguments {
     /// ranks by its weighted level position; typed meanings fit decide only.
     pub(crate) question: String,
 
-    /// Taken so the command can say where the evidence goes.
-    #[arg(value_name = "EVIDENCE", hide = true)]
+    /// Read these files in order; cannot accompany --input.
+    #[arg(value_name = "FILE")]
     pub(crate) extra: Vec<OsString>,
 
     /// Print the first N records of the order, from 1 upward.
@@ -586,7 +565,7 @@ mod annotate_tests {
             panic!("annotate command");
         };
         assert_eq!(arguments.questions.to_string_lossy(), "checks.json");
-        assert!(arguments.extra_input.is_none());
+        assert!(arguments.extra_input.is_empty());
         assert!(arguments.common.jsonl);
         assert_eq!(arguments.common.field, ["/body"]);
         assert_eq!(arguments.common.jobs, Some(4));

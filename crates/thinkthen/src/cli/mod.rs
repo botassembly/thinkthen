@@ -14,6 +14,7 @@ pub(crate) mod failure;
 mod file_size;
 pub(crate) mod find;
 mod hint;
+pub(crate) mod intake;
 mod interrupt;
 pub(crate) mod judge;
 mod measure;
@@ -39,13 +40,13 @@ use crate::cli::asking::Folders;
 use crate::cli::edge::Environment;
 use crate::cli::failure::Failure;
 use crate::core::{JsonError, RecordError, safe_key, version_line};
-use clap::Parser as _;
+use clap::{CommandFactory as _, FromArgMatches as _};
 
 /// Parse the process inputs, run one command, and report its exit code.
 #[must_use]
 pub fn entry() -> ExitCode {
     let started = Instant::now();
-    let cli = match Cli::try_parse_from(normalize::arguments(std::env::args_os())) {
+    let cli = match parsed_cli() {
         Ok(cli) => cli,
         Err(error) => return hint::refused(error),
     };
@@ -135,6 +136,31 @@ pub fn entry() -> ExitCode {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
     }
+}
+
+/// Hide unsupported intake options and settle all positional routes once.
+fn parsed_cli() -> Result<Cli, clap::Error> {
+    let parser = Cli::command()
+        .mut_subcommand("recognize", |command| {
+            command.mut_arg("window", |arg| arg.hide(true))
+        })
+        .mut_subcommand("relate", |command| {
+            command.mut_arg("window", |arg| arg.hide(true))
+        });
+    let matches = parser.try_get_matches_from(normalize::arguments(std::env::args_os()))?;
+    let mut cli = Cli::from_arg_matches(&matches)?;
+    if let Some(command) = cli.command.as_mut() {
+        command.route_inputs().map_err(|error| match error {
+            Failure::Usage(message) => {
+                clap::Error::raw(clap::error::ErrorKind::ValueValidation, message)
+            }
+            _ => clap::Error::raw(
+                clap::error::ErrorKind::ValueValidation,
+                "invalid input routes",
+            ),
+        })?;
+    }
+    Ok(cli)
 }
 
 fn report_early(

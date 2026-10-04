@@ -15,16 +15,13 @@ use crate::engine::pipeline::{self, Answered, Asker, Failed, Flow, Input, Packin
 use crate::failure::{Failure, ReplayContext};
 use crate::schedule::{Judged, Output, Placed};
 
-/// One annotate input: a framed line or document, or a table row.
-pub(crate) enum Framed {
-    Bytes(usize, Vec<u8>),
-    Record(usize, Record),
-}
+pub(crate) type Framed = crate::cli::intake::Item;
 
 /// One parsed input and the number its messages name.
 pub(super) struct Held {
     at: usize,
     record: Record,
+    position: Option<crate::cli::intake::Position>,
 }
 
 /// Why one input has no row: a pointer that missed its record, or another failure.
@@ -62,7 +59,12 @@ impl Asker for AnnotateAsker<'_> {
             error: PrepareError::Other(error),
         };
         let groups = grouped(self.judging, &answers).map_err(refused)?;
-        self.judging.finish(held.record, groups).map_err(refused)
+        let mut judged = self.judging.finish(held.record, groups).map_err(refused)?;
+        if self.judging.details() {
+            crate::cli::intake::locate(&mut judged.printed, held.position.as_ref())
+                .map_err(refused)?;
+        }
+        Ok(judged)
     }
 
     fn gone(&self) -> bool {
@@ -209,7 +211,7 @@ where
     // A stop after one document's row changes nothing it printed.
     if let Some(stop) = ended
         .stop
-        .filter(|_| reading.streams() || ended.finished == 0)
+        .filter(|_| reading.streams() || judging.common.input.len() > 1 || ended.finished == 0)
     {
         if !reading.streams() {
             return Err(stop.cause);
@@ -365,17 +367,16 @@ impl Parser {
     }
 
     fn parse(&self, framed: Framed) -> Result<Held, Refused> {
-        let (at, record) = match framed {
-            Framed::Bytes(at, bytes) => (
-                at,
-                self.reading
-                    .annotation_record(&bytes)
-                    .map_err(|error| Refused {
-                        at,
-                        error: PrepareError::Other(Failure::record(error, self.reading.streams())),
-                    })?,
-            ),
-            Framed::Record(at, record) => (at, record),
+        let at = framed.at;
+        let record = match framed.data {
+            crate::cli::intake::Data::Bytes(bytes) => self
+                .reading
+                .annotation_record(&bytes)
+                .map_err(|error| Refused {
+                    at,
+                    error: PrepareError::Other(Failure::record(error, self.reading.streams())),
+                })?,
+            crate::cli::intake::Data::Record(record) => record,
         };
         if !self.details {
             super::collisions(&self.set, &record).map_err(|error| Refused {
@@ -383,6 +384,10 @@ impl Parser {
                 error: PrepareError::Other(error),
             })?;
         }
-        Ok(Held { at, record })
+        Ok(Held {
+            at,
+            record,
+            position: framed.position,
+        })
     }
 }

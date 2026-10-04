@@ -12,12 +12,11 @@ use crate::core::{
 use crate::args::{AnnotateArguments, Common};
 use crate::asking::{self, Folders};
 use crate::cli::question_text;
-use crate::edge::{self, Environment};
+use crate::edge::Environment;
 use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::profile::{self, Mismatch};
-use crate::schedule::{Judged, Output, Placed};
-use crate::table::{Kind as TableKind, Rows as TableRows};
+use crate::schedule::{Judged, Output};
 
 mod aggregation;
 mod asker;
@@ -25,7 +24,6 @@ pub(crate) mod error_row;
 mod plan;
 
 pub(crate) use crate::engine::facade::GroupAnswer;
-use asker::Framed;
 
 pub(crate) enum PrepareError {
     MissingOn(String),
@@ -79,6 +77,7 @@ pub(crate) fn run(
     }
     let profile = profile::read(&arguments.common)?;
     let mismatch = Mismatch::new(set.profile(), profile.as_ref());
+    crate::cli::intake::window(&arguments.common, set.first_part().is_some())?;
     let reading = reading(&arguments.common)?;
     let setting = batch_setting(arguments, environment, &set, reading.streams())?;
     let request_size = if reading.streams() {
@@ -93,7 +92,12 @@ pub(crate) fn run(
     if let (Framing::Lines, Some(name)) = (arguments.common.framing(), set.first_part()) {
         return Err(Failure::Reading(ReadingError::LinesPart(name.to_owned())));
     }
-    let source = edge::source(arguments.common.input.as_deref(), input)?;
+    let inputs = crate::cli::intake::Intake::new(
+        &arguments.common,
+        &reading,
+        input,
+        set.first_part().is_some(),
+    )?;
     let inputs_cap = setting.and_then(|setting| match setting {
         Setting::Records(most) => Some(most.get()),
         Setting::Max => None,
@@ -107,20 +111,6 @@ pub(crate) fn run(
         arguments.common.jobs,
     )?;
     let judging = Judging::new(arguments, environment, engine, set, mismatch);
-    let inputs: Box<dyn Iterator<Item = Result<Framed, Placed>> + Send> =
-        if let Some(kind) = table_kind(&arguments.common) {
-            let rows = TableRows::new(source, kind)?;
-            Box::new(rows.enumerate().map(|(place, row)| {
-                row.map(|record| Framed::Record(place + 1, record))
-                    .map_err(|error| Placed::at(error, place + 1))
-            }))
-        } else {
-            let chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
-            Box::new(chunks.map(|(at, row)| {
-                row.map(|bytes| Framed::Bytes(at, bytes))
-                    .map_err(|error| Placed::at(error, at))
-            }))
-        };
     if arguments.common.dry_run {
         return plan::dry_run(&judging, &reading, inputs, inputs_cap, &mut writer);
     }
@@ -142,11 +132,6 @@ fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
                 "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --plan",
             ));
         }
-    }
-    if arguments.extra_input.is_some() {
-        return Err(Failure::Usage(
-            "the second path is input; write it as `--input FILE`",
-        ));
     }
     if arguments.threshold.is_some() {
         return Err(Failure::Usage(
@@ -211,16 +196,9 @@ fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {
     arguments
         .common
         .input
-        .as_deref()
+        .first()
         .and_then(|path| crate::read_question_file(path).ok())
         .is_some_and(|text| QuestionSet::parse(&text).is_ok())
-}
-
-fn table_kind(common: &Common) -> Option<TableKind> {
-    common
-        .csv
-        .then_some(TableKind::Csv)
-        .or_else(|| common.tsv.then_some(TableKind::Tsv))
 }
 
 fn reading(common: &Common) -> Result<Reading, Failure> {
