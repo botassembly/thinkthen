@@ -101,6 +101,7 @@ fn original_byte_budget_counts_blanks_endings_and_all_source_occurrences() -> io
             assert_eq!(listener.connections(), 0);
         }
         check_overflow_and_lazy_intake(verb, full, &mut whole)?;
+        let listener = Listener::answering(answer)?;
         fs::write(two, [&half[..], b"\n"].concat())?;
         let output = call(&listener, verb, &["--around", "0", one, two], b"")?;
         assert_eq!(output.status.code(), Some(2));
