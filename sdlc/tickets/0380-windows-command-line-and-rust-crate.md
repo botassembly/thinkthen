@@ -1,6 +1,6 @@
 # 0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64
 
-Status: in progress. Slice A landed through `115bb95b20111f3f73688157584ff2f4736171ff` after fresh receipt review and all 350 actual site replays. Windows runner proof and slices B–D remain. Slice B design in `sdlc/records/0380-b-installer-design.md` passed fresh independent review at `fe0bf809c98789e33b25caf1fc5d497172b4305f`. The installer implementation and portable boundary proof are prepared in `sdlc/records/0380-b-installer-build.md`; fresh code review and native Windows proof remain pending. The `release/0.1` cut and ticket 0397 are landed. Fresh ticket review accepted the plan on 2026-10-04. Physical lane: claude-1. Plan: `sdlc/planning/windows.md`, stage 1. Shared workflow edits wait for the coordinator's signal; ticket 0398 slice C owns its workflow guard.
+Status: in progress. Slice A landed through `115bb95b20111f3f73688157584ff2f4736171ff` after fresh receipt review and all 350 actual site replays. Windows runner proof and slices B–D remain. Slice B design in `sdlc/records/0380-b-installer-design.md` passed fresh independent review at `fe0bf809c98789e33b25caf1fc5d497172b4305f`. The installer implementation and portable boundary proof are prepared in `sdlc/records/0380-b-installer-build.md`; fresh High source review accepted `046ed382b8`; the coordinator checkpoint passed after its source-preserving rebase. Final receipt review and native Windows proof remain pending. The `release/0.1` cut and ticket 0397 are landed. Fresh ticket review accepted the plan on 2026-10-04. Physical lane: claude-1. Plan: `sdlc/planning/windows.md`, stage 1. Shared workflow edits wait for the coordinator's signal; ticket 0398 slice C owns its workflow guard.
 
 Milestone: 0.2
 
@@ -47,3 +47,5 @@ Milestone: 0.2
 - Windows command packaging needs a separate archive format and executable suffix. Keep those changes in the Windows arm, and leave Unix command tar names and payloads unchanged.
 
 - Crate metadata changes the documentation proof identity even without Rust source changes. The full canonical replay refreshed 308 language and 42 SQL samples; strict verification reports all 350 current, and the final site build passes. Windows runner proof remains separate.
+
+- Slice B's actual AST regressions must preserve saved replacement failures when inspection and diagnostics fail. A committed installation must still exit 0 after reporting fails; an uncommitted failure exits 1. Private original snapshots survive uncertain recovery. The complete local checkpoint is in [the slice B build record](../records/0380-b-installer-build.md); portable acceptance does not close native Windows proof.

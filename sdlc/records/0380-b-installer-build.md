@@ -1,6 +1,6 @@
 # 0380 slice B: Windows development installer build
 
-Status: clean pushed review candidate. Native Windows proof remains pending. Approved shared workflow integration is prepared after ticket 0398 slice C landed. This record claims no Windows execution. Public signing and distribution remain open. No workflow was dispatched and no site was deployed.
+Status: source accepted at `046ed382b8` by fresh independent High review. The source-preserving rebase is `f71282573`; the local full test, specification and site checkpoint passed. Final receipt review and landing remain. Native Windows proof remains pending an approved dispatch; public signing and distribution remain open.
 
 ## Prior evidence and retained behavior
 
@@ -65,3 +65,13 @@ The recovery fixture now loads the actual `Commit-File`, `Restore-File` and `Get
 Only the two diagnostic sites and their root/site copies changed in installer source. Windows native proof remains pending; no dispatch or publication ran. Rust, crate inputs, release workflow and ticket 0398 guards remain unchanged. Final diagnostic-correction lint passed on `aae496dbd` with exit 0 before fresh independent High review.
 
 The unchanged reviewer replacement plant now observes `PRIMARY REPLACEMENT ERROR` and raises its own fixed-plant assertion instead of observing `DIAGNOSTIC ERROR`. The unchanged reviewer committed-entry plant exits 0. The committed source passed the required lint in the existing 12 GiB memory / 1 GiB swap scope with the inspected offline Cargo wrapper, two jobs and `/tmp` scratch. Policy, private-name checks, workflow/source and copy plants, Unix installer regressions, registry checks, formatting, Clippy, documentation and inventory passed. Logs remain in ignored `target/0380b-lint/diagnostic-fix-lint.log` and `target/0380b-lint/diagnostic-fix-portable.log`. No full test, spec or surfaces checkpoint ran. The final record-only commit changes no executable source; fresh independent High review remains pending.
+
+## Coordinator checkpoint and rebase
+
+Fresh independent High review accepted the complete candidate `046ed382b8fec1cb3804cf083913b675cbd08c18`, including actual error-preservation and committed-success regressions. The rebase onto main `ddfcbc74c` produced `f71282573`. Product additions and deletions match the reviewed patch exactly. The workflow fixture tuple retains the R contribution-path regression alongside the reviewed Windows installer fixture. Its 112 planted workflow cases passed again after that resolution.
+
+The coordinator named the full test and specification checkpoint. All 1327 workspace tests passed with 25 existing skips, 134 library-only tests passed with four skips, and 21 consumer tests passed with three skips. The retained type/C door and binding smoke checks passed. Specification checks passed 58 pages with one skip, the settings and probe fixtures, and all 24 green demos.
+
+Strict site verification reports all 350 actual saved replay samples current and zero pages to prove again. This slice changes no Rust or crate input, so it preserves the existing actual replay receipts. The first site attempt selected an older cached release executable and correctly failed seven window-flag comparisons. The coordinator rebuilt the current reviewed source under the same offline two-job scope. The final site build then passed with that explicit binary. No proof hash was edited and no native Windows result was inferred.
+
+Receipts remain in owned ignored output `target/0380b-checkpoint-final/`: `test.log`, `spec.log`, `workflows.log`, `release-build.log`, `strict.log` and `site-build.log`. The heavy runs used the repository environment allow-list, installed Node 22, two offline Cargo jobs, an empty compiler wrapper, a lane lock and systemd user limits of 12 GiB memory and 1 GiB swap. No hosted workflow, provider call or publication ran. The prepared Windows PowerShell 5.1/7 NTFS, ACL, sharing and replacement checks remain open under this ticket.
