@@ -4,7 +4,7 @@ use crate::display_0401::call;
 use crate::harness::{Canned, Listener, spawn};
 use crate::intake_0401::{answer, folder, text};
 use crate::support::stored;
-use serde_json::json;
+use serde_json::{Value, json};
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
@@ -207,12 +207,17 @@ fn provider_context_remains_independent_from_display_neighbors() -> io::Result<(
         b"hit\n\n",
     )?;
     assert_eq!(output.stdout, b"--\nhit\n\n");
-    assert_eq!(listener.requests().len(), 1);
-    assert!(
-        listener
-            .requests()
-            .iter()
-            .all(|request| text(&request.body).contains("Provider-only context"))
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let body: Value = serde_json::from_slice(&requests.first().expect("one observed request").body)
+        .expect("observed request JSON");
+    assert_eq!(
+        body,
+        json!({
+            "state": "Provider-only context",
+            "model": "local-1",
+            "questions": {"q1": {"type": "noul", "instructions": "The text is \"hit\". Is it clear?"}}
+        })
     );
     Ok(())
 }

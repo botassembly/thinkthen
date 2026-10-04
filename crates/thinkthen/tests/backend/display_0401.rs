@@ -2,6 +2,7 @@
 
 use crate::harness::{Canned, Listener, spawn};
 use crate::intake_0401::{answer, folder, text};
+use serde_json::{Value, json};
 use std::{fs, io};
 
 pub(super) fn call(
@@ -141,15 +142,18 @@ fn jsonl_spacing_survives_and_neighbors_never_become_evidence() -> io::Result<()
     )?;
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(output.stdout, b"--\n1:{ \"text\": \"hit\" }  \n2-\n");
-    assert_eq!(listener.requests().len(), 1);
-    let bodies = listener
-        .requests()
-        .iter()
-        .map(|request| text(&request.body))
-        .collect::<Vec<_>>()
-        .join("\n");
-    assert!(!bodies.contains("not json"));
-    assert!(!bodies.contains("text\\\""));
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let body: Value = serde_json::from_slice(&requests.first().expect("one observed request").body)
+        .expect("observed request JSON");
+    assert_eq!(
+        body,
+        json!({
+            "state": "Each question quotes the text it asks about.",
+            "model": "local-1",
+            "questions": {"q1": {"type": "noul", "instructions": "The text is \"hit\". Is it clear?"}}
+        })
+    );
     let listener = Listener::answering(answer)?;
     let output = call(
         &listener,
