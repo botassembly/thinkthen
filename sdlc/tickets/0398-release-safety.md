@@ -1,6 +1,6 @@
 # 0398: Release safety: publish dry runs, install checks after publishing, and a rehearsed tag
 
-Status: in progress. Slice A landed through `ff047d8c50ce39ed9ab0acd22695c4960a963d38`. Slice B offline implementation received fresh ACCEPT at `fc4d842b0e627a9e4f96088f4bcff32e7a9e6246` and landed through `b780323909505450743af30d8bea2ee07a51e65b`. Slice C and approved hosted proof remain. Lane 2, its first item. Parent: Ian's 0.2 plan of 2026-10-04, lane 2 "release safety". It closes `sdlc/issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md`, `sdlc/issues/2026-10-04-public-install-checks-are-done-by-hand.md` and `sdlc/issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md`. It needs no other ticket. It lands after ticket 0397 in the lane order.
+Status: in progress. Slice A landed through `ff047d8c50ce39ed9ab0acd22695c4960a963d38`. Slice B offline implementation received fresh ACCEPT at `fc4d842b0e627a9e4f96088f4bcff32e7a9e6246` and landed through `b780323909505450743af30d8bea2ee07a51e65b`. Slice C implementation received fresh High ACCEPT at `78c7fe748bc33dd2b102dbd175f751cdc40b37c7`; its landing and approved hosted proof remain. Lane 2, its first item. Parent: Ian's 0.2 plan of 2026-10-04, lane 2 "release safety". It closes `sdlc/issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md`, `sdlc/issues/2026-10-04-public-install-checks-are-done-by-hand.md` and `sdlc/issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md`. It needs no other ticket. It lands after ticket 0397 in the lane order.
 
 Milestone: 0.2
 
@@ -127,3 +127,5 @@ Slice C's fresh High design review accepted `ebfa557cae241ee134b52a25a24af40854e
 Slice C's required scoped lint passed with exit 0 on implementation `0289c5a65fbb81f1f6a7b3191ad06f1024e65f32`. Policy, format, Clippy, documentation and inventory checks passed under the bounded offline two-job wrapper. Fresh code review, landing and approved hosted proof remain pending.
 
 Fresh High C code review found an inherited workflow environment gap. The validator now pins the absence of workflow-level env. Real-workflow GH_TOKEN and BASH_ENV plants refuse, and all 112 workflow cases pass. Required bounded offline lint passes with exit 0 on correction `cde3c5f0913762f3b9ba98025147d49ea174cdcd`. Fresh review, landing and hosted proof remain pending.
+
+Fresh High review accepted the whole corrected slice C at `78c7fe748bc33dd2b102dbd175f751cdc40b37c7`. Independent offline replay passed all 112 workflow cases and the real-file validator. Slice C changes no engine or binding proof inputs. Hosted rehearsal, registry install checks and the eventual 0.2 release proof remain open.

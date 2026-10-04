@@ -1,7 +1,7 @@
 # 0398 slice C: Enforce the rehearsed release commit
 
 Date: 2026-10-04
-Status: implementation complete; fresh code review and landing pending; hosted proof remains open
+Status: implementation accepted; landing pending; hosted proof remains open
 Starting revision: `b780323909505450743af30d8bea2ee07a51e65b`
 Accepted design: `ebfa557cae241ee134b52a25a24af40854e511c8`
 Ticket: `sdlc/tickets/0398-release-safety.md`
@@ -26,4 +26,4 @@ Slice A/B hosted proof and the exact approved rehearsal remain open. This guard 
 
 ## Review correction
 
-Fresh High code review found that a workflow-level environment could pass the validator and make GH_TOKEN available to build jobs. The validator now pins the accepted absence of workflow-level env. Two plants modify the actual release workflow object with inherited GH_TOKEN and BASH_ENV and require the exact resolve refusal. Existing job-specific token checks remain. Focused workflow proof passes 112/112 cases, including both new plants and all prior cases. Required scoped lint passed with exit 0 on correction `cde3c5f0913762f3b9ba98025147d49ea174cdcd` under the same bounded offline two-job wrapper. Policy, format, Clippy, documentation and inventory checks passed. The private-name check found no matches. Local receipts are `target/0398c-lint-env-fix.log` and `target/0398c-checks/workflows-env-fix.log`. Fresh code review remains pending.
+Fresh High code review found that a workflow-level environment could pass the validator and make GH_TOKEN available to build jobs. The validator now pins the accepted absence of workflow-level env. Two plants modify the actual release workflow object with inherited GH_TOKEN and BASH_ENV and require the exact resolve refusal. Existing job-specific token checks remain. Focused workflow proof passes 112/112 cases, including both new plants and all prior cases. Required scoped lint passed with exit 0 on correction `cde3c5f0913762f3b9ba98025147d49ea174cdcd` under the same bounded offline two-job wrapper. Policy, format, Clippy, documentation and inventory checks passed. The private-name check found no matches. Local receipts are `target/0398c-lint-env-fix.log` and `target/0398c-checks/workflows-env-fix.log`. Fresh High code review accepted the whole corrected candidate at `78c7fe748bc33dd2b102dbd175f751cdc40b37c7`. Independent offline replay passed all 112 cases and real-file workflow, ticket and diff checks. No actionable findings remain.
