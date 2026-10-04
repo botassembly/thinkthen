@@ -24,7 +24,7 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 The development archive `thinkthen-c-0.2.0-x86_64-pc-windows-msvc.zip` contains exactly `include/thinkthen.h`, `bin/thinkthen.dll` and `lib/thinkthen.dll.lib`, with a separate SHA-256 sidecar. The `.lib` imports the public DLL; it is not a static implementation. From an x64 MSVC developer shell, compile a consumer after extraction:
 
-```powershell
+```console
 cl.exe /nologo /TC /std:c11 /W4 /WX /MD /Iinclude consumer.c /link lib\thinkthen.dll.lib
 copy bin\thinkthen.dll .
 consumer.exe
