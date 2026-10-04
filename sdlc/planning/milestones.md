@@ -79,6 +79,7 @@ Windows work follows [windows.md](windows.md):
 Open items:
 
 
+- [0419: Official ThinkThen skill for agents](../tickets/0419-official-skill-for-agents.md), the separately reviewed promotion of docs item 22. It changes documentation and preserves empty-find behavior.
 - [0377: Each language binding and SQL extension names a backend in code](../tickets/0377-binding-backends.md)
 - [0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64](../tickets/0380-windows-command-line-and-rust-crate.md)
 - [0381: Windows stage 1: the C library ships as a DLL for Windows x86-64](../tickets/0381-windows-c-dll.md)
