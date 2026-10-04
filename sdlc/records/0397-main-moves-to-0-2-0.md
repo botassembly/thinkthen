@@ -1,6 +1,6 @@
 # 0397: Move main to 0.2.0 and freeze release/0.1
 
-Status: candidate, 2026-10-04. Built from origin/main at 70618a4a1741fa2731b6818bf9b4f6ccbe2de87b in lane claude-0. Fresh independent review and landing remain the coordinator's next steps.
+Status: COMPLETE. Reviewed 2026-10-04. Built from origin/main at 70618a4a1741fa2731b6818bf9b4f6ccbe2de87b in lane claude-0. Fresh independent review accepted product and proof commit 8bd84282b2d4218e64b07f471d3df75df699c203. The landing merge carries the Ticket and Review trailers.
 
 Main's 70 version places read 0.2.0. Public install text still names 0.1.2. The Rust install page keeps `thinkthen = "0.1"`, and the smoke runner rewrites only its scratch manifests to the working crate's major and minor version. The changelogs open with unreleased 0.2.0 headings. The release process and ADR 0116 record Ian's no-patch-release ruling. Both release issues stay open for their remaining debt.
 
