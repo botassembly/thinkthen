@@ -3,10 +3,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-#[cfg(windows)]
 #[path = "run.rs"]
-mod run;
-#[cfg(windows)]
+pub(crate) mod run;
 #[path = "wait.rs"]
 pub(crate) mod wait;
 

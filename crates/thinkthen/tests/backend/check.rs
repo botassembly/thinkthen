@@ -10,9 +10,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use conformance_backend::Backend;
 
+use crate::harness::spawn;
 #[cfg(unix)]
-use crate::harness::Canned;
-use crate::harness::{Listener, spawn};
+use crate::harness::{Canned, Listener};
 
 const KEY: &str = "sk-check-0121";
 

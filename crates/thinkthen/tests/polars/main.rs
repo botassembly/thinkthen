@@ -7,8 +7,7 @@
 mod child;
 #[allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 mod common;
-#[path = "../../src/test_deadline/wait.rs"]
-mod wait;
+use child::wait;
 
 mod cases;
 mod deadline;
