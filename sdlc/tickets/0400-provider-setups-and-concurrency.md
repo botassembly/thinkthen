@@ -1,6 +1,6 @@
 # 0400: One setup format per provider, local servers and Clef documented, and a default throttle of 8
 
-Status: in progress. Slices A and B are landed; slice C implements the default of 8 and awaits tests and landing under the lighter proof ruling. Slice D waits for accepted provider measurements.
+Status: in progress. Slices A, B and C landed: provider setups work and the shared default is 8. Slice D waits for accepted provider measurements.
 
 Milestone: 0.2
 

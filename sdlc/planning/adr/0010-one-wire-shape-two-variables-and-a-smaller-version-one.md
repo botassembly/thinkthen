@@ -88,3 +88,5 @@ The final resolved posting URL must not contain the nonblank effective API key a
 ## Amendment, 2026-09-26: ADR 0048 batches records
 
 Under ADR 0048 a request carries a batch of records, so `--jobs N` also sets how many batches are in flight. The default of 4 stays, and `records.md` keeps the range of 1 to 32. Ian can overturn this.
+
+Amendment, ticket 0400 slice C (2026-10-04): omitted throttle now uses 8. Explicit settings, range 1 through 32 and the first explicit process selection remain unchanged. Ian can overturn this default.

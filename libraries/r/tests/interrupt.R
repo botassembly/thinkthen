@@ -17,8 +17,8 @@ spawn <- function(code, env = held) {
   dir.create(cache)
   writeLines(c("library(thinkthen)", code), file)
   pid <- system(paste("env", paste(clean_env(inherited, child_values(cache, env)), collapse = " "),
-                      shQuote(file.path(R.home("bin"), "Rscript")),
-                      shQuote(file), ">", shQuote(out), "2>&1 </dev/null & echo $!"), intern = TRUE)
+                      paste(rscript_args(file), collapse = " "),
+                      ">", shQuote(out), "2>&1 </dev/null & echo $!"), intern = TRUE)
   list(pid = as.integer(pid), out = out)
 }
 lines_of <- function(one) if (file.exists(one$out)) readLines(one$out, warn = FALSE) else character()
@@ -65,11 +65,11 @@ Sys.sleep(1)
 check("the single count stays 1 after release", backend_count() == 1L)
 invisible(ended(single))
 
-# The tick, batch at throttle 8: the cap is exactly 8, CAUGHT comes before
+# The tick, batch at throttle 6: the cap is exactly 6, CAUGHT comes before
 # release (within 0.5 s under stress), and the cancelled batch sends nothing
 # more after release.
 receipt_caught <- 'function(e) { cat("CAUGHT", format(as.numeric(Sys.time()), digits = 15), "\\n"); cat("ON_INTERRUPT", tt_completion_read(h)$state, "\\n"); flush(stdout()) }'
-batch <- spawn(c('tt_engine(throttle = 8L)',
+batch <- spawn(c('tt_engine(throttle = 6L)',
   'h <- tt_completion(); cat("BEFORE", tt_completion_read(h)$state, "\\n")',
   sprintf('tryCatch(tt_decide("Q?", paste("batch", 1:200), batch = 2L, completion = h), interrupt = %s)', receipt_caught),
   'for (i in 1:600) { a <- tt_completion_read(h); if (identical(a$state, "terminal")) break; Sys.sleep(0.05) }',
@@ -77,10 +77,10 @@ batch <- spawn(c('tt_engine(throttle = 8L)',
   'reuse <- tryCatch(tt_decide("Q?", "reuse", completion = h), thinkthen_error = function(e) e$kind)',
   'cat("FINAL", a$kind, a$facts$requests_sent, a$facts$records, identical(a, b), reuse, "\\n")',
   'a$details[[1]]$index <- 99; cat("OWNED", tt_completion_read(h)$details[[1]]$index, "\\n")'))
-invisible(backend_wait(1L + 8L))
+invisible(backend_wait(1L + 6L))
 Sys.sleep(0.3)
 at_signal <- backend_count()
-check("throttle 8 holds exactly 8 on the wire", at_signal == 1L + 8L)
+check("throttle 6 holds exactly 6 on the wire", at_signal == 1L + 6L)
 signalled <- now()
 tools::pskill(batch$pid, 2L)
 check("a batch answers the interrupt before release", until(function() !is.na(caught_at(batch)), 30))
@@ -97,7 +97,7 @@ batch_lines <- paste(lines_of(batch), collapse = "\n")
 check("completion moves unused through running to final accounted cancellation",
       grepl("BEFORE unused", batch_lines, fixed = TRUE) &&
       grepl("ON_INTERRUPT running", batch_lines, fixed = TRUE) &&
-      grepl("FINAL cancelled 8 16 TRUE usage", batch_lines, fixed = TRUE))
+      grepl("FINAL cancelled 6 12 TRUE usage", batch_lines, fixed = TRUE))
 check("completion reads are owned snapshots", grepl("OWNED 0", batch_lines, fixed = TRUE))
 
 # The caller drops its only R handle while a sent scalar is still held. The
@@ -120,9 +120,9 @@ bulk <- c(choose = 'tt_choose("Which?", paste("c", 1:50), c("a", "b"), batch = 2
           tag = 'tt_tag("Which labels?", paste("t", 1:50), c("x", "y"), batch = 2L)')
 for (verb in names(bulk)) {
   base <- backend_count()
-  job <- spawn(c('tt_engine(throttle = 8L)', bulk[[verb]]))
-  # Throttle 8 holds eight sends; the file's total counts all eight before the kill.
-  check(paste("R2-23:", verb, "puts more than one request on the wire"), backend_wait(base + 8L) - base > 1L)
+  job <- spawn(c('tt_engine(throttle = 6L)', bulk[[verb]]))
+  # Throttle 6 holds six sends; the file's total counts all six before the kill.
+  check(paste("R2-23:", verb, "puts more than one request on the wire"), backend_wait(base + 6L) - base > 1L)
   tools::pskill(job$pid, 9L)
   ended(job)
   backend_say("round")
@@ -153,4 +153,4 @@ for (catch in c(FALSE, TRUE)) {
 }
 
 backend_say("release")
-finish("interrupt", 1L + 8L + 1L + 24L + 2L)
+finish("interrupt", 1L + 6L + 1L + 18L + 2L)

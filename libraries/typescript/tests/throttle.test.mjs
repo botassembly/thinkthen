@@ -24,6 +24,21 @@ test('five calls under throttle 4 hold four requests and leave the libuv pool fr
   assert.equal(await backend.count(), 5);
 });
 
+test('nine calls with omitted throttle hold eight before the ninth', async (t) => {
+  const backend = await startBackend(t);
+  const run = child(backend, `
+    const engine = new tt.Engine();
+    return Promise.all(Array.from({ length: 9 }, (_, at) => engine.decide('Refund?', 'held ' + at)));`, { arm: 'arm/held' });
+  assert.equal(await backend.wait(8), 8);
+  await sleep(300);
+  assert.equal(await backend.count(), 8, 'the ninth request stays queued');
+  assert.equal(run.lines.length, 0, 'no held answer settled');
+  backend.release();
+  await run.exited;
+  assert.deepEqual(run.lines.at(-1).value.value.map((call) => call.value), Array(9).fill(true));
+  assert.equal(await backend.count(), 9);
+});
+
 // Once the backend holds the batch's first request, thirty timers fire before
 // any reply is let go. A door that blocked the JavaScript thread would never
 // print the line that releases them.
