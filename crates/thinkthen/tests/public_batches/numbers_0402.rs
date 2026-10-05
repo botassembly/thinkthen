@@ -29,7 +29,7 @@ fn reported_confidence_and_wire_score_do_not_replace_public_numbers() {
         ),
     ];
     for (source, reply, expected, confidence) in cases {
-        let listener = Listener::serving(vec![Canned::ok(reply)]).expect("listener");
+        let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
         let engine = engine(listener.base());
         let thinkthen::LoadedQuestion::Question(asked) =
             Question::from_json(source).expect("dynamic question")
@@ -97,7 +97,7 @@ fn typed_band_endpoints_match_the_illustrative_trust_rows() {
             let reply = format!(
                 r#"{{"model":"jev-latest","answers":{{"q1":{{"type":"noul","noul":{probability}}}}}}}"#
             );
-            let listener = Listener::serving(vec![Canned::ok(&reply)]).expect("listener");
+            let listener = Listener::answering(move |_| Canned::ok(&reply)).expect("listener");
             let engine = engine(listener.base());
             let asked = Question::decide("Does this pass?")
                 .expect("question")
