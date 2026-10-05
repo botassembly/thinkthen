@@ -212,7 +212,7 @@ def pack_routing(root):
     source = root / 'source'
     scripts = source / 'sdlc/scripts'
     scripts.mkdir(parents=True)
-    for name in ('release-pack', 'scratch.sh', 'release-windows-command.py', 'release-windows-c.py'):
+    for name in ('release-pack', 'scratch.sh', 'release-windows-command.py', 'release-windows-c.py', 'release-bounded.py', 'release-owned-job.py'):
         shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
     for manifest in ('crates/thinkthen/Cargo.toml', 'libraries/c/Cargo.toml'):
         path = source / manifest
@@ -301,21 +301,35 @@ def msvc_setup_routing(root):
                 if name not in ('CL', '_CL_', 'LINK', 'FAKE_SERVICE_API_KEY')}
     output = io.StringIO()
     setup = root / 'Visual Studio/VC/Auxiliary/Build/vcvarsall.bat'
+    namespace = runpy.run_path(str(Path(__file__).with_name('release-msvc.py')))
+    capture = mock.Mock()
     def compiler_environment(command, **options):
+        assert options == {'env': expected, 'timeout': 60, 'text': True}
+        if isinstance(command, list):
+            assert command[0] == str(root / 'Program Files/Microsoft Visual Studio/Installer/vswhere.exe')
+            assert command[1:] == ['-latest', '-products', '*', '-requires',
+                'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationPath']
+            return subprocess.CompletedProcess(command, 0, str(root / 'Visual Studio'), '')
         assert command == f'cmd.exe /d /s /c ""{setup}" x64 >nul && set"'
-        assert options['env'] == expected and options['timeout'] == 60 and options['check'] is True
         return subprocess.CompletedProcess(command, 0,
             'PATH=x64-tools\nINCLUDE=inc\nLIB=libs\nLIBPATH=libpath\nCL=masked-warning\nFAKE_SERVICE_API_KEY=fake-credential\n', '')
+    capture.side_effect = compiler_environment
+    namespace['main'].__globals__['CAPTURE'] = capture
     with mock.patch.dict(os.environ, variables, clear=True):
-        with mock.patch.object(Path, 'is_file', return_value=True):
-            with mock.patch.object(subprocess, 'check_output', return_value=str(root / 'Visual Studio')) as finder:
-                with mock.patch.object(subprocess, 'run', side_effect=compiler_environment):
-                    with contextlib.redirect_stdout(output):
-                        runpy.run_path(str(Path(__file__).with_name('release-msvc.py')))
-    assert finder.call_args.kwargs['env'] == expected and finder.call_args.kwargs['timeout'] == 60
-    assert finder.call_args.args[0][1:] == ['-latest', '-products', '*', '-requires',
-        'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationPath']
+        with mock.patch.object(Path, 'is_file', return_value=True), contextlib.redirect_stdout(output):
+            namespace['main']()
+    assert capture.call_count == 2
     assert output.getvalue().splitlines() == ['PATH=x64-tools', 'INCLUDE=inc', 'LIB=libs', 'LIBPATH=libpath']
+    capture.reset_mock()
+    with mock.patch.dict(os.environ, variables, clear=True), mock.patch.object(Path, 'is_file', return_value=False):
+        try:
+            namespace['main']()
+        except SystemExit as error:
+            assert str(error) == 'release-msvc: installed x64 compiler environment is missing'
+        else:
+            raise AssertionError('missing MSVC setup passed preflight')
+    assert capture.call_count == 1, 'missing setup executed native cmd'
+
 
 
 def main():
@@ -323,6 +337,7 @@ def main():
         archives(Path(temporary))
         pack_routing(Path(temporary))
         msvc_setup_routing(Path(temporary))
+    runpy.run_path(str(Path(__file__).with_name('release-bounded-0381-self-test.py')))['main']()
     plants = workflow_plants()
     print(f'Windows C portable self-test: archive/header/export refusals and {plants} workflow plants passed; native proof pending')
 

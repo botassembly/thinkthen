@@ -5,6 +5,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
+import runpy
 import shutil
 import struct
 import subprocess
@@ -16,6 +17,7 @@ TARGET = 'x86_64-pc-windows-msvc'
 MEMBERS = ('include/thinkthen.h', 'bin/thinkthen.dll', 'lib/thinkthen.dll.lib')
 REPO = Path(__file__).resolve().parents[2]
 HEADER = REPO / 'libraries/c/include/thinkthen.h'
+CAPTURE = runpy.run_path(str(Path(__file__).with_name('release-bounded.py')))['capture']
 
 
 def declarations(header):
@@ -195,7 +197,7 @@ def environment():
 
 
 def run(args):
-    result = subprocess.run(args, env=environment(), capture_output=True, text=True, timeout=120)
+    result = CAPTURE(args, env=environment(), text=True, timeout=120)
     if result.returncode:
         raise ValueError(f'{Path(args[0]).name} failed (exit {result.returncode}): {result.stdout}{result.stderr}')
     return result.stdout

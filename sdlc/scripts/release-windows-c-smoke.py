@@ -7,7 +7,6 @@ import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import threading
 
@@ -66,8 +65,7 @@ def consume(archive):
                     child_env = env | {'THINKTHEN_CACHE': str(root / ('capped' if capped else 'open'))}
                     if capped:
                         child_env['THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL'] = '10'
-                    result = subprocess.run([str(binary)], input=payload, env=child_env,
-                                            capture_output=True, timeout=60)
+                    result = C.CAPTURE([str(binary)], input=payload, env=child_env, timeout=60)
                     if result.returncode != 0 or result.stderr or b'sk-c-archive-loopback' in result.stdout:
                         raise ValueError('downloaded C consumer failed or exposed its key')
                     expected = f'1 {len(refusal)}\n{refusal}\n'.encode() if capped else b'0 21\n1 0.90000000000000002\n'
