@@ -1,6 +1,6 @@
 # 0400 slice C: the default throttle is eight
 
-Status: source-preserved C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`. Fresh prior High review accepted C source `5a74e1e74`; the combined regression correction below awaits fresh High review. D is landed, documentation work is active, and parent full/canonical/stress proof remains pending.
+Status: source-preserved C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`. Fresh prior High review accepted C source `5a74e1e74`; corrected combined source `4080bd327` passes focused checks and required lint and awaits fresh High review. D is landed, documentation work is active, and parent full/canonical/stress proof remains pending.
 
 The final B source/receipt acceptance and byte-identical landing are recorded in the [B build record](0400-provider-setups-slice-b-build.md). C preserves the Windows and B source, ratchets and retained receipts. No paid 0399 call, native host run, dispatch, publication or release approval ran.
 
@@ -166,3 +166,26 @@ Required frozen-source combined focus/lint and fresh High review follow. The coo
 Frozen `e36669352a32b857800bcb143aa59718cd47d281` passed offline policy, formatting and all 71 combined focused cases: backend 44/44 (794 skipped), library width/rank sets 16/16 (401 skipped), public cancellation/panic 2/2 (22 skipped) and public rank sets 9/9 (50 skipped). Required lint then exited 101 because the extracted sibling module no longer inherited the identity module's existing reasoned test allowances for expect and checked indexing. `integration-focus-e36669352.log` and `integration-lint-e36669352.log` retain the full frozen results and rejection. Nothing was overwritten or reported as passing lint.
 
 The fixture is now the identity module's child at `crates/thinkthen/tests/backend/rank_set_0401_identity/preview_0400.rs`. It inherits the same existing allowance scope as the original assertions. No new suppression, threshold, behavior or assertion changes. The corrected decomposition is helper +9, parent extraction/registration -100 and child +157: still exactly +66 and 118131. Parent/child are 355/157 lines; the shared call helper file is 251. The backend registry returns to its unchanged 209 lines. Fresh frozen focus, policy and required lint follow before High review.
+
+### Final frozen correction receipts
+
+Corrected source is `4080bd327f67c636350e392142f24ac8fef9a732`; its crates/thinkthen tree is `aeb0ff2c1a671f463bc10bf453ab74da73f66a63`. The source is pushed explicitly to `origin` branch `ticket/0400-provider-setups-and-concurrency`. This final record-only successor changes no Rust, executable fixture, ratchet, contract or runner-generated documentation proof.
+
+`target/0400c-checkpoint-final/integration-focus-4080bd327.log` begins and ends with that unchanged frozen HEAD and exits 0. It includes renewed offline policy on 254 packages, formatting, and these exact nextest selectors/results:
+
+| Binary | Selector | Passing / skipped |
+| --- | --- | --- |
+| backend | `test(interrupt::) \| test(parallel::) \| test(decide_edge::help) \| test(rank_set_0401)` | 44 / 794 |
+| lib | `test(engine::width_tests) \| test(cli::schedule::width_tests) \| test(rank_set_0401)` | 16 / 401 |
+| public_controls | exact throttle-gate cancellation and panic/join cases | 2 / 22 |
+| public_batches | `test(rank_set_0401)` | 9 / 50 |
+
+All 71 cases pass with no fail-fast omission. The two preview cases cover twelve width/shape combinations at literal three/six send budgets; all single-member wire/cache/detail, selecting metadata, shared budget, invalid-input, secrecy, failure and cancellation guards in those selectors remain passing. The exact public-control names are `a_stop_at_the_throttle_gate_sends_nothing_new_and_sent_work_finishes` and `a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join`.
+
+Required `sdlc/scripts/lint` exits 0 in `integration-lint-4080bd327.log`, on the same unchanged source. It verifies exact ratchets/caps, settings/tickets/children, formatting, all-target workspace Clippy with warnings denied, Rustdoc with warnings denied, and 580 declared public items with four refused inventory plants. The private-name check reports only counts: 35 names checked in tracked paths/files, none found. Expected registry-timeout plants print Killed; this is not a host or release execution result. The existing inspected fetch wrapper admits only its owned dependency-free local-file source-package refusal fixture under scratch Cargo home; all ordinary Cargo calls remain offline.
+
+Heavy execution used the owned lane2 user scope with 12 GiB memory/1 GiB swap, two jobs, the forwarded lane lock and existing shared toolchain/cache mutation locks, an empty compiler wrapper and allow-listed environment. Production source equals the frozen start byte for byte. Rust remains 118131 (+66 test lines over the integrated start; +143 total C over landed rank); all binding/SQL ratchets retain their listed values. Both the original `focus.log` and the first frozen lint rejection remain untouched.
+
+Ready for fresh independent High review. The coordinator still owns 350 actual canonical replays with strict/final site proof, a named full test/spec/surfaces checkpoint and the authorized SQLite/stress checkpoint. Earlier accepted C surface witnesses and all ten mapping plants are retained rather than relabeled as reruns. No helper, rebase, landing, full gate, canonical replay, paid/native/CI job, stress, publication or manual proof-hash update ran here.
+
+The final record-only worktree passes `integration-final-tickets.log` (zero failures) and `integration-final-private-count.log` (35 names, zero tracked-path/file hits). These count-only checks disclose no external name. They change no frozen-source receipt.
