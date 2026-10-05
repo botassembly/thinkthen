@@ -1,6 +1,6 @@
 # 0377: Each language binding and SQL extension names a backend in code
 
-Status: ready. It waits for the `release/0.1` cut. It changes library and SQL behavior, so no slice lands on main before the cut (ADR 0116 item 2). Only this record landed early, because it changes no behavior. Design: ADR 0114 section 3 and build order step 2. Issue: `sdlc/issues/2026-10-01-bindings-and-sql-extensions-name-no-backend.md`. Written on Ian's direction of 2026-10-01 in lane claude-1. The coordinator assigns build lanes after the cut.
+Status: ready: the accepted ADR 0114 design allows each language binding and SQL extension to select a named backend in code. Implementation and its behavior checks remain; the release/0.1 cut is complete.
 
 Milestone: 0.2
 

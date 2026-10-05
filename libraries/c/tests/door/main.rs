@@ -34,7 +34,7 @@ mod golden;
 mod plan;
 mod question_file;
 mod settings;
-mod throttle_0400;
+mod request_width;
 mod usage;
 
 use crate::child::ChildEnvironment as _;

@@ -1,6 +1,6 @@
 # 0404: Remove the proof spiral
 
-Status: in progress. Permanent build-rule cleanup is prepared first; machinery, records, tests and stale statuses remain.
+Status: implemented. Permanent rules, machinery removal, record consolidation and behavior-based tests have landed; full tests and lint on this last landing are running.
 
 Milestone: 0.2
 

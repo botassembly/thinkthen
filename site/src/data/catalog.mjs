@@ -1270,7 +1270,7 @@ export const RECIPE_PAGES = [
     "example": "site/examples/recipes/rules-propose-model-confirms",
     "issue": "sdlc/issues/2026-10-03-draft-function-extract.md",
     "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/2026-10-05-reviewed-experiment-planning.md",
+    "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": RULES_MEASURED,
     "fixtureAssertions": [
       {
@@ -1577,7 +1577,7 @@ export const RECIPE_PAGES = [
     "example": "site/examples/recipes/link-records",
     "issue": "sdlc/issues/2026-10-03-draft-function-link.md",
     "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
+    "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
@@ -1742,7 +1742,7 @@ export const RECIPE_PAGES = [
     "example": "site/examples/recipes/navigate-many-documents",
     "issue": "sdlc/issues/2026-10-03-draft-function-navigate.md",
     "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
+    "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
@@ -1767,7 +1767,7 @@ export const RECIPE_PAGES = [
     "example": "site/examples/recipes/search-transcripts",
     "issue": "sdlc/issues/2026-10-05-recipe-search-transcripts.md",
     "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
+    "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
