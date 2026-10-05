@@ -1,4 +1,4 @@
-thinkthen check \
+thinkthen backends check \
   --backend liquid \
   --timeout 90 \
   --plan |

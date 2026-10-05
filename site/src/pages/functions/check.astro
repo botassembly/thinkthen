@@ -1,5 +1,5 @@
 ---
-// Goal: say what thinkthen check sends, what each report row means, and when it exits 4.
+// Goal: say what thinkthen backends check sends, what each report row means, and when it exits 4.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import { BACKENDS_SEE } from '../../data/catalog.mjs';
@@ -11,9 +11,10 @@ const plan = run('install/backends/system-one', '4-check-plan');
 const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md';
 const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed', 'usage'];
 ---
-<Base title="check" description={'What thinkthen check sends, what each report row means, and when it exits 4.'}>
-  <h1><code>check</code></h1>
-  <p class="lede"><code>thinkthen check</code> tests whether a server works with ThinkThen. It sends four fixed requests, one after another. Every request is real. A hosted server may charge for it.</p>
+<Base title="backends check" description={'What thinkthen backends check sends, what each report row means, and when it exits 4.'}>
+  <h1><code>backends check</code></h1>
+  <p class="lede"><code>thinkthen backends check</code> tests whether a server works with ThinkThen. It sends four fixed requests, one after another. Every request is real. A hosted server may charge for it.</p>
+  <p><code>thinkthen check</code> remains a hidden compatibility alias with the same options, requests, report and exit codes.</p>
 
   <h2 id="plan">See it first</h2>
   <p><code>--plan</code> prints the address and the model, then the four request bodies and a count. It sends nothing and needs no key.</p>
@@ -39,7 +40,7 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
     <li>2: a usage error, such as no address or an unknown option. Nothing is sent.</li>
     <li>4: a row is critical, or the key is unset at an address other than this machine.</li>
   </ul>
-  <p><code>check</code> reads no input, cache, recording or profile. <code>--cache</code>, <code>--no-cache</code>, <code>--record</code>, <code>--replay</code> and <code>--profile</code> are refused at exit 2. It takes no <code>--max-retries</code>, and four probes send at most sixteen attempts.</p>
+  <p><code>backends check</code> reads no input, cache, recording or profile. <code>--cache</code>, <code>--no-cache</code>, <code>--record</code>, <code>--replay</code> and <code>--profile</code> are refused at exit 2. It takes no <code>--max-retries</code>, and four probes send at most sixteen attempts.</p>
 
   <h2 id="limits">Limits</h2>
   <p>A check has no fixed worst case. A server's <code>Retry-After</code> or <code>Retry-After-Ms</code> header sets a minimum wait before a retry, with no cap. Without either header, a check at <code>--timeout 90</code> takes about 25 minutes at most.</p>

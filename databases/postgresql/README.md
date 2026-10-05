@@ -89,6 +89,7 @@ The details digest includes a question's saved calibration `profile`. A differen
 | `thinkthen.max_request_bytes` | any role | positive request-byte ceiling for relation plans. -1 keeps the environment value |
 | `thinkthen.batch` | any role | `max` or a decimal whole number of 1 or more records per request. Empty keeps `THINKTHEN_BATCH` or the default `max`; `1` retains historical singleton request bytes |
 | `thinkthen.max_requests_total` | superuser | the most requests one backend sends. -1 means no total |
+| `thinkthen.backend` | superuser | built-in or configured name; empty restores captured environment selection |
 | `thinkthen.model` | any role | backend model. Empty keeps the environment value |
 | `thinkthen.timeout` | any role | positive attempt timeout in seconds; -1 keeps the environment value |
 | `thinkthen.max_retries` | any role | status retries, 0 or more; -1 keeps the environment value |
@@ -101,6 +102,8 @@ The details digest includes a question's saved calibration `profile`. A differen
 The answer cache is off unless an administrator names a folder, by `THINKTHEN_CACHE` in the server's environment or by `thinkthen.cache`. The platform folder under the server's home is never used (ticket 0318). Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it. So a call refuses, before any request, a named cache, record or replay folder that another operating-system user owns or others can write; make it the server user's own with mode 0700. `cache prune` is the only thing that removes entries. Set `thinkthen.cache = 'off'` to disable a cache `THINKTHEN_CACHE` names.
 
 The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included, and `meta.cached` tells one role that another already judged the same text. Name a shared folder only when every calling role may see every judged row. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`.
+
+`SET thinkthen.backend = 'typesafe'` selects a named backend. `RESET` or an empty string restores captured environment selection. An ordinary role cannot change this setting, including a custom placeholder staged before module load. SQL accepts no address or key. The engine captures the server environment after fork. Changing the name changes the validated engine plan, while existing process totals and throttle ownership remain.
 
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 

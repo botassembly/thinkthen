@@ -26,8 +26,9 @@ use extendr_api::prelude::*;
 use crate::calls::receipt::Receipt;
 use crate::calls::{self, Crossed};
 use crate::relate::{self};
-use crate::{Settings, usage};
+use crate::usage;
 
+mod engine;
 mod settings;
 mod values;
 use values::{asked, batch_of, completion_of, context_of, required_completion, spec_of, whole_of};
@@ -484,29 +485,24 @@ fn tt_engine_set(
     replay: Robj,
     profile: Robj,
     batch: Robj,
+    backend: Robj,
 ) -> Crossed<()> {
-    let optional =
-        |value: &Robj, what: &str| (!value.is_null()).then(|| text_of(value, what)).transpose();
-    let cache = match cache.rtype() {
-        Rtype::Null => None,
-        Rtype::Logicals if cache.as_bool() == Some(false) => Some(None),
-        _ => Some(Some(text_of(&cache, "cache")?)),
-    };
-    crate::choose_engine(Settings {
-        base_url: optional(&base_url, "base_url")?,
-        model: optional(&model, "model")?,
-        throttle: whole_of(&throttle, "throttle")?,
-        max_requests: whole_of(&max_requests, "max_requests")?,
-        max_requests_total: whole_of(&max_requests_total, "max_requests_total")?,
-        max_request_bytes: whole_of(&max_request_bytes, "max_request_bytes")?,
+    engine::configure([
+        base_url,
+        model,
+        throttle,
+        max_requests,
+        max_requests_total,
+        max_request_bytes,
         cache,
-        timeout: whole_of(&timeout, "timeout")?,
-        max_retries: whole_of(&max_retries, "max_retries")?,
-        record: optional(&record, "record")?,
-        replay: optional(&replay, "replay")?,
-        profile: optional(&profile, "profile")?,
-        batch: batch_of(&batch)?,
-    })
+        timeout,
+        max_retries,
+        record,
+        replay,
+        profile,
+        batch,
+        backend,
+    ])
 }
 
 extendr_module! {

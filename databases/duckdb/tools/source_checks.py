@@ -99,11 +99,12 @@ def requirements(path: Path) -> list[str]:
 
 
 def shipped() -> None:
-    built = ROOT / "build" / "thinkthen.duckdb_extension"
-    data = built.read_bytes()
-    for marker in (b"thinkthen_test_hook", b"ENGINE_TEST_PANIC"):
-        if marker in data:
-            fail(f"decision 14: the shipped extension holds {marker.decode()}")
+    from inputs import canonical, versions
+    for version in versions():
+        data = canonical(version).read_bytes()
+        for marker in (b"thinkthen_test_hook", b"ENGINE_TEST_PANIC"):
+            if marker in data:
+                fail(f"decision 14: the shipped {version} extension holds {marker.decode()}")
     tree = subprocess.run(
         ["cargo", "tree", "--offline", "--locked", "-e", "features", "-i", "thinkthen-duckdb-bridge"],
         cwd=ROOT / "bridge", check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL, env=child_env(CARGO),
@@ -122,7 +123,9 @@ def main() -> int:
     guards()
     cargo_flags()
     vendored()
-    FAILED.extend(requirements(ROOT / "tools" / "requirements.txt"))
+    from inputs import selected, versions
+    for version in versions():
+        FAILED.extend(requirements(ROOT / "tools" / selected(version)['requirements']))
     shipped()
     for message in FAILED:
         print(f"FAIL {message}")

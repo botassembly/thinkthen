@@ -59,6 +59,7 @@ fn interrupted() -> String {
 /// The engine settings `tt_engine` takes, as the caller gave them.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Settings {
+    pub(crate) backend: Option<String>,
     pub(crate) base_url: Option<String>,
     pub(crate) model: Option<String>,
     pub(crate) throttle: Option<u8>,
@@ -83,6 +84,7 @@ impl Settings {
             None => "cache = FALSE".to_owned(),
         });
         let named: Vec<String> = [
+            self.backend.as_ref().map(|it| format!("backend = {it:?}")),
             self.base_url.as_ref().map(|_| "base_url".to_owned()),
             self.model.as_ref().map(|it| format!("model = {it:?}")),
             self.throttle.map(|it| format!("throttle = {it}")),
@@ -114,6 +116,9 @@ impl Settings {
     /// The engine these settings build over the environment's own.
     fn build(&self) -> Result<Engine, Error> {
         let mut builder = EngineBuilder::from_env()?;
+        if let Some(backend) = &self.backend {
+            builder = builder.backend(backend)?;
+        }
         if let Some(base) = &self.base_url {
             builder = builder.base_url(base)?;
         }

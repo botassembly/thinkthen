@@ -155,7 +155,7 @@ cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --packag
 
 failed=""
 if [ "$profile" = stress ]; then
-	for test in tests/test_interrupt.py tests/test_settings.py tests/test_usage.py tests/test_try_budget.py; do
+	for test in tests/test_interrupt.py tests/test_settings.py tests/test_named_backends.py tests/test_usage.py tests/test_try_budget.py; do
 		step "$test, stress"
 		sh "$LIMIT" 300 "$python" "$test" || failed="$failed $test"
 	done

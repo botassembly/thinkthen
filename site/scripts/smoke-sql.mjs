@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { readDuckDBVersions, nativeDuckDBTarget, duckDBArtifact } from './duckdb-inputs.mjs';
 import { spawnSync } from 'node:child_process';
 import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles } from './binding-samples.mjs';
 
@@ -23,6 +24,9 @@ if (leaked.length) {
   console.error(`smoke-sql: unset ${leaked.join(', ')} first. The replay run sends nothing and reads no setting from the shell.`);
   process.exit(2);
 }
+
+// Validate every supported pin before resolving any database tool or starting a child.
+const duckDBVersion = readDuckDBVersions(path.join(repo, 'databases/duckdb/tools/version.env'))[0];
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-sql-'));
 // An interrupt ends the run and removes the temp folder. Node runs no signal
@@ -41,7 +45,7 @@ const run = (cmd, args, opts = {}) => {
   if (STOPS.includes(signal)) stop(signal);
   return done;
 };
-const TOOLCHAINS = path.join(os.homedir(), '.cache', 'thinkthen-toolchains');
+const TOOLCHAINS = process.env.THINKTHEN_TOOLCHAINS ?? path.join(os.homedir(), '.cache', 'thinkthen-toolchains');
 
 // Each database: the folder its extension builds from and build(), which
 // returns the toolchain versions and
@@ -71,20 +75,28 @@ const DATABASES = {
   duckdb: {
     folder: 'databases/duckdb',
     build() {
-      const tools = path.join(TOOLCHAINS, 'duckdb', 'v1.5.5');
+      const version = duckDBVersion;
+      const [nativeTarget, platform] = nativeDuckDBTarget();
+      const tools = path.join(TOOLCHAINS, 'duckdb', version);
       const cli = path.join(tools, 'duckdb');
-      if (!fs.existsSync(cli)) return { missing: 'the pinned DuckDB 1.5.5 CLI that databases/duckdb/tools/setup.sh fetches' };
+      if (!fs.existsSync(cli)) return { missing: `the pinned DuckDB ${version} CLI that databases/duckdb/tools/setup.sh fetches` };
       if (!fs.existsSync(path.join(tools, 'static-libs', 'libduckdb_static.a'))) return { missing: 'the pinned DuckDB source and static archives that databases/duckdb/tools/setup.sh --fetch fetches' };
-      for (const tool of ['cargo', 'cmake']) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
+      const cmake = nativeTarget.endsWith('apple-darwin') ? path.join(tools, 'venv/bin/cmake') : 'cmake';
+      for (const tool of ['cargo', cmake]) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
+      if (fs.readFileSync(path.join(tools, 'platform.txt'), 'utf8').trim() !== platform) throw new Error('stock DuckDB reports another platform');
       const target = path.join(repo, 'target', 'site-duckdb');
-      const done = run('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_CPP_BUILD: path.join(target, 'cpp'), CARGO_TARGET_DIR: path.join(target, 'bridge') } });
+      const done = run('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_VERSION: version, THINKTHEN_DUCKDB_CPP_BUILD: path.join(target, 'cpp'), CARGO_TARGET_DIR: path.join(target, 'bridge') } });
       if (done.status !== 0) throw new Error(`cpp/build.sh failed in ${this.folder}\n${done.stdout}${done.stderr}`);
-      const extension = path.join(target, 'cpp', 'extension', 'thinkthen', 'thinkthen.duckdb_extension');
+      const extension = duckDBArtifact(repo, version, nativeTarget);
       return {
-        toolchain: [`DuckDB ${run(cli, ['--version']).stdout.split(' ')[0]}`, run('cmake', ['--version']).stdout.split('\n')[0], run('rustc', ['--version']).stdout.trim()],
-        // The install page loads the extension as ./thinkthen.duckdb_extension.
-        lay: (dir) => fs.copyFileSync(extension, path.join(dir, 'thinkthen.duckdb_extension')),
-        command: (sample) => [cli, ['-unsigned', '-list'], fs.readFileSync(sample, 'utf8')],
+        toolchain: [`DuckDB ${run(cli, ['--version']).stdout.split(' ')[0]}`, run(cmake, ['--version']).stdout.split('\n')[0], run('rustc', ['--version']).stdout.trim()],
+        lay: (dir) => {
+          fs.copyFileSync(extension, path.join(dir, 'thinkthen.duckdb_extension'));
+          const member = path.join(dir, version, platform);
+          fs.mkdirSync(member, { recursive: true });
+          fs.copyFileSync(extension, path.join(member, 'thinkthen.duckdb_extension'));
+        },
+        command: (sample) => [cli, ['-unsigned', '-list', '-init', '/dev/null'], "SET extension_directory='./extensions';\n" + fs.readFileSync(sample, 'utf8')],
         env: {},
       };
     },

@@ -1,6 +1,6 @@
-# Check
+# Backend check
 
-`thinkthen check` sends four fixed requests to a backend you name and reports whether it works with this tool. [specification/check.md](../specification/check.md) is the contract. Each block unsets the key and the address first, so neither block can reach a network.
+`thinkthen backends check` sends four fixed requests to a backend you name and reports whether it works with this tool. [specification/check.md](../specification/check.md) is the contract. Each block unsets the key and the address first, so neither block can reach a network.
 
 A plan prints the address, the provider, the model asked for, the model sent, and the four request bodies. It inspects an optional configured key for an address collision and sends nothing. This example unsets the key, so a loopback address with nothing behind it is enough. The bodies match the fixture byte for byte.
 
@@ -9,7 +9,7 @@ set -euo pipefail
 export HOME="$(mktemp -d)"
 unset XDG_CONFIG_HOME XDG_CACHE_HOME THINKTHEN_API_KEY THINKTHEN_BASE_URL
 fixture="$(git rev-parse --show-toplevel)/specification/fixtures/check/requests.jsonl"
-thinkthen check --url http://127.0.0.1:9/v1 --plan > "$HOME/plan.txt"
+thinkthen backends check --url http://127.0.0.1:9/v1 --plan > "$HOME/plan.txt"
 sed -n 1p "$HOME/plan.txt" | mustmatch "url http://127.0.0.1:9/v1/systemone"
 sed -n 2p "$HOME/plan.txt" | mustmatch "provider systemone"
 sed -n 3p "$HOME/plan.txt" | mustmatch "model asked unspecified"
@@ -28,7 +28,7 @@ set -euo pipefail
 export HOME="$(mktemp -d)"
 unset XDG_CONFIG_HOME XDG_CACHE_HOME THINKTHEN_API_KEY THINKTHEN_BASE_URL THINKTHEN_BACKEND OLLAMA_API_KEY
 fixture="$(git rev-parse --show-toplevel)/specification/fixtures/check/requests-text.jsonl"
-thinkthen check --backend ollama --plan > "$HOME/plan.txt" 2> "$HOME/said.txt"
+thinkthen backends check --backend ollama --plan > "$HOME/plan.txt" 2> "$HOME/said.txt"
 sed -n 1p "$HOME/plan.txt" | mustmatch "url http://localhost:11434/v1/systemone"
 sed -n 4p "$HOME/plan.txt" | mustmatch "model sent nimble"
 sed -n 's/^request [a-z]* //p' "$HOME/plan.txt" | diff - "$fixture"
@@ -43,10 +43,10 @@ export HOME="$(mktemp -d)"
 unset XDG_CONFIG_HOME XDG_CACHE_HOME THINKTHEN_API_KEY THINKTHEN_BASE_URL
 
 set +e
-thinkthen check >/dev/null 2>&1
+thinkthen backends check >/dev/null 2>&1
 code=$?
 set -e
 test "$code" -eq 2
-test -z "$(thinkthen check 2>/dev/null)"
-thinkthen check 2>&1 >/dev/null | mustmatch "thinkthen: check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file"
+test -z "$(thinkthen backends check 2>/dev/null)"
+thinkthen backends check 2>&1 >/dev/null | mustmatch "thinkthen: check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file"
 ```

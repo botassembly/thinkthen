@@ -1,4 +1,5 @@
 .load ./thinkthen
+SELECT thinkthen_configure('{"backend":"typesafe"}');
 
 CREATE TABLE messages(id INTEGER, body TEXT);
 INSERT INTO messages VALUES

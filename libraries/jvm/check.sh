@@ -50,10 +50,12 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 fi
 mkdir -p "$here/target/native"
 RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2
+RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/Cargo.toml" --locked --offline --package conformance-backend -j2
 native="$root/libraries/c/target/debug/libthinkthen_c.so"
 python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native"
 cp "$native" "$here/target/native/libthinkthen.so"
 sh "$here/build.sh"
+python3 "$here/tests/named_backends.py"
 python3 "$here/tests/package_check.py"
 python3 "$here/tests/installed.py"
 python3 "$here/tests/public_types.py"

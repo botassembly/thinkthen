@@ -102,7 +102,13 @@ if [ "$profile" = stress ]; then
 fi
 for file in tests/*.R examples/examples.R examples/slide_check.R; do
   [ "$file" = tests/helper.R ] && continue
-  bash tests/with-backend.sh "$backend" "$file"
+  if [ "$file" = tests/named_backends.R ]; then
+    for name in liquid ollama openrouter perplexity typesafe; do
+      TT_NAMED_BACKEND=$name TT_TEST_MARKERS='{"captured":"fake-named-r-captured","later":"fake-named-r-later"}' bash tests/with-backend.sh "$backend" "$file"
+    done
+  else
+    bash tests/with-backend.sh "$backend" "$file"
+  fi
 done
 
 echo "== r: the tarball from $(git -C "$root" rev-parse --short HEAD), installed with an empty cargo home"

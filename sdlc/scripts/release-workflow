@@ -671,6 +671,9 @@ $members
 $needed
 "*) ;; *) fail "DuckDB archive lacks C++ package marker $needed" ;; esac
 	done
+	duckdb_target=${duckdb##*thinkthen-duckdb-$version-}
+	duckdb_target=${duckdb_target%.tar.gz}
+	python3 databases/duckdb/cpp/verify_repository.py "$duckdb" "$duckdb_target" "$version"
 	mkdir -p "$4"
 	cp "$2"/* "$4/"
 	rm -f -- "$4/thinkthen-$version.tgz" "$4/thinkthen-$version.tgz.sha256"

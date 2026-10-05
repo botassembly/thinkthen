@@ -301,6 +301,7 @@ fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBui
             .ok_or_else(|| Failure::usage(format!("options.{key} is a whole number")))
     };
     Ok(match (key, value) {
+        ("backend", _) => builder.backend(text()?)?,
         ("baseUrl", _) => builder.base_url(text()?)?,
         ("model", _) => builder.model(text()?)?,
         ("batch", _) => builder.batch(batch_of(value)?),

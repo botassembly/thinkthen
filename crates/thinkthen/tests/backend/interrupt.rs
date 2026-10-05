@@ -452,16 +452,18 @@ fn sigint_during_retry_wait_makes_exactly_one_request() {
 
 #[test]
 fn sigterm_after_a_check_probe_fails_prints_no_report() {
-    let output = held_with_signal(
-        signal_hook::consts::signal::SIGTERM,
-        1,
-        &["check"],
-        b"",
-        || Canned::status(401, "unauthorized"),
-    )
-    .expect("interrupted check ends");
-    assert!(output.stdout.is_empty());
-    assert!(output.stderr.is_empty());
+    for command in [&["backends", "check"][..], &["check"][..]] {
+        let output = held_with_signal(
+            signal_hook::consts::signal::SIGTERM,
+            1,
+            command,
+            b"",
+            || Canned::status(401, "unauthorized"),
+        )
+        .expect("interrupted check ends");
+        assert!(output.stdout.is_empty());
+        assert!(output.stderr.is_empty());
+    }
 }
 
 /// Ticket 0133: the carrier thread cannot spawn under `RLIMIT_NPROC`, the

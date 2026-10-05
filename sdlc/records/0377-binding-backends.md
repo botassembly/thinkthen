@@ -1,0 +1,7 @@
+# 0377: Select a backend from binding and SQL code
+
+Python, TypeScript, Ruby and R now expose the backend setting. The C JSON door accepts it, and all thirteen forwarding language surfaces retain their existing constructors. DuckDB and PostgreSQL expose their session settings; SQLite accepts the setting before its process engine builds. Backend selection keeps captured credentials, precedence, key/address guards and request identity. No key argument or C ABI function was added.
+
+Counted loopback checks cover the five backend forms, named aliases, captured keys, refusals, SQL permissions and lifecycle. All thirteen forwarders passed their configured-backend checks and all thirteen explicit backend examples replayed. Existing omission behavior remains covered. One whole-change High review found a missing COBOL compiler input and two misleading documentation sentences; all were corrected. No remaining blocking findings were reported.
+
+Full tests passed on 0f263872a. Landing lint exposed an existing child-exit race in the process-cleanup test helper; a narrow fix passed the actual cleanup fixture and a fresh review. Full tests also passed on 0005bb7a0. The existing TypeScript source ceilings then needed their final type and counted-routing growth recorded; only that metadata changed. Landing lint passed on 94d34497d. Actual release-platform and Windows qualification belongs to the approved combined run after the remaining core lands. R still uses one engine per session and SQLite one per process. Per-call fallback and inline key settings remain deferred.

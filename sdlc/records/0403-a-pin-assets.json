@@ -1,0 +1,332 @@
+{
+  "source_commit": "08e34c447bae34eaee3723cac61f2878b6bdf787",
+  "release_url": "https://github.com/duckdb/duckdb/releases/tag/v1.5.4",
+  "all_version_target_assets": [
+    {
+      "version": "v1.5.5",
+      "target": "x86_64-unknown-linux-gnu",
+      "asset": "static-libs-linux-amd64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.5/static-libs-linux-amd64.zip",
+      "sha256": "deb47c5300f3c99725e84cdb14d214c3b12bbd748b613b1698b938c894cb68eb",
+      "official_digest": "sha256:deb47c5300f3c99725e84cdb14d214c3b12bbd748b613b1698b938c894cb68eb",
+      "bytes": 29948376,
+      "manifest": "archive-sha256.txt",
+      "archive_members": 22,
+      "zip_members": 23,
+      "header_sha256": "48e716b9ce96ca8fead9cb35693fdc0343ac0fc1f6e7db5561fa0f44b674153d"
+    },
+    {
+      "version": "v1.5.5",
+      "target": "x86_64-unknown-linux-gnu",
+      "asset": "duckdb_cli-linux-amd64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.5/duckdb_cli-linux-amd64.zip",
+      "sha256": "08c0ca117111fcede14239d0093792352befdc174218c344d232c13279643d05",
+      "official_digest": "sha256:08c0ca117111fcede14239d0093792352befdc174218c344d232c13279643d05",
+      "bytes": 21263499,
+      "binary_sha256": "3d33b1df037cb049155c393778df7853fafb23e9d49d7c9cacdde4dd67155788"
+    },
+    {
+      "version": "v1.5.5",
+      "target": "aarch64-unknown-linux-gnu",
+      "asset": "static-libs-linux-arm64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.5/static-libs-linux-arm64.zip",
+      "sha256": "ea6a34cb49ec2db5ed23d9e8311237c53c32abf9cdbf5dd608c4176c3dd8bfeb",
+      "official_digest": "sha256:ea6a34cb49ec2db5ed23d9e8311237c53c32abf9cdbf5dd608c4176c3dd8bfeb",
+      "bytes": 28751058,
+      "manifest": "archive-sha256-linux-arm64.txt",
+      "archive_members": 22,
+      "zip_members": 23,
+      "header_sha256": "48e716b9ce96ca8fead9cb35693fdc0343ac0fc1f6e7db5561fa0f44b674153d"
+    },
+    {
+      "version": "v1.5.5",
+      "target": "aarch64-unknown-linux-gnu",
+      "asset": "duckdb_cli-linux-arm64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.5/duckdb_cli-linux-arm64.zip",
+      "sha256": "02163197027a42149147364d31fa67cac82108517a4be43304a1cc226eaef07a",
+      "official_digest": "sha256:02163197027a42149147364d31fa67cac82108517a4be43304a1cc226eaef07a",
+      "bytes": 19269812,
+      "binary_sha256": "9882c99a9804407de82c0edb1816d7667733d37d771a98eb23ad5f6a8d37acb1"
+    },
+    {
+      "version": "v1.5.5",
+      "target": "aarch64-apple-darwin",
+      "asset": "static-libs-osx-arm64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.5/static-libs-osx-arm64.zip",
+      "sha256": "d79ec66b8a4054b866faada82e9e31f859a713c555b3f1c4b71c4a43d3273e9c",
+      "official_digest": "sha256:d79ec66b8a4054b866faada82e9e31f859a713c555b3f1c4b71c4a43d3273e9c",
+      "bytes": 26256428,
+      "manifest": "archive-sha256-osx-arm64.txt",
+      "archive_members": 21,
+      "zip_members": 22,
+      "header_sha256": "48e716b9ce96ca8fead9cb35693fdc0343ac0fc1f6e7db5561fa0f44b674153d"
+    },
+    {
+      "version": "v1.5.5",
+      "target": "aarch64-apple-darwin",
+      "asset": "duckdb_cli-osx-arm64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.5/duckdb_cli-osx-arm64.zip",
+      "sha256": "da5177b8869c4ed8c65d514fb47a8ed0f6fa7427f103304932d5e83851e46abd",
+      "official_digest": "sha256:da5177b8869c4ed8c65d514fb47a8ed0f6fa7427f103304932d5e83851e46abd",
+      "bytes": 17005846,
+      "binary_sha256": "d0610710dd30667aa6c76709299b6822e55dc9199803350aa2e1b06e3346943b"
+    },
+    {
+      "version": "v1.5.5",
+      "target": "x86_64-apple-darwin",
+      "asset": "static-libs-osx-amd64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.5/static-libs-osx-amd64.zip",
+      "sha256": "a27d36fa1247a3ffa1692e7aa0bf4ea4d1e0ee51da7c4df7a5db5217357b1b4d",
+      "official_digest": "sha256:a27d36fa1247a3ffa1692e7aa0bf4ea4d1e0ee51da7c4df7a5db5217357b1b4d",
+      "bytes": 27147528,
+      "manifest": "archive-sha256-osx-amd64.txt",
+      "archive_members": 21,
+      "zip_members": 22,
+      "header_sha256": "48e716b9ce96ca8fead9cb35693fdc0343ac0fc1f6e7db5561fa0f44b674153d"
+    },
+    {
+      "version": "v1.5.5",
+      "target": "x86_64-apple-darwin",
+      "asset": "duckdb_cli-osx-amd64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.5/duckdb_cli-osx-amd64.zip",
+      "sha256": "47cbda17c5d4643a58833617dfae649a6a8722d7e54435a08161b98ac1c4e832",
+      "official_digest": "sha256:47cbda17c5d4643a58833617dfae649a6a8722d7e54435a08161b98ac1c4e832",
+      "bytes": 18961648,
+      "binary_sha256": "b5f6e002e2bf316534a3b79f81f07b0faf3f7b88c444d613b515d7346c772735"
+    },
+    {
+      "version": "v1.5.4",
+      "target": "x86_64-unknown-linux-gnu",
+      "asset": "static-libs-linux-amd64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.4/static-libs-linux-amd64.zip",
+      "sha256": "44edc1b55365624b4aa4a4f1d8087f75c4bfaceed4494b71059f54a8fa2f6e45",
+      "official_digest": "sha256:44edc1b55365624b4aa4a4f1d8087f75c4bfaceed4494b71059f54a8fa2f6e45",
+      "bytes": 29916326,
+      "manifest": "archive-sha256-v1.5.4-linux-amd64.txt",
+      "archive_members": 22,
+      "zip_members": 23,
+      "header_sha256": "b6d1d212603b751c6613868b4d499952c4bbd9e241c6ae5979da431505282151"
+    },
+    {
+      "version": "v1.5.4",
+      "target": "x86_64-unknown-linux-gnu",
+      "asset": "duckdb_cli-linux-amd64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.4/duckdb_cli-linux-amd64.zip",
+      "sha256": "1f2fa724fb054b3dbe1a9cbd13de5b76997d850e7087ec762ba88db04e0180cf",
+      "official_digest": "sha256:1f2fa724fb054b3dbe1a9cbd13de5b76997d850e7087ec762ba88db04e0180cf",
+      "bytes": 21247976,
+      "binary_sha256": "c478c0f49f6755100d55dee32de485c0f00f3729b40b62658a83b0666b684707"
+    },
+    {
+      "version": "v1.5.4",
+      "target": "aarch64-unknown-linux-gnu",
+      "asset": "static-libs-linux-arm64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.4/static-libs-linux-arm64.zip",
+      "sha256": "68133154f3f62f5b8704656ece5b67989a3089537e4944e0b372518843155e62",
+      "official_digest": "sha256:68133154f3f62f5b8704656ece5b67989a3089537e4944e0b372518843155e62",
+      "bytes": 28716236,
+      "manifest": "archive-sha256-v1.5.4-linux-arm64.txt",
+      "archive_members": 22,
+      "zip_members": 23,
+      "header_sha256": "b6d1d212603b751c6613868b4d499952c4bbd9e241c6ae5979da431505282151"
+    },
+    {
+      "version": "v1.5.4",
+      "target": "aarch64-unknown-linux-gnu",
+      "asset": "duckdb_cli-linux-arm64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.4/duckdb_cli-linux-arm64.zip",
+      "sha256": "377f03fb9f17ab5a78f28f829cbfcb5333da8ab3c2d0788f27694f81df77ed29",
+      "official_digest": "sha256:377f03fb9f17ab5a78f28f829cbfcb5333da8ab3c2d0788f27694f81df77ed29",
+      "bytes": 19255662,
+      "binary_sha256": "513b573b5ad3a94ad2c0668b1ccefb5f281b6f7aa2a5e2ff057825473848e69a"
+    },
+    {
+      "version": "v1.5.4",
+      "target": "aarch64-apple-darwin",
+      "asset": "static-libs-osx-arm64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.4/static-libs-osx-arm64.zip",
+      "sha256": "7d6d51110134c031e8a4944a8aa6514d68d462c479346a42f3e38bd7e4158c83",
+      "official_digest": "sha256:7d6d51110134c031e8a4944a8aa6514d68d462c479346a42f3e38bd7e4158c83",
+      "bytes": 25469799,
+      "manifest": "archive-sha256-v1.5.4-osx-arm64.txt",
+      "archive_members": 21,
+      "zip_members": 22,
+      "header_sha256": "b6d1d212603b751c6613868b4d499952c4bbd9e241c6ae5979da431505282151"
+    },
+    {
+      "version": "v1.5.4",
+      "target": "aarch64-apple-darwin",
+      "asset": "duckdb_cli-osx-arm64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.4/duckdb_cli-osx-arm64.zip",
+      "sha256": "d6c35195683fd1378e5624b01ca390069d399f8341c38986b7e3dfa0b3470d10",
+      "official_digest": "sha256:d6c35195683fd1378e5624b01ca390069d399f8341c38986b7e3dfa0b3470d10",
+      "bytes": 16319183,
+      "binary_sha256": "6c5abaff49f07ba3f6b2e41ed1adf338d10fcb2d98777331b285cc97938fb00a"
+    },
+    {
+      "version": "v1.5.4",
+      "target": "x86_64-apple-darwin",
+      "asset": "static-libs-osx-amd64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.4/static-libs-osx-amd64.zip",
+      "sha256": "f102a62959e3cc7f2147c3181e6b86be158f70183889bb7b40624a4c18d886f3",
+      "official_digest": "sha256:f102a62959e3cc7f2147c3181e6b86be158f70183889bb7b40624a4c18d886f3",
+      "bytes": 26982763,
+      "manifest": "archive-sha256-v1.5.4-osx-amd64.txt",
+      "archive_members": 21,
+      "zip_members": 22,
+      "header_sha256": "b6d1d212603b751c6613868b4d499952c4bbd9e241c6ae5979da431505282151"
+    },
+    {
+      "version": "v1.5.4",
+      "target": "x86_64-apple-darwin",
+      "asset": "duckdb_cli-osx-amd64.zip",
+      "url": "https://github.com/duckdb/duckdb/releases/download/v1.5.4/duckdb_cli-osx-amd64.zip",
+      "sha256": "36e35ae59f417fb0b7e6c5e0b962f887e2b73ad52efc694b76e71fc57bd35b0a",
+      "official_digest": "sha256:36e35ae59f417fb0b7e6c5e0b962f887e2b73ad52efc694b76e71fc57bd35b0a",
+      "bytes": 18561984,
+      "binary_sha256": "856bc9392dedb612c45ea305ad630fa7a0baf5d4b41ad99de3f151af339cf8fe"
+    }
+  ],
+  "wheel": {
+    "filename": "duckdb-1.5.4-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+    "url": "https://files.pythonhosted.org/packages/1e/0b/2ae4c3e157a19d9b4ac1f09a5dea6f93012334cc2db09f1e0c71eb99693d/duckdb-1.5.4-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+    "sha256": "136cea7f886b78caf4035485b4b1e766e8b309e999f9e83a966f81ebb8122844"
+  },
+  "numpy-wheel": {
+    "filename": "numpy-2.5.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "url": "https://files.pythonhosted.org/packages/3a/1b/3b16a9bc514a440a7a0883684111dcb1ef1aee960af2ca95da8fc775f124/numpy-2.5.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "sha256": "a5fa86b80fd24bcd1aff83ad23be44ea323de3f787be8f8b15d4a65621e25321"
+  },
+  "sources": [
+    {
+      "version": "v1.5.5",
+      "commit": "d8cdaa33fda8df955cc76ef58a280f68f4cd43fa",
+      "source_path": "/home/ian/.cache/thinkthen-toolchains/duckdb/v1.5.5/source",
+      "raw_git_matching_members": 14601
+    },
+    {
+      "version": "v1.5.4",
+      "commit": "08e34c447bae34eaee3723cac61f2878b6bdf787",
+      "source_path": "/tmp/thinkthen-0403-prep-JNKtAc/assets/source-v1.5.4",
+      "raw_git_matching_members": 14539
+    }
+  ],
+  "python_wheels": [
+    {
+      "package": "duckdb-1.5.4",
+      "target": "linux_amd64",
+      "filename": "duckdb-1.5.4-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+      "url": "https://files.pythonhosted.org/packages/1e/0b/2ae4c3e157a19d9b4ac1f09a5dea6f93012334cc2db09f1e0c71eb99693d/duckdb-1.5.4-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "136cea7f886b78caf4035485b4b1e766e8b309e999f9e83a966f81ebb8122844"
+    },
+    {
+      "package": "duckdb-1.5.4",
+      "target": "linux_arm64",
+      "filename": "duckdb-1.5.4-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+      "url": "https://files.pythonhosted.org/packages/c1/d1/ac56c6096e3e95da60b2c5dd5a0f0eb5540a80622e2e4f8faab893ec4e96/duckdb-1.5.4-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "698ec90bd5d5538bd5f6d212a4b61af443d240703cf45f134738535026556ea5"
+    },
+    {
+      "package": "duckdb-1.5.4",
+      "target": "osx_amd64",
+      "filename": "duckdb-1.5.4-cp313-cp313-macosx_10_13_x86_64.whl",
+      "url": "https://files.pythonhosted.org/packages/f5/5f/bff5054c2c1d65decab36aa6296621e51a2a575a9f250db7ab9b83a325d6/duckdb-1.5.4-cp313-cp313-macosx_10_13_x86_64.whl",
+      "sha256": "3fb6f07d54ecf4d0d3c5179a2361fdddfafa14de4fc42696de4632479b703421"
+    },
+    {
+      "package": "duckdb-1.5.4",
+      "target": "osx_arm64",
+      "filename": "duckdb-1.5.4-cp313-cp313-macosx_11_0_arm64.whl",
+      "url": "https://files.pythonhosted.org/packages/93/12/d1b2b344e9699246aada6f9de5156e708fb476e2780e5bff9b5d95fe11d9/duckdb-1.5.4-cp313-cp313-macosx_11_0_arm64.whl",
+      "sha256": "0f32ad7e0286c1c29ab6c73b29118c86101f8eee46aae54f54d0b50916f542f6"
+    },
+    {
+      "package": "numpy-2.5.3",
+      "target": "linux_amd64",
+      "filename": "numpy-2.5.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "url": "https://files.pythonhosted.org/packages/3a/1b/3b16a9bc514a440a7a0883684111dcb1ef1aee960af2ca95da8fc775f124/numpy-2.5.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "a5fa86b80fd24bcd1aff83ad23be44ea323de3f787be8f8b15d4a65621e25321"
+    },
+    {
+      "package": "numpy-2.5.3",
+      "target": "linux_arm64",
+      "filename": "numpy-2.5.3-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+      "url": "https://files.pythonhosted.org/packages/73/85/735720d04ec197c5dcfacdfc9922667c7f1f5f496a279b7ba4d7c74c4cc7/numpy-2.5.3-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "c76d5dde9f445058f83d0c02af00557a4db91de9a9a57c0df87d1535001d654b"
+    },
+    {
+      "package": "numpy-2.5.3",
+      "target": "osx_amd64",
+      "filename": "numpy-2.5.3-cp313-cp313-macosx_10_13_x86_64.whl",
+      "url": "https://files.pythonhosted.org/packages/79/e5/8fb89cd46d14e35699d13bf943a5f5f441ecee8667120a1f6105ab89e349/numpy-2.5.3-cp313-cp313-macosx_10_13_x86_64.whl",
+      "sha256": "66a78fe4556c60aceda5916f9eacd638b18e9e681016ec302dcb4682d6d4d034"
+    },
+    {
+      "package": "numpy-2.5.3",
+      "target": "osx_arm64",
+      "filename": "numpy-2.5.3-cp313-cp313-macosx_11_0_arm64.whl",
+      "url": "https://files.pythonhosted.org/packages/2f/06/9dc9e48b5e5e941c8b10350c5ff2d721da42a20517d911d15544246775ff/numpy-2.5.3-cp313-cp313-macosx_11_0_arm64.whl",
+      "sha256": "92f30e89b8ee0ecf363033576c422b2f58fed6a80bed0aa48dff6d14c654663e"
+    }
+  ],
+  "extracted_static_inputs": [
+    {
+      "version": "v1.5.5",
+      "target": "x86_64-unknown-linux-gnu",
+      "path": "/tmp/thinkthen-0403-prep-JNKtAc/extracted/v1.5.5/x86_64-unknown-linux-gnu",
+      "archives": 22,
+      "header": true
+    },
+    {
+      "version": "v1.5.5",
+      "target": "aarch64-unknown-linux-gnu",
+      "path": "/tmp/thinkthen-0403-prep-JNKtAc/extracted/v1.5.5/aarch64-unknown-linux-gnu",
+      "archives": 22,
+      "header": true
+    },
+    {
+      "version": "v1.5.5",
+      "target": "aarch64-apple-darwin",
+      "path": "/tmp/thinkthen-0403-prep-JNKtAc/extracted/v1.5.5/aarch64-apple-darwin",
+      "archives": 21,
+      "header": true
+    },
+    {
+      "version": "v1.5.5",
+      "target": "x86_64-apple-darwin",
+      "path": "/tmp/thinkthen-0403-prep-JNKtAc/extracted/v1.5.5/x86_64-apple-darwin",
+      "archives": 21,
+      "header": true
+    },
+    {
+      "version": "v1.5.4",
+      "target": "x86_64-unknown-linux-gnu",
+      "path": "/tmp/thinkthen-0403-prep-JNKtAc/extracted/v1.5.4/x86_64-unknown-linux-gnu",
+      "archives": 22,
+      "header": true
+    },
+    {
+      "version": "v1.5.4",
+      "target": "aarch64-unknown-linux-gnu",
+      "path": "/tmp/thinkthen-0403-prep-JNKtAc/extracted/v1.5.4/aarch64-unknown-linux-gnu",
+      "archives": 22,
+      "header": true
+    },
+    {
+      "version": "v1.5.4",
+      "target": "aarch64-apple-darwin",
+      "path": "/tmp/thinkthen-0403-prep-JNKtAc/extracted/v1.5.4/aarch64-apple-darwin",
+      "archives": 21,
+      "header": true
+    },
+    {
+      "version": "v1.5.4",
+      "target": "x86_64-apple-darwin",
+      "path": "/tmp/thinkthen-0403-prep-JNKtAc/extracted/v1.5.4/x86_64-apple-darwin",
+      "archives": 21,
+      "header": true
+    }
+  ],
+  "preparation_only": true,
+  "native_host_executions": 0
+}

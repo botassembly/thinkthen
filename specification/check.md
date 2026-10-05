@@ -1,15 +1,15 @@
-# Check
+# Backend check
 
-Status: **Settled** by ticket 0121.
+Status: **Settled** by tickets 0121 and 0416, with [ADR 0118](../sdlc/planning/adr/0118-backend-command-namespace.md).
 
-`thinkthen check` answers one question: does the backend at an address you name work with this tool? It sends four fixed requests to the backend’s path under the base, `systemone` unless the backend names another path, one after another. Each finding is critical or a warning. The check exits 0 only when nothing is critical, so a script or a list of backends can trust the exit code. The report opens with the address, the provider, and the models, and it prints each decoded reply.
+`thinkthen backends check` answers one question: does the backend at an address you name work with this tool? It sends four fixed requests to the backend’s path under the base, `systemone` unless the backend names another path, one after another. Each finding is critical or a warning. The check exits 0 only when nothing is critical, so a script or a list of backends can trust the exit code. The report opens with the address, the provider, and the models, and it prints each decoded reply.
 
 Each request is built by the production question grammar and written by the production encoder. The engine sends it with the production transport, retry rule, and key rule. The production decoder reads the reply. A critical finding therefore means what a real run would meet, and it carries the sentence a real run would print.
 
 ## Command line
 
 ```text
-thinkthen check [--url BASE] [--backend NAME] [--model NAME] [--timeout SECONDS] [--plan]
+thinkthen backends check [--url BASE] [--backend NAME] [--model NAME] [--timeout SECONDS] [--plan]
 ```
 
 - The address comes from `--url` or `--backend`, then `THINKTHEN_BASE_URL` or `THINKTHEN_BACKEND`, then the configuration file's `url` or `backend`, by the tiers of [backends.md](backends.md#named-backends). A named backend counts as a named address. The rules of [backends.md](backends.md) apply unchanged. The built-in default address is refused, because the check would otherwise spend requests at the hosted service when you named nothing. The refusal exits 2 before the key is read and sends nothing. Its whole standard error line reads `thinkthen: check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file`.
@@ -18,7 +18,9 @@ thinkthen check [--url BASE] [--backend NAME] [--model NAME] [--timeout SECONDS]
 - `--timeout` works as it does everywhere. `--max-retries` keeps its default of 3 and is not accepted. Four probes send at most sixteen attempts. Each attempt takes at most the timeout, and each wait before an attempt at most the lesser of the timeout and 60 seconds, because a longer server wait fails the probe ([backends.md](backends.md)). Twelve retry waits and three waits between probes give fifteen waits, so at `--timeout 90` a check ends within 16 × 90 + 15 × 60 = 2,340 seconds, plus at most two seconds for another process's usage lock: one before the first probe and one when the counts are written at the end. Without retry headers the waits double from one second, and the bound is 16 × 90 + 4 × 7 + 3 × 8 = 1,492 seconds.
 - The check reads no standard input, cache, recording, replay, or explicit profile file. A selected setup supplies its inline profile. All four fixed requests must fit that profile before the first send or any `--plan` output; a violation exits 2 with the existing profile-limit sentence and sends nothing, even when a later probe is the first violation. The fixed probes are never split. `--cache`, `--no-cache`, `--record`, `--replay`, and `--profile` are unknown options and exit 2.
 - Its attempts and reported tokens count in the usage totals, as every live request does.
-- `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` binds each probe as it binds every live request, by [backends.md](backends.md). `check` has no flag for it. A probe the cap cannot admit stops the check before that probe is sent: the command prints the asking commands' sentence, such as `thinkthen usage: max_estimated_input_tokens_total=1 (encoded-body-bytes-908-v1) would be exceeded before this call's first request`, prints no report, and exits 2.
+- `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` binds each probe as it binds every live request, by [backends.md](backends.md). `backends check` has no flag for it. A probe the cap cannot admit stops the check before that probe is sent: the command prints the asking commands' sentence, such as `thinkthen usage: max_estimated_input_tokens_total=1 (encoded-body-bytes-908-v1) would be exceeded before this call's first request`, prints no report, and exits 2.
+
+`thinkthen check` remains a hidden compatibility alias. Both spellings accept the same options and produce identical request bodies, reports, diagnostics, secrecy, timeout and exit behavior. Help advertises only `backends`.
 
 ## The four probes
 

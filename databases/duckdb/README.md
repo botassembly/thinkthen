@@ -1,6 +1,17 @@
 # The DuckDB surface
 
-A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. The Linux x86_64, Linux ARM64, Apple Silicon and Intel macOS release routes use DuckDB's C++ API and a Rust bridge to `thinkthen`'s public API (tickets 0201 and 0231). The Intel package has focused installed proof under Rosetta on macOS 26; native Intel hardware, macOS 15 and release-runner proof remain open.
+Unsigned loadable extensions for DuckDB v1.5.5 and v1.5.4 that put the `thinkthen` engine behind SQL. The Linux x86_64, Linux ARM64, Apple Silicon and Intel macOS release routes use DuckDB's C++ API and a Rust bridge to `thinkthen`'s public API (tickets 0201 and 0231). The Intel package has focused installed proof under Rosetta on macOS 26; native Intel hardware, macOS 15 and release-runner proof remain open.
+
+The archive uses DuckDB's repository layout: `v1.5.5/<platform>/thinkthen.duckdb_extension` and `v1.5.4/<platform>/thinkthen.duckdb_extension`. From its unpacked directory, run DuckDB with unsigned extensions allowed at startup:
+
+```sql
+INSTALL thinkthen FROM './';
+LOAD thinkthen;
+```
+
+To load directly, use `LOAD 'v1.5.5/linux_amd64/thinkthen.duckdb_extension';` on the matching Linux x86-64 host, or the matching version/platform path on another supported host.
+
+Use dbt v1 with `duckdb` 1.5.5 for the documented dbt route. dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2. Signing and community listing are deferred.
 
 ## Functions
 
@@ -77,6 +88,8 @@ The details digest includes a question's saved calibration `profile`. A differen
 
 ## Settings
 
+`SET thinkthen_backend = 'typesafe'` selects a built-in or configured backend for the calling session. `RESET thinkthen_backend` restores captured environment selection. An explicit empty name refuses. SQL accepts no address or key. The Rust engine captures the selected key from the process environment when it builds. Connections with different backend names retain separate engines. The existing limit of 16 resident engines, held-plan refusal, idle eviction and process request totals still apply.
+
 The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`. SQL cannot name a backend address or a key. DuckDB reads these caller-session settings before each call:
 
 - `SET thinkthen_batch = 'max'` fills each compatible vector group up to the backend's limits. `SET thinkthen_batch = '1'` restores one distinct text per request and its old no-context wire identity; another positive decimal sets a member cap. `RESET thinkthen_batch` returns to `THINKTHEN_BATCH`, then a loaded question's `batch`, then `max`. Invalid text is refused before transport. A literal nonblank context in call settings is shared across one request and changes `meta.context_sha256` and request digests, not the question digest.
@@ -123,4 +136,4 @@ LOAD takes SIGINT and chains to the host's own action. A Ctrl-C stops the runnin
 
 ## Build and check
 
-`tools/setup.sh --fetch` is the networked setup step. It verifies the stock v1.5.5 CLI, the pinned DuckDB C++ source and static archives, and the stock v1.5.4 CLI used for version refusal. `tools/setup.sh` alone checks those inputs and installs the pinned Python test requirements offline. `check.sh PORT` builds the C++ extension and Rust bridge, runs source and dependency checks, loads the extension in the stock CLI, and runs the loopback suites with fake keys. The old raw C API entry and its `libduckdb-sys` dependency are retired under ADR 0081; the Rust files `src/engines.rs` and `src/signal.rs` remain source imports of the C++ bridge. With `THINKTHEN_ARTIFACT` set to the release archive, the check unpacks the package and checks the installed binary without invoking a Rust build. The `surfaces` rung runs the check at its named integration checkpoint.
+`tools/setup.sh --fetch` is the networked setup step. It verifies each supported version's stock CLI, Python module, pinned C++ source and static archives. `tools/setup.sh` alone checks those inputs and installs the pinned Python test requirements offline. `check.sh PORT` builds the C++ extension and Rust bridge, runs source and dependency checks, loads the extension in the stock CLI, and runs the loopback suites with fake keys. The old raw C API entry and its `libduckdb-sys` dependency are retired under ADR 0081; the Rust files `src/engines.rs` and `src/signal.rs` remain source imports of the C++ bridge. With `THINKTHEN_ARTIFACT` set to the release archive, the check unpacks the package and checks the installed binary without invoking a Rust build. The `surfaces` rung runs the check at its named integration checkpoint.

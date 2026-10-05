@@ -26,6 +26,8 @@ struct ThinkThenSettings {
 	int64_t max_requests;
 	int64_t max_request_bytes;
 	int64_t max_requests_total;
+	const uint8_t *backend_bytes;
+	size_t backend_len;
 	const uint8_t *cache_bytes;
 	size_t cache_len;
 	int32_t cache_allowed;

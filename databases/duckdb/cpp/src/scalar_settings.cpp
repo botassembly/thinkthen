@@ -43,6 +43,7 @@ SessionSettings Settings(ClientContext &context) {
 	                          NumericSetting(context, "thinkthen_max_requests"),
 	                          NumericSetting(context, "thinkthen_max_request_bytes"),
 	                          NumericSetting(context, "thinkthen_max_requests_total"),
+	                          TextSetting(context, "thinkthen_backend"),
 	                          TextSetting(context, "thinkthen_cache"), 1,
 	                          TextSetting(context, "thinkthen_model"),
 	                          NumericSetting(context, "thinkthen_timeout"),

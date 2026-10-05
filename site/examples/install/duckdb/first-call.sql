@@ -1,4 +1,6 @@
-LOAD './thinkthen.duckdb_extension';
+INSTALL thinkthen FROM './';
+LOAD thinkthen;
+SET thinkthen_backend = 'typesafe';
 
 CREATE TABLE tickets AS SELECT * FROM (VALUES
     (1, 'My parcel is a week late. Not okay.'),

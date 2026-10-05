@@ -180,9 +180,17 @@ static class Program
         catch (ObjectDisposedException) { }
         Console.WriteLine("MATRIX_PASS");
     }
+    static void NamedBackend()
+    {
+        using var engine = Engine.Open("{\"backend\":\"local\",\"cache\":false}");
+        var answer = engine.Decide("Is it?", "named-csharp");
+        AnswerIs(answer.Value, 1, .9);
+        Check(N(answer.Facts, "requests_sent") == 1, "named backend request");
+        Console.WriteLine("CSHARP_NAMED_BACKEND_PASS");
+    }
     public static int Main(string[] args)
     {
-        try { if (args.Length == 1 && args[0] == "direct") Direct(); else if (args.Length == 1 && args[0] == "matrix") Matrix(); else throw new ArgumentException("mode direct|matrix"); return 0; }
+        try { if (args.Length == 1 && args[0] == "direct") Direct(); else if (args.Length == 1 && args[0] == "matrix") Matrix(); else if (args.Length == 1 && args[0] == "named") NamedBackend(); else throw new ArgumentException("mode direct|matrix|named"); return 0; }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
     }
 }
