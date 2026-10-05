@@ -8,7 +8,7 @@ spawn <- function(code) {
   writeLines(c("library(thinkthen)", code), script)
   env <- paste0("THINKTHEN_BASE_URL=", arm("arm/held/v1"))
   pid <- system(paste("env", paste(clean_env(inherited, child_values(cache, env)), collapse = " "),
-                      shQuote(file.path(R.home("bin"), "Rscript")), shQuote(script),
+                      paste(rscript_args(script), collapse = " "),
                       ">", shQuote(output), "2>&1 </dev/null & echo $!"), intern = TRUE)
   list(pid = as.integer(pid), output = output)
 }

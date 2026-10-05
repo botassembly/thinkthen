@@ -17,8 +17,8 @@ spawn <- function(code, env = held) {
   dir.create(cache)
   writeLines(c("library(thinkthen)", code), file)
   pid <- system(paste("env", paste(clean_env(inherited, child_values(cache, env)), collapse = " "),
-                      shQuote(file.path(R.home("bin"), "Rscript")),
-                      shQuote(file), ">", shQuote(out), "2>&1 </dev/null & echo $!"), intern = TRUE)
+                      paste(rscript_args(file), collapse = " "),
+                      ">", shQuote(out), "2>&1 </dev/null & echo $!"), intern = TRUE)
   list(pid = as.integer(pid), out = out)
 }
 lines_of <- function(one) if (file.exists(one$out)) readLines(one$out, warn = FALSE) else character()
