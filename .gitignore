@@ -1,4 +1,5 @@
 target/
+/build/
 .env
 **/.locks/
 # Swift and Objective-C checks copy the one C header here at build time.

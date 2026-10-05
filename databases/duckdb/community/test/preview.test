@@ -1,0 +1,23 @@
+# Load the actual extension through DuckDB's DONT_LINK test path.
+require thinkthen
+
+query II
+SELECT p.records, p.requests FROM
+  (SELECT thinkthen_plan('asks for a refund', '{"7":"Refund me please."}', '{}') AS p);
+----
+1	1
+
+query T
+SELECT typeof(thinkthen_plan('asks for a refund', '{"7":"Refund me please."}', '{}'));
+----
+STRUCT(records BIGINT, requests BIGINT, estimated_bytes BIGINT, estimated_input_tokens STRUCT(lower BIGINT, upper BIGINT), upper_bound BOOLEAN, first_body VARCHAR)
+
+statement error
+SELECT thinkthen_plan('asks for a refund', '["not keyed"]');
+----
+thinkthen usage:
+
+statement error
+SELECT thinkthen_plan('asks for a refund', '{"7":"one"}', 4);
+----
+thinkthen usage: plan settings are one JSON text object
