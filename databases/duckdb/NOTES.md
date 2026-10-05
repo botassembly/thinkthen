@@ -30,4 +30,4 @@ Every suite under `tools/` starts its own loopback backend and runs each child w
 
 ## 0403 preparation
 
-The accepted design retains ADR 0081's C++ API and the Rust bridge. Both version builds use the unchanged C++ sources. Header compatibility is untested at this preparation checkpoint; add a guard only after a demonstrated difference. The old `older-host/` cache and pre-existing build folders remain untouched. New consumers resolve matching tools beneath `duckdb/<version>/`.
+The accepted design retains ADR 0081's C++ API and the Rust bridge. Both version builds use the unchanged C++ sources. Native qualification compiles the shared sources against both pinned headers; add a guard only after a demonstrated difference. The old `older-host/` cache and pre-existing build folders remain untouched. New consumers resolve matching tools beneath `duckdb/<version>/`.

@@ -267,11 +267,30 @@ def sqlite(check):
 
 def duckdb(check):
     folder = check.unpack(check.release(f'thinkthen-duckdb-{check.version}-{TARGET}.tar.gz'), check.root / 'duckdb')
-    extension = folder / 'thinkthen.duckdb_extension'
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/cpp'))
+    from inputs import selected, versions
+    from verify_footer import verify
+    host = check.run('duckdb', '-unsigned', '-noheader', '-list', ':memory:',
+                     input='SELECT version(); PRAGMA platform;').splitlines()
+    if len(host) != 2 or host[0] not in versions():
+        raise Failure('DuckDB host must report one supported version and platform')
+    identity = selected(host[0], TARGET)
+    if host[1] != identity['platform']:
+        raise Failure('DuckDB host platform differs from its native target')
+    extension = folder / host[0] / host[1] / 'thinkthen.duckdb_extension'
+    if not extension.is_file() or extension.is_symlink():
+        raise Failure(f'DuckDB archive is missing regular member {extension.relative_to(folder)}')
+    try:
+        verify(extension, TARGET, host[0], check.version)
+    except (OSError, ValueError) as error:
+        raise Failure(str(error)) from error
     sql = f'LOAD {sql_quote(extension)}; SET thinkthen_replay={sql_quote(check.sample / "recording")}; SET thinkthen_cache=\'off\';\n'
-    sql += "SELECT extension_version FROM duckdb_extensions() WHERE extension_name='thinkthen';\n"
+    sql += "SELECT extension_version FROM duckdb_extensions() WHERE extension_name='thinkthen' AND loaded;\n"
     sql += f'SELECT thinkthen_details({sql_quote((check.sample / "question.txt").read_text())},{sql_quote((check.sample / "report.txt").read_text())});\n'
     lines = check.run('duckdb', '-unsigned', '-noheader', '-list', ':memory:', input=sql).splitlines()
+    if len(lines) != 2:
+        raise Failure('DuckDB replay must report one loaded ThinkThen version and one answer')
     details = json.loads(lines[-1])
     return lines[-2], {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}, 'loaded extension version'
 

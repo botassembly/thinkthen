@@ -1,3 +1,5 @@
+import { readDuckDBVersions } from '../../scripts/duckdb-inputs.mjs';
+const duckDBArchiveVersions = readDuckDBVersions(new URL('../../../databases/duckdb/tools/version.env', import.meta.url)).join(' and ');
 // The names, the order, and the one line for every function and surface.
 //
 // The one line for each function is the first line of its help text. The
@@ -817,10 +819,11 @@ export const SURFACES = [
     errors: 'A failure is an error whose text starts `thinkthen <kind>: `. It never reads as `NULL`.',
     settings: '`SET thinkthen_record` writes a recording to a folder. `SET thinkthen_replay` answers from that recording with no connection.',
     install: [
-      ['thinkthen-duckdb-VERSION-TARGET.tar.gz', 'The extension for DuckDB v1.5.5, from each release. Unpack it where DuckDB runs.'],
+      ['thinkthen-duckdb-VERSION-TARGET.tar.gz', `Unsigned extensions for DuckDB ${duckDBArchiveVersions}, from each release. Unpack the repository where DuckDB runs.`],
       ['duckdb -unsigned', 'The `-unsigned` flag lets DuckDB load a local extension file. The query loads that file first.'],
     ],
-    particular: ['DuckDB hands the extension up to 2,048 rows at a time. One call judges those rows together, and `SET thinkthen_max_requests` caps that call.'],
+    supportedVersions: ['v1.5.5', 'v1.5.4'],
+    particular: ['Use dbt v1 with duckdb 1.5.5. dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2.', 'Load by path with LOAD \'v1.5.5/<platform>/thinkthen.duckdb_extension\' on DuckDB v1.5.5, or the v1.5.4 path on DuckDB v1.5.4.', 'DuckDB hands the extension up to 2,048 rows at a time. One call judges those rows together, and `SET thinkthen_max_requests` caps that call.'],
   },
   {
     slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite',

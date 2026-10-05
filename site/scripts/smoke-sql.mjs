@@ -45,7 +45,7 @@ const run = (cmd, args, opts = {}) => {
   if (STOPS.includes(signal)) stop(signal);
   return done;
 };
-const TOOLCHAINS = path.join(os.homedir(), '.cache', 'thinkthen-toolchains');
+const TOOLCHAINS = process.env.THINKTHEN_TOOLCHAINS ?? path.join(os.homedir(), '.cache', 'thinkthen-toolchains');
 
 // Each database: the folder its extension builds from and build(), which
 // returns the toolchain versions and
@@ -90,9 +90,13 @@ const DATABASES = {
       const extension = duckDBArtifact(repo, version, nativeTarget);
       return {
         toolchain: [`DuckDB ${run(cli, ['--version']).stdout.split(' ')[0]}`, run(cmake, ['--version']).stdout.split('\n')[0], run('rustc', ['--version']).stdout.trim()],
-        // The install page loads the extension as ./thinkthen.duckdb_extension.
-        lay: (dir) => fs.copyFileSync(extension, path.join(dir, 'thinkthen.duckdb_extension')),
-        command: (sample) => [cli, ['-unsigned', '-list'], fs.readFileSync(sample, 'utf8')],
+        lay: (dir) => {
+          fs.copyFileSync(extension, path.join(dir, 'thinkthen.duckdb_extension'));
+          const member = path.join(dir, version, platform);
+          fs.mkdirSync(member, { recursive: true });
+          fs.copyFileSync(extension, path.join(member, 'thinkthen.duckdb_extension'));
+        },
+        command: (sample) => [cli, ['-unsigned', '-list', '-init', '/dev/null'], "SET extension_directory='./extensions';\n" + fs.readFileSync(sample, 'utf8')],
         env: {},
       };
     },

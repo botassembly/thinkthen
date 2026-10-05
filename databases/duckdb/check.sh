@@ -86,7 +86,7 @@ verify_selected_package() {
 		[ "$other" != "$DUCKDB_VERSION" ] || continue
 		other_tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$other
 		if [ "${1:-}" = installed ]; then
-			"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --version "$DUCKDB_VERSION" --target "$host_target" --matching-host "$CLI" --different-host "$other_tools/duckdb" --different-version "$other"
+			"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --version "$DUCKDB_VERSION" --target "$host_target" --matching-host "$CLI" --different-host "$other_tools/duckdb" --different-version "$other" --repository-extension "$scratch/$other/$platform/thinkthen.duckdb_extension"
 		else
 			"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --version "$DUCKDB_VERSION" --target "$host_target" --matching-host "$CLI" --different-host "$other_tools/duckdb" --different-version "$other" --repository-extension "$HERE/build/artifacts/cpp/$other/$host_target/thinkthen.duckdb_extension"
 		fi
@@ -103,7 +103,19 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# extension unpacked from the release archive, by its path.
 	. "$REPO/sdlc/scripts/installed.sh"
 	installed_unpack
-	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension"
+	release=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
+	python3 cpp/verify_repository.py "$THINKTHEN_ARTIFACT" "$host_target" "$release"
+	python3 cpp/verify_repository.py "$scratch" "$host_target" "$release"
+	for version in $DUCKDB_VERSIONS; do
+		select_host "$version"
+		export THINKTHEN_DUCKDB_EXTENSION="$scratch/$version/$platform/thinkthen.duckdb_extension"
+		own_panic_hook "$THINKTHEN_DUCKDB_EXTENSION"
+		stock_cli
+		verify_selected_package installed
+		[ "$version" = "$DEFAULT_VERSION" ] || older_suites
+	done
+	select_host "$DEFAULT_VERSION"
+	export THINKTHEN_DUCKDB_EXTENSION="$scratch/$DEFAULT_VERSION/$platform/thinkthen.duckdb_extension"
 	# Ticket 0374: the shipped extension keeps its own panic hook.
 	own_panic_hook "$THINKTHEN_DUCKDB_EXTENSION"
 	stock_cli
@@ -131,6 +143,7 @@ done
 echo "== source checks and deny"
 python3 tools/source_checks.py
 python3 tools/inputs_0403_cases.py
+node "$REPO/site/scripts/check-duckdb-versions.mjs"
 "$PY" tools/release_pack_cases.py "$host_target"
 cargo deny --locked --offline --manifest-path bridge/Cargo.toml check --config ../../deny.toml advisories bans licenses sources
 

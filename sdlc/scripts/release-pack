@@ -384,12 +384,23 @@ part_duckdb() {
 	. "$INPUTS_HERE/inputs.sh"
 	DUCKDB_VERSIONS=$(input_versions)
 	DEFAULT_VERSION=${DUCKDB_VERSIONS%% *}
-	[ "${THINKTHEN_DUCKDB_VERSION:-$DEFAULT_VERSION}" = "$DEFAULT_VERSION" ] || {
-		echo 'release-pack: the single-version archive requires the default DuckDB selector' >&2; exit 2;
-	}
-	input_select "$DEFAULT_VERSION" "$TARGET"
-	THINKTHEN_DUCKDB_VERSION=$DEFAULT_VERSION
-	export THINKTHEN_DUCKDB_VERSION
+	override_version=${THINKTHEN_DUCKDB_VERSION:-$DEFAULT_VERSION}
+	input_select "$override_version" "$TARGET"
+	override_source=${THINKTHEN_DUCKDB_CPP_SOURCE:-}
+	override_static=${THINKTHEN_DUCKDB_CPP_STATIC_DIR:-}
+	folder=$(fresh duckdb)
+	cp LICENSE "$folder/LICENSE.thinkthen"
+	set --
+	for version in $DUCKDB_VERSIONS; do
+	input_select "$version" "$TARGET"
+	THINKTHEN_DUCKDB_VERSION=$version
+	THINKTHEN_DUCKDB_CPP_SOURCE=$TOOLS/source
+	THINKTHEN_DUCKDB_CPP_STATIC_DIR=$TOOLS/static-libs
+	if [ "$version" = "$override_version" ]; then
+		THINKTHEN_DUCKDB_CPP_SOURCE=${override_source:-$TOOLS/source}
+		THINKTHEN_DUCKDB_CPP_STATIC_DIR=${override_static:-$TOOLS/static-libs}
+	fi
+	export THINKTHEN_DUCKDB_VERSION THINKTHEN_DUCKDB_CPP_SOURCE THINKTHEN_DUCKDB_CPP_STATIC_DIR
 	if [ -z "$reuse" ]; then
 		sh databases/duckdb/cpp/build.sh
 	fi
@@ -413,17 +424,13 @@ part_duckdb() {
 		}
 	fi
 	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$DUCKDB_VERSION" "$V"
-	folder=$(fresh duckdb)
-	cp "$extension" "$folder/"
-	cp LICENSE "$folder/LICENSE.thinkthen"
-	tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
-	source=${THINKTHEN_DUCKDB_CPP_SOURCE:-$tools/source}
-	cp "$source/LICENSE" "$folder/LICENSE.duckdb"
-	python3 "$INPUTS_HERE/validate_inputs.py" --source "$source" --commit "$duckdb_source_commit" --static "${THINKTHEN_DUCKDB_CPP_STATIC_DIR:-$tools/static-libs}" --manifest "$INPUTS_HERE/../cpp/$manifest"
-	python3 databases/duckdb/cpp/package_notices.py "$source" "$folder" "$DUCKDB_VERSION" "$INPUTS_HERE/../cpp/$manifest"
-	printf 'ThinkThen %s: MIT (LICENSE.thinkthen)\nDuckDB %s source and static archives: MIT (LICENSE.duckdb)\n' \
-		"$V" "$DUCKDB_VERSION" >"$folder/NOTICE"
-	printf 'Third-party license texts and Rust dependency inventory: LICENSES/ and DEPENDENCIES.txt\n' >>"$folder/NOTICE"
+	mkdir -p "$folder/$version/$platform"
+	cp "$extension" "$folder/$version/$platform/"
+	python3 "$INPUTS_HERE/validate_inputs.py" --source "$THINKTHEN_DUCKDB_CPP_SOURCE" --commit "$duckdb_source_commit" --static "$THINKTHEN_DUCKDB_CPP_STATIC_DIR" --manifest "$INPUTS_HERE/../cpp/$manifest"
+	set -- "$@" "$version" "$THINKTHEN_DUCKDB_CPP_SOURCE" "$INPUTS_HERE/../cpp/$manifest"
+	done
+	python3 databases/duckdb/cpp/package_notices.py "$folder" "$V" "$@"
+	python3 databases/duckdb/cpp/verify_repository.py "$folder" "$TARGET" "$V"
 	find "$folder" -type f -exec chmod 644 {} +
 	pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
 }
