@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Explicit initial loading permits reviewed schema calls on one connection."""
 
-import json
 import os
 import sys
 
@@ -56,10 +55,10 @@ def test_trusted_keyed_view_uses_one_packed_request() -> None:
     backend = Backend()
     held = child(TRUSTED + r"""
 db = trusted_connect()
-db.execute("CREATE VIEW packed AS SELECT key,value FROM thinkthen_decide_many('Is it red?', '{\"a\":\"a red coat\",\"b\":\"a blue coat\"}')")
+db.execute("CREATE VIEW packed AS SELECT key,value FROM thinkthen_decide_many('Is it red?', '{\"a\":\"a red coat\",\"b\":\"another red coat\"}')")
 say(rows=run(db, "SELECT * FROM packed"))
 """, environment(backend))
-    expect(held, {"rows": [["a", 1], ["b", 0]]}, "trusted keyed table view")
+    expect(held, {"rows": [["a", 1], ["b", 1]]}, "trusted keyed table view")
     expect(backend.close(), 1, "one packed schema request")
 
 
@@ -95,11 +94,11 @@ def test_trusted_registration_keeps_controls_direct_only_and_judgments_volatile(
 db = trusted_connect(setting="OFF")
 initial = db.execute("PRAGMA trusted_schema").fetchone()[0]
 db.execute("PRAGMA trusted_schema=ON")
-rows = db.execute("SELECT name, flags FROM pragma_function_list WHERE name LIKE 'thinkthen%'").fetchall()
+rows = db.execute("SELECT name, narg, flags FROM pragma_function_list WHERE name LIKE 'thinkthen%'").fetchall()
 judgments = {'thinkthen_decide', 'thinkthen_choose', 'thinkthen_score', 'thinkthen_tag', 'thinkthen_annotate',
              'thinkthen_details', 'thinkthen_try_details', 'thinkthen_find', 'thinkthen_relations', 'thinkthen_plan'}
 calls = {'configure': "thinkthen_configure('{}')", 'budget': 'thinkthen_budget_ms(0)', 'usage': 'thinkthen_usage()',
-         'removed': 'thinkthen_warm()'}
+         'removed': 'thinkthen_warm()', 'positional': "thinkthen_decide('Is it red?', 'red', 0, '')"}
 refusals = {}
 for label, call in calls.items():
     db.execute(f"CREATE VIEW {label} AS SELECT {call}")
@@ -108,16 +107,16 @@ db.execute("CREATE VIEW preview AS SELECT thinkthen_plan('Is it red?', '{\"a\":\
 plan = json.loads(db.execute("SELECT * FROM preview").fetchone()[0])
 db.execute("CREATE TABLE t(body TEXT)")
 say(initial=initial, registered=bool(rows),
-    direct=[name for name, flags in rows if name in judgments and flags & 0x80000],
-    controls=all(flags & 0x80000 for name, flags in rows if name not in judgments),
-    innocuous=[name for name, flags in rows if flags & 0x200000],
-    deterministic=[name for name, flags in rows if flags & 0x800], refusals=refusals,
+    direct=[name for name, arity, flags in rows if name in judgments and arity != 4 and flags & 0x80000],
+    controls=all(flags & 0x80000 for name, arity, flags in rows if name not in judgments or arity == 4),
+    innocuous=[name for name, _, flags in rows if flags & 0x200000],
+    deterministic=[name for name, _, flags in rows if flags & 0x800], refusals=refusals,
     plan=plan['records'], index=run(db, "CREATE INDEX x ON t(thinkthen_decide('Is it red?', body))"))
 """, environment(backend))
     expect(held, {"initial": 0, "registered": True, "direct": [], "controls": True, "innocuous": [],
                   "deterministic": [], "refusals": {"configure": "unsafe use of thinkthen_configure()",
                   "budget": "unsafe use of thinkthen_budget_ms()", "usage": "unsafe use of thinkthen_usage()",
-                  "removed": "unsafe use of thinkthen_warm()"}, "plan": 1,
+                  "removed": "unsafe use of thinkthen_warm()", "positional": "unsafe use of thinkthen_decide()"}, "plan": 1,
                   "index": "non-deterministic functions prohibited in index expressions"}, "trusted function contract")
     expect(backend.close(), 0, "controls, preview and index refusal sent nothing")
 
