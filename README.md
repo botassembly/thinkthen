@@ -80,6 +80,8 @@ true
 
 The [specification](https://github.com/botassembly/thinkthen/blob/main/specification/README.md) gives each function's contract, its exit codes, and its failures.
 
+For agents, the [official ThinkThen skill](skills/thinkthen/SKILL.md) explains function selection, evidence framing, abstention and bounded requests.
+
 ## Languages
 
 Every language uses the same Rust engine. Each page below gives the install line and a first call.

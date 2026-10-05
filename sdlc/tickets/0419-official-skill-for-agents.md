@@ -1,6 +1,6 @@
 # 0419: Publish a small official ThinkThen skill for agents
 
-Status: ready: the corrected official-agent-skill ticket was accepted on 2026-10-04 and preserves the ten-function/empty-find contracts. The skill documentation, its checks and whole-change review remain.
+Status: done. The official skill, replay examples and compatibility wording passed one whole-change review. Full landing tests and lint run before pushing.
 
 Milestone: 0.2
 

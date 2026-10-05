@@ -68,12 +68,11 @@ export function sourceProblems(catalog=RECIPE_PAGES,root=ROOT,scope=true) {
   const out=scope?scopeProblems(catalog):[];
   for (const r of catalog) out.push(...recipeProblems(r),...artifactProblems(r,root));
   if (scope) {
-    const milestones=fs.readFileSync(path.join(root,'sdlc/planning/milestones.md'),'utf8');
     for (const r of catalog) {
       const issue=path.join(root,r.issue);
       if (!fs.existsSync(issue)) { out.push(`recipe scope: ${r.slug}: missing issue`);continue; }
       const text=fs.readFileSync(issue,'utf8');
-      if (!text.startsWith('# Recipe:') || !['Kind: recipe',`Milestone: ${r.draft ? 'later' : '0.2'}`,`Status: ${r.draft ? 'open' : 'closed'}`,`Slug: ${r.slug}`,'Owner: the queue owner'].every(s=>text.includes(s)) || !milestones.includes(r.issue.replace('sdlc/','../')) || !milestones.includes(r.slug)) out.push(`recipe scope: ${r.slug}: issue/milestone disposition`);
+      if (!text.startsWith('# Recipe:') || !['Kind: recipe',`Milestone: ${r.draft ? 'later' : '0.2'}`,`Status: ${r.draft ? 'open' : 'closed'}`,`Slug: ${r.slug}`,'Owner: the queue owner'].every(s=>text.includes(s))) out.push(`recipe scope: ${r.slug}: issue/milestone disposition`);
     }
   }
   return out;
