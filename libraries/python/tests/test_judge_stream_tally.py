@@ -280,6 +280,7 @@ def test_stream_second_reader_refuses_while_first_waits(backend, tmp_path):
     assert backend.count() == 1
 
 
+@pytest.mark.skipif(not os.path.isdir("/proc/self/task"), reason="native worker counts require Linux procfs")
 def test_dropped_stream_releases_its_native_worker(backend, tmp_path):
     """Dropping the last Python reference cancels the one native batch and
     its scheduler without reading the rest of the caller's source."""
