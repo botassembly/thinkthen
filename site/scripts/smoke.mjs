@@ -90,7 +90,7 @@ fs.cpSync(path.join(site, 'recordings'), recordings, { recursive: true });
 // nothing and takes no replay folder. audit, diff, and check send nothing.
 const wrapper = path.join(tmp, 'bin');
 fs.mkdirSync(wrapper);
-fs.writeFileSync(path.join(wrapper, 'thinkthen'), `#!/bin/sh
+fs.writeFileSync(path.join(wrapper, 'thinkthen'), `#!/bin/bash
 case $1 in
   decide|choose|tag|score|filter|rank|find|annotate|recognize|relate) ;;
   *) exec "${bin}" "$@" ;;
