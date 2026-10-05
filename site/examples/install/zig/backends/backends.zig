@@ -20,23 +20,30 @@ fn decide(
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    var tt = switch (try thinkthen.Engine.init(allocator)) {
-        .ok => |engine| engine,
-        .failed => |failure| {
-            thinkthen.releaseFailure(allocator, failure);
-            return error.NoEngine;
-        },
+    const settings = [_][:0]const u8{
+        "{\"backend\":\"typesafe\"}",
+        "{\"backend\":\"liquid\"}",
+        "{\"backend\":\"ollama\",\"base_url\":\"http://localhost:11535/v1\"}",
     };
-    defer tt.deinit();
+    for (settings) |setting| {
+        var tt = switch (try thinkthen.Engine.initWithSettings(allocator, setting)) {
+            .ok => |engine| engine,
+            .failed => |failure| {
+                thinkthen.releaseFailure(allocator, failure);
+                return error.NoEngine;
+            },
+        };
+        defer tt.deinit();
 
-    const question = "Does the customer ask for a refund?";
-    const broken =
-        "Please refund my order. It arrived broken.";
-    const thanks = "Thanks for the quick help yesterday!";
-    const broken_is_refund =
-        try decide(&tt, question, broken);
-    const thanks_is_refund =
-        try decide(&tt, question, thanks);
-    std.debug.assert(broken_is_refund == .yes);
-    std.debug.assert(thanks_is_refund == .no);
+        const question = "Does the customer ask for a refund?";
+        const broken =
+            "Please refund my order. It arrived broken.";
+        const thanks = "Thanks for the quick help yesterday!";
+        const broken_is_refund =
+            try decide(&tt, question, broken);
+        const thanks_is_refund =
+            try decide(&tt, question, thanks);
+        std.debug.assert(broken_is_refund == .yes);
+        std.debug.assert(thanks_is_refund == .no);
+    }
 }
