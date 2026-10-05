@@ -1,6 +1,6 @@
 # 0400 slice B: provider setup parser and captured settings
 
-Status: frozen builder candidate; independent source review and coordinator checkpoint pending. This record owns the lane 2 parser candidate based on main `110e6ac88`. Slice C owns concurrency defaults; slice D owns measured pages. No live job or ledger operation ran.
+Status: source accepted and merged checkpoint passed; fresh final receipt review and slice B landing pending. This record owns the lane 2 parser candidate based on main `110e6ac88`. Slice C owns concurrency defaults; slice D owns measured pages. No live job or ledger operation ran.
 
 ## Implementation
 
@@ -62,3 +62,30 @@ The separate canonical run actually replayed 308 language and 42 SQL samples. It
 | `target/0400b-checkpoint-final/site-build.log` | `21b52b8ae6a69ae8d7724c33e588d44c5726434687bd3e91c345ddd3a497e0a0` |
 
 These are exact pre-Windows integration receipts. The forthcoming source-preserving rebase onto the landed Windows candidate must retain product behavior, measure the combined source, review named-configuration ownership/key ordering in that context and run the required merged checkpoint and actual documentation proof. This earlier proof will not be relabeled as later-source execution. No new live check, native job, release dispatch, approval or publication ran. Slices C and D remain open.
+
+## Windows integration and current checkpoint
+
+The source-preserving rebase onto landed Windows main `6d26206aa8861490cc6540b6bafafc08e3249c3c` produced `1d412f8c9d70cbe845e556d5ac22da11ae5a6b47`. The product edit checksum remains `5456cdcb4eb3e4ed86f6496ad0ac0072d0f45c6e45bfd664fa0d107d98e4ba4f`. The exact Rust ratchet is 115881: landed main 114995 plus B growth 886. Configuration and CLI registry changes merged automatically; fresh High review accepted their ownership inspection, shared warning, selected-setup admission and key-ordering behavior. Its local receipt is `/tmp/thinkthen-0400b-windows-source-review-cli-kh62oe28/review.md`.
+
+Generated proof files conflicted during rebase. The coordinator retained main's runner-generated file unchanged, preserving the prior B replay separately rather than editing source hashes. New actual replays run before landing. A fresh Medium review accepted the record-only correction `552672d61`, which replaces a forbidden home path in the earlier Windows design with the local Cargo registry cache.
+
+Merged focused proof passes 36 named-backend, 30 profile, 12 check, 10 find-display and 10 packer cases, plus offline policy, exact ratchet and formatting. Required lint passed on frozen `552672d61`, including 112/112 workflow plants, Clippy, warning-free documentation and the 569-item inventory with four refused plants. The preceding attempt correctly refused a changed checkout after the coordinator committed the record correction during the gate. That complete failed output was overwritten by the retry; `target/0400b-profile-fix/lint/windows-merged-first-failure-note.txt` is a diagnosis, not the original receipt.
+
+Full tests on the unchanged merged product passed 1379 workspace cases with 26 skips, 134 library-only cases with 4 skips and 21 consumer cases with 3 skips. The specification passed 62 pages with 1 skip and 24 green demos with 0 red. Routine isolated-home smoke omissions remain Dart, TypeScript, Ruby, DuckDB, SQLite and R; canonical documentation replay is separate.
+
+`target/0400b-checkpoint-final/test-after-windows.log` has SHA-256 `454e7b79f6f83d5e9dcd6cda3179a2d617b00bd51ab226c44636b63eb0cd96dd`.
+
+`target/0400b-checkpoint-final/spec-after-windows.log` has SHA-256 `e014d051b70c464563cba370b3048edf4cc39fefccc7076dbd789ed443e5a1cc`.
+
+`target/0400b-profile-fix/lint/windows-merged-output.log` has SHA-256 `57e335e11208c15d7c49a424d77e7a8aa25a6a859bfdba4b383b252ca5360c3a`.
+
+Actual documentation replay passed all 308 language and 42 SQL samples on the merged product. Both strict checks matched 350 samples with 0 stale pages, and the final site build passed. The runner-generated proof has a byte-identical retained copy at `target/0400b-checkpoint-final/final-after-windows-proof.json`. No proof hashes were edited manually. Fresh final receipt review and landing remain pending. No new live call, native dispatch, stress campaign, release approval or publication ran.
+
+| Current merged receipt | SHA-256 |
+| --- | --- |
+| `target/0400b-checkpoint-final/test-docs-after-windows.log` | `7275ea1ad0910b73cfb5c7dec6c7b551bc158cac80994513c50f48fd5fde8f7a` |
+| `target/0400b-checkpoint-final/strict-after-windows.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0400b-checkpoint-final/site-build-after-windows.log` | `28375efcd5d31aaa2006b614c7504766537cb3f304f45c56cd0a6f889bf78067` |
+| `target/0400b-checkpoint-final/final-after-windows-proof.json` | `b5bff36926176700213561f5a200aabe66a87b6532eb3f806de86992bc22c940` |
+
+The current checkpoint used owned 12G memory/1G swap user scopes, two offline Cargo jobs, isolated configuration and lane-owned outputs. The one record-only commit during the first lint attempt changed no tested product bytes; renewed lint used frozen `552672d61`. The complete original failed lint log is unavailable, as disclosed above. Slices C and D remain open.

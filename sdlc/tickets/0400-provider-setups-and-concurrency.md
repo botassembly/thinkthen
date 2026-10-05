@@ -1,6 +1,6 @@
 # 0400: One setup format per provider, local servers and Clef documented, and a default throttle of 8
 
-Status: in progress. Slice A format and starter table received fresh independent design and record acceptance; slices B, C and D remain. Lane 2, after ticket 0399, on Ian's lane order of 2026-10-04. Four slices. Slice A lands ADR 0117 and the starter evidence table before the experiments team's new-model day in the week of 2026-10-05. Slice B implements the format. Slice C raises the default throttle to 8. Slice D waits for accepted local-server and new-model results. Amends ADR 0032, ADR 0108 and ADR 0114 section 2 through ADR 0117 in slice A, and the throttle default in ADR 0010, ADR 0017 section 5 and ADR 0048 item 5 in slice C. Closes no existing issue.
+Status: in progress. Slice A format and starter table received fresh independent design and record acceptance; slice B source and checkpoint passed, with final receipt review and landing pending; slices C and D remain. Lane 2, after ticket 0399, on Ian's lane order of 2026-10-04. Four slices. Slice A lands ADR 0117 and the starter evidence table before the experiments team's new-model day in the week of 2026-10-05. Slice B implements the format. Slice C raises the default throttle to 8. Slice D waits for accepted local-server and new-model results. Amends ADR 0032, ADR 0108 and ADR 0114 section 2 through ADR 0117 in slice A, and the throttle default in ADR 0010, ADR 0017 section 5 and ADR 0048 item 5 in slice C. Closes no existing issue.
 
 Milestone: 0.2
 
@@ -112,7 +112,7 @@ The accepted [ADR 0117](../planning/adr/0117-provider-setups-extend-the-backend-
   }
   ```
 
-  This example describes planned fields. The configuration reader refuses the new price/profile fields until slice B. The local Clef entry illustrates the format and establishes no compatibility.
+  Slice B implements the price/profile fields in this example; its current merged checkpoint passed. The local Clef entry illustrates the format and establishes no compatibility.
 
   The entry keeps everything that decides where the key and the evidence go, and the owner-only file rule guards it. The profile keeps what the backend accepts, in the shape every surface already parses. The price sits beside the rate, because both describe the account, not the wire. This reuses both existing mechanisms and adds one parser call, three fields and one precedence step.
 - The rejected shape: a profile file that also names the address, path and key variable. It would break ADR 0032's rule that a profile selects no address or key, and `--profile FILE` names files that the owner-only rule never checks.
@@ -144,3 +144,5 @@ Slice B's lane candidate extends the existing parser and both configuration-read
 Fresh High source review rejected slice B candidate `98185a5b26acf2089540080caf3af60b676f81d6`: check propagated the setup profile but never enforced it. The correction reuses the packer's count-limit admission and validates the whole fixed probe list before any send or plan claim. New counted CLI cases cover every limit, later-probe refusal, missing-key ordering and retained explicit profile precedence on decide. Focused named/profile/check receipts pass; the owning build record records the rejected claim, exact growth and correction receipts. Parent-owned independent review and checkpoint remain pending.
 
 Slice B pre-Windows snapshot: fresh High source review accepted `b3c7fe599`, and source-preserving candidate `d432a75a8` passed renewed lint, the full test/specification checkpoint and all 350 actual canonical replays with strict proof and final site build. The next Windows integration and final review remain before landing; these receipts do not claim that later source was run.
+
+Current slice B integration: fresh High review accepted the preserved product on Windows main `6d26206aa`. Policy, focused cases, renewed lint, full test/specification, all 350 actual canonical replays, strict proof and final site build pass. The owning build record preserves earlier snapshots and the changed-HEAD lint failure diagnosis. Final receipt review and slice B landing remain; C and D remain open.
