@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""0381 release lifecycle regressions; portable execution and mocked Windows source oracles."""
+"""Release process lifecycle regressions; portable execution and mocked Windows source oracles."""
 import contextlib
 import ctypes
 import importlib.util
@@ -252,11 +252,11 @@ def windows_source_oracles():
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='thinkthen-0381-release-timeout-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='thinkthen-release-timeout-') as temporary:
         portable(Path(temporary))
     windows_source_oracles()
     posix = 'POSIX inherited-output/owned cleanup passed' if os.name == 'posix' else 'POSIX cleanup execution skipped'
-    print(f'0381 release lifecycle: byte/success/nonzero/filled-output passed; {posix}; Windows source oracles passed, native Windows full proof pending')
+    print(f'Release process lifecycle: byte/success/nonzero/filled-output passed; {posix}; Windows source oracles passed, native Windows full proof pending')
 
 
 if __name__ == '__main__':

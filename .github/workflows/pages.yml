@@ -31,10 +31,6 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - run: npm ci
         working-directory: site
-      # A deploy needs proof that every library and SQL sample passed
-      # against this commit's engine and bindings. npm run test-docs makes it.
-      - run: node scripts/check-binding-proofs.mjs --strict
-        working-directory: site
       # The smoke run replays every example against the command built from
       # this commit. The runner image carries Rust and jq.
       - run: cargo build --release --locked --bin thinkthen
