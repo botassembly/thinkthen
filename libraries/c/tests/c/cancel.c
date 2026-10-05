@@ -10,7 +10,7 @@
  * reader thread fires that token and prints `fired A`, `fired B`, or
  * `fired C`, and only then does the harness let the held replies go.
  */
-#include <pthread.h>
+#include "platform.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -36,7 +36,7 @@ static int untouched(const thinkthen_answer *answer) {
 }
 
 /* Fire each token when the harness says its request is held. */
-static void *reader(void *unused) {
+static THREAD_RESULT reader(void *unused) {
     (void)unused;
     char line[16];
     for (int i = 0; i < 3 && fgets(line, sizeof line, stdin) != NULL; i++) {
@@ -44,10 +44,11 @@ static void *reader(void *unused) {
         printf("fired %c\n", 'A' + i);
         fflush(stdout);
     }
-    return NULL;
+    return THREAD_DONE;
 }
 
 int main(void) {
+    binary_streams();
     const int64_t none = THINKTHEN_NO_DEADLINE;
     const char *q = "Is this a complaint?";
     thinkthen_engine *tt = thinkthen_engine_new();
@@ -58,8 +59,8 @@ int main(void) {
     for (int i = 0; i < 3; i++) {
         tokens[i] = thinkthen_cancel_token_new();
     }
-    pthread_t thread;
-    if (pthread_create(&thread, NULL, reader, NULL) != 0) {
+    THREAD_TYPE thread;
+    if (fixture_start(&thread, reader, NULL) != 0) {
         fprintf(stderr, "FAIL no reader thread\n");
         return 1;
     }
@@ -87,7 +88,7 @@ int main(void) {
     for (int i = 0; i < 5; i++) {
         check(untouched(&many[i]), "a cancelled bulk writes no row");
     }
-    if (pthread_join(thread, NULL) != 0) {
+    if (fixture_join(thread) != 0) {
         fprintf(stderr, "FAIL the reader did not join\n");
         return 1;
     }

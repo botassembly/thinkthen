@@ -20,6 +20,18 @@ A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with t
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_engine_new_with("{\"cache\":false}")`. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move its folder.
 
+## Windows x86-64
+
+The development archive `thinkthen-c-0.2.0-x86_64-pc-windows-msvc.zip` contains exactly `include/thinkthen.h`, `bin/thinkthen.dll` and `lib/thinkthen.dll.lib`, with a separate SHA-256 sidecar. The `.lib` imports the public DLL; it is not a static implementation. From an x64 MSVC developer shell, compile a consumer after extraction:
+
+```console
+cl.exe /nologo /TC /std:c11 /W4 /WX /MD /Iinclude consumer.c /link lib\thinkthen.dll.lib
+copy bin\thinkthen.dll .
+consumer.exe
+```
+
+Free owned strings and facts through `thinkthen_free_string`, and engines and tokens through their DLL free functions. Error messages and error facts remain borrowed. Windows static libraries and other bindings remain separate work. Development files are unsigned; public distribution and native runner proof remain pending.
+
 ## Run facts
 
 Every successful asking JSON call returns `{"value":...,"facts":...}`. `value` keeps the verb's prior bare JSON shape. `facts` reports this call's finished records, sent attempts, cache answers and elapsed seconds, with provider token counts and model only when available. A failed call still returns `NULL`; after it, `thinkthen_error_facts_json` borrows final facts from the same calling-thread and engine slot as `thinkthen_error_message`. A refusal before a call starts has no facts. The direct `{"usage":true}` process totals remain a separate shape.
@@ -40,7 +52,7 @@ The engine's throttle is the limit on requests in flight at once. It holds per l
 
 ## Checks
 
-`cargo test` builds the door and compiles each C program under AddressSanitizer against it, linked through the header and the soname as a host links it. `tests/door/main.rs` checks the soname and the exported symbols, the examples' pinned output, and the C rows in `tests/c/`. `tests/door/cases.rs` feeds every applicable shared case through `tests/c/driver.c`. `tests/door/bytes.rs` holds the `value` field's bytes to the command's output.
+`cargo test` builds the door and compiles each C program against it. Unix uses AddressSanitizer and leak checking; Windows uses MSVC `/W4 /WX /MD`, linked through the header and the public library as a host links it. The Windows fixture compiler alone defines `_CRT_SECURE_NO_WARNINGS` for the framing driver. A separate native MSVC ASan test first requires a detected use-after-free; it covers C consumers, not the Rust DLL or Unix LSan. `tests/door/main.rs` checks the soname and the exported symbols, the examples' pinned output, and the C rows in `tests/c/`. `tests/door/cases.rs` feeds every applicable shared case through `tests/c/driver.c`. `tests/door/bytes.rs` holds the `value` field's bytes to the command's output.
 
 The loopback backend's generic arm answers every question by a fixed rule: the first option, level, label, or yes gets 0.9. The pinned text shows that rule's answers. A model would answer differently.
 

@@ -19,6 +19,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import runpy
 import tempfile
 
 import yaml
@@ -162,6 +163,7 @@ def release(name, doc):
         if job not in ("resolve", "draft", "publish") and "GH_TOKEN" in yaml.safe_dump(spec):
             out.append(f"{name}: job {job} must not receive GH_TOKEN; only resolve, draft and publish may")
     out += windows_release_rules(name, jobs)
+    out += runpy.run_path(str(REPO / 'sdlc/scripts/release-windows-c-workflow.py'))['rules'](name, jobs)
     out += publish_dispatch(name, doc)
     required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "draft",
                 "crates", "pypi", "npm", "rubygems", "tap", "nuget", "maven", "pub", "publish"}
@@ -446,7 +448,7 @@ def windows_release_rules(name, jobs):
         if kind == "build":
             for command in ("cargo clippy --locked --offline --workspace --all-targets -- -D warnings",
                             "cargo test --locked --offline --no-fail-fast --workspace --all-targets",
-                            'sdlc/scripts/release-pack "$TARGET" release-files command first-run',
+                            'sdlc/scripts/release-pack "$TARGET" release-files command c first-run',
                             "release-windows-command.py platform release-files"):
                 if command not in text:
                     out.append(f"{name}: build must check and pack the Windows command: {command}")
@@ -507,6 +509,8 @@ def check(folder, lint_text=None):
         out += every(path.name, doc, text)
         if path.name == "release.yml":
             out += release(path.name, doc)
+        if path.name == "windows.yml":
+            out += runpy.run_path(str(REPO / 'sdlc/scripts/release-windows-c-workflow.py'))['standalone'](path.name, doc.get('jobs', {}))
         if path.name == "install-check.yml":
             out += install_workflow(path.name, doc)
     if lint_text is None:
@@ -1145,7 +1149,7 @@ def self_test():
         bad += 1
         print(f"workflows self-test Windows command: {windows.stdout}{windows.stderr}", file=sys.stderr)
     for fixture in ("windows-installer-integration-self-test.py", "install-check-workflow-self-test.py", "install-check-self-test.py",
-                    "install-check-postgresql-self-test.py", "install-check-r-0398-self-test.py"):
+                    "install-check-postgresql-self-test.py", "install-check-r-0398-self-test.py", "release-windows-c-self-test.py"):
         result = subprocess.run([sys.executable, str(REPO / "sdlc/scripts" / fixture)],
                                 capture_output=True, text=True)
         if result.returncode != 0:
@@ -1153,7 +1157,7 @@ def self_test():
             print(f"workflows self-test {fixture}: {result.stdout}{result.stderr}", file=sys.stderr)
         else:
             print(result.stdout.strip() or result.stderr.strip())
-    total = len(cases) + 4 + len(host_cases) + 12
+    total = len(cases) + 4 + len(host_cases) + 13
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 

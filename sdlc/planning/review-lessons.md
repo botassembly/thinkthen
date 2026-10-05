@@ -124,3 +124,8 @@ Every decision lands in `sdlc/`: an ADR, an issue, or a ticket. Tickets are numb
 ## 2026-10-04: Audit host contracts separately from the common engine
 
 0405 found that typed score descriptions and relation reads already existed despite an older product note. Trace the accepted parser and the complete executable path before turning a premise into a ticket. Keep metadata digests separate from request/cache identity. Record exact selected-case and packed-file proof scope; a published file count is not an individual test count. Name host adapters, generic JSON versus typed routes and changed-rule strict-replay proof separately. Recognition can introduce previously unasked downstream relations when its entity cut changes. Bound display snapshots in memory; a read-only audit does not authorize implicit spool files.
+
+
+## 2026-10-04: Bound native setup and stop failed joins before teardown
+
+0381 A's fresh High review rejected unbounded native build tools despite bounded consumer lifetimes, and found that recording join failure let a fixture read/free a live worker's state. Inspect the entire build/stage/inspection path when asserting deadlines. Drain outputs without blocking deadline enforcement; cleanup targets only owned handles or an owned PID tree. A failed join must terminate before shared-state access and teardown. Test the failure with a real held worker and an independent cleanup bomb. Portable runner/shared-fixture proof does not establish native Windows thread, compiler, loader or process-tree behavior.

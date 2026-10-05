@@ -141,10 +141,14 @@ Adding a symbol or a code is a minor bump. Changing a signature, a layout, or a 
 
 **Soname.** The shared library carries the soname `libthinkthen.so.0` (ADR 0047 item 6), and on macOS the install name `@rpath/libthinkthen.0.dylib`. `build.rs` sets it. The crate's library is named `thinkthen_c` so its output files never collide with the engine's, and a release renames them `libthinkthen.so` and `libthinkthen.a`. `tests/door/main.rs` reads the soname with `readelf -d` and checks that a clean build prints no collision warning (R2-26).
 
+**Windows DLL.** The x86-64 MSVC archive contains exactly `include/thinkthen.h`, `bin/thinkthen.dll`, and `lib/thinkthen.dll.lib`. It has no wrapper directory, static implementation, `.pc`, runtime DLL, PDB or EXP. The checksum sidecar covers the ZIP. The declaration reader supplies a sorted header-derived DEF to the cdylib linker. Final packaging separately generates the import library with `lib.exe /MACHINE:X64` against a DEF naming `thinkthen.dll`; renaming Cargo's import library would retain the wrong descriptor. Native `dumpbin` checks compare all exports with the header, including unexpected names, and inspect the import descriptor and consumer's imports. Owned allocations return to the DLL's free functions; borrowed failures never cross into host `free`.
+
+The Windows source door runs shared behavioral assertions through MSVC, except the Unix fork case. A separate consumer links the downloaded archive's header/import library and runs its public DLL, proving an exact spend refusal with zero counted loopback sends followed by a successful call with one send. Its fixtures alone define `_CRT_SECURE_NO_WARNINGS` under `/W4 /WX`. Threads use checked native creation, bounded join and handle close; byte-sensitive streams stay binary. The MSVC ASan check requires a detected owned negative before exercising C ownership and concurrency. It cannot establish Rust DLL instrumentation or Unix leak checking. Actual native linker, loader, execution, sanitizer availability and runtime dependency results remain pending; portable structural fixtures are not native receipts. The Windows host-exit test does not establish identical Unix destructor ordering.
+
 Every result of open size crosses as JSON text, so a new field never changes a layout. Options are flat scalars for the same reason.
 
 ## Deferred
 
 - A checked throttle constructor landed as `thinkthen_engine_new_with` in ticket 0148.
 - Partial rows, which need an engine capability that exposes a stopped call's finished judgments.
-- Windows. The first release is Linux and macOS.
+- Windows COFF static localization, static-link coexistence and metadata remain slice B. Raw Cargo static output is never shipped by slice A. Stage 2 bindings remain separate.

@@ -9,6 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 #include <thinkthen.h>
 
 static int failed;
@@ -42,6 +47,11 @@ static void planned(thinkthen_engine *tt, const char *name, const char *input, i
 }
 
 int main(void) {
+#ifdef _WIN32
+    if (_setmode(_fileno(stdin), _O_BINARY) == -1 ||
+        _setmode(_fileno(stdout), _O_BINARY) == -1 ||
+        _setmode(_fileno(stderr), _O_BINARY) == -1) return 1;
+#endif
     char *out = NULL;
     size_t out_len = 0;
     const char *p1 = "{\"verb\":\"decide\",\"question\":\"asks for a refund\","

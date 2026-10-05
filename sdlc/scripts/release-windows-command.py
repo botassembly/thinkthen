@@ -8,6 +8,11 @@ import re
 import struct
 import sys
 import zipfile
+import importlib.util
+
+_spec = importlib.util.spec_from_file_location("windows_c", Path(__file__).with_name("release-windows-c.py"))
+windows_c = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(windows_c)
 
 
 TARGET = "x86_64-pc-windows-msvc"
@@ -65,12 +70,14 @@ def check(archive):
 def platform(folder, version):
     """Reject stage 2 artifacts and incomplete Windows command bundles."""
     name = f"thinkthen-{version}-{TARGET}.zip"
-    wanted = {name, name + ".sha256", "thinkthen-first-run.tar.gz", "thinkthen-first-run.tar.gz.sha256"}
+    c_name = f"thinkthen-c-{version}-{TARGET}.zip"
+    wanted = {c_name, c_name + ".sha256", name, name + ".sha256", "thinkthen-first-run.tar.gz", "thinkthen-first-run.tar.gz.sha256"}
     if folder.is_symlink() or not folder.is_dir():
         raise ValueError("Windows platform folder is missing or linked")
     if {path.name for path in folder.iterdir()} != wanted:
-        raise ValueError("Windows platform must hold exactly the command ZIP and first-run sample with checksums")
+        raise ValueError("Windows platform must hold exactly the command ZIP, C ZIP and first-run sample with checksums")
     check(folder / name)
+    windows_c.check(folder / c_name)
     sample = folder / "thinkthen-first-run.tar.gz"
     sidecar = folder / (sample.name + ".sha256")
     if any(path.is_symlink() or not path.is_file() for path in (sample, sidecar)):

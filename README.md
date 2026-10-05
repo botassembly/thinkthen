@@ -84,7 +84,7 @@ The [specification](https://github.com/botassembly/thinkthen/blob/main/specifica
 
 Every language uses the same Rust engine. Each page below gives the install line and a first call.
 
-The Rust crate supports Linux, macOS and Windows x86-64. Add it to a Rust project with `cargo add thinkthen`. Windows bindings follow the command and crate; the Windows command archive contains `thinkthen.exe` alone.
+The Rust crate supports Linux, macOS and Windows x86-64. Add it to a Rust project with `cargo add thinkthen`. The Windows C archive contains the header, `thinkthen.dll` and its MSVC import library. The Windows command archive contains `thinkthen.exe` alone. Native C runner proof remains pending.
 
 | Kind | Install pages |
 | --- | --- |

@@ -70,6 +70,9 @@ jobs:
           printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/thinkthen-appdata/Roaming" "$RUNNER_TEMP/thinkthen-appdata/Local"
 
+      - name: Select x64 MSVC
+        run: python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"
+
       - name: Download the locked crates
         run: |
           set -eu

@@ -172,6 +172,12 @@ part_c() {
 	# Later checks, such as COBOL's, rebuild the C library without remaps into the same folder, so
 	# the copy there holds the builder's home. --reuse rebuilds it here with the remaps above.
 	[ -z "$reuse" ] || (cd libraries/c && cargo build --locked --quiet --offline --lib)
+	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+		from=$(built libraries/c)/$profile
+		python3 sdlc/scripts/release-windows-c.py pack "$from/thinkthen_c.dll" libraries/c/include/thinkthen.h "$OUT/thinkthen-c-$V-$TARGET.zip"
+		c_built=1
+		return
+	fi
 	from=$(built libraries/c)/$profile
 	folder=$(fresh c)
 	mkdir -p "$folder/include" "$folder/lib/pkgconfig"
@@ -499,9 +505,9 @@ EOF
 }
 
 if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
-	[ $# -gt 0 ] || set -- command first-run
+	[ $# -gt 0 ] || set -- command c first-run
 	for part in "$@"; do
-		case $part in command | first-run | crate) ;;
+		case $part in command | c | first-run | crate) ;;
 		*) echo "release-pack: $part is not a Windows stage 1 command part" >&2; exit 2 ;; esac
 	done
 else

@@ -17,6 +17,7 @@ import io
 
 
 REPO = Path(__file__).resolve().parents[2]
+C_FIXTURE = __import__('runpy').run_path(str(REPO / 'sdlc/scripts/release-windows-c-fixture.py'))
 TARGET = "x86_64-pc-windows-msvc"
 SCRIPT = REPO / "sdlc/scripts/release-windows-command.py"
 VERSION = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -72,7 +73,8 @@ exec '{sys.executable}' "$@"''',
     expect(run("sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", TARGET, env=env))
     assert log.read_text().splitlines() == [
         "rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt",
-        "cargo fetch --locked --manifest-path Cargo.toml"]
+        "cargo fetch --locked --manifest-path Cargo.toml",
+        "cargo fetch --locked --manifest-path libraries/c/Cargo.toml"]
 
 
 def interruption_routing(smoke, base):
@@ -163,7 +165,8 @@ def main():
         source = base / "source"
         scripts = source / "sdlc/scripts"
         scripts.mkdir(parents=True)
-        for name in ("release-pack", "scratch.sh", "release-windows-command.py"):
+        for name in ("release-pack", "scratch.sh", "release-windows-command.py", "release-windows-c.py",
+                     "release-bounded.py", "release-owned-job.py"):
             shutil.copy2(REPO / "sdlc/scripts" / name, scripts / name)
         crate = source / "crates/thinkthen"
         crate.mkdir(parents=True)
@@ -221,6 +224,7 @@ def main():
             (folder / f"fixture-{target}").write_bytes(b"Unix retained")
         windows = platforms / f"platform-{TARGET}"
         shutil.copytree(base / "release", windows)
+        c_zip = C_FIXTURE["create"](windows, VERSION)
         sample = windows / "thinkthen-first-run.tar.gz"
         sample.write_bytes(b"sample")
         checksum(sample)
@@ -234,11 +238,29 @@ def main():
         collected = base / "collected"
         expect(run("sh", str(gate), "collect", str(platforms), str(npm), str(collected)))
         assert {path.name for path in collected.iterdir()} == {
-            archive.name, archive.name + ".sha256", sample.name, sample.name + ".sha256",
+            c_zip.name, c_zip.name + ".sha256", archive.name, archive.name + ".sha256", sample.name, sample.name + ".sha256",
             f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256",
             "fixture-x86_64-unknown-linux-gnu", "fixture-aarch64-unknown-linux-gnu",
             "fixture-x86_64-apple-darwin", "fixture-aarch64-apple-darwin"}
-        mutations = (("missing ZIP", lambda: (windows / archive.name).unlink(),
+        def malformed_c():
+            c_zip.write_bytes(b"not ZIP")
+            checksum(c_zip)
+        def wrong_header():
+            with zipfile.ZipFile(c_zip) as source:
+                files = {name: source.read(name) for name in source.namelist()}
+            files['include/thinkthen.h'] = b'wrong header'
+            with zipfile.ZipFile(c_zip, 'w') as out:
+                for name, data in files.items():
+                    member = zipfile.ZipInfo(name)
+                    member.external_attr = 0o100644 << 16
+                    out.writestr(member, data)
+            checksum(c_zip)
+        mutations = (("missing C ZIP", lambda: c_zip.unlink(), "exactly the command ZIP"),
+                     ("missing C checksum", lambda: c_zip.with_name(c_zip.name + ".sha256").unlink(), "exactly the command ZIP"),
+                     ("bad C checksum", lambda: c_zip.with_name(c_zip.name + ".sha256").write_text("bad"), "C ZIP differs"),
+                     ("malformed C", malformed_c, "not a zip file"),
+                     ("wrong header", wrong_header, "header differs"),
+                     ("missing ZIP", lambda: (windows / archive.name).unlink(),
                       "exactly the command ZIP"),
                      ("extra stage 2 binding", lambda: (windows / "thinkthen-c-extra.tar.gz").write_bytes(b"C"),
                       "exactly the command ZIP"),
