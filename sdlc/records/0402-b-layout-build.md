@@ -1,6 +1,6 @@
 # 0402 B: Uniform layout and shared documentation checks
 
-Status: B implementation and the root-authorized focused proof are complete on lane0, prepared for fresh independent source review. Ticket 0402 remains in progress; independent B source review, coordinator checkpoint and landing remain pending. No helper participated in this build.
+Status: B source/implementation accepted at `383305ec9`, source `e15a772ef`. Source-preserving integration and B FINAL INTEGRATION SITE are complete; fresh integration receipt review and B landing remain pending. Ticket 0402 remains partial and in progress; C/D remain unimplemented. No helper participated.
 
 ## Accepted design and reconciliation
 
@@ -61,3 +61,50 @@ Final receipt SHA-256: `1b02bc57685adbf06bacb2cc7888632defbb63eb57557a00c357bf09
 This rule catches exact paragraph duplication, not semantic overlap. Matching metadata does not certify words drawn in images. The 37-width sweep and fixed divisibility rule do not certify every browser or assistive technology. Saved-proof validation adds no new native/canonical replay, accuracy or calibration claim.
 
 The coordinator must assign a fresh independent reviewer to the immutable B source/candidate and these receipts, then name any full checkpoint and landing. The builder will commit and push WIP only. Ian can overturn the table/list choices, blog lines, breakpoint and each literal exception while retaining ticket outcomes and A's content contract.
+
+## Source-preserving main integration and B FINAL INTEGRATION SITE
+
+Fresh independent source review returned ACCEPT for exact candidate `383305ec90882a489297f5ded3b7a9a2525ab54c`, source `e15a772ef3a71981d07b89f875fe3cb545341290`, at `/tmp/thinkthen-0402b-source-review-cli-8cpifta0/review.md`. This integration rebases its two commits onto Windows A main `24212dffa80226a530e9a2f51161c436286c9ff3`. Frozen integration source is `c9ad8192c9fea990e4a3eb0355cd6007b63413e9`. Only the two expected team-record applications conflicted; main history and B updates are retained. No product conflict or source correction occurred. The final candidate adds records only and is reported separately.
+
+The normalized complete B site patch before/after is byte-identical, SHA-256 `90e26df7b1c44713c119dc8a1607c533e0bc44e5607c41dc44b7525f3d121fe5`. Every tracked path outside B's accepted site inventory and its four records matches main byte for byte, including Windows source, scripts, fixtures, workflows and ratchets. Accepted B site paths match the accepted B source. No source growth: independently measured root Rust/C Rust/C fixture totals remain 117988/5487/1329. The actual generated result schema is `specification/result.schema.json`, SHA-256 `ebdbee26c5361912357cebb56b0a45de323fa644483d1e54c0eba41d11479c68`, unchanged. Main's runner-generated `site/examples/bindings-proof.json` remains byte-identical to main and its actual Windows replay artifact, SHA-256 `ebe8a4d56634caf65b0203a1a2c4baf1723bd3d9a5f987529ac87115a8da6092`. No proof row or hash was edited or regenerated.
+
+All nine Windows Linux/canonical receipts still match their recorded hashes. Full-test/spec/C40/workflow113 execution inputs (engine, bindings, fixtures, scripts, workflows, contracts and dependency specifications) are byte-identical to accepted Windows integration `7a1b5dc385fbf5dc68f2ba2c0939502102b72762`. Retain its workspace 1408 passes/26 skips, library-only 143/four skips, external consumer 21/three skips, spec 64/one skip and 24 green demos/zero red, required lint, C40/shared corpus 53 passes/two exclusions, workflow113, and actual 308 language + 42 SQL replay. These are inherited proof on their original frozen source, not fresh execution here. Current strict proof validates all 350 rows against current source/input bytes. Routine smoke remains only the 143 CLI scripts. Native Windows proof remains pending.
+
+All ten original B receipt hashes remain tied to original source `e15a772ef`; the original clean-clone lint is not relabeled as merged lint. The immutable original manifest and verification are retained in `target/0402b-integration-main/`.
+
+| Original B receipt | SHA-256 |
+| --- | --- |
+| `target/0402b-build/site.log` | `50da78e07770cbf6329ae5730fc7062862a8947bd76e46f6271a21869d41bf7e` |
+| `target/0402b-build/draft.log` | `de7fcfbcb25699a0741325328baf3cccc60ab621448252337094f58a37c087b9` |
+| `target/0402b-build/proof.log` | `be6580e867fc04bb5c8a349334feb241474240a290e6c4e85bb909a2071ed75d` |
+| `target/0402b-build/draft-source-plant.log` | `e578e6ef7d8cd16727472e01402cb7009310e49893c990b4764c4c790cc9f2d6` |
+| `target/0402b-build/lint.log` | `1394a39aa5892b06610440c37be2087e1a8af55be02ebeb81bfca44f9c0d101f` |
+| `target/0402b-build/final.log` | `1b02bc57685adbf06bacb2cc7888632defbb63eb57557a00c357bf091fa693a2` |
+| `target/0402b-build/proofs.mjs` | `8015a884435f1e00821153e2cf2ee0f0669dbf29ad9e4bfff636e6863e345937` |
+| `target/0402b-build/draft-source-plant.mjs` | `dee36c64f300d42ca1fd65262b54510358e012e0bd957a8fb17ae2adf206e79f` |
+| `target/0402b-build/draft-blog.html` | `53b37fb4f07f296b803dde4af7aa7624846de68f712b0be38c3e7d3a3600d67a` |
+| `target/0402b-build/draft-blog.md` | `2570afe3003382e7e71ef681f6d40cf94359e87890952a0094b88d709e586011` |
+
+The root named B FINAL INTEGRATION SITE before execution. This checkpoint freshly runs offline policy, exact ratchets, complete required lint on frozen integration source, full site build and check, the actual 37-width browser sweep, redirect browser/card checks, strict zero-stale validation, and the retained independent retention/card activation/h4 omission/geometry controls. The owned proof runner changes only its protected-path comparison baseline from Docs A to the specified Windows main; all content/browser oracles and original runner bytes remain intact. The completed scope exits 0. Fresh checks pass 43 layout and 33 card cases, 128 nonstub pages at all 37 widths (4736 page views), 189 HTML routes/anchors, 61 redirect aliases, nine fragment cases, three direct-page controls and two no-JavaScript fallbacks. Independent retention passes 189 route/kind pairs, 771 headings, 881 sample/output blocks, 3984 destination/title checks and 114 unchanged Markdown twins. Six annotate h4 subsections remain in both actual outputs; the omission plant fails on `Flat fields` and restored controls pass. Six-card CSS `[4,2]` and hidden-child plants fail as intended, restored geometry passes all 37 widths, and pointer-description/visible keyboard focus/Enter card activation passes. Strict checks before and after report 350 matching saved proofs, zero stale pages. Retained draft output remains prior B evidence, not a freshly built draft here. Required lint includes 113 workflow cases, the 580-item inventory and four refused plants; Clippy and documentation deny warnings. Peak memory is 3506388992 bytes under MemoryMax=12884901888 and MemorySwapMax=1073741824; the scope is inactive.
+
+The initial launcher stopped with exit 1 before any gate because clean HOME exposes pre-existing Python bytecode otherwise ignored in the usual environment. Its separate `checkpoint.log` is retained. The first retry then passed policy/exact ratchets but stopped lint at its child-environment self-test: its owned fixture TMPDIR was inside the checkout and Git enumeration hid planted files. The corrected launcher uses an owned external `mktemp` fixture root and preserves this failed `lint.log` and `checkpoint-retry.log`. No candidate source change was needed. New completed receipts use the separate `checkpoint2/` subdirectory. The bounded replacement requires no tracked/staged changes and admits only `.pyc` files in the eleven observed bytecode directories; it neither removes files nor changes global ignore policy.
+
+Runs use owned `target/0402b-integration-main/` logs/configuration, clean HOME and Cargo config, cached Node 22.22.3 and Chromium, two offline Cargo jobs, an empty compiler wrapper, lane0's exclusive `/tmp/thinkthen-claude-0-heavy.lock` with matching HEAVY_LOCK/HELD, and retained shared toolchain/cache mutation locks. The accepted prior helper's local-fetch validator is adapted only to the owned scratch root; only its validated sibling `file://` negative fixture permits an offline exception, with no remote fetch. No initialization or credential file was read. Count-only checking reports 35 private-name patterns, zero path hits and zero text hits; names never enter records or receipts. No lint clone or permanent lane was added.
+
+No new full test/spec/surfaces, canonical350, load/stress/timing, experiment/live/native/CI, tag, release, publication or download ran. Ticket 0402 remains partial and in progress: B source/implementation is accepted and integration receipts await fresh independent review; B is not landed. C/D remain unimplemented. Ian can overturn the inherited-proof decision and request another named checkpoint.
+
+| Fresh frozen integration receipt | Exit | SHA-256 |
+| --- | --- | --- |
+| `target/0402b-integration-main/checkpoint2/policy.log` | 0 | `5815fff89140fc8210baca7994e1ff555d55bafcd952ade5cf623b7c2d9fda90` |
+| `target/0402b-integration-main/checkpoint2/ratchets.log` | 0 | `bc6b86163b87c27a68ee630da4817234768ecb47254ced8af44ca1a3ca94fd33` |
+| `target/0402b-integration-main/checkpoint2/lint.log` | 0 | `3ea8648ac82cd9a94a31b3c00eb4ce9deeb810a5d0deffb6455cbf55b4a40270` |
+| `target/0402b-integration-main/checkpoint2/strict-before.log` | 0 | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0402b-integration-main/checkpoint2/site-build.log` | 0 | `6a612374aac7d32edb0e231fee235c07703678ace8dc29d207ec9213db92692c` |
+| `target/0402b-integration-main/checkpoint2/site-check.log` | 0 | `090ce819eb4651a4d4889741959a6a599a2a55d398f522a978faf865c7da7cde` |
+| `target/0402b-integration-main/checkpoint2/strict-after.log` | 0 | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0402b-integration-main/checkpoint2/retention-browser.log` | 0 | `541a22182e7d9797930a15b6e9ddbd3064af38c1d378f1b7bf3a28e3ac0e4a82` |
+| `target/0402b-integration-main/checkpoint2/verify-before.log` | 0 | `b104d57edbd946c097b68d8139c3d92fb9fbe6f9e42b00ef91af45728bb599c4` |
+| `target/0402b-integration-main/checkpoint2/verify-after.log` | 0 | `b104d57edbd946c097b68d8139c3d92fb9fbe6f9e42b00ef91af45728bb599c4` |
+| `target/0402b-integration-main/checkpoint2/checkpoint.log` | 0 | `5f444ff9c16f72bc3d7b1fb09b27c98279f171bf6eca52faf7d45523148ab445` |
+
+The complete source inventory, all 24 B and 36 Windows per-file digests, normalized before/after patch, nine inherited Windows hashes, ten original B hashes, failed launcher receipts, successful checkpoint runners and new receipts remain in owned `target/0402b-integration-main/`. `receipts.sha256` freezes this local handoff. The record-only candidate delta is separately inventoried for fresh receipt review. Older B/A logs and proof outputs are untouched.
