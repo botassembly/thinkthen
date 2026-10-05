@@ -48,6 +48,11 @@ def raw_git(source_root, commit, extra_paths=()):
     for directory, folders, files in os.walk(source_root):
         if Path(directory) == source_root:
             folders[:] = [name for name in folders if name != ".git"]
+        for name in folders:
+            path = Path(directory) / name
+            relative = path.relative_to(source_root)
+            if path.is_symlink() and relative not in tracked and relative not in allowed:
+                raise ValueError(f"unexpected source input: {relative}")
         for name in files:
             relative = (Path(directory) / name).relative_to(source_root)
             if relative not in tracked and relative not in allowed and relative != Path(".git"):

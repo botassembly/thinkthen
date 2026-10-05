@@ -153,9 +153,21 @@ class Cases(unittest.TestCase):
             script(folder / 'hidden', 'exit 0')
             with self.assertRaisesRegex(ValueError, 'unexpected source input: hidden'):
                 archive_tree.raw_git(folder, commit)
+            (folder / 'source.cc').rename(folder / 'saved-original')
+            (folder / 'source.cc').symlink_to(folder / 'saved-original')
+            with self.assertRaisesRegex(ValueError, 'raw Git source file differs'):
+                archive_tree.raw_git(folder, commit)
             self.assertFalse(marker.exists(), 'the raw guard ran a Git filter')
             with self.assertRaisesRegex(ValueError, 'differs from the pinned commit'):
                 archive_tree.raw_git(folder, '0' * 40)
+
+    def test_raw_git_refuses_untracked_linked_input_directory(self):
+        folder = self.root / 'source'; commit = self.source_fixture(folder)
+        outside = self.root / 'outside'; outside.mkdir()
+        script(outside / 'executable', 'exit 0')
+        (folder / 'linked-input').symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'unexpected source input: linked-input'):
+            archive_tree.raw_git(folder, commit)
 
     def test_node_reader_requires_final_canonical(self):
         authority_file = HERE / 'version.env'
