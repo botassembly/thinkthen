@@ -14,6 +14,7 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
 | [result.md](result.md) | The bare value, the `--details` object, and the five answer kinds | Settled |
+| [files.md](files.md) | Explicit file/folder readers, located carriers and spans across all ten functions | Settled for 0.2 |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [recording.md](recording.md) | `--record` and `--replay`: a folder of exchanges that runs again with no network | Settled |

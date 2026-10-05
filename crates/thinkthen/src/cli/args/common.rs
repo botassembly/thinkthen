@@ -9,6 +9,11 @@ impl Common {
                 "--dry-run was renamed --plan",
             ));
         }
+        if self.located() && (self.csv || self.tsv) {
+            return Err(crate::failure::Failure::Usage(
+                "located input needs text or JSONL, not CSV or TSV",
+            ));
+        }
         if self.unit.is_some() && self.input.is_empty() {
             return Err(crate::failure::Failure::Usage("--unit requires --input"));
         }

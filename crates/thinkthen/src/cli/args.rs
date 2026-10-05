@@ -297,6 +297,10 @@ pub(crate) struct Refused {
 /// Everything `filter` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct FilterArguments {
+    /// Print each matching file once, in first-match order.
+    #[arg(long)]
+    pub(crate) files_only: bool,
+
     /// The question asked of each record, or `@` and the path of a question file.
     ///
     /// As `@FILE` it is a question file holding one `decide` question, and a

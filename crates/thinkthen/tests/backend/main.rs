@@ -159,6 +159,13 @@ mod secrecy_recognize;
     reason = "fixture failures should stop this relation secrecy proof"
 )]
 mod secrecy_relate;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    reason = "fixture failures stop the located source boundary proof"
+)]
+mod source_files;
 mod state;
 mod status_reason;
 mod streaming;

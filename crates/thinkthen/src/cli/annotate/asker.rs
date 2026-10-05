@@ -221,10 +221,12 @@ where
         .map_err(Failure::Output)?;
     }
     // A stop after one document's row changes nothing it printed.
-    if let Some(stop) = ended
-        .stop
-        .filter(|_| reading.streams() || judging.common.input.len() > 1 || ended.finished == 0)
-    {
+    if let Some(stop) = ended.stop.filter(|_| {
+        reading.streams()
+            || judging.common.input.len() > 1
+            || judging.common.located()
+            || ended.finished == 0
+    }) {
         if !reading.streams() {
             return Err(stop.cause);
         }

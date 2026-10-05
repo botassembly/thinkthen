@@ -213,9 +213,10 @@ fn located_units(
         let evidence = reading
             .evidence(&record)
             .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
-        let position = item
+        let mut position = item
             .position
             .ok_or(Failure::Defect("find source has no physical position"))?;
+        position.located = true;
         units.push(Unit {
             bytes,
             record,

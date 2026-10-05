@@ -12,6 +12,9 @@ use crate::schedule::Judged;
 
 #[derive(Args, Clone, Debug, Default)]
 pub(crate) struct Arguments {
+    #[arg(skip)]
+    pub(crate) files_only: bool,
+
     /// Prefix selected records with their physical line number.
     #[arg(short = 'n', long)]
     pub(crate) line_number: bool,
@@ -31,10 +34,26 @@ pub(crate) struct Display {
     pub(crate) around: Option<usize>,
     pub(crate) snapshot: Option<Snapshot>,
     multiple: bool,
+    seen_files: std::cell::RefCell<std::collections::HashSet<String>>,
 }
 
 impl Display {
     pub(crate) fn validate(&mut self, common: &Common) -> Result<(), Failure> {
+        if self.arguments.files_only && common.input.is_empty() {
+            return Err(Failure::Usage(
+                "--files-only requires named input files or folders",
+            ));
+        }
+        if self.arguments.files_only
+            && (common.details
+                || self.arguments.line_number
+                || self.arguments.scores
+                || self.arguments.around.is_some())
+        {
+            return Err(Failure::Usage(
+                "--files-only cannot accompany details or text display flags",
+            ));
+        }
         self.around = self
             .arguments
             .around
@@ -98,6 +117,16 @@ impl Display {
         let Some(printed) = printed else {
             return Ok(true);
         };
+        if self.arguments.files_only {
+            let file = position
+                .and_then(|position| position.file.as_ref())
+                .ok_or(Failure::Defect("matching file has no source name"))?;
+            return if self.seen_files.borrow_mut().insert(file.clone()) {
+                edge::write_line(writer, file)
+            } else {
+                Ok(true)
+            };
+        }
         if !self.arguments.line_number && !self.arguments.scores && self.around.is_none() {
             return edge::write_line(writer, printed);
         }

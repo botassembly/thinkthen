@@ -177,14 +177,13 @@ impl Intake {
         snapshot: bool,
     ) -> Result<(Self, Option<Snapshot>), Failure> {
         let window = window(common, has_on)?;
-        let paths = crate::enumerate_files(&common.input).map_err(|_| {
-            Failure::Usage("input operands could not be enumerated as regular files or folders")
-        })?;
+        let paths = crate::enumerate_files(&common.input)
+            .map_err(|error| Failure::OpenInput(std::io::Error::other(error.to_string())))?;
         let kind = common
             .csv
             .then_some(Kind::Csv)
             .or(common.tsv.then_some(Kind::Tsv));
-        if !common.input.is_empty() && !snapshot {
+        if !common.input.is_empty() && !snapshot && kind.is_none() {
             let sources = paths
                 .into_iter()
                 .enumerate()
@@ -351,7 +350,7 @@ pub(crate) fn source_members(
 
 /// Retain source and original input beside a value without altering caller keys.
 pub(crate) fn source_value(
-    record: &Record,
+    record: &impl Serialize,
     value: &str,
     position: &Position,
 ) -> Result<String, Failure> {

@@ -6,6 +6,7 @@ use std::process::ExitCode;
 
 use serde::Serialize;
 
+use crate::cli::intake::{Data, Intake};
 use crate::core::adapters::built_in;
 use crate::core::{
     Backend, BackendProfile, Description, PlanSummary, Reading, RecognizeSpec, Record, json_line,
@@ -13,7 +14,6 @@ use crate::core::{
 use crate::edge;
 use crate::engine::facade;
 use crate::failure::Failure;
-use crate::table::{Kind as TableKind, Rows as TableRows};
 
 #[derive(Serialize)]
 struct DryRun<'a> {
@@ -80,32 +80,23 @@ pub(super) struct Question<'a> {
     pub(super) key_env: &'a str,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the preview boundary receives each already resolved concern once"
-)]
 pub(super) fn run(
     reading: &Reading,
-    source: Box<dyn std::io::BufRead + Send>,
+    source: Intake,
     backend: &Backend,
     profile: Option<&BackendProfile>,
-    table: Option<TableKind>,
     question: Question<'_>,
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
-    if let Some(kind) = table {
-        let rows = TableRows::new(source, kind)?;
-        return planned(rows, backend, profile, question, writer, reading);
-    }
-    let reading_for_rows = reading.clone();
-    let records = edge::numbered(edge::Chunks::new(source, reading.streams()), reading).map(
-        move |(_, bytes)| {
-            let bytes = bytes?;
-            reading_for_rows
+    let records = source.map(|item| {
+        let item = item.map_err(|placed| placed.cause)?;
+        match item.data {
+            Data::Record(record) => Ok(record),
+            Data::Bytes(bytes) => reading
                 .record(&bytes)
-                .map_err(|error| Failure::record(error, reading_for_rows.streams()))
-        },
-    );
+                .map_err(|error| Failure::record(error, reading.streams())),
+        }
+    });
     planned(records, backend, profile, question, writer, reading)
 }
 

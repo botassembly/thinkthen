@@ -31,7 +31,7 @@ pub(super) fn read(
 
 /// The entity's name. A name `recognize` found carries `text` in place of
 /// `name`, so a record with no `name` at the default field reads its `text`.
-fn name_of<'a>(record: &'a Record, spec: &RelateSpec) -> Result<&'a str, RecordError> {
+pub(super) fn name_of<'a>(record: &'a Record, spec: &RelateSpec) -> Result<&'a str, RecordError> {
     let field = spec.name_field();
     match record.entity_text(field) {
         Err(missed @ RecordError::Missed(_)) if field.as_str() == "/name" => Pointer::new("/text")
@@ -80,7 +80,10 @@ fn lines(
     admitted(spec, &pairs)
 }
 
-fn admitted(spec: &RelateSpec, pairs: &[(String, String)]) -> Result<Vec<RelationEntity>, Failure> {
+pub(super) fn admitted(
+    spec: &RelateSpec,
+    pairs: &[(String, String)],
+) -> Result<Vec<RelationEntity>, Failure> {
     spec.admit(pairs).map_err(|error| {
         let error = match error {
             EntitySetError::TooMany => {

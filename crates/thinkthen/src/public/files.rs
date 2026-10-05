@@ -51,7 +51,7 @@ impl ReaderOptions {
 }
 
 /// An original record with physical source coordinates. Metadata is never evidence.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct SourceRecord<T> {
     /// Original record, without metadata inserted into its content.
     pub record: T,
@@ -61,6 +61,18 @@ pub struct SourceRecord<T> {
     pub first_line: usize,
     /// Last physical line, one-based and inclusive.
     pub last_line: usize,
+}
+
+impl<T> std::fmt::Debug for SourceRecord<T> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("SourceRecord")
+            .field("record", &"<withheld>")
+            .field("file", &self.file)
+            .field("first_line", &self.first_line)
+            .field("last_line", &self.last_line)
+            .finish()
+    }
 }
 
 impl<T: AsRef<str>> AsRef<str> for SourceRecord<T> {

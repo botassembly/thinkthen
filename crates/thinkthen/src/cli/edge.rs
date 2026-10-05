@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::core::{Backend, Reading};
+use crate::core::Backend;
 use crate::engine::usage::open_read;
 
 mod backend;
@@ -301,21 +301,6 @@ impl<R: BufRead> Iterator for Chunks<R> {
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().map(|bytes| bytes.map_err(Failure::Input))
     }
-}
-
-/// Keep the input line number while dropping only blank lines in line framing.
-pub(crate) fn numbered<R: BufRead>(
-    chunks: Chunks<R>,
-    reading: &Reading,
-) -> impl Iterator<Item = (usize, Result<Vec<u8>, Failure>)> + use<R> {
-    let reading = reading.clone();
-    chunks.enumerate().filter_map(move |(place, row)| {
-        if row.as_ref().is_ok_and(|bytes| reading.skips(bytes)) {
-            None
-        } else {
-            Some((place + 1, row))
-        }
-    })
 }
 
 /// What a user sitting at a terminal is told the command is waiting for.
