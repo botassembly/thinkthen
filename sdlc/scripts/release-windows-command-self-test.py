@@ -165,7 +165,8 @@ def main():
         source = base / "source"
         scripts = source / "sdlc/scripts"
         scripts.mkdir(parents=True)
-        for name in ("release-pack", "scratch.sh", "release-windows-command.py", "release-windows-c.py"):
+        for name in ("release-pack", "scratch.sh", "release-windows-command.py", "release-windows-c.py",
+                     "release-bounded.py", "release-owned-job.py"):
             shutil.copy2(REPO / "sdlc/scripts" / name, scripts / name)
         crate = source / "crates/thinkthen"
         crate.mkdir(parents=True)
