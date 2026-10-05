@@ -1,12 +1,12 @@
 git clone https://github.com/ggml-org/llama.cpp.git
 cd llama.cpp
-git checkout a7b94df2c616bc1f62a73b964b4a71cb0dcc488e
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target llama-server -j 2
+git checkout d81235049384534c167caea52b85a694f6103d14
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_METAL=ON
+cmake --build build --target llama-server -j 4
 
-model_repo=https://huggingface.co/ggml-org/Kev-4B-GGUF
-model_revision=d924f2e2c3872da8b8aaf3eb4453b4126deceb79
-model_file=Kev-4B-Q4_K_M.gguf
+model_repo=https://huggingface.co/ggml-org/Clef-Flash-GGUF
+model_revision=4a7a08c09bc63baf043b62b5ba89dd67a0357d95
+model_file=Clef-Flash-Q4_K_M.gguf
 curl -fL -o "$model_file" \
   "$model_repo/resolve/$model_revision/$model_file"
 
@@ -16,4 +16,6 @@ curl -fL -o "$model_file" \
   --host 127.0.0.1 \
   --port 8080 \
   --ctx-size 4096 \
-  --ubatch-size 4096
+  --batch-size 4096 \
+  --ubatch-size 4096 \
+  --parallel 1
