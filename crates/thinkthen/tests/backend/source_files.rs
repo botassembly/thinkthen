@@ -312,3 +312,80 @@ fn unrepresentable_folder_names_refuse_the_complete_manifest_without_sending() -
     assert!(listener.requests().is_empty());
     Ok(())
 }
+
+#[test]
+fn recognize_and_relate_windows_keep_original_units_and_physical_spans() -> io::Result<()> {
+    let place = folder("source-names-windows")?;
+    let path = place.join("names.txt");
+    let original = "café 😀\r\nAda at Acme\r\nlast";
+    fs::write(&path, original)?;
+    let listener = Listener::answering(answer)?;
+    for verb in ["recognize", "relate"] {
+        let help = spawn(&[verb, "--help"], &[], b"")?;
+        assert!(text(&help.stdout).contains("--window <N>"), "{verb}");
+        let command = if verb == "recognize" {
+            vec![verb, "person", "organization"]
+        } else {
+            vec![verb, "connected"]
+        };
+        let output = call(
+            &listener,
+            &command,
+            &[path.to_str().unwrap()],
+            &["--window", "2"],
+        )?;
+        let values = rows(&output);
+        assert!(!values.is_empty(), "{verb}");
+        let requests = listener.requests();
+        assert!(!requests.is_empty(), "native requests for {verb}");
+        for request in requests {
+            let body = text(&request.body);
+            assert!(!body.contains(path.to_str().unwrap()));
+            assert!(!body.contains("first_line"));
+            assert!(!body.contains("last_line"));
+        }
+        if verb == "recognize" {
+            assert_eq!(values.len(), 2);
+            assert_eq!(values[0]["input"], "café 😀\r\nAda at Acme");
+            assert_eq!(values[0]["first_line"], 1);
+            assert_eq!(values[0]["last_line"], 2);
+            assert_eq!(values[1]["input"], "last");
+            assert_eq!(values[1]["first_line"], 3);
+            let ada = values[0]["value"]["entities"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|entity| entity["text"] == "Ada")
+                .unwrap();
+            assert_eq!(ada["first_line"], 2);
+            assert_eq!(ada["last_line"], 2);
+        } else {
+            for edge in values {
+                for endpoint in ["source", "target"] {
+                    let row = &edge[endpoint];
+                    assert_eq!(row["file"], path.to_str().unwrap());
+                    match row["first_line"].as_u64().unwrap() {
+                        1 => {
+                            assert_eq!(row["record"], "café 😀\r\nAda at Acme");
+                            assert_eq!(row["last_line"], 2);
+                        }
+                        3 => {
+                            assert_eq!(row["record"], "last");
+                            assert_eq!(row["last_line"], 3);
+                        }
+                        line => panic!("unexpected endpoint line {line}"),
+                    }
+                }
+            }
+        }
+        for extra in [
+            vec!["--window", "0"],
+            vec!["--unit", "file", "--window", "2"],
+        ] {
+            let rejected = call(&listener, &command, &[path.to_str().unwrap()], &extra)?;
+            assert_eq!(rejected.status.code(), Some(2));
+            assert!(listener.requests().is_empty());
+        }
+    }
+    Ok(())
+}
