@@ -17,7 +17,7 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
   <p><code>thinkthen check</code> remains a hidden compatibility alias with the same options, requests, report and exit codes.</p>
 
   <h2 id="plan">See it first</h2>
-  <p><code>--plan</code> prints the address and the model, then the four rich request bodies, function-plan counts and a total request upper bound. It sends nothing and needs no key.</p>
+  <p><code>--plan</code> prints the address and the model, then the four rich request bodies, function-plan counts and a total prepared-request upper bound before retries and refusal splits. It sends nothing and needs no key.</p>
   <Terminal run={plan} caption={BACKENDS_SEE['system-one']['4-check-plan']} />
 
   <h2 id="probes">The four probes</h2>

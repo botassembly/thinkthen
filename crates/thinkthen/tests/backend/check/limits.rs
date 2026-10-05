@@ -164,11 +164,7 @@ fn a_function_body_close_or_timeout_stops_later_functions() {
         let ordinal = AtomicUsize::new(0);
         let listener = Listener::answering(move |body| {
             if ordinal.fetch_add(1, Ordering::SeqCst) == failed_at {
-                return if delayed {
-                    crate::harness::Canned::ok("").after(1500)
-                } else {
-                    crate::harness::Canned::cut_short()
-                };
+                return crate::harness::Canned::cut_short().after(1500 * u64::from(delayed));
             }
             let request: serde_json::Value = serde_json::from_slice(body).expect("wire");
             answered(&request)
