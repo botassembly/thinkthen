@@ -26,13 +26,13 @@ export const CHECKS = {
   openrouter: [
     {
       model: 'typesafe/jev-1.13', date: '2026-10-04', commit: '4349b91b3', exit: 0, critical: 0, warning: 0,
-      source: `${RECORDS}/records/0399-backend-path-build.md`,
+      source: `${RECORDS}/records/0399-backend-paths.md`,
     },
   ],
   perplexity: [
     {
       model: 'pplx-decider-v1-27b', date: '2026-10-04', commit: '4349b91b3', exit: 0, critical: 0, warning: 0,
-      source: `${RECORDS}/records/0399-backend-path-build.md`,
+      source: `${RECORDS}/records/0399-backend-paths.md`,
     },
   ],
   ollama: [

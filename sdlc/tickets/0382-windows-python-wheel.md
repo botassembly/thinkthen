@@ -1,6 +1,6 @@
 # 0382: Windows stage 1: the Python wheel ships for Windows x86-64
 
-Status: ready. It waits for the `release/0.1` cut and for ticket 0380 slice A, which adds the fifth release target. No slice lands on main before the cut (ADR 0116 item 2). Plan: `sdlc/planning/windows.md`, stage 1. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. The coordinator assigns a lane after the cut.
+Status: in progress: the Windows Python wheel/core runner draft is pushed at `f74c54412` and is unverified; its 0380 prerequisite and the release/0.1 cut are complete. Review, focused checks, landing and the authorized combined native Windows run remain.
 
 Milestone: 0.2
 

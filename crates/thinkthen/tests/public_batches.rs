@@ -518,11 +518,8 @@ fn churn(base: &str, asked: &Question) {
     }
 }
 
-#[path = "public_batches/rank_set_0401.rs"]
-mod rank_set_0401;
+#[path = "public_batches/rank_set.rs"]
+mod rank_set;
 
-#[path = "public_batches/rank_set_0401_safety.rs"]
-mod rank_set_0401_safety;
-
-#[path = "public_batches/numbers_0402.rs"]
-mod numbers_0402;
+#[path = "public_batches/reading_numbers.rs"]
+mod reading_numbers;

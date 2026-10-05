@@ -24,11 +24,3 @@ Each confirmed gap becomes a separate ticket or a named debt record. CLI, Rust a
 - Proof: fresh ticket review accepts the scope before the audit. Preserve source links and exact command outcomes. Count loopback sends for no-send claims; use saved replies for every test. Mark each assertion as confirmed behavior, confirmed defect, design gap, inconsistency or unproved, and identify which existing conformance cases prove it. No broad green suite stands in for cell-specific evidence. Check every cell is filled and every gap has an owning ticket or debt line with milestone and proof. A fresh read-only reviewer accepts the complete findings and first search answer. Use the normal record, merge trailers and push process.
 
 - Defers: implementation belongs to the resulting tickets. No live provider call, registry install, publication, external change or credential read is needed. Clinical and biological conclusions are outside this software audit. Full test, spec and surfaces require a named coordinator checkpoint; reuse prior receipts where their source and scope still apply.
-
-## What the build taught us
-
-The first answer received fresh ACCEPT at e37b7150. The complete [report](../records/0405-audit-report.md) and [280-cell matrix](../records/0405-surface-matrix.md) distinguish source support, selected conformance evidence, unproved host paths and design gaps. Typed score descriptions and relation reads already exist. Cache question identity excludes free cuts even though metadata digests include them. Recognition relation-stage dependencies limit blanket no-send claims. Amended 0401 and gap tickets 0406–0414 and question-set follow-ups 0417–0418 remain planning until fresh review. Separate planning asks 0415 and 0416 are not audit findings.
-
-Fresh full-audit review accepted `33dc12e9a2d812055f99aac423010724756add08` after verifying all 280 cells, all 40 C/SQL execution profiles, unchanged product paths and four focused public details/context tests. The audit outcome is complete. Implementation belongs to the separate tickets.
-
-Landed: a7264645e7be2aef4605c421ad42874153316a4b

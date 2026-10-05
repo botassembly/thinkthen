@@ -277,7 +277,7 @@ Malformed fields exit 5 without repeating values. The price-pair sentence is `co
 
 The local row illustrates syntax only and makes no compatibility claim. The Perplexity profile does not raise the existing engine request ceiling; the published 262144-token ceiling is recorded separately and not represented as a byte approximation. Its published score-level ceiling remains subject to existing score constraints, not a new profile field.
 
-Official facts in the table were checked on 2026-10-04. The [owning evidence record](../sdlc/records/0400-provider-format-evidence.md) retains official source links and limits of these observations. The [0399 build record](../sdlc/records/0399-backend-path-build.md#actual-manual-provider-receipts) owns the two once-only hosted checks. These rows establish only the recorded routes/models; this parser slice runs no hosted checks. Local-server and new-model measured pages remain slice D.
+Official facts in the table were checked on 2026-10-04. The [owning evidence record](../sdlc/records/0400-provider-setups-and-width.md) retains official source links and limits of these observations. The [0399 build record](../sdlc/records/0399-backend-paths.md) owns the two once-only hosted checks. These rows establish only the recorded routes/models; this parser slice runs no hosted checks. Local-server and new-model measured pages remain slice D.
 
 | Provider | How ThinkThen reaches it | Base | Path | Key variable | Model | Published limits | Published price | Reads images | Needs both sides | Suggested settings | Check or run on record |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
