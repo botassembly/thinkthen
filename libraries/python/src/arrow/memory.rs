@@ -77,25 +77,25 @@ impl Readable {
     }
 
     /// How many bytes from `first` can be read, up to `cap`.
+    #[cfg(target_os = "linux")]
     pub(crate) fn reach(&self, first: usize, cap: usize) -> usize {
-        #[cfg(target_os = "linux")]
-        {
-            self.readable_until(first, first.saturating_add(cap))
-                .saturating_sub(first)
-        }
-        #[cfg(not(target_os = "linux"))]
-        {
-            let mut reach = 0;
-            while reach < cap {
-                let at = first.saturating_add(reach);
-                let step = (PAGE - at % PAGE).min(cap - reach);
-                if !super::ffi::mapped(at, at.saturating_add(step - 1)) {
-                    break;
-                }
-                reach += step;
+        self.readable_until(first, first.saturating_add(cap))
+            .saturating_sub(first)
+    }
+
+    /// How many bytes from `first` can be read, up to `cap`.
+    #[cfg(not(target_os = "linux"))]
+    pub(crate) fn reach(&self, first: usize, cap: usize) -> usize {
+        let mut reach = 0;
+        while reach < cap {
+            let at = first.saturating_add(reach);
+            let step = (PAGE - at % PAGE).min(cap - reach);
+            if !super::ffi::mapped(at, at.saturating_add(step - 1)) {
+                break;
             }
-            reach
+            reach += step;
         }
+        reach
     }
 
     /// True when every byte of `[first, first + length)` can be read.
