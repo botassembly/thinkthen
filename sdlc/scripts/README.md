@@ -24,7 +24,7 @@ The repository gate and its hand-run support scripts.
 | `demos`, `demos-self-test` | Run green how-tos and prove the runner's refusals: a green page asserts, every `bash` block asserts, no `like ""`, no `set +e`, and every `--replay` folder exists |
 | `pages` | Fails rung 1 on a dead relative link in the README, the documentation plan, or a how-to page. `--self-test` plants one first |
 | `settings`, run by `spec` | Fails rung 3 when `specification/settings.md` lacks a row for a flag in any command's help, a product `THINKTHEN_` variable, or a question-file key, names one that no longer exists, or moves a column (ticket 0140). `--self-test` plants each fault into a copy of the page first |
-| `tickets` | Fails rung 1 when a ticket from 0120 lacks its five Evidence items, or a ticket from 0333 lacks `## Outcome` or lands without `## What the build taught us`. `--self-test` runs its planted cases first |
+| `tickets` | Fails rung 1 when a ticket from 0120 lacks its five Evidence items, or a ticket from 0333 lacks `## Outcome`. `--self-test` runs its planted cases first |
 | `recognize-keys` | Fails rung 1 when a line of `specification/fixtures/recognize/names.jsonl` or `relations.jsonl` has a name whose code-point offsets do not cut it out of its text, overlaps the name before, repeats an id, or names an edge endpoint its line lacks (ticket 0164). `--self-test` plants each fault first. `convert names SOURCE` and `convert relations SOURCE` print the converted keys |
 | `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |

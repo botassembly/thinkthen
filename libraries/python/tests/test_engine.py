@@ -34,6 +34,33 @@ def test_held_request_does_not_pull_ahead(backend, tmp_path):
     assert backend.count() == 20
 
 
+
+def test_omitted_and_explicit_throttles_hold_counted_packed_requests(tmp_path):
+    """Fresh engines offer ten requests: omission holds eight, explicit six holds six."""
+    for settings, cap in (("", 8), ("throttle=6,", 6)):
+        backend = Backend()
+        before = backend.count()
+        child = start(f"""
+            import thinkthen as tt
+            answers = tt.Engine({settings} batch=2, cache=False).decide(
+                tt.question(decide="Is it late?"), [f"note {{n}}" for n in range(20)]).value
+            assert answers == [True] * 20
+            print(len(answers))
+        """, child_env(backend, tmp_path / str(cap), "arm/held"))
+        try:
+            assert backend.wait(before + cap) == before + cap
+            time.sleep(0.3)
+            assert backend.count() == before + cap
+            backend.release()
+            assert child.wait(timeout=60) == 0, child.stderr.read()
+            assert child.stdout.read().strip() == "20"
+            assert backend.count() == before + 10
+        finally:
+            backend.release()
+            child.wait(timeout=60)
+            backend.close()
+
+
 def test_bad_settings_are_usage_errors_that_send_nothing(backend, tmp_path):
     """Change 13: the binding checks the throttle itself, so 300 is a
     ``UsageError`` and not an ``OverflowError``. A bool is refused. A

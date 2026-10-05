@@ -122,16 +122,16 @@ db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(n, f'Person {n}', 'person') f
 
 
 def test_a_keyed_call_is_cancelled_mid_batch() -> None:
-    """Case 18: eight packed sends are held; cancellation starts no ninth."""
+    """Case 18: six packed sends are held; cancellation starts no seventh."""
     backend = Backend()
-    setup = """db.execute("SELECT thinkthen_configure(?)", ('{"throttle":8,"batch":2}',))
+    setup = """db.execute("SELECT thinkthen_configure(?)", ('{"throttle":6,"batch":2}',))
 db.execute("CREATE TABLE t(id INTEGER, body TEXT)")
 db.executemany("INSERT INTO t VALUES (?,?)", [(at, f"row {at}") for at in range(20)])"""
-    result = interrupted(backend, "SELECT count(*) FROM thinkthen_decide_many('Is it red?', (SELECT json_group_object(id,body) FROM t))", 8, setup)
+    result = interrupted(backend, "SELECT count(*) FROM thinkthen_decide_many('Is it red?', (SELECT json_group_object(id,body) FROM t))", 6, setup)
     stopped_fast(result)
     time.sleep(0.3)
-    expect(backend.count(), 8, "sends 300 ms after the interrupt")
-    settled(backend, 8)
+    expect(backend.count(), 6, "sends 300 ms after the interrupt")
+    settled(backend, 6)
 
 
 def test_the_cli_prints_the_cancelled_sentence_on_sigint() -> None:

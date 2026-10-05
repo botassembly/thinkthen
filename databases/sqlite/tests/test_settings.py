@@ -209,25 +209,26 @@ say(refused=run(db, "SELECT thinkthen_decide('Is it late?', 'the train left at n
     expect(backend.close(), 0, "the refused call sends nothing")
 
 
-def test_throttle_holds_eight_before_the_ninth() -> None:
-    """Stress selector only: an owned packed call holds eight live requests."""
-    backend = Backend()
-    packed = json.dumps({str(at): f"row {at}" for at in range(18)})
-    waiting = Child(f"""
+def test_omitted_and_explicit_throttles_hold_packed_requests() -> None:
+    """Stress selector owns the paired nine-request held witness."""
+    for settings, cap in (({"batch": 2}, 8), ({"throttle": 6, "batch": 2}, 6)):
+        backend = Backend()
+        packed = json.dumps({str(at): f"row {at}" for at in range(18)})
+        waiting = Child(f"""
 db = connect()
-db.execute("SELECT thinkthen_configure(?)", ('{{"throttle":8,"batch":2}}',))
+db.execute("SELECT thinkthen_configure(?)", ({json.dumps(settings)!r},))
 say(rows=run(db, "SELECT count(*) FROM thinkthen_decide_many(?, ?)", ("Is it red?", {packed!r})))
 """, environment(backend, "arm/held"))
-    expect(backend.wait(8), 8, "eight held arrivals")
-    time.sleep(0.3)
-    expect(backend.count(), 8, "ninth has not started")
-    backend.release()
-    expect(waiting.result()["rows"], [[18]], "all records")
-    expect(backend.close(), 9, "nine packed requests")
+        expect(backend.wait(cap), cap, "held arrivals")
+        time.sleep(0.3)
+        expect(backend.count(), cap, "the next request stays queued")
+        backend.release()
+        expect(waiting.result()["rows"], [[18]], "all records")
+        expect(backend.close(), 9, "nine packed requests")
 
 
 if __name__ == "__main__":
     os.chdir(pathlib.Path(__file__).resolve().parent)
     stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
     sys.exit(main({name: value for name, value in globals().items()
-                   if name.startswith("test_") and (name == "test_throttle_holds_eight_before_the_ninth") == stress}))
+                   if name.startswith("test_") and (name == "test_omitted_and_explicit_throttles_hold_packed_requests") == stress}))

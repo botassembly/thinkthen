@@ -32,16 +32,21 @@ class TestEngineSettings < Minitest::Test
   end
 
   def test_the_throttle_holds_exactly_that_many_requests_in_flight
-    TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
-      say T::Engine.new(throttle: 8, batch: 2).decide_many("Is it urgent?", (1..20).map { |n| "record \#{n}" }).value.size
-    RUBY
-      assert_equal 8, backend.wait(8)
-      sleep 0.3
-      assert_equal 8, backend.count
-      backend.release
-      assert_equal 20, child.hear
-      status, errors = child.finish
-      assert status.success?, errors
+    [["", 8], ["throttle: 6,", 6]].each do |setting, cap|
+      TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
+        answers = T::Engine.new(#{setting} batch: 2).decide_many("Is it urgent?", (1..20).map { |n| "record \#{n}" }).value
+        raise "wrong answers" unless answers == [true] * 20
+        say answers.size
+      RUBY
+        assert_equal cap, backend.wait(cap)
+        sleep 0.3
+        assert_equal cap, backend.count
+        backend.release
+        assert_equal 20, child.hear
+        status, errors = child.finish
+        assert status.success?, errors
+        assert_equal 10, backend.count
+      end
     end
   end
 

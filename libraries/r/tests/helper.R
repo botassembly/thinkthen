@@ -7,6 +7,11 @@ source(file.path(Sys.getenv("TT_TESTS"), "..", "..", "..", "conformance", "child
 # scratch home and XDG folders, and the tests folder a child may source.
 inherited <- c("R_LIBS", "HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "TT_TESTS", "TT_BACKEND_ORIGIN")
 
+# Absolute nested children bypass the outer wrapper; suppress all startup files.
+rscript_args <- function(file) {
+  c(shQuote(file.path(R.home("bin"), "Rscript")), "--vanilla", shQuote(file))
+}
+
 # The values a child is given: this process's address and fake key, read by
 # name, its own cache, then the caller's `NAME=value` pairs, which win.
 child_values <- function(cache, env = character()) {
@@ -153,7 +158,7 @@ child <- function(code, env = character()) {
   file <- tempfile(fileext = ".R")
   writeLines(c("library(thinkthen)", code), file)
   out <- suppressWarnings(system2("env", c(clean_env(inherited, child_values(cache, env)),
-                                           shQuote(file.path(R.home("bin"), "Rscript")), shQuote(file)),
+                                           rscript_args(file)),
                                   stdout = TRUE, stderr = TRUE))
   status <- attr(out, "status")
   list(text = paste(out, collapse = "\n"), status = if (is.null(status)) 0L else status)

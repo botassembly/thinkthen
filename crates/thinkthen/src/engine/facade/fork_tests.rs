@@ -198,7 +198,7 @@ fn child_width_child() {
         (
             "an implicit engine follows the fallback",
             &implicit,
-            4,
+            8,
             None,
         ),
         (

@@ -61,7 +61,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
         "the help does not name the threshold default: {long}"
     );
     assert!(
-        long.contains("[default: 4]"),
+        long.contains("[default: 8]"),
         "the help does not name the jobs default: {long}"
     );
     for cache_rule in [

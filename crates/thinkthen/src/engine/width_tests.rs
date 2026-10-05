@@ -85,12 +85,12 @@ fn implicit_engines_never_select_and_follow_the_first_explicit_width() {
     let widths = widths();
     // The lazy convenience engine and a builder with no width pass `None`.
     for _ in 0..3 {
-        assert_eq!(widths.select(None), Ok(Width::FALLBACK));
+        assert_eq!(widths.select(None), Ok(width(8)));
     }
     assert_eq!(widths.selected(), None);
-    assert_eq!(widths.select(Some(width(8))), Ok(width(8)));
-    assert_eq!(widths.select(None), Ok(width(8)));
-    assert_eq!(widths.selected(), Some(width(8)));
+    assert_eq!(widths.select(Some(width(6))), Ok(width(6)));
+    assert_eq!(widths.select(None), Ok(width(6)));
+    assert_eq!(widths.selected(), Some(width(6)));
 }
 
 #[test]
@@ -166,7 +166,7 @@ fn a_width_exists_only_for_1_through_32() {
 #[test]
 fn a_lower_first_width_holds_every_waiter_until_the_old_attempts_drain() {
     let widths = widths();
-    let mut fallback = held(widths, 4);
+    let mut fallback = held(widths, 8);
     let (blocked_send, blocked_on) = channel();
     let (entered_send, entered) = channel();
     let mut waiters: Vec<Waiter> = (0..2)
@@ -199,7 +199,7 @@ fn a_lower_first_width_holds_every_waiter_until_the_old_attempts_drain() {
 #[test]
 fn a_higher_first_width_wakes_waiters_without_passing_it() {
     let widths = widths();
-    let fallback = held(widths, 4);
+    let fallback = held(widths, 8);
     let (blocked_send, blocked_on) = channel();
     let (entered_send, entered) = channel();
     let waiters: Vec<Waiter> = (0..6)
@@ -208,20 +208,20 @@ fn a_higher_first_width_wakes_waiters_without_passing_it() {
     blocked(&blocked_on, 6);
     nobody_entered(&entered);
 
-    assert_eq!(widths.select(Some(width(8))), Ok(width(8)));
+    assert_eq!(widths.select(Some(width(12))), Ok(width(12)));
     for _ in 0..4 {
         let (_, seen) = entered
             .recv_timeout(SECOND * 30)
             .expect("new room wakes one");
-        assert!(seen <= 8, "{seen} attempts at width 8");
+        assert!(seen <= 12, "{seen} attempts at width 12");
     }
     nobody_entered(&entered);
-    assert_eq!(widths.active(), 8);
+    assert_eq!(widths.active(), 12);
 
     drop(fallback);
     for _ in 0..2 {
         let (_, seen) = entered.recv_timeout(SECOND * 30).expect("freed room");
-        assert!(seen <= 8, "{seen} attempts at width 8");
+        assert!(seen <= 12, "{seen} attempts at width 12");
     }
     for waiter in waiters {
         let _unheld = waiter.release.send(());

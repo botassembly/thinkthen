@@ -201,7 +201,7 @@ pub(crate) struct Common {
     )]
     pub(crate) timeout: u64,
 
-    /// How many requests are in flight at once, from 1 to 32. [default: 4]
+    /// How many requests are in flight at once, from 1 to 32. [default: 8]
     ///
     /// It acts in record mode, on `annotate`, where a single text can make
     /// several grouped requests, and on `relate`, where each relation makes its

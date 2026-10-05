@@ -3,6 +3,7 @@
 use std::process::Stdio;
 
 use super::{child, wait};
+use child::ChildEnvironment as _;
 
 /// Names the one row a rerun child runs.
 const ALONE: &str = "THINKTHEN_TEST_CONTROLS_ALONE";
@@ -15,10 +16,16 @@ pub(super) fn alone(path: &str, body: impl FnOnce()) {
         body();
         return;
     }
+    let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "controls-{}-{}",
+        std::process::id(),
+        path.replace("::", "-")
+    ));
+    std::fs::create_dir(&home).expect("a fresh child home");
     let binary = std::env::current_exe().expect("this test binary");
     let child = child::command(
         binary.to_str().expect("a UTF-8 test binary path"),
-        &["HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME", "TMPDIR"],
+        &["TMPDIR"],
     )
     .args([
         "--exact",
@@ -27,6 +34,10 @@ pub(super) fn alone(path: &str, body: impl FnOnce()) {
         "--nocapture",
         "--test-threads=1",
     ])
+    .home(&home)
+    .env("XDG_CONFIG_HOME", home.join("config"))
+    .env("XDG_CACHE_HOME", home.join("cache"))
+    .env("XDG_STATE_HOME", home.join("state"))
     .env(ALONE, path)
     .stdin(Stdio::null())
     .stdout(Stdio::piped())

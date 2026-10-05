@@ -82,7 +82,7 @@ Run package gates and their children with a minimal explicit environment, using 
 | 3 | `sdlc/scripts/spec` | The compiled binary against `spec/*.md` |
 | 4 | `sdlc/scripts/surfaces` | Each landed binding's `check.sh` against one loopback backend (ADR 0047) |
 
-Run the smallest relevant format, lint and functional checks during each change. The coordinator names a batch checkpoint before full `test`, `spec` or `surfaces` runs. Retain passing receipts when their source and inputs remain valid; rerun the checks affected by a correction or merge. Load, churn, timing and contention belong only in explicit `test-stress --run` jobs. Additional functional cases use `test-full-cases --run`. Neither runs automatically at each handback.
+Run the smallest relevant format, lint and functional checks during each change. Run full tests and lint on the landing commit. Run `spec` and affected surface checks when the change needs them. Load, churn, timing and contention belong only in explicit `test-stress --run` jobs. Additional functional cases use `test-full-cases --run`. Neither runs automatically at each handback.
 
 The complete `sdlc/scripts/package` validation is a separate explicit packaging checkpoint and a required step of the manually dispatched release `crate` job before artifact upload. It includes library-only tests, internal doctests, private export probes in both feature profiles, stale archive cleanup, a fresh unpacked source build, transform bytes, and release panic modes; routine lint does not run it.
 
@@ -95,6 +95,6 @@ The complete `sdlc/scripts/package` validation is a separate explicit packaging 
 - `unwrap_used` skips a result whose error type cannot occur. The lint bans a risk and leaves the token legal.
 - Clippy ignores a ban-list path it cannot resolve, and a typo in any ban passes quietly. The dynamic JSON bans were proved in ticket 0001. Every ban added later has to be planted and refused the same way.
 - No tool checks that parsing happens only at the edge or that a validated value has its own type. The reviewing agent checks both and says so in its review.
-- No tool requires a second reviewer before the ceiling rises, the public surface widens, or a dependency lands. The rule is written in `AGENTS.md` only.
+- No tool requires the second reviewer for a new dependency. The dependency rule above and the review rule in `AGENTS.md` govern review.
 - Minimal environments are not yet enforced for every package gate and child. The [package verification issue](../issues/closed/2026-09-29-nine-package-gates-fail-from-clean-checkouts.md) owns the remaining runner checks, including the release families introduced by 0269–0272. Each correction must prove the intended case executes under the declared environment.
 - The five factory scripts under `sdlc/project/` are absent. Copy them when this repository registers with the factory.

@@ -1,4 +1,4 @@
-# Prepare tickets and learn from their builds
+# Prepare tickets
 
 Preparation reads the code and fills the ticket's short form (`sdlc/tickets/README.md`). It does not implement the feature or change an accepted outcome. Ian can overturn this process.
 
@@ -20,10 +20,10 @@ Read `origin/main` at a named commit; a local `main` can lag. Verify a landed pr
 
 **Proof strength.** Assert the row count before each row. Separate an absent field from a malformed one. One intended failure per fixture. Prove "sends nothing" by counting loopback requests. Prove precedence with conflicting values through the real builder. Run a new regression once against the bad source.
 
-**Gates.** A full `test`, `spec`, or `surfaces` run needs a checkpoint the coordinator named. An interrupted run is not a pass. Keep the candidate stable while a reviewer checks it. A clean textual merge does not prove compatibility; compile what the merge touches.
+**Gates.** Run focused checks during the build and full tests and lint on the landing commit. An interrupted run is not a pass. A clean textual merge does not prove compatibility; check what the merge touches.
 
 **Old tests and unchanged files.** Before replacing a negative test, cite the contract clause it pins. A review finding does not amend an accepted contract; reconcile the two first. When a refusal promises unchanged files, validate the whole proposed state before the first write.
 
-## Before landing
+## Landing
 
-The builder adds `## What the build taught us`: a few factual bullets on corrected assumptions, surprises, and remaining gaps with their owner, or one line saying nothing new arose. The fresh code reviewer checks it against the diff. The coordinator reads Status, Evidence, and Defers together before landing, so a finished item is not also listed as deferred. When a miss recurs, add one rule above and delete one that stopped earning its place.
+Use the whole-ticket or whole-slice review rule in `AGENTS.md`. Write one short record per ticket at landing. Say what landed, why, what was checked and which gaps remain. Keep the ticket status to one or two sentences. A ticket needs no separate build-lessons section or review of its record.

@@ -334,7 +334,7 @@ pub(crate) struct Width(u8);
 
 impl Width {
     /// The width every call follows until an explicit width is selected.
-    pub(crate) const FALLBACK: Self = Self(4);
+    pub(crate) const FALLBACK: Self = Self(8);
 
     /// The widest throttle, which also sizes the connection pool.
     pub(crate) const MOST: Self = Self(32);

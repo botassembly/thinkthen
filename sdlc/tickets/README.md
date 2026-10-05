@@ -7,6 +7,6 @@ One file per ticket; take the next free number. A ticket authorizes work and lan
 - `## Outcome`: what is true when it lands.
 - `## Evidence`: `- Starts from:`, `- Keeps:`, `- Changes:`, `- Proof:`, `- Defers:`. They name prior evidence, retained behavior, changes, proof, and deferred gaps.
 - Design notes only when the builder needs them.
-- `## What the build taught us`, added before landing.
+Write one short record per ticket at landing: what landed, why, what was checked and which gaps remain. Keep status lines to one or two sentences. Add no separate build-lessons section to the ticket.
 
-`sdlc/scripts/tickets` checks these sections.
+`sdlc/scripts/tickets` checks Outcome and Evidence.
