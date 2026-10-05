@@ -35,6 +35,10 @@ impl Judging<'_> {
             Value::Score(position) => Some(*position),
             _ => judged.answer.yes(),
         };
+        let original = context
+            .position
+            .filter(|p| p.located)
+            .map(|_| record.clone());
         let mut printed =
             if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {
                 // Ordinary rank has no cut and therefore no yes/no value.
@@ -93,7 +97,8 @@ impl Judging<'_> {
         if self.view.details {
             crate::cli::intake::locate(&mut printed, context.position)?;
         }
-        if self.documents {
+        self.source_output(original, &mut printed, context.position)?;
+        if self.documents && !context.position.is_some_and(|p| p.located) {
             crate::cli::intake::document(&mut printed, context.position, self.view.details)?;
         }
         Ok(Judged {
@@ -106,5 +111,26 @@ impl Judging<'_> {
             partial_failure: false,
             profile_mismatch: mismatch.notice(),
         })
+    }
+    fn source_output(
+        &self,
+        original: Option<Record>,
+        printed: &mut Option<String>,
+        position: Option<&crate::cli::intake::Position>,
+    ) -> Result<(), Failure> {
+        let original_value = original.as_ref().map(crate::core::json_line).transpose()?;
+        if let (Some(position), Some(original)) = (position.filter(|p| p.located), original) {
+            if self.view.details || (self.streams && !self.keeping.streams_only() && !self.view.raw)
+            {
+                crate::cli::intake::source_members(printed, Some(position))?;
+            } else if let Some(line) = printed {
+                let value = original_value
+                    .as_deref()
+                    .filter(|_| self.keeping.streams_only())
+                    .unwrap_or(line);
+                *line = crate::cli::intake::source_value(&original, value, position)?;
+            }
+        }
+        Ok(())
     }
 }

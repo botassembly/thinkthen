@@ -18,7 +18,10 @@ use rusqlite::vtab::{
 
 use crate::many::{ChooseMany, DecideMany, Rank, ScoreMany, Store, TagMany};
 use crate::tables::{self, Recognizer, Relater, Table};
-use crate::{budget, guard, scalars};
+use crate::{Registration, budget, guard, scalars};
+
+#[path = "ffi/files/ffi.rs"]
+mod files;
 
 /// The host's `sqlite3_api_routines`, extended past the 3.34 bindings of
 /// `libsqlite3-sys` to the `is_interrupted` field SQLite 3.41 added. Every
@@ -147,7 +150,7 @@ fn pin() {
     };
 }
 
-fn init(connection: Connection) -> rusqlite::Result<bool> {
+fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
     // SAFETY: the loadable API is initialized; this reads the host's version.
     let host = unsafe { ffi::sqlite3_libversion_number() };
     if let Some(refusal) = version_refusal(host) {
@@ -162,9 +165,13 @@ fn init(connection: Connection) -> rusqlite::Result<bool> {
     if let Some(check) = unsafe { table.as_ref() }.and_then(|table| table.is_interrupted) {
         IS_INTERRUPTED.store(check as *mut (), Ordering::Release);
     }
-    scalars::register(&connection)?;
+    scalars::register(&connection, mode)?;
+    files::register(&connection)?;
     budget::register(&connection)?;
-    let store = Arc::new(Mutex::new(Store::default()));
+    let store = Arc::new(Tables {
+        store: Arc::new(Mutex::new(Store::default())),
+        mode,
+    });
     connection.create_module(c"thinkthen_recognize", &RECOGNIZE, Some(Arc::clone(&store)))?;
     connection.create_module(c"thinkthen_relate", &RELATE, Some(Arc::clone(&store)))?;
     connection.create_module(
@@ -199,10 +206,45 @@ pub unsafe extern "C" fn sqlite3_thinkthen_init(
     message: *mut *mut c_char,
     api: *mut ffi::sqlite3_api_routines,
 ) -> c_int {
+    // SAFETY: the host's pointers are passed unchanged to the common loader.
+    unsafe {
+        load(db, message, api, |connection| {
+            init(connection, Registration::DirectOnly)
+        })
+    }
+}
+
+/// Initial-load entry point permitting judgments from every trusted schema.
+///
+/// Use a fresh connection and load once. SQLite's trusted_schema remains unchanged.
+///
+/// # Safety
+///
+/// Only SQLite calls this, at extension load, with its own three pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn sqlite3_thinkthen_trusted_init(
+    db: *mut sqlite3,
+    message: *mut *mut c_char,
+    api: *mut ffi::sqlite3_api_routines,
+) -> c_int {
+    // SAFETY: the host's pointers are passed unchanged to the common loader.
+    unsafe {
+        load(db, message, api, |connection| {
+            init(connection, Registration::Trusted)
+        })
+    }
+}
+
+unsafe fn load(
+    db: *mut sqlite3,
+    message: *mut *mut c_char,
+    api: *mut ffi::sqlite3_api_routines,
+    initialize: fn(Connection) -> rusqlite::Result<bool>,
+) -> c_int {
     API_TABLE.store(api, Ordering::Release);
     let loaded = guard("load", || {
         // SAFETY: the host's pointers, passed on as `extension_init2` asks.
-        Ok(unsafe { Connection::extension_init2(db, message, api, init) })
+        Ok(unsafe { Connection::extension_init2(db, message, api, initialize) })
     });
     match loaded {
         Ok(code) => code,
@@ -220,6 +262,13 @@ const CHOOSE_MANY: Module<'static, Tab<ChooseMany>> = Module::eponymous_only_mod
 const SCORE_MANY: Module<'static, Tab<ScoreMany>> = Module::eponymous_only_module();
 const TAG_MANY: Module<'static, Tab<TagMany>> = Module::eponymous_only_module();
 const RANK: Module<'static, Tab<Rank>> = Module::eponymous_only_module();
+
+/// Table registration state owned by one connection, beside its shared rows.
+#[derive(Debug)]
+struct Tables {
+    store: Arc<Mutex<Store>>,
+    mode: Registration,
+}
 
 /// One table-valued function's virtual table.
 #[repr(C)]
@@ -245,9 +294,9 @@ struct Cursor<T> {
 }
 
 // SAFETY: `Tab` is `repr(C)` with the base first, and its callbacks only
-// register a direct-only, eponymous table and answer from owned rows.
+// register an eponymous table under its connection policy and serve owned rows.
 unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
-    type Aux = Arc<Mutex<Store>>;
+    type Aux = Arc<Tables>;
     type Cursor = Cursor<T>;
 
     fn connect(
@@ -258,7 +307,10 @@ unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
         _: &[u8],
         _: &[&[u8]],
     ) -> rusqlite::Result<(Cow<'static, CStr>, Self)> {
-        db.config(VTabConfig::DirectOnly)?;
+        let registered = store.ok_or(rusqlite::Error::InvalidQuery)?;
+        if registered.mode == Registration::DirectOnly {
+            db.config(VTabConfig::DirectOnly)?;
+        }
         // SAFETY: the handle belongs to this connection and outlives the table.
         let handle = unsafe { db.handle() };
         Ok((
@@ -266,7 +318,7 @@ unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
             Self {
                 base: ffi::sqlite3_vtab::default(),
                 db: handle,
-                store: Arc::clone(store.ok_or(rusqlite::Error::InvalidQuery)?),
+                store: Arc::clone(&registered.store),
                 kind: PhantomData,
             },
         ))

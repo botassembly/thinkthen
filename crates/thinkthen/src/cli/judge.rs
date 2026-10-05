@@ -190,10 +190,12 @@ pub(crate) fn filter(
         ));
     }
     let (settled, file) = asked::filter(arguments)?;
+    let mut display = arguments.display.clone();
+    display.files_only = arguments.files_only;
     over_kept(
         Keeping::Passing,
         &arguments.common,
-        &arguments.display,
+        &display,
         tiers(&arguments.batching, file),
         &settled,
         fixed(&settled)?,

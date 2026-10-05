@@ -297,6 +297,7 @@ fn ask(ruby: &Ruby, verb: &str, subject: Value, input: Value) -> Result<Ask, Err
     let text = || String::try_convert(input);
     let records = || Vec::<String>::try_convert(input);
     Ok(match verb {
+        "files" => Ask::Files(String::try_convert(subject)?, text()?),
         "decide" => Ask::Decide(question_of(subject)?, text()?),
         "details" => Ask::Details(question_of(subject)?, text()?),
         "score" => Ask::Score(question_of(subject)?, text()?),

@@ -59,7 +59,19 @@ impl Asker for AnnotateAsker<'_> {
             error: PrepareError::Other(error),
         };
         let groups = grouped(self.judging, &answers).map_err(refused)?;
+        let original = held
+            .position
+            .as_ref()
+            .filter(|p| p.located)
+            .map(|_| held.record.clone());
         let mut judged = self.judging.finish(held.record, groups).map_err(refused)?;
+        if let (Some(position), Some(original), Some(line)) = (
+            held.position.as_ref().filter(|p| p.located),
+            original,
+            &mut judged.printed,
+        ) {
+            *line = crate::cli::intake::source_value(&original, line, position).map_err(refused)?;
+        }
         if self.judging.details() {
             crate::cli::intake::locate(&mut judged.printed, held.position.as_ref())
                 .map_err(refused)?;
@@ -209,10 +221,12 @@ where
         .map_err(Failure::Output)?;
     }
     // A stop after one document's row changes nothing it printed.
-    if let Some(stop) = ended
-        .stop
-        .filter(|_| reading.streams() || judging.common.input.len() > 1 || ended.finished == 0)
-    {
+    if let Some(stop) = ended.stop.filter(|_| {
+        reading.streams()
+            || judging.common.input.len() > 1
+            || judging.common.located()
+            || ended.finished == 0
+    }) {
         if !reading.streams() {
             return Err(stop.cause);
         }

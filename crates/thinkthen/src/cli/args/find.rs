@@ -50,7 +50,13 @@ pub(crate) struct FindCommon {
     pub(crate) details: bool,
     /// Read the lines or records from FILE instead of standard input.
     #[arg(long, value_name = "FILE")]
-    pub(crate) input: Option<PathBuf>,
+    pub(crate) input: Vec<PathBuf>,
+    /// Select physical line records or whole files.
+    #[arg(long, value_parser = ["line", "file"], value_name = "UNIT")]
+    pub(crate) unit: Option<String>,
+    /// Join N physical lines per unit.
+    #[arg(long, value_name = "N")]
+    pub(crate) window: Option<String>,
     /// Take each line as one text record.
     #[arg(long, conflicts_with = "jsonl")]
     pub(crate) lines: bool,
@@ -132,8 +138,9 @@ impl FindCommon {
             max_requests_total: self.max_requests_total,
             max_estimated_input_tokens_total: self.max_estimated_input_tokens_total,
             details: self.details,
-            input: self.input.iter().cloned().collect(),
-            window: None,
+            input: self.input.clone(),
+            window: self.window.clone(),
+            unit: self.unit.clone(),
             lines: self.lines,
             jsonl: self.jsonl,
             csv: false,

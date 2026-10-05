@@ -450,6 +450,26 @@ impl Engine {
         })
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "source calls retain the public call controls"
+    )]
+    fn _source(
+        &self,
+        py: Python<'_>,
+        verb: &str,
+        question: &str,
+        selection: &str,
+        batch: Arg<'_, '_>,
+        context: Arg<'_, '_>,
+        deadline: Arg<'_, '_>,
+        token: Held<'_, '_>,
+    ) -> PyResult<Py<PyAny>> {
+        crate::files::execute(
+            self, py, verb, question, selection, batch, context, deadline, token,
+        )
+    }
+
     /// This engine's totals.
     fn usage<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let counts = self.0.usage();

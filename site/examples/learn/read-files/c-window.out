@@ -1,0 +1,4 @@
+{"input":"Refund policy\nCustomers may request a refund within 30 days.","value":"Refund policy\nCustomers may request a refund within 30 days.","file":"documents/01-policy.txt","first_line":1,"last_line":2}
+{"input":"Ada approves refunds for Acme.\nBilling disputes require a receipt.","value":"Ada approves refunds for Acme.\nBilling disputes require a receipt.","file":"documents/01-policy.txt","first_line":3,"last_line":4}
+{"input":"Refund policy\nCustomers may request a refund within 30 days.","value":"Refund policy\nCustomers may request a refund within 30 days.","file":"documents/01-policy.txt","first_line":1,"last_line":2}
+{"input":"Ada approves refunds for Acme.\nBilling disputes require a receipt.","value":"Ada approves refunds for Acme.\nBilling disputes require a receipt.","file":"documents/01-policy.txt","first_line":3,"last_line":4}

@@ -24,3 +24,5 @@ export(tt_completion)
 export(tt_completion_read)
 S3method(print, thinkthen_question)
 importFrom(jsonlite, toJSON)
+
+export(tt_files)

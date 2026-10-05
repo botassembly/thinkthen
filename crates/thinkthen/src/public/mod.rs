@@ -5,6 +5,11 @@
 
 use std::sync::OnceLock;
 
+mod files;
+pub use files::{
+    FileReader, ReaderOptions, SourceRecord, SourceRecords, SourceUnit, enumerate_files, read_files,
+};
+
 mod annotated;
 mod asking;
 mod batch;

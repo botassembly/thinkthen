@@ -36,6 +36,7 @@ mod plan;
 mod question_file;
 mod request_width;
 mod settings;
+mod sources;
 mod usage;
 
 use crate::child::ChildEnvironment as _;

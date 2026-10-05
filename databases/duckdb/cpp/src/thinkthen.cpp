@@ -3,6 +3,7 @@
 #include "duckdb.hpp"
 #include "bridge.hpp"
 #include "find.hpp"
+#include "files.hpp"
 #include "nested.hpp"
 #include "portable.hpp"
 #include "relate.hpp"
@@ -38,6 +39,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	RegisterPlan(loader);
 	RegisterNested(loader);
 	RegisterFind(loader);
+	RegisterFiles(loader);
 	RegisterUsage(loader);
 	RegisterRemoved(loader);
 	RegisterRelate(loader);

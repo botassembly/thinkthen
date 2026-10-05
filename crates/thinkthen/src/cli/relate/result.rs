@@ -106,7 +106,10 @@ pub(super) fn write(
     }
 }
 
-fn details<'a>(output: &Output<'a>, execution: &'a Execution) -> Result<Details<'a>, Failure> {
+pub(super) fn details<'a>(
+    output: &Output<'a>,
+    execution: &'a Execution,
+) -> Result<Details<'a>, Failure> {
     let question = output.spec.question(output.framing == Framing::Lines);
     let meta = Meta::new(
         env!("CARGO_PKG_VERSION"),

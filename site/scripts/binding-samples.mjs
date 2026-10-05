@@ -39,6 +39,9 @@ export function sampleSurface(rel) {
 // The files/ folder a sample reads: its page's, beside the sample or one
 // folder up for a sample under more/.
 export function sampleFiles(examples, rel) {
+  if (rel.startsWith('learn/python/files.')) {
+    return path.resolve(examples, '../../specification/fixtures/files');
+  }
   return path.join(examples, path.dirname(rel).replace(/\/more$/, ''), 'files');
 }
 // No key, address, backend or setting from the shell may reach a sample.

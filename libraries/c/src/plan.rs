@@ -25,7 +25,10 @@ struct PlanInput<'a> {
     verb: String,
     #[serde(borrow)]
     question: &'a RawValue,
-    input: Records,
+    #[serde(default)]
+    input: Option<Records>,
+    #[serde(borrow, default)]
+    source: Option<&'a RawValue>,
     #[serde(borrow, default)]
     settings: Option<&'a RawValue>,
 }
@@ -63,9 +66,14 @@ pub(crate) fn plan(engine: &Engine, text: &str) -> Result<String, Failure> {
     let source = input.settings.map_or("{}", RawValue::get);
     let settings = Settings::parse(source).map_err(usage)?;
     let question = question(input.question.get(), &settings, source, verb)?;
-    let records = match input.input {
-        Records::One(text) => vec![text],
-        Records::Many(texts) => texts,
+    let records = match (input.input, input.source) {
+        (Some(Records::One(text)), None) => vec![text],
+        (Some(Records::Many(texts)), None) => texts,
+        (None, Some(source)) => super::call::source::parse(source.get())?
+            .read()?
+            .map(|r| r.map(|r| r.record))
+            .collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(Failure::usage("plan takes input or source, not both")),
     };
     let mut options = CallOptions::new();
     if settings.batch_max() {

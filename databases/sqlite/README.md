@@ -1,6 +1,31 @@
 # The SQLite extension
 
-`thinkthen-sqlite` is a loadable extension over the public Rust engine (ADR 0047 and ADR 0105). Build its release library, copy `libthinkthen0.so` to `thinkthen.so`, and load it with `.load ./thinkthen`. SQLite 3.50.0 or newer is required. The extension registers volatile, direct-only functions: an untrusted schema cannot call them to spend requests or read files.
+`thinkthen-sqlite` is a loadable extension over the public Rust engine (ADR 0047 and ADR 0105). Build its release library, copy `libthinkthen0.so` to `thinkthen.so`, and load it with `.load ./thinkthen`. SQLite 3.50.0 or newer is required. Default loading registers volatile, direct-only functions. Objects in main and attached schemas cannot call them to spend requests or read files. Caller-created TEMP objects remain callable, even with `trusted_schema=OFF`.
+
+## Use reviewed views and ingestion triggers
+
+On a fresh connection, load once through the explicit trusted entry point:
+
+```sql
+.load ./thinkthen sqlite3_thinkthen_trusted_init
+PRAGMA trusted_schema=ON;
+```
+
+A native host passes `sqlite3_thinkthen_trusted_init` as the entry-point argument to `sqlite3_load_extension`. Default loading uses `sqlite3_thinkthen_init`. [entry-points.txt](entry-points.txt) declares the extension's exports. Switch modes by closing the connection and loading once on a fresh connection.
+
+This choice permits reviewed schema SQL to spend paid requests and read permitted question files. Trust covers main, every attached schema and later attachments while `trusted_schema` is ON. It provides no per-view or per-file trust isolation. Keep downloaded or unreviewed databases on separate default-loaded connections.
+
+Trusted registration permits judgment scalars, `thinkthen_plan` and judgment tables in views and triggers. SQLite may also evaluate judgments in CHECK and DEFAULT expressions. Configuration, usage, budget setters and removed spellings retain DIRECTONLY and remain unavailable from main and attached schema objects. Judgments retain neither INNOCUOUS nor DETERMINISTIC flags; SQLite still refuses non-deterministic generated columns and indexes. Loading changes neither `trusted_schema` nor the host's authorizer. With `trusted_schema=OFF`, judgments from main and attached schema objects refuse before reading a question file or sending a request. Top-level calls remain available. SQLite treats caller-created TEMP objects as caller SQL: TEMP views and triggers can call judgments, plans, controls and judgment tables in both loading modes, even with `trusted_schema=OFF`. Such calls can spend paid requests and read permitted question files. This flag does not revoke TEMP calls. The ordinary permissions, budgets, cancellation and errors still apply.
+
+For example, a reviewed ingestion trigger can store a judgment:
+
+```sql
+CREATE TABLE messages(body TEXT, is_red INTEGER);
+CREATE TRIGGER judge_message AFTER INSERT ON messages BEGIN
+  UPDATE messages SET is_red=(SELECT thinkthen_decide('Is it red?', NEW.body) AS is_red)
+  WHERE rowid=NEW.rowid;
+END;
+```
 
 ## Judge a table once
 
@@ -60,7 +85,19 @@ The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document
 
 `thinkthen_find` accepts an ordered JSON array of 2–255 nonblank text units, or 2–254 with `{"none":true}`. Duplicates retain separate zero-based positions. Empty input and SQL NULL return SQL NULL. `thinkthen_recognize` keeps the `text, start, end, length, kind, strength` row shape, with character offsets matching SQLite `substr`. `thinkthen_relations` accepts a full or bare recognize spec or an `@file`.
 
+For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names as `'person,organisation'`. To supply descriptions, pass a recognize JSON object such as `'{"kinds":{"person":"A human name."}}'`, a full versioned recognize spec, or an `@file` containing that spec. A bare JSON array string such as `'["person"]'` currently names one literal kind, `["person"]`. Use `'person'` to request the person kind.
+
+```sql
+SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person') AS recognized_names;
+```
+
 `thinkthen_relate` runs a caller-supplied read-only `SELECT` yielding `id, name` or `id, name, kind` on the same connection. `rules` is one inline rule, a JSON array of rules, a JSON relate spec or `@file`. At most 255 distinct name/kind pairs enter a call. Equal pairs share one entity, and each answer edge expands to the ids that held its endpoints. Blank names/kinds and a 256th pair raise usage before a send.
+
+## Price and elapsed time
+
+SQL plans report an estimated input-token band before cache hits, retries or refusal splits. They do not predict output tokens, total dollars or future duration. SQL usage reports cumulative process totals, not the facts of one isolated call. Packed request metadata can appear on more than one result row; summing those rows counts the same request more than once.
+
+Measure wall time around the SQL statement in the client. This includes database and client work and is not engine-only time. For an external price estimate, apply a known input/output tariff to complete provider-reported usage with decimal arithmetic. The provider's invoice determines actual charges. Missing rates or incomplete attempt usage mean unknown cost, not zero. Cumulative SQL counters do not prove usage completeness for failed attempts, and subtracting shared counters cannot isolate concurrent calls.
 
 ## Runtime boundaries
 
@@ -68,4 +105,17 @@ The engine is shared by connections in this loaded copy. `thinkthen_budget_ms(n)
 
 Questions may be plain decide text, inline JSON or a named `@file`; question sets, recognition and relation specs use their documented JSON/file forms. The file door follows symlinks, opens a regular file nonblocking and refuses files above 1 MiB. Parsed named files are re-read when modification time or size changes. The answer cache is off unless `THINKTHEN_CACHE` or the `"cache"` setting names a folder; the platform cache folder is never used (ticket 0318). Answer cache and recordings contain question and evidence text, in plain text, with no expiry. Whoever can write such a folder controls its answers, so a call refuses, before any request, a named cache, record or replay folder that another user owns or others can write; keep it at mode 0700. Recordings store bodies, never headers. Strict replay misses send nothing. The cache is not a pricing or authorization ledger.
 
-`setup.sh` installs the pinned SQLite 3.50.0 amalgamation into the local toolchain cache once. `check.sh` builds a matching extension offline, verifies one exported entry point and the panic guard, then runs fixtures on the pinned host. `tests/helper.py` supplies isolated loopback children with clean environments; `tests/conformance.py` selects cases with an absolute `THINKTHEN_CONFORMANCE_IDS` file. A source test, a copied installed package and the release runner are separate qualifications.
+`setup.sh` installs the pinned SQLite 3.50.0 amalgamation into the local toolchain cache once. `check.sh` builds a matching extension offline, verifies the declared exported entry points and the panic guard, then runs fixtures on the pinned host. `tests/helper.py` supplies isolated loopback children with clean environments; `tests/conformance.py` selects cases with an absolute `THINKTHEN_CONFORMANCE_IDS` file. A source test, a copied installed package and the release runner are separate qualifications.
+
+## Explicit files and folders
+
+`thinkthen_read_files(path[, reader_options])` returns `ordinal, record, file, first_line, last_line`. A path is explicit text or a JSON array of paths; strings passed to judging functions remain ordinary evidence. Reader options are JSON text and default to line units. Use `{"unit":"window","window":4}` for nonoverlapping physical line windows or `{"unit":"file"}` for exact whole documents. Positions are one-based and inclusive. Folder descendants sort by relative path, include hidden regular files and skip descendant symlinks. Explicit file symlinks retain the native open policy. Operand order and duplicate occurrences are preserved. A manifest and each record have a 16 MiB bound. Invalid options, unsupported operands and enumeration failures refuse before admission; one active handle reads content on demand and a later content failure stops the scan.
+
+```sql
+-- Run from the repository root after loading the SQLite extension.
+SELECT ordinal, record, file, first_line, last_line,
+       thinkthen_decide('Does this document contain a support contract?', record) AS value
+FROM thinkthen_read_files('specification/fixtures/files/documents', '{"unit":"file"}');
+```
+
+Files use the caller's native filesystem permissions. The reader remains DIRECTONLY even under `sqlite3_thinkthen_trusted_init`: stored main/attached views and triggers cannot read files. Caller-created TEMP objects retain SQLite's availability under either trusted_schema setting. A reader's source coordinates stay outside judging payloads and cache keys. `thinkthen_span_lines(record, first_line, start, end)` returns JSON with physical `first_line` and `last_line` from the shared native Unicode scalar mapper; retain the local recognize offsets alongside it. Relate joins both returned endpoint ids to their actual reader rows and admits at most 255 source rows before deduplication. PostgreSQL server paths remain deferred.

@@ -272,14 +272,6 @@ fn preflight_refusals_send_nothing() -> io::Result<()> {
     let saved = format!("@{}", question.display());
     let cases: Vec<Vec<&str>> = vec![
         vec!["decide", "Clear?", "--input", one, "--input", missing],
-        vec![
-            "filter",
-            "Clear?",
-            "--input",
-            one,
-            "--input",
-            place.to_str().expect("path"),
-        ],
         vec!["rank", "Clear?", one, "--input", one],
         vec![
             "decide", "Clear?", "--input", one, "--input", one, "--quiet",
@@ -295,8 +287,6 @@ fn preflight_refusals_send_nothing() -> io::Result<()> {
         vec!["decide", "Clear?", "--window", "2", "--field", "/text"],
         vec!["rank", &saved, "--window", "2"],
         vec!["annotate", set.to_str().expect("path"), "--window", "2"],
-        vec!["recognize", "--input", one, "--input", one],
-        vec!["relate", "member", "--window", "2"],
     ];
     let listener = Listener::answering(answer)?;
     for case in cases {

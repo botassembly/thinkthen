@@ -1,0 +1,44 @@
+---
+// Goal: show explicit file and folder readers for all ten functions with physical source coordinates.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { runs } from '../../data/samples.mjs';
+import python from '../../../examples/learn/python/files.py?raw';
+import pythonOutput from '../../../examples/learn/python/files.py.out?raw';
+const examples = runs('learn/read-files');
+const captions = [
+  'Filter refund lines and retain their file and physical lines.',
+  'Print each matching file once, in first-match order.',
+  'Rank complete documents about billing disputes.',
+  'Find one refund-policy line and its original file.',
+  'Decide whether each complete document is a contract.',
+  'Choose a category for each document.',
+  'Tag each document with every accepted label.',
+  'Score document urgency on the supplied a-to-b scale.',
+  'Answer the saved contract and urgent questions.',
+  'Recognize names with local offsets and physical span lines.',
+  'Relate complete documents with both endpoints located.',
+  'Read repeated paths as separate two-line windows.',
+];
+---
+<Base title="Files and folders" description="Explicit readers for all ten ThinkThen functions, with original records, file names and physical lines.">
+  <h1>Files and folders</h1>
+  <p class="lede">Select paths explicitly, choose a physical line, a nonoverlapping window or a complete file, then use the existing ten functions. Each answer keeps its original record and source.</p>
+  <p>These readers are part of the 0.2 development API. The examples below replay controlled saved responses. They demonstrate input and output shapes, rather than model accuracy.</p>
+  <h2>One shared folder</h2>
+  <p>From a checkout, use <code>specification/fixtures/files</code> as your working folder. Its <a href="https://github.com/botassembly/thinkthen/tree/main/specification/fixtures/files/documents">documents</a> folder holds <code>01-policy.txt</code> and <code>02-contract.txt</code>. Its <a href="https://github.com/botassembly/thinkthen/blob/main/specification/fixtures/files/questions.json">questions.json</a> asks the named contract and urgent questions. CLI, Python and SQL examples use this same corpus.</p>
+  <h2>Command line</h2>
+  <p>Repeat <code>--input</code> for multiple operands. <code>--unit line</code> selects physical lines; <code>--unit file</code> keeps complete document bytes. <code>--window N</code> selects nonoverlapping N-line windows, including a final short window. A folder defaults to lines. Existing file calls without explicit reader options retain their framing defaults.</p>
+  {examples.map((run, i) => <Terminal run={run} caption={captions[i]} />)}
+  <h2>Python</h2>
+  <p><code>read_files(path_or_paths, unit="line")</code> creates a reusable explicit source selection. Use <code>unit="file"</code> for documents or <code>unit="window", window=N</code> for windows. The existing engine functions return located values. The sample prints their original records, answers and coordinates.</p>
+  <Code code={python} file="files.py" />
+  <Code code={pythonOutput} lang="output" />
+  <h2>Source coordinates and limits</h2>
+  <p><code>file</code>, <code>first_line</code> and <code>last_line</code> identify the original record. Physical lines are one-based and inclusive, including blank lines skipped by the reader. Recognition keeps local Unicode offsets and maps each span to its physical lines. Relation endpoints carry their complete source ranges.</p>
+  <p>Folder files follow sorted relative paths; named operands keep their order. Descendant symlinks are skipped. Reader metadata stays outside model evidence and cache identity. Each record and folder manifest has a 16 MiB bound. Source rank also has a 16 MiB cumulative original-evidence bound. Find keeps its complete-set 16 MiB and candidate limits; relate keeps its entity limit. Rank withholds partial output; streaming CLI functions can retain results before a later read failure.</p>
+  <h2>Other surfaces</h2>
+  <p>The <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/files.md">library reader guide</a> gives the actual path-reader entry point for each SDK and the C JSON <code>source</code> envelope. <a href="/install/duckdb/">DuckDB</a> and <a href="/install/sqlite/">SQLite</a> expose <code>{'thinkthen_read_files(\'documents\', \'{"unit":"file"}\')'}</code> with <code>ordinal, record, file, first_line, last_line</code>; existing SQL functions consume those rows. The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/duckdb/examples/files.sql">ten DuckDB examples</a> keep source columns, join the selected find ordinal, map recognition spans through <code>thinkthen_span_lines</code>, and join both relation endpoints. The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/sqlite/README.md">SQLite reader example</a> shows the corresponding reader and judgment join. PostgreSQL server-file access remains deferred.</p>
+  <p class="pagelinks"><a href="/functions/">The ten functions</a> · <a href="https://github.com/botassembly/thinkthen/blob/main/specification/files.md">Files specification</a> · <a href="/learn/recording/">Replay</a></p>
+</Base>

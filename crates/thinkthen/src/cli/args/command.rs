@@ -365,18 +365,7 @@ impl Command {
                 a.extra.drain(..).map(PathBuf::from).collect(),
             ),
             Self::Annotate(a) => (&mut a.common, std::mem::take(&mut a.extra_input)),
-            Self::Recognize(a) => {
-                if a.common.input.len() > 1 || a.common.window.is_some() {
-                    return Err(Failure::Usage("recognize takes one input and no --window"));
-                }
-                return Ok(());
-            }
-            Self::Relate(a) => {
-                if a.common.input.len() > 1 || a.common.window.is_some() {
-                    return Err(Failure::Usage("relate takes one input and no --window"));
-                }
-                return Ok(());
-            }
+            Self::Recognize(_) | Self::Relate(_) => return Ok(()),
             _ => return Ok(()),
         };
         if !paths.is_empty() && !common.input.is_empty() {
@@ -439,7 +428,7 @@ impl Command {
             Self::Score(arguments) => arguments.common.input.first().map(PathBuf::as_path),
             Self::Filter(arguments) => arguments.common.input.first().map(PathBuf::as_path),
             Self::Rank(arguments) => arguments.common.input.first().map(PathBuf::as_path),
-            Self::Find(arguments) => arguments.common.input.as_deref(),
+            Self::Find(arguments) => arguments.common.input.first().map(PathBuf::as_path),
             Self::Annotate(arguments) => arguments.common.input.first().map(PathBuf::as_path),
             Self::Recognize(arguments) => arguments.common.input.first().map(PathBuf::as_path),
             Self::Relate(arguments) => arguments.common.input.first().map(PathBuf::as_path),

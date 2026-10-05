@@ -79,6 +79,10 @@ pub(crate) struct Common {
     #[arg(long, value_name = "N")]
     pub(crate) window: Option<String>,
 
+    /// Select physical line records or whole files from explicit paths.
+    #[arg(long, value_parser = ["line", "file"], value_name = "UNIT")]
+    pub(crate) unit: Option<String>,
+
     /// Take each line as one text record.
     ///
     /// Value verbs keep `input` beside `value`. Record-returning verbs return
@@ -293,6 +297,10 @@ pub(crate) struct Refused {
 /// Everything `filter` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct FilterArguments {
+    /// Print each matching file once, in first-match order.
+    #[arg(long)]
+    pub(crate) files_only: bool,
+
     /// The question asked of each record, or `@` and the path of a question file.
     ///
     /// As `@FILE` it is a question file holding one `decide` question, and a

@@ -15,6 +15,7 @@ export const {
   NO,
   UNSURE,
   plan,
+  files,
   decide,
   decide_many,
   choose_many,

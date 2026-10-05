@@ -32,30 +32,65 @@ pub(super) type Records = Box<dyn Iterator<Item = Result<Held, Placed>> + Send>;
 
 /// Frame the input as records: table rows, lines, or one document.
 pub(super) fn records(
-    _configuration: &JudgingInput<'_>,
+    configuration: &JudgingInput<'_>,
     reading: &Reading,
     source: crate::cli::intake::Intake,
 ) -> Result<Records, Failure> {
     let reading = reading.clone();
     let streams = reading.streams();
-    Ok(Box::new(source.map(move |item| {
-        let item = item?;
-        let (record, arrived) = match item.data {
-            crate::cli::intake::Data::Record(record) => (record, None),
-            crate::cli::intake::Data::Bytes(bytes) => {
-                let record = reading
-                    .record(&bytes)
-                    .map_err(|error| Placed::at(Failure::record(error, streams), item.at))?;
-                (record, Some(bytes))
+    let limited = configuration.keeping == Keeping::Ordered && configuration.common.located();
+    let mut remaining = crate::core::MAX_RECORD_BYTES;
+    let mut source = source;
+    let mut stopped = false;
+    Ok(Box::new(std::iter::from_fn(move || {
+        if stopped {
+            return None;
+        }
+        let held = source.next()?.and_then(|item| {
+            let (record, arrived) = match item.data {
+                crate::cli::intake::Data::Record(record) => (record, None),
+                crate::cli::intake::Data::Bytes(bytes) => {
+                    let record = reading
+                        .record(&bytes)
+                        .map_err(|error| Placed::at(Failure::record(error, streams), item.at))?;
+                    (record, Some(bytes))
+                }
+            };
+            let held = Held {
+                record,
+                arrived,
+                at: item.at,
+                position: item.position,
+            };
+            if limited {
+                charge(&reading, &held, &mut remaining)?;
             }
-        };
-        Ok(Held {
-            record,
-            arrived,
-            at: item.at,
-            position: item.position,
-        })
+            Ok(held)
+        });
+        stopped = held.is_err();
+        Some(held)
     })))
+}
+
+/// Charge original evidence at source admission, leaving the iterator tail unread.
+fn charge(reading: &Reading, held: &Held, remaining: &mut usize) -> Result<(), Placed> {
+    let record_error = |error| Placed::at(Failure::record(error, reading.streams()), held.at);
+    let bytes = match &held.arrived {
+        Some(bytes) => reading.as_it_arrived(bytes).map_err(record_error)?.len(),
+        None => reading
+            .evidence(&held.record)
+            .map_err(record_error)?
+            .as_text()
+            .map_err(|error| Placed::at(Failure::from(error), held.at))?
+            .len(),
+    };
+    *remaining = remaining.checked_sub(bytes).ok_or_else(|| {
+        Placed::at(
+            Failure::Usage("source rank reads at most 16 MiB across all input records"),
+            held.at,
+        )
+    })?;
+    Ok(())
 }
 
 /// What one record's plan needs besides the record.

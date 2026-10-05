@@ -1,0 +1,2 @@
+{"input":"Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n","value":["refund","contract"],"file":"documents/01-policy.txt","first_line":1,"last_line":4}
+{"input":"Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n","value":["refund","contract"],"file":"documents/02-contract.txt","first_line":1,"last_line":4}

@@ -13,6 +13,7 @@ mod config;
 mod dry_run;
 mod input;
 pub(crate) mod result;
+mod source;
 
 pub(crate) fn run(
     arguments: &RelateArguments,
@@ -33,15 +34,8 @@ pub(crate) fn run(
         .with_request_size(request_size);
     environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common, environment, &backend)?;
-    let source = crate::edge::source(
-        arguments
-            .common
-            .input
-            .first()
-            .map(std::path::PathBuf::as_path),
-        input,
-    )?;
-    let entities = input::read(source, settled.framing, &settled.spec)?;
+    let (entities, sources) =
+        source::selection(&arguments.common, input, settled.framing, &settled.spec)?;
     if entities.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
@@ -90,7 +84,11 @@ pub(crate) fn run(
         backend: &backend,
         warning: mismatch.warning(),
     };
-    result::write(&mut writer, &output, &execution)?;
+    if let Some(sources) = &sources {
+        source::write(&mut writer, &output, &execution, sources)?;
+    } else {
+        result::write(&mut writer, &output, &execution)?;
+    }
     environment.usage().record_done();
     mismatch.print_once()?;
     Ok(if partial {

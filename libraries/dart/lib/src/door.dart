@@ -521,17 +521,22 @@ class Door {
   ]) {
     final owned = _OwnedPointers();
     try {
-      final request = owned.add(memory.cString(jsonEncode({
-        'verb': verb,
-        'question': question,
-        'input': input,
-        if (settings != null) 'settings': settings,
-      })));
+      final request = owned.add(
+        memory.cString(
+          jsonEncode({
+            'verb': verb,
+            'question': question,
+            'input': input,
+            if (settings != null) 'settings': settings,
+          }),
+        ),
+      );
       final out = owned.add(
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
       );
-      final outLen =
-          owned.add(memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>());
+      final outLen = owned.add(
+        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+      );
       final code = planJson(engine, request, out, outLen);
       if (code != 0) throw failure(engine, code);
       try {
@@ -674,6 +679,33 @@ class Door {
     }
   }
 
+  /// Explicit native reader for all ten JSON question grammars.
+  Object? files(
+    Pointer<Void> engine,
+    Map<String, Object?> question,
+    List<String> paths, {
+    String unit = 'line',
+    int? window,
+    int deadline = -1,
+    Pointer<Void>? token,
+  }) {
+    if (question.containsKey('source'))
+      throw ArgumentError('source is supplied by files');
+    return ask(
+      engine,
+      {
+        ...question,
+        'source': {
+          'paths': paths,
+          'unit': unit,
+          if (window != null) 'window': window,
+        },
+      },
+      deadline: deadline,
+      token: token,
+    );
+  }
+
   /// Carries description maps and structured {what,not_for,examples} unchanged.
   Object? ask(
     Pointer<Void> engine,
@@ -690,8 +722,14 @@ class Door {
     int deadline = -1,
     Pointer<Void>? token,
   }) =>
-      structured(engine, spec, [text],
-          recognize: true, deadline: deadline, token: token);
+      structured(
+        engine,
+        spec,
+        [text],
+        recognize: true,
+        deadline: deadline,
+        token: token,
+      );
 
   ({Object? value, Map<String, Object?> facts}) relate(
     Pointer<Void> engine,
@@ -700,8 +738,14 @@ class Door {
     int deadline = -1,
     Pointer<Void>? token,
   }) =>
-      structured(engine, spec, records,
-          recognize: false, deadline: deadline, token: token);
+      structured(
+        engine,
+        spec,
+        records,
+        recognize: false,
+        deadline: deadline,
+        token: token,
+      );
 
   Object? call(
     Pointer<Void> engine,

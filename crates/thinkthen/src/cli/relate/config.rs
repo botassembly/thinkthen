@@ -76,7 +76,14 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
             sources.model = Source::CommandLine;
         }
     }
-    let framing = arguments.common.framing();
+    let framing = if arguments.common.input.len() > 1
+        && arguments.common.unit.is_none()
+        && arguments.common.framing() == Framing::Document
+    {
+        Framing::Lines
+    } else {
+        arguments.common.framing()
+    };
     if framing == Framing::Lines {
         lines_only(name.is_some() || arguments.kind_field.is_some(), &spec)?;
     }

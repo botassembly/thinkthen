@@ -166,6 +166,15 @@ C;
         try { return FFI::string($text); }
         finally { $this->ffi->thinkthen_free_string($text); }
     }
+    /** Explicit native reader for any of the ten question grammars. */
+    public function files(array $question, array $paths, string $unit = 'line', ?int $window = null, int $deadlineMs = -1, ?FFI\CData $token = null): string
+    {
+        if (array_key_exists('source', $question)) throw new InvalidArgumentException('source is supplied by files');
+        $source = ['paths' => array_values($paths), 'unit' => $unit];
+        if ($window !== null) $source['window'] = $window;
+        $question['source'] = $source;
+        return $this->call(json_encode($question, JSON_THROW_ON_ERROR), $deadlineMs, $token);
+    }
     public function recognize(string $spec, string $text, int $deadlineMs = -1, ?FFI\CData $token = null): array
     {
         $this->live(); $s = $this->checked($spec); $t = $this->evidence($text);
