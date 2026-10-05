@@ -47,6 +47,9 @@ int tt_field_read(const TTJSON *member, TTField *out);
 - (TTErrorKind)decideBytes:(const char *)question questionLength:(size_t)questionLength text:(const void *)text length:(size_t)length deadline:(int64_t)deadline token:(TTToken *)token answer:(TTDecision *)output facts:(char **)facts failure:(TTFailure *)failure;
 - (TTErrorKind)manyBytes:(const char *)question questionLength:(size_t)questionLength texts:(const char *const *)texts lengths:(const size_t *)lengths count:(size_t)count deadline:(int64_t)deadline token:(TTToken *)token answers:(TTDecision *)output facts:(char **)facts failure:(TTFailure *)failure;
 - (TTErrorKind)many:(const char *)question texts:(const char *const *)texts lengths:(const size_t *)lengths count:(size_t)count deadline:(int64_t)deadline token:(TTToken *)token answers:(TTDecision *)output facts:(char **)facts failure:(TTFailure *)failure;
+/* Explicit native reader for every verb. source is JSON paths/unit/window.
+ * Caller frees a successful JSON reply with free, as for json:. */
+- (char *)files:(const char *)question source:(const char *)source deadline:(int64_t)deadline token:(TTToken *)token failure:(TTFailure *)failure;
 - (char *)json:(const char *)request deadline:(int64_t)deadline token:(TTToken *)token failure:(TTFailure *)failure;
 - (char *)jsonBytes:(const char *)request length:(size_t)length deadline:(int64_t)deadline token:(TTToken *)token failure:(TTFailure *)failure;
 - (TTErrorKind)recognizeBytes:(const char *)spec specLength:(size_t)specLength text:(const void *)text length:(size_t)length result:(char **)output size:(size_t *)outLen deadline:(int64_t)deadline token:(TTToken *)token facts:(char **)facts failure:(TTFailure *)failure;

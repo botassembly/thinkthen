@@ -1,5 +1,8 @@
 //! The calls a worker runs: owned inputs in, plain Rust values out.
 
+#[path = "../../shared/source.rs"]
+mod source;
+
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 
@@ -32,6 +35,7 @@ fn texts(records: Vec<String>) -> impl Iterator<Item = Text> {
 /// Ruby value.
 #[derive(Debug)]
 pub(crate) enum Ask {
+    Files(String, String),
     Decide(LoadedQuestion, String),
     Details(LoadedQuestion, String),
     Score(LoadedQuestion, String),
@@ -161,6 +165,10 @@ fn run_inner(
     options: CallOptions<'_>,
 ) -> Result<(Output, Facts), Fault> {
     Ok(match ask {
+        Ask::Files(question, selection) => {
+            let (value, facts) = source::dispatch(engine, &question, &selection, options)?;
+            (Output::Json(value), facts)
+        }
         Ask::Decide(LoadedQuestion::Question(question), text) => {
             let call = engine.decide_with(&question, &text, options)?;
             let facts = call.facts().clone();

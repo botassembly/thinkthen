@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -209,6 +210,17 @@ public sealed class Engine : IDisposable
             try { return Marshal.PtrToStringUTF8(output) ?? throw new InvalidOperationException("null string"); }
             finally { Native.thinkthen_free_string(output); }
         });
+    }
+    /// <summary>Explicit native reader for any of the ten JSON question grammars.</summary>
+    public TypedResult<JsonElement> Files(IReadOnlyDictionary<string, object?> question, string[] paths,
+        string unit = "line", int? window = null, TimeSpan? budget = null, CancellationToken cancellation = default)
+    {
+        var request = new Dictionary<string, object?>(question);
+        if (request.ContainsKey("source")) throw new ArgumentException("source is supplied by Files");
+        var source = new Dictionary<string, object?> { ["paths"] = paths, ["unit"] = unit };
+        if (window.HasValue) source["window"] = window.Value;
+        request["source"] = source;
+        return CallTyped(JsonSerializer.Serialize(request), budget, cancellation);
     }
     /// <summary>The JSON door's reply read as its value and facts; other members are ignored.</summary>
     public TypedResult<JsonElement> CallTyped(string request, TimeSpan? budget = null, CancellationToken cancellation = default)

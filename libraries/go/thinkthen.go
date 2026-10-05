@@ -515,3 +515,24 @@ func (e *Engine) Relate(ctx context.Context, spec string, records []string) (Res
 	}
 	return Result[json.RawMessage]{Value: value, Facts: owned}, nil
 }
+
+// ReaderOptions selects physical units; validation and file parsing stay native.
+type ReaderOptions struct {
+    Unit string `json:"unit,omitempty"`
+    Window *int `json:"window,omitempty"`
+}
+
+// Files sends one existing question grammar through the explicit native reader.
+// It returns the JSON value/facts envelope, including original source locations.
+func (e *Engine) Files(ctx context.Context, question map[string]any, paths []string, reader ReaderOptions) (string, error) {
+    request := make(map[string]any, len(question)+1)
+    for key, value := range question { request[key] = value }
+    if _, exists := request["source"]; exists { return "", errors.New("source is supplied by Files") }
+    source := map[string]any{"paths": paths}
+    if reader.Unit != "" { source["unit"] = reader.Unit }
+    if reader.Window != nil { source["window"] = *reader.Window }
+    request["source"] = source
+    encoded, err := json.Marshal(request)
+    if err != nil { return "", err }
+    return e.Call(ctx, string(encoded))
+}

@@ -59,3 +59,7 @@ tt_completion_read_native <- function(value) .Call(wrap__tt_completion_read_nati
 tt_completion_settle_early <- function(value, kind) .Call(wrap__tt_completion_settle_early, value, kind)
 
 # nolint end
+
+tt_source_files <- function(question, selection, deadline) {
+    .Call(wrap__tt_source_files, question, selection, deadline)
+}

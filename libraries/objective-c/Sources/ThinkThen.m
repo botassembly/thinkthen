@@ -105,6 +105,18 @@ static void leave(TTClient *e, TTToken *t) {
         *facts=owned; capture(native,0,f); }
     thinkthen_free_string(rawFacts); free(answers); leave(self,tok); return (TTErrorKind)rc;
 }
+- (char *)files:(const char *)question source:(const char *)source deadline:(int64_t)d token:(TTToken *)tok failure:(TTFailure *)f {
+    if (!question || !source) { reject(f); return NULL; }
+    TTJSON *q=tt_json_parse(question,strlen(question)), *s=tt_json_parse(source,strlen(source));
+    if (!q || !s || q->type!=TTJSONObject || s->type!=TTJSONObject || tt_json_get(q,"source")) {
+        tt_json_free(q); tt_json_free(s); reject(f); return NULL;
+    }
+    size_t n=q->source_length+strlen(source)+12;
+    char *request=malloc(n); if (!request) abort();
+    snprintf(request,n,"%.*s%s\"source\":%s}",(int)(q->source_length-1),q->source,q->count?",":"",source);
+    char *answer=[self json:request deadline:d token:tok failure:f];
+    free(request); tt_json_free(q); tt_json_free(s); return answer;
+}
 - (char *)json:(const char *)request deadline:(int64_t)d token:(TTToken *)tok failure:(TTFailure *)f {
     if (!request) { reject(f); return NULL; }
     enter(self,tok); char *raw = thinkthen_call_opts(native,request,d,tok ? tok->native : NULL);

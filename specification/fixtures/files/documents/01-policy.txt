@@ -1,0 +1,4 @@
+Refund policy
+Customers may request a refund within 30 days.
+Ada approves refunds for Acme.
+Billing disputes require a receipt.

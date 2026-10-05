@@ -198,6 +198,14 @@ module ThinkThen
       engine.instance_variable_set(:@native, native)
       engine
     end
+    # Explicit native reader; question is the existing JSON grammar for any verb.
+    def files(question, paths, unit: "line", window: nil, cancel: nil, deadline_ms: nil)
+      source = {paths: paths.is_a?(String) ? [paths] : paths, unit: unit}
+      source[:window] = window unless window.nil?
+      crossing("files", JSON.generate(question), JSON.generate(source), cancel, deadline_ms)
+        .map { |text| JSON.parse(text) }
+    end
+
     private_class_method :from_native
 
     def inspect

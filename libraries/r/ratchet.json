@@ -1,7 +1,8 @@
 {
   "directory": [
-    "thinkthen/src/rust"
+    "thinkthen/src/rust",
+    "../shared"
   ],
   "extension": ".rs",
-  "max": 1920
+  "max": 2315
 }

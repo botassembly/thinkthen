@@ -35,6 +35,12 @@ class Judge:
             raise UsageError(f"the settings key `{key}` belongs when the judge is built")
         deadline_ms = _deadline(deadline_ms)
         engine = self._engine if self._engine is not None else _engine()
+        from .files import FileSelection, call as source_call
+        if isinstance(value, FileSelection):
+            if self._tally is not None or self._probability:
+                raise UsageError("source judgments keep values and call facts; tally and probability are not supported")
+            return source_call(engine, self._verb, self._asked._json(), value,
+                               self._batch, self._context, deadline_ms, token)
         native = engine._engine
         verb = self._verb
         asked = self._asked

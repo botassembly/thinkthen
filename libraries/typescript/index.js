@@ -347,6 +347,17 @@ function entityPair(held, at) {
 
 // Each verb takes the engine first: null is the default engine.
 const verbs = {
+  files(engine, question, paths, reader = {}, call = {}) {
+    if (!isObject(question) || !isObject(reader)) throw usageError('files takes a question object and reader options');
+    const source = { paths: typeof paths === 'string' ? [paths] : paths, ...reader };
+    return invoke(engine, 'files', jsonText(question, 'files question'), jsonText(source, 'source'), call)
+      .then((done) => {
+        const locate = (entity, record) => ({ ...utf16(record)(entity) });
+        const value = Array.isArray(done.value) && question.recognize ? done.value.map((row) => ({ ...row,
+          value: { ...row.value, entities: row.value.entities.map((e) => locate(e, row.record)) } })) : done.value;
+        return mapped(done, value);
+      });
+  },
   async decide(engine, asked, text, last) {
     checkText(text);
     const { inputs, call } = splitLast('decide', last);

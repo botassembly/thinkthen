@@ -1,8 +1,9 @@
 {
   "directory": [
     "src",
-    "tests"
+    "tests",
+    "../shared"
   ],
   "extension": ".rs",
-  "max": 5723
+  "max": 6290
 }

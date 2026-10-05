@@ -1,6 +1,8 @@
 //! Owned JSON snapshots of one Rust call's facts and ordered questions.
 
 use std::sync::Mutex;
+#[path = "../../../shared/source.rs"]
+mod source;
 
 use serde_json::{Value, json};
 use thinkthen::{Batch, Call, Facts, Judgment, RecordObservation};
@@ -92,6 +94,10 @@ pub(super) fn run(
 ) -> Result<Finished, Failure> {
     let spec = call.spec.as_deref().unwrap_or_default();
     let text = call.payload.as_str();
+    if call.op == "files" {
+        let (value, facts) = source::dispatch(engine, spec, text, options)?;
+        return Ok(Finished { value, facts });
+    }
     match call.op.as_str() {
         "decide" => Ok(eager(
             engine.decide_with(decision(&question(spec)?), text, options)?,

@@ -11,6 +11,7 @@ mod arrow;
 mod asked;
 mod diagnostics;
 mod engine;
+mod files;
 mod frame;
 mod input;
 mod result;
@@ -164,6 +165,8 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module.add(class.name()?, class)?;
     }
     module.add_class::<engine::Engine>()?;
+    module.add_function(wrap_pyfunction!(files::_read_files, module)?)?;
+    module.add_function(wrap_pyfunction!(files::_spec_source, module)?)?;
     module.add_class::<result::PyCall>()?;
     module.add_class::<tally::PyTally>()?;
     module.add_class::<stream::PyStream>()?;

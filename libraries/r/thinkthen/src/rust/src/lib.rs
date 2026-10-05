@@ -15,6 +15,7 @@
 pub mod ffi;
 
 mod calls;
+mod files;
 mod plan;
 mod relate;
 

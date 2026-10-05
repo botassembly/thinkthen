@@ -134,6 +134,17 @@ inline Json call(const Engine& engine, const Json& request,
     if (!raw) throw failure(engine.get(), thinkthen_error_code(engine.get()));
     return Json::parse(raw.get());
 }
+// Explicit source selection for every verb; typed text/record APIs keep their inputs.
+inline Json files(const Engine& engine, const Json& question, const std::vector<std::string>& paths,
+                  const std::string& unit = "line", const Json& window = Json(nullptr),
+                  int64_t deadline = THINKTHEN_NO_DEADLINE, thinkthen_cancel_token* cancel = nullptr) {
+    if (!question.is_object() || question.contains("source")) throw std::invalid_argument("files takes question members alone");
+    Json::Array names; for (const auto& path : paths) names.emplace_back(path);
+    Json::Object selection{{"paths", Json(std::move(names))}, {"unit", Json(unit)}};
+    if (!window.is_null()) selection.emplace_back("window", window);
+    auto request = question.object(); request.emplace_back("source", Json(std::move(selection)));
+    return call(engine, Json(std::move(request)), deadline, cancel);
+}
 inline CallResult<Json> recognize(const Engine& engine, const std::string& spec, const std::string& text,
                                   int64_t deadline = THINKTHEN_NO_DEADLINE, thinkthen_cancel_token* cancel = nullptr) {
     char* raw = nullptr; size_t length = 999; char* rawFacts = nullptr; size_t factsLength = 999;

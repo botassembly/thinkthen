@@ -1,5 +1,8 @@
 {
-  "directory": ".",
+  "directory": [
+    ".",
+    "../shared"
+  ],
   "extension": ".rs",
-  "max": 894
+  "max": 1268
 }

@@ -505,9 +505,15 @@ fn tt_engine_set(
     ])
 }
 
+#[extendr]
+fn tt_source_files(question: Robj, selection: Robj, deadline: Robj) -> Crossed<List> {
+    crate::files::execute(text_of(&question, "question")?, text_of(&selection, "source")?, deadline_of(&deadline)?, &interrupt_pending)
+}
+
 extendr_module! {
     mod thinkthen;
     fn tt_question_check;
+    fn tt_source_files;
     fn tt_question_file;
     fn tt_settings_check;
     fn tt_decide_column;

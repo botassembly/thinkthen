@@ -674,6 +674,14 @@ class Door {
     }
   }
 
+  /// Explicit native reader for all ten JSON question grammars.
+  Object? files(Pointer<Void> engine, Map<String, Object?> question, List<String> paths,
+      {String unit = 'line', int? window, int deadline = -1, Pointer<Void>? token}) {
+    if (question.containsKey('source')) throw ArgumentError('source is supplied by files');
+    return ask(engine, {...question, 'source': {'paths': paths, 'unit': unit,
+      if (window != null) 'window': window}}, deadline: deadline, token: token);
+  }
+
   /// Carries description maps and structured {what,not_for,examples} unchanged.
   Object? ask(
     Pointer<Void> engine,
