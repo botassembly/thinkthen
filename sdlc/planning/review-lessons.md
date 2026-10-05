@@ -132,3 +132,6 @@ Every decision lands in `sdlc/`: an ADR, an issue, or a ticket. Tickets are numb
 ## 2026-10-04: Count recognition chunks before choosing a held width
 
 0400 C's historical recognition fixture claimed fourteen chunks but its seven-word text now produces seven BILOU questions. A default-eight rendezvous could never fill. Repeating that phrase on one input line supplies fourteen actual chunks while retaining the original canned reply. Keep scalar omission and explicit-four record mode as distinct guards; the record-mode jobs refusal stays unchanged. Reuse the owned signal helper through a bounded child module rather than exposing a test API. Record arrival counts on failures, and verify the plan's chunk count separately from actual sends. Source review, final integration, full checkpoints and SQLite stress proof remain pending.
+
+
+Extracted setup helpers do not receive Clippy's test-function exception for `expect()`. Return `io::Result` and let the boundary test assert setup success. 0400 C's first frozen lint rejection and its renewed independent scalar/record proof remain in the build record.
