@@ -336,14 +336,7 @@ fn recognize_and_relate_windows_keep_original_units_and_physical_spans() -> io::
         )?;
         let values = rows(&output);
         assert!(!values.is_empty(), "{verb}");
-        let requests = listener.requests();
-        assert!(!requests.is_empty(), "native requests for {verb}");
-        for request in requests {
-            let body = text(&request.body);
-            assert!(!body.contains(path.to_str().unwrap()));
-            assert!(!body.contains("first_line"));
-            assert!(!body.contains("last_line"));
-        }
+        check_window_requests(&listener, path.to_str().unwrap());
         if verb == "recognize" {
             assert_eq!(values.len(), 2);
             assert_eq!(values[0]["input"], "café 😀\r\nAda at Acme");
@@ -360,23 +353,7 @@ fn recognize_and_relate_windows_keep_original_units_and_physical_spans() -> io::
             assert_eq!(ada["first_line"], 2);
             assert_eq!(ada["last_line"], 2);
         } else {
-            for edge in values {
-                for endpoint in ["source", "target"] {
-                    let row = &edge[endpoint];
-                    assert_eq!(row["file"], path.to_str().unwrap());
-                    match row["first_line"].as_u64().unwrap() {
-                        1 => {
-                            assert_eq!(row["record"], "café 😀\r\nAda at Acme");
-                            assert_eq!(row["last_line"], 2);
-                        }
-                        3 => {
-                            assert_eq!(row["record"], "last");
-                            assert_eq!(row["last_line"], 3);
-                        }
-                        line => panic!("unexpected endpoint line {line}"),
-                    }
-                }
-            }
+            check_window_endpoints(&values, path.to_str().unwrap());
         }
         for extra in [
             vec!["--window", "0"],
@@ -388,4 +365,32 @@ fn recognize_and_relate_windows_keep_original_units_and_physical_spans() -> io::
         }
     }
     Ok(())
+}
+
+fn check_window_endpoints(values: &[Value], path: &str) {
+    for edge in values {
+        for endpoint in ["source", "target"] {
+            let row = &edge[endpoint];
+            assert_eq!(row["file"], path);
+            if row["first_line"] == 1 {
+                assert_eq!(row["record"], "café 😀\r\nAda at Acme");
+                assert_eq!(row["last_line"], 2);
+            } else {
+                assert_eq!(row["first_line"], 3);
+                assert_eq!(row["record"], "last");
+                assert_eq!(row["last_line"], 3);
+            }
+        }
+    }
+}
+
+fn check_window_requests(listener: &Listener, path: &str) {
+    let requests = listener.requests();
+    assert!(!requests.is_empty(), "window calls send native requests");
+    for request in requests {
+        let body = text(&request.body);
+        assert!(!body.contains(path));
+        assert!(!body.contains("first_line"));
+        assert!(!body.contains("last_line"));
+    }
 }
