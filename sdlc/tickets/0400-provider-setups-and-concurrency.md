@@ -160,3 +160,6 @@ The coordinator resolved C's recognition fixture choice: retain scalar omission 
 
 
 Required lint rejected frozen recognition source `52c8f9c52` for setup-helper `expect()` calls. The helper now returns `io::Result`; both scalar and record cases pass again independently, and policy/fmt/exact ratchet pass. Final correction growth is +23, total Rust 115958 (+77 over landed B); the prior +21 measurement remains historical. The failed lint receipt is retained. Renewed frozen-source lint and all previously named parent-owned review/checkpoints remain pending.
+
+
+Corrected C source `5a74e1e7498e7473bcf32704f961c87c9f6c43ff` is pushed and passes required lint on unchanged HEAD (569 inventory items / four refusal plants), with both recognition paths independently rerun after the setup-error fix. Exact Rust total remains 115958; production/contracts, all ten independent mapping plants and consumer witnesses remain intact. The owning build record now resolves the paired-fixture decision and retains every initial failure. Fresh independent source review, final integration, full/canonical proof and the parent's named post-acceptance SQLite stress checkpoint remain pending. B acceptance and paid 0399 proof were not rerun.
