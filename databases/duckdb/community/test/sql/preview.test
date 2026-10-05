@@ -1,4 +1,7 @@
-# Load the actual extension through DuckDB's DONT_LINK test path.
+# Load the actual extension into this run's fresh directory through DONT_LINK.
+statement ok
+SET extension_directory = '__TEST_DIR__/extensions';
+
 require thinkthen
 
 query II
