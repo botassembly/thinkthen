@@ -32,6 +32,8 @@ EXCLUDED = {
     "sdlc/scripts/": "the gate's own tools run cargo, git, and node in the developer's toolchain",
     "site/": "the site build is not a test",
     "libraries/r/thinkthen/tools/": "the R package's install-time tools are not tests",
+    "databases/duckdb/community/build_rust.py": "the community compiler wrapper is a build tool, not a test",
+    "databases/duckdb/community/prepare.py": "the community toolchain preparation is a build tool, not a test",
 }
 EXEMPT = {
     ("libraries/typescript/tests/fork.test.mjs", "inherits",
