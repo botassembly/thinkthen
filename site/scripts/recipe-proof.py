@@ -53,7 +53,7 @@ class Listener:
                 if len(matches) != 1 or owner.count(owner.stage) > owner.ceiling:
                     owner.errors.append('literal request/ceiling mismatch')
                     sys.stderr.write('synthetic request mismatch: '+json.dumps(body)+'\n')
-                    self.send_response(400);self.end_headers();return
+                    self.send_response(400);self.send_header("Connection", "close");self.end_headers();return
                 e = matches[0]; criteria = e['request']['questions']['q1']['criteria']
                 probabilities = {label: 0.0 for label in criteria}
                 if e['id'] == 'N01': probabilities.update(c001=0.5,c002=0.5)
@@ -61,7 +61,7 @@ class Listener:
                 else: probabilities[e['choice']] = 1.0
                 pick = max(probabilities,key=probabilities.get)
                 payload = json.dumps({'model':'recipe-fixture-v1','answers':{'q1':{'type':'choice','choice':pick,'confidence':0.0,'probabilities':probabilities}},'usage':{'input_tokens':100,'output_tokens':10}}).encode()
-                self.send_response(200);self.send_header('Content-Length',str(len(payload)));self.end_headers();self.wfile.write(payload)
+                self.send_response(200);self.send_header("Connection", "close");self.send_header('Content-Length',str(len(payload)));self.end_headers();self.wfile.write(payload)
         self.server = http.server.ThreadingHTTPServer(('127.0.0.1',port),Handler)
         self.thread = threading.Thread(target=self.server.serve_forever,daemon=True)
         self.thread.start()
