@@ -13,7 +13,7 @@
   "evidenceFromTicketNumber": 120,
   "closedIssuesFolder": "closed",
   "lanesTable": {
-    "file": "planning/cleanup-2026-09-30.md",
+    "file": "planning/team-0-2-2026-10-04.md",
     "heading": "Lanes"
   },
   "recordNaming": "ticket",
@@ -22,6 +22,7 @@
     "values": [
       "0.1",
       "0.2",
+      "0.3",
       "later"
     ]
   },

@@ -6,6 +6,7 @@ use std::process::Command;
 pub(crate) const CARGO: &[&str] = &[
     "HOME",
     "CARGO_HOME",
+    "CARGO_BUILD_JOBS",
     "RUSTUP_HOME",
     "RUSTUP_TOOLCHAIN",
     "CARGO_TARGET_DIR",

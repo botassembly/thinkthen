@@ -25,7 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { namedAnswerProblems } from './named-answers.mjs';
 import { CODE_FUNCTIONS } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine } from './binding-proofs.mjs';
+import { readReplayList, replayLine } from './binding-samples.mjs';
 
 const here = fileURLToPath(import.meta.url);
 const site = path.resolve(path.dirname(here), '..');
@@ -200,7 +200,7 @@ function main() {
   const problems = [];
   for (const file of walk(root)) {
     const rel = path.relative(root, file);
-    if (['SKIP', 'REPLAY', 'bindings-proof.json', 'beatles/bench-pin', 'beatles/deck-pin', 'beatles/folders.json'].includes(rel)) continue;
+    if (['SKIP', 'REPLAY', 'beatles/bench-pin', 'beatles/deck-pin', 'beatles/folders.json'].includes(rel)) continue;
     const ext = path.extname(file);
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));

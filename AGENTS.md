@@ -1,14 +1,14 @@
 # Agent instructions for thinkthen
 
-Read `README.md`, `specification/README.md`, then `sdlc/planning/rust-standards.md`. The specification is the contract. The current plan is `sdlc/planning/cleanup-2026-09-30.md`.
+Read `README.md`, `specification/README.md`, then `sdlc/planning/rust-standards.md`. The specification is the contract. Current scope lives in `sdlc/planning/milestones.md`; current order and lane assignments live in `sdlc/planning/team-0-2-2026-10-04.md`.
 
 ## Build and review
 
-For 0.2, Ian's 2026-10-05 ruling overrides earlier proof instructions: one fresh whole-ticket or whole-slice review, then fix and land; review again only for a real behavior defect. Run full tests and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Write one record per ticket at landing; name tests by behavior. Keep release rehearsal and Ian's approvals. Scope and order live in `sdlc/planning/milestones.md`.
+Use one fresh review of the whole ticket or slice, then fix and land. A second review is allowed only when a substantial fix touches data loss, credentials, money, memory safety or user-visible correctness. A new dependency also takes the second reviewer required by the Rust standards. Run full tests and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Write one short record per ticket at landing; name tests by behavior. Keep release rehearsal and Ian's approvals.
 
 - Build simply: YAGNI, DRY, local behavior, separate concerns. Add commands and options only for demos. Land outside-in CLI/API, edge-table, contract, or prior-failing regression tests; delete scaffolding. See workspace decision `2026-09-24-tests-earn-their-place.md`.
-- Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change. The coordinator names a checkpoint before full `test`, `spec`, or `surfaces`. Load and timing run only through `test-stress --run`. Gates use no network.
-- Rust source and test files cap at 500 nonblank lines; `sdlc/ratchet.json` equals the measured source total. Explain growth. A fresh independent reviewer checks each candidate.
+- Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change. Run full tests and lint on the landing commit; run `spec` and affected surface checks when the change needs them. Load and timing run only through `test-stress --run`. Gates use no network.
+- Rust source and test files cap at 500 nonblank lines; `sdlc/ratchet.json` equals the measured source total. Explain growth; the cap and ratchet require no additional reviewer.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`. Compilation and Clippy miss file caps and the adapter-word boundary.
 - Keep checks that protect behavior, secrecy, spend, boundaries, or ticket evidence. A check that only polices prose may go; the commit says why.
 - Linux and M5 builds may overlap when load, memory, and I/O permit. Reduce jobs under pressure; isolate outputs and lane locks. Keep the shared toolchain and cache mutation locks when builds overlap.

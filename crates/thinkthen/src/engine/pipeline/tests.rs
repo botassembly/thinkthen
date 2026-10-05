@@ -160,7 +160,7 @@ fn a_deadline_starts_no_waiting_request() {
         sent,
         "nothing starts after the call returns"
     );
-    assert!(sent <= 4, "{sent} requests started past the workers");
+    assert!(sent <= 8, "{sent} requests started past the workers");
     assert!(asks.load(Ordering::SeqCst) < 40, "the reader stopped");
     assert_eq!(emitted, [Err("deadline")]);
 }

@@ -58,7 +58,7 @@ Order:
 5. Lane 3: 0403, then 0419.
 6. Gaps: 0404 starts with behavior-based test names, duplicate-test cuts and record cleanup.
 
-Proof for 0.2: one fresh review of the whole ticket or slice, then fix and land. A second review is needed only for a real behavior defect. Run the full test suite and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Open runner findings on 0400 C are dropped. Write one record per ticket at landing, and keep ticket statuses to one or two sentences. Release rehearsal and Ian's approvals remain required.
+Proof for 0.2: one fresh review of the whole ticket or slice, then fix and land. A second review is allowed only when a substantial fix touches data loss, credentials, money, memory safety or user-visible correctness. Run the full test suite and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Open runner findings on 0400 C are dropped. Write one record per ticket at landing, and keep ticket statuses to one or two sentences. Release rehearsal and Ian's approvals remain required.
 
 Waiting on experiments: provider entries, the "none" wording for choose and each recipe's measured numbers. [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) uses rules to find candidates and decide or choose to confirm them. Reviewed 0031 supplies only the frozen-cohort comparison; publication proof remains pending.
 

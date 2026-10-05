@@ -7,7 +7,7 @@ The system of record for thinkthen. Nothing outside this repository is authorita
 | [planning/](planning/) | The design study, the Rust standards, the plan, and the architecture decision records |
 | [issues/](issues/) | Problems found and filed. An issue is not a ticket and authorizes no work |
 | [tickets/](tickets/) | Work a ticket authorizes. One file per ticket, numbered from 0001 |
-| [records/](records/) | Sealed records of work that ran |
+| [records/](records/) | Short notes of what landed and why |
 | [scripts/](scripts/) | The gate ladder: `install`, `lint`, `test`, `spec`, `surfaces` |
 | surfaces.txt | The nine surfaces and their state. `sdlc/scripts/surfaces` reads it |
 | ratchet.json | The source size ceiling. `sdlc/scripts/lint` reads it |
@@ -22,7 +22,7 @@ The destination this repository serves lives outside it, in Ian's workspace. The
 
 ## Ticket preparation and completion
 
-Follow [ticket-preparation.md](planning/ticket-preparation.md) when preparing and finishing a ticket. A Quick Fix keeps its lessons in its build record.
+Follow [ticket-preparation.md](planning/ticket-preparation.md) when preparing and finishing a ticket. Write one short record per ticket at landing. A Quick Fix gets one short landing note.
 
 ## Repository map
 
