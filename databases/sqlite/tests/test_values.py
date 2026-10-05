@@ -258,13 +258,13 @@ def test_relate_returns_each_edge_once_for_every_row_holding_its_ends() -> None:
     expect(backend.close(), 1, "sends: two distinct entities")
 
 
-def test_relate_refuses_a_blank_name_and_the_256th_pair_before_any_send() -> None:
+def test_relate_refuses_a_blank_name_and_the_256th_source_row_before_any_send() -> None:
     backend = Backend()
     blank = child(RELATE.format(rows=[(1, "Ada", "person"), (7, None, "organization")]), environment(backend))
     many = child(RELATE.format(rows=[(at, f"name {at}", "person") for at in range(300)]), environment(backend))
     expect((blank["edges"], many["edges"]), (
         "thinkthen usage: the row with id 7 has no name (retryable: no)",
-        "thinkthen usage: thinkthen_relate takes at most 255 distinct name and kind pairs (retryable: no)",
+        "thinkthen usage: thinkthen_relate takes at most 255 source rows (retryable: no)",
     ), "the refusals")
     expect(backend.close(), 0, "sends")
 

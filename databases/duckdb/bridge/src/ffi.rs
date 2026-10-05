@@ -10,6 +10,8 @@ use thinkthen::{CancelToken, LoadedQuestion, Question, QuestionSet};
 
 #[path = "ffi/complete_listed/ffi.rs"]
 mod complete_listed;
+#[path = "ffi/files/ffi.rs"]
+mod files;
 mod find;
 mod listed;
 mod nested;

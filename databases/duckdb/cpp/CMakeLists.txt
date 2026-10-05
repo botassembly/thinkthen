@@ -60,7 +60,7 @@ endforeach()
 
 build_loadable_extension(thinkthen " " src/thinkthen.cpp src/find.cpp src/scalar_owner.cpp src/scalar_settings.cpp src/portable.cpp src/plan.cpp
   src/listed_result.cpp src/nested.cpp src/nested_result.cpp src/usage.cpp src/removed.cpp
-  src/relate.cpp src/relate_query.cpp)
+  src/relate.cpp src/relate_query.cpp src/files.cpp src/files_manifest.cpp)
 if(APPLE)
   # Hide every name in the Rust bridge archive, as --exclude-libs does on Linux.
   # Its Rust standard library, panic hook and bundled SQLite stay out of the
