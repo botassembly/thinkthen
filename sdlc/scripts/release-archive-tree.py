@@ -2,9 +2,57 @@
 """Compare Git-archived source members with the extracted release source tree."""
 
 import os
+import stat
+import subprocess
 from pathlib import Path
 import sys
 import tarfile
+
+
+def raw_git(source_root, commit, extra_paths=()):
+    """Compare actual bytes/modes/links to raw Git blobs, bypassing index and filters."""
+    def git(*args):
+        return subprocess.check_output(["git", "-C", str(source_root), *args])
+    if git("rev-parse", "HEAD").decode().strip() != commit:
+        raise ValueError("DuckDB C++ source differs from the pinned commit")
+    rows = [row.split(b"\t", 1) for row in git("ls-tree", "-rz", commit).split(b"\0") if row]
+    batch = subprocess.Popen(["git", "-C", str(source_root), "cat-file", "--batch"],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    tracked = set()
+    try:
+        for head, name in rows:
+            mode, kind, oid = head.split()
+            if kind != b"blob":
+                raise ValueError("source tree contains a non-blob input")
+            relative = Path(os.fsdecode(name))
+            tracked.add(relative)
+            path = source_root / relative
+            batch.stdin.write(oid + b"\n")
+            batch.stdin.flush()
+            info = batch.stdout.readline().split()
+            raw = batch.stdout.read(int(info[2]))
+            batch.stdout.read(1)
+            meta = path.lstat()
+            if mode == b"120000":
+                same = stat.S_ISLNK(meta.st_mode) and os.fsencode(os.readlink(path)) == raw
+            else:
+                same = stat.S_ISREG(meta.st_mode) and bool(meta.st_mode & 0o111) == (mode == b"100755")
+                same = same and path.read_bytes() == raw
+            if not same:
+                raise ValueError(f"raw Git source file differs: {relative}")
+    finally:
+        batch.stdin.close()
+        batch.stdout.close()
+        batch.wait()
+    allowed = set(map(Path, extra_paths))
+    for directory, folders, files in os.walk(source_root):
+        if Path(directory) == source_root:
+            folders[:] = [name for name in folders if name != ".git"]
+        for name in files:
+            relative = (Path(directory) / name).relative_to(source_root)
+            if relative not in tracked and relative not in allowed and relative != Path(".git"):
+                raise ValueError(f"unexpected source input: {relative}")
+    return len(tracked)
 
 
 def compare(archive_path, source_root):

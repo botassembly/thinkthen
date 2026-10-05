@@ -38,6 +38,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { readDuckDBVersions, nativeDuckDBTarget, duckDBArtifact } from './duckdb-inputs.mjs';
 import { spawnSync } from 'node:child_process';
 import { readReplayList, replayLine, sampleHashes, sourceTree, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, sampleFiles, cargoFolders, sha256 } from './binding-proofs.mjs';
 
@@ -104,17 +105,21 @@ const DATABASES = {
     folder: 'databases/duckdb',
     manifest: 'databases/duckdb/bridge/Cargo.toml',
     build() {
-      const tools = path.join(TOOLCHAINS, 'duckdb', 'v1.5.5');
+      const version = readDuckDBVersions(path.join(repo, 'databases/duckdb/tools/version.env'))[0];
+      const [nativeTarget, platform] = nativeDuckDBTarget();
+      const tools = path.join(TOOLCHAINS, 'duckdb', version);
       const cli = path.join(tools, 'duckdb');
-      if (!fs.existsSync(cli)) return { missing: 'the pinned DuckDB 1.5.5 CLI that databases/duckdb/tools/setup.sh fetches' };
+      if (!fs.existsSync(cli)) return { missing: `the pinned DuckDB ${version} CLI that databases/duckdb/tools/setup.sh fetches` };
       if (!fs.existsSync(path.join(tools, 'static-libs', 'libduckdb_static.a'))) return { missing: 'the pinned DuckDB source and static archives that databases/duckdb/tools/setup.sh --fetch fetches' };
-      for (const tool of ['cargo', 'cmake']) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
+      const cmake = nativeTarget.endsWith('apple-darwin') ? path.join(tools, 'venv/bin/cmake') : 'cmake';
+      for (const tool of ['cargo', cmake]) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
+      if (fs.readFileSync(path.join(tools, 'platform.txt'), 'utf8').trim() !== platform) throw new Error('stock DuckDB reports another platform');
       const target = path.join(repo, 'target', 'site-duckdb');
-      const done = run('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_CPP_BUILD: path.join(target, 'cpp'), CARGO_TARGET_DIR: path.join(target, 'bridge') } });
+      const done = run('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_VERSION: version, THINKTHEN_DUCKDB_CPP_BUILD: path.join(target, 'cpp'), CARGO_TARGET_DIR: path.join(target, 'bridge') } });
       if (done.status !== 0) throw new Error(`cpp/build.sh failed in ${this.folder}\n${done.stdout}${done.stderr}`);
-      const extension = path.join(target, 'cpp', 'extension', 'thinkthen', 'thinkthen.duckdb_extension');
+      const extension = duckDBArtifact(repo, version, nativeTarget);
       return {
-        toolchain: [`DuckDB ${run(cli, ['--version']).stdout.split(' ')[0]}`, run('cmake', ['--version']).stdout.split('\n')[0], run('rustc', ['--version']).stdout.trim()],
+        toolchain: [`DuckDB ${run(cli, ['--version']).stdout.split(' ')[0]}`, run(cmake, ['--version']).stdout.split('\n')[0], run('rustc', ['--version']).stdout.trim()],
         // The install page loads the extension as ./thinkthen.duckdb_extension.
         lay: (dir) => fs.copyFileSync(extension, path.join(dir, 'thinkthen.duckdb_extension')),
         command: (sample) => [cli, ['-unsigned', '-list'], fs.readFileSync(sample, 'utf8')],

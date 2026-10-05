@@ -380,11 +380,21 @@ part_duckdb() {
 	x86_64-unknown-linux-gnu | aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin) ;;
 	*) echo "release-pack: no pinned DuckDB C++ package for $TARGET" >&2; exit 77 ;;
 	esac
+	INPUTS_HERE=$REPO/databases/duckdb/tools
+	. "$INPUTS_HERE/inputs.sh"
+	DUCKDB_VERSIONS=$(input_versions)
+	DEFAULT_VERSION=${DUCKDB_VERSIONS%% *}
+	[ "${THINKTHEN_DUCKDB_VERSION:-$DEFAULT_VERSION}" = "$DEFAULT_VERSION" ] || {
+		echo 'release-pack: the single-version archive requires the default DuckDB selector' >&2; exit 2;
+	}
+	input_select "$DEFAULT_VERSION" "$TARGET"
+	THINKTHEN_DUCKDB_VERSION=$DEFAULT_VERSION
+	export THINKTHEN_DUCKDB_VERSION
 	if [ -z "$reuse" ]; then
 		sh databases/duckdb/cpp/build.sh
 	fi
-	extension="databases/duckdb/build/artifacts/cpp/$TARGET/thinkthen.duckdb_extension"
-	[ -f "$extension" ] || { echo "release-pack: $extension is missing; build it first" >&2; exit 1; }
+	extension="databases/duckdb/build/artifacts/cpp/$DUCKDB_VERSION/$TARGET/thinkthen.duckdb_extension"
+	[ -f "$extension" ] && [ ! -L "$extension" ] || { echo "release-pack: $extension is missing; build it first" >&2; exit 1; }
 	elf_arch= mac_arch=
 	case $TARGET in
 	x86_64-unknown-linux-gnu) elf_arch='Advanced Micro Devices X86-64' ;;
@@ -402,7 +412,6 @@ part_duckdb() {
 			exit 1
 		}
 	fi
-	. databases/duckdb/tools/version.env
 	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$DUCKDB_VERSION" "$V"
 	folder=$(fresh duckdb)
 	cp "$extension" "$folder/"
@@ -410,7 +419,8 @@ part_duckdb() {
 	tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
 	source=${THINKTHEN_DUCKDB_CPP_SOURCE:-$tools/source}
 	cp "$source/LICENSE" "$folder/LICENSE.duckdb"
-	python3 databases/duckdb/cpp/package_notices.py "$source" "$folder"
+	python3 "$INPUTS_HERE/validate_inputs.py" --source "$source" --commit "$duckdb_source_commit" --static "${THINKTHEN_DUCKDB_CPP_STATIC_DIR:-$tools/static-libs}" --manifest "$INPUTS_HERE/../cpp/$manifest"
+	python3 databases/duckdb/cpp/package_notices.py "$source" "$folder" "$DUCKDB_VERSION" "$INPUTS_HERE/../cpp/$manifest"
 	printf 'ThinkThen %s: MIT (LICENSE.thinkthen)\nDuckDB %s source and static archives: MIT (LICENSE.duckdb)\n' \
 		"$V" "$DUCKDB_VERSION" >"$folder/NOTICE"
 	printf 'Third-party license texts and Rust dependency inventory: LICENSES/ and DEPENDENCIES.txt\n' >>"$folder/NOTICE"

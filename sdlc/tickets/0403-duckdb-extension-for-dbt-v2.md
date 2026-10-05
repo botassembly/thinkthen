@@ -1,10 +1,10 @@
 # 0403: The DuckDB extension ships a build for DuckDB v1.5.4, the version dbt v2 ships
 
-Status: ready. Not started. It changes the release workflow's DuckDB package, so a rehearsal under Ian's approval proves it before the 0.2 release.
+Status: in progress. Slice A source and pin preparation only; native proof and A landing remain pending. It changes the release workflow's DuckDB package, so a rehearsal under Ian's approval proves it before the 0.2 release.
 
 Milestone: 0.2
 
-Lane: 3, after ticket 0402, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0403-duckdb-extension-for-dbt-v2`.
+Lane: claude-0, advancing approved core while 0402 publication waits, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0403-duckdb-extension-for-dbt-v2`.
 
 ## Outcome
 
@@ -75,3 +75,11 @@ Ian approved a separate signed DuckDB community-listing follow-up after 0.2 core
 - Two DuckDB versions in 0.2, and the version policy default above.
 - Staying on the C++ API in place of a stable C API port.
 - Running the full suites on v1.5.5 only, with conformance, rank, find and portable cases on v1.5.4.
+
+## What the build taught us
+
+The official 1.5.4 tag resolves to `08e34c447bae34eaee3723cac61f2878b6bdf787`. Both Linux static ZIPs contain 22 archives and a header; both macOS ZIPs contain 21 archives and a header. ZIP membership must account for the header separately from the linker manifest. The existing newest manifests remain byte-identical. Source, archive and footer identity are separate checks; none establishes a stock native load.
+
+The [complete accepted design](../planning/0403-accepted-design.md) retains SHA-256 `904eb42d8922e1d9c0b4bd3c8090d1805b27a341381779df62f480634773b9bb`. The [High acceptance](../records/0403-design-acceptance.md) fixes the A/B split. Ian's 2026-10-05 assignment starts A preparation in claude-0 on main `26174408f620c1771e70e6fbe495eab4e6c07e67`. Docs 0402 A/B/C/D foundations are landed; six recipes remain DRAFT and publication and none wording remain pending independent experiment reports. Advancing approved DuckDB core is a dependency workaround, not a 0402 completion claim or a new experiment authorization.
+
+A remains incomplete until both separately compiled real binaries load in matching stock hosts, symmetric refusals and retained suites pass, the old-format archive passes installed smoke, and actual site replay consumes the final canonical default file. B's combined archive remains future work. Fresh High source and pin review precedes any stock native build/load. No remote hardware, Windows native tag, workflow dispatch, release rehearsal, external community submission, signing or spend ran.

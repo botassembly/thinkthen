@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import platform
 import shutil
 import subprocess
 import sys
@@ -22,9 +21,9 @@ def legal_files(folder: Path) -> list[Path]:
 
 
 def main() -> None:
-    if len(sys.argv) != 3:
-        raise SystemExit("usage: package_notices.py DUCKDB_SOURCE PACKAGE_FOLDER")
-    source, destination = (Path(value).resolve(strict=True) for value in sys.argv[1:])
+    if len(sys.argv) != 5:
+        raise SystemExit("usage: package_notices.py DUCKDB_SOURCE PACKAGE_FOLDER DUCKDB_VERSION MANIFEST")
+    source, destination = (Path(value).resolve(strict=True) for value in sys.argv[1:3])
     licenses = destination / "LICENSES"
     duckdb = sorted(p for p in source.rglob("*") if p.is_file() and p.name.lower().startswith(LEGAL) and p != source / "LICENSE")
     if not duckdb:
@@ -38,17 +37,14 @@ def main() -> None:
         "cargo", "metadata", "--format-version", "1", "--locked", "--offline",
         "--manifest-path", str(BRIDGE),
     ], env=child_env(CARGO)))
-    manifests = {
-        ("Linux", "x86_64"): "archive-sha256.txt",
-        ("Linux", "aarch64"): "archive-sha256-linux-arm64.txt",
-        ("Darwin", "arm64"): "archive-sha256-osx-arm64.txt",
-        ("Darwin", "x86_64"): "archive-sha256-osx-amd64.txt",
-    }
-    host = (platform.system(), platform.machine())
-    if host not in manifests:
-        raise SystemExit(f"no pinned DuckDB archive inventory for {host[0]}/{host[1]}")
-    archives = [line.split(maxsplit=1)[1] for line in (HERE / manifests[host]).read_text().splitlines()]
-    inventory = ["Pinned DuckDB static archives:", *archives, "", "Bundled Rust crates (name version | declared license):"]
+    sys.path.insert(0, str(HERE.parent / "tools"))
+    from inputs import versions
+    from validate_inputs import inventory as archive_inventory
+    version, manifest = sys.argv[3:]
+    if version not in versions():
+        raise SystemExit("unsupported DuckDB notice version")
+    archives = list(archive_inventory(Path(manifest)))
+    inventory = [f"Pinned DuckDB {version} static archives:", *archives, "", "Bundled Rust crates (name version | declared license):"]
     for package in sorted(metadata["packages"], key=lambda value: (value["name"], value["version"])):
         folder = Path(package["manifest_path"]).parent
         if "/registry/" not in str(folder):

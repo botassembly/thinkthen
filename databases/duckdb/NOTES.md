@@ -27,3 +27,7 @@ The shipped extension is the C++ extension in `cpp/`, linked with the Rust stati
 ## Tests
 
 Every suite under `tools/` starts its own loopback backend and runs each child with a fake key, a loopback address, and fresh XDG folders. `harness.guard` refuses anything else. `check.sh` runs them after the builds, the source checks and one call through the stock CLI.
+
+## 0403 preparation
+
+The accepted design retains ADR 0081's C++ API and the Rust bridge. Both version builds use the unchanged C++ sources. Header compatibility is untested at this preparation checkpoint; add a guard only after a demonstrated difference. The old `older-host/` cache and pre-existing build folders remain untouched. New consumers resolve matching tools beneath `duckdb/<version>/`.
