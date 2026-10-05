@@ -9,9 +9,11 @@ snapshot <- function(command) {
   output <- Sys.getenv("TT_BACKEND_OUT")
   before <- length(grep("^\\{", readLines(output)))
   backend_say(command)
+  until <- Sys.time() + 30
   repeat {
     lines <- grep("^\\{", readLines(output), value = TRUE)
     if (length(lines) > before) return(jsonlite::fromJSON(tail(lines, 1L)))
+    if (Sys.time() >= until) stop("backend did not report the requested counts")
     Sys.sleep(0.02)
   }
 }
@@ -49,6 +51,11 @@ out <- child(c(
   '  kind <- tryCatch({tt_engine(backend = value); "none"}, thinkthen_usage = function(e) e$kind)',
   '  stopifnot(identical(kind, "usage"))',
   '}',
+  'stopifnot(length(formals(thinkthen:::tt_engine_set)) == 14L)',
+  'stopifnot(getDLLRegisteredRoutines("thinkthen")$.Call$wrap__tt_engine_set$numParameters == 14L)',
+  'partial <- tryCatch(tt_engine(back = "typesafe"), thinkthen_usage = function(e) e$kind)',
+  'positional <- tryCatch(do.call(tt_engine, rep(list(NULL), 14L)), thinkthen_usage = function(e) e$kind)',
+  'stopifnot(identical(partial, "usage"), identical(positional, "usage"))',
   'cat("all refused")'
 ))
 check("invalid names and host types refuse", out$status == 0L && grepl("all refused", out$text, fixed = TRUE))
