@@ -21,7 +21,6 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
         ("tag", engine.plan(&tag, [TEXT])),
         ("score", engine.plan(&score, [TEXT])),
         ("filter", engine.plan(&decide, [TEXT])),
-        ("rank", engine.plan(&rank, [TEXT])),
     ];
     let mut lines = Vec::new();
     let mut requests = 0;
@@ -33,6 +32,7 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
             core::json_line(&estimate)?
         ));
     }
+    quoted("rank", inner, rank.core, &mut lines, &mut requests)?;
     let backend = inner.backend();
     let evidence = Evidence::new(TEXT).map_err(invalid)?;
     let find = core::Find::new(
@@ -55,26 +55,7 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
         &mut lines,
         &mut requests,
     )?;
-    let plan = core::quoted_plan(
-        backend.asked(),
-        evidence,
-        None,
-        vec![decide.core.clone()],
-        inner.profile(),
-    )
-    .map_err(|error| match error {
-        core::BatchError::Profile(limit) => Failure::ProfileLimit(limit),
-        _ => Failure::Defect("a fixed annotation check no longer plans"),
-    })?;
-    let mut asks = Asks::default();
-    asks.add(backend, &plan)?;
-    add(
-        "annotate",
-        asks.requests(backend, inner.profile(), Bound::WHOLE)?,
-        0,
-        &mut lines,
-        &mut requests,
-    )?;
+    quoted("annotate", inner, decide.core, &mut lines, &mut requests)?;
     let spec =
         core::RecognizeSpec::from_parts(vec![("person".to_owned(), None)], Vec::new(), None, None)
             .map_err(invalid)?;
@@ -98,6 +79,36 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
     let prepared = facade::relations(&entities, &spec, backend, inner.profile())?;
     add("relate", prepared.requests, 0, &mut lines, &mut requests)?;
     Ok((lines, requests))
+}
+
+fn quoted(
+    name: &str,
+    inner: &Engine,
+    question: core::Question,
+    lines: &mut Vec<String>,
+    requests: &mut usize,
+) -> Result<(), Failure> {
+    let backend = inner.backend();
+    let plan = core::quoted_plan(
+        backend.asked(),
+        Evidence::new(TEXT).map_err(invalid)?,
+        None,
+        vec![question],
+        inner.profile(),
+    )
+    .map_err(|error| match error {
+        core::BatchError::Profile(limit) => Failure::ProfileLimit(limit),
+        _ => Failure::Defect("a fixed function check no longer plans"),
+    })?;
+    let mut asks = Asks::default();
+    asks.add(backend, &plan)?;
+    add(
+        name,
+        asks.requests(backend, inner.profile(), Bound::WHOLE)?,
+        0,
+        lines,
+        requests,
+    )
 }
 
 fn add(
