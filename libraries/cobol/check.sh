@@ -87,6 +87,8 @@ cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/door" "$ROOT/checks/do
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/proofs" "$ROOT/checks/proofs.cob" "$ROOT/src/tt_engine.cob" "$ROOT/src/tt_call.cob" "$ROOT/src/tt_files.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_plan.cob" "$ROOT/src/tt_validate.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/failure" "$ROOT/checks/failure.cob" "$ROOT/src/tt_engine.cob" "$ROOT/src/tt_call.cob" "$ROOT/src/tt_files.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
 cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/matrix" "$ROOT/checks/matrix.cob" "$ROOT/src/tt_decide.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c -lm
+cobc $COMMON -I "$ROOT/copybooks" -A "$FLAGS" -o "$TARGET/files" "$ROOT/checks/files.cob" "$ROOT/src/tt_engine.cob" "$ROOT/src/tt_call.cob" "$ROOT/src/tt_files.cob" "$ROOT/src/tt_error.cob" "$TARGET/ttjson.o" "$TARGET/ttshape.o" -L "$CARGO_TARGET_DIR/debug" -lthinkthen_c
+python3 "$ROOT/checks/files.py"
 python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"
 python3 "$ROOT/checks/failure.py"

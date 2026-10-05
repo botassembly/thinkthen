@@ -39,38 +39,54 @@ final class DoorFailure implements Exception {
 class Door {
   final DynamicLibrary lib;
   Door(String path) : lib = DynamicLibrary.open(path);
-  late final Pointer<Void> Function() engineNew =
-      lib.lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
-    'thinkthen_engine_new',
-  );
-  late final Pointer<Void> Function(Pointer<Uint8>) engineNewWith =
-      lib.lookupFunction<Pointer<Void> Function(Pointer<Uint8>),
-          Pointer<Void> Function(Pointer<Uint8>)>('thinkthen_engine_new_with');
-  late final void Function(Pointer<Void>) engineFree = lib.lookupFunction<
-      Void Function(Pointer<Void>),
-      void Function(Pointer<Void>)>('thinkthen_engine_free');
-  late final Pointer<Void> Function() tokenNew =
-      lib.lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
-    'thinkthen_cancel_token_new',
-  );
-  late final void Function(Pointer<Void>) cancel = lib.lookupFunction<
-      Void Function(Pointer<Void>),
-      void Function(Pointer<Void>)>('thinkthen_cancel');
-  late final void Function(Pointer<Void>) tokenFree = lib.lookupFunction<
-      Void Function(Pointer<Void>),
-      void Function(Pointer<Void>)>('thinkthen_cancel_token_free');
-  late final int Function(Pointer<Void>) errorCode = lib.lookupFunction<
-      Int32 Function(Pointer<Void>),
-      int Function(Pointer<Void>)>('thinkthen_error_code');
-  late final int Function(Pointer<Void>) errorRetryable = lib.lookupFunction<
-      Int32 Function(Pointer<Void>),
-      int Function(Pointer<Void>)>('thinkthen_error_retryable');
-  late final Pointer<Uint8> Function(Pointer<Void>) errorMessage =
-      lib.lookupFunction<Pointer<Uint8> Function(Pointer<Void>),
-          Pointer<Uint8> Function(Pointer<Void>)>('thinkthen_error_message');
-  late final Pointer<Uint8> Function(Pointer<Void>) errorFacts =
-      lib.lookupFunction<Pointer<Uint8> Function(Pointer<Void>),
-          Pointer<Uint8> Function(Pointer<Void>)>('thinkthen_error_facts_json');
+  late final Pointer<Void> Function() engineNew = lib
+      .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+        'thinkthen_engine_new',
+      );
+  late final Pointer<Void> Function(Pointer<Uint8>) engineNewWith = lib
+      .lookupFunction<
+        Pointer<Void> Function(Pointer<Uint8>),
+        Pointer<Void> Function(Pointer<Uint8>)
+      >('thinkthen_engine_new_with');
+  late final void Function(Pointer<Void>) engineFree = lib
+      .lookupFunction<
+        Void Function(Pointer<Void>),
+        void Function(Pointer<Void>)
+      >('thinkthen_engine_free');
+  late final Pointer<Void> Function() tokenNew = lib
+      .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+        'thinkthen_cancel_token_new',
+      );
+  late final void Function(Pointer<Void>) cancel = lib
+      .lookupFunction<
+        Void Function(Pointer<Void>),
+        void Function(Pointer<Void>)
+      >('thinkthen_cancel');
+  late final void Function(Pointer<Void>) tokenFree = lib
+      .lookupFunction<
+        Void Function(Pointer<Void>),
+        void Function(Pointer<Void>)
+      >('thinkthen_cancel_token_free');
+  late final int Function(Pointer<Void>) errorCode = lib
+      .lookupFunction<
+        Int32 Function(Pointer<Void>),
+        int Function(Pointer<Void>)
+      >('thinkthen_error_code');
+  late final int Function(Pointer<Void>) errorRetryable = lib
+      .lookupFunction<
+        Int32 Function(Pointer<Void>),
+        int Function(Pointer<Void>)
+      >('thinkthen_error_retryable');
+  late final Pointer<Uint8> Function(Pointer<Void>) errorMessage = lib
+      .lookupFunction<
+        Pointer<Uint8> Function(Pointer<Void>),
+        Pointer<Uint8> Function(Pointer<Void>)
+      >('thinkthen_error_message');
+  late final Pointer<Uint8> Function(Pointer<Void>) errorFacts = lib
+      .lookupFunction<
+        Pointer<Uint8> Function(Pointer<Void>),
+        Pointer<Uint8> Function(Pointer<Void>)
+      >('thinkthen_error_facts_json');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -81,29 +97,32 @@ class Door {
     Pointer<Answer>,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
-  ) decideOpts = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Uint8>,
-        IntPtr,
-        Int64,
-        Pointer<Void>,
-        Pointer<Answer>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Uint8>,
-        int,
-        int,
-        Pointer<Void>,
-        Pointer<Answer>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      )>('thinkthen_decide_with_facts_opts');
+  )
+  decideOpts = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Uint8>,
+          IntPtr,
+          Int64,
+          Pointer<Void>,
+          Pointer<Answer>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Uint8>,
+          int,
+          int,
+          Pointer<Void>,
+          Pointer<Answer>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        )
+      >('thinkthen_decide_with_facts_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -115,49 +134,55 @@ class Door {
     Pointer<Answer>,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
-  ) manyOpts = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        IntPtr,
-        Int64,
-        Pointer<Void>,
-        Pointer<Answer>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        int,
-        int,
-        Pointer<Void>,
-        Pointer<Answer>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      )>('thinkthen_decide_many_with_facts_opts');
+  )
+  manyOpts = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          IntPtr,
+          Int64,
+          Pointer<Void>,
+          Pointer<Answer>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          int,
+          int,
+          Pointer<Void>,
+          Pointer<Answer>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        )
+      >('thinkthen_decide_many_with_facts_opts');
   late final Pointer<Uint8> Function(
     Pointer<Void>,
     Pointer<Uint8>,
     int,
     Pointer<Void>,
-  ) callOpts = lib.lookupFunction<
-      Pointer<Uint8> Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Int64,
-        Pointer<Void>,
-      ),
-      Pointer<Uint8> Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        int,
-        Pointer<Void>,
-      )>('thinkthen_call_opts');
+  )
+  callOpts = lib
+      .lookupFunction<
+        Pointer<Uint8> Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Int64,
+          Pointer<Void>,
+        ),
+        Pointer<Uint8> Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          int,
+          Pointer<Void>,
+        )
+      >('thinkthen_call_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -169,31 +194,34 @@ class Door {
     Pointer<IntPtr>,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
-  ) recognizeOpts = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Uint8>,
-        IntPtr,
-        Int64,
-        Pointer<Void>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Uint8>,
-        int,
-        int,
-        Pointer<Void>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      )>('thinkthen_recognize_with_facts_opts');
+  )
+  recognizeOpts = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Uint8>,
+          IntPtr,
+          Int64,
+          Pointer<Void>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Uint8>,
+          int,
+          int,
+          Pointer<Void>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        )
+      >('thinkthen_recognize_with_facts_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -206,75 +234,86 @@ class Door {
     Pointer<IntPtr>,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
-  ) relateOpts = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        IntPtr,
-        Int64,
-        Pointer<Void>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        int,
-        int,
-        Pointer<Void>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      )>('thinkthen_relate_with_facts_opts');
+  )
+  relateOpts = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          IntPtr,
+          Int64,
+          Pointer<Void>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          int,
+          int,
+          Pointer<Void>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        )
+      >('thinkthen_relate_with_facts_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
-  ) planJson = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      )>('thinkthen_plan_json');
-  late final void Function(Pointer<Uint8>) freeString = lib.lookupFunction<
-      Void Function(Pointer<Uint8>),
-      void Function(Pointer<Uint8>)>('thinkthen_free_string');
+  )
+  planJson = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        )
+      >('thinkthen_plan_json');
+  late final void Function(Pointer<Uint8>) freeString = lib
+      .lookupFunction<
+        Void Function(Pointer<Uint8>),
+        void Function(Pointer<Uint8>)
+      >('thinkthen_free_string');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
     Pointer<Uint8>,
     int,
     Pointer<Answer>,
-  ) decidePlain = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Uint8>,
-        IntPtr,
-        Pointer<Answer>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Uint8>,
-        int,
-        Pointer<Answer>,
-      )>('thinkthen_decide');
+  )
+  decidePlain = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Uint8>,
+          IntPtr,
+          Pointer<Answer>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Uint8>,
+          int,
+          Pointer<Answer>,
+        )
+      >('thinkthen_decide');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -282,28 +321,31 @@ class Door {
     Pointer<IntPtr>,
     int,
     Pointer<Answer>,
-  ) manyPlain = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        IntPtr,
-        Pointer<Answer>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        int,
-        Pointer<Answer>,
-      )>('thinkthen_decide_many');
+  )
+  manyPlain = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          IntPtr,
+          Pointer<Answer>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          int,
+          Pointer<Answer>,
+        )
+      >('thinkthen_decide_many');
   late final Pointer<Uint8> Function(Pointer<Void>, Pointer<Uint8>) callPlain =
       lib.lookupFunction<
-          Pointer<Uint8> Function(Pointer<Void>, Pointer<Uint8>),
-          Pointer<Uint8> Function(
-              Pointer<Void>, Pointer<Uint8>)>('thinkthen_call');
+        Pointer<Uint8> Function(Pointer<Void>, Pointer<Uint8>),
+        Pointer<Uint8> Function(Pointer<Void>, Pointer<Uint8>)
+      >('thinkthen_call');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -311,23 +353,26 @@ class Door {
     int,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
-  ) recognizePlain = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Uint8>,
-        IntPtr,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Uint8>,
-        int,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      )>('thinkthen_recognize');
+  )
+  recognizePlain = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Uint8>,
+          IntPtr,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Uint8>,
+          int,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        )
+      >('thinkthen_recognize');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -336,34 +381,39 @@ class Door {
     int,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
-  ) relatePlain = lib.lookupFunction<
-      Int32 Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        IntPtr,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      ),
-      int Function(
-        Pointer<Void>,
-        Pointer<Uint8>,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-        int,
-        Pointer<Pointer<Uint8>>,
-        Pointer<IntPtr>,
-      )>('thinkthen_relate');
+  )
+  relatePlain = lib
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          IntPtr,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        ),
+        int Function(
+          Pointer<Void>,
+          Pointer<Uint8>,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+          int,
+          Pointer<Pointer<Uint8>>,
+          Pointer<IntPtr>,
+        )
+      >('thinkthen_relate');
   // Exercise all five non-_opts entry points on existing cache keys.
   void plainAliases(Pointer<Void> engine) {
     final question = memory.cString('Is it?'), text = memory.cString('yes');
     final answer = memory.allocate(sizeOf<Answer>()).cast<Answer>();
-    final ptrs =
-        memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>();
+    final ptrs = memory
+        .allocate(sizeOf<Pointer<Uint8>>())
+        .cast<Pointer<Uint8>>();
     final lens = memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>();
-    final result =
-        memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>();
+    final result = memory
+        .allocate(sizeOf<Pointer<Uint8>>())
+        .cast<Pointer<Uint8>>();
     final resultLen = memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>();
     final usage = memory.cString('{"usage":true}');
     final spec = memory.cString(
@@ -375,8 +425,9 @@ class Door {
     );
     final first = memory.cString('{"name":"First","kind":"alert"}');
     final second = memory.cString('{"name":"Second","kind":"alert"}');
-    final both =
-        memory.allocate(2 * sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>();
+    final both = memory
+        .allocate(2 * sizeOf<Pointer<Uint8>>())
+        .cast<Pointer<Uint8>>();
     final lengths = memory.allocate(2 * sizeOf<IntPtr>()).cast<IntPtr>();
     try {
       if (decidePlain(engine, question, text, 3, answer) != 0 ||
@@ -410,7 +461,8 @@ class Door {
         freeString(json);
       }
       if (recognizePlain(engine, spec, person, 10, result, resultLen) != 0 ||
-          result.value.address == 0) throw StateError('plain recognize');
+          result.value.address == 0)
+        throw StateError('plain recognize');
       try {
         if (jsonEncode(
               jsonDecode(
@@ -429,11 +481,13 @@ class Door {
       lengths[1] = utf8.encode('{"name":"Second","kind":"alert"}').length;
       if (relatePlain(engine, relation, both, lengths, 2, result, resultLen) !=
               0 ||
-          result.value.address == 0) throw StateError('plain relate');
+          result.value.address == 0)
+        throw StateError('plain relate');
       try {
         final edges =
             (jsonDecode(utf8.decode(result.value.asTypedList(resultLen.value)))
-                as Map)['edges'] as List;
+                    as Map)['edges']
+                as List;
         if (edges.length != 2 ||
             jsonEncode(edges[0]) !=
                 '{"relation":"caused_by","source":{"name":"First","kind":"alert"},"target":{"name":"Second","kind":"alert"},"probability":0.9}' ||
@@ -490,7 +544,7 @@ class Door {
     final facts = factsPointer.address == 0
         ? null
         : jsonDecode(memory.decodeCString(factsPointer))
-            as Map<String, dynamic>;
+              as Map<String, dynamic>;
     return DoorFailure(
       code,
       memory.decodeCString(errorMessage(engine)),
@@ -521,17 +575,22 @@ class Door {
   ]) {
     final owned = _OwnedPointers();
     try {
-      final request = owned.add(memory.cString(jsonEncode({
-        'verb': verb,
-        'question': question,
-        'input': input,
-        if (settings != null) 'settings': settings,
-      })));
+      final request = owned.add(
+        memory.cString(
+          jsonEncode({
+            'verb': verb,
+            'question': question,
+            'input': input,
+            if (settings != null) 'settings': settings,
+          }),
+        ),
+      );
       final out = owned.add(
         memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
       );
-      final outLen =
-          owned.add(memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>());
+      final outLen = owned.add(
+        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+      );
       final code = planJson(engine, request, out, outLen);
       if (code != 0) throw failure(engine, code);
       try {
@@ -675,11 +734,30 @@ class Door {
   }
 
   /// Explicit native reader for all ten JSON question grammars.
-  Object? files(Pointer<Void> engine, Map<String, Object?> question, List<String> paths,
-      {String unit = 'line', int? window, int deadline = -1, Pointer<Void>? token}) {
-    if (question.containsKey('source')) throw ArgumentError('source is supplied by files');
-    return ask(engine, {...question, 'source': {'paths': paths, 'unit': unit,
-      if (window != null) 'window': window}}, deadline: deadline, token: token);
+  Object? files(
+    Pointer<Void> engine,
+    Map<String, Object?> question,
+    List<String> paths, {
+    String unit = 'line',
+    int? window,
+    int deadline = -1,
+    Pointer<Void>? token,
+  }) {
+    if (question.containsKey('source'))
+      throw ArgumentError('source is supplied by files');
+    return ask(
+      engine,
+      {
+        ...question,
+        'source': {
+          'paths': paths,
+          'unit': unit,
+          if (window != null) 'window': window,
+        },
+      },
+      deadline: deadline,
+      token: token,
+    );
   }
 
   /// Carries description maps and structured {what,not_for,examples} unchanged.
@@ -688,8 +766,7 @@ class Door {
     Map<String, Object?> request, {
     int deadline = -1,
     Pointer<Void>? token,
-  }) =>
-      call(engine, jsonEncode(request), deadline: deadline, token: token);
+  }) => call(engine, jsonEncode(request), deadline: deadline, token: token);
 
   ({Object? value, Map<String, Object?> facts}) recognize(
     Pointer<Void> engine,
@@ -697,9 +774,14 @@ class Door {
     String text, {
     int deadline = -1,
     Pointer<Void>? token,
-  }) =>
-      structured(engine, spec, [text],
-          recognize: true, deadline: deadline, token: token);
+  }) => structured(
+    engine,
+    spec,
+    [text],
+    recognize: true,
+    deadline: deadline,
+    token: token,
+  );
 
   ({Object? value, Map<String, Object?> facts}) relate(
     Pointer<Void> engine,
@@ -707,9 +789,14 @@ class Door {
     List<String> records, {
     int deadline = -1,
     Pointer<Void>? token,
-  }) =>
-      structured(engine, spec, records,
-          recognize: false, deadline: deadline, token: token);
+  }) => structured(
+    engine,
+    spec,
+    records,
+    recognize: false,
+    deadline: deadline,
+    token: token,
+  );
 
   Object? call(
     Pointer<Void> engine,
