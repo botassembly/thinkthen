@@ -17,7 +17,7 @@ thinkthen backends check [--url BASE] [--backend NAME] [--model NAME] [--timeout
 - The key comes only from `THINKTHEN_API_KEY`, or from a named backend's own key variables. An unset or blank key exits 4 with the sentence every command prints, before any request, unless the address is `localhost`, `127.0.0.1`, or `[::1]`. There the probes go out with no `Authorization` header, as on every command.
 - `--timeout` works as it does everywhere. `--max-retries` keeps its default of 3 and is not accepted. The four rich probes plus the minimal function inputs need at most 15 original requests: one for each of the first eight functions, one recognize boundary request and at most one kind request, and one relate request. Each original request permits four attempts, so at most 60 attempts occur. Each attempt takes at most the timeout, and each wait at most the lesser of the timeout and 60 seconds. This bounds transport and retry waits by `60 × timeout + 59 × min(timeout, 60)`, before configured pacing and local usage-lock waits. A setup profile may split function requests under the existing production planner, so that profile can increase the number of requests. The estimated input cap admits each actual encoded request before its send.
 
-- The check reads no standard input, cache, recording, replay, or explicit profile file. A selected setup supplies its inline profile. All four fixed requests must fit that profile before the first send or any `--plan` output; a violation exits 2 with the existing profile-limit sentence and sends nothing, even when a later probe is the first violation. The fixed probes are never split. `--cache`, `--no-cache`, `--record`, `--replay`, and `--profile` are unknown options and exit 2.
+- The check reads no standard input, cache, recording, replay, or explicit profile file. A selected setup supplies its inline profile. All four fixed requests and the prepared minimal function requests must fit that profile before the first send or any `--plan` output; a violation exits 2 with the existing profile-limit sentence and sends nothing, even when a later probe is the first violation. The fixed probes are never split. `--cache`, `--no-cache`, `--record`, `--replay`, and `--profile` are unknown options and exit 2.
 - Its attempts and reported tokens count in the usage totals, as every live request does.
 - `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` binds each probe as it binds every live request, by [backends.md](backends.md). `backends check` has no flag for it. A probe the cap cannot admit stops the check before that probe is sent: the command prints the asking commands' sentence, such as `thinkthen usage: max_estimated_input_tokens_total=1 (encoded-body-bytes-908-v1) would be exceeded before this call's first request`, prints no report, and exits 2.
 
@@ -70,6 +70,7 @@ The report starts with eight rich-probe rows in this order: `connection`, `key`,
 | probe | warning | A `choice` or `score` answer carries no `confidence` | ``the answer to question `qN` carries no confidence`` |
 | `usage` | warning | Any decoded reply carries no `usage` | `a reply carries no token counts, so results and usage totals leave them out` |
 | probe | warning | The `ollama` backend sent one of the probe's description objects or lists as text | ``backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out`` |
+| probe | warning | The `mlx` backend sent a description object or list as text | ``backend `mlx` sends each description object as its `what` text, a temporary workaround for the Strands server schema, so its other fields are left out`` |
 
 Ten function rows follow `usage`, in the public function order: decide, choose, tag, score, filter, rank, find, annotate, recognize, relate. Each prints `answered function NAME`, `incompatible function NAME: SENTENCE`, or `unchecked function NAME`. Each incompatible function adds one critical finding to the closing count. Function sentences come from the public production call and contain no raw reply. A transport failure or status 401–404 during a function stops the later functions. The estimated input cap still stops the command with no report at exit 2.
 
@@ -124,7 +125,7 @@ Each `reply PROBE JSON` line holds one decoded reply: `model` is the model that 
 | Not reached after a stop | no | `unchecked` |
 | The reply names another model than the one sent | yes, with the reply's model | no finding |
 
-The last line counts the finding lines. The report prints once, after the last probe. On SIGINT or SIGTERM the check prints no report and follows the interrupt rule of [channels.md](channels.md).
+The last line counts the finding lines. The report prints once, after the last reached probe or function. On SIGINT or SIGTERM the check prints no report and follows the interrupt rule of [channels.md](channels.md).
 
 | Exit | When |
 | --- | --- |
