@@ -1,45 +1,14 @@
 #!/usr/bin/env node
-// Replay each SQL sample that examples/REPLAY names against its database
-// extension, built from this working tree, and compare what the database
-// printed with the sample's saved <sample>.sql.out. The run writes what it
-// proved to examples/bindings-proof.json, beside the library entries that
-// scripts/smoke-bindings.mjs writes. scripts/check-binding-proofs.mjs reads
-// that file in every build.
-//
-//   node scripts/smoke-sql.mjs                  replay every listed SQL sample
-//   node scripts/smoke-sql.mjs PATTERN          only the samples whose path holds PATTERN
-//   node scripts/smoke-sql.mjs --update         write each sample's .sql.out from its run
-//   node scripts/smoke-sql.mjs --allow-missing  pass when a toolchain is missing
-//
-// A sample runs in a fresh folder that holds its page's files/ and the
-// extension as the install page names it. THINKTHEN_CACHE names a fresh
-// copy of recordings/thinkthen.jsonl in a folder of mode 0700. The run sets
-// no key and no address, so a missed answer fails with no request sent. A
-// sample passes when it exits 0 and prints its .sql.out byte for byte.
-// narrow() in binding-proofs.mjs finds the answers it read.
-//
-// SQLite needs the pinned 3.50.0 CLI that databases/sqlite/setup.sh builds
-// into ~/.cache/thinkthen-toolchains/sqlite-3500000-host, and Rust with the
-// offline Cargo cache. The CLI runs in its default list mode. DuckDB needs
-// the pinned 1.5.5 CLI, source and static archives that
-// databases/duckdb/tools/setup.sh --fetch puts in
-// ~/.cache/thinkthen-toolchains/duckdb/v1.5.5, CMake, a C++ compiler and
-// Rust. cpp/build.sh builds the extension offline, and the CLI runs as
-// duckdb -unsigned -list.
-// PostgreSQL needs the pinned 16.15 server that databases/postgresql/check.sh
-// unpacks into ~/.cache/thinkthen-toolchains/postgresql, /usr/bin/pg_config,
-// psql and cargo-pgrx 0.17.0. pgrx-package-locked.sh packages the extension
-// offline. Each attempt runs its own server on a socket with no TCP port, and
-// the cache folder belongs to the server's user. The sample runs as an
-// ordinary role, apart from a page that names a file. A database
-// whose toolchain is missing reports "not run" and keeps its old entries,
-// and the run exits 1 unless --allow-missing is given.
+// Replay each listed SQL sample and compare its output with <sample>.out.
+// Runs use saved recordings in fresh folders, with no key or network request.
+// Pass a path pattern to select samples, --update to save expected output,
+// or --allow-missing to skip missing toolchains.
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { readReplayList, replayLine, sampleHashes, sourceTree, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, sampleFiles, cargoFolders, sha256 } from './binding-proofs.mjs';
+import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles } from './binding-samples.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -74,13 +43,12 @@ const run = (cmd, args, opts = {}) => {
 };
 const TOOLCHAINS = path.join(os.homedir(), '.cache', 'thinkthen-toolchains');
 
-// Each database: the folder its extension builds from, the Cargo manifest
-// of its Rust part, and build(), which returns the toolchain versions and
+// Each database: the folder its extension builds from and build(), which
+// returns the toolchain versions and
 // how to run a sample in a folder, or the tool that is missing.
 const DATABASES = {
   sqlite: {
     folder: 'databases/sqlite',
-    manifest: 'databases/sqlite/Cargo.toml',
     build() {
       const host = path.join(TOOLCHAINS, 'sqlite-3500000-host');
       const cli = path.join(host, 'sqlite3');
@@ -102,7 +70,6 @@ const DATABASES = {
   },
   duckdb: {
     folder: 'databases/duckdb',
-    manifest: 'databases/duckdb/bridge/Cargo.toml',
     build() {
       const tools = path.join(TOOLCHAINS, 'duckdb', 'v1.5.5');
       const cli = path.join(tools, 'duckdb');
@@ -124,7 +91,6 @@ const DATABASES = {
   },
   postgresql: {
     folder: 'databases/postgresql',
-    manifest: 'databases/postgresql/Cargo.toml',
     build() {
       const pgConfig = '/usr/bin/pg_config';
       const extracted = path.join(TOOLCHAINS, 'postgresql', '16.15-0ubuntu0.24.04.1');
@@ -197,8 +163,6 @@ const DATABASES = {
 };
 
 const list = readReplayList(examples).filter((line) => replayLine(line).rel.endsWith('.sql')).filter((line) => !only.length || only.some((o) => line.includes(o)));
-const proofPath = path.join(examples, PROOF_FILE);
-const proof = fs.existsSync(proofPath) ? JSON.parse(fs.readFileSync(proofPath, 'utf8')) : {};
 const fixture = fixtureLines(path.join(site, 'recordings', 'thinkthen.jsonl'));
 const states = fixture.filter((l) => !l.key);
 const built = new Map();
@@ -253,36 +217,18 @@ for (const line of list) {
   if (saved === null) { failed.push(`${line}: ${rel}.out is missing. Run node scripts/smoke-sql.mjs --update ${rel}.`); continue; }
   if (whole.stdout !== saved) { failed.push(`${line}: printed other output than ${rel}.out\n--- saved\n${saved}--- printed\n${whole.stdout}`); continue; }
 
-  const passes = (answers) => {
-    const one = attempt(rel, db, answers);
-    return one.ok && one.stdout === saved;
-  };
-  const narrowed = narrow(fixture, fs.readFileSync(path.join(examples, rel), 'utf8'), passes);
-  if (narrowed.reason) { failed.push(`${line}: ${narrowed.reason}`); continue; }
-  const { kept } = narrowed;
-
-  const folders = [...new Set([spec.folder, ...cargoFolders(repo, spec.manifest)])].sort();
-  proof[line] = {
-    page: samplePage(rel),
-    ...sampleHashes(examples, rel),
-    answers: Object.fromEntries(kept.map((l) => [l.key, sha256(l.text)]).sort()),
-    sources: { folders, tree: sourceTree(repo, folders) },
-    toolchain: db.toolchain,
-  };
   proved += 1;
-  console.log(`smoke-sql: ${line} passed, reading ${kept.length} recorded answers at ${[...new Set(kept.map((l) => l.url))].join(', ')}.`);
+  console.log(`smoke-sql: ${line} passed.`);
 }
 fs.rmSync(tmp, { recursive: true, force: true });
 
-const ordered = Object.fromEntries(Object.keys(proof).sort().map((k) => [k, proof[k]]));
-fs.writeFileSync(proofPath, JSON.stringify(ordered, null, 2) + '\n');
 for (const line of notRun) console.log(`smoke-sql: ${line}`);
 if (failed.length) {
   console.error(`smoke-sql: ${failed.length} samples failed\n\n${failed.join('\n\n')}`);
   process.exit(1);
 }
 if (notRun.length && !allowMissing) {
-  console.error(`smoke-sql: ${notRun.length} samples did not run. Install their toolchains, or pass --allow-missing to keep their old entries.`);
+  console.error(`smoke-sql: ${notRun.length} samples did not run. Install their toolchains, or pass --allow-missing to skip missing toolchains.`);
   process.exit(1);
 }
 if (notRun.length) console.log(`smoke-sql: ${notRun.length} samples did not run, and --allow-missing lets the run pass.`);

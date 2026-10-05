@@ -200,7 +200,7 @@ export const ALLOWED = [
     "reason": "Retain the sourced hosted request/evidence limits in each complete function reference."
   },
   {
-    "text": "--jobs N runs from 1 to 32 and defaults to 4. It acts in record mode. On one document it is a usage error. TypeSafe documents a limit of 1,200 requests a minute. The records specification holds the measured rates. --jobs caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of 4 can pass that limit. In a review, the default sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, --jobs 3 sent 1,285 a minute. Set requests_per_minute on the backend, or THINKTHEN_REQUESTS_PER_MINUTE, to stay under the limit.",
+    "text": "--jobs N runs from 1 to 32 and defaults to 8. It acts in record mode. On one document it is a usage error. TypeSafe documents a limit of 1,200 requests a minute. The records specification holds the measured rates. --jobs caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of 8 can pass that limit. In a review, throttle 4 sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, --jobs 3 sent 1,285 a minute. Set requests_per_minute on the backend, or THINKTHEN_REQUESTS_PER_MINUTE, to stay under the limit.",
     "routes": [
       "/functions/choose/",
       "/functions/decide/",
@@ -247,7 +247,7 @@ export const ALLOWED = [
     "reason": "Retain the default single-cut boundary on applicable functions."
   },
   {
-    "text": "--jobs N runs from 1 to 32 and defaults to 4. It acts in record mode. TypeSafe documents a limit of 1,200 requests a minute. The records specification holds the measured rates. --jobs caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of 4 can pass that limit. In a review, the default sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, --jobs 3 sent 1,285 a minute. Set requests_per_minute on the backend, or THINKTHEN_REQUESTS_PER_MINUTE, to stay under the limit.",
+    "text": "--jobs N runs from 1 to 32 and defaults to 8. It acts in record mode. TypeSafe documents a limit of 1,200 requests a minute. The records specification holds the measured rates. --jobs caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of 8 can pass that limit. In a review, throttle 4 sent 1,519 requests a minute to TypeSafe. Against a local test server with 100 ms replies, --jobs 3 sent 1,285 a minute. Set requests_per_minute on the backend, or THINKTHEN_REQUESTS_PER_MINUTE, to stay under the limit.",
     "routes": [
       "/functions/filter/",
       "/functions/rank/"

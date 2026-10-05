@@ -44,4 +44,3 @@
 **/*.php.out     What a library sample that prints printed; smoke-bindings.mjs compares it.
 **/*.dart.out    What a library sample that prints printed; smoke-bindings.mjs compares it.
 REPLAY        The samples smoke-bindings.mjs and smoke-sql.mjs replay.
-bindings-proof.json  What the replay runners proved; check-binding-proofs.mjs reads it.

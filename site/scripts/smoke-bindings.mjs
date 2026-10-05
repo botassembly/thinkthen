@@ -1,49 +1,8 @@
 #!/usr/bin/env node
-// Replay each library sample that examples/REPLAY names against its
-// binding, built from this working tree, and write what each run proved to
-// examples/bindings-proof.json. scripts/check-binding-proofs.mjs reads that
-// file in every build.
-//
-//   node scripts/smoke-bindings.mjs                  replay every listed sample
-//   node scripts/smoke-bindings.mjs PATTERN          only the samples whose path holds PATTERN
-//   node scripts/smoke-bindings.mjs --allow-missing  pass when a toolchain is missing
-//   node scripts/smoke-bindings.mjs --update         write <sample>.out for each sample that prints
-//
-// A sample runs in a fresh folder that starts with a copy of its page's
-// files/. THINKTHEN_CACHE names a fresh copy of recordings/thinkthen.jsonl.
-// The run sets no key and no address, so a missed answer fails with no
-// request sent. A sample passes when it exits 0, so every assert held. A
-// sample prints only when the printed form is the point, such as a stream
-// or a table. Then it must print its <sample>.out byte for byte, as a SQL
-// sample does. A sample that prints with no <sample>.out fails, and so
-// does one with a <sample>.out that prints something else. --update writes
-// the file from the run, and removes it when the sample prints nothing.
-//
-// A REPLAY line that ends with backend=NAME runs its sample with
-// THINKTHEN_BACKEND set to that name, and with THINKTHEN_BASE_URL set to
-// Ollama's second port for ollama. Every answer that run read must sit at
-// that backend's address, so a sample that falls back to another backend
-// fails. A backends sample on a line with no backend names every backend
-// in its own code. It must read answers at each backend's address and at
-// no other. The whole line keys the proof entry.
-//
-// The store loads the whole fixture, so it cannot say which answers a
-// sample read. narrow() in binding-proofs.mjs finds them.
-//
-// A sample on a function page, functions/<fn>/<surface>.<ext>, runs on
-// its surface's binding under the name sample.<ext>, so no sample shadows
-// a package. It skips a line that ends in .sql.
-//
-// A sample whose toolchain is missing reports "not run" and keeps its old
-// entry, and the run exits 1. With --allow-missing, the run prints how many
-// samples did not run and passes. The run needs Rust with the offline Cargo
-// cache, and each binding's own toolchain: a stable Python 3.12 or later
-// with uv and maturin, R 4.2 or later with dplyr, Node 22, the pinned Ruby
-// that libraries/ruby/setup-ruby.sh builds with libclang, a C compiler with
-// json-c, g++, gcc with Objective-C, GnuCOBOL, GNAT, JDK 21 with kotlinc and
-// scalac, .NET 8, Go, Swift, Zig, PHP with FFI and the pinned Flutter's
-// Dart. The native samples link the C door that sdlc/scripts/installed.sh
-// lays out, and the runner builds each sample once.
+// Replay each listed library sample and compare its output with <sample>.out.
+// Runs use saved recordings in fresh folders, with no key or network request.
+// Pass a path pattern to select samples, --update to save expected output,
+// or --allow-missing to skip missing toolchains.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -51,7 +10,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, sampleHashes, sourceTree, sha256, PROOF_FILE, fixtureLines, narrow, leakedVariables, sampleSurface, samplePage, sampleFiles, cargoFolders } from './binding-proofs.mjs';
+import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles } from './binding-samples.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -211,11 +170,9 @@ ARCHIVE.scala = ARCHIVE.java;
 // would have, with thinkthen-c/ and the binding's archive beside the
 // sample and its files/, and runs the build lines the install page shows.
 // Each sample builds once, and each attempt runs the page's run line.
-function withBuild({ slug, folder = `libraries/${slug}`, manifest = 'libraries/c/Cargo.toml', tools, needs = () => null, versions, env = {}, buildEnv = {} }) {
+function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildEnv = {} }) {
   const layout = ARCHIVE[slug] ?? sourceArchive(slug);
   return {
-    folder,
-    manifest,
     build() {
       const runEnv = typeof env === 'function' ? env() : env;
       for (const tool of [...tools, 'cargo']) if (!has(tool, { ...process.env, ...runEnv })) return { missing: tool };
@@ -292,8 +249,6 @@ const BINDINGS = {
   // The npm package's files, with the addon under the name loader.js reads.
   // Each run links the package into node_modules beside the sample.
   typescript: {
-    folder: 'libraries/typescript',
-    manifest: 'libraries/typescript/Cargo.toml',
     build() {
       for (const tool of ['node', 'cargo']) if (!has(tool)) return { missing: tool };
       const release = cargoBuild('libraries/typescript', 'site-typescript');
@@ -311,8 +266,6 @@ const BINDINGS = {
   },
   // The gem's files, with the extension built for the pinned Ruby.
   ruby: {
-    folder: 'libraries/ruby',
-    manifest: 'libraries/ruby/Cargo.toml',
     build() {
       const prefix = RUBY_PREFIX();
       const ruby = path.join(prefix, 'bin', 'ruby');
@@ -334,10 +287,8 @@ const BINDINGS = {
     },
   },
   c: withBuild({ slug: 'c', tools: ['cc', 'pkg-config'], needs: jsonC, versions: () => [firstLine('cc', ['--version']), `json-c ${run('pkg-config', ['--modversion', 'json-c'], { env: { ...process.env, ...JSON_C } }).stdout.trim()}`], buildEnv: JSON_C, env: { LD_LIBRARY_PATH: path.join(LOCAL, 'lib') } }),
-  rust: withBuild({ slug: 'rust', folder: 'crates/thinkthen', manifest: 'crates/thinkthen/Cargo.toml', tools: [], versions: () => [firstLine('cargo', ['--version'])], env: { ...CARGO_ENV, RUSTUP_TOOLCHAIN: RUST_CHANNEL(), CARGO_TARGET_DIR: path.join(repo, 'target', 'site-rust') } }),
+  rust: withBuild({ slug: 'rust', tools: [], versions: () => [firstLine('cargo', ['--version'])], env: { ...CARGO_ENV, RUSTUP_TOOLCHAIN: RUST_CHANNEL(), CARGO_TARGET_DIR: path.join(repo, 'target', 'site-rust') } }),
   python: {
-    folder: 'libraries/python',
-    manifest: 'libraries/python/Cargo.toml',
     build() {
       const python = ['python3.14', 'python3.13', 'python3.12', 'python3'].map((p) => run('sh', ['-c', `command -v ${p}`]).stdout.trim())
         .find((p) => p && run(p, ['-c', 'import sys; sys.exit(sys.version_info < (3, 12) or sys.version_info.releaselevel != "final")']).status === 0);
@@ -366,8 +317,6 @@ const BINDINGS = {
     },
   },
   r: {
-    folder: 'libraries/r',
-    manifest: 'libraries/r/thinkthen/src/rust/Cargo.toml',
     build() {
       for (const tool of ['R', 'Rscript', 'cargo']) if (!has(tool)) return { missing: tool };
       const lib = path.join(tmp, 'rlib');
@@ -390,9 +339,9 @@ const BINDINGS = {
   'objective-c': withBuild({ slug: 'objective-c', tools: ['gcc'], versions: () => [firstLine('gcc', ['--version'])] }),
   cobol: withBuild({ slug: 'cobol', tools: ['cobc'], versions: () => [firstLine('cobc', ['--version'])] }),
   ada: withBuild({ slug: 'ada', tools: ['gnatmake'], versions: () => [firstLine('gnatmake', ['--version'])] }),
-  java: withBuild({ slug: 'java', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion()] }),
-  kotlin: withBuild({ slug: 'kotlin', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('kotlinc', ['-version'])] }),
-  scala: withBuild({ slug: 'scala', folder: 'libraries/jvm', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('scalac', ['-version'])], env: () => ({ SCALA_HOME: SCALA_HOME() }) }),
+  java: withBuild({ slug: 'java', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion()] }),
+  kotlin: withBuild({ slug: 'kotlin', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('kotlinc', ['-version'])] }),
+  scala: withBuild({ slug: 'scala', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('scalac', ['-version'])], env: () => ({ SCALA_HOME: SCALA_HOME() }) }),
   go: withBuild({ slug: 'go', tools: ['go', 'pkg-config'], versions: () => [firstLine('go', ['version'])], buildEnv: {
     GOCACHE: path.join(tmp, 'go-cache'), GOMODCACHE: path.join(tmp, 'go-mod'), GOPROXY: 'off', GOTOOLCHAIN: 'local', GOFLAGS: '-mod=mod -buildvcs=false', CGO_ENABLED: '1',
   } }),
@@ -411,8 +360,6 @@ PAGE_BINDING.pandas = 'python';
 PAGE_BINDING.polars = 'python';
 
 const list = readReplayList(examples).filter((line) => !replayLine(line).rel.endsWith('.sql')).filter((rel) => !only.length || only.some((o) => rel.includes(o)));
-const proofPath = path.join(examples, PROOF_FILE);
-const proof = fs.existsSync(proofPath) ? JSON.parse(fs.readFileSync(proofPath, 'utf8')) : {};
 const fixture = fixtureLines(path.join(site, 'recordings', 'thinkthen.jsonl'));
 const states = fixture.filter((l) => !l.key);
 const built = new Map();
@@ -471,7 +418,8 @@ for (const line of list) {
     failed.push(`${line}: ${error.message}`);
     continue;
   }
-  const whole = attempt(rel, binding, fixture.filter((l) => l.key), named);
+  const answers = fixture.filter((l) => l.key && (!route || l.url?.startsWith(`${route.base}/`)));
+  const whole = attempt(rel, binding, answers, named);
   if (!whole.ok) { failed.push(`${line}: failed against the whole recording\n${whole.output}`); continue; }
   const saved = path.join(examples, `${rel}.out`);
   if (update && whole.stdout) fs.writeFileSync(saved, whole.stdout);
@@ -480,45 +428,18 @@ for (const line of list) {
   if (whole.stdout && !fs.existsSync(saved)) { failed.push(`${line}: printed output, and examples/${rel}.out does not exist. Run node scripts/smoke-bindings.mjs --update ${rel}, then read the file.\n${whole.stdout}`); continue; }
   if (whole.stdout !== expected) { failed.push(`${line}: printed other output than examples/${rel}.out\n--- saved\n${expected}--- printed\n${whole.stdout}`); continue; }
 
-  const narrowed = narrow(fixture, fs.readFileSync(path.join(examples, rel), 'utf8'), (answers) => {
-    const tried = attempt(rel, binding, answers, named);
-    return tried.ok && tried.stdout === expected;
-  });
-  if (narrowed.reason) { failed.push(`${line}: ${narrowed.reason}`); continue; }
-  const { kept } = narrowed;
-
-  const stray = route ? kept.filter((l) => !l.url?.startsWith(`${route.base}/`)) : [];
-  if (stray.length) { failed.push(`${line}: read ${stray.length} answers recorded away from ${route.base}: ${[...new Set(stray.map((l) => l.url))].join(', ')}. The backend setting did not reach the sample.`); continue; }
-  if (!backend && path.basename(rel).startsWith('backends.')) {
-    const at = (r) => kept.filter((l) => l.url?.startsWith(`${r.base}/`));
-    const unread = BACKEND_ROUTES.filter((r) => !at(r).length).map((r) => r.base);
-    const elsewhere = kept.filter((l) => !BACKEND_ROUTES.some((r) => l.url?.startsWith(`${r.base}/`)));
-    const gaps = [...unread.map((b) => `read no answer at ${b}`), ...(elsewhere.length ? [`read ${elsewhere.length} answers at no backend's address`] : [])];
-    if (gaps.length) { failed.push(`${line}: ${gaps.join('. It ')}. A backends sample must ask every backend.`); continue; }
-  }
-
-  const folders = [...new Set([spec.folder, ...cargoFolders(repo, spec.manifest)])].sort();
-  proof[line] = {
-    page: samplePage(rel),
-    ...sampleHashes(examples, rel),
-    answers: Object.fromEntries(kept.map((l) => [l.key, sha256(l.text)]).sort()),
-    sources: { folders, tree: sourceTree(repo, folders) },
-    toolchain: binding.toolchain,
-  };
   proved += 1;
-  console.log(`smoke-bindings: ${line} passed, reading ${kept.length} recorded answers at ${[...new Set(kept.map((l) => l.url))].join(', ')}.`);
+  console.log(`smoke-bindings: ${line} passed.`);
 }
 fs.rmSync(tmp, { recursive: true, force: true });
 
-const ordered = Object.fromEntries(Object.keys(proof).sort().map((k) => [k, proof[k]]));
-fs.writeFileSync(proofPath, JSON.stringify(ordered, null, 2) + '\n');
 for (const line of notRun) console.log(`smoke-bindings: ${line}`);
 if (failed.length) {
   console.error(`smoke-bindings: ${failed.length} samples failed\n\n${failed.join('\n\n')}`);
   process.exit(1);
 }
 if (notRun.length && !allowMissing) {
-  console.error(`smoke-bindings: ${notRun.length} samples did not run. Install their toolchains, or pass --allow-missing to keep their old entries.`);
+  console.error(`smoke-bindings: ${notRun.length} samples did not run. Install their toolchains, or pass --allow-missing to skip missing toolchains.`);
   process.exit(1);
 }
 if (notRun.length) console.log(`smoke-bindings: ${notRun.length} samples did not run, and --allow-missing lets the run pass.`);

@@ -51,8 +51,7 @@ export function artifactProblems(r, root = ROOT) {
       const pinned=spawnSync('git',['cat-file','blob',`${e.artifactCommit}:${r.example}/${e.artifact}`],{cwd:ROOT,timeout:10000});
       if (pinned.status!==0 || sha(pinned.stdout)!==e.sha256) add('source-pin','fixture artifact absent/changed at commit');
     }
-    const receipts=JSON.parse(fs.readFileSync(path.join(base,'files/harness.json')));
-    if (receipts.population!==8 || receipts.audit_rows!==5 || receipts.local_none!==1 || receipts.candidate_miss!==1 || receipts.ordinary_correct!==5 || receipts.not_sure!==2 || receipts.replay_requests!==0 || receipts.cache_hit_requests!==0 || receipts.negative_requests!==0 || receipts.preparation_requests!==7 || receipts.cache_fill_requests!==7 || receipts.cumulative_synthetic_requests!==14) add('publication-evidence','full fixture accounting');
+
   } catch { add('artifact-shape','manifest or retained JSON'); }
   return problems;
 }

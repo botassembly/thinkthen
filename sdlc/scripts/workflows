@@ -1149,7 +1149,7 @@ def self_test():
         bad += 1
         print(f"workflows self-test Windows command: {windows.stdout}{windows.stderr}", file=sys.stderr)
     for fixture in ("windows-installer-integration-self-test.py", "install-check-workflow-self-test.py", "install-check-self-test.py",
-                    "install-check-postgresql-self-test.py", "install-check-r-0398-self-test.py", "release-windows-c-self-test.py"):
+                    "install-check-postgresql-self-test.py", "install-check-r-binary-test.py", "release-windows-c-self-test.py"):
         result = subprocess.run([sys.executable, str(REPO / "sdlc/scripts" / fixture)],
                                 capture_output=True, text=True)
         if result.returncode != 0:
