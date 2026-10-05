@@ -2,8 +2,7 @@
 use std::fs;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-#[path = "../../../tests/windows/ffi.rs"]
-mod independent;
+use crate::windows::test_support::ffi as independent;
 
 #[test]
 fn identity_check_refuses_a_distinct_named_leaf_and_keeps_both_files() {

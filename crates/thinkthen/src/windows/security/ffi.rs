@@ -76,7 +76,7 @@ fn contains(base: *const c_void, size: usize, view: *const c_void, length: usize
 
 fn sid(base: *const c_void, size: usize, value: *mut c_void) -> io::Result<Vec<u8>> {
     if value.is_null()
-        || (value as usize) % align_of::<SID>() != 0
+        || !(value as usize).is_multiple_of(align_of::<SID>())
         || !contains(base, size, value, 8)
     {
         return Err(super::super::permission());
@@ -246,7 +246,7 @@ fn inspect_acl(
     user: &User,
     result: &mut Inspection,
 ) -> io::Result<()> {
-    if (acl as usize) % align_of::<ACL>() != 0
+    if !(acl as usize).is_multiple_of(align_of::<ACL>())
         || !contains(allocation.0, length, acl.cast(), size_of::<ACL>())
     {
         return Err(super::super::permission());
