@@ -22,11 +22,21 @@ def environment(args):
     rustflags = shlex.split(env.get("RUSTFLAGS", ""))
     if env.get("CARGO_ENCODED_RUSTFLAGS"):
         rustflags = env["CARGO_ENCODED_RUSTFLAGS"].split("\x1f")
-    rustflags += ["-C", "relocation-model=pic", f"--remap-path-prefix={Path.home()}=/build"]
+    rustflags += ["-C", "relocation-model=pic"]
+    # Scratch HOME can differ from the checkout and Cargo's shared cache.
+    cargo_home = Path(env.get("CARGO_HOME", Path.home() / ".cargo")).absolute()
+    roots = {Path.home(): "/build", ROOT: "/build/thinkthen", cargo_home: "/build/cargo"}
+    for child in ("registry", "git"):
+        path = cargo_home / child
+        roots[path] = f"/build/cargo/{child}"
+        roots[path.resolve()] = f"/build/cargo/{child}"
+    roots[cargo_home.resolve()] = "/build/cargo"
+    remaps = sorted(roots.items(), key=lambda entry: len(str(entry[0])))
+    rustflags += [f"--remap-path-prefix={path}={destination}" for path, destination in remaps]
     if args.target.endswith("-musl"):
         rustflags += ["-C", "target-feature=-crt-static"]
     cflags = shlex.split(env.get(f"CFLAGS_{target_key}", env.get("CFLAGS", ""))) + shlex.split(args.cflags)
-    cflags += ["-fPIC", f"-ffile-prefix-map={Path.home()}=/build"]
+    cflags += ["-fPIC"] + [f"-ffile-prefix-map={path}={destination}" for path, destination in remaps]
     if args.cc:
         env[f"CC_{target_key}"] = args.cc
     if args.ar:
