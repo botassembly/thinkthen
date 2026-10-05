@@ -38,6 +38,7 @@ fn apply(
         let unknown = || Failure::usage(format!("settings JSON has unknown key {key}"));
         builder = match key.as_str() {
             "usd_per_million_input" | "usd_per_million_output" => builder,
+            "backend" => builder.backend(text()?)?,
             "base_url" => builder.base_url(text()?)?,
             "model" => builder.model(text()?)?,
             "throttle" => {

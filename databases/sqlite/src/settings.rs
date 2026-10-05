@@ -195,6 +195,7 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
         let mut next = Stored::default();
         for (key, value) in fields {
             match key.as_str() {
+                "backend" => return Err(Failure::usage("settings JSON has unknown key backend")),
                 "base_url" => return Err(Failure::usage("settings JSON has unknown key base_url")),
                 "max_estimated_input_tokens_total" => {
                     return Err(Failure::usage(

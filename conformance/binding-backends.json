@@ -1,0 +1,9 @@
+{
+  "backends": [
+    {"name":"liquid","key":"LIQUIDAI_API_KEY","model":"d1:free","path":"capture_systemone","form":"authored"},
+    {"name":"ollama","key":"OLLAMA_API_KEY","model":"nimble","path":"capture_systemone","form":"text"},
+    {"name":"openrouter","key":"OPENROUTER_API_KEY","model":"typesafe/jev-1.13","path":"capture_systemone","form":"both"},
+    {"name":"perplexity","key":"PERPLEXITY_API_KEY","model":"pplx-decider-v1-27b","path":"capture_decisions","form":"authored"},
+    {"name":"typesafe","key":"TYPESAFE_API_KEY","model":"jev-1.13.0","path":"capture_systemone","form":"authored"}
+  ]
+}

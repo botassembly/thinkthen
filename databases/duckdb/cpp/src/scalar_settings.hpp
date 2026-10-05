@@ -14,6 +14,7 @@ struct SessionSettings {
 	int64_t max_requests;
 	int64_t max_request_bytes;
 	int64_t max_requests_total;
+	std::optional<string> backend;
 	std::optional<string> cache;
 	int32_t cache_allowed = 1;
 	std::optional<string> model;
@@ -31,6 +32,7 @@ struct SessionSettings {
 		};
 		const auto length = [](const std::optional<string> &value) { return value ? value->size() : 0; };
 		return {bytes(batch), length(batch), throttle, max_requests, max_request_bytes, max_requests_total,
+		        bytes(backend), length(backend),
 		        cache ? reinterpret_cast<const uint8_t *>(cache->data()) : nullptr,
 		        cache ? cache->size() : 0, cache_allowed,
 		        bytes(model), length(model), timeout, max_retries, bytes(profile), length(profile),

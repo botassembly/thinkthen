@@ -7,7 +7,9 @@
 mod arms;
 mod lifetime;
 mod listener;
+mod observations;
 
 pub use arms::{Backend, run};
 pub use lifetime::Rendezvous;
 pub use listener::{Canned, Listener, Observed, Recorded};
+pub use observations::Paths;

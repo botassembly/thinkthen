@@ -13,6 +13,8 @@ pub(crate) struct BridgeSettings {
     max_requests: i64,
     max_request_bytes: i64,
     max_requests_total: i64,
+    backend_bytes: *const u8,
+    backend_len: usize,
     cache_bytes: *const u8,
     cache_len: usize,
     cache_allowed: i32,
@@ -39,6 +41,7 @@ pub(crate) fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String>
     };
     let cache = optional(settings.cache_bytes, settings.cache_len)?;
     Ok(engines::Asked {
+        backend: optional(settings.backend_bytes, settings.backend_len)?,
         throttle: present(settings.throttle),
         max_requests: present(settings.max_requests),
         max_request_bytes: present(settings.max_request_bytes),

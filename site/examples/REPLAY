@@ -272,9 +272,7 @@ install/ada/backends.adb backend=liquid
 install/ada/backends.adb backend=ollama
 install/ada/backends.adb backend=typesafe
 install/ada/first_call.adb
-install/c/backends.c backend=liquid
-install/c/backends.c backend=ollama
-install/c/backends.c backend=typesafe
+install/c/backends.c
 install/c/first-call.c
 install/cobol/backends.cob backend=liquid
 install/cobol/backends.cob backend=ollama
@@ -316,9 +314,7 @@ install/php/backends.php backend=typesafe
 install/php/first-call.php
 install/polars/first-call.py
 install/postgresql/first-call.sql
-install/python/backends.py backend=liquid
-install/python/backends.py backend=ollama
-install/python/backends.py backend=typesafe
+install/python/backends.py
 install/python/first-call.py
 install/python/functional/judge.py
 install/python/functional/stream.py
@@ -344,9 +340,7 @@ install/swift/backends/backends.swift backend=liquid
 install/swift/backends/backends.swift backend=ollama
 install/swift/backends/backends.swift backend=typesafe
 install/swift/main.swift
-install/typescript/backends.ts backend=liquid
-install/typescript/backends.ts backend=ollama
-install/typescript/backends.ts backend=typesafe
+install/typescript/backends.ts
 install/typescript/first-call.ts
 install/zig/backends/backends.zig backend=liquid
 install/zig/backends/backends.zig backend=ollama
