@@ -1,0 +1,12 @@
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/crates/thinkthen/Cargo.toml" THINKTHEN_VERSION_LINE
+  REGEX "^version = \"[^\"]+\"$")
+list(GET THINKTHEN_VERSION_LINE 0 THINKTHEN_VERSION_LINE)
+string(REGEX REPLACE "^version = \"([^\"]+)\"$" "\\1" THINKTHEN_EXTENSION_VERSION "${THINKTHEN_VERSION_LINE}")
+
+duckdb_extension_load(thinkthen
+  SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}"
+  INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/databases/duckdb/cpp/src"
+  DONT_LINK
+  LOAD_TESTS
+  TEST_DIR "${CMAKE_CURRENT_LIST_DIR}/databases/duckdb/community/test/sql"
+  EXTENSION_VERSION "${THINKTHEN_EXTENSION_VERSION}")

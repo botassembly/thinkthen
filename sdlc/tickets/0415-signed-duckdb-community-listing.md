@@ -1,6 +1,6 @@
 # 0415: Submit the ThinkThen DuckDB community extension
 
-Status: ready. Ian approved submission; fresh ticket review precedes implementation.
+Status: qualified locally; landing and external submission remain pending. Ian approved submission. See record 0415 for the reviewed source and platform results.
 
 Milestone: 0.2
 
