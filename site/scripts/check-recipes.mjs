@@ -1,5 +1,6 @@
 // Closed source, artifact and actual export checks for every recipe disposition.
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -13,6 +14,15 @@ const raw = node => node.tag === '#text' ? node.text : (node.kids || []).map(raw
 const tidy = text => text.replace(/\s+/g,' ').trim();
 const walk = (n, fn) => { fn(n); for (const k of n.kids || []) walk(k,fn); };
 const REQUIRED = ['1-ask.sh','1-ask.out','2-audit.sh','2-audit.out',...['question.json','cases.jsonl','key.jsonl','labels.jsonl','expected.json','provenance.json','results.jsonl','audit.jsonl','audit-cases.jsonl','harness.json','task-results.jsonl','measured.json','recording/thinkthen.jsonl'].map(f=>'files/'+f)];
+export function fixtureAssertionProblems(base,e) {
+  try {
+    const bytes=fs.readFileSync(path.join(base,e.artifact));
+    let value=JSON.parse(bytes);
+    for (const part of e.selector.slice(1).split('/')) value=value?.[part];
+    if (String(value)!==e.value || sha(bytes)!==e.sha256) return [`recipe fixture assertion: ${e.id}: value/hash mismatch`];
+    return [];
+  } catch { return [`recipe fixture assertion: ${e.id}: missing/malformed artifact`]; }
+}
 export function artifactProblems(r, root = ROOT) {
   const problems=[], add=(code,field)=>problems.push(`recipe ${code}: ${r.slug}: ${field}`);
   const base=path.join(root,r.example);
@@ -32,9 +42,10 @@ export function artifactProblems(r, root = ROOT) {
     if (!/audit files\/results\.jsonl\s*\\?\s*files\/key\.jsonl/.test(fs.readFileSync(path.join(base,'2-audit.sh'),'utf8'))) add('missing-artifact','audit call');
     if (JSON.stringify(JSON.parse(fs.readFileSync(path.join(base,'files/measured.json')))) !== JSON.stringify(r.measured)) add('measurement-definition','admitted values');
     for (const e of r.fixtureAssertions) {
-      let value=JSON.parse(fs.readFileSync(path.join(base,e.artifact)));
-      for (const part of e.selector.slice(1).split('/')) value=value?.[part];
-      if (String(value)!==e.value || manifest.artifact_hashes[e.artifact]!==e.sha256) add('hash mismatch',e.id);
+      if (fixtureAssertionProblems(base,e).length || manifest.artifact_hashes[e.artifact]!==e.sha256) add('hash mismatch',e.id);
+      if (manifest.artifact_source_commit!==e.artifactCommit) add('source-pin','fixture provenance');
+      const pinned=spawnSync('git',['cat-file','blob',`${e.artifactCommit}:${r.example}/${e.artifact}`],{cwd:ROOT,timeout:10000});
+      if (pinned.status!==0 || sha(pinned.stdout)!==e.sha256) add('source-pin','fixture artifact absent/changed at commit');
     }
     const receipts=JSON.parse(fs.readFileSync(path.join(base,'files/harness.json')));
     if (receipts.population!==8 || receipts.audit_rows!==5 || receipts.local_none!==1 || receipts.candidate_miss!==1 || receipts.ordinary_correct!==5 || receipts.not_sure!==2 || receipts.replay_requests!==0 || receipts.cache_hit_requests!==0 || receipts.negative_requests!==0 || receipts.preparation_requests!==7 || receipts.cache_fill_requests!==7 || receipts.cumulative_synthetic_requests!==14) add('publication-evidence','full fixture accounting');

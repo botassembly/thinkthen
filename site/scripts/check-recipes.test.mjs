@@ -1,11 +1,12 @@
 // Independent numerical controls and four visibility states; no catalog promotion.
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { recipeProblems, recipeSelection } from '../src/data/recipes.mjs';
-import { renderedProblems } from './check-recipes.mjs';
+import { renderedProblems, fixtureAssertionProblems } from './check-recipes.mjs';
 import { ALIASES, preserver, validateCompatibility } from './redirect-contract.mjs';
 const own=fs.mkdtempSync(path.join(os.tmpdir(),'thinkthen-recipe-check-'));
 const cleanup=dir=>{ if(dir!==own)throw Error('cleanup refuses unowned path');fs.rmSync(dir,{recursive:true}); };
@@ -35,8 +36,15 @@ try {
   }
   assert.deepEqual(renderedProblems(fixture,html.replace('</main>','<p>The method is 97.3% accurate.</p></main>'),md,llms),['recipe unsupported numerical prose: fixture-number: rendered']);count++;
   for (const kind of ['md','llms']) { assert.ok(renderedProblems(fixture,html,kind==='md'?md.replace('503/626','lost'):md,kind==='llms'?llms.replace('503/626','lost'):llms).some(p=>p.includes('export-evidence')));count++; }
-  const control={...fixture,measured:[],fixtureAssertions:[{id:'controlled',evidenceClass:'fixture',value:'8',denominator:'8',scope:'Handwritten notes',qualification:'Controlled loopback fixture; no provider-quality measurement.',artifact:'files/harness.json',selector:'/population'}],body:[{kind:'evidence',id:'controlled'}]};
+  const artifactDir=path.join(own,'files');fs.mkdirSync(artifactDir);
+  const savedAssertion='{"population":8}\n';fs.writeFileSync(path.join(artifactDir,'harness.json'),savedAssertion);
+  const artifactHash=crypto.createHash('sha256').update(savedAssertion).digest('hex');
+  const control={...fixture,measured:[],fixtureAssertions:[{id:'controlled',evidenceClass:'fixture',value:'8',denominator:'8',scope:'Handwritten notes',qualification:'Controlled loopback fixture; no provider-quality measurement.',artifact:'files/harness.json',selector:'/population',sha256:artifactHash,artifactCommit:'1da71e8116cf89e33f2edc193b0c7ea3d19c32ff'}],body:[{kind:'evidence',id:'controlled'}]};
   assert.deepEqual(recipeProblems(control),[]);count++;
+  assert.deepEqual(fixtureAssertionProblems(own,control.fixtureAssertions[0]),[]);count++;
+  fs.writeFileSync(path.join(artifactDir,'harness.json'),'{"population":97}\n');
+  assert.deepEqual(fixtureAssertionProblems(own,control.fixtureAssertions[0]),['recipe fixture assertion: controlled: value/hash mismatch']);count++;
+  fs.writeFileSync(path.join(artifactDir,'harness.json'),savedAssertion);
   const switched=structuredClone(control);switched.fixtureAssertions[0].evidenceClass='measured';assert.ok(recipeProblems(switched).includes('recipe evidence-class: fixture-number: controlled'));count++;
   const promoted=structuredClone(control);promoted.measured=[{...promoted.fixtureAssertions[0],evidenceClass:'measured'}];promoted.fixtureAssertions=[];assert.ok(recipeProblems(promoted).includes('recipe evidence-class: fixture-number: controlled'));count++;
   const replacement=structuredClone(fixture);replacement.body[0].value='97.3';assert.deepEqual(recipeProblems(replacement),['recipe carrier-shape: fixture-number: body[0]']);count++;

@@ -1283,7 +1283,8 @@ export const RECIPE_PAGES = [
         "qualification": "Controlled loopback fixture; no provider-quality measurement.",
         "artifact": "files/harness.json",
         "selector": "/population",
-        "sha256": "9dab654a70e8376ccedfbd0ded55727992cd736a3d2d1ea3ad5db8c1b4e7e4a1"
+        "sha256": "9dab654a70e8376ccedfbd0ded55727992cd736a3d2d1ea3ad5db8c1b4e7e4a1",
+        "artifactCommit": "1da71e8116cf89e33f2edc193b0c7ea3d19c32ff"
       }
     ],
     "body": [

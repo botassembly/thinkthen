@@ -40,3 +40,10 @@ No full test/spec/surfaces or broad canonical350 rerun is requested: this change
 Every invoked shell uses `/bin/bash` with `login:false`. Proof uses an explicit minimal environment, cached Node 22.22.3, separate empty npm user/global configurations, owned HOME/configuration/cache/state, and offline npm. No dependency is installed or downloaded. Heavy runs acquire lane 0's exclusive lock with matching HEAVY_LOCK/HELD, shared toolchain/cache mutation locks and Cargo cache exclusion inside a 12 GiB memory/1 GiB swap user scope. Script cleanup guards refuse the lane before removing only same-run mktemp directories. The changed smoke runner keeps recipe `files/` intact in its own scratch copy. Baseline bytecode is preserved.
 
 The CLI reports `thinkthen 0.2.0`; its executable SHA-256 is retained in provenance. Version output does not independently establish source-to-binary identity. The C checkout HEAD and final harness/producer/file fingerprints are recorded separately from that binary. No Rust changed, so the existing ratchet schema and exact 118107 total remain; this slice adds zero Rust lines. Structured measured rows share definitions and cohort rendering instead of repeating full objects.
+
+
+## Fixture source snapshot
+
+The first whole D implementation commit is `1da71e8116cf89e33f2edc193b0c7ea3d19c32ff`. It contains all required issue dispositions and milestones together. The controlled fixture assertion now cites its actual saved artifact at that immutable commit; the owning measured record remains pinned separately to `ea615c0e6a3412bb4716ad97b704a3f698be30cb`. The source checker verifies the committed fixture bytes through local Git objects. No nonexistent artifact is attributed to the accepted planning commit, and no existing binding-proof hash is edited.
+
+The final pinned-source pass adds an independently saved fixture assertion and its changed-value/hash control. Publication still waits on fresh independent review; these commits create no release or public recipe promotion.

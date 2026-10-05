@@ -124,5 +124,6 @@
   "producer_sha256": "fc1864506288d9c59d4cbc49a38bb82291ab8f5fd773e8cd672e829e636ffa6a",
   "question_file_sha256": "5c0e67718a36825e9ddd16721ef604be1f312bbe6d5ba610f247428835bcb1d5",
   "question_identity_note": "File digest includes cut; supported rereads reuse stored wire questions. Stored keys come only from cache convert.",
-  "option_order": "First retained amount occurrence, equal-value deduplication; none last."
+  "option_order": "First retained amount occurrence, equal-value deduplication; none last.",
+  "artifact_source_commit": "1da71e8116cf89e33f2edc193b0c7ea3d19c32ff"
 }

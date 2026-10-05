@@ -39,6 +39,7 @@ export function recipeProblems(r) {
       if (typeof e[field] !== 'string' || !e[field]) add('measurement-definition', `${e.id}/${field}`);
     }
     if (measured && !pinned(e.source || '')) add('source-pin', e.id);
+    if (!measured && (!/^[a-f0-9]{40}$/.test(e.artifactCommit || '') || !/^[a-f0-9]{64}$/.test(e.sha256 || ''))) add('source-pin', e.id);
     if (!measured && (!/^files\/[a-z0-9.-]+$/.test(e.artifact || '') || !/^\/[a-z_]+$/.test(e.selector || '') || !/Controlled/.test(e.qualification || ''))) add('carrier-shape', e.id);
   }
   if (!Array.isArray(r.body)) add('carrier-shape','body');
@@ -69,5 +70,5 @@ export function evidenceText(e) {
     : `${e.value}; denominator ${e.denominator}; ${e.scope}; ${e.qualification}`;
 }
 export function evidenceSource(r,e) {
-  return e.evidenceClass === 'measured' ? e.source : `https://github.com/botassembly/thinkthen/blob/${r.sourceCommit}/${r.example}/${e.artifact}`;
+  return e.evidenceClass === 'measured' ? e.source : `https://github.com/botassembly/thinkthen/blob/${e.artifactCommit}/${r.example}/${e.artifact}`;
 }
