@@ -18,14 +18,12 @@ const sixHowtos = HOWTOS.slice(0, 6);
 
   <h2>The ten functions</h2>
   <p class="counts">{COUNTS.functions}, <a href="/install/shell/">{COUNTS.cli}</a>, <a href="/install/">{COUNTS.bindings}</a>.</p>
-  <div class="grid">
+  <table>
+    <tr><th>Function</th><th>What it does</th></tr>
     {CODE_FUNCTIONS.map((fn) => (
-      <a class="tile" href={`/functions/${fn.name}/`}>
-        <b>{fn.name}</b>
-        <span>{fn.line}</span>
-      </a>
+      <tr><td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></td><td>{fn.line}</td></tr>
     ))}
-  </div>
+  </table>
   <p class="pagelinks"><a href="/functions/question-file/">Save a question as a file</a></p>
 
   <h2>Learn it on the Beatles</h2>

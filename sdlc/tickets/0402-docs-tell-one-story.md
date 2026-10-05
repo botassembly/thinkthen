@@ -1,6 +1,6 @@
 # 0402: The docs tell one story
 
-Status: in progress. Slice A has a source candidate after 0401 D; fresh source review and the named coordinator checkpoint remain pending.
+Status: in progress. Slice A landed at `b7e5dd3e4`; B implementation and focused proof are in progress. Fresh independent B source review and coordinator checkpoint remain pending. C/D remain outside B.
 
 Milestone: 0.2
 
@@ -104,4 +104,4 @@ Relabels: `sdlc/issues/2026-10-03-draft-function-link.md`, `sdlc/issues/2026-10-
 
 Slice A's [build record](../records/0402-a-one-home-build.md) records the frozen accepted design, actual failures and corrections, fragment and h4 omission plants, unchanged proof inputs and focused evidence. Fresh source review and coordinator-owned full proof remain pending.
 
-Slice A source received fresh acceptance at `6eba7e317`; its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Final receipt review and A landing remain pending. B and C have complete accepted designs; their implementation waits for predecessor landings. D’s Rules recipe comparison remains pending.
+Slice A landed at `b7e5dd3e4` with exact accepted source `53de60f6b`. Its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Slice B is in progress from the [complete accepted design](../planning/0402-b-docs-design.md); focused checks are authorized, fresh independent source review and a coordinator checkpoint remain pending. C implementation and D recipes remain outside B. Experiment 0031 exists, but B publishes no recipe comparison or performance claim.

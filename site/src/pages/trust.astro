@@ -27,7 +27,7 @@ const audit = run('beatles/audit', '2-default');
 
   <h2>Four outcomes, four colors</h2>
   <p>The same four colors run through this site and the terminal.</p>
-  <div class="outcomes">
+  <div class="grid">
     {OUTCOMES.map((o) => (
       <div class={`outcome ${o.key}`}>
         <b>{o.label}</b>

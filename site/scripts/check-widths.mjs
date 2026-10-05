@@ -61,6 +61,19 @@ function measure() {
       panes.push(`${name(el)} ("${(el.textContent || '').trim().slice(0, 40)}") is ${Math.round(Math.max(right - edge, el.scrollWidth - el.clientWidth))} px wider than its column`);
     }
   }
+  for (const [index, grid] of [...document.querySelectorAll('main .grid')].entries()) {
+    const rows = [];
+    let hidden = false;
+    for (const child of grid.children) {
+      const rect = child.getBoundingClientRect();
+      if (!rect.width || !rect.height || getComputedStyle(child).visibility === 'hidden' || getComputedStyle(child).display === 'none') { hidden = true; continue; }
+      let row = rows.find(row => Math.abs(row.top - rect.top) <= 1);
+      if (!row) { row = { top: rect.top, count: 0 }; rows.push(row); }
+      row.count += 1;
+    }
+    const counts = rows.map(row => row.count);
+    if (hidden || !counts.length || counts.some(count => count !== counts[0])) panes.push(`grid-rows grid=${index} rows=${JSON.stringify(counts)}${hidden ? ' hidden-child' : ''}`);
+  }
   const screen = document.documentElement.clientWidth;
   const wide = document.documentElement.scrollWidth;
   if (wide <= screen) return panes.length ? { panes } : null;
@@ -108,6 +121,7 @@ async function tab(context) {
 
 try {
   const context = await browser.newContext();
+  await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await Promise.all(Array.from({ length: TABS }, () => tab(context)));
 } finally {
   await browser.close();
@@ -121,4 +135,4 @@ if (problems.length) {
   if (problems.length > shown.length) console.error(`  and ${problems.length - shown.length} more`);
   process.exit(1);
 }
-console.log(`check-widths: ${pages.length} pages fit the screen at ${WIDTHS.length} widths from ${WIDTHS[0]} to ${WIDTHS.at(-1)} px, and every table and code pane fits its column`);
+console.log(`check-widths: ${pages.length} pages fit the screen at ${WIDTHS.length} widths from ${WIDTHS[0]} to ${WIDTHS.at(-1)} px, and every table/code pane fits its column and grid rows have equal card counts`);

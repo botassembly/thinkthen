@@ -17,28 +17,31 @@ npm run build
 `npm run build` does these things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
-2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, saved output for each SQL sample, whole details, no comments, and a goal on every page.
+2. `scripts/named-answers.test.mjs` runs named-answer fixtures, then `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, saved output for each SQL sample, whole details, no comments, and a goal on every page.
 3. `scripts/check-slides.mjs` checks that the Beatles Bench slides come from a deck that quotes the pinned bench.
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
 5. `scripts/check-flags.mjs` compares each function's flag data in `src/data/catalog.mjs` and `src/data/flags.mjs` with `thinkthen <fn> --help`. It fails on a flag the help shows and the data lacks, and on one the data lists and the help lacks.
 6. `scripts/check-binding-proofs.mjs` checks each replayed library sample against its proof. See "The binding replay" below.
 7. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
-8. `scripts/label-tables.mjs` copies each column heading into the cells of a table of three or more columns. On a phone or a tablet every table row stacks into a card, and the label names each cell. The same step marks each code span of 24 characters or fewer outside a code pane with class `short`, so a model name, a flag, a key name or a version never splits across lines.
-9. `scripts/emit-md.mjs` writes a Markdown twin of every page, `dist/llms.txt`, and `dist/llms-full.txt`, which holds every twin in one file.
-10. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
-11. `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
-12. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
-13. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
-14. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
-15. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
-16. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
-17. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt`, the llms files, or the JSON-LD on the home and About pages is wrong. It also fails when two listed pages share a title or a description.
+8. `scripts/preserve-redirect-fragments.mjs` preserves incoming fragments on all compatibility stubs.
+9. `scripts/label-tables.mjs` copies each column heading into the cells of a table of three or more columns. On a phone or a tablet every table row stacks into a card, and the label names each cell. The same step marks each code span of 24 characters or fewer outside a code pane with class `short`, so a model name, a flag, a key name or a version never splits across lines.
+10. `scripts/check-layout.test.mjs` and `scripts/check-layout.mjs` prove the grid count, blog source/list and exact paragraph exception rules.
+11. `scripts/emit-md.mjs` writes a Markdown twin of every listed page, `dist/llms.txt`, and `dist/llms-full.txt`, which holds every twin in one file.
+12. `scripts/check-markdown-headings.mjs` first checks the six annotate h4 subsections and llms-full. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
+13. `scripts/check-words.test.mjs` runs fixtures, then `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
+14. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
+15. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
+16. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
+17. `scripts/check-links.test.mjs` and `scripts/check-links.mjs` fail the build on a broken internal link, or a link to an anchor the page does not hold.
+18. `scripts/check-redirects.mjs` proves direct fragment navigation and fixed fallbacks with cached Chromium.
+19. `scripts/check-cards.test.mjs` and `scripts/check-cards.mjs` enforce matching decoded titles/descriptions, both alt tags, the Open Graph address and matching same-site 1200 by 630 PNGs.
+20. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt`, the llms files, or the JSON-LD on the home and About pages is wrong. It also fails when two listed pages share a title or a description.
 
 The Backends pages read each built-in backend's name, address, key variables and model with `backend('name')` from `src/lib/backends-table.mjs`, which parses the "Named backends" table in `../specification/backends.md`. A name the table lacks fails the build, and `scripts/check-settings.mjs` fails when the built overview disagrees with the table. A live `thinkthen check` cannot replay, so `src/data/backend-checks.mjs` holds each live check a page states, with its date, build and record.
 
 A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
-`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the binding proof check, the code check, the word check, the settings check, the link check, the card check, the head check and the width check on the last build. `scripts/check-widths.mjs` opens every built page in headless Chromium at every width from 320 to 1600 px in steps of 40, and at 375, 768, 820 and 1024 px. It fails when a page scrolls sideways, or when a table or a code pane is wider than its column. It uses `playwright-core` and its matching Chromium. Get the browser once with `npx playwright-core install chromium`.
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the binding proof check, the code check, the word check, the settings check, the link check, the layout fixtures/check, card fixtures/check, the head check and the width check on the last build. `scripts/check-widths.mjs` opens every built page in headless Chromium at every width from 320 to 1600 px in steps of 40, and at 375, 768, 820 and 1024 px. It fails when a page scrolls sideways, when a table or a code pane is wider than its column, or when visible direct card children form rows of different counts. External browser requests are blocked. It uses `playwright-core` and its matching Chromium. Get the browser once with `npx playwright-core install chromium`.
 
 ## Lighthouse
 

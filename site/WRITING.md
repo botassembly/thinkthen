@@ -41,7 +41,7 @@ Follow these rules when you write or edit any page or code example on this site.
 
 - Every page shares a card on Open Graph and Twitter. Its description is the page's own.
 - A Beatles Bench page uses its slide. A function page uses its function's slide. `src/data/cards.mjs` names the slide for other pages that match one. Every other page uses `brand/thinkthen-card.png`.
-- `scripts/check-cards.mjs` fails a built page that lacks a card tag, or whose card is not a 1200 by 630 PNG on the site.
+- `scripts/check-cards.mjs` requires one nonempty title and description, matching Open Graph and Twitter text, both image alt tags, and identical same-site 1200 by 630 PNG addresses. The Open Graph address equals the canonical address. Unlisted search and 404 pages keep no canonical; their Open Graph address equals their site route. Redirect stubs remain exempt. Matching head text does not prove the wording inside an image.
 
 ## Colour
 
@@ -227,3 +227,19 @@ After a change to the command or to a script, run `node scripts/smoke.mjs --upda
 ### What runs on each change
 
 `npm run build` runs `check-samples`, then the slide check, then the smoke run, then the Astro build, the Markdown twins, the code check, the word check, the settings check, the link check, and the card check. `npm run check` runs `check-samples`, the slide check, the smoke run, the code check, the word check, the settings check, the link check, and the card check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.
+
+## Layout
+
+Use `.grid` only for collections of 2, 3, 4, 6 or 9 cards. Use a semantic list or table for other counts. Below 46rem cards form one column; above it 2/4 cards use two columns and 3/6/9 use three. Never pad or truncate a collection to fit. `check-layout.mjs` checks direct element counts; `check-widths.mjs` measures uniform visible rows at its 37 widths and retains table/code containment checks.
+
+The blog index is an ordered list of date, title and summary, newest first, then slug for equal dates. Every article, including drafts, has a nonblank `line` of at most 100 Unicode code points with no newline. Write it as a double-quoted JSON-compatible front-matter string. Keep `blurb` for the article's description. Summaries may wrap on phones. The layout checker compares source fields with visible entries and respects draft visibility.
+
+## Links
+
+Link to the canonical home and retain a moved page's fragments. The link check rejects links to redirect stubs. A link card remains one full-card anchor with its existing destination, hover treatment and visible keyboard focus. Lists use an ordinary title link followed by the description. Add no nested controls to a card.
+
+## One home per idea
+
+Give each explanation one home and link to it elsewhere. `check-layout.mjs` compares decoded, whitespace-normalized paragraphs of 25 words or more inside `main`. Case and punctuation stay significant; inline links and code count. Navigation, footer, scripts, buttons and preformatted blocks do not count. This detects exact repetition, not paraphrases or semantic overlap.
+
+Existing contract and installation repetitions have literal `ALLOWED` entries in that checker. Each names the complete paragraph, exact sorted routes, source and individual reason. A changed, unused, duplicated or widened exception fails. Do not exempt a whole template.

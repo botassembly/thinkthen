@@ -327,22 +327,11 @@ table.install td code { white-space: normal; }
 }
 
 .grid { display: grid; gap: .8rem; grid-template-columns: minmax(0, 1fr); margin: 1rem 0 1.6rem; }
-/* Three cards a row on a wide screen, on six tracks. A last row of two
-   splits its row in half. When three cards would leave one alone, the last
-   four sit two by two. No row ends in an empty slot. */
+/* Fixed counts divide evenly: two columns for 2/4, three for 3/6/9. */
 @media (min-width: 46rem) {
-  .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .grid > * { grid-column: span 2; }
-  .grid:has(> :last-child:nth-child(3n+2)) > :nth-last-child(-n+2),
-  .grid:has(> :last-child:nth-child(3n+1)) > :nth-last-child(-n+4) { grid-column: span 3; }
-  .grid > :only-child { grid-column: span 3; }
-}
-/* Ten cards, such as the ten functions, sit two by five on a phone or a
-   tablet and five by two on a wide screen. No width leaves one alone. */
-.grid:has(> :nth-child(10):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.grid:has(> :nth-child(10):last-child) > :nth-child(n) { grid-column: auto; }
-@media (min-width: 60rem) {
-  .grid:has(> :nth-child(10):last-child) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid:has(> :nth-child(2):last-child),
+  .grid:has(> :nth-child(4):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .tile {
   display: block; background: var(--card); border: 1px solid var(--line); border-radius: 10px;
@@ -352,10 +341,6 @@ table.install td code { white-space: normal; }
 .tile b { display: block; font-family: var(--mono); font-size: .95rem; color: var(--then); text-wrap: balance; }
 .tile span { display: block; color: var(--muted); font-size: .88rem; margin-top: .2rem; }
 
-.facts { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin: 1.4rem 0; }
-.fact { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: .9rem 1rem; }
-.fact b { display: block; font-size: 1.05rem; }
-.fact span { color: var(--muted); font-size: .88rem; }
 
 /* ------------------------------------------------------------------- code */
 
@@ -424,7 +409,6 @@ button.copy:hover { color: var(--ink); border-color: var(--think); }
 
 .cell[hidden] { display: none; }
 
-.outcomes { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); margin: 1.2rem 0; }
 .outcome { border: 1px solid var(--line); border-left: 4px solid; border-radius: 8px; padding: .6rem .8rem; background: var(--card); }
 .outcome.yes { border-left-color: var(--then); }
 .outcome.no { border-left-color: var(--no); }
@@ -580,3 +564,6 @@ main form.search input { width: 16rem; }
 #search :is(input, button) { font-family: var(--sans); }
 #search input { color: var(--ink); }
 #search input::placeholder { color: var(--muted); opacity: 1; }
+
+.blog-posts li { margin-bottom: 1rem; }
+.blog-posts time, .blog-posts span { display: block; color: var(--muted); font-size: .9rem; }

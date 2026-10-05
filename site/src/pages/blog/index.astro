@@ -4,16 +4,16 @@ import Base from '../../layouts/Base.astro';
 import { POSTS } from '../../data/posts.mjs';
 
 const posts = [...POSTS]
-  .sort((a, b) => b.date.localeCompare(a.date))
-  .map((p) => ({ href: p.href, title: p.draft ? `${p.title} (draft)` : p.title, blurb: p.blurb }));
+  .sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug))
+  .map((p) => ({ href: p.href, title: p.draft ? `${p.title} (draft)` : p.title, date: p.date, line: p.line }));
 ---
 <Base title="Blog" description="Writing about code that knows what you mean." reading>
   <h1>Blog</h1>
   <p class="lede">Articles about software that answers questions about text. These articles are drafted with AI agents against a voice guide, reviewed and edited by Ian.</p>
-  <div class="grid">
+  <ol class="blog-posts">
     {posts.map((p) => (
-      <a class="tile" href={p.href}><b>{p.title}</b><span>{p.blurb}</span></a>
+      <li><time datetime={p.date}>{p.date}</time> <a href={p.href}>{p.title}</a> <span>{p.line}</span></li>
     ))}
-  </div>
+  </ol>
   <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
 </Base>
