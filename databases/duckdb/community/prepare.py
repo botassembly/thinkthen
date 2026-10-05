@@ -21,7 +21,7 @@ def main():
     else:
         target = None
     version = TOOLCHAIN["channel"]
-    subprocess.run(["rustup", "toolchain", "install", version, "--profile", TOOLCHAIN["profile"],
+    subprocess.run(["rustup", "toolchain", "install", version, "--no-self-update", "--profile", TOOLCHAIN["profile"],
                     "--component", ",".join(TOOLCHAIN["components"])], check=True)
     if target is None:
         host = subprocess.check_output(["rustc", f"+{version}", "-vV"], text=True)
