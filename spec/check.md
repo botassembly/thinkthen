@@ -1,8 +1,8 @@
 # Backend check
 
-`thinkthen backends check` sends four fixed requests to a backend you name and reports whether it works with this tool. [specification/check.md](../specification/check.md) is the contract. Each block unsets the key and the address first, so neither block can reach a network.
+`thinkthen backends check` sends four rich probes and minimal calls through ten functions to a backend you name and reports whether it works with this tool. [specification/check.md](../specification/check.md) is the contract. Each block unsets the key and the address first, so neither block can reach a network.
 
-A plan prints the address, the provider, the model asked for, the model sent, and the four request bodies. It inspects an optional configured key for an address collision and sends nothing. This example unsets the key, so a loopback address with nothing behind it is enough. The bodies match the fixture byte for byte.
+A plan prints the address, the provider, the model asked for, the model sent, the four rich request bodies, ten function-plan rows and the total request upper bound. It inspects an optional configured key for an address collision and sends nothing. This example unsets the key, so a loopback address with nothing behind it is enough. The bodies match the fixture byte for byte.
 
 ```bash
 set -euo pipefail

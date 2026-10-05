@@ -965,6 +965,7 @@ export const BACKEND_PAGES = [
   { slug: '', title: 'Backends', label: 'Overview', group: null },
   { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Built in' },
   { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Built in' },
+  { slug: 'local', title: 'Run a model locally', label: 'Run a model locally', group: 'Your own' },
   { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
   { slug: 'perplexity', title: 'Perplexity Decisions', label: 'Perplexity Decisions', group: 'Built in' },
   { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Built in' },

@@ -13,11 +13,11 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
 ---
 <Base title="backends check" description={'What thinkthen backends check sends, what each report row means, and when it exits 4.'}>
   <h1><code>backends check</code></h1>
-  <p class="lede"><code>thinkthen backends check</code> tests whether a server works with ThinkThen. It sends four fixed requests, one after another. Every request is real. A hosted server may charge for it.</p>
+  <p class="lede"><code>thinkthen backends check</code> tests whether a server works with ThinkThen. It sends four rich wire probes, then minimal calls through all ten production functions. Every request is real. A hosted server may charge for it.</p>
   <p><code>thinkthen check</code> remains a hidden compatibility alias with the same options, requests, report and exit codes.</p>
 
   <h2 id="plan">See it first</h2>
-  <p><code>--plan</code> prints the address and the model, then the four request bodies and a count. It sends nothing and needs no key.</p>
+  <p><code>--plan</code> prints the address and the model, then the four rich request bodies, function-plan counts and a total prepared-request upper bound before retries and refusal splits. It sends nothing and needs no key.</p>
   <Terminal run={plan} caption={BACKENDS_SEE['system-one']['4-check-plan']} />
 
   <h2 id="probes">The four probes</h2>
@@ -31,7 +31,8 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
   <Terminal run={probes} caption={probes.see} />
 
   <h2 id="the-report">The report</h2>
-  <p>A live check prints one <code>reply</code> line for each probe it decoded, then eight rows in this order: {ROWS.map((r, i) => <>{i ? (i === ROWS.length - 1 ? ' and ' : ', ') : ''}<code>{r}</code></>)}. A row reads <code>ok</code>, <code>warning</code> or <code>critical</code>. It reads <code>unchecked</code> when the check stopped before reaching it. A last line counts the critical and warning lines.</p>
+  <p>A live check prints one <code>reply</code> line for each probe it decoded, then eight probe rows in this order: {ROWS.map((r, i) => <>{i ? (i === ROWS.length - 1 ? ' and ' : ', ') : ''}<code>{r}</code></>)}. A row reads <code>ok</code>, <code>warning</code> or <code>critical</code>. It reads <code>unchecked</code> when the check stopped before reaching it. A last line counts the critical and warning lines.</p>
+  <p>Ten function rows follow. A function reads <code>answered</code>, <code>incompatible</code> or <code>unchecked</code>. An incompatible function adds one critical finding. Rank tests a yes/no question; annotate tests a one-member decide set. Valid empty results count as answers. A pass covers these inputs and measures no model accuracy.</p>
   <p>A transport failure, or status 401, 402, 403 or 404, stops the check, because every later request would meet it too. Any other failure belongs to its probe, and the check goes on. A finding never quotes the reply.</p>
 
   <h2 id="exit-codes">Exit codes</h2>
@@ -40,10 +41,10 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
     <li>2: a usage error, such as no address or an unknown option. Nothing is sent.</li>
     <li>4: a row is critical, or the key is unset at an address other than this machine.</li>
   </ul>
-  <p><code>backends check</code> reads no input, cache, recording or profile. <code>--cache</code>, <code>--no-cache</code>, <code>--record</code>, <code>--replay</code> and <code>--profile</code> are refused at exit 2. It takes no <code>--max-retries</code>, and four probes send at most sixteen attempts.</p>
+  <p><code>backends check</code> reads no input, cache, recording or profile. <code>--cache</code>, <code>--no-cache</code>, <code>--record</code>, <code>--replay</code> and <code>--profile</code> are refused at exit 2. It takes no <code>--max-retries</code>, and the supplied inputs prepare at most 15 requests before profile or size-refusal splits.</p>
 
   <h2 id="limits">Limits</h2>
-  <p>A check has no fixed worst case. A server's <code>Retry-After</code> or <code>Retry-After-Ms</code> header sets a minimum wait before a retry, with no cap. Without either header, a check at <code>--timeout 90</code> takes about 25 minutes at most.</p>
+  <p>Each original request permits four attempts. A size refusal can halve tag and relate requests once. Without profile splits, the check sends at most 19 original requests and 76 attempts. Each attempt takes at most the timeout. Each retry wait takes at most the lesser of the timeout and 60 seconds. Configured pacing adds its own waits. The <a href={spec}>specification</a> gives the bound and the staged inputs.</p>
   <p><code>THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL</code> binds each probe. A probe the cap cannot admit stops the check before it is sent. The check prints no report and exits 2.</p>
 
   <p class="pagelinks"><a href="/install/backends/system-one/">Any System One server</a> · <a href={spec}>The check specification</a> · <a href="/learn/answers/#exit-codes">Every exit code</a></p>

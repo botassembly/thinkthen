@@ -237,7 +237,7 @@ const CASES: [Case; 17] = [
         "",
         "-",
         0,
-        "Usage: unknown backend `local-d1`; the built-in backends are `liquid`, `ollama`, `openrouter`, `perplexity` and `typesafe`, and the configuration file may name more",
+        "Usage: unknown backend `local-d1`; the built-in backends are `liquid`, `llamacpp`, `mlx`, `ollama`, `openrouter`, `perplexity` and `typesafe`, and the configuration file may name more",
     ),
     (
         "backend=Local",

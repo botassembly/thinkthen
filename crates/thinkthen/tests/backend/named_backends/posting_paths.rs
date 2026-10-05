@@ -321,13 +321,13 @@ fn check_satisfies_both_sides_and_plan_pins_exact_requests() {
         8
     );
     assert!(stdout.ends_with("critical 0, warning 0\n"));
-    assert_eq!(target.count(), 4);
+    assert_eq!(target.count(), 15);
     let out = home.run(&["check", "--url", target.base()], &[]);
     assert_eq!(out.status.code(), Some(4));
     let stdout = said(&out).0;
     assert!(stdout.contains("critical noul:"));
     assert!(stdout.contains("critical mixed:"));
-    assert_eq!(target.count(), 8);
+    assert_eq!(target.count(), 30);
     let out = home.run(
         &[
             "check",
@@ -349,13 +349,13 @@ fn check_satisfies_both_sides_and_plan_pins_exact_requests() {
     let expected =
         include_str!("../../../../../specification/fixtures/check/requests-both-sides.jsonl");
     assert_eq!(bodies, expected);
-    assert_eq!(target.count(), 8);
+    assert_eq!(target.count(), 30);
 }
 
 #[test]
-fn manual_check_caps_bind_admission_and_all_sixteen_retry_attempts() {
+fn manual_check_caps_bind_admission_and_all_retry_attempts() {
     for name in ["perplexity", "openrouter"] {
-        for cap in ["1", "10000"] {
+        for cap in ["1", "100000"] {
             let target =
                 Listener::answering(|_| Canned::status(503, "{}")).expect("retry listener");
             let home = Home::new("cap-0399");
@@ -364,7 +364,7 @@ fn manual_check_caps_bind_admission_and_all_sixteen_retry_attempts() {
                 &[("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL", cap)],
             );
             assert_eq!(out.status.code(), Some(if cap == "1" { 2 } else { 4 }));
-            assert_eq!(target.count(), if cap == "1" { 0 } else { 16 });
+            assert_eq!(target.count(), if cap == "1" { 0 } else { 56 });
             if cap == "1" {
                 assert!(
                     said(&out)

@@ -9,6 +9,22 @@
       "url": "https://api.liquid.ai/decisions/v1/systemone"
     },
     {
+      "name": "llamacpp",
+      "key": "LLAMACPP_API_KEY",
+      "model": "local",
+      "path": "capture_systemone",
+      "form": "authored",
+      "url": "http://localhost:8080/v1/systemone"
+    },
+    {
+      "name": "mlx",
+      "key": "MLX_API_KEY",
+      "model": "strands-decider-2B-hobson-v19",
+      "path": "capture_systemone",
+      "form": "text",
+      "url": "http://localhost:8000/v1/systemone"
+    },
+    {
       "name": "ollama",
       "key": "OLLAMA_API_KEY",
       "model": "nimble",

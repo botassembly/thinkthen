@@ -88,6 +88,7 @@ pub(super) fn dry_run(
             .questions()
             .iter()
             .any(|named| built_in::drops_detail_of(backend.descriptions(), named.question())),
+        judging.environment.named(),
     )?;
     let on = judging
         .set()
