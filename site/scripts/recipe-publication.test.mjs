@@ -17,9 +17,10 @@ try {
     const dist=path.join(root,preview?'preview':'normal');
     const pages=preview?catalog:[published];
     const nav='<a href="/recipes/">Recipes</a>';
-    const index=`<link rel="canonical" href="https://thinkthen.dev/recipes/"><header>${nav}</header><main>${pages.map(r=>`<a href="/recipes/${r.slug}/">${r.slug}</a>`).join('')}</main><footer>${nav}</footer>`;
+    const notice=preview?'Draft catalog: these recipes await publication evidence.':'';
+    const index=`<link rel="canonical" href="https://thinkthen.dev/recipes/"><header>${nav}</header><main${preview?' data-draft':''}><p>${notice}</p>${pages.map(r=>`<a href="/recipes/${r.slug}/">${r.slug}</a>`).join('')}</main><footer>${nav}</footer>`;
     put(path.join(dist,'index.html'),`<header>${nav}</header><main>Home</main><footer>${nav}</footer>`);
-    put(path.join(dist,'recipes/index.html'),index);put(path.join(dist,'recipes.md'),'# Recipes');
+    put(path.join(dist,'recipes/index.html'),index);put(path.join(dist,'recipes.md'),'# Recipes\n'+notice);
     let llms='',short='',sitemap='';
     for(const r of pages) {
       const md='# Recipe\n'+(r.draft?'Draft: waiting.':'Published recipe.');
@@ -30,6 +31,16 @@ try {
     }
     put(path.join(dist,'llms-full.txt'),llms);put(path.join(dist,'llms.txt'),short);put(path.join(dist,'sitemap.xml'),sitemap);
     assert.deepEqual(distProblems(dist,catalog,preview),[]);count++;
+    if(preview) {
+      put(path.join(dist,'recipes/index.html'),index.replace(' data-draft',''));
+      assert.ok(distProblems(dist,catalog,preview).includes('alias compatibility: /recipes: missing draft index marker or unexpected draft index'));count++;
+      put(path.join(dist,'recipes/index.html'),index.replace(notice,''));
+      assert.ok(distProblems(dist,catalog,preview).includes('alias compatibility: /recipes: missing visible draft index notice'));count++;
+      put(path.join(dist,'recipes/index.html'),index);
+      put(path.join(dist,'recipes.md'),'# Recipes');
+      assert.ok(distProblems(dist,catalog,preview).includes('recipe visibility: index twin'));count++;
+      put(path.join(dist,'recipes.md'),'# Recipes\n'+notice);
+    }
     put(path.join(dist,'recipes/index.html'),index.replace('href="/recipes/fixture-published/"','href="/missing/"'));
     assert.ok(distProblems(dist,catalog,preview).includes('recipe visibility: index membership fixture-published'));count++;
     put(path.join(dist,'recipes/index.html'),index);

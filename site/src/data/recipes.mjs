@@ -10,8 +10,9 @@ export const RECIPE_SCOPE = Object.freeze({
 });
 export function recipeSelection(catalog, preview = false) {
   const published = catalog.filter(r => !r.draft);
+  const pages = catalog.filter(r => !r.draft || preview);
   return { index: published.length > 0 || preview, navigation: published.length > 0,
-    pages: catalog.filter(r => !r.draft || preview), draftIndex: !published.length };
+    pages, draftIndex: pages.some(r => r.draft) };
 }
 export const hasDecimal = text => [...text].some(c => /\p{Decimal_Number}/u.test(c));
 export const decodedText = text => textContent(parseHtml(text));

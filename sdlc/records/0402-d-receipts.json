@@ -57,7 +57,6 @@
     "target/0402d-build/prepare-negative.log": "ef9bd2da7d4da310c39e074598cf96fcb65139905cb95a341f353e350a89ced7",
     "target/0402d-build/prepare-wire.log": "e139934e9e37659d5bd671a381345c22d14c506c1504d2b2b17b908bf650f5a3",
     "target/0402d-build/private-scan-relative-home-failure.log": "60e7deb20ba10affafe94d0ea7aefc4cc3bd7d9a172d0744ce4e6dc6c6888040",
-    "target/0402d-build/private-scan.log": "2cf518f6194ef2ddfa0e41733c1cfe5032cfc1b7d77bd70e631a3a358b4d397f",
     "target/0402d-build/private-scan.py": "d0490b643635d8fd82ee378f49c2094338bddf690d199747aef7b6e31e1657ba",
     "target/0402d-build/receipt-manifest.py": "a56564f0b0abe742a86711f6ceb6ded9c8af6e2554f29e72554aa1ed52b259cb",
     "target/0402d-build/records.sh": "fa4a4caa93e360d4b88a02668a85e9bb5b8fa68cae0a559dad64c8fd6c2bfa43",
@@ -146,5 +145,20 @@
       "source": "Working-tree code before fixture citation pin; no claim these are execution on the final source commit."
     }
   },
-  "scan_note": "An early overbroad absolute-home scan counted relative owned scratch home paths in incidental npm log filenames. It was a false positive, not an operator-home disclosure. Curated receipts exclude those incidental logs; the corrected absolute-path scan passes."
+  "scan_note": "An early overbroad absolute-home scan counted relative owned scratch home paths in incidental npm log filenames. It was a false positive, not an operator-home disclosure. Curated receipts exclude those incidental logs; the corrected absolute-path scan passes.",
+  "invalid_receipt_bindings": [
+    {
+      "artifact": "target/0402d-build/private-scan.log",
+      "incorrect_recorded_sha256": "2cf518f6194ef2ddfa0e41733c1cfe5032cfc1b7d77bd70e631a3a358b4d397f",
+      "observed_sha256": "99c1f1adb4c54b5a51d617d9085f7bf61502ff5feab7f08fa8653d86fcab0196",
+      "observed_at_candidate": "dac0e6e11a4cdd72144f59393007c6e1e91047f4",
+      "disposition": "Excluded from valid retained proof. The old binding is incorrect; these present bytes are a corrected-scan observation, not execution proof on the old implementation source. The separate relative-home failure and every other retained artifact remain untouched."
+    }
+  ],
+  "scan_curation": {
+    "prior_manifest_commit": "dac0e6e11a4cdd72144f59393007c6e1e91047f4",
+    "prior_manifest_sha256": "1eb35b43dcda33023c1ca0cff3adcd51ffa6f94b3da2c4c25155ee2eeca7246c",
+    "stale_handback_manifest_sha256": "04326caacd9fb092a24084a6c921eca1dcbdea9388c2e10af56283195b5c040c",
+    "status": "Neither historical manifest digest describes this corrected manifest. All old source identities remain historical; no receipt is rebound to the fix source. See the separate fix manifest for fresh measured hashes and scan execution."
+  }
 }

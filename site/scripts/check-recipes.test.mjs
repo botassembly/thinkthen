@@ -51,10 +51,10 @@ try {
   const missing=structuredClone(fixture);delete missing.measured[0].unresolved;assert.ok(recipeProblems(missing).includes('recipe measurement-definition: fixture-number: supported/unresolved'));count++;
   const unpinned=structuredClone(fixture);unpinned.measured[0].source=source.replace(/[a-f0-9]{40}/,'main');assert.ok(recipeProblems(unpinned).includes('recipe source-pin: fixture-number: supported'));count++;
   const drafts=[{slug:'draft',draft:true}],mixed=[{slug:'published',draft:false},{slug:'draft',draft:true}];
-  for(const [catalog,preview,index,navigation,pages] of [[drafts,false,false,false,[]],[drafts,true,true,false,['draft']],[mixed,false,true,true,['published']],[mixed,true,true,true,['published','draft']]]) {
-    const selected=recipeSelection(catalog,preview);assert.equal(selected.index,index);assert.equal(selected.navigation,navigation);assert.deepEqual(selected.pages.map(r=>r.slug),pages);count++;
+  for(const [catalog,preview,index,navigation,draftIndex,pages] of [[drafts,false,false,false,false,[]],[drafts,true,true,false,true,['draft']],[mixed,false,true,true,false,['published']],[mixed,true,true,true,true,['published','draft']]]) {
+    const selected=recipeSelection(catalog,preview);assert.equal(selected.index,index);assert.equal(selected.navigation,navigation);assert.equal(selected.draftIndex,draftIndex);assert.deepEqual(selected.pages.map(r=>r.slug),pages);count++;
     if(index) {
-      const h=`<link rel="canonical" href="https://thinkthen.dev/recipes/"><main${!navigation?' data-draft':''}><p>${!navigation?'Draft catalog:':'Published catalog'}</p></main>`;
+      const h=`<link rel="canonical" href="https://thinkthen.dev/recipes/"><main${draftIndex?' data-draft':''}><p>${draftIndex?'Draft catalog:':'Published catalog'}</p></main>`;
       assert.equal(validateCompatibility(h,'/recipes',ALIASES['/recipes'],own,true,selected),null);
       assert.throws(()=>validateCompatibility(h.replace('<main','<meta http-equiv="refresh"><main'),'/recipes',ALIASES['/recipes'],own,true,selected),/found redirect/);count++;
     }
