@@ -185,21 +185,24 @@ fn failing_input(pulls: &AtomicUsize) -> impl Iterator<Item = Result<&'static st
     let local = std::rc::Rc::new(());
     std::iter::from_fn(move || {
         let _ = std::rc::Rc::strong_count(&local);
-        match pulls.fetch_add(1, Ordering::SeqCst) {
-            0 => Some(Ok("alpha")),
-            1 => Some(Err(Error::new(ErrorKind::Local, "later reader failure"))),
-            _ => panic!("input tail must stay unread"),
-        }
+        let stage = pulls.fetch_add(1, Ordering::SeqCst);
+        assert!(stage < 2, "input tail must stay unread");
+        Some(if stage == 0 {
+            Ok("alpha")
+        } else {
+            Err(Error::new(ErrorKind::Local, "later reader failure"))
+        })
     })
 }
 
 fn reader_failure<T>(mut batch: thinkthen::Batch<'_, T>, pulls: &AtomicUsize) {
     assert!(matches!(batch.next(), Some(Ok(_))));
     assert_eq!(pulls.load(Ordering::SeqCst), 1);
-    let error = match batch.next() {
-        Some(Err(error)) => error,
-        _ => panic!("ordered reader error"),
-    };
+    let error = batch
+        .next()
+        .expect("ordered reader error")
+        .err()
+        .expect("reader failure");
     assert_eq!(error.to_string(), "later reader failure");
     for facts in [error.facts(), batch.facts()] {
         assert_eq!(
