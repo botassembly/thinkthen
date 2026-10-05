@@ -1,6 +1,6 @@
 # 0423: State SQL pricing and timing limits accurately
 
-Status: ready. Fresh High ticket review accepted.
+Status: complete. Source review accepted; public site build passed. Full tests and lint run on the landing commit.
 Milestone: 0.2
 
 ## Outcome
