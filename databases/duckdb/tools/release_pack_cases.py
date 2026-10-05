@@ -101,7 +101,18 @@ def published_consumer(archive: Path, target: str, release: str, root: Path) -> 
                 cached = own / '.duckdb/extensions' / versions()[0] / selected(versions()[0], target)['platform']
                 cached.mkdir(parents=True)
                 shutil.copyfile(canonical(versions()[0], target), cached / 'unrelated.duckdb_extension')
-            check.release = lambda name: local
+            # Replace file acquisition only; retain Check.release's real checksum path.
+            def fetch(url, destination):
+                name = url.rsplit('/', 1)[-1]
+                expected = f'thinkthen-duckdb-{release}-{target}.tar.gz'
+                assert name in (expected, expected + '.sha256'), name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                if name.endswith('.sha256'):
+                    destination.write_text(hashlib.sha256(local.read_bytes()).hexdigest() + '  ' + expected + '\n')
+                else:
+                    shutil.copyfile(local, destination)
+                return destination
+            check.fetch = fetch
             before = backend.count()
             try:
                 installed, reply, _ = duckdb(check)
