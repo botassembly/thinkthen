@@ -114,6 +114,7 @@ fn c_selected_setup_keeps_path_prices_and_profile_through_overrides() {
     std::fs::write(config.join("config.json"), json!({"schema":"thinkthen.config/1", "usd_per_million_input":"9", "usd_per_million_output":"9", "backends":{"local":{
         "url":base,"model":"setup","key_env":"LOCAL_KEY","path":"judgements/v2/decide", "usd_per_million_input":"1", "usd_per_million_output":"2", "profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":3}
     }}}).to_string()).expect("config");
+    crate::child::private_file(&config.join("config.json")).expect("private fixture configuration");
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
     let mut script = Script::default();
     script.ask("env", &["LOCAL_KEY", "fake-local"]);
@@ -129,7 +130,11 @@ fn c_selected_setup_keeps_path_prices_and_profile_through_overrides() {
         &driver,
         &base,
         &script.0,
-        &[("XDG_CONFIG_HOME", &home), ("HOME", &home)],
+        &[
+            ("XDG_CONFIG_HOME", &home),
+            ("HOME", &home),
+            ("APPDATA", &home),
+        ],
     );
     let said = replies(&output.stdout).expect("replies");
     assert_eq!(said[0].0, 0);
@@ -151,7 +156,11 @@ fn c_selected_setup_keeps_path_prices_and_profile_through_overrides() {
         &driver,
         &base,
         &script.0,
-        &[("XDG_CONFIG_HOME", &home), ("HOME", &home)],
+        &[
+            ("XDG_CONFIG_HOME", &home),
+            ("HOME", &home),
+            ("APPDATA", &home),
+        ],
     );
     let said = replies(&output.stdout).expect("replies");
     assert_eq!(said[0].0, 0);
