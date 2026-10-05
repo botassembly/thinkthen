@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
-from harness import Backend, case, expect, main, rows, run, said
+from harness import EXTENSION, Backend, case, child_env, expect, main, rows, run, said
 
 
 @case
@@ -240,6 +244,90 @@ def recognize_named_settings_and_old_deadline_boundary():
                "thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'",
                "removed relations deadline")
         expect(backend.count(), 2, "the one valid recognized name uses steps 1 and 2 only")
+
+
+REPLAY_CHILD = r"""
+import json, os, sys
+import duckdb
+extension, folder, cap, queries, misses = sys.argv[1:]
+cap = int(cap)
+def opened():
+    db = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+    db.execute("SET enable_progress_bar = false")
+    db.execute(f"LOAD '{extension}'")
+    db.execute("SET thinkthen_cache = 'off'")
+    return db
+if cap:
+    spender = opened()
+    spender.execute("SET thinkthen_max_requests_total = 1")
+    assert spender.execute("SELECT thinkthen_decide('Is it a refund?', 'spend once')").fetchall() == [(True,)]
+os.environ.pop("THINKTHEN_API_KEY", None)
+db = opened()
+db.execute(f"SET thinkthen_replay = '{folder}'")
+db.execute(f"SET thinkthen_max_requests_total = {cap}")
+before = dict(db.execute("SELECT * FROM thinkthen_usage()").fetchall())
+answers = [db.execute(query).fetchall() for query in json.loads(queries)]
+failures = []
+for query in json.loads(misses):
+    try:
+        db.execute(query).fetchall()
+    except duckdb.Error as error:
+        failures.append({"error": str(error)})
+    else:
+        raise AssertionError("a strict replay miss answered")
+after = dict(db.execute("SELECT * FROM thinkthen_usage()").fetchall())
+print(json.dumps({"answers": answers, "before": before, "after": after, "failures": failures}))
+"""
+
+
+@case
+def staged_replay_answers_with_zero_or_spent_total_and_no_key():
+    rules = ('{"version":1,"recognize":{"kinds":{"person":null},'
+             '"relations":[{"name":"near","source":"person","target":"person"}]}}')
+    queries = [
+        "SELECT thinkthen_recognize('Maria Chen arrived.', ['person'])",
+        f"SELECT thinkthen_relations('Maria Chen arrived.', '{rules}')",
+        "SELECT * FROM thinkthen_relate('SELECT 1 AS id, ''Ada'' AS name, ''person'' AS kind UNION ALL SELECT 2, ''Acme'', ''organization''', ['works_for=person:organization'])",
+    ]
+    misses = [query.replace('Maria Chen', 'Unknown name').replace("''Ada''", "''Unknown''")
+              for query in queries]
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        recorded = run(["SET thinkthen_cache = 'off'", f"SET thinkthen_record = '{folder}'", *queries],
+                       backend.base("arm/full"))
+        answers = [rows(result) for result in recorded[2:]]
+        expect(len(answers[0][0][0]), 2, "two stored names")
+        expect(len(answers[1][0][0]), 2, "two stored nested relations")
+        expect(answers[2], [["works_for", "1", "2", 0.9, False]], "stored explicit relation")
+        recorded_sends = backend.count()
+        expect(recorded_sends > 0, True, "recording used owned loopback responses")
+        for cap in (0, 1):
+            with tempfile.TemporaryDirectory() as home:
+                done = subprocess.run(
+                    [sys.executable, "-c", REPLAY_CHILD, str(EXTENSION), folder, str(cap),
+                     json.dumps(queries), json.dumps(misses)],
+                    env=child_env(backend.base("arm/full"), Path(home), keyless=cap == 0),
+                    capture_output=True, text=True, timeout=60, check=False,
+                )
+            expect(done.returncode, 0, f"replay child exit: {done.stderr[-800:]}")
+            got = json.loads(done.stdout)
+            expect(got["answers"], answers, f"keyless strict replay at cap {cap}")
+            for metric in ("requests_sent", "input_tokens", "output_tokens"):
+                expect(got["before"][metric], cap, f"already spent {metric}")
+                expect(got["after"][metric], cap, f"replay and misses add no {metric}")
+            expect(got["after"]["cache_answers"] > got["before"]["cache_answers"], True,
+                   "stored answers counted as cache answers")
+            for failure in got["failures"]:
+                expect(said(failure), "thinkthen local: the replay folder holds no answer for this question (retryable: no)",
+                       "strict miss precedes quota and key lookup")
+            expect(backend.count(), recorded_sends + cap, "only the positive-cap spender sent")
+        live = run(["SET thinkthen_cache = 'off'", "SET thinkthen_max_requests_total = 0", *queries,
+                    "SELECT * FROM thinkthen_usage()"], backend.base("arm/full"))
+        for failure in live[2:-1]:
+            expect(said(failure), "thinkthen usage: this process has spent its request total of 0; raise SET thinkthen_max_requests_total or RESET it (retryable: no)",
+                   "live zero refuses at actual send reservation")
+        for metric in ("requests_sent", "input_tokens", "output_tokens"):
+            expect(dict(rows(live[-1]))[metric], 0, f"live zero {metric}")
+        expect(backend.count(), recorded_sends + 1, "live zero sends nothing")
 
 
 if __name__ == "__main__":
