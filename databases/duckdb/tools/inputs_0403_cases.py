@@ -233,7 +233,7 @@ if __name__ == '__main__':
         count = 0
         def do_POST(self):
             type(self).count += 1
-            self.send_response(500); self.end_headers()
+            self.send_response(500); self.send_header("Connection", "close"); self.end_headers()
         def log_message(self, *_):
             pass
     with ThreadingHTTPServer(('127.0.0.1', 0), Counter) as server:
