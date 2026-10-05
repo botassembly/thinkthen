@@ -50,7 +50,7 @@ def checksum(path):
 
 
 def host_setup(base):
-    """The native Windows setup fetches the root lock without acquiring Unix tools."""
+    """The native Windows setup fetches the core locks and pinned wheel builder."""
     tools = base / "host-tools"
     tools.mkdir()
     bodies = {
@@ -61,7 +61,12 @@ def host_setup(base):
 esac''',
         "rustup": 'echo "rustup $*" >> "$WINDOWS_HOST_LOG"',
         "cargo": 'echo "cargo $*" >> "$WINDOWS_HOST_LOG"',
-        "python3": f'''[ "$1" = - ] || {{ echo 'refuse acquiring Python packages in fixture' >&2; exit 92; }}
+        "python3": f'''if [ "$1" = -m ]; then
+    [ "$*" = "-m pip install --disable-pip-version-check maturin==1.15.0" ] || exit 92
+    echo "python3 $*" >> "$WINDOWS_HOST_LOG"
+    exit 0
+fi
+[ "$1" = - ] || exit 92
 exec '{sys.executable}' "$@"''',
     }
     for tool, body in bodies.items():
@@ -74,7 +79,9 @@ exec '{sys.executable}' "$@"''',
     assert log.read_text().splitlines() == [
         "rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt",
         "cargo fetch --locked --manifest-path Cargo.toml",
-        "cargo fetch --locked --manifest-path libraries/c/Cargo.toml"]
+        "cargo fetch --locked --manifest-path libraries/c/Cargo.toml",
+        "cargo fetch --locked --manifest-path libraries/python/Cargo.toml",
+        "python3 -m pip install --disable-pip-version-check maturin==1.15.0"]
 
 
 def interruption_routing(smoke, base):
@@ -214,7 +221,7 @@ def main():
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET, str(mapped), "command", env=mapped_env))
         expect(run("python3", str(SCRIPT), "check", str(mapped / archive.name)))
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET,
-                   str(base / "unsupported"), "python", env=env), 2, "not a Windows stage 1 command part")
+                   str(base / "unsupported"), "typescript", env=env), 2, "not a Windows stage 1 command part")
         # Five-target collection includes Windows and refuses bad Windows assets before copying.
         platforms = base / "platforms"
         for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
@@ -228,6 +235,9 @@ def main():
         sample = windows / "thinkthen-first-run.tar.gz"
         sample.write_bytes(b"sample")
         checksum(sample)
+        wheel = windows / f"thinkthen-{VERSION}-cp310-abi3-win_amd64.whl"
+        wheel.write_bytes(b"wheel fixture")
+        checksum(wheel)
         npm = base / "npm"
         npm.mkdir()
         version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -239,6 +249,7 @@ def main():
         expect(run("sh", str(gate), "collect", str(platforms), str(npm), str(collected)))
         assert {path.name for path in collected.iterdir()} == {
             c_zip.name, c_zip.name + ".sha256", archive.name, archive.name + ".sha256", sample.name, sample.name + ".sha256",
+            wheel.name, wheel.name + ".sha256",
             f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256",
             "fixture-x86_64-unknown-linux-gnu", "fixture-aarch64-unknown-linux-gnu",
             "fixture-x86_64-apple-darwin", "fixture-aarch64-apple-darwin"}

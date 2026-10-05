@@ -3,6 +3,7 @@ to 13). The throttle is one per process, so each engine lives in its own
 child with its own backend and cache folder."""
 
 import time
+import sys
 
 from conftest import Backend, child_env, run, start
 
@@ -149,7 +150,8 @@ def test_the_environment_seeds_every_unset_setting(backend, tmp_path):
     run(SETTINGS + f"""
     engine = tt.Engine(throttle=8, base_url="{backend.base()}")
     engine.decide(late, "one").value, engine.decide(late, "one").value
-    """, child_env(backend, tmp_path, HOME=str(scratch), XDG_STATE_HOME=str(scratch)))
+    """, child_env(backend, tmp_path, HOME=str(scratch), XDG_STATE_HOME=str(scratch),
+                   **({"LOCALAPPDATA": str(scratch)} if sys.platform == "win32" else {})))
     assert backend.count() == 1
     assert any((tmp_path / "cache").rglob("*"))
     written = [path for path in scratch.rglob("*") if path.is_file()]

@@ -2,6 +2,7 @@
 
 import os
 import signal
+import pytest
 
 from conftest import child_env, run, start
 
@@ -175,8 +176,8 @@ def test_tally_waits_for_two_started_held_calls(backend, tmp_path):
     assert backend.count() == 2
 
 
-def test_stream_token_before_first_pull_and_fork_guard(backend, tmp_path):
-    """A fired token sends nothing; a child cannot read its parent's stream."""
+def test_stream_token_before_first_pull_sends_nothing(backend, tmp_path):
+    """A fired token cancels the first pull without sending a request."""
     printed = run("""
     import os, thinkthen as tt
     engine = tt.Engine(cache=False, batch=1)
@@ -185,6 +186,17 @@ def test_stream_token_before_first_pull_and_fork_guard(backend, tmp_path):
     stopped = judge(iter(["one"]), token=token)
     try: next(stopped)
     except tt.Cancelled as error: print(error.kind, stopped.facts["requests_sent"])
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == ["cancelled 0"]
+    assert backend.count() == 0
+
+
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="the forked stream guard requires os.fork")
+def test_forked_child_cannot_read_parent_stream(backend, tmp_path):
+    """A child cannot read its parent's stream; the parent keeps its rows."""
+    printed = run("""
+    import os, thinkthen as tt
+    judge = tt.Engine(cache=False, batch=1).decide("Is it late?")
     stream = judge(iter(["one", "two"]))
     print(next(stream))
     pipe_in, pipe_out = os.pipe()
@@ -197,10 +209,11 @@ def test_stream_token_before_first_pull_and_fork_guard(backend, tmp_path):
     os.close(pipe_out)
     print(os.read(pipe_in, 20).decode(), os.waitpid(pid, 0)[1], list(stream))
     """, child_env(backend, tmp_path))
-    assert printed.splitlines() == ["cancelled 0", "True", "usage 0 [True]"]
+    assert printed.splitlines() == ["True", "usage 0 [True]"]
     assert backend.count() == 2
 
 
+@pytest.mark.skipif(os.name == "nt", reason="os.kill(SIGINT) does not deliver a Windows console Ctrl-C")
 def test_stream_interrupt_retains_later_completion_receipt(backend, tmp_path):
     """The caller sees Cancelled promptly; the held reply later completes
     one row before Stop converts the outcome to cancellation. A later read
@@ -267,6 +280,7 @@ def test_stream_second_reader_refuses_while_first_waits(backend, tmp_path):
     assert backend.count() == 1
 
 
+@pytest.mark.skipif(not os.path.isdir("/proc/self/task"), reason="native worker counts require Linux procfs")
 def test_dropped_stream_releases_its_native_worker(backend, tmp_path):
     """Dropping the last Python reference cancels the one native batch and
     its scheduler without reading the rest of the caller's source."""

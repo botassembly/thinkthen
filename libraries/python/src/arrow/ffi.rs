@@ -339,7 +339,7 @@ impl Alias {
 unsafe impl Send for Alias {}
 
 /// True when every page from `first` to `last` is mapped (off Linux).
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(unix, not(target_os = "linux")))]
 pub(super) fn mapped(first: usize, last: usize) -> bool {
     unsafe extern "C" {
         fn mincore(address: *mut c_void, length: usize, pages: *mut u8) -> c_int;
@@ -362,6 +362,12 @@ pub(super) fn mapped(first: usize, last: usize) -> bool {
         ) == 0
     }
 }
+
+#[cfg(windows)]
+#[path = "windows/ffi.rs"]
+mod windows;
+#[cfg(windows)]
+pub(super) use windows::mapped;
 
 #[cfg(test)]
 mod tests;

@@ -7,6 +7,7 @@ cross the whole door from Python.
 """
 
 import pathlib
+import os
 
 import pytest
 
@@ -79,6 +80,7 @@ def test_nullable_utf8_offsets_still_refuse_reversal_before_a_send(backend, tmp_
 
 
 @pytest.mark.stress
+@pytest.mark.skipif(os.name == "nt", reason="resident memory measurement requires Unix resource.getrusage")
 def test_refused_inputs_release_their_batches(backend, tmp_path):
     """R2-17: 200 refused 8 MB number columns in a row each release their
     stream, so peak resident memory grows under 8 MiB. Regression: a

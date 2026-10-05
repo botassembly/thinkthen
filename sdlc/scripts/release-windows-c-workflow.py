@@ -7,7 +7,7 @@ CONDITION = f"matrix.target == '{TARGET}'"
 SETUP = 'python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"'
 CLIPPY = 'cargo clippy --locked --offline --manifest-path libraries/c/Cargo.toml --all-targets -- -D warnings'
 TEST = 'cargo test --locked --offline --manifest-path libraries/c/Cargo.toml --no-fail-fast'
-PACK = 'CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$TARGET" release-files command c first-run'
+PACK = 'CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$TARGET" release-files command c python first-run'
 PLATFORM = 'python3 sdlc/scripts/release-windows-command.py platform release-files "$(sed -n \'s/^version = "\\(.*\\)"$/\\1/p\' crates/thinkthen/Cargo.toml | head -n 1)"'
 VERSION = 'version=$(sed -n \'s/^version = "\\(.*\\)"$/\\1/p\' crates/thinkthen/Cargo.toml | head -n 1)'
 CHECK = 'python3 sdlc/scripts/release-windows-c.py check "platform/thinkthen-c-$version-x86_64-pc-windows-msvc.zip"'
@@ -45,7 +45,7 @@ def rules(name, jobs):
             commands = [
                 ('root Clippy', 'cargo clippy --locked --offline --workspace --all-targets -- -D warnings'),
                 ('root tests', 'cargo test --locked --offline --no-fail-fast --workspace --all-targets'),
-                ('C Clippy', CLIPPY), ('C door tests', TEST), ('C packing', PACK), ('six-file platform verification', PLATFORM)]
+                ('C Clippy', CLIPPY), ('C door tests', TEST), ('C packing', PACK), ('platform verification', PLATFORM)]
             for label, command in commands:
                 if arm.count(command) != 1:
                     out.append(f'{name}: Windows {label} must execute in the Windows arm and propagate failure')

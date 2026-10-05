@@ -38,7 +38,7 @@ def workflow_plants():
     assert ROUTES['rules']('release.yml', original) == []
     cases = 0
     for key, label in [('CLIPPY', 'C Clippy'), ('TEST', 'C door tests'), ('PACK', 'C packing'),
-                       ('PLATFORM', 'six-file platform verification'), ('CHECK', 'downloaded C validation'),
+                       ('PLATFORM', 'platform verification'), ('CHECK', 'downloaded C validation'),
                        ('CONSUME', 'downloaded C consumption')]:
         command = ROUTES[key]
         kind = 'smoke' if key in ('CHECK', 'CONSUME') else 'build'
@@ -222,6 +222,11 @@ def pack_routing(root):
     include.mkdir()
     shutil.copyfile(C.HEADER, include / 'thinkthen.h')
     shutil.copytree(REPO / 'demos/27-test-with-no-network', source / 'demos/27-test-with-no-network')
+    python = source / 'libraries/python'
+    python.mkdir()
+    (python / 'build-wheel.sh').write_text(
+        f'#!/bin/sh\nmkdir -p libraries/python/target/release-wheel\n'
+        f'printf "wheel fixture" >libraries/python/target/release-wheel/thinkthen-{VERSION}-cp310-abi3-win_amd64.whl\n')
     tools = root / 'tools'
     tools.mkdir()
     saved_dll = root / 'saved.dll'
@@ -281,6 +286,7 @@ def pack_routing(root):
     assert {path.name for path in default_output.iterdir()} == {
         f'thinkthen-{VERSION}-{C.TARGET}.zip', f'thinkthen-{VERSION}-{C.TARGET}.zip.sha256',
         f'thinkthen-c-{VERSION}-{C.TARGET}.zip', f'thinkthen-c-{VERSION}-{C.TARGET}.zip.sha256',
+        f'thinkthen-{VERSION}-cp310-abi3-win_amd64.whl', f'thinkthen-{VERSION}-cp310-abi3-win_amd64.whl.sha256',
         'thinkthen-first-run.tar.gz', 'thinkthen-first-run.tar.gz.sha256'}
     assert not list(scratch.iterdir())
     # Real tool failure propagates through the real packer and cleans scratch.
