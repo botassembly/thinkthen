@@ -4,6 +4,8 @@ Read `README.md`, `specification/README.md`, then `sdlc/planning/rust-standards.
 
 ## Build and review
 
+For 0.2, Ian's 2026-10-05 ruling overrides earlier proof instructions: one fresh whole-ticket or whole-slice review, then fix and land; review again only for a real behavior defect. Run full tests and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Write one record per ticket at landing; name tests by behavior. Keep release rehearsal and Ian's approvals. Scope and order live in `sdlc/planning/milestones.md`.
+
 - Build simply: YAGNI, DRY, local behavior, separate concerns. Add commands and options only for demos. Land outside-in CLI/API, edge-table, contract, or prior-failing regression tests; delete scaffolding. See workspace decision `2026-09-24-tests-earn-their-place.md`.
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused checks per change. The coordinator names a checkpoint before full `test`, `spec`, or `surfaces`. Load and timing run only through `test-stress --run`. Gates use no network.
 - Rust source and test files cap at 500 nonblank lines; `sdlc/ratchet.json` equals the measured source total. Explain growth. A fresh independent reviewer checks each candidate.

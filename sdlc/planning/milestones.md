@@ -47,22 +47,26 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 Outcome: Windows support and the first features after 0.1. 0.2 work lands on main after the `release/0.1` cut (ADR 0116).
 
-Ian approved the 0.2 scope and lane order on 2026-10-04. 0.2 ships when release safety, the backends, the search flags, the recipes with their numbers, and Windows stage 1 have landed. Ian dropped extract as a function on 2026-10-04. 0.2 retains the ten functions. The proxy, the hosted screens, the decision store, link, verify and qualify as functions, Markdown repair, tables and the navigate command are not in 0.2. There are no 0.1.x patch releases; ticket 0397 freezes `release/0.1`.
+Ian cut 0.2 to its core on 2026-10-05. Keep 0397 to 0405, 0377, 0416 and 0419. Move audit gaps 0406, 0407, 0408, 0409, 0410, 0413, 0414 and 0417 to later. Paragraph windows remain later. No score or pandas/DuckDB issue slice needs a new 0.2 ticket. Extract remains dropped; the ten functions remain.
 
-Lanes, in order:
+Order:
 
-- First, in any free lane: [0397: Main moves to 0.2.0 and release/0.1 freezes](../tickets/0397-main-moves-to-0-2-0.md).
-- Lane 1: Windows, tickets 0380 to 0385 below and what follows them.
-- Lane 2: [0398: Release safety](../tickets/0398-release-safety.md), then [0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides](../tickets/0399-backend-path-perplexity-openrouter.md), then [0400: One setup format per provider and a default throttle of 8](../tickets/0400-provider-setups-and-concurrency.md), then 0377 below. 0400 slice A must be usable before the experiments team's new-model day run in the week of 2026-10-05.
-- Lane 3: [0405: Audit the ten functions](../tickets/0405-audit-ten-functions.md) first on Ian's 2026-10-04 update. Answer filter, rank and grep before implementation of [0401: Search flags on rank](../tickets/0401-rank-search-flags.md), then [0402: The docs tell one story](../tickets/0402-docs-tell-one-story.md), then [0403: The DuckDB extension ships a build for DuckDB v1.5.4](../tickets/0403-duckdb-extension-for-dbt-v2.md).
-- Gaps in any lane: [0404: Tech debt cut, with tests held to behavior](../tickets/0404-tech-debt-and-tests-held-to-behavior.md).
-- Waiting on experiments: the "none" wording for choose and each recipe's measured numbers. [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) uses rules to find candidates and decide or choose to confirm them. Reviewed 0031 supplies only the frozen-cohort comparison; publication proof remains pending.
+1. Land 0400 slice C, the default of 8. 0402 slice D is already landed; recipe publication follows each accepted experiment result.
+2. 0398 slice B2, the R packaging fix, already landed at `ddfcbc74c`. Prepare one approval request covering the hosted rehearsal and one real Windows run for the command line/Rust crate, C DLL and Python wheel.
+3. Lane 1: finish 0381, then 0382. Node, C# and JVM stay open for 0.3.
+4. Lane 2: 0377, then 0416.
+5. Lane 3: 0403, then 0419.
+6. Gaps: 0404 starts with behavior-based test names, duplicate-test cuts and record cleanup.
+
+Proof for 0.2: one fresh review of the whole ticket or slice, then fix and land. A second review is needed only for a real behavior defect. Run the full test suite and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Open runner findings on 0400 C are dropped. Write one record per ticket at landing, and keep ticket statuses to one or two sentences. Release rehearsal and Ian's approvals remain required.
+
+Waiting on experiments: provider entries, the "none" wording for choose and each recipe's measured numbers. [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) uses rules to find candidates and decide or choose to confirm them. Reviewed 0031 supplies only the frozen-cohort comparison; publication proof remains pending.
 
 Completed foundation: [0397](../tickets/0397-main-moves-to-0-2-0.md) moves main to 0.2.0 and freezes `release/0.1`.
 
 Exit criteria, a coordinator default Ian can overturn:
 
-1. Every item below lands or moves to `later`.
+1. The retained 0.2 tickets land; recipe pages publish as their accepted numbers arrive.
 2. A clean rehearsal and a clean release QA round on the latest checkpoint.
 3. Ian gives the go.
 
@@ -74,19 +78,11 @@ Windows work follows [windows.md](windows.md):
 
 - [0373: Windows stage 0](../tickets/0373-windows-stage-0.md), landed before the cut. The root workspace and the C door build and pass their tests on Windows, and nothing ships. It changes no 0.1 behavior.
 - [0379: The root workspace tests pass on macOS](../tickets/0379-macos-root-suite.md), landed before the cut. It changes tests only.
-- Windows stage 1: the command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM ship for Windows x86-64, and findings W1 to W7 close. The stage 1 report in [windows.md](windows.md#stage-1-difficulty-report) sizes it at 9 to 11 tickets' worth of work and 1,600 to 3,400 lines. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Tickets 0380 to 0385 carry it, in slices. Each waits for the `release/0.1` cut. 0381 to 0385 wait for 0380 slice A, and 0384 and 0385 also wait for 0381 slice A.
+- Windows for 0.2: the command line and Rust crate (0380), C DLL (0381), and Python wheel (0382) ship for Windows x86-64. Each is tested once on a real Windows runner before release, in one combined run. Node (0383), C# (0384) and JVM (0385) move to 0.3 and remain open. 0381 and 0382 retain their prerequisite on 0380 slice A; the deferred tickets retain their technical prerequisites.
 
 Open items:
 
-- [0406: Rank questions preserve criteria and score ordering across core surfaces](../tickets/0406-rank-question-equivalence.md)
-- [0407: Supply independent context for each record](../tickets/0407-per-record-context.md)
-- [0408: Expose complete question probabilities through C JSON and SQL details](../tickets/0408-j1-full-probabilities.md)
-- [0409: Match TypeScript rank and find declarations to runtime](../tickets/0409-typescript-rank-find-contract.md)
-- [0410: Complete dataframe function coverage](../tickets/0410-column-function-equivalence.md)
-- [0413: Supply candidate options independently for each record](../tickets/0413-options-per-record-equivalence.md)
-- [0414: Define separate context on aggregate functions](../tickets/0414-separate-shared-context.md)
 - [0416: Move backend checking under the backend namespace](../tickets/0416-backend-command-namespace.md)
-- [0417: SQL rank accepts a question set](../tickets/0417-sql-rank-question-sets.md)
 
 
 - [0419: Official ThinkThen skill for agents](../tickets/0419-official-skill-for-agents.md), the separately reviewed promotion of docs item 22. It changes documentation and preserves empty-find behavior.
@@ -94,9 +90,6 @@ Open items:
 - [0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64](../tickets/0380-windows-command-line-and-rust-crate.md)
 - [0381: Windows stage 1: the C library ships as a DLL for Windows x86-64](../tickets/0381-windows-c-dll.md)
 - [0382: Windows stage 1: the Python wheel ships for Windows x86-64](../tickets/0382-windows-python-wheel.md)
-- [0383: Windows stage 1: the Node addon ships for Windows x86-64](../tickets/0383-windows-node-addon.md)
-- [0384: Windows stage 1: the C# package loads the Windows DLL](../tickets/0384-windows-csharp.md)
-- [0385: Windows stage 1: the JVM binding loads the Windows DLL](../tickets/0385-windows-jvm.md)
 - [0393: npm publishes through staged publishing](../tickets/0393-npm-staged-publishing.md)
 - [A Flutter app file in the release bundle](../issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md)
 - [The bindings and SQL extensions cannot name a backend](../issues/2026-10-01-bindings-and-sql-extensions-name-no-backend.md)
@@ -127,6 +120,16 @@ Open items:
 
 Verify and qualify remain shared in `verify-a-claim`. Rules comparison is accepted only for the frozen 0031 cohort and tested choose configuration; publication proof is pending. Extract stays dropped. 0030 establishes no quality-qualified winner. 0032 efficacy is unanswered with TEST sealed and its full hold retained; none wording remains unknown. No continuation follows.
 
+## 0.3
+
+Outcome: add the remaining Windows bindings after the 0.2 core release. These tickets stay open under Ian's 2026-10-05 ruling.
+
+Open items:
+
+- [0383: Windows stage 1: the Node addon ships for Windows x86-64](../tickets/0383-windows-node-addon.md)
+- [0384: Windows stage 1: the C# package loads the Windows DLL](../tickets/0384-windows-csharp.md)
+- [0385: Windows stage 1: the JVM binding loads the Windows DLL](../tickets/0385-windows-jvm.md)
+
 ## later
 
 Outcome: no release is promised. Each item waits on its own trigger, such as a user's request, an upstream fix or Ian's ruling.
@@ -136,6 +139,15 @@ Exit criteria: none. An item moves to a numbered milestone when its trigger fire
 Blockers: none.
 
 Open items:
+
+- [0406: Rank questions preserve criteria and score ordering across core surfaces](../tickets/0406-rank-question-equivalence.md)
+- [0407: Supply independent context for each record](../tickets/0407-per-record-context.md)
+- [0408: Expose complete question probabilities through C JSON and SQL details](../tickets/0408-j1-full-probabilities.md)
+- [0409: Match TypeScript rank and find declarations to runtime](../tickets/0409-typescript-rank-find-contract.md)
+- [0410: Complete dataframe function coverage](../tickets/0410-column-function-equivalence.md)
+- [0413: Supply candidate options independently for each record](../tickets/0413-options-per-record-equivalence.md)
+- [0414: Define separate context on aggregate functions](../tickets/0414-separate-shared-context.md)
+- [0417: SQL rank accepts a question set](../tickets/0417-sql-rank-question-sets.md)
 
 - [0411: Prove changed reading rules on every binding route](../tickets/0411-binding-reading-replay-proof.md)
 - [0412: Document R index adapters in the binding contract](../tickets/0412-r-result-contract.md)
