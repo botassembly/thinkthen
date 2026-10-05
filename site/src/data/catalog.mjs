@@ -1210,7 +1210,7 @@ export const TECHNIQUES = [
   },
 ];
 
-export const RECIPES = [
+export const SHELL_JOBS = [
   {
     slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
     goal: 'annotate labels a JSON array and keeps every other field, and a second run costs nothing.',
@@ -1250,5 +1250,448 @@ export const BASH_FIRST = { slug: '', title: 'Bash techniques', label: 'Bash tec
 export const BASH = [
   BASH_FIRST,
   ...TECHNIQUES.map((t) => ({ ...t, group: 'Techniques', route: `/how-tos/bash/${t.slug}/` })),
-  ...RECIPES.map((r) => ({ ...r, group: 'Recipes', route: `/how-tos/bash/${r.slug}/` })),
+  ...SHELL_JOBS.map((r) => ({ ...r, group: 'Shell jobs', route: `/how-tos/bash/${r.slug}/` })),
+];
+
+// Measured recipes are separate from the existing shell jobs.
+import { RULES_MEASURED } from './recipe-evidence.mjs';
+export const RECIPE_PAGES = [
+  {
+    "slug": "rules-propose-model-confirms",
+    "title": "Rules propose, the model confirms",
+    "goal": "Confirm a proposed total without inventing a replacement.",
+    "job": "Confirm a proposed total without inventing a replacement.",
+    "functions": [
+      "choose"
+    ],
+    "draft": true,
+    "publication": "waiting",
+    "wait": "Scoped comparison accepted; repeatability and measured publication review remain pending.",
+    "example": "site/examples/recipes/rules-propose-model-confirms",
+    "issue": "sdlc/issues/2026-10-03-draft-function-extract.md",
+    "owner": "Queue owner",
+    "sourceRecord": "sdlc/records/2026-10-05-reviewed-experiment-planning.md",
+    "sourceCommit": "ea615c0e6a3412bb4716ad97b704a3f698be30cb",
+    "measured": RULES_MEASURED,
+    "fixtureAssertions": [
+      {
+        "id": "fixture-population",
+        "evidenceClass": "fixture",
+        "value": "8",
+        "denominator": "8",
+        "scope": "Six ordinary cases and two reading controls",
+        "qualification": "Controlled loopback fixture; no provider-quality measurement.",
+        "artifact": "files/harness.json",
+        "selector": "/population",
+        "sha256": "9dab654a70e8376ccedfbd0ded55727992cd736a3d2d1ea3ad5db8c1b4e7e4a1",
+        "artifactCommit": "1da71e8116cf89e33f2edc193b0c7ea3d19c32ff"
+      }
+    ],
+    "body": [
+      {
+        "kind": "text",
+        "text": "A caller finds candidates, asks ThinkThen to confirm one, and copies that exact retained value. ThinkThen judges; the caller owns every subsequent action."
+      },
+      {
+        "kind": "heading",
+        "text": "The question file"
+      },
+      {
+        "kind": "artifact",
+        "file": "files/question.json"
+      },
+      {
+        "kind": "heading",
+        "text": "A labeled controlled sample"
+      },
+      {
+        "kind": "text",
+        "text": "These handwritten purchase notes use controlled loopback replies. Agreement checks wiring and repeatability, never provider quality."
+      },
+      {
+        "kind": "artifact",
+        "file": "files/cases.jsonl"
+      },
+      {
+        "kind": "heading",
+        "text": "Ask and name the answer"
+      },
+      {
+        "kind": "artifact",
+        "file": "1-ask.sh"
+      },
+      {
+        "kind": "artifact",
+        "file": "1-ask.out"
+      },
+      {
+        "kind": "heading",
+        "text": "Audit retained rows"
+      },
+      {
+        "kind": "artifact",
+        "file": "2-audit.sh"
+      },
+      {
+        "kind": "artifact",
+        "file": "2-audit.out"
+      },
+      {
+        "kind": "heading",
+        "text": "Interpretation and failure handling"
+      },
+      {
+        "kind": "text",
+        "text": "Empty pools return local absence without asking. A singleton still offers none. A tied top or a winner below the cut is not sure. Faults remain failures, and candidate misses remain in task totals."
+      },
+      {
+        "kind": "text",
+        "text": "The finder deduplicates equal amounts by first occurrence and retains exact offsets. Choosing copies the retained value; this does not measure location accuracy."
+      },
+      {
+        "kind": "text",
+        "text": "Source-location accuracy, preparation timing, local-model comparison and provider invoice were not measured."
+      },
+      {
+        "kind": "heading",
+        "text": "Measured comparison and qualifications"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-full-resolved"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-full-tp"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-full-fp"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-full-fn"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-full-precision"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-full-recall"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-full-resolved"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-full-tp"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-full-fp"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-full-fn"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-full-precision"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-full-recall"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-full-resolved"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-full-tp"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-full-fp"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-full-fn"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-full-precision"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-full-recall"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-matched-resolved"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-matched-tp"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-matched-fp"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-matched-fn"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-matched-precision"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-matched-recall"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-matched-resolved"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-matched-tp"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-matched-fp"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-matched-fn"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-matched-precision"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-matched-recall"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-matched-resolved"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-matched-tp"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-matched-fp"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-matched-fn"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-matched-precision"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-matched-recall"
+      },
+      {
+        "kind": "evidence",
+        "id": "candidate-misses"
+      },
+      {
+        "kind": "evidence",
+        "id": "dictionary"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-abstain"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-abstain"
+      },
+      {
+        "kind": "evidence",
+        "id": "rules-abstain"
+      },
+      {
+        "kind": "evidence",
+        "id": "name-recognize"
+      },
+      {
+        "kind": "evidence",
+        "id": "name-choose"
+      },
+      {
+        "kind": "evidence",
+        "id": "date-recognize"
+      },
+      {
+        "kind": "evidence",
+        "id": "date-choose"
+      },
+      {
+        "kind": "evidence",
+        "id": "usage"
+      },
+      {
+        "kind": "evidence",
+        "id": "exposure"
+      },
+      {
+        "kind": "evidence",
+        "id": "historical-charge"
+      },
+      {
+        "kind": "evidence",
+        "id": "choose-hold"
+      },
+      {
+        "kind": "evidence",
+        "id": "recognize-hold"
+      },
+      {
+        "kind": "heading",
+        "text": "Controlled fixture accounting"
+      },
+      {
+        "kind": "evidence",
+        "id": "fixture-population"
+      }
+    ]
+  },
+  {
+    "slug": "link-records",
+    "title": "Link records",
+    "goal": "Choose a matching record and leave uncertain matches for a person.",
+    "job": "Choose a matching record and leave uncertain matches for a person.",
+    "functions": [
+      "choose"
+    ],
+    "draft": true,
+    "publication": "waiting",
+    "wait": "Earlier linking evidence and compatible replay remain pending; completed wording comparison returned no answers.",
+    "example": "site/examples/recipes/link-records",
+    "issue": "sdlc/issues/2026-10-03-draft-function-link.md",
+    "owner": "Queue owner",
+    "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
+    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
+    "measured": [],
+    "fixtureAssertions": [],
+    "body": [
+      {
+        "kind": "text",
+        "text": "Earlier linking evidence and compatible replay remain pending; completed wording comparison returned no answers."
+      }
+    ]
+  },
+  {
+    "slug": "verify-a-claim",
+    "title": "Verify a claim",
+    "goal": "Judge support for a claim and keep qualification within the same recipe.",
+    "job": "Judge support for a claim and keep qualification within the same recipe.",
+    "functions": [
+      "choose"
+    ],
+    "draft": true,
+    "publication": "waiting",
+    "wait": "Constructed-claim limits and source review remain; qualification efficacy and publication artifacts remain pending.",
+    "example": "site/examples/recipes/verify-a-claim",
+    "issue": "sdlc/issues/2026-10-03-draft-function-verify.md",
+    "owner": "Queue owner",
+    "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
+    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
+    "measured": [],
+    "fixtureAssertions": [],
+    "body": [
+      {
+        "kind": "text",
+        "text": "Constructed-claim limits and source review remain; qualification efficacy and publication artifacts remain pending."
+      }
+    ]
+  },
+  {
+    "slug": "navigate-many-documents",
+    "title": "Navigate many documents",
+    "goal": "Find passages across documents with a caller-owned manifest and fallback.",
+    "job": "Find passages across documents with a caller-owned manifest and fallback.",
+    "functions": [
+      "filter",
+      "rank",
+      "find"
+    ],
+    "draft": true,
+    "publication": "waiting",
+    "wait": "Admitted navigation measurements and compatible artifacts remain pending; no tree command is promised.",
+    "example": "site/examples/recipes/navigate-many-documents",
+    "issue": "sdlc/issues/2026-10-03-draft-function-navigate.md",
+    "owner": "Queue owner",
+    "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
+    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
+    "measured": [],
+    "fixtureAssertions": [],
+    "body": [
+      {
+        "kind": "text",
+        "text": "Admitted navigation measurements and compatible artifacts remain pending; no tree command is promised."
+      }
+    ]
+  },
+  {
+    "slug": "search-transcripts",
+    "title": "Search transcripts",
+    "goal": "Retain context around transcript search results.",
+    "job": "Retain context around transcript search results.",
+    "functions": [
+      "rank",
+      "filter"
+    ],
+    "draft": true,
+    "publication": "waiting",
+    "wait": "Held-out source reconciliation and replay remain pending; unequal reading lengths and overlap limit interpretation.",
+    "example": "site/examples/recipes/search-transcripts",
+    "issue": "sdlc/issues/2026-10-05-recipe-search-transcripts.md",
+    "owner": "Queue owner",
+    "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
+    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
+    "measured": [],
+    "fixtureAssertions": [],
+    "body": [
+      {
+        "kind": "text",
+        "text": "Held-out source reconciliation and replay remain pending; unequal reading lengths and overlap limit interpretation."
+      }
+    ]
+  },
+  {
+    "slug": "ask-your-cache-with-duckdb",
+    "title": "Ask your cache with DuckDB",
+    "goal": "Ask analysis questions of retained answers.",
+    "job": "Ask analysis questions of retained answers.",
+    "functions": [
+      "choose"
+    ],
+    "draft": true,
+    "publication": "waiting",
+    "wait": "Admitted cache-analysis artifacts and supported-build reconciliation remain pending; no extension support or efficacy promise.",
+    "example": "site/examples/recipes/ask-your-cache-with-duckdb",
+    "issue": "sdlc/issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md",
+    "owner": "Queue owner",
+    "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
+    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
+    "measured": [],
+    "fixtureAssertions": [],
+    "body": [
+      {
+        "kind": "text",
+        "text": "Admitted cache-analysis artifacts and supported-build reconciliation remain pending; no extension support or efficacy promise."
+      }
+    ]
+  }
 ];

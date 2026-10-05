@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { SITE, isStub } from '../src/lib/listed-pages.mjs';
-import { ALIASES, routeFile, validateStub } from './redirect-contract.mjs';
+import { ALIASES, routeFile, validateCompatibility } from './redirect-contract.mjs';
 import { BINDING_PATHS_WITHOUT_PAGES } from '../src/data/catalog.mjs';
 
 const DIST = path.join(process.cwd(), 'dist');
@@ -60,7 +60,7 @@ if (stale.length) {
 
 const compatibility = [];
 for (const [alias, fixed] of Object.entries(ALIASES)) {
-  try { validateStub(fs.readFileSync(routeFile(DIST, alias), 'utf8'), alias, fixed, DIST); }
+  try { validateCompatibility(fs.readFileSync(routeFile(DIST, alias), 'utf8'), alias, fixed, DIST); }
   catch (e) { compatibility.push(e.message.includes('ENOENT') ? `alias compatibility: ${alias}: missing redirect stub` : e.message); }
 }
 const redirects = [];

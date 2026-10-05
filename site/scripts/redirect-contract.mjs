@@ -1,4 +1,6 @@
 // Independent compatibility inventory: 42 historical aliases and 19 moved pages.
+import { RECIPE_PAGES } from '../src/data/catalog.mjs';
+import { recipeSelection } from '../src/data/recipes.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { SITE, isStub } from '../src/lib/listed-pages.mjs';
@@ -54,4 +56,17 @@ export function validateStub(html, alias, fixed, dist, transformed = true) {
     if (isStub(without) || without === html || (html.match(/<script>/g) || []).length !== 1) fail('active refresh or unexpected script');
   } else if (/<script|<noscript/.test(html)) fail('unexpected untransformed shape');
   return refresh[0][0];
+}
+
+export function recipeRouteState(catalog = RECIPE_PAGES, preview = process.env.THINKTHEN_DRAFTS === '1') {
+  return recipeSelection(catalog, preview);
+}
+export function validateCompatibility(html, alias, fixed, dist, transformed = true, state = recipeRouteState()) {
+  if (alias !== '/recipes' || !state.index) return validateStub(html,alias,fixed,dist,transformed);
+  const fail = message => { throw new Error(`alias compatibility: /recipes: ${message}`); };
+  if (isStub(html) || html.includes(preserver(fixed))) fail('expected recipe index, found redirect');
+  if ((html.match(/<main(?:\s|>)/g) || []).length !== 1 || !html.includes('href="https://thinkthen.dev/recipes/"')) fail('missing canonical recipe index');
+  if (/<main\b[^>]*\sdata-draft(?:\s|=|>)/.test(html) !== state.draftIndex) fail('missing draft index marker or unexpected draft index');
+  if (state.draftIndex && !html.includes('Draft catalog:')) fail('missing visible draft index notice');
+  return null;
 }

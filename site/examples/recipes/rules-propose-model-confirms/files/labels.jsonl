@@ -1,0 +1,8 @@
+{"id":"R01","target_present":false,"target_value":null,"candidate_miss":false,"status":"local_none"}
+{"id":"R02","target_present":true,"target_value":"$12.50","candidate_miss":false,"status":"selected"}
+{"id":"R03","target_present":false,"target_value":null,"candidate_miss":false,"status":"model_none"}
+{"id":"R04","target_present":true,"target_value":"$11.00","candidate_miss":false,"status":"selected"}
+{"id":"R05","target_present":false,"target_value":null,"candidate_miss":false,"status":"model_none"}
+{"id":"R06","target_present":true,"target_value":"twelve dollars","candidate_miss":true,"status":"model_none"}
+{"id":"N01","target_present":true,"target_value":"$5.00","candidate_miss":false,"status":"not_sure"}
+{"id":"N02","target_present":true,"target_value":"$7.00","candidate_miss":false,"status":"not_sure"}

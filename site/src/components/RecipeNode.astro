@@ -1,0 +1,22 @@
+---
+import Code from './Code.astro';
+import { evidenceText, evidenceSource } from '../data/recipes.mjs';
+const { node, recipe, evidence, artifact } = Astro.props;
+const entry = node.kind === 'evidence' ? evidence.get(node.id) : null;
+---
+{node.kind === 'text' && <p>{node.text}</p>}
+{node.kind === 'heading' && <h2>{node.text}</h2>}
+{node.kind === 'link' && <p><a href={node.href}>{node.text}</a></p>}
+{node.kind === 'artifact' && (
+  <section data-recipe-artifact={node.file}>
+    <Code code={artifact(node.file)} file={node.file} lang={node.file.endsWith('.out') ? 'output' : null} />
+  </section>
+)}
+{entry && (
+  <table data-recipe-evidence={node.id} data-evidence-class={entry.evidenceClass}>
+    <thead><tr><th>Evidence</th><th>Source</th></tr></thead>
+    <tbody><tr><td>{evidenceText(entry)}</td><td>
+      <a href={evidenceSource(recipe,entry)}>{entry.evidenceClass === 'measured' ? 'Owning record' : 'Controlled fixture'}</a>
+    </td></tr></tbody>
+  </table>
+)}

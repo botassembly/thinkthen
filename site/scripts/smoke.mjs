@@ -90,7 +90,7 @@ fs.cpSync(path.join(site, 'recordings'), recordings, { recursive: true });
 // nothing and takes no replay folder. audit, diff, and check send nothing.
 const wrapper = path.join(tmp, 'bin');
 fs.mkdirSync(wrapper);
-fs.writeFileSync(path.join(wrapper, 'thinkthen'), `#!/bin/sh
+fs.writeFileSync(path.join(wrapper, 'thinkthen'), `#!/bin/bash
 case $1 in
   decide|choose|tag|score|filter|rank|find|annotate|recognize|relate) ;;
   *) exec "${bin}" "$@" ;;
@@ -104,6 +104,8 @@ exec "${bin}" "$@" --replay "${recordings}"
 // Every example sees the same environment on every machine: no key, no
 // address, no backend, no setting from the shell, and an empty
 // configuration folder.
+const cleanup = dir => { if (dir !== tmp) throw new Error('cleanup refuses unowned path'); fs.rmSync(dir, { recursive: true, force: true }); };
+try { cleanup(process.cwd()); throw new Error('cleanup guard failed'); } catch (e) { if (e.message !== 'cleanup refuses unowned path') throw e; }
 const env = { ...process.env, PATH: `${wrapper}:${process.env.PATH}`, HOME: path.join(tmp, 'home'), XDG_CACHE_HOME: path.join(tmp, 'cache'), XDG_CONFIG_HOME: path.join(tmp, 'config'), LC_ALL: 'C.UTF-8' };
 for (const name of Object.keys(env)) {
   if (name.startsWith('THINKTHEN_')) delete env[name];
@@ -131,12 +133,12 @@ for (const [page, list] of pages) {
     fs.cpSync(bench, work, { recursive: true });
     cwd = path.join(work, folder);
   } else if (fs.existsSync(path.join(root, page, 'files'))) {
-    fs.cpSync(path.join(root, page, 'files'), work, { recursive: true });
+    fs.cpSync(path.join(root, page, 'files'), page.startsWith('recipes/') ? path.join(work, 'files') : work, { recursive: true });
   }
   for (const rel of list) {
     const file = path.join(root, rel);
     const text = fs.readFileSync(file, 'utf8');
-    const done = spawnSync('bash', ['-c', `{\n${asserting(text)}\n} 2>&1`], { cwd, env, encoding: 'utf8' });
+    const done = spawnSync('/bin/bash', ['-c', `{\n${asserting(text)}\n} 2>&1`], { cwd, env, encoding: 'utf8' });
     const output = done.stdout.replace(/\n+$/, '');
     const exit = done.status;
     ran += 1;
@@ -161,7 +163,7 @@ for (const [page, list] of pages) {
     }
   }
 }
-fs.rmSync(tmp, { recursive: true, force: true });
+cleanup(tmp);
 
 const skipped = skips.reduce((n, s) => n + s.count, 0);
 const skipLines = skips.filter((s) => s.count).map((s) => `  ${s.count} ${s.glob}: ${s.why}`).join('\n');

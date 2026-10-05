@@ -1,0 +1,5 @@
+{
+  "choose": "Which candidate is the stated total?",
+  "model": "recipe-fixture-v1",
+  "threshold": 0.75
+}
