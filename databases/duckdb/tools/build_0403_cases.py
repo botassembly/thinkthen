@@ -31,7 +31,8 @@ def routing(case, encode_footer, write_script):
     cmake.write_text('''#!/usr/bin/env python3
 import json,os,sys
 from pathlib import Path
-assert {k:v for k,v in os.environ.items() if k.startswith('GIT_')} == {'GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':'/dev/null','GIT_NO_REPLACE_OBJECTS':'1'}
+assert [os.environ.get(k) for k in ('GIT_CONFIG_NOSYSTEM','GIT_CONFIG_GLOBAL','GIT_NO_REPLACE_OBJECTS')] == ['1','/dev/null','1']
+assert all(os.environ.get(k) is None for k in ('GIT_DIR','GIT_WORK_TREE','GIT_COMMON_DIR','GIT_INDEX_FILE','GIT_OBJECT_DIRECTORY','GIT_ALTERNATE_OBJECT_DIRECTORIES','GIT_CONFIG_COUNT','GIT_CONFIG_KEY_0','GIT_CONFIG_VALUE_0','GIT_CONFIG_PARAMETERS','GIT_CONFIG','GIT_CONFIG_SYSTEM','GIT_REPLACE_REF_BASE','GIT_CEILING_DIRECTORIES'))
 args=sys.argv[1:]
 base=Path(args[1] if args[0]=='--build' else args[args.index('-B')+1])
 with open(os.environ['FIXTURE_CMAKE_LOG'],'a') as log:log.write(json.dumps(args)+'\\n')

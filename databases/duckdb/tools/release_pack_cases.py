@@ -42,7 +42,7 @@ def copy_packer(destination: Path) -> None:
 def reject_lane_cleanup() -> None:
     result = subprocess.run(['/bin/sh', '-c', '. "$1"; scratch_remove "$2"', 'cleanup-plant',
                              str(REPO / 'sdlc/scripts/scratch.sh'), str(REPO)],
-                            capture_output=True, text=True, check=False)
+                            capture_output=True, text=True, check=False, env=child_env())
     assert result.returncode == 1 and 'which this run did not make with mktemp' in result.stderr
 
 
