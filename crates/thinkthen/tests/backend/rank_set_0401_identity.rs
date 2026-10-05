@@ -6,6 +6,8 @@ use crate::support::stored;
 use serde_json::Value;
 use std::io;
 
+mod preview_0400;
+
 #[test]
 fn one_member_matches_plain_rank_bytes_requests_keys_and_detailed_answer() -> io::Result<()> {
     let set = saved(
@@ -353,10 +355,10 @@ fn first_structured_member_does_not_change_selecting_text_members_batch_metadata
 
 #[test]
 fn preview_packs_two_text_members_once_per_record_and_matches_runtime() -> io::Result<()> {
-    super::rank_set_0401_preview_0400::text_members()
+    preview_0400::text_members()
 }
 
 #[test]
 fn preview_keeps_mixed_member_quoting_and_runtime_packing_in_both_orders() -> io::Result<()> {
-    super::rank_set_0401_preview_0400::mixed_members()
+    preview_0400::mixed_members()
 }

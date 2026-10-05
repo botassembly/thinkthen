@@ -1,5 +1,5 @@
 //! Counted preview/runtime contracts at the default and explicit widths.
-use super::rank_set_0401::{SET, call_at_width, saved};
+use super::super::rank_set_0401::{SET, call_at_width, saved};
 use crate::harness::Listener;
 use crate::intake_0401::text;
 use serde_json::Value;

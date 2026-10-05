@@ -213,4 +213,3 @@ mod rank_set_0401_safety;
     reason = "checked result objects and recorded keys stop the identity proof"
 )]
 mod rank_set_0401_identity;
-mod rank_set_0401_preview_0400;
