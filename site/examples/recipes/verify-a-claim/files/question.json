@@ -6,5 +6,6 @@
     "not_stated": "The source does not address the claim either way"
   },
   "model": "jev-1.13.0",
-  "threshold": 1e-06
+  "threshold": 1e-06,
+  "batch": 10
 }

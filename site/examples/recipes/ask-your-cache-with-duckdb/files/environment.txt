@@ -1,4 +1,6 @@
-Supported path: stock DuckDB 1.5.5; dbt v1 where dbt is used.
-This read-only JSONL example needs no extension, key or network.
-The ThinkThen extension uses the unsigned development path documented on the DuckDB install page.
-DuckDB 1.5.4 and the custom dbt v2 path are not supported by this recipe.
+Use stock DuckDB 1.5.5.
+Use dbt v1 when dbt is needed.
+This JSONL query needs no extension, key or network.
+The extension uses the unsigned development path.
+The DuckDB install page gives the extension instructions.
+DuckDB 1.5.4 and custom dbt v2 remain unsupported here.

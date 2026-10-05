@@ -1,4 +1,4 @@
-saved_rows,answered_rows,without_answer,recorded_requests_sent
+saved_rows,answered,unanswered,requests_sent
 7,5,2,0
-answered_rows,near_cut
+answered,near_cut
 5,0

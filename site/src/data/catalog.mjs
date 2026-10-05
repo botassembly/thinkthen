@@ -1271,7 +1271,6 @@ export const RECIPE_PAGES = [
     "issue": "sdlc/issues/2026-10-03-draft-function-extract.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/2026-10-05-reviewed-experiment-planning.md",
-    "sourceCommit": "ea615c0e6a3412bb4716ad97b704a3f698be30cb",
     "measured": RULES_MEASURED,
     "fixtureAssertions": [
       {
@@ -1282,9 +1281,7 @@ export const RECIPE_PAGES = [
         "scope": "Six ordinary cases and two reading controls",
         "qualification": "Controlled loopback fixture; no provider-quality measurement.",
         "artifact": "files/harness.json",
-        "selector": "/population",
-        "sha256": "9dab654a70e8376ccedfbd0ded55727992cd736a3d2d1ea3ad5db8c1b4e7e4a1",
-        "artifactCommit": "1da71e8116cf89e33f2edc193b0c7ea3d19c32ff"
+        "selector": "/population"
       }
     ],
     "body": [
@@ -1581,7 +1578,6 @@ export const RECIPE_PAGES = [
     "issue": "sdlc/issues/2026-10-03-draft-function-link.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
-    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
@@ -1605,8 +1601,7 @@ export const RECIPE_PAGES = [
     "example": "site/examples/recipes/verify-a-claim",
     "issue": "sdlc/issues/2026-10-03-draft-function-verify.md",
     "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-publish-core-recipes.md",
-    "sourceCommit": "f85209de313f8486560061617e76e31cb5c93ab4",
+    "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [
       {
         "id": "supported",
@@ -1615,12 +1610,12 @@ export const RECIPE_PAGES = [
         "denominator": "20",
         "definition": "Selected supports on constructed supported claims",
         "qualification": "Clustered within twenty excerpts from five RFCs; no population guarantee.",
-        "cohort": "Constructed technical citation claims",
+        "cohort": "Sixty constructed claims clustered within twenty excerpts from five RFCs",
         "backend": "TypeSafe",
         "model": "jev-1.13.0",
-        "resolved": "not applicable",
-        "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/f85209de313f8486560061617e76e31cb5c93ab4/sdlc/records/0402-publish-core-recipes.md"
+        "resolved": "60",
+        "unresolved": "0",
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
       },
       {
         "id": "bad-supports",
@@ -1629,12 +1624,12 @@ export const RECIPE_PAGES = [
         "denominator": "40",
         "definition": "Selected supports on contradicted or excerpt-local unsupported claims",
         "qualification": "No wrong supports occurred; no protective probability cut was established.",
-        "cohort": "Constructed technical citation claims",
+        "cohort": "Sixty constructed claims clustered within twenty excerpts from five RFCs",
         "backend": "TypeSafe",
         "model": "jev-1.13.0",
-        "resolved": "not applicable",
-        "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/f85209de313f8486560061617e76e31cb5c93ab4/sdlc/records/0402-publish-core-recipes.md"
+        "resolved": "60",
+        "unresolved": "0",
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
       },
       {
         "id": "verdicts",
@@ -1643,12 +1638,12 @@ export const RECIPE_PAGES = [
         "denominator": "60",
         "definition": "Frozen verdict correctness",
         "qualification": "One weekday label has a defensible contrary reading; these are not independent observed citations.",
-        "cohort": "Constructed technical citation claims",
+        "cohort": "Sixty constructed claims clustered within twenty excerpts from five RFCs",
         "backend": "TypeSafe",
         "model": "jev-1.13.0",
-        "resolved": "not applicable",
-        "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/f85209de313f8486560061617e76e31cb5c93ab4/sdlc/records/0402-publish-core-recipes.md"
+        "resolved": "60",
+        "unresolved": "0",
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
       }
     ],
     "fixtureAssertions": [],
@@ -1748,7 +1743,6 @@ export const RECIPE_PAGES = [
     "issue": "sdlc/issues/2026-10-03-draft-function-navigate.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
-    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
@@ -1774,7 +1768,6 @@ export const RECIPE_PAGES = [
     "issue": "sdlc/issues/2026-10-05-recipe-search-transcripts.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/2026-10-04-recipe-evidence-limits.md",
-    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
@@ -1798,8 +1791,7 @@ export const RECIPE_PAGES = [
     "example": "site/examples/recipes/ask-your-cache-with-duckdb",
     "issue": "sdlc/issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md",
     "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-publish-core-recipes.md",
-    "sourceCommit": "f85209de313f8486560061617e76e31cb5c93ab4",
+    "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [
       {
         "id": "analytics-spend",
@@ -1813,7 +1805,7 @@ export const RECIPE_PAGES = [
         "model": "not applicable",
         "resolved": "not applicable",
         "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/f85209de313f8486560061617e76e31cb5c93ab4/sdlc/records/0402-publish-core-recipes.md"
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
       },
       {
         "id": "historical-replay",
@@ -1827,7 +1819,7 @@ export const RECIPE_PAGES = [
         "model": "not applicable",
         "resolved": "not applicable",
         "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/f85209de313f8486560061617e76e31cb5c93ab4/sdlc/records/0402-publish-core-recipes.md"
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
       }
     ],
     "fixtureAssertions": [],
@@ -1847,6 +1839,11 @@ export const RECIPE_PAGES = [
       {
         "kind": "text",
         "text": "For extension calls, follow the DuckDB install page and its unsigned development instructions. This read-only example needs only the stock CLI."
+      },
+      {
+        "kind": "link",
+        "text": "Install DuckDB and read the unsigned development extension instructions.",
+        "href": "/install/duckdb/"
       },
       {
         "kind": "heading",

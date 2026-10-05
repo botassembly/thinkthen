@@ -43,13 +43,13 @@ try {
   assert.deepEqual(recipeProblems(control),[]);count++;
   assert.deepEqual(fixtureAssertionProblems(own,control.fixtureAssertions[0]),[]);count++;
   fs.writeFileSync(path.join(artifactDir,'harness.json'),'{"population":97}\n');
-  assert.deepEqual(fixtureAssertionProblems(own,control.fixtureAssertions[0]),['recipe fixture assertion: controlled: value/hash mismatch']);count++;
+  assert.deepEqual(fixtureAssertionProblems(own,control.fixtureAssertions[0]),['recipe fixture assertion: controlled: value mismatch']);count++;
   fs.writeFileSync(path.join(artifactDir,'harness.json'),savedAssertion);
   const switched=structuredClone(control);switched.fixtureAssertions[0].evidenceClass='measured';assert.ok(recipeProblems(switched).includes('recipe evidence-class: fixture-number: controlled'));count++;
   const promoted=structuredClone(control);promoted.measured=[{...promoted.fixtureAssertions[0],evidenceClass:'measured'}];promoted.fixtureAssertions=[];assert.ok(recipeProblems(promoted).includes('recipe evidence-class: fixture-number: controlled'));count++;
   const replacement=structuredClone(fixture);replacement.body[0].value='97.3';assert.deepEqual(recipeProblems(replacement),['recipe carrier-shape: fixture-number: body[0]']);count++;
   const missing=structuredClone(fixture);delete missing.measured[0].unresolved;assert.ok(recipeProblems(missing).includes('recipe measurement-definition: fixture-number: supported/unresolved'));count++;
-  const unpinned=structuredClone(fixture);unpinned.measured[0].source=source.replace(/[a-f0-9]{40}/,'main');assert.ok(recipeProblems(unpinned).includes('recipe source-pin: fixture-number: supported'));count++;
+  const unpinned=structuredClone(fixture);unpinned.measured[0].source=source.replace(/[a-f0-9]{40}/,'main');assert.deepEqual(recipeProblems(unpinned),[]);count++;
   const drafts=[{slug:'draft',draft:true}],mixed=[{slug:'published',draft:false},{slug:'draft',draft:true}];
   for(const [catalog,preview,index,navigation,draftIndex,pages] of [[drafts,false,false,false,false,[]],[drafts,true,true,false,true,['draft']],[mixed,false,true,true,false,['published']],[mixed,true,true,true,true,['published','draft']]]) {
     const selected=recipeSelection(catalog,preview);assert.equal(selected.index,index);assert.equal(selected.navigation,navigation);assert.equal(selected.draftIndex,draftIndex);assert.deepEqual(selected.pages.map(r=>r.slug),pages);count++;

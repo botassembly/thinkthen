@@ -205,6 +205,6 @@ The build transforms the 61 generated redirect stubs with `preserve-redirect-fra
 `check-markdown-headings.mjs` preserves the six existing annotate subsections after nesting them at h4. Build checks the emitted canonical twin and `llms-full.txt`; check validates the saved build.
 
 
-Recipes use the separate `RECIPE_PAGES` catalog and closed evidence carriers; Bash examples remain `SHELL_JOBS` at their existing addresses. `recipes/[...index].astro` generates no index in a normal all-draft build, retaining the `/recipes` Bash redirect. `THINKTHEN_DRAFTS=1` generates a direct draft index and details without a global Recipes menu/footer entry. Publication is separately reviewed.
+Recipes use `RECIPE_PAGES`; Bash examples remain `SHELL_JOBS`. Normal builds publish Rules, verify and cache SQL in the index, navigation, HTML, Markdown, llms exports and search. Link, navigation and transcript-search recipes remain later drafts. `THINKTHEN_DRAFTS=1` also emits visibly marked later drafts.
 
-`check-recipes.test.mjs` exercises independent numerical negatives and supported HTML/Markdown/llms controls. `check-recipes.mjs` validates every source draft and checks rendered evidence/visibility after exports. `smoke.mjs` replays the recipe shell samples and compares their output with the saved output. It uses a fresh folder, saved recordings and no credentials.
+`check-recipes.mjs` checks source content and rendered evidence and visibility. Run the ordinary sample replay with `node scripts/smoke.mjs recipes/`; the SQL example uses the stock DuckDB CLI. Illustrative outputs establish local behavior, not provider quality. Every supports result in verify requires a person to review the original source before action.
