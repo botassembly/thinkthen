@@ -4,7 +4,8 @@ using ThinkThen;
 string[] settings = {
     "{\"backend\":\"typesafe\"}",
     "{\"backend\":\"liquid\"}",
-    "{\"backend\":\"ollama\",\"base_url\":\"http://localhost:11535/v1\"}",
+    "{\"backend\":\"ollama\",\"base_url\":" +
+        "\"http://localhost:11535/v1\"}",
 };
 foreach (var setting in settings) {
     using var tt = Engine.Open(setting);

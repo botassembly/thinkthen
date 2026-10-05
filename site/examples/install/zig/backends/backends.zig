@@ -23,22 +23,33 @@ pub fn main() !void {
     const settings = [_][:0]const u8{
         "{\"backend\":\"typesafe\"}",
         "{\"backend\":\"liquid\"}",
-        "{\"backend\":\"ollama\",\"base_url\":\"http://localhost:11535/v1\"}",
+        "{\"backend\":\"ollama\",\"base_url\":" ++
+            "\"http://localhost:11535/v1\"}",
     };
     for (settings) |setting| {
-        var tt = switch (try thinkthen.Engine.initWithSettings(allocator, setting)) {
+        const open = thinkthen.Engine.initWithSettings;
+        const opened = try open(
+            allocator,
+            setting,
+        );
+        var tt = switch (opened) {
             .ok => |engine| engine,
             .failed => |failure| {
-                thinkthen.releaseFailure(allocator, failure);
+                thinkthen.releaseFailure(
+                    allocator,
+                    failure,
+                );
                 return error.NoEngine;
             },
         };
         defer tt.deinit();
 
-        const question = "Does the customer ask for a refund?";
+        const question =
+            "Does the customer ask for a refund?";
         const broken =
             "Please refund my order. It arrived broken.";
-        const thanks = "Thanks for the quick help yesterday!";
+        const thanks =
+            "Thanks for the quick help yesterday!";
         const broken_is_refund =
             try decide(&tt, question, broken);
         const thanks_is_refund =

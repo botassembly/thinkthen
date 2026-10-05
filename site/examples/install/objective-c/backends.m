@@ -7,11 +7,13 @@ int main(void) {
     const char *settings[] = {
         "{\"backend\":\"typesafe\"}",
         "{\"backend\":\"liquid\"}",
-        "{\"backend\":\"ollama\",\"base_url\":\"http://localhost:11535/v1\"}",
+        "{\"backend\":\"ollama\",\"base_url\":"
+        "\"http://localhost:11535/v1\"}",
     };
     for (size_t i = 0; i < 3; i++) {
         TTFailure failure = {0};
-        TTClient *client = [TTClient createWithSettings:settings[i]
+        TTClient *client = [TTClient
+            createWithSettings:settings[i]
             length:strlen(settings[i]) failure:&failure];
         assert(client != nil);
         assert(failure.kind == TTErrorNone);

@@ -5,7 +5,8 @@ int main() {
     const char *settings[] = {
         "{\"backend\":\"typesafe\"}",
         "{\"backend\":\"liquid\"}",
-        "{\"backend\":\"ollama\",\"base_url\":\"http://localhost:11535/v1\"}",
+        "{\"backend\":\"ollama\",\"base_url\":"
+        "\"http://localhost:11535/v1\"}",
     };
     for (const char *setting : settings) {
         auto engine = tt::create(setting);

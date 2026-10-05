@@ -8,12 +8,14 @@ void main() {
   const settings = [
     '{"backend":"typesafe"}',
     '{"backend":"liquid"}',
-    '{"backend":"ollama","base_url":"http://localhost:11535/v1"}',
+    '{"backend":"ollama","base_url":'
+        '"http://localhost:11535/v1"}',
   ];
   for (final setting in settings) {
     final engine = tt.create(setting);
     try {
-      const question = 'Does the customer ask for a refund?';
+      const question =
+          'Does the customer ask for a refund?';
       final brokenIsRefund = tt.decide(
         engine,
         question,

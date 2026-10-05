@@ -12,8 +12,7 @@ copy "thinkthen.cpy".
        '{"backend":"typesafe"}'.
    02 filler pic x(100) value
        '{"backend":"liquid"}'.
-   02 filler pic x(100) value
-       '{"backend":"ollama","base_url":"http://localhost:11535/v1"}'.
+   02 filler pic x(100).
 01 settings-rows redefines settings-table.
    02 settings-text pic x(100) occurs 3 times.
 01 settings-index usage binary-long.
@@ -26,11 +25,17 @@ copy "thinkthen.cpy".
 01 evidence pic x(200).
 01 evidence-length usage binary-double unsigned.
 procedure division.
+    string '{"backend":"ollama","base_url":'
+        '"http://localhost:11535/v1"}'
+        into settings-text(3)
+    end-string
     perform varying settings-index from 1 by 1
         until settings-index > 3
-        move length(trim(settings-text(settings-index) trailing))
+        move length(
+            trim(settings-text(settings-index) trailing))
             to settings-length
-        call "TT-ENGINE-NEW" using settings-text(settings-index)
+        call "TT-ENGINE-NEW" using
+            settings-text(settings-index)
             settings-length engine tt-failure
         if engine = null or tt-failure-code not = 0
             stop run returning 1

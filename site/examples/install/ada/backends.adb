@@ -11,7 +11,9 @@ procedure Backends is
    Settings : constant array (1 .. 3) of Unbounded_String :=
      (To_Unbounded_String ("{""backend"":""typesafe""}"),
       To_Unbounded_String ("{""backend"":""liquid""}"),
-      To_Unbounded_String ("{""backend"":""ollama"",""base_url"":""http://localhost:11535/v1""}"));
+      To_Unbounded_String
+        ("{""backend"":""ollama"",""base_url"":" &
+         """http://localhost:11535/v1""}"));
 
    Question : constant String :=
      "Does the customer ask for a refund?";
