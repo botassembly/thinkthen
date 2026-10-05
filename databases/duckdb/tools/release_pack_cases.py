@@ -93,6 +93,14 @@ def published_consumer(archive: Path, target: str, release: str, root: Path) -> 
                     for entry in original:
                         if entry.name.removeprefix('./') != wanted:
                             output.addfile(entry, original.extractfile(entry) if entry.isfile() else None)
+                    data = canonical(versions()[1], target).read_bytes()
+                    import io
+                    stale = tarfile.TarInfo('thinkthen.duckdb_extension')
+                    stale.size = len(data)
+                    output.addfile(stale, io.BytesIO(data))
+                cached = own / '.duckdb/extensions' / versions()[0] / selected(versions()[0], target)['platform']
+                cached.mkdir(parents=True)
+                shutil.copyfile(canonical(versions()[0], target), cached / 'unrelated.duckdb_extension')
             check.release = lambda name: local
             before = backend.count()
             try:

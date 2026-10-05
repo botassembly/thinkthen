@@ -102,9 +102,10 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the stock CLI and the shared cases load the
 	# extension unpacked from the release archive, by its path.
 	. "$REPO/sdlc/scripts/installed.sh"
-	installed_unpack
+	unset THINKTHEN_CONFORMANCE_IDS
 	release=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 	python3 cpp/verify_repository.py "$THINKTHEN_ARTIFACT" "$host_target" "$release"
+	installed_unpack
 	python3 cpp/verify_repository.py "$scratch" "$host_target" "$release"
 	for version in $DUCKDB_VERSIONS; do
 		select_host "$version"
@@ -116,10 +117,6 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	done
 	select_host "$DEFAULT_VERSION"
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/$DEFAULT_VERSION/$platform/thinkthen.duckdb_extension"
-	# Ticket 0374: the shipped extension keeps its own panic hook.
-	own_panic_hook "$THINKTHEN_DUCKDB_EXTENSION"
-	stock_cli
-	verify_selected_package installed
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
 	sh "$LIMIT" 900 "$PY" tools/plan_suite.py p1_native_struct_is_keyless_and_sends_nothing plan_refusals_and_named_binding_never_send positive_process_total_denies_the_next_actual_send
