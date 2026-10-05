@@ -85,6 +85,12 @@ The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document
 
 `thinkthen_find` accepts an ordered JSON array of 2–255 nonblank text units, or 2–254 with `{"none":true}`. Duplicates retain separate zero-based positions. Empty input and SQL NULL return SQL NULL. `thinkthen_recognize` keeps the `text, start, end, length, kind, strength` row shape, with character offsets matching SQLite `substr`. `thinkthen_relations` accepts a full or bare recognize spec or an `@file`.
 
+For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names as `'person,organisation'`. To supply descriptions, pass a recognize JSON object such as `'{"kinds":{"person":"A human name."}}'`, a full versioned recognize spec, or an `@file` containing that spec. A bare JSON array string such as `'["person"]'` currently names one literal kind, `["person"]`. Use `'person'` to request the person kind.
+
+```sql
+SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person');
+```
+
 `thinkthen_relate` runs a caller-supplied read-only `SELECT` yielding `id, name` or `id, name, kind` on the same connection. `rules` is one inline rule, a JSON array of rules, a JSON relate spec or `@file`. At most 255 distinct name/kind pairs enter a call. Equal pairs share one entity, and each answer edge expands to the ids that held its endpoints. Blank names/kinds and a 256th pair raise usage before a send.
 
 ## Runtime boundaries
