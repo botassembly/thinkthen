@@ -1,6 +1,6 @@
 # 0398: Release safety: publish dry runs, install checks after publishing, and a rehearsed tag
 
-Status: in progress. Slice A landed through `ff047d8c50ce39ed9ab0acd22695c4960a963d38`. Slice B offline implementation received fresh ACCEPT at `fc4d842b0e627a9e4f96088f4bcff32e7a9e6246` and landed through `b780323909505450743af30d8bea2ee07a51e65b`. Slice C landed through `a389291b5`. Slice B2 corrects the R consumer's binary index and archive paths under `src/contrib`; required lint passes and fresh code review remains. Hosted rehearsal and installed-package proof remain pending. Lane 2, its first item. Parent: Ian's 0.2 plan of 2026-10-04, lane 2 "release safety". It closes `sdlc/issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md`, `sdlc/issues/2026-10-04-public-install-checks-are-done-by-hand.md` and `sdlc/issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md`. It needs no other ticket. It lands after ticket 0397 in the lane order.
+Status: in progress. Slices A, B, B2 and C landed through `ddfcbc74c`; B2 fixes the R binary contribution paths. Hosted rehearsal and installed-package proof remain pending.
 
 Milestone: 0.2
 

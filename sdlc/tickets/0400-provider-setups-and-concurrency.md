@@ -1,6 +1,6 @@
 # 0400: One setup format per provider, local servers and Clef documented, and a default throttle of 8
 
-Status: in progress. Slice A format and starter table received fresh independent design and record acceptance; slice B source and checkpoint passed, with final receipt review and landing pending; slices C and D remain. Lane 2, after ticket 0399, on Ian's lane order of 2026-10-04. Four slices. Slice A lands ADR 0117 and the starter evidence table before the experiments team's new-model day in the week of 2026-10-05. Slice B implements the format. Slice C raises the default throttle to 8. Slice D waits for accepted local-server and new-model results. Amends ADR 0032, ADR 0108 and ADR 0114 section 2 through ADR 0117 in slice A, and the throttle default in ADR 0010, ADR 0017 section 5 and ADR 0048 item 5 in slice C. Closes no existing issue.
+Status: in progress. Slices A and B are landed; slice C implements the default of 8 and awaits tests and landing under the lighter proof ruling. Slice D waits for accepted provider measurements.
 
 Milestone: 0.2
 

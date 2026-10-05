@@ -1,6 +1,6 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: complete. All four slices are implemented and checked. A, B and C landed; D received fresh source, integration and final receipt acceptance after its full coordinator checkpoint. The completion-record review and D landing remain in the build workflow. SQL sets remain ticket 0417 for 0.2; foreign sets remain ticket 0418 later.
+Status: landed. All four slices landed through `b39774cce`. SQL question sets and foreign question sets remain later in tickets 0417 and 0418.
 
 Landed: fb428165487488a9decbaf08c2269a64c2f57442
 
