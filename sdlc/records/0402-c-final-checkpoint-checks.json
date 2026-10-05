@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "scope": "0402 C FINAL",
+  "frozen_candidate": "4f9dce58207c066c607d0e9ab51f39ad96017cd7",
+  "implementation_source": "dbc6bf72d999122b4c2f520c2034f90ebf09b177",
+  "outer_exit": 0,
+  "full_test": {
+    "workspace_passed": 1410,
+    "workspace_skipped": 26,
+    "library_passed": 145,
+    "library_skipped": 4,
+    "consumer_passed": 21,
+    "consumer_skipped": 3
+  },
+  "spec": {
+    "pages_passed": 64,
+    "pages_skipped": 1,
+    "demos_green": 24,
+    "demos_red": 0
+  },
+  "canonical": {
+    "library": 308,
+    "sql": 42,
+    "entries": 350,
+    "stale_pages": 0
+  },
+  "site_build_exit": 0,
+  "stress_executed": false,
+  "native_executed": false,
+  "source_review": "accept",
+  "receipts": {
+    "checkpoint.log": "5aa8b3f1fac08ec34f310e7944d42a727cbaddb6a06956d9b406bf62f685d5c7",
+    "test.log": "47bddca4341f8a09a05897c6a6cd443978907dba34d6c95190c6b7f9845d2e67",
+    "spec.log": "0c6100d4855a8e22e33de4822e41d6b48cf329684cc93e7f0679605cbeda02dc",
+    "test-docs.log": "3e536c9c78cd641f18ef93493f4a48e5a65a86ea5b1fbd258ee4fcd4674e82fd",
+    "strict.log": "d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30",
+    "site-build.log": "8850e546895449271c6d3722aa5b8dacdd399015e4003a98c9973b6de929043f",
+    "final-proof.json": "75984be0ac4980d34d76812071f49db2e136d8de86029521523620bc87c2dc6d",
+    "private-name-count.log": "368ebed8b5eb7ae950a1ee0812bc198a6a02d1f438f64dca2739a2fe0c3537f3"
+  },
+  "runners": {
+    "target/0402c-build/env-run.sh": "c97dd4511e7f1db491f5d74d2ffce6541ac46723a5c3899fbba94254d77ee2c6",
+    "target/0402c-build/checkpoint-final.sh": "4c81ba0de005bc97025a985f7accce49d3f74317402358071614ded127828c28"
+  },
+  "final_record_checks": {
+    "final-record-private-count.log": "f7397e118fc133b78dce4569f8c41bd5e17aec9eee2628c0aa0fae3ba75ada5d",
+    "final-record-tickets.log": "21433f30154bb74aa9dc4c97c2c63db9cbb969103e80d5e6f0e132245b8a8032",
+    "pm-links-final-slugs.json": "6ed23095bda56617183cfa44f2f335f7a1f89f8af595be59fcde0927e1f1da37"
+  },
+  "pm_links": {
+    "total_other_record_findings": 70,
+    "changed_0402_findings": 0,
+    "full_links_gate_passed": false
+  }
+}

@@ -1,6 +1,6 @@
 # 0402 C: Glossary, confidence and reading boundaries
 
-Status: in progress, partial ticket. A/B landed through `cf457ff989f21e626d33f0bfeb3de55297eebee2`. C implementation awaits fresh independent High source review and the coordinator's named checkpoint. D remains unimplemented. No helpers participated.
+Status: in progress, partial ticket. A/B landed through `cf457ff989f21e626d33f0bfeb3de55297eebee2`. C implementation received fresh independent High source ACCEPT and passed the coordinator's named final checkpoint. Final receipt review and C landing remain pending. D remains unimplemented. No helpers participated.
 
 ## Authority, risk and reconciliation
 
@@ -78,3 +78,15 @@ Ignored reproducible runners, all seven plant/control pairs, the clean lint clon
 | `checker.log` | `8dc983906e81c5521aeff37f2c5b66e70925d82c5ff86456aefee7ecbf2785df` |
 
 Manifest SHA-256: `ac393b6e3e39078361ec7f9b73e8ac6ede537736ece797deb06ad2471d645961`. Clean source/checker/export scopes exited 0; candidate strict check exited 1 as specified above; original failed fixture and every intended code plant exited 101. No source-independent future success is claimed.
+
+## Coordinator final checkpoint
+
+The preceding pending-checkpoint statements describe the builder handoff. They are superseded by the actual named `0402 C FINAL` checkpoint on frozen candidate `4f9dce58207c066c607d0e9ab51f39ad96017cd7`, whose implementation is `dbc6bf72d999122b4c2f520c2034f90ebf09b177`. Fresh independent High source review returned ACCEPT before the checkpoint. The outer runner exited 0 and its end guard verified unchanged HEAD. No old receipt was rebound.
+
+Full test passes 1410 workspace cases with 26 skipped, 145 library cases with four skipped, and 21 consumer cases with three skipped. The executable specification passes 64 pages with one skipped; the demo sweep is 24 green and zero red. Actual documentation replay passes all 308 library and 42 SQL samples. The actual strict checker reports 350 matching proofs and zero stale pages. The final normal site build passes, including 189 linked pages, 61 redirect aliases, nine fragment cases, three direct pages, two no-JavaScript controls, 33 card fixtures and 128 matching page cards. The runner-generated binding proof is committed unchanged from its captured final artifact. No hash was manually substituted.
+
+The [checkpoint manifest](0402-c-final-checkpoint-checks.json) pins every actual log and both owned runners. It keeps full tests, specification, actual canonical replay and final site build distinct from inherited focused proof. The earlier failed listener fixture, stale-proof check and all independent code plants remain retained at their original identities. A renewed count-only private-name scan checks 14 changed text files and finds zero matching lines. It prints no patterns. Existing untracked bytecode remains preserved; no blanket untracked-clean claim is made.
+
+No stress, native Windows, CI dispatch, tag, paid call, new experiment, release or publication action ran. C remains a partial ticket pending fresh receipt review and landing. D's corrected complete recipe design received fresh independent ACCEPT at SHA-256 `e970b9cfda6feb1e37cd0f3be322481b5536155f17593b5d395e24cbd7e080f1`; implementation starts only after C lands and the accepted plan is reconciled with the landed source.
+
+The final record/proof scan also finds zero private-name matching lines. The ticket checker passes with zero failures under its Python interpreter. PM link lint reports 70 findings on other records and zero on 0402; this is not a passing repository-wide links gate. Both closed issues use their supported slug in ticket links, and PM rewrites their milestone destinations. The final manifest retains these bounded record-check receipts.
