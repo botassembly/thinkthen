@@ -114,5 +114,33 @@ say(error=run(db, "SELECT * FROM thinkthen_relate('SELECT id,name,kind FROM enti
     expect(backend.close(), 0, 'oversized source set sends nothing')
 
 
+def test_invalid_utf8_discovered_filename_refuses_before_any_judgment():
+    import os
+    with tempfile.TemporaryDirectory(prefix='thinkthen-names-') as tmp:
+        pathlib.Path(tmp,'a').write_text('valid\n')
+        descriptor=os.open(os.fsencode(tmp)+b'/z-\xff',os.O_CREAT|os.O_WRONLY,0o600)
+        os.close(descriptor)
+        backend=Backend()
+        held=child(f"""
+db=connect()
+say(result=run(db, "SELECT thinkthen_decide('Is it valid?',record) FROM thinkthen_read_files(?)", ({tmp!r},)))
+""", environment(backend))
+        sends=backend.close()
+        expect(isinstance(held['result'],str) and 'UTF-8' in held['result'],True,'native manifest filename preflight')
+        expect(sends,0,'complete invalid filename manifest sends nothing')
+
+
+def test_span_mapping_refuses_empty_spans_and_sql_integer_overflow():
+    backend=Backend()
+    held=child("""
+db=connect()
+say(empty=run(db,'SELECT thinkthen_span_lines(?,1,2,2)',('abc',)),
+    large=run(db,'SELECT thinkthen_span_lines(?,9223372036854775807,2,3)',('a\\nb',)))
+""",environment(backend))
+    expect(held['large'],'thinkthen usage: source line exceeds SQL INTEGER (retryable: no)','SQL coordinate overflow')
+    expect(held['empty'],'thinkthen usage: source span is outside its record (retryable: no)','empty span')
+    expect(backend.close(),0,'mapper refusals send nothing')
+
+
 if __name__ == '__main__':
     sys.exit(main(globals()))

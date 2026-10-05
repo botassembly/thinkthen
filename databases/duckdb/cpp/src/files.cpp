@@ -7,7 +7,7 @@
 #include "duckdb/common/types/vector.hpp"
 #include "yyjson.hpp"
 
-#include <algorithm>
+#include <limits>
 
 extern "C" {
 ThinkThenReply thinkthen_cpp_reader_options(const uint8_t *, size_t);
@@ -128,7 +128,11 @@ struct Json {
 	Value Integer(const char *name) {
 		auto value = Member(name);
 		if (!duckdb_yyjson::yyjson_is_uint(value)) { throw OrdinaryError("thinkthen defect: invalid source line"); }
-		return Value::BIGINT(static_cast<int64_t>(duckdb_yyjson::yyjson_get_uint(value)));
+		auto line = duckdb_yyjson::yyjson_get_uint(value);
+		if (line > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+			throw OrdinaryError("thinkthen usage: source line exceeds SQL BIGINT");
+		}
+		return Value::BIGINT(static_cast<int64_t>(line));
 	}
 };
 

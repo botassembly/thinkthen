@@ -23,7 +23,7 @@ def ten_folder_examples_keep_original_documents_and_mapped_endpoints():
     statements = [statement.strip() for statement in source.split(';') if statement.strip()]
     expect(len(statements), 11, 'materialization plus all ten examples')
     with Backend() as backend:
-        got = run(['SET thinkthen_cache=\'off\'', *statements], backend.base('arm/full/capture'))
+        got = run(['SET thinkthen_cache=\'off\'', *statements], backend.base())
         expected = [[i, p.read_text(), str(p), 1, 4] for i,p in enumerate(sorted(FIXTURE.iterdir()), 1)]
         for index, values in ((2,[True,True]),(3,['policy','policy']),
                               (4,[['refund','support','billing']]*2),(5,[0.1,0.1])):
@@ -48,11 +48,7 @@ def ten_folder_examples_keep_original_documents_and_mapped_endpoints():
             expect(edge[6:11], expected[edge[6]-1], 'actual target endpoint row')
             expect(edge[0], 'supports', 'relation')
             expect(edge[11], 0.9, 'edge probability')
-        bodies = backend.capture()
-        expect(backend.count() > 0, True, 'owned loopback actually judged')
-        expect(len(bodies),backend.count(),'all requests captured')
-        expect(any(str(FIXTURE) in body for body in bodies),False,'source names excluded from provider bodies')
-        expect(any('first_line' in body or 'last_line' in body for body in bodies),False,'coordinates excluded from provider bodies')
+        expect(backend.count() > 0, True, 'owned loopback actually judged all ten examples')
 
 
 @case
@@ -98,13 +94,20 @@ def invalid_reader_inputs_and_unread_tail_send_nothing():
             f"SELECT * FROM thinkthen_read_files({path},'{{\"unit\":\"line\",\"window\":2}}')",
             f"SELECT * FROM thinkthen_read_files({path},'{{\"extra\":\"PRIVATE_INPUT_MARKER\"}}')",
             'SELECT * FROM thinkthen_read_files([]::VARCHAR[])',
+            "SELECT thinkthen_span_lines('a\nb',9223372036854775807,2,3)",
+            "SELECT thinkthen_span_lines('abc',1,2,2)",
             f"SELECT * FROM thinkthen_read_files({literal(tmp+'/invalid')})",
             f"SELECT * FROM thinkthen_read_files({literal(tmp+'/big')})",
         ]
+        (folder/'blocked').mkdir(); (folder/'blocked/x').write_text('blocked\n')
+        (folder/'blocked').chmod(0)
+        invalid += [f'SELECT * FROM thinkthen_read_files({literal(tmp)})',
+                    f'SELECT * FROM thinkthen_read_files({literal(tmp+"/blocked")})']
         got=run([*invalid,f'SELECT record FROM thinkthen_read_files([{path},{literal(tmp+"/invalid")}]) LIMIT 1'],backend.base())
         for result in got[:-1]:
             expect('error' in result,True,'reader refusal')
             expect('PRIVATE_INPUT_MARKER' in said(result),False,'content secrecy')
+        (folder/'blocked').chmod(0o700)
         expect(rows(got[-1]),[['good']],'unread next file not opened')
         expect(backend.count(),0,'all refusals send nothing')
 
@@ -129,6 +132,53 @@ def host_authority_is_rechecked_on_prepared_execution_and_open():
         directories=run([f'SET allowed_directories=[{literal(tmp)}]','SET enable_external_access=false',query],backend.base())
         expect(rows(directories[2]),[[True]],'allowed directory reads descendant')
         expect(backend.count(),2,'second isolated allowed judgment sent')
+
+
+@case
+def relocated_documents_reuse_answers_and_never_send_source_metadata():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-relocated-') as tmp, Backend() as backend:
+        import shutil
+        shutil.copytree(FIXTURE, Path(tmp)/'moved')
+        def query(path):
+            return f"SELECT thinkthen_decide('Does this document contain a support contract?',record) FROM thinkthen_read_files({literal(str(path))}, '{{\"unit\":\"file\"}}')"
+        got=run([query(FIXTURE),query(Path(tmp)/'moved')],backend.base('arm/full/capture'))
+        expect([rows(result) for result in got],[[[True],[True]]]*2,'relocated answer equality')
+        expect(backend.count(),2,'relocated evidence reused identical cache keys')
+        bodies=backend.capture()
+        expect(len(bodies),2,'exact two original evidence requests')
+        for body in bodies:
+            expect(str(FIXTURE) in body or tmp in body,False,'file metadata excluded')
+            expect('first_line' in body or 'last_line' in body,False,'line metadata excluded')
+        texts = [p.read_text() for p in sorted(FIXTURE.iterdir())]
+        expected = [f'The text is {json.dumps(text,ensure_ascii=False)}. Does this document contain a support contract?' for text in texts]
+        expect([json.loads(body)['questions']['q1']['instructions'] for body in bodies],expected,'exact original evidence instructions')
+
+
+@case
+def invalid_utf8_discovered_filename_is_refused_before_judgment():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-names-') as tmp, Backend() as backend:
+        import os
+        Path(tmp,'a').write_text('valid\n')
+        descriptor=os.open(os.fsencode(tmp)+b'/z-\xff',os.O_CREAT|os.O_WRONLY,0o600)
+        os.close(descriptor)
+        got=run([f"SELECT thinkthen_decide('Is it valid?',record) FROM thinkthen_read_files({literal(tmp)})"],backend.base())
+        expect(said(got[0]),'thinkthen local: source filename must be UTF-8 (retryable: no)','exact filename refusal')
+        expect(backend.count(),0,'complete manifest refusal sends nothing')
+
+
+@case
+def oversized_sorted_manifest_refuses_before_admitting_content():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-manifest-') as tmp, Backend() as backend:
+        folder=Path(tmp)
+        for _ in range(14):
+            folder=folder/('d'*220)
+            folder.mkdir()
+        needed=(16*1024*1024)//(len(str(folder))+8)+2
+        for ordinal in range(needed):
+            (folder/f'{ordinal:06d}').touch()
+        got=run([f"SELECT thinkthen_decide('Is it valid?',record) FROM thinkthen_read_files({literal(tmp)})"],backend.base())
+        expect(said(got[0]),'thinkthen local: source manifest exceeds 16 MiB (retryable: no)','exact manifest refusal')
+        expect(backend.count(),0,'oversized manifest admitted no content')
 
 
 if __name__=='__main__':

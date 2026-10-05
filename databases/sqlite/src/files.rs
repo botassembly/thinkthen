@@ -74,7 +74,12 @@ fn span(context: &rusqlite::functions::Context<'_>) -> Result<String, Failure> {
         last_line: first_line,
     };
     let (first, last) = source.span_lines(offset(2)?, offset(3)?)?;
-    Ok(serde_json::json!({"first_line": first, "last_line": last}).to_string())
+    let sql_line =
+        |line| i64::try_from(line).map_err(|_| Failure::usage("source line exceeds SQL INTEGER"));
+    Ok(
+        serde_json::json!({"first_line": sql_line(first)?, "last_line": sql_line(last)?})
+            .to_string(),
+    )
 }
 
 pub(crate) fn register_span(connection: &Connection) -> rusqlite::Result<()> {

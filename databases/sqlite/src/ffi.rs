@@ -20,6 +20,7 @@ use crate::many::{ChooseMany, DecideMany, Rank, ScoreMany, Store, TagMany};
 use crate::tables::{self, Recognizer, Relater, Table};
 use crate::{Registration, budget, guard, scalars};
 
+#[path = "ffi/files/ffi.rs"]
 mod files;
 
 /// The host's `sqlite3_api_routines`, extended past the 3.34 bindings of

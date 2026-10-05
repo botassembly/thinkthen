@@ -43,6 +43,9 @@ void Descend(FileSystem &files, const string &path, vector<string> &manifest, si
 } // namespace
 
 void AuthorizeLocalSource(FileSystem &files, const string &path) {
+	if (!Value::StringIsValid(path)) {
+		throw OrdinaryError("thinkthen local: source filename must be UTF-8");
+	}
 	// A host metadata interpretation is valid only for the stock local route.
 	// Refuse custom registries rather than guessing whether they own a path.
 	auto opener = dynamic_cast<OpenerFileSystem *>(&files);

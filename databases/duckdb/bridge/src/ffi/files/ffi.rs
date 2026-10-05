@@ -154,3 +154,60 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_span_lines(
             .map_err(|_| "thinkthen defect: source lines did not encode".to_owned())
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{BufReader, FileReader, HostRead, Read, ReaderOptions, c_void, io};
+
+    extern "C" fn too_many(_: *mut c_void, _: *mut u8, size: usize) -> i64 {
+        i64::try_from(size + 1).unwrap()
+    }
+
+    extern "C" fn failed(_: *mut c_void, _: *mut u8, _: usize) -> i64 {
+        -1
+    }
+
+    #[test]
+    fn invalid_host_read_counts_fail_without_exposing_a_buffer_range() {
+        for read in [too_many, failed] {
+            let mut reader = HostRead {
+                context: std::ptr::null_mut(),
+                read,
+            };
+            assert!(reader.read(&mut [0; 4]).is_err());
+        }
+    }
+
+    extern "C" fn short_read(context: *mut c_void, bytes: *mut u8, size: usize) -> i64 {
+        // SAFETY: this test lends one exclusive live Cursor and the Read
+        // implementation lends a writable size-byte range for this call only.
+        let (cursor, buffer) = unsafe {
+            (
+                context.cast::<io::Cursor<&[u8]>>().as_mut().unwrap(),
+                std::slice::from_raw_parts_mut(bytes, size.min(2)),
+            )
+        };
+        i64::try_from(cursor.read(buffer).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn short_host_reads_preserve_unicode_crlf_and_physical_positions() {
+        let mut cursor = io::Cursor::new("café 😀\r\n\r\nAda\n".as_bytes());
+        let host = HostRead {
+            context: (&raw mut cursor).cast(),
+            read: short_read,
+        };
+        let records = FileReader::new("owned", BufReader::new(host), ReaderOptions::default())
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(
+            records
+                .iter()
+                .map(|r| (r.record.as_str(), r.first_line, r.last_line))
+                .collect::<Vec<_>>(),
+            vec![("café 😀", 1, 1), ("Ada", 3, 3)]
+        );
+        assert_eq!(records[0].span_lines(5, 6).unwrap(), (1, 1));
+    }
+}
