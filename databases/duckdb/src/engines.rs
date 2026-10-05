@@ -376,18 +376,11 @@ fn total_of(total: i64) -> Result<u64, String> {
 }
 
 /// The texts a call may send, and the refusal it raises after them.
-type Allowed = (Vec<String>, Option<String>);
 type TypedAllowed = (Vec<String>, Option<RowError>);
 
 /// The texts one call may send under the process's request total, and the
 /// refusal the call raises after it sends them when the total cut it short.
 /// A spent total refuses before anything is sent.
-pub(crate) fn within_total(asked: &Asked, texts: Vec<String>) -> Result<Allowed, String> {
-    within_total_typed(asked, texts)
-        .map(|(texts, cut)| (texts, cut.map(|error| error.text)))
-        .map_err(|error| error.text)
-}
-
 pub(crate) fn within_total_typed(
     asked: &Asked,
     mut texts: Vec<String>,

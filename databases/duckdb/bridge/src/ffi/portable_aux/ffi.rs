@@ -144,7 +144,6 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_nested_group(
             held.model = Some(model);
         }
         let engine = engines::engine_for(&held, |path| probe(&session, path))?;
-        let (texts, cut) = engines::within_total(&held, texts)?;
         let total = held.max_requests_total;
         let deadline = match call.deadline_ms() {
             None | Some(-1) => query_deadline_ms,
@@ -160,7 +159,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_nested_group(
         let batch = chosen_batch.or(session_batch);
         let context = call.context().map(str::to_owned);
         run_detached(stop, move |token| {
-            let values = super::nested::run(
+            super::nested::run(
                 &engine,
                 &ask,
                 texts,
@@ -172,11 +171,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_nested_group(
                     batch: batch.as_deref(),
                     context: context.as_deref(),
                 },
-            )?;
-            if let Some(error) = cut {
-                return Err(error);
-            }
-            Ok(values)
+            )
         })
     })
 }
