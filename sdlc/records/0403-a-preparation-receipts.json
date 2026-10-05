@@ -1,0 +1,218 @@
+{
+  "phase": "0403 A source/pin preparation only",
+  "base_commit": "26174408f620c1771e70e6fbe495eab4e6c07e67",
+  "proof_source_commit": "8dd2fb63d781faa62c7b9ea754dd9c77a5302641",
+  "accepted_plan_sha256": "904eb42d8922e1d9c0b4bd3c8090d1805b27a341381779df62f480634773b9bb",
+  "runtime": {
+    "python3": {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "version": "Python 3.12.3"
+    },
+    "node": {
+      "path": "/home/ian/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64/bin/node",
+      "sha256": "e6ec2c188d83d813f81f2de8aea084d74dce603ac1abedd0a30ad941b10087b2",
+      "version": "v22.22.3"
+    },
+    "cargo": {
+      "path": "/usr/bin/rustup",
+      "sha256": "be178b5cdda17e6ab5027dcdd5262014a9e967f02f439b2da618942af5cbad27"
+    },
+    "rustc": {
+      "path": "/usr/bin/rustup",
+      "sha256": "be178b5cdda17e6ab5027dcdd5262014a9e967f02f439b2da618942af5cbad27"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "sha256": "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668"
+    },
+    "cmake": {
+      "path": "/usr/bin/cmake",
+      "sha256": "1c5227af4edd22d8d689def545e18ee458260c0fd579eba2187967f38817e638"
+    },
+    "bash": {
+      "path": "/usr/bin/bash",
+      "sha256": "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
+    },
+    "cached_cargo": {
+      "path": "/home/ian/.rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo",
+      "sha256": "841072d1d92f9e841d9ba5b0814182a0adf064acf4527cd120967b7bc49dcb66",
+      "toolchain": "1.95.0-x86_64-unknown-linux-gnu"
+    },
+    "cached_rustc": {
+      "path": "/home/ian/.rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustc",
+      "sha256": "bff349e72704ff70bc08a234a3847338e797065bbedde5e556808bc87b7bf7c6",
+      "toolchain": "1.95.0-x86_64-unknown-linux-gnu"
+    },
+    "cached_rustfmt": {
+      "path": "/home/ian/.rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustfmt",
+      "sha256": "56b31ad3ec8fe0277a2884a189e243b8f04e9b48e5fd22e547c1516c5f8fd34c",
+      "toolchain": "1.95.0-x86_64-unknown-linux-gnu"
+    }
+  },
+  "code_inputs": {
+    "databases/duckdb/check.sh": "0201ad37fd5cd66343aee00a32e4ae630524f1ff2273c8ed61449e11152a0039",
+    "databases/duckdb/cpp/CMakeLists.txt": "2010f7aabc86e11d0cabbe83323c8c25e2c254ef1eadb8832ac47fc6c1cf7b43",
+    "databases/duckdb/cpp/archive-sha256-v1.5.4-linux-amd64.txt": "c9bf742f75aeb1513f682306c08dff6b1893130d9fc33de5040acfe2744c010a",
+    "databases/duckdb/cpp/archive-sha256-v1.5.4-linux-arm64.txt": "a51acb0d129ec560eab04a2f8aa1038cc00632714f46292fad89c116f33348e5",
+    "databases/duckdb/cpp/archive-sha256-v1.5.4-osx-amd64.txt": "df7d241bc89719ec85c6b69722a77b5353ec151ead15aa592d7beefa70f8e765",
+    "databases/duckdb/cpp/archive-sha256-v1.5.4-osx-arm64.txt": "5f2a2d5695de2b4b3331ee0bbf9bdfbb7f62fbbfd2bc055cbd5beb1e98392bfa",
+    "databases/duckdb/cpp/build.sh": "fec60aae26e3a9e24275023e6d7d39ed40132f25c335bd25e6fc8fd00e53e70c",
+    "databases/duckdb/cpp/package_notices.py": "45441027cadf97b7d9f6ba1ddce145a1f38b2859c66d0163045453bfc9dd1bc1",
+    "databases/duckdb/cpp/verify_package.py": "aaef7880f23d9787f4e65722dd93f852db62a251a86e4c8fa023404d31d93750",
+    "databases/duckdb/ratchet.py.json": "4c4388185e4f0ddba9d7242c417b9d148adb0592b2dbd3b25384a1a85c9bf570",
+    "databases/duckdb/tools/build_0403_cases.py": "88da23b62704d54eb6f4cf41049bd0baee8839a9a540b1f26ecaa11967c660c0",
+    "databases/duckdb/tools/cache_lock.py": "86a1e0d9cbc133715ee8c24e533c4d2c5ef80cbc52cb51b897582609deb6a750",
+    "databases/duckdb/tools/harness.py": "f4c6c6077a14a0b64f52036213467f68a65814e6eb5f8a06002666c9f6dd590c",
+    "databases/duckdb/tools/inputs.py": "d06e0be934a527f1380755d1177012c7aa82277e4038cdeb3e5834d92933a813",
+    "databases/duckdb/tools/inputs.sh": "33ace538800f51a30f106011370a140bde08844b8c00afa9a59faea409c6e679",
+    "databases/duckdb/tools/inputs_0403_cases.py": "4498fe89e8ab1a186fb9bd5238604fcd05095260cb7f0e5d496927daf8d44d62",
+    "databases/duckdb/tools/prepare_inputs.sh": "afb7049bfd59a28c33a2c12900441676b6ff28e9d90b1c7607db372ffe836816",
+    "databases/duckdb/tools/release_pack_cases.py": "93a43c235b79f49b64a616b7b44748beb8a17e883f2fa00247ce25e346dc23c9",
+    "databases/duckdb/tools/requirements-v1.5.4.txt": "4c38a0e19674eb0f4f98a43db0a133446c0a62bf8af2f0a9b0b7dd05bf2db904",
+    "databases/duckdb/tools/setup.sh": "b1e034b4e809be3ee6140d3d564881bf84b31f1a97625d52ef2d4559c18fc0ce",
+    "databases/duckdb/tools/source_checks.py": "a586865ee0406fa95af46101e669870ccbff71371181b6f7853d2d0033adf031",
+    "databases/duckdb/tools/validate_inputs.py": "4b41ed015a730701e34316000e29d83b658977a5b912cb7d54b0656e39f256ef",
+    "databases/duckdb/tools/version.env": "758d990050f175716674914af113bd2c5ea888f945bfff9589c2031f0f4a0bfa",
+    "sdlc/scripts/install_check_tools.py": "895a67bb095c1d3d655b4208a8b15c72f2186fcef9eff3519e1720ce84716df1",
+    "sdlc/scripts/lint": "b1a7858cc338c10d6552446e7c6058f6f25f3d479af2fa078a73ad6697fc2038",
+    "sdlc/scripts/release-archive-tree.py": "5f9c543f70d623d052e8e791304f5a89fa473d11b18532049426ac2eba3efe7f",
+    "sdlc/scripts/release-container": "e541a171d893c43c46ead1aa2686405db06ce30d28cb2997df0809888f23d082",
+    "sdlc/scripts/release-pack": "ea2939120ae4257e8269d2f009bcab381279790a650872208077de65551bb857",
+    "site/scripts/duckdb-inputs.mjs": "0951312d84d930fd634d14000e3d91a8312e65849cd6d72ebfe58c6649c623fe",
+    "site/scripts/smoke-sql.mjs": "c474bb6edfb7c2e67b703c79ea9ea05e3c6c9f295930cf419c3e6605eae5b8f9"
+  },
+  "owned_scripts": {
+    "/tmp/thinkthen-0403-prep-JNKtAc/source_guard.py": "4b1393dbe5928f05d71ca20bffc9f77aea31c32170cca0bab1f14fc0ed5c4e28",
+    "/tmp/thinkthen-0403-prep-JNKtAc/exec-clean.py": "f881e392145230793ce5a32c98ee097afe7d57c4094b2c28543fc5a4959ed096",
+    "/tmp/thinkthen-0403-prep-JNKtAc/run-focused.sh": "e198ad1b7038314760b12feb48e255284901eecb49e528f094b2d7cd4a98efea",
+    "/tmp/thinkthen-0403-prep-JNKtAc/check-focused.sh": "6bcb99c4808f7f1df14e77e0c2217b9c5e3c9add68ef18ca5d84f50dba1ba06c",
+    "/tmp/thinkthen-0403-prep-JNKtAc/fetch-official.sh": "7dc01b2753b01069127eff5795f48efeabbf5e03fefea799fbe6b241ce5c043a",
+    "/tmp/thinkthen-0403-prep-JNKtAc/fetch-rest.sh": "b7202122c033de67ebbe8591e4d7d83d9d30d0f1b0321cd5bb31bf5b4457028a",
+    "/tmp/thinkthen-0403-prep-JNKtAc/fetch-wheels.sh": "d00cb5ba372b8072ea8eec3f0a776126799dc717f9e91cde6afedf63bb43ad30",
+    "/tmp/thinkthen-0403-prep-JNKtAc/prepare-baseline.py": "fcf91e025ef1a175b256183c8096fbda82ae56b070c06d94f92a5042cf697ae4"
+  },
+  "receipts": {
+    "/tmp/thinkthen-0403-prep-JNKtAc/policy-baseline.log": "ded465b94bdde261144baa6af6ed1f55eaedf043541404d50fb58efeaa10a7d9",
+    "/tmp/thinkthen-0403-prep-JNKtAc/policy-current.log": "ded465b94bdde261144baa6af6ed1f55eaedf043541404d50fb58efeaa10a7d9",
+    "/tmp/thinkthen-0403-prep-JNKtAc/source-inputs.json": "1031be714824efe8c365dbf75bb34c8b31f34ff5263cab631d1e5d98cf54fdf4",
+    "/tmp/thinkthen-0403-prep-JNKtAc/extracted-inputs.json": "88e7abe58e99ed38f1cc7fa896c39437d9af5404342cd56515837ea6b3cf95e1",
+    "/tmp/thinkthen-0403-prep-JNKtAc/pin-assets.json": "a77a5096d699cdd69ded449ee274c7da594ef686171c85cf0980e32eae965a94",
+    "/tmp/thinkthen-0403-prep-JNKtAc/python-wheels.json": "421e9c005351e185ee3fa20efac394ec283c22b6643db42e02e893b86dfaf5c3",
+    "/tmp/thinkthen-0403-prep-JNKtAc/preexisting-inputs.json": "3f4b7842172c2edeb10e4ec84651a8aff3fd88fd7bc627c3d7f33638cb578496",
+    "/tmp/thinkthen-0403-prep-JNKtAc/preexisting-directory-links.json": "c4d96b570fef26f665676dc624dc849eab28b0ddafaca46a8be5ddf240249c39",
+    "/tmp/thinkthen-0403-prep-JNKtAc/baseline-source.log": "1064b9c9d203b4b5dffdbb67ede5c90b2707b465949a090484e37e6b4fd2b924",
+    "/tmp/thinkthen-0403-prep-JNKtAc/preparation.log": "923c1a10a7a577558562f50aec4db0067f9ad9600bb7c6bab4b9a96d00730f94",
+    "/tmp/thinkthen-0403-prep-JNKtAc/preparation-rest.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/tmp/thinkthen-0403-prep-JNKtAc/preparation-wheels.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/tmp/thinkthen-0403-prep-JNKtAc/focused-11.log": "4978399a52693a5780a99a14f31beaf5d22e028909015ffff650d02d53eb99f4",
+    "/tmp/thinkthen-0403-prep-JNKtAc/runtime.json": "db80ecc88a3d779390ad1455fd894f02df7f23586ac596743e423b4f752228ba"
+  },
+  "focused_results": {
+    "portable_cases": 10,
+    "portable_failures": 0,
+    "portable_errors": 0,
+    "counted_loopback_requests": 0,
+    "root_format_exit": 0,
+    "bridge_format_exit": 0,
+    "tickets_exit": 0,
+    "exact_ratchets": 53,
+    "ratchet_failures": 0,
+    "shell_syntax_checks": 8,
+    "node_syntax_checks": 2,
+    "syntax_failures": 0,
+    "policy_baseline_exit": 1,
+    "policy_candidate_exit": 1,
+    "policy_output_identical": true,
+    "policy_failure": "site/scripts/recipe-proof.py omits Connection: close",
+    "overall_focused_exit": 1
+  },
+  "retained_inventory": {
+    "proof_entries": 350,
+    "source_guard_tracked_members": 7003,
+    "existing_executables": 2975,
+    "existing_pyc": 107,
+    "specific_output_cache_directory_links": 23,
+    "rust_ratchet": 118107,
+    "duckdb_rust_ratchet": 4062,
+    "duckdb_cpp_ratchet": 1762,
+    "duckdb_python_ratchet": 4742,
+    "duckdb_python_before": 4224,
+    "duckdb_python_growth": 518
+  },
+  "historical_nonpassing_attempts": {
+    "preparation_archive_only_assertion": 1,
+    "runner_invalid_executable_probe": 1,
+    "portable_fixture_syntax_error": 1,
+    "portable_filter_fixture_failure": 1,
+    "new_counter_policy_finding_fixed": 1,
+    "baseline_policy_finding_unfixed": 1,
+    "root_ratchet_argument_error_fixed": 1,
+    "explicit_stale_lease_rejection": 1,
+    "cancelled_before_checks": [
+      "focused-2",
+      "focused-4",
+      "focused-5"
+    ],
+    "cancelled_jobs_qualify_as_pass": false
+  },
+  "not_run": [
+    "native DuckDB builds",
+    "stock DuckDB CLI/Python loads",
+    "SQL suites",
+    "real package/installed smoke",
+    "actual site replay",
+    "test",
+    "spec",
+    "surfaces",
+    "stress",
+    "canonical 350 replay",
+    "Windows native/tag",
+    "CI dispatch",
+    "remote hardware",
+    "four-target rehearsal",
+    "publication",
+    "0415 submission/signing",
+    "experiments"
+  ],
+  "pin_asset_record": "sdlc/records/0403-a-pin-assets.json",
+  "prerequisites": {
+    "official_source_commits": 2,
+    "verified_cli_zip_binary_pairs": 8,
+    "verified_static_zip_manifests": 8,
+    "static_archive_members": 172,
+    "verified_python_wheels": 8,
+    "conventional_linux_newest_venv_exists": true,
+    "conventional_linux_older_venv_exists": false,
+    "python_runtime_and_platform_queries": "not run; require fresh pin/source review",
+    "foreign_native_hosts": "not used; target assets prepared locally only",
+    "A_complete": false,
+    "B_started": false
+  },
+  "pin_asset_record_sha256": "9feeb0fcbd3add0b8a9f785e7073840b007a0a6e7ee421631a657ca71de4db93",
+  "proof_source_excludes_final_record_only_commit": true,
+  "focused_run": "focused-11",
+  "execution_controls": {
+    "shell": "/bin/bash nonlogin",
+    "memory_max": "12G",
+    "swap_max": "1G",
+    "cpu_quota": "200%",
+    "cargo_jobs": 2,
+    "network": "offline portable checks; separate official preparation fetches",
+    "private_home": "/tmp/thinkthen-0403-prep-JNKtAc/home",
+    "cargo_offline": true,
+    "rustc_wrapper": "",
+    "node": "22.22.3",
+    "signal_defaults": [
+      "SIGPIPE",
+      "SIGXFSZ"
+    ],
+    "lane_lock": "/tmp/thinkthen-claude-0-heavy.lock",
+    "shared_locks": [
+      "/run/user/1000/thinkthen-rustup-1.95.0.lock",
+      "/run/user/1000/thinkthen-shared-cache-mutation.lock",
+      "/tmp/thinkthen-shared-cache-mutation.lock",
+      "/tmp/thinkthen-shared-cargo-cache.lock"
+    ]
+  }
+}
