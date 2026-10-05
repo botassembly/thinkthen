@@ -44,7 +44,10 @@ def alive(pid):
     # Linux orphan zombies have exited; they cannot retain handles or run code.
     status = Path(f'/proc/{pid}/stat')
     if status.exists():
-        return status.read_text().split(') ')[1].split()[0] != 'Z'
+        try:
+            return status.read_text().split(') ')[1].split()[0] != 'Z'
+        except FileNotFoundError:
+            return False
     try:
         os.kill(pid, 0)
         return True
