@@ -1,6 +1,6 @@
 # 0381 A Windows C DLL build
 
-Status: corrected frozen source `cb12581b5ebf26280f82f64e06b6214036e97985` passes the authorized focused Linux C checks, policy and required lint after the additional High rejection of candidate `ffb20a0c0cd3897cf7c8d9bc4c82493700ec8c4d` / source `3281e7a9a506a1229ae541e09f015b001d617e16`. The accepted prior Rust deadlines and typed-facts join refusal remain unchanged. Another parent-supplied fresh High review and the parent's integration/full checkpoint remain required. Native Windows compilation, execution and dispatch authorization remain pending.
+Status: accepted slice A source and Linux/canonical receipts are preserved at Docs A integration source `b7ab00d26bb56c0d28b2b45bcfeaf8e21b87b9e6`. Focused post-integration policy, strict proof, site build and site check pass. Fresh High receipt review and A landing remain pending. Native Windows authorization/execution and slice B remain pending.
 
 The accepted design's source SHA-256 is `f5d6f3155e8a94747d4d13d7bb15eff740ed11db2c91f1adaa19b307668d68f3`. The historical design baseline predates 0380 C landing; this implementation starts from landed main `6d26206aa8861490cc6540b6bafafc08e3249c3c`. The lane and branch are assigned in ticket 0381. No unlanded patch was copied or rebase performed. The parent supplies the fresh reviewer; this builder uses no helpers.
 
@@ -160,3 +160,34 @@ Owned checkpoint receipts and SHA-256:
 | `target/0381a-checkpoint-final/strict-retry.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
 | `target/0381a-checkpoint-final/site-build-retry.log` | `17ed4dd5abedccd5960647851cb9eebfdb645eba2e743fd96994cf1f3c7016cb` |
 | `target/0381a-checkpoint-final/final-proof.json` | `ebe8a4d56634caf65b0203a1a2c4baf1723bd3d9a5f987529ac87115a8da6092` |
+
+
+## Source-preserving integration onto landed Docs A
+
+Final receipt review at `/tmp/thinkthen-0381a-final-receipt-review-cli-bqudlxlj/review.md` accepted immutable candidate `72b3e27b71dc1744b60cbe936e8e84e132e0d4f0`, against accepted integration `7a1b5dc385fbf5dc68f2ba2c0939502102b72762`, with no findings. Its actual review bytes have SHA-256 `0f9345b205da2db3dc952a90f205facdfa74a86355c7eca051b1cece72139ee3`. The original High source/integration reviews and every older receipt reference above remain unchanged.
+
+Lane 1 rebased the complete ticket branch onto local `origin/main` at `b7e5dd3e464117d38701617ca18c5fdb68f5fb2a`, the Docs A landing of accepted `53de60f6b098c1d0b7a7f0f9e3130b7570c786f0`. Frozen integration source is `b7ab00d26bb56c0d28b2b45bcfeaf8e21b87b9e6`. Only the two team-note applications conflicted. Their resolution retains main's complete 0401 landing at `b39774cce87105be419d6140ae4155bfc8cd733c`, Docs A's actual replay and failed initial attempt, the latest Windows A source/receipt and corrected B-design progress, and lane 2's 1408-pass/one-failure diagnostic and subsequent focused correction. Windows A remains a candidate; no landing or main checkout switch occurred.
+
+All 36 accepted Windows/product/test/workflow source digests still match the frozen `cb12581b5` inventory. The entire non-Markdown source diff, excluding the generated binding proof, compares byte for byte before and after rebase: SHA-256 `afc258535132ea03a43d71473417658f80b14268f70dd802bcbf3b4099a7f856`. All 54 Docs A changed/deleted paths outside the team note retain main's exact bytes or absence. Main's docs routes and scripts are used unchanged. No product, binding, sample, proof-input, dependency, workflow or test correction was introduced. The measured root/C/fixture totals are exactly 117988/5487/1329; policy passes the source caps and inward boundaries. The generated result schema remains byte-identical to both accepted candidate and main, SHA-256 `ebdbee26c5361912357cebb56b0a45de323fa644483d1e54c0eba41d11479c68`. This integration adds zero source lines and changes no ratchet.
+
+The nine retained Linux/canonical receipts still match every recorded hash. Full workspace 1408 tests (26 skips), library-only 143 (four skips), external consumer 21 (three skips), specification 64 (one skip), 24 demos, required lint, C 40 (shared corpus 53 passes/two exclusions), workflow 113 and actual 350 replay remain evidence on their original frozen integration. Docs A changed no engine, binding, sample or proof dependency, so this bounded integration carries those receipts without repeating full test/spec/surfaces or the canonical runner. Both the retained runner-generated `target/0381a-checkpoint-final/final-proof.json` and committed `site/examples/bindings-proof.json` remain byte-identical, SHA-256 `ebe8a4d56634caf65b0203a1a2c4baf1723bd3d9a5f987529ac87115a8da6092`. All 350 unique proof rows remain current: 308 language and 42 SQL. No proof hash was edited and no new proof artifact was generated.
+
+New focused checks ran on frozen `b7ab00d26bb56c0d28b2b45bcfeaf8e21b87b9e6`: policy and all three exact ratchets; strict zero-stale proof before and after build; merged Docs A site build; and complete site check. The site uses all 61 redirect aliases, nine fragment cases, three direct pages and two JavaScript-disabled fallbacks; 12 link-check plants pass. Markdown headings, 189-page link/anchor inventory, head/cards/search/sitemap checks pass. Cached Chromium verifies 128 canonical pages at all 37 widths. Each gate exited zero. The first outer checkpoint exits 1 only after every check passes: its final broad clean-worktree guard sees generated Python bytecode under the scratch HOME, where the caller's global ignore is absent. `guard-diagnostic.log` pins those two cache directories. A separate final guard exits zero, verifies tracked source cleanliness and permits only `.pyc` files in those exact generated directories; it reruns strict proof and verifies source, all old receipts, schema and proof bytes. The first launcher/log remains intact; no successful check is falsely described as rerun.
+
+All new receipts are distinct under `target/0381a-integration-docsa/`. The launcher uses an explicit environment and sourced allowlist, installed Node 22.22.3, existing Python/R tool paths, disabled shell/R/Python startup settings, npm config files with no user configuration, cached Chromium, two offline Cargo jobs and no compiler wrapper. Both owned scopes use MemoryMax=12G, MemorySwapMax=1G and exclusive `/run/user/1000/thinkthen-heavy-claude-1.lock`, matching `THINKTHEN_HEAVY_LOCK` and `THINKTHEN_HEAVY_LOCK_HELD`, plus the shared toolchain/cache mutation and Cargo-cache locks. Both scopes are inactive. No helper, credential/init-file inspection, dependency acquisition, provider/network check, native job, stress, release dispatch, signing, publication or landing occurred. Only the separately authorized WIP Git push uses remote transport.
+
+`target/0381a-integration-docsa/{before,after}.patch`, `before.json` and `source-inventory.json` retain the exact source comparison, 36 per-file digests, Docs A byte inventory, old receipt hashes, schema identity, prior acceptance and new receipts. The following record-only candidate preserves this frozen source; its final candidate/delta inventory is retained separately for the parent's fresh High receipt review. Ian can overturn the narrow carry decision and request a new named checkpoint; this work claims no Windows native proof or slice B completion.
+
+| Fresh integration receipt | Captured exit | SHA-256 |
+| --- | --- | --- |
+| `policy.log` | 0 | `5815fff89140fc8210baca7994e1ff555d55bafcd952ade5cf623b7c2d9fda90` |
+| `ratchets.log` | 0 | `bc6b86163b87c27a68ee630da4817234768ecb47254ced8af44ca1a3ca94fd33` |
+| `strict-before.log` | 0 | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `site-build.log` | 0 | `a77160671c8cc7d19a1c2b9e1fc02e517d107ee93ecc57ccd5097169c7702eda` |
+| `site-check.log` | 0 | `83b9ac3530b083b324d8a7e3f04502830ebf8b844870faf83a6f61712c04640b` |
+| `strict-after.log` | 0 | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `checkpoint.log` | 1 | `9abe5a1c1946adfda50603f24d70e2c6aae562a8e09b740421e6a67442460b6f` |
+| `guard-diagnostic.log` | 0 | `946d5ff5d027492fafd39a5405f36a2706b057a1a6aa07e490bb10aa0b579539` |
+| `verify-source.log` | 0 | `a2fd894f66516f77c1d4d126f3a00dda5da8daeca1a7a9866427144a4f8684de` |
+| `strict-guard.log` | 0 | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `final-guard.log` | 0 | `271ca5d2869009cd10897019567b9537f57e13dde98df59d865dcb023338a355` |
