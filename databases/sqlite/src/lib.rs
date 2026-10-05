@@ -4,10 +4,10 @@
 //! `.load ./thinkthen` registers every function and sends nothing. The one
 //! process engine is built on the first call that can send. Every call that
 //! can send runs on a worker thread, so the calling thread hears SQLite's
-//! interrupt while a request is out (`worker`). Every function is volatile
-//! and direct-only, so a schema in a database the host has not vouched for
-//! cannot spend money or read files. That promise needs SQLite 3.50.0 or
-//! newer, and the load refuses an older host by name (`ffi`).
+//! interrupt while a request is out (`worker`). Default loading registers
+//! volatile, direct-only functions. Explicit trusted loading permits schema
+//! judgments while SQLite's trusted_schema is ON. Both need SQLite 3.50.0
+//! or newer, and the load refuses an older host by name (`ffi`).
 
 use rusqlite::ffi::{
     self as sqlite, SQLITE_CANTOPEN, SQLITE_CONSTRAINT, SQLITE_ERROR, SQLITE_INTERRUPT,
@@ -28,7 +28,14 @@ mod settings;
 mod tables;
 mod worker;
 
-pub use ffi::sqlite3_thinkthen_init;
+pub use ffi::{sqlite3_thinkthen_init, sqlite3_thinkthen_trusted_init};
+
+/// The registration policy chosen at initial load on one connection.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Registration {
+    DirectOnly,
+    Trusted,
+}
 
 /// One failure on its way to SQLite: a kind, a safe message, and whether the
 /// same call may pass later.
