@@ -203,7 +203,7 @@ assert.throws(() => duckDBArtifact(process.argv[2], 'v1.5.5', 'x86_64-unknown-li
         shim = self.root / 'shim'
         script(shim / 'rustc', f'echo "host: {TARGET}"')
         script(shim / 'readelf', 'echo "Machine: Advanced Micro Devices X86-64"')
-        script(shim / 'cargo', "printf '%s\\n' '{"packages":[]}'")
+        script(shim / 'cargo', """echo '{"packages":[]}'""")
         env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}', 'THINKTHEN_DUCKDB_CPP_SOURCE': str(source),
                'THINKTHEN_DUCKDB_CPP_STATIC_DIR': str(static)}
         member = tree / 'databases/duckdb/build/artifacts/cpp' / NEWEST / TARGET / 'thinkthen.duckdb_extension'
