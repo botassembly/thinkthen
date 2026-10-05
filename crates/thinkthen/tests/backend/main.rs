@@ -52,6 +52,11 @@ mod cache_trust;
 )]
 mod check;
 mod choosing;
+#[allow(
+    clippy::expect_used,
+    reason = "fixture setup must run the compiled CLI"
+)]
+mod command_namespace;
 // Windows does not tell the command that its output reader closed (sdlc/planning/windows.md).
 #[cfg(unix)]
 mod closed_pipe;

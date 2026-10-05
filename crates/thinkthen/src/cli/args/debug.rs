@@ -86,6 +86,13 @@ mod tests {
             ],
             vec![
                 "thinkthen",
+                "backends",
+                "check",
+                "--url",
+                "http://localhost/debug-secret-0210",
+            ],
+            vec![
+                "thinkthen",
                 "check",
                 "--url",
                 "http://localhost/debug-secret-0210",

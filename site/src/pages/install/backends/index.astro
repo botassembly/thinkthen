@@ -39,7 +39,7 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
       <td colspan="4">Announced, not released</td>
     </tr>
   </table>
-  <p>This table gives the last <code>thinkthen check</code> of each built-in backend.</p>
+  <p>This table gives the last <code>thinkthen backends check</code> of each built-in backend.</p>
   <table class="backend-checks">
     <tr><th>Backend</th><th>Date</th><th>Model</th><th>Lines found</th></tr>
     {rows.flatMap((r) => r.checks.map((c) => (
