@@ -838,7 +838,7 @@ export const SURFACES = [
       ['.load ./thinkthen', null],
     ],
     particular: [
-      'Only a query you type can call its functions. A view or trigger in an untrusted schema cannot call them to spend requests or read files.',
+      'Default loading permits top-level calls. A view or trigger cannot call its functions to spend requests or read files. Explicit trusted loading permits reviewed schema judgments while trusted_schema is ON.',
     ],
   },
   {
