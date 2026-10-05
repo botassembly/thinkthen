@@ -11,7 +11,7 @@ LOAD thinkthen;
 
 To load directly, use `LOAD 'v1.5.5/linux_amd64/thinkthen.duckdb_extension';` on the matching Linux x86-64 host, or the matching version/platform path on another supported host.
 
-Use dbt v1 with `duckdb` 1.5.5 for the documented dbt route. dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2. Signing and community listing are deferred.
+Use dbt v1 with `duckdb` 1.5.5 for the documented dbt route. dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2. Community listing and signing are in progress under ticket 0415. No community install is available until DuckDB accepts and builds the submission. A signed build for another DuckDB version does not establish dbt v2 compatibility. The [public install page](https://thinkthen.dev/install/duckdb/#use-the-release-from-dbt-v1) provides the pinned dbt v1 packages and complete startup profile.
 
 ## Functions
 
