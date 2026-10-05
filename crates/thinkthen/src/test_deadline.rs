@@ -6,8 +6,7 @@ use std::time::{Duration, Instant};
 pub(crate) mod child;
 #[cfg(test)]
 mod child_tests;
-mod run;
-mod wait;
+use child::{run, wait};
 
 pub(crate) use run::output;
 pub(crate) use wait::finish;

@@ -15,10 +15,7 @@ use std::time::{Duration, Instant};
 
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
-#[path = "../../../../crates/thinkthen/src/test_deadline/run.rs"]
-mod run;
-#[path = "../../../../crates/thinkthen/src/test_deadline/wait.rs"]
-mod wait;
+use child::{run, wait};
 
 use conformance_backend::Backend;
 use fork_probe::in_child;

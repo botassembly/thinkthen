@@ -8,10 +8,7 @@
 
 #[path = "../../src/test_deadline/child.rs"]
 mod child;
-#[path = "../../src/test_deadline/run.rs"]
-mod run;
-#[path = "../../src/test_deadline/wait.rs"]
-mod wait;
+use child::{run, wait};
 
 mod ca_bundle;
 mod compile_contract;

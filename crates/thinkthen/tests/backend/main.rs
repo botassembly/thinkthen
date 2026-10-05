@@ -16,10 +16,7 @@ mod harness;
 )]
 #[path = "../support/measure.rs"]
 mod measure_support;
-#[path = "../../src/test_deadline/run.rs"]
-mod run;
-#[path = "../../src/test_deadline/wait.rs"]
-mod wait;
+use child::{run, wait};
 
 mod address;
 mod annotate;

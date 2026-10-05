@@ -39,8 +39,7 @@ mod fired;
 mod overlap;
 #[path = "public_controls/stopped.rs"]
 mod stopped;
-#[path = "../src/test_deadline/wait.rs"]
-mod wait;
+use child::wait;
 
 /// Guards the process state the engine still holds: `PROCESS_LIMITS` in
 /// `engine/limits.rs`, one throttle, 429 gate, pacer and request total per
