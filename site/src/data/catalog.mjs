@@ -44,7 +44,7 @@ const MEANS = [
 ];
 const QUIET = flag('--quiet', 'nothing', 'off', 'Prints nothing. The exit code carries the answer. It works on one document only.');
 // The shared flags every record function takes. find takes none of them.
-const RECORD_FLAGS = ['--window', '--csv', '--tsv', '--context', '--batch', '--max-request-bytes', '--jobs'];
+const RECORD_FLAGS = ['--csv', '--tsv', '--context', '--batch', '--max-request-bytes', '--jobs'];
 // recognize and relate do not batch records.
 const SET_FLAGS = ['--csv', '--tsv', '--max-request-bytes', '--jobs'];
 
@@ -236,7 +236,6 @@ export const FUNCTIONS = [
       flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the winning candidate probability, independently of confidence.'),
       flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints one group with N physical neighbors on either side from an immutable snapshot. Every valid neighbor already belongs to the aggregate candidate request. Text display flags refuse details.'),
     ],
-    shared: ['--window'],
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],
     unsure: 'Without --none, find must pick a line. When nothing fits, the line it picks is wrong. --none lets it say nothing fits.',
     howtos: ['group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
