@@ -1,6 +1,6 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: in progress. Slices A and B landed; slice C landed in `fea3a6fbc46b68ccc33a28e35eb0c4eb48329df9` after fresh source, contract and final evidence acceptance. Full tests/spec/lint and actual350 replay/strict/site passed for C. Slice D implements its accepted frozen design in lane0; focused proof and candidate review are recorded separately. Full coordinator checkpoints remain pending.
+Status: in progress. Slices A, B and C landed. Slice D source received fresh High acceptance after Windows/provider integration; focused checks, renewed lint, full test/specification, C door, Rust Polars and all 350 actual documentation replays with strict proof and final site build pass. Fresh final receipt review and D landing remain before this ticket completes.
 
 Milestone: 0.2
 
@@ -102,3 +102,5 @@ fn Engine::rank_set_with<I>(&self, &RankSet, I, CallOptions<'_>) -> Result<Call<
 Slice D builds the accepted [frozen design](../records/0401-d-rank-set-design.md) against landed C `fea3a6fbc46b68ccc33a28e35eb0c4eb48329df9` in lane0. Fresh candidate review and coordinator checkpoints remain pending. SQL question sets belong to 0417 for 0.2; C and language sets belong to 0418 later.
 
 The D frozen-source review found that preview added each set member as an input slot, unlike runtime's single add per original record. The correction gathers member entries first and adds once. Its independent counted loopback witness pins the exact first body and complete byte/token summary against three runtime requests with both text members; mixed quoting retains its state cuts in both member orders. Ordinary single-question identity, runtime merge/bounds and whole-call controls remain protected. Exact correction growth and focused receipts are in the [D build record](../records/0401-d-rank-set-build.md). Fresh parent review and the merged checkpoint remain pending.
+
+Slice D provider integration at `ace778598` retains the accepted product byte for byte and passes its final coordinator checkpoint. The owning [D build record](../records/0401-d-rank-set-build.md) preserves source reviews, prior failures and exact current receipts. Rank sets retain original ownership and member-local wire/cache identity; preview groups every member per original record. Full C-door and Rust Polars compatibility and actual 350-page proof close the former deferred local checks. Native execution remains separate. Final receipt review and whole-ticket completion remain before D landing.

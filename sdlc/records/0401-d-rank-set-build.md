@@ -76,3 +76,29 @@ Fresh independent High review accepted corrected candidate `6696815ec60f302cad91
 The coordinator rebased onto Windows main `6d26206aa8861490cc6540b6bafafc08e3249c3c`, producing `a84525024`. Only exact Rust ratchets conflicted; measured totals during the preserved commits were 116971, 116992 and 117102. Final total is 117102: main 114995 plus D growth 2107. Added/deleted product lines are identical before and after rebase, SHA-256 `089a1a200cafb7713e44eab18c8e49c75155aeede039dbc3b86fc0ed9e4a4f7b`. Patches remain in `target/0401d-{before,after}-windows.patch`.
 
 Offline policy, exact ratchet, 84 distinct focused Rust cases and the three executable rank-set/result contract blocks passed on the Windows integration. `target/0401d-windows-focus.log` has SHA-256 `bb8435ee4d489d3e4e2bd00ebe4eadefba763355b25b2a5d0faf3d2090ae69dd`. This focused receipt does not claim the final provider-integrated source, renewed full lint, full checkpoint or canonical documentation replay. The provider landing, final rebase, review and checkpoint remain pending. No new live call or native/release dispatch ran.
+
+## Provider integration and final coordinator checkpoint
+
+The coordinator rebased the accepted D product onto provider main `4ca5a9f9bbb45c2a9679ceb71bb9a1096208d134`, producing `ace778598ad980762d533639a000b14ddc7fbf62`. CLI asking, the backend test registry and settings contract merged automatically. Only exact ratchets conflicted; measured totals were 117857, 117878 and 117988. Final Rust is 117988: main 115881 plus D growth 2107. All files remain below 500 nonblank lines.
+
+Product added/deleted lines remain identical before and after rebase, SHA-256 `089a1a200cafb7713e44eab18c8e49c75155aeede039dbc3b86fc0ed9e4a4f7b`; `target/0401d-{before,after}-provider.patch` retains the patches. Fresh independent High source review accepted `ace778598` at `/tmp/thinkthen-0401d-provider-source-review-cli-3cxu4hg6/review.md`. It inspected captured setup prices/profiles and owner/key precedence in member planning, wire/cache identity, budgets/cancellation, bounded turns and the corrected preview.
+
+Policy, exact ratchet, 85 distinct focused Rust cases and all three executable contract blocks pass on the provider integration. Renewed required lint passes with 580 public declarations and four refused inventory plants. Full tests pass 1408 workspace cases with 26 skips, 143 library-only cases with 4 skips and 21 external-consumer cases with 3 skips. The specification passes 62 pages with 1 skip and 24 green demos with 0 red. Routine isolated-home smoke omissions remain separate from canonical execution.
+
+The coordinator also closed the recorded C-door and optional Rust Polars compatibility checks: 34 C door tests pass, with 53 shared cases passing and two existing exclusions. Rust Polars passes Clippy for normal and library-only feature modes, 19 cases with one stress case ignored, and its documentation example. These are Linux/source-feature receipts and establish no native Windows result.
+
+The actual documentation run replayed all 308 language and 42 SQL samples. Both strict checks matched 350 proofs with zero stale pages, and the final site build passed. `site/examples/bindings-proof.json` is runner-generated; `target/0401d-checkpoint-final/final-proof.json` is its byte-identical retained copy. No proof hashes were manually stamped.
+
+| Current merged receipt | SHA-256 |
+| --- | --- |
+| `target/0401d-provider-focus.log` | `3586ecdb65ea2cf42c5fc21a64de1dd2dc572fea52257626349c8c3ce9a008ce` |
+| `target/0401d-provider-lint.log` | `5d9992873aa43df1f050fd54ca4134dbb3a7b149bb214a52a883626501c67f4e` |
+| `target/0401d-checkpoint-final/test.log` | `007b07edc227a530244d3fff4c7492ec0b8995cfc99caa2d45d84ade021e00c4` |
+| `target/0401d-checkpoint-final/spec.log` | `0c6100d4855a8e22e33de4822e41d6b48cf329684cc93e7f0679605cbeda02dc` |
+| `target/0401d-checkpoint-final/compat.log` | `dec5e9417c6cdf08b180af784c91e7f71327f072324db2ceb3d52e59685c78b1` |
+| `target/0401d-checkpoint-final/test-docs.log` | `2e1369ac1b2311ec5b23f9e2cffb14059e070fcb0a7947d588a5842f37194ddb` |
+| `target/0401d-checkpoint-final/strict.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0401d-checkpoint-final/site-build.log` | `7f60474fd3d83327478d68ebc8e232e61e9f1168915f5c7ce654babe2f5a9a30` |
+| `target/0401d-checkpoint-final/final-proof.json` | `ff26c793f1f744e225f28941b9d7351c77d8be5de6f567726e05eab613c3185c` |
+
+All heavy commands used owned user scopes with 12G memory/1G swap, two offline Cargo jobs and lane output/locks. No new live call, native dispatch, stress campaign, release approval or publication ran. Fresh final receipt review and slice D landing remain pending. SQL sets remain 0417 for 0.2, foreign sets remain 0418 later, and default concurrency remains owned by 0400 C.
