@@ -1,7 +1,7 @@
 //! Owned JSON snapshots of one Rust call's facts and ordered questions.
 
 use std::sync::Mutex;
-#[path = "../../../shared/source.rs"]
+#[path = "../../../r/thinkthen/src/rust/src/source/mod.rs"]
 mod source;
 
 use serde_json::{Value, json};

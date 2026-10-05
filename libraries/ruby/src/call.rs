@@ -1,6 +1,6 @@
 //! The calls a worker runs: owned inputs in, plain Rust values out.
 
-#[path = "../../shared/source.rs"]
+#[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
 mod source;
 
 use std::sync::atomic::{AtomicBool, Ordering};

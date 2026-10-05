@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 void tt_failure_clear(TTFailure *f) { if (f) { free(f->message); free(f->facts_json); *f = (TTFailure){0}; } }
 static void reject(TTFailure *f) { if (f) { tt_failure_clear(f); f->kind=TTErrorUsage; f->retryable=0; f->message=strdup("NUL or missing C-string input"); } }
@@ -111,9 +112,16 @@ static void leave(TTClient *e, TTToken *t) {
     if (!q || !s || q->type!=TTJSONObject || s->type!=TTJSONObject || tt_json_get(q,"source")) {
         tt_json_free(q); tt_json_free(s); reject(f); return NULL;
     }
-    size_t n=q->source_length+strlen(source)+12;
+    size_t used=strlen(question), source_length=strlen(source);
+    while(used && isspace((unsigned char)question[used-1])) used--;
+    if(used > SIZE_MAX-source_length-12) { tt_json_free(q); tt_json_free(s); reject(f); return NULL; }
+    size_t n=used+source_length+12;
     char *request=malloc(n); if (!request) abort();
-    snprintf(request,n,"%.*s%s\"source\":%s}",(int)(q->source_length-1),q->source,q->count?",":"",source);
+    used--;
+    memcpy(request,question,used); if(q->count) request[used++]=',';
+    memcpy(request+used,"\"source\":",9); used+=9;
+    memcpy(request+used,source,strlen(source)); used+=strlen(source);
+    request[used++]='}'; request[used]=0;
     char *answer=[self json:request deadline:d token:tok failure:f];
     free(request); tt_json_free(q); tt_json_free(s); return answer;
 }

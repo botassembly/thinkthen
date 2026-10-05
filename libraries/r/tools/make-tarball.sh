@@ -22,8 +22,6 @@ fi
 scratch_dir STAGE
 PKG="$STAGE/thinkthen"
 cp -R "$ROOT/libraries/r/thinkthen" "$PKG"
-cp "$ROOT/libraries/shared/source.rs" "$PKG/src/rust/src/source.rs"
-perl -pi -e 's|../../../../../shared/source.rs|source.rs|' "$PKG/src/rust/src/files.rs"
 rm -rf -- "$PKG/src/rust/.cargo" "$PKG/src/rust/target"
 
 # The crate as cargo publishes it, unpacked where the package's manifest

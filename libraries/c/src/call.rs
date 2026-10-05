@@ -18,7 +18,7 @@ use crate::door;
 use crate::failures::Failure;
 
 mod records;
-#[path = "../../shared/source.rs"]
+#[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
 pub(crate) mod source;
 
 const VERBS: [&str; 10] = [

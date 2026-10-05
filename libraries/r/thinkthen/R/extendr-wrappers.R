@@ -17,6 +17,8 @@ NULL
 #' Check a question file and name its kind.
 tt_question_check <- function(body) .Call(wrap__tt_question_check, body)
 
+tt_source_files <- function(question, selection, deadline) .Call(wrap__tt_source_files, question, selection, deadline)
+
 #' Read a question file under the crate's one 1 MiB cap.
 tt_question_file <- function(path) .Call(wrap__tt_question_file, path)
 
@@ -59,7 +61,3 @@ tt_completion_read_native <- function(value) .Call(wrap__tt_completion_read_nati
 tt_completion_settle_early <- function(value, kind) .Call(wrap__tt_completion_settle_early, value, kind)
 
 # nolint end
-
-tt_source_files <- function(question, selection, deadline) {
-    .Call(wrap__tt_source_files, question, selection, deadline)
-}

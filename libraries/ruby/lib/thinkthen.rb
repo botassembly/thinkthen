@@ -471,7 +471,7 @@ module ThinkThen
     end
 
     %i[decide decide_many decide_many_with_probabilities filter rank find choose choose_many score score_many score_with_level
-       tag tag_many details annotate recognize relate plan usage].each do |name|
+       tag tag_many details annotate recognize relate plan usage files].each do |name|
       define_method(name) { |*args, **keywords, &block| default_engine.public_send(name, *args, **keywords, &block) }
     end
 

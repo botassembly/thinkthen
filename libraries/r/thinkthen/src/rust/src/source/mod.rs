@@ -1,40 +1,36 @@
 //! Located calls shared by the JSON door and Python, using the native reader.
 
-use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use thinkthen::{
     CallOptions, DetailQuestion, Engine, Entity, Error, Facts, LoadedQuestion, Question,
-    QuestionSet, ReaderOptions, Recognize, Relate, SourceRecord, SourceUnit, Tally,
+    QuestionSet, ReaderOptions, Recognize, Relate, SourceRecord, Tally,
 };
 
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(crate) struct Selection {
-    pub(crate) paths: Vec<String>,
-    #[serde(default)]
-    pub(crate) unit: SourceUnit,
-    #[serde(default)]
-    pub(crate) window: Option<usize>,
+    paths: Vec<String>,
+    options: ReaderOptions,
 }
 
 impl Selection {
     pub(crate) fn read(&self) -> Result<thinkthen::SourceRecords, Error> {
-        thinkthen::read_files(
-            &self.paths,
-            ReaderOptions {
-                unit: self.unit,
-                window: self.window,
-            },
-        )
+        thinkthen::read_files(&self.paths, self.options)
     }
 }
 
 pub(crate) fn parse(text: &str) -> Result<Selection, Error> {
-    serde_json::from_str(text).map_err(|_| usage("source takes paths, unit, and optional window"))
-}
-
-fn value<T: Serialize>(held: T) -> Result<Value, Error> {
-    serde_json::to_value(held).map_err(|_| defect("a located result could not be written"))
+    let mut body: serde_json::Map<String, Value> = serde_json::from_str(text)
+        .map_err(|_| usage("source takes paths, unit, and optional window"))?;
+    let paths = serde_json::from_value(
+        body.remove("paths")
+            .ok_or_else(|| usage("source requires paths"))?,
+    )
+    .map_err(|_| usage("source paths are an array of strings"))?;
+    let options: ReaderOptions = serde_json::from_value(Value::Object(body))
+        .map_err(|_| usage("source takes paths, unit, and optional window"))?;
+    Ok(Selection {
+        paths,
+        options: options.validate()?,
+    })
 }
 
 fn decoded(text: &str) -> Result<Value, Error> {
@@ -42,7 +38,7 @@ fn decoded(text: &str) -> Result<Value, Error> {
 }
 
 fn located(source: &SourceRecord<String>, answer: Value) -> Result<Value, Error> {
-    let mut row = value(source)?;
+    let mut row = json!({"record":source.record,"file":source.file,"first_line":source.first_line,"last_line":source.last_line});
     put(&mut row, "value", answer)?;
     Ok(row)
 }
@@ -79,7 +75,7 @@ pub(crate) fn execute(
                 .facts()
                 .cloned()
                 .ok_or_else(|| defect("completed filter has no facts"))?;
-            (value(rows)?, facts)
+            (Value::Array(rows), facts)
         }
         "rank" => {
             let body: std::collections::BTreeMap<String, String> =
@@ -102,7 +98,7 @@ pub(crate) fn execute(
                     Ok(held)
                 })
                 .collect::<Result<Vec<_>, Error>>()?;
-            (value(rows)?, call.facts().clone())
+            (Value::Array(rows), call.facts().clone())
         }
         "find" => find(engine, question, selection, options)?,
         "annotate" => {
@@ -123,7 +119,7 @@ pub(crate) fn execute(
                 .zip(answers)
                 .map(|(s, a)| located(s, a))
                 .collect::<Result<Vec<_>, _>>()?;
-            (value(rows)?, facts)
+            (Value::Array(rows), facts)
         }
         "recognize" => recognize(engine, question, selection, options)?,
         "relate" => relate(engine, question, selection, options)?,
@@ -157,9 +153,9 @@ fn judgments<Q: DetailQuestion + ?Sized>(
                     thinkthen::Answer::No => json!(false),
                     thinkthen::Answer::Unsure => Value::Null,
                 }),
-                thinkthen::Judgment::Choice(pick) => value(pick),
-                thinkthen::Judgment::Score(score) => value(score),
-                thinkthen::Judgment::Tags(tags) => value(tags),
+                thinkthen::Judgment::Choice(pick) => Ok(json!(pick)),
+                thinkthen::Judgment::Score(score) => Ok(json!(score)),
+                thinkthen::Judgment::Tags(tags) => Ok(json!(tags)),
             }
         })
         .collect::<Result<Vec<_>, Error>>()?;
@@ -172,7 +168,7 @@ fn judgments<Q: DetailQuestion + ?Sized>(
         .zip(answers)
         .map(|(s, a)| located(s, a))
         .collect::<Result<Vec<_>, _>>()?;
-    Ok((value(rows)?, facts))
+    Ok((Value::Array(rows), facts))
 }
 
 fn find(
@@ -199,11 +195,34 @@ fn find(
         Some(Value::Bool(false)) | None => (),
         _ => return Err(usage("find takes none as true or false")),
     }
-    let records = selection.read()?.collect::<Result<Vec<_>, _>>()?;
+    let mut records = Vec::new();
+    let mut bytes = 0usize;
+    let maximum = if body.get("none") == Some(&Value::Bool(true)) {
+        254
+    } else {
+        255
+    };
+    for source in selection.read()? {
+        let source = source?;
+        bytes = bytes
+            .checked_add(source.record.len())
+            .ok_or_else(|| usage("find input exceeds 16 MiB"))?;
+        if bytes > 16 * 1024 * 1024 {
+            return Err(usage("find input exceeds 16 MiB"));
+        }
+        if records.len() == maximum {
+            return Err(usage("find takes at most 255 units, or 254 with none"));
+        }
+        records.push(source);
+    }
     let call = engine.find_with(&asked, records, options)?;
     let answer =
         if let (Some(source), Some(picked)) = (call.value().selected(), call.value().picked()) {
-            located(source, value(picked)?)?
+            located(
+                source,
+                serde_json::to_value(picked)
+                    .map_err(|_| defect("a found result could not be written"))?,
+            )?
         } else {
             Value::Null
         };
@@ -223,17 +242,10 @@ fn recognize(
         let source = source?;
         let call = tally.run(|| engine.recognize_with(&asked, &source.record, options))?;
         let mut answer = decoded(&call.value().to_json())?;
-        if let Some(entities) = answer.get_mut("entities").and_then(Value::as_array_mut) {
-            for (entity, span) in entities.iter_mut().zip(call.value().entities()) {
-                let (first, last) = source.span_lines(span.start(), span.end())?;
-                entity["file"] = json!(source.file);
-                entity["first_line"] = json!(first);
-                entity["last_line"] = json!(last);
-            }
-        }
+        locate_recognition(&source, &mut answer)?;
         rows.push(located(&source, answer)?);
     }
-    Ok((value(rows)?, tally.facts()))
+    Ok((Value::Array(rows), tally.facts()))
 }
 
 fn relate(
@@ -380,4 +392,42 @@ pub(crate) fn dispatch(
         options,
         detailed,
     )
+}
+
+fn locate_recognition(source: &SourceRecord<String>, answer: &mut Value) -> Result<(), Error> {
+    if let Some(entities) = answer.get_mut("entities").and_then(Value::as_array_mut) {
+        for entity in entities {
+            locate_span(source, entity)?;
+        }
+    }
+    if let Some(relations) = answer.get_mut("relations").and_then(Value::as_array_mut) {
+        for relation in relations {
+            locate_relation(source, relation)?;
+        }
+    }
+    Ok(())
+}
+
+fn locate_span(source: &SourceRecord<String>, entity: &mut Value) -> Result<(), Error> {
+    let offset = |key| {
+        entity
+            .get(key)
+            .and_then(Value::as_u64)
+            .and_then(|n| usize::try_from(n).ok())
+            .ok_or_else(|| defect("a native recognition span held no offset"))
+    };
+    let (first, last) = source.span_lines(offset("start")?, offset("end")?)?;
+    put(entity, "file", json!(source.file))?;
+    put(entity, "first_line", json!(first))?;
+    put(entity, "last_line", json!(last))?;
+    Ok(())
+}
+
+fn locate_relation(source: &SourceRecord<String>, relation: &mut Value) -> Result<(), Error> {
+    for endpoint in ["source", "target"] {
+        if let Some(entity) = relation.get_mut(endpoint) {
+            locate_span(source, entity)?;
+        }
+    }
+    Ok(())
 }

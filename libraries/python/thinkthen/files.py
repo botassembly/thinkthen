@@ -36,7 +36,7 @@ class FileSelection:
         return json.dumps(dict(paths=self.paths, unit=self.unit, window=self.window))
 
     def __iter__(self):
-        return iter(SourceRecord(**row) for row in json.loads(_thinkthen._read_files(self._json())))
+        return (SourceRecord(**json.loads(row)) for row in _thinkthen._read_files(self._json()))
 
     def __repr__(self):
         return f"FileSelection(unit={self.unit!r}, window={self.window!r}, paths=<withheld>)"

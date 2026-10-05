@@ -49,3 +49,5 @@ The JSON door accepts question-file grammar: bare label arrays and ordered label
 This proof tests synthetic answers, ownership, UTF-8, native cancellation, response shapes and counted requests, not answer quality, Rust allocator instrumentation, other operating systems or Apple Objective-C runtimes.
 
 `createWithSettings:length:failure:` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
+
+Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.

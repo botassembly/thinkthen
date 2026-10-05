@@ -458,7 +458,10 @@ class Engine:
         """
         deadline_ms = _due_keyword(deadline_ms, legacy)
         if isinstance(records, FileSelection):
-            call = _source_call(self, "rank", json.dumps({"rank": question}), records, batch, context, deadline_ms, token)
+            asked = _ordering(question, "rank")
+            if asked.kind != "rank":
+                raise UsageError("rank takes a rank question")
+            call = _source_call(self, "rank", asked._json(), records, batch, context, deadline_ms, token)
             return _mapped(call, lambda rows: rows[:top])
         ranked = self._engine.order("rank", _ordering(question, "rank"), records,
                                      batch, context, deadline_ms, token)
@@ -473,11 +476,15 @@ class Engine:
         if not isinstance(none, bool):
             raise UsageError("none is True or False")
         asked = _ordering(question, "find")
-        if none:
-            asked = asked._offering_none()
         deadline_ms = _due_keyword(deadline_ms, legacy)
         if isinstance(units, FileSelection):
-            return _source_call(self, "find", json.dumps({"find": question, "none": none}), units, None, None, deadline_ms, token)
+            if asked.kind != "find":
+                raise UsageError("find takes a find question")
+            body = json.loads(asked._json())
+            body["none"] = none
+            return _source_call(self, "find", json.dumps(body), units, None, None, deadline_ms, token)
+        if none:
+            asked = asked._offering_none()
         found = self._engine.order("find", asked, units, None, None, deadline_ms, token)
         def picked(rows):
             if not rows:

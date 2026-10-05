@@ -27,8 +27,8 @@ struct PlanInput<'a> {
     question: &'a RawValue,
     #[serde(default)]
     input: Option<Records>,
-    #[serde(default)]
-    source: Option<super::call::source::Selection>,
+    #[serde(borrow, default)]
+    source: Option<&'a RawValue>,
     #[serde(borrow, default)]
     settings: Option<&'a RawValue>,
 }
@@ -69,7 +69,7 @@ pub(crate) fn plan(engine: &Engine, text: &str) -> Result<String, Failure> {
     let records = match (input.input, input.source) {
         (Some(Records::One(text)), None) => vec![text],
         (Some(Records::Many(texts)), None) => texts,
-        (None, Some(source)) => source
+        (None, Some(source)) => super::call::source::parse(source.get())?
             .read()?
             .map(|r| r.map(|r| r.record))
             .collect::<Result<Vec<_>, _>>()?,

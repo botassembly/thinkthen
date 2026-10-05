@@ -5,9 +5,16 @@ use conformance_backend::Backend;
 use serde_json::{Value, json};
 
 fn ask(backend: &Backend, requests: &[Value]) -> Vec<(i32, Value)> {
-    let base = format!("{}/arm/full/v1", backend.origin());
+    ask_at(backend, requests, false)
+}
+
+fn ask_at(backend: &Backend, requests: &[Value], cache: bool) -> Vec<(i32, Value)> {
+    let base = format!("{}/arm/full/capture/v1", backend.origin());
     let mut script = Script::default();
-    script.ask("settings", &[&base, r#"{"cache":false,"max_retries":0}"#]);
+    script.ask(
+        "settings",
+        &[&base, &json!({"cache":cache,"max_retries":0}).to_string()],
+    );
     for request in requests {
         script.ask("call", &[&base, &request.to_string()]);
     }
@@ -71,16 +78,11 @@ fn every_function_reaches_the_shared_documents_without_changing_records() {
         if index == 9 {
             let edges = value["edges"].as_array().expect("edges");
             assert!(!edges.is_empty());
-            for edge in edges {
-                for endpoint in ["source", "target"] {
-                    assert!(
-                        originals
-                            .iter()
-                            .any(|record| edge[endpoint]["record"] == *record)
-                    );
-                    assert_eq!(edge[endpoint]["first_line"], 1);
-                    assert_eq!(edge[endpoint]["last_line"], 4);
-                }
+            for endpoint in edges
+                .iter()
+                .flat_map(|edge| [&edge["source"], &edge["target"]])
+            {
+                source_row(endpoint, &originals);
             }
         } else {
             let rows: Vec<&Value> = if index == 6 {
@@ -155,4 +157,82 @@ fn lines_and_windows_retain_physical_crlf_positions_and_duplicate_occurrences() 
         replies[2].1["value"]["edges"].as_array().map(Vec::len),
         Some(4)
     );
+}
+
+fn source_row(row: &Value, originals: &[String]) {
+    assert!(originals.iter().any(|record| row["record"] == *record));
+    assert_eq!(row["first_line"], 1);
+    assert_eq!(row["last_line"], 4);
+}
+
+#[test]
+fn source_plans_match_original_evidence_and_mixtures_preserve_outputs_without_sending() {
+    use crate::child::ChildEnvironment as _;
+    let backend = Backend::start().expect("backend");
+    let folder = scratch("source-plan");
+    std::fs::create_dir_all(&folder).expect("folder");
+    let path = folder.join("notes.txt");
+    std::fs::write(&path, "Refund me please.\n").expect("notes");
+    let evidence =
+        json!({"verb":"decide","question":"asks for a refund","input":["Refund me please."]});
+    let source = json!({"verb":"decide","question":"asks for a refund","source":{"paths":[path]}});
+    let mut mixture = source.clone();
+    mixture["input"] = json!(["old"]);
+    let output = std::process::Command::new(compile(&crate_dir().join("tests/c/source_plan.c")))
+        .clear_environment()
+        .env(
+            "THINKTHEN_BASE_URL",
+            format!("{}/generic/v1", backend.origin()),
+        )
+        .env("THINKTHEN_CACHE", folder.join("cache"))
+        .args([
+            evidence.to_string(),
+            source.to_string(),
+            mixture.to_string(),
+        ])
+        .output()
+        .expect("plans");
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    let plans: Vec<Value> = text(&output.stdout)
+        .lines()
+        .map(|line| serde_json::from_str(line).expect("plan"))
+        .collect();
+    assert_eq!(plans.len(), 2);
+    assert_eq!(plans[0], plans[1]);
+    assert_eq!(backend.count(), 0);
+}
+
+#[test]
+fn moving_identical_evidence_changes_provenance_without_changing_cache_identity() {
+    let backend = Backend::start().expect("backend");
+    let folder = scratch("source-identity");
+    std::fs::create_dir_all(&folder).expect("folder");
+    let first = folder.join("first.txt");
+    let second = folder.join("second.txt");
+    for path in [&first, &second] {
+        std::fs::write(path, "Refund me please.\n").expect("notes");
+    }
+    let requests = [
+        json!({"decide":"Q?","source":{"paths":[first]}}),
+        json!({"decide":"Q?","source":{"paths":[second]}}),
+        json!({"decide":"Q?","evidence":"Refund me please."}),
+    ];
+    let replies = ask_at(&backend, &requests, true);
+    assert!(replies.iter().all(|(code, _)| *code == 0), "{replies:?}");
+    assert_eq!(
+        replies[0].1["value"][0]["file"],
+        first.to_string_lossy().as_ref()
+    );
+    assert_eq!(
+        replies[1].1["value"][0]["file"],
+        second.to_string_lossy().as_ref()
+    );
+    assert_eq!(backend.count(), 1);
+    let capture: Value = serde_json::from_str(&backend.capture()).expect("capture");
+    let bodies = capture["bodies"].as_array().expect("bodies");
+    assert_eq!(bodies.len(), 1);
+    let body = bodies[0].to_string();
+    assert!(body.contains("Refund me please."));
+    assert!(!body.contains("first.txt") && !body.contains("second.txt"));
+    assert!(!body.contains("first_line") && !body.contains("last_line"));
 }

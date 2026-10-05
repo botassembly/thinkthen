@@ -377,7 +377,7 @@ export interface Verbs {
 
 /** An engine with its own settings, built on the environment. */
 export class Engine implements Verbs {
-  files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: CallOptions): Promise<Call<JsonValue>>;
+  files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: ManyCallOptions): Promise<Call<JsonValue>>;
   constructor(options?: EngineOptions);
   decide: Verbs['decide'];
   decide_many: Verbs['decide_many'];
@@ -426,4 +426,4 @@ export interface ReaderOptions { unit?: 'line' | 'window' | 'file'; window?: num
 export interface SourceRecord { record: string; file: string; first_line: number; last_line: number; }
 export interface LocatedRow extends SourceRecord { value: JsonValue; }
 /** Explicit files through the native JSON grammar, for any of the ten verbs. */
-export function files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: CallOptions): Promise<Call<JsonValue>>;
+export function files(question: Readonly<Record<string, JsonValue>>, paths: string | readonly string[], reader?: ReaderOptions, call?: ManyCallOptions): Promise<Call<JsonValue>>;

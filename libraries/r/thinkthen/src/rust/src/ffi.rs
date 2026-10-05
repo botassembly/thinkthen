@@ -97,8 +97,7 @@ fn charsxp_text(charsxp: SEXP, what: &str) -> Crossed<String> {
         .map_err(|_| refused("bytes that are not valid UTF-8"))
 }
 
-/// One R value as one string.
-fn text_of(value: &Robj, what: &str) -> Crossed<String> {
+pub(crate) fn text_of(value: &Robj, what: &str) -> Crossed<String> {
     match value.rtype() {
         // SAFETY: a length-one character vector's first element is a CHARSXP.
         Rtype::Strings if value.len() == 1 => {
@@ -166,7 +165,7 @@ fn number_of(value: &Robj, what: &str) -> Crossed<Option<f64>> {
 }
 
 /// The deadline argument is whole milliseconds, `-1`, or `NULL`.
-fn deadline_of(value: &Robj) -> Crossed<Option<f64>> {
+pub(crate) fn deadline_of(value: &Robj) -> Crossed<Option<f64>> {
     number_of(value, "deadline_ms")
 }
 
@@ -507,7 +506,7 @@ fn tt_engine_set(
 
 #[extendr]
 fn tt_source_files(question: Robj, selection: Robj, deadline: Robj) -> Crossed<List> {
-    crate::files::execute(text_of(&question, "question")?, text_of(&selection, "source")?, deadline_of(&deadline)?, &interrupt_pending)
+    crate::files::from_robj(question, selection, deadline, &interrupt_pending)
 }
 
 extendr_module! {

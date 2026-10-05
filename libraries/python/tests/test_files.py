@@ -63,3 +63,20 @@ def test_reader_refusals_send_nothing_and_do_not_infer_paths(backend, tmp_path):
     ''', child_env(backend, tmp_path))
     assert output.strip() == "refused"
     assert backend.count() == 0
+
+
+def test_iteration_reports_a_later_content_failure_after_the_first_record(tmp_path):
+    import thinkthen as tt
+    folder = tmp_path / "sources"
+    folder.mkdir()
+    (folder / "01-good.txt").write_text("original\n")
+    (folder / "02-bad.txt").write_bytes(b"\xff\n")
+    selection = tt.read_files(folder)
+    rows = iter(selection)
+    assert next(rows).record == "original"
+    try:
+        next(rows)
+    except tt.UsageError as error:
+        assert str(error) == "the record is not valid UTF-8"
+    else:
+        raise AssertionError("invalid UTF-8 admitted")

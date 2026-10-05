@@ -87,9 +87,15 @@ impl Account {
         }
     }
 
-    pub(crate) fn start(&self) -> thinkthen::TallyStart<'_> { self.tally.start() }
+    pub(crate) fn start(&self) -> thinkthen::TallyStart<'_> {
+        self.tally.start()
+    }
 
-    pub(crate) fn include(&self, started: thinkthen::TallyStart<'_>, facts: &Facts) -> Result<(), String> {
+    pub(crate) fn include(
+        &self,
+        started: thinkthen::TallyStart<'_>,
+        facts: &Facts,
+    ) -> Result<(), String> {
         started.finish(facts).map_err(|e| carry(&e))?;
         self.counted.store(true, Ordering::SeqCst);
         Ok(())

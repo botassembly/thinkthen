@@ -31,3 +31,11 @@ def check(engine: tt.Engine, question: tt.Question, error: tt.ThinkThenError,
     assert_type(judge, tt.Judge[bool | None])
     assert_type(judge(iter(["one"])), tt.Stream[bool | None])
     assert_type(tt.plan(judge, ["one"]), dict[str, Any])
+
+
+def source_types(engine: tt.Engine) -> None:
+    source = tt.read_files("documents", unit="file")
+    assert_type(source, tt.FileSelection)
+    assert_type(next(iter(source)), tt.SourceRecord)
+    assert_type(engine.decide("Ready?", source), tt.Call[list[tt.Located[bool | None]]])
+    assert_type(engine.find("Which?", source), tt.Call[tt.Located[dict[str, Any]] | None])
