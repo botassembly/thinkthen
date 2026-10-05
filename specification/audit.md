@@ -97,20 +97,24 @@ interval = [max(0, centre − half), min(1, centre + half)], or null when n = 0
 
 **Tie share** (`choose` and `find`). An answer that reads as tied among `k` options at the top earns `1/k` when the key is one of them, and 0 otherwise. A `find` tie among real units prints the first unit, so it reads as that unit and earns no share. `tied_holding_key` counts the ties that hold the key, and `tie_share` sums their shares. Both count under every rule, and both are null for other verbs. `tied` and `right` keep their meaning.
 
-**Calibration pairs** (probabilities on every labeled answer). Each pair is the answer's confidence in the answer it gave as run, under the question's own bar, and how right that answer was. `--threshold` does not move the pairs.
+**Calibration pairs** (probabilities on every labeled answer). Each pair uses the probability of the answer given as run, under the question's own rule, and the credit that answer earned against the key. Changing audit's `--threshold` does not move these pairs.
 
-| Answer as run | Confidence | Right |
+| Answer as run | Probability used | Right |
 | --- | --- | ---: |
 | Yes/no said yes | `p` | 1 when the key is yes, else 0 |
 | Yes/no said no | `1 − p` | 1 when the key is no, else 0 |
 | Yes/no not sure | `max(p, 1 − p)` | 0 |
 | `choose` or `find` | the top | 1 or 0 by the outcome, or the tie share for a tie |
 
+“Probability of the answer given” is the general term; an unresolved yes/no answer uses the documented side-probability convention rather than a probability of `null`.
+
 Yes/no covers `decide`, `filter`, and each `tag` label. `score` and `rank` pair nothing, so their `calibration` and `curve` are null, as are the `tag` pooled row's. Failed and unlabeled answers pair nothing.
 
-**Calibration.** Ten equal bins cover zero to one, and the last is closed at one. The error is the sum over bins of `|Σ right − Σ confidence|`, divided by the number of pairs. Sums of floats compensate each step as Python's `sum` does. The interval draws 1,000 bootstrap resamples with a SplitMix64 generator seeded with `--seed`, one generator per group. Each resample's error, less the bias, floors at 0. The bias is the mean resampled error less the estimate. The interval takes the linear-interpolation quantiles at 0.025 and 0.975 of the shifted errors, then widens to hold the estimate. `calibration` prints `error`, `interval`, `note`, and `by_bin`: ten `{low, high, n, right, confidence}` objects, where `right` sums the pairs' right and `confidence` is the bin's mean confidence, null when `n` is 0. The note says `the interval resamples the records; it does not cover rerun noise, so compare two runs of the same records`.
+**Calibration.** Ten equal bins cover zero to one, and the last is closed at one. The error is the sum over bins of `|Σ right − Σ pair probability|`, divided by the number of pairs. Sums of floats compensate each step as Python's `sum` does. The interval draws 1,000 bootstrap resamples with a SplitMix64 generator seeded with `--seed`, one generator per group. Each resample's error, less the bias, floors at 0. The bias is the mean resampled error less the estimate. The interval takes the linear-interpolation quantiles at 0.025 and 0.975 of the shifted errors, then widens to hold the estimate. `calibration` prints `error`, `interval`, `note`, and `by_bin`: ten `{low, high, n, right, confidence}` objects, where `right` sums the pairs' right and `confidence` is the bin's mean pair probability, null when `n` is 0. The note says `the interval resamples the records; it does not cover rerun noise, so compare two runs of the same records`.
 
-**Curve** (with `--curve`, over the calibration pairs). `curve` lists `{cut, kept, right}` at each distinct confidence, highest first. `kept` counts the pairs whose confidence reaches the cut, and `right` sums their right. Without `--curve` it is null.
+`calibration.by_bin[].confidence` retains its name for compatibility. It is the bin's mean pair probability. It is not the backend's `answer.confidence` field. Calibration error describes agreement between reported probabilities and labels in the measured set. It does not certify a future answer or establish population accuracy.
+
+**Curve** (with `--curve`, over the calibration pairs). `curve` lists `{cut, kept, right}` at each distinct pair probability, highest first. `kept` counts the pairs whose probability reaches the cut, and `right` sums their right. Without `--curve` it is null.
 
 **The pooled line** (with `--pooled`). One last line, `{pooled: "every verb", answers, calibration, curve}`, over the calibration pairs of every unfailed, labeled answer of a verb that pairs, whatever the grouping. `tag` labels stay out, because their errors move together. The bootstrap has its own generator seeded with `--seed`. `calibration` and `curve` are null when a pairing answer lacks probabilities.
 

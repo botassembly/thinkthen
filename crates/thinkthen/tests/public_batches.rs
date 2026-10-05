@@ -523,3 +523,6 @@ mod rank_set_0401;
 
 #[path = "public_batches/rank_set_0401_safety.rs"]
 mod rank_set_0401_safety;
+
+#[path = "public_batches/numbers_0402.rs"]
+mod numbers_0402;

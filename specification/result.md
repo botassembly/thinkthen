@@ -62,11 +62,13 @@ For example, one detailed `decide` result is:
 
 ## A detailed result keeps everything
 
+The following paragraphs describe the CLI details and native observation shapes named here. Complete aggregate details are not available through every generic C JSON and SQL route. The [0405 audit](../sdlc/records/0405-audit-report.md) records the gaps; [0408](../sdlc/tickets/0408-j1-full-probabilities.md) owns aggregate carriers.
+
 `relate --details` is an aggregate Option A result. `value` holds accepted edges. `question` holds the resolved fields, ordered relation rules, threshold, and optional saved calibration profile. `answer.questions` keeps each yes/no relation pair, including its endpoints, probability, accepted marker or failure, and question key. `meta.failed_questions` counts failed entries and is always present. [relate.md](relate.md) fixes the exact ordered schema.
 
 `recognize --details` keeps the bare object under `value` and the resolved recognition shape under `question`. `answer.pieces` lists each piece's offsets and its five tag probabilities. `answer.names` lists each found name's span as step 1 found it, its kind probabilities, and its edge option probabilities, or null when it had no edge question. `answer.pairs` lists each relation pair's probability. `meta.requests` lists the question keys of step 1, then step 2, then the relation questions. Name `strength` is P(kind) times P(span), computed from these inputs, and is not itself a probability.
 
-Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probability of every option or every level, and it carries the backend's own `confidence` when the backend reports one. A saved run can then be swept at another rule with no second request.
+Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probability of every option or every level, and it carries the backend's own `confidence` when the backend reports one. Stored wire answers can be read under another supported reading rule without another send when the required questions and stages are already stored. A bare result is not a complete standalone store for every function. Strict replay refuses a missing question locally; ordinary cache mode may send it.
 
 `confidence` is present only when the backend sends it. No cut is taken on it. [backends.md](backends.md) says why. The vendor sends no `confidence` on a yes/no answer, so a `yes_no` answer carries none. `sdlc/planning/interface-audit.md` found the page promising one, and this page no longer does.
 
@@ -127,6 +129,8 @@ For `choose`, `score`, `find`, ordinary `rank`, and `recognize` step-2 options, 
 
 ## `meta`
 
+A [call](../CONTRIBUTING.md#call) may answer several [decisions](../CONTRIBUTING.md#decision). A [request](../CONTRIBUTING.md#request) is one send; `requests_sent` counts attributed transport attempts, including retries.
+
 ADR 0036 names the stored-answer field `cached`, replacing `replayed` without changing its meaning. New results emit only `cached`. The cost and trials readers still accept historical rows with `replayed`; a present `cached` field takes precedence even when false. Explicit read-only replay also reports `cached: true`.
 
 ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the explicitly selected run profile differ. Its value is `{"tuned_for":NAME,"running":NAME}`. The command prints the same mismatch once on standard error at the first successful logical result. `filter` still warns when it rejects every result and prints no records. A failure on the first logical record warns nobody, even when a later parallel worker completed. A missing name on either side and equal names add no field. The run profile itself stays out of metadata because the field records a warning, not backend selection.
@@ -142,7 +146,7 @@ Library and SQL details forms carry the same optional warning in `meta`. The pub
 | `usage` | The sum of the row's question shares, live or stored, by ADR 0111 section 7. Each answer's share is an even split of its request's reported counts, with the remainder to the earliest questions. Absent when any share lacks counts, as when a reply reported none. When every share has counts and their sum does not fit, the row fails with `the backend reported token counts whose total is too large`, a backend failure that exits 4 on the command |
 | `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Each retry of a retried status adds one. When a too-large batch halves, the refused whole request counts in the first half. A batched row carries its share of its request's attempts by the same rule, by ADR 0048 item 9. On the seven record commands, a row whose question joined another row's send in flight counts no attempt for it, so the rows' counts add up to the sends |
 | `cached` | `true` when the answer came entirely from stored exchanges — a recording or a cache — rather than a live backend |
-| `requests` | The question keys of the answers that produced the result, in answer order, by ADR 0111 section 7 and [recording.md](recording.md#the-question-store). Retries add nothing |
+| `requests` | The stored-answer question keys behind this result, in answer order. These are request digests in the existing public vocabulary, not a list of transport sends. Packing and retries do not make their count equal to `requests_sent`. See the [glossary](../CONTRIBUTING.md#calls-requests-and-decisions) and [question-store contract](recording.md#the-question-store). |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
 | `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
 | `batch` | No longer written. Rows saved before ADR 0111 may hold it, with the run's `setting` beside the batch's `records`, `position`, `closed`, `usage` and `requests_sent`. `audit` and `diff` still read its `setting` when a row has no `batch_setting` |

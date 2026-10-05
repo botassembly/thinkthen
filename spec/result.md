@@ -31,6 +31,10 @@ row() { head -n 1 | jq -c --arg command "$1" '{from: "replayed", command: $comma
        fenced && /"schema":"thinkthen\.result\/1"/ { print "{\"from\":\"example\",\"command\":\"" label "\",\"row\":" $0 "}" }' "$page"
 } > "$HOME/rows.jsonl"
 wc -l < "$HOME/rows.jsonl" | mustmatch "22"
+jq -r 'select(.from == "replayed" and .command == "choose") | .row |
+  [(.value == "billing"), (.answer.probabilities.billing == 1),
+   (.answer.confidence == 1), (.threshold == null),
+   (.meta.requests | length == 1), (.meta.requests_sent == 0)] | all' "$HOME/rows.jsonl" | mustmatch "true"
 sed -n '/^## Compatibility$/,/^## Record rows$/p' "$page" | grep '^| `' \
   | jq -R -c 'split("|") | {command: (.[1] | gsub("[` ]"; "")), verbs: (.[2] | [scan("`([^`]+)`")[0]] | if length == 0 then ["none"] else . end),
       members: [.[3] | scan("`([^`]+)`")[0]], meta: [.[4] | scan("`([^`]+)`")[0]]}' > "$HOME/table.jsonl"
