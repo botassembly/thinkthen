@@ -10,7 +10,7 @@ assert.throws(()=>cleanup(process.cwd()),/refuses unowned/);
 let cases=0;
 try{
  fs.mkdirSync(path.join(root,'site/examples/recipes'),{recursive:true});
- fs.cpSync(new URL('../examples/recipes/rules-propose-model-confirms',import.meta.url),path.join(root,'site/examples/recipes/rules-propose-model-confirms'),{recursive:true});
+ for(const r of RECIPE_PAGES.filter(r=>!r.draft)) fs.cpSync(new URL('../'+r.example.replace(/^site\//,''),import.meta.url),path.join(root,r.example),{recursive:true});
  fs.mkdirSync(path.join(root,'sdlc/issues'),{recursive:true});fs.mkdirSync(path.join(root,'sdlc/planning'),{recursive:true});
  for(const r of RECIPE_PAGES)fs.copyFileSync(new URL('../../'+r.issue,import.meta.url),path.join(root,r.issue));
  fs.copyFileSync(new URL('../../sdlc/planning/milestones.md',import.meta.url),path.join(root,'sdlc/planning/milestones.md'));

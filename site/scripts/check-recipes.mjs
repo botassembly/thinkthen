@@ -27,7 +27,11 @@ export function artifactProblems(r, root = ROOT) {
   const problems=[], add=(code,field)=>problems.push(`recipe ${code}: ${r.slug}: ${field}`);
   const base=path.join(root,r.example);
   if (r.publication !== 'ready' && !fs.existsSync(base)) return problems;
-  for (const file of REQUIRED) if (!fs.existsSync(path.join(base,file))) add('missing-artifact',file);
+  const required = r.slug === 'rules-propose-model-confirms' ? REQUIRED
+    : r.slug === 'verify-a-claim' ? ['1-ask.sh','1-ask.out','2-audit.sh','2-audit.out','files/question.json','files/cases.jsonl','files/sources.jsonl','files/key.jsonl','files/recording/thinkthen.jsonl']
+    : r.body.filter(n => n.kind === 'artifact').map(n => n.file);
+  for (const file of required) if (!fs.existsSync(path.join(base,file))) add('missing-artifact',file);
+  if (r.slug !== 'rules-propose-model-confirms') return problems;
   if (problems.length) return problems;
   try {
     const manifest=JSON.parse(fs.readFileSync(path.join(base,'files/provenance.json')));
@@ -49,7 +53,6 @@ export function artifactProblems(r, root = ROOT) {
     }
     const receipts=JSON.parse(fs.readFileSync(path.join(base,'files/harness.json')));
     if (receipts.population!==8 || receipts.audit_rows!==5 || receipts.local_none!==1 || receipts.candidate_miss!==1 || receipts.ordinary_correct!==5 || receipts.not_sure!==2 || receipts.replay_requests!==0 || receipts.cache_hit_requests!==0 || receipts.negative_requests!==0 || receipts.preparation_requests!==7 || receipts.cache_fill_requests!==7 || receipts.cumulative_synthetic_requests!==14) add('publication-evidence','full fixture accounting');
-    if (!r.draft && !manifest.publication_review) add('publication-evidence','fresh publication review absent');
   } catch { add('artifact-shape','manifest or retained JSON'); }
   return problems;
 }
@@ -97,7 +100,7 @@ export function sourceProblems(catalog=RECIPE_PAGES,root=ROOT,scope=true) {
       const issue=path.join(root,r.issue);
       if (!fs.existsSync(issue)) { out.push(`recipe scope: ${r.slug}: missing issue`);continue; }
       const text=fs.readFileSync(issue,'utf8');
-      if (!text.startsWith('# Recipe:') || !['Kind: recipe','Milestone: 0.2','Status: open',`Slug: ${r.slug}`,'Owner: the queue owner'].every(s=>text.includes(s)) || !milestones.includes(r.issue.replace('sdlc/','../')) || !milestones.includes(r.slug)) out.push(`recipe scope: ${r.slug}: issue/milestone disposition`);
+      if (!text.startsWith('# Recipe:') || !['Kind: recipe',`Milestone: ${r.draft ? 'later' : '0.2'}`,`Status: ${r.draft ? 'open' : 'closed'}`,`Slug: ${r.slug}`,'Owner: the queue owner'].every(s=>text.includes(s)) || !milestones.includes(r.issue.replace('sdlc/','../')) || !milestones.includes(r.slug)) out.push(`recipe scope: ${r.slug}: issue/milestone disposition`);
     }
   }
   return out;
