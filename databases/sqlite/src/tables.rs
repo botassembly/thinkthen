@@ -353,7 +353,14 @@ impl Relater {
         let has_kind = statement.column_count() == 3;
         let mut rows = statement.query([]).map_err(refused)?;
         let (mut order, mut ids) = (Vec::new(), HashMap::<(String, String), Vec<Value>>::new());
+        let mut source_rows = 0;
         while let Some(row) = rows.next().map_err(refused)? {
+            source_rows += 1;
+            if source_rows > MOST_PAIRS {
+                return Err(Failure::usage(
+                    "thinkthen_relate takes at most 255 source rows",
+                ));
+            }
             let held: Value = row.get(0).map_err(refused)?;
             let pair = (
                 named(row, 1, "name", &held)?,

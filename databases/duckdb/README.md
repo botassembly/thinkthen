@@ -32,6 +32,8 @@ Use dbt v1 with `duckdb` 1.5.5 for the documented dbt route. dbt v2 requires sig
 | `thinkthen_recognize(text, kinds[, settings])` | a list of `(text, start, end, length, kind, strength)` |
 | `thinkthen_relations(text, file[, settings])` | a list of `(relation, source, source_kind, target, target_kind, probability, either)`; `either` is true for a both-ways rule, whose ends are then in the order found |
 | `thinkthen_relate(query, rules[, settings])` | a table of `(relation, source, target, probability, either)`, one row per edge between the query's ids; `either` is true for a both-ways rule, whose ends are then in query order |
+| `thinkthen_read_files(path[, reader_options])` | rows `(ordinal, record, file, first_line, last_line)`; path is text or a list of explicit paths |
+| `thinkthen_span_lines(record, first_line, start, end)` | struct `(first_line, last_line)` mapped from native Unicode scalar offsets |
 | `thinkthen_usage()` | rows `(metric, value)` for `requests_sent`, `cache_answers`, `input_tokens`, and `output_tokens` |
 
 `WHERE` provides the filter form. `thinkthen_find` judges one ordered list per call; build a list from rows with `list(unit ORDER BY ordinal)` to preserve caller order. It accepts 2–255 nonblank units, or 2–254 when `{"none":true}` is in settings, and at most 16 MiB of unit text. Equal units keep separate original indexes. A selected none has a non-NULL result with NULL `index` and `value`; a top-level SQL NULL or empty list returns SQL NULL without sending. The question is literal text, including text beginning with `@` or looking like JSON. The earlier four C++ target packages have installed find proof; the Intel result is translated macOS 26 proof, with native Intel and macOS 15 release-runner checks still open. Call settings are one JSON object: `threshold`, question members, `model`, `batch`, `context`, `deadline_ms`, and find's `none` where the verb permits them. `NULL` settings and `{}` mean no call settings. `deadline_ms` replaces positional deadline and context slots; `-1` means no deadline, and `0` is spent. A `NULL` question or text gives a `NULL` row. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
@@ -61,6 +63,14 @@ SELECT best_passage FROM (
   FROM passages
 ) AS judged WHERE best_passage IS NOT NULL;
 ```
+
+## Files and folders
+
+`thinkthen_read_files` explicitly selects local files and recursively sorted folders. It defaults to physical lines. Reader options are JSON text: `{"unit":"file"}` retains whole documents and all original endings; `{"unit":"window","window":4}` selects nonoverlapping windows of four physical lines. Line/window units drop only the final LF or CRLF ending, skip whitespace units after size validation, and keep one-based inclusive physical positions. Operand lists retain their order and duplicate occurrences. Hidden regular files are included; descendant symlinks are skipped. Explicit file symlinks keep DuckDB's host policy. A manifest and each record have a 16 MiB bound. Unsupported entries and enumeration failures refuse before content admission; content opens and reads occur on demand and later failures stop the scan.
+
+The executing DuckDB filesystem authorizes every operand and descendant, then C++ inspects only local metadata because the pinned DuckDB listing API omits unsupported entries and listing failures. All content opens and reads use DuckDB-authorized handles and honor `enable_external_access`, `allowed_paths`, `allowed_directories` and disabled filesystems. Prepared executions recheck permission. This strict reader requires the stock local filesystem with no custom filesystem registrations; remote/custom routes are refused. Rust frames the authorized handle and never opens a DuckDB path.
+
+[All ten SQL examples](examples/files.sql) use the same [document folder](../../specification/fixtures/files/documents) and [question set](../../specification/fixtures/files/questions.json) as CLI and Python. Run them from the repository root after loading the matching extension. Their committed `documents` table lets relate's separate read-only connection see the complete source set. Row judgments retain source columns outside provider evidence and cache identity. Find maps its selected ordered index to the actual reader row; recognize calls the shared native span mapper; relate joins both endpoint ids to actual source rows. Document endpoints retain complete document ranges.
 
 ## Constrain a stored answer
 
