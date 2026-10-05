@@ -1,5 +1,7 @@
 //! Located calls shared by the JSON door and Python, using the native reader.
 
+mod relate_output;
+
 use serde_json::{Value, json};
 use thinkthen::{
     CallOptions, DetailQuestion, Engine, Entity, Error, Evidence, Facts, LoadedQuestion, Question,
@@ -257,8 +259,16 @@ fn relate(
     let mut sources = Vec::new();
     let mut entities = Vec::new();
     let mut occurrences = Vec::new();
+    let mut bytes = 0usize;
     for source in selection.read()? {
         let source = source?;
+        if sources.len() == 255 {
+            return Err(usage("source relate takes at most 255 source records"));
+        }
+        bytes = bytes
+            .checked_add(source.record.len())
+            .filter(|&bytes| bytes <= 16 * 1024 * 1024)
+            .ok_or_else(|| usage("source relate input exceeds 16 MiB"))?;
         let entity = Entity::new(&source.record, "*")?;
         let index = if let Some(at) = entities.iter().position(|e| e == &entity) {
             at
@@ -274,6 +284,7 @@ fn relate(
     }
     let call = engine.relate_with(&asked, entities.clone(), options)?;
     let mut edges = Vec::new();
+    let mut budget = relate_output::Budget::new();
     for edge in call.value() {
         for (s, _) in occurrences
             .iter()
@@ -285,23 +296,15 @@ fn relate(
                 .enumerate()
                 .filter(|(_, i)| entities.get(**i) == Some(edge.target()))
             {
-                let mut held = decoded(&edge.to_json())?;
                 let source = sources
                     .get(s)
                     .ok_or_else(|| defect("missing source occurrence"))?;
                 let target = sources
                     .get(t)
                     .ok_or_else(|| defect("missing target occurrence"))?;
-                let source_value = located(
-                    source,
-                    json!({"name": edge.source().name(), "kind": edge.source().kind()}),
-                )?;
-                let target_value = located(
-                    target,
-                    json!({"name": edge.target().name(), "kind": edge.target().kind()}),
-                )?;
-                put(&mut held, "source", source_value)?;
-                put(&mut held, "target", target_value)?;
+                let held =
+                    relate_output::edge(edge, source, target, &mut budget, !edges.is_empty())
+                        .map_err(|error| error.with_facts(call.facts().clone()))?;
                 edges.push(held);
             }
         }

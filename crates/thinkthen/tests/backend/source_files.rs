@@ -9,7 +9,7 @@ fn fixture() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../specification/fixtures/files")
 }
 
-fn answer(body: &[u8]) -> Canned {
+pub(super) fn answer(body: &[u8]) -> Canned {
     let request: Value = serde_json::from_slice(body).unwrap();
     let questions = request["questions"].as_object().unwrap();
     if questions.values().any(|q| {
@@ -40,7 +40,7 @@ fn answer(body: &[u8]) -> Canned {
     Canned::ok(&json!({"model":"local-1","answers":answers}).to_string())
 }
 
-fn call(
+pub(super) fn call(
     listener: &Listener,
     command: &[&str],
     paths: &[&str],
