@@ -132,6 +132,8 @@ for (const [page, list] of pages) {
   if (folder) {
     fs.cpSync(bench, work, { recursive: true });
     cwd = path.join(work, folder);
+  } else if (page === 'learn/read-files') {
+    fs.cpSync(path.resolve(site, '../specification/fixtures/files'), work, { recursive: true });
   } else if (fs.existsSync(path.join(root, page, 'files'))) {
     fs.cpSync(path.join(root, page, 'files'), page.startsWith('recipes/') ? path.join(work, 'files') : work, { recursive: true });
   }

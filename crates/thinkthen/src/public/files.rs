@@ -241,10 +241,12 @@ fn descend(path: &Path, files: &mut Vec<PathBuf>, bytes: &mut usize) -> Result<(
         if kind.is_symlink() {
             continue;
         }
+        let path = entry.path();
+        source_name(&path)?;
         if kind.is_dir() {
-            descend(&entry.path(), files, bytes)?;
+            descend(&path, files, bytes)?;
         } else if kind.is_file() {
-            add(files, entry.path(), bytes)?;
+            add(files, path, bytes)?;
         } else {
             return Err(Error::local(
                 "source folder contains an unsupported file kind",
@@ -257,7 +259,7 @@ fn descend(path: &Path, files: &mut Vec<PathBuf>, bytes: &mut usize) -> Result<(
 /// A native file selection that holds a bounded manifest and opens one file at a time.
 #[derive(Debug)]
 pub struct SourceRecords {
-    paths: VecDeque<PathBuf>,
+    paths: VecDeque<(PathBuf, String)>,
     options: ReaderOptions,
     current: Option<FileReader<std::io::BufReader<std::fs::File>>>,
     stopped: bool,
@@ -272,8 +274,12 @@ pub fn read_files(
     options: ReaderOptions,
 ) -> Result<SourceRecords, Error> {
     let options = options.validate()?;
+    let paths = enumerate_files(paths)?
+        .into_iter()
+        .map(|path| source_name(&path).map(|name| (path, name)))
+        .collect::<Result<_, _>>()?;
     Ok(SourceRecords {
-        paths: enumerate_files(paths)?.into(),
+        paths,
         options,
         current: None,
         stopped: false,
@@ -293,7 +299,7 @@ impl Iterator for SourceRecords {
                 return Some(record);
             }
             self.current = None;
-            let path = self.paths.pop_front()?;
+            let (path, name) = self.paths.pop_front()?;
             let opened = open_regular(&path);
             let file = match opened {
                 Ok(file) => file,
@@ -302,11 +308,8 @@ impl Iterator for SourceRecords {
                     return Some(Err(Error::local("source file could not be opened")));
                 }
             };
-            self.current = match FileReader::new(
-                path.to_string_lossy(),
-                std::io::BufReader::new(file),
-                self.options,
-            ) {
+            self.current = match FileReader::new(name, std::io::BufReader::new(file), self.options)
+            {
                 Ok(reader) => Some(reader),
                 Err(error) => {
                     self.stopped = true;
@@ -323,4 +326,10 @@ fn open_regular(path: &Path) -> std::io::Result<std::fs::File> {
         return Err(std::io::Error::other("source is not regular"));
     }
     Ok(file)
+}
+
+fn source_name(path: &Path) -> Result<String, Error> {
+    path.to_str()
+        .map(str::to_owned)
+        .ok_or_else(|| Error::local("source path is not valid UTF-8"))
 }

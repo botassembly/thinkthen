@@ -1,6 +1,8 @@
 # Explicit files in libraries
 
-Select paths explicitly. A text argument is always evidence; it never becomes a filename. All readers use the native engine's file parser. Reader options are `unit: "line"` (the default), `unit: "window", window: N` for a positive nonoverlapping line window, or `unit: "file"` for complete documents. Files follow operand order; real folder contents follow sorted relative paths. Physical lines are one-based and inclusive, including skipped blank lines. Windows preserve internal LF/CRLF bytes; file units preserve the whole file.
+The [files and folders page](https://thinkthen.dev/learn/files/) runs all ten CLI and Python examples over the shared `specification/fixtures/files` corpus.
+
+Select paths explicitly. A text argument is always evidence; it never becomes a filename. All readers use the native engine's file parser. Reader options are `unit: "line"` (the default), `unit: "window", window: N` for a positive nonoverlapping line window, or `unit: "file"` for complete documents. Files follow operand order; real folder contents follow sorted relative paths. Unrepresentable UTF-8 source paths fail before content admission. Physical lines are one-based and inclusive, including skipped blank lines. Windows preserve internal LF/CRLF bytes; file units preserve the whole file.
 
 Python uses `read_files(path_or_paths, *, unit="line", window=None)`. Iteration yields immutable `SourceRecord` values with `record`, `file`, `first_line`, and `last_line`. Passing the selection to any of the ten existing engine functions returns `Call` values with `Located(source, value)` rows. Find returns one located selection or `None`; relate returns edges whose source and target are located occurrences. Recognize keeps local Unicode scalar offsets and adds physical line coordinates to its spans. `on=` frame recognition is refused for a source selection because decoded fields have no physical source map.
 

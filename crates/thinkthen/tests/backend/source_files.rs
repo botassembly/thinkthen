@@ -20,12 +20,21 @@ fn answer(body: &[u8]) -> Canned {
     let answers = questions.iter().map(|(key, question)| {
         let value = if question["type"] == "choice" {
             let labels = question["criteria"].as_object().unwrap();
-            let picked = if labels.contains_key("u002") { "u002" } else { labels.keys().next().unwrap() };
+            let picked = if labels.contains_key("u002") { "u002" }
+                else if labels.contains_key("support") && question["instructions"].as_str().unwrap().contains("Support contract") { "support" }
+                else { labels.keys().next().unwrap() };
             let probabilities = labels.keys().map(|label| (label.clone(), Value::from(if label == picked { 1.0 } else { 0.0 }))).collect::<serde_json::Map<_, _>>();
             json!({"type":"choice","choice":picked,"probabilities":probabilities})
         } else if question["type"] == "score" {
             json!({"type":"score","score":0.8,"confidence":0.9,"legend":{"0":"a","1":"b"},"probabilities":{"0":0.2,"1":0.8}})
-        } else { json!({"type":"noul","noul":0.9}) };
+        } else {
+            let words = question["instructions"].as_str().unwrap();
+            let rejected = (words.ends_with("Does this line describe a refund?") && !words.split(". Does this line").next().unwrap().to_lowercase().contains("refund"))
+                || (words.ends_with("Does this document contain a support contract?") && !words.contains("Support contract"))
+                || (words.ends_with("Does this document require attention today?") && !words.contains("An urgent"));
+            let probability = if rejected { 0.1 } else { 0.9 };
+            json!({"type":"noul","noul":probability})
+        };
         (key.clone(), value)
     }).collect::<serde_json::Map<_, _>>();
     Canned::ok(&json!({"model":"local-1","answers":answers}).to_string())
@@ -78,7 +87,21 @@ fn ten_folder_examples_retain_original_records_and_physical_sources() -> io::Res
         vec!["relate", "connected"],
     ];
     let listener = Listener::answering(answer)?;
-    for command in &commands {
+    let examples =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../site/examples/learn/read-files");
+    let golden = [
+        "5-decide",
+        "6-choose",
+        "7-tag",
+        "8-score",
+        "1-filter",
+        "3-rank",
+        "4-find",
+        "9-annotate",
+        "a-recognize",
+        "b-relate",
+    ];
+    for (command, golden) in commands.iter().zip(golden) {
         let verb = command[0];
         let unit = if matches!(verb, "filter" | "find") {
             "line"
@@ -87,6 +110,12 @@ fn ten_folder_examples_retain_original_records_and_physical_sources() -> io::Res
         };
         let output = call(&listener, command, &[documents], &["--unit", unit])?;
         let rows = rows(&output);
+        let normalized = text(&output.stdout).replace(&format!("{}/", place.display()), "");
+        assert_eq!(
+            normalized,
+            fs::read_to_string(examples.join(format!("{golden}.out")))?,
+            "{verb} published output"
+        );
         assert!(!rows.is_empty(), "{verb}");
         let requests = listener.requests();
         assert!(!requests.is_empty(), "{verb}");
@@ -96,11 +125,7 @@ fn ten_folder_examples_retain_original_records_and_physical_sources() -> io::Res
     assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
     assert_eq!(
         text(&output.stdout),
-        format!(
-            "{}\n{}\n",
-            place.join("documents/01-policy.txt").display(),
-            place.join("documents/02-contract.txt").display()
-        )
+        format!("{}\n", place.join("documents/01-policy.txt").display())
     );
     Ok(())
 }
@@ -157,7 +182,7 @@ fn check_relation(row: &Value, documents: &str) {
 #[test]
 fn physical_paths_do_not_change_provider_requests_or_replay_keys() -> io::Result<()> {
     let place = folder("source-identity")?;
-    let one = place.join("one");
+    let one = place.join("β-one");
     let two = place.join("two");
     let recording = place.join("recording");
     fs::write(&one, "same original evidence\r\n")?;
@@ -208,6 +233,82 @@ fn invalid_reader_options_and_missing_operands_admit_no_requests() -> io::Result
         &[],
     )?;
     assert_eq!(output.status.code(), Some(5), "{}", text(&output.stderr));
+    assert!(listener.requests().is_empty());
+    Ok(())
+}
+
+#[test]
+fn source_rank_withholds_output_and_stops_before_the_invalid_tail_at_excess() -> io::Result<()> {
+    let place = folder("source-rank-budget")?;
+    let first = place.join("01-first.txt");
+    let excess = place.join("02-excess.txt");
+    let tail = place.join("03-unread.txt");
+    fs::write(&first, "good\n")?;
+    fs::write(&excess, "y".repeat(16 * 1024 * 1024))?;
+    fs::write(&tail, b"\xff")?;
+    let listener = Listener::answering(answer)?;
+    for paths in [
+        vec![place.to_str().unwrap()],
+        vec![
+            first.to_str().unwrap(),
+            excess.to_str().unwrap(),
+            tail.to_str().unwrap(),
+        ],
+    ] {
+        let output = call(
+            &listener,
+            &["rank", "Relevant?"],
+            &paths,
+            &["--unit", "file", "--facts"],
+        )?;
+        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        let stderr = text(&output.stderr);
+        assert_eq!(
+            stderr.lines().next(),
+            Some("thinkthen: source rank reads at most 16 MiB across all input records")
+        );
+        assert!(output.stdout.is_empty());
+        let facts: Value = serde_json::from_str(stderr.lines().last().unwrap()).unwrap();
+        let requests = listener.requests();
+        assert_eq!(facts["requests_sent"], requests.len());
+        assert!(requests.len() <= 1, "only the preceding record may send");
+        for request in requests {
+            let request: Value = serde_json::from_slice(&request.body).unwrap();
+            assert_eq!(
+                request["questions"]["q1"]["instructions"],
+                "The text is \"good\\n\". Relevant?"
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn unrepresentable_folder_names_refuse_the_complete_manifest_without_sending() -> io::Result<()> {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt as _;
+    let place = folder("source-filename")?;
+    fs::write(place.join("01-unread.txt"), b"\xff")?;
+    fs::write(
+        place.join(OsString::from_vec(b"02-\xff.txt".to_vec())),
+        "original evidence",
+    )?;
+    let error = thinkthen::read_files([&place], thinkthen::ReaderOptions::default()).unwrap_err();
+    assert_eq!(error.detail().message(), "source path is not valid UTF-8");
+    let listener = Listener::answering(answer)?;
+    let output = call(
+        &listener,
+        &["decide", "Clear?"],
+        &[place.to_str().unwrap()],
+        &[],
+    )?;
+    assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        text(&output.stderr),
+        "thinkthen: --input could not be opened: source path is not valid UTF-8\n"
+    );
     assert!(listener.requests().is_empty());
     Ok(())
 }

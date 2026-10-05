@@ -176,6 +176,7 @@ export const FUNCTIONS = [
     args: 'QUESTION or @FILE',
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
+      flag('--files-only', 'nothing', lower(setting('Matching files only').default), 'Prints each matching file once in first-match order. It changes output only.'),
       flag('--threshold T', CUT_TAKES, cutOn('filter'), 'The bar a record must reach to be kept. A band is a usage error.'),
       flag('-n, --line-number', 'nothing', lower(setting('Line numbers').default), 'Prefixes physical line numbers. Several named sources also show the filename.'),
       flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the yes probability, or the weighted value of a saved score question on rank.'),
@@ -235,7 +236,7 @@ export const FUNCTIONS = [
       flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the winning candidate probability, independently of confidence.'),
       flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints one group with N physical neighbors on either side from an immutable snapshot. Every valid neighbor already belongs to the aggregate candidate request. Text display flags refuse details.'),
     ],
-    shared: [],
+    shared: ['--window'],
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],
     unsure: 'Without --none, find must pick a line. When nothing fits, the line it picks is wrong. --none lets it say nothing fits.',
     howtos: ['group-alerts-into-incidents', 'check-an-expense-against-the-policy'],

@@ -80,3 +80,21 @@ def test_iteration_reports_a_later_content_failure_after_the_first_record(tmp_pa
         assert str(error) == "the record is not valid UTF-8"
     else:
         raise AssertionError("invalid UTF-8 admitted")
+
+
+def test_published_ten_function_script_replays_original_sources_without_requests(backend, tmp_path):
+    from conftest import REPO
+    script = REPO / "site/examples/learn/python/files.py"
+    recording = REPO / "site/recordings"
+    replacement = f'tt.Engine(model="local-1", base_url="https://api.typesafe.ai/v1", replay={str(recording)!r})'
+    output = run(f'''
+        import os, pathlib, thinkthen
+        os.chdir({str(DOCUMENTS.parent)!r})
+        script = pathlib.Path({str(script)!r})
+        code = script.read_text().replace(
+            'tt.Engine(model="local-1")',
+            {replacement!r})
+        exec(compile(code, str(script), "exec"))
+    ''', child_env(backend, tmp_path))
+    assert output == script.with_suffix(".py.out").read_text()
+    assert backend.count() == 0

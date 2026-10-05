@@ -28,7 +28,8 @@ const dflt = (name) => lower(setting(name).default);
 const THROTTLE = setting('Throttle');
 
 export const GLOBAL_FLAGS = [
-  flag('--input FILE', lower(setting('Input file').allowed), dflt('Input file'), 'Reads the evidence from FILE instead of standard input. Decide, filter, rank, choose, score, tag and annotate can repeat it in argument order. Other functions take one file. It never names a framing.'),
+  flag('--input FILE_OR_FOLDER', lower(setting('Input file').allowed), dflt('Input file'), 'Selects files or folders explicitly on all ten functions. Repeat it in argument order. Folder contents follow sorted relative paths. See Files and folders for located output.'),
+  flag('--unit line or file', lower(setting('Reader unit').allowed), setting('Reader unit').default, 'Selects physical lines or complete original files. Requires --input and refuses JSON/table framing and pointers. Existing file calls without reader options keep their framing.'),
   flag('--lines', 'nothing', 'off', 'Takes each line as one text record. Input below gives the framing this function reads by default.'),
   flag('--jsonl', 'nothing', 'off', 'Takes each line as one JSON record.'),
   flag('--field POINTER', 'an RFC 6901 pointer, and it may repeat', dflt('Evidence pointer'), 'Sends only the part of each record the pointer names. Several pointers send one object of the parts. Input below gives every rule.'),
