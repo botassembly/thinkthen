@@ -208,46 +208,58 @@ assert.throws(() => duckDBArtifact(process.argv[2], 'v1.5.5', 'x86_64-unknown-li
         result = pack(tree, TARGET, self.root / 'missing', env)
         self.assertEqual(result.returncode, 1)
         self.assertIn(f'{member.relative_to(tree)} is missing', result.stderr)
-        result = pack(tree, TARGET, self.root / 'conflict', {**env, 'THINKTHEN_DUCKDB_VERSION': OLDER})
+        result = pack(tree, TARGET, self.root / 'conflict', {**env, 'THINKTHEN_DUCKDB_VERSION': 'v9.9.9'})
         self.assertEqual(result.returncode, 2)
-        self.assertIn('single-version archive requires the default DuckDB selector', result.stderr)
+        self.assertIn('unsupported DuckDB version: v9.9.9', result.stderr)
         self.assertEqual(list((self.root / 'missing').glob('*.tar.gz*')), [])
 
     def test_separate_build_outputs_and_alias_ownership(self):
         from build_0403_cases import routing
         routing(self, footer, script)
 
-    def test_synthetic_old_format_pack_and_source_guard(self):
+    def test_repository_pack_keeps_both_versions_and_refuses_changed_source(self):
+        import json
         tree = self.root / 'tree'; copy_packer(tree)
-        source = self.root / 'dependency-source'; self.source_fixture(source)
-        (source / 'LICENSE').write_text('fixture MIT license\n')
-        (source / 'NOTICE').write_text('fixture source notice\n')
-        run(['git', '-C', str(source), 'add', '.'], self.env)
-        run(['git', '-C', str(source), '-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'legal fixture'], self.env)
-        commit = run(['git', '-C', str(source), 'rev-parse', 'HEAD'], self.env).stdout.strip()
+        cache = self.root / 'tools'
         authority_path = tree / 'databases/duckdb/tools/version.env'
-        text = authority_path.read_text().replace('d8cdaa33fda8df955cc76ef58a280f68f4cd43fa', commit)
+        text = authority_path.read_text()
+        for version, source_pin, manifest in ((NEWEST, 'd8cdaa33fda8df955cc76ef58a280f68f4cd43fa', 'archive-sha256.txt'),
+                                              (OLDER, '08e34c447bae34eaee3723cac61f2878b6bdf787', 'archive-sha256-v1.5.4-linux-amd64.txt')):
+            tools = cache / 'duckdb' / version
+            tools.mkdir(parents=True)
+            source = tools / 'source'; self.source_fixture(source)
+            (source / 'LICENSE').write_text('fixture MIT license\n')
+            (source / 'NOTICE').write_text(f'fixture {version} notice\n')
+            run(['git', '-C', str(source), 'add', '.'], self.env)
+            run(['git', '-C', str(source), '-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'legal fixture'], self.env)
+            commit = run(['git', '-C', str(source), 'rev-parse', 'HEAD'], self.env).stdout.strip()
+            text = text.replace(source_pin, commit)
+            static = tools / 'static-libs'; static.mkdir()
+            (static / 'libduckdb_static.a').write_bytes(b'synthetic archive')
+            (tree / 'databases/duckdb/cpp' / manifest).write_text(hashlib.sha256(b'synthetic archive').hexdigest() + ' libduckdb_static.a\n')
+            member = tree / 'databases/duckdb/build/artifacts/cpp' / version / TARGET / 'thinkthen.duckdb_extension'
+            member.parent.mkdir(parents=True); member.write_bytes(footer(version))
         authority_path.write_text(text)
-        static = self.root / 'static'; static.mkdir()
-        (static / 'libduckdb_static.a').write_bytes(b'synthetic archive')
-        (tree / 'databases/duckdb/cpp/archive-sha256.txt').write_text(hashlib.sha256(b'synthetic archive').hexdigest() + ' libduckdb_static.a\n')
+        registry = self.root / 'registry/example'; registry.mkdir(parents=True)
+        (registry / 'LICENSE').write_text('MIT fixture\n')
+        metadata = {'packages': [{'name': 'example', 'version': '1.0.0', 'license': 'MIT', 'manifest_path': str(registry / 'Cargo.toml')}]}
         shim = self.root / 'shim'
         script(shim / 'rustc', f'echo "host: {TARGET}"')
         script(shim / 'readelf', 'echo "Machine: Advanced Micro Devices X86-64"')
-        script(shim / 'cargo', """echo '{"packages":[]}'""")
-        env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}', 'THINKTHEN_DUCKDB_CPP_SOURCE': str(source),
-               'THINKTHEN_DUCKDB_CPP_STATIC_DIR': str(static)}
-        member = tree / 'databases/duckdb/build/artifacts/cpp' / NEWEST / TARGET / 'thinkthen.duckdb_extension'
-        member.parent.mkdir(parents=True); member.write_bytes(footer())
+        script(shim / 'cargo', "printf '%s\\n' '" + json.dumps(metadata) + "'")
+        env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}', 'THINKTHEN_TOOLCHAINS': str(cache)}
         result = pack(tree, TARGET, self.root / 'positive', env)
         self.assertEqual(result.returncode, 0, result.stderr)
         archive = self.root / 'positive' / f'thinkthen-duckdb-0.2.0-{TARGET}.tar.gz'
         self.assertTrue(Path(str(archive) + '.sha256').is_file())
         with tarfile.open(archive) as packed:
             extensions = [m for m in packed if m.name.endswith('.duckdb_extension')]
-            self.assertEqual([m.name for m in extensions], ['./thinkthen.duckdb_extension'])
-            self.assertEqual(packed.extractfile(extensions[0]).read(), footer())
-        (source / 'source.cc').write_text('changed source\n')
+            self.assertEqual(sorted(m.name for m in extensions),
+                             ['./v1.5.4/linux_amd64/thinkthen.duckdb_extension', './v1.5.5/linux_amd64/thinkthen.duckdb_extension'])
+            for member in extensions:
+                self.assertEqual(packed.extractfile(member).read(), footer(member.name.split('/')[1]))
+            self.assertEqual(packed.extractfile('./LICENSES/duckdb/v1.5.4/NOTICE').read(), b'fixture v1.5.4 notice\n')
+        (cache / 'duckdb' / NEWEST / 'source/source.cc').write_text('changed source\n')
         result = pack(tree, TARGET, self.root / 'bad-source', env)
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn('raw Git source file differs: source.cc', result.stderr)
