@@ -184,6 +184,10 @@ assert.throws(() => duckDBArtifact(process.argv[2], 'v1.5.5', 'x86_64-unknown-li
         result = run(['node', '--input-type=module', '-e', code, str(authority_file), str(self.root)], self.env, REPO)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_node_complete_pins_before_any_children(self):
+        from source_pin_0403_cases import node_controls
+        node_controls(self, script)
+
     def test_real_scratch_packer_refuses_obsolete_and_footer(self):
         tree = self.root / 'tree'; copy_packer(tree)
         shim = self.root / 'shim'

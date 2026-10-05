@@ -31,6 +31,7 @@ def routing(case, encode_footer, write_script):
     cmake.write_text('''#!/usr/bin/env python3
 import json,os,sys
 from pathlib import Path
+assert {k:v for k,v in os.environ.items() if k.startswith('GIT_')} == {'GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':'/dev/null','GIT_NO_REPLACE_OBJECTS':'1'}
 args=sys.argv[1:]
 base=Path(args[1] if args[0]=='--build' else args[args.index('-B')+1])
 with open(os.environ['FIXTURE_CMAKE_LOG'],'a') as log:log.write(json.dumps(args)+'\\n')
@@ -54,6 +55,8 @@ else:base.mkdir(parents=True,exist_ok=True)
            'THINKTHEN_DUCKDB_CPP_STATIC_DIR': str(static), 'THINKTHEN_DUCKDB_CPP_BUILD': str(case.root / 'cmake-base')}
     build = tree / 'databases/duckdb/cpp/build.sh'
     alias = tree / 'databases/duckdb/build/thinkthen.duckdb_extension'
+    from source_pin_0403_cases import replacement_controls
+    replacement_controls(case, source, commit, build, env, write_script)
     for version in ('v1.5.5', 'v1.5.4'):
         result = subprocess.run(['/bin/sh', str(build)], env={**env, 'THINKTHEN_DUCKDB_VERSION': version},
                                 capture_output=True, text=True, timeout=30, check=False)

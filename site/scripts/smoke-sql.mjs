@@ -56,6 +56,9 @@ if (leaked.length) {
   process.exit(2);
 }
 
+// Validate every supported pin before resolving any database tool or starting a child.
+const duckDBVersion = readDuckDBVersions(path.join(repo, 'databases/duckdb/tools/version.env'))[0];
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-sql-'));
 // An interrupt ends the run and removes the temp folder. Node runs no signal
 // handler while a child runs, so run() also stops when a child ended by
@@ -105,7 +108,7 @@ const DATABASES = {
     folder: 'databases/duckdb',
     manifest: 'databases/duckdb/bridge/Cargo.toml',
     build() {
-      const version = readDuckDBVersions(path.join(repo, 'databases/duckdb/tools/version.env'))[0];
+      const version = duckDBVersion;
       const [nativeTarget, platform] = nativeDuckDBTarget();
       const tools = path.join(TOOLCHAINS, 'duckdb', version);
       const cli = path.join(tools, 'duckdb');

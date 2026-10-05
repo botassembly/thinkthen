@@ -11,7 +11,8 @@ if(NOT EXISTS "${THINKTHEN_DUCKDB_STATIC_DIR}/libduckdb_static.a")
   message(FATAL_ERROR "Set THINKTHEN_DUCKDB_STATIC_DIR to the selected verified release archives")
 endif()
 
-execute_process(COMMAND git -C "${CMAKE_SOURCE_DIR}" rev-parse HEAD
+execute_process(COMMAND python3 "${CMAKE_CURRENT_LIST_DIR}/../../../sdlc/scripts/release-archive-tree.py"
+  --git "${CMAKE_SOURCE_DIR}" rev-parse HEAD
   OUTPUT_VARIABLE DUCKDB_SOURCE_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE
   RESULT_VARIABLE DUCKDB_SOURCE_STATUS)
 if(NOT DUCKDB_SOURCE_STATUS EQUAL 0 OR

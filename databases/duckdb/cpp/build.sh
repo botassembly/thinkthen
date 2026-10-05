@@ -18,6 +18,11 @@ for absolute in "$SOURCE" "$STATIC" "$BUILD_BASE"; do
 done
 BUILD=$BUILD_BASE/$DUCKDB_VERSION/$HOST_TARGET
 ARTIFACT=$ROOT/build/artifacts/cpp/$DUCKDB_VERSION/$HOST_TARGET/thinkthen.duckdb_extension
+[ -d "$SOURCE" ] && [ -f "$STATIC/libduckdb_static.a" ] || {
+	echo 'duckdb: pinned C++ source or static archives are missing; run tools/setup.sh --fetch' >&2
+	exit 77
+}
+python3 "$INPUTS_HERE/validate_inputs.py" --source "$SOURCE" --commit "$duckdb_source_commit" --static "$STATIC" --manifest "$HERE/$manifest"
 RUST_TARGET=$(rustc -vV | sed -n 's/^host: //p')
 [ "$HOST_TARGET" = "$RUST_TARGET" ] || { echo "duckdb: $RUST_TARGET is not the pinned host $HOST_TARGET" >&2; exit 1; }
 CARGO_OUT=${CARGO_TARGET_DIR:-$ROOT/bridge/target}
@@ -47,16 +52,11 @@ case $HOST_TARGET in *-apple-darwin)
 VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 [ -n "$VERSION" ] || { echo 'duckdb: the ThinkThen version is missing' >&2; exit 1; }
 
-[ -d "$SOURCE" ] && [ -f "$STATIC/libduckdb_static.a" ] || {
-	echo 'duckdb: pinned C++ source or static archives are missing; run tools/setup.sh --fetch' >&2
-	exit 77
-}
-python3 "$INPUTS_HERE/validate_inputs.py" --source "$SOURCE" --commit "$duckdb_source_commit" --static "$STATIC" --manifest "$HERE/$manifest"
 cd -- "$REPO"
 cargo build --locked --offline --release --manifest-path "$ROOT/bridge/Cargo.toml"
 set -- -DCMAKE_BUILD_TYPE=Release "-DCMAKE_C_FLAGS=$CFLAGS" "-DCMAKE_CXX_FLAGS=$CXXFLAGS"
 case $HOST_TARGET in *-apple-darwin) set -- "$@" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 ;; esac
-"$CMAKE" -S "$SOURCE" -B "$BUILD" -G 'Unix Makefiles' "$@" \
+python3 "$REPO/sdlc/scripts/release-archive-tree.py" --run "$CMAKE" -S "$SOURCE" -B "$BUILD" -G 'Unix Makefiles' "$@" \
 	-DBUILD_UNITTESTS=OFF -DBUILD_SHELL=OFF -DEXTENSION_STATIC_BUILD=OFF \
 	-DDUCKDB_EXTENSION_CONFIGS="$HERE/extension_config.cmake" \
 	-DTHINKTHEN_EXTENSION_VERSION="$VERSION" \
@@ -64,7 +64,7 @@ case $HOST_TARGET in *-apple-darwin) set -- "$@" -DCMAKE_OSX_DEPLOYMENT_TARGET=1
 	-DTHINKTHEN_DUCKDB_STATIC_DIR="$STATIC" \
 	-DTHINKTHEN_DUCKDB_SOURCE_COMMIT="$duckdb_source_commit" \
 	-DTHINKTHEN_DUCKDB_ARCHIVE_MANIFEST="$HERE/$manifest"
-"$CMAKE" --build "$BUILD" --target thinkthen_loadable_extension -j 2
+python3 "$REPO/sdlc/scripts/release-archive-tree.py" --run "$CMAKE" --build "$BUILD" --target thinkthen_loadable_extension -j 2
 python3 "$INPUTS_HERE/validate_inputs.py" --source "$SOURCE" --commit "$duckdb_source_commit" --static "$STATIC" --manifest "$HERE/$manifest"
 case $HOST_TARGET in
 x86_64-unknown-linux-gnu) elf_arch='Advanced Micro Devices X86-64' ;;

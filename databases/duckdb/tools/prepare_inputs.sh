@@ -12,7 +12,7 @@ PY
 }
 input_prepare_source_static() {
 	mkdir -p "$TOOLS"
-	[ -e "$TOOLS/source" ] || git clone --quiet --depth 1 --branch "$DUCKDB_VERSION" https://github.com/duckdb/duckdb.git "$TOOLS/source"
+	[ -e "$TOOLS/source" ] || python3 "$INPUTS_HERE/../../../sdlc/scripts/release-archive-tree.py" --git "$TOOLS" clone --quiet --depth 1 --branch "$DUCKDB_VERSION" https://github.com/duckdb/duckdb.git "$TOOLS/source"
 	static_zip=$TOOLS/$static_asset
 	[ -e "$static_zip" ] || fetch_url "$static_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/$static_asset"
 	input_verify "$static_hash" "$static_zip"
