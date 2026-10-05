@@ -48,7 +48,7 @@ def ten_folder_examples_keep_original_documents_and_mapped_endpoints():
             expect(edge[6:11], expected[edge[6]-1], 'actual target endpoint row')
             expect(edge[0], 'supports', 'relation')
             expect(edge[11], 0.9, 'edge probability')
-        expect(backend.count() > 0, True, 'owned loopback actually judged all ten examples')
+        expect(backend.count(), 13, 'exact packed and recognition requests for all ten examples')
 
 
 @case
