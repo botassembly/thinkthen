@@ -105,6 +105,12 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
 
   <h2>Run facts</h2>
   <p>{parts(surface.facts).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+  {['duckdb', 'postgresql', 'sqlite'].includes(surface.slug) && (
+    <>
+      <p>SQL plans estimate input tokens before cache hits, retries and refusal splits. Output tokens, total price and future duration are unknown. Usage reports cumulative process totals, which cannot isolate concurrent calls. Packed request usage can repeat across result rows; do not sum those repeated values.</p>
+      <p>Measure statement wall time in the client; it includes database and client work. Apply a known tariff to complete provider-reported usage outside SQL using decimal arithmetic, and label the price as an estimate. Missing rates or incomplete attempt usage mean unknown cost. The provider's invoice determines actual charges.</p>
+    </>
+  )}
 
   {surface.errors && (
     <>
