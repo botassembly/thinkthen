@@ -2,7 +2,8 @@
 # checks were last green against (2026-09-22), with hashes: `uv pip compile
 # --generate-hashes --offline` from the local cache, so an install answers
 # from the cache with every artifact verified. The pinning story is in
-# scripts/gate-hermeticity.md.
+# scripts/gate-hermeticity.md. Windows adds the tzdata pin and hashes from
+# the pandas 2 lock so pandas 3 installs under --require-hashes.
 iniconfig==2.3.0 \
     --hash=sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730 \
     --hash=sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12
@@ -412,6 +413,10 @@ typing-inspection==0.4.4 \
     --hash=sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47 \
     --hash=sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147
     # via pydantic
+tzdata==2026.4 \
+    --hash=sha256:c2169a8b0a7a5e9674da5a135ccdfb2b3e671b333ed9fed17b41f73c34476e81 \
+    --hash=sha256:f1b8bd365d8d210c55353f4d7f8d6d8561c0ba50d704b700d195a9424bba0d79
+    # via pandas on Windows
 
 # pytest uses colorama on Windows. The wheel hash also appears in workspace uv locks.
 colorama==0.4.6 ; sys_platform == "win32" \
