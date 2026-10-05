@@ -25,7 +25,7 @@ npm run build
 7. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
 8. `scripts/preserve-redirect-fragments.mjs` preserves incoming fragments on all compatibility stubs.
 9. `scripts/label-tables.mjs` copies each column heading into the cells of a table of three or more columns. On a phone or a tablet every table row stacks into a card, and the label names each cell. The same step marks each code span of 24 characters or fewer outside a code pane with class `short`, so a model name, a flag, a key name or a version never splits across lines.
-10. `scripts/check-layout.test.mjs` and `scripts/check-layout.mjs` prove the grid count, blog source/list and exact paragraph exception rules.
+10. `scripts/check-layout.test.mjs` and `scripts/check-layout.mjs` check grid counts and compare the blog list with its source posts.
 11. `scripts/emit-md.mjs` writes a Markdown twin of every listed page, `dist/llms.txt`, and `dist/llms-full.txt`, which holds every twin in one file.
 12. `scripts/check-markdown-headings.mjs` first checks the six annotate h4 subsections and llms-full. `scripts/check-code.mjs` fails the build when a built page shows a code block that `src/lib/code.mjs` did not draw, a code block with no colour, or colour in an output pane.
 13. `scripts/check-words.test.mjs` runs fixtures, then `scripts/check-words.mjs` fails the build when page prose uses a retired word, such as "unsure" or a status word. `WRITING.md`, "Pages", lists them.
