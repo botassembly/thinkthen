@@ -442,7 +442,6 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_nested_group(
         let ask = nested::ask(kind, argument, &members, from_file != 0)?;
         let asked = asked(&settings)?;
         let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
-        let (texts, cut) = engines::within_total(&asked, texts)?;
         let total = asked.max_requests_total;
         run_detached(stop, move |token| {
             let scope = CallScope {
@@ -452,11 +451,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_nested_group(
                 batch: None,
                 context: None,
             };
-            let values = nested::run(&engine, &ask, texts, kind, scope)?;
-            if let Some(error) = cut {
-                return Err(error);
-            }
-            Ok(values)
+            nested::run(&engine, &ask, texts, kind, scope)
         })
     })
 }
