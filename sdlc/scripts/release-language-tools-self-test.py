@@ -340,7 +340,8 @@ def bwrap_namespaces(root, observer):
 
 
 def fetch_retries():
-    """A 503, a timeout or a lost connection retries twice; a 404 fails at once."""
+    """Transient requests and partial bodies retry twice; a 404 fails at once."""
+    import http.client
     import io
     import urllib.error
 
@@ -377,6 +378,55 @@ def fetch_retries():
         else:
             raise AssertionError("a 404 must fail at once")
         assert not (root / "b").exists() and not (root / "c").exists()
+
+        class Response(io.BytesIO):
+            def __init__(self, body, headers=None, status=200, error=None):
+                super().__init__(body)
+                self.headers = headers or {}
+                self.status = status
+                self.error = error
+
+            def read(self, size=-1):
+                if self.tell() and self.error:
+                    raise self.error
+                return super().read(size)
+
+        # urllib's sized reads can return EOF before Content-Length without raising.
+        cases = (
+            ("short", lambda: Response(b"part", {"Content-Length": "7"})),
+            ("partial-status", lambda: Response(b"part", status=206)),
+            ("partial-range", lambda: Response(b"part", {"Content-Range": "bytes 0-3/7"})),
+            ("body-timeout", lambda: Response(b"part", error=TimeoutError("read"))),
+            ("body-reset", lambda: Response(b"part", error=ConnectionResetError("hung up"))),
+            ("body-incomplete", lambda: Response(b"part", error=http.client.IncompleteRead(b"part", 3))),
+        )
+        for label, bad_response in cases:
+            path = root / label
+            pauses = []
+            calls = []
+
+            def opener(url, timeout):
+                calls.append(url)
+                return bad_response() if len(calls) < 3 else Response(b"archive", {"Content-Length": "7"})
+
+            tools.fetch("u", path, opener, pauses.append)
+            assert path.read_bytes() == b"archive" and calls == ["u"] * 3, (label, calls)
+            assert pauses == [10, 20], (label, pauses)
+            path.unlink()
+            calls.clear()
+            pauses.clear()
+
+            def always_bad(url, timeout):
+                calls.append(url)
+                return bad_response()
+
+            try:
+                tools.fetch("u", path, always_bad, pauses.append)
+            except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.IncompleteRead):
+                assert calls == ["u"] * 3 and pauses == [10, 20], (label, calls, pauses)
+            else:
+                raise AssertionError(f"three {label} bodies must fail")
+            assert not path.exists(), label
 
 
 if __name__ == "__main__":
