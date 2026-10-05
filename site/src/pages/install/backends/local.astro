@@ -21,6 +21,8 @@ const sample = (name) => fs.readFileSync(`examples/install/backends/local/${name
   <Code code={sample('llamacpp')} file="llamacpp.txt" lang="bash" />
   <p><code>--alias {llama.model}</code> sets the model id that <code>--backend {llama.name}</code> sends. ThinkThen reaches <code>{llama.base}</code>. Use <code>--model</code> if you choose another server alias. A chat-compatible build needs the native <code>/v1/systemone</code> route and supported decision weights. HTTP 501 can mean that the model lacks that route. The <a href="https://github.com/ggml-org/llama.cpp/blob/d81235049384534c167caea52b85a694f6103d14/tools/server/README.md">server documentation</a> describes its options. Keep context and physical batch within the model's bounds and large enough for the full prompt.</p>
 
+  <p>ThinkThen batch settings count records per request. llama.cpp <code>--batch-size</code> and <code>--ubatch-size</code> control physical prompt processing; a larger <code>--ctx-size</code> does not increase them. The full prompt must fit the physical limits. SQL plans count prepared requests before retries and refusal splits, so a one-attempt request allowance can stop a larger call after a size refusal. Keep the request guard and allow the attempts your workload needs within its authorized budget.</p>
+
   <h2>MLX on Apple silicon</h2>
   <p>Use the Strands decision server on a Mac with Apple silicon. The <a href="https://huggingface.co/StrandsAgents/strands-decider-2B-hobson-v19">public checkpoint</a> needs its named base model. The loader fetches both; allow disk space for both and follow their model cards. A plain MLX chat server does not provide this decision interface.</p>
   <Code code={sample('mlx')} file="mlx.txt" lang="bash" />
