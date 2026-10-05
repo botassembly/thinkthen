@@ -51,11 +51,6 @@ mod cache_trust;
     reason = "a helper that cannot run the check or read its files should stop the test"
 )]
 mod check;
-#[allow(
-    clippy::expect_used,
-    reason = "a helper that cannot run the check or read its files should stop the test"
-)]
-mod check_alias;
 mod choosing;
 #[allow(
     clippy::expect_used,

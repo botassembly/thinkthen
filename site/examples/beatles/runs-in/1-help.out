@@ -12,6 +12,6 @@ help
 audit
 diff
 status
-check
+backends
 cache
 transform
