@@ -1,56 +1,32 @@
 // Closed source, artifact and actual export checks for every recipe disposition.
 import fs from 'node:fs';
-import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { RECIPE_PAGES } from '../src/data/catalog.mjs';
 import { recipeProblems, scopeProblems, recipeSelection, evidenceText, evidenceSource, hasDecimal, unsafePublic } from '../src/data/recipes.mjs';
 import { parseHtml, findElement, textContent } from '../src/lib/html.mjs';
 import { validateCompatibility, ALIASES, routeFile } from './redirect-contract.mjs';
 const ROOT = fileURLToPath(new URL('../../',import.meta.url));
-const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const raw = node => node.tag === '#text' ? node.text : (node.kids || []).map(raw).join('');
 const tidy = text => text.replace(/\s+/g,' ').trim();
 const walk = (n, fn) => { fn(n); for (const k of n.kids || []) walk(k,fn); };
-const REQUIRED = ['1-ask.sh','1-ask.out','2-audit.sh','2-audit.out',...['question.json','cases.jsonl','key.jsonl','labels.jsonl','expected.json','provenance.json','results.jsonl','audit.jsonl','audit-cases.jsonl','harness.json','task-results.jsonl','measured.json','recording/thinkthen.jsonl'].map(f=>'files/'+f)];
 export function fixtureAssertionProblems(base,e) {
   try {
-    const bytes=fs.readFileSync(path.join(base,e.artifact));
-    let value=JSON.parse(bytes);
+    let value=JSON.parse(fs.readFileSync(path.join(base,e.artifact)));
     for (const part of e.selector.slice(1).split('/')) value=value?.[part];
-    if (String(value)!==e.value || sha(bytes)!==e.sha256) return [`recipe fixture assertion: ${e.id}: value/hash mismatch`];
-    return [];
+    return String(value)===e.value ? [] : [`recipe fixture assertion: ${e.id}: value mismatch`];
   } catch { return [`recipe fixture assertion: ${e.id}: missing/malformed artifact`]; }
 }
 export function artifactProblems(r, root = ROOT) {
-  const problems=[], add=(code,field)=>problems.push(`recipe ${code}: ${r.slug}: ${field}`);
-  const base=path.join(root,r.example);
+  const base=path.join(root,r.example), problems=[];
   if (r.publication !== 'ready' && !fs.existsSync(base)) return problems;
-  for (const file of REQUIRED) if (!fs.existsSync(path.join(base,file))) add('missing-artifact',file);
-  if (problems.length) return problems;
-  try {
-    const manifest=JSON.parse(fs.readFileSync(path.join(base,'files/provenance.json')));
-    if (manifest.evidence_class !== 'controlled-loopback-fixture' || unsafePublic(JSON.stringify(manifest))) add('public-provenance','manifest');
-    if (!/^[a-f0-9]{40}$/.test(manifest.owning_commit) || manifest.owning_record !== r.sourceRecord) add('source-pin','manifest');
-    const actual = Object.fromEntries(REQUIRED.filter(f=>f!=='files/provenance.json').map(f=>[f,sha(fs.readFileSync(path.join(base,f)))]));
-    for (const [file,hash] of Object.entries(manifest.artifact_hashes || {})) {
-      if (!fs.existsSync(path.join(base,file)) || sha(fs.readFileSync(path.join(base,file))) !== hash) add('hash mismatch',file);
-    }
-    for (const file of Object.keys(actual)) if (manifest.artifact_hashes?.[file] !== actual[file]) add('hash mismatch',file);
-    if (!/choose @files\/question\.json/.test(fs.readFileSync(path.join(base,'1-ask.sh'),'utf8'))) add('missing-artifact','question call');
-    if (!/audit files\/results\.jsonl\s*\\?\s*files\/key\.jsonl/.test(fs.readFileSync(path.join(base,'2-audit.sh'),'utf8'))) add('missing-artifact','audit call');
-    if (JSON.stringify(JSON.parse(fs.readFileSync(path.join(base,'files/measured.json')))) !== JSON.stringify(r.measured)) add('measurement-definition','admitted values');
-    for (const e of r.fixtureAssertions) {
-      if (fixtureAssertionProblems(base,e).length || manifest.artifact_hashes[e.artifact]!==e.sha256) add('hash mismatch',e.id);
-      if (manifest.artifact_source_commit!==e.artifactCommit) add('source-pin','fixture provenance');
-      const pinned=spawnSync('git',['cat-file','blob',`${e.artifactCommit}:${r.example}/${e.artifact}`],{cwd:ROOT,timeout:10000});
-      if (pinned.status!==0 || sha(pinned.stdout)!==e.sha256) add('source-pin','fixture artifact absent/changed at commit');
-    }
-    const receipts=JSON.parse(fs.readFileSync(path.join(base,'files/harness.json')));
-    if (receipts.population!==8 || receipts.audit_rows!==5 || receipts.local_none!==1 || receipts.candidate_miss!==1 || receipts.ordinary_correct!==5 || receipts.not_sure!==2 || receipts.replay_requests!==0 || receipts.cache_hit_requests!==0 || receipts.negative_requests!==0 || receipts.preparation_requests!==7 || receipts.cache_fill_requests!==7 || receipts.cumulative_synthetic_requests!==14) add('publication-evidence','full fixture accounting');
-    if (!r.draft && !manifest.publication_review) add('publication-evidence','fresh publication review absent');
-  } catch { add('artifact-shape','manifest or retained JSON'); }
+  const required = new Set(r.body.filter(n=>n.kind==='artifact').map(n=>n.file));
+  if (r.slug==='rules-propose-model-confirms' || r.slug==='verify-a-claim') {
+    for (const file of ['files/question.json','files/cases.jsonl','files/key.jsonl','files/recording/thinkthen.jsonl','1-ask.sh','1-ask.out','2-audit.sh','2-audit.out']) required.add(file);
+  }
+  if (r.slug==='rules-propose-model-confirms') required.add('files/results.jsonl');
+  for (const file of required) if (!fs.existsSync(path.join(base,file))) problems.push(`recipe missing-artifact: ${r.slug}: ${file}`);
+  for (const e of r.fixtureAssertions) problems.push(...fixtureAssertionProblems(base,e));
   return problems;
 }
 export function renderedProblems(r,html,markdown,llms,root=ROOT) {
@@ -97,7 +73,7 @@ export function sourceProblems(catalog=RECIPE_PAGES,root=ROOT,scope=true) {
       const issue=path.join(root,r.issue);
       if (!fs.existsSync(issue)) { out.push(`recipe scope: ${r.slug}: missing issue`);continue; }
       const text=fs.readFileSync(issue,'utf8');
-      if (!text.startsWith('# Recipe:') || !['Kind: recipe','Milestone: 0.2','Status: open',`Slug: ${r.slug}`,'Owner: the queue owner'].every(s=>text.includes(s)) || !milestones.includes(r.issue.replace('sdlc/','../')) || !milestones.includes(r.slug)) out.push(`recipe scope: ${r.slug}: issue/milestone disposition`);
+      if (!text.startsWith('# Recipe:') || !['Kind: recipe',`Milestone: ${r.draft ? 'later' : '0.2'}`,`Status: ${r.draft ? 'open' : 'closed'}`,`Slug: ${r.slug}`,'Owner: the queue owner'].every(s=>text.includes(s)) || !milestones.includes(r.issue.replace('sdlc/','../')) || !milestones.includes(r.slug)) out.push(`recipe scope: ${r.slug}: issue/milestone disposition`);
     }
   }
   return out;

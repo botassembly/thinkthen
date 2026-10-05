@@ -3,6 +3,7 @@ to 13). The throttle is one per process, so each engine lives in its own
 child with its own backend and cache folder."""
 
 import time
+import sys
 
 from conftest import Backend, child_env, run, start
 
@@ -32,6 +33,33 @@ def test_held_request_does_not_pull_ahead(backend, tmp_path):
     backend.release()
     assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == 20
+
+
+
+def test_omitted_and_explicit_throttles_hold_counted_packed_requests(tmp_path):
+    """Fresh engines offer ten requests: omission holds eight, explicit six holds six."""
+    for settings, cap in (("", 8), ("throttle=6,", 6)):
+        backend = Backend()
+        before = backend.count()
+        child = start(f"""
+            import thinkthen as tt
+            answers = tt.Engine({settings} batch=2, cache=False).decide(
+                tt.question(decide="Is it late?"), [f"note {{n}}" for n in range(20)]).value
+            assert answers == [True] * 20
+            print(len(answers))
+        """, child_env(backend, tmp_path / str(cap), "arm/held"))
+        try:
+            assert backend.wait(before + cap) == before + cap
+            time.sleep(0.3)
+            assert backend.count() == before + cap
+            backend.release()
+            assert child.wait(timeout=60) == 0, child.stderr.read()
+            assert child.stdout.read().strip() == "20"
+            assert backend.count() == before + 10
+        finally:
+            backend.release()
+            child.wait(timeout=60)
+            backend.close()
 
 
 def test_bad_settings_are_usage_errors_that_send_nothing(backend, tmp_path):
@@ -122,7 +150,8 @@ def test_the_environment_seeds_every_unset_setting(backend, tmp_path):
     run(SETTINGS + f"""
     engine = tt.Engine(throttle=8, base_url="{backend.base()}")
     engine.decide(late, "one").value, engine.decide(late, "one").value
-    """, child_env(backend, tmp_path, HOME=str(scratch), XDG_STATE_HOME=str(scratch)))
+    """, child_env(backend, tmp_path, HOME=str(scratch), XDG_STATE_HOME=str(scratch),
+                   **({"LOCALAPPDATA": str(scratch)} if sys.platform == "win32" else {})))
     assert backend.count() == 1
     assert any((tmp_path / "cache").rglob("*"))
     written = [path for path in scratch.rglob("*") if path.is_file()]

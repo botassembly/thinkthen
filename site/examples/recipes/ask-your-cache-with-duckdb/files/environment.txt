@@ -1,0 +1,6 @@
+Use stock DuckDB 1.5.5.
+Use dbt v1 when dbt is needed.
+This JSONL query needs no extension, key or network.
+The extension uses the unsigned development path.
+The DuckDB install page gives the extension instructions.
+DuckDB 1.5.4 and custom dbt v2 remain unsupported here.

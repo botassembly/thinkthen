@@ -120,3 +120,5 @@ Ticket 0139's calls:
 ## Amendment, 2026-09-26: ADR 0055 sends each record once
 
 ADR 0055 amends item 1 for `decide`, `filter` and `rank`. Without a context, a batch of two or more distinct records sends the fixed sentence `Each question quotes the text it asks about.` as its evidence in place of `{"records":[…]}`. Each question still quotes its record as item 1 says. A batch of one still sends today's request byte for byte. `choose` and `tag` keep item 1's form until B8 and B9 measure them on long records. Ian can overturn it.
+
+Amendment, ticket 0400 slice C (2026-10-04): omitted throttle now uses 8. Explicit settings, range 1 through 32 and the first explicit process selection remain unchanged. Ian can overturn this default.

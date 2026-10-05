@@ -678,6 +678,7 @@ def test_held_stop_has_a_retryable_final_receipt(backend, tmp_path):
     assert backend.count() == 1
 
 
+@pytest.mark.skipif(os.name == "nt", reason="os.kill(SIGINT) does not deliver a Windows console Ctrl-C")
 def test_system_exit_retains_type_code_and_completion(backend, tmp_path):
     child = start("""
     import signal, sys, thinkthen as tt

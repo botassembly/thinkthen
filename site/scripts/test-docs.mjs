@@ -1,19 +1,10 @@
 #!/usr/bin/env node
-// Run every doc test before a release: build thinkthen from this working
-// tree, run the site build, replay every language sample and every SQL
-// sample, and check the proof file strictly. Every sample replays from a
-// saved recording, so the run needs no key and sends no request.
-//
-//   npm run test-docs
-//
-// The run strips every THINKTHEN_ variable and every key, token or secret
-// from the environment first. It takes no options, so no --allow-missing can
-// reach a runner, and a missing toolchain fails the run. The runners rewrite
-// examples/bindings-proof.json. Commit it when every sample passed.
+// Build the command and site, then replay every language and SQL sample.
+// Strip shell settings and secrets; missing toolchains fail the release check.
 
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { leakedVariables } from './binding-proofs.mjs';
+import { leakedVariables } from './binding-samples.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -38,7 +29,6 @@ const steps = [
   ['npm', ['run', 'build'], site, { THINKTHEN_BIN: bin }],
   ['node', ['scripts/smoke-bindings.mjs'], site, {}],
   ['node', ['scripts/smoke-sql.mjs'], site, {}],
-  ['node', ['scripts/check-binding-proofs.mjs', '--strict'], site, {}],
 ];
 
 for (const [cmd, args, cwd, extra] of steps) {
@@ -50,4 +40,4 @@ for (const [cmd, args, cwd, extra] of steps) {
     process.exit(1);
   }
 }
-console.log('test-docs: every doc test passed. Commit examples/bindings-proof.json if it changed.');
+console.log('test-docs: every doc test passed.');

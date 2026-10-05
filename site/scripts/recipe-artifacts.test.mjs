@@ -10,7 +10,7 @@ assert.throws(()=>cleanup(process.cwd()),/refuses unowned/);
 let cases=0;
 try{
  fs.mkdirSync(path.join(root,'site/examples/recipes'),{recursive:true});
- fs.cpSync(new URL('../examples/recipes/rules-propose-model-confirms',import.meta.url),path.join(root,'site/examples/recipes/rules-propose-model-confirms'),{recursive:true});
+ for(const r of RECIPE_PAGES.filter(r=>!r.draft)) fs.cpSync(new URL('../'+r.example.replace(/^site\//,''),import.meta.url),path.join(root,r.example),{recursive:true});
  fs.mkdirSync(path.join(root,'sdlc/issues'),{recursive:true});fs.mkdirSync(path.join(root,'sdlc/planning'),{recursive:true});
  for(const r of RECIPE_PAGES)fs.copyFileSync(new URL('../../'+r.issue,import.meta.url),path.join(root,r.issue));
  fs.copyFileSync(new URL('../../sdlc/planning/milestones.md',import.meta.url),path.join(root,'sdlc/planning/milestones.md'));
@@ -18,14 +18,14 @@ try{
  const check=()=>sourceProblems(RECIPE_PAGES,root);
  assert.deepEqual(check(),[]);cases++;
  const base=path.join(root,RECIPE_PAGES[0].example);
- for(const file of ['files/question.json','files/key.jsonl','files/recording/thinkthen.jsonl','files/audit.jsonl','files/provenance.json']){
+ for(const file of ['files/question.json','files/key.jsonl','files/recording/thinkthen.jsonl','files/results.jsonl']){
   const p=path.join(base,file),saved=fs.readFileSync(p);fs.unlinkSync(p);
   assert.ok(check().includes(`recipe missing-artifact: rules-propose-model-confirms: ${file}`));cases++;
   fs.writeFileSync(p,saved);assert.deepEqual(check(),[]);cases++;
  }
- for(const file of ['files/cases.jsonl','files/key.jsonl','files/recording/thinkthen.jsonl']){
-  const p=path.join(base,file),saved=fs.readFileSync(p);fs.appendFileSync(p,'\n');
-  assert.ok(check().includes(`recipe hash mismatch: rules-propose-model-confirms: ${file}`));cases++;
+ for(const [slug,file] of [['verify-a-claim','files/recording/thinkthen.jsonl'],['ask-your-cache-with-duckdb','files/queries.sql']]) {
+  const p=path.join(root,'site/examples/recipes',slug,file),saved=fs.readFileSync(p);fs.unlinkSync(p);
+  assert.ok(check().includes(`recipe missing-artifact: ${slug}: ${file}`));cases++;
   fs.writeFileSync(p,saved);assert.deepEqual(check(),[]);cases++;
  }
  const issue=path.join(root,RECIPE_PAGES[3].issue),saved=fs.readFileSync(issue);
@@ -37,5 +37,5 @@ try{
  fs.writeFileSync(milestone,m);assert.deepEqual(check(),[]);cases++;
  const clone=structuredClone(RECIPE_PAGES);clone.push({...clone[2],slug:'qualify'});
  assert.ok(sourceProblems(clone,root).includes('recipe disposition: verify/qualify must remain shared'));cases++;
- console.log(`recipe metadata/artifact controls: ${cases} passed, required issues/slugs/milestones and actual byte omission/mutation`);
+ console.log(`recipe metadata/artifact controls: ${cases} passed, required issues/slugs/milestones and missing runnable files`);
 }finally{cleanup(root);}

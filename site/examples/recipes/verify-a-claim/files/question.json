@@ -1,0 +1,11 @@
+{
+  "choose": "Does the cited source support, contradict, or leave the claim unstated?",
+  "options": {
+    "supports": "The source states the claim or directly implies it",
+    "contradicts": "The source states or directly implies the opposite of the claim",
+    "not_stated": "The source does not address the claim either way"
+  },
+  "model": "jev-1.13.0",
+  "threshold": 1e-06,
+  "batch": 10
+}

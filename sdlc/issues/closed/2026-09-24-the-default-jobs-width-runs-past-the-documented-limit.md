@@ -43,3 +43,5 @@ Why 4 holds:
 What would change it: a 429 or a published enforcement change from the vendor at width 4. Then the default drops to 3.
 
 The two `--jobs` pages now give the measured numbers and name the measuring records: `specification/records.md` and `site/src/pages/reference.astro`. Both tell a user who must stay inside the documented limit on short records to set `--jobs 3`.
+
+Ticket [0400 slice C](../../tickets/0400-provider-setups-and-concurrency.md) raises the current default to 8 using experiment 0017. The throttle-4 rates above remain historical measurements; optional configured rates and 429 retries retain their existing behavior.

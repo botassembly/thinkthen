@@ -2,7 +2,7 @@
 
 Status: ready. Planning record only; fresh ticket review precedes implementation.
 
-Milestone: 0.2
+Milestone: later
 
 ## Outcome
 

@@ -264,23 +264,23 @@ def the_process_throttle_reaches_relate():
 @case
 def the_throttle_reaches_a_relate():
     """Sixteen rules over 16 rows make 3,840 pairs in ten requests.
-    Eight are held at throttle 8, and the remaining two wait for free slots."""
-    with Backend() as backend:
-        rows16 = "CREATE TABLE p AS SELECT i AS id, 'Person ' || i AS name, 'person' AS kind FROM range(16) t(i)"
-        rules = ", ".join(f"'r{rule}'" for rule in range(1, 17))
-        query = f"SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM p', [{rules}])"
-        got: list = []
-        worker = threading.Thread(target=lambda: got.extend(run([rows16, "SET thinkthen_throttle = 8", query], backend.base("arm/held"), timeout=120)))
-        worker.start()
-        try:
-            expect(backend.wait(8), 8, "requests in flight")
-            time.sleep(0.2)
-            expect(backend.count(), 8, "the count while held")
-        finally:
-            backend.release()
-            worker.join(timeout=120)
-        expect([backend.count(), rows(got[2])], [10, [[16 * 16 * 15]]], "the count and the edges after release")
-
+    Omitted throttle holds eight; explicit six holds six before release."""
+    for setting, cap in ((None, 8), ("SET thinkthen_throttle = 6", 6)):
+        with Backend() as backend:
+            rows16 = "CREATE TABLE p AS SELECT i AS id, 'Person ' || i AS name, 'person' AS kind FROM range(16) t(i)"
+            rules = ", ".join(f"'r{rule}'" for rule in range(1, 17))
+            query = f"SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM p', [{rules}])"
+            got: list = []
+            worker = threading.Thread(target=lambda: got.extend(run([rows16, *([] if setting is None else [setting]), query], backend.base("arm/held"), timeout=120)))
+            worker.start()
+            try:
+                expect(backend.wait(cap), cap, "requests in flight")
+                time.sleep(0.2)
+                expect(backend.count(), cap, "the count while held")
+            finally:
+                backend.release()
+                worker.join(timeout=120)
+            expect([backend.count(), rows(got[-1])], [10, [[3840]]], "the count and the edges after release")
 
 @case
 def a_second_relate_over_the_same_rows_reads_the_cache():

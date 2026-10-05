@@ -10,6 +10,7 @@ happen. ``guarded`` places bytes against unreadable memory. ``take`` and
 
 import ctypes
 import mmap
+import os
 
 PAGE = mmap.PAGESIZE
 HELD = {}
@@ -55,8 +56,14 @@ _new = ctypes.pythonapi.PyCapsule_New
 _new.restype, _new.argtypes = ctypes.py_object, [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
 _pointer = ctypes.pythonapi.PyCapsule_GetPointer
 _pointer.restype, _pointer.argtypes = ctypes.c_void_p, [ctypes.py_object, ctypes.c_char_p]
-_libc = ctypes.CDLL(None, use_errno=True)
-_libc.mprotect.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
+if os.name == "nt":
+    _protect = ctypes.WinDLL("kernel32", use_last_error=True).VirtualProtect
+    _protect.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_ulong,
+                        ctypes.POINTER(ctypes.c_ulong)]
+    _protect.restype = ctypes.c_int
+else:
+    _libc = ctypes.CDLL(None, use_errno=True)
+    _libc.mprotect.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
 
 
 def utf8(texts):
@@ -82,7 +89,11 @@ def guarded(data, reserve=64 << 20):
     start = base + 2 * PAGE - len(data)
     ctypes.memmove(start, data, len(data))
     for first, length in ((base, PAGE), (base + 2 * PAGE, reserve)):
-        assert _libc.mprotect(first, length, 0) == 0, ctypes.get_errno()
+        if os.name == "nt":
+            previous = ctypes.c_ulong()
+            assert _protect(first, length, 1, ctypes.byref(previous)), ctypes.get_last_error()
+        else:
+            assert _libc.mprotect(first, length, 0) == 0, ctypes.get_errno()
     return region, start
 
 

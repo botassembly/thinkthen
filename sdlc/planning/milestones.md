@@ -45,87 +45,21 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Outcome: Windows support and the first features after 0.1. 0.2 work lands on main after the `release/0.1` cut (ADR 0116).
+Ship the small working core approved by Ian on 2026-10-05. [The current plan](team-0-2-2026-10-04.md) owns the priority order, completion status, deferred work, delegated run approvals and exit criteria.
 
-Ian approved the 0.2 scope and lane order on 2026-10-04. 0.2 ships when release safety, the backends, the search flags, the recipes with their numbers, and Windows stage 1 have landed. Ian dropped extract as a function on 2026-10-04. 0.2 retains the ten functions. The proxy, the hosted screens, the decision store, link, verify and qualify as functions, Markdown repair, tables and the navigate command are not in 0.2. There are no 0.1.x patch releases; ticket 0397 freezes `release/0.1`.
+Remaining core: Windows Python 0382, binding/SQL backend choice 0377, backend checking rename 0416, DuckDB 1.5.4/1.5.5 builds 0403, agent skill 0419 and the small default-recognize check. Then run the authorized hosted rehearsal and real Windows test on the reviewed commit; missing required Windows behavior blocks release. Lower-priority file readers do not hold release and move to 0.3 if unfinished. Release QA and Ian's go complete the release.
 
-Lanes, in order:
+Main carries 0.2.0; release/0.1 is frozen, and public install text stays 0.1.2 until 0.2 ships. dbt v1 is the documented route. No new function or grep alias is approved. The plan records the deferred audit gaps, recipes, Windows bindings, tables, signing and community listing.
 
-- First, in any free lane: [0397: Main moves to 0.2.0 and release/0.1 freezes](../tickets/0397-main-moves-to-0-2-0.md).
-- Lane 1: Windows, tickets 0380 to 0385 below and what follows them.
-- Lane 2: [0398: Release safety](../tickets/0398-release-safety.md), then [0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides](../tickets/0399-backend-path-perplexity-openrouter.md), then [0400: One setup format per provider and a default throttle of 8](../tickets/0400-provider-setups-and-concurrency.md), then 0377 below. 0400 slice A must be usable before the experiments team's new-model day run in the week of 2026-10-05.
-- Lane 3: [0405: Audit the ten functions](../tickets/0405-audit-ten-functions.md) first on Ian's 2026-10-04 update. Answer filter, rank and grep before implementation of [0401: Search flags on rank](../tickets/0401-rank-search-flags.md), then [0402: The docs tell one story](../tickets/0402-docs-tell-one-story.md), then [0403: The DuckDB extension ships a build for DuckDB v1.5.4](../tickets/0403-duckdb-extension-for-dbt-v2.md).
-- Gaps in any lane: [0404: Tech debt cut, with tests held to behavior](../tickets/0404-tech-debt-and-tests-held-to-behavior.md).
-- Waiting on experiments: the "none" wording for choose and each recipe's measured numbers. [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) uses rules to find candidates and decide or choose to confirm them. Reviewed 0031 supplies only the frozen-cohort comparison; publication proof remains pending.
+## 0.3
 
-Completed foundation: [0397](../tickets/0397-main-moves-to-0-2-0.md) moves main to 0.2.0 and freezes `release/0.1`.
-
-Exit criteria, a coordinator default Ian can overturn:
-
-1. Every item below lands or moves to `later`.
-2. A clean rehearsal and a clean release QA round on the latest checkpoint.
-3. Ian gives the go.
-
-Blockers:
-
-- None. `release/0.1` is frozen under Ian's ruling of 2026-10-04. Main carries 0.2.0 (ticket 0397). Fixes land on main and ship in 0.2.
-
-Windows work follows [windows.md](windows.md):
-
-- [0373: Windows stage 0](../tickets/0373-windows-stage-0.md), landed before the cut. The root workspace and the C door build and pass their tests on Windows, and nothing ships. It changes no 0.1 behavior.
-- [0379: The root workspace tests pass on macOS](../tickets/0379-macos-root-suite.md), landed before the cut. It changes tests only.
-- Windows stage 1: the command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM ship for Windows x86-64, and findings W1 to W7 close. The stage 1 report in [windows.md](windows.md#stage-1-difficulty-report) sizes it at 9 to 11 tickets' worth of work and 1,600 to 3,400 lines. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Tickets 0380 to 0385 carry it, in slices. Each waits for the `release/0.1` cut. 0381 to 0385 wait for 0380 slice A, and 0384 and 0385 also wait for 0381 slice A.
+Outcome: add the remaining Windows bindings after the 0.2 core release. These tickets stay open under Ian's 2026-10-05 ruling.
 
 Open items:
 
-- [0406: Rank questions preserve criteria and score ordering across core surfaces](../tickets/0406-rank-question-equivalence.md)
-- [0407: Supply independent context for each record](../tickets/0407-per-record-context.md)
-- [0408: Expose complete question probabilities through C JSON and SQL details](../tickets/0408-j1-full-probabilities.md)
-- [0409: Match TypeScript rank and find declarations to runtime](../tickets/0409-typescript-rank-find-contract.md)
-- [0410: Complete dataframe function coverage](../tickets/0410-column-function-equivalence.md)
-- [0413: Supply candidate options independently for each record](../tickets/0413-options-per-record-equivalence.md)
-- [0414: Define separate context on aggregate functions](../tickets/0414-separate-shared-context.md)
-- [0416: Move backend checking under the backend namespace](../tickets/0416-backend-command-namespace.md)
-- [0417: SQL rank accepts a question set](../tickets/0417-sql-rank-question-sets.md)
-
-
-- [0419: Official ThinkThen skill for agents](../tickets/0419-official-skill-for-agents.md), the separately reviewed promotion of docs item 22. It changes documentation and preserves empty-find behavior.
-- [0377: Each language binding and SQL extension names a backend in code](../tickets/0377-binding-backends.md)
-- [0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64](../tickets/0380-windows-command-line-and-rust-crate.md)
-- [0381: Windows stage 1: the C library ships as a DLL for Windows x86-64](../tickets/0381-windows-c-dll.md)
-- [0382: Windows stage 1: the Python wheel ships for Windows x86-64](../tickets/0382-windows-python-wheel.md)
 - [0383: Windows stage 1: the Node addon ships for Windows x86-64](../tickets/0383-windows-node-addon.md)
 - [0384: Windows stage 1: the C# package loads the Windows DLL](../tickets/0384-windows-csharp.md)
 - [0385: Windows stage 1: the JVM binding loads the Windows DLL](../tickets/0385-windows-jvm.md)
-- [0393: npm publishes through staged publishing](../tickets/0393-npm-staged-publishing.md)
-- [A Flutter app file in the release bundle](../issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md)
-- [The bindings and SQL extensions cannot name a backend](../issues/2026-10-01-bindings-and-sql-extensions-name-no-backend.md)
-- [`rank --threshold P` keeps only records at or above a probability](../issues/2026-10-01-rank-keeps-only-records-over-a-threshold.md)
-- [`score --level NAME=MEANING` describes a level on the command line](../issues/2026-10-01-score-levels-described-on-the-command-line.md)
-- [SQL named forms `thinkthen_rank` and `thinkthen_filter`](../issues/2026-10-01-sql-names-for-rank-and-filter.md)
-- [SQLite `thinkthen_find` drops its `model` setting](../issues/2026-10-01-sqlite-find-drops-its-model-setting.md)
-- [`rank --details` prints `"value": null` on every row](../issues/2026-10-03-rank-details-prints-value-null.md)
-- [Search features: positions, several questions, and grep-style output](../issues/2026-10-03-search-features-positions-several-questions-and-grep-style-output.md)
-- [Help and warning gaps from the transcript how-to](../issues/2026-10-03-help-gaps-from-the-transcript-how-to.md)
-- [A glossary for call, request and decision](../issues/closed/2026-10-03-glossary-call-request-decision.md)
-- [AGENTS.md tells outside agents how to report](../issues/2026-10-03-agents-md-tells-outside-agents-how-to-report.md)
-- [The doc tests gate each checkpoint and each release](../issues/2026-10-03-doc-tests-gate-checkpoints-and-releases.md)
-- [`native_install` loses the C library when `CARGO_TARGET_DIR` is set](../issues/2026-10-03-native-install-ignores-cargo-target-dir.md)
-- [The pandas binding refuses a Series on four functions, and DuckDB's recognize takes no kind descriptions](../issues/2026-10-03-pandas-series-and-duckdb-recognize-descriptions.md)
-- [The `ruby` platform gem on RubyGems is still the 0.0.1 placeholder](../issues/2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md)
-- [The Polars deadline test races its own deadline under load](../issues/2026-10-03-polars-deadline-test-races-its-deadline-under-load.md)
-- Release process, from the 0.1 releases: [the rehearsal never runs the publish steps](../issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md), [the public install checks are done by hand](../issues/2026-10-04-public-install-checks-are-done-by-hand.md), [the release tag can name an unrehearsed commit](../issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md), [each patch release costs two hand passes](../issues/2026-10-04-each-patch-release-costs-two-hand-passes.md), [the R package's Linux install and pre-release proof](../issues/2026-10-04-r-install-on-linux-and-before-release.md), [two release secrets remain](../issues/2026-10-04-two-release-secrets-remain.md), and [a release needs two approvals](../issues/2026-10-04-a-release-needs-two-approvals.md)
-- Remaining tool draft: [Markdown repair tool](../issues/2026-10-03-draft-markdown-repair-tool.md).
-
-- Recipe infrastructure is partial 0402 D. All six pages remain drafts and all issues remain open until measured publication:
-- [`rules-propose-model-confirms`: Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) — Scoped comparison accepted; repeatability and measured publication review remain pending.
-- [`link-records`: Link records](../issues/2026-10-03-draft-function-link.md) — Earlier linking evidence and compatible replay remain pending; completed wording comparison returned no answers.
-- [`verify-a-claim`: Verify a claim](../issues/2026-10-03-draft-function-verify.md) — Constructed-claim limits and source review remain; qualification efficacy and publication artifacts remain pending.
-- [`navigate-many-documents`: Navigate many documents](../issues/2026-10-03-draft-function-navigate.md) — Admitted navigation measurements and compatible artifacts remain pending; no tree command is promised.
-- [`search-transcripts`: Search transcripts](../issues/2026-10-05-recipe-search-transcripts.md) — Held-out source reconciliation and replay remain pending; unequal reading lengths and overlap limit interpretation.
-- [`ask-your-cache-with-duckdb`: Ask your cache with DuckDB](../issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md) — Admitted cache-analysis artifacts and supported-build reconciliation remain pending; no extension support or efficacy promise.
-
-Verify and qualify remain shared in `verify-a-claim`. Rules comparison is accepted only for the frozen 0031 cohort and tested choose configuration; publication proof is pending. Extract stays dropped. 0030 establishes no quality-qualified winner. 0032 efficacy is unanswered with TEST sealed and its full hold retained; none wording remains unknown. No continuation follows.
 
 ## later
 
@@ -136,6 +70,17 @@ Exit criteria: none. An item moves to a numbered milestone when its trigger fire
 Blockers: none.
 
 Open items:
+
+- [Windows static-library distribution waits for stage 3](../issues/2026-10-05-windows-static-library-waits-for-stage-3.md)
+
+- [0406: Rank questions preserve criteria and score ordering across core surfaces](../tickets/0406-rank-question-equivalence.md)
+- [0407: Supply independent context for each record](../tickets/0407-per-record-context.md)
+- [0408: Expose complete question probabilities through C JSON and SQL details](../tickets/0408-j1-full-probabilities.md)
+- [0409: Match TypeScript rank and find declarations to runtime](../tickets/0409-typescript-rank-find-contract.md)
+- [0410: Complete dataframe function coverage](../tickets/0410-column-function-equivalence.md)
+- [0413: Supply candidate options independently for each record](../tickets/0413-options-per-record-equivalence.md)
+- [0414: Define separate context on aggregate functions](../tickets/0414-separate-shared-context.md)
+- [0417: SQL rank accepts a question set](../tickets/0417-sql-rank-question-sets.md)
 
 - [0411: Prove changed reading rules on every binding route](../tickets/0411-binding-reading-replay-proof.md)
 - [0412: Document R index adapters in the binding contract](../tickets/0412-r-result-contract.md)

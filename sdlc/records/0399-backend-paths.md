@@ -1,0 +1,9 @@
+# 0399: Backend posting paths
+
+Landed at `4cf694673`: read-only named relative posting paths, Perplexity Decisions and OpenRouter System One, complete criteria, exact posting-address inheritance and provider-compatible response replay. Offline parser/routing, secrecy, no-send, fixture replay and documentation checks passed. Built-ins cannot be redirected by configuration; paths are relative bounded components, and headers never enter recordings.
+
+The authorized once-only checks ran on 2026-10-04 at `4349b91b3`; both exited 0 with critical 0 and warning 0. Perplexity requested/served `pplx-decider-v1-27b` at `/v1/decisions`, with four successful replies totaling 901 input/8 output tokens. OpenRouter requested `typesafe/jev-1.13` at `/api/v1/systemone`, served `typesafe/jev-1.13-20260917` in all four successful replies, and reported 1483 input/176 output tokens. Saved response bodies support offline replay; these checks prove only the tested route/model/schema combinations.
+
+Official pricing checked at 2026-10-04 19:26:16 UTC was $0.04/M input for [Perplexity](https://docs.perplexity.ai/docs/decisions/quickstart) and $0.042/M for [OpenRouter](https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints), with free output. Successful usage implies $0.000098326, not an exact bill or absence of retries: attempt counts were unavailable. The pair used two durable 10,000-token reservations within Ian’s combined $1 cap; its conservative allowance was $0.20. That authorization is done/expired and permits no rerun.
+
+Left: no implementation gap in this ticket; other routes/models, images and general provider reliability remain unestablished. Fixture isolation failures observed during ambient gate runs belong to [the fixture-isolation issue](../issues/2026-10-04-local-test-fixtures-read-ambient-configuration.md), not new live authority.

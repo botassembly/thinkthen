@@ -2,6 +2,7 @@
 
 import ast
 import json
+import os
 import pathlib
 
 import pytest
@@ -187,6 +188,7 @@ def test_relate_reads_what_recognize_found(backend, tmp_path):
     ]
 
 
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="the forked engine test requires os.fork")
 def test_a_forked_child_answers_and_the_parent_counts_nothing(backend, tmp_path):
     """0096 and Q15: the warm process engine answers in a forked child, and
     the child's calls do not move the parent's counters."""

@@ -10,11 +10,13 @@ cd -- "$(dirname -- "$0")"
 . ../../sdlc/scripts/scratch.sh
 scratch_dir out
 
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+builder_home=$HOME
+case $(uname -s) in MINGW*|MSYS*) builder_home=$(cygpath -m "$HOME") ;; esac
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$builder_home=/build"
 export RUSTFLAGS
 maturin build --quiet --locked --offline --release -o "$out"
 
-python3 - "$out"/thinkthen-*.whl "$HOME" <<'PY'
+python3 - "$out"/thinkthen-*.whl "$builder_home" <<'PY'
 import sys
 import zipfile
 
@@ -22,7 +24,7 @@ wheel, home = sys.argv[1], sys.argv[2].encode()
 with zipfile.ZipFile(wheel) as held:
     names = held.namelist()
     metadata = next(held.read(n) for n in names if n.endswith(".dist-info/METADATA"))
-    extensions = [held.read(n) for n in names if n.endswith(".so")]
+    extensions = [held.read(n) for n in names if n.endswith((".so", ".pyd"))]
     homed = [n for n in names if home in held.read(n)]
 wrong = [f"it lacks {need}" for need in ("thinkthen/__init__.pyi", "thinkthen/py.typed",
                                       "thinkthen/judge.py", "thinkthen/stream.py")

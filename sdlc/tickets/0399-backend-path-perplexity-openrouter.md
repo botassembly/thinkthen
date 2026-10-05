@@ -1,6 +1,6 @@
 # 0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides
 
-Status: landed. Fresh High design review accepted `f752bb15d` on 2026-10-04. Fresh High source review accepted `5a2aa3323`; fresh Medium fixture review accepted `4349b91b3`. Both coordinator-run manual checks passed once on `4349b91b3`. Latest-main full tests, specification, required lint, all 350 actual documentation replays, strict proof and final site build passed. Fresh final receipt review accepted `ae0c78001`; the coordinator publishes this reviewed candidate through the landing merge. Lane: claude-2, after ticket 0398 (release safety), on Ian's lane order of 2026-10-04. Offline design preparation may proceed while 0398's hosted proof waits. Amends ADR 0114 sections 1, 2 and 6, and ADR 0115 section 3. Closes no existing issue; the findings come from experiment 0003. The queue owner approves implementation after fresh design review.
+Status: landed at `4cf694673`: named posting paths, Perplexity/OpenRouter support and saved-response replay work, and both authorized provider checks passed once on 2026-10-04. The completed/expired authorization permits no repeat; other routes/models and general provider reliability remain unestablished.
 
 Landed: ae0c78001
 
@@ -84,7 +84,7 @@ Milestone: 0.2
   - Cache: one `decide --true` question asked under `openrouter` and under the unnamed path at the same loopback URL and model makes two cache entries. A `decide` with no descriptions makes one, because the bytes match (ADR 0115 section 6).
   - Unchanged default: `requests.jsonl`, `requests-text.jsonl` and every `specification/fixtures/systemone/*.request.json` pass byte for byte. The full named-backend suite passes.
   - `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py`, `sdlc/scripts/settings`, `sdlc/scripts/tickets`, full `sdlc/scripts/lint`, the site build and the site's check script.
-  - Live, by hand. Landing waits on these two checks. `site/src/pages/install/backends/index.astro` and `checkLines` in `site/src/data/backend-checks.mjs` throw without a `CHECKS` entry for every built-in, and experiment 0003 holds no passing `thinkthen check` for either backend. Ian authorized both manual checks on 2026-10-04 under a combined $1 cap through `sdlc/scripts/live` with a token cap. That authority persists; no second permission request is needed. The coordinator alone executes the reviewed run plan in [the design record](../planning/0399-backend-path-design.md). Each child enforces `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10000`, and each wrapper invocation reserves 10000 tokens. One check per backend, at most sixteen attempts each, has a conservative published-limit cost bound below $0.20 combined. An automatic retry of a wrapper or check is forbidden. Experiment 0003's $0.0000042 Perplexity and $0.0001 OpenRouter figures describe 2026-10-02, not this run's budget. Each check must exit 0 and print `critical 0`. The ticket records both transcripts, and the site's `CHECKS` cites them.
+  - Historical live plan, completed on 2026-10-04. Both required checks passed before landing. `site/src/pages/install/backends/index.astro` and `checkLines` in `site/src/data/backend-checks.mjs` throw without a `CHECKS` entry for every built-in, and experiment 0003 holds no passing `thinkthen check` for either backend. Ian authorized both manual checks on 2026-10-04 under a combined $1 cap through `sdlc/scripts/live` with a token cap. That once-only authority is completed/expired and permits no repeat. The coordinator alone executes the reviewed run plan in [the design record](../records/0399-backend-paths.md). Each child enforces `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10000`, and each wrapper invocation reserves 10000 tokens. One check per backend, at most sixteen attempts each, has a conservative published-limit cost bound below $0.20 combined. An automatic retry of a wrapper or check is forbidden. Experiment 0003's $0.0000042 Perplexity and $0.0001 OpenRouter figures describe 2026-10-02, not this run's budget. Each check must exit 0 and print `critical 0`. The ticket records both transcripts, and the site's `CHECKS` cites them.
 - Defers: the following gaps.
   - Databricks `ai_decide`, which serves on each workspace's own address and names its probability `probability`. Out of 0.2 by the product manager's addendum.
   - A path for the unnamed path. `--url` and `EngineBuilder::base_url` keep `systemone`. A user names a configured entry to reach another path.
@@ -96,7 +96,7 @@ Milestone: 0.2
 
 ## Design notes
 
-The proposed implementation, review boundaries and manual run controls live in [0399-backend-path-design.md](../planning/0399-backend-path-design.md). That record authorizes no additional paid call.
+The proposed implementation, review boundaries and manual run controls live in [0399-backend-paths.md](../records/0399-backend-paths.md). That record authorizes no additional paid call.
 
 - The fill value is `{}`. Experiment 0003's probe showed OpenRouter accepts it and answers. ThinkThen already sends `{}` for a `score` level whose description is null, so `{}` is the tool's own word for "no description". A sentence such as "otherwise" would add words the author never wrote and could move the answer. Ian can overturn the value.
 - `BothSides` rides the existing `Descriptions` plumbing, because that value already reaches every plan, every check probe and the cache key. A separate field would need the same plumbing twice. The builder may rename the type if a clearer name fits both meanings.
@@ -107,11 +107,3 @@ The proposed implementation, review boundaries and manual run controls live in [
 - `openrouter` as a built-in. The alternative leaves it a configured entry and lets the entry turn on both sides (ticket 0400 slice A). The built-in costs the experiments team one configuration edit.
 - The fill value `{}`.
 - The defaults `pplx-decider-v1-27b` and `typesafe/jev-1.13`.
-
-## What the build taught us
-
-The coordinator ran each reviewed manual job once on `4349b91b3` on 2026-10-04. Both exited 0 with critical 0 and warning 0. [The build record](../records/0399-backend-path-build.md#actual-manual-provider-receipts) retains the actual transcripts, model identities and spend limits. Successful replies report a combined usage cost of $0.000098326; attempt counts are not printed, so this is not an exact total bill. The pair retains its conservative $0.20 allowance and charged 20000 durable reserved tokens. No extra paid call is authorized here.
-
-The coordinator's full test and specification proof uses an owned empty HOME with explicit build-cache homes. It does not prove default-HOME fixture independence. The remaining ambient configuration problem is [Debt 038](../issues/2026-10-04-local-test-fixtures-read-ambient-configuration.md), owned by the next reviewed fixture-isolation slice related to 0404. Runtime configuration refusal remains correct and unchanged. The saved OpenRouter replay fixture reconstructs retained response fields and explicitly substitutes a fixture-only identifier; it is not a complete raw capture.
-
-The coordinator replayed all 308 language and 42 SQL documentation samples on the rebased source. Strict verification reports 350 current proofs and zero stale pages; the final site build passes. These are Linux documentation proofs, not new native Windows proof. No manual provider check was repeated.

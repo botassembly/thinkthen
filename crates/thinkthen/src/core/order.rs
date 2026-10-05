@@ -102,4 +102,4 @@ mod tests {
 }
 
 #[cfg(test)]
-mod rank_set_0401_tests;
+mod rank_set_tests;

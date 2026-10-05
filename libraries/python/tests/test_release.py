@@ -9,7 +9,7 @@ since an abort would dump core.
 """
 
 import pathlib
-import resource
+import os
 import shutil
 import subprocess
 import sys
@@ -39,7 +39,11 @@ SETUP = f"""
 
 
 def no_core():
+    import resource
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+
+
+NO_CORE = no_core if os.name != "nt" else None
 
 
 def released_after_cancel(backend, tmp_path, calls):
@@ -73,7 +77,7 @@ def released_after_cancel(backend, tmp_path, calls):
     """
     child = subprocess.Popen([sys.executable, "-c", textwrap.dedent(code)], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1,
-                             preexec_fn=no_core,
+                             preexec_fn=NO_CORE,
                              env=child_env(backend, tmp_path, "arm/held", CALLS=str(calls)))
     # A hang guard, not a speed claim: a call that never ends stops the child.
     guard = threading.Timer(120 if calls == 1 else 600, child.kill)
@@ -119,7 +123,7 @@ def released_after_timed_cancel(backend, tmp_path, calls):
         print(kind, len(HELD), tt._thinkthen._live_workers(), sys.getrefcount(token) == base)
     """
     done = subprocess.run([sys.executable, "-c", textwrap.dedent(code)], capture_output=True,
-                          text=True, timeout=15 if calls == 1 else 120, preexec_fn=no_core,
+                          text=True, timeout=15 if calls == 1 else 120, preexec_fn=NO_CORE,
                           env=child_env(backend, tmp_path, "arm/delay/30", CALLS=str(calls)))
     assert done.returncode == 0, done.stderr
     assert done.stdout.splitlines() == ["ctypes 0 0 True", "raw 0 0 True"]
@@ -210,7 +214,7 @@ def one_run(number, python, folder, stairs):
                         PYTHONPATH=str(folder / "package"))
         child = subprocess.Popen([python, "-c", textwrap.dedent(FREEZE)], env=env, text=True,
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, preexec_fn=no_core)
+                                 stderr=subprocess.PIPE, preexec_fn=NO_CORE)
         assert backend.wait(1) == 1
         child.stdin.write("go\n")
         child.stdin.flush()
@@ -227,6 +231,7 @@ def one_run(number, python, folder, stairs):
     return lines, window
 
 
+@pytest.mark.skipif(os.name == "nt", reason="exit fixture releases its backend through /proc/PID/fd/0")
 def test_each_producer_exits_after_one_worker_wake(tmp_path):
     """One real child per producer reaches one release or leak and exits."""
     (tmp_path / "package").mkdir()
@@ -239,6 +244,7 @@ def test_each_producer_exits_after_one_worker_wake(tmp_path):
 
 
 @pytest.mark.stress
+@pytest.mark.skipif(os.name == "nt", reason="exit fixture releases its backend through /proc/PID/fd/0")
 def test_no_worker_freezes_at_exit(tmp_path):
     """Change 6's exit freeze: each child's worker wakes 0 to 8 ms around
     its script's end, stepped toward the edge where the window lies. Every ``wake`` must reach one outcome and ``done``.

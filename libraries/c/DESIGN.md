@@ -151,4 +151,4 @@ Every result of open size crosses as JSON text, so a new field never changes a l
 
 - A checked throttle constructor landed as `thinkthen_engine_new_with` in ticket 0148.
 - Partial rows, which need an engine capability that exposes a stopped call's finished judgments.
-- Windows COFF static localization, static-link coexistence and metadata remain slice B. Raw Cargo static output is never shipped by slice A. Stage 2 bindings remain separate.
+- Windows 0.2 distributes the DLL and its import library only. Raw Cargo static output is never shipped. Stage 3 owns COFF static localization, static-link coexistence and metadata in [the static-library issue](../../sdlc/issues/2026-10-05-windows-static-library-waits-for-stage-3.md). No native localization experiment has run. Stage 2 bindings remain separate.

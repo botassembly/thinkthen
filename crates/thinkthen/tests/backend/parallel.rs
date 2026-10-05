@@ -81,7 +81,7 @@ fn decide(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
 }
 
 /// Start `decide` over JSON records without the cache, with standard input left open.
-fn piped(base: &str, jobs: &str) -> io::Result<Child> {
+fn piped(base: &str, jobs: Option<&str>) -> io::Result<Child> {
     Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .clear_environment()
         .home(env!("CARGO_TARGET_TMPDIR"))
@@ -95,7 +95,8 @@ fn piped(base: &str, jobs: &str) -> io::Result<Child> {
             "--batch",
             "1",
         ])
-        .args(["--url", base, "--jsonl", "--field", "/body", "--jobs", jobs])
+        .args(["--url", base, "--jsonl", "--field", "/body"])
+        .args(jobs.into_iter().flat_map(|jobs| ["--jobs", jobs]))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -170,27 +171,30 @@ fn a_backend_that_answers_out_of_order_still_prints_in_input_order() {
 
 #[test]
 fn no_more_requests_are_in_flight_than_the_jobs_asked_for() {
-    for jobs in ["1", "2", "4"] {
-        let asked: usize = jobs.parse().expect("a number of jobs");
+    for (jobs, asked, count) in [
+        (Some("1"), 1, 8),
+        (Some("2"), 2, 8),
+        (Some("4"), 4, 8),
+        (None, 8, 16),
+    ] {
         // The first `asked` requests wait until all are in flight, so the peak
         // reaches the bound however loaded the machine is (ticket 0352).
         let gathering = Gathering::new(asked);
-        let listener = Listener::answering(move |body| {
+        let listener = Listener::answering(move |_| {
             gathering.hold();
-            Canned::ok(&answered(ordinal(body)))
+            Canned::ok(&answered(1))
         })
         .expect("a loopback listener");
-        let output = decide(
-            listener.base(),
-            &["--jsonl", "--field", "/body", "--jobs", jobs],
-            &records(8),
-        )
-        .expect("the compiled binary runs");
+        let mut arguments = vec!["--jsonl", "--field", "/body", "--batch", "1"];
+        arguments.extend(jobs.into_iter().flat_map(|jobs| ["--jobs", jobs]));
+        let output =
+            decide(listener.base(), &arguments, &records(count)).expect("the compiled binary runs");
 
-        assert_eq!(output.status.code(), Some(0), "{jobs} jobs");
-        assert_eq!(printed(&output).lines().count(), 8, "{jobs} jobs");
+        assert_eq!(output.status.code(), Some(0), "{jobs:?} jobs");
+        assert_eq!(printed(&output), wrapped(count), "{jobs:?} jobs");
+        assert_eq!(listener.count(), count);
         let peak = listener.peak();
-        assert_eq!(peak, asked, "{jobs} jobs reached {peak} in flight");
+        assert_eq!(peak, asked, "{jobs:?} jobs reached {peak} in flight");
     }
 }
 
@@ -341,7 +345,13 @@ fn jobs_acts_in_record_mode_alone_and_inside_its_range() {
 
 #[test]
 fn a_run_opens_one_connection_for_each_job_and_reuses_it() {
-    for jobs in [1_usize, 4, 16, 32] {
+    for (explicit, jobs) in [
+        (true, 1_usize),
+        (true, 4),
+        (true, 16),
+        (true, 32),
+        (false, 8),
+    ] {
         // Each round is held until all of its requests are in flight, so the
         // first opens `jobs` connections and the second needs them all again.
         let rounds = [(); 2].map(|()| Gathering::new(jobs));
@@ -349,11 +359,14 @@ fn a_run_opens_one_connection_for_each_job_and_reuses_it() {
         let listener = Listener::answering(move |body| {
             let place = ordinal(body);
             rounds[usize::from(place > jobs)].hold();
-            Canned::ok(&answered(place)).notifying(told.clone())
+            Canned::ok(&answered(1)).notifying(told.clone())
         })
         .expect("a loopback listener");
-        let mut child =
-            piped(listener.base(), &jobs.to_string()).expect("the compiled binary runs");
+        let mut child = piped(
+            listener.base(),
+            explicit.then_some(jobs.to_string()).as_deref(),
+        )
+        .expect("the compiled binary runs");
         let mut input = child.stdin.take().expect("a pipe to standard input");
         let all = records(2 * jobs);
         let lines: Vec<&str> = all.split_inclusive('\n').collect();
@@ -374,7 +387,7 @@ fn a_run_opens_one_connection_for_each_job_and_reuses_it() {
         let output = finish(child, "thinkthen over two rounds").expect("the compiled binary ends");
 
         assert_eq!(output.status.code(), Some(0), "{jobs} jobs");
-        assert_eq!(printed(&output).lines().count(), 2 * jobs, "{jobs} jobs");
+        assert_eq!(printed(&output), wrapped(2 * jobs), "{jobs} jobs");
         assert_eq!(listener.count(), 2 * jobs, "{jobs} jobs");
         assert_eq!(listener.peak(), jobs, "{jobs} jobs");
         assert_eq!(listener.connections(), jobs, "{jobs} jobs");
@@ -385,7 +398,7 @@ fn a_run_opens_one_connection_for_each_job_and_reuses_it() {
 fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))).after(30))
         .expect("a loopback listener");
-    let mut child = piped(listener.base(), "4").expect("the compiled binary runs");
+    let mut child = piped(listener.base(), Some("4")).expect("the compiled binary runs");
 
     let mut input = child.stdin.take().expect("a pipe to standard input");
     input

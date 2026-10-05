@@ -1,6 +1,6 @@
 # 0382: Windows stage 1: the Python wheel ships for Windows x86-64
 
-Status: ready. It waits for the `release/0.1` cut and for ticket 0380 slice A, which adds the fifth release target. No slice lands on main before the cut (ADR 0116 item 2). Plan: `sdlc/planning/windows.md`, stage 1. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. The coordinator assigns a lane after the cut.
+Status: in progress. The Windows Python wheel and core runner candidate passes focused Linux Python, installed-wheel and workflow checks. Fresh High review, landing and the combined native Windows run remain. Native dispatch is pending approval.
 
 Milestone: 0.2
 
@@ -18,3 +18,7 @@ Milestone: 0.2
 - Changes: `build-wheel.sh` takes the Windows extension file. The package classifiers name Windows. The Unix-only tests get skips with reasons. `release.yml` builds the wheel on the Windows target, and both wheel counts in `release.yml` rise to five.
 - Proof: a wheel install and smoke on the runner that counts loopback requests. The Python check passes on `windows-2025` with only the named skips. The Linux and macOS Python checks stay green.
 - Defers: the main unknown, whether `cibuildwheel` or the present script builds the Windows wheel more simply. The builder picks one and records why. The Polars door follows the wheel in stage 2.
+
+## Build decisions
+
+Keep maturin and the existing shell build route. It supports the abi3 `win_amd64` wheel once the content check admits `.pyd`. Windows needs `VirtualQuery` in the existing raw-memory leaf because the prior non-Linux path links Unix `mincore`; inspect committed readable regions before Arrow reads them. Use the existing pinned windows-sys 0.61.2 with only its memory feature. Keep Unix memory inspection unchanged. Port protected-page fixtures and token/release checks; skip only Unix fork, signal, resource and /proc fixtures with reasons. Run the release wheel's installed import, counted loopback answer and no-send refusals, then the full applicable probe suite and pandas 2 safety checks. Root owns the one High review, full landing gates and the combined hosted/native approval request.

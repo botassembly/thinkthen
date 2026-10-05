@@ -15,13 +15,13 @@ use std::time::Duration;
 use crate::harness::{Canned, Listener, Observed, finish};
 
 mod facts_flush;
+mod recognition_width;
 
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 const PICKED: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u002","#,
     r#""probabilities":{"u001":0.1,"u002":0.9}}}}"#,
 );
-const RECOGNIZED: &str = r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"IN","probabilities":{"IN":1.0,"OUT":0.0}}}}"#;
 const RELATED: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}}}"#;
 
 struct Acknowledgment(std::path::PathBuf);
@@ -116,10 +116,14 @@ fn held_with_signal(
     let fixed = ["--url", listener.base(), "--model", "local-1"];
     let child = spawn(&[arguments, &fixed].concat(), input, &acknowledgment)?;
     for _ in 0..count {
-        assert!(matches!(
-            events.recv_timeout(Duration::from_secs(30)),
-            Ok(Observed::Request)
-        ));
+        assert!(
+            matches!(
+                events.recv_timeout(Duration::from_secs(30)),
+                Ok(Observed::Request)
+            ),
+            "held {} of {count} requests",
+            listener.requests().len()
+        );
     }
     let flag = if signal == signal_hook::consts::signal::SIGTERM {
         "-TERM"
@@ -458,31 +462,6 @@ fn sigterm_after_a_check_probe_fails_prints_no_report() {
     .expect("interrupted check ends");
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
-}
-
-/// Ticket 0143: a split text holds up to the default width of 4 in flight.
-/// The text makes 14 one-question chunks, and none starts after the signal.
-#[test]
-fn sigint_between_recognition_chunks_starts_no_later_chunk() {
-    let profile = Path::new(env!("CARGO_TARGET_TMPDIR")).join("recognize-interrupt-profile.json");
-    fs::write(
-        &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
-    )
-    .expect("profile");
-    let output = held(
-        4,
-        &[
-            "recognize",
-            "--profile",
-            &profile.to_string_lossy(),
-            "--no-cache",
-        ],
-        b"Ada met Bob at Acme in Paris",
-        || Canned::ok(RECOGNIZED),
-    )
-    .expect("recognize stops");
-    assert!(output.stdout.is_empty());
 }
 
 /// Ticket 0133: the carrier thread cannot spawn under `RLIMIT_NPROC`, the

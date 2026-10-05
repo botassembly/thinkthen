@@ -8,7 +8,8 @@
 //! the snapshot is the readable mappings in `/proc/self/maps`, so a protected
 //! page and an unmapped page both fail the check. A process that cannot read
 //! its own map gets a refusal for every Arrow column. Off Linux, `mincore`
-//! finds unmapped pages only (`NOTES.md`, the waivers).
+//! finds unmapped pages only (`NOTES.md`, the waivers) on Unix. Windows uses
+//! `VirtualQuery` to require committed readable regions without guard pages.
 //!
 //! A file mapping is listed readable to its end, but a page past the end of
 //! its file raises SIGBUS when touched. Such a mapping is bounded by the

@@ -298,7 +298,7 @@ pub(crate) fn width(asked: Option<u8>) -> Result<usize, Failure> {
 }
 
 /// `--jobs N` selects N. An omitted `--jobs` selects nothing and follows the
-/// width the process runs at, which is 4 until something selects another.
+/// width the process runs at, which is 8 until something selects another.
 pub(crate) fn width_in(widths: &Widths, asked: Option<u8>) -> Result<usize, Failure> {
     let asked = asked.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
     widths
@@ -387,4 +387,4 @@ pub(crate) mod width_tests;
 mod rank_set;
 
 #[cfg(test)]
-mod rank_set_0401_tests;
+mod rank_set_tests;
