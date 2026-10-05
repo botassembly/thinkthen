@@ -65,6 +65,7 @@ case $HOST_TARGET in *-apple-darwin) set -- "$@" -DCMAKE_OSX_DEPLOYMENT_TARGET=1
 	-DTHINKTHEN_DUCKDB_SOURCE_COMMIT="$duckdb_source_commit" \
 	-DTHINKTHEN_DUCKDB_ARCHIVE_MANIFEST="$HERE/$manifest"
 "$CMAKE" --build "$BUILD" --target thinkthen_loadable_extension -j 2
+python3 "$INPUTS_HERE/validate_inputs.py" --source "$SOURCE" --commit "$duckdb_source_commit" --static "$STATIC" --manifest "$HERE/$manifest"
 case $HOST_TARGET in
 x86_64-unknown-linux-gnu) elf_arch='Advanced Micro Devices X86-64' ;;
 aarch64-unknown-linux-gnu) elf_arch=AArch64 ;;

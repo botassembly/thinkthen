@@ -40,6 +40,7 @@ if args[0]=='--build':
     out=base/'extension/thinkthen/thinkthen.duckdb_extension'
     out.parent.mkdir(parents=True,exist_ok=True)
     out.write_bytes(body.read_bytes())
+    if os.environ.get('FIXTURE_MUTATE_SOURCE'):Path(os.environ['THINKTHEN_DUCKDB_CPP_SOURCE'],'source.cc').write_text('mutated during build')
 else:base.mkdir(parents=True,exist_ok=True)
 ''')
     cmake.chmod(0o755)
@@ -69,4 +70,9 @@ else:base.mkdir(parents=True,exist_ok=True)
                             capture_output=True, text=True, timeout=30, check=False)
     case.assertEqual(result.returncode, 1, result.stderr)
     case.assertIn('DuckDB footer DuckDB version is', result.stderr)
+    case.assertEqual(alias.read_bytes(), encode_footer('v1.5.5'))
+    result = subprocess.run(['/bin/sh', str(build)], env={**env, 'FIXTURE_MUTATE_SOURCE': '1'},
+                            capture_output=True, text=True, timeout=30, check=False)
+    case.assertEqual(result.returncode, 1, result.stderr)
+    case.assertIn('raw Git source file differs: source.cc', result.stderr)
     case.assertEqual(alias.read_bytes(), encode_footer('v1.5.5'))
