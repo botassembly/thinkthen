@@ -6,6 +6,8 @@ Every release of every surface shares one version number.
 
 Version 0.2 is in progress on main.
 
+Python, TypeScript and the C JSON door can select a named backend in their constructor. Packages that forward C settings JSON inherit `"backend"`. SQLite explicitly refuses this field until its process configuration supports it.
+
 The default throttle is 8 simultaneous requests on every surface. Explicit throttles retain their process-wide precedence and range of 1 through 32 (ticket 0400).
 
 Named backends add `perplexity` and `openrouter`. Configuration entries may set a relative posting `path`. OpenRouter preserves descriptions and fills a missing yes-or-no side with `{}`. Existing configured entries named `perplexity` or `openrouter` must be renamed or removed because those names now select built-ins; a built-in configuration entry accepts only `requests_per_minute`.

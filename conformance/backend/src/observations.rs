@@ -138,3 +138,19 @@ impl Observations {
         serde_json::json!({"markers": markers, "absent": self.absent, "unknown": self.unknown, "overflow": self.overflow}).to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Paths;
+
+    #[test]
+    fn exhausted_path_counts_refuse_to_wrap() {
+        let mut paths = Paths {
+            other: u64::MAX,
+            ..Default::default()
+        };
+        paths.observe("unusable");
+        assert_eq!(paths.other, u64::MAX);
+        assert!(paths.overflow);
+    }
+}

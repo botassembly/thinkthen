@@ -70,3 +70,16 @@ test('explicit backend selects configured routing over captured address and keep
   assert.deepEqual(await backend.snapshot('bearers'), {markers:{local:1},absent:0,unknown:0,overflow:false});
   assert.equal(JSON.parse((await backend.snapshot('capture')).bodies[0]).model, 'override');
 });
+
+test('a successful provider body at the wrong path fails the count expectation', async (t) => {
+  const backend = await startBackend(t, {provider:'fake-provider'});
+  const body = '{"state":"refund","model":"pplx-decider-v1-27b","questions":{"q1":{"type":"noul","description":"attention?"}}}';
+  const response = await fetch(`${backend.base('arm/full/capture')}/systemone`, {method:'POST',body,headers:{Authorization:'Bearer fake-provider'}});
+  assert.equal(response.status, 200);
+  await response.text();
+  assert.equal(await backend.count(), 1);
+  assert.deepEqual(await backend.snapshot('capture'), {bodies:[body]});
+  assert.deepEqual(await backend.snapshot('bearers'), {markers:{provider:1},absent:0,unknown:0,overflow:false});
+  const actual = await backend.snapshot('paths');
+  assert.throws(() => assert.deepEqual(actual, paths('capture_decisions'), 'posting_path_mismatch'), /posting_path_mismatch/);
+});

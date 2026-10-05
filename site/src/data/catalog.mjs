@@ -442,7 +442,7 @@ export const SURFACES = [
   },
   {
     slug: 'python', name: 'Python', deckHeading: 'Python',
-    backends: 'env',
+    backends: 'code',
     lang: 'python', tab: 'Python',
     blurb: 'Pass a string or a list. Read the answer from `Call.value`.',
     unsureWord: '`None`',
@@ -488,7 +488,7 @@ export const SURFACES = [
   },
   {
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
-    backends: 'env',
+    backends: 'code',
     lang: 'ts', tab: 'TypeScript',
     blurb: 'Pass the question and the text. Await the call, then read its `.value`.',
     unsureWord: '`null`',
@@ -548,7 +548,7 @@ export const SURFACES = [
   },
   {
     slug: 'c', name: 'C', deckHeading: 'C',
-    backends: 'env',
+    backends: 'code',
     lang: 'c', tab: 'Rust',
     blurb: 'One header over a shared or a static library. Bind ThinkThen to any language that can call C.',
     unsureWord: 'the outcome `THINKTHEN_UNSURE`',
@@ -891,7 +891,7 @@ for (const s of SURFACES) {
   for (const field of s.slug === 'shell' ? ['facts'] : ['facts', 'errors', 'settings']) {
     if (!s[field]) throw new Error(`catalog: the surface ${s.slug} has no ${field}`);
   }
-  if (s.backends && !['env', 'builder', 'cli', 'python'].includes(s.backends)) throw new Error(`catalog: the surface ${s.slug} has the backends route ${s.backends}`);
+  if (s.backends && !['env', 'builder', 'code', 'cli', 'python'].includes(s.backends)) throw new Error(`catalog: the surface ${s.slug} has the backends route ${s.backends}`);
 }
 
 // The tabs on the home page sample, and on every code block that has variants.

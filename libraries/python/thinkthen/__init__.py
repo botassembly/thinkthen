@@ -352,7 +352,8 @@ class Engine:
     ``backend``, ``base_url``, ``model``, ``throttle`` (1 to 32 requests in flight), ``batch``,
     ``max_requests``, ``max_request_bytes``, ``cache`` (a folder, ``False`` for none, or ``True``
     for the default folder), ``timeout``, ``max_retries``, ``record``, ``replay``, and ``profile``. An omitted setting comes
-    from the environment. The throttle is one per loaded copy of this
+    from the environment. ``backend`` selects its captured named key; an explicit
+    ``base_url`` receives that key and retains its setup path and limits. The throttle is one per loaded copy of this
     package: a second, different throttle raises ``UsageError``.
 
     Each verb takes a ``tt.question()`` or its text. Beside a text,

@@ -20,7 +20,7 @@ const rows = (await tt.annotate("form.json", tickets, { signal, batch: 2 })).val
 
 ## Settings
 
-The module-level verbs use the engine the environment describes: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest. `new tt.Engine({ baseUrl, model, throttle, maxRequests, maxRequestsTotal, maxRequestBytes, cache, timeoutSeconds, maxRetries, profile, record, replay, batch })` starts from the same environment, and each given key overrides one setting. `cache: false` keeps no cache. A refused setting throws `ThinkThenError` of kind `usage`. An engine counts its own usage. `maxRequestsTotal` caps the live sends every engine of the process makes together; `0` refuses the first with `usage`.
+The module-level verbs use the engine the environment describes: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest. `new tt.Engine({ backend, baseUrl, model, throttle, maxRequests, maxRequestsTotal, maxRequestBytes, cache, timeoutSeconds, maxRetries, profile, record, replay, batch })` starts from the same environment, and each given key overrides one setting. `cache: false` keeps no cache. A refused setting throws `ThinkThenError` of kind `usage`. An engine counts its own usage. `maxRequestsTotal` caps the live sends every engine of the process makes together; `0` refuses the first with `usage`.
 
 A question spec's `profile` names saved calibration. The engine's separate `profile` option selects a runtime limits file. A mismatch appears as optional `details.meta.profile_warning`; the type declarations cover both names.
 
@@ -51,3 +51,5 @@ Facts, details, and annotate rows are the engine's JSON, so a member this packag
 ## Build and check
 
 `setup-toolchain.sh` places the pinned Node under `~/.cache/thinkthen-toolchains/` once, on a networked machine. `build-addon.sh` builds `thinkthen-<platform>-<arch>.node` offline, the name `loader.js` picks. `check.sh` is this surface's entry in the surface rung, `sdlc/scripts/surfaces`. It runs offline against loopback backends only and reports "not run" when the toolchain is missing.
+
+`new tt.Engine({backend: "liquid"})` selects a named backend in code. The Rust builder captures its key from that backend's environment variable. Explicit `backend` outranks environment and configuration selection. With `baseUrl` too, the selected key, posting path, description form and setup prices/profile apply at that address. An explicit model or profile overrides its setup value. No TypeScript key option exists. Omission preserves the environment-driven default engine.

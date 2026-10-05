@@ -1,5 +1,6 @@
 """Constructor backend selection keeps provider paths, forms and captured keys."""
 import json
+import os
 import pathlib
 import sys
 
@@ -17,7 +18,8 @@ def paths(slot, count=1):
 
 def isolated(folder, **extra):
     return clean_env(HOME=str(folder), XDG_CONFIG_HOME=str(folder / "config"),
-                     XDG_CACHE_HOME=str(folder / "cache"), XDG_STATE_HOME=str(folder / "state"), **extra)
+                     XDG_CACHE_HOME=str(folder / "cache"), XDG_STATE_HOME=str(folder / "state"),
+                     **({"APPDATA":str(folder / "config"), "LOCALAPPDATA":str(folder / "local")} if os.name == "nt" else {}), **extra)
 
 
 def configuration(folder, value):
@@ -111,5 +113,41 @@ def test_selected_setup_survives_overrides_and_pickle_recaptures_keys(tmp_path):
         assert backend.snapshot("paths") == paths("capture_custom", 2)
         assert backend.snapshot("bearers") == {"markers":{"first":1,"second":1},"absent":0,"unknown":0,"overflow":False}
         assert all(json.loads(body)["model"] == "override" for body in backend.snapshot("capture")["bodies"])
+    finally:
+        backend.close()
+
+
+def test_successful_wrong_provider_path_fails_the_count_expectation():
+    import http.client
+    backend = Backend({"provider": "fake-provider"})
+    try:
+        body = '{"state":"refund","model":"pplx-decider-v1-27b","questions":{"q1":{"type":"noul","description":"attention?"}}}'
+        connection = http.client.HTTPConnection("127.0.0.1", backend.port)
+        connection.request("POST", "/arm/full/capture/v1/systemone", body,
+                           {"Authorization": "Bearer fake-provider"})
+        response = connection.getresponse()
+        assert response.status == 200
+        response.read()
+        connection.close()
+        assert backend.count() == 1
+        assert backend.snapshot("capture") == {"bodies": [body]}
+        assert backend.snapshot("bearers") == {"markers":{"provider":1},"absent":0,"unknown":0,"overflow":False}
+        with pytest.raises(AssertionError, match="posting_path_mismatch"):
+            assert backend.snapshot("paths") == paths("capture_decisions"), "posting_path_mismatch"
+    finally:
+        backend.close()
+
+
+def test_a_named_loopback_backend_never_uses_the_unnamed_key(tmp_path):
+    backend = Backend({"unnamed": "fake-unnamed"})
+    try:
+        output = run(f'''
+            import thinkthen as tt
+            engine = tt.Engine(backend="ollama", base_url={backend.base()!r}, cache=False)
+            print(engine.decide('attention?', 'refund').value)
+        ''', isolated(tmp_path, THINKTHEN_API_KEY="fake-unnamed"))
+        assert output.strip() == "True"
+        assert backend.count() == 1
+        assert backend.snapshot("bearers") == {"markers":{"unnamed":0},"absent":1,"unknown":0,"overflow":False}
     finally:
         backend.close()

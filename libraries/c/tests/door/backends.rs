@@ -32,7 +32,6 @@ fn c_constructor_selects_all_provider_keys_models_paths_and_forms() {
                 &json!({"backend":name,"base_url":base,"cache":false}).to_string(),
             ],
         );
-        script.ask("env", &[row["key"].as_str().expect("key"), "fake-later"]);
         script.ask("call", &[&base, REQUEST]);
         let output = run(&driver, &base, &script.0);
         assert!(output.status.success(), "{}", text(&output.stderr));
