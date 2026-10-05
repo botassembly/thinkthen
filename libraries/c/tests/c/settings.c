@@ -22,7 +22,7 @@ int main(void) {
     thinkthen_engine_free(empty);
     thinkthen_engine_free(object);
 
-    const char bad[] = {'{', '"', (char)0xff, '"', ':', '1', '}', '\0'};
+    const char bad[] = "{\"\xff\":1}";
     check(thinkthen_engine_new_with(bad) == NULL, "invalid UTF-8 is refused");
     check(thinkthen_error_code(NULL) == THINKTHEN_EUSAGE, "invalid UTF-8 is usage");
 

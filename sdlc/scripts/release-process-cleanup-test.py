@@ -97,7 +97,8 @@ def portable(root):
             def short(args, **options):
                 assert options['timeout'] == (120 if caller is C else 60)
                 if caller is not SMOKE:
-                    assert options['env'] == environment and options['text'] is True
+                    assert options['env'] == environment
+                    assert options.get('text', False) is (caller is MSVC)
                 else:
                     assert 'text' not in options and options['input'].startswith(b'decide 3\n')
                     assert not any(name in options['env'] for name in ('INCLUDE', 'LIB', 'LIBPATH', 'CL', '_CL_', 'LINK'))

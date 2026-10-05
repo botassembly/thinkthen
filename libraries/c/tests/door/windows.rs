@@ -78,7 +78,7 @@ fn compile_mode(source: &Path, sanitizer: bool) -> PathBuf {
     let folder = archive();
     let mut compiler = child::command("cl.exe", MSVC);
     if sanitizer {
-        compiler.arg("/fsanitize=address");
+        compiler.args(["/fsanitize=address", "/Z7"]);
     }
     let linked = tool(
         compiler

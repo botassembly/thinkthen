@@ -197,10 +197,13 @@ def environment():
 
 
 def run(args):
-    result = CAPTURE(args, env=environment(), text=True, timeout=120)
+    result = CAPTURE(args, env=environment(), timeout=120)
+    # dumpbin /all includes raw archive bytes alongside the ASCII ABI inventory.
+    stdout, stderr = (value.decode('utf-8', errors='replace').replace('\r\n', '\n').replace('\r', '\n')
+                      for value in (result.stdout, result.stderr))
     if result.returncode:
-        raise ValueError(f'{Path(args[0]).name} failed (exit {result.returncode}): {result.stdout}{result.stderr}')
-    return result.stdout
+        raise ValueError(f'{Path(args[0]).name} failed (exit {result.returncode}): {stdout}{stderr}')
+    return stdout
 
 
 def import_library(header, stage):

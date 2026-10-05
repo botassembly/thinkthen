@@ -173,6 +173,13 @@ def archives(root):
     for line in ['1 0 00001000 thinkthen_a = other.dll.func', '1 0 00001000 _thinkthen_a@8',
                  '1 00001000 [NONAME]']:
         refused(lambda: C.exports('ordinal hint RVA name\n' + line), 'decorated, forwarded or ordinal-only')
+    # Native dumpbin /all can print non-UTF-8 archive bytes after valid ABI rows.
+    report = C.run([sys.executable, '-c',
+                    "import sys; sys.stdout.buffer.write(b'thinkthen.dll\\r\\nraw: \\xd0\\r\\n')"])
+    assert report == 'thinkthen.dll\nraw: \ufffd\n'
+    refused(lambda: C.run([sys.executable, '-c',
+                          "import sys; sys.stderr.buffer.write(b'native failure: \\xd0'); sys.exit(47)"]),
+            'failed (exit 47): native failure:')
     # lib.exe errors propagate; newly owned staging goes and caller input remains.
     binary = root / 'caller.dll'
     binary.write_bytes(FIXTURE['pe']())

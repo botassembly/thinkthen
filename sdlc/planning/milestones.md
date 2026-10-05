@@ -47,7 +47,7 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 Ship the working core and the files/local-runtime additions approved by Ian on 2026-10-05. [The current plan](team-0-2-2026-10-04.md) owns order, completion status, delegated run approvals and exit criteria.
 
-Core items through the default-recognize check have landed. Finish the current Windows corrections, then build files and folders for all ten functions and built-in llama.cpp and MLX routes alongside Ollama. One shared folder fixture covers CLI, Python and database examples; DuckDB and SQLite readers ship, while Postgres server-file access waits. Existing text, record and column calls retain their behavior.
+Core items through the default-recognize check have landed. Finish the current Windows corrections, then build [0420](../tickets/0420-files-for-all-ten-functions.md), files and folders for all ten functions, and [0421](../tickets/0421-local-runtime-backends.md), built-in llama.cpp and MLX routes alongside Ollama. One shared folder fixture covers CLI, Python and database examples; DuckDB and SQLite readers ship, while Postgres server-file access waits. Existing text, record and column calls retain their behavior.
 
 Run the final authorized rehearsal and real Windows test over the expanded reviewed commit, then release QA and Ian's go. Missing required Windows behavior blocks release. [0415](../tickets/0415-signed-duckdb-community-listing.md) proceeds beside this work without holding release: offline community rehearsal, then the approved submission under imaurer. Listing publication remains DuckDB's decision.
 

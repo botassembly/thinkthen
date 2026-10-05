@@ -74,8 +74,8 @@ int main(void) {
         engine, "{\"choose\": \"Pick.\", \"options\": [\"a\", \"b\"]}",
         "choose takes evidence as one string",
     };
-    THREAD_TYPE one;
-    THREAD_TYPE two;
+    THREAD_TYPE one = 0;
+    THREAD_TYPE two = 0;
     if (fixture_start(&one, run, &first) != 0 || fixture_start(&two, run, &second) != 0) {
         fail("a thread did not start");
     }
