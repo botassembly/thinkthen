@@ -19,6 +19,17 @@ pub(super) fn call(
     flags: &[&str],
     input: &[u8],
 ) -> io::Result<std::process::Output> {
+    call_at_width(listener, question, flags, input, Some("1"))
+}
+
+pub(super) fn call_at_width(
+    listener: &Listener,
+    question: &str,
+    flags: &[&str],
+    input: &[u8],
+    jobs: Option<&str>,
+) -> io::Result<std::process::Output> {
+    let width: Vec<_> = jobs.into_iter().flat_map(|jobs| ["--jobs", jobs]).collect();
     let cache = if flags.contains(&"--cache") {
         vec![]
     } else {
@@ -33,9 +44,8 @@ pub(super) fn call(
                 listener.base(),
                 "--model",
                 "local-1",
-                "--jobs",
-                "1",
             ][..],
+            &width,
             &cache,
             flags,
         ]
