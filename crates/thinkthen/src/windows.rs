@@ -4,6 +4,11 @@ pub(crate) mod files;
 mod security;
 
 #[cfg(test)]
+#[allow(
+    clippy::expect_used,
+    clippy::panic,
+    reason = "native writer fixtures stop the proof on a broken test precondition"
+)]
 pub(crate) mod checkpoint;
 
 #[cfg(test)]

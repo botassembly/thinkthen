@@ -424,4 +424,9 @@ mod tests;
 mod windows;
 
 #[cfg(all(test, windows))]
+#[allow(
+    clippy::expect_used,
+    clippy::panic,
+    reason = "native signal fixtures stop the proof on a broken test precondition"
+)]
 mod windows_tests;
