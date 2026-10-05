@@ -120,3 +120,9 @@ Ian's ruling above settles the Ollama-only scope, the warning and the removal co
 Ticket 0399 adds `BothSides` for OpenRouter. It preserves authored strings, objects and arrays, and fills a missing or null yes-or-no side with `{}` whenever the other side remains. It omits criteria when neither side remains. Decide and described tag labels follow this rule. Choose and score retain their bytes. This satisfies a server schema requirement, drops no fields and creates no workaround debt or warning. The encoder owns the transformation; cache and recording identity continue to follow the bytes sent.
 
 The accepted design is [0399-backend-paths.md](../../records/0399-backend-paths.md). Actual provider checks remain required before landing. Ian can overturn these defaults.
+
+## Amendment, 2026-10-05: ticket 0421
+
+The approved local-runtime outcome extends the existing `Text` rendering to the `mlx` built-in. Pinned Strands source accepts only string score criteria with 2–10 levels. Experiment 0030's 2026-10-04 diagnosis observed a rich score refusal and a string score reply. `Text` already renders null and empty descriptions as their level names, so no new dialect or configuration field is needed. MLX warnings name `mlx` and the Strands schema; Ollama retains its exact warning and encoded bytes. The MLX workaround can be removed when Strands accepts authored criteria.
+
+The new `llamacpp` built-in uses authored descriptions at `http://localhost:8080/v1` with model `local`. The setup sets `--alias local`; this alias is a supported setup choice, not an upstream universal default. `mlx` uses `http://localhost:8000/v1` with the Strands checkpoint basename `strands-decider-2B-hobson-v19`. Both optional key variables follow the existing loopback and host guards. Explicit address/model overrides and configured-entry precedence remain unchanged.

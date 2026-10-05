@@ -1,0 +1,3 @@
+thinkthen backends check --backend llamacpp
+thinkthen backends check --backend mlx
+thinkthen backends check --backend ollama

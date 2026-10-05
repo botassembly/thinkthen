@@ -26,6 +26,8 @@ pub struct AttemptObservation {
     pub(crate) request_sha256: String,
     pub(crate) wall_ms: u64,
     pub(crate) outcome: AttemptOutcome,
+    #[serde(skip)]
+    pub(crate) transport_failed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) status: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
