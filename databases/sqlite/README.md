@@ -22,7 +22,7 @@ For example, a reviewed ingestion trigger can store a judgment:
 ```sql
 CREATE TABLE messages(body TEXT, is_red INTEGER);
 CREATE TRIGGER judge_message AFTER INSERT ON messages BEGIN
-  UPDATE messages SET is_red=thinkthen_decide('Is it red?', NEW.body)
+  UPDATE messages SET is_red=(SELECT thinkthen_decide('Is it red?', NEW.body) AS is_red)
   WHERE rowid=NEW.rowid;
 END;
 ```
@@ -88,7 +88,7 @@ The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document
 For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names as `'person,organisation'`. To supply descriptions, pass a recognize JSON object such as `'{"kinds":{"person":"A human name."}}'`, a full versioned recognize spec, or an `@file` containing that spec. A bare JSON array string such as `'["person"]'` currently names one literal kind, `["person"]`. Use `'person'` to request the person kind.
 
 ```sql
-SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person');
+SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person') AS recognized_names;
 ```
 
 `thinkthen_relate` runs a caller-supplied read-only `SELECT` yielding `id, name` or `id, name, kind` on the same connection. `rules` is one inline rule, a JSON array of rules, a JSON relate spec or `@file`. At most 255 distinct name/kind pairs enter a call. Equal pairs share one entity, and each answer edge expands to the ids that held its endpoints. Blank names/kinds and a 256th pair raise usage before a send.
