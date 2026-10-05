@@ -187,6 +187,10 @@ assert.throws(() => duckDBArtifact(process.argv[2], 'v1.5.5', 'x86_64-unknown-li
         self.assertIn('single-version archive requires the default DuckDB selector', result.stderr)
         self.assertEqual(list((self.root / 'missing').glob('*.tar.gz*')), [])
 
+    def test_separate_build_outputs_and_alias_ownership(self):
+        from build_0403_cases import routing
+        routing(self, footer, script)
+
     def test_synthetic_old_format_pack_and_source_guard(self):
         tree = self.root / 'tree'; copy_packer(tree)
         source = self.root / 'dependency-source'; self.source_fixture(source)
