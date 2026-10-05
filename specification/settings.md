@@ -135,3 +135,7 @@ A design adds each of these, and no code has it yet. The ticket that lands one m
 ## Keeping this page true
 
 A ticket that adds or changes a setting updates its row in the same commit. `sdlc/scripts/settings` fails the `spec` rung when a flag in any command's help has no row, when a `THINKTHEN_` name the product code reads has no row, or when a question-file key has no row. The keys come from the schema, one level of nesting deep, and from the two key lists `crates/thinkthen/src/core/recognize_file.rs` checks a recognize file against. A rule's own members, such as `either`, are not checked. It also fails when a row names one that no longer exists, and when a column moves. It does not read the library and SQL cells, the defaults, or the allowed values against the code. Review holds those.
+
+## Rank question sets
+
+CLI `rank @FILE` and Rust `RankSet::from_json` / `RankSet::load` accept ordered decide sets under [rank.md](rank.md#rank-question-sets). Top-level batch and calibration profile keep their existing precedence and meaning. Authored cuts and member pointers are refused before normalization; `--field` is common to all members. CLI true/false overrides are refused because the set owns its meanings. Backend/model, context, intake and display controls retain their ordinary rules. Rust `rank_set_with` shares one `CallOptions` across members and returns the complete merged order. SQL support remains 0417 for 0.2; C and other language sets remain 0418 later.

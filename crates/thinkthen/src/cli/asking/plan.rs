@@ -67,23 +67,25 @@ pub(super) fn packed(
     let mut dropped = false;
     for held in records {
         let held = held.map_err(|placed| placed.cause)?;
-        let plan = planner.plan(&held.record)?;
-        dropped |= built_in::drops_detail(&plan);
-        let asks = pack::asks(backend.url(), &plan)
-            .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
-        let entries = asks
-            .into_iter()
-            .filter(|ask| seen.insert(ask.key))
-            .map(|ask| Entry {
-                state: ask.state.clone(),
-                question: Arc::clone(&ask.question),
-                options: pipeline::options(&ask),
-                item: (),
-            })
-            .collect();
+        let mut entries = Vec::new();
+        for plan in planner.plans(&held.record)? {
+            dropped |= built_in::drops_detail(&plan);
+            let asks = pack::asks(backend.url(), &plan)
+                .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
+            entries.extend(
+                asks.into_iter()
+                    .filter(|ask| seen.insert(ask.key))
+                    .map(|ask| Entry {
+                        state: ask.state.clone(),
+                        question: Arc::clone(&ask.question),
+                        options: pipeline::options(&ask),
+                        item: (),
+                    }),
+            );
+        }
         packer
             .add(entries, &mut closed)
             .map_err(|error| planner.refused(error))?;

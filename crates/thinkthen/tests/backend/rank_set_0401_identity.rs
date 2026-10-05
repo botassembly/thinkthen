@@ -1,0 +1,465 @@
+//! One-member wire parity and individual-member recording/cache reuse.
+use super::rank_set_0401::{SET, answer, call, saved};
+use crate::harness::Listener;
+use crate::intake_0401::text;
+use crate::support::stored;
+use serde_json::Value;
+use std::io;
+
+#[test]
+fn one_member_matches_plain_rank_bytes_requests_keys_and_detailed_answer() -> io::Result<()> {
+    let set = saved(
+        "rank-set-one",
+        r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#,
+    )?;
+    let plain = saved("rank-set-plain", r#"{"decide":"First?"}"#)?;
+    let listener = Listener::answering(answer)?;
+    for view in [
+        vec![],
+        vec!["-n", "--scores", "--around", "1", "--top", "2"],
+    ] {
+        let ordinary = call(
+            &listener,
+            &plain,
+            &[&["--batch", "1"][..], &view].concat(),
+            b"a\nb\nc\n",
+        )?;
+        assert_eq!(ordinary.status.code(), Some(0));
+        let bodies = listener.requests();
+        let multiple = call(
+            &listener,
+            &set,
+            &[&["--batch", "1"][..], &view].concat(),
+            b"a\nb\nc\n",
+        )?;
+        assert_eq!(
+            multiple.status.code(),
+            Some(0),
+            "{}",
+            text(&multiple.stderr)
+        );
+        assert_eq!(ordinary.stdout, multiple.stdout);
+        assert_eq!(
+            listener
+                .requests()
+                .iter()
+                .map(|request| &request.body)
+                .collect::<Vec<_>>(),
+            bodies
+                .iter()
+                .map(|request| &request.body)
+                .collect::<Vec<_>>()
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn one_member_details_add_only_name_and_keep_recorded_keys() -> io::Result<()> {
+    let set = saved(
+        "rank-set-detail-one",
+        r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#,
+    )?;
+    let plain = saved("rank-set-detail-plain", r#"{"decide":"First?"}"#)?;
+    let listener = Listener::answering(answer)?;
+    let plain_record = crate::recordings::folder("rank-set-one-plain");
+    let set_record = crate::recordings::folder("rank-set-one-set");
+    let ordinary = call(
+        &listener,
+        &plain,
+        &[
+            "--batch",
+            "1",
+            "--details",
+            "--record",
+            plain_record.to_str().expect("path"),
+        ],
+        b"a\n",
+    )?;
+    let multiple = call(
+        &listener,
+        &set,
+        &[
+            "--batch",
+            "1",
+            "--details",
+            "--record",
+            set_record.to_str().expect("path"),
+        ],
+        b"a\n",
+    )?;
+    let plain: Value = serde_json::from_slice(&ordinary.stdout)?;
+    let set: Value = serde_json::from_slice(&multiple.stdout)?;
+    assert!(plain.get("question_name").is_none());
+    assert_eq!(set["question_name"], "first");
+    for field in [
+        "question",
+        "answer",
+        "threshold",
+        "value",
+        "input",
+        "position",
+    ] {
+        assert_eq!(plain[field], set[field]);
+    }
+    for field in ["question_sha256", "requests", "requests_sent", "cache"] {
+        assert_eq!(plain["meta"][field], set["meta"][field]);
+    }
+    assert_eq!(
+        stored(&plain_record)?
+            .iter()
+            .map(|row| &row["key"])
+            .collect::<Vec<_>>(),
+        stored(&set_record)?
+            .iter()
+            .map(|row| &row["key"])
+            .collect::<Vec<_>>()
+    );
+    Ok(())
+}
+
+#[test]
+fn individual_member_recordings_replay_sets_and_rename_reorder_without_sends() -> io::Result<()> {
+    let record = crate::recordings::folder("rank-set-individual");
+    let listener = Listener::answering(answer)?;
+    for (question, bytes) in [
+        ("First?", b"a\nb\nc\n".as_slice()),
+        ("Second?", b"a\nc\nb\n".as_slice()),
+    ] {
+        let result = call(
+            &listener,
+            question,
+            &["--batch", "1", "--record", record.to_str().expect("path")],
+            b"a\nb\nc\n",
+        )?;
+        assert_eq!(result.status.code(), Some(0));
+        assert_eq!(result.stdout, bytes);
+    }
+    assert_eq!(stored(&record)?.len(), 6);
+    let count = listener.connections();
+    assert_eq!(listener.requests().len(), 6);
+    let set = saved("rank-set-replay", SET)?;
+    for (question, view, expected) in [
+        (set, vec!["--scores"], "0.7 a\n0.6 b\n0.99 c\n"),
+        (
+            saved(
+                "rank-set-renamed",
+                r#"{"version":1,"questions":{"renamed":{"decide":"First?"},"other":{"decide":"Second?"}}}"#,
+            )?,
+            vec!["--top", "2"],
+            "a\nb\n",
+        ),
+        (
+            saved(
+                "rank-set-reversed",
+                r#"{"version":1,"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}"#,
+            )?,
+            vec!["-n", "--scores"],
+            "1 1:a\n0.99 3:c\n0.6 2:b\n",
+        ),
+    ] {
+        let result = call(
+            &listener,
+            &question,
+            &[&["--replay", record.to_str().expect("record")][..], &view].concat(),
+            b"a\nb\nc\n",
+        )?;
+        assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+        assert_eq!(result.stdout, expected.as_bytes());
+        assert_eq!(listener.connections(), count);
+    }
+    let missing = saved(
+        "rank-set-missing",
+        r#"{"version":1,"questions":{"first":{"decide":"First?"},"missing":{"decide":"Absent?"}}}"#,
+    )?;
+    let result = call(
+        &listener,
+        &missing,
+        &["--replay", record.to_str().expect("record")],
+        b"a\nb\nc\n",
+    )?;
+    assert_eq!(result.status.code(), Some(5), "{}", text(&result.stderr));
+    assert!(result.stdout.is_empty());
+    assert_eq!(listener.connections(), count);
+    Ok(())
+}
+
+#[test]
+fn normal_cache_reuses_members_and_sends_only_missing_questions() -> io::Result<()> {
+    let listener = Listener::answering(answer)?;
+    let cache = crate::recordings::folder("rank-set-cache");
+    // Explicit cache overrides no-cache at the shared command edge.
+    let set = saved("rank-set-cache", SET)?;
+    let fixed = ["--cache", cache.to_str().expect("cache")];
+    let first = call(&listener, &set, &fixed, b"a\nb\nc\n")?;
+    assert_eq!(first.status.code(), Some(0), "{}", text(&first.stderr));
+    let count = listener.connections();
+    let second = call(
+        &listener,
+        &set,
+        &[&fixed[..], &["--top", "1", "--scores"]].concat(),
+        b"a\nb\nc\n",
+    )?;
+    assert_eq!(second.stdout, b"0.7 a\n");
+    assert_eq!(listener.connections(), count);
+    let extended = saved(
+        "rank-set-cache-miss",
+        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"},"extra":{"decide":"Extra?"}}}"#,
+    )?;
+    listener.requests();
+    let result = call(&listener, &extended, &fixed, b"a\nb\nc\n")?;
+    assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+    let bodies = listener.requests();
+    assert!(!bodies.is_empty());
+    for request in bodies {
+        let body = text(&request.body);
+        assert!(body.contains("Extra?"));
+        assert!(!body.contains("First?"));
+        assert!(!body.contains("Second?"));
+    }
+    Ok(())
+}
+
+#[test]
+fn mixed_structured_and_text_members_keep_individual_wire_identity_in_any_order() -> io::Result<()>
+{
+    let listener = Listener::answering(crate::intake_0401::answer)?;
+    let record = crate::recordings::folder("rank-set-mixed");
+    let structured = saved(
+        "rank-set-structured-single",
+        r#"{"decide":{"check":"Ready?"}}"#,
+    )?;
+    for question in [&structured[..], "Ready?"] {
+        let result = call(
+            &listener,
+            question,
+            &["--batch", "1", "--record", record.to_str().expect("record")],
+            b"alpha\nbeta\n",
+        )?;
+        assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+    }
+    assert_eq!(stored(&record)?.len(), 4);
+    let count = listener.connections();
+    for (name, set) in [
+        (
+            "rank-set-mixed-forward",
+            r#"{"version":1,"questions":{"text":{"decide":"Ready?"},"json":{"decide":{"check":"Ready?"}}}}"#,
+        ),
+        (
+            "rank-set-mixed-reverse",
+            r#"{"version":1,"questions":{"json":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
+        ),
+    ] {
+        let question = saved(name, set)?;
+        let result = call(
+            &listener,
+            &question,
+            &["--details", "--replay", record.to_str().expect("record")],
+            b"alpha\nbeta\n",
+        )?;
+        assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+        let rows: Vec<Value> = text(&result.stdout)
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("detail"))
+            .collect();
+        let first = if name.ends_with("forward") {
+            "text"
+        } else {
+            "json"
+        };
+        assert!(rows.iter().all(|row| row["question_name"] == first));
+        assert_eq!(
+            rows.iter()
+                .map(|row| row["meta"]["batch_setting"].clone())
+                .collect::<Vec<_>>(),
+            if first == "text" {
+                vec![serde_json::json!("max"); 2]
+            } else {
+                vec![serde_json::json!(1); 2]
+            }
+        );
+        assert_eq!(listener.connections(), count);
+    }
+    Ok(())
+}
+
+#[test]
+fn first_structured_member_does_not_change_selecting_text_members_batch_metadata() -> io::Result<()>
+{
+    let question = saved(
+        "rank-set-mixed-attribution",
+        r#"{"version":1,"questions":{"structured":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
+    )?;
+    let listener = Listener::answering(|body| {
+        let body: Value = serde_json::from_slice(body).expect("request");
+        let questions = body["questions"].as_object().expect("questions");
+        let answers = questions
+            .iter()
+            .map(|(key, question)| {
+                let structured = question["instructions"].is_object();
+                let beta = if structured {
+                    body["state"].as_str().expect("state").contains("beta")
+                } else {
+                    question["instructions"]
+                        .as_str()
+                        .expect("text")
+                        .contains("beta")
+                };
+                let probability = match (structured, beta) {
+                    (true, false) => 0.8,
+                    (true, true) => 0.7,
+                    (false, false) => 0.1,
+                    (false, true) => 1.0,
+                };
+                (
+                    key.clone(),
+                    serde_json::json!({"type":"noul","noul":probability}),
+                )
+            })
+            .collect::<serde_json::Map<_, _>>();
+        crate::harness::Canned::ok(
+            &serde_json::json!({"model":"local-1","answers":answers}).to_string(),
+        )
+    })?;
+    let result = call(&listener, &question, &["--details"], b"alpha\nbeta\n")?;
+    assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+    let rows: Vec<Value> = text(&result.stdout)
+        .lines()
+        .map(|line| serde_json::from_str(line).expect("detail"))
+        .collect();
+    assert_eq!(
+        rows.iter()
+            .map(|row| (
+                row["input"].clone(),
+                row["question_name"].clone(),
+                row["meta"]["batch_setting"].clone()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            (
+                serde_json::json!("alpha"),
+                serde_json::json!("structured"),
+                serde_json::json!(1)
+            ),
+            (
+                serde_json::json!("beta"),
+                serde_json::json!("text"),
+                serde_json::json!("max")
+            )
+        ]
+    );
+    Ok(())
+}
+
+fn preview_matches_counted_requests(set: &str, mixed: bool) -> io::Result<()> {
+    let question = saved("rank-set-preview", set)?;
+    let listener = Listener::answering(crate::intake_0401::answer)?;
+    let preview = call(
+        &listener,
+        &question,
+        &["--batch", "1", "--plan"],
+        b"alpha\nbeta\ngamma\n",
+    )?;
+    assert_eq!(preview.status.code(), Some(0), "{}", text(&preview.stderr));
+    assert_eq!(listener.connections(), 0);
+    assert!(listener.requests().is_empty());
+    let lines: Vec<_> = text(&preview.stdout).lines().map(str::to_owned).collect();
+    assert_eq!(lines.len(), 2);
+    let document: serde_json::Map<String, Value> = serde_json::from_str(&lines[0])?;
+    let raw: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
+        serde_json::from_str(&lines[0])?;
+    let runtime = call(
+        &listener,
+        &question,
+        &["--batch", "1"],
+        b"alpha\nbeta\ngamma\n",
+    )?;
+    assert_eq!(runtime.status.code(), Some(0), "{}", text(&runtime.stderr));
+    assert_eq!(runtime.stdout, b"alpha\nbeta\ngamma\n");
+    let requests = listener.requests();
+    let per_record = if mixed { 2 } else { 1 };
+    assert_eq!(requests.len(), 3 * per_record);
+    assert_eq!(raw["request"].get().as_bytes(), requests[0].body);
+    assert_eq!(
+        document["request"],
+        serde_json::from_slice::<Value>(&requests[0].body)?
+    );
+    for (group, record) in requests.chunks(per_record).zip(["alpha", "beta", "gamma"]) {
+        let bodies: Vec<Value> = group
+            .iter()
+            .map(|request| serde_json::from_slice(&request.body).expect("request"))
+            .collect();
+        assert_member_evidence(&bodies, record, mixed);
+    }
+    let bytes: usize = requests.iter().map(|request| request.body.len()).sum();
+    let summary: Value = serde_json::from_str(&lines[1])?;
+    assert_eq!(
+        summary,
+        serde_json::json!({
+            "records":3,"requests":3 * per_record,"estimated_bytes":bytes,
+            "estimated_input_tokens":{"lower":bytes * 516 / 1000,"upper":(bytes * 908).div_ceil(1000)},
+            "upper_bound":false
+        })
+    );
+    Ok(())
+}
+
+#[test]
+fn preview_packs_two_text_members_once_per_record_and_matches_runtime() -> io::Result<()> {
+    preview_matches_counted_requests(SET, false)
+}
+
+#[test]
+fn preview_keeps_mixed_member_quoting_and_runtime_packing_in_both_orders() -> io::Result<()> {
+    for set in [
+        r#"{"version":1,"questions":{"text":{"decide":"Ready?"},"json":{"decide":{"check":"Ready?"}}}}"#,
+        r#"{"version":1,"questions":{"json":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
+    ] {
+        preview_matches_counted_requests(set, true)?;
+    }
+    Ok(())
+}
+
+fn assert_member_evidence(bodies: &[Value], record: &str, mixed: bool) {
+    let instructions: Vec<_> = bodies
+        .iter()
+        .flat_map(|body| {
+            body["questions"]
+                .as_object()
+                .expect("questions")
+                .values()
+                .map(|q| &q["instructions"])
+        })
+        .collect();
+    assert_eq!(
+        instructions.len(),
+        2,
+        "both members judge each original record"
+    );
+    let texts: Vec<_> = instructions.iter().filter_map(|q| q.as_str()).collect();
+    assert_eq!(texts.len(), if mixed { 1 } else { 2 });
+    assert!(texts.iter().all(|q| q.contains(&format!("\"{record}\""))));
+    if mixed {
+        let structured = bodies
+            .iter()
+            .find(|body| {
+                body["questions"]
+                    .as_object()
+                    .expect("questions")
+                    .values()
+                    .any(|q| q["instructions"].is_object())
+            })
+            .expect("structured request");
+        assert_eq!(structured["state"], record);
+        assert!(
+            instructions
+                .iter()
+                .any(|q| **q == serde_json::json!({"check":"Ready?"}))
+        );
+        assert!(texts[0].contains("Ready?"));
+    } else {
+        for member in ["First?", "Second?"] {
+            assert!(texts.iter().any(|q| q.contains(member)));
+        }
+    }
+}

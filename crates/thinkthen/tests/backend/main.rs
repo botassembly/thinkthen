@@ -197,3 +197,19 @@ mod speed;
 mod status;
 mod transform;
 mod version;
+
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "checked loopback fixtures and result rows stop the rank-set contract proof"
+)]
+mod rank_set_0401;
+
+mod rank_set_0401_safety;
+
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "checked result objects and recorded keys stop the identity proof"
+)]
+mod rank_set_0401_identity;

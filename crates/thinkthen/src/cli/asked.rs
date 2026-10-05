@@ -9,8 +9,8 @@ use std::path::Path;
 use crate::core::{Cutting, Description, Json, QuestionFile, Resolved, Typed, Verb, resolve};
 
 use crate::args::{
-    ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, RankArguments,
-    ScoreArguments, TagArguments,
+    ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, ScoreArguments,
+    TagArguments,
 };
 use crate::cli::question_text;
 use crate::failure::Failure;
@@ -117,46 +117,8 @@ pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, FileTier)
     )
 }
 
-/// Settle the ordinary yes/no rank or a saved graded score question.
-pub(crate) fn rank(arguments: &RankArguments) -> Result<(Resolved, FileTier), Failure> {
-    let (file, batch) = read_top(&arguments.question)?;
-    let graded = file.as_ref().is_some_and(|held| held.verb() == Verb::Score);
-    if graded && (arguments.meanings.yes.is_some() || arguments.meanings.no.is_some()) {
-        return Err(Failure::Usage(
-            "`rank` with a `score` question file takes no --true or --false",
-        ));
-    }
-    let typed = Typed {
-        threshold: arguments.threshold.clone(),
-        yes: arguments.meanings.yes.clone(),
-        no: arguments.meanings.no.clone(),
-        model: arguments.common.model.clone(),
-        on: fields(&arguments.common),
-        cutting: Cutting::NoRule,
-        ..Typed::default()
-    };
-    let verb = if graded { Verb::Score } else { Verb::Decide };
-    let resolved = resolve(
-        verb,
-        typed_text(&arguments.question, file.is_some()),
-        file.as_ref(),
-        &typed,
-    )
-    .map_err(|error| match error {
-        crate::core::QuestionFileError::VerbMismatch { held, .. } => Failure::QuestionKind {
-            command: "rank",
-            held: held.word(),
-        },
-        other => Failure::Question(other),
-    })?;
-    Ok((
-        resolved,
-        FileTier {
-            batch,
-            tuned: false,
-        },
-    ))
-}
+mod rank;
+pub(crate) use rank::rank;
 
 /// Settle everything `choose` was asked.
 pub(crate) fn choose(arguments: &ChooseArguments) -> Result<(Resolved, FileTier), Failure> {

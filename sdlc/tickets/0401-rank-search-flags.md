@@ -1,10 +1,14 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: in progress. Slice A landed through `a82a9877a`; slice B through `57de974e8`. Slice C received fresh source and result-contract acceptance. Full tests, corrected specification, required lint, all 350 actual site replays, strict proof and final site build passed after source-preserving rebases. [The C build record](../records/0401-c-find-display-build.md) retains source identities, original failure and actual receipts. Slice C is prepared for final receipt review and landing. Slice D remains open.
+Status: complete. All four slices are implemented and checked. A, B and C landed; D received fresh source, integration and final receipt acceptance after its full coordinator checkpoint. The completion-record review and D landing remain in the build workflow. SQL sets remain ticket 0417 for 0.2; foreign sets remain ticket 0418 later.
+
+Landed: fb428165487488a9decbaf08c2269a64c2f57442
+
+This identifies the accepted slice D candidate that the coordinator publishes through the landing merge. The merge carries the Ticket, Slice and Review trailers.
 
 Milestone: 0.2
 
-Lane: 3, first implementation item after audit 0405. Each slice lands on main and ships in 0.2. The documentation story and DuckDB version build follow.
+Lane: claude-0 for slice D, assigned after audit 0405 and landed C. Each slice lands on main and ships in 0.2. The documentation story and DuckDB version build follow.
 
 Depends on: 0405
 
@@ -82,3 +86,27 @@ Slice B keeps one immutable original-byte snapshot only for neighbor views. The 
 Slice C keeps find's complete aggregate candidate set and existing empty-input success. It shares the immutable around snapshot and output emitter without adopting record-pipeline blank skipping. Duplicate candidates retain their selected index and probability. Pointer display preserves original rows while the captured request contains only admitted pointer evidence. Fresh source and result-contract reviews accepted C. Its completed coordinator checkpoint retains the original Result shapes failure and corrected retry; final receipt review precedes C landing.
 
 The C source-preserving rebase onto `4cf694673` passed the coordinator's full tests. Its specification checkpoint exposed a missing optional find position in the result compatibility table. The bounded correction adds that accepted CLI member to the table and explains its omission from shared typed host results. The focused Result shapes fixture passes without a Rust, schema or wire change. Fresh correction review accepted the bounded change. The full specification retry, all 350 actual documentation replays, strict verification and final site build passed. This taught us to reconcile additive CLI metadata with the result compatibility table while retaining typed host shapes and strict unknown-member checks.
+
+### Added public declarations
+
+```text
+struct RankSet
+fn RankSet::from_json(&str) -> Result<RankSet, Error>
+fn RankSet::load(impl AsRef<Path>) -> Result<RankSet, Error>
+struct SetRanked<T>
+fn SetRanked::index(&self) -> usize
+fn SetRanked::input(&self) -> &T
+fn SetRanked::into_input(self) -> T
+fn SetRanked::probability(&self) -> f64
+fn SetRanked::question_name(&self) -> &str
+fn Engine::rank_set<I>(&self, &RankSet, I) -> Result<Call<Vec<SetRanked<I::Item>>>, Error> where I: IntoIterator, I::Item: Evidence
+fn Engine::rank_set_with<I>(&self, &RankSet, I, CallOptions<'_>) -> Result<Call<Vec<SetRanked<I::Item>>>, Error> where I: IntoIterator, I::Item: Evidence
+```
+
+Slice D builds the accepted [frozen design](../records/0401-d-rank-set-design.md) against landed C `fea3a6fbc46b68ccc33a28e35eb0c4eb48329df9` in lane0. Fresh candidate review and coordinator checkpoints remain pending. SQL question sets belong to 0417 for 0.2; C and language sets belong to 0418 later.
+
+The D frozen-source review found that preview added each set member as an input slot, unlike runtime's single add per original record. The correction gathers member entries first and adds once. Its independent counted loopback witness pins the exact first body and complete byte/token summary against three runtime requests with both text members; mixed quoting retains its state cuts in both member orders. Ordinary single-question identity, runtime merge/bounds and whole-call controls remain protected. Exact correction growth and focused receipts are in the [D build record](../records/0401-d-rank-set-build.md). Fresh parent review and the merged checkpoint remain pending.
+
+Slice D provider integration at `ace778598` retains the accepted product byte for byte and passes its final coordinator checkpoint. The owning [D build record](../records/0401-d-rank-set-build.md) preserves source reviews, prior failures and exact current receipts. Rank sets retain original ownership and member-local wire/cache identity; preview groups every member per original record. Full C-door and Rust Polars compatibility and actual 350-page proof close the former deferred local checks. Native execution remains separate. Final receipt review and whole-ticket completion remain before D landing.
+
+Final D receipt review accepted `fb428165487488a9decbaf08c2269a64c2f57442` with no findings or missing required local proof. The current record update changes no product, executable contract, fixture, ratchet or generated proof. All ticket outcomes are implemented and verified; the coordinator advances the completion-record review and no-ff D landing.

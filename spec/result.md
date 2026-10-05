@@ -17,6 +17,8 @@ row() { head -n 1 | jq -c --arg command "$1" '{from: "replayed", command: $comma
 {
   (cd "$demos/01-refund-gate" && thinkthen decide 'Does the customer ask for money back?' --details --replay recording/ < message.txt | row decide)
   (cd "$demos/03-grep-for-meaning" && thinkthen filter 'Does the report give steps that would reproduce a defect?' --csv --field /body --threshold 0.9 --batch 1 --details --replay recording/ < issues.csv | row filter)
+  printf '%s\n' '{"version":1,"questions":{"query":{"decide":"The passage answers the query."}}}' > "$HOME/rank-set.json"
+  (cd "$demos/06-top-search-hits" && jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl | thinkthen rank @"$HOME/rank-set.json" --batch 1 --jsonl --field /query --field /passage --top 3 --details --replay recording/ | row rank-set)
   (cd "$demos/06-top-search-hits" && jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl | thinkthen rank 'The passage answers the query.' --batch 1 --jsonl --field /query --field /passage --top 3 --details --replay recording/ | row rank)
   (cd "$demos/02-route-a-ticket" && thinkthen choose 'Which team owns this request?' billing shipping account other --details --replay recording/ < ticket.txt | row choose)
   (cd "$demos/39-screen-a-message" && thinkthen tag @hazards.json --details --replay recording --input message.txt | row tag)
@@ -28,7 +30,7 @@ row() { head -n 1 | jq -c --arg command "$1" '{from: "replayed", command: $comma
   awk '/^```/ { if (fenced) { fenced = 0 } else { fenced = 1; label = $2 }; next }
        fenced && /"schema":"thinkthen\.result\/1"/ { print "{\"from\":\"example\",\"command\":\"" label "\",\"row\":" $0 "}" }' "$page"
 } > "$HOME/rows.jsonl"
-wc -l < "$HOME/rows.jsonl" | mustmatch "20"
+wc -l < "$HOME/rows.jsonl" | mustmatch "22"
 sed -n '/^## Compatibility$/,/^## Record rows$/p' "$page" | grep '^| `' \
   | jq -R -c 'split("|") | {command: (.[1] | gsub("[` ]"; "")), verbs: (.[2] | [scan("`([^`]+)`")[0]] | if length == 0 then ["none"] else . end),
       members: [.[3] | scan("`([^`]+)`")[0]], meta: [.[4] | scan("`([^`]+)`")[0]]}' > "$HOME/table.jsonl"
@@ -37,7 +39,7 @@ jq -r --slurpfile table "$HOME/table.jsonl" '
   def compare($where; $held; $listed):
     ($held - ($listed | map(rtrimstr("?"))) | .[] | "\($where) \(.) is not in the table"),
     (($listed | map(select(endswith("?") | not))) - $held | .[] | "\($where) \(.) is missing");
-  .command as $label | (if $label == "rank-score" then "rank" else $label end) as $c
+  .command as $label | (if $label == "rank-score" or $label == "rank-set" then "rank" else $label end) as $c
   | .row as $row | "\(.from) \(if $label == "" then "(no command)" else $label end):" as $who
   | [$table[] | select(.command == $c)] as $match
   | if ($match | length) != 1 then "\($who) no table row"

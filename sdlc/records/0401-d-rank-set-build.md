@@ -1,0 +1,110 @@
+# 0401D: CLI and Rust rank question sets
+
+Status: implementation candidate. Fresh independent code review and coordinator checkpoints remain pending. SQL sets belong to 0417 for 0.2; C and language sets belong to 0418 later. No landing or checkpoint dispatch is claimed.
+
+## Authority and source
+
+Lane0 started clean on `ticket/0401-rank-search-flags` at landed C main `fea3a6fbc46b68ccc33a28e35eb0c4eb48329df9`. The [owning design](0401-d-rank-set-design.md) adopts frozen SHA256 `ace1ddd3deec8ef962920c06804f1b66d55826cdb66d4e68e504241cfb014a87` and its fresh independent ACCEPT. The review accepted duplicate-consumes-visit turns and the additive RankSet/SetRanked API. Historical preparation baselines did not replace landed C. There is no API deviation. Ian can overturn the accepted choices; the parent owns review, latest-main rebase and full checkpoints.
+
+RankSet parses the existing closed, ordered set grammar through rank admission before normalization. It refuses authored threshold/on and non-decide members while leaving annotate defaults and canonicalization intact. CLI dispatch reads the named file once through the existing capped loader and chooses the grammar by the parsed questions key. Parse errors never fall back. CLI meanings conflicts retain an exact safe usage sentence.
+
+The CLI plans each member independently, packs through the existing engine, decodes every member with its own receipt, and retains member-local stable lists. The pure core merge visits saved member order at each depth. Duplicate identities consume visits; equal text at distinct positions survives; top follows first appearances. With top K, candidates remain at most M×K and merge deduplication at most K. All records and members are judged. Shared intake, snapshots, locations and display emission remain the owning paths.
+
+Rust uses one pipeline and Stop for the complete eager call. Original caller items stay on the caller thread, move once, and need no Clone/Send/Serialize implementation. SetRanked owns the selecting probability and name without changing existing Ranked/RankedRow. Observations retain all named probabilities and receipts, with one row event per original. Success facts count N records; errors retain final facts after joining workers. CLI details add only question_name to the selecting member's ordinary rank detail. No schema, fingerprint, cache migration, backend, default width or paid call is added.
+
+## Focused evidence
+
+Owned complete logs are in `/tmp/thinkthen-0401d-build-cli-o1P52IbY`. Every shell tool call used `/bin/bash` with login disabled. Builds ran through a sourced allow-list, clean owned HOME/Cargo configuration, offline Cargo, two jobs and an empty compiler wrapper, inside a user systemd scope capped at 12 GiB memory and 1 GiB swap. The lane lock isolates warm outputs. Cargo retains shared cache/toolchain exclusion; no installation or mutation of the shared advisory snapshot was requested. Warm outputs were preserved and no process was stopped.
+
+- `retention-final.log`: 16 CLI and 9 public API rank-set cases pass, followed by both rank-set executable blocks and the Result shapes block. Cases independently declare member order and attribution, cross-scale probabilities, stable ties, original identities and top prefixes. They pin N-record facts, selecting receipts, non-Clone/non-Send ownership, named backend model/address/key selection, shared cancellation/budget, preflight refusals, late member failure, capped loading, secrecy, single-member wire/detail parity, individual-member replay, rename/reorder, missing strict replay, normal cache misses, and mixed structured/text identities.
+- `focused-final.log`: 2 pure merge/retention witnesses, all 23 retained keeping cases, 26 shared display cases including C's find views, the retained annotate batch-tier case, and all 9 question-set parser/canonicalization cases pass. Saved-score ordinary rank, filter subsequences, find none/positions, immutable snapshots, replay and display failures remain protected. The initial rank-set cases also passed; retention-final.log supersedes that selection with 25 cases and repeats the two pure boundary witnesses and three executable contract blocks.
+- Settings coverage passes: 66 rows, 68 flags, 9 environment names and 15 question-file keys, zero failures. Result compatibility now admits optional CLI question_name and checks both a replayed set row and a literal illustrative set row, retaining strict unknown-member checks.
+- `policy-retention-final.log`: offline policy passes on final product source, checking 254 resolved packages. Final required lint receipts follow below.
+
+- `lint-final-pass.log`: required `sdlc/scripts/lint` exits 0 on the final candidate. Offline policy, source/test caps and exact 114869 ratchet, registry-only binding checks, cached advisory/bans/licenses, formatting, workspace/all-target Clippy with warnings denied, rustdoc with warnings denied, and all 580 public declarations pass; four inventory plants are refused. The private-name list check is explicitly skipped in the isolated HOME because THINKTHEN_PRIVATE_NAMES is unset. Native Windows installer execution is explicitly NOT RUN. Registry timeout plants produce the expected Killed diagnostic; this is not a build failure.
+
+Across those retained and corrected selections, 86 distinct Rust cases pass. This is focused evidence, not a full test/spec/surfaces checkpoint or native/packaging/site proof. No helper, mail, remote dispatch or paid provider was used; the live ledger was untouched.
+
+## Lessons and corrections
+
+Planning a mixed structured/text set as one Plan would make the core's all-or-none quoting rule unquote every member. Each member now uses its own production plan before shared packing. Individual structured and text recordings replay in either saved order. A stronger selecting-member case then failed red: a text member selected after a structured first member reported batch 1 instead of max. Set runs now retain the actual shared batch setting, and structured member rows report their own one-record setting. `mixed-metadata-red.log` pins the original mismatch; the final corrected case passes.
+
+The initial fixtures confused TCP connection counts with request counts, used an answer field named yes instead of the established probability field, and combined conflicting cache flags. The corrected witnesses count actual requests for judgments and persistent listener connection totals for runtime no-send comparisons. The shared request-total control is process-wide; its test allocates one additional send above the observed process total and pins the one-record/error facts. These changes correct test premises without weakening the expected behavior.
+
+Each executable bash block gets its own environment. The second rank-set block initially referenced the first block's temporary question file and returned exit 5 instead of the intended meanings-conflict exit 2. It now declares its own file and passes with the exact sentence. Clippy led to small parser/admission and detail-attribution helpers, without adding production lint suppressions.
+
+The final source inspection also removed quadratic work on the untopped CLI route: append member rows in input order, sort each once at completion, preserve the ranked identity lists, then arrange the same payloads by original index for binary lookup. Top keeps its bounded per-member insertion behavior. No lookup map or extra full-input deduplication state is added. Core deduplication uses a deterministic bounded tree set. The final 25 CLI/API cases, both pure boundary witnesses and all three contract blocks pass after this local correction.
+
+The first two required lint attempts stopped at the isolated Cargo home's missing expected advisory-dbs repository path. No product finding was reported before that prerequisite failure. The corrected link names the cached repository at the exact expected child path and retains shared package-cache locks; no advisory fetch, installation or shared cache deletion occurs. The next attempt passed advisory checks, formatting, Clippy and rustdoc, then identified five inventory declaration spellings: generic result methods use SetRanked::method rather than SetRanked<T>::method in the inventory convention. The owning ticket now uses that convention without changing the accepted Rust API. inventory-final.log passes all 580 declarations and refuses all four plants.
+
+## Measured growth
+
+The exact ratchet rises from 112872 to 114869 nonblank Rust lines: +1997, comprising +668 production and +1329 tests, including the two pure boundary modules and registration. Production falls within the design's 650–900 estimate; tests exceed its 500–750 estimate because the independent CLI/API evidence separately pins complete receipts, failures, mixed-wording behavior, backend selection, ownership and memory bounds. Every source/test file stays below 500. New CLI tests have 242, 69, 347 and 162 lines; public tests have 231 and 186. The core merge witness has 31 and retention witness 42.
+
+The shared parser extraction replaces 75 old parent lines with one reused grammar and rank admission. The implementation reuses the scheduler, production planner, ordinary row/detail builder, display emitter, Decisions asker, capped loaders, batch precedence and pull controls. I inspected those paths for duplication before raising the ratchet. No dependency, source/test cap, schema or lint policy was weakened. The repository measures files directly and has no tests/test-file-caps.json registry, as the earlier A/B records establish.
+
+## Frozen source receipt
+
+The final product source commit is `619e7f6ff29cdf9f11ad1996d864d1e5eab3c35f`; its crates/thinkthen tree is `89002d277de56b50e5b307d222914eb87935476b`. The following evidence/declaration commit changes no Rust source or executable fixture. Both product commits were pushed as whole changes to the owning ticket branch. No latest-main rebase or landing occurred.
+
+## Preview packing review correction
+
+The fresh source review of frozen `ecf07978e27a57553d86575babc43ef5bd66b78a` found one preview defect: adding each member separately consumed separate original-record slots. Two text members over three distinct records at batch 1 disclosed six requests with one member each, while execution sent three requests with both members. Preview now gathers all independently planned member entries for each original record and adds that record once through the existing packer. Member planning, request-key deduplication, quoting and the packer's state/byte cuts stay in their owning paths. Runtime scheduling, turns, top retention, budgets, cancellation, accounting, descriptors, schema and public API are untouched.
+
+The independent loopback regression compares the disclosed first request's exact raw bytes against execution, counts all actual runtime requests, checks both authored members for every original record, and derives the complete byte/token summary from captured bodies using the published rates. Preview is proven to open zero loopback connections and send zero requests. Mixed structured/text members retain separate states and six runtime requests; the same comparison covers both member orders. The initial mixed fixture incorrectly expected three requests; its corrected premise passes on the unfixed source. `preview-red-corrected.log` preserves the intended text-member first-body failure (one mixed case passed, one text case failed), rather than claiming that fixture error as product evidence. The initial mixed expectation failure remains in `preview-red.log`; a fixture map-type compile error was corrected before those saved red runs.
+
+Correction growth is exactly **114979 = 114869 + 110** nonblank Rust lines: +1 production and +109 tests. The complete D growth over landed C is **2107 = 669 production + 1438 tests**. The corrected plan file has 188 lines and the reused identity regression file has 455; the repository maximum remains 499. The exact ratchet is 114979. I checked the existing rank-set identity helpers, loopback listener and preview summary witnesses for duplication first; reusing one comparison helper avoids repeating request/summary assertions across text and both mixed orders. No dependency or cap was raised.
+
+`preview-focused-final.log` passes 18 CLI rank-set and 9 public API rank-set cases, retaining ordinary single-member body/detail/record/cache identity, invalid-input refusals, secrecy, top turns, backend selection and shared cancellation/budget/final facts. `preview-policy.log` passes offline policy on 254 resolved packages. `preview-private-count-final.log` reports 35 external names checked, zero tracked-path hits and zero tracked-file hits, without printing names or contents. No credential or shell-init file was read.
+
+`preview-compat.log` passes 34 planner cases, all 23 retained keeping cases (including ordinary saved-score rank and top/failure edges), both pure merge/retention witnesses and the two Rank sets plus one Result shapes executable blocks. Together with the final rank-set selection, this is 84 distinct passing Rust cases. The first correction lint reached Clippy and refused complexity 23/20 in the new comparison helper; its member-evidence assertions now have one small reused helper, with no lint suppression. The required final lint receipt follows below. Earlier advisory-cache prerequisite failures remain as described above; they are not retroactively passing runs. The existing fixture-only Cargo wrapper validates the local file source-package negative plant before its local fetch; ordinary Cargo stays offline, the isolated Cargo configuration and shared package-cache/mutation locks remain intact. All correction builds use the existing scoped runner, two Cargo jobs, 12 GiB memory, 1 GiB swap and the owned lane lock. No full gate, release/native/provider work, rebase or landing is claimed. The parent owns fresh independent review and the merged checkpoint.
+
+## Final correction receipt
+
+The pushed correction source commit is `432ce1124f1944c5113e89aae26b252b0f7a94a2`, with crates/thinkthen tree `cfdc4dddfa4a117039e4dac78c771a81f977050d`. This source supersedes the earlier frozen product receipt for candidate review. The following receipt-only commit changes no Rust source or executable fixture. Logs remain in the same owned scratch folder named above. The branch stays in lane0 for the parent; no landing occurred.
+
+`preview-lint-final.log` exits 0 on the corrected source: offline policy, exact 114979 ratchet and file caps, cached advisories/bans/licenses, validated localfile source refusal, formatting, all-target workspace Clippy with warnings denied, rustdoc with warnings denied, and all 580 public declarations pass; four inventory plants are refused. `preview-policy-final.log` and `preview-ratchet-final.log` independently repeat the final policy and exact total after the helper correction. The count-only external private-name receipt is separate from lint's explicitly skipped isolated-HOME check. Windows native execution remains NOT RUN. Expected registry timeout plants print Killed. No earlier prerequisite or failed test/lint attempt is reported as passing.
+
+## Deferred proof and boundaries
+
+Fresh independent candidate review remains required. Parent-named full test/spec/surfaces, C-door/Polars/public compatibility, canonical actual350 replay/strict/site, native host and release proof remain deferred. The parent controls rebase onto newer main. This lane does not cherry-pick 0400 or Windows work and does not change default concurrency. SQL 0417 remains 0.2; foreign 0418 remains later; 0406 single-question surface parity is separate. Score members, filter sets, alternate merges, fingerprint changes and new providers remain outside D.
+
+## Accepted preview correction and Windows integration
+
+Fresh independent High review accepted corrected candidate `6696815ec60f302cad91813d6ffd206763db6b3b` and source `432ce1124f1944c5113e89aae26b252b0f7a94a2`. Its receipt is `/tmp/thinkthen-0401d-preview-review-cli-02nyg3e3/review.md`. The preview now adds each original record once after gathering member questions. Counted runtime regressions compare exact first-body bytes and complete summaries for both mixed-member orders. The fresh reviewer found no remaining source findings.
+
+The coordinator rebased onto Windows main `6d26206aa8861490cc6540b6bafafc08e3249c3c`, producing `a84525024`. Only exact Rust ratchets conflicted; measured totals during the preserved commits were 116971, 116992 and 117102. Final total is 117102: main 114995 plus D growth 2107. Added/deleted product lines are identical before and after rebase, SHA-256 `089a1a200cafb7713e44eab18c8e49c75155aeede039dbc3b86fc0ed9e4a4f7b`. Patches remain in `target/0401d-{before,after}-windows.patch`.
+
+Offline policy, exact ratchet, 84 distinct focused Rust cases and the three executable rank-set/result contract blocks passed on the Windows integration. `target/0401d-windows-focus.log` has SHA-256 `bb8435ee4d489d3e4e2bd00ebe4eadefba763355b25b2a5d0faf3d2090ae69dd`. This focused receipt does not claim the final provider-integrated source, renewed full lint, full checkpoint or canonical documentation replay. The provider landing, final rebase, review and checkpoint remain pending. No new live call or native/release dispatch ran.
+
+## Provider integration and final coordinator checkpoint
+
+The coordinator rebased the accepted D product onto provider main `4ca5a9f9bbb45c2a9679ceb71bb9a1096208d134`, producing `ace778598ad980762d533639a000b14ddc7fbf62`. CLI asking, the backend test registry and settings contract merged automatically. Only exact ratchets conflicted; measured totals were 117857, 117878 and 117988. Final Rust is 117988: main 115881 plus D growth 2107. All files remain below 500 nonblank lines.
+
+Product added/deleted lines remain identical before and after rebase, SHA-256 `089a1a200cafb7713e44eab18c8e49c75155aeede039dbc3b86fc0ed9e4a4f7b`; `target/0401d-{before,after}-provider.patch` retains the patches. Fresh independent High source review accepted `ace778598` at `/tmp/thinkthen-0401d-provider-source-review-cli-3cxu4hg6/review.md`. It inspected captured setup prices/profiles and owner/key precedence in member planning, wire/cache identity, budgets/cancellation, bounded turns and the corrected preview.
+
+Policy, exact ratchet, 85 distinct focused Rust cases and all three executable contract blocks pass on the provider integration. Renewed required lint passes with 580 public declarations and four refused inventory plants. Full tests pass 1408 workspace cases with 26 skips, 143 library-only cases with 4 skips and 21 external-consumer cases with 3 skips. The specification gate reports 64 passed and 1 skipped; demos report 24 green and 0 red. Routine isolated-home smoke omissions remain separate from canonical execution.
+
+The coordinator also closed the recorded C-door and optional Rust Polars compatibility checks: 34 C door tests pass, with 53 shared cases passing and two existing exclusions. Rust Polars passes Clippy for normal and library-only feature modes, 19 cases with one stress case ignored, and its documentation example. These are Linux/source-feature receipts and establish no native Windows result.
+
+The actual documentation run replayed all 308 language and 42 SQL samples. Both strict checks matched 350 proofs with zero stale pages, and the final site build passed. `site/examples/bindings-proof.json` is runner-generated; `target/0401d-checkpoint-final/final-proof.json` is its byte-identical retained copy. No proof hashes were manually stamped.
+
+| Current merged receipt | SHA-256 |
+| --- | --- |
+| `target/0401d-provider-focus.log` | `3586ecdb65ea2cf42c5fc21a64de1dd2dc572fea52257626349c8c3ce9a008ce` |
+| `target/0401d-provider-lint.log` | `5d9992873aa43df1f050fd54ca4134dbb3a7b149bb214a52a883626501c67f4e` |
+| `target/0401d-checkpoint-final/test.log` | `007b07edc227a530244d3fff4c7492ec0b8995cfc99caa2d45d84ade021e00c4` |
+| `target/0401d-checkpoint-final/spec.log` | `0c6100d4855a8e22e33de4822e41d6b48cf329684cc93e7f0679605cbeda02dc` |
+| `target/0401d-checkpoint-final/compat.log` | `dec5e9417c6cdf08b180af784c91e7f71327f072324db2ceb3d52e59685c78b1` |
+| `target/0401d-checkpoint-final/test-docs.log` | `2e1369ac1b2311ec5b23f9e2cffb14059e070fcb0a7947d588a5842f37194ddb` |
+| `target/0401d-checkpoint-final/strict.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0401d-checkpoint-final/site-build.log` | `7f60474fd3d83327478d68ebc8e232e61e9f1168915f5c7ce654babe2f5a9a30` |
+| `target/0401d-checkpoint-final/final-proof.json` | `ff26c793f1f744e225f28941b9d7351c77d8be5de6f567726e05eab613c3185c` |
+
+All heavy commands used owned user scopes with 12G memory/1G swap, two offline Cargo jobs and lane output/locks. No new live call, native dispatch, stress campaign, release approval or publication ran. Fresh final receipt review and slice D landing remain pending. SQL sets remain 0417 for 0.2, foreign sets remain 0418 later, and default concurrency remains owned by 0400 C.
+
+## Final receipt acceptance and ticket completion
+
+Fresh independent receipt review accepted frozen `fb428165487488a9decbaf08c2269a64c2f57442` against main `4ca5a9f9b` with no findings or missing required local proof. Its retained verdict is `/tmp/thinkthen-0401d-final-receipt-review-cli-9sxtpg8e/review.md`. It independently checked the normalized product checksum, exact source total/caps, all nine receipt hashes and byte-identical generated proof, including the corrected specification summary of 64 passed and 1 skipped.
+
+All four ticket slices are implemented and verified. The ticket is marked complete for the reviewed D landing workflow. This update changes only records; source, fixtures, contracts, ratchets and generated proof remain byte-identical to the accepted candidate. Fresh completion-record review and D merge/push remain before freeing the lane. No deferred native, stress, paid, release or foreign/SQL-set result is claimed.

@@ -21,7 +21,6 @@ use crate::public::results::{
     self, Answer, Call, Found, ObservedQuestion, ObservedRow, QuestionDetail, Ranked,
     RecordObservation, Row, Written,
 };
-use crate::public::set::QuestionSet;
 
 /// One record's named values and bounded per-member observations.
 pub(crate) struct Values {
@@ -60,8 +59,8 @@ pub(super) fn selected_batch(
     })
 }
 
-fn selected_set_batch(
-    questions: &QuestionSet,
+pub(super) fn selected_set_batch(
+    questions: &core::QuestionSet,
     options: &CallOptions<'_>,
     engine: Option<core::Setting>,
 ) -> Result<core::Setting, Error> {
@@ -71,7 +70,7 @@ fn selected_set_batch(
     if let Some(engine) = engine {
         return Ok(engine);
     }
-    let Some(file) = questions.0.batch() else {
+    let Some(file) = questions.batch() else {
         return Ok(core::Setting::Max);
     };
     core::Setting::of_json(file).ok_or_else(|| {

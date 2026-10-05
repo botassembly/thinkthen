@@ -71,8 +71,15 @@ pub(super) struct Planner<'a> {
 impl Planner<'_> {
     /// The quoted plan one record sends. A stream's record quotes the JSON
     /// value a batch has always quoted, and one document quotes its evidence.
-    pub(super) fn plan(&self, record: &Record) -> Result<Plan, Failure> {
-        let question = self.asks.of(record)?;
+    pub(super) fn plans(&self, record: &Record) -> Result<Vec<Plan>, Failure> {
+        self.asks
+            .questions(record)?
+            .into_iter()
+            .map(|question| self.plan(record, question))
+            .collect()
+    }
+
+    fn plan(&self, record: &Record, question: crate::core::Question) -> Result<Plan, Failure> {
         let planned = if self.reading.streams() {
             let batch = self.reading.batch_record(record)?;
             quoted_plan_of(
@@ -97,8 +104,14 @@ impl Planner<'_> {
 
     /// The wire questions one record sends.
     pub(super) fn asks(&self, url: &Url, record: &Record) -> Result<Vec<Ask>, Failure> {
-        pack::asks(url, &self.plan(record)?)
-            .map_err(|_| Failure::Defect("a request could not be written as JSON"))
+        let mut asks = Vec::new();
+        for plan in self.plans(record)? {
+            asks.extend(
+                pack::asks(url, &plan)
+                    .map_err(|_| Failure::Defect("a request could not be written as JSON"))?,
+            );
+        }
+        Ok(asks)
     }
 
     /// The command's refusal of a question the packer cannot send.
@@ -122,8 +135,8 @@ impl Planner<'_> {
     }
 }
 
-struct JudgeAsker<'a> {
-    judging: &'a Judging<'a>,
+pub(super) struct JudgeAsker<'a> {
+    pub(super) judging: &'a Judging<'a>,
     planner: Planner<'a>,
     url: Url,
     downstream: edge::Downstream,
@@ -131,7 +144,7 @@ struct JudgeAsker<'a> {
 
 impl Asker for JudgeAsker<'_> {
     type Input = Held;
-    type Row = Judged;
+    type Row = Vec<Judged>;
     type Error = Placed;
 
     fn label(&self, held: &Held) -> usize {
@@ -144,7 +157,7 @@ impl Asker for JudgeAsker<'_> {
             .map_err(|error| Placed::at(error, held.at))
     }
 
-    fn row(&self, held: Held, answers: Vec<Answered>) -> Result<Judged, Placed> {
+    fn row(&self, held: Held, answers: Vec<Answered>) -> Result<Vec<Judged>, Placed> {
         let at = held.at;
         self.judged(held, &answers)
             .map_err(|error| Placed::at(error, at))
@@ -156,8 +169,16 @@ impl Asker for JudgeAsker<'_> {
 }
 
 impl JudgeAsker<'_> {
-    fn judged(&self, held: Held, answers: &[Answered]) -> Result<Judged, Failure> {
-        let question = self.judging.asks.of(&held.record)?;
+    fn judged(&self, held: Held, answers: &[Answered]) -> Result<Vec<Judged>, Failure> {
+        super::rank_set::rows(self, held, answers)
+    }
+
+    pub(super) fn one(
+        &self,
+        held: &Held,
+        question: crate::core::Question,
+        answers: &[Answered],
+    ) -> Result<Judged, Failure> {
         let outcomes = pipeline::read(&question, answers)
             .map_err(|error| Failure::from(crate::engine::error::Error::from(error)))?;
         let [AnswerOutcome::Answered(answer)] = outcomes.as_slice() else {
@@ -197,7 +218,7 @@ impl JudgeAsker<'_> {
         attempts.dedup_by_key(|event| event.ordinal());
         let mut judged = self.judging.row_of(
             self.planner.reading,
-            held.record,
+            held.record.clone(),
             question,
             &judgment,
             RowContext {
@@ -323,7 +344,7 @@ struct Ended {
 impl Ended {
     fn take(
         &mut self,
-        result: Result<Judged, Failed<Placed>>,
+        result: Result<Vec<Judged>, Failed<Placed>>,
         planner: &Planner<'_>,
         output: &mut Output<'_>,
     ) -> Flow {
@@ -334,8 +355,11 @@ impl Ended {
                 return Flow::Stop;
             }
         };
-        let (replayed, outcome) = (judged.replayed, judged.outcome);
-        match output.take(judged) {
+        let replayed = judged.iter().all(|row| row.replayed);
+        let outcome = judged
+            .first()
+            .map_or(crate::core::Outcome::Unresolved, |row| row.outcome);
+        match output.take_members(judged, self.finished) {
             Ok(true) => {
                 self.finished += 1;
                 self.replayed += usize::from(replayed);

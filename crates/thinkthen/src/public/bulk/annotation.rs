@@ -148,7 +148,7 @@ impl Engine {
     {
         Batch::of((|| {
             options.without_context("annotate")?;
-            let setting = selected_set_batch(questions, &options, self.batch)?;
+            let setting = selected_set_batch(&questions.0, &options, self.batch)?;
             let stop = Stop::begin(options)?.with_prices(self.prices);
             let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
             let asker = Annotating::new(&engine, set.clone());
@@ -189,7 +189,7 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<Call<EachRow>, Error> {
         options.without_context("annotate")?;
-        let setting = selected_set_batch(questions, &options, self.batch)?;
+        let setting = selected_set_batch(&questions.0, &options, self.batch)?;
         let inputs = self
             .within_limit(texts)?
             .enumerate()

@@ -517,3 +517,9 @@ fn churn(base: &str, asked: &Question) {
         );
     }
 }
+
+#[path = "public_batches/rank_set_0401.rs"]
+mod rank_set_0401;
+
+#[path = "public_batches/rank_set_0401_safety.rs"]
+mod rank_set_0401_safety;

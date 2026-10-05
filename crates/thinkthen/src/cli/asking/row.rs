@@ -18,6 +18,18 @@ impl Judging<'_> {
         judged: &Judgment,
         context: RowContext<'_>,
     ) -> Result<Judged, Failure> {
+        let mismatch = match &question {
+            Question::Decide { text, .. }
+                if matches!(self.asks, super::Asks::Set(_))
+                    && text.as_json().as_str().is_none() =>
+            {
+                self.mismatch.clone().with_batch(
+                    None,
+                    crate::core::Setting::Records(std::num::NonZeroUsize::MIN),
+                )
+            }
+            _ => self.mismatch.clone(),
+        };
         let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
         let order_value = match &judged.value {
             Value::Score(position) => Some(*position),
@@ -36,10 +48,10 @@ impl Judging<'_> {
                 };
                 let run = Run {
                     backend: self.engine.backend(),
-                    tuned_for: self.tuned_for_profile(),
-                    warning: self.mismatch.warning(),
-                    batch_setting: self.mismatch.batch_setting(),
-                    batch_warning: self.mismatch.batch_warning(),
+                    tuned_for: mismatch.tuned_for(),
+                    warning: mismatch.warning(),
+                    batch_setting: mismatch.batch_setting(),
+                    batch_warning: mismatch.batch_warning(),
                     context_sha256: self
                         .context
                         .as_ref()
@@ -92,11 +104,7 @@ impl Judging<'_> {
             replayed,
             order_value,
             partial_failure: false,
-            profile_mismatch: self.mismatch.notice(),
+            profile_mismatch: mismatch.notice(),
         })
-    }
-
-    fn tuned_for_profile(&self) -> Option<&crate::core::ProfileName> {
-        self.mismatch.tuned_for()
     }
 }

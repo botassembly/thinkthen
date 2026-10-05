@@ -10,6 +10,8 @@ pub use call::{Call, DoorReply, Facts};
 pub use found::{Candidate, Found, Picked};
 mod ranked;
 pub use ranked::{Ranked, RankedRow};
+mod set_ranked;
+pub use set_ranked::SetRanked;
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;

@@ -49,7 +49,7 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `tag QUESTION LABEL...` | Returns every applicable label |
 | `score QUESTION LEVEL...` | Places the evidence on named levels and prints a number |
 | `filter QUESTION` | Keeps the records that reach the mark |
-| `rank QUESTION` | Prints records by yes probability, or by the weighted value of a saved `score` question |
+| `rank QUESTION` | Prints records by yes probability, by a saved score value, or by turns across an ordered decide set |
 | `annotate FILE` | Asks a saved question set and adds one field per question |
 | `find QUESTION` | Picks the unit that best answers a question, out of a set the model sees at once |
 | `recognize [KIND]...` | Finds every name in one text and gives each one a kind |
