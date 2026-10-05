@@ -19,7 +19,7 @@ input_prepare_source_static() {
 	if [ ! -e "$TOOLS/static-libs" ]; then
 		scratch_dir extracted
 		# Inspect names and hashes before extraction; never extract over an old set.
-		python3 - "$static_zip" "$INPUTS_HERE/../cpp/$manifest" "$extracted" <<'PY'
+		python3 -B - "$static_zip" "$INPUTS_HERE/../cpp/$manifest" "$extracted" <<'PY'
 import sys, zipfile
 from pathlib import Path
 sys.path.insert(0, str(Path(sys.argv[2]).parent.parent / 'tools'))
@@ -31,9 +31,9 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         raise SystemExit('setup: DuckDB static ZIP membership differs from its manifest')
     archive.extractall(sys.argv[3])
 PY
-		python3 "$INPUTS_HERE/validate_inputs.py" --static "$extracted" --manifest "$INPUTS_HERE/../cpp/$manifest" --zip "$static_zip"
+		python3 -B "$INPUTS_HERE/validate_inputs.py" --static "$extracted" --manifest "$INPUTS_HERE/../cpp/$manifest" --zip "$static_zip"
 		mkdir "$TOOLS/static-libs"
 		cp "$extracted/"* "$TOOLS/static-libs/"
 	fi
-	python3 "$INPUTS_HERE/validate_inputs.py" --source "$TOOLS/source" --commit "$duckdb_source_commit" --static "$TOOLS/static-libs" --manifest "$INPUTS_HERE/../cpp/$manifest" --zip "$static_zip"
+	python3 -B "$INPUTS_HERE/validate_inputs.py" --source "$TOOLS/source" --commit "$duckdb_source_commit" --static "$TOOLS/static-libs" --manifest "$INPUTS_HERE/../cpp/$manifest" --zip "$static_zip"
 }
