@@ -58,54 +58,9 @@
     "/tmp/thinkthen-0403a-pin-fixes-72zmNx/policy-baseline.log": "ded465b94bdde261144baa6af6ed1f55eaedf043541404d50fb58efeaa10a7d9",
     "/tmp/thinkthen-0403a-pin-fixes-72zmNx/policy-current.log": "ded465b94bdde261144baa6af6ed1f55eaedf043541404d50fb58efeaa10a7d9",
     "/tmp/thinkthen-0403a-pin-fixes-72zmNx/prior-files.json": "b19496b1379bdfa767dba0717b7f6954e989f860f005bca50c05f79739033523",
-    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/source-commit": "24e9788dfc0edb5c1a8e7fe7547fc6b1355d3642dc6d4178acb4827cb18336ce"
-  },
-  "runtime": {
-    "python3": {
-      "path": "/usr/bin/python3.12",
-      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
-      "version": "Python 3.12.3"
-    },
-    "node": {
-      "path": "/home/ian/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64/bin/node",
-      "sha256": "e6ec2c188d83d813f81f2de8aea084d74dce603ac1abedd0a30ad941b10087b2",
-      "version": "v22.22.3"
-    },
-    "cargo": {
-      "path": "/usr/bin/rustup",
-      "sha256": "be178b5cdda17e6ab5027dcdd5262014a9e967f02f439b2da618942af5cbad27"
-    },
-    "rustc": {
-      "path": "/usr/bin/rustup",
-      "sha256": "be178b5cdda17e6ab5027dcdd5262014a9e967f02f439b2da618942af5cbad27"
-    },
-    "git": {
-      "path": "/usr/bin/git",
-      "sha256": "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668"
-    },
-    "cmake": {
-      "path": "/usr/bin/cmake",
-      "sha256": "1c5227af4edd22d8d689def545e18ee458260c0fd579eba2187967f38817e638"
-    },
-    "bash": {
-      "path": "/usr/bin/bash",
-      "sha256": "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
-    },
-    "cached_cargo": {
-      "path": "/home/ian/.rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/cargo",
-      "sha256": "841072d1d92f9e841d9ba5b0814182a0adf064acf4527cd120967b7bc49dcb66",
-      "toolchain": "1.95.0-x86_64-unknown-linux-gnu"
-    },
-    "cached_rustc": {
-      "path": "/home/ian/.rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustc",
-      "sha256": "bff349e72704ff70bc08a234a3847338e797065bbedde5e556808bc87b7bf7c6",
-      "toolchain": "1.95.0-x86_64-unknown-linux-gnu"
-    },
-    "cached_rustfmt": {
-      "path": "/home/ian/.rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin/rustfmt",
-      "sha256": "56b31ad3ec8fe0277a2884a189e243b8f04e9b48e5fd22e547c1516c5f8fd34c",
-      "toolchain": "1.95.0-x86_64-unknown-linux-gnu"
-    }
+    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/source-commit": "24e9788dfc0edb5c1a8e7fe7547fc6b1355d3642dc6d4178acb4827cb18336ce",
+    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/handback-1.log": "3f78596c26bf155671d6ae0b25b7ce023d3dfebc07e6a451f00b02a96f26c652",
+    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/handback-1-status.json": "c83fbf992c2c6d9caff0e938967b18dcf35dfd7117f3ce10f8918432da21bd89"
   },
   "focused_results": {
     "portable_cases": 11,
@@ -240,6 +195,24 @@
   "handoff_owned_scripts": {
     "/tmp/thinkthen-0403a-pin-fixes-72zmNx/check-handback.sh": "1bfcc917348f221171a7af3a779efae8ba2dbcf22e179f58a5becfbf599452f5",
     "/tmp/thinkthen-0403a-pin-fixes-72zmNx/run-handback.sh": "098fdf0c6f90fa7cdd03746c367b124bf00b743972deb1118f24442447d31867",
-    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/verify-handback.py": "4a4511eb41dad12c70cc31314a8cb0e4e322c25d6552400939353c1943d5d5d6"
+    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/verify-handback.py": "4a4511eb41dad12c70cc31314a8cb0e4e322c25d6552400939353c1943d5d5d6",
+    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/verify-handback-2.py": "4a4511eb41dad12c70cc31314a8cb0e4e322c25d6552400939353c1943d5d5d6",
+    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/check-handback-2.sh": "28f2b20c4784164d3f2feaf6913346f2dadb2e4518b2adbcc61908a4a06ffb83",
+    "/tmp/thinkthen-0403a-pin-fixes-72zmNx/run-handback-2.sh": "a6aa896ce970c08af0b7744f69dd081d36f05929cb1116cb17187be09c072b96"
+  },
+  "runtime_manifest_reference": {
+    "path": "sdlc/records/0403-a-preparation-receipts.json",
+    "sha256": "6765aa0a471492bea285ea2f5212c0f410eac743f764a163f6d2aa400a0654ee",
+    "section": "runtime",
+    "runtime_binaries_were_independently_verified_in_focused_audit": true
+  },
+  "historical_handback_failure": {
+    "candidate_commit": "83613b2753f323077630ce07afd7eba69cc25ef7",
+    "command_driver_status": 1,
+    "outer_status": 1,
+    "reason": "new receipt duplicated host-specific paths from retained runtime manifest",
+    "source_changes": false,
+    "qualifies_as_pass": false,
+    "record_manifest_sha256_at_attempt": "c967179c8f9130183bc79e945fb4df1ceb2d740b795c089a8cab35c4a315001c"
   }
 }
