@@ -1,4 +1,4 @@
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 
 use serde::Serialize;
 
@@ -101,7 +101,7 @@ pub(super) fn write(
         .write_all(text.as_bytes())
         .and_then(|()| writer.flush())
     {
-        Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(Failure::Output(error)),
+        Err(error) if !Failure::closed_output(&error) => Err(Failure::Output(error)),
         _ => Ok(()),
     }
 }

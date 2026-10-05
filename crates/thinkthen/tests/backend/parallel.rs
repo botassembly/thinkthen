@@ -82,9 +82,15 @@ fn decide(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
 
 /// Start `decide` over JSON records without the cache, with standard input left open.
 fn piped(base: &str, jobs: Option<&str>) -> io::Result<Child> {
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "parallel-home-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
     Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
+        .home(home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "decide",
@@ -374,9 +380,11 @@ fn a_run_opens_one_connection_for_each_job_and_reuses_it() {
             .write_all(lines[..jobs].concat().as_bytes())
             .expect("round one");
         for _ in 0..jobs {
-            answers
-                .recv_timeout(Duration::from_secs(30))
-                .expect("the first round is answered");
+            if let Err(error) = answers.recv_timeout(Duration::from_secs(30)) {
+                drop(input);
+                let output = finish(child, "unanswered parallel round").expect("bounded child");
+                panic!("the first round is unanswered: {error}; {jobs} jobs; {output:?}");
+            }
         }
         // Every connection now sits idle in the pool, where a small pool trims it.
         std::thread::sleep(Duration::from_millis(200));
@@ -412,10 +420,8 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     reader.read_line(&mut row).expect("one row");
     drop(reader);
 
-    let status = finish(child, "thinkthen after `head -1`")
-        .expect("the compiled binary ends")
-        .status;
-    assert_eq!(status.code(), Some(0));
+    let output = finish(child, "thinkthen after `head -1`").expect("the compiled binary ends");
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
     assert_eq!(row, wrapped(1));
     // The tool learns of the closed pipe from the write that fails, so it
     // stops within one round of requests. The count stays near --jobs and

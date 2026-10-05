@@ -41,7 +41,7 @@ fn interrupted(success: bool, lines: bool) -> (std::process::Output, serde_json:
     }
     let mut command = scratch.command(&arguments);
     command.env("THINKTHEN_TEST_SIGINT_ACK", &acknowledgment);
-    let mut child = process::Owned::spawn(&mut command).expect("isolated CLI");
+    let mut child = process::Owned::console(&mut command).expect("isolated CLI");
     use std::io::Write as _;
     child
         .0
@@ -56,9 +56,12 @@ fn interrupted(success: bool, lines: bool) -> (std::process::Output, serde_json:
         observed.recv_timeout(Duration::from_secs(30)),
         Ok(Observed::Request)
     ));
-    process::inject(child.id(), "console_injector");
+    process::inject(child.id(), "console_injector", Some(&acknowledgment));
+    if !child.alive() {
+        let output = child.finish().expect("early signal exit");
+        panic!("admitted request must remain cooperative: {output:?}");
+    }
     process::wait(&acknowledgment);
-    assert!(child.alive());
     release.wait();
     let output = child.finish().expect("cooperative CLI exit");
     assert_eq!(output.status.code(), Some(130));
@@ -136,7 +139,7 @@ fn release_binary_console_interrupt() {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    let mut child = process::Owned::spawn(&mut command).expect("isolated release command");
+    let mut child = process::Owned::console(&mut command).expect("isolated release command");
     child
         .0
         .as_mut()
@@ -150,7 +153,7 @@ fn release_binary_console_interrupt() {
         observed.recv_timeout(Duration::from_secs(30)),
         Ok(Observed::Request)
     ));
-    process::inject(child.id(), "console_injector");
+    process::inject(child.id(), "console_injector", None);
     // The admitted attempt retains its normal 30-second timeout. Its cancellation
     // cleanup returns 130 even while the canned answer remains held.
     let output = child

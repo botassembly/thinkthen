@@ -302,7 +302,7 @@ fn a_closed_tag_output_pipe_stops_quietly() {
     output.read_line(&mut first).expect("one row");
     drop(output);
     let finished = finish(child, "tag").expect("tag ends");
-    assert_eq!(finished.status.code(), Some(0));
+    assert_eq!(finished.status.code(), Some(0), "{finished:?}");
     assert_eq!(first, "{\"input\":\"row 1\",\"value\":[\"billing\"]}\n");
     assert!(finished.stderr.is_empty());
     assert!(listener.requests().len() <= 12);

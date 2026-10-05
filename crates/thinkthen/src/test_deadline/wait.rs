@@ -16,10 +16,15 @@ pub(crate) const CHILD_DEADLINE: Duration = Duration::from_secs(60);
 /// A child still running at `CHILD_DEADLINE` is killed, and the error names
 /// `what`, so a hang fails its test with a message.
 pub(crate) fn finish(mut child: Child, what: &str) -> io::Result<Output> {
+    finish_after(&mut child, what, CHILD_DEADLINE)
+}
+
+/// Borrow an owned child so its guard still reaps it on an early wait error.
+pub(crate) fn finish_after(child: &mut Child, what: &str, limit: Duration) -> io::Result<Output> {
     drop(child.stdin.take());
     let stdout = child.stdout.take().map(drain);
     let stderr = child.stderr.take().map(drain);
-    let end = Instant::now() + CHILD_DEADLINE;
+    let end = Instant::now() + limit;
     let status = loop {
         if let Some(status) = child.try_wait()? {
             break status;
@@ -29,10 +34,7 @@ pub(crate) fn finish(mut child: Child, what: &str) -> io::Result<Output> {
             child.wait()?;
             return Err(io::Error::new(
                 io::ErrorKind::TimedOut,
-                format!(
-                    "{what} ran past {} seconds and was killed",
-                    CHILD_DEADLINE.as_secs()
-                ),
+                format!("{what} ran past {} seconds and was killed", limit.as_secs()),
             ));
         }
         thread::sleep(Duration::from_millis(10));
