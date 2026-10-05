@@ -8,7 +8,8 @@ public class Backends {
         String[] settings = {
             "{\"backend\":\"typesafe\"}",
             "{\"backend\":\"liquid\"}",
-            "{\"backend\":\"ollama\",\"base_url\":\"http://localhost:11535/v1\"}",
+            "{\"backend\":\"ollama\",\"base_url\":" +
+                "\"http://localhost:11535/v1\"}",
         };
         for (String setting : settings) {
             try (var tt = new Door(setting)) {
@@ -16,7 +17,8 @@ public class Backends {
                     "Does the customer ask for a refund?";
                 var brokenIsRefund = tt.decide(
                     question,
-                    "Please refund my order. It arrived broken."
+                    ("Please refund my order. "
+                        + "It arrived broken.")
                         .getBytes(UTF_8));
                 var thanksIsRefund = tt.decide(
                     question,

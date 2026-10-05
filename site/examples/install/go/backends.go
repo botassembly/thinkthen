@@ -11,7 +11,8 @@ func main() {
 	settings := []string{
 		`{"backend":"typesafe"}`,
 		`{"backend":"liquid"}`,
-		`{"backend":"ollama","base_url":"http://localhost:11535/v1"}`,
+		`{"backend":"ollama","base_url":` +
+			`"http://localhost:11535/v1"}`,
 	}
 	for _, setting := range settings {
 		tt, err := thinkthen.NewWith(setting)

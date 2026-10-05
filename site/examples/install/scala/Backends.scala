@@ -7,7 +7,8 @@ import thinkthen.Door.Outcome
   val settings = Seq(
     "{\"backend\":\"typesafe\"}",
     "{\"backend\":\"liquid\"}",
-    "{\"backend\":\"ollama\",\"base_url\":\"http://localhost:11535/v1\"}",
+    "{\"backend\":\"ollama\",\"base_url\":" +
+      "\"http://localhost:11535/v1\"}",
   )
   for setting <- settings do
     Using.resource(Door(setting)) { engine =>

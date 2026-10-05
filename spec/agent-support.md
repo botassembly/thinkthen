@@ -56,17 +56,17 @@ An explicit catch-all is an ordinary label, while a tied judgment remains unreso
 set -euo pipefail
 recording="$(git rev-parse --show-toplevel)/spec/fixtures/agent-support"
 for input in 'Can you recommend a good lunch?' 'I need help with my account charge.'; do
-  value=$(printf '%s' "$input" | thinkthen choose 'Which team owns this request?' \
+  routing_team=$(printf '%s' "$input" | thinkthen choose 'Which team owns this request?' \
     billing shipping account 'none of these' --threshold 0.8 \
     --max-requests-total 4 --max-estimated-input-tokens-total 12000 --max-retries 0 \
     --replay "$recording") && rc=0 || rc=$?
   case $input in
     'Can you recommend a good lunch?')
       printf '%s\n' "$rc" | mustmatch '0'
-      printf '%s\n' "$value" | mustmatch '"none of these"' ;;
+      printf '%s\n' "$routing_team" | mustmatch '"none of these"' ;;
     *)
       printf '%s\n' "$rc" | mustmatch '3'
-      printf '%s\n' "$value" | mustmatch 'null' ;;
+      printf '%s\n' "$routing_team" | mustmatch 'null' ;;
   esac
 done
 ```
