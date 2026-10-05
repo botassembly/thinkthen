@@ -56,7 +56,8 @@ impl Engine {
     /// Fallible complete-set input for [`Engine::rank_with`].
     ///
     /// # Errors
-    /// Returns an input failure or the errors of [`Engine::rank_with`] before sending.
+    /// Returns an input failure before sending, or the call errors of
+    /// [`Engine::rank_with`].
     pub fn try_rank_with<I, T>(
         &self,
         question: &Question,
@@ -135,7 +136,8 @@ impl Engine {
     /// Admission stops at the first count, evidence-byte or reader failure.
     ///
     /// # Errors
-    /// Returns an input failure or the errors of [`Engine::find_with`] before sending.
+    /// Returns an input failure before sending, or the call errors of
+    /// [`Engine::find_with`].
     pub fn try_find_with<I, T>(
         &self,
         question: &Question,
