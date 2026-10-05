@@ -328,6 +328,18 @@ def staged_replay_answers_with_zero_or_spent_total_and_no_key():
         for metric in ("requests_sent", "input_tokens", "output_tokens"):
             expect(dict(rows(live[-1]))[metric], 0, f"live zero {metric}")
         expect(backend.count(), recorded_sends + 1, "live zero sends nothing")
+        for index, (query, miss) in enumerate(zip(queries, misses, strict=True)):
+            limited = run(["SET thinkthen_cache = 'off'", "SET thinkthen_max_requests_total = 1",
+                           query, miss, "SELECT * FROM thinkthen_usage()"], backend.base("arm/full"))
+            spent = "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it (retryable: no)"
+            if index < 2:
+                expect(said(limited[2]), spent, "recognition's next stage cannot send")
+            else:
+                expect(rows(limited[2]), answers[2], "one allowed explicit relation answers")
+            expect(said(limited[3]), spent, "spent positive total denies the next call")
+            for metric in ("requests_sent", "input_tokens", "output_tokens"):
+                expect(dict(rows(limited[-1]))[metric], 1, f"one allowed live {metric}")
+            expect(backend.count(), recorded_sends + 2 + index, "exactly one allowed live send per route")
 
 
 if __name__ == "__main__":
