@@ -56,7 +56,7 @@ Lanes, in order:
 - Lane 2: [0398: Release safety](../tickets/0398-release-safety.md), then [0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides](../tickets/0399-backend-path-perplexity-openrouter.md), then [0400: One setup format per provider and a default throttle of 8](../tickets/0400-provider-setups-and-concurrency.md), then 0377 below. 0400 slice A must be usable before the experiments team's new-model day run in the week of 2026-10-05.
 - Lane 3: [0405: Audit the ten functions](../tickets/0405-audit-ten-functions.md) first on Ian's 2026-10-04 update. Answer filter, rank and grep before implementation of [0401: Search flags on rank](../tickets/0401-rank-search-flags.md), then [0402: The docs tell one story](../tickets/0402-docs-tell-one-story.md), then [0403: The DuckDB extension ships a build for DuckDB v1.5.4](../tickets/0403-duckdb-extension-for-dbt-v2.md).
 - Gaps in any lane: [0404: Tech debt cut, with tests held to behavior](../tickets/0404-tech-debt-and-tests-held-to-behavior.md).
-- Waiting on experiments: the "none" wording for choose and each recipe's measured numbers. [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) uses rules to find candidates and decide or choose to confirm them. Accepted completed 0031 supplies the comparison only for its frozen cohort and tested choose/custom-role recognize configurations; publication proof remains pending. See the [reviewed planning dispositions](../records/2026-10-05-reviewed-experiment-planning.md), which also retain no quality-qualified 0030 winner and unanswered 0032 efficacy.
+- Waiting on experiments: the "none" wording for choose and each recipe's measured numbers. [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) uses rules to find candidates and decide or choose to confirm them. Reviewed 0031 supplies only the frozen-cohort comparison; publication proof remains pending.
 
 Completed foundation: [0397](../tickets/0397-main-moves-to-0-2-0.md) moves main to 0.2.0 and freezes `release/0.1`.
 
@@ -115,9 +115,17 @@ Open items:
 - [The `ruby` platform gem on RubyGems is still the 0.0.1 placeholder](../issues/2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md)
 - [The Polars deadline test races its own deadline under load](../issues/2026-10-03-polars-deadline-test-races-its-deadline-under-load.md)
 - Release process, from the 0.1 releases: [the rehearsal never runs the publish steps](../issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md), [the public install checks are done by hand](../issues/2026-10-04-public-install-checks-are-done-by-hand.md), [the release tag can name an unrehearsed commit](../issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md), [each patch release costs two hand passes](../issues/2026-10-04-each-patch-release-costs-two-hand-passes.md), [the R package's Linux install and pre-release proof](../issues/2026-10-04-r-install-on-linux-and-before-release.md), [two release secrets remain](../issues/2026-10-04-two-release-secrets-remain.md), and [a release needs two approvals](../issues/2026-10-04-a-release-needs-two-approvals.md)
-- Remaining drafts, each waiting on its experiment: [link](../issues/2026-10-03-draft-function-link.md), [verify](../issues/2026-10-03-draft-function-verify.md), [navigate](../issues/2026-10-03-draft-function-navigate.md), and the [Markdown repair tool](../issues/2026-10-03-draft-markdown-repair-tool.md)
+- Remaining tool draft: [Markdown repair tool](../issues/2026-10-03-draft-markdown-repair-tool.md).
 
-- Recipe draft: [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md). Ticket 0402 owns its page; accepted 0031 supplies scoped measured numbers, while publication proof remains pending. It replaces the extract function draft.
+- Recipe infrastructure is partial 0402 D. All six pages remain drafts and all issues remain open until measured publication:
+- [`rules-propose-model-confirms`: Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) — Scoped comparison accepted; repeatability and measured publication review remain pending.
+- [`link-records`: Link records](../issues/2026-10-03-draft-function-link.md) — Earlier linking evidence and compatible replay remain pending; completed wording comparison returned no answers.
+- [`verify-a-claim`: Verify a claim](../issues/2026-10-03-draft-function-verify.md) — Constructed-claim limits and source review remain; qualification efficacy and publication artifacts remain pending.
+- [`navigate-many-documents`: Navigate many documents](../issues/2026-10-03-draft-function-navigate.md) — Admitted navigation measurements and compatible artifacts remain pending; no tree command is promised.
+- [`search-transcripts`: Search transcripts](../issues/2026-10-05-recipe-search-transcripts.md) — Held-out source reconciliation and replay remain pending; unequal reading lengths and overlap limit interpretation.
+- [`ask-your-cache-with-duckdb`: Ask your cache with DuckDB](../issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md) — Admitted cache-analysis artifacts and supported-build reconciliation remain pending; no extension support or efficacy promise.
+
+Verify and qualify remain shared in `verify-a-claim`. Rules comparison is accepted only for the frozen 0031 cohort and tested choose configuration; publication proof is pending. Extract stays dropped. 0030 establishes no quality-qualified winner. 0032 efficacy is unanswered with TEST sealed and its full hold retained; none wording remains unknown. No continuation follows.
 
 ## later
 

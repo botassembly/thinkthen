@@ -1,0 +1,245 @@
+[
+  {
+    "id": "R01",
+    "text": "The note mentions a purchase but gives no amount.",
+    "candidates": [],
+    "target_present": false,
+    "target_value": null,
+    "choice": "local_none",
+    "request": null
+  },
+  {
+    "id": "R02",
+    "text": "Total $12.50 was paid.",
+    "candidates": [
+      {
+        "label": "c001",
+        "value": "$12.50",
+        "description": "Amount $12.50 at characters 6:12",
+        "start": 6,
+        "end": 12
+      }
+    ],
+    "target_present": true,
+    "target_value": "$12.50",
+    "choice": "c001",
+    "request": {
+      "state": "Each question quotes the text it asks about.",
+      "model": "recipe-fixture-v1",
+      "questions": {
+        "q1": {
+          "type": "choice",
+          "instructions": "The text is \"Total $12.50 was paid.\". Which candidate is the stated total?",
+          "criteria": {
+            "c001": "Amount $12.50 at characters 6:12",
+            "none": "No offered amount is the stated total"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "R03",
+    "text": "The old price was $8.00; no total is stated.",
+    "candidates": [
+      {
+        "label": "c001",
+        "value": "$8.00",
+        "description": "Amount $8.00 at characters 18:23",
+        "start": 18,
+        "end": 23
+      }
+    ],
+    "target_present": false,
+    "target_value": null,
+    "choice": "none",
+    "request": {
+      "state": "Each question quotes the text it asks about.",
+      "model": "recipe-fixture-v1",
+      "questions": {
+        "q1": {
+          "type": "choice",
+          "instructions": "The text is \"The old price was $8.00; no total is stated.\". Which candidate is the stated total?",
+          "criteria": {
+            "c001": "Amount $8.00 at characters 18:23",
+            "none": "No offered amount is the stated total"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "R04",
+    "text": "Subtotal $10.00; total $11.00.",
+    "candidates": [
+      {
+        "label": "c001",
+        "value": "$10.00",
+        "description": "Amount $10.00 at characters 9:15",
+        "start": 9,
+        "end": 15
+      },
+      {
+        "label": "c002",
+        "value": "$11.00",
+        "description": "Amount $11.00 at characters 23:29",
+        "start": 23,
+        "end": 29
+      }
+    ],
+    "target_present": true,
+    "target_value": "$11.00",
+    "choice": "c002",
+    "request": {
+      "state": "Each question quotes the text it asks about.",
+      "model": "recipe-fixture-v1",
+      "questions": {
+        "q1": {
+          "type": "choice",
+          "instructions": "The text is \"Subtotal $10.00; total $11.00.\". Which candidate is the stated total?",
+          "criteria": {
+            "c001": "Amount $10.00 at characters 9:15",
+            "c002": "Amount $11.00 at characters 23:29",
+            "none": "No offered amount is the stated total"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "R05",
+    "text": "Prices $3.00 and $4.00 are estimates; no total.",
+    "candidates": [
+      {
+        "label": "c001",
+        "value": "$3.00",
+        "description": "Amount $3.00 at characters 7:12",
+        "start": 7,
+        "end": 12
+      },
+      {
+        "label": "c002",
+        "value": "$4.00",
+        "description": "Amount $4.00 at characters 17:22",
+        "start": 17,
+        "end": 22
+      }
+    ],
+    "target_present": false,
+    "target_value": null,
+    "choice": "none",
+    "request": {
+      "state": "Each question quotes the text it asks about.",
+      "model": "recipe-fixture-v1",
+      "questions": {
+        "q1": {
+          "type": "choice",
+          "instructions": "The text is \"Prices $3.00 and $4.00 are estimates; no total.\". Which candidate is the stated total?",
+          "criteria": {
+            "c001": "Amount $3.00 at characters 7:12",
+            "c002": "Amount $4.00 at characters 17:22",
+            "none": "No offered amount is the stated total"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "R06",
+    "text": "Total twelve dollars; deposit $2.00.",
+    "candidates": [
+      {
+        "label": "c001",
+        "value": "$2.00",
+        "description": "Amount $2.00 at characters 30:35",
+        "start": 30,
+        "end": 35
+      }
+    ],
+    "target_present": true,
+    "target_value": "twelve dollars",
+    "choice": "none",
+    "request": {
+      "state": "Each question quotes the text it asks about.",
+      "model": "recipe-fixture-v1",
+      "questions": {
+        "q1": {
+          "type": "choice",
+          "instructions": "The text is \"Total twelve dollars; deposit $2.00.\". Which candidate is the stated total?",
+          "criteria": {
+            "c001": "Amount $2.00 at characters 30:35",
+            "none": "No offered amount is the stated total"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "N01",
+    "text": "Total $5.00; estimate $6.00.",
+    "candidates": [
+      {
+        "label": "c001",
+        "value": "$5.00",
+        "description": "Amount $5.00 at characters 6:11",
+        "start": 6,
+        "end": 11
+      },
+      {
+        "label": "c002",
+        "value": "$6.00",
+        "description": "Amount $6.00 at characters 22:27",
+        "start": 22,
+        "end": 27
+      }
+    ],
+    "target_present": true,
+    "target_value": "$5.00",
+    "choice": null,
+    "request": {
+      "state": "Each question quotes the text it asks about.",
+      "model": "recipe-fixture-v1",
+      "questions": {
+        "q1": {
+          "type": "choice",
+          "instructions": "The text is \"Total $5.00; estimate $6.00.\". Which candidate is the stated total?",
+          "criteria": {
+            "c001": "Amount $5.00 at characters 6:11",
+            "c002": "Amount $6.00 at characters 22:27",
+            "none": "No offered amount is the stated total"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "N02",
+    "text": "Total $7.00 was paid.",
+    "candidates": [
+      {
+        "label": "c001",
+        "value": "$7.00",
+        "description": "Amount $7.00 at characters 6:11",
+        "start": 6,
+        "end": 11
+      }
+    ],
+    "target_present": true,
+    "target_value": "$7.00",
+    "choice": null,
+    "request": {
+      "state": "Each question quotes the text it asks about.",
+      "model": "recipe-fixture-v1",
+      "questions": {
+        "q1": {
+          "type": "choice",
+          "instructions": "The text is \"Total $7.00 was paid.\". Which candidate is the stated total?",
+          "criteria": {
+            "c001": "Amount $7.00 at characters 6:11",
+            "none": "No offered amount is the stated total"
+          }
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "population": 8,
+  "ordinary": 6,
+  "asking": 5,
+  "local_none": 1,
+  "selected": 2,
+  "model_none": 3,
+  "not_sure": 2,
+  "failed": 0,
+  "candidate_miss": 1,
+  "ordinary_correct": 5,
+  "preparation_requests": 7,
+  "cache_fill_requests": 7,
+  "replay_requests": 0,
+  "cache_hit_requests": 0,
+  "negative_requests": 0,
+  "cumulative_synthetic_requests": 14,
+  "producer_negative_controls": 14,
+  "audit_rows": 5
+}

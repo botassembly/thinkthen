@@ -2,7 +2,7 @@
 // Goal: let a reader find the job they have, or the shell form they want
 // to learn.
 import Base from '../../layouts/Base.astro';
-import { HOWTO_GROUPS, HOWTOS, TECHNIQUES, RECIPES } from '../../data/catalog.mjs';
+import { HOWTO_GROUPS, HOWTOS, TECHNIQUES, SHELL_JOBS } from '../../data/catalog.mjs';
 
 // A how-to with no known group would drop off this page without a sound.
 const stray = HOWTOS.filter((h) => !HOWTO_GROUPS.includes(h.group));
@@ -38,7 +38,7 @@ const sections = HOWTO_GROUPS
   <h2><a href="/how-tos/bash/">Bash techniques</a></h2>
   <p>Each Bash page teaches one shell form. The recipes do small jobs.</p>
   <ul>
-    {[...TECHNIQUES, ...RECIPES].map((t) => (
+    {[...TECHNIQUES, ...SHELL_JOBS].map((t) => (
       <li><a href={`/how-tos/bash/${t.slug}/`}>{t.title}</a> — {t.label}</li>
     ))}
   </ul>

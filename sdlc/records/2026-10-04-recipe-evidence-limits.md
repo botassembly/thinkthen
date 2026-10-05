@@ -26,7 +26,7 @@ The strict selection pass scored choose at 644/800 receipt fields, including 177
 
 The 223/800 multi-value OCR cases used strict one-value or explicit-none scoring. The results cannot directly replace the earlier any-value-on-line scores. The small date and name boundary cases do not establish general support. Documentation keeps the narrow money/count/line scope and makes candidate discovery, exact copying and abstention explicit. Absence handling remains weak.
 
-Ian dropped extract as a function on 2026-10-04. No new function or annotate mode follows. The strict selection pass did not perform the comparison against recognize. The accepted completed 0031 comparison now resolves that measurement wait only for its frozen cohort and tested choose/custom-role recognize configurations; equivalent decide performance is unproved. The [reviewed planning record](2026-10-05-reviewed-experiment-planning.md) preserves unresolved outcomes, candidate misses and abstention limits. Publication proof remains pending.
+Ian dropped extract as a function on 2026-10-04. No new function or annotate mode follows. This recipe still waits on experiment 4, which compares rule-proposed candidates confirmed by decide or choose with recognize alone. The strict selection pass did not perform that comparison and cannot replace it.
 
 ## Completed work supersedes old routing asks
 
@@ -44,4 +44,15 @@ The text result establishes no image result. Images and matched-model comparison
 
 Recipe publication still requires a tested question file, labeled sample, recorded replay, audit output and commit-pinned measured source under ticket 0402. This owning record can supply public-safe provenance after it lands and the implementation pins its commit. The completed handoffs do not prove that each recipe sample has a convertible retained recording. The builder checks that prerequisite without a live call and leaves uncovered samples as drafts.
 
-The linking wording question and protective citation threshold remain unanswered. 0031 resolves the Rules comparison measurement wait for its tested cohort only; its publication proof remains outstanding. These limits do not block slices A, B or C or preparation of the Recipes harness.
+The linking wording question and protective citation threshold remain unanswered. Experiment 4 remains outstanding. These limits do not block slices A, B or C or preparation of the Recipes harness.
+
+
+## Scoped superseding Rules disposition, 2026-10-05
+
+The immutable accepted [planning record](https://github.com/botassembly/thinkthen/blob/ea615c0e6a3412bb4716ad97b704a3f698be30cb/sdlc/records/2026-10-05-reviewed-experiment-planning.md) and admitted 0031 final aggregate resolve only the frozen-cohort choose-versus-rules/custom-role-recognize comparison wait. The stopped status above remains historical. Full population: 858 fields on 145 documents; rules resolves 858, confirmation 857, recognize 850. Matched cohort: 849 fields on 144 documents; rules TP/FP/FN 528/6786/41, choose 503/123/66, recognize 16/423/553. Candidate misses and unresolved present fields stay in conservative denominators.
+
+The broad 9919-word dictionary and caps are not best-possible rules. Confirmation cannot recover 42/575 absent candidates. All 283 absent fields are receipts: choose correctly abstains on 211, recognize on 277 with three unresolved faults, rules on zero. Name/date controls and one custom-role configuration prohibit generic claims. Equivalent decide performance, location accuracy, preparation timing, local-model comparison and provider invoice were not established.
+
+New usage-derived $0.182553 and exposure $0.203782 stay distinct from historical 0027 $0.068566848. Genuine fault holds $0.000380 and $0.021019 remain; the latter includes $0.000170 partial usage. Reused logical shares do not multiply consumption. No retry follows. The Rules draft requires compatible public fixture and publication proof, with synthetic loopback repeatability separate from measured quality. Extract remains dropped and 0413 owns its API gaps.
+
+0030 has no quality-qualified local-model winner. 0032 has terminal evidence but unanswered efficacy, all 16210 TEST records sealed and full $0.292177704 reservation including known usage. Neither supports a replace-regex post or resolves choose-none wording. No diagnostic, retry or new experiment is authorized.

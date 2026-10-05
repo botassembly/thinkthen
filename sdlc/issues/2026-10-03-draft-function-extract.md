@@ -1,5 +1,28 @@
 # Recipe: Rules propose, the model confirms
 
+Status: open. Draft; infrastructure closes no recipe issue.
+Kind: recipe
+Milestone: 0.2
+Owner: the queue owner
+Slug: rules-propose-model-confirms
+When: compatible evidence and reviewed measured publication
+
+## Job and evidence wait
+
+Confirm a proposed total without inventing a replacement.
+
+Accepted 0031 resolves comparison for the frozen cohort and tested choose configuration only. Extract stays dropped: no function or annotate mode. Ticket 0413 owns candidate-option gaps. Earlier 0027 remains separate.
+
+Scoped comparison accepted; repeatability and measured publication review remain pending.
+
+## Closure
+
+Ticket 0402 owns the hidden draft and harness. This issue closes only when its measured page publishes with compatible question file, independently labeled sample, recording, audit, commit-pinned provenance and fresh publication proof. No experiment, retry, release or publication is authorized here.
+
+## Original draft history
+
+# Recipe: Rules propose, the model confirms
+
 Status: open. Recipe draft. Ian dropped extract as a function on 2026-10-04 in the change to the docs lane-order message. This relabels the extract draft filed on 2026-10-03. Owner: the queue owner. Ticket 0402 owns the recipe page and harness. The page remains draft until its measured numbers publish.
 Kind: idea
 When: ticket 0402 publication proof passes for the accepted scoped 0031 comparison

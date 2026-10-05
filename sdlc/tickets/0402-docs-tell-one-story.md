@@ -1,10 +1,10 @@
 # 0402: The docs tell one story
 
-Status: in progress. A and B landed through `cf457ff98`; C implementation and authorized focused proof are complete on lane 0. C received fresh High source ACCEPT and passed the named final checkpoint; final receipt review and C landing remain pending. D remains unimplemented.
+Status: in progress, partial ticket. A/B/C landed through `e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7`; C has fresh independent source and final receipt ACCEPT with its actual final checkpoint. D infrastructure and all six hidden drafts are implemented on lane 0. The first independent High source review returned two P2 findings; the targeted mixed-preview and receipt corrections have passing focused proof. Fresh whole-candidate High source/receipt acceptance and reviewed landing remain pending. No recipe publishes here. Outcome 11 remains a separate measurement wait.
 
 Milestone: 0.2
 
-Lane: 0 for C, assigned after A/B landed, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0402-docs-tell-one-story`. Slice C touches no site layout, so it may land first.
+Lane: 0 for D, assigned after C landed, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0402-docs-tell-one-story`. Slice C touches no site layout, so it may land first.
 
 Closes: 2026-10-03-site-bench-paths-point-at-deleted-runs
 Closes: 2026-10-03-glossary-call-request-decision
@@ -118,4 +118,13 @@ C's build found the threshold reader already conforms to the settled endpoints. 
 
 C's named final checkpoint on `4f9dce582` passes full test (1410 workspace, 145 library, 21 consumer), executable specification (64 pages; 24 green demos), all actual 350 library/SQL replays, strict zero-stale proof and final normal site build. The [final manifest](../records/0402-c-final-checkpoint-checks.json) retains exact source attribution and original failures. C awaits fresh final receipt acceptance and landing; the full ticket remains in progress. D's corrected full recipe plan is accepted at SHA-256 `e970b9cfda6feb1e37cd0f3be322481b5536155f17593b5d395e24cbd7e080f1` and waits for C landing.
 
-The accepted aggregate [planning record](../records/2026-10-05-reviewed-experiment-planning.md) qualifies 0402 D: completed 0031 supersedes recognize-unrun history, while question-file, labeled-sample, retained-recording, audit and commit-pinned provenance proof remain pending. No further experiment or publication is authorized.
+
+## D implementation disposition
+
+The complete accepted [D plan](../planning/0402-d-recipes-design.md) is preserved byte for byte; [original acceptance](../records/0402-d-design-acceptance.md) and [build record](../records/0402-d-recipes-build.md) distinguish its historical source from current landed C. The accepted conditional index uses `[...index].astro` rather than an unconditional `index.astro`. All six recipe pages remain hidden drafts in normal output; explicit draft preview emits the marked index without global Recipes navigation. The owned controlled-loopback sample replaces the unavailable compatible experiment-cache sample only for repeatability, never measured quality. Three relabels, two issue creations, Rules metadata and six milestone dispositions are in this same whole change. Verify and qualify remain shared; extract stays dropped.
+
+
+D source review taught us that navigation eligibility and catalog draft identity have different conditions. A mixed preview needs a visible draft catalog notice even with a published-selection fixture. The targeted correction preserves all six actual drafts and retains independently declared four-state output expectations. Receipt bytes must be measured independently of a prior summary: the stale scan binding is preserved as excluded history, the separate failed scan stays intact, and new execution gets its own output and attribution. See the [D build record](../records/0402-d-recipes-build.md) and new fix manifest for exact identities and proof.
+
+
+D's targeted proof passes actual normal/preview build and complete site check, independent HTML/Markdown/llms/Pagefind/navigation/footer proof in all four states, literal legacy-destination checks, 28 numerical/selection controls, 12 publication controls and unchanged producer/artifact controls. New replay counts zero replay and negative requests with a distinct seven-request synthetic cache fill. Independent 350 byte/source-closure checks and strict proof report zero mismatches or stale pages; old proof and scan artifacts remain unchanged. The [fix manifest](../records/0402-d-fix-receipts.json) records the frozen source snapshot and new receipts. The full ticket stays in progress; whole-candidate High source/receipt acceptance, any root-named broader checkpoint and reviewed landing remain pending. All six recipes stay drafts.
