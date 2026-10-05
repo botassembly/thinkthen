@@ -12,7 +12,7 @@ require_relative "../../../conformance/children/children"
 class TestPublicNames < Minitest::Test
   CONSTANTS = %i[BackendError Call Cancel CancelledError Completion DeadlineError DefectError Edge Engine Entity Error Found
                  LocalError NO Question QuestionSet Ranked Recognized RecognizedEntity Relation UNSURE UsageError VERSION YES].freeze
-  VERBS = %i[annotate choose choose_many decide decide_many decide_many_with_probabilities details filter find plan rank
+  VERBS = %i[annotate choose choose_many decide decide_many decide_many_with_probabilities details files filter find plan rank
              recognize relate score score_many score_with_level tag tag_many usage with_tick].freeze
 
   def test_the_loaded_module_shows_only_the_pinned_names
