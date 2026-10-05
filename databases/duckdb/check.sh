@@ -124,6 +124,7 @@ if [ "$profile" = stress ]; then
 fi
 
 echo "== suites"
+sh "$LIMIT" 900 "$PY" tools/setups_0400.py
 for suite in verbs_suite rank_suite settings_suite signal_suite relate_suite databases_suite conformance; do
 	sh "$LIMIT" 900 "$PY" "tools/$suite.py"
 done

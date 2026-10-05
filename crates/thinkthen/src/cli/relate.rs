@@ -32,7 +32,7 @@ pub(crate) fn run(
         )?
         .with_request_size(request_size);
     environment.warn_request_size(&backend)?;
-    let selected_profile = profile::read(&arguments.common)?;
+    let selected_profile = profile::read(&arguments.common, environment, &backend)?;
     let source = crate::edge::source(
         arguments
             .common

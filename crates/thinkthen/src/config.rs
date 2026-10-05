@@ -11,19 +11,19 @@ mod backends;
 
 /// Why the configuration file was refused. The message names the file and a
 /// field, never a value.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ConfigError {
-    pub(crate) message: &'static str,
+    pub(crate) message: std::borrow::Cow<'static, str>,
     /// The file exists but could not be read, which is a local failure.
     pub(crate) unreadable: bool,
-    pub(crate) price: bool,
+    pub(crate) price: Option<&'static str>,
 }
 
 const fn refused(message: &'static str) -> ConfigError {
     ConfigError {
-        message,
+        message: std::borrow::Cow::Borrowed(message),
         unreadable: false,
-        price: false,
+        price: None,
     }
 }
 
@@ -32,9 +32,9 @@ const PRICE_PAIR: &str = "configuration prices require both input and output fie
 
 const fn refused_price(message: &'static str) -> ConfigError {
     ConfigError {
-        message,
+        message: std::borrow::Cow::Borrowed(message),
         unreadable: false,
-        price: true,
+        price: Some(message),
     }
 }
 
@@ -64,7 +64,7 @@ pub(crate) struct Config {
     usd_per_million_input: Option<String>,
     usd_per_million_output: Option<String>,
     backend: Option<String>,
-    backends: Option<serde_json::Map<String, serde_json::Value>>,
+    backends: Option<std::collections::BTreeMap<String, Box<serde_json::value::RawValue>>>,
     #[serde(skip)]
     prices: Option<Prices>,
     #[serde(skip)]
@@ -104,9 +104,9 @@ impl Config {
             }
             Err(_) => {
                 return Err(ConfigError {
-                    message: "the configuration file could not be read",
+                    message: "the configuration file could not be read".into(),
                     unreadable: true,
-                    price: false,
+                    price: None,
                 });
             }
         };
@@ -392,3 +392,7 @@ fn variable(name: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "config/setups_0400_tests.rs"]
+mod setups_0400;

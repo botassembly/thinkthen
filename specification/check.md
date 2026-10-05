@@ -16,7 +16,7 @@ thinkthen check [--url BASE] [--backend NAME] [--model NAME] [--timeout SECONDS]
 - `--model` resolves as every command resolves it: the option, then the configuration file's `model`, then `jev-1.13.0`. `model asked` prints the option or the file's value, or `unspecified` when neither names one. `model sent` prints the resolved value, which every request carries.
 - The key comes only from `THINKTHEN_API_KEY`, or from a named backend's own key variables. An unset or blank key exits 4 with the sentence every command prints, before any request, unless the address is `localhost`, `127.0.0.1`, or `[::1]`. There the probes go out with no `Authorization` header, as on every command.
 - `--timeout` works as it does everywhere. `--max-retries` keeps its default of 3 and is not accepted. Four probes send at most sixteen attempts. Each attempt takes at most the timeout, and each wait before an attempt at most the lesser of the timeout and 60 seconds, because a longer server wait fails the probe ([backends.md](backends.md)). Twelve retry waits and three waits between probes give fifteen waits, so at `--timeout 90` a check ends within 16 × 90 + 15 × 60 = 2,340 seconds, plus at most two seconds for another process's usage lock: one before the first probe and one when the counts are written at the end. Without retry headers the waits double from one second, and the bound is 16 × 90 + 4 × 7 + 3 × 8 = 1,492 seconds.
-- The check reads no standard input and no cache, recording, replay, or profile. `--cache`, `--no-cache`, `--record`, `--replay`, and `--profile` are unknown options and exit 2.
+- The check reads no standard input, cache, recording, replay, or explicit profile file. A selected setup supplies its inline profile. All four fixed requests must fit that profile before the first send or any `--plan` output; a violation exits 2 with the existing profile-limit sentence and sends nothing, even when a later probe is the first violation. The fixed probes are never split. `--cache`, `--no-cache`, `--record`, `--replay`, and `--profile` are unknown options and exit 2.
 - Its attempts and reported tokens count in the usage totals, as every live request does.
 - `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` binds each probe as it binds every live request, by [backends.md](backends.md). `check` has no flag for it. A probe the cap cannot admit stops the check before that probe is sent: the command prints the asking commands' sentence, such as `thinkthen usage: max_estimated_input_tokens_total=1 (encoded-body-bytes-908-v1) would be exceeded before this call's first request`, prints no report, and exits 2.
 
@@ -106,7 +106,7 @@ The last line counts the finding lines. The report prints once, after the last p
 | Exit | When |
 | --- | --- |
 | 0 | The report holds no critical line. Warnings may stand |
-| 2 | No named address, an address the rules refuse, a blank model, a timeout outside 1 to 86400, or an unknown option. Nothing is sent |
+| 2 | No named address, an address the rules refuse, a blank model, a timeout outside 1 to 86400, an unknown option, or a selected setup profile limit. Nothing is sent |
 | 4 | The report holds a critical line, or the key is unset or blank at an address other than loopback. An unset key prints nothing on standard output |
 | 5 | Standard output could not be written |
 | 70 | A defect |

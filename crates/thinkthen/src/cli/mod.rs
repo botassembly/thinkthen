@@ -261,7 +261,7 @@ fn told(mut failure: Failure, cli: &Cli, environment: &Environment) -> Failure {
             .is_some_and(|command| in_default_cache(command, environment))
     };
     if storage && default() {
-        Failure::Configuration(DEFAULT_CACHE_STORAGE)
+        Failure::Configuration(DEFAULT_CACHE_STORAGE.to_owned())
     } else {
         failure
     }

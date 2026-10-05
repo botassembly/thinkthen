@@ -88,7 +88,7 @@ pub(crate) fn run(
         )?
         .with_request_size(request_size);
     environment.warn_request_size(&backend)?;
-    let selected_profile = profile::read(&arguments.common)?;
+    let selected_profile = profile::read(&arguments.common, environment, &backend)?;
     let mismatch = profile::Mismatch::new(spec.profile.as_ref(), selected_profile.as_ref());
 
     if arguments.common.dry_run {

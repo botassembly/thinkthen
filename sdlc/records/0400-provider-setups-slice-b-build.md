@@ -1,0 +1,91 @@
+# 0400 slice B: provider setup parser and captured settings
+
+Status: source accepted and merged checkpoint passed; fresh final receipt review and slice B landing pending. This record owns the lane 2 parser candidate based on main `110e6ac88`. Slice C owns concurrency defaults; slice D owns measured pages. No live job or ledger operation ran.
+
+## Implementation
+
+The existing backend entry accepts the ADR 0117 setup fields. All seven nonempty legal built-in subsets are accepted; built-in transport, key, model, path and wire overrides remain refused. Added entries reuse the existing BothSides form. Prices use the existing exact decimal parser. Inline profiles retain their original JSON bytes for the existing profile parser, including duplicate-field refusal. Configuration errors can carry the profile parser's value-free reason while preserving exit 5; top-level price errors retain their existing usage classification.
+
+Named and exact canonical built-in posting-URL selection carry setup prices/profile independently of rates. Named settings survive explicit address/model overrides. Captured top-level prices have their own provenance below setup prices; explicit setters win regardless of order. The CLI has a separate edge path and applies both prices and profiles there, including check. Rust, Python and SQL continue using the captured builder. No public API was added, and no accepted precedence or profile semantics changed.
+
+The existing packer splits multi-question requests at `max_questions`, including tag labels. The ticket's two-label refusal example therefore cannot establish a refusal under `max_questions: 1` without changing the accepted existing profile semantics. The consumer refusal witnesses use `max_evidence_bytes: 3`, which refuses before any send and can be overridden explicitly. The legal-subset edge table still includes `max_questions: 1`. This follows the accepted ADR's preservation rule; it introduces no API deviation.
+
+## Completed focused proof
+
+All builds use user systemd scopes with MemoryMax 12G, MemorySwapMax 1G, offline Cargo, two Cargo jobs and empty RUSTC_WRAPPER. Build launchers source the repository allow-list. Tests use scratch usage homes and fake loopback keys. The only key values in test source are fake markers. No credential file was created.
+
+The configuration-focused run passed 10 tests, including the 2 new subset/canonical edge-table cases. The expanded named-backend run passed 34 tests with 2 child-only tests ignored; its parents execute those child halves. Python and DuckDB each passed their focused captured-profile test with zero counted requests on refusal and one after explicit override. The existing profile-focused filter passed 29 tests; the top-level caller-price filter passed 3 tests. Settings validation passes against the lane binary: 66 rows, 68 flags, zero failures (`target/0400b-proof/settings-final.log`). Tickets and children validation pass. Offline policy passes after naming the new edge-table file as a test source under the existing boundary policy.
+
+The first outside-in setup run found three fixture expectations needing correction: the profile parser deliberately says `is not valid JSON` for a duplicate field, and the evidence sentence itself is 44 bytes, so an explicit 20-byte profile still refuses. The witnesses now use a 100-byte explicit profile. These were test-fixture corrections, not changed parser or preflight behavior. No red-before-implementation claim is made; a targeted precedence mutation then proved the Rust witness fails with Cargo exit 101 when captured top-level prices wrongly outrank setup prices. The source was restored and the 31-case named run passed before the final three guard cases were added.
+
+Required lint first stopped at the Python test ratchet; the Python and DuckDB ceilings now exactly include their new consumer witnesses. The next required lint run reached Clippy and refused four fixture-helper unwraps. Contextual expectations now replace them; focused all-target Clippy passes and the 34-case named run passes again. The added-entry wire case supplies every supported field together. Required lint then exited 0 on source candidate `0b45197a434797f16005a51ebf97835cdf0e3ba1`. Policy, all exact ratchets, private-name and workflow guards, offline dependencies, formatting, Clippy, warning-free documentation and the public inventory pass; the inventory checks 569 declared items and refuses 4 plants. The receipt is `target/0400b-proof/lint/output.log`. Fresh independent source review remains pending. No full test, spec or surfaces rung, native host sweep or hosted check ran. The coordinator names the checkpoint and controls any later rebase or landing.
+
+## Growth
+
+The source/test growth earns the shared setup parser, typed selection and separated fallback provenance, plus independent legal-subset, canonical-route and outside-in refusal/price/wire/replay/consumer witnesses. Before raising the ratchet, the builder checked the existing rate, price and profile parsers and reused them; existing BothSides encoding is reused; no new parser, transport or surface setting was introduced. After formatting, the exact Rust total is 113048, up 743 from 112305: 126 lines in production/module files and 617 in proof files. No Rust file exceeds 500 nonblank lines. The Python test ceiling is 4783, up 34; the DuckDB Python-test ceiling is 4224, up 31. Both additions prove setup visibility at real consumer boundaries.
+
+Ian can overturn the accepted format and slice boundaries. The parent owns review, checkpoint, final rebase and landing.
+
+Local receipts are retained under ignored `target/0400b-proof/`: configuration and named runs, profile and top-level-price runs, Python and DuckDB consumer output, offline policy, settings, children, tickets and the precedence plant. Required lint uses the previously verified local-file-only dependency-fixture wrapper, copied into owned output with a newly owned outside-checkout TMPDIR and scratch HOME. All ordinary Cargo commands remain offline; only the exact validated sibling `file://` fixture with no dependencies may be fetched. No remote fetch is admitted. The lane build lock protects the final focused and lint runs.
+
+The final receipt update changes this record and the ticket only. Production source, tests, specification and ratchets remain identical to the linted source candidate. The pushed branch is `ticket/0400-provider-setups-and-concurrency`. The parent handles fresh independent review, the named full/native checkpoint and any later rebase or landing; this candidate claims none of those outcomes.
+
+## Source-review correction: check profile admission
+
+Fresh independent High review rejected candidate `98185a5b26acf2089540080caf3af60b676f81d6` with one P2 finding: `check` captured the selected setup profile but `send_plan` encoded, looked up the key and sent without enforcing it. `check --plan` also bypassed admission. The earlier implementation paragraph's claim that the CLI applied profiles “including check” described propagation, not enforcement, and overstated the proof. None of the original focused receipts witnessed a check/setup-profile refusal. The review remains a rejection of that candidate; this correction requires a new independent review.
+
+The fix moves the existing pure count-limit comparison from `Packer` to its `PackLimits` value without changing its comparisons. The fixed-plan engine path reuses it on the original encoded body, wire-question count (including tag labels), state evidence count and largest choice-option count. The CLI prevalidates the entire known probe list before sending the first probe or producing plan output. This is necessary because a one-question limit admits the first three probes but refuses the mixed probe, and a request-byte limit can admit the first probe but refuse the choice probe. `send_plan` also validates before its runtime key lookup. The existing optional key snapshot/address collision and named-key host guards remain in place. No probe is split, no explicit profile option is added to check, and unconfigured check bodies and send-budget ordering remain unchanged.
+
+The new real CLI table covers all four limit kinds, an exact first-probe byte ceiling that refuses the later choice probe, live and plan exits 2 with empty standard output, exact profile sentences and zero counted loopback requests. Each limit also refuses at a non-loopback address with its named key removed and zero proxy connections, proving profile failure precedes the missing-key error. A separate counted CLI witness retains explicit `decide --profile` precedence over a selected setup's one-byte request limit. Existing secrecy helpers scan both streams and scratch files.
+
+The new regression failed on the reviewed source with Cargo exit 101 because check reached the loopback backend and returned report exit 4 instead of local exit 2 (`target/0400b-profile-fix/red.log`). During the fix, one expected evidence count was corrected from 52 to the existing 53-byte text form, which includes its newline; an extraction compile failure also exposed one remaining call site, which was updated. The final focused runs pass 36 named-backend cases (2 child-only cases ignored), 30 profile-filter cases and 12 check cases. The retained check suite pins ordinary probe bytes, plan bodies, secrecy, retry behavior and estimated-input budget ordering. Receipts are `target/0400b-profile-fix/{named,profiles,check}.log`. Required lint and final policy receipts are recorded below after completion.
+
+This correction adds exactly 143 Rust nonblank lines relative to the reviewed candidate: 36 production lines and 107 CLI regression lines. The exact ratchet is now 113191, up 886 from slice B's main baseline 112305. Python and DuckDB totals stay 4783 and 4224. The builder inspected the existing packer admission, request parts, count helpers and named CLI test support before raising the ceiling, and reused their behavior instead of adding a parallel validator or test framework. All Rust files remain under the 500-line cap. The check specification now documents selected-setup admission of the complete fixed list and keeps explicit profile files unsupported.
+
+Correction verification completed: standalone offline policy exits 0 (`target/0400b-profile-fix/policy.log`); required lint exits 0 (`target/0400b-profile-fix/lint/output.log`), including exact ratchets, file caps, formatting, offline dependency checks, all-target Clippy, warning-free docs and the 569-item inventory with four refused plants. The focused packer suite passes 10 cases (`target/0400b-profile-fix/packer.log`), protecting the extracted comparisons and existing splitting behavior. All builds ran in lane2 user scopes capped at 12G memory/1G swap with two offline Cargo jobs, empty wrapper and the sourced environment allow-list; output and build locks stayed in this lane. The lint launcher created and cleaned only its own new scratch home/TMPDIR, first proving cleanup refuses the lane. Its validated dependency-fixture wrapper admits only the dependency-free sibling `file://` fetch required by lint, never a remote fetch. No full test/spec/surfaces, native/canonical checkpoint, rebase, landing, dispatch, credential read, paid call or ledger operation ran. Fresh High review and checkpoint remain parent-owned.
+
+
+## Accepted correction and pre-Windows coordinator checkpoint
+
+Fresh High review accepted the complete profile-check correction at `b3c7fe599ed3d24ef06693dfcbcc834f60a0779f`. The source-preserving rebase onto main `fea3a6fbc46b68ccc33a28e35eb0c4eb48329df9` is `d432a75a8f2cb587ec3e46a40019966855474910`. Only exact ratchets conflicted; measured Rust is 113758, main 112872 plus retained B growth 886. Added/deleted product lines before and after rebase compare byte for byte with SHA-256 `5456cdcb4eb3e4ed86f6496ad0ac0072d0f45c6e45bfd664fa0d107d98e4ba4f`; full patches and normalized edits remain in `target/0400b-profile-fix/product-{before,after}-current-main.patch`.
+
+Merged named-backend, profile, check, find-display and packer cases passed, followed by policy, exact ratchet, formatting and renewed required lint. Receipts are `target/0400b-profile-fix/merged-focus.log` and `lint/merged-output.log`. The coordinator named the full checkpoint on `d432a75a8`: 1379 workspace cases passed with 26 skips, 134 library-only with 4 skips, 21 consumer with 3 skips, 62 specification pages with 1 skip and 24 green demos with 0 red. The routine smoke omissions remain explicit.
+
+The separate canonical run actually replayed 308 language and 42 SQL samples. Its strict proof matched 350 samples with 0 stale pages; the separate strict check and final site build passed. `site/examples/bindings-proof.json` is runner-generated, with a byte-identical retained copy in `target/0400b-checkpoint-final/pre-windows-proof.json`. No proof hash was manually updated.
+
+| Retained pre-Windows receipt | SHA-256 |
+| --- | --- |
+| `target/0400b-checkpoint-final/test.log` | `0c52cbd840cfeaa8e612d721c13423bdc0158261a83266fb14e3b327b5caddfe` |
+| `target/0400b-checkpoint-final/spec.log` | `e014d051b70c464563cba370b3048edf4cc39fefccc7076dbd789ed443e5a1cc` |
+| `target/0400b-checkpoint-final/test-docs.log` | `065fd34301af609be250391f7a7d6a9379191bdc6dea0bcf046c777588c6c155` |
+| `target/0400b-checkpoint-final/strict.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0400b-checkpoint-final/site-build.log` | `21b52b8ae6a69ae8d7724c33e588d44c5726434687bd3e91c345ddd3a497e0a0` |
+
+These are exact pre-Windows integration receipts. The forthcoming source-preserving rebase onto the landed Windows candidate must retain product behavior, measure the combined source, review named-configuration ownership/key ordering in that context and run the required merged checkpoint and actual documentation proof. This earlier proof will not be relabeled as later-source execution. No new live check, native job, release dispatch, approval or publication ran. Slices C and D remain open.
+
+## Windows integration and current checkpoint
+
+The source-preserving rebase onto landed Windows main `6d26206aa8861490cc6540b6bafafc08e3249c3c` produced `1d412f8c9d70cbe845e556d5ac22da11ae5a6b47`. The product edit checksum remains `5456cdcb4eb3e4ed86f6496ad0ac0072d0f45c6e45bfd664fa0d107d98e4ba4f`. The exact Rust ratchet is 115881: landed main 114995 plus B growth 886. Configuration and CLI registry changes merged automatically; fresh High review accepted their ownership inspection, shared warning, selected-setup admission and key-ordering behavior. Its local receipt is `/tmp/thinkthen-0400b-windows-source-review-cli-kh62oe28/review.md`.
+
+Generated proof files conflicted during rebase. The coordinator retained main's runner-generated file unchanged, preserving the prior B replay separately rather than editing source hashes. New actual replays run before landing. A fresh Medium review accepted the record-only correction `552672d61`, which replaces a forbidden home path in the earlier Windows design with the local Cargo registry cache.
+
+Merged focused proof passes 36 named-backend, 30 profile, 12 check, 10 find-display and 10 packer cases, plus offline policy, exact ratchet and formatting. Required lint passed on frozen `552672d61`, including 112/112 workflow plants, Clippy, warning-free documentation and the 569-item inventory with four refused plants. The preceding attempt correctly refused a changed checkout after the coordinator committed the record correction during the gate. That complete failed output was overwritten by the retry; `target/0400b-profile-fix/lint/windows-merged-first-failure-note.txt` is a diagnosis, not the original receipt.
+
+Full tests on the unchanged merged product passed 1379 workspace cases with 26 skips, 134 library-only cases with 4 skips and 21 consumer cases with 3 skips. The specification passed 62 pages with 1 skip and 24 green demos with 0 red. Routine isolated-home smoke omissions remain Dart, TypeScript, Ruby, DuckDB, SQLite and R; canonical documentation replay is separate.
+
+`target/0400b-checkpoint-final/test-after-windows.log` has SHA-256 `454e7b79f6f83d5e9dcd6cda3179a2d617b00bd51ab226c44636b63eb0cd96dd`.
+
+`target/0400b-checkpoint-final/spec-after-windows.log` has SHA-256 `e014d051b70c464563cba370b3048edf4cc39fefccc7076dbd789ed443e5a1cc`.
+
+`target/0400b-profile-fix/lint/windows-merged-output.log` has SHA-256 `57e335e11208c15d7c49a424d77e7a8aa25a6a859bfdba4b383b252ca5360c3a`.
+
+Actual documentation replay passed all 308 language and 42 SQL samples on the merged product. Both strict checks matched 350 samples with 0 stale pages, and the final site build passed. The runner-generated proof has a byte-identical retained copy at `target/0400b-checkpoint-final/final-after-windows-proof.json`. No proof hashes were edited manually. Fresh final receipt review and landing remain pending. No new live call, native dispatch, stress campaign, release approval or publication ran.
+
+| Current merged receipt | SHA-256 |
+| --- | --- |
+| `target/0400b-checkpoint-final/test-docs-after-windows.log` | `7275ea1ad0910b73cfb5c7dec6c7b551bc158cac80994513c50f48fd5fde8f7a` |
+| `target/0400b-checkpoint-final/strict-after-windows.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0400b-checkpoint-final/site-build-after-windows.log` | `28375efcd5d31aaa2006b614c7504766537cb3f304f45c56cd0a6f889bf78067` |
+| `target/0400b-checkpoint-final/final-after-windows-proof.json` | `b5bff36926176700213561f5a200aabe66a87b6532eb3f806de86992bc22c940` |
+
+The current checkpoint used owned 12G memory/1G swap user scopes, two offline Cargo jobs, isolated configuration and lane-owned outputs. The one record-only commit during the first lint attempt changed no tested product bytes; renewed lint used frozen `552672d61`. The complete original failed lint log is unavailable, as disclosed above. Slices C and D remain open.

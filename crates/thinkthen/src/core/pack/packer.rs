@@ -29,6 +29,45 @@ pub(crate) struct PackLimits {
     pub(crate) context: bool,
 }
 
+impl PackLimits {
+    /// The first limit these counts pass, with the limit and the count.
+    pub(crate) fn over(
+        &self,
+        state: &State,
+        bytes: usize,
+        questions: usize,
+        options: usize,
+    ) -> Option<(LimitKind, usize, usize)> {
+        let profile = self.profile.as_ref();
+        let request = profile
+            .and_then(|held| held.max_request_bytes)
+            .map_or(self.ceiling, |most| most.min(self.ceiling));
+        let questions_most = match (profile.and_then(|held| held.max_questions), self.questions) {
+            (Some(one), Some(other)) => Some(one.min(other)),
+            (one, other) => one.or(other),
+        };
+        [
+            (
+                LimitKind::EvidenceBytes,
+                profile.and_then(|held| held.max_evidence_bytes),
+                state.evidence_bytes(),
+            ),
+            (LimitKind::RequestBytes, Some(request), bytes),
+            (LimitKind::Questions, questions_most, questions),
+            (
+                LimitKind::Options,
+                profile.and_then(|held| held.max_options),
+                options,
+            ),
+        ]
+        .into_iter()
+        .find_map(|(kind, most, actual)| {
+            most.filter(|&most| actual > most)
+                .map(|most| (kind, most, actual))
+        })
+    }
+}
+
 /// One question to pack and the caller's handle for it.
 pub(crate) struct Entry<T> {
     pub(crate) state: State,
@@ -85,7 +124,7 @@ impl<T> Packer<T> {
 
     /// Refuse a context whose request with no question passes a limit.
     pub(crate) fn check_state(&self, state: &State) -> Result<(), PackError> {
-        match self.over(state, self.base(state), 0, 0) {
+        match self.limits.over(state, self.base(state), 0, 0) {
             Some((kind, limit, actual)) if self.limits.context => Err(PackError::Context {
                 initial: true,
                 kind,
@@ -177,7 +216,8 @@ impl<T> Packer<T> {
 
     fn fits(&self, open: &Open<T>, entry: &Entry<T>) -> bool {
         let bytes = grown(open.bytes, open.questions.len(), entry.question.len());
-        self.over(&open.state, bytes, open.questions.len() + 1, 0)
+        self.limits
+            .over(&open.state, bytes, open.questions.len() + 1, 0)
             .is_none()
     }
 
@@ -191,7 +231,7 @@ impl<T> Packer<T> {
             bytes = grown(bytes, count, entry.question.len());
             count += 1;
         }
-        self.over(&open.state, bytes, count, 0).is_none()
+        self.limits.over(&open.state, bytes, count, 0).is_none()
     }
 
     /// Refuse a question that passes a limit in a request of its own.
@@ -200,6 +240,7 @@ impl<T> Packer<T> {
         let profile = self.limits.profile.as_ref();
         if self.limits.context
             && let Some((kind, limit, actual)) = self
+                .limits
                 .over(&entry.state, bytes, 1, entry.options)
                 .filter(|(kind, ..)| *kind != LimitKind::Options)
         {
@@ -235,46 +276,6 @@ impl<T> Packer<T> {
                     })
             })
             .map_or(Ok(()), |limit| Err(PackError::Profile(limit)))
-    }
-
-    /// The first limit these counts pass, with the limit and the count.
-    fn over(
-        &self,
-        state: &State,
-        bytes: usize,
-        questions: usize,
-        options: usize,
-    ) -> Option<(LimitKind, usize, usize)> {
-        let profile = self.limits.profile.as_ref();
-        let request = profile
-            .and_then(|held| held.max_request_bytes)
-            .map_or(self.limits.ceiling, |most| most.min(self.limits.ceiling));
-        let questions_most = match (
-            profile.and_then(|held| held.max_questions),
-            self.limits.questions,
-        ) {
-            (Some(one), Some(other)) => Some(one.min(other)),
-            (one, other) => one.or(other),
-        };
-        [
-            (
-                LimitKind::EvidenceBytes,
-                profile.and_then(|held| held.max_evidence_bytes),
-                state.evidence_bytes(),
-            ),
-            (LimitKind::RequestBytes, Some(request), bytes),
-            (LimitKind::Questions, questions_most, questions),
-            (
-                LimitKind::Options,
-                profile.and_then(|held| held.max_options),
-                options,
-            ),
-        ]
-        .into_iter()
-        .find_map(|(kind, most, actual)| {
-            most.filter(|&most| actual > most)
-                .map(|most| (kind, most, actual))
-        })
     }
 }
 

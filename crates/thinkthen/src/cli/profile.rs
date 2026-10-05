@@ -12,9 +12,13 @@ use crate::core::{
 use crate::failure::Failure;
 
 /// Read the profile file a run explicitly selected.
-pub(crate) fn read(common: &Common) -> Result<Option<BackendProfile>, Failure> {
+pub(crate) fn read(
+    common: &Common,
+    environment: &crate::edge::Environment,
+    backend: &crate::core::Backend,
+) -> Result<Option<BackendProfile>, Failure> {
     let Some(path) = common.profile.as_deref() else {
-        return Ok(None);
+        return environment.setup_profile(common, backend);
     };
     let text = fs::read_to_string(path).map_err(|error| Failure::OpenProfile {
         path: path.to_path_buf(),

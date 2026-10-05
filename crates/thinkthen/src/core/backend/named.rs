@@ -11,6 +11,7 @@ use std::num::NonZeroU32;
 use crate::core::adapters::built_in::backends::BUILT_INS;
 use crate::core::backend::{Backend, BackendError, KEY_VAR};
 use crate::core::plan::Descriptions;
+use crate::core::{BackendProfile, Prices};
 
 /// One named backend: a built-in or a configuration entry.
 #[derive(Clone, Eq, PartialEq)]
@@ -23,6 +24,8 @@ pub(crate) struct Named {
     descriptions: Descriptions,
     /// The configuration file's rate for this backend; a built-in has none of its own.
     per_minute: Option<NonZeroU32>,
+    prices: Option<Prices>,
+    profile: Option<BackendProfile>,
 }
 
 impl fmt::Debug for Named {
@@ -41,8 +44,7 @@ impl fmt::Debug for Named {
 
 impl Named {
     /// A configuration entry, whose fields the configuration reader checked.
-    /// Its descriptions travel as authored, since the file names no form
-    /// (ADR 0115 section 5).
+    /// Its descriptions start as authored; the validated setup may select BothSides.
     pub(crate) fn new(name: &str, base: &str, key: &str, model: &str) -> Self {
         Self {
             name: name.to_owned(),
@@ -52,6 +54,8 @@ impl Named {
             model: model.to_owned(),
             descriptions: Descriptions::Authored,
             per_minute: None,
+            prices: None,
+            profile: None,
         }
     }
 
@@ -68,6 +72,21 @@ impl Named {
         self
     }
 
+    /// Apply validated setup settings without changing transport identity.
+    pub(crate) fn with_setup(
+        mut self,
+        prices: Option<Prices>,
+        profile: Option<BackendProfile>,
+        both_sides: bool,
+    ) -> Self {
+        self.prices = prices;
+        self.profile = profile;
+        if both_sides {
+            self.descriptions = Descriptions::BothSides;
+        }
+        self
+    }
+
     /// The built-in backend of this name, if one exists.
     pub(crate) fn built_in(name: &str) -> Option<Self> {
         BUILT_INS
@@ -81,6 +100,8 @@ impl Named {
                 model: built_in.model.to_owned(),
                 descriptions: built_in.descriptions,
                 per_minute: None,
+                prices: None,
+                profile: None,
             })
     }
 
@@ -149,9 +170,8 @@ pub(crate) struct Choice<'a> {
     pub(crate) url: Option<&'a str>,
     /// The index of the tier that decided, or `None` when no tier named anything.
     pub(crate) tier: Option<usize>,
-    /// The built-ins the configuration file gave a rate, which also pace the
-    /// unnamed path at their own base (ticket 0343).
-    rated: Vec<Named>,
+    /// Configured built-ins whose settings may enrich an exact unnamed posting URL.
+    setups: Vec<Named>,
 }
 
 /// Walk the tiers from the top; the first tier that names a backend or an
@@ -164,9 +184,9 @@ pub(crate) fn choose<'a>(
     tiers: &[Tier<'a>],
     configured: &[Named],
 ) -> Result<Choice<'a>, BackendError> {
-    let rated: Vec<Named> = configured
+    let setups: Vec<Named> = configured
         .iter()
-        .filter(|entry| entry.per_minute.is_some() && Named::built_in(&entry.name).is_some())
+        .filter(|entry| Named::built_in(&entry.name).is_some())
         .cloned()
         .collect();
     for (index, &(name, url)) in tiers.iter().enumerate() {
@@ -178,14 +198,14 @@ pub(crate) fn choose<'a>(
             named,
             url,
             tier: Some(index),
-            rated,
+            setups,
         });
     }
     Ok(Choice {
         named: None,
         url: None,
         tier: None,
-        rated,
+        setups,
     })
 }
 
@@ -207,7 +227,9 @@ impl Choice<'_> {
         match &self.named {
             None => {
                 Backend::resolve(self.url, None, asked.unwrap_or(unnamed_model)).map(|backend| {
-                    let rate = self.unnamed_rate(&backend);
+                    let rate = self
+                        .unnamed_setup(&backend)
+                        .and_then(|entry| entry.per_minute);
                     backend.with_per_minute(rate)
                 })
             }
@@ -225,8 +247,8 @@ impl Choice<'_> {
         }
     }
 
-    /// The rate of the rated built-in whose own base posts to this backend's URL.
-    fn unnamed_rate(&self, backend: &Backend) -> Option<NonZeroU32> {
+    /// The configured built-in whose own canonical posting URL matches.
+    fn unnamed_setup(&self, backend: &Backend) -> Option<&Named> {
         let posts_here = |entry: &&Named| {
             Backend::resolve_path(
                 Some(&entry.base),
@@ -236,7 +258,13 @@ impl Choice<'_> {
             )
             .is_ok_and(|base| base.url() == backend.url())
         };
-        self.rated.iter().find(posts_here)?.per_minute
+        self.setups.iter().find(posts_here)
+    }
+
+    /// Settings from the named setup or an exact canonical built-in posting URL.
+    pub(crate) fn setup(&self, backend: &Backend) -> (Option<Prices>, Option<BackendProfile>) {
+        let entry = self.named.as_ref().or_else(|| self.unnamed_setup(backend));
+        entry.map_or((None, None), |entry| (entry.prices, entry.profile.clone()))
     }
 
     /// The key variables this choice reads, in order.

@@ -9,10 +9,10 @@ use crate::engine::error::Error as EngineError;
 
 impl From<crate::config::ConfigError> for Failure {
     fn from(error: crate::config::ConfigError) -> Self {
-        if error.price {
-            Self::Usage(error.message)
+        if let Some(message) = error.price {
+            Self::Usage(message)
         } else {
-            Self::Configuration(error.message)
+            Self::Configuration(error.message.into_owned())
         }
     }
 }

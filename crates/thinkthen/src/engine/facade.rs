@@ -376,6 +376,7 @@ impl Engine {
     /// reads and writes no cache (`specification/check.md`). The send runs
     /// on an engine worker, so a host signal never lands in its socket read.
     pub(crate) fn send_plan(&self, plan: &Plan, cancel: &Cancel) -> Result<Reply, Error> {
+        self.check_plan(plan)?;
         let body = built_in::encode(plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         let state = self.state(cancel)?;
