@@ -263,7 +263,25 @@ fn labels_that_name_existing_files_remain_labels() -> io::Result<()> {
         let printed = text(&output.stdout);
         assert!(printed.contains("only stdin"), "{verb}");
         assert!(!printed.contains("private evidence"), "{verb}");
-        assert!(printed.contains(a) && printed.contains(b), "{verb}");
+        let plan: serde_json::Value =
+            serde_json::from_str(printed.lines().next().expect("plan")).expect("plan JSON");
+        let questions = plan["request"]["questions"].as_object().expect("questions");
+        for label in [a, b] {
+            let quoted = serde_json::to_string(label).expect("JSON label");
+            let authored = questions.values().any(|question| {
+                question["criteria"].get(label).is_some()
+                    || question["criteria"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .any(|criterion| criterion.as_str() == Some(label))
+                    || question["instructions"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .contains(&quoted)
+            });
+            assert!(authored, "{verb}");
+        }
         assert_eq!(listener.connections(), 0);
     }
     Ok(())

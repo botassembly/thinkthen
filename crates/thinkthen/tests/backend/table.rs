@@ -507,10 +507,8 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
     let mut first = String::new();
     reader.read_line(&mut first).expect("one output row");
     drop(reader);
-    assert_eq!(
-        finish(child, "table").expect("command ends").status.code(),
-        Some(0)
-    );
+    let output = finish(child, "table").expect("command ends");
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
     assert_eq!(first, "{\"input\":{\"body\":\"row 0\"},\"value\":true}\n");
     assert!(listener.requests().len() <= 12);
 }

@@ -4,7 +4,7 @@
 //! applies, parses, or runs a transform, and it reads no setting, input, or
 //! file. `sdlc/scripts/policy.py` holds this file to that.
 
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 
 use clap::{Args, Subcommand};
 
@@ -53,7 +53,7 @@ pub(crate) fn run(command: &TransformCommand, mut writer: impl Write) -> Result<
         TransformCommand::Show { name } => writer.write_all(lookup(name)?),
     };
     match written.and_then(|()| writer.flush()) {
-        Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(Failure::Output(error)),
+        Err(error) if !Failure::closed_output(&error) => Err(Failure::Output(error)),
         _ => Ok(()),
     }
 }

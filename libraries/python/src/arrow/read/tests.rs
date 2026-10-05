@@ -6,9 +6,9 @@
 
 use std::ffi::c_void;
 
-use super::super::ffi::{ArrowArray, ArrowSchema, EMPTY_ARRAY, EMPTY_SCHEMA};
+use super::super::ffi::{ArrowArray, EMPTY_ARRAY};
 use super::super::memory::Readable;
-use super::{BAD_TEXT, MAX_TEXT, Text, UNREADABLE, borrow, c_text, text_layout};
+use super::{Text, borrow};
 
 fn array_of(held: &[*const c_void], length: i64) -> ArrowArray {
     ArrowArray {
@@ -265,7 +265,9 @@ fn a_conformant_view_column_round_trips() {
 #[cfg(target_os = "linux")]
 mod guarded {
     use super::super::super::ffi::testing::{Guarded, PastEnd};
+    use super::super::super::ffi::{ArrowSchema, EMPTY_SCHEMA};
     use super::super::super::write::{BAD_METADATA, SchemaNode, metadata};
+    use super::super::{BAD_TEXT, MAX_TEXT, UNREADABLE, c_text, text_layout};
     use super::*;
 
     /// R3-4, R5-6 (a), R7-2: offsets that clear the row cap and the

@@ -5,7 +5,7 @@ use child::ChildEnvironment as _;
 use conformance_backend::{Canned, Listener};
 use std::fs;
 use std::io::Write as _;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -74,10 +74,10 @@ fn counts(root: &Scratch, sent: u64) {
 fn release(root: &Scratch) {
     fs::write(root.0.join("release"), b"1").expect("release owned writer");
 }
-fn descriptor(path: &Path) -> String {
+fn descriptors(paths: &[PathBuf]) -> Vec<String> {
     let mut command = child::command("powershell.exe", &[]);
-    command.clear_environment().args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; $a=Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; if($a.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid -or !$a.AreAccessRulesProtected){throw 'owner/protection'}; $r=@($a.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])); if($r.Count -ne 2){throw 'exact user/System rules'}; $ids=@($r | ForEach-Object {$_.IdentityReference.Value} | Sort-Object -Unique); if($ids.Count -ne 2 -or $ids -notcontains $sid -or $ids -notcontains 'S-1-5-18'){throw 'user/System identities'}; foreach($ace in $r){if($ace.AccessControlType -ne 'Allow' -or $ace.FileSystemRights -ne [System.Security.AccessControl.FileSystemRights]::FullControl -or @($sid,'S-1-5-18') -notcontains $ace.IdentityReference.Value){throw 'private rule'}}; $a.Sddl"])
-        .env("THINKTHEN_FIXTURE_PATH", path);
+    command.clear_environment().args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; foreach($path in (ConvertFrom-Json $env:THINKTHEN_FIXTURE_PATHS)){ $a=Get-Acl -LiteralPath $path; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; if($a.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid -or !$a.AreAccessRulesProtected){throw 'owner/protection'}; $r=@($a.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])); if($r.Count -ne 2){throw 'exact user/System rules'}; $ids=@($r | ForEach-Object {$_.IdentityReference.Value} | Sort-Object -Unique); if($ids.Count -ne 2 -or $ids -notcontains $sid -or $ids -notcontains 'S-1-5-18'){throw 'user/System identities'}; foreach($ace in $r){if($ace.AccessControlType -ne 'Allow' -or $ace.FileSystemRights -ne [System.Security.AccessControl.FileSystemRights]::FullControl -or @($sid,'S-1-5-18') -notcontains $ace.IdentityReference.Value){throw 'private rule'}}; $a.Sddl }"])
+        .env("THINKTHEN_FIXTURE_PATHS", serde_json::to_string(paths).expect("owned paths"));
     let output = crate::test_deadline::output(&mut command).expect("bounded native ACL inspection");
     assert!(
         output.status.success(),
@@ -86,8 +86,9 @@ fn descriptor(path: &Path) -> String {
     );
     String::from_utf8(output.stdout)
         .expect("native descriptor UTF-8")
-        .trim()
-        .to_owned()
+        .lines()
+        .map(|line| line.trim().to_owned())
+        .collect()
 }
 
 #[test]
@@ -170,9 +171,12 @@ fn newly_created_temporary_has_explicit_protected_user_system_access_before_publ
         saved
     );
     drop(opened);
-    let before = descriptor(&temporary);
-    descriptor(&root.usage());
-    descriptor(&root.usage().join(".lock"));
+    let before = descriptors(&[temporary.clone(), root.usage(), root.usage().join(".lock")]);
+    assert_eq!(
+        before.len(),
+        3,
+        "inspect temporary, usage directory and lock"
+    );
     release(&root);
     assert!(
         child
@@ -182,7 +186,10 @@ fn newly_created_temporary_has_explicit_protected_user_system_access_before_publ
             .success()
     );
     counts(&root, 1);
-    assert_eq!(descriptor(&month(&root)), before);
+    assert_eq!(
+        descriptors(&[month(&root)]),
+        vec![before.first().expect("temporary descriptor").clone()]
+    );
     assert!(!temporary.exists());
     assert_eq!(listener.requests().len(), 1);
 }

@@ -18,7 +18,7 @@ fn independent_month_and_lock_full_native_ids_differ() {
     let lock_id = super::ffi::identity(&lock).expect("lock full native ID");
     assert_eq!(month_id.0, lock_id.0);
     assert_ne!(month_id.1, lock_id.1);
-    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(listener.count(), 1);
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn unreadable_configuration_refuses_locally_with_no_native_details_or_sends() {
     let listener = Listener::answering(|_| Canned::ok(support::ANSWER)).expect("loopback");
     let output = privacy::live(&scratch, &listener);
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(listener.requests().len(), 0);
+    assert_eq!(listener.count(), 0);
     assert_eq!(
         output.stderr,
         b"thinkthen: the configuration file could not be read\n"
@@ -113,7 +113,7 @@ fn replay_keeps_success_and_sends_nothing_beside_unsafe_usage() {
     ]);
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"true\n");
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.count(), 2);
 }
 
 #[test]

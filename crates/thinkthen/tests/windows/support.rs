@@ -105,7 +105,7 @@ pub(crate) fn descriptor(path: &Path) -> String {
     )
 }
 pub(crate) fn plant(path: &Path, extra: &str, foreign_owner: bool) {
-    let owner = if foreign_owner { "BA" } else { "$sid" };
+    let owner = if foreign_owner { "BA" } else { "${sid}" };
     powershell(
         path,
         &format!(

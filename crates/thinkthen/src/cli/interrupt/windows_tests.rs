@@ -40,7 +40,7 @@ fn child(scratch: &Scratch, mode: &str) -> process::Owned {
         .env("THINKTHEN_WINDOWS_SIGNAL_MARKERS", &scratch.0)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    let child = process::Owned::spawn(&mut command).expect("isolated child");
+    let child = process::Owned::console(&mut command).expect("isolated child");
     process::wait(&scratch.0.join("ready"));
     child
 }
@@ -52,11 +52,10 @@ fn native_ctrl_c_exits_130_at_rest_and_after_finish() {
         process::inject(
             child.id(),
             "cli::interrupt::windows_tests::console_injector",
+            None,
         );
-        assert_eq!(
-            child.finish().expect("Ctrl-C exit").status.code(),
-            Some(130)
-        );
+        let output = child.finish().expect("Ctrl-C exit");
+        assert_eq!(output.status.code(), Some(130), "{mode}: {output:?}");
     }
 }
 #[test]
@@ -67,22 +66,25 @@ fn native_ctrl_c_cancels_then_finishes_or_exits_on_an_acknowledged_second_event(
         process::inject(
             child.id(),
             "cli::interrupt::windows_tests::console_injector",
+            Some(&scratch.0.join("ack")),
         );
+        if !child.alive() {
+            let output = child.finish().expect("early signal exit");
+            panic!("first active signal must remain cooperative: {mode}: {output:?}");
+        }
         process::wait(&scratch.0.join("ack"));
-        assert!(child.alive(), "first active signal must remain cooperative");
         if mode == "second" {
             process::inject(
                 child.id(),
                 "cli::interrupt::windows_tests::console_injector",
+                None,
             );
         } else {
             fs::write(scratch.0.join("release"), b"1").expect("release");
         }
         let expected = if mode == "second-term" { 143 } else { 130 };
-        assert_eq!(
-            child.finish().expect("signal exit").status.code(),
-            Some(expected)
-        );
+        let output = child.finish().expect("signal exit");
+        assert_eq!(output.status.code(), Some(expected), "{mode}: {output:?}");
     }
 }
 #[test]
@@ -104,7 +106,8 @@ fn console_injector() {
         .expect("owned PID")
         .parse()
         .expect("PID");
-    ffi::inject(process).expect("native console injection");
+    let acknowledgment = std::env::var_os("THINKTHEN_CONSOLE_INJECT_ACK").map(PathBuf::from);
+    ffi::inject(process, acknowledgment.as_deref()).expect("native console injection");
 }
 #[test]
 #[ignore = "subprocess-only synchronized signal state"]

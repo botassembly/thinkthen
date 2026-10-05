@@ -307,7 +307,7 @@ fn a_closed_output_pipe_ends_find_quietly_after_the_paid_answer_finishes() {
         .expect("units written");
     drop(child.stdout.take().expect("output pipe"));
     let output = finish(child, "find with a closed output").expect("find stops");
-    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
     assert!(output.stderr.is_empty());
     assert_eq!(listener.requests().len(), 1);
 }

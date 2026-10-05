@@ -17,7 +17,7 @@ use super::out;
 use super::read::Frame;
 
 mod schema;
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 pub(crate) use schema::BAD_METADATA;
 pub(crate) use schema::{SchemaNode, metadata};
 

@@ -3,6 +3,13 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+#[cfg(windows)]
+#[path = "run.rs"]
+mod run;
+#[cfg(windows)]
+#[path = "wait.rs"]
+pub(crate) mod wait;
+
 pub(crate) const CARGO: &[&str] = &[
     "HOME",
     "CARGO_HOME",
@@ -84,7 +91,9 @@ impl Folder {
     pub(crate) fn configure(root: &Path, text: &str) -> std::io::Result<(&'static str, String)> {
         let folder = Self::Config.under(root);
         std::fs::create_dir_all(&folder)?;
-        std::fs::write(folder.join("config.json"), text)?;
+        let path = folder.join("config.json");
+        std::fs::write(&path, text)?;
+        private_file(&path)?;
         Ok(Self::Config.variable(root))
     }
 
@@ -122,6 +131,29 @@ impl Folder {
             _ => &["thinkthen"],
         }
     }
+}
+
+/// Restrict an owned fixture file before asking the product to trust it.
+pub(crate) fn private_file(path: &Path) -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        let mut command = command("powershell.exe", &[]);
+        command.args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $acl=Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH; $acl.SetSecurityDescriptorSddlForm(\"O:${sid}D:P(A;;FA;;;${sid})(A;;FA;;;SY)\"); Set-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH -AclObject $acl"])
+            .env("THINKTHEN_FIXTURE_PATH", path);
+        let output = run::output(&mut command)?;
+        if !output.status.success() {
+            return Err(std::io::Error::other(format!(
+                "private fixture ACL: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(())
 }
 
 impl ChildEnvironment for Command {

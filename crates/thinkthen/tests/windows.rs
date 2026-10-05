@@ -24,7 +24,9 @@ fn console_injector() {
         .expect("owned PID")
         .parse()
         .expect("PID");
-    ffi::inject(process).expect("native console injection");
+    let acknowledgment =
+        std::env::var_os("THINKTHEN_CONSOLE_INJECT_ACK").map(std::path::PathBuf::from);
+    ffi::inject(process, acknowledgment.as_deref()).expect("native console injection");
 }
 
 #[test]

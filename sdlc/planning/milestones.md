@@ -45,15 +45,19 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Ship the small working core approved by Ian on 2026-10-05. [The current plan](team-0-2-2026-10-04.md) owns the priority order, completion status, deferred work, delegated run approvals and exit criteria.
+Ship the working core and the files/local-runtime additions approved by Ian on 2026-10-05. [The current plan](team-0-2-2026-10-04.md) owns order, completion status, delegated run approvals and exit criteria.
 
-Windows Python, binding/SQL backend choice, the backend checking rename, DuckDB 1.5.4/1.5.5 builds and the agent skill have landed. The small default-recognize check completed without a software defect. Then run the authorized hosted rehearsal and real Windows test on the reviewed commit; missing required Windows behavior blocks release. Lower-priority file readers do not hold release and move to 0.3 if unfinished. Release QA and Ian's go complete the release.
+Core items through the default-recognize check have landed. Finish the current Windows corrections, then build files and folders for all ten functions and built-in llama.cpp and MLX routes alongside Ollama. One shared folder fixture covers CLI, Python and database examples; DuckDB and SQLite readers ship, while Postgres server-file access waits. Existing text, record and column calls retain their behavior.
 
-Main carries 0.2.0; release/0.1 is frozen, and public install text stays 0.1.2 until 0.2 ships. dbt v1 is the documented route. No new function or grep alias is approved. The plan records the deferred audit gaps, recipes, Windows bindings, tables, signing and community listing.
+Run the final authorized rehearsal and real Windows test over the expanded reviewed commit, then release QA and Ian's go. Missing required Windows behavior blocks release. [0415](../tickets/0415-signed-duckdb-community-listing.md) proceeds beside this work without holding release: offline community rehearsal, then the approved submission under imaurer. Listing publication remains DuckDB's decision.
+
+Main carries 0.2.0; release/0.1 is frozen, and public install text stays 0.1.2 until 0.2 ships. dbt v1 remains the documented route; dbt v2 waits for a live signed listing. No grep alias or new semantic function is approved. Size the data-talk gaps before choosing any additional work; sizing does not admit every gap into 0.2.
 
 ## 0.3
 
 Outcome: add the remaining Windows bindings after the 0.2 core release. These tickets stay open under Ian's 2026-10-05 ruling.
+
+Future outcomes: support additional decision-provider endpoints and API versions, then images and other modalities when their contracts are known. These are outcomes only.
 
 Open items:
 
@@ -84,7 +88,6 @@ Open items:
 
 - [0411: Prove changed reading rules on every binding route](../tickets/0411-binding-reading-replay-proof.md)
 - [0412: Document R index adapters in the binding contract](../tickets/0412-r-result-contract.md)
-- [0415: Prepare a signed DuckDB community extension listing](../tickets/0415-signed-duckdb-community-listing.md)
 - [0418: Language rank accepts a question set](../tickets/0418-binding-rank-question-sets.md)
 
 - [0119: Functional audit of the engine tests](../tickets/0119-mutation-audit-of-the-engine-tests.md)
