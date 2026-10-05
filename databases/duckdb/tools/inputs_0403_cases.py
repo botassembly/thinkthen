@@ -96,6 +96,16 @@ class Cases(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'malformed|duplicate'):
                 authority(path)
 
+    def test_shared_checksum_accepts_exact_bytes_and_refuses_changes(self):
+        data = self.root / 'fixture.zip'; data.write_bytes(b'fixture bytes')
+        args = ['/bin/sh', '-c', '. "$1"; input_verify "$2" "$3"', 'checksum-fixture',
+                str(HERE / 'prepare_inputs.sh'), hashlib.sha256(b'fixture bytes').hexdigest(), str(data)]
+        self.assertEqual(run(args, self.env).returncode, 0)
+        data.write_bytes(b'changed')
+        result = run(args, self.env)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('differs from its pinned SHA-256', result.stderr)
+
     def test_static_input_failure_causes(self):
         static = self.root / 'static'; static.mkdir()
         archive = static / 'libfixture.a'; archive.write_bytes(b'fixture archive')
