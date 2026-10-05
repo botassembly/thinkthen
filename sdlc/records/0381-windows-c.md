@@ -1,0 +1,7 @@
+# 0381: Windows C DLL
+
+Slice A landed at `24212dffa`: the x86-64 DLL, committed header and MSVC import-library ZIP, complete public export declaration, Windows C-door branches and bounded downloaded-archive consumer. Linux C checks, portable workflow/collection/packing checks and lint passed; synthetic PE/COFF and saved export output establish structure/routing only.
+
+The Windows bundle carries command and C ZIPs with separate checksums plus the first-run sample. MSVC setup precedes C tests and packing; the consumer links and loads the shipped header/import library/DLL. Owned allocations return through DLL free functions; borrowed failures, exact codes, secrecy, request counts, cancellation and Unix regressions stay intact. Slice A ships DLL-only because raw Rust static output exposes runtime and bundled SQLite symbols.
+
+Left: authorized native MSVC linker/loader/export/consumer execution, memory-safety evidence and slice B’s static localization investigation. C-consumer ASan requires a working negative first and cannot claim instrumentation of the Rust DLL or Unix leak coverage. Ian can overturn DLL-only staging; no signing or publication approval follows from these source checks.
