@@ -313,3 +313,5 @@ This design uses read-only inspection of workspace/repository instructions, [tic
 Ian can overturn the archive layout, explicit import-library production, sanitizer limitation acceptance and DLL-only staging choice. **This corrected design is frozen for fresh acceptance; implementation and native proof remain pending.**
 
 Implementation note: the assigned baseline is the landed 0380 C commit named above. The native source door retains a separate normal MSVC sanitizer test under the binding policy; it requires its owned negative before claiming C-consumer coverage. Portable receipts remain separate from pending native Windows execution.
+
+Current implementation status: source `fd98fbbaaab7db4de3a892dedd7425251bac1478` implements slice A against the assigned landed baseline. Focused Linux C checks and required lint pass with exact ratchets 114995, 5223 and 1323. [The build record](0381-a-windows-c-build.md) holds source fingerprints, growth and actual receipt digests. Fresh High ABI/platform review, the parent checkpoint and native authorization/execution remain pending; the accepted proposal text above is preserved exactly.
