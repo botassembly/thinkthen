@@ -1,6 +1,6 @@
 # 0402: The docs tell one story
 
-Status: in progress. Slice A landed at `b7e5dd3e4`; B implementation and focused proof are in progress. Fresh independent B source review and coordinator checkpoint remain pending. C/D remain outside B.
+Status: in progress. Slice A landed at `b7e5dd3e4`; B implementation and focused proof are complete and pushed as WIP. Fresh independent B source review and coordinator checkpoint remain pending. C/D remain outside B.
 
 Milestone: 0.2
 
@@ -102,6 +102,6 @@ Relabels: `sdlc/issues/2026-10-03-draft-function-link.md`, `sdlc/issues/2026-10-
 
 ## What the build taught us
 
-Slice A's [build record](../records/0402-a-one-home-build.md) records the frozen accepted design, actual failures and corrections, fragment and h4 omission plants, unchanged proof inputs and focused evidence. Fresh source review and coordinator-owned full proof remain pending.
+Slice A's [build record](../records/0402-a-one-home-build.md) records the frozen accepted design, actual failures and corrections, fragment and h4 omission plants, unchanged proof inputs and its completed coordinator checkpoint. Slice B's [build record](../records/0402-b-layout-build.md) records the full accepted design, reconciled inventory, the 404 address correction, actual normal/draft builds, uniform-row and h4 omission plants, content retention, clean-clone lint and unchanged-source strict proof. Fresh independent B source review and coordinator checkpoint remain pending.
 
-Slice A landed at `b7e5dd3e4` with exact accepted source `53de60f6b`. Its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Slice B is in progress from the [complete accepted design](../planning/0402-b-docs-design.md); focused checks are authorized, fresh independent source review and a coordinator checkpoint remain pending. C implementation and D recipes remain outside B. Experiment 0031 exists, but B publishes no recipe comparison or performance claim.
+Slice A landed at `b7e5dd3e4` with exact accepted source `53de60f6b`. Its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Slice B implements the [complete accepted design](../planning/0402-b-docs-design.md), with exact source `e15a772ef` and completed root-authorized focused proof. Fresh independent source review and a coordinator checkpoint remain pending. C implementation and D recipes remain outside B. Experiment 0031 exists, but B publishes no recipe comparison or performance claim.
