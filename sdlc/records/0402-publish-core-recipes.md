@@ -1,0 +1,13 @@
+# 0402: Publish the three core recipes
+
+Ian approved Rules, verify with a person reviewing every supports result, and cache SQL on 2026-10-05. Link and qualify stay later while their measurements wait. Transcript search and navigation stay later because the held-out search result did not generalize: 13/29 passages versus broad search's 15/29, with unequal reading lengths.
+
+The admitted Rules comparison stays in its existing reviewed planning record. It tests a frozen candidate generator and one choose/custom-role-recognize configuration. It establishes no default recognize failure or equivalent decide performance.
+
+The reviewed citation-support experiment returned 60/60 answers on 60 constructed claims clustered in 20 excerpts from five public RFCs. Supports was selected on 20/20 supported claims and 0/40 contradicted or excerpt-local unsupported claims. Frozen verdict correctness was 57/60; one weekday label has a defensible contrary reading. No wrong supports appeared, so no protective probability cut was established. Every supports result requires a person to review the original source before action. The public example selects three retained cases and converts the existing recording with the shipped cache converter; these examples establish replay and audit behavior, not a new quality measurement. Qualification remains later on the shared verify route.
+
+The reviewed saved-decision SQL experiment answered eight analytics questions with stock DuckDB 1.5.5 over retained sources. New model/API spend was $0. Its historical 100,000-row cached local replay recorded 100,000 cache answers and zero requests. These use processed rows, not unique questions or lookup events. Older saved answer files lacked lookup history, so their cache hit rates remain unknown. Question-key answer changes did not establish immutable evidence/context/options/served-model identity. Receipt totals were deduplicated before question joins; proportional cost allocations were not per-question measurements. Missing timings, usage and retry links remained unknown.
+
+The cache example queries existing controlled Rules results. It reports stored rows, unanswered rows, recorded sends and selected-label probabilities. Its outputs are illustrative and cannot estimate provider quality, timing, cost or lookup hit rate. Current support is stock DuckDB 1.5.5, dbt v1 when used, and the documented unsigned development extension path. This page establishes no DuckDB 1.5.4 or custom dbt v2 support.
+
+Validation and whole-candidate review are pending. The coordinator runs full tests and lint on the landing commit and records the landing here.
