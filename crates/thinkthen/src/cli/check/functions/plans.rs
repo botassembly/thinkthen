@@ -13,14 +13,15 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
     let choice = choice().map_err(invalid)?;
     let tag = tags().map_err(invalid)?;
     let score = score().map_err(invalid)?;
+    let rank =
+        crate::public::Question::rank("Did the parcel arrive undamaged?").map_err(invalid)?;
     let estimates = [
         ("decide", engine.plan(&decide, [TEXT])),
         ("choose", engine.plan(&choice, [TEXT])),
         ("tag", engine.plan(&tag, [TEXT])),
         ("score", engine.plan(&score, [TEXT])),
         ("filter", engine.plan(&decide, [TEXT])),
-        // Rank's minimal yes/no question has the same production plan.
-        ("rank", engine.plan(&decide, [TEXT])),
+        ("rank", engine.plan(&rank, [TEXT])),
     ];
     let mut lines = Vec::new();
     let mut requests = 0;

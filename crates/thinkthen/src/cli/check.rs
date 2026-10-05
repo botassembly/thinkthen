@@ -1,4 +1,4 @@
-//! `thinkthen check`: four fixed requests that show whether a backend works here.
+//! `thinkthen check`: rich probes and minimal production function calls.
 //!
 //! Each probe goes through the production encoder, engine, and decoder, so a
 //! critical finding is what a real run would meet. `core::check` holds the
@@ -81,26 +81,14 @@ pub(crate) fn run(
     ];
     let function_rows = functions::ROWS.map(|(_, row)| row);
     let mut report = Report::new(&probes, &function_rows);
-    let mut stopped = false;
-    let mut summary = PlanSummary::new(false);
-    for probe in &probes {
-        if arguments.dry_run {
-            // The one request a probe makes, from the encoder every command uses.
-            let body = built_in::encode(&probe.plan)
-                .map_err(|_| Failure::Defect("a check probe could not be written as JSON"))?;
-            summary
-                .record()
-                .map_err(|_| Failure::Defect("a plan is too large"))?;
-            summary
-                .request(&body)
-                .map_err(|_| Failure::Defect("a plan is too large"))?;
-            let body = String::from_utf8_lossy(&body);
-            lines.push(format!("request {} {body}", probe.name));
-        } else if !send(&engine, environment, probe, (&mut report, &mut lines))? {
-            stopped = true;
-            break;
-        }
-    }
+    let (stopped, summary) = inspect(
+        &engine,
+        environment,
+        &probes,
+        arguments.dry_run,
+        &mut report,
+        &mut lines,
+    )?;
     if !arguments.dry_run && !stopped {
         functions::check(&engine, environment, &mut report)?;
     }
@@ -127,7 +115,39 @@ pub(crate) fn run(
     Ok(ExitCode::from(if critical { 4 } else { 0 }))
 }
 
-/// Say once, under `--plan`, that the Ollama workaround turned a description
+/// Prepare rich probe bodies or send and grade their replies.
+fn inspect(
+    engine: &Engine,
+    environment: &Environment,
+    probes: &[Probe],
+    dry_run: bool,
+    report: &mut Report,
+    lines: &mut Vec<String>,
+) -> Result<(bool, PlanSummary), Failure> {
+    let mut stopped = false;
+    let mut summary = PlanSummary::new(false);
+    for probe in probes {
+        if dry_run {
+            // The one request a probe makes, from the encoder every command uses.
+            let body = built_in::encode(&probe.plan)
+                .map_err(|_| Failure::Defect("a check probe could not be written as JSON"))?;
+            summary
+                .record()
+                .map_err(|_| Failure::Defect("a plan is too large"))?;
+            summary
+                .request(&body)
+                .map_err(|_| Failure::Defect("a plan is too large"))?;
+            let body = String::from_utf8_lossy(&body);
+            lines.push(format!("request {} {body}", probe.name));
+        } else if !send(engine, environment, probe, (report, lines))? {
+            stopped = true;
+            break;
+        }
+    }
+    Ok((stopped, summary))
+}
+
+/// Say once, under `--plan`, that a runtime workaround turned a description
 /// object into text (ADR 0115 section 4). The workaround is debt; the
 /// adapter's backend table names its issue.
 pub(crate) fn say_dropped_detail(dropped: bool, name: Option<&str>) -> Result<(), Failure> {
