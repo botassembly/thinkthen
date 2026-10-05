@@ -65,12 +65,14 @@ impl ResponseInfo {
         digest: &str,
         wall_ms: u64,
         outcome: AttemptOutcome,
+        transport_failed: bool,
     ) -> AttemptObservation {
         AttemptObservation {
             ordinal,
             request_sha256: digest.to_owned(),
             wall_ms,
             outcome,
+            transport_failed,
             status: self.status,
             server_ms: self.server_ms,
             request_id: self.request_id,

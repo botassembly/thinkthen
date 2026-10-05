@@ -105,7 +105,7 @@ pub(crate) fn run(
         lines.push(format!("rich-probes {}", json_line(&counts)?));
         lines.extend(function_plans);
         lines.push(format!(
-            "original-requests upper-bound {} before retries",
+            "prepared-requests upper-bound {} before retries and refusal splits",
             probes.len() + function_requests
         ));
     }

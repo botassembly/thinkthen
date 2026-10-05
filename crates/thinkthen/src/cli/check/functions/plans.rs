@@ -5,7 +5,7 @@ use crate::core::{self, Evidence, PlanSummary, QuestionText};
 use crate::engine::facade::{self, Asks, Bound, Engine};
 use crate::failure::Failure;
 
-/// One line per function and the bound on original requests before retries.
+/// One line per function and the bound on prepared requests before retries and refusal splits.
 pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usize), Failure> {
     let engine = crate::public::Engine::for_check(inner);
     let plan_error = |_| Failure::Usage("a backend setup cannot fit a minimal function check");

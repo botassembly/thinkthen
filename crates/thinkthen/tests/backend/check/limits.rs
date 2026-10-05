@@ -107,3 +107,122 @@ fn a_retried_status_is_sent_four_times_for_each_probe() {
         assert_eq!(backend.count(), 56);
     }
 }
+
+/// Production tag and relate calls halve a refused pair once; prepared plans
+/// exclude those additional sends rather than claiming a total request bound.
+#[test]
+fn size_refusals_add_two_halves_to_tag_and_relate_requests() {
+    let listener = Listener::answering(|body| {
+        let request: serde_json::Value = serde_json::from_slice(body).expect("wire");
+        let questions = request.get("questions").expect("questions");
+        if questions.as_object().expect("questions map").len() == 2 {
+            return crate::harness::Canned::status(413, "");
+        }
+        answered(&request)
+    })
+    .expect("listener");
+    let output = check(&["backends", "check"], &["--url", listener.base()], &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}{}",
+        text(&output.stdout),
+        text(&output.stderr)
+    );
+    assert_eq!(listener.count(), 19);
+    let requests = listener.requests();
+    let pairs = requests
+        .iter()
+        .filter(|request| {
+            let body: serde_json::Value = serde_json::from_slice(&request.body).expect("wire");
+            body.get("questions")
+                .expect("questions")
+                .as_object()
+                .expect("map")
+                .len()
+                == 2
+        })
+        .count();
+    assert_eq!(pairs, 2);
+    let plan = check(
+        &["backends", "check"],
+        &["--url", listener.base(), "--plan"],
+        &[],
+    );
+    assert_eq!(plan.status.code(), Some(0), "{}", text(&plan.stderr));
+    assert!(
+        text(&plan.stdout)
+            .ends_with("prepared-requests upper-bound 15 before retries and refusal splits\n")
+    );
+    assert_eq!(listener.count(), 19, "planning sends nothing");
+}
+
+#[test]
+fn a_function_body_close_or_timeout_stops_later_functions() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    for (failed_at, delayed) in [(4, false), (11, false), (4, true)] {
+        let ordinal = AtomicUsize::new(0);
+        let listener = Listener::answering(move |body| {
+            if ordinal.fetch_add(1, Ordering::SeqCst) == failed_at {
+                return if delayed {
+                    crate::harness::Canned::ok("").after(1500)
+                } else {
+                    crate::harness::Canned::cut_short()
+                };
+            }
+            let request: serde_json::Value = serde_json::from_slice(body).expect("wire");
+            answered(&request)
+        })
+        .expect("listener");
+        let output = check(
+            &["backends", "check"],
+            &["--url", listener.base(), "--timeout", "1"],
+            &[],
+        );
+        let stdout = text(&output.stdout);
+        assert_eq!(
+            output.status.code(),
+            Some(4),
+            "{stdout}{}",
+            text(&output.stderr)
+        );
+        assert_eq!(listener.count(), failed_at + 1, "{stdout}");
+        let failed = failed_at - 4;
+        for (place, name) in super::FUNCTIONS.iter().enumerate() {
+            let state = if place < failed {
+                "answered"
+            } else if place == failed {
+                "incompatible"
+            } else {
+                "unchecked"
+            };
+            assert!(
+                stdout.contains(&format!("{state} function {name}")),
+                "{stdout}"
+            );
+        }
+        assert!(stdout.ends_with("critical 1, warning 0\n"), "{stdout}");
+        assert_eq!(text(&output.stderr), "");
+    }
+}
+
+fn answered(request: &serde_json::Value) -> crate::harness::Canned {
+    let questions = request
+        .get("questions")
+        .expect("questions")
+        .as_object()
+        .expect("map");
+    let answers = questions
+        .iter()
+        .map(|(name, question)| {
+            format!(
+                "\"{name}\":{}",
+                crate::named_backends::ollama::answer(question)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    crate::harness::Canned::ok(&format!(
+        r#"{{"model":"local","answers":{{{answers}}},"usage":{{"input_tokens":1,"output_tokens":1}}}}"#
+    ))
+}

@@ -41,10 +41,10 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
     <li>2: a usage error, such as no address or an unknown option. Nothing is sent.</li>
     <li>4: a row is critical, or the key is unset at an address other than this machine.</li>
   </ul>
-  <p><code>backends check</code> reads no input, cache, recording or profile. <code>--cache</code>, <code>--no-cache</code>, <code>--record</code>, <code>--replay</code> and <code>--profile</code> are refused at exit 2. It takes no <code>--max-retries</code>, and the supplied inputs need at most 15 original requests before a selected profile splits them.</p>
+  <p><code>backends check</code> reads no input, cache, recording or profile. <code>--cache</code>, <code>--no-cache</code>, <code>--record</code>, <code>--replay</code> and <code>--profile</code> are refused at exit 2. It takes no <code>--max-retries</code>, and the supplied inputs prepare at most 15 requests before profile or size-refusal splits.</p>
 
   <h2 id="limits">Limits</h2>
-  <p>Each original request permits four attempts. Without profile splits, the check sends at most 60 attempts. Each attempt takes at most the timeout. Each retry wait takes at most the lesser of the timeout and 60 seconds. Configured pacing adds its own waits. The <a href={spec}>specification</a> gives the bound and the staged inputs.</p>
+  <p>Each original request permits four attempts. A size refusal can halve tag and relate requests once. Without profile splits, the check sends at most 19 original requests and 76 attempts. Each attempt takes at most the timeout. Each retry wait takes at most the lesser of the timeout and 60 seconds. Configured pacing adds its own waits. The <a href={spec}>specification</a> gives the bound and the staged inputs.</p>
   <p><code>THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL</code> binds each probe. A probe the cap cannot admit stops the check before it is sent. The check prints no report and exits 2.</p>
 
   <p class="pagelinks"><a href="/install/backends/system-one/">Any System One server</a> · <a href={spec}>The check specification</a> · <a href="/learn/answers/#exit-codes">Every exit code</a></p>
