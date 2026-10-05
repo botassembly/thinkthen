@@ -23,6 +23,11 @@ const talk = PAGES.slice(1);
     {talk.map((p) => <li><a href={p.route}>{p.command ? <><code>{p.title.split(' ')[0]}</code>{'\u00a0'}{p.title.split(' ').slice(1).join(' ')}</> : p.title}</a></li>)}
   </ol>
 
-  <h2>Reference</h2>
-  <p>The <a href="/reference/">reference</a> lists the function flags, the exit codes, and the output fields. <a href="/reference/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number. <a href="/refusals/">What it will not do</a> lists every line the tool will not cross.</p>
+  <h2>Questions and answers</h2>
+  <ul>
+    <li><a href="/learn/answers/">How answers work</a></li>
+    <li><a href="/learn/question-sets/">Question sets</a></li>
+    <li><a href="/learn/recording/">Recording and the answer cache</a></li>
+  </ul>
+  <p><a href="/functions/">Functions</a> lists each function's full reference. <a href="/refusals/">What it will not do</a> lists every line the tool will not cross.</p>
 </Base>

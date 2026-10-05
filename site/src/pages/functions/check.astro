@@ -1,18 +1,17 @@
 ---
 // Goal: say what thinkthen check sends, what each report row means, and when it exits 4.
-import SidePage from '../../layouts/SidePage.astro';
+import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import { BACKENDS_SEE } from '../../data/catalog.mjs';
-import { REFERENCE_PAGES, referencePage, TOOLS_SEE } from '../../data/reference.mjs';
+import { TOOLS_SEE } from '../../data/reference.mjs';
 import { captioned, run } from '../../data/samples.mjs';
 
-const page = referencePage('check');
 const [probes] = captioned('reference/check', TOOLS_SEE.check);
 const plan = run('install/backends/system-one', '4-check-plan');
 const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md';
 const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed', 'usage'];
 ---
-<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'What thinkthen check sends, what each report row means, and when it exits 4.' }} name="Reference">
+<Base title="check" description={'What thinkthen check sends, what each report row means, and when it exits 4.'}>
   <h1><code>check</code></h1>
   <p class="lede"><code>thinkthen check</code> tests whether a server works with ThinkThen. It sends four fixed requests, one after another. Every request is real. A hosted server may charge for it.</p>
 
@@ -46,8 +45,8 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
   <p>A check has no fixed worst case. A server's <code>Retry-After</code> or <code>Retry-After-Ms</code> header sets a minimum wait before a retry, with no cap. Without either header, a check at <code>--timeout 90</code> takes about 25 minutes at most.</p>
   <p><code>THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL</code> binds each probe. A probe the cap cannot admit stops the check before it is sent. The check prints no report and exits 2.</p>
 
-  <p class="pagelinks"><a href="/install/backends/system-one/">Any System One server</a> · <a href={spec}>The check specification</a> · <a href="/reference/answers/#exit-codes">Every exit code</a></p>
-</SidePage>
+  <p class="pagelinks"><a href="/install/backends/system-one/">Any System One server</a> · <a href={spec}>The check specification</a> · <a href="/learn/answers/#exit-codes">Every exit code</a></p>
+</Base>
 
 <style>
   /* The long variable name in prose wraps, so a phone does not scroll sideways. */

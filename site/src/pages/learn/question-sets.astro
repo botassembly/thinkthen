@@ -1,19 +1,18 @@
 ---
 // Goal: give the rules a question set for annotate follows, and show how on picks the part of each record a question reads.
-import SidePage from '../../layouts/SidePage.astro';
+import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
-import { REFERENCE_PAGES, referencePage, QUESTION_SETS_SEE } from '../../data/reference.mjs';
+import { QUESTION_SETS_SEE } from '../../data/reference.mjs';
 import { captioned, files } from '../../data/samples.mjs';
 
-const page = referencePage('question-sets');
 const dir = 'reference/question-sets';
 const [plan] = captioned(dir, QUESTION_SETS_SEE);
 const [triage] = files(dir);
 const [form] = files('reference/annotate');
 const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/annotate.md#the-question-set';
 ---
-<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'The rules a question set for annotate follows, and how on picks the part of each record a question reads.' }} name="Reference">
+<Base title="Question sets" description={'The rules a question set for annotate follows, and how on picks the part of each record a question reads.'}>
   <h1>Question sets</h1>
   <p class="lede">A question set is one JSON file that holds every question <code>annotate</code> asks of each record.</p>
   <Code code={form.text} file={form.name} caption={`${form.name}, the smallest useful set: three questions and nothing else`} />
@@ -41,5 +40,5 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
   <h2 id="refusals">What the file refuses</h2>
   <p>An unknown key anywhere in the file, a missing <code>questions</code> object, a wrong <code>version</code> and a bad name each stop the run at exit 5, before any request. The message names the key at fault.</p>
 
-  <p class="pagelinks"><a href="/reference/functions/annotate/#edge-cases">annotate's edge cases</a> · <a href="/functions/question-file/">Question files</a> · <a href={spec}>The question-set specification</a></p>
-</SidePage>
+  <p class="pagelinks"><a href="/functions/annotate/#edge-cases">annotate's edge cases</a> · <a href="/functions/question-file/">Question files</a> · <a href={spec}>The question-set specification</a></p>
+</Base>

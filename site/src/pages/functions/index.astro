@@ -2,11 +2,10 @@
 // Goal: list the ten functions, simplest first, each as code a reader
 // already writes.
 import Base from '../../layouts/Base.astro';
-import { CODE_FUNCTIONS, FUNCTIONS, COUNTS } from '../../data/catalog.mjs';
-const questionFile = FUNCTIONS.find((f) => f.notAFunction);
+import { CODE_FUNCTIONS, COUNTS } from '../../data/catalog.mjs';
 ---
 <Base title="Functions" description="The ten functions and the answer each one gives.">
-  <h1>The ten functions</h1>
+  <h1 id="functions">The ten functions</h1>
   <p class="lede">Each function reads text and answers a question about it. Each does a job you already write in code: an if, a switch, a grep, a sort.</p>
   <p class="counts">{COUNTS.functions}, <a href="/install/shell/">{COUNTS.cli}</a>, <a href="/install/">{COUNTS.bindings}</a>.</p>
 
@@ -19,10 +18,20 @@ const questionFile = FUNCTIONS.find((f) => f.notAFunction);
         <td>{fn.primitive}</td>
       </tr>
     ))}
-    <tr>
-      <td><a href="/functions/question-file/"><code>@question</code></a></td>
-      <td>{questionFile.line}</td>
-      <td>No answer of its own</td>
-    </tr>
   </table>
+  <h2 id="question-files">Question files</h2>
+  <p>A <a href="/functions/question-file/">question file</a> saves one question. It is not an eleventh function.</p>
+  <h2 id="tools">Tools</h2>
+  <ul>
+    <li><a href="/functions/audit/"><code>audit</code></a> grades saved answers.</li>
+    <li><a href="/functions/diff/"><code>diff</code></a> shows answers that changed.</li>
+    <li><a href="/functions/check/"><code>check</code></a> checks a named backend.</li>
+    <li><a href="/functions/transform/"><code>transform</code></a> prints built-in jq transforms.</li>
+  </ul>
+  <h2 id="across-functions">Across functions</h2>
+  <ul>
+    <li><a href="/learn/answers/">How answers work</a></li>
+    <li><a href="/learn/question-sets/">Question sets</a></li>
+    <li><a href="/learn/recording/">Recording and the answer cache</a></li>
+  </ul>
 </Base>

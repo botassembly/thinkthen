@@ -1,14 +1,13 @@
 ---
 // Goal: show how each function turns the model's probabilities into an answer, when the answer is not sure, why null never means a failure, and what every exit code means.
-import SidePage from '../../layouts/SidePage.astro';
+import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import { FUNCTIONS } from '../../data/catalog.mjs';
-import { REFERENCE_PAGES, referencePage, EXITS, RUN_RULE } from '../../data/reference.mjs';
+import { EXITS, RUN_RULE } from '../../data/reference.mjs';
 import { inlineHtml } from '../../lib/settings-table.mjs';
 import { run } from '../../data/samples.mjs';
 import { setting } from '../../lib/settings-table.mjs';
 
-const page = referencePage('answers');
 const shown = (fn, name) => ({
   run: run(`functions/${fn}`, name),
   caption: FUNCTIONS.find((f) => f.name === fn).see[name],
@@ -23,7 +22,7 @@ const edgeCut = setting('Relation threshold').number;
 const levels = setting('Levels').range;
 const spec = (name) => `https://github.com/botassembly/thinkthen/blob/main/specification/${name}.md`;
 ---
-<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'How each function turns probabilities into an answer, when the answer is not sure, why null never means a failure, and every exit code.' }} name="Reference">
+<Base title="How answers work" description={'How each function turns probabilities into an answer, when the answer is not sure, why null never means a failure, and every exit code.'}>
   <h1>How answers work</h1>
   <p class="lede">The model gives a probability for each choice. ThinkThen turns those probabilities into the answer it prints. Each function does this its own way.</p>
 
@@ -38,7 +37,7 @@ const spec = (name) => `https://github.com/botassembly/thinkthen/blob/main/speci
   <p>In a stream of records, each not-sure record prints <code>null</code> in its row. The run itself exits 0 when it finishes.</p>
 
   <h2 id="bands-and-cuts">Bands and cuts</h2>
-  <p>Only <code>decide</code> takes a band, written <code>LOW:HIGH</code>. A probability of yes at or above <code>HIGH</code> is yes. A probability under <code>LOW</code> is no. Anything between is not sure. Every other function that takes a threshold takes one number, a cut. The <a href="/reference/functions/decide/#thresholds">decide reference</a> gives every boundary, and <a href="/how-tos/bash/threshold-band/">Set a cut or a band</a> runs both on one message.</p>
+  <p>Only <code>decide</code> takes a band, written <code>LOW:HIGH</code>. A probability of yes at or above <code>HIGH</code> is yes. A probability under <code>LOW</code> is no. Anything between is not sure. Every other function that takes a threshold takes one number, a cut. The <a href="/functions/decide/#thresholds">decide reference</a> gives every boundary, and <a href="/how-tos/bash/threshold-band/">Set a cut or a band</a> runs both on one message.</p>
   <Terminal run={band.run} caption={band.caption} />
 
   <h2 id="choose">choose</h2>
@@ -71,4 +70,4 @@ const spec = (name) => `https://github.com/botassembly/thinkthen/blob/main/speci
   <p>Code 8 is reserved and unused. {RUN_RULE} A completed run exits 0 unless <code>annotate</code> exits 6 or 7, or <code>relate</code> exits 6. A valid answer on standard output can sit beside exit 1, 3, 6, or 7.</p>
 
   <p class="pagelinks"><a href="/how-tos/bash/not-sure/">Handle not sure in Bash</a> · <a href="/trust/">Test it before you trust it</a></p>
-</SidePage>
+</Base>

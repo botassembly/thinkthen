@@ -13,3 +13,5 @@ The work:
 4. `pages.yml` refuses a stale `bindings-proof.json`.
 
 A doc sample that fails at a checkpoint is fixed on its page, or filed as a code bug.
+
+Items 1 and 4 landed at `8a2db1df0`: `npm run test-docs` runs the doc tests, and Pages checks strict binding proof. Items 2 and 3 remain open with release safety. Ticket 0402 slice A changes no checkpoint or release workflow.

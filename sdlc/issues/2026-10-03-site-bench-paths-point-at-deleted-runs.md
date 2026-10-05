@@ -11,3 +11,5 @@ The site's `pull-bench` reads only the bench commit `site/examples/beatles/bench
 2. `site/src/articles/rad.md` links `results/runs/2026-09-26-thinkthen-jev-open-book` on the bench's main branch. The stub keeps the link working. Repointing it to the run at a6a6be71 makes it stable.
 
 Both are due before `site/examples/beatles/bench-pin` moves past bench commit a6a6be71. Leaving them breaks a site example on that move.
+
+Ticket 0402 slice A's candidate moves the retained three-row recording byte for byte into blind-spots files/recording, removes only its bench mapping and pins the open-book link to `a6a6be71`. Focused blind-spots smoke passes both outputs: `"john"` at exit 0 and `null` at exit 3. The lander can close this issue when the reviewed slice lands.

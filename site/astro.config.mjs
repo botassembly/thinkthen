@@ -31,7 +31,14 @@ export default defineConfig({
     '/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
     '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
     // annotate's edge cases moved onto its reference page.
-    '/reference/annotate': '/reference/functions/annotate/#edge-cases',
+    '/reference/annotate': '/functions/annotate/#edge-cases',
+    ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file']
+      .map((name) => [`/reference/functions/${name}`, `/functions/${name}/`])),
+    ...Object.fromEntries(['audit', 'diff', 'check', 'transform']
+      .map((name) => [`/reference/${name}`, `/functions/${name}/`])),
+    ...Object.fromEntries(['answers', 'question-sets', 'recording']
+      .map((name) => [`/reference/${name}`, `/learn/${name}/`])),
+    '/reference': '/functions/',
     // The talk merged its bench-run slide into the bench-field slide.
     '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
   },
