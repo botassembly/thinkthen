@@ -1,5 +1,5 @@
 //! The judgment functions: volatile scalars, `thinkthen_usage`, and the
-//! `thinkthen_warm` aggregate, each registered volatile and direct-only.
+//! removed spellings. Configuration and controls remain direct-only.
 
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use thinkthen::{
 };
 
 use crate::question::{call_controls, call_settings, question, question_with_settings, set, text};
-use crate::{Failure, ffi, guard, recognize_document, settings, worker};
+use crate::{Failure, Registration, ffi, guard, recognize_document, settings, worker};
 
 /// One scalar call's checked question, evidence and portable controls.
 type Inputs = Option<(Arc<LoadedQuestion>, String, Settings, Option<String>)>;
@@ -398,13 +398,17 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
     Ok(())
 }
 
-/// Register the scalar functions for direct calls, without deterministic flags.
-pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
+/// Register judgments under the initial connection policy, without harmless flags.
+pub(crate) fn register(connection: &Connection, mode: Registration) -> rusqlite::Result<()> {
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
+    let judgment = match mode {
+        Registration::DirectOnly => volatile,
+        Registration::Trusted => FunctionFlags::SQLITE_UTF8,
+    };
     connection.create_scalar_function(
         "thinkthen_relations",
         2,
-        volatile,
+        judgment,
         recognize_document::recognize_document,
     )?;
     connection.create_scalar_function(
@@ -419,18 +423,18 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         },
     )?;
     for arity in [2, 3] {
-        connection.create_scalar_function("thinkthen_decide", arity, volatile, decide)?;
-        connection.create_scalar_function("thinkthen_choose", arity, volatile, choose)?;
-        connection.create_scalar_function("thinkthen_score", arity, volatile, score)?;
-        connection.create_scalar_function("thinkthen_tag", arity, volatile, tag)?;
-        connection.create_scalar_function("thinkthen_annotate", arity, volatile, annotate)?;
-        connection.create_scalar_function("thinkthen_details", arity, volatile, details)?;
-        connection.create_scalar_function("thinkthen_try_details", arity, volatile, try_details)?;
-        connection.create_scalar_function("thinkthen_find", arity, volatile, find::find)?;
+        connection.create_scalar_function("thinkthen_decide", arity, judgment, decide)?;
+        connection.create_scalar_function("thinkthen_choose", arity, judgment, choose)?;
+        connection.create_scalar_function("thinkthen_score", arity, judgment, score)?;
+        connection.create_scalar_function("thinkthen_tag", arity, judgment, tag)?;
+        connection.create_scalar_function("thinkthen_annotate", arity, judgment, annotate)?;
+        connection.create_scalar_function("thinkthen_details", arity, judgment, details)?;
+        connection.create_scalar_function("thinkthen_try_details", arity, judgment, try_details)?;
+        connection.create_scalar_function("thinkthen_find", arity, judgment, find::find)?;
     }
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
     for arity in [2, 3] {
-        connection.create_scalar_function("thinkthen_plan", arity, volatile, plan::plan)?;
+        connection.create_scalar_function("thinkthen_plan", arity, judgment, plan::plan)?;
     }
     connection.create_scalar_function("thinkthen_configure", 1, volatile, settings::configure)?;
     register_removed(connection, volatile)?;

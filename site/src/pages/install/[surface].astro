@@ -72,6 +72,19 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
     ))}
   </table>
   <p>Set <code>{KEY_VARIABLE}</code> in the environment.</p>
+  {surface.slug === 'sqlite' && (
+    <>
+      <h3>Use reviewed views and ingestion triggers</h3>
+      <p>On a fresh connection, load once with the explicit trusted entry point. A native host names <code>sqlite3_thinkthen_trusted_init</code> in <code>sqlite3_load_extension</code>. Switch modes with a fresh connection.</p>
+      <Code code={'.load ./thinkthen sqlite3_thinkthen_trusted_init\nPRAGMA trusted_schema=ON;'} lang="sql" label="Copy the trusted initial load" />
+      <p>This choice permits schema SQL to spend paid requests and read permitted question files. Trust covers main, every attached schema and later attachments while <code>trusted_schema</code> is ON. Review every schema you open or attach. Keep downloaded or unreviewed databases on separate default-loaded connections. There is no per-view or per-file trust isolation.</p>
+      <p>Judgment scalars, plans and judgment tables can run in views and triggers. SQLite may also evaluate judgments in CHECK and DEFAULT expressions. Configuration, usage, budget setters and removed spellings retain DIRECTONLY and remain unavailable from main and attached schema objects. Judgments remain non-deterministic and non-innocuous, so SQLite's generated-column and index restrictions still apply.</p>
+      <p>Loading changes neither <code>trusted_schema</code> nor an existing host authorizer. With <code>trusted_schema=OFF</code>, judgments from main and attached schema objects refuse before reading question files or sending requests. Top-level calls remain available. SQLite treats caller-created TEMP objects as caller SQL. TEMP views and triggers can call judgments, plans, controls and judgment tables in both loading modes, even with <code>trusted_schema=OFF</code>. These calls can spend paid requests and read permitted question files. This flag does not revoke TEMP calls. Existing file permissions, budgets and cancellation still apply. The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/sqlite/README.md#use-reviewed-views-and-ingestion-triggers">SQLite README</a> gives an ingestion-trigger recipe.</p>
+      <h3>Pass recognition kinds</h3>
+      <p>Pass one kind as <code>'person'</code>, or comma-separated names as <code>'person,organisation'</code>. Descriptions take a recognize JSON object such as <code>{`'{"kinds":{"person":"A human name."}}'`}</code>, a full versioned recognize spec, or an <code>@file</code> containing that spec. A bare JSON array string such as <code>{`'["person"]'`}</code> currently names one literal kind, <code>{`["person"]`}</code>. Use <code>'person'</code> to request the person kind.</p>
+      <Code code={"SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person');"} lang="sql" label="Copy the SQLite recognition call" />
+    </>
+  )}
   {surface.uninstall && (
     <>
       <h3>Uninstall</h3>
