@@ -81,7 +81,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	export THINKTHEN_SQLITE_EXTENSION
 	# Ticket 0374: the shipped library keeps its own panic hook.
 	own_panic_hook "$THINKTHEN_SQLITE_EXTENSION"
-	for test in tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py; do
+	for test in tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py; do
 		step "$test, installed"
 		sh "$LIMIT" 300 "$python" "$test"
 	done
@@ -134,14 +134,15 @@ if grep -aFq -- "$HOME" "$library"; then
 	exit 1
 fi
 
-step "one exported symbol and one panic guard"
+step "declared exported entry points and one panic guard"
 if [ "$suffix" = dylib ]; then
-	symbols=$(nm -gU "$library" | awk '{ print $NF }')
-	[ "$symbols" = _sqlite3_thinkthen_init ] || { echo "FAIL     the library exports: $symbols" >&2; exit 1; }
+	symbols=$(nm -gU "$library" | awk '{ print $NF }' | LC_ALL=C sort)
+	expected=$(sed 's/^/_/' entry-points.txt | LC_ALL=C sort)
 else
-	symbols=$(nm -D --defined-only -- "$library" | awk '{ print $NF }')
-	[ "$symbols" = sqlite3_thinkthen_init ] || { echo "FAIL     the library exports: $symbols" >&2; exit 1; }
+	symbols=$(nm -D --defined-only -- "$library" | awk '{ print $NF }' | LC_ALL=C sort)
+	expected=$(LC_ALL=C sort entry-points.txt)
 fi
+[ "$symbols" = "$expected" ] || { echo "FAIL     the library exports: $symbols" >&2; exit 1; }
 # Ticket 0306: the guard is thinkthen::contained; src holds no catch_unwind of its own.
 # Two sites: the call guard and the usage exit hook (ADR 0113).
 sites=$(grep -rn 'catch_unwind(' src | wc -l)
