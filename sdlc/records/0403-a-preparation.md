@@ -32,6 +32,8 @@ Checkout readers now select the canonical version/target artifact: harness, chec
 
 The [receipt manifest](0403-a-preparation-receipts.json) freezes the exact code, runtime, scripts, logs and baseline inventories. Owned scratch and logs remain at `/tmp/thinkthen-0403-prep-JNKtAc` for review.
 
+The final inventory audit of record candidate `453f84894806f15df0403f418c8198d68c213627` exits 0: two source trees, eight static sets, eight CLI pairs, eight wheels and all frozen input/runtime/script/receipt hashes match. Its before/after raw source guards match 7,006 tracked members including the new records. Two earlier audit-helper assertions failed and were corrected; their receipts remain counted, with no passing claim. One assumed the wrong proof-map shape; the other treated retained bytecode exposed by private HOME's absent global ignore rules as new input. Raw bytecode/executable inventory checks remain in place.
+
 | Focused check | Result |
 | --- | --- |
 | Selector/input/reader/scratch-packer/fake-build cases | 10 cases, zero failures, zero errors; counted loopback requests **0** |

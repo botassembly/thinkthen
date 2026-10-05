@@ -90,7 +90,10 @@
     "/tmp/thinkthen-0403-prep-JNKtAc/fetch-official.sh": "7dc01b2753b01069127eff5795f48efeabbf5e03fefea799fbe6b241ce5c043a",
     "/tmp/thinkthen-0403-prep-JNKtAc/fetch-rest.sh": "b7202122c033de67ebbe8591e4d7d83d9d30d0f1b0321cd5bb31bf5b4457028a",
     "/tmp/thinkthen-0403-prep-JNKtAc/fetch-wheels.sh": "d00cb5ba372b8072ea8eec3f0a776126799dc717f9e91cde6afedf63bb43ad30",
-    "/tmp/thinkthen-0403-prep-JNKtAc/prepare-baseline.py": "fcf91e025ef1a175b256183c8096fbda82ae56b070c06d94f92a5042cf697ae4"
+    "/tmp/thinkthen-0403-prep-JNKtAc/prepare-baseline.py": "fcf91e025ef1a175b256183c8096fbda82ae56b070c06d94f92a5042cf697ae4",
+    "/tmp/thinkthen-0403-prep-JNKtAc/verify-handback.py": "98a41c45520c8b1e2e9338b9a3366889bc899c8ffd9f1371aa4fd30cf74b5358",
+    "/tmp/thinkthen-0403-prep-JNKtAc/check-handback.sh": "c79c36c0ee4bf57d1455a62bcd6eb3e54bb16cef96ad84d573a35427268bb191",
+    "/tmp/thinkthen-0403-prep-JNKtAc/run-handback.sh": "3189c787501f0967d67754e710d27435aea0c0276ed8679fa758c7a54012583a"
   },
   "receipts": {
     "/tmp/thinkthen-0403-prep-JNKtAc/policy-baseline.log": "ded465b94bdde261144baa6af6ed1f55eaedf043541404d50fb58efeaa10a7d9",
@@ -106,7 +109,10 @@
     "/tmp/thinkthen-0403-prep-JNKtAc/preparation-rest.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "/tmp/thinkthen-0403-prep-JNKtAc/preparation-wheels.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "/tmp/thinkthen-0403-prep-JNKtAc/focused-11.log": "4978399a52693a5780a99a14f31beaf5d22e028909015ffff650d02d53eb99f4",
-    "/tmp/thinkthen-0403-prep-JNKtAc/runtime.json": "db80ecc88a3d779390ad1455fd894f02df7f23586ac596743e423b4f752228ba"
+    "/tmp/thinkthen-0403-prep-JNKtAc/runtime.json": "db80ecc88a3d779390ad1455fd894f02df7f23586ac596743e423b4f752228ba",
+    "/tmp/thinkthen-0403-prep-JNKtAc/handback-1.log": "f2920d7b413fdb0d2eb7a51bfb52dea3103da2b3aad45be371396f5abe70822d",
+    "/tmp/thinkthen-0403-prep-JNKtAc/handback-2.log": "b73377e92ffe7d9c48fc7547af2876fbbcaaf804c3c714f3cbbbd8c2e28c92a5",
+    "/tmp/thinkthen-0403-prep-JNKtAc/handback-3.log": "0e7902bbb1b7b8aadb16eca5cbb927eb85c85821867dd305ee770bcd745f05c8"
   },
   "focused_results": {
     "portable_cases": 10,
@@ -214,5 +220,27 @@
       "/tmp/thinkthen-shared-cache-mutation.lock",
       "/tmp/thinkthen-shared-cargo-cache.lock"
     ]
+  },
+  "final_inventory_audit": {
+    "audited_candidate_commit": "453f84894806f15df0403f418c8198d68c213627",
+    "exit": 0,
+    "frozen_hash_mismatches": 0,
+    "source_sets": 2,
+    "static_sets": 8,
+    "cli_pairs": 8,
+    "wheels": 8,
+    "preserved_proofs": 350,
+    "native_executions": 0,
+    "tracked_raw_matches": 7006,
+    "unchanged_executables": 2975,
+    "unchanged_pyc": 107,
+    "specific_directory_links": 23,
+    "ticket_failures": 0,
+    "earlier_audit_helper_failures": 2,
+    "earlier_failure_reasons": [
+      "helper assumed a proofs wrapper instead of the actual 350-entry map",
+      "private HOME excluded global ignore rules and exposed retained preexisting pyc; replaced status assertion with staged-diff check plus independent raw/executable/pyc guards"
+    ],
+    "earlier_failures_qualify_as_pass": false
   }
 }
