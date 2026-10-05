@@ -1,6 +1,6 @@
 # 0416: Move backend checking under the backend namespace
 
-Status: ready: the backend command-namespace plan is prepared and existing backend checking works. Implementation, behavior checks and whole-change review remain.
+Status: landed. `thinkthen backends check` is canonical, `thinkthen check` remains a hidden alias, and the proxy nouns are reserved.
 
 Milestone: 0.2
 
