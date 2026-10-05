@@ -1,6 +1,6 @@
 # 0400 slice C: the default throttle is eight
 
-Status: source-preserved C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`. Fresh prior High review accepted C source `5a74e1e74`; corrected combined source `4080bd327` passed focused checks, required lint and whole-C High review on candidate `00dafde673`; the subsequent root full checkpoint exposed a stale child-width oracle, corrected below with renewed bounded proof passed; fresh High review and the renewed root checkpoint remain pending. D is landed, documentation work is active, and parent full/canonical/stress proof remains pending.
+Status: C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`; whole-C and fork correction High reviews accepted. The renewed root checkpoint exposed the stale pipeline deadline-default oracle. Its one-literal correction now passes frozen focused proof and required lint; fresh High review and the next named root checkpoint remain pending. All 350 canonical entries remain source-stale; stress/native proof remains pending.
 
 The final B source/receipt acceptance and byte-identical landing are recorded in the [B build record](0400-provider-setups-slice-b-build.md). C preserves the Windows and B source, ratchets and retained receipts. No paid 0399 call, native host run, dispatch, publication or release approval ran.
 
@@ -242,3 +242,25 @@ Concurrency, spend and deadline risk remain bounded by the counted cap of eight 
 Default-dependent fixture assertions also exist outside modules named width or fork. Include the actual failed pipeline test and its spent-deadline/cancellation sibling in the bounded selector, and preserve the loopback and post-return guards when updating its independent contract oracle. A launcher exit cannot override the test runner's explicit failing summary.
 
 Rust growth is zero: exact total remains 118131; the pipeline test file remains 152 nonblank lines. All binding/SQL ratchets remain unchanged. Renewed frozen-source focused pipeline/width/fork/recognition checks, offline policy, formatting, exact ratchets and required lint follow in distinct receipts. Fresh High review and a coordinator-named next full checkpoint are required. Latest-main integration, all 350 source-stale canonical entries, strict/final site proof, authorized stress/SQLite and native Windows proof remain pending. No full test/spec/stress, canonical/native/paid/CI, helper, rebase/landing/publication or manual proof-hash update runs in this correction. Ian can overturn the fixture correction; the default-eight decision remains the accepted ticket contract.
+
+
+### Frozen pipeline deadline-default receipts
+
+Corrected source is `0206f59aecd424ad3cce2e03829b4e38ba6f8e2f`, based on the clean accepted fork candidate `e6fe413302bb67c71a2ec1e66b3b5d49d6796a48`. The sole Rust change is `crates/thinkthen/src/engine/pipeline/tests.rs:163`, independent literal cap 4 to 8. This record-only successor changes no source, fixture, contract or ratchet. All 716 tracked Rust files remain within 500 nonblank lines; pipeline tests remain 152. Exact root/C/Python/Ruby/R/TypeScript/DuckDB/SQLite totals remain 118131/5012/4807/2503/2523/1356/4225/2540: zero growth.
+
+Distinct retained receipts under `target/0400c-checkpoint-final/`:
+
+| Receipt | Actual result |
+| --- | --- |
+| `deadline-default-focus.log` | exit 0; same frozen source before/after; policy 254 packages, formatting, all eight exact ratchets; 20 library cases passed / 397 skipped; two recognition cases passed / 836 skipped |
+| `deadline-default-lint.log` | required lint exit 0; settings/tickets/children, caps/ratchets, formatting, all-target workspace Clippy and Rustdoc with warnings denied, 580 inventory items / four refused plants |
+| `deadline-default-review-policy.log` | renewed offline policy exit 0 after lint; all accepted tables/bans/dependencies match |
+| `deadline-default-launch-status.log` | captured outer exit 0; each failing step would propagate its captured status before any final HEAD check |
+
+The library selector is `test(engine::pipeline::tests::) | test(engine::facade::fork_tests::a_child) | test(engine::width_tests) | test(cli::schedule::width_tests)`. It includes the actual prior-failing deadline case, the spent-deadline/fired-cancel zero-read/zero-send sibling, four isolated fork parent-launch cases and fourteen width guards. The backend selector is `test(interrupt::recognition_0400::)`, retaining default-eight scalar and explicit-four record cancellation together. All 22 selected cases pass without fail-fast omission; no new test was added, and ignored stress cases were not run. The earlier 71-case combined witness and ten mapping plants remain retained evidence with unchanged inputs, rather than claims of reruns.
+
+Execution used the owned lane2 user scope with 12 GiB memory / 1 GiB swap, the forwarded lane lock and existing shared toolchain/cache mutation locks, two offline jobs, empty wrapper and allow-listed environment with owned scratch home. The required lint private-name check reports 35 checked and zero matches, only counts. Its existing inspected wrapper admits only the owned dependency-free local-file refusal plant under scratch Cargo home; ordinary Cargo remains offline. Expected registry-timeout plants print Killed; the registry is no native or surface execution claim.
+
+All five historical root checkpoint/diagnostic logs were checked byte-identical after the run. The retained workspace diagnostic still has one actual failure; no outer launcher result or new focused pass relabels it. This candidate is clean and ready for fresh High review. The coordinator must name the next full checkpoint before running full test/spec/surfaces; those checks, latest-main integration, all 350 source-stale canonical entries, strict/final site proof and authorized stress/SQLite/native Windows proof remain pending. No full test/spec/stress, canonical/native/paid/CI, helper, rebase/landing/publication or manual proof-hash update ran here.
+
+Final record-only checks are retained in `deadline-default-final-tickets.log` (zero failures, captured exit 0), `deadline-default-final-private-count.log` (35 names, zero tracked path/file hits, exit 0) and `deadline-default-final-records-status.log` (captured outer exit 0). They change no frozen-source proof and disclose no external name.
