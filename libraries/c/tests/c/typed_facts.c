@@ -78,7 +78,13 @@ int main(void) {
     if (fixture_start(&thread, other_caller, &other) != 0) {
         check(0, "second caller starts"); thinkthen_engine_free(tt); return 1;
     }
-    check(fixture_join(thread) == 0, "second caller joins");
+    if (fixture_join(thread) != 0) {
+        fprintf(stderr, "FAIL second caller joins\n");
+        fflush(stderr);
+        /* The worker may still own the engine and output slots. Stop all threads
+         * without running teardown or inspecting/freeing their shared state. */
+        _Exit(1);
+    }
     check(other.code == THINKTHEN_OK && other.answer.outcome == THINKTHEN_YES,
           "second caller has its own result");
     facts(f, fl, 1, 1); f = NULL;

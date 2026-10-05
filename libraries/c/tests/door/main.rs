@@ -21,6 +21,7 @@ use unix::compile;
 #[cfg(windows)]
 use windows::compile;
 mod header;
+mod native_tool;
 fn declared(input: &str) -> Vec<String> {
     header::declarations(input).expect("header declarations")
 }

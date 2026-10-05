@@ -3,21 +3,27 @@ use super::*;
 
 const MSVC: &[&str] = &["INCLUDE", "LIB", "LIBPATH"];
 
+fn tool(command: &mut Command, name: &str, seconds: u64) -> Output {
+    native_tool::output(command, name, Duration::from_secs(seconds)).expect("bounded native tool")
+}
+
 fn archive() -> &'static Path {
     static FOLDER: OnceLock<PathBuf> = OnceLock::new();
     FOLDER.get_or_init(|| {
         let keep: Vec<&str> = child::CARGO.iter().chain(MSVC).copied().collect();
-        let built = child::command(env!("CARGO"), &keep)
-            .args([
-                "build",
-                "--locked",
-                "--offline",
-                "--lib",
-                "--message-format=json-render-diagnostics",
-            ])
-            .current_dir(crate_dir())
-            .output()
-            .expect("Cargo ran");
+        let built = tool(
+            child::command(env!("CARGO"), &keep)
+                .args([
+                    "build",
+                    "--locked",
+                    "--offline",
+                    "--lib",
+                    "--message-format=json-render-diagnostics",
+                ])
+                .current_dir(crate_dir()),
+            "Cargo",
+            600,
+        );
         assert!(built.status.success(), "{}", text(&built.stderr));
         let binary = text(&built.stdout)
             .lines()
@@ -31,14 +37,16 @@ fn archive() -> &'static Path {
             })
             .expect("the produced DLL");
         let folder = scratch("archive");
-        let staged = child::command("python", MSVC)
-            .arg(crate_dir().join("../../sdlc/scripts/release-windows-c.py"))
-            .arg("stage")
-            .arg(binary)
-            .arg(crate_dir().join("include/thinkthen.h"))
-            .arg(&folder)
-            .output()
-            .expect("public import library producer");
+        let staged = tool(
+            child::command("python", MSVC)
+                .arg(crate_dir().join("../../sdlc/scripts/release-windows-c.py"))
+                .arg("stage")
+                .arg(binary)
+                .arg(crate_dir().join("include/thinkthen.h"))
+                .arg(&folder),
+            "Python stage",
+            300,
+        );
         assert!(staged.status.success(), "{}", text(&staged.stderr));
         std::fs::copy(
             folder.join("bin/thinkthen.dll"),
@@ -72,38 +80,42 @@ fn compile_mode(source: &Path, sanitizer: bool) -> PathBuf {
     if sanitizer {
         compiler.arg("/fsanitize=address");
     }
-    let linked = compiler
-        .args([
-            "/nologo",
-            "/TC",
-            "/std:c11",
-            "/W4",
-            "/WX",
-            "/MD",
-            "/D_CRT_SECURE_NO_WARNINGS",
-        ])
-        .arg(format!("/I{}", folder.join("include").display()))
-        .arg(source)
-        .arg(format!("/Fo{}", binary.with_extension("obj").display()))
-        .arg(format!("/Fe{}", binary.display()))
-        .args(["/link"])
-        .arg(folder.join("lib/thinkthen.dll.lib"))
-        .current_dir(root())
-        .output()
-        .expect("MSVC ran");
+    let linked = tool(
+        compiler
+            .args([
+                "/nologo",
+                "/TC",
+                "/std:c11",
+                "/W4",
+                "/WX",
+                "/MD",
+                "/D_CRT_SECURE_NO_WARNINGS",
+            ])
+            .arg(format!("/I{}", folder.join("include").display()))
+            .arg(source)
+            .arg(format!("/Fo{}", binary.with_extension("obj").display()))
+            .arg(format!("/Fe{}", binary.display()))
+            .args(["/link"])
+            .arg(folder.join("lib/thinkthen.dll.lib"))
+            .current_dir(root()),
+        "MSVC (cl.exe)",
+        120,
+    );
     assert!(
         linked.status.success(),
         "{}{}",
         text(&linked.stdout),
         text(&linked.stderr)
     );
-    let inspected = child::command("python", MSVC)
-        .arg(crate_dir().join("../../sdlc/scripts/release-windows-c.py"))
-        .arg("inspect")
-        .arg(folder)
-        .arg(&binary)
-        .output()
-        .expect("native inspection");
+    let inspected = tool(
+        child::command("python", MSVC)
+            .arg(crate_dir().join("../../sdlc/scripts/release-windows-c.py"))
+            .arg("inspect")
+            .arg(folder)
+            .arg(&binary),
+        "Python inspect consumer",
+        600,
+    );
     assert!(inspected.status.success(), "{}", text(&inspected.stderr));
     built.insert((source.to_owned(), sanitizer), binary.clone());
     binary
@@ -111,12 +123,14 @@ fn compile_mode(source: &Path, sanitizer: bool) -> PathBuf {
 
 #[test]
 fn complete_dll_exports_and_imports_match_the_header() {
-    let inspected = child::command("python", MSVC)
-        .arg(crate_dir().join("../../sdlc/scripts/release-windows-c.py"))
-        .arg("inspect")
-        .arg(archive())
-        .output()
-        .expect("dumpbin inspection");
+    let inspected = tool(
+        child::command("python", MSVC)
+            .arg(crate_dir().join("../../sdlc/scripts/release-windows-c.py"))
+            .arg("inspect")
+            .arg(archive()),
+        "Python inspect DLL",
+        600,
+    );
     assert!(inspected.status.success(), "{}", text(&inspected.stderr));
     let input = std::fs::read_to_string(crate_dir().join("include/thinkthen.h")).expect("header");
     assert!(!declared(&input).is_empty());
