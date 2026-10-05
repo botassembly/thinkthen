@@ -1,6 +1,6 @@
 # 0400 slice C: the default throttle is eight
 
-Status: accepted C source integrated onto Docs A + Windows DLL A main `24212dffa80226a530e9a2f51161c436286c9ff3`. Old frozen candidate `557bbb28b` received final High ACCEPT and root full test/spec PASS. Its stress campaign failed; original logs remain intact. Merged focused validation and owned runner preparation are authorized; fresh final source review and a new named root checkpoint remain pending. Main binding proof stays untouched until actual fresh canonical replay.
+Status: accepted C source integrated onto Docs A + Windows DLL A main `24212dffa80226a530e9a2f51161c436286c9ff3`. Old frozen candidate `557bbb28b` received final High ACCEPT and root full test/spec PASS. Its stress campaign failed; original logs remain intact. Merged focused validation and owned runner fixtures pass at frozen source `721141f86`; fresh final source review and a new named root checkpoint remain pending. Main binding proof stays untouched until actual fresh canonical replay.
 
 The final B source/receipt acceptance and byte-identical landing are recorded in the [B build record](0400-provider-setups-slice-b-build.md). C preserves the Windows and B source, ratchets and retained receipts. No paid 0399 call, native host run, dispatch, publication or release approval ran.
 
@@ -288,3 +288,11 @@ The [runner preparation record](0400-c-owned-runner-preparation.md) describes th
 Initial runner receipts retain two setup corrections: the root ratchet must use its default invocation because a named config resolves directories from its own folder, and scratch Cargo plants must be outside the repository workspace. A copied wrapper's old absolute dispatcher path was also corrected. Preserve these actual failed receipts separately from successful fixture proof. Counted URL refusal and real Cargo execution establish the local-file boundary; they do not establish whole-host network isolation or a green stress campaign.
 
 Fresh final High source review must include the authorized sentence move and full normalized diff. Root will arrange that review and name any later checkpoint. Ian can overturn the scoped planning dispositions and runner preparation; no broader execution authority follows.
+
+### Frozen merged focused handback
+
+Immutable merged source/preparation commit is `721141f86aca366e5e838b833cf6cd9334f0623c`, based on main `24212dffa80226a530e9a2f51161c436286c9ff3`. Its binary Git diff SHA-256 is `4945d904d6812366bdaf37d5dfedbce000c2acb3497c06b2501d0c63eaaa06ee`. This receipt-only successor changes planning/proof context only. All 721 tracked Rust files satisfy the 500-nonblank cap; the maximum is 500. Root 118131, C Rust 5546 and C fixtures 1329 are exact; the remaining binding totals retain their measured values.
+
+Retained successful receipts under `target/0400c-integration-runner/receipts/`: `focused.log` (captured exit 0, offline policy + nine exact ratchets + required lint), `fixtures.log` (captured exit 0, real fetch exit 0 / deny exit 8 `source-not-allowed` / URL refusal exit 1 with zero counted requests), and `future-checkpoint-guard.log` (four missing-label refusals before any campaign). Original and new receipt/script hashes are pinned in separate preserved-log and runner-receipt digest manifests. Actual setup failures and the distinct outer-2 launcher error remain excluded from passing proof.
+
+The old stress campaign's thirteen not-run entries contain eight intentional omissions (Rust/C/PHP/Go/C++/Ada/Objective-C/COBOL) and five prerequisite failures (Dart/Python/Ruby/R/SQLite), established from the existing check scripts and original log. Its twelve Rust and six surface passes / two failures stay truthful. No campaign was rerun. Main's binding proof remains byte-identical; source/pending-context limits carry unchanged into fresh High review. Reviewed EXP records commission no additional experiment, diagnostic, efficacy/post, retry or sealed-test access.

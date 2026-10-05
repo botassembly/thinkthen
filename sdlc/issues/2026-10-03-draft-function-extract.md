@@ -2,14 +2,14 @@
 
 Status: open. Recipe draft. Ian dropped extract as a function on 2026-10-04 in the change to the docs lane-order message. This relabels the extract draft filed on 2026-10-03. Owner: the queue owner. Ticket 0402 owns the recipe page and harness. The page remains draft until its measured numbers publish.
 Kind: idea
-When: the experiments team's experiment 4 reports
+When: ticket 0402 publication proof passes for the accepted scoped 0031 comparison
 Milestone: 0.2
 
 Regular expressions or a dictionary match with Aho-Corasick find candidates. Decide or choose confirms the true positives. Choose takes options per record; candidate-finding code belongs to the recipe. This uses the existing functions and introduces no extract function or annotate mode.
 
-Experiment 4 measures this pattern against recognize alone and supplies the recipe's numbers. The recipe cites the accepted report and separates its small replayed example from the measured run. Ticket 0413 retains ownership of audited per-record candidate-option gaps; this relabeling makes no new support claim.
+Accepted completed 0031 measures the tested choose pattern against one custom-role recognize configuration and supplies scoped numbers. The recipe cites the accepted report and separates its small replayed example from the measured run. Ticket 0413 retains ownership of audited per-record candidate-option gaps; this relabeling makes no new support claim.
 
-The former form and table modes are not 0.2 implementation work. Tables remain outside 0.2. The recipe waits on evidence, not a new function design.
+The former form and table modes are not 0.2 implementation work. Tables remain outside 0.2. The recipe waits on publication proof for the accepted scoped evidence.
 
 ## Accepted completed comparison, 2026-10-05
 
