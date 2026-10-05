@@ -83,6 +83,8 @@ The details digest includes a question's saved calibration `profile`. A differen
 
 SQL plans report an estimated input-token band before cache hits, retries or refusal splits. They do not predict output tokens, total dollars or future duration. SQL usage reports cumulative process totals, not the facts of one isolated call. Packed request metadata can appear on more than one result row; summing those rows counts the same request more than once.
 
+`thinkthen_plan` previews one judgment question, not an annotate question set or a whole SQL pipeline. `thinkthen annotate --plan` previews CLI question-set packing; match the question set, backend, model and record framing, and treat that preview as a guide for SQL calls whose packing can differ. Reduce the planned cohort before calls when the configured allowance cannot admit the pipeline. Estimates neither authorize a larger budget nor predict the provider's bill.
+
 Measure wall time around the SQL statement in the client. This includes database and client work and is not engine-only time. For an external price estimate, apply a known input/output tariff to complete provider-reported usage with decimal arithmetic. The provider's invoice determines actual charges. Missing rates or incomplete attempt usage mean unknown cost, not zero. Cumulative SQL counters do not prove usage completeness for failed attempts, and subtracting shared counters cannot isolate concurrent calls.
 
 ## Settings
