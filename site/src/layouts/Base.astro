@@ -18,7 +18,8 @@ const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
 const card = image ? { image, alt: imageAlt || title } : routeCard(here) || DEFAULT_CARD;
 const cardImage = new URL(card.image, Astro.site).href;
-const pageUrl = new URL(here, Astro.site).href;
+// Astro's 404 source pathname differs from its emitted special file.
+const pageUrl = new URL(here === '/404/' ? '/404.html' : here, Astro.site).href;
 const home = here === '/';
 // The home page tells search engines what the site and the software are,
 // and who makes it.

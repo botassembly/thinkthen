@@ -1,4 +1,5 @@
 ---
+line: "A Beatles Bench example compares answers from memory with answers given a song catalog."
 title: "Retrieval-augmented decisions"
 slug: rad
 author: Ian Maurer

@@ -1,4 +1,5 @@
 ---
+line: "Why a model trained for decisions interests programmers, and what remains a bet."
 title: "Why are people excited about Jev?"
 slug: jev-is-trained-to-decide
 author: Ian Maurer

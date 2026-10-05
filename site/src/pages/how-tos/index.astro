@@ -19,19 +19,27 @@ const sections = HOWTO_GROUPS
   {sections.map((s) => (
     <Fragment>
       <h2>{s.name}</h2>
-      <div class="grid">
-        {s.pages.map((h) => (
-          <a class="tile" href={`/how-tos/${h.slug}/`}><b>{h.title}</b><span>{reader(h)} · {h.functions.join(', ')}</span></a>
-        ))}
-      </div>
+      {[2, 3, 4, 6, 9].includes(s.pages.length) ? (
+        <div class="grid">
+          {s.pages.map((h) => (
+            <a class="tile" href={`/how-tos/${h.slug}/`}><b>{h.title}</b><span>{reader(h)} · {h.functions.join(', ')}</span></a>
+          ))}
+        </div>
+      ) : (
+        <ul>
+          {s.pages.map((h) => (
+            <li><a href={`/how-tos/${h.slug}/`}>{h.title}</a> — {reader(h)} · {h.functions.join(', ')}</li>
+          ))}
+        </ul>
+      )}
     </Fragment>
   ))}
 
   <h2><a href="/how-tos/bash/">Bash techniques</a></h2>
   <p>Each Bash page teaches one shell form. The recipes do small jobs.</p>
-  <div class="grid">
+  <ul>
     {[...TECHNIQUES, ...RECIPES].map((t) => (
-      <a class="tile" href={`/how-tos/bash/${t.slug}/`}><b>{t.title}</b><span>{t.label}</span></a>
+      <li><a href={`/how-tos/bash/${t.slug}/`}>{t.title}</a> — {t.label}</li>
     ))}
-  </div>
+  </ul>
 </Base>

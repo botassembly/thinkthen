@@ -13,16 +13,16 @@ const first = (text) => `${plain(text).split('. ')[0].replace(/\.$/, '')}.`;
   <p class="lede">A ThinkThen function is a shell command. It reads standard input, prints an answer, and sets an exit code. Each page here teaches one shell form with one real run.</p>
 
   <h2>Techniques</h2>
-  <div class="grid">
+  <ul>
     {TECHNIQUES.map((t) => (
-      <a class="tile" href={`/how-tos/bash/${t.slug}/`}><b>{t.title}</b><span>{first(t.said)}</span></a>
+      <li><a href={`/how-tos/bash/${t.slug}/`}>{t.title}</a> — {first(t.said)}</li>
     ))}
-  </div>
+  </ul>
 
   <h2>Recipes</h2>
-  <div class="grid">
+  <ul>
     {RECIPES.map((r) => (
-      <a class="tile" href={`/how-tos/bash/${r.slug}/`}><b>{r.title}</b><span>{first(r.said)}</span></a>
+      <li><a href={`/how-tos/bash/${r.slug}/`}>{r.title}</a> — {first(r.said)}</li>
     ))}
-  </div>
+  </ul>
 </SidePage>

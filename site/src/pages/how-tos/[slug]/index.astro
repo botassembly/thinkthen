@@ -41,10 +41,19 @@ if (!howto.goal) throw new Error(`how-tos: ${howto.slug} has no goal`);
   {runs.map((run) => <Terminal run={run} caption={run.see} />)}
 
   <h2>The functions it uses</h2>
-  <div class="grid">
-    {howto.functions.map((name) => {
-      const fn = FUNCTIONS.find((f) => f.name === name);
-      return <a class="tile" href={`/functions/${fn.name}/`}><b>{fn.name}</b><span>{fn.line}</span></a>;
-    })}
-  </div>
+  {[2, 3, 4, 6, 9].includes(howto.functions.length) ? (
+    <div class="grid">
+      {howto.functions.map((name) => {
+        const fn = FUNCTIONS.find((f) => f.name === name);
+        return <a class="tile" href={`/functions/${fn.name}/`}><b>{fn.name}</b><span>{fn.line}</span></a>;
+      })}
+    </div>
+  ) : (
+    <ul>
+      {howto.functions.map((name) => {
+        const fn = FUNCTIONS.find((f) => f.name === name);
+        return <li><a href={`/functions/${fn.name}/`}>{fn.name}</a> — {fn.line}</li>;
+      })}
+    </ul>
+  )}
 </Base>

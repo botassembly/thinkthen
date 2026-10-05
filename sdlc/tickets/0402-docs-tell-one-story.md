@@ -1,6 +1,6 @@
 # 0402: The docs tell one story
 
-Status: in progress. Slice A has a source candidate after 0401 D; fresh source review and the named coordinator checkpoint remain pending.
+Status: in progress. Slice A landed at `b7e5dd3e4`; B source/implementation accepted at `383305ec9`, source `e15a772ef`. Source-preserving integration onto Windows A main `24212dffa` and B FINAL INTEGRATION SITE are complete; fresh integration receipt review and B landing remain pending. C/D remain unimplemented.
 
 Milestone: 0.2
 
@@ -102,6 +102,6 @@ Relabels: `sdlc/issues/2026-10-03-draft-function-link.md`, `sdlc/issues/2026-10-
 
 ## What the build taught us
 
-Slice A's [build record](../records/0402-a-one-home-build.md) records the frozen accepted design, actual failures and corrections, fragment and h4 omission plants, unchanged proof inputs and focused evidence. Fresh source review and coordinator-owned full proof remain pending.
+Slice A's [build record](../records/0402-a-one-home-build.md) records the frozen accepted design, actual failures and corrections, fragment and h4 omission plants, unchanged proof inputs and its completed coordinator checkpoint. Slice B's [build record](../records/0402-b-layout-build.md) records the full accepted design, reconciled inventory, the 404 address correction, actual normal/draft builds, uniform-row and h4 omission plants, content retention, clean-clone lint and unchanged-source strict proof. Fresh independent B source review accepted `383305ec9`; B FINAL INTEGRATION SITE passed on `c9ad8192c`. Fresh integration receipt review and B landing remain pending.
 
-Slice A source received fresh acceptance at `6eba7e317`; its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Final receipt review and A landing remain pending. B and C have complete accepted designs; their implementation waits for predecessor landings. D’s Rules recipe comparison remains pending.
+Slice A landed at `b7e5dd3e4` with exact accepted source `53de60f6b`. Its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Slice B implements the [complete accepted design](../planning/0402-b-docs-design.md), with exact source `e15a772ef` and completed root-authorized focused proof. Fresh independent B source review accepted candidate `383305ec9`, source `e15a772ef`. Source-preserving integration freezes `c9ad8192c` on Windows A main `24212dffa`; B FINAL INTEGRATION SITE freshly passes required lint and complete focused site proof. Main’s actual Windows proof is inherited without a fresh full-test/spec/surfaces/canonical350 run. Fresh integration receipt review and B landing remain pending. C/D remain unimplemented. Experiment 0031 exists, but B publishes no recipe comparison or performance claim.

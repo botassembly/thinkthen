@@ -263,11 +263,19 @@ const jobsScope = name === 'annotate'
   {howtos.length > 0 && (
     <>
       <h2>Jobs that use <code>{title}</code></h2>
-      <div class="grid">
-        {howtos.map((h) => (
-          <a class="tile" href={`/how-tos/${h.slug}/`}><b>{h.title}</b><span>{h.reader}</span></a>
-        ))}
-      </div>
+      {[2, 3, 4, 6, 9].includes(howtos.length) ? (
+        <div class="grid">
+          {howtos.map((h) => (
+            <a class="tile" href={`/how-tos/${h.slug}/`}><b>{h.title}</b><span>{h.reader}</span></a>
+          ))}
+        </div>
+      ) : (
+        <ul>
+          {howtos.map((h) => (
+            <li><a href={`/how-tos/${h.slug}/`}>{h.title}</a> — {h.reader}</li>
+          ))}
+        </ul>
+      )}
     </>
   )}
 

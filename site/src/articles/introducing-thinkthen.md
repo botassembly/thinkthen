@@ -1,4 +1,5 @@
 ---
+line: "Ask a bounded question about text and use the typed answer in your code."
 title: "Introducing ThinkThen"
 slug: introducing-thinkthen
 author: Ian Maurer
