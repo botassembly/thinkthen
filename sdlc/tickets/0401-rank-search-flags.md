@@ -1,6 +1,6 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: in progress. Slices A, B and C landed. Slice D source received fresh High acceptance after Windows/provider integration; focused checks, renewed lint, full test/specification, C door, Rust Polars and all 350 actual documentation replays with strict proof and final site build pass. Fresh final receipt review and D landing remain before this ticket completes.
+Status: complete. All four slices are implemented and checked. A, B and C landed; D received fresh source, integration and final receipt acceptance after its full coordinator checkpoint. The completion-record review and D landing remain in the build workflow. SQL sets remain ticket 0417 for 0.2; foreign sets remain ticket 0418 later.
 
 Milestone: 0.2
 
@@ -104,3 +104,5 @@ Slice D builds the accepted [frozen design](../records/0401-d-rank-set-design.md
 The D frozen-source review found that preview added each set member as an input slot, unlike runtime's single add per original record. The correction gathers member entries first and adds once. Its independent counted loopback witness pins the exact first body and complete byte/token summary against three runtime requests with both text members; mixed quoting retains its state cuts in both member orders. Ordinary single-question identity, runtime merge/bounds and whole-call controls remain protected. Exact correction growth and focused receipts are in the [D build record](../records/0401-d-rank-set-build.md). Fresh parent review and the merged checkpoint remain pending.
 
 Slice D provider integration at `ace778598` retains the accepted product byte for byte and passes its final coordinator checkpoint. The owning [D build record](../records/0401-d-rank-set-build.md) preserves source reviews, prior failures and exact current receipts. Rank sets retain original ownership and member-local wire/cache identity; preview groups every member per original record. Full C-door and Rust Polars compatibility and actual 350-page proof close the former deferred local checks. Native execution remains separate. Final receipt review and whole-ticket completion remain before D landing.
+
+Final D receipt review accepted `fb428165487488a9decbaf08c2269a64c2f57442` with no findings or missing required local proof. The current record update changes no product, executable contract, fixture, ratchet or generated proof. All ticket outcomes are implemented and verified; the coordinator advances the completion-record review and no-ff D landing.

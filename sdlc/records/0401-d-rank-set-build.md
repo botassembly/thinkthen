@@ -102,3 +102,9 @@ The actual documentation run replayed all 308 language and 42 SQL samples. Both 
 | `target/0401d-checkpoint-final/final-proof.json` | `ff26c793f1f744e225f28941b9d7351c77d8be5de6f567726e05eab613c3185c` |
 
 All heavy commands used owned user scopes with 12G memory/1G swap, two offline Cargo jobs and lane output/locks. No new live call, native dispatch, stress campaign, release approval or publication ran. Fresh final receipt review and slice D landing remain pending. SQL sets remain 0417 for 0.2, foreign sets remain 0418 later, and default concurrency remains owned by 0400 C.
+
+## Final receipt acceptance and ticket completion
+
+Fresh independent receipt review accepted frozen `fb428165487488a9decbaf08c2269a64c2f57442` against main `4ca5a9f9b` with no findings or missing required local proof. Its retained verdict is `/tmp/thinkthen-0401d-final-receipt-review-cli-9sxtpg8e/review.md`. It independently checked the normalized product checksum, exact source total/caps, all nine receipt hashes and byte-identical generated proof, including the corrected specification summary of 64 passed and 1 skipped.
+
+All four ticket slices are implemented and verified. The ticket is marked complete for the reviewed D landing workflow. This update changes only records; source, fixtures, contracts, ratchets and generated proof remain byte-identical to the accepted candidate. Fresh completion-record review and D merge/push remain before freeing the lane. No deferred native, stress, paid, release or foreign/SQL-set result is claimed.
