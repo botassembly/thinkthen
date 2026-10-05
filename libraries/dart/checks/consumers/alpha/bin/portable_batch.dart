@@ -9,7 +9,7 @@ void main(List<String> args) {
   final corpus =
       jsonDecode(File(args[1]).readAsStringSync()) as Map<String, dynamic>;
   final door = Door(args[0]);
-  final engine = door.create();
+  final engine = door.create(Platform.environment['TT_PORTABLE_SETTINGS']);
   try {
     final answers = door.many(
       engine,
