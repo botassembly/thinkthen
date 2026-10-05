@@ -39,3 +39,5 @@ Additional fresh High review rejected candidate `ffb20a0c0cd3` / source `3281e7a
 
 
 Final frozen release-capture source `cb12581b5ebf26280f82f64e06b6214036e97985` passes focused policy/C Clippy/40 Linux door tests, the unchanged 53-pass/two-exclusion shared corpus, all 113 workflow cases/45 Windows C plants, both collection fixtures and required lint. The source fingerprint, per-file digests, successful receipts and retained failed attempts are frozen in the build record. All source ratchets remain exact and no Rust/C/public/native-workflow source changed from the prior lifecycle correction. Owned scope cleanup is complete. Another parent-supplied fresh High review, integration and the parent checkpoint remain required; native Windows authorization/execution remains pending.
+
+Slice A source and integration received fresh High acceptance on `7a1b5dc38`; the named Linux checkpoint, actual 350 replay retry, strict zero-stale verification and final site build pass. Final receipt review and A landing remain pending. Native Windows execution and B’s static-library disposition remain pending; these Linux receipts do not complete them.

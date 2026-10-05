@@ -136,3 +136,27 @@ All whole corrections are pushed on the same ticket branch; no rebase or landing
 Fresh High source review accepted candidate `1d723fd2d0e62e607677d7e3e23f5f7da691467a`, source `cb12581b5ebf26280f82f64e06b6214036e97985`, with no remaining findings. It verified owned job/process/handle cleanup, bounded file-backed capture, safe failed-join exit, public ABI/exports/imports/archive/workflow guards, exact ratchets and all retained source/receipt digests. Native Windows execution remained pending. Its sandbox policy retry could not create scratch output; the retained frozen policy receipt was verified.
 
 The coordinator rebased onto actual main `b39774cce87105be419d6140ae4155bfc8cd733c`, producing `1882c618bdd7bdeab77dcf8f8186e91d6f3a8c8a`. Only team-note conflicts required resolution; main history was retained. All product/test/release-script/workflow additions and deletions compare byte for byte, SHA-256 `4bde5b6df04ec377dcb6ce549a068ecba3fa7979ed5f4c9dfbe747173c3eb6a7`. Owned `target/0381a-checkpoint-final/{before-provider-rank,after-provider-rank}.patch` retain the complete diffs. No source conflict was resolved. C ratchets remain 5487 and 1329; combined root inherits rank's 117988 because A changes no root Rust. Original receipts remain tied to their original frozen source; fresh integration review and renewed Linux/canonical checkpoints remain pending. No native dispatch or new release run occurred.
+
+## Coordinator complete Linux checkpoint
+
+Fresh High integration review accepted immutable `7a1b5dc385fbf5dc68f2ba2c0939502102b72762`, source `1882c618b`, with no findings. The exact root/C/fixture ratchets are 117988/5487/1329. Renewed policy, all 40 Linux C door cases, the 113 workflow cases and required lint pass on that unchanged candidate. Public inventory checks 580 declared items and refuses four plants.
+
+The named full Linux checkpoint passes: workspace 1408 tests with 26 skips; library-only integration 143 with four skips; external consumer 21 with three skips. Specification reports 64 passed and one skipped; all 24 green demos pass with zero red. Routine isolated-home smoke omissions remain in the test log and are not full surface proof.
+
+The first canonical replay was still running when the coordinator diagnosed the shared cache-path issue in the parallel docs run. The coordinator stopped only its own checkpoint processes by PID, verified the scope became inactive, and retained `test-docs.log` as interrupted proof, not a completed replay. The already successful full test and specification logs remain unchanged. The corrected site-only runner selects existing toolchains, cached Python dependencies and installed R jsonlite 2.0.0. R startup files are disabled in the corrected runner. It downloads no new dependency and invokes no live provider.
+
+The complete retry actually replays 308 language and 42 SQL samples, all 350. Both strict checks report zero stale entries; the final site build passes. Copied generated `final-proof.json` equals the committed runner artifact byte for byte. No proof hash was edited manually. Native Windows execution, static-library disposition, release environments, publication and new paid or stress runs remain outside this checkpoint. Fresh final receipt review and A landing remain pending; ticket 0381 stays in progress for B and native proof.
+
+Owned checkpoint receipts and SHA-256:
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `target/0381a-checkpoint-final/c-final.log` | `83e14c295e8d316b3bb80a92bb5617e793c1074b1b371d356dc2011e7a65e298` |
+| `target/0381a-checkpoint-final/required.log` | `b270ac67062866deba1056ea30ea7988b2950a62bfb04345fe13daec89676581` |
+| `target/0381a-checkpoint-final/test.log` | `2c0af5b92a242f78fef8e07c32f248052222524ce189f028aea0e68b1b7204cb` |
+| `target/0381a-checkpoint-final/spec.log` | `0c6100d4855a8e22e33de4822e41d6b48cf329684cc93e7f0679605cbeda02dc` |
+| `target/0381a-checkpoint-final/test-docs.log` | `51e25cac8bfdc7ff9f48a3397378f3c3d63cc0bb1d2111fd86b1b8ec9da21829` |
+| `target/0381a-checkpoint-final/test-docs-retry.log` | `837af1bf9b99941f1177488d6cd932d2066f7a58afd94c35bbf483603791601d` |
+| `target/0381a-checkpoint-final/strict-retry.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0381a-checkpoint-final/site-build-retry.log` | `17ed4dd5abedccd5960647851cb9eebfdb645eba2e743fd96994cf1f3c7016cb` |
+| `target/0381a-checkpoint-final/final-proof.json` | `ebe8a4d56634caf65b0203a1a2c4baf1723bd3d9a5f987529ac87115a8da6092` |
