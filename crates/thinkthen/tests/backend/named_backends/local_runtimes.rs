@@ -161,14 +161,7 @@ fn minimal_recognition_follows_its_answer_and_empty_relations_still_answer() {
         let target = Listener::answering(move |body| {
             let request: Value = serde_json::from_slice(body).expect("wire");
             let answers = request["questions"].as_object().expect("questions").iter().map(|(name, question)| {
-                let answer = if question["type"] == "noul" {
-                    r#"{"type":"noul","noul":0.0}"#.to_owned()
-                } else if question["criteria"].get("BEGIN").is_some() {
-                    let distribution = ["BEGIN", "INSIDE", "END", "SINGLE", "OUT"].map(|tag| format!("\"{tag}\":{}", u8::from(tag == boundary))).join(",");
-                    format!(r#"{{"type":"choice","probabilities":{{{distribution}}}}}"#)
-                } else {
-                    super::ollama::answer(question)
-                };
+                let answer = stage_answer(question, boundary);
                 format!("\"{name}\":{answer}")
             }).collect::<Vec<_>>().join(",");
             Canned::ok(&format!(r#"{{"model":{},"answers":{{{answers}}},"usage":{{"input_tokens":1,"output_tokens":1}}}}"#, request["model"]))
@@ -313,4 +306,17 @@ fn a_function_profile_limit_refuses_the_whole_check_before_any_request() {
         );
         assert_eq!(target.count(), 0);
     }
+}
+
+fn stage_answer(question: &Value, boundary: &str) -> String {
+    if question["type"] == "noul" {
+        return r#"{"type":"noul","noul":0.0}"#.to_owned();
+    }
+    if question["criteria"].get("BEGIN").is_some() {
+        let distribution = ["BEGIN", "INSIDE", "END", "SINGLE", "OUT"]
+            .map(|tag| format!("\"{tag}\":{}", u8::from(tag == boundary)))
+            .join(",");
+        return format!(r#"{{"type":"choice","probabilities":{{{distribution}}}}}"#);
+    }
+    super::ollama::answer(question)
 }

@@ -340,7 +340,7 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
                 let (function, body) = plan.split_once(' ').expect("function plan");
                 assert_eq!(function, name);
                 let counts: serde_json::Value = serde_json::from_str(body).expect("counts");
-                assert_eq!(counts["requests"], if name == "recognize" { 2 } else { 1 });
+                assert_eq!(counts["requests"], 1 + usize::from(name == "recognize"));
                 assert_eq!(counts["upper_bound"], name == "recognize");
             }
             assert!(stdout.ends_with("original-requests upper-bound 15 before retries\n"));
@@ -368,7 +368,9 @@ fn other_model() -> Listener {
             return reply;
         }
         let request: serde_json::Value = serde_json::from_slice(body).expect("wire");
-        let answers = request["questions"]
+        let answers = request
+            .get("questions")
+            .expect("questions")
             .as_object()
             .expect("questions")
             .iter()
