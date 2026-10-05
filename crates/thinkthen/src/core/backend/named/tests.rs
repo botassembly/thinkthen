@@ -115,7 +115,7 @@ fn names_are_checked_before_they_are_looked_up() {
     }
     assert_eq!(
         find("nowhere", &[]).map_err(|error| error.to_string()),
-        Err("unknown backend `nowhere`; the built-in backends are `liquid`, `ollama`, `openrouter`, `perplexity` and `typesafe`, and the configuration file may name more".to_owned())
+        Err("unknown backend `nowhere`; the built-in backends are `liquid`, `llamacpp`, `mlx`, `ollama`, `openrouter`, `perplexity` and `typesafe`, and the configuration file may name more".to_owned())
     );
     assert!(
         find("local-d1", &[]).is_err(),

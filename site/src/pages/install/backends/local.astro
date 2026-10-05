@@ -1,0 +1,39 @@
+---
+// Goal: show the supported loopback setups for Ollama, llama.cpp and the Strands MLX decision server.
+import fs from 'node:fs';
+import SidePage from '../../../layouts/SidePage.astro';
+import Code from '../../../components/Code.astro';
+import { BACKEND_PAGES } from '../../../data/catalog.mjs';
+import { backend } from '../../../lib/backends-table.mjs';
+
+const page = BACKEND_PAGES.find((p) => p.slug === 'local');
+const llama = backend('llamacpp');
+const mlx = backend('mlx');
+const ollama = backend('ollama');
+const sample = (name) => fs.readFileSync(`examples/install/backends/local/${name}.txt`, 'utf8');
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Run Ollama, llama.cpp or the Strands MLX decision server on your own machine, then check the model with ThinkThen.' }} name="Backends">
+  <h1>Run a model locally</h1>
+  <p class="lede">A local decision server receives your question and text on your own machine. ThinkThen connects to it with a named backend. The loopback setup needs no key.</p>
+
+  <h2>llama.cpp</h2>
+  <p>Build the native System One server from the pinned source below. The public Kev 4B model supplied this decision route in experiment 0030 on 2026-10-04. The setup uses its tested context and physical batch sizes. Its <a href="https://huggingface.co/ggml-org/Kev-4B-GGUF/tree/d924f2e2c3872da8b8aaf3eb4453b4126deceb79">model files</a> carry the Apache 2.0 license.</p>
+  <Code code={sample('llamacpp')} file="llamacpp.txt" lang="bash" />
+  <p><code>--alias {llama.model}</code> sets the model id that <code>--backend {llama.name}</code> sends. ThinkThen reaches <code>{llama.base}</code>. Use <code>--model</code> if you choose another server alias. A chat-compatible build needs the native <code>/v1/systemone</code> route and supported decision weights. HTTP 501 can mean that the model lacks that route. The <a href="https://github.com/ggml-org/llama.cpp/blob/a7b94df2c616bc1f62a73b964b4a71cb0dcc488e/tools/server/README.md">server documentation</a> describes its options. Keep context and physical batch within the model's bounds and large enough for the full prompt.</p>
+
+  <h2>MLX on Apple silicon</h2>
+  <p>Use the Strands decision server on a Mac with Apple silicon. The <a href="https://huggingface.co/StrandsAgents/strands-decider-2B-hobson-v19">public checkpoint</a> needs its named base model. The loader fetches both; allow disk space for both and follow their model cards. A plain MLX chat server does not provide this decision interface.</p>
+  <Code code={sample('mlx')} file="mlx.txt" lang="bash" />
+  <p>ThinkThen sends model <code>{mlx.model}</code> to <code>{mlx.base}</code>. The <a href="https://github.com/strands-labs/strands-decider/blob/75c9fd32e664954cdc18481434018aa507eee8fb/src/strands_decider/cli.py">pinned server</a> uses the checkpoint basename as its model id. Its score schema requires 2–10 string levels. The MLX backend sends description objects as their <code>what</code> text. A rich check probe or <code>--plan</code> warns when other fields are left out.</p>
+
+  <h2>Ollama</h2>
+  <p>Install Ollama from <a href="https://ollama.com/download">its download page</a>. Pull <code>{ollama.model}</code> with <code>ollama pull {ollama.model}</code>, then start its server on loopback.</p>
+  <Code code={sample('ollama')} file="ollama.txt" lang="bash" />
+  <p>ThinkThen reaches <code>{ollama.base}</code>. Ollama's loader and decision encoder must support the chosen model. Experiment 0030 found loader and encoder refusals in version 0.35.1. A model working in llama.cpp does not establish Ollama support. The <a href="/install/backends/ollama/">Ollama page</a> explains its text-description workaround.</p>
+
+  <h2>Check the running model</h2>
+  <p>Run the line for the server you started in another terminal. Each check sends real requests.</p>
+  <Code code={sample('check')} file="check.txt" lang="bash" />
+  <p>The report keeps four rich wire probes and adds one row for each of the ten production functions. Each function reads <code>answered</code>, <code>incompatible</code> or <code>unchecked</code>. A valid empty name or relation result is answered. A pass establishes these inputs on that model. It measures no model accuracy and promises no other question set. The <a href="/functions/check/">check reference</a> explains the rows and limits.</p>
+  <p>Use <code>--url</code> for another loopback port. Set <code>{llama.keys[0]}</code>, <code>{mlx.keys[0]}</code> or <code>{ollama.keys[0]}</code> only when your server requires a key. An unset key sends no Authorization header on loopback. A remote address requires a key and HTTPS.</p>
+</SidePage>

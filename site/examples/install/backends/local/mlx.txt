@@ -1,0 +1,13 @@
+python3 -m venv strands-env
+. strands-env/bin/activate
+git clone \
+  https://github.com/strands-labs/strands-decider.git
+cd strands-decider
+git checkout 75c9fd32e664954cdc18481434018aa507eee8fb
+pip install '.[mlx]'
+
+checkpoint=StrandsAgents/strands-decider-2B-hobson-v19
+strands-decider serve "$checkpoint" \
+  --device mlx \
+  --host 127.0.0.1 \
+  --port 8000

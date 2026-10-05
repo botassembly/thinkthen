@@ -10,7 +10,7 @@ import { checkLines } from '../../../data/backend-checks.mjs';
 
 const page = BACKEND_PAGES[0];
 const plan = run('install/backends', '1-plan');
-const linked = (name) => BACKEND_PAGES.find((p) => p.slug === name);
+const linked = (name) => BACKEND_PAGES.find((p) => p.slug === (['llamacpp', 'mlx'].includes(name) ? 'local' : name));
 const rows = backends().map((b) => ({ ...b, page: linked(b.name), checks: checkLines(b.name) }));
 for (const r of rows) {
   if (!r.page) throw new Error(`backends: the table holds ${r.name}, and BACKEND_PAGES has no page for it`);
@@ -21,6 +21,7 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
   <h1>Backends</h1>
   <p class="lede">A backend is an address and a model. ThinkThen speaks one wire shape, System One, and any server that speaks it can answer.</p>
 
+  <p><a href="/install/backends/local/">Run a model locally</a> shows Ollama, llama.cpp and the Strands MLX server.</p>
   <h2>The built-in backends</h2>
   <p>Name one with <code>--backend NAME</code> or <code>THINKTHEN_BACKEND</code>. Each brings its own address, key variable and model.</p>
   <table class="backends" data-backends>

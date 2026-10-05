@@ -22,8 +22,10 @@ mod backend_setups;
 mod builder;
 #[path = "named_backends/command.rs"]
 mod command;
+#[path = "named_backends/local_runtimes.rs"]
+mod local_runtimes;
 #[path = "named_backends/ollama.rs"]
-mod ollama;
+pub(crate) mod ollama;
 #[path = "named_backends/posting_paths.rs"]
 mod posting_paths;
 #[path = "named_backends/precedence.rs"]

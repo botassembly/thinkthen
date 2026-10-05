@@ -17,6 +17,8 @@ use crate::engine::error::Error;
 use crate::engine::facade::{Engine, Settings, Storage};
 use crate::failure::{self, Failure};
 
+mod functions;
+
 /// The check sends only to an address the user named, never the built-in one.
 const NO_ADDRESS: &str = "check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file";
 
@@ -40,7 +42,7 @@ pub(crate) fn run(
         .or_else(|| environment.model().filter(|_| unnamed));
     let backend = environment.settle(&choice, asked)?;
     let roots = environment.roots()?;
-    let probes = check::probes(backend.model(), backend.descriptions())
+    let probes = check::probes(backend.model(), backend.descriptions(), environment.named())
         .ok_or(Failure::Defect("a check probe no longer parses"))?;
     let profile = choice.setup(&backend).1;
     let engine = Engine::with_roots(
@@ -64,8 +66,12 @@ pub(crate) fn run(
     for probe in &probes {
         engine.check_plan(&probe.plan)?;
     }
+    let (function_plans, function_requests) = functions::prepare(&engine)?;
     if arguments.dry_run {
-        say_dropped_detail(probes.iter().any(|probe| probe.drops_detail))?;
+        say_dropped_detail(
+            probes.iter().any(|probe| probe.drops_detail),
+            environment.named(),
+        )?;
     }
     let mut lines = vec![
         format!("url {}", engine.backend().url().as_str()),
@@ -73,7 +79,9 @@ pub(crate) fn run(
         format!("model asked {}", asked.unwrap_or("unspecified")),
         format!("model sent {}", engine.backend().model().as_str()),
     ];
-    let mut report = Report::new(&probes);
+    let function_rows = functions::ROWS.map(|(_, row)| row);
+    let mut report = Report::new(&probes, &function_rows);
+    let mut stopped = false;
     let mut summary = PlanSummary::new(false);
     for probe in &probes {
         if arguments.dry_run {
@@ -89,8 +97,12 @@ pub(crate) fn run(
             let body = String::from_utf8_lossy(&body);
             lines.push(format!("request {} {body}", probe.name));
         } else if !send(&engine, environment, probe, (&mut report, &mut lines))? {
+            stopped = true;
             break;
         }
+    }
+    if !arguments.dry_run && !stopped {
+        functions::check(&engine, environment, &mut report)?;
     }
     if environment.cancel().fired() {
         return Err(Failure::Cancelled);
@@ -102,7 +114,12 @@ pub(crate) fn run(
         let counts = summary
             .counts()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
-        lines.push(json_line(&counts)?);
+        lines.push(format!("rich-probes {}", json_line(&counts)?));
+        lines.extend(function_plans);
+        lines.push(format!(
+            "original-requests upper-bound {} before retries",
+            probes.len() + function_requests
+        ));
     }
     for line in lines {
         edge::write_line(&mut writer, &line)?;
@@ -113,12 +130,12 @@ pub(crate) fn run(
 /// Say once, under `--plan`, that the Ollama workaround turned a description
 /// object into text (ADR 0115 section 4). The workaround is debt; the
 /// adapter's backend table names its issue.
-pub(crate) fn say_dropped_detail(dropped: bool) -> Result<(), Failure> {
+pub(crate) fn say_dropped_detail(dropped: bool, name: Option<&str>) -> Result<(), Failure> {
     if dropped {
         writeln!(
             std::io::stderr().lock(),
             "thinkthen: {}",
-            check::DROPPED_DETAIL
+            built_in::backends::dropped_detail(name)
         )
         .map_err(Failure::Output)?;
     }

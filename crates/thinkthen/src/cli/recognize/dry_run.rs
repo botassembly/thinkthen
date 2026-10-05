@@ -78,6 +78,7 @@ pub(super) struct Question<'a> {
     pub(super) limit: usize,
     /// The first key variable of the selected backend.
     pub(super) key_env: &'a str,
+    pub(super) backend_name: Option<&'a str>,
 }
 
 #[expect(
@@ -122,6 +123,7 @@ fn planned(
         from_file,
         limit,
         key_env,
+        backend_name,
     } = question;
     let mut summary = PlanSummary::new(true);
     let mut first = None;
@@ -170,12 +172,15 @@ fn planned(
     let Some((pieces, requests, name_bound, relation_bound)) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    crate::cli::check::say_dropped_detail(built_in::drops_any(
-        backend.descriptions(),
-        spec.kinds
-            .iter()
-            .filter_map(|(_, held)| held.as_ref().map(Description::as_json)),
-    ))?;
+    crate::cli::check::say_dropped_detail(
+        built_in::drops_any(
+            backend.descriptions(),
+            spec.kinds
+                .iter()
+                .filter_map(|(_, held)| held.as_ref().map(Description::as_json)),
+        ),
+        backend_name,
+    )?;
     let report = DryRun {
         schema: "thinkthen.recognize-plan/2",
         url: backend.url().as_str(),
@@ -224,6 +229,7 @@ mod tests {
             url,
             model: "local-1",
             key_env: KEY_VAR,
+
             from: None,
             pieces: 1,
             request_count: 1,

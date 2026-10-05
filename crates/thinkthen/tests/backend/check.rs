@@ -16,7 +16,7 @@ use crate::harness::{Listener, spawn};
 
 const KEY: &str = "sk-check-0121";
 
-const PASS: &str = "ok connection\nok key\nok endpoint\nok noul\nok choice\nok score\nok mixed\nok usage\ncritical 0, warning 0\n";
+const PASS: &str = "ok connection\nok key\nok endpoint\nok noul\nok choice\nok score\nok mixed\nok usage\nanswered function decide\nanswered function choose\nanswered function tag\nanswered function score\nanswered function filter\nanswered function rank\nanswered function find\nanswered function annotate\nanswered function recognize\nanswered function relate\ncritical 0, warning 0\n";
 
 /// The four decoded replies of `/arm/full/v1`, each answer by the arm's fixed rule.
 const FULL_REPLIES: &str = concat!(
@@ -43,6 +43,26 @@ const GENERIC_REPLIES: &str = concat!(
 );
 
 const REFUSED: &str = "the backend answered with status 422: the backend refused the request as malformed or too large";
+
+const FUNCTIONS: [&str; 10] = [
+    "decide",
+    "choose",
+    "tag",
+    "score",
+    "filter",
+    "rank",
+    "find",
+    "annotate",
+    "recognize",
+    "relate",
+];
+
+fn failures(mut sentence: impl FnMut(&str) -> String) -> String {
+    FUNCTIONS
+        .iter()
+        .map(|name| format!("incompatible function {name}: {}\n", sentence(name)))
+        .collect()
+}
 
 /// Run `check` with the arguments and environment, and hold it to the key rule.
 fn check(command: &[&str], arguments: &[&str], environment: &[(&str, &str)]) -> Output {
@@ -108,7 +128,7 @@ fn text(bytes: &[u8]) -> String {
 }
 
 #[test]
-fn a_backend_that_carries_every_field_passes_on_four_requests() {
+fn a_backend_that_carries_every_field_passes_the_rich_probes_and_ten_functions() {
     for command in [&["backends", "check"][..], &["check"][..]] {
         let backend = Backend::start().expect("backend");
         let output = at(command, &backend, "/arm/full/v1");
@@ -118,7 +138,7 @@ fn a_backend_that_carries_every_field_passes_on_four_requests() {
         );
         assert_eq!(text(&output.stderr), "");
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(backend.count(), 4);
+        assert_eq!(backend.count(), 15);
     }
 }
 
@@ -133,13 +153,13 @@ fn missing_confidence_and_token_counts_warn_and_keep_exit_zero() {
         warning mixed: the answer to question `q2` carries no confidence\n\
         warning mixed: the answer to question `q3` carries no confidence\n\
         warning usage: a reply carries no token counts, so results and usage totals leave them out\n\
-        critical 0, warning 5\n";
+        answered function decide\nanswered function choose\nanswered function tag\nanswered function score\nanswered function filter\nanswered function rank\nanswered function find\nanswered function annotate\nanswered function recognize\nanswered function relate\ncritical 0, warning 5\n";
         assert_eq!(
             text(&output.stdout),
             head(&backend, "/generic/v1") + GENERIC_REPLIES + report
         );
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(backend.count(), 4);
+        assert_eq!(backend.count(), 15);
     }
 }
 
@@ -150,6 +170,11 @@ fn a_missing_answer_is_critical_in_every_probe_and_names_the_tag_range() {
         let path = "/arm/malformed/missing_answer/v1";
         let output = at(command, &backend, path);
         let refused = "the reply was refused: the response carries no answer for question `q1`";
+        let functions = failures(|name| match name {
+            "tag" => "a backend question failed in a batch".to_owned(),
+            "relate" => "the backend failed 1 of 2 relation questions".to_owned(),
+            _ => refused.to_owned(),
+        });
         let report = format!(
             "{}\n\
         ok connection\nok key\nok endpoint\n\
@@ -158,13 +183,13 @@ fn a_missing_answer_is_critical_in_every_probe_and_names_the_tag_range() {
         warning mixed: the answer to question `q3` carries no confidence\n\
         critical mixed: the answer to questions `q4` to `q5` failed as `missing_answer`\n\
         warning usage: a reply carries no token counts, so results and usage totals leave them out\n\
-        critical 4, warning 3\n",
+        {functions}critical 14, warning 3\n",
             // Only the mixed reply decodes. Its tag answer carries the failure marker.
             r#"reply mixed {"model":"jev-1.13.0","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1}},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1}},{"failed":{"kind":"backend","cause":"missing_answer"}}],"usage":null}"#
         );
         assert_eq!(text(&output.stdout), head(&backend, path) + &report);
         assert_eq!(output.status.code(), Some(4));
-        assert_eq!(backend.count(), 4);
+        assert_eq!(backend.count(), 14);
     }
 }
 
@@ -173,25 +198,26 @@ fn a_refused_body_is_critical_for_its_probe_and_the_check_goes_on() {
     for command in [&["backends", "check"][..], &["check"][..]] {
         let backend = Backend::start().expect("backend");
         let output = at(command, &backend, "/arm/refuse/v1");
+        let functions = failures(|_| "the backend answered with status 422".to_owned());
         let report = format!(
             "ok connection\nok key\nok endpoint\n\
         critical noul: {REFUSED}\ncritical choice: {REFUSED}\n\
         critical score: {REFUSED}\ncritical mixed: {REFUSED}\n\
-        unchecked usage\ncritical 4, warning 0\n"
+        unchecked usage\n{functions}critical 14, warning 0\n"
         );
         assert_eq!(
             text(&output.stdout),
             head(&backend, "/arm/refuse/v1") + &report
         );
         assert_eq!(output.status.code(), Some(4));
-        assert_eq!(backend.count(), 4);
+        assert_eq!(backend.count(), 14);
     }
 }
 
 #[test]
 fn a_failure_no_body_causes_stops_the_check_at_the_first_probe() {
     for command in [&["backends", "check"][..], &["check"][..]] {
-        let later = "unchecked noul\nunchecked choice\nunchecked score\nunchecked mixed\nunchecked usage\ncritical 1, warning 0\n";
+        let later = "unchecked noul\nunchecked choice\nunchecked score\nunchecked mixed\nunchecked usage\nunchecked function decide\nunchecked function choose\nunchecked function tag\nunchecked function score\nunchecked function filter\nunchecked function rank\nunchecked function find\nunchecked function annotate\nunchecked function recognize\nunchecked function relate\ncritical 1, warning 0\n";
         let key = |said: &str| {
             format!(
                 "ok connection\ncritical key: the backend answered with status {said}\nunchecked endpoint\n{later}"
@@ -249,7 +275,7 @@ fn the_check_sends_only_to_the_address_the_user_named() {
             text(&output.stdout),
             head(&named, "/arm/full/v1") + FULL_REPLIES + PASS
         );
-        assert_eq!((named.count(), beside.count()), (4, 0));
+        assert_eq!((named.count(), beside.count()), (15, 0));
 
         // No key is set, so a regression that reached the built-in address still sends nothing.
         let output = check(command, &[], &[]);
@@ -302,8 +328,22 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
             let output = check(command, &["--url", url.as_str(), "--plan"], environment);
             let printed = head(&backend, "/arm/full/v1")
                 + &requests
-                + "{\"records\":4,\"requests\":4,\"estimated_bytes\":1568,\"estimated_input_tokens\":{\"lower\":809,\"upper\":1424},\"upper_bound\":false}\n";
-            assert_eq!(text(&output.stdout), printed);
+                + "rich-probes {\"records\":4,\"requests\":4,\"estimated_bytes\":1568,\"estimated_input_tokens\":{\"lower\":809,\"upper\":1424},\"upper_bound\":false}\n";
+            let stdout = text(&output.stdout);
+            assert!(stdout.starts_with(&printed), "{stdout}");
+            let plans = stdout
+                .lines()
+                .filter_map(|line| line.strip_prefix("function-plan "))
+                .collect::<Vec<_>>();
+            assert_eq!(plans.len(), FUNCTIONS.len());
+            for (plan, name) in plans.iter().zip(FUNCTIONS) {
+                let (function, body) = plan.split_once(' ').expect("function plan");
+                assert_eq!(function, name);
+                let counts: serde_json::Value = serde_json::from_str(body).expect("counts");
+                assert_eq!(counts["requests"], if name == "recognize" { 2 } else { 1 });
+                assert_eq!(counts["upper_bound"], name == "recognize");
+            }
+            assert!(stdout.ends_with("original-requests upper-bound 15 before retries\n"));
             assert_eq!(text(&output.stderr), "");
             assert_eq!(output.status.code(), Some(0));
         }
@@ -322,7 +362,27 @@ fn other_model() -> Listener {
     ];
     let canned =
         answers.map(|said| Canned::ok(&format!(r#"{{"model":"other-1","answers":{{{said}}}}}"#)));
-    Listener::serving(canned.into()).expect("listener")
+    let canned = std::sync::Mutex::new(std::collections::VecDeque::from(canned));
+    Listener::answering(move |body| {
+        if let Some(reply) = canned.lock().expect("replies").pop_front() {
+            return reply;
+        }
+        let request: serde_json::Value = serde_json::from_slice(body).expect("wire");
+        let answers = request["questions"]
+            .as_object()
+            .expect("questions")
+            .iter()
+            .map(|(name, question)| {
+                format!(
+                    "\"{name}\":{}",
+                    crate::named_backends::ollama::answer(question)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        Canned::ok(&format!(r#"{{"model":"other-1","answers":{{{answers}}}}}"#))
+    })
+    .expect("listener")
 }
 
 /// The header lines and the model each reply line names.
@@ -366,7 +426,11 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
         assert_eq!(output.status.code(), Some(0), "{}", text(&output.stdout));
 
         let sent = listener.requests();
-        assert_eq!(sent.len(), 4, "one observed send per check probe");
+        assert_eq!(
+            sent.len(),
+            15,
+            "rich probes and minimal functions with an empty recognition result"
+        );
         assert_eq!(
         sent[0].body,
         br#"{"state":"The parcel arrived on Tuesday and the box was intact.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Did the parcel arrive undamaged?","criteria":{"true":"The text says the box or its contents were intact."}}}}"#
@@ -394,99 +458,5 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
     }
 }
 
-/// Ticket 0132: a reply over its limit fails its probe, and the check goes on.
-#[test]
-fn a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on() {
-    for command in [&["backends", "check"][..], &["check"][..]] {
-        let limits = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
-        let seen = std::sync::Arc::clone(&limits);
-        let listener = Listener::answering(move |body| {
-            let limit = crate::resend::limit(body);
-            seen.lock()
-                .expect("limits")
-                .push(crate::resend::past(limit));
-            crate::resend::padded(r#"{"model":"jev-latest","answers":{}}"#, limit + 1)
-        })
-        .expect("listener");
-        let output = check(
-            command,
-            &["--url", listener.base()],
-            &[("THINKTHEN_API_KEY", KEY)],
-        );
-        let said = limits.lock().expect("limits").clone();
-        assert_eq!(
-            said.len(),
-            4,
-            "{}{}",
-            text(&output.stdout),
-            text(&output.stderr)
-        );
-        let report = format!(
-            "url {}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-1.13.0\n\
-        ok connection\nok key\nok endpoint\n\
-        critical noul: {}\ncritical choice: {}\ncritical score: {}\ncritical mixed: {}\n\
-        unchecked usage\ncritical 4, warning 0\n",
-            listener.base(),
-            said[0],
-            said[1],
-            said[2],
-            said[3]
-        );
-        assert_eq!(text(&output.stdout), report);
-        assert_eq!(output.status.code(), Some(4));
-    }
-}
-
-/// The estimated input cap binds `check` as it binds every live request
-/// (ticket 0364). A cap of 1 refuses the first probe and sends nothing; a cap
-/// of the first probe's estimate refuses the second after one request.
-#[test]
-fn the_estimated_input_cap_stops_the_check_before_a_probe_it_cannot_admit() {
-    for command in [&["backends", "check"][..], &["check"][..]] {
-        let fixture = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../specification/fixtures/check/requests.jsonl"
-        );
-        let bodies = fs::read_to_string(fixture).expect("the fixture");
-        let first = bodies.lines().next().expect("a first body").len();
-        // `encoded-body-bytes-908-v1`: ceil(bytes × 908 / 1000).
-        let first_estimate = (first * 908).div_ceil(1000).to_string();
-        for (cap, sent, before) in [
-            ("1", 0, "this call's first request"),
-            (first_estimate.as_str(), 1, "another request in this call"),
-        ] {
-            let backend = Backend::start().expect("backend");
-            let url = format!("{}/arm/full/v1", backend.origin());
-            let output = check(
-                command,
-                &["--url", url.as_str()],
-                &[
-                    ("THINKTHEN_API_KEY", KEY),
-                    ("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL", cap),
-                ],
-            );
-            assert_eq!(
-                text(&output.stderr),
-                format!(
-                    "thinkthen usage: max_estimated_input_tokens_total={cap} (encoded-body-bytes-908-v1) would be exceeded before {before}\n"
-                ),
-                "{cap}"
-            );
-            assert_eq!(text(&output.stdout), "", "{cap}");
-            assert_eq!(output.status.code(), Some(2), "{cap}");
-            assert_eq!(backend.count(), sent, "{cap}");
-        }
-    }
-}
-
-/// Each probe retries a retried status three times, the default of every
-/// command, so four probes send sixteen requests (`specification/check.md`).
-#[test]
-fn a_retried_status_is_sent_four_times_for_each_probe() {
-    for command in [&["backends", "check"][..], &["check"][..]] {
-        let backend = Backend::start().expect("backend");
-        let output = at(command, &backend, "/arm/503/v1");
-        assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
-        assert_eq!(backend.count(), 16);
-    }
-}
+#[path = "check/limits.rs"]
+mod limits;
