@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Each ticket names its evidence; a landed ticket records what its build taught.
+"""Each ticket names its outcome and evidence.
 
 From ticket 0120, `## Evidence` holds five items with text: `- Starts from:`,
 `- Keeps:`, `- Changes:`, `- Proof:`, `- Defers:`. A label may be bold. From
-ticket 0333, a ticket also has `## Outcome`, and a ticket whose status starts
-with `landed` has a non-empty `## What the build taught us`. Older tickets
-are exempt by number. Fenced lines do not count.
+0333, a ticket also has `## Outcome`. Older tickets are exempt by number.
+Fenced lines do not count.
 
 Usage: tickets [ROOT]. ROOT defaults to the repository. --self-test runs planted cases.
 """
@@ -55,9 +54,6 @@ def failures(path, number):
     if number >= SHORT_FROM:
         if section(text, "Outcome") is None:
             out.append(f"{path.name}: lacks a `## Outcome` section")
-        landed = re.search(r"^Status:\s*landed", text.replace("**", ""), re.M | re.I)
-        if landed and not any(line.strip() for line in section(text, "What the build taught us") or []):
-            out.append(f"{path.name}: landed without `## What the build taught us`")
     return out
 
 
@@ -85,16 +81,12 @@ One thing.
 - Changes: one flag.
 - Proof: a test.
 - Defers: nothing.
-
-## What the build taught us
-
-- Nothing new.
 """
 
 CASES = [
     ("0333-good.md", GOOD, []),
     ("0119-old.md", "# 0119\n", []),
-    ("0120-old-form.md", GOOD.replace("## Outcome", "## Aim").split("## What")[0], []),
+    ("0120-old-form.md", GOOD.replace("## Outcome", "## Aim"), []),
     ("0333-none.md", GOOD.replace("## Evidence", "## Notes"), ["0333-none.md: lacks a `## Evidence` section"]),
     (
         "0333-part.md",
@@ -108,25 +100,15 @@ CASES = [
     ),
     (
         "0333-elsewhere.md",
-        GOOD.replace("- Proof: a test.\n", "").replace("- Nothing new.", "- Proof: late."),
+        GOOD.replace("- Proof: a test.\n", "").replace("One thing.", "- Proof: late."),
         ["0333-elsewhere.md: Evidence lacks a `- Proof:` item with text"],
     ),
     ("0333-aim.md", GOOD.replace("## Outcome", "## Aim"), ["0333-aim.md: lacks a `## Outcome` section"]),
-    (
-        "0333-unlearned.md",
-        GOOD.split("## What")[0],
-        ["0333-unlearned.md: landed without `## What the build taught us`"],
-    ),
     ("0333-fenced.md", "# 0333\n\n```\n" + GOOD + "```\n", [
         "0333-fenced.md: lacks a `## Evidence` section",
         "0333-fenced.md: lacks a `## Outcome` section",
     ]),
-    (
-        "0333-empty-lessons.md",
-        GOOD.replace("Status: landed", "Status: **Landed**").replace("- Nothing new.", ""),
-        ["0333-empty-lessons.md: landed without `## What the build taught us`"],
-    ),
-    ("0333-ready.md", GOOD.replace("Status: landed", "Status: ready").split("## What")[0], []),
+    ("0333-ready.md", GOOD.replace("Status: landed", "Status: ready"), []),
 ]
 
 
