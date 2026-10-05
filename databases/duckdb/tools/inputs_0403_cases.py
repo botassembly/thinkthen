@@ -90,7 +90,7 @@ class Cases(unittest.TestCase):
             self.assertIn('unsupported DuckDB version: v9.9.9', result.stderr)
         self.assertFalse((self.root / 'cmake-ran').exists())
         original = (HERE / 'version.env').read_text()
-        for value in ('"v1.5.5 v1.5.5"', '"v1.5.5  v1.5.4"', '"../v1.5.4"', '$(touch marker)', 'v1.5.5\nDUCKDB_VERSIONS=v1.5.4'):
+        for value in ('"v1.5.5 v1.5.5"', '"v1.5.5 v9.9.9"', '"v1.5.5  v1.5.4"', '"../v1.5.4"', '$(touch marker)', 'v1.5.5\nDUCKDB_VERSIONS=v1.5.4'):
             path = self.root / 'version.env'
             path.write_text(original.replace('"v1.5.5 v1.5.4"', value))
             with self.assertRaisesRegex(ValueError, 'malformed|duplicate'):

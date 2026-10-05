@@ -22,6 +22,20 @@ HOSTS = {
 }
 
 
+def pin_fields(pins: dict[str, str], version: str, platform: str) -> dict[str, str]:
+    prefix = 'DUCKDB_' + version.upper().replace('.', '_')
+    fields = {'source_commit': prefix + '_CPP_SOURCE_COMMIT', 'requirements': prefix + '_REQUIREMENTS'}
+    fields.update({name: prefix + '_' + platform.upper() + '_' + name.upper()
+                   for name in ('cli_zip_sha256', 'cli_sha256', 'static_zip_sha256', 'manifest')})
+    result = {name: pins.get(key, '') for name, key in fields.items()}
+    for name, value in result.items():
+        pattern = r'requirements(?:-v[0-9.]+)?\.txt' if name == 'requirements' else r'archive-sha256(?:-[A-Za-z0-9.-]+)?\.txt' if name == 'manifest' else (
+            r'[0-9a-f]{40}' if name == 'source_commit' else r'[0-9a-f]{64}')
+        if re.fullmatch(pattern, value) is None:
+            raise ValueError(f'missing or malformed DuckDB {name} for {version}/{platform}')
+    return result
+
+
 def authority(path: Path = HERE / 'version.env') -> dict[str, str]:
     raw = path.read_bytes()
     if len(raw) > 16384:
@@ -39,6 +53,10 @@ def authority(path: Path = HERE / 'version.env') -> dict[str, str]:
         re.fullmatch(r'v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', v) is None for v in versions
     ):
         raise ValueError('unknown, malformed or duplicate DuckDB supported versions')
+    # Every declared entry needs a complete pin set before any selector resolves paths.
+    for version in versions:
+        for platform in PLATFORMS.values():
+            pin_fields(pins, version, platform)
     return pins
 
 
@@ -64,16 +82,7 @@ def selected(version: str | None = None, target: str | None = None,
     if target not in PLATFORMS:
         raise ValueError(f'unsupported DuckDB target: {target}')
     platform = PLATFORMS[target]
-    prefix = 'DUCKDB_' + version.upper().replace('.', '_')
-    fields = {'source_commit': prefix + '_CPP_SOURCE_COMMIT', 'requirements': prefix + '_REQUIREMENTS'}
-    fields.update({name: prefix + '_' + platform.upper() + '_' + name.upper()
-                   for name in ('cli_zip_sha256', 'cli_sha256', 'static_zip_sha256', 'manifest')})
-    result = {name: pins.get(key, '') for name, key in fields.items()}
-    for name, value in result.items():
-        pattern = r'requirements(?:-v[0-9.]+)?\.txt' if name == 'requirements' else r'archive-sha256(?:-[A-Za-z0-9.-]+)?\.txt' if name == 'manifest' else (
-            r'[0-9a-f]{40}' if name == 'source_commit' else r'[0-9a-f]{64}')
-        if re.fullmatch(pattern, value) is None:
-            raise ValueError(f'missing or malformed DuckDB {name} for {version}/{target}')
+    result = pin_fields(pins, version, platform)
     asset_platform = platform.replace('_', '-')
     result.update(version=version, target=target, platform=platform,
                   cli_asset=f'duckdb_cli-{asset_platform}.zip', static_asset=f'static-libs-{asset_platform}.zip')
