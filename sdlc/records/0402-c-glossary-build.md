@@ -4,7 +4,7 @@ Status: in progress, partial ticket. A/B landed through `cf457ff989f21e626d33f0b
 
 ## Authority, risk and reconciliation
 
-The [full frozen accepted design](../planning/0402-c-glossary-design.md) is retained byte for byte at SHA-256 `af55138bd6e224bd91a0e25d90573f616ac348c5198a075a8e885dadbaffd34d`. Its supplied fresh review returned ACCEPT. Its predecessor and experiment statuses describe the earlier frozen source; this implementation starts from the clean assigned lane 0 branch at the specified landed A/B main.
+The [full frozen accepted design](../planning/0402-c-glossary-design.md) is retained byte for byte at SHA-256 `af55138bd6e224bd91a0e25d90573f616ac348c5198a075a8e885dadbaffd34d`. Its supplied fresh design review returned ACCEPT against `6eba7e3179a26140b0c09de63fddb6d45464ad23`; it is not acceptance of the implemented C source. Its predecessor and experiment statuses describe the earlier frozen source; this implementation starts from the clean assigned lane 0 branch at the specified landed A/B main.
 
 Named High risk: correcting an existing reading-band boundary could change typed outcomes. The settled threshold contract requires no below LOW, not sure at LOW, and yes at HIGH. Inspection of core `Threshold::judge`, `Answer::read`, public `Decided::judgment` and exported builders found that behavior already implemented. C corrects the trust explanation and exercises the typed endpoints; it changes no production Rust, reading rule, request, cache identity, result schema, dependency, route or flag. There is no additional authorized runtime correction to make. The original ticket's strict-distance sentence would omit LOW; the precise inequality is `LOW ≤ p < HIGH`.
 
@@ -77,4 +77,4 @@ Ignored reproducible runners, all seven plant/control pairs, the clean lint clon
 | `content.log` | `0de8da409309b3857d6f164a43b22eea922da2e4ef909ab17c8e85a128c3a46e` |
 | `checker.log` | `8dc983906e81c5521aeff37f2c5b66e70925d82c5ff86456aefee7ecbf2785df` |
 
-Manifest SHA-256: `3a1037f981cc8e24a8617d707cd6b509ef2db5ad6d019a649cb2a37a5f257608`. Clean source/checker/export scopes exited 0; candidate strict check exited 1 as specified above; original failed fixture and every intended code plant exited 101. No source-independent future success is claimed.
+Manifest SHA-256: `ac393b6e3e39078361ec7f9b73e8ac6ede537736ece797deb06ad2471d645961`. Clean source/checker/export scopes exited 0; candidate strict check exited 1 as specified above; original failed fixture and every intended code plant exited 101. No source-independent future success is claimed.
