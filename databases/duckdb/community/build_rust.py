@@ -55,6 +55,7 @@ def environment(args):
             env["SDKROOT"] = sysroot
         check_apple_std(args, env)
     env[f"CFLAGS_{target_key}"] = shlex.join(cflags)
+    env["CC_SHELL_ESCAPED_FLAGS"] = "1"
     env["CARGO_ENCODED_RUSTFLAGS"] = "\x1f".join(rustflags)
     env.pop("RUSTFLAGS", None)
     return env
