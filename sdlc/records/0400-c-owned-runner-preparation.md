@@ -1,6 +1,6 @@
 # 0400 C owned runner preparation
 
-Status: the two P2 boundaries from candidate `653feada6333d147cb163b6b6876c6b79c13a65a` are corrected in a new owned bundle and authorized R harness sources; renewed focused proof and fresh High review follow. Prior focused receipts remain attributed only to frozen `721141f86aca366e5e838b833cf6cd9334f0623c`. Full campaign is not authorized or run. The concrete reviewed launch scripts and receipts are retained under the lane's ignored `target/0400c-integration-runner/`, with the owned runtime directory named in `runner-root.txt`. No product runner or architecture change is introduced.
+Status: both P2 corrections pass authorized focused proof at frozen source `31fe230075e6969430d65740695f86ec47d64952` on Docs B main `cf457ff989f21e626d33f0bfeb3de55297eebee2`; ready for fresh High whole-source/runner review. Prior focused receipts retain only their original `721141f86` attribution. Full campaign is not authorized or run.
 
 ## Environment and bounded exception
 
@@ -49,3 +49,26 @@ Only focused R routine/startup/local-Cargo ownership plants, policy, exact ratch
 ### What the P2 build taught us
 
 A working manifest and committed filenames cannot establish the dependency graph fetched by Cargo. Inspect committed objects before relaxing offline mode, and keep ownership inventories closed. A wrapper's startup settings disappear at an `env -i` child boundary; put suppression on the absolute child invocation itself. Passing prerequisites never establish a new full campaign. Ian can overturn these scoped runner choices; fresh whole-source/runner High review remains required.
+
+### Frozen P2 proof and limitations
+
+Immutable source is `31fe230075e6969430d65740695f86ec47d64952`. Every successful driver records that HEAD and exits 0 after its final unchanged-HEAD guard. This successor edits records only. Complete machine evidence, normalized object map, script pins, runtime digests, copied named receipts and preserved manifests are in `target/0400c-p2-runner/`; the active future entry is `launch-final.sh` in the corrected owned bundle.
+
+| Named receipt | Actual result | SHA-256 |
+| --- | --- | --- |
+| `receipts/p2cargo.log` | two real fetch 0 / deny 8 `source-not-allowed` pairs; 14 refusals exit 1 with zero Cargo invocations and HTTP requests; ordinary actual Cargo fetch offline, exit 0; captured driver exit 0 | `60344d97088c2ea29b5037db7ff2fadc87bf163677feb1488597a6b2b0c5f70e` |
+| `receipts/startup4.log` | three positive paths; omission exit 1 with all four canaries loaded in each path and three failed assertions; restored three paths pass; captured driver exit 0 | `b91d78a7276697b95be7ea03066967a25f3065e6b3fa78aaf7ffddd0ad6706dd` |
+| `receipts/routine2.log` | 17 routine R files, 259 checks / 233 counted requests; conformance 50 pass / 5 intentional not-run; throttle 12/20 and interrupt 19/28 unchanged; captured driver exit 0 | `1d7b6e949ce15f410234bcedef0be20f50aea90459fe310c2673c53b70d18215` |
+| `receipts/focused.log` | offline policy 254 packages, nine exact ratchets, required lint, formatting, all-target Clippy/Rustdoc with warnings denied; inventory 580 / four refused plants; captured driver exit 0 | `001dee9f5c7efe98586ae7375f3678c733e0a937fa691548600a3cd292c5dde9` |
+
+`final-future-checkpoint-guard.log` pins four missing-label refusals, each exit 1, with no campaign receipt. The label remains a guard, not authorization. Startup routine proof counts zero backend requests. R routine reuses the installed package and existing conformance backend, whose binary digests are pinned separately; it performs no new native build or stress promise. All three `env -i` absolute child paths were inspected. The configure-time absolute Rscript inherits its parent's suppression variables and does not use that child allowlist; production configure/API/engine bytes are unchanged.
+
+The first `routine.log` reached functional outputs but its active launcher edit caused actual outer exit 2. `routine.outer-exit` and `routine-launcher-error.log` retain it; no nested exit was captured or inferred, and it is excluded from successful launcher proof. The separate fixed `run-final.sh`/`launch-final.sh` passed `routine2.log` and focused proof without further edits. The basic earlier `startup.log` is retained beside the stronger `startup4.log`. No failed or earlier receipt was overwritten. Existing bytecode and others' artifacts were kept.
+
+Required lint's private-name scan is skipped in the owned HOME; original count-only 35-name receipts remain inherited evidence. It supplies no renewed private-name scan or native Windows execution claim. Root/C/fixtures/R are exactly 118131/5546/1329/2564; all nine ratchets match, all 721 Rust files fit 500, and the normalized map has 6953 entries / zero unexpected changes. All 21 Docs B literal exceptions and main binding proof are byte-identical; only the authorized canonical sentence differs. Accepted C product/test/contract bytes otherwise survive except the explicitly authorized harness change/new canary, with the additive C throttle registration retained.
+
+Source binary diff SHA-256: `2d3cfc5bf11d8109f5f6d0065e08572b320e96a4ed3aed914c2ad8aa203f52b6`. Normalized map SHA-256: `40e7573014bd9eb0bae9005f3cb0b84e19e49189f1cab071a1c29b5b2abc9418`. Twenty stable runner scripts are pinned by manifest SHA-256 `de15ffde91cd653249afb8633ec179ffb82b387000748a54af811f9f752a7990`. New receipt manifest SHA-256: `b9588d667e06a8f72516609ae1ad31d9c6d4593b9bdd5ecb591e7fcf7b3868af`.
+
+The original 43-log manifest SHA-256 remains `aec492cd5a54eaa629a0231c1e8b55bfd37e77dcef5cb31c88a8b55b84047d2c`; original 43-runner-artifact manifest remains `bb7bddf81e1b63199c367827036c98f999c649c8e80a2a864e74fe18d16396e7`. All 86 entries match, including every old setup failure and original outer-2 receipt. Old source `721141f86` is not rebound to this new source.
+
+The complete future full test/spec/surfaces/canonical350/stress/native/CI/release campaign is unrun here. Old stress still fails: 12 Rust passes, six surfaces passed, two failed, thirteen not run (eight intentional/five prerequisite); SQLite 18-row proof is still absent. No clinical/raw-gold/sealed material, new experiment, paid call, download, CI job, tag, landing or main mutation is introduced. Fresh High whole-source/runner review remains required. Freeze launch scripts before executing them: a completed child output does not establish successful outer status.
