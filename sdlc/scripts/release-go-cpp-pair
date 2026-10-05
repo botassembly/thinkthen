@@ -200,7 +200,7 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./copybooks/ \
 				./copybooks/thinkthen.cpy ./src/ ./src/TTJSON.c ./src/TTJSON.h \
 				./src/tt_shape.c ./src/tt_engine.cob ./src/tt_error.cob \
-				./src/tt_call.cob ./src/tt_decide.cob ./src/tt_validate.cob ./src/tt_plan.cob \
+				./src/tt_call.cob ./src/tt_files.cob ./src/tt_decide.cob ./src/tt_validate.cob ./src/tt_plan.cob \
 				./examples/ ./examples/direct.cob ./examples/settings.cob \
 				./examples/types.cob ./THINKTHEN-PACKAGE-INPUTS \
 				| LC_ALL=C sort >"$work/expected-members" ;;

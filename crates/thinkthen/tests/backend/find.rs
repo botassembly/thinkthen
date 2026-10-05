@@ -160,7 +160,7 @@ fn backend_failure_repeats_neither_the_key_nor_the_response_body() {
 }
 
 #[test]
-fn every_preflight_refusal_is_keyed_and_opens_no_connection() {
+fn every_preflight_stop_is_keyed_and_opens_no_connection() {
     let many = (0..256)
         .map(|place| format!("unit {place}\n"))
         .collect::<String>()
@@ -225,23 +225,27 @@ fn every_preflight_refusal_is_keyed_and_opens_no_connection() {
     let directory = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("find-input-directory");
     let _removed = fs::remove_dir_all(&directory);
     fs::create_dir_all(&directory).expect("directory");
-    let directory_text = directory.to_string_lossy();
-    let listener = Listener::serving(Vec::new()).expect("listener");
-    let output = spawn(
-        &[
-            "find",
-            "Which?",
-            "--url",
-            listener.base(),
-            "--input",
-            &directory_text,
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
-        b"ignored",
-    )
-    .expect("directory preflight");
-    assert_eq!(output.status.code(), Some(5));
-    assert!(listener.requests().is_empty());
+    let missing = directory.join("missing");
+    for (path, code) in [(&directory, 0), (&missing, 5)] {
+        let path_text = path.to_string_lossy();
+        let listener = Listener::serving(Vec::new()).expect("listener");
+        let output = spawn(
+            &[
+                "find",
+                "Which?",
+                "--url",
+                listener.base(),
+                "--input",
+                &path_text,
+            ],
+            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            b"ignored",
+        )
+        .expect("named input preflight");
+        assert_eq!(output.status.code(), Some(code), "{path:?}");
+        assert!(output.stdout.is_empty());
+        assert!(listener.requests().is_empty());
+    }
 }
 
 #[test]
