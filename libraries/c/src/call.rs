@@ -18,6 +18,8 @@ use crate::door;
 use crate::failures::Failure;
 
 mod records;
+#[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
+pub(crate) mod source;
 
 const VERBS: [&str; 10] = [
     "decide",
@@ -33,7 +35,7 @@ const VERBS: [&str; 10] = [
 ];
 
 /// Each envelope key and the verbs it goes with.
-const ENVELOPE: [(&str, &[&str]); 7] = [
+const ENVELOPE: [(&str, &[&str]); 8] = [
     (
         "evidence",
         &["decide", "choose", "score", "tag", "recognize"],
@@ -45,6 +47,7 @@ const ENVELOPE: [(&str, &[&str]); 7] = [
         ],
     ),
     ("units", &["find"]),
+    ("source", &VERBS),
     ("details", &["decide", "choose", "score", "tag"]),
     ("usage", &[]),
     ("call", &VERBS),
@@ -161,6 +164,7 @@ fn split(members: Members) -> Result<Request, Failure> {
             return Err(Failure::usage(format!("{verb} takes no {key} key")));
         }
     }
+    check_source(&envelope)?;
     let call = envelope
         .get("call")
         .map(|raw| {
@@ -169,7 +173,7 @@ fn split(members: Members) -> Result<Request, Failure> {
             let object = value
                 .as_object()
                 .ok_or_else(|| Failure::usage("call is one JSON object"))?;
-            let many = envelope.contains_key("records")
+            let many = (envelope.contains_key("records") || envelope.contains_key("source"))
                 && matches!(
                     verb.as_str(),
                     "decide" | "choose" | "score" | "tag" | "filter" | "rank" | "annotate"
@@ -216,6 +220,9 @@ fn answer(
     options: CallOptions<'_>,
 ) -> Result<(String, Facts), Failure> {
     let verb = request.verb.as_str();
+    if let Some(selection) = request.envelope.get("source") {
+        return source_answer(engine, request, selection.get(), options);
+    }
     match verb {
         "decide" | "choose" | "score" | "tag" => {
             let detailed = flag(&request.envelope, "details")?;
@@ -389,4 +396,35 @@ pub(crate) fn raw(text: String) -> Result<Box<RawValue>, Failure> {
 /// One typed value's JSON text, or the door's defect.
 pub(crate) fn written(text: serde_json::Result<String>) -> Result<String, Failure> {
     text.map_err(|_| Failure::defect("an answer could not be written"))
+}
+
+fn check_source(envelope: &Members) -> Result<(), Failure> {
+    if envelope.contains_key("source")
+        && ["evidence", "records", "units"]
+            .iter()
+            .any(|key| envelope.contains_key(*key))
+    {
+        return Err(Failure::usage(
+            "source replaces evidence, records, and units",
+        ));
+    }
+    Ok(())
+}
+
+fn source_answer(
+    engine: &Engine,
+    request: &Request,
+    selection: &str,
+    options: CallOptions<'_>,
+) -> Result<(String, Facts), Failure> {
+    let mut question = request.question.clone();
+    if let Some(details) = request.envelope.get("details") {
+        question.insert("details".into(), details.clone());
+    }
+    Ok(source::dispatch(
+        engine,
+        &object(&question)?,
+        selection,
+        options,
+    )?)
 }

@@ -53,3 +53,5 @@ Facts, details, and annotate rows are the engine's JSON, so a member this packag
 `setup-toolchain.sh` places the pinned Node under `~/.cache/thinkthen-toolchains/` once, on a networked machine. `build-addon.sh` builds `thinkthen-<platform>-<arch>.node` offline, the name `loader.js` picks. `check.sh` is this surface's entry in the surface rung, `sdlc/scripts/surfaces`. It runs offline against loopback backends only and reports "not run" when the toolchain is missing.
 
 `new tt.Engine({backend: "liquid"})` selects a named backend in code. The Rust builder captures its key from that backend's environment variable. Explicit `backend` outranks environment and configuration selection. With `baseUrl` too, the selected key, posting path, description form and setup prices/profile apply at that address. An explicit model or profile overrides its setup value. No TypeScript key option exists. Omission preserves the environment-driven default engine.
+
+Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.

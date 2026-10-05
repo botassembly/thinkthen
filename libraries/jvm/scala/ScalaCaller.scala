@@ -9,6 +9,7 @@ import scala.concurrent.duration.*
 final class ScalaFacade(engine: Door)(using ExecutionContext) {
   def decide(question: String, evidence: String): Door.TypedResult[Door.Answer] =
     engine.decide(question, evidence.getBytes(StandardCharsets.UTF_8))
+  def files(question: String, paths: java.util.List[String]): String = engine.files(question, paths)
   def call(request: String): String = engine.call(request)
   final class RunningDecision(question: String, evidence: String) extends AutoCloseable {
     private val token = engine.token()

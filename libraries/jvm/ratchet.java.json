@@ -1,1 +1,8 @@
-{"directory":["door","tests"],"extension":".java","max":955}
+{
+  "directory": [
+    "door",
+    "tests"
+  ],
+  "extension": ".java",
+  "max": 975
+}

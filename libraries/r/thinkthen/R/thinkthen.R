@@ -806,3 +806,11 @@ print.thinkthen_question <- function(x, ...) {
   cat("<thinkthen ", x$kind, ": ", shown, members, ">\n", sep = "")
   invisible(x)
 }
+
+# Explicit native reader for every JSON question grammar; locations stay beside values.
+tt_files <- function(question, paths, unit = "line", window = NULL, deadline_ms = NULL) {
+  source <- list(paths = as.list(paths), unit = unit)
+  if (!is.null(window)) source$window <- window
+  native <- .tt_call(tt_source_files(.tt_json(question), .tt_json(source), deadline_ms))
+  .tt_result(native$value, native)
+}

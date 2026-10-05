@@ -141,6 +141,20 @@ pub const Engine = struct {
         for (raw, 0..) |answer, i| answers[i] = try convert(answer);
         return .{ .ok = .{ .value = answers, .facts = try factsFromNative(self.allocator, facts, facts_len) } };
     }
+    /// Explicit native reader options, never an implicit path in evidence.
+    pub const ReaderOptions = struct { unit: []const u8 = "line", window: ?usize = null };
+    /// All ten question grammars through the explicit source envelope.
+    pub fn files(self: *Engine, question: []const u8, paths: []const []const u8, reader: ReaderOptions, options: Options) !Result([]u8) {
+        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, question, .{});
+        defer parsed.deinit();
+        if (parsed.value != .object or parsed.value.object.contains("source")) return error.InvalidQuestion;
+        const selection = try std.json.Stringify.valueAlloc(self.allocator, .{ .paths = paths, .unit = reader.unit, .window = reader.window }, .{});
+        defer self.allocator.free(selection);
+        const held = std.mem.trim(u8, question, " \t\r\n");
+        const request = try std.fmt.allocPrintSentinel(self.allocator, "{s}{s}\"source\":{s}}}", .{ held[0 .. held.len - 1], if (parsed.value.object.count() == 0) "" else ",", selection }, 0);
+        defer self.allocator.free(request);
+        return self.call(request, options);
+    }
     /// The JSON door supports all ten verbs. Free successful bytes with the engine allocator.
     pub fn call(self: *Engine, request: [:0]const u8, options: Options) !Result([]u8) {
         try checkCString(request);

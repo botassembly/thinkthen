@@ -192,6 +192,26 @@ public final class Door implements AutoCloseable {
             }
         }
     }
+    /** Explicit reader for all ten verbs; returns the native value/facts envelope. */
+    public String files(String question, java.util.List<String> paths, String unit, Integer window,
+                        long deadlineMs, Token token) {
+        var members = Json.parseObject(question);
+        if (members.containsKey("source")) throw new IllegalArgumentException("source is supplied by files");
+        StringBuilder source = new StringBuilder("{\"paths\":[");
+        for (int i = 0; i < paths.size(); i++) {
+            if (i > 0) source.append(',');
+            source.append(Json.quote(paths.get(i)));
+        }
+        source.append("],\"unit\":").append(Json.quote(unit));
+        if (window != null) source.append(",\"window\":").append(window);
+        source.append('}');
+        String held = question.strip();
+        return call(held.substring(0, held.length()-1) + (members.isEmpty() ? "" : ",") +
+                    "\"source\":" + source + "}", deadlineMs, token);
+    }
+    public String files(String question, java.util.List<String> paths) {
+        return files(question, paths, "line", null, -1, null);
+    }
     public String call(String request) { return call(request,-1,null); }
     public String call(String request,long deadlineMs,Token token) {
         MemorySegment e = live();

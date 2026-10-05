@@ -397,6 +397,19 @@ package body Thinkthen is
          Capture (Client.Handle, 0, Error);
       end if;
    end Call;
+   procedure Files (Client : in out Engine; Question, Source_JSON : String;
+                    Result : out Unbounded_String; Error : out Failure;
+                    Deadline_Ms : Interfaces.Integer_64 := -1; Token : access Cancel_Token := null) is
+      Held : constant String := Ada.Strings.Fixed.Trim (Question, Ada.Strings.Both);
+   begin
+      Validate (Held); Validate (Source_JSON);
+      if Held'Length < 2 or else Held (Held'First) /= '{' or else Held (Held'Last) /= '}' then
+         raise Constraint_Error with "files takes a question object";
+      end if;
+      Call (Client, Held (Held'First .. Held'Last - 1) &
+            (if Held'Length = 2 then "" else ",") & """source"":" & Source_JSON & "}",
+            Result, Error, Deadline_Ms, Token);
+   end Files;
    procedure Recognize (Client : in out Engine; Specification, Evidence : String;
                         Result, Facts : out Unbounded_String; Error : out Failure;
                         Deadline_Ms : Interfaces.Integer_64 := -1;

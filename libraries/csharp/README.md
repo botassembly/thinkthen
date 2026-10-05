@@ -18,3 +18,5 @@ The native library must match the header and ABI used to build the wrapper. The 
 Linux x86_64 is the installed-consumer proof host. The release ships a checksummed `thinkthen-csharp-<version>-<target>.tar.gz` beside the matching `thinkthen-c-<version>-<target>.tar.gz`; the managed archive contains the nupkg and a fixed input manifest, while the C archive supplies the native library. The two-file installed check reads only those unpacked product bytes. Other hosts remain separate work.
 
 `Engine.Open(settingsJson)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
+
+Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.

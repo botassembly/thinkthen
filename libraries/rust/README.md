@@ -56,3 +56,5 @@ for row in ranked.value().iter().take(5) {
 ```
 
 The CLI contract and executable replay examples live in [rank](../../specification/rank.md#rank-question-sets) and [rank sets](../../spec/rank-sets.md).
+
+Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.

@@ -51,6 +51,8 @@ from ._thinkthen import (
 )
 from .judge import Judge, make as _make_judge
 from .stream import Stream
+from .files import FileSelection, SourceRecord, Located, read_files
+from .files import call as _source_call, spec_source as _source_spec
 
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
@@ -58,7 +60,7 @@ __all__ = [
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
     "annotate", "choose", "decide", "details", "filter",
     "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",
-    "usage",
+    "usage", "FileSelection", "SourceRecord", "Located", "read_files",
 ]
 
 _VERBS = ("decide", "choose", "score", "tag")
@@ -433,6 +435,8 @@ class Engine:
             raise UsageError("the judge belongs to another engine")
         if isinstance(records, (set, frozenset)):
             raise UsageError("an unordered set cannot align records with answers")
+        if isinstance(records, FileSelection):
+            records = [row.record for row in records]
         kind = _pandas(records)
         if kind == "Series":
             records = _marked(records, kind)
@@ -453,6 +457,12 @@ class Engine:
         ``question`` is the question text. ``top`` keeps the first entries.
         """
         deadline_ms = _due_keyword(deadline_ms, legacy)
+        if isinstance(records, FileSelection):
+            asked = _ordering(question, "rank")
+            if asked.kind != "rank":
+                raise UsageError("rank takes a rank question")
+            call = _source_call(self, "rank", asked._json(), records, batch, context, deadline_ms, token)
+            return _mapped(call, lambda rows: rows[:top])
         ranked = self._engine.order("rank", _ordering(question, "rank"), records,
                                      batch, context, deadline_ms, token)
         return _mapped(ranked, lambda rows: [{"index": index, "record": record,
@@ -466,9 +476,15 @@ class Engine:
         if not isinstance(none, bool):
             raise UsageError("none is True or False")
         asked = _ordering(question, "find")
+        deadline_ms = _due_keyword(deadline_ms, legacy)
+        if isinstance(units, FileSelection):
+            if asked.kind != "find":
+                raise UsageError("find takes a find question")
+            body = json.loads(asked._json())
+            body["none"] = none
+            return _source_call(self, "find", json.dumps(body), units, None, None, deadline_ms, token)
         if none:
             asked = asked._offering_none()
-        deadline_ms = _due_keyword(deadline_ms, legacy)
         found = self._engine.order("find", asked, units, None, None, deadline_ms, token)
         def picked(rows):
             if not rows:
@@ -493,6 +509,10 @@ class Engine:
         deadline_ms = _due_keyword(deadline_ms, legacy)
         if context is not None:
             raise UsageError("annotate does not take a shared context")
+        if isinstance(records, FileSelection):
+            if on is not None:
+                raise UsageError("source annotate takes question-member on, not frame on")
+            return _source_call(self, "annotate", _source_spec(questions), records, batch, None, deadline_ms, token)
         asked = _spec(_thinkthen._QuestionSet, questions)
         if on is None:
             return self._engine.annotate(asked, records, batch, deadline_ms, token)
@@ -552,6 +572,10 @@ class Engine:
             if relation_threshold is not None:
                 body["relation_threshold"] = relation_threshold
             spec = _thinkthen._Recognize._from_json(json.dumps(body))
+        if isinstance(text, FileSelection):
+            if on is not None:
+                raise UsageError("source recognize reads text units; on requires a parser source map")
+            return _source_call(self, "recognize", _source_spec(ask) if ask is not None else json.dumps(body), text, None, None, deadline_ms, token)
         if on is not None and _pandas(text) == "DataFrame":
             column = _on(text, on, ["names"])
             found = _thinkthen._recognize_column(self._engine, spec, _marked(column, "Series"),
@@ -578,6 +602,13 @@ class Engine:
             spec = _spec(_thinkthen._Relate, ask)
         else:
             spec = _thinkthen._Relate._build(_rules(relations, either), threshold)
+        if isinstance(entities, FileSelection):
+            body = {"version": 1, "relate": {"relations": [
+                {"name": name, "source": source, "target": target, "either": both}
+                for name, source, target, both in _rules(relations, either)]}}
+            if threshold is not None:
+                body["threshold"] = threshold
+            return _source_call(self, "relate", _source_spec(ask) if ask is not None else json.dumps(body), entities, None, None, deadline_ms, token)
         return self._engine.relate(spec, entities, deadline_ms, token)
 
     def usage(self):

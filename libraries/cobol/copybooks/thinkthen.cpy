@@ -37,3 +37,6 @@
           02 tt-text-row occurs 64 times.
              03 tt-text-length usage binary-double unsigned.
              03 tt-text pic x(256).
+      *> TT-FILES takes engine, question text/length, source JSON text/length,
+      *> deadline-ms, result JSON text/length and the existing failure row.
+      *> Buffers use pic x(8192); lengths are binary-double unsigned.
