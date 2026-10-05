@@ -5,6 +5,15 @@ import scala.concurrent.ExecutionContext
 
 @main def installedScala(): Unit = {
   given ExecutionContext = ExecutionContext.global
+  if (sys.env.get("TT_NAMED_BACKEND").contains("1")) {
+    val door = new Door("""{"backend":"local","cache":false}""")
+    try {
+      val answer = new ScalaFacade(door).decide("Is it?", "named-scala")
+      assert(answer.value().outcome() == 1 && answer.value().probability() == .9 && answer.facts().get("requests_sent").asInstanceOf[Number].longValue == 1L)
+      println("SCALA_NAMED_BACKEND_PASS")
+    } finally door.close()
+    return
+  }
   if (sys.env.get("TT_PORTABLE_BATCH").contains("1")) {
     val door = new Door("""{"cache":false,"throttle":1,"max_retries":0}""")
     try {

@@ -30,8 +30,8 @@ export const INDEX = fileURLToPath(import.meta.resolve('thinkthen'));
 export const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 /** Start the conformance backend and close it when the test ends. */
-export async function startBackend(t) {
-  const proc = spawn(process.env.THINKTHEN_TEST_BACKEND, [], { stdio: ['pipe', 'pipe', 'inherit'], env: cleanEnv() });
+export async function startBackend(t, markers = {}) {
+  const proc = spawn(process.env.THINKTHEN_TEST_BACKEND, [], { stdio: ['pipe', 'pipe', 'inherit'], env: cleanEnv({ values: { THINKTHEN_TEST_MARKERS: JSON.stringify(markers) } }) });
   const lines = createInterface({ input: proc.stdout });
   const queue = [];
   const waiting = [];
@@ -46,6 +46,10 @@ export async function startBackend(t) {
     async count() {
       proc.stdin.write('count\n');
       return Number(await next());
+    },
+    async snapshot(command) {
+      proc.stdin.write(`${command}\n`);
+      return JSON.parse(await next());
     },
     async wait(n) {
       proc.stdin.write(`wait ${n}\n`);

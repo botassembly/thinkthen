@@ -325,6 +325,8 @@ export class ThinkThenError extends Error {
 
 /** An engine's settings. Each given key overrides what the environment set. */
 export interface EngineOptions {
+  /** Select a captured named backend; an explicit baseUrl receives its key. */
+  backend?: string;
   baseUrl?: string;
   model?: string;
   /** The most requests in flight at once, 1 through 32, for this loaded copy of the engine. */

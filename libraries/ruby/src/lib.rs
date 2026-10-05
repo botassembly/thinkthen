@@ -203,6 +203,7 @@ fn start(
 /// The settings `ThinkThen::Engine.new` takes, over the environment's.
 #[derive(Debug, Default)]
 struct Settings {
+    backend: Option<String>,
     base_url: Option<String>,
     model: Option<String>,
     throttle: Option<i64>,
@@ -223,6 +224,9 @@ impl Settings {
     /// Start from `EngineBuilder::from_env()`, then apply each given setting.
     fn build(self) -> Result<Engine, Fault> {
         let mut builder = EngineBuilder::from_env()?;
+        if let Some(value) = &self.backend {
+            builder = builder.backend(value)?;
+        }
         if let Some(value) = &self.base_url {
             builder = builder.base_url(value)?;
         }

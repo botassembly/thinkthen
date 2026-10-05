@@ -26,6 +26,7 @@ const MOST: usize = 16;
 /// The engine settings as the caller's session holds them; `None` is unset.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Asked {
+    pub(crate) backend: Option<String>,
     pub(crate) throttle: Option<i64>,
     pub(crate) max_requests: Option<i64>,
     pub(crate) max_request_bytes: Option<i64>,
@@ -48,6 +49,7 @@ pub(crate) enum Probe {
 
 /// One engine's key: the settings that change what an engine is.
 type Key = (
+    Option<String>,
     Option<u8>,
     Option<usize>,
     Option<usize>,
@@ -279,6 +281,9 @@ fn request_bytes(value: Option<i64>) -> Result<Option<usize>, RowError> {
 fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
     let refused = RowError::from;
     let mut builder = EngineBuilder::from_env().map_err(refused)?.shared_host();
+    if let Some(backend) = &asked.backend {
+        builder = builder.backend(backend).map_err(refused)?;
+    }
     let throttle = asked
         .throttle
         .map(|value| {
@@ -350,6 +355,7 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
     }
     Ok((
         (
+            asked.backend.clone(),
             throttle,
             most,
             bytes,

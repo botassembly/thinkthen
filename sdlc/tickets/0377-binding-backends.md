@@ -1,6 +1,6 @@
 # 0377: Each language binding and SQL extension names a backend in code
 
-Status: ready: the accepted ADR 0114 design allows each language binding and SQL extension to select a named backend in code. Implementation and its behavior checks remain; the release/0.1 cut is complete.
+Status: landed. Bindings and SQL now select named backends in code while preserving captured keys, request counts and existing defaults. Release-platform qualification remains part of the combined release run.
 
 Milestone: 0.2
 

@@ -20,6 +20,7 @@ use serde_json::value::RawValue;
 
 use crate::lifetime::Gate;
 use crate::listener::{Canned, Listener, Recorded};
+use crate::observations::Observations;
 
 /// The status every unknown body, arm, or request earns, and no arm serves.
 pub(crate) const DRIFT: u16 = 500;
@@ -137,11 +138,17 @@ pub struct Backend {
     listener: Listener,
     gate: Arc<Gate>,
     capture: Arc<Mutex<Capture>>,
+    observations: Arc<Mutex<Observations>>,
 }
 
 impl Backend {
     /// Bind 127.0.0.1 on an ephemeral port and serve every arm.
     pub fn start() -> io::Result<Self> {
+        Self::with_markers(BTreeMap::new())
+    }
+
+    /// Capture a bounded table of explicit fake markers for counted binding tests.
+    pub fn with_markers(markers: BTreeMap<String, String>) -> io::Result<Self> {
         let document: Document = serde_json::from_str(CASES).map_err(io::Error::other)?;
         let mut cases = Cases::new();
         for case in document.cases {
@@ -157,7 +164,13 @@ impl Backend {
         let held = Arc::clone(&gate);
         let capture = Arc::new(Mutex::new(Capture::default()));
         let observed = Arc::clone(&capture);
+        let observations = Arc::new(Mutex::new(Observations::new(markers)?));
+        let counts = Arc::clone(&observations);
         let listener = Listener::routing(move |request| {
+            counts
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .observe(request);
             if capturing(request) {
                 observed
                     .lock()
@@ -170,6 +183,7 @@ impl Backend {
             listener,
             gate,
             capture,
+            observations,
         })
     }
 
@@ -184,11 +198,28 @@ impl Backend {
     }
 
     /// The bounded bodies kept by this process's one opted-in case arm.
-    fn capture_json(&self) -> String {
+    pub fn capture(&self) -> String {
         self.capture
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .json()
+    }
+
+    /// The fixed counter snapshot of actual request targets.
+    pub fn paths(&self) -> crate::Paths {
+        self.observations
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .paths
+            .clone()
+    }
+
+    /// Fake-marker counts only; no header values appear in this snapshot.
+    pub fn bearers(&self) -> String {
+        self.observations
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .bearer_json()
     }
 
     /// Let every held reply go, now and from here on.
@@ -228,7 +259,14 @@ impl Backend {
 /// A `wait` answers on a thread of its own, so the lines behind it run at once.
 /// The output is shared with those threads. Input close cancels and joins them.
 pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Result<()> {
-    let backend = Arc::new(Backend::start()?);
+    let markers = std::env::var("THINKTHEN_TEST_MARKERS")
+        .ok()
+        .map(|text| {
+            serde_json::from_str(&text).map_err(|_| io::Error::other("invalid fake-marker table"))
+        })
+        .transpose()?
+        .unwrap_or_default();
+    let backend = Arc::new(Backend::with_markers(markers)?);
     let output = Arc::new(Mutex::new(output));
     let port = backend.origin().rsplit(':').next().unwrap_or_default();
     say(&output, port)?;
@@ -238,7 +276,12 @@ pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Resu
         for line in input.lines() {
             match line?.trim() {
                 "count" => say(&output, backend.count())?,
-                "capture" => say(&output, backend.capture_json())?,
+                "capture" => say(&output, backend.capture())?,
+                "paths" => say(
+                    &output,
+                    serde_json::to_string(&backend.paths()).map_err(io::Error::other)?,
+                )?,
+                "bearers" => say(&output, backend.bearers())?,
                 "release" => backend.release(),
                 "round" => backend.round(),
                 other => match other.strip_prefix("wait ").and_then(whole) {

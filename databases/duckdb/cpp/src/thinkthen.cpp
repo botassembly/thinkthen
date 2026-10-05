@@ -27,6 +27,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
 	                          LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_cache", "Local ThinkThen cache folder", LogicalType::VARCHAR);
+	config.AddExtensionOption("thinkthen_backend", "ThinkThen named backend", LogicalType::VARCHAR);
 	config.AddExtensionOption("thinkthen_model", "ThinkThen model", LogicalType::VARCHAR);
 	config.AddExtensionOption("thinkthen_timeout", "Live attempt timeout in seconds", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_max_retries", "Maximum live retries", LogicalType::BIGINT);

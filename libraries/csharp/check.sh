@@ -60,6 +60,7 @@ mkdir -p "$here/target/scratch/lib" "$here/target/scratch/nuget" "$here/target/s
 export DOTNET_CLI_HOME="$here/target/scratch/dotnet-home" NUGET_PACKAGES="$here/target/scratch/nuget"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1
 RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2
+RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/Cargo.toml" --locked --offline --package conformance-backend -j2
 native="$root/libraries/c/target/debug/libthinkthen_c.so"
 python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native"
 cp "$native" "$here/target/scratch/lib/libthinkthen.so"
@@ -70,6 +71,7 @@ tar -czf "$here/target/artifacts/thinkthen-c-$version-x86_64-linux-gnu.tar.gz" -
 "$dotnet" pack "$here/ThinkThen.csproj" -c Release --source "$here/target/scratch/nuget" -o "$here/target/scratch/managed" -v quiet
 test -f "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg"
 python3 "$here/tests/package_check.py"
+python3 "$here/tests/named_backends.py"
 python3 "$here/tests/run_matrix.py"
 run_dir=$(mktemp -d "$here/target/logs/package-XXXXXX")
 python3 "$here/tests/isolated_consumer.py" alpha "$run_dir"

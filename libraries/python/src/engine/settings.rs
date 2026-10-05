@@ -97,6 +97,17 @@ pub(crate) fn context(value: Arg<'_, '_>) -> PyResult<Option<String>> {
         .transpose()
 }
 
+/// Read a backend name without applying Rust's name grammar in the host.
+pub(super) fn backend(value: Arg<'_, '_>) -> PyResult<Option<String>> {
+    value
+        .map(|value| {
+            let refusal = || usage(value.py(), "backend is text");
+            let text = value.cast::<PyString>().map_err(|_| refusal())?;
+            Ok(text.to_str().map_err(|_| refusal())?.to_owned())
+        })
+        .transpose()
+}
+
 /// Read one optional folder setting with its own public refusal sentence.
 pub(super) fn folder_path(
     py: Python<'_>,
@@ -110,6 +121,7 @@ pub(super) fn folder_path(
 
 /// The checked settings of `tt.Engine`, each applied over the environment.
 pub(super) struct Settings<'a> {
+    pub(super) backend: Option<String>,
     pub(super) base_url: Option<&'a str>,
     pub(super) model: Option<&'a str>,
     pub(super) throttle: Option<u8>,
@@ -128,6 +140,9 @@ impl Settings<'_> {
     pub(super) fn build(self, py: Python<'_>, cache: Arg<'_, '_>) -> PyResult<thinkthen::Engine> {
         let refused = |error: thinkthen::Error| raised(py, &error);
         let mut builder = EngineBuilder::from_env().map_err(refused)?;
+        if let Some(name) = self.backend {
+            builder = builder.backend(&name).map_err(refused)?;
+        }
         if let Some(address) = self.base_url {
             builder = builder.base_url(address).map_err(refused)?;
         }

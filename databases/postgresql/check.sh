@@ -1217,6 +1217,14 @@ sql_settings_and_retry_total() {
 		'permission denied to set parameter "thinkthen.record"'
 }
 check sql_settings_and_retry_total
+named_backend_settings() {
+    export LIQUIDAI_API_KEY=fake-pg-liquid OLLAMA_API_KEY=fake-pg-ollama OPENROUTER_API_KEY=fake-pg-openrouter PERPLEXITY_API_KEY=fake-pg-perplexity TYPESAFE_API_KEY=fake-pg-typesafe
+    export THINKTHEN_TEST_MARKERS='{"liquid":"fake-pg-liquid","ollama":"fake-pg-ollama","openrouter":"fake-pg-openrouter","perplexity":"fake-pg-perplexity","typesafe":"fake-pg-typesafe"}'
+    fresh arm/full/capture
+    python3 tests/named_backends.py "$SOCK" "$SCRATCH" "$SCRATCH/.config" "http://127.0.0.1:$BPORT/arm/full/capture/v1" "$RUN/b.out" "$RUN"
+}
+check named_backend_settings
+
 shared_settings_cases() {
 	python3 tests/settings_cases.py plan >"$RUN/settings.plan"
 	while IFS=$'\t' read -r id arm expected; do

@@ -50,11 +50,11 @@ def stored(folder: str) -> int:
 class Backend:
     """One loopback backend, driven from one writer."""
 
-    def __init__(self) -> None:
+    def __init__(self, markers=None) -> None:
         if not BACKEND:
             raise SystemExit("harness: THINKTHEN_BACKEND_BIN names no loopback backend")
         self.process = subprocess.Popen(
-            [BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1, env=clean_env()
+            [BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1, env=clean_env(**({"THINKTHEN_TEST_MARKERS":json.dumps(markers)} if markers else {}))
         )
         self.port = int(self._line())
 
@@ -74,6 +74,10 @@ class Backend:
     def count(self) -> int:
         self._say("count")
         return int(self._line())
+
+    def snapshot(self, command):
+        self._say(command)
+        return json.loads(self._line())
 
     def capture(self) -> list[str]:
         """Bodies retained by the shared backend's bounded opt-in case arm."""

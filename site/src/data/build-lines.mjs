@@ -68,6 +68,7 @@ export const BUILD_LINES = {
       '-Wno-incompatible-pointer-types',
       '-Wno-implicit-function-declaration"',
       `-o ${program(sample)} ${sample}`,
+      'thinkthen-cobol/src/tt_engine.cob',
       'thinkthen-cobol/src/tt_decide.cob',
       'thinkthen-cobol/src/tt_error.cob',
       'thinkthen-cobol/src/tt_call.cob',
