@@ -70,6 +70,10 @@ package Thinkthen is
    procedure Call (Client : in out Engine; Request : String; Result : out Ada.Strings.Unbounded.Unbounded_String;
                    Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
                    Token : access Cancel_Token := null);
+   -- Explicit reader for any JSON question grammar; Source_JSON contains paths/unit/window.
+   procedure Files (Client : in out Engine; Question, Source_JSON : String;
+                    Result : out Ada.Strings.Unbounded.Unbounded_String; Error : out Failure;
+                    Deadline_Ms : Interfaces.Integer_64 := -1; Token : access Cancel_Token := null);
    -- Recognize offsets are zero-based Unicode code points, end exclusive.
    procedure Recognize (Client : in out Engine; Specification, Evidence : String;
                         Result, Facts : out Ada.Strings.Unbounded.Unbounded_String; Error : out Failure;

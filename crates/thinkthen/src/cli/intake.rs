@@ -24,6 +24,8 @@ pub(crate) struct Position {
     pub(crate) last: usize,
     #[serde(skip)]
     pub(crate) source: usize,
+    #[serde(skip)]
+    pub(crate) located: bool,
 }
 
 pub(crate) enum Data {
@@ -42,10 +44,17 @@ struct TextSource {
     file: Option<PathBuf>,
     chunks: Chunks<Box<dyn BufRead + Send>>,
     line: usize,
+    located: bool,
 }
 
 enum Source {
     Text(TextSource),
+    Pending {
+        file: PathBuf,
+        source: usize,
+        kind: Option<Kind>,
+        located: bool,
+    },
     Table(Box<Rows<Box<dyn BufRead + Send>>>),
 }
 
@@ -57,25 +66,8 @@ struct Piece {
 
 impl TextSource {
     fn next(&mut self, streams: bool, window: usize) -> Option<Result<Piece, Failure>> {
-        let bytes = self.chunks.next()?;
-        Some(bytes.and_then(|bytes| self.join(bytes, streams, window)))
-    }
-
-    fn join(&mut self, mut bytes: Vec<u8>, streams: bool, window: usize) -> Result<Piece, Failure> {
-        if !streams {
-            let count = bytes.iter().filter(|&&b| b == b'\n').count()
-                + usize::from(!bytes.is_empty() && !bytes.ends_with(b"\n"));
-            return Ok(self.piece(bytes, count, false));
-        }
-        let mut count = 1;
-        while count < window && bytes.len() <= crate::core::MAX_RECORD_BYTES + 2 {
-            let Some(next) = self.chunks.next() else {
-                break;
-            };
-            bytes.extend(next?);
-            count += 1;
-        }
-        Ok(self.piece(bytes, count, true))
+        let unit = self.chunks.next_unit(window)?;
+        Some(unit.map(|(bytes, count)| self.piece(bytes, count, streams)))
     }
 
     fn piece(&mut self, bytes: Vec<u8>, count: usize, streams: bool) -> Piece {
@@ -84,6 +76,7 @@ impl TextSource {
         Piece {
             position: Some(Position {
                 source: self.source,
+                located: self.located,
                 file: self
                     .file
                     .as_ref()
@@ -99,7 +92,33 @@ impl TextSource {
 
 impl Source {
     fn next(&mut self, streams: bool, window: usize) -> Option<Result<Piece, Failure>> {
+        if let Self::Pending {
+            file,
+            source,
+            kind,
+            located,
+        } = self
+        {
+            let reader = match edge::source(Some(file), std::io::empty()) {
+                Ok(reader) => reader,
+                Err(error) => return Some(Err(error)),
+            };
+            *self = match kind {
+                Some(kind) => match Rows::new(reader, *kind) {
+                    Ok(rows) => Self::Table(Box::new(rows)),
+                    Err(error) => return Some(Err(error)),
+                },
+                None => Self::Text(TextSource {
+                    source: *source,
+                    file: Some(file.clone()),
+                    chunks: Chunks::new(reader, streams),
+                    line: 0,
+                    located: *located,
+                }),
+            };
+        }
         match self {
+            Self::Pending { .. } => None,
             Self::Table(rows) => rows.next().map(|row| {
                 row.map(|record| Piece {
                     position: None,
@@ -112,12 +131,11 @@ impl Source {
     }
 }
 
-/// Every source is opened before iteration can admit its first item.
+/// Enumeration finishes before admission; file handles open one at a time.
 pub(crate) struct Intake {
     sources: VecDeque<Source>,
     reading: Reading,
     window: usize,
-    windowed: bool,
     global: usize,
 }
 
@@ -158,11 +176,37 @@ impl Intake {
         snapshot: bool,
     ) -> Result<(Self, Option<Snapshot>), Failure> {
         let window = window(common, has_on)?;
+        let paths = crate::enumerate_files(&common.input)
+            .map_err(|error| Failure::OpenInput(std::io::Error::other(error.to_string())))?;
+        let kind = common
+            .csv
+            .then_some(Kind::Csv)
+            .or(common.tsv.then_some(Kind::Tsv));
+        if !common.input.is_empty() && !snapshot && kind.is_none() {
+            let sources = paths
+                .into_iter()
+                .enumerate()
+                .map(|(source, file)| Source::Pending {
+                    file,
+                    source,
+                    kind,
+                    located: common.located(),
+                })
+                .collect();
+            return Ok((
+                Self {
+                    sources,
+                    reading: reading.clone(),
+                    window,
+                    global: 0,
+                },
+                None,
+            ));
+        }
         let opened = if common.input.is_empty() {
             vec![(None, edge::source(None, input)?)]
         } else {
-            common
-                .input
+            paths
                 .iter()
                 .map(|path| {
                     edge::source(Some(path), std::io::empty())
@@ -189,6 +233,7 @@ impl Intake {
                     file,
                     chunks: Chunks::new(reader, reading.streams()),
                     line: 0,
+                    located: common.located(),
                 })),
             })
             .collect::<Result<VecDeque<_>, _>>()?;
@@ -197,7 +242,6 @@ impl Intake {
                 sources,
                 reading: reading.clone(),
                 window,
-                windowed: common.window.is_some(),
                 global: 0,
             },
             snapshot,
@@ -221,6 +265,18 @@ impl Iterator for Intake {
                 Err(error) => return Some(Err(Placed::at(error, at))),
             };
             self.global += piece.advance;
+            // The bounded reader can cut an oversized unit and abandon its file.
+            // Refuse it here, before blank skipping or worker prefetch of later files.
+            if let Data::Bytes(bytes) = &piece.data
+                && bytes.len() > crate::core::MAX_RECORD_BYTES
+                && let Err(error) = self.reading.record(bytes)
+            {
+                self.sources.clear();
+                return Some(Err(Placed::at(
+                    Failure::record(error, self.reading.streams()),
+                    at,
+                )));
+            }
             if self.skips(&piece.data) {
                 continue;
             }
@@ -238,13 +294,7 @@ impl Intake {
         let Data::Bytes(bytes) = data else {
             return false;
         };
-        // An oversized joined whitespace window must be refused before admission.
         self.reading.skips(bytes)
-            && (!self.windowed
-                || self
-                    .reading
-                    .as_it_arrived(bytes)
-                    .is_ok_and(|text| text.len() <= crate::core::MAX_RECORD_BYTES))
     }
 }
 
@@ -286,4 +336,31 @@ pub(crate) fn document(
         );
     }
     Ok(())
+}
+
+/// Add flat source coordinates to an explicit located result.
+pub(crate) fn source_members(
+    line: &mut Option<String>,
+    position: Option<&Position>,
+) -> Result<(), Failure> {
+    let (Some(line), Some(position)) = (line, position.filter(|p| p.located)) else {
+        return Ok(());
+    };
+    member(line, "file", &position.file)?;
+    member(line, "first_line", &position.first)?;
+    member(line, "last_line", &position.last)
+}
+
+/// Retain source and original input beside a value without altering caller keys.
+pub(crate) fn source_value(
+    record: &impl Serialize,
+    value: &str,
+    position: &Position,
+) -> Result<String, Failure> {
+    let mut line = Some(format!(
+        "{{\"input\":{},\"value\":{value}}}",
+        crate::core::json_line(record)?
+    ));
+    source_members(&mut line, Some(position))?;
+    line.ok_or(Failure::Defect("a located value has no carrier"))
 }

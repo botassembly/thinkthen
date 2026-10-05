@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicReference
 /** Kotlin facade over the same Java FFM door. Caller joins before engine close. */
 class KotlinFacade(private val engine: Door) {
     fun decide(question: String, evidence: String): Door.TypedResult<Door.Answer> = engine.decide(question, evidence.toByteArray(StandardCharsets.UTF_8))
+    fun files(question: String, paths: List<String>): String = engine.files(question, paths)
     fun call(request: String): String = engine.call(request)
     inner class RunningDecision(question: String, evidence: String): AutoCloseable {
         private val token = engine.token()

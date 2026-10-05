@@ -29,3 +29,5 @@ For Linux x86-64, `sdlc/scripts/release-pack TARGET OUT c go cpp` produces versi
 The local MIT JSON parser preserves object insertion order for label maps and rejects invalid strings and duplicate keys. Numbers are `double`; this is not arbitrary-precision number support. Synthetic replies prove the integration boundary, not model accuracy or a published release.
 
 `tt::create(settings)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
+
+Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.

@@ -316,3 +316,5 @@ install/typescript/backends.ts
 install/typescript/first-call.ts
 install/zig/backends/backends.zig
 install/zig/first-call.zig
+
+learn/python/files.py

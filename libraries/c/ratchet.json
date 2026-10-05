@@ -1,8 +1,9 @@
 {
   "directory": [
     "src",
-    "tests"
+    "tests",
+    "../r/thinkthen/src/rust/src/source"
   ],
   "extension": ".rs",
-  "max": 5743
+  "max": 6904
 }

@@ -158,8 +158,13 @@ impl Question {
         } else {
             thinkthen::Question::rank(text)
         };
-        made.map(|question| Self(Asked::Plain(question), None))
-            .map_err(|error| raised(py, &error))
+        made.map(|question| {
+            Self(
+                Asked::Plain(question),
+                Some(serde_json::json!({verb: text}).to_string()),
+            )
+        })
+        .map_err(|error| raised(py, &error))
     }
 
     /// This find question with a `none` candidate beside the units.

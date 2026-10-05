@@ -186,6 +186,17 @@ public final class Engine: @unchecked Sendable {
             return try CallResult(value: answers.map(Answer.init), facts: copyJSON(facts, factsLen))
         }
     }
+    /// Explicit native reader for any of the ten JSON question grammars.
+    public func files(_ question: [String: Any], paths: [String], unit: String = "line", window: Int? = nil,
+                      deadline: Int64 = -1, token: OpaquePointer? = nil) throws -> String {
+        guard question["source"] == nil else { throw DoorFailure(code: 1, retryable: false, message: "source is supplied by files") }
+        var request = question
+        var source: [String: Any] = ["paths": paths, "unit": unit]
+        if let window { source["window"] = window }
+        request["source"] = source
+        let bytes = try JSONSerialization.data(withJSONObject: request)
+        return try call(String(decoding: bytes, as: UTF8.self), deadline: deadline, token: token)
+    }
     public func call(_ request: String, deadline: Int64 = -1, token: OpaquePointer? = nil) throws -> String {
         let h = try open()
         return try withInput(request) { q in

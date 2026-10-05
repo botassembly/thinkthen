@@ -20,6 +20,7 @@ mod budget;
     reason = "the SQLite entry point, API table, and virtual-table glue (ADR 0047 item 3)"
 )]
 mod ffi;
+mod files;
 mod many;
 mod question;
 mod recognize_document;

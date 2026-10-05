@@ -11,7 +11,10 @@ pub(super) fn read_by(
 ) -> Result<Reading, Failure> {
     let on = settled.on().to_vec();
     let asked = common.framing();
-    if asked != Framing::Document || !keeping.streams_only() {
+    if asked != Framing::Document
+        || !keeping.streams_only()
+        || common.unit.as_deref() == Some("file")
+    {
         return Ok(Reading::new(asked, on)?);
     }
     let framing = if on.is_empty() {

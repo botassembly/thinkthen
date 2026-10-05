@@ -41,6 +41,21 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence + Serialize,
     {
+        self.try_details_many_with(question, records.into_iter().map(Ok), options)
+    }
+
+    /// Fallible input for [`Engine::details_many_with`], preserving input order.
+    /// A reader failure ends the batch after its earlier admitted rows.
+    pub fn try_details_many_with<'a, I, T, Q: DetailQuestion + ?Sized>(
+        &'a self,
+        question: &'a Q,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Batch<'a, Row<T, Details>>
+    where
+        I: IntoIterator<Item = Result<T, Error>> + 'a,
+        T: Evidence + Serialize + 'a,
+    {
         let question = question.question();
         Batch::of((|| {
             only(
@@ -70,7 +85,7 @@ impl Engine {
                 stop,
                 most: self.most,
             };
-            Ok(pull::start(
+            Ok(pull::try_start(
                 call,
                 asker,
                 records.into_iter(),

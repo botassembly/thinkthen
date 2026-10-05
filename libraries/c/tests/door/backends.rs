@@ -185,20 +185,33 @@ fn c_selected_setup_keeps_path_prices_and_profile_through_overrides() {
 #[test]
 fn c_local_runtime_names_send_no_authorization_when_their_keys_are_absent() {
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
-    for (name, model) in [("llamacpp", "local"), ("mlx", "strands-decider-2B-hobson-v19")] {
+    for (name, model) in [
+        ("llamacpp", "local"),
+        ("mlx", "strands-decider-2B-hobson-v19"),
+    ] {
         let backend = Backend::start().expect("backend");
         let base = format!("{}/arm/full/capture/v1", backend.origin());
         let mut script = Script::default();
-        script.ask("settings", &[&base, &json!({"backend":name,"base_url":base,"cache":false}).to_string()]);
+        script.ask(
+            "settings",
+            &[
+                &base,
+                &json!({"backend":name,"base_url":base,"cache":false}).to_string(),
+            ],
+        );
         script.ask("call", &[&base, REQUEST]);
         let output = run(&driver, &base, &script.0);
         let said = replies(&output.stdout).expect("replies");
         assert_eq!(said.iter().map(|reply| reply.0).collect::<Vec<_>>(), [0, 0]);
         let capture: Value = serde_json::from_str(&backend.capture()).expect("capture");
-        let body: Value = serde_json::from_str(capture["bodies"][0].as_str().expect("body")).expect("wire");
+        let body: Value =
+            serde_json::from_str(capture["bodies"][0].as_str().expect("body")).expect("wire");
         assert_eq!(body["model"], model);
         let bearer: Value = serde_json::from_str(&backend.bearers()).expect("counts");
-        assert_eq!(bearer, json!({"markers":{},"absent":1,"unknown":0,"overflow":false}));
+        assert_eq!(
+            bearer,
+            json!({"markers":{},"absent":1,"unknown":0,"overflow":false})
+        );
         assert_eq!(backend.count(), 1);
     }
 }

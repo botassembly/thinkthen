@@ -347,6 +347,25 @@ function entityPair(held, at) {
 
 // Each verb takes the engine first: null is the default engine.
 const verbs = {
+  files(engine, question, paths, reader = {}, call = {}) {
+    if (!isObject(question) || !isObject(reader)) throw usageError('files takes a question object and reader options');
+    if (Object.keys(reader).some(key => key !== 'unit' && key !== 'window')) throw usageError('reader takes unit and optional window');
+    const many = ['decide','choose','tag','score','filter','rank','annotate'].some(verb => has(question, verb));
+    if (has(call, 'batch') && !many) throw usageError('this source verb takes no batch');
+    if (has(call, 'context') && (!many || has(question, 'annotate'))) throw usageError('this source verb takes no shared context');
+    const source = { paths: typeof paths === 'string' ? [paths] : paths, ...reader };
+    return invoke(engine, 'files', jsonText(question, 'files question'), jsonText(source, 'source'), call)
+      .then((done) => {
+        const value = Array.isArray(done.value) && question.recognize ? done.value.map((row) => {
+          const offsets = utf16(row.record);
+          const located = { ...row.value, entities: row.value.entities.map(offsets) };
+          if (row.value.relations !== undefined) located.relations = row.value.relations.map(
+            (edge) => ({ ...edge, source: offsets(edge.source), target: offsets(edge.target) }));
+          return { ...row, value: located };
+        }) : done.value;
+        return mapped(done, value);
+      });
+  },
   async decide(engine, asked, text, last) {
     checkText(text);
     const { inputs, call } = splitLast('decide', last);

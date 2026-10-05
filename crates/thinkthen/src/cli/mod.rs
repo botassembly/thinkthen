@@ -139,15 +139,9 @@ pub fn entry() -> ExitCode {
     }
 }
 
-/// Hide unsupported intake options and settle all positional routes once.
+/// Settle all positional routes once.
 fn parsed_cli() -> Result<Cli, clap::Error> {
-    let parser = Cli::command()
-        .mut_subcommand("recognize", |command| {
-            command.mut_arg("window", |arg| arg.hide(true))
-        })
-        .mut_subcommand("relate", |command| {
-            command.mut_arg("window", |arg| arg.hide(true))
-        });
+    let parser = Cli::command();
     let matches = parser.try_get_matches_from(normalize::arguments(std::env::args_os()))?;
     let mut cli = Cli::from_arg_matches(&matches)?;
     if let Some(command) = cli.command.as_mut() {

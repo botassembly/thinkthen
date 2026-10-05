@@ -180,3 +180,114 @@ fn batch_one_failure_ends_without_pulling_another_caller_record() {
         );
     }
 }
+
+fn failing_input(pulls: &AtomicUsize) -> impl Iterator<Item = Result<&'static str, Error>> + '_ {
+    let local = std::rc::Rc::new(());
+    std::iter::from_fn(move || {
+        let _ = std::rc::Rc::strong_count(&local);
+        let stage = pulls.fetch_add(1, Ordering::SeqCst);
+        assert!(stage < 2, "input tail must stay unread");
+        Some(if stage == 0 {
+            Ok("alpha")
+        } else {
+            Err(Error::new(ErrorKind::Local, "later reader failure"))
+        })
+    })
+}
+
+fn reader_failure<T>(mut batch: thinkthen::Batch<'_, T>, pulls: &AtomicUsize) {
+    assert!(matches!(batch.next(), Some(Ok(_))));
+    assert_eq!(pulls.load(Ordering::SeqCst), 1);
+    let error = batch
+        .next()
+        .expect("ordered reader error")
+        .err()
+        .expect("reader failure");
+    assert_eq!(error.to_string(), "later reader failure");
+    for facts in [error.facts(), batch.facts()] {
+        assert_eq!(
+            facts.map(|f| (f.records(), f.requests_sent())),
+            Some((1, 1))
+        );
+    }
+    assert!(batch.next().is_none());
+    assert_eq!(pulls.load(Ordering::SeqCst), 2);
+}
+
+#[test]
+fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = engine(listener.base());
+    let asked = question();
+    let options = CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
+    let pulls = AtomicUsize::new(0);
+    reader_failure(
+        engine.try_details_many_with(&asked, failing_input(&pulls), options),
+        &pulls,
+    );
+    let pulls = AtomicUsize::new(0);
+    reader_failure(
+        engine.try_filter_with(&asked, failing_input(&pulls), options),
+        &pulls,
+    );
+    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#)
+        .expect("set");
+    let pulls = AtomicUsize::new(0);
+    reader_failure(
+        engine.try_annotate_with(&set, failing_input(&pulls), options),
+        &pulls,
+    );
+    assert_eq!(listener.count(), 3);
+}
+
+#[test]
+fn dropping_a_fallible_batch_does_not_read_the_failure_or_tail() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = engine(listener.base());
+    let asked = question();
+    let pulls = AtomicUsize::new(0);
+    let mut batch = engine.try_filter_with(
+        &asked,
+        failing_input(&pulls),
+        CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+    );
+    assert_eq!(batch.next().expect("row").expect("answer"), "alpha");
+    drop(batch);
+    assert_eq!(pulls.load(Ordering::SeqCst), 1);
+    assert_eq!(listener.count(), 1);
+}
+
+#[test]
+fn reader_failure_flushes_a_partial_pack_and_drains_its_attempt() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = engine(listener.base());
+    let asked = question();
+    let pulls = AtomicUsize::new(0);
+    let attempts = AtomicUsize::new(0);
+    let observe = |_| {
+        attempts.fetch_add(1, Ordering::SeqCst);
+    };
+    let mut batch = engine.try_filter_with(
+        &asked,
+        failing_input(&pulls),
+        CallOptions::new()
+            .batch(BatchSetting::Records(
+                std::num::NonZeroUsize::new(2).expect("two"),
+            ))
+            .observe_attempt(&observe),
+    );
+    assert_eq!(batch.next().expect("prefix").expect("answer"), "alpha");
+    let error = batch.next().expect("failure").expect_err("reader failure");
+    assert_eq!(error.to_string(), "later reader failure");
+    assert_eq!(
+        error.facts().map(|f| (f.records(), f.requests_sent())),
+        Some((1, 1))
+    );
+    assert_eq!(attempts.load(Ordering::SeqCst), 1);
+    assert_eq!(pulls.load(Ordering::SeqCst), 2);
+    assert_eq!(listener.count(), 1);
+    assert!(batch.next().is_none());
+}

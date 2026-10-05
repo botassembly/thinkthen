@@ -121,6 +121,25 @@ impl Engine {
         I: IntoIterator,
         I::Item: Evidence,
     {
+        self.try_plan_with(question, records.into_iter().map(Ok), options)
+    }
+
+    /// Preview fallible records incrementally under the same admission and packing rules.
+    /// No records after the first reader or admission failure are consumed.
+    ///
+    /// # Errors
+    /// As [`Engine::plan_with`], also returning the first input error.
+    pub fn try_plan_with<Q, I, T>(
+        &self,
+        question: &Q,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<PlanEstimate, Error>
+    where
+        Q: DetailQuestion + ?Sized,
+        I: IntoIterator<Item = Result<T, Error>>,
+        T: Evidence,
+    {
         let question = question.question();
         only(
             question,
@@ -156,11 +175,8 @@ impl Engine {
         let mut seen = HashSet::new();
         let mut closed = Vec::new();
         for (at, item) in records.into_iter().enumerate() {
-            if let Some(most) = self.most.filter(|most| at >= *most) {
-                return Err(Error::usage(format!(
-                    "this engine answers at most {most} records in one call"
-                )));
-            }
+            let item = item?;
+            self.check_record_limit(at)?;
             let text = Text {
                 at,
                 text: item.evidence().to_owned(),

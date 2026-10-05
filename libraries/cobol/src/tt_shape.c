@@ -111,3 +111,19 @@ int tt_cobol_plan_input(const char *verb,size_t verb_length,const char *question
     if(!ok) return 2;
     *out_length=at;return 0;
 }
+/* Compose a source envelope without reading any file or changing question grammar. */
+int tt_cobol_files_input(const char *question,size_t qlen,const char *source,size_t slen,
+                        char *out,size_t capacity,size_t *length) {
+    TTJSON *q=tt_json_parse(question,qlen),*s=tt_json_parse(source,slen);
+    if(!q||!s||q->type!=TTJSONObject||s->type!=TTJSONObject||tt_json_get(q,"source")) {
+        tt_json_free(q);tt_json_free(s);return 1;
+    }
+    size_t used=q->source_length-1, need=used+(q->count?1:0)+9+s->source_length+1;
+    if(need>capacity){tt_json_free(q);tt_json_free(s);return 2;}
+    memcpy(out,q->source,used);
+    if(q->count)out[used++]=',';
+    memcpy(out+used,"\"source\":",9);used+=9;
+    memcpy(out+used,s->source,s->source_length);used+=s->source_length;
+    out[used++]='}';*length=used;
+    tt_json_free(q);tt_json_free(s);return 0;
+}

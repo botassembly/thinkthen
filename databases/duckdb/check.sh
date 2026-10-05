@@ -94,6 +94,7 @@ verify_selected_package() {
 }
 older_suites() {
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
+	sh "$LIMIT" 900 "$PY" tools/files_suite.py
 	sh "$LIMIT" 900 "$PY" tools/rank_suite.py
 	sh "$LIMIT" 900 "$PY" tools/find_suite.py original_duplicate_and_ties null_empty_and_invalid_units_do_not_send portable_find_settings_and_removed_slots held_find_and_spent_statement_budget
 	sh "$LIMIT" 900 "$PY" tools/portable_suite.py named_decide_binds_by_name_and_settings_refuse_before_send listed_settings_and_members_are_distinct_overloads keyed_decide_preserves_key_body_and_one_send keyed_verbs_keep_members_order_and_refuse_duplicate_keys six_song_vector_and_keyed_forms_share_one_packed_body removed_warm_and_probability_forms_refuse_without_transport rank_and_details_share_one_portable_request annotate_accepts_call_settings_and_refuses_question_only_keys try_details_keeps_recoverable_settings_failures_beside_an_answer recognize_named_settings_and_old_deadline_boundary
@@ -165,7 +166,7 @@ fi
 echo "== suites"
 sh "$LIMIT" 900 "$PY" tools/backend_setups.py
 sh "$LIMIT" 900 "$PY" tools/named_backends.py
-for suite in verbs_suite rank_suite settings_suite signal_suite relate_suite databases_suite conformance; do
+for suite in files_suite verbs_suite rank_suite settings_suite signal_suite relate_suite databases_suite conformance; do
 	sh "$LIMIT" 900 "$PY" "tools/$suite.py"
 done
 sh "$LIMIT" 900 "$PY" tools/portable_suite.py

@@ -2,14 +2,13 @@
 
 use std::path::Path;
 
-use crate::args::{Common, RecognizeArguments};
+use crate::args::RecognizeArguments;
 use crate::cli::question_text;
 use crate::core::{
     Description, RecognizeConfigError, RecognizeKinds, RecognizeSpec, RelationRule, rule_side,
 };
 use crate::failure::Failure;
 use crate::failure::recognize::Error;
-use crate::table::Kind as TableKind;
 
 pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Failure> {
     let file = arguments
@@ -107,11 +106,4 @@ fn command_rule(text: &str) -> Result<RelationRule, Failure> {
 
 pub(super) fn error(file: bool, error: RecognizeConfigError) -> Failure {
     Failure::Recognize(crate::cli::failure::recognize::Error::Config { file, error })
-}
-
-pub(super) fn table_kind(common: &Common) -> Option<TableKind> {
-    common
-        .csv
-        .then_some(TableKind::Csv)
-        .or_else(|| common.tsv.then_some(TableKind::Tsv))
 }

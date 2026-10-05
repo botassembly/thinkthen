@@ -248,7 +248,7 @@ pub(crate) fn run(
     crate::cli::intake::window(common, !settled.on().is_empty())?;
     let reading = read_by(common, settled, keeping)?;
     output.validate_display(common)?;
-    let documents = !reading.streams() && common.input.len() > 1;
+    let documents = !reading.streams() && (common.input.len() > 1 || common.located());
     if documents && (view.raw || view.quiet) {
         return Err(Failure::Usage(
             "multiple documents cannot accompany --raw or --quiet",

@@ -20,6 +20,9 @@ use crate::many::{ChooseMany, DecideMany, Rank, ScoreMany, Store, TagMany};
 use crate::tables::{self, Recognizer, Relater, Table};
 use crate::{Registration, budget, guard, scalars};
 
+#[path = "ffi/files/ffi.rs"]
+mod files;
+
 /// The host's `sqlite3_api_routines`, extended past the 3.34 bindings of
 /// `libsqlite3-sys` to the `is_interrupted` field SQLite 3.41 added. Every
 /// field of the tail is a function pointer, so an opaque pointer keeps each
@@ -163,6 +166,7 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
         IS_INTERRUPTED.store(check as *mut (), Ordering::Release);
     }
     scalars::register(&connection, mode)?;
+    files::register(&connection)?;
     budget::register(&connection)?;
     let store = Arc::new(Tables {
         store: Arc::new(Mutex::new(Store::default())),

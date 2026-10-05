@@ -17,7 +17,6 @@ pub(super) fn estimate<'py>(
     context: Arg<'_, '_>,
 ) -> PyResult<Bound<'py, PyDict>> {
     guard(py, || {
-        let records = texts(records)?;
         let selected = super::batch(batch)?;
         let context = super::context(context)?;
         let options = thinkthen::CallOptions::new();
@@ -25,10 +24,15 @@ pub(super) fn estimate<'py>(
         let options = context
             .as_deref()
             .map_or(options, |text| options.context(text));
-        let plan = engine
-            .0
-            .plan_with(question.get().0.detail(), records, options)
-            .map_err(|error| raised(py, &error))?;
+        let plan = if let Ok(source) = records.extract::<PyRef<'_, crate::files::SourceIterator>>()
+        {
+            source.plan(&engine.0, question.get().0.detail(), options)
+        } else {
+            engine
+                .0
+                .plan_with(question.get().0.detail(), texts(records)?, options)
+        }
+        .map_err(|error| raised(py, &error))?;
         named(py, plan)
     })
 }

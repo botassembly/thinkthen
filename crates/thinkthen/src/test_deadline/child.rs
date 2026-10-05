@@ -138,8 +138,8 @@ pub(crate) fn private_file(path: &Path) -> std::io::Result<()> {
     #[cfg(windows)]
     {
         let mut command = command("powershell.exe", &[]);
-        command.args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $acl=Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH; $acl.SetSecurityDescriptorSddlForm(\"O:${sid}D:P(A;;FA;;;${sid})(A;;FA;;;SY)\"); Set-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH -AclObject $acl"])
-            .env("THINKTHEN_FIXTURE_PATH", path);
+        command.args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $acl=Get-Acl -LiteralPath $env:THINKTHEN_TEST_FIXTURE_PATH; $acl.SetSecurityDescriptorSddlForm(\"O:${sid}D:P(A;;FA;;;${sid})(A;;FA;;;SY)\"); Set-Acl -LiteralPath $env:THINKTHEN_TEST_FIXTURE_PATH -AclObject $acl"])
+            .env("THINKTHEN_TEST_FIXTURE_PATH", path);
         let output = run::output(&mut command)?;
         if !output.status.success() {
             return Err(std::io::Error::other(format!(

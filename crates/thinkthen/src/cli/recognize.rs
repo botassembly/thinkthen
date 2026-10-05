@@ -7,6 +7,7 @@ use serde::Serialize;
 
 use crate::args::{Common, RecognizeArguments};
 use crate::asking::{self, Folders};
+use crate::cli::intake::{Data, Intake, Item};
 use crate::core::{
     Meta, ModelName, Outcome, Reading, RecognizeSpec, Record, RecordValue, RequestMeta, json_line,
     recognize_sha256,
@@ -16,10 +17,10 @@ use crate::engine::facade::{Engine, MAX_TEXT_BYTES, Probabilities, Recognized};
 use crate::failure::{Failure, ReplayContext};
 use crate::profile;
 use crate::schedule;
-use crate::table::Rows as TableRows;
 
 mod config;
 mod dry_run;
+mod source;
 
 #[derive(Debug, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
@@ -69,16 +70,28 @@ pub(crate) fn run(
     if let Some(model) = arguments.common.model.as_deref() {
         spec.model = Some(edge::model_flag(model)?);
     }
-    let reading = Reading::new(arguments.common.framing(), pointers)?;
+    let framing = if arguments.common.input.len() > 1
+        && arguments.common.unit.is_none()
+        && arguments.common.framing() == crate::core::Framing::Document
+    {
+        crate::core::Framing::Lines
+    } else {
+        arguments.common.framing()
+    };
+    let reading = Reading::new(framing, pointers)?;
     schedule::jobs_of(arguments.common.jobs, reading.streams())?;
-    let source = edge::source(
-        arguments
-            .common
-            .input
-            .first()
-            .map(std::path::PathBuf::as_path),
-        input,
-    )?;
+    if (arguments.common.located() || arguments.common.input.len() > 1)
+        && (!spec.on.is_empty()
+            || arguments.common.jsonl
+            || arguments.common.csv
+            || arguments.common.tsv
+            || !arguments.common.field.is_empty())
+    {
+        return Err(Failure::Usage(
+            "located recognize needs text units without JSON fields or table framing",
+        ));
+    }
+    let source = Intake::new(&arguments.common, &reading, input, !spec.on.is_empty())?;
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
     let backend = environment
         .resolve(
@@ -101,7 +114,6 @@ pub(crate) fn run(
             source,
             &backend,
             selected_profile.as_ref(),
-            config::table_kind(&arguments.common),
             dry_run::Question {
                 spec: &spec,
                 from_file: arguments
@@ -130,49 +142,61 @@ pub(crate) fn run(
         )?,
         mismatch,
     };
-    if let Some(kind) = config::table_kind(&arguments.common) {
-        let rows = TableRows::new(source, kind)?;
-        return schedule::over_records(
-            &running.engine,
-            &|record: &Record| judged_record(&running, &reading, &spec, record.clone(), true),
-            rows.enumerate().map(|(place, row)| {
-                row.map(|record| (place + 1, record))
-                    .map_err(|error| schedule::Placed::at(error, place + 1))
-            }),
-            environment.cancel(),
-            &mut schedule::Output::streaming(&mut writer, environment.usage()),
-        );
-    }
     let streams = reading.streams();
-    let mut chunks = edge::numbered(edge::Chunks::new(source, streams), &reading);
-    if !streams {
-        let bytes = chunks
+    if !streams && !arguments.common.located() && arguments.common.input.len() <= 1 {
+        let item = source
+            .into_iter()
             .next()
-            .map(|(_, row)| row)
-            .transpose()?
-            .unwrap_or_default();
-        let record = reading
-            .record(&bytes)
-            .map_err(|error| Failure::record(error, streams))?;
-        let judged = judged_record(&running, &reading, &spec, record, streams)?;
+            .transpose()
+            .map_err(|placed| placed.cause)?
+            .ok_or(Failure::Defect("document recognize has no input"))?;
+        let judged = judged_item(&running, &reading, &spec, &item)?;
         schedule::Output::streaming(&mut writer, environment.usage()).take(judged)?;
         return Ok(ExitCode::SUCCESS);
     }
     schedule::over_records(
         &running.engine,
-        &|bytes: &Vec<u8>| {
-            let record = reading
-                .record(bytes)
-                .map_err(|error| Failure::record(error, streams))?;
-            judged_record(&running, &reading, &spec, record, streams)
-        },
-        chunks.map(|(at, row)| {
-            row.map(|bytes| (at, bytes))
-                .map_err(|error| schedule::Placed::at(error, at))
-        }),
+        &|item: &Item| judged_item(&running, &reading, &spec, item),
+        source.map(|item| item.map(|item| (item.at, item))),
         environment.cancel(),
         &mut schedule::Output::streaming(&mut writer, environment.usage()),
     )
+}
+
+fn judged_item(
+    running: &Running<'_>,
+    reading: &Reading,
+    spec: &RecognizeSpec,
+    item: &Item,
+) -> Result<schedule::Judged, Failure> {
+    let streams = reading.streams();
+    let record = match &item.data {
+        Data::Bytes(bytes) => reading
+            .record(bytes)
+            .map_err(|error| Failure::record(error, streams))?,
+        Data::Record(record) => record.clone(),
+    };
+    let mut judged = judged_record(running, reading, spec, record, streams)?;
+    if let Some(position) = item
+        .position
+        .as_ref()
+        .filter(|p| p.located || running.common.input.len() > 1)
+    {
+        let mut position = position.clone();
+        position.located = true;
+        let Data::Bytes(bytes) = &item.data else {
+            return Err(Failure::Usage("located recognize needs text units"));
+        };
+        source::locate(
+            &mut judged.printed,
+            &position,
+            reading.as_it_arrived(bytes)?,
+            streams,
+            running.common.details,
+        )?;
+        judged.position = Some(position);
+    }
+    Ok(judged)
 }
 
 fn judged_record(

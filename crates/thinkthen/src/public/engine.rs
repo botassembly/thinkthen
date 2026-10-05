@@ -130,6 +130,20 @@ pub(crate) fn evidence(text: &str) -> Result<core::Evidence, Error> {
 pub(super) const DECISIONS: &[Kind] = &[Kind::Decide, Kind::Banded];
 
 impl Engine {
+    /// Check a zero-based record ordinal against this engine's call admission cap.
+    /// Composed source calls use the same `max_requests` limit as native batches.
+    ///
+    /// # Errors
+    /// Returns [`Error::Usage`] for the first excess record or any later ordinal.
+    pub fn check_record_limit(&self, at: usize) -> Result<(), Error> {
+        if let Some(most) = self.most.filter(|most| at >= *most) {
+            return Err(Error::usage(format!(
+                "this engine answers at most {most} records in one call"
+            )));
+        }
+        Ok(())
+    }
+
     /// Reuse resolved settings for backend compatibility calls with no storage.
     #[cfg(feature = "cli")]
     pub(crate) fn for_check(inner: &facade::Engine) -> Self {
