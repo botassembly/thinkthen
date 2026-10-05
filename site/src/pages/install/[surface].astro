@@ -135,7 +135,15 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
           <ul>{BACKEND_ROUTES.map((r) => <li><a href={r.route}>{r.title}</a>: <code>--backend {r.name}</code></li>)}</ul>
         </>
       )}
-      {route !== 'cli' && (
+      {route === 'sql' && (
+        <>
+          <p>SQL names a built-in or configured backend. The selected backend supplies its address, model and key variable. SQL accepts no address or key.</p>
+          <Code code={{ duckdb: "SET thinkthen_backend = 'typesafe';", postgresql: "SET thinkthen.backend = 'typesafe';", sqlite: `SELECT thinkthen_configure('{"backend":"typesafe"}');` }[surface.slug]} lang="sql" />
+          {surface.slug === 'sqlite' ? <p>Configure before the first engine build or plan. SQLite keeps one engine for the whole process.</p> : <p>RESET restores captured environment selection. PostgreSQL requires an administrator to change the backend; DuckDB selects it for the calling session.</p>}
+          <p>The names are <code>liquid</code>, <code>ollama</code>, <code>openrouter</code>, <code>perplexity</code> and <code>typesafe</code>.</p>
+        </>
+      )}
+      {route !== 'cli' && route !== 'sql' && (
         <>
           {route === 'env'
             ? <p>{surface.name} reads its backend from the environment. Set <code>THINKTHEN_BACKEND</code> to the name below. Set the backend's key variable in the shell, and the same sample asks that backend.</p>

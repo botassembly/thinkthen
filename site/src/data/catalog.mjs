@@ -809,7 +809,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB',
+    slug: 'duckdb', backends: 'sql', name: 'DuckDB', deckHeading: 'DuckDB',
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
     unsureWord: '`NULL`',
@@ -823,7 +823,7 @@ export const SURFACES = [
     particular: ['DuckDB hands the extension up to 2,048 rows at a time. One call judges those rows together, and `SET thinkthen_max_requests` caps that call.'],
   },
   {
-    slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite',
+    slug: 'sqlite', backends: 'sql', name: 'SQLite', deckHeading: 'SQLite',
     lang: 'sql', tab: 'SQL',
     blurb: 'Judge a whole table in one call, then join the answers back by key.',
     unsureWord: '`NULL`',
@@ -839,7 +839,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL',
+    slug: 'postgresql', backends: 'sql', name: 'PostgreSQL', deckHeading: 'PostgreSQL',
     lang: 'sql', tab: 'SQL',
     blurb: 'One extension. Ask questions in any query.',
     unsureWord: '`NULL`',
@@ -891,7 +891,7 @@ for (const s of SURFACES) {
   for (const field of s.slug === 'shell' ? ['facts'] : ['facts', 'errors', 'settings']) {
     if (!s[field]) throw new Error(`catalog: the surface ${s.slug} has no ${field}`);
   }
-  if (s.backends && !['env', 'builder', 'code', 'cli', 'python'].includes(s.backends)) throw new Error(`catalog: the surface ${s.slug} has the backends route ${s.backends}`);
+  if (s.backends && !['env', 'builder', 'code', 'sql', 'cli', 'python'].includes(s.backends)) throw new Error(`catalog: the surface ${s.slug} has the backends route ${s.backends}`);
 }
 
 // The tabs on the home page sample, and on every code block that has variants.
