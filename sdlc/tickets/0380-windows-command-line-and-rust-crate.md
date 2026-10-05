@@ -40,16 +40,3 @@ Milestone: 0.2
 
 - Slice A touches release files every target uses. Run the release self-tests and `workflows --self-test` before each push. A wrong count breaks the Unix release.
 - Rehearsals need Ian's approval, as in `sdlc/planning/release-process.md` section 4.
-
-## What the build taught us
-
-- The archived release proof checks every source file against Git HEAD. Commit a changed packer before running this proof; copying an uncommitted packer into an archive correctly fails the source identity check.
-- Windows command packaging needs a separate archive format and executable suffix. Keep those changes in the Windows arm, and leave Unix command tar names and payloads unchanged.
-
-- Crate metadata changes the documentation proof identity even without Rust source changes. The full canonical replay refreshed 308 language and 42 SQL samples; strict verification reports all 350 current, and the final site build passes. Windows runner proof remains separate.
-
-- Slice B's actual AST regressions must preserve saved replacement failures when inspection and diagnostics fail. A committed installation must still exit 0 after reporting fails; an uncommitted failure exits 1. Private original snapshots survive uncertain recovery. The complete local checkpoint is in [the slice B build record](../records/0380-windows-command-and-rust.md); portable acceptance does not close native Windows proof.
-
-- Slice C records the accepted Windows dependency and unsafe-leaf design before coding. Configuration retains its Unix parsing and metadata order. Native creation and retained-handle proof needs an observation inside the actual write: Windows-only unit-test checkpoints now expose the verified writer handles to owned synchronized fixtures, and their module, inner guard and call sites exclude production builds. Full Windows usage advice is pinned per object. Source implementation and portable checks do not close W1/W2; exact-commit console, ACL, NTFS and packed-binary execution remain pending authorization.
-
-- Final slice C checkpoint on `4ffb0c7f1` retains the failed consumer-lock run, accepted exact correction and byte-identical rebase. The merged Linux test/specification and 350 canonical replays passed; native execution remains pending. See `sdlc/records/0380-windows-command-and-rust.md` for exact receipts and scope.

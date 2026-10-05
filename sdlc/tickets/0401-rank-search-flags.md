@@ -75,17 +75,7 @@ Expose an additive Rust rank_set API with input index, probability and question 
 
 Repeated --input and unambiguous positional routes; multi-file JSON carrier; all-whitespace-window skip; 16 MiB bound for around snapshots; independent overlap groups; score meaning and text/details conflicts; turns and its deduplication rule; additive position member. Changes need contract review before code.
 
-## What the build taught us
-
-Slice A shares one edge intake iterator across the seven commands. It opens all named files first and initializes each table header before admitting an item. File positions travel separately from global pipeline labels. Text windows reuse the existing bounded chunks and record parser. CLI result metadata appends positions without rewriting the existing result members. The four default-document functions need a distinct multi-document completion mode so a later input or backend failure cannot inherit the first answer's exit code.
-
-The old loose-argument hint remains on find. The seven new routes replace it where positional files are now valid. Recognize and relate keep their single-input guards and hide the unsupported window option. Slice A leaves display flags, find display and question-set rank untouched. The full checkpoint and actual 350 site replay receipts are recorded in [the slice A build record](../records/0401-search-intake-and-display.md).
-
-Slice B keeps one immutable original-byte snapshot only for neighbor views. The same snapshot frames requests and supplies physical neighbors; repeated source occurrences need their own private identity. Output decoration reuses the stored ordering value and changes no provider bytes or cache key. A draining listener accessor must be captured once before both count and content assertions. Independent wrong-body plants now prove the neighbor and context assertions fail. The full checkpoint and actual 350 replay receipts are in [the slice B record](../records/0401-search-intake-and-display.md). C and D remain open.
-
-Slice C keeps find's complete aggregate candidate set and existing empty-input success. It shares the immutable around snapshot and output emitter without adopting record-pipeline blank skipping. Duplicate candidates retain their selected index and probability. Pointer display preserves original rows while the captured request contains only admitted pointer evidence. Fresh source and result-contract reviews accepted C. Its completed coordinator checkpoint retains the original Result shapes failure and corrected retry; final receipt review precedes C landing.
-
-The C source-preserving rebase onto `4cf694673` passed the coordinator's full tests. Its specification checkpoint exposed a missing optional find position in the result compatibility table. The bounded correction adds that accepted CLI member to the table and explains its omission from shared typed host results. The focused Result shapes fixture passes without a Rust, schema or wire change. Fresh correction review accepted the bounded change. The full specification retry, all 350 actual documentation replays, strict verification and final site build passed. This taught us to reconcile additive CLI metadata with the result compatibility table while retaining typed host shapes and strict unknown-member checks.
+## Public declarations
 
 ### Added public declarations
 
@@ -102,11 +92,3 @@ fn SetRanked::question_name(&self) -> &str
 fn Engine::rank_set<I>(&self, &RankSet, I) -> Result<Call<Vec<SetRanked<I::Item>>>, Error> where I: IntoIterator, I::Item: Evidence
 fn Engine::rank_set_with<I>(&self, &RankSet, I, CallOptions<'_>) -> Result<Call<Vec<SetRanked<I::Item>>>, Error> where I: IntoIterator, I::Item: Evidence
 ```
-
-Slice D builds the accepted [frozen design](../records/0401-search-intake-and-display.md) against landed C `fea3a6fbc46b68ccc33a28e35eb0c4eb48329df9` in lane0. Fresh candidate review and coordinator checkpoints remain pending. SQL question sets belong to 0417 for 0.2; C and language sets belong to 0418 later.
-
-The D frozen-source review found that preview added each set member as an input slot, unlike runtime's single add per original record. The correction gathers member entries first and adds once. Its independent counted loopback witness pins the exact first body and complete byte/token summary against three runtime requests with both text members; mixed quoting retains its state cuts in both member orders. Ordinary single-question identity, runtime merge/bounds and whole-call controls remain protected. Exact correction growth and focused receipts are in the [D build record](../records/0401-search-intake-and-display.md). Fresh parent review and the merged checkpoint remain pending.
-
-Slice D provider integration at `ace778598` retains the accepted product byte for byte and passes its final coordinator checkpoint. The owning [D build record](../records/0401-search-intake-and-display.md) preserves source reviews, prior failures and exact current receipts. Rank sets retain original ownership and member-local wire/cache identity; preview groups every member per original record. Full C-door and Rust Polars compatibility and actual 350-page proof close the former deferred local checks. Native execution remains separate. Final receipt review and whole-ticket completion remain before D landing.
-
-Final D receipt review accepted `fb428165487488a9decbaf08c2269a64c2f57442` with no findings or missing required local proof. The current record update changes no product, executable contract, fixture, ratchet or generated proof. All ticket outcomes are implemented and verified; the coordinator advances the completion-record review and no-ff D landing.
