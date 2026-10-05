@@ -44,3 +44,7 @@ Create one llama.cpp debt issue for route/build/model prerequisites and unsuppor
 1. Confirm pinned runtime defaults, add the two built-in rows and MLX warning identity, and land the loopback request/secrecy regressions with contract updates. Amend ADR 0115's Ollama-only text scope under the new approval.
 2. Add minimal actual ten-function compatibility smokes and rows to the existing check report, without a new validation command. Preserve partial-failure and exit behavior.
 3. Publish the local setup page with explicit runnable server commands and supported public models. Perform the three approved M5 checks through the existing manual workflow. Name actual runtime defects in their owning debt issues; then run the integrated landing gates and record the outcome once.
+
+## Approved v0.6.0 setup update
+
+Ian's message `inbox/thinkthen/2026-10-05-feat-push-llamacpp-to-v0-6-0-with-clef.md` updates this ticket. Pin v0.6.0 release commit d81235049384534c167caea52b85a694f6103d14. Clef-Flash Q4_K_M revision 4a7a08c09bc63baf043b62b5ba89dd67a0357d95 was chosen by setup size and passed the newly authorized real keyless M5 check: four rich probes, all ten functions, exit 0, no warnings. Publish the exact Apple silicon setup; other platforms remain unqualified by this check. Keep the previous working pin in this ticket's record and existing debt issue. No backend API changes, image work, model ranking or MLX recheck. One fresh source review and landing gates cover the setup documentation update.
