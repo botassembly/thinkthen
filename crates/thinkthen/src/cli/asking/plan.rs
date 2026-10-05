@@ -91,7 +91,7 @@ pub(super) fn packed(
             .map_err(|error| planner.refused(error))?;
     }
     closed.extend(packer.close());
-    crate::cli::check::say_dropped_detail(dropped)?;
+    crate::cli::check::say_dropped_detail(dropped, configuration.environment.named())?;
     for request in &closed {
         summary
             .request(&request.body)

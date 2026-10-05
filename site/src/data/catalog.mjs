@@ -850,7 +850,7 @@ export const SURFACES = [
     errors: 'A failed call raises its named error. `thinkthen_try_details` returns a failure as `jsonb` instead.',
     settings: '`SET thinkthen.record` writes a recording to a folder. `SET thinkthen.replay` answers from that recording with no connection.',
     install: [
-      ['thinkthen-postgresql16-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 16, from each release. Copy the file in `lib/` to `pg_config --pkglibdir`. Copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
+      ['thinkthen-postgresql16-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 16, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
       ['CREATE EXTENSION thinkthen;', null],
     ],
     particular: [
@@ -965,6 +965,7 @@ export const BACKEND_PAGES = [
   { slug: '', title: 'Backends', label: 'Overview', group: null },
   { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Built in' },
   { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Built in' },
+  { slug: 'local', title: 'Run a model locally', label: 'Run a model locally', group: 'Your own' },
   { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
   { slug: 'perplexity', title: 'Perplexity Decisions', label: 'Perplexity Decisions', group: 'Built in' },
   { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Built in' },

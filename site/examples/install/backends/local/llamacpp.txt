@@ -1,0 +1,19 @@
+git clone https://github.com/ggml-org/llama.cpp.git
+cd llama.cpp
+git checkout a7b94df2c616bc1f62a73b964b4a71cb0dcc488e
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target llama-server -j 2
+
+model_repo=https://huggingface.co/ggml-org/Kev-4B-GGUF
+model_revision=d924f2e2c3872da8b8aaf3eb4453b4126deceb79
+model_file=Kev-4B-Q4_K_M.gguf
+curl -fL -o "$model_file" \
+  "$model_repo/resolve/$model_revision/$model_file"
+
+./build/bin/llama-server \
+  --model "$model_file" \
+  --alias local \
+  --host 127.0.0.1 \
+  --port 8080 \
+  --ctx-size 4096 \
+  --ubatch-size 4096

@@ -122,6 +122,7 @@ pub(crate) fn run(
                     .is_some_and(|kind| kind.starts_with('@')),
                 limit: max_text_bytes,
                 key_env: environment.key_variable(),
+                backend_name: environment.named(),
             },
             &mut writer,
         );

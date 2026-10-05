@@ -11,7 +11,7 @@ LOAD thinkthen;
 
 To load directly, use `LOAD 'v1.5.5/linux_amd64/thinkthen.duckdb_extension';` on the matching Linux x86-64 host, or the matching version/platform path on another supported host.
 
-Use dbt v1 with `duckdb` 1.5.5 for the documented dbt route. dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2. Signing and community listing are deferred.
+Use dbt v1 with `duckdb` 1.5.5 for the documented dbt route. dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2. Community listing and signing are in progress under ticket 0415. No community install is available until DuckDB accepts and builds the submission. A signed build for another DuckDB version does not establish dbt v2 compatibility. The [public install page](https://thinkthen.dev/install/duckdb/#use-the-release-from-dbt-v1) provides the pinned dbt v1 packages and complete startup profile.
 
 ## Functions
 
@@ -85,6 +85,12 @@ The details digest includes a question's saved calibration `profile`. A differen
 `thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
 
 `thinkthen_try_details` returns `{"status":"answered","details":...}` with the full scalar details object, or `{"status":"failed","error":{"kind":"usage","message":"check the row's question and arguments, or raise the process request total when it is spent","retryable":false}}`. Compatible distinct rows pack under the selected batch setting; a recoverable usage, local, or backend failure affects only its request's members and does not stop later requests. One partly answered reply keeps good and failed members beside each other without another send. SQL NULL question or text returns SQL NULL; NULL settings mean absent. Unresolved answers stay answered with JSON `null` in their details. Failed values omit questions, evidence, keys, paths, and backend addresses. Cancellation, deadlines, and defects still stop the statement.
+
+## Price and elapsed time
+
+SQL plans report an estimated input-token band before cache hits, retries or refusal splits. They do not predict output tokens, total dollars or future duration. SQL usage reports cumulative process totals, not the facts of one isolated call. Packed request metadata can appear on more than one result row; summing those rows counts the same request more than once.
+
+Measure wall time around the SQL statement in the client. This includes database and client work and is not engine-only time. For an external price estimate, apply a known input/output tariff to complete provider-reported usage with decimal arithmetic. The provider's invoice determines actual charges. Missing rates or incomplete attempt usage mean unknown cost, not zero. Cumulative SQL counters do not prove usage completeness for failed attempts, and subtracting shared counters cannot isolate concurrent calls.
 
 ## Settings
 

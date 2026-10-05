@@ -64,13 +64,14 @@ impl ResponseInfo {
         ordinal: u64,
         digest: &str,
         wall_ms: u64,
-        outcome: AttemptOutcome,
+        (outcome, transport_failed): (AttemptOutcome, bool),
     ) -> AttemptObservation {
         AttemptObservation {
             ordinal,
             request_sha256: digest.to_owned(),
             wall_ms,
             outcome,
+            transport_failed,
             status: self.status,
             server_ms: self.server_ms,
             request_id: self.request_id,
@@ -80,9 +81,9 @@ impl ResponseInfo {
 
 pub(super) fn observed_result(
     sent: &Result<Sent, Box<Attempt>>,
-) -> (&ResponseInfo, AttemptOutcome) {
+) -> (&ResponseInfo, (AttemptOutcome, bool)) {
     match sent {
-        Ok(answer) => (&answer.info, AttemptOutcome::Ok),
+        Ok(answer) => (&answer.info, (AttemptOutcome::Ok, false)),
         Err(attempt) => {
             let outcome = if matches!(
                 attempt.failure,
@@ -92,7 +93,10 @@ pub(super) fn observed_result(
             } else {
                 AttemptOutcome::Status
             };
-            (&attempt.info, outcome)
+            (
+                &attempt.info,
+                (outcome, matches!(attempt.failure, Error::Transport(_))),
+            )
         }
     }
 }
