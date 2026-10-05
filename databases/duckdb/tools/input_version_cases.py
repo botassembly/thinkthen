@@ -185,7 +185,7 @@ assert.throws(() => duckDBArtifact(process.argv[2], 'v1.5.5', 'x86_64-unknown-li
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_node_complete_pins_before_any_children(self):
-        from source_pin_0403_cases import node_controls
+        from source_pin_cases import node_controls
         node_controls(self, script)
 
     def test_real_scratch_packer_refuses_obsolete_and_footer(self):
@@ -214,7 +214,7 @@ assert.throws(() => duckDBArtifact(process.argv[2], 'v1.5.5', 'x86_64-unknown-li
         self.assertEqual(list((self.root / 'missing').glob('*.tar.gz*')), [])
 
     def test_separate_build_outputs_and_alias_ownership(self):
-        from build_0403_cases import routing
+        from build_version_cases import routing
         routing(self, footer, script)
 
     def test_repository_pack_keeps_both_versions_and_refuses_changed_source(self):
