@@ -1,6 +1,6 @@
 # 0381: Windows stage 1: the C library ships as a DLL for Windows x86-64
 
-Status: in progress. Slice A owns claude-1 on `ticket/0381-windows-c-dll`, starting from landed main `6d26206aa8861490cc6540b6bafafc08e3249c3c`. The corrected complete DLL design received fresh High acceptance. Slice B and native runner execution remain pending. Plan: `sdlc/planning/windows.md`, stage 1; 0.2 only.
+Status: in progress. Slice A's Windows C DLL packaging and MSVC consumer implementation are landed; the combined native run remains pending approval. Windows 0.2 distributes the DLL only; the static library waits for stage 3.
 
 Milestone: 0.2
 
@@ -22,7 +22,7 @@ Milestone: 0.2
 - Keeps: the C header, every exported name and every Linux and macOS archive's contents. The `.pc` file's meaning on Unix. The rule that a static link exposes no Rust standard library symbol.
 - Changes: slice A, the DLL: `libraries/c/build.rs` makes the import library and a `.def` export list; `release-pack` and `release.yml` build and pack the DLL, import library and header on the Windows target; an export check with `dumpbin`; the MSVC build of the door's C tests. Slice B, the static library: hide the Rust internal symbols in the COFF static library, the `.pc` file's `Libs.private` for Windows, and a static-link smoke. `DESIGN.md` gains the rules in each slice.
 - Proof: `dumpbin /exports` lists exactly the header's functions. The MSVC door tests pass on the runner. MSVC's ASan gets its own check, or the builder records why it cannot run. A static-link smoke links a small C program and finds no Rust standard library symbol. The Linux and macOS C door tests and `release-pack` self-tests stay green.
-- Defers: the main unknown, how to hide the Rust standard library's symbols in a COFF static library. If slice B finds no clean way, the builder ships the DLL alone, files the static library as an issue for stage 3, and says so in `DESIGN.md`. `fork.c` stays Unix-only. The stage 2 bindings that load this DLL (C++, Go, Ruby, R, PHP, Swift, Dart, Zig) wait for stage 2.
+- Defers: Windows static-library localization, coexistence and metadata wait for stage 3 in [the static-library issue](../issues/2026-10-05-windows-static-library-waits-for-stage-3.md). No native localization experiment ran or failed. `fork.c` stays Unix-only. The stage 2 bindings that load this DLL (C++, Go, Ruby, R, PHP, Swift, Dart, Zig) wait for stage 2.
 
 ## What the build taught us
 

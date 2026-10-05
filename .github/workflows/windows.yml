@@ -21,6 +21,7 @@ jobs:
     timeout-minutes: 120
     env:
       CARGO_TERM_COLOR: never
+      PYTHONUTF8: '1'
 
     steps:
       # The runner's Git turns LF into CRLF on checkout. The fixtures and

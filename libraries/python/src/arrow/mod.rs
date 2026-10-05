@@ -3,7 +3,7 @@
 //! Arrow PyCapsule interface. The wheel never imports Polars, and no Python
 //! loop touches a row.
 //!
-//! The three `ffi.rs` files hold every `unsafe` block of the binding: `ffi` reads a producer's memory, `out` hands answers back, and `probe` is a test producer. `memory` lists what this
+//! The `ffi.rs` leaves hold every `unsafe` block of the binding: `ffi` reads a producer's memory, `windows` checks native readable regions, `out` hands answers back, and `probe` is a test producer. `memory` lists what this
 //! process can read, `read` checks and borrows a text column, `write` builds
 //! what goes back, and `gate` releases a column's batches at exit safely.
 

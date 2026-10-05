@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Build and test the installed Windows Python wheel using cached test packages."""
 import argparse
+from contextlib import chdir
 import os
 from pathlib import Path
 import subprocess
+import shutil
+import runpy
 import sys
 import tempfile
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
+CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture']
 
 
 def main():
@@ -23,19 +27,31 @@ def main():
     env.update(CARGO_HOME=os.environ.get('CARGO_HOME', str(Path.home() / '.cargo')),
                RUSTUP_HOME=os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),
                CARGO_TARGET_DIR=str(REPO / 'target'), CARGO_NET_OFFLINE='true', CARGO_BUILD_JOBS='2',
-               RUSTC_WRAPPER='', RUSTC_WORKSPACE_WRAPPER='')
+               RUSTC_WRAPPER='', RUSTC_WORKSPACE_WRAPPER='', PYTHONUTF8='1')
     with tempfile.TemporaryDirectory(prefix='thinkthen-python-windows-') as temporary:
         scratch = Path(temporary)
         env.update(HOME=str(scratch / 'home'), APPDATA=str(scratch / 'Roaming'),
                    LOCALAPPDATA=str(scratch / 'Local'))
         for name in ('home', 'Roaming', 'Local'):
             (scratch / name).mkdir()
+        # Copy only fixtures and tests. No source package can satisfy imports.
+        checked = scratch / 'libraries/python'
+        checked.mkdir(parents=True)
+        shutil.copytree(HERE / 'tests', checked / 'tests', ignore=shutil.ignore_patterns('__pycache__'))
+        shutil.copyfile(HERE / 'examples.json', checked / 'examples.json')
+        shutil.copytree(REPO / 'conformance', scratch / 'conformance',
+                        ignore=shutil.ignore_patterns('target', '__pycache__'))
+        shutil.copytree(REPO / 'specification/fixtures/batching', scratch / 'specification/fixtures/batching')
         env['RUSTFLAGS'] = (f'--remap-path-prefix={REPO.as_posix()}=/build/source '
                             f'--remap-path-prefix={env["CARGO_HOME"]}=/build/cargo '
                             f'--remap-path-prefix={Path.home().as_posix()}=/build/home')
 
-        def run(*command, cwd=HERE):
-            subprocess.run(command, cwd=cwd, env=env, check=True, timeout=1800)
+        def run(*command, cwd=HERE, extra=None):
+            with chdir(cwd):
+                result = CAPTURE(command, env=env | (extra or {}), text=True, timeout=1800)
+            print(result.stdout, end='')
+            print(result.stderr, end='', file=sys.stderr)
+            result.check_returncode()
 
         def venv(name, requirements):
             folder = scratch / name
@@ -53,15 +69,35 @@ def main():
         if len(wheels) != 1:
             raise RuntimeError('expected one checked win_amd64 release wheel')
         run(str(python), '-m', 'pip', 'install', '--no-index', '--no-deps', str(wheels[0]))
-        run(str(python), '-c', 'import pathlib, sys, thinkthen; '
-            'assert pathlib.Path(thinkthen.__file__).is_relative_to(sys.prefix)', cwd=scratch)
+        installed = ('import pathlib, sys, thinkthen, thinkthen._thinkthen as native; '
+                     'assert all(pathlib.Path(p).resolve().is_relative_to(pathlib.Path(sys.prefix).resolve()) '
+                     'for p in (thinkthen.__file__, native.__file__))')
+        run(str(python), '-c', installed, cwd=checked)
         # The production wheel must send nothing on refusal, then answer from
         # the fixture backend. Those tests count real loopback requests.
-        env['PYTHONPATH'] = str(HERE / 'tests')
+        env['PYTHONPATH'] = str(checked / 'tests')
         run(str(python), '-m', 'pytest', '-q', '-p', 'no:cacheprovider',
-            str(HERE / 'tests/test_call.py') + '::test_token_cap_variable_refuses_before_any_send',
-            str(HERE / 'tests/test_stopping.py') + '::test_a_token_cancelled_before_the_call_sends_nothing',
-            str(HERE / 'tests/test_surface.py') + '::test_the_module_functions_equal_an_explicit_engine', cwd=scratch)
+            'tests/test_call.py::test_token_cap_variable_refuses_before_any_send',
+            'tests/test_stopping.py::test_a_token_cancelled_before_the_call_sends_nothing',
+            'tests/test_surface.py::test_the_module_functions_equal_an_explicit_engine', cwd=checked)
+        # Shared cases and documentation examples exercise the production wheel.
+        with subprocess.Popen([str(REPO / 'target/debug/conformance-backend.exe')], env=env,
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True) as backend:
+            try:
+                port = backend.stdout.readline().strip()
+                int(port)
+                fake = {'THINKTHEN_API_KEY': 'sk-fake-loopback-python-0105',
+                        'THINKTHEN_BASE_URL': f'http://127.0.0.1:{port}/generic/v1',
+                        'THINKTHEN_CACHE': str(scratch / 'cache')}
+                run(str(python), 'tests/conformance.py', port, cwd=checked, extra=fake)
+                run(str(python), 'tests/examples.py', port, cwd=checked, extra=fake)
+            finally:
+                backend.stdin.close()
+                try:
+                    backend.wait(timeout=60)
+                except subprocess.TimeoutExpired:
+                    backend.kill()
+                    backend.wait(timeout=10)
         run('cargo', 'clippy', '--locked', '--offline', '--all-targets', '--', '-D', 'warnings')
         run('cargo', 'clippy', '--locked', '--offline', '--all-targets', '--features', 'probe', '--', '-D', 'warnings')
         run('cargo', 'test', '--locked', '--offline', '--no-default-features', '--lib')
@@ -70,13 +106,15 @@ def main():
         run('maturin', 'build', '--quiet', '--locked', '--offline', '--features', 'probe', '-o', str(scratch / 'probe'))
         probe, = (scratch / 'probe').glob('thinkthen-*.whl')
         run(str(python), '-m', 'pip', 'install', '--no-index', '--no-deps', '--force-reinstall', str(probe))
-        run(str(python), '-m', 'mypy', '--strict', str(HERE / 'tests/type_contract.py'), cwd=scratch)
+        run(str(python), '-c', installed, cwd=checked)
+        run(str(python), '-m', 'mypy', '--strict', 'tests/type_contract.py', cwd=checked)
         run(str(python), '-m', 'pytest', '-q', '-rs', '-p', 'no:cacheprovider', '-m', 'not stress',
-            str(HERE / 'tests'), cwd=scratch)
+            'tests', cwd=checked)
         older = venv('pandas2', 'requirements-pandas2.txt')
         run(str(older), '-m', 'pip', 'install', '--no-index', '--no-deps', str(probe))
+        run(str(older), '-c', installed, cwd=checked)
         run(str(older), '-m', 'pytest', '-q', '-rs', '-p', 'no:cacheprovider', '-m', 'not stress',
-            str(HERE / 'tests/test_pandas.py'), str(HERE / 'tests/test_secrecy.py'), cwd=scratch)
+            'tests/test_pandas.py', 'tests/test_secrecy.py', cwd=checked)
 
 
 if __name__ == '__main__':

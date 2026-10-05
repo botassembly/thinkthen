@@ -140,6 +140,8 @@ Blockers: none.
 
 Open items:
 
+- [Windows static-library distribution waits for stage 3](../issues/2026-10-05-windows-static-library-waits-for-stage-3.md)
+
 - [0406: Rank questions preserve criteria and score ordering across core surfaces](../tickets/0406-rank-question-equivalence.md)
 - [0407: Supply independent context for each record](../tickets/0407-per-record-context.md)
 - [0408: Expose complete question probabilities through C JSON and SQL details](../tickets/0408-j1-full-probabilities.md)

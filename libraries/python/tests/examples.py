@@ -22,6 +22,7 @@ def run(example, port):
         for name, content in example.get("files", {}).items():
             pathlib.Path(folder, name).write_text(content)
         env = child_env(THINKTHEN_API_KEY=os.environ["THINKTHEN_API_KEY"],
+                        keep=("SystemRoot", "TEMP", "TMP", "APPDATA", "LOCALAPPDATA") if os.name == "nt" else (),
                         THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
                         THINKTHEN_CACHE=str(pathlib.Path(folder, "cache")))
         program = ("import thinkthen as tt\n" + example.get("imports", "") +

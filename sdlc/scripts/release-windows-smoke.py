@@ -9,6 +9,7 @@ import json
 import shutil
 from pathlib import Path
 import subprocess
+import sys
 import tarfile
 import tempfile
 import threading
@@ -86,6 +87,56 @@ def interrupt(binary, env):
          "interrupt::release_binary_console_interrupt", "--", "--exact", "--ignored"],
         supplied, timeout=600)
     print("Windows packed command interruption: actual isolated Ctrl-C returned 130 with one request")
+
+
+def python_smoke(platform, env, version, root):
+    """Install the packed wheel away from source and count its real requests."""
+    names = ('PATH', 'SystemRoot', 'SystemDrive', 'TEMP', 'TMP', 'HOME', 'APPDATA', 'LOCALAPPDATA')
+    env = {name: env[name] for name in names if name in env}
+    venv = root / 'python'
+    run([sys.executable, '-I', '-m', 'venv', str(venv)], env)
+    python = str(venv / 'Scripts/python.exe')
+    wheel = platform / f'thinkthen-{version}-cp310-abi3-win_amd64.whl'
+    run([python, '-I', '-m', 'pip', 'install', '--no-index', '--no-deps', str(wheel.resolve())], env)
+    requests = []
+
+    class Backend(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            requests.append(body)
+            data = json.dumps({'model': 'jev-1.13.0', 'answers': {
+                name: {'type': 'noul', 'noul': 0.9} for name in body['questions']}}).encode()
+            self.send_response(200)
+            self.send_header('Connection', 'close')
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, *_args):
+            pass
+
+    with http.server.ThreadingHTTPServer(('127.0.0.1', 0), Backend) as server:
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            supplied = env | {'THINKTHEN_API_KEY': 'sk-python-wheel-loopback',
+                              'THINKTHEN_BASE_URL': f'http://127.0.0.1:{server.server_port}/generic/v1'}
+            program = ('import pathlib, sys, thinkthen as tt, thinkthen._thinkthen as native; '
+                       'assert all(pathlib.Path(p).resolve().is_relative_to(pathlib.Path(sys.prefix).resolve()) '
+                       'for p in (tt.__file__, native.__file__)); ')
+            capped = supplied | {'THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL': '10'}
+            refusal = run([python, '-I', '-c', program + '\ntry: tt.Engine(cache=False).decide("Is it late?", "one")'
+                           '\nexcept tt.UsageError as error: print(error.kind, error)'], capped)
+            if 'would be exceeded before this call\'s first request' not in refusal.stdout or requests:
+                raise RuntimeError('installed Python spend refusal did not send zero requests')
+            answer = run([python, '-I', '-c', program + 'answer = tt.Engine(cache=False).decide("Is it late?", "one"); '
+                          'print(answer.value, answer.facts["requests_sent"])'], supplied, output='True 1')
+            if len(requests) != 1 or 'sk-python-wheel-loopback' in answer.stdout + answer.stderr + refusal.stdout + refusal.stderr:
+                raise RuntimeError('installed Python wheel sent the wrong count or exposed its key')
+        finally:
+            server.shutdown()
+            thread.join(timeout=10)
+    print('Windows Python wheel smoke: installed import, spend refusal sent 0 requests, answer sent 1')
 
 
 @contextmanager
@@ -178,6 +229,7 @@ def main():
              str(root / "command/thinkthen.exe"), "--version", version], env, timeout=600)
         installed_smoke(args.platform, sample, env, version, root)
         interrupt(root / "command/thinkthen.exe", env)
+        python_smoke(args.platform, env, version, root)
         if args.crate_dir:
             wanted = args.crate_dir / f"thinkthen-{version}.crate"
             if list(args.crate_dir.glob("*.crate")) != [wanted] or wanted.is_symlink():
