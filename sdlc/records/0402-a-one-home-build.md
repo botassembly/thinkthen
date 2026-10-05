@@ -97,3 +97,23 @@ D	site/src/pages/reference/functions/[name]/index.astro
 M	site/src/pages/search.astro
 M	site/src/pages/trust.astro
 ```
+
+## Coordinator documentation checkpoint
+
+Fresh Medium source review accepted immutable `6eba7e3179a26140b0c09de63fddb6d45464ad23` without findings. The coordinator named and ran the actual documentation checkpoint on that unchanged HEAD. Rust, bindings and executable specification remain byte-identical to landed rank main; its accepted full test/specification receipts carry those unchanged source roots. This slice requires the actual documentation and route/export checks instead of another unrelated Rust run.
+
+The first isolated-home replay exited 1: Python could not find cached wheels and R found system jsonlite 1.8.8 instead of the installed 2.0.0 library. It reported 63 failed samples and skipped cached toolchains; `test-docs.log` remains intact and is not passing proof. The corrected runner selects existing cached toolchains, Python dependencies and R library. It installs no new dependency and invokes no live provider.
+
+The complete retry actually replayed 308 language samples and 42 SQL samples, all 350. Both strict checks report zero stale entries. The final site build passes, including the 61-alias and exported-heading contracts. Generated `final-proof.json` equals the committed runner artifact byte for byte; no proof hash was written manually. This checkpoint changes no source, workflow, release environment or experiment. Native Windows, publication, paid and stress execution did not run here.
+
+Owned checkpoint receipts and SHA-256:
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `target/0402a-checkpoint-final/test-docs.log` | `7d85a15d04aa2689d9033ab8152eacf1f043c498a062d69d915dcde76f87735b` |
+| `target/0402a-checkpoint-final/test-docs-retry.log` | `9ad348686c622465144362cd60e800193c69b3031afa244f93ebbdd015ce9858` |
+| `target/0402a-checkpoint-final/strict-retry.log` | `d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30` |
+| `target/0402a-checkpoint-final/site-build-retry.log` | `737a6526434ef83a0394d59bbdbd35fe9adc362da687f29af75e160f82c081b0` |
+| `target/0402a-checkpoint-final/final-proof.json` | `ff26c793f1f744e225f28941b9d7351c77d8be5de6f567726e05eab613c3185c` |
+
+Fresh final receipt review and A landing remain next. The ticket stays in progress: accepted B and C designs await their predecessors, and D’s measured recipes still wait on experiment comparisons.

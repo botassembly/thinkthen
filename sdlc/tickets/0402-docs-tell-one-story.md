@@ -103,3 +103,5 @@ Relabels: `sdlc/issues/2026-10-03-draft-function-link.md`, `sdlc/issues/2026-10-
 ## What the build taught us
 
 Slice A's [build record](../records/0402-a-one-home-build.md) records the frozen accepted design, actual failures and corrections, fragment and h4 omission plants, unchanged proof inputs and focused evidence. Fresh source review and coordinator-owned full proof remain pending.
+
+Slice A source received fresh acceptance at `6eba7e317`; its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Final receipt review and A landing remain pending. B and C have complete accepted designs; their implementation waits for predecessor landings. D’s Rules recipe comparison remains pending.
