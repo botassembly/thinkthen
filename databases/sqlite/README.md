@@ -114,7 +114,7 @@ Questions may be plain decide text, inline JSON or a named `@file`; question set
 ```sql
 -- Run from the repository root after loading the SQLite extension.
 SELECT ordinal, record, file, first_line, last_line,
-       thinkthen_decide('Does this document contain a support contract?', record) AS value
+       thinkthen_decide('Does this document contain a support contract?', record) AS has_support_contract
 FROM thinkthen_read_files('specification/fixtures/files/documents', '{"unit":"file"}');
 ```
 

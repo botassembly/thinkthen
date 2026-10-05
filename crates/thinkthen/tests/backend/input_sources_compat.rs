@@ -288,17 +288,16 @@ fn labels_that_name_existing_files_remain_labels() -> io::Result<()> {
 }
 
 #[test]
-fn unchanged_aggregate_commands_hide_window_and_refuse_new_input_forms() -> io::Result<()> {
+fn aggregate_commands_offer_windows_and_refuse_missing_inputs() -> io::Result<()> {
     let listener = Listener::answering(answer)?;
     for verb in ["find", "recognize", "relate"] {
         let output = spawn(&[verb, "--help"], &[], b"")?;
         assert_eq!(output.status.code(), Some(0));
-        assert!(!text(&output.stdout).contains("--window"), "{verb}");
+        assert!(text(&output.stdout).contains("--window"), "{verb}");
     }
     for command in [
         vec!["find", "Clear?", "--input", "one", "--input", "two"],
-        vec!["find", "Clear?", "--window", "2"],
-        vec!["recognize", "--window", "2"],
+        vec!["recognize", "--input", "one", "--input", "two"],
         vec!["relate", "member", "--input", "one", "--input", "two"],
     ] {
         let output = spawn(
@@ -308,7 +307,7 @@ fn unchanged_aggregate_commands_hide_window_and_refuse_new_input_forms() -> io::
         )?;
         assert_eq!(
             output.status.code(),
-            Some(2),
+            Some(5),
             "{command:?}: {}",
             text(&output.stderr)
         );

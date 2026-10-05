@@ -185,6 +185,12 @@ impl Output<'_> {
         self.display.around.is_some()
     }
 
+    pub(crate) fn text_view(&self) -> bool {
+        self.display.arguments.line_number
+            || self.display.arguments.scores
+            || self.display.around.is_some()
+    }
+
     pub(crate) fn snapshot(&mut self, snapshot: Option<crate::cli::intake::Snapshot>) {
         self.display.snapshot = snapshot;
     }
