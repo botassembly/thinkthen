@@ -47,7 +47,7 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 Ship the small working core approved by Ian on 2026-10-05. [The current plan](team-0-2-2026-10-04.md) owns the priority order, completion status, deferred work, delegated run approvals and exit criteria.
 
-Windows Python, binding/SQL backend choice, the backend checking rename, DuckDB 1.5.4/1.5.5 builds and the agent skill have landed. The small default-recognize check remains. Then run the authorized hosted rehearsal and real Windows test on the reviewed commit; missing required Windows behavior blocks release. Lower-priority file readers do not hold release and move to 0.3 if unfinished. Release QA and Ian's go complete the release.
+Windows Python, binding/SQL backend choice, the backend checking rename, DuckDB 1.5.4/1.5.5 builds and the agent skill have landed. The small default-recognize check completed without a software defect. Then run the authorized hosted rehearsal and real Windows test on the reviewed commit; missing required Windows behavior blocks release. Lower-priority file readers do not hold release and move to 0.3 if unfinished. Release QA and Ian's go complete the release.
 
 Main carries 0.2.0; release/0.1 is frozen, and public install text stays 0.1.2 until 0.2 ships. dbt v1 is the documented route. No new function or grep alias is approved. The plan records the deferred audit gaps, recipes, Windows bindings, tables, signing and community listing.
 

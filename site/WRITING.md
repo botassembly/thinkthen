@@ -240,9 +240,7 @@ Link to the canonical home and retain a moved page's fragments. The link check r
 
 ## One home per idea
 
-Give each explanation one home and link to it elsewhere. `check-layout.mjs` compares decoded, whitespace-normalized paragraphs of 25 words or more inside `main`. Case and punctuation stay significant; inline links and code count. Navigation, footer, scripts, buttons and preformatted blocks do not count. This detects exact repetition, not paraphrases or semantic overlap.
-
-Existing contract and installation repetitions have literal `ALLOWED` entries in that checker. Each names the complete paragraph, exact sorted routes, source and individual reason. A changed, unused, duplicated or widened exception fails. Do not exempt a whole template.
+Give each explanation one home and link to it elsewhere. Repeat a shared API contract where readers need it on each surface.
 
 
 ## Recipes and publication evidence
@@ -253,6 +251,6 @@ A complete recipe presents the job and boundary, question file, independently la
 
 Recipe narrative uses the closed body model in `recipes.mjs`. Titles, goals, jobs, headings, captions and link labels contain no literal decimal digits, including Unicode digits. Numerical claims use evidence-reference nodes with no author replacement value. Measured carriers require exact value, denominator, cohort, measure definition, resolved/unresolved accounting, backend/model qualification and public owning-record source. Fixture carriers require the saved artifact, selector, denominator and visible controlled-fixture qualification. Artifact nodes display exact declared files; their code/output digits are not quality evidence. Human review still judges quantities written as words. Raw HTML, arbitrary expressions and free-form Markdown are not recipe bodies.
 
-`check-recipes.mjs` checks actual HTML, Markdown and llms exports against source carriers, rejects numerical narrative outside them and verifies visibility. No new long-paragraph exception is permitted. Controlled loopback recordings prove replay and wiring, never provider performance. Audit agreement on a tiny fixture never becomes a quality rate. Candidate absence, misses, none, not sure and failures retain separate full-population counts. Variable option labels require item-aware audits.
+`check-recipes.mjs` checks actual HTML, Markdown and llms exports against source carriers, rejects numerical narrative outside them and verifies visibility. Controlled loopback recordings prove replay and wiring, never provider performance. Audit agreement on a tiny fixture never becomes a quality rate. Candidate absence, misses, none, not sure and failures retain separate full-population counts. Variable option labels require item-aware audits.
 
 Normal all-draft builds retain `/recipes` as the fragment-preserving Bash redirect and emit no recipe details, index twin or listing. Explicit draft preview generates the static index through `[...index].astro` and marked draft details with visible draft notices in exports. Preview alone adds no global menu/footer entry. A published entry requires runnable examples, measured outcomes with ordinary source attribution and one whole-change review. Only that later disposition enables global navigation. Every other alias remains fixed.

@@ -1,6 +1,6 @@
 # 0419: Publish a small official ThinkThen skill for agents
 
-Status: done. The official skill, replay examples and compatibility wording passed one whole-change review. Full landing tests and lint run before pushing.
+Status: done. The official skill, replay examples and compatibility wording passed one whole-change review. Full tests and lint passed on the integrated core landing.
 
 Milestone: 0.2
 
