@@ -110,15 +110,19 @@ Open items:
 - Release process, from the 0.1 releases: [the rehearsal never runs the publish steps](../issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md), [the public install checks are done by hand](../issues/2026-10-04-public-install-checks-are-done-by-hand.md), [the release tag can name an unrehearsed commit](../issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md), [each patch release costs two hand passes](../issues/2026-10-04-each-patch-release-costs-two-hand-passes.md), [the R package's Linux install and pre-release proof](../issues/2026-10-04-r-install-on-linux-and-before-release.md), [two release secrets remain](../issues/2026-10-04-two-release-secrets-remain.md), and [a release needs two approvals](../issues/2026-10-04-a-release-needs-two-approvals.md)
 - Remaining tool draft: [Markdown repair tool](../issues/2026-10-03-draft-markdown-repair-tool.md).
 
-- Recipe infrastructure is partial 0402 D. All six pages remain drafts and all issues remain open until measured publication:
-- [`rules-propose-model-confirms`: Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) — Scoped comparison accepted; repeatability and measured publication review remain pending.
-- [`link-records`: Link records](../issues/2026-10-03-draft-function-link.md) — Earlier linking evidence and compatible replay remain pending; completed wording comparison returned no answers.
-- [`verify-a-claim`: Verify a claim](../issues/2026-10-03-draft-function-verify.md) — Constructed-claim limits and source review remain; qualification efficacy and publication artifacts remain pending.
-- [`navigate-many-documents`: Navigate many documents](../issues/2026-10-03-draft-function-navigate.md) — Admitted navigation measurements and compatible artifacts remain pending; no tree command is promised.
-- [`search-transcripts`: Search transcripts](../issues/2026-10-05-recipe-search-transcripts.md) — Held-out source reconciliation and replay remain pending; unequal reading lengths and overlap limit interpretation.
-- [`ask-your-cache-with-duckdb`: Ask your cache with DuckDB](../issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md) — Admitted cache-analysis artifacts and supported-build reconciliation remain pending; no extension support or efficacy promise.
+The approved core recipes publish through 0402:
 
-Verify and qualify remain shared in `verify-a-claim`. Rules comparison is accepted only for the frozen 0031 cohort and tested choose configuration; publication proof is pending. Extract stays dropped. 0030 establishes no quality-qualified winner. 0032 efficacy is unanswered with TEST sealed and its full hold retained; none wording remains unknown. No continuation follows.
+- [`rules-propose-model-confirms`: Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) — Frozen candidate-generation and choose comparison; no generic recognize failure claim.
+- [`verify-a-claim`: Verify a claim](../issues/2026-10-03-draft-function-verify.md) — A person reviews every supports result before action. Qualification remains later on this shared route.
+- [`ask-your-cache-with-duckdb`: Ask your cache with DuckDB](../issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md) — Retained-data SQL with stock DuckDB 1.5.5, dbt v1 where used, and the documented unsigned development path.
+
+These recipes stay unpublished for later:
+
+- [`link-records`: Link records](../issues/2026-10-03-draft-function-link.md) — Link none measurements are being rerun; no wording improvement established.
+- [`navigate-many-documents`: Navigate many documents](../issues/2026-10-03-draft-function-navigate.md) — Held-out search did not generalize.
+- [`search-transcripts`: Search transcripts](../issues/2026-10-05-recipe-search-transcripts.md) — Held-out 13/29 passages versus broad search’s 15/29, with unequal reading lengths.
+
+Extract remains dropped. Qualification promises no automatic judgment. No recipe change authorizes an experiment continuation or paid call.
 
 ## 0.3
 

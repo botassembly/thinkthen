@@ -394,5 +394,5 @@ fn variable(name: &str) -> Option<String> {
 mod tests;
 
 #[cfg(test)]
-#[path = "config/setups_0400_tests.rs"]
-mod setups_0400;
+#[path = "config/backend_setups_tests.rs"]
+mod backend_setups;

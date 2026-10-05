@@ -61,22 +61,6 @@ mod default_cache;
 // Its cases set Unix folder modes (sdlc/planning/windows.md).
 #[cfg(unix)]
 mod default_cache_storage;
-#[allow(
-    clippy::expect_used,
-    reason = "fixture failures stop the CLI byte proof"
-)]
-mod display_0401;
-#[allow(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "fixture failures and checked stored keys stop the identity proof"
-)]
-mod display_0401_identity;
-#[allow(
-    clippy::expect_used,
-    reason = "fixture failures stop the CLI safety proof"
-)]
-mod display_0401_safety;
 mod distribution_total;
 mod exchange;
 #[allow(
@@ -86,21 +70,20 @@ mod exchange;
 )]
 mod facts;
 mod find;
-mod find_display_0401;
-mod find_display_0401_safety;
+mod find_display;
 mod from_record;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,
     reason = "fixture setup and checked JSON rows stop the intake boundary proof"
 )]
-mod intake_0401;
+mod input_sources;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,
     reason = "fixture setup and measured requests stop the compatibility proof"
 )]
-mod intake_0401_compat;
+mod input_sources_compat;
 #[cfg(unix)]
 mod interrupt;
 mod json_syntax;
@@ -126,6 +109,22 @@ mod question_cache_steps;
 )]
 mod recognize;
 mod recognize_refusals;
+#[allow(
+    clippy::expect_used,
+    reason = "fixture failures stop the CLI byte proof"
+)]
+mod record_display;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "fixture failures and checked stored keys stop the identity proof"
+)]
+mod record_display_identity;
+#[allow(
+    clippy::expect_used,
+    reason = "fixture failures stop the CLI safety proof"
+)]
+mod record_display_safety;
 mod record_values;
 mod recording_conflicts;
 mod recording_durability;
@@ -203,13 +202,11 @@ mod version;
     clippy::indexing_slicing,
     reason = "checked loopback fixtures and result rows stop the rank-set contract proof"
 )]
-mod rank_set_0401;
-
-mod rank_set_0401_safety;
+mod rank_set;
 
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,
     reason = "checked result objects and recorded keys stop the identity proof"
 )]
-mod rank_set_0401_identity;
+mod rank_set_identity;

@@ -1,20 +1,12 @@
 # Recipe: Search transcripts
 
-Status: open. Draft; infrastructure closes no recipe issue.
+Status: open. Publication stays later under Ian’s 2026-10-05 ruling.
 Kind: recipe
-Milestone: 0.2
+Milestone: later
 Owner: the queue owner
 Slug: search-transcripts
-When: compatible evidence and reviewed measured publication
+When: later measurements support publication
 
-## Job and evidence wait
+## Disposition
 
-Retain context around transcript search results.
-
-Ticket 0401 and experiment 422 own search evidence. Unequal reading lengths prevent an equal-length comparison; any-line overlap does not prove complete context.
-
-Held-out source reconciliation and replay remain pending; unequal reading lengths and overlap limit interpretation.
-
-## Closure
-
-Ticket 0402 owns the hidden draft and harness. This issue closes only when its measured page publishes with compatible question file, independently labeled sample, recording, audit, commit-pinned provenance and fresh publication proof. No experiment, retry, release or publication is authorized here.
+Held-out transcript search found 13/29 passages against broad search’s 15/29, with unequal reading lengths. The earlier result did not generalize. Navigation and transcript-search publication stay later; no general recall advantage is promised.

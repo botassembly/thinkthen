@@ -15,7 +15,7 @@ code <- c('stopifnot(is.null(getOption("tt_startup_site_profile")), is.null(getO
           'cat("STARTUP SUPPRESSED\n")')
 one <- child(code, env)
 check("helper child suppresses startup", one$status == 0L && identical(one$text, "STARTUP SUPPRESSED"))
-for (name in c("throttle_0400.R", "interrupt.R")) {
+for (name in c("request_width.R", "interrupt.R")) {
   # Evaluate the actual launcher only, without running its backend campaign.
   expressions <- parse(file.path(Sys.getenv("TT_TESTS"), name))
   launcher <- Filter(function(x) is.call(x) && identical(x[[1L]], as.name("<-")) &&

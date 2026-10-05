@@ -1,0 +1,7 @@
+# 0398: Release and installed-package safety
+
+Slices A/B/B2/C landed: Cargo publication dry-run, strict wheel validation, checked Homebrew rendering, version-specific installed-package replay and resolved-commit release routing. Offline workflow, archive, ownership/cleanup, child environment and installed-package fixtures passed; hosted rehearsal remains pending.
+
+Installed checks use owned scratch homes, no provider keys/configuration, exact requested versions and true replay answers with zero requests. Homebrew selects historical formulas; R-universe distinguishes missing/older/superseded binary indexes. B2 fixed Linux R’s `src/contrib/PACKAGES` path at `ddfcbc74c`; HTTP index/archive-header observations established that path defect, not a successful public install or verified archive body. SQLite archive identity remains qualified where package metadata cannot establish it. PostgreSQL cleanup joins only owned children and preserves startup-failure evidence.
+
+Release routing resolves source once, bounds child lifetimes/output, preserves errors and confines outward credentials/actions to approved contexts. Full export/package checks and release rehearsal remain because stale artifacts, leaked credentials, escaped children and accidental publication harm users. Left: Ian’s approval for hosted rehearsal and the combined native Windows run, then release QA and final go; offline fixtures authorize none of them.

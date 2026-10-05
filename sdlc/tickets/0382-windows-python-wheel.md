@@ -1,6 +1,6 @@
 # 0382: Windows stage 1: the Python wheel ships for Windows x86-64
 
-Status: in progress in lane 1 after the release/0.1 cut and landed 0380 A/0381 A. Build the Python wheel before the single authorized Windows core run; native proof remains pending.
+Status: in progress. The Windows Python wheel and core runner candidate passes focused Linux Python, installed-wheel and workflow checks. Fresh High review, landing and the combined native Windows run remain. Native dispatch is pending approval.
 
 Milestone: 0.2
 
