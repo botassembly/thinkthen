@@ -50,9 +50,9 @@ New located recognize input uses text units. Existing structured/field recogniti
 
 For plain text source records, relate uses the full record content as the entity name and kind `*`, as its existing lines mode does. Whole-file mode supplies the full document, not the filename, so the model sees the content it judges. Structured entity records retain caller-selected names/kinds. Relate still asks about supplied names and never silently runs recognize. Equal source name/kind pairs share one admitted entity and fan each accepted edge back to source occurrence pairs, as SQL already does. Existing non-source duplicate rejection stays unchanged. An endpoint carries its original source record and range. A document endpoint names its complete document range, not an invented supporting sentence.
 
-### Added public declarations
-
 These are the additive Rust reader and fallible-intake signatures implemented and reviewed in this ticket.
+
+### Added public declarations
 
 ```text
 ReaderOptions::unit: SourceUnit
