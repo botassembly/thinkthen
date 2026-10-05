@@ -305,7 +305,7 @@ impl Acknowledgment {
         }
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     fn failed(&self) -> bool {
         self.failed.load(Ordering::Acquire)
     }

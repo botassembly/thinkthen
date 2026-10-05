@@ -9,14 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-#[path = "../../../tests/windows/ffi.rs"]
-mod native;
-#[path = "../../../tests/windows/process.rs"]
-#[allow(
-    dead_code,
-    reason = "the synchronized writer needs owned children without console injection"
-)]
-mod process;
+use crate::windows::test_support::{ffi as native, process};
 
 const ANSWER: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":5,"output_tokens":1}}"#;
 

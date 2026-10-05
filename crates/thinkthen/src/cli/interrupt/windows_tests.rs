@@ -1,15 +1,12 @@
 //! Native console proof; subprocess helpers are excluded from routine selection.
 use super::{Environment, Routing, State};
 use crate::test_deadline::child;
+use crate::windows::test_support::{ffi, process};
 use child::ChildEnvironment as _;
 use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
-#[path = "../../../tests/windows/ffi.rs"]
-mod ffi;
-#[path = "../../../tests/windows/process.rs"]
-mod process;
 
 struct Scratch(PathBuf);
 impl Scratch {

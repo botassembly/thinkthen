@@ -174,6 +174,11 @@ def banned(prefix: str, names: tuple[str, ...], reason: str) -> list[dict[str, s
     return [{"path": f"{prefix}{name}", "reason": reason} for name in names]
 
 
+def banned_unix(prefix: str, names: tuple[str, ...], reason: str) -> list[dict]:
+    """Keep Unix prohibitions active on Unix without warning on Windows."""
+    return [{**entry, "allow-invalid": True} for entry in banned(prefix, names, reason)]
+
+
 def accepted_core_clippy() -> dict:
     methods = (
         banned("std::fs::", (
@@ -184,7 +189,7 @@ def accepted_core_clippy() -> dict:
             "symlink_metadata", "write",
         ), BYTES)
         + banned("std::path::", ("absolute",), BYTES)
-        + banned("std::os::unix::fs::", (
+        + banned_unix("std::os::unix::fs::", (
             "chown", "chroot", "fchown", "lchown", "mkfifo", "symlink",
         ), BYTES)
         + banned("std::path::Path::", (
@@ -208,7 +213,7 @@ def accepted_core_clippy() -> dict:
     types = (
         banned("std::fs::", ("DirBuilder", "DirEntry", "File", "OpenOptions", "ReadDir"), BYTES)
         + banned("std::net::", ("TcpListener", "TcpStream", "UdpSocket"), SOCKET)
-        + banned("std::os::unix::net::", ("UnixDatagram", "UnixListener", "UnixStream"), SOCKET)
+        + banned_unix("std::os::unix::net::", ("UnixDatagram", "UnixListener", "UnixStream"), SOCKET)
         + banned("std::process::", ("Command",), PROCESS)
         + banned("serde_json::", ("Value", "Map"), DYNAMIC_JSON)
     )
