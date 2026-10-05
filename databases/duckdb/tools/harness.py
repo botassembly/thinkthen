@@ -25,7 +25,8 @@ ROOT = HERE.parent
 REPO_ROOT = ROOT.parent.parent
 sys.path.insert(0, str(REPO_ROOT / "conformance" / "children"))
 from children import child_env as clean_env  # noqa: E402  the shared helper, ticket 0127
-EXTENSION = Path(os.environ.get("THINKTHEN_DUCKDB_EXTENSION", ROOT / "build" / "thinkthen.duckdb_extension"))
+from inputs import canonical  # noqa: E402
+EXTENSION = Path(os.environ["THINKTHEN_DUCKDB_EXTENSION"]) if "THINKTHEN_DUCKDB_EXTENSION" in os.environ else canonical()
 BACKEND = os.environ.get("THINKTHEN_BACKEND_BIN", "")
 FAKE_KEY = "sk-loopback-duckdb-suite"
 

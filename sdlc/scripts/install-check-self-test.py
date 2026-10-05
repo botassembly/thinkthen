@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from install_check import CHANNELS, Check, Failure, check_index, check_result, main as install_main, clean_environment, extract_archive, validate_version, verify_checksum
-from install_check_channels import INSTALLERS, dcf_packages, homebrew, local_tap, r_universe, selected_formula, sqlite
+from install_check_channels import INSTALLERS, dcf_packages, homebrew, local_tap, r_universe, selected_formula, sqlite, duckdb
 
 
 class RefusalTable(unittest.TestCase):
@@ -66,6 +66,106 @@ class RefusalTable(unittest.TestCase):
                 else:
                     self.assertEqual(stderr.getvalue(), '')
                     self.assertEqual(stdout.getvalue(), 'install-check: download thinkthen 0.1.2: true, requests_sent 0; version proof: fixture installed binary\n')
+
+    def test_duckdb_uses_reported_host_member_and_rejects_missing_or_mismatched_bytes(self):
+        table = [('v1.5.5', 'linux_amd64', None), ('v1.5.4', 'linux_amd64', None),
+                 ('v1.5.6', 'linux_amd64', 'supported version'), ('v1.5.5', 'osx_arm64', 'native target'),
+                 ('v1.5.5', 'linux_amd64', 'missing'), ('v1.5.5', 'linux_amd64', 'footer'),
+                 ('v1.5.5', 'linux_amd64', 'linked'), ('v1.5.5', 'linux_amd64', 'hardlink')]
+        for host, platform, failure in table:
+            with self.subTest(host=host, failure=failure), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                check = Check(root, 'duckdb', '0.2.0')
+                prepare_sample(check)
+                archive = root / 'package.tar.gz'
+                files = duckdb_repository_files()
+                matching = f'{host}/linux_amd64/thinkthen.duckdb_extension'
+                if failure == 'missing':
+                    # A valid old root member must not rescue a missing matching path.
+                    files['thinkthen.duckdb_extension'] = files.pop(matching)
+                if failure == 'footer':
+                    files[matching] = files['v1.5.4/linux_amd64/thinkthen.duckdb_extension']
+                if failure == 'hardlink':
+                    files = {'LICENSES/rust/example/extension': files[matching], **files}
+                with tarfile.open(archive, 'w:gz') as output:
+                    for name, data in files.items():
+                        member = tarfile.TarInfo(name)
+                        member.size = len(data)
+                        if failure == 'linked' and name == matching:
+                            member.type, member.linkname = tarfile.SYMTYPE, '../stale'
+                        if failure == 'hardlink' and name == matching:
+                            member.type, member.linkname = tarfile.LNKTYPE, 'LICENSES/rust/example/extension'
+                        output.addfile(member, io.BytesIO(data) if member.isfile() else None)
+                check.release = lambda name: archive
+                calls = []
+                def run(*args, **kwargs):
+                    sql = kwargs['input']
+                    calls.append(sql)
+                    if sql == 'SELECT version(); PRAGMA platform;':
+                        return host + '\n' + platform
+                    self.assertIn(f'{host}/{platform}/thinkthen.duckdb_extension', sql)
+                    self.assertIn("AND loaded", sql)
+                    self.assertIn('thinkthen_replay', sql)
+                    return '0.2.0\n{"value":true,"meta":{"requests_sent":0}}'
+                check.run = run
+                if failure:
+                    with patch.object(check, 'unpack', wraps=check.unpack) as unpack, self.assertRaises(Failure) as error:
+                        duckdb(check)
+                    wanted = {'missing': f'{host}/{platform}/thinkthen.duckdb_extension',
+                              'footer': 'DuckDB footer DuckDB version', 'linked': 'link or special member',
+                              'hardlink': 'link or special member'}
+                    self.assertIn(wanted.get(failure, failure), str(error.exception))
+                    if failure == 'hardlink':
+                        unpack.assert_not_called()
+                        self.assertFalse((root / 'duckdb').exists())
+                        self.assertEqual(calls, [])
+                    self.assertLessEqual(len(calls), 1)
+                else:
+                    installed, reply, _ = duckdb(check)
+                    check_result('0.2.0', installed, reply)
+                    self.assertEqual(len(calls), 2)
+
+    def test_duckdb_repository_rejects_bad_members_and_incomplete_legal_material(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/cpp'))
+        from verify_repository import verify_repository
+        files = duckdb_repository_files()
+        old = 'v1.5.4/linux_amd64/thinkthen.duckdb_extension'
+        cases = [('good', None), ('missing', 'missing ' + old), ('swap', 'footer DuckDB version'),
+                 ('platform', 'footer platform'), ('duplicate', 'duplicate member'),
+                 ('extra', 'unexpected member'), ('link', 'link or special member'),
+                 ('escape', 'escaping path'), ('legal', 'legal inventory for v1.5.4'),
+                 ('reference', 'missing referenced legal file')]
+        for case, cause in cases:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as folder:
+                members = dict(files)
+                if case == 'missing':
+                    del members[old]
+                if case == 'swap':
+                    members[old] = files['v1.5.5/linux_amd64/thinkthen.duckdb_extension']
+                if case == 'platform':
+                    members[old] = files[old].replace(b'linux_amd64', b'osx_amd64\0\0')
+                if case == 'extra':
+                    members['thinkthen.duckdb_extension'] = files[old]
+                if case == 'legal':
+                    members['NOTICE'] = files['NOTICE'].splitlines()[0]
+                if case == 'reference':
+                    members['NOTICE'] += b'\n(LICENSES/missing/LICENSE)'
+                archive = Path(folder) / 'archive.tar.gz'
+                with tarfile.open(archive, 'w:gz') as output:
+                    for name, data in members.items():
+                        member = tarfile.TarInfo('../escape' if case == 'escape' and name == old else name)
+                        member.size = len(data)
+                        if case == 'link' and name == old:
+                            member.type, member.linkname = tarfile.SYMTYPE, 'elsewhere'
+                        output.addfile(member, io.BytesIO(data) if member.isfile() else None)
+                        if case == 'duplicate' and name == old:
+                            output.addfile(member, io.BytesIO(data))
+                if cause:
+                    with self.assertRaises(ValueError) as error:
+                        verify_repository(archive, 'x86_64-unknown-linux-gnu', '0.2.0')
+                    self.assertIn(cause, str(error.exception))
+                else:
+                    verify_repository(archive, 'x86_64-unknown-linux-gnu', '0.2.0')
 
     def test_invalid_versions_before_side_effects(self):
         for version in ('v0.1.2', '0.1', '0.01.2', '-1.2.3', '0.1.2\n', '$(touch nope)', '0.1.2;echo bad'):
@@ -358,6 +458,21 @@ class BrewFixture(Fixture):
         if self.failure == 'replay': raise Failure('fixture replay failed')
         version = '0.1.3' if self.failure == 'version' else self.version
         return version, {'value': True, 'requests_sent': 0}
+
+
+def duckdb_repository_files():
+    header = b'\x00\x93\x04\x10duckdb_signature\x80\x04'
+    files = {'LICENSE.thinkthen': b'MIT', 'LICENSE.duckdb': b'MIT', 'LICENSES/rust/example/LICENSE': b'MIT'}
+    notice, inventory = [], []
+    for version in ('v1.5.5', 'v1.5.4'):
+        fields = [b''] * 16
+        fields[3:8] = [b'CPP', b'0.2.0', version.encode(), b'linux_amd64', b'4']
+        files[f'{version}/linux_amd64/thinkthen.duckdb_extension'] = b'fixture' + header + b''.join(value.ljust(32, b'\0') for value in fields)
+        notice.append(f'DuckDB {version} source and static archives: MIT (LICENSE.duckdb)')
+        inventory.extend((f'Pinned DuckDB {version} static archives:', f'Pinned DuckDB {version} source license and notice files:', 'LICENSE -> LICENSE.duckdb'))
+    files['NOTICE'] = '\n'.join(notice).encode()
+    files['DEPENDENCIES.txt'] = '\n'.join(inventory).encode()
+    return files
 
 
 def packed(path, files):

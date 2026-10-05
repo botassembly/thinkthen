@@ -4,4 +4,4 @@ The public command is now `thinkthen backends check`. The hidden `thinkthen chec
 
 Compiled-command checks retain success, refusal, counted no-send, budgets, retries, secrecy, timeout and cancellation behavior. Affected documentation examples and settings inventory passed. One fresh whole-change review found a stale saved help output and a test configuration race caused by duplicate modules. The saved output is corrected and canonical/alias cases now share one sequential behavior test. No production behavior changed in those corrections.
 
-Landing gates: full tests and lint. No proxy commands or new backend behavior were added. Unrelated recipe milestone prose checks are corrected in 0419.
+Full tests and lint passed on c2dd2ce8f. No proxy commands or new backend behavior were added. Unrelated recipe milestone prose checks are corrected in 0419.

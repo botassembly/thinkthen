@@ -1,6 +1,7 @@
 """Pinned public host runtimes, installed only into a check's owned scratch."""
 import hashlib
 from pathlib import Path
+import sys
 import zipfile
 from install_check import Failure
 
@@ -66,9 +67,16 @@ def prepare(check):
         if check.run('sqlite3', '--version').split()[0] != '3.53.4':
             raise Failure('SQLite host differs from pinned 3.53.4')
     elif check.channel == 'duckdb':
-        archive = pinned(check, 'https://github.com/duckdb/duckdb/releases/download/v1.5.5/duckdb_cli-linux-amd64.zip', 'duckdb.zip', '08c0ca117111fcede14239d0093792352befdc174218c344d232c13279643d05')
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
+        from inputs import selected, versions
+        identity = selected(versions()[0], 'x86_64-unknown-linux-gnu')
+        archive = pinned(check, f"https://github.com/duckdb/duckdb/releases/download/{identity['version']}/{identity['cli_asset']}",
+                         'duckdb.zip', identity['cli_zip_sha256'])
         folder = unzip(archive, check.root / 'duckdb-tools')
-        (folder / 'duckdb').chmod(0o755)
+        binary = folder / 'duckdb'
+        if hashlib.sha256(binary.read_bytes()).hexdigest() != identity['cli_sha256']:
+            raise Failure('DuckDB host binary differs from its pin')
+        binary.chmod(0o755)
         prepend(check, folder)
-        if not check.run('duckdb', '--version').startswith('v1.5.5 '):
-            raise Failure('DuckDB host differs from pinned 1.5.5')
+        if not check.run('duckdb', '--version').startswith(identity['version'] + ' '):
+            raise Failure(f"DuckDB host differs from pinned {identity['version']}")

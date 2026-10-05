@@ -1,10 +1,10 @@
-# 0403: The DuckDB extension ships a build for DuckDB v1.5.4, the version dbt v2 ships
+# 0403: Build the extension for DuckDB 1.5.4 and 1.5.5
 
-Status: ready. Not started. It changes the release workflow's DuckDB package, so a rehearsal under Ian's approval proves it before the 0.2 release.
+Status: landed. Both versions build, load and install from the versioned archive on Linux, and each rejects the other version’s binary. Other-platform qualification remains for rehearsal; dbt v1 stays the documented route.
 
 Milestone: 0.2
 
-Lane: 3, after ticket 0402, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0403-duckdb-extension-for-dbt-v2`.
+Lane: claude-1. The whole change lands together under Ian’s consolidated 2026-10-05 plan.
 
 ## Outcome
 
@@ -75,3 +75,15 @@ Ian approved a separate signed DuckDB community-listing follow-up after 0.2 core
 - Two DuckDB versions in 0.2, and the version policy default above.
 - Staying on the C++ API in place of a stable C API port.
 - Running the full suites on v1.5.5 only, with conformance, rank, find and portable cases on v1.5.4.
+
+## What the build taught us
+
+The official 1.5.4 tag resolves to `08e34c447bae34eaee3723cac61f2878b6bdf787`. Both Linux static ZIPs contain 22 archives and a header; both macOS ZIPs contain 21 archives and a header. ZIP membership must account for the header separately from the linker manifest. The existing newest manifests remain byte-identical. Source, archive and footer identity are separate checks; none establishes a stock native load.
+
+The [complete accepted design](../planning/0403-accepted-design.md) retains SHA-256 `904eb42d8922e1d9c0b4bd3c8090d1805b27a341381779df62f480634773b9bb`. The [High acceptance](../records/0403-design-acceptance.md) fixes the A/B split. Ian's 2026-10-05 assignment starts A preparation in claude-0 on main `26174408f620c1771e70e6fbe495eab4e6c07e67`. Docs 0402 A/B/C/D foundations are landed; six recipes remain DRAFT and publication and none wording remain pending independent experiment reports. Advancing approved DuckDB core is a dependency workaround, not a 0402 completion claim or a new experiment authorization.
+
+A remains incomplete until both separately compiled real binaries load in matching stock hosts, symmetric refusals and retained suites pass, the old-format archive passes installed smoke, and actual site replay consumes the final canonical default file. B's combined archive remains future work. Fresh High source and pin review precedes any stock native build/load. No remote hardware, Windows native tag, workflow dispatch, release rehearsal, external community submission, signing or spend ran.
+
+The [A preparation handback](../records/0403-a-preparation.md), [official asset inventory](../records/0403-a-pin-assets.json) and [portable receipt manifest](../records/0403-a-preparation-receipts.json) freeze proof source `8dd2fb63d781faa62c7b9ea754dd9c77a5302641`. All eight version/target static sets and CLI pairs are independently verified; no stock native executable ran. Ten portable cases, 53 exact ratchets, root/bridge formatting, tickets and syntax pass, with zero counted loopback requests. Policy and the overall focused run exit 1: the starting commit and candidate have identical output for the inherited recipe-proof `Connection: close` finding. The existing 107 bytecode files and 2,975 executable files remain unchanged. Python growth is 518 measured lines for shared input helpers and behavioral fixtures; Rust and C++ totals are unchanged. Fresh independent High source/pin review is next; this is not A completion.
+
+The [source/pin findings corrections](../records/0403-a-source-pin-corrections.md) address the whole High review's P1 replacement-object bypass and P2 incomplete Node pins on frozen source `1b04f9de33c8f8848d9dff18a4b77df787d87400`. Eleven portable cases pass with zero loopback requests; real commit/tree/blob and Git override refusals start zero fake native tools; 43 Node pin plants produce 86 reader/smoke refusals with zero child starts. All 53 ratchets match; Python grows another 126 lines to 4,868 for these behavioral controls. All official inputs and old failed/cancelled receipts remain unchanged. Policy and driver/outer execution remain exit 1 with identical inherited baseline/current output. C/main correction is pending landing. Fresh independent High source/pin review remains next, before native work; A is incomplete.
