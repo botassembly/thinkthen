@@ -49,6 +49,7 @@ pub(super) fn read(
     let intake = Intake::new(common, &reading, input, false)?;
     let mut pairs = Vec::new();
     let mut occurrences = Vec::new();
+    let mut evidence_bytes = 0usize;
     for item in intake {
         let item = item.map_err(|placed| placed.cause)?;
         let Data::Bytes(bytes) = item.data else {
@@ -56,6 +57,16 @@ pub(super) fn read(
                 "located relate takes text or explicit JSONL records",
             ));
         };
+        let original = reading.as_it_arrived(&bytes)?;
+        if occurrences.len() == 255 {
+            return Err(Failure::Usage(
+                "source relate takes at most 255 source records",
+            ));
+        }
+        evidence_bytes = evidence_bytes
+            .checked_add(original.len())
+            .filter(|&bytes| bytes <= crate::core::MAX_RECORD_BYTES)
+            .ok_or(Failure::Usage("source relate input exceeds 16 MiB"))?;
         let record = reading.record(&bytes).map_err(Failure::from)?;
         let (name, kind) = if text {
             (reading.as_it_arrived(&bytes)?, "*")
@@ -118,6 +129,7 @@ pub(super) fn write(
     sources: &Sources,
 ) -> Result<(), Failure> {
     let mut edges = Vec::new();
+    let mut budget = Budget(crate::core::MAX_RECORD_BYTES - usize::from(output.details) * 2);
     for edge in &execution.edges {
         for source in sources
             .occurrences
@@ -129,7 +141,7 @@ pub(super) fn write(
                 .iter()
                 .filter(|(entity, _)| entity == &edge.target)
             {
-                edges.push(Edge {
+                let located = Edge {
                     relation: &edge.relation,
                     source: Endpoint {
                         name: source.0.name(),
@@ -143,7 +155,11 @@ pub(super) fn write(
                     },
                     probability: edge.probability,
                     either: edge.either,
-                });
+                };
+                // Count escaped JSON bytes using borrowed evidence before retaining
+                // the Cartesian expansion or writing any part of this complete set.
+                budget.admit(&located, !output.details || !edges.is_empty())?;
+                edges.push(located);
             }
         }
     }
@@ -167,4 +183,31 @@ pub(super) fn write(
         }
     }
     Ok(())
+}
+
+struct Budget(usize);
+
+impl Budget {
+    fn admit(&mut self, edge: &impl Serialize, separator: bool) -> Result<(), Failure> {
+        if separator {
+            self.write_all(b"\n")
+                .map_err(|_| Failure::Usage("source relate output exceeds 16 MiB"))?;
+        }
+        serde_json::to_writer(self, edge)
+            .map_err(|_| Failure::Usage("source relate output exceeds 16 MiB"))
+    }
+}
+
+impl Write for Budget {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0 = self
+            .0
+            .checked_sub(bytes.len())
+            .ok_or_else(|| std::io::Error::other("source relate output exceeds 16 MiB"))?;
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }

@@ -3,6 +3,9 @@
 CREATE TABLE documents AS
 SELECT * FROM thinkthen_read_files('specification/fixtures/files/documents', '{"unit":"file"}');
 
+CREATE TABLE lines AS
+SELECT * FROM thinkthen_read_files('specification/fixtures/files/documents');
+
 -- decide
 SELECT *, thinkthen_decide('Does this document contain a support contract?', record) AS value
 FROM documents ORDER BY ordinal;
@@ -16,18 +19,18 @@ FROM documents ORDER BY ordinal;
 SELECT *, thinkthen_score('How urgent is this document?', record, ['routine','urgent']) AS value
 FROM documents ORDER BY ordinal;
 -- filter
-SELECT * FROM documents
-WHERE thinkthen_decide('Does this document require attention today?', record) ORDER BY ordinal;
+SELECT * FROM lines
+WHERE thinkthen_decide('Does this line describe a refund?', record) ORDER BY ordinal;
 -- rank
 SELECT d.*, r.rank, r.probability
-FROM documents d JOIN thinkthen_rank('Does this document require attention today?',
+FROM documents d JOIN thinkthen_rank('Does this document discuss a billing dispute?',
   (SELECT json_group_object(ordinal, record) FROM (SELECT * FROM documents ORDER BY ordinal))) r
 ON r.key = CAST(d.ordinal AS VARCHAR) ORDER BY r.rank;
 -- find: returned indexes are zero-based positions in the ordered candidate list.
 WITH chosen AS (
-  SELECT thinkthen_find('Which document describes the refund policy?', list(record ORDER BY ordinal)) AS result
-  FROM documents
-), mapped AS (SELECT *, row_number() OVER (ORDER BY ordinal) - 1 AS candidate FROM documents)
+  SELECT thinkthen_find('Which line gives the refund policy?', list(record ORDER BY ordinal)) AS result
+  FROM lines
+), mapped AS (SELECT *, row_number() OVER (ORDER BY ordinal) - 1 AS candidate FROM lines)
 SELECT d.ordinal, d.record, d.file, d.first_line, d.last_line, c.result.probability
 FROM mapped d JOIN chosen c ON d.candidate = c.result.index;
 -- annotate

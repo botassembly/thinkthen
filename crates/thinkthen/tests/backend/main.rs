@@ -166,6 +166,7 @@ mod secrecy_relate;
     reason = "fixture failures stop the located source boundary proof"
 )]
 mod source_files;
+mod source_limits;
 mod state;
 mod status_reason;
 mod streaming;

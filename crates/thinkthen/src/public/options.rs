@@ -230,6 +230,21 @@ impl<'a> CallOptions<'a> {
         })
     }
 
+    /// Fix a relative deadline now so composed calls share one absolute deadline.
+    /// Other controls and an already absolute deadline remain intact.
+    ///
+    /// # Errors
+    /// Returns [`Error::Usage`] when the clock cannot name the deadline.
+    pub fn started(mut self) -> Result<Self, Error> {
+        if let Some(Due::After(budget)) = self.due {
+            let at = Instant::now()
+                .checked_add(budget)
+                .ok_or_else(|| Error::usage("the clock cannot name a deadline this far away"))?;
+            self.due = Some(Due::At(at));
+        }
+        Ok(self)
+    }
+
     /// Stop the call at this instant. A past instant sends nothing.
     #[must_use]
     pub fn deadline_at(mut self, value: Instant) -> Self {

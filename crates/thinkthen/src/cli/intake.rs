@@ -136,7 +136,6 @@ pub(crate) struct Intake {
     sources: VecDeque<Source>,
     reading: Reading,
     window: usize,
-    windowed: bool,
     global: usize,
 }
 
@@ -199,7 +198,6 @@ impl Intake {
                     sources,
                     reading: reading.clone(),
                     window,
-                    windowed: common.window.is_some(),
                     global: 0,
                 },
                 None,
@@ -244,7 +242,6 @@ impl Intake {
                 sources,
                 reading: reading.clone(),
                 window,
-                windowed: common.window.is_some(),
                 global: 0,
             },
             snapshot,
@@ -268,6 +265,18 @@ impl Iterator for Intake {
                 Err(error) => return Some(Err(Placed::at(error, at))),
             };
             self.global += piece.advance;
+            // The bounded reader can cut an oversized unit and abandon its file.
+            // Refuse it here, before blank skipping or worker prefetch of later files.
+            if let Data::Bytes(bytes) = &piece.data
+                && bytes.len() > crate::core::MAX_RECORD_BYTES
+                && let Err(error) = self.reading.record(bytes)
+            {
+                self.sources.clear();
+                return Some(Err(Placed::at(
+                    Failure::record(error, self.reading.streams()),
+                    at,
+                )));
+            }
             if self.skips(&piece.data) {
                 continue;
             }
@@ -285,13 +294,7 @@ impl Intake {
         let Data::Bytes(bytes) = data else {
             return false;
         };
-        // An oversized joined whitespace window must be refused before admission.
         self.reading.skips(bytes)
-            && (!self.windowed
-                || self
-                    .reading
-                    .as_it_arrived(bytes)
-                    .is_ok_and(|text| text.len() <= crate::core::MAX_RECORD_BYTES))
     }
 }
 

@@ -98,3 +98,60 @@ def test_published_ten_function_script_replays_original_sources_without_requests
     ''', child_env(backend, tmp_path))
     assert output == script.with_suffix(".py.out").read_text()
     assert backend.count() == 0
+
+
+def test_source_plan_bounds_admission_before_an_invalid_unread_tail(backend, tmp_path):
+    folder = tmp_path / "planned"
+    folder.mkdir()
+    paths = [folder / f"{at}.txt" for at in range(3)]
+    paths[0].write_text("Ada")
+    paths[1].write_text("Bea")
+    paths[2].write_bytes(b"\xff")
+    output = run(f'''
+        import thinkthen as tt
+        engine = tt.Engine(cache=False, max_requests=1)
+        try: engine.plan(engine.decide("Q?"), tt.read_files({str(folder)!r}, unit="file"))
+        except tt.UsageError as error:
+            assert str(error) == "this engine answers at most 1 records in one call", str(error)
+        else: raise AssertionError("excess source record admitted")
+        print("bounded")
+    ''', child_env(backend, tmp_path))
+    assert output.strip() == "bounded"
+    assert backend.count() == 0
+
+
+def test_source_plan_bounds_total_evidence_before_an_invalid_unread_tail(backend, tmp_path):
+    folder = tmp_path / "planned"
+    folder.mkdir()
+    for at in range(2):
+        (folder / f"{at}.txt").write_text("x" * (8 * 1024 * 1024 + 1))
+    (folder / "2.txt").write_bytes(b"\xff")
+    output = run(f'''
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        try: engine.plan(engine.decide("Q?"), tt.read_files({str(folder)!r}, unit="file"))
+        except tt.UsageError as error:
+            assert str(error) == "source plan input exceeds 16 MiB", str(error)
+        else: raise AssertionError("excess source evidence admitted")
+        print("bounded")
+    ''', child_env(backend, tmp_path))
+    assert output.strip() == "bounded"
+    assert backend.count() == 0
+
+
+def test_source_plan_matches_original_evidence_without_metadata_or_sends(backend, tmp_path):
+    path = tmp_path / "notes.txt"
+    path.write_bytes("Refund βeta\r\n".encode())
+    output = run(f'''
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        judge = engine.decide("Q?")
+        source = engine.plan(judge, tt.read_files({str(path)!r}))
+        plain = engine.plan(judge, ["Refund βeta"])
+        assert source == plain, (source, plain)
+        assert source["records"] == 1
+        assert source["requests"] == 1
+        print("identical")
+    ''', child_env(backend, tmp_path))
+    assert output.strip() == "identical"
+    assert backend.count() == 0

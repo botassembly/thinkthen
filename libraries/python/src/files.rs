@@ -4,11 +4,28 @@ use crate::engine::{Arg, Engine, Held, batch, context};
 use crate::{guard, input, raised, result, worker};
 use pyo3::prelude::*;
 
+#[path = "../../r/thinkthen/src/rust/src/source/plan.rs"]
+mod planning;
 #[path = "../../r/thinkthen/src/rust/src/source/mod.rs"]
 mod source;
 
 #[pyclass(name = "_SourceIterator", module = "thinkthen._thinkthen")]
 pub(crate) struct SourceIterator(std::sync::Mutex<thinkthen::SourceRecords>);
+
+impl SourceIterator {
+    pub(crate) fn plan(
+        &self,
+        engine: &thinkthen::Engine,
+        question: &dyn thinkthen::DetailQuestion,
+        options: thinkthen::CallOptions<'_>,
+    ) -> Result<thinkthen::PlanEstimate, thinkthen::Error> {
+        let mut records = self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        planning::estimate(engine, question, records.by_ref(), options)
+    }
+}
 
 impl std::fmt::Debug for SourceIterator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
