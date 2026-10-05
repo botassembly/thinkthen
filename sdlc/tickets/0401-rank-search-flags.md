@@ -2,6 +2,10 @@
 
 Status: complete. All four slices are implemented and checked. A, B and C landed; D received fresh source, integration and final receipt acceptance after its full coordinator checkpoint. The completion-record review and D landing remain in the build workflow. SQL sets remain ticket 0417 for 0.2; foreign sets remain ticket 0418 later.
 
+Landed: fb428165487488a9decbaf08c2269a64c2f57442
+
+This identifies the accepted slice D candidate that the coordinator publishes through the landing merge. The merge carries the Ticket, Slice and Review trailers.
+
 Milestone: 0.2
 
 Lane: claude-0 for slice D, assigned after audit 0405 and landed C. Each slice lands on main and ships in 0.2. The documentation story and DuckDB version build follow.
