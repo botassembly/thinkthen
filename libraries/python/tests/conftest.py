@@ -3,6 +3,7 @@ call in a child Python whose environment holds a fake key beside that
 loopback address and never the parent's key (amendment changes 5 and 14).
 """
 
+import json
 import os
 import pathlib
 import subprocess
@@ -42,8 +43,8 @@ def pytest_sessionstart(session):
 class Backend:
     """The 0092 conformance backend, driven through its line protocol."""
 
-    def __init__(self):
-        self.process = subprocess.Popen([str(BINARY)], stdin=subprocess.PIPE, env=clean_env(),
+    def __init__(self, markers=None):
+        self.process = subprocess.Popen([str(BINARY)], stdin=subprocess.PIPE, env=clean_env(THINKTHEN_TEST_MARKERS=json.dumps(markers or {})),
                                         stdout=subprocess.PIPE, text=True, bufsize=1)
         self.port = int(self.process.stdout.readline())
 
@@ -57,6 +58,10 @@ class Backend:
     def count(self):
         self.say("count")
         return int(self.process.stdout.readline())
+
+    def snapshot(self, command):
+        self.say(command)
+        return json.loads(self.process.stdout.readline())
 
     def wait(self, least):
         """The count once it reads at least ``least``, or at 30 s."""

@@ -26,6 +26,7 @@ fn declared(input: &str) -> Vec<String> {
     header::declarations(input).expect("header declarations")
 }
 
+mod backends;
 mod bytes;
 mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
@@ -33,8 +34,8 @@ mod child;
 mod golden;
 mod plan;
 mod question_file;
-mod settings;
 mod request_width;
+mod settings;
 mod usage;
 
 use crate::child::ChildEnvironment as _;

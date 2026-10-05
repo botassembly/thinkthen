@@ -33,6 +33,7 @@ pub(crate) struct Plan {
     max_request_bytes: Option<usize>,
     batch: Option<BatchSetting>,
     cache: Option<Option<PathBuf>>,
+    backend: Option<String>,
     model: Option<String>,
     timeout: Option<Duration>,
     max_retries: Option<u32>,
@@ -48,6 +49,7 @@ struct Raw<'a> {
     max_request_bytes: i32,
     batch: Option<&'a str>,
     cache: Option<&'a str>,
+    backend: Option<&'a str>,
     model: Option<&'a str>,
     timeout: i32,
     max_retries: i32,
@@ -108,6 +110,10 @@ impl Plan {
             max_request_bytes: usize::try_from(raw.max_request_bytes).ok(),
             batch: batch(raw.batch)?,
             cache,
+            backend: raw
+                .backend
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned),
             model: raw
                 .model
                 .filter(|value| !value.is_empty())
@@ -146,6 +152,9 @@ pub(super) fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBui
         Some(None) => builder = builder.no_cache(),
         None => {}
     }
+    if let Some(backend) = &plan.backend {
+        builder = builder.backend(backend)?;
+    }
     if let Some(model) = &plan.model {
         builder = builder.model(model)?;
     }
@@ -176,6 +185,7 @@ static MAX_REQUEST_BYTES: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static BATCH: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static MAX_REQUESTS_TOTAL: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static CACHE: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
+static BACKEND: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static MODEL: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static TIMEOUT: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_RETRIES: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
@@ -205,6 +215,7 @@ pub(crate) fn read_result() -> Result<Call, Error> {
     }
     let cache = text_of(&CACHE);
     let batch = text_of(&BATCH);
+    let backend = text_of(&BACKEND);
     let model = text_of(&MODEL);
     let profile = text_of(&PROFILE);
     let record = text_of(&RECORD);
@@ -215,6 +226,7 @@ pub(crate) fn read_result() -> Result<Call, Error> {
         max_request_bytes: MAX_REQUEST_BYTES.get(),
         batch: batch.as_deref(),
         cache: cache.as_deref(),
+        backend: backend.as_deref(),
         model: model.as_deref(),
         timeout: TIMEOUT.get(),
         max_retries: MAX_RETRIES.get(),
@@ -269,6 +281,14 @@ fn register_new_engine_settings() {
         c"",
         &BATCH,
         GucContext::Userset,
+        GucFlags::default(),
+    );
+    GucRegistry::define_string_guc(
+        c"thinkthen.backend",
+        c"named backend; empty keeps captured selection",
+        c"",
+        &BACKEND,
+        GucContext::Suset,
         GucFlags::default(),
     );
     GucRegistry::define_string_guc(
@@ -383,6 +403,7 @@ mod tests {
             max_request_bytes: UNSET,
             batch: None,
             cache: None,
+            backend: None,
             model: None,
             timeout: UNSET,
             max_retries: UNSET,

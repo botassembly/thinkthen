@@ -11,7 +11,8 @@ pub fn main() !void {
     const texts = try alloc.alloc([]const u8, 5);
     defer alloc.free(texts);
     for (texts, 0..) |*slot, index| slot.* = args[index + 2];
-    var engine = switch (try tt.Engine.init(alloc)) {
+    const settings = std.posix.getenv("TT_PORTABLE_SETTINGS");
+    var engine = switch (try if (settings) |value| tt.Engine.initWithSettings(alloc, value) else tt.Engine.init(alloc)) {
         .ok => |value| value,
         .failed => |failure| {
             defer tt.releaseFailure(alloc, failure);

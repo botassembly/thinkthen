@@ -55,10 +55,10 @@ def say(**fields):
 class Backend:
     """One conformance backend process, driven over its standard input."""
 
-    def __init__(self) -> None:
+    def __init__(self, markers=None) -> None:
         self.process = subprocess.Popen(
             [BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-            env=child_env(),
+            env=child_env(**({"THINKTHEN_TEST_MARKERS":json.dumps(markers)} if markers else {})),
         )
         LIVE.append(self.process)
         self.port = int(self._line())
@@ -85,6 +85,10 @@ class Backend:
     def count(self) -> int:
         self._say("count")
         return int(self.counts.get(timeout=30))
+
+    def snapshot(self, command):
+        self._say(command)
+        return json.loads(self.counts.get(timeout=30))
 
     def capture(self) -> list[str]:
         """Exact bodies from the bounded, opted-in recognize case arm."""

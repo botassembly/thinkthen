@@ -343,7 +343,7 @@ pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
         };
         let string = || matches!(value, Json::String(_));
         let valid = match key.as_str() {
-            "base_url" | "model" | "record" | "replay" | "profile" => string(),
+            "backend" | "base_url" | "model" | "record" | "replay" | "profile" => string(),
             "throttle" => number().is_some_and(|count| (1..=32).contains(&count)),
             "max_requests" => {
                 matches!(value, Json::Null) || number().is_some_and(|count| count > 0)

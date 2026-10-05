@@ -763,17 +763,25 @@ tt_details <- function(question, input, threshold = NULL,
 # The counters of the engine in use.
 tt_usage <- function() jsonlite::parse_json(.tt_call(tt_usage_counters()))
 
-# The engine settings (ADR 0017 section 5). NULL keeps what the environment
-# gives. The key stays on THINKTHEN_API_KEY alone.
+#' Select settings for the R session's engine
+#'
+#' NULL retains environment selection. Equal settings can be repeated.
+#' Changing settings requires a new R session. Rust captures named keys.
+#' @param backend One backend name or NULL. Use the full keyword name.
+#' @return Invisibly returns NULL.
+#' @export
 tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_requests = NULL,
                       max_requests_total = NULL,
                       max_request_bytes = NULL,
                       cache = NULL, timeout = NULL, max_retries = NULL,
-                      record = NULL, replay = NULL, profile = NULL, batch = NULL, ...) {
+                      record = NULL, replay = NULL, profile = NULL, batch = NULL, ..., backend = NULL) {
   if (length(list(...))) .tt_unknown(...)
   string <- function(x) is.null(x) || (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x))
   whole <- function(x) is.null(x) || (is.numeric(x) && is.null(attr(x, "class")) &&
     length(x) == 1L && !is.na(x) && x == round(x))
+  if (!is.null(backend) && !(is.character(backend) && length(backend) == 1L && !is.na(backend))) {
+    .tt_usage("backend is one string")
+  }
   checks <- list(base_url = string(base_url), model = string(model),
                  throttle = whole(throttle), max_requests = whole(max_requests),
                  max_requests_total = whole(max_requests_total),
@@ -788,7 +796,7 @@ tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_reques
   }
   .tt_call(tt_engine_set(base_url, model, throttle, max_requests, max_requests_total,
                          max_request_bytes, cache,
-                         timeout, max_retries, record, replay, profile, batch))
+                         timeout, max_retries, record, replay, profile, batch, backend))
   invisible(NULL)
 }
 

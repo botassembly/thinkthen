@@ -51,8 +51,8 @@ module TestBackend
   class Backend
     attr_reader :port
 
-    def initialize
-      @in, @out, @thread = Open3.popen2(Children.env, BIN, unsetenv_others: true)
+    def initialize(markers = {})
+      @in, @out, @thread = Open3.popen2(Children.env("THINKTHEN_TEST_MARKERS" => JSON.generate(markers)), BIN, unsetenv_others: true)
       @port = Integer(@out.gets)
     end
 
@@ -63,6 +63,11 @@ module TestBackend
     def count
       order("count")
       Integer(@out.gets)
+    end
+
+    def snapshot(command)
+      order(command)
+      JSON.parse(@out.gets)
     end
 
     def capture
@@ -151,8 +156,8 @@ module TestBackend
 
   # Start a backend and a child on one arm, yield both, and clean up. A nil
   # value in extra leaves that name out of the child's environment.
-  def self.with(script, arm: "generic", extra: {})
-    backend = Backend.new
+  def self.with(script, arm: "generic", extra: {}, markers: {})
+    backend = Backend.new(markers)
     Dir.mktmpdir do |root|
       child = Child.new(env(backend.url(arm), root, extra.transform_values { |value| value&.to_s&.gsub("ROOT", root)&.gsub("PORT", backend.port.to_s) }), script)
       yield backend, child, root
