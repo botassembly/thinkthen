@@ -4,6 +4,11 @@ EXT_CONFIG=${PROJ_DIR}extension_config.cmake
 
 include extension-ci-tools/makefiles/duckdb_extension.Makefile
 
+# This repository keeps its extension tests beside the DuckDB adapter.
+ifneq ($(SUBSET_EXTENSIONS_TESTS),complete)
+TESTS_BASE_DIRECTORY=$(PROJ_DIR)databases/duckdb/community/test/sql/
+endif
+
 # Downloads belong to CI preparation, never to release or test targets.
 .PHONY: thinkthen_prepare_rust
 configure_ci: thinkthen_prepare_rust

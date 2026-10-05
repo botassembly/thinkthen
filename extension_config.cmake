@@ -8,5 +8,5 @@ duckdb_extension_load(thinkthen
   INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/databases/duckdb/cpp/src"
   DONT_LINK
   LOAD_TESTS
-  TEST_DIR "${CMAKE_CURRENT_LIST_DIR}/databases/duckdb/community/test"
+  TEST_DIR "${CMAKE_CURRENT_LIST_DIR}/databases/duckdb/community/test/sql"
   EXTENSION_VERSION "${THINKTHEN_EXTENSION_VERSION}")
