@@ -13,7 +13,7 @@ const audit = run('beatles/audit', '2-default');
 ---
 <Base title="Trust" description="Check ThinkThen against your own labeled records before you rely on it.">
   <h1>Test it before you trust it</h1>
-  <p class="lede">Every answer comes with the model's probability. You set the bar, and you count the misses on your own records.</p>
+  <p class="lede">The model reports probabilities behind its answers. You set supported reading rules and count the misses on your own labeled records.</p>
 
   <h2>Grade it on your own records</h2>
   <p>Take records you have already labeled. Put your labels in a key file, one per record. <code>thinkthen audit</code> grades ThinkThen's saved answers against the key. <code>thinkthen audit --help</code> shows how to save them.</p>
@@ -24,6 +24,18 @@ const audit = run('beatles/audit', '2-default');
   <p>The model reports a probability. Your threshold turns it into an answer. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
   <Terminal run={lines} caption="Under the band 0.2:0.8, the refund request is yes and the thank-you is no. The send-back line could mean an exchange or money back. It lands in the band as null." />
   <p>A band hands a person the calls a pipeline should not make alone. The backend may fail to answer a question. ThinkThen marks that question failed and counts it. A failure never turns into <code>null</code>.</p>
+
+  <p>Under <code>0.3:0.7</code>, decide is not sure exactly when <code>0.3 ≤ p &lt; 0.7</code>. The interior has <code>|2p − 1| &lt; 0.4</code>; the low boundary is also not sure, while the high boundary is yes. An uneven band such as <code>0.2:0.9</code> sets different bars for yes and no.</p>
+  <table id="band-boundaries">
+    <caption>Illustrative yes probabilities at and between band boundaries.</caption>
+    <tr><th>Yes probability</th><th>0.3:0.7</th><th>0.2:0.9</th></tr>
+    <tr><td>0.2</td><td>no</td><td>not sure</td></tr>
+    <tr><td>0.3</td><td>not sure</td><td>not sure</td></tr>
+    <tr><td>0.5</td><td>not sure</td><td>not sure</td></tr>
+    <tr><td>0.7</td><td>yes</td><td>not sure</td></tr>
+    <tr><td>0.9</td><td>yes</td><td>yes</td></tr>
+  </table>
+  <p>Decide returns <code>null</code> inside a band. Choose returns <code>null</code> below a supplied cut or at an exact top tie. A sole choose winner can be returned without a cut. These are valid not-sure answers. A failed question remains a failure. The <a href="https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md#calls-requests-and-decisions">glossary</a> defines calls, requests and decisions.</p>
 
   <h2>Four outcomes, four colors</h2>
   <p>The same four colors run through this site and the terminal.</p>
@@ -40,14 +52,17 @@ const audit = run('beatles/audit', '2-default');
   <h2>The words for the numbers</h2>
   <table>
     <tr><th>Word</th><th>What it is</th></tr>
-    <tr><td>probability</td><td>A number the model reported, passed through unchanged. For yes or no, the chance the answer is yes. For <code>choose</code> and <code>score</code>, the share given to each option or level.</td></tr>
-    <tr><td>probabilities</td><td>The model's full list, one number per option or level, adding to 1.</td></tr>
-    <tr><td>threshold</td><td>Your bar on a probability. An input.</td></tr>
-    <tr><td>band</td><td>A low bar and a high bar. The middle goes to a person.</td></tr>
-    <tr><td>position</td><td>The number <code>score</code> prints: where the evidence lands along your levels. ThinkThen computes it as the average of the level probabilities.</td></tr>
-    <tr><td>strength</td><td>The number on a recognized name. ThinkThen computes it. It is not a probability.</td></tr>
+    <tr><td>probability</td><td>A number reported by the model for the question it was asked. A yes/no probability is the reported probability of yes. It is not a measured rate of correct answers.</td></tr>
+    <tr><td>probabilities</td><td>The reported numbers behind an answer. Choose and score carry a distribution across options or levels; accepted totals may differ slightly from 1. Tag labels have independent yes probabilities and need not add to 1. Availability depends on the details route.</td></tr>
+    <tr><td>threshold</td><td>A reading rule supplied by the caller. Its quantity depends on the function: for example, yes probability, winning option probability, or printed name strength.</td></tr>
+    <tr><td>band</td><td>Two boundaries on decide's yes probability. Below the low boundary is no; at or above the high boundary is yes; the middle is not sure.</td></tr>
+    <tr><td>position</td><td>The number score prints: the probability-weighted average of zero-based level positions, divided by the accepted probability total.</td></tr>
+    <tr><td>strength</td><td>The printed number on a recognized name, computed from kind and span probabilities and rounded to four decimals. It is not itself a probability.</td></tr>
+    <tr><td>confidence</td><td>The backend's own summary of how spread out the probabilities are. ThinkThen keeps it as reported and never cuts on it. A yes/no answer has none.</td></tr>
   </table>
-  <p>ThinkThen prints no confidence of its own. Set your bar on the probability.</p>
+  <p>Audit also prints <code>calibration.by_bin[].confidence</code>. That compatibility name means the bin's mean pair probability, not the backend's confidence field.</p>
+  <p>A probability of 0.9, a score of 1.6, and a confidence of 0.9 describe different quantities. None means that this outcome will be correct on 90% of future cases. Check agreement, coverage, and calibration on labeled records that represent the job.</p>
+  <p>Three levels with probabilities 0.05, 0.30, and 0.65 give position 1.6. The most likely level is the highest one, but 1.6 is an average position. Score has no command threshold or not-sure answer. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/backends.md#what-the-adapter-keeps">backend contract</a> gives the confidence formulas.</p>
 
   <h2>What leaves the machine</h2>
   <ul>

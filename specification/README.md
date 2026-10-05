@@ -4,7 +4,7 @@ The contract for `thinkthen`. Code follows these documents. A behavior that is a
 
 Version one is ten commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `annotate`, `find`, `recognize`, and `relate`. ADR 0010 removed named address profiles and their configuration command. ADR 0033 later added the smaller read-only cache configuration. `roadmap.md` holds what remains out.
 
-The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions.
+The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions. The [glossary](../CONTRIBUTING.md#calls-requests-and-decisions) defines call, request and decision.
 
 `spec/` holds executable pages that describe the code that has landed. `specification/` is the contract the code is moving to. Slice 3 of `sdlc/planning/plan.md` closes the gap between the two. The fixtures under `fixtures/` follow the landed code until a ticket changes them together with `spec/`.
 

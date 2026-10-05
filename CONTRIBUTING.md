@@ -40,6 +40,22 @@ ADR 0015 fixes four names, and other pages link this table.
 
 A transform is a metric or a policy. A metric reads a whole run and prints numbers. A policy reads one row and names an action. A question file holds one question. A question set holds several named questions, and `annotate` reads one.
 
+## Calls, requests and decisions
+
+| Term | Definition |
+| --- | --- |
+| <a id="call"></a> **call** | One use of a ThinkThen function on any surface. |
+| <a id="request"></a> **request** | One send to a model. |
+| <a id="decision"></a> **decision** | One question answered about one piece of evidence. |
+
+One call can answer several decisions. A request can carry several questions. A retry sends another request. A cache hit or replay can answer a decision without sending a request.
+
+One `choose` call over two records can answer two decisions in one packed request. Replaying the saved answers sends zero requests. If the original request is retried once before succeeding, two requests were sent.
+
+Tag expansion, annotations, recognition stages, relation questions, packing, partial replies, and failures have their own accounting; one record does not always mean one backend question.
+
+`meta.requests` keeps its existing name for compatibility. It lists the stored-answer question keys behind a result. It does not count sends. `meta.requests_sent` counts the result's attributed transport attempts, including retries. Run or call facts give the corresponding total.
+
 ## How work is recorded
 
 `sdlc/` is the record. A problem goes in `sdlc/issues/`. Authorized work is a ticket in `sdlc/tickets/`. An architecture decision is an ADR in `sdlc/planning/`. A change that alters behavior updates the specification and its pages in the same commit.

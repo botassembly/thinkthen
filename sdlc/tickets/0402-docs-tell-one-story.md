@@ -1,10 +1,10 @@
 # 0402: The docs tell one story
 
-Status: in progress. Slice A landed at `b7e5dd3e4`; B source/implementation accepted at `383305ec9`, source `e15a772ef`. Source-preserving integration onto Windows A main `24212dffa` and B FINAL INTEGRATION SITE are complete; fresh integration receipt review and B landing remain pending. C/D remain unimplemented.
+Status: in progress. A and B landed through `cf457ff98`; C implementation and focused proof are in progress on lane 0. C awaits fresh High source review and the coordinator's named checkpoint. D remains unimplemented.
 
 Milestone: 0.2
 
-Lane: 3, after ticket 0401, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0402-docs-tell-one-story`. Slice C touches no site layout, so it may land first.
+Lane: 0 for C, assigned after A/B landed, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0402-docs-tell-one-story`. Slice C touches no site layout, so it may land first.
 
 Closes: `sdlc/issues/2026-10-03-site-bench-paths-point-at-deleted-runs.md` in slice A, and `sdlc/issues/2026-10-03-glossary-call-request-decision.md` in slice C.
 
@@ -105,3 +105,8 @@ Relabels: `sdlc/issues/2026-10-03-draft-function-link.md`, `sdlc/issues/2026-10-
 Slice A's [build record](../records/0402-a-one-home-build.md) records the frozen accepted design, actual failures and corrections, fragment and h4 omission plants, unchanged proof inputs and its completed coordinator checkpoint. Slice B's [build record](../records/0402-b-layout-build.md) records the full accepted design, reconciled inventory, the 404 address correction, actual normal/draft builds, uniform-row and h4 omission plants, content retention, clean-clone lint and unchanged-source strict proof. Fresh independent B source review accepted `383305ec9`; B FINAL INTEGRATION SITE passed on `c9ad8192c`. Fresh integration receipt review and B landing remain pending.
 
 Slice A landed at `b7e5dd3e4` with exact accepted source `53de60f6b`. Its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Slice B implements the [complete accepted design](../planning/0402-b-docs-design.md), with exact source `e15a772ef` and completed root-authorized focused proof. Fresh independent B source review accepted candidate `383305ec9`, source `e15a772ef`. Source-preserving integration freezes `c9ad8192c` on Windows A main `24212dffa`; B FINAL INTEGRATION SITE freshly passes required lint and complete focused site proof. Main’s actual Windows proof is inherited without a fresh full-test/spec/surfaces/canonical350 run. Fresh integration receipt review and B landing remain pending. C/D remain unimplemented. Experiment 0031 exists, but B publishes no recipe comparison or performance claim.
+
+
+C's full frozen accepted design is [0402-c-glossary-design.md](../planning/0402-c-glossary-design.md), SHA-256 `af55138bd6e224bd91a0e25d90573f616ac348c5198a075a8e885dadbaffd34d`. The [C build record](../records/0402-c-glossary-build.md) separates actual proof from pending checkpoints. Named High risk: an existing reading-band boundary affects typed outcomes. Inspection found the settled endpoints already implemented, so C corrects the explanation and proves the exported outcomes without changing runtime behavior.
+
+The frozen design's stopped 0031 status is historical. Reviewed completed evidence and shared answers at `e66a943` resolve the comparison measurement wait only for the frozen cohort, candidate generation and tested choose/custom-role-recognize configurations, retaining unresolved outcomes, candidate misses and abstention limits. The recipe remains open pending publication proof. C adds no comparative recipe page, new experiment or generic support claim. Choose-none wording remains pending the owning 0025 reports; 0032 concerns regex versus filter meaning, not choose-none.

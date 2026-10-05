@@ -203,9 +203,31 @@ The vendor also sends `choice`, `score`, and `legend` beside the probabilities. 
 
 ### What the adapter keeps
 
-Settled by ADR 0009 item 2, accepted in ADR 0010. The adapter keeps the full distribution and the vendor's `confidence` field. Both reach `answer` in the result, as [result.md](result.md) describes. A saved run can then be swept at another rule with no second request.
+Settled by ADR 0009 item 2, accepted in ADR 0010. The adapter keeps the full distribution and the vendor's `confidence` field. Both reach `answer` in the result, as [result.md](result.md) describes. Stored answers can be read under another supported rule without another send when all required questions and stages are already stored. Strict replay refuses a missing question locally; ordinary cache mode may send it.
 
-The cut on `choose` stays on the winning option's probability. That number exists on every backend, and a reader can say what it means. Most of the vendor's own pages cut on `confidence` instead, and the formula behind `confidence` is unpublished. A live sweep of both against labels settles whether the rule changes.
+**Choice.** [TypeSafe's published formulas](https://docs.typesafe.ai/confidence#how-confidence-is-calculated) give choice confidence as `(top − 1/n) / (1 − 1/n)`, where `n` is the number of options and `top` is the highest reported option probability. It rescales the winning probability relative to an even distribution. In the existing three-option example, `top = 0.94` gives `confidence = 0.91`.
+
+For fixed `n > 1`, a published-formula confidence cut `c` corresponds to the probability cut:
+
+```text
+top ≥ 1/n + c × (1 − 1/n)
+```
+
+For one fixed question, the published choice formula makes confidence and top-probability cuts equivalent after converting the cut. ThinkThen still cuts on the top probability and still treats an exact top tie as not sure. No live sweep is needed to establish that algebraic equivalence. This does not assert that every reported vendor field matches the formula, or that one confidence cut means the same probability across different option counts.
+
+**Score.** TypeSafe publishes score confidence as one minus the probability-weighted distance from the most likely level, divided by the corresponding distance for an even distribution, floored at zero. For levels indexed `0 … K−1` and a most likely level at `m`:
+
+```text
+distance         = Σ pᵢ × |i − m|
+uniform_distance = Σ (1/K) × |i − m|
+confidence       = max(0, 1 − distance / uniform_distance)
+```
+
+This summarizes spread around a leading level. It does not replace the weighted score position. The published formula record does not settle tie selection or handling of rounded distribution totals; those remain limits on independent formula reproduction.
+
+**Preservation and discrepancy.** ThinkThen keeps the backend's confidence field as received when it is valid. It does not compute or correct that field, and it never uses it as a threshold. A yes/no answer carries no confidence field.
+
+The saved [score-disruption response](fixtures/systemone/score-disruption.response.json) reports probabilities `0`, `0.13`, and `0.87`. Its distance from level 2 is `0.13` and its uniform distance is `1`, giving published-formula confidence `0.87`. Its reported confidence is `0.79`, which ThinkThen preserves. ThinkThen computes weighted position `1.87`; the supplied wire `score: 1.86` does not replace that computation. This discrepancy remains documented and tested; the fixture is unchanged.
 
 ## Provider setups
 
