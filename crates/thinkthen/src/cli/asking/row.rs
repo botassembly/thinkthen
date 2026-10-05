@@ -37,7 +37,7 @@ impl Judging<'_> {
         };
         let original = context
             .position
-            .filter(|p| p.located)
+            .filter(|p| p.located && !self.text_view)
             .map(|_| record.clone());
         let mut printed =
             if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {

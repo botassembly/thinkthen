@@ -282,16 +282,13 @@ fn input_file_and_directory_follow_the_shared_opened_handle_rules() {
     assert!(String::from_utf8_lossy(&accepted.stdout).contains(r#"\"evidence\":\"second\""#));
 
     let root_text = root.to_string_lossy();
-    let refused = run(
+    let folder = run(
         &["find", "Which?", "--plan", "--input", &root_text],
         b"ignored",
     )
-    .expect("directory is refused");
-    assert_eq!(refused.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "thinkthen: `--input` names a directory, and a directory is not an input file\n"
-    );
+    .expect("directory runs");
+    assert_eq!(folder.status.code(), Some(0));
+    assert_eq!(folder.stdout, accepted.stdout);
 }
 
 #[test]

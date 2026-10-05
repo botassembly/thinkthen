@@ -173,7 +173,7 @@ fn syntax_diagnostics_repeat_no_input_bytes() {
 }
 
 #[test]
-fn a_directory_is_not_an_input_file_and_no_record_was_framed() {
+fn an_empty_input_directory_frames_no_records_and_sends_nothing() {
     let listener = listener().expect("a loopback listener");
     let directory = Path::new(env!("CARGO_TARGET_TMPDIR")).join("input-is-directory");
     fs::create_dir_all(&directory).expect("a test directory");
@@ -192,12 +192,10 @@ fn a_directory_is_not_an_input_file_and_no_record_was_framed() {
         b"ignored",
     )
     .expect("the compiled binary runs");
-    assert_refused(
-        &output,
-        &listener,
-        5,
-        "`--input` names a directory, and a directory is not an input file",
-    );
+    assert_eq!(output.status.code(), Some(0));
+    assert!(output.stdout.is_empty());
+    assert_eq!(listener.connections(), 0);
+    assert!(listener.requests().is_empty());
     assert!(!said(&output).contains("stopped at record"));
 }
 
