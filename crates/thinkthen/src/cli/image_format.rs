@@ -36,6 +36,7 @@ fn png(bytes: &[u8]) -> bool {
             }
             if chunk.get(8..12).and_then(number).unwrap_or(0) == 0
                 || chunk.get(12..16).and_then(number).unwrap_or(0) == 0
+                || !png_header(chunk)
             {
                 return false;
             }
@@ -58,7 +59,7 @@ fn jpeg(bytes: &[u8]) -> bool {
     let Some(mut rest) = bytes.strip_prefix(b"\xff\xd8") else {
         return false;
     };
-    let mut frame = false;
+    let mut components = Vec::new();
     loop {
         let Some(after) = rest.strip_prefix(b"\xff") else {
             return false;
@@ -83,20 +84,81 @@ fn jpeg(bytes: &[u8]) -> bool {
             return false;
         };
         if matches!(marker, 0xc0..=0xc3 | 0xc5..=0xc7 | 0xc9..=0xcb | 0xcd..=0xcf) {
-            if length < 8
-                || segment.get(3..5) == Some(&[0, 0])
-                || segment.get(5..7) == Some(&[0, 0])
-            {
+            let Some(ids) = frame_components(segment) else {
                 return false;
-            }
-            frame = true;
+            };
+            components = ids;
         }
         if marker == 0xda {
-            return frame && length >= 6 && after.len() > 2 && after.ends_with(b"\xff\xd9");
+            return scan_components(segment, &components)
+                && after.len() > 2
+                && after.ends_with(b"\xff\xd9");
         }
         if matches!(marker, 0xd8 | 0xd9 | 0x00) {
             return false;
         }
         rest = after;
     }
+}
+
+fn png_header(chunk: &[u8]) -> bool {
+    let Some([depth, color, compression, filter, interlace]) = chunk.get(16..21) else {
+        return false;
+    };
+    let legal_depth = match color {
+        0 => matches!(depth, 1 | 2 | 4 | 8 | 16),
+        2 | 4 | 6 => matches!(depth, 8 | 16),
+        3 => matches!(depth, 1 | 2 | 4 | 8),
+        _ => false,
+    };
+    legal_depth && *compression == 0 && *filter == 0 && *interlace <= 1
+}
+
+fn frame_components(segment: &[u8]) -> Option<Vec<u8>> {
+    let count = usize::from(*segment.get(7)?);
+    if count == 0
+        || segment.len() != 8 + 3 * count
+        || segment.get(3..5) == Some(&[0, 0])
+        || segment.get(5..7) == Some(&[0, 0])
+    {
+        return None;
+    }
+    let mut ids = Vec::new();
+    for component in segment.get(8..)?.chunks_exact(3) {
+        let [id, sampling, table] = component else {
+            return None;
+        };
+        if ids.contains(id)
+            || !(1..=4).contains(&(sampling >> 4))
+            || !(1..=4).contains(&(sampling & 15))
+            || *table > 3
+        {
+            return None;
+        }
+        ids.push(*id);
+    }
+    Some(ids)
+}
+
+fn scan_components(segment: &[u8], frame: &[u8]) -> bool {
+    let Some(count) = segment.get(2).copied().map(usize::from) else {
+        return false;
+    };
+    if !(1..=4).contains(&count) || segment.len() != 6 + 2 * count {
+        return false;
+    }
+    let Some(components) = segment.get(3..3 + 2 * count) else {
+        return false;
+    };
+    let mut ids = Vec::new();
+    for component in components.chunks_exact(2) {
+        let [id, tables] = component else {
+            return false;
+        };
+        if !frame.contains(id) || ids.contains(id) || tables >> 4 > 3 || tables & 15 > 3 {
+            return false;
+        }
+        ids.push(*id);
+    }
+    true
 }

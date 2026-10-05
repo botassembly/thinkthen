@@ -288,6 +288,44 @@ fn a_live_record_keeps_actual_image_exchange_and_keyless_replay_for_every_verb()
     }
 }
 
+fn malformed_headers() -> Vec<Vec<u8>> {
+    let mut malformed = Vec::new();
+    // Header fields must be legal even when the container still has image data.
+    for (offset, value) in [(24, 3), (24, 1), (25, 1), (26, 1), (27, 1), (28, 2)] {
+        let mut bytes = PNG.to_vec();
+        bytes[offset] = value;
+        malformed.push(bytes);
+    }
+    let jpeg = include_bytes!("../fixtures/images/pixel.jpg");
+    let frame = jpeg
+        .windows(2)
+        .position(|pair| pair == [0xff, 0xc0])
+        .expect("frame");
+    let scan = jpeg
+        .windows(2)
+        .position(|pair| pair == [0xff, 0xda])
+        .expect("scan");
+    for (offset, value) in [
+        (frame + 9, 0),
+        (frame + 9, 4),
+        (frame + 9, 2),
+        (frame + 11, 0),
+        (frame + 12, 4),
+        (frame + 13, jpeg[frame + 10]),
+        (scan + 4, 0),
+        (scan + 4, 4),
+        (scan + 4, 2),
+        (scan + 5, 99),
+        (scan + 6, 0x44),
+        (scan + 7, jpeg[scan + 5]),
+    ] {
+        let mut bytes = jpeg.to_vec();
+        bytes[offset] = value;
+        malformed.push(bytes);
+    }
+    malformed
+}
+
 #[test]
 fn invalid_files_and_modes_send_nothing() {
     let root = folder("invalid");
@@ -319,6 +357,20 @@ fn invalid_files_and_modes_send_nothing() {
             String::from_utf8_lossy(&out.stderr)
         );
         assert_eq!(listener.connections(), 0);
+    }
+    for (index, bytes) in malformed_headers().iter().enumerate() {
+        let path = file(&root, &format!("malformed-{index}"), bytes);
+        let out = run(
+            &listener,
+            "llamacpp",
+            "decide",
+            &[],
+            &["--image", path.to_str().expect("path")],
+            true,
+        );
+        assert_eq!(out.status.code(), Some(2), "malformed header {index}");
+        assert!(String::from_utf8_lossy(&out.stderr).contains("JPEG or PNG bytes"));
+        assert_eq!(listener.connections(), 0, "malformed header {index}");
     }
     let out = run(
         &listener,
