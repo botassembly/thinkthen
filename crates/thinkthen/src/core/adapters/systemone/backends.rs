@@ -18,7 +18,7 @@ pub(crate) struct BuiltIn {
 }
 
 /// The built-in backends, in name order, which the unknown-name sentence lists.
-pub(crate) const BUILT_INS: [BuiltIn; 5] = [
+pub(crate) const BUILT_INS: [BuiltIn; 7] = [
     BuiltIn {
         name: "liquid",
         path: super::ENDPOINT_PATH,
@@ -26,6 +26,24 @@ pub(crate) const BUILT_INS: [BuiltIn; 5] = [
         keys: &["LIQUIDAI_API_KEY", "LIQUID_API_KEY"],
         model: "d1:free",
         descriptions: Descriptions::Authored,
+    },
+    BuiltIn {
+        name: "llamacpp",
+        path: super::ENDPOINT_PATH,
+        base: "http://localhost:8080/v1",
+        keys: &["LLAMACPP_API_KEY"],
+        model: "local",
+        descriptions: Descriptions::Authored,
+    },
+    BuiltIn {
+        name: "mlx",
+        path: super::ENDPOINT_PATH,
+        base: "http://localhost:8000/v1",
+        keys: &["MLX_API_KEY"],
+        model: "strands-decider-2B-hobson-v19",
+        // The pinned Strands server requires string score criteria (ticket 0421).
+        // Debt: sdlc/issues/2026-10-05-mlx-score-criteria-need-text-rendering.md.
+        descriptions: Descriptions::Text,
     },
     BuiltIn {
         name: "ollama",
@@ -63,3 +81,12 @@ pub(crate) const BUILT_INS: [BuiltIn; 5] = [
         descriptions: Descriptions::Authored,
     },
 ];
+
+/// The named text workaround, with the existing Ollama sentence retained.
+pub(crate) fn dropped_detail(name: Option<&str>) -> &'static str {
+    if name == Some("mlx") {
+        "backend `mlx` sends each description object as its `what` text, a temporary workaround for the Strands server schema, so its other fields are left out"
+    } else {
+        "backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out"
+    }
+}

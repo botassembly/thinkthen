@@ -8,6 +8,8 @@
 const RECORDS = 'https://github.com/botassembly/thinkthen/blob/main/sdlc';
 
 export const CHECKS = {
+  llamacpp: [],
+  mlx: [],
   typesafe: [
     // The run passed no --model. specification/check.md at b50e0425c
     // resolves the model from the option, then the configuration file,

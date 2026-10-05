@@ -46,22 +46,22 @@ const PROBES: [(bool, &str); 4] = [
 const NO_USAGE: &str =
     "a reply carries no token counts, so results and usage totals leave them out";
 
-/// What `check` and `--plan` say when the Ollama workaround turned a
-/// description object into text (ADR 0115 section 4). The workaround is debt;
-/// the adapter's backend table names its issue.
-pub(crate) const DROPPED_DETAIL: &str = "backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out";
-
 /// One fixed request: the row it reports on, the plan it sends, and whether
 /// sending it turns a description object into text.
 pub(crate) struct Probe {
     pub(crate) name: &'static str,
     pub(crate) plan: Plan,
     pub(crate) drops_detail: bool,
+    pub(crate) warning: &'static str,
 }
 
 /// The four probes for one model and description form. `None` means a fixed
 /// probe no longer parses, and only a defect can cause it.
-pub(crate) fn probes(model: &ModelName, descriptions: Descriptions) -> Option<Vec<Probe>> {
+pub(crate) fn probes(
+    model: &ModelName,
+    descriptions: Descriptions,
+    backend_name: Option<&str>,
+) -> Option<Vec<Probe>> {
     let object = Evidence::structured(Json::parse(OBJECT).ok()?).ok()?;
     let text = Evidence::new(TEXT).ok()?;
     let probe = |(structured, set): &(bool, &str)| {
@@ -84,6 +84,7 @@ pub(crate) fn probes(model: &ModelName, descriptions: Descriptions) -> Option<Ve
             name,
             plan,
             drops_detail,
+            warning: built_in::backends::dropped_detail(backend_name),
         })
     };
     PROBES.iter().map(probe).collect()
@@ -132,10 +133,15 @@ pub(crate) struct Report(Vec<Row>);
 
 impl Report {
     /// The gate rows, one row per probe, and the usage row, none reached yet.
-    pub(crate) fn new(probes: &[Probe]) -> Self {
+    pub(crate) fn new(probes: &[Probe], functions: &[&'static str]) -> Self {
         let probes = probes.iter().map(|probe| probe.name);
         let rows = ["connection", "key", "endpoint"].into_iter().chain(probes);
-        Self(rows.chain(["usage"]).map(|name| (name, None)).collect())
+        Self(
+            rows.chain(["usage"])
+                .chain(functions.iter().copied())
+                .map(|name| (name, None))
+                .collect(),
+        )
     }
 
     /// A probe's reply was decoded: grade each answer in wire order.
@@ -180,17 +186,35 @@ impl Report {
         self.set(row, vec![(true, sentence)]);
     }
 
+    /// A real function path answered, or failed with a safe public error.
+    pub(crate) fn function(&mut self, name: &str, failure: Option<String>) {
+        self.set(name, failure.into_iter().map(|said| (true, said)).collect());
+    }
+
     /// The row lines, the closing count line, and whether any line is critical.
     pub(crate) fn lines(&self) -> (Vec<String>, bool) {
         let mut lines = Vec::new();
         for (name, row) in &self.0 {
             match row.as_deref() {
                 None => lines.push(format!("unchecked {name}")),
-                Some([]) => lines.push(format!("ok {name}")),
-                Some(held) => lines.extend(
-                    held.iter()
-                        .map(|(critical, said)| format!("{} {name}: {said}", level(*critical))),
-                ),
+                Some([]) => lines.push(format!(
+                    "{} {name}",
+                    if name.starts_with("function ") {
+                        "answered"
+                    } else {
+                        "ok"
+                    }
+                )),
+                Some(held) => lines.extend(held.iter().map(|(critical, said)| {
+                    format!(
+                        "{} {name}: {said}",
+                        if name.starts_with("function ") {
+                            "incompatible"
+                        } else {
+                            level(*critical)
+                        }
+                    )
+                })),
             }
         }
         let all = self.0.iter().filter_map(|(_, row)| row.as_ref()).flatten();
@@ -225,7 +249,7 @@ impl Report {
 fn dropped(probe: &Probe) -> Option<Finding> {
     probe
         .drops_detail
-        .then(|| (false, DROPPED_DETAIL.to_owned()))
+        .then(|| (false, probe.warning.to_owned()))
 }
 
 const fn level(critical: bool) -> &'static str {

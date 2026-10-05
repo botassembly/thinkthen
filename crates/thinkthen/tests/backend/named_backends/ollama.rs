@@ -42,7 +42,7 @@ fn null_noul_side(question: &Value) -> bool {
 /// A loopback System One that answers `status` to any request holding a
 /// question `refuses` names, and otherwise answers every question with a
 /// confidence and usage.
-fn mimic(refuses: fn(&Value) -> bool, status: u16) -> Listener {
+pub(super) fn mimic(refuses: fn(&Value) -> bool, status: u16) -> Listener {
     Listener::answering(move |body| {
         let request: Value = serde_json::from_slice(body).unwrap_or_default();
         let empty = serde_json::Map::new();
@@ -65,7 +65,7 @@ fn mimic(refuses: fn(&Value) -> bool, status: u16) -> Listener {
 
 /// One answer: 0.92 for a yes/no question, and 0.9 on the first option or
 /// level of a choice or score, the rest shared.
-fn answer(question: &Value) -> String {
+pub(crate) fn answer(question: &Value) -> String {
     let kind = question["type"].as_str().unwrap_or_default();
     if kind == "noul" {
         return r#"{"type":"noul","noul":0.92}"#.to_owned();
@@ -121,13 +121,13 @@ fn check_warns_for_the_ollama_workaround_and_each_other_backend_sends_as_authore
     assert_eq!(
         report(&stdout),
         format!(
-            "ok connection\nok key\nok endpoint\nok noul\nwarning choice: {DROPPED}\nwarning score: {DROPPED}\nwarning mixed: {DROPPED}\nok usage\ncritical 0, warning 3\n"
+            "ok connection\nok key\nok endpoint\nok noul\nwarning choice: {DROPPED}\nwarning score: {DROPPED}\nwarning mixed: {DROPPED}\nok usage\nanswered function decide\nanswered function choose\nanswered function tag\nanswered function score\nanswered function filter\nanswered function rank\nanswered function find\nanswered function annotate\nanswered function recognize\nanswered function relate\ncritical 0, warning 3\n"
         )
     );
     assert!(stdout.contains("\nmodel sent nimble\n"), "{stdout}");
     assert_eq!(
         by_marker(&ollama),
-        only(KEYLESS, 4),
+        only(KEYLESS, 15),
         "loopback Ollama takes no key"
     );
 
@@ -136,7 +136,7 @@ fn check_warns_for_the_ollama_workaround_and_each_other_backend_sends_as_authore
     let (stdout, _) = said(&unnamed);
     assert_eq!(unnamed.status.code(), Some(4));
     assert!(stdout.ends_with("\ncritical 3, warning 0\n"), "{stdout}");
-    assert_eq!(ollama.count(), 8);
+    assert_eq!(ollama.count(), 30);
 
     // Liquid's own mimic accepts the authored bytes: no null `noul` side travels.
     let liquid = liquid_mimic();
@@ -147,10 +147,10 @@ fn check_warns_for_the_ollama_workaround_and_each_other_backend_sends_as_authore
     let (stdout, stderr) = said(&run);
     assert_eq!((run.status.code(), stderr.as_str()), (Some(0), ""));
     assert!(
-        stdout.ends_with("\nok usage\ncritical 0, warning 0\n"),
+        stdout.contains("\nok usage\nanswered function decide\n"),
         "{stdout}"
     );
-    assert_eq!(by_marker(&liquid), only(1, 4));
+    assert_eq!(by_marker(&liquid), only(1, 15));
 
     let typesafe = typesafe_mimic();
     let run = home.run(
@@ -160,7 +160,7 @@ fn check_warns_for_the_ollama_workaround_and_each_other_backend_sends_as_authore
     let (stdout, _) = said(&run);
     assert_eq!(run.status.code(), Some(0));
     assert!(stdout.ends_with("\ncritical 0, warning 0\n"), "{stdout}");
-    assert_eq!(by_marker(&typesafe), only(0, 4));
+    assert_eq!(by_marker(&typesafe), only(0, 15));
     home.assert_no_marker_in_files();
 }
 
