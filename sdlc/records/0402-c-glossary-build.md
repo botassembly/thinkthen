@@ -24,8 +24,57 @@ The five layers are a proposed benchmarking model, not stored independent finger
 
 Actual Rust growth is 119 nonblank lines: the 117-line exported-number/band regression plus two registration lines. The root ratchet uses its existing `directory: [crates, conformance]` schema and measures 118107. Every Rust source/test file remains at or below 500 nonblank lines. No production Rust grows. Existing details, choosing and threshold suites were inspected for duplication; the bounded additions protect vendor-field/value separation and explicit typed endpoints without copying those suites.
 
-Focused evidence, failed receipts, immutable source and limits will be appended after execution. Full test/spec/surfaces, canonical350 and stress wait for the coordinator's named checkpoint. Fresh independent High review is pending and is not self-certified here.
+Focused proof is complete for the implemented source; receipts and pending limits follow below. Full test/spec/surfaces, canonical350 and stress wait for the coordinator's named checkpoint. Fresh independent High review is pending and is not self-certified here.
 
 ## What the build taught us
 
 The named boundary risk was an explanation mismatch, not a runtime mismatch: both CLI and exported readers already use the settled inclusive-low/exclusive-high middle. Saved question keys and transport attempts differ even on a successful replay. A preserved vendor confidence can disagree with a published formula while the weighted score remains independently computable. Broad saved-proof source hashing includes test files, so unchanged production code does not make a previous 350-row receipt newly current.
+
+
+## Actual focused evidence
+
+Production source and tests freeze at `dbc6bf72d999122b4c2f520c2034f90ebf09b177`. The site tree is `96c15f1f61e508c41d47060e7ced86961ef70905`; production Rust's tree is `0a89309c66d8926e0de945d8a0ce1f8617a001ba`, identical to the specified main. The actual built version names this source. The later candidate commit adds only SDLC status/evidence, with no implementation change.
+
+- Offline policy passes on the frozen source, checking 254 resolved packages. The required complete `lint` passes in an owned clean local clone of that source with isolated outputs, including 113 workflow fixtures, formatting, Clippy and Rust documentation with warnings denied, and the 580-item inventory with four refused plants. The optional private-name check is explicitly skipped in the clean HOME; no new private-name verification is claimed.
+- Two new exported regression tests pass: three confidence/value cases and ten typed band reads. Score retains `0`, `0.13`, `0.87`, computed value `1.87`, highest nearest level and reported confidence `0.79`; details JSON preserves them. Choice clears a probability cut despite reported confidence `0.1`, and an exact tie remains not sure with details available. Each counts one actual loopback request.
+- Twenty-one retained focused cases pass across public details/split accounting/cache and CLI choosing, distribution validation, band output/exit codes, audit goldens/pairing and invalid stored-answer cache/replay behavior. The single executable `spec/result.md` page passes, including its retained 22-row/ten-contract-row inventory and new replay assertion distinguishing one question key from zero current attempts. No full spec rung ran.
+- All seven independent scratch code plants fail with exit 101 on the intended assertion and their restored controls pass with exit 0. They substitute formula-result confidence `0.87`, substitute the saved wire score value `1.86`, cut choice on confidence, include LOW in no, replace audit's pair probability with vendor-summary example `0.79`, replace key inventory with attributed attempt count, and disable lookup. The audit plant is a numeric substitution, not a new implementation of backend-field parsing. The cache plant fails the retained cache-accounting tuple; the existing positive control counts the listener's questions and requests.
+- Actual offline normal `npm run build` and complete `npm run check` pass with every A/B check retained in order. Routine smoke replays 143 CLI scripts and deliberately skips 365 non-CLI samples. Layout/card suites pass 43/33 cases; links cover 189 HTML routes; redirect browser checks cover 61 aliases, nine fragment cases, three direct pages and two no-JavaScript controls. All 128 nonstub pages pass 37 widths (4736 page views), including equal visible grid rows and table/code containment. No draft build or new language/SQL replay is claimed.
+- Independent content comparison passes 189 route/kind pairs, 771 headings, 881 pre/sample blocks and 125 byte-identical non-trust Markdown twins. Every non-trust main tree remains identical to the landed B build. Protected Git source, aliases, layouts, checker contracts, literal exceptions, full references, article bodies, samples, saved outputs, recordings and all 350 proof entries match specified main. Numeric rows match the independent five-row table in actual trust HTML, Markdown and its llms-full section. Local specification links and the actual trust glossary href resolve to declared source anchors.
+- Owned missing-table export plants reject HTML and Markdown omissions with exit 1 and their numeric-row markers; a separate llms trust-row omission rejects the llms section. Removing the glossary target rejects with exit 1 and its target marker. Restored actual exporter/anchor controls pass with exit 0. The cleanup guard first refuses the lane, then removes only its own same-run scratch output.
+
+- Strict checker controls against an owned source copy of specified main `cf457ff98` pass with 350 matching saved entries and zero stale pages. Removing a tracked Rust source file rejects with exit 1 and the stale-source marker; restoring it passes with exit 0. Removing one saved proof entry separately rejects with exit 1 and its exact missing-entry marker. These are saved-input validator controls, not new language/SQL execution. The same-run cleanup guard refuses the lane before cleaning its own source copy.
+
+## Failed receipts and remaining proof
+
+The first new Rust run exited 101 because the scripted listener's `count()` counts only kept-connection requests. All number assertions passed before that observation failure. The corrected fixture uses the existing counting listener and passes; `focused-first-failure.log` preserves the failed run. No runtime defect was inferred from the fixture mistake.
+
+Candidate strict saved-proof validation exits 1 with exactly 350 stale rows across 35 pages: the source hash includes changed test files. Samples, recordings and stored proof hashes remain byte-identical to main. Normal site build/check intentionally warn about this stale source evidence. A later authorized actual 350 runner is required to make the candidate's source proof current; no manual rebinding was done. Main's previous actual 308+42 replay remains attributed to its original source and is not new C execution.
+
+Full test/spec/surfaces, canonical350, stress, native proof, release and publication remain unrun by this builder. Fresh independent High review, glossary-issue closure and the coordinator's named checkpoint remain pending. The full ticket stays partial/in progress. Windows A is landed and B1 is ongoing; 0400 C integration awaits its lane's fresh review. Those lanes own their ticket/recipe updates; C changes no 0400, 0381 or recipe-evidence history.
+
+## Execution conditions
+
+Each launched shell used `/bin/bash`, `login:false`, without initialization files. Checks used explicit minimal environments, owned HOME/Cargo/npm configuration, cached Node 22.22.3/Chromium and offline Cargo with at most two jobs and an empty compiler wrapper. Required lint's one `cargo fetch` fixture was independently restricted to its owned sibling `file://` Git source; no remote fetch or download was admitted. Lane 0's exclusive `/tmp/thinkthen-claude-0-heavy.lock` and matching HEAVY_LOCK/HELD were retained alongside shared toolchain/cache mutation locks. Every heavy user scope enforced MemoryMax 12884901888 and MemorySwapMax 1073741824 bytes. Peak memory was 3193163776 bytes for site proof, 2282991616 for code plants, 1981247488 for lint and 1001431040 for relevant checks. Pre-existing bytecode was neither removed nor hidden by a source change. Local scratch clones/output and ignored runners are retained for fresh review; none is shipped.
+
+
+## Immutable handoff and receipt manifest
+
+The candidate adds only SDLC evidence/status after frozen implementation source `dbc6bf72d999122b4c2f520c2034f90ebf09b177`. Source and candidate remain on `ticket/0402-docs-tell-one-story`; this builder does not merge, rebase, tag or mutate main. The final candidate ID is returned separately to avoid self-reference. The glossary issue stays open for reviewed implementation/checkpoint proof.
+
+Ignored reproducible runners, all seven plant/control pairs, the clean lint clone and the immutable landed B output comparison remain under `target/0402c-build/` and its recorded owned scratch root. `receipts.json` hashes the actual logs/runners; it is separate from the unchanged binding proof. The first failed Rust receipt retains its pre-correction fixture source attribution. No old A/B/Windows receipt or hash was reassigned.
+
+| Receipt under `target/0402c-build/` | SHA-256 |
+| --- | --- |
+| `focused-first-failure.log` | `b5e31b6ec7b87ed64e273eb27d87936e0cb94eed2f779c6c0da6790cba990950` |
+| `focused.log` | `cc10bd0c1e45cebcd0c9f585e52a47091a07307108a2372717963ba111a9d450` |
+| `relevant.log` | `92bd9dcf3de2c936e536b9831b611cf61d5ee3b6c1e1389fadd610579a3ad5bd` |
+| `plants.log` | `d8301f8c40755757ff093d1dc7ec9e6ee19a132f7a2fe7f6c71a651f3e59c754` |
+| `lint.log` | `039cb82ac2ef9ccb9d8677cd908e68a211b788e4538a78157fd32db416f95a15` |
+| `site-build.log` | `a7fc3bbbbd859f8b939fa13fa42ab36177320b1252d1f692ecd9ba6d4a61828b` |
+| `site-check.log` | `1c64c3022f4e17bdc006e8220c5d93ac6d15d4c2623b0ec1278114092ffe91e3` |
+| `strict.log` | `64df19a12a51bdd7ec220abd6dd449fac0c52fc6d037856c5ee038e86a76968a` |
+| `content.log` | `0de8da409309b3857d6f164a43b22eea922da2e4ef909ab17c8e85a128c3a46e` |
+| `checker.log` | `8dc983906e81c5521aeff37f2c5b66e70925d82c5ff86456aefee7ecbf2785df` |
+
+Manifest SHA-256: `3a1037f981cc8e24a8617d707cd6b509ef2db5ad6d019a649cb2a37a5f257608`. Clean source/checker/export scopes exited 0; candidate strict check exited 1 as specified above; original failed fixture and every intended code plant exited 101. No source-independent future success is claimed.
