@@ -18,6 +18,9 @@ use thinkthen::{
 
 use crate::failures::Failure;
 
+#[path = "../../r/thinkthen/src/rust/src/source/plan.rs"]
+mod source;
+
 /// The closed input object. Serde refuses an unknown or repeated member.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -66,15 +69,6 @@ pub(crate) fn plan(engine: &Engine, text: &str) -> Result<String, Failure> {
     let source = input.settings.map_or("{}", RawValue::get);
     let settings = Settings::parse(source).map_err(usage)?;
     let question = question(input.question.get(), &settings, source, verb)?;
-    let records = match (input.input, input.source) {
-        (Some(Records::One(text)), None) => vec![text],
-        (Some(Records::Many(texts)), None) => texts,
-        (None, Some(source)) => super::call::source::parse(source.get())?
-            .read()?
-            .map(|r| r.map(|r| r.record))
-            .collect::<Result<Vec<_>, _>>()?,
-        _ => return Err(Failure::usage("plan takes input or source, not both")),
-    };
     let mut options = CallOptions::new();
     if settings.batch_max() {
         options = options.batch(BatchSetting::Max);
@@ -84,9 +78,31 @@ pub(crate) fn plan(engine: &Engine, text: &str) -> Result<String, Failure> {
     if let Some(context) = settings.context() {
         options = options.context(context);
     }
-    let estimate = match &question {
-        LoadedQuestion::Question(question) => engine.plan_with(question, records, options)?,
-        LoadedQuestion::Banded(question) => engine.plan_with(question, records, options)?,
+    let estimate = match (input.input, input.source) {
+        (Some(records), None) => {
+            let records = match records {
+                Records::One(text) => vec![text],
+                Records::Many(texts) => texts,
+            };
+            match &question {
+                LoadedQuestion::Question(question) => {
+                    engine.plan_with(question, records, options)?
+                }
+                LoadedQuestion::Banded(question) => engine.plan_with(question, records, options)?,
+            }
+        }
+        (None, Some(source)) => {
+            let records = super::call::source::parse(source.get())?.read()?;
+            match &question {
+                LoadedQuestion::Question(question) => {
+                    source::estimate(engine, question, records, options)?
+                }
+                LoadedQuestion::Banded(question) => {
+                    source::estimate(engine, question, records, options)?
+                }
+            }
+        }
+        _ => return Err(Failure::usage("plan takes input or source, not both")),
     };
     serde_json::to_string(&estimate).map_err(|_| Failure::defect("a plan could not be written"))
 }

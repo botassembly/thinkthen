@@ -36,6 +36,7 @@ mod plan;
 mod question_file;
 mod request_width;
 mod settings;
+mod source_controls;
 mod sources;
 mod usage;
 

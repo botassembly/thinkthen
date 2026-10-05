@@ -104,13 +104,25 @@ impl<T: AsRef<str>> SourceRecord<T> {
 }
 
 /// A bounded reader over one authorized host handle. It opens no filesystem path.
-#[derive(Debug)]
 pub struct FileReader<R> {
     chunks: crate::chunks::Chunks<R>,
     file: String,
     options: ReaderOptions,
     line: usize,
     stopped: bool,
+}
+
+impl<R> std::fmt::Debug for FileReader<R> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("FileReader")
+            .field("reader", &"<withheld>")
+            .field("file", &self.file)
+            .field("options", &self.options)
+            .field("line", &self.line)
+            .field("stopped", &self.stopped)
+            .finish_non_exhaustive()
+    }
 }
 
 impl<R: BufRead> FileReader<R> {

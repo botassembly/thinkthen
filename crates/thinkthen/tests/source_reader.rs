@@ -91,3 +91,27 @@ fn folder_order_and_explicit_operand_order_keep_duplicate_occurrences() {
     );
     std::fs::remove_dir_all(folder).unwrap();
 }
+
+#[test]
+fn reader_debug_withholds_arbitrary_reader_evidence_before_and_after_intake() {
+    let mut reader = FileReader::new(
+        "notes",
+        Cursor::new("PRIVATE_INPUT_MARKER\nsecond\n"),
+        ReaderOptions::default(),
+    )
+    .unwrap();
+    for stage in 0..2 {
+        let debug = format!("{reader:?}");
+        assert!(
+            !debug.contains("PRIVATE_INPUT_MARKER"),
+            "stage {stage}: {debug}"
+        );
+        assert!(!debug.contains("second"), "stage {stage}: {debug}");
+        if stage == 0 {
+            assert_eq!(
+                reader.next().unwrap().unwrap().record,
+                "PRIVATE_INPUT_MARKER"
+            );
+        }
+    }
+}

@@ -229,13 +229,15 @@ fn recognize(
     selection: &Selection,
     options: CallOptions<'_>,
 ) -> Result<(Value, Facts), Error> {
+    let options = options.started()?;
     let asked = Recognize::from_json(question)?;
     let tally = Tally::new();
     let mut rows = Vec::new();
     let records = selection.read()?;
     let result = (|| {
-        for source in records {
+        for (at, source) in records.enumerate() {
             let source = source?;
+            engine.check_record_limit(at)?;
             let call = tally.run(|| engine.recognize_with(&asked, &source.record, options))?;
             let mut answer = decoded(&call.value().to_json())?;
             locate_recognition(&source, &mut answer)?;

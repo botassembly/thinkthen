@@ -436,7 +436,8 @@ class Engine:
         if isinstance(records, (set, frozenset)):
             raise UsageError("an unordered set cannot align records with answers")
         if isinstance(records, FileSelection):
-            records = [row.record for row in records]
+            return self._engine.plan(judge._asked, _thinkthen._read_files(records._json()),
+                                     judge._batch, judge._context)
         kind = _pandas(records)
         if kind == "Series":
             records = _marked(records, kind)

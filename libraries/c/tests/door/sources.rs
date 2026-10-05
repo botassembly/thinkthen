@@ -14,11 +14,12 @@ fn ask_at(backend: &Backend, requests: &[Value], cache: bool) -> Vec<(i32, Value
 }
 
 fn ask_base(base: &str, requests: &[Value], cache: bool) -> Vec<(i32, Value)> {
+    ask_settings(base, requests, json!({"cache":cache,"max_retries":0}))
+}
+
+pub(super) fn ask_settings(base: &str, requests: &[Value], settings: Value) -> Vec<(i32, Value)> {
     let mut script = Script::default();
-    script.ask(
-        "settings",
-        &[base, &json!({"cache":cache,"max_retries":0}).to_string()],
-    );
+    script.ask("settings", &[base, &settings.to_string()]);
     for request in requests {
         script.ask("call", &[base, &request.to_string()]);
         script.ask("facts", &[base, ""]);
@@ -243,7 +244,7 @@ fn moving_identical_evidence_changes_provenance_without_changing_cache_identity(
     assert!(!body.contains("first_line") && !body.contains("last_line"));
 }
 
-fn all_no_answers(body: &[u8]) -> Canned {
+pub(super) fn all_no_answers(body: &[u8]) -> Canned {
     let request: Value = serde_json::from_slice(body).expect("request");
     let answers: serde_json::Map<String, Value> = request["questions"]
         .as_object()

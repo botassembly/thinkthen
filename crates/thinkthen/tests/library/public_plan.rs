@@ -83,3 +83,66 @@ fn plan_refuses_nonordinary_questions_before_disclosing_a_body_or_sending() {
         assert_eq!(listener.count(), 0, "{kind} disclosed no request body");
     }
 }
+
+#[test]
+fn plan_stops_at_the_first_excess_record_without_consuming_the_tail_or_sending() {
+    let listener =
+        Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .no_cache()
+        .max_requests(Some(1))
+        .expect("cap")
+        .build()
+        .expect("engine");
+    let asked = Question::decide("Q?").expect("question").cut();
+    let pulls = std::cell::Cell::new(0);
+    let records = std::iter::from_fn(|| {
+        pulls.set(pulls.get() + 1);
+        assert!(pulls.get() <= 2, "tail remains unread");
+        Some("alpha")
+    });
+    let error = engine.plan(&asked, records).expect_err("cap");
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.to_string(),
+        "this engine answers at most 1 records in one call"
+    );
+    assert_eq!(pulls.get(), 2);
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn fallible_plan_returns_the_reader_error_at_admission_and_leaves_the_tail_unread() {
+    let listener =
+        Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .no_cache()
+        .max_requests(Some(1))
+        .expect("cap")
+        .build()
+        .expect("engine");
+    let asked = Question::decide("Q?").expect("question").cut();
+    let pulls = std::cell::Cell::new(0);
+    let records = std::iter::from_fn(|| {
+        pulls.set(pulls.get() + 1);
+        match pulls.get() {
+            1 => Some(Ok("alpha")),
+            2 => Some(Err(thinkthen::Error::new(
+                ErrorKind::Local,
+                "reader stopped",
+            ))),
+            _ => panic!("tail remains unread"),
+        }
+    });
+    let error = engine
+        .try_plan_with(&asked, records, CallOptions::new())
+        .expect_err("reader failure");
+    assert_eq!(error.kind(), ErrorKind::Local);
+    assert_eq!(error.to_string(), "reader stopped");
+    assert_eq!(pulls.get(), 2);
+    assert_eq!(listener.count(), 0);
+}
