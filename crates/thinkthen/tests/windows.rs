@@ -1,5 +1,7 @@
 //! Disposable native Windows CLI boundaries. Source presence is not native proof.
 #![cfg(all(windows, feature = "cli"))]
+#![allow(clippy::expect_used, reason = "failed native fixtures stop the test")]
+#![allow(clippy::panic, reason = "failed native fixtures stop the test")]
 #[path = "../src/test_deadline/child.rs"]
 mod child;
 #[path = "windows/ffi.rs"]
