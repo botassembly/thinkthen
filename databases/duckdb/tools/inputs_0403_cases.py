@@ -124,27 +124,28 @@ class Cases(unittest.TestCase):
         return run(['git', '-C', str(folder), 'rev-parse', 'HEAD'], self.env).stdout.strip()
 
     def test_raw_git_bypasses_filters_index_and_flags(self):
-        folder = self.root / 'source'; commit = self.source_fixture(folder)
-        marker = self.root / 'filter-ran'
-        for kind in ('clean', 'smudge'):
-            run(['git', '-C', str(folder), 'config', f'filter.marker.{kind}', f'touch {marker}; cat'], self.env)
-        self.assertEqual(archive_tree.raw_git(folder, commit), 3)
         for flag in ('--assume-unchanged', '--skip-worktree'):
+            folder = self.root / flag[2:]; commit = self.source_fixture(folder)
+            # Set index flags before arming the filter. update-index may refresh via filters.
             run(['git', '-C', str(folder), 'update-index', flag, 'source.cc'], self.env)
+            marker = self.root / (flag[2:] + '-filter-ran')
+            for kind in ('clean', 'smudge'):
+                run(['git', '-C', str(folder), 'config', f'filter.marker.{kind}', f'touch {marker}; cat'], self.env)
+            self.assertEqual(archive_tree.raw_git(folder, commit), 3)
             (folder / 'source.cc').write_text('masked mutation\n')
             with self.assertRaisesRegex(ValueError, 'raw Git source file differs'):
                 archive_tree.raw_git(folder, commit)
             (folder / 'source.cc').write_text('original\n')
-        (folder / 'source.cc').chmod(0o755)
-        with self.assertRaisesRegex(ValueError, 'raw Git source file differs'):
-            archive_tree.raw_git(folder, commit)
-        (folder / 'source.cc').chmod(0o644)
-        script(folder / 'hidden', 'exit 0')
-        with self.assertRaisesRegex(ValueError, 'unexpected source input: hidden'):
-            archive_tree.raw_git(folder, commit)
-        self.assertFalse(marker.exists(), 'the raw guard ran a Git filter')
-        with self.assertRaisesRegex(ValueError, 'differs from the pinned commit'):
-            archive_tree.raw_git(folder, '0' * 40)
+            (folder / 'source.cc').chmod(0o755)
+            with self.assertRaisesRegex(ValueError, 'raw Git source file differs'):
+                archive_tree.raw_git(folder, commit)
+            (folder / 'source.cc').chmod(0o644)
+            script(folder / 'hidden', 'exit 0')
+            with self.assertRaisesRegex(ValueError, 'unexpected source input: hidden'):
+                archive_tree.raw_git(folder, commit)
+            self.assertFalse(marker.exists(), 'the raw guard ran a Git filter')
+            with self.assertRaisesRegex(ValueError, 'differs from the pinned commit'):
+                archive_tree.raw_git(folder, '0' * 40)
 
     def test_node_reader_requires_final_canonical(self):
         authority_file = HERE / 'version.env'
