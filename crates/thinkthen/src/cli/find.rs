@@ -31,11 +31,7 @@ pub(crate) fn run(
     let mut display = Display::default();
     display.arguments = arguments.display.clone();
     display.validate(common)?;
-    let framing = if common.jsonl {
-        Framing::Jsonl
-    } else {
-        Framing::Lines
-    };
+    let framing = framing(common);
     let fields = common
         .field
         .iter()
@@ -161,6 +157,9 @@ fn input_units(
     reading: &Reading,
     (most, none, recording): (usize, bool, bool),
 ) -> Result<Vec<Unit>, Failure> {
+    if common.located() || common.input.len() > 1 {
+        return located_units(common, input, display, reading, (most, none, recording));
+    }
     let path = common.input.first();
     let mut source = edge::source(path.map(std::path::PathBuf::as_path), input)?;
     if display.around.is_some() {
@@ -180,6 +179,51 @@ fn input_units(
         none,
         recording,
     )
+}
+
+fn located_units(
+    common: &Common,
+    input: impl Read + Send + 'static,
+    display: &mut Display,
+    reading: &Reading,
+    (most, none, recording): (usize, bool, bool),
+) -> Result<Vec<Unit>, Failure> {
+    let (intake, snapshot) =
+        intake::Intake::prepare(common, reading, input, false, display.around.is_some())?;
+    display.snapshot = snapshot;
+    let mut units = Vec::new();
+    let mut original = 0usize;
+    for item in intake {
+        let item = item.map_err(|placed| placed.cause)?;
+        if units.len() == most {
+            return Err(Failure::FindCount { none });
+        }
+        let intake::Data::Bytes(bytes) = item.data else {
+            return Err(Failure::Defect("find reader returned a table"));
+        };
+        original = original
+            .checked_add(bytes.len())
+            .ok_or(Failure::FindTooLarge)?;
+        if original > MAX_RECORD_BYTES {
+            return Err(Failure::FindTooLarge);
+        }
+        let record = reading
+            .record(&bytes)
+            .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
+        let evidence = reading
+            .evidence(&record)
+            .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
+        let position = item
+            .position
+            .ok_or(Failure::Defect("find source has no physical position"))?;
+        units.push(Unit {
+            bytes,
+            record,
+            evidence,
+            position,
+        });
+    }
+    Ok(units)
 }
 
 struct Unit {
@@ -233,6 +277,7 @@ fn read_units(
                 first: line,
                 last: line,
                 source: 0,
+                located: false,
             },
         });
     }
@@ -297,6 +342,11 @@ fn rendered(
     };
     if common.details {
         intake::locate(&mut line, position.as_ref())?;
+        intake::source_members(&mut line, position.as_ref())?;
+    } else if let (Some(unit), Some(position), Some(line)) =
+        (unit, position.as_ref().filter(|p| p.located), &mut line)
+    {
+        *line = intake::source_value(&unit.record, &json_line(&unit.record)?, position)?;
     }
     Ok(Rendered {
         line,
@@ -314,5 +364,15 @@ fn stopped(place: usize, recording: bool, cause: Failure) -> Failure {
         recording,
         held: false,
         cause: Box::new(cause),
+    }
+}
+
+fn framing(common: &Common) -> Framing {
+    if common.unit.as_deref() == Some("file") {
+        Framing::Document
+    } else if common.jsonl {
+        Framing::Jsonl
+    } else {
+        Framing::Lines
     }
 }

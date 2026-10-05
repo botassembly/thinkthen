@@ -79,6 +79,10 @@ pub(crate) struct Common {
     #[arg(long, value_name = "N")]
     pub(crate) window: Option<String>,
 
+    /// Select physical line records or whole files from explicit paths.
+    #[arg(long, value_parser = ["line", "file"], value_name = "UNIT")]
+    pub(crate) unit: Option<String>,
+
     /// Take each line as one text record.
     ///
     /// Value verbs keep `input` beside `value`. Record-returning verbs return

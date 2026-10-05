@@ -23,6 +23,8 @@ compile_error!(
 
 mod core;
 
+mod chunks;
+
 mod config;
 
 #[cfg(windows)]

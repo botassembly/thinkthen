@@ -54,13 +54,6 @@ use crate::failure::Failure;
 /// The wait before the first retry, which only a test shortens.
 const RETRY_WAIT: Duration = Duration::from_secs(1);
 
-/// The most bytes one record is read from the input.
-///
-/// A record at the limit is taken, and one byte past it is refused, so reading
-/// one byte past the limit settles it. A stream may end a record with `\r\n`,
-/// and neither byte is part of the record, so the bound allows both.
-const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
-
 /// The environment the command reads, read once. Only a debug build reads the
 /// `THINKTHEN_TEST_` variables. The key is captured once after the final
 /// address resolves, and that value governs every later check and request.
@@ -283,26 +276,22 @@ fn opened<'a>(file: File) -> Result<Box<dyn BufRead + Send + 'a>, Failure> {
     }
 }
 
-/// The bytes of one record at a time, read no further than the caller asks.
-///
-/// A stream yields one line at a time, with the line feed that ended it, so a
-/// plan over the first record reads that record alone. One document yields
-/// every byte once and then nothing.
+/// Command error mapping over the shared bounded reader.
 #[derive(Debug)]
-pub(crate) struct Chunks<R> {
-    reader: R,
-    streams: bool,
-    spent: bool,
-}
+pub(crate) struct Chunks<R>(crate::chunks::Chunks<R>);
 
 impl<R: BufRead> Chunks<R> {
-    /// Read records of this shape from this reader.
     pub(crate) const fn new(reader: R, streams: bool) -> Self {
-        Self {
-            reader,
-            streams,
-            spent: false,
-        }
+        Self(crate::chunks::Chunks::new(reader, streams))
+    }
+
+    pub(crate) fn next_unit(
+        &mut self,
+        window: usize,
+    ) -> Option<Result<crate::chunks::UnitBytes, Failure>> {
+        self.0
+            .next_unit(window)
+            .map(|unit| unit.map_err(Failure::Input))
     }
 }
 
@@ -310,37 +299,7 @@ impl<R: BufRead> Iterator for Chunks<R> {
     type Item = Result<Vec<u8>, Failure>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.spent {
-            return None;
-        }
-        let mut bytes = Vec::new();
-        // The core refuses a record past the limit, so nothing beyond the two
-        // bytes that may end one is worth reading. A stream with no line feed
-        // in it would otherwise be read into memory whole.
-        let mut reader = (&mut self.reader).take(BOUND);
-        let read = if self.streams {
-            let read = reader.read_until(b'\n', &mut bytes);
-            // A read that stopped at the bound found no line feed, so the
-            // record runs past the cut. What follows the cut is the middle of
-            // that record and not a record of its own, and framing it as one
-            // would send part of a refused record to the backend. The stream
-            // ends here, and the record the cut holds is refused for its size.
-            if !bytes.ends_with(b"\n") {
-                self.spent = true;
-            }
-            read
-        } else {
-            self.spent = true;
-            reader.read_to_end(&mut bytes)
-        };
-        match read {
-            Err(error) => {
-                self.spent = true;
-                Some(Err(Failure::Input(error)))
-            }
-            Ok(0) if self.streams => None,
-            Ok(_) => Some(Ok(bytes)),
-        }
+        self.0.next().map(|bytes| bytes.map_err(Failure::Input))
     }
 }
 
