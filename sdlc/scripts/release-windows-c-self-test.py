@@ -337,7 +337,7 @@ def main():
         archives(Path(temporary))
         pack_routing(Path(temporary))
         msvc_setup_routing(Path(temporary))
-    runpy.run_path(str(Path(__file__).with_name('release-bounded-0381-self-test.py')))['main']()
+    runpy.run_path(str(Path(__file__).with_name('release-process-cleanup-test.py')))['main']()
     plants = workflow_plants()
     print(f'Windows C portable self-test: archive/header/export refusals and {plants} workflow plants passed; native proof pending')
 

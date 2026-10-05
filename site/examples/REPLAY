@@ -1,10 +1,7 @@
-# The library and SQL samples the replay runners prove, one path a line,
-# relative to examples/. scripts/smoke-bindings.mjs runs the library
-# samples, and scripts/smoke-sql.mjs runs the lines that end in .sql. A line
-# that ends with backend=NAME runs its sample with that backend named in the
-# environment. scripts/check-binding-proofs.mjs checks each line's entry in
-# bindings-proof.json in every build, and fails when a sample under
-# examples/ has no line here.
+# Library and SQL samples to run, one path per line relative to examples/.
+# smoke-bindings.mjs runs libraries; smoke-sql.mjs runs SQL. Each sample
+# compares its output or asserts its result. backend=NAME selects that backend.
+# check-binding-samples.mjs checks coverage and install package names.
 functions/annotate/ada.adb
 functions/annotate/c.c
 functions/annotate/cobol.cob
