@@ -82,11 +82,13 @@ impl Observations {
     pub(crate) fn new(markers: BTreeMap<String, String>) -> io::Result<Self> {
         if markers.len() > 16
             || markers.iter().any(|(name, marker)| {
-                name.is_empty()
+                !(1..=32).contains(&name.len())
                     || !name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
                     || marker.is_empty()
                     || marker.len() > 256
-                    || marker.bytes().any(|b| b.is_ascii_whitespace())
+                    || marker
+                        .bytes()
+                        .any(|b| b.is_ascii_whitespace() || b.is_ascii_control())
             })
             || markers
                 .values()
