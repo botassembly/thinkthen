@@ -68,7 +68,7 @@ A live call through a library binding took a median of 138 ms on 2026-10-01. Thi
 
 ThinkThen speaks System One, the request format [Jev](https://typesafe.ai) answers. Any System One server works.
 
-Jev, from TypeSafe, is the default. Liquid AI's d1 works through the [Liquid backend](/install/backends/liquid/). A local model works through [Ollama](/install/backends/ollama/), with no key. `thinkthen check` tells you whether a server works with ThinkThen.
+Jev, from TypeSafe, is the default. Liquid AI's d1 works through the [Liquid backend](/install/backends/liquid/). A local model works through [Ollama](/install/backends/ollama/), with no key. `thinkthen backends check` tells you whether a server works with ThinkThen.
 
 One caution: a threshold belongs to one model. Switch models, and you measure again.
 

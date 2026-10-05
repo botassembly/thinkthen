@@ -51,7 +51,17 @@ mod cache_trust;
     reason = "a helper that cannot run the check or read its files should stop the test"
 )]
 mod check;
+#[allow(
+    clippy::expect_used,
+    reason = "a helper that cannot run the check or read its files should stop the test"
+)]
+mod check_alias;
 mod choosing;
+#[allow(
+    clippy::expect_used,
+    reason = "fixture setup must run the compiled CLI"
+)]
+mod command_namespace;
 // Windows does not tell the command that its output reader closed (sdlc/planning/windows.md).
 #[cfg(unix)]
 mod closed_pipe;

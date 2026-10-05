@@ -1,4 +1,4 @@
-thinkthen check \
+thinkthen backends check \
   --url http://localhost:8080/v1 \
   --plan |
 grep '^request' |

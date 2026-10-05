@@ -14,7 +14,7 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <BackendFacts name={b.name} />
   <p>Put your provider key in <code>{b.keys[0]}</code>. ThinkThen reads this variable when you select the backend.</p>
   <h2>Check the connection</h2>
-  <p>Run <code>thinkthen check --backend {b.name} --timeout 90</code>. A run with <code>--plan</code> needs no key and sends nothing.</p>
+  <p>Run <code>thinkthen backends check --backend {b.name} --timeout 90</code>. A run with <code>--plan</code> needs no key and sends nothing.</p>
   <CheckLines name={b.name} />
   <p>All four successful replies in the 2026-10-04 check named <code>pplx-decider-v1-27b</code>. This check establishes no result for other models or routes.</p>
   <p>Perplexity accepts one-sided yes-or-no criteria. Its Decisions route is distinct from the default System One route.</p>
