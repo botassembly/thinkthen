@@ -205,6 +205,7 @@ class Engine:
     def __init__(
         self,
         *,
+        backend: Optional[str] = ...,
         base_url: Optional[str] = ...,
         model: Optional[str] = ...,
         throttle: Optional[int] = ...,

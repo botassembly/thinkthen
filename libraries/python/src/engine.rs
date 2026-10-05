@@ -110,14 +110,15 @@ pub(crate) struct Engine(pub(crate) thinkthen::Engine);
 #[pymethods]
 impl Engine {
     /// Start from what `thinkthen` reads from the environment, then apply
-    /// each given setting (amendment changes 11 to 13).
+    /// each given setting.
     #[new]
-    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, batch=None, max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
+    #[pyo3(signature = (*, backend=None, base_url=None, model=None, throttle=None, batch=None, max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
     #[expect(
         clippy::too_many_arguments,
         reason = "PyO3's keyword-only constructor exposes the engine settings"
     )]
     fn new(
+        backend: Arg<'_, '_>,
         base_url: Option<&str>,
         model: Option<&str>,
         throttle: Arg<'_, '_>,
@@ -135,6 +136,7 @@ impl Engine {
         Python::attach(|py| {
             let read = || -> PyResult<Self> {
                 let settings = Settings {
+                    backend: settings::backend(backend)?,
                     base_url,
                     model,
                     throttle: checked_throttle(throttle)?,

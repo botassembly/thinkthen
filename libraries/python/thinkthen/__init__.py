@@ -349,7 +349,7 @@ def _rules(relations, either):
 class Engine:
     """An engine with its own settings, each keyword-only.
 
-    ``base_url``, ``model``, ``throttle`` (1 to 32 requests in flight), ``batch``,
+    ``backend``, ``base_url``, ``model``, ``throttle`` (1 to 32 requests in flight), ``batch``,
     ``max_requests``, ``max_request_bytes``, ``cache`` (a folder, ``False`` for none, or ``True``
     for the default folder), ``timeout``, ``max_retries``, ``record``, ``replay``, and ``profile``. An omitted setting comes
     from the environment. The throttle is one per loaded copy of this
@@ -367,18 +367,18 @@ class Engine:
             raise AttributeError("an Engine's validated settings cannot be changed")
         object.__setattr__(self, name, value)
 
-    def __init__(self, *, base_url=None, model=None, throttle=None,
+    def __init__(self, *, backend=None, base_url=None, model=None, throttle=None,
                  batch=None,
                  max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None,
                  record=None, replay=None, profile=None):
         self._engine = _thinkthen._Engine(
-            base_url=base_url, model=model, throttle=throttle,
+            backend=backend, base_url=base_url, model=model, throttle=throttle,
             batch=batch,
             max_requests=max_requests, max_requests_total=max_requests_total,
             max_request_bytes=max_request_bytes,
             cache=cache, timeout=timeout,
             max_retries=max_retries, record=record, replay=replay, profile=profile)
-        given = dict(base_url=base_url, model=model, throttle=throttle, batch=batch,
+        given = dict(backend=backend, base_url=base_url, model=model, throttle=throttle, batch=batch,
                      max_requests=max_requests, max_requests_total=max_requests_total,
                      max_request_bytes=max_request_bytes, cache=cache, timeout=timeout,
                      max_retries=max_retries, record=record, replay=replay, profile=profile)
