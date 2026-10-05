@@ -5,6 +5,9 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { ALIASES, routeFile, preserver } from './redirect-contract.mjs';
+import { RECIPE_PAGES } from '../src/data/catalog.mjs';
+import { recipeSelection } from '../src/data/recipes.mjs';
+const published = recipeSelection(RECIPE_PAGES).index;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-links-'));
 const dist = path.join(root, 'dist');
 fs.symlinkSync(new URL('../../specification', import.meta.url).pathname, path.join(root, 'specification'));
@@ -16,7 +19,8 @@ const stub = fixed => `<!doctype html><title>Redirect</title>${preserver(fixed)}
 try {
   for (const [alias, fixed] of Object.entries(ALIASES)) {
     write(routeFile(dist, new URL(fixed, 'https://thinkthen.dev').pathname), '<main><h1 id="flags">Flags</h1><h2 id="edge-cases">Edges</h2></main>');
-    write(routeFile(dist, alias), stub(fixed));
+    write(routeFile(dist, alias), alias === '/recipes' && published
+      ? '<link rel="canonical" href="https://thinkthen.dev/recipes/"><main><h1>Recipes</h1></main>' : stub(fixed));
   }
   const page = routeFile(dist, '/fixture/');
   function run(link, expected, marker) {
@@ -42,7 +46,7 @@ try {
     [s => s.replace(preserver('/install/'), ''), /missing fragment preserver/],
   ]) { write(alias, mutate(original)); run('/functions/decide/#flags', 1, marker); }
   write(alias, original); run('/functions/decide/#flags', 0);
-  const recipe = routeFile(dist, '/recipes'); const recipeStub = fs.readFileSync(recipe, 'utf8');
+  const recipe = routeFile(dist, '/recipes'); const recipeOriginal = fs.readFileSync(recipe, 'utf8'); const recipeStub = stub('/how-tos/bash/');
   const index = '<link rel="canonical" href="https://thinkthen.dev/recipes/"><main data-draft><h1>Recipes</h1><p>Draft catalog: waiting</p></main>';
   const preview = () => spawnSync(process.execPath, [checker], { cwd: root, encoding: 'utf8', timeout: 10000, env: {...process.env, THINKTHEN_DRAFTS: '1'} });
   write(recipe,index);write(page,'<main><a href="/recipes/">Recipes</a></main>');
@@ -54,6 +58,6 @@ try {
   write(recipe,index);
   write(alias,original.replace(preserver('/install/'),''));assert.equal(preview().status,1);assert.match(preview().stderr,/missing fragment preserver/);
   write(alias,original);assert.equal(preview().status,0);
-  write(recipe,recipeStub);run('/functions/decide/#flags',0);
+  write(recipe,recipeOriginal);run('/functions/decide/#flags',0);
   console.log('link checker plants: 20 cases passed, normal and explicit draft index contracts');
 } finally { cleanup(root); }

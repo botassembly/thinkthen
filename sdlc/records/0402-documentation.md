@@ -2,7 +2,7 @@
 
 A/B/C/D landed through `26174408f`: one documentation home and retained aliases, language/database layouts, the call/request/decision glossary and recipe draft/replay infrastructure. Documentation replay/build and focused contract checks passed at the slice landings. The five layers are a benchmarking model, not independent stored identities; a changed metadata digest alone proves no cache miss, and recognition/relation rereading requires complete downstream answers.
 
-All six recipe pages landed as drafts. The three approved publication candidates are Rules propose/model confirms, verify with a person reviewing every supports result, and cache SQL. Their pages and ordinary examples are ready for review at `9732d71dd`; preparation is not publication. Public examples replay saved answers and compare outputs. Choose-none wording is still unanswered; extract stays dropped, tables stay outside 0.2, and no new paid call or experiment is authorized.
+All six recipe pages landed as drafts. The three approved publication candidates are Rules propose/model confirms, verify with a person reviewing every supports result, and cache SQL. Their pages and ordinary examples passed one fresh source review at `9732d71dd` and now publish through the ordinary navigation, Markdown, search and llms outputs. Public examples replay saved answers and compare outputs. Choose-none wording is unchanged; extract stays dropped and tables stay outside 0.2. This publication authorizes no paid call or experiment.
 
 The admitted dated experiment findings and limits below remain the documentation boundary. They justify scoped claims, not population guarantees or inferred provider invoices.
 
@@ -36,7 +36,7 @@ Completed reviewed reports for experiments 0025, 0026 and 0027 supersede the ear
 
 ## Publication and remaining work
 
-Recipe publication requires a tested question file, labeled sample, saved-response replay, audit output and identified measured source under ticket 0402. This note preserves the public-safe measured evidence. The completed handoffs do not prove that each recipe sample has a convertible retained recording. The builder checks that prerequisite without a live call and leaves uncovered samples as drafts.
+The three published recipes have question files, labeled samples, saved-response examples and identified measured sources. The site build and five recipe script replays passed; integration preserved their outputs and passed the visibility check. Link, qualify and transcript search remain unpublished. Full tests and lint run on the publication landing.
 
 The linking wording question and protective citation threshold remain unanswered. The later 0031 disposition below resolves only the frozen-cohort comparison wait. These limits do not block slices A, B or C or preparation of the Recipes harness.
 
@@ -47,7 +47,7 @@ The dated [planning record](https://github.com/botassembly/thinkthen/blob/ea615c
 
 The broad 9919-word dictionary and caps are not best-possible rules. Confirmation cannot recover 42/575 absent candidates. All 283 absent fields are receipts: choose correctly abstains on 211, recognize on 277 with three unresolved faults, rules on zero. Name/date controls and one custom-role configuration prohibit generic claims. Equivalent decide performance, location accuracy, preparation timing, local-model comparison and provider invoice were not established.
 
-New usage-derived $0.182553 and exposure $0.203782 stay distinct from historical 0027 $0.068566848. Genuine fault holds $0.000380 and $0.021019 remain; the latter includes $0.000170 partial usage. Reused logical shares do not multiply consumption. No retry follows. The Rules draft requires compatible public fixture and publication proof, with synthetic loopback repeatability separate from measured quality. Extract remains dropped and 0413 owns its API gaps.
+New usage-derived $0.182553 and exposure $0.203782 stay distinct from historical 0027 $0.068566848. Genuine fault holds $0.000380 and $0.021019 remain; the latter includes $0.000170 partial usage. Reused logical shares do not multiply consumption. No retry follows. The published Rules recipe uses a compatible public fixture; synthetic loopback repeatability remains separate from measured quality. Extract remains dropped and 0413 owns its API gaps.
 
 0030 has no quality-qualified local-model winner. 0032 has terminal evidence but unanswered efficacy, all 16210 TEST records sealed and full $0.292177704 reservation including known usage. Neither supports a replace-regex post or resolves choose-none wording. No diagnostic, retry or new experiment is authorized.
 

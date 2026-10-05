@@ -1,6 +1,6 @@
 # 0402: The docs tell one story
 
-Status: in progress: A/B/C/D landed through `26174408f`, providing the documentation layout, glossary and six recipe drafts with replay infrastructure. Three approved core recipe candidates remain saved unfinished at `b82ce3282`; publication checks and choose-none wording measurement remain.
+Status: complete for the 0.2 core: the documentation layout, glossary and three approved recipes have landed with reviewed examples. Link, qualify, transcript search and choose-none wording remain later.
 
 Milestone: 0.2
 

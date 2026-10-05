@@ -1264,14 +1264,13 @@ export const RECIPE_PAGES = [
     "functions": [
       "choose"
     ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Scoped comparison accepted; repeatability and measured publication review remain pending.",
+    "draft": false,
+    "publication": "ready",
+    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/rules-propose-model-confirms",
     "issue": "sdlc/issues/2026-10-03-draft-function-extract.md",
     "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/2026-10-05-reviewed-experiment-planning.md",
-    "sourceCommit": "ea615c0e6a3412bb4716ad97b704a3f698be30cb",
+    "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": RULES_MEASURED,
     "fixtureAssertions": [
       {
@@ -1282,9 +1281,7 @@ export const RECIPE_PAGES = [
         "scope": "Six ordinary cases and two reading controls",
         "qualification": "Controlled loopback fixture; no provider-quality measurement.",
         "artifact": "files/harness.json",
-        "selector": "/population",
-        "sha256": "9dab654a70e8376ccedfbd0ded55727992cd736a3d2d1ea3ad5db8c1b4e7e4a1",
-        "artifactCommit": "1da71e8116cf89e33f2edc193b0c7ea3d19c32ff"
+        "selector": "/population"
       }
     ],
     "body": [
@@ -1576,43 +1573,156 @@ export const RECIPE_PAGES = [
     ],
     "draft": true,
     "publication": "waiting",
-    "wait": "Earlier linking evidence and compatible replay remain pending; completed wording comparison returned no answers.",
+    "wait": "Later: link none measurements are being rerun; no wording improvement is established.",
     "example": "site/examples/recipes/link-records",
     "issue": "sdlc/issues/2026-10-03-draft-function-link.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
-    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
       {
         "kind": "text",
-        "text": "Earlier linking evidence and compatible replay remain pending; completed wording comparison returned no answers."
+        "text": "Later: link none measurements are being rerun; no wording improvement is established."
       }
     ]
   },
   {
     "slug": "verify-a-claim",
     "title": "Verify a claim",
-    "goal": "Judge support for a claim and keep qualification within the same recipe.",
-    "job": "Judge support for a claim and keep qualification within the same recipe.",
+    "goal": "Judge a claim against its source and have a person review every supports result.",
+    "job": "Review every supports result before taking action.",
     "functions": [
       "choose"
     ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Constructed-claim limits and source review remain; qualification efficacy and publication artifacts remain pending.",
+    "draft": false,
+    "publication": "ready",
+    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/verify-a-claim",
     "issue": "sdlc/issues/2026-10-03-draft-function-verify.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
-    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
-    "measured": [],
+    "measured": [
+      {
+        "id": "supported",
+        "evidenceClass": "measured",
+        "value": "20/20",
+        "denominator": "20",
+        "definition": "Selected supports on constructed supported claims",
+        "qualification": "Clustered within twenty excerpts from five RFCs; no population guarantee.",
+        "cohort": "Sixty constructed claims clustered within twenty excerpts from five RFCs",
+        "backend": "TypeSafe",
+        "model": "jev-1.13.0",
+        "resolved": "60",
+        "unresolved": "0",
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
+      },
+      {
+        "id": "bad-supports",
+        "evidenceClass": "measured",
+        "value": "0/40",
+        "denominator": "40",
+        "definition": "Selected supports on contradicted or excerpt-local unsupported claims",
+        "qualification": "No wrong supports occurred; no protective probability cut was established.",
+        "cohort": "Sixty constructed claims clustered within twenty excerpts from five RFCs",
+        "backend": "TypeSafe",
+        "model": "jev-1.13.0",
+        "resolved": "60",
+        "unresolved": "0",
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
+      },
+      {
+        "id": "verdicts",
+        "evidenceClass": "measured",
+        "value": "57/60",
+        "denominator": "60",
+        "definition": "Frozen verdict correctness",
+        "qualification": "One weekday label has a defensible contrary reading; these are not independent observed citations.",
+        "cohort": "Sixty constructed claims clustered within twenty excerpts from five RFCs",
+        "backend": "TypeSafe",
+        "model": "jev-1.13.0",
+        "resolved": "60",
+        "unresolved": "0",
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
+      }
+    ],
     "fixtureAssertions": [],
     "body": [
       {
         "kind": "text",
-        "text": "Constructed-claim limits and source review remain; qualification efficacy and publication artifacts remain pending."
+        "text": "A person must review every supports result against the original source before any action. ThinkThen judges the supplied excerpt; it does not retrieve or certify the source."
+      },
+      {
+        "kind": "heading",
+        "text": "Save the question"
+      },
+      {
+        "kind": "artifact",
+        "file": "files/question.json"
+      },
+      {
+        "kind": "heading",
+        "text": "Replay retained examples"
+      },
+      {
+        "kind": "text",
+        "text": "These constructed claims quote public RFC excerpts. The examples select retained answers and show local replay behavior; they do not add a quality measurement. The source references let the reviewer open the original document."
+      },
+      {
+        "kind": "artifact",
+        "file": "files/cases.jsonl"
+      },
+      {
+        "kind": "artifact",
+        "file": "files/sources.jsonl"
+      },
+      {
+        "kind": "artifact",
+        "file": "1-ask.sh"
+      },
+      {
+        "kind": "artifact",
+        "file": "1-ask.out"
+      },
+      {
+        "kind": "text",
+        "text": "Every supports result still requires a person to check the original source before acceptance or any subsequent action. The sample output is a review queue, not an approval."
+      },
+      {
+        "kind": "heading",
+        "text": "Audit the sample"
+      },
+      {
+        "kind": "artifact",
+        "file": "2-audit.sh"
+      },
+      {
+        "kind": "artifact",
+        "file": "2-audit.out"
+      },
+      {
+        "kind": "heading",
+        "text": "Measured evidence and limits"
+      },
+      {
+        "kind": "evidence",
+        "id": "supported"
+      },
+      {
+        "kind": "evidence",
+        "id": "bad-supports"
+      },
+      {
+        "kind": "evidence",
+        "id": "verdicts"
+      },
+      {
+        "kind": "text",
+        "text": "Unsupported means absent from the supplied excerpt. Stricter probability cuts removed good answers without separating any observed wrong supports. This sample establishes no automatic acceptance threshold or measured benefit of human review."
+      },
+      {
+        "kind": "text",
+        "text": "Qualification of negation, uncertainty and attributed claims remains later on this shared verify route. This recipe promises no automatic qualification judgment. Faults and replay misses remain failures; an uncertain answer grants no acceptance."
       }
     ]
   },
@@ -1628,18 +1738,17 @@ export const RECIPE_PAGES = [
     ],
     "draft": true,
     "publication": "waiting",
-    "wait": "Admitted navigation measurements and compatible artifacts remain pending; no tree command is promised.",
+    "wait": "Later: held-out passage search did not generalize; no general recall advantage is established.",
     "example": "site/examples/recipes/navigate-many-documents",
     "issue": "sdlc/issues/2026-10-03-draft-function-navigate.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
-    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
       {
         "kind": "text",
-        "text": "Admitted navigation measurements and compatible artifacts remain pending; no tree command is promised."
+        "text": "Later: held-out passage search did not generalize; no general recall advantage is established."
       }
     ]
   },
@@ -1654,18 +1763,17 @@ export const RECIPE_PAGES = [
     ],
     "draft": true,
     "publication": "waiting",
-    "wait": "Held-out source reconciliation and replay remain pending; unequal reading lengths and overlap limit interpretation.",
+    "wait": "Later: held-out passage search did not generalize; no general recall advantage is established.",
     "example": "site/examples/recipes/search-transcripts",
     "issue": "sdlc/issues/2026-10-05-recipe-search-transcripts.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
-    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
     "measured": [],
     "fixtureAssertions": [],
     "body": [
       {
         "kind": "text",
-        "text": "Held-out source reconciliation and replay remain pending; unequal reading lengths and overlap limit interpretation."
+        "text": "Later: held-out passage search did not generalize; no general recall advantage is established."
       }
     ]
   },
@@ -1677,20 +1785,121 @@ export const RECIPE_PAGES = [
     "functions": [
       "choose"
     ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Admitted cache-analysis artifacts and supported-build reconciliation remain pending; no extension support or efficacy promise.",
+    "draft": false,
+    "publication": "ready",
+    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/ask-your-cache-with-duckdb",
     "issue": "sdlc/issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md",
     "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
-    "sourceCommit": "e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7",
-    "measured": [],
+    "measured": [
+      {
+        "id": "analytics-spend",
+        "evidenceClass": "measured",
+        "value": "$0",
+        "denominator": "8",
+        "definition": "New model/API spend for eight retained-data analytics questions",
+        "qualification": "Offline retrospective analysis; historical receipt charges remain separate.",
+        "cohort": "Reviewed saved-decision SQL experiment",
+        "backend": "not applicable",
+        "model": "not applicable",
+        "resolved": "not applicable",
+        "unresolved": "not applicable",
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
+      },
+      {
+        "id": "historical-replay",
+        "evidenceClass": "measured",
+        "value": "100000/100000",
+        "denominator": "100000",
+        "definition": "Recorded cache answers in a historical cached local replay",
+        "qualification": "Processed-row denominator; not unique questions or measured lookup hit rate. Zero requests were recorded.",
+        "cohort": "One retained news-classification replay",
+        "backend": "not applicable",
+        "model": "not applicable",
+        "resolved": "not applicable",
+        "unresolved": "not applicable",
+        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
+      }
+    ],
     "fixtureAssertions": [],
     "body": [
       {
         "kind": "text",
-        "text": "Admitted cache-analysis artifacts and supported-build reconciliation remain pending; no extension support or efficacy promise."
+        "text": "Query retained detailed answers with ordinary DuckDB SQL. This example reads saved JSONL and invokes no model or ThinkThen extension."
+      },
+      {
+        "kind": "heading",
+        "text": "Supported setup"
+      },
+      {
+        "kind": "artifact",
+        "file": "files/environment.txt"
+      },
+      {
+        "kind": "text",
+        "text": "For extension calls, follow the DuckDB install page and its unsigned development instructions. This read-only example needs only the stock CLI."
+      },
+      {
+        "kind": "link",
+        "text": "Install DuckDB and read the unsigned development extension instructions.",
+        "href": "/install/duckdb/"
+      },
+      {
+        "kind": "heading",
+        "text": "Inspect the retained rows"
+      },
+      {
+        "kind": "text",
+        "text": "These controlled purchase-note answers come from the Rules sample. Their probabilities and unanswered rows demonstrate the query shape, not provider quality."
+      },
+      {
+        "kind": "artifact",
+        "file": "files/results.jsonl"
+      },
+      {
+        "kind": "heading",
+        "text": "Run the SQL"
+      },
+      {
+        "kind": "artifact",
+        "file": "files/queries.sql"
+      },
+      {
+        "kind": "artifact",
+        "file": "1-query.sh"
+      },
+      {
+        "kind": "artifact",
+        "file": "1-query.out"
+      },
+      {
+        "kind": "heading",
+        "text": "Measured retrospective evidence"
+      },
+      {
+        "kind": "evidence",
+        "id": "analytics-spend"
+      },
+      {
+        "kind": "evidence",
+        "id": "historical-replay"
+      },
+      {
+        "kind": "heading",
+        "text": "Keep the denominators honest"
+      },
+      {
+        "kind": "text",
+        "text": "A stored answer is not a cache lookup event. A replayed row does not prove an independent trial or a live cache hit. Accuracy needs labels; selected-label probability is not accuracy or confidence."
+      },
+      {
+        "kind": "text",
+        "text": "Deduplicate receipts before joining questions. Dividing request cost across answers is an allocation. Missing cost, timing, usage and retry links stay unknown. Question-key changes alone do not prove unchanged evidence, context, options or served model."
+      },
+      {
+        "kind": "text",
+        "text": "Use audit for labeled accuracy and diff for saved comparisons with its identity limits. Stock SQL can summarize retained fields; it cannot recover fields the recording never stored."
       }
     ]
   }

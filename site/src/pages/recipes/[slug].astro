@@ -20,10 +20,12 @@ const artifact = file => fs.readFileSync(path.join(process.cwd(),r.example.repla
 <Base title={r.title} description={r.job} reading recipe={r.slug} draft={r.draft}>
   <Fragment>
     <h1>{r.title}</h1>
-    {r.draft && <p>Draft: {r.title} awaits a reviewed publication candidate.</p>}
+    {r.draft && <p>Draft: {r.title} stays unpublished for later.</p>}
+    {!r.draft && <p>Published recipe: {r.title}.</p>}
     <p class="lede">{r.goal}</p>
     <p>{r.job}</p>
     <p>Functions: {r.functions.map((f,i) => (<Fragment>{i ? ', ' : ''}<a href={`/functions/${f}/`}>{f}</a></Fragment>))}</p>
+    <p>To run {r.title}, open its <a href={`https://github.com/botassembly/thinkthen/tree/main/${r.example}`}>example folder</a> in a checkout. Run the numbered shell scripts in order from that folder.</p>
     {r.body.map(node => (
       <RecipeNode node={node} recipe={r} evidence={evidence} artifact={artifact} />
     ))}
