@@ -1,6 +1,6 @@
 # 0400 slice C: the default throttle is eight
 
-Status: source-preserved C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`. Fresh prior High review accepted C source `5a74e1e74`; corrected combined source `4080bd327` passes focused checks and required lint and awaits fresh High review. D is landed, documentation work is active, and parent full/canonical/stress proof remains pending.
+Status: source-preserved C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`. Fresh prior High review accepted C source `5a74e1e74`; corrected combined source `4080bd327` passed focused checks, required lint and whole-C High review on candidate `00dafde673`; the subsequent root full checkpoint exposed a stale child-width oracle, corrected below with renewed bounded proof pending. D is landed, documentation work is active, and parent full/canonical/stress proof remains pending.
 
 The final B source/receipt acceptance and byte-identical landing are recorded in the [B build record](0400-provider-setups-slice-b-build.md). C preserves the Windows and B source, ratchets and retained receipts. No paid 0399 call, native host run, dispatch, publication or release approval ran.
 
@@ -189,3 +189,16 @@ Heavy execution used the owned lane2 user scope with 12 GiB memory/1 GiB swap, t
 Ready for fresh independent High review. The coordinator still owns 350 actual canonical replays with strict/final site proof, a named full test/spec/surfaces checkpoint and the authorized SQLite/stress checkpoint. Earlier accepted C surface witnesses and all ten mapping plants are retained rather than relabeled as reruns. No helper, rebase, landing, full gate, canonical replay, paid/native/CI job, stress, publication or manual proof-hash update ran here.
 
 The final record-only worktree passes `integration-final-tickets.log` (zero failures) and `integration-final-private-count.log` (35 names, zero tracked-path/file hits). These count-only checks disclose no external name. They change no frozen-source receipt.
+
+
+## Root checkpoint child-width fixture correction
+
+Fresh whole-C High review accepted candidate `00dafde67308ffb01c7770c9fe04157291ab596f`, source `4080bd327f67c636350e392142f24ac8fef9a732`, with no actionable findings. Its 71 focused passes and required lint remain retained evidence, including the isolated-pass/paired-failure preview fixture diagnosis. The parent then ran its named root checkpoint on that exact candidate. The full test exited 100: 347 passed, one failed, 1061 not run and 26 skipped. The failure was `engine::facade::fork_tests::a_child_selects_its_width_as_a_fresh_process`, launched through `child_width_child`: actual omitted child width 8 versus stale literal 4 at line 212. Specification and root test-stress were not reached. Original `target/0400c-checkpoint-final/test.log` and `checkpoint.log` remain unchanged; this partial run is not full-checkpoint proof.
+
+The correction changes only the independent literal expected width in the implicit child row, from 4 to 8. Parent explicit width 2 and implicit-following-parent 2 remain pinned. The fresh child's implicit selection stays None, its explicit row selects Some(2), and same-width acceptance and conflicting-width refusal remain unchanged. Related engine/CLI width and facade fork tests were searched for default assumptions; explicit-four selection/conflict rows, counts and historical timing fixtures are retained. The existing parent-launch test exercises this row in an isolated child, so no duplicate regression or runtime-derived oracle is added. Production behavior is unchanged. Rust growth is zero; exact total stays 118131 and all binding/SQL ratchets remain unchanged.
+
+### What the checkpoint taught us
+
+A focused width suite can pass while an existing fork fixture outside its selector still pins the old default. Preserve the parent/child ownership assertions and correct only the stale independent expectation; include the parent-launch fork cases in the bounded follow-up. The actual failed full checkpoint remains the regression evidence.
+
+Renewed frozen-source policy, formatting, exact ratchets, bounded parent-fork/engine-width/CLI-width and paired recognition checks, and required lint follow in distinct receipts. Fresh High review and the coordinator's renewed named full test/spec/surfaces checkpoint remain pending, together with 350 source-stale canonical entries, strict/final site proof, latest-main integration and authorized stress/SQLite proof. No manual proof hashes are updated. No full test/spec/stress, canonical, native, paid, CI, landing, rebase, publication or helper execution occurs in this bounded correction.
