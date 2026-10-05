@@ -49,7 +49,7 @@ Exact landed-base ratchets measured after formatting:
 
 | Scope | Landed B | C candidate | Growth |
 |---|---:|---:|---:|
-| Rust source/tests | 115881 | 115934 | +53 |
+| Rust source/tests | 115881 | 115935 | +54 |
 | C door Rust | 4953 | 5012 | +59 |
 | Python tests | 4783 | 4807 | +24 |
 | Ruby tests | 2498 | 2503 | +5 |
@@ -58,7 +58,7 @@ Exact landed-base ratchets measured after formatting:
 | DuckDB Python | 4224 | 4225 | +1 |
 | SQLite Python | 2539 | 2540 | +1 |
 
-Growth buys independently counted default and explicit mapping proof, fresh owned process isolation and nested two-job propagation. Existing backends, child environments, packed calls and driver parsers were inspected and reused. No new fixture backend was built. Changed Rust files remain at or below 500 nonblank lines; `public_controls.rs` is 495, CLI `parallel.rs` 472, and the new C module 58. New test files, in path order, are `libraries/c/tests/door/throttle_0400.rs` (58 nonblank Rust lines) and `libraries/r/tests/throttle_0400.R` (41 nonblank R lines). New modules are sorted into their existing runners; no distinct parser, secrecy, cancellation, cache-miss, invalid-input or conflict guard was deleted. No historical experiment source or expected results were rewritten.
+Growth buys independently counted default and explicit mapping proof, fresh owned process isolation and nested two-job propagation. Existing backends, child environments, packed calls and driver parsers were inspected and reused. No new fixture backend was built. Changed Rust files remain at or below 500 nonblank lines; `public_controls.rs` is 496, CLI `parallel.rs` 472, and the new C module 58. New test files, in path order, are `libraries/c/tests/door/throttle_0400.rs` (58 nonblank Rust lines) and `libraries/r/tests/throttle_0400.R` (41 nonblank R lines). New modules are sorted into their existing runners; no distinct parser, secrecy, cancellation, cache-miss, invalid-input or conflict guard was deleted. No historical experiment source or expected results were rewritten.
 
 The coordinator owns fresh independent source review, the named full test/spec/surfaces checkpoint and all 350 actual canonical replays. No full gate or manual canonical hash proof ran here. Native Windows execution remains pending authorization. Slice D and the accepted future 0403 design remain outside this candidate.
 
@@ -69,3 +69,10 @@ The builder found that explicit `--jobs 4` on the original single-text recogniti
 Preserve the original single-text cancellation path with omitted jobs at the new default of 8: the same input makes 14 one-question chunks, eight arrivals are held with a nine-party rendezvous, the owned child receives SIGINT, and no later request starts. Also retain the historical four-request proof with the same single input line under existing `--lines --jobs 4`: four held arrivals, a five-party rendezvous and no later sends. Both cases keep empty output and exact signal/request-count assertions. The additional record case does not replace the distinct scalar case.
 
 Use a bounded per-ticket test module or extract the original fixture when needed to preserve the shared file cap. Reuse the owned signal harness; do not duplicate it. Record exact new proof and growth. This changes test admission only and makes no new CLI or backend behavior claim. The complete source reviewer must inspect both paths before landing.
+
+
+## Frozen source and required lint correction
+
+The first source candidate `7a21de05cb2244e6bc56a77bf1313fbfdd3adbdf` was pushed after the focused receipts and all ten restored mapping plants. On that frozen HEAD, policy passed (254 resolved packages), settings passed (66 rows, 68 flags, nine environment names and 15 question-file keys), tickets passed, child checks reported zero findings, and site flags matched ten functions / 20 global flags with derived default 8. Required lint rejected excessive nesting in the fresh-child cancellation fixture; `lint-7a21de05c-failed.log` retains exit 101.
+
+The correction moves the token-firing closure beside its scope. It adds one measured nonblank line and changes no cancellation assertion, delay, source behavior or historical fixture. The affected public gate case passes again (one passed / 23 skipped), and renewed policy passes before review. Required lint follows on the next frozen source candidate. Focused receipts preceding the commit cover the worktree frozen by that commit; they are not receipts for an intervening main or full checkpoint.

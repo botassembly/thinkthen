@@ -282,11 +282,12 @@ fn a_stop_at_the_throttle_gate_sends_nothing_new_and_sent_work_finishes() {
 
                 // A token fired from another thread stops a waiting call.
                 let token = CancelToken::new();
+                let fire = || {
+                    thread::sleep(Duration::from_millis(150));
+                    token.cancel();
+                };
                 let result = thread::scope(|inner| {
-                    inner.spawn(|| {
-                        thread::sleep(Duration::from_millis(150));
-                        token.cancel();
-                    });
+                    inner.spawn(fire);
                     gated.decide_with(asked, "Refund me three.", CallOptions::new().cancel(&token))
                 });
                 assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
