@@ -3,6 +3,8 @@ import '../styles/site.css';
 import { NOINDEX, REPO } from '../data/catalog.mjs';
 import { DEFAULT_CARD, routeCard } from '../data/cards.mjs';
 import { ORGANIZATION_LD, PERSON_LD } from '../data/about.mjs';
+import { RECIPE_PAGES } from '../data/catalog.mjs';
+import { recipeSelection } from '../data/recipes.mjs';
 import SiteFooter from '../components/SiteFooter.astro';
 
 // `repo` is the one GitHub link a page carries, at its bottom. `image` and
@@ -12,7 +14,7 @@ import SiteFooter from '../components/SiteFooter.astro';
 // robots tag, no canonical link, no Markdown twin and no search index mark.
 // `structured` holds a page's own schema.org nodes, as the About page does.
 // `reading` sets the page in the reading column: an article or a how-to.
-const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.', repo = REPO, image, imageAlt, noindex = false, structured, reading = false } = Astro.props;
+const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.', repo = REPO, image, imageAlt, noindex = false, structured, reading = false, recipe = null, draft = false } = Astro.props;
 const full = title === 'ThinkThen' ? 'ThinkThen: code that knows what you mean' : `${title} — ThinkThen`;
 const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
@@ -55,6 +57,7 @@ const nav = [
   ['/install/', 'Install'],
   ['/functions/', 'Functions'],
   ['/how-tos/', 'How-tos'],
+    ...(recipeSelection(RECIPE_PAGES).navigation ? [['/recipes/', 'Recipes']] : []),
   ['/learn/', 'Learn'],
   ['/blog/', 'Blog'],
 ];
@@ -141,7 +144,7 @@ const nav = [
 </header>
 
 <p id="copy-said" class="sr-only" aria-live="polite"></p>
-<main data-pagefind-body={noindex ? undefined : ''}><div class={reading ? 'wrap reading' : 'wrap'}><slot /><p class="repo-link">On GitHub: <a href={repo}>{repo.replace('https://', '')}</a></p></div></main>
+<main data-pagefind-body={noindex ? undefined : ''} data-recipe={recipe || undefined} data-draft={draft ? '' : undefined}><div class={reading ? 'wrap reading' : 'wrap'}><slot /><p class="repo-link">On GitHub: <a href={repo}>{repo.replace('https://', '')}</a></p></div></main>
 
 <SiteFooter mdHref={noindex ? null : mdHref} />
 

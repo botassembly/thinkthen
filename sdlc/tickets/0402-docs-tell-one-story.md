@@ -1,10 +1,10 @@
 # 0402: The docs tell one story
 
-Status: in progress. A and B landed through `cf457ff98`; C implementation and authorized focused proof are complete on lane 0. C received fresh High source ACCEPT and passed the named final checkpoint; final receipt review and C landing remain pending. D remains unimplemented.
+Status: in progress, partial ticket. A/B/C landed through `e6f9ff8a4b17fd2e4e010b77f4167dee4f72a0b7`; C has fresh independent source and final receipt ACCEPT with its actual final checkpoint. D infrastructure and all six hidden drafts are implemented on lane 0; focused implementation proof is complete; fresh independent source/receipt review and reviewed landing remain pending. No recipe publishes here. Outcome 11 remains a separate measurement wait.
 
 Milestone: 0.2
 
-Lane: 0 for C, assigned after A/B landed, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0402-docs-tell-one-story`. Slice C touches no site layout, so it may land first.
+Lane: 0 for D, assigned after C landed, per the 0.2 lane order Ian approved on 2026-10-04. Slices land one at a time on `ticket/0402-docs-tell-one-story`. Slice C touches no site layout, so it may land first.
 
 Closes: 2026-10-03-site-bench-paths-point-at-deleted-runs
 Closes: 2026-10-03-glossary-call-request-decision
@@ -117,3 +117,8 @@ The frozen design's stopped 0031 status is historical. Reviewed completed eviden
 C's build found the threshold reader already conforms to the settled endpoints. Outside-in number/band regressions and independent scratch plants preserve the vendor field, computed value and probability cuts. Exact Rust growth is 119 lines (118107 total, maximum file 499). Required lint, focused regressions, one executable result page, complete site build/check and actual exported numeric/anchor controls pass on source `dbc6bf72d`. Saved strict proof is truthfully stale on the candidate because its source hash includes tests; all original 350 proof entries stay untouched until an authorized actual replay. C remains partial/in progress pending independent review and the coordinator's checkpoint.
 
 C's named final checkpoint on `4f9dce582` passes full test (1410 workspace, 145 library, 21 consumer), executable specification (64 pages; 24 green demos), all actual 350 library/SQL replays, strict zero-stale proof and final normal site build. The [final manifest](../records/0402-c-final-checkpoint-checks.json) retains exact source attribution and original failures. C awaits fresh final receipt acceptance and landing; the full ticket remains in progress. D's corrected full recipe plan is accepted at SHA-256 `e970b9cfda6feb1e37cd0f3be322481b5536155f17593b5d395e24cbd7e080f1` and waits for C landing.
+
+
+## D implementation disposition
+
+The complete accepted [D plan](../planning/0402-d-recipes-design.md) is preserved byte for byte; [original acceptance](../records/0402-d-design-acceptance.md) and [build record](../records/0402-d-recipes-build.md) distinguish its historical source from current landed C. The accepted conditional index uses `[...index].astro` rather than an unconditional `index.astro`. All six recipe pages remain hidden drafts in normal output; explicit draft preview emits the marked index without global Recipes navigation. The owned controlled-loopback sample replaces the unavailable compatible experiment-cache sample only for repeatability, never measured quality. Three relabels, two issue creations, Rules metadata and six milestone dispositions are in this same whole change. Verify and qualify remain shared; extract stays dropped.

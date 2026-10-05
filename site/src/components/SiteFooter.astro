@@ -5,6 +5,8 @@
 // The legend stays here because coloured exit codes show on most pages, and
 // WRITING.md asks for a legend beside every coloured mark.
 // `mdHref` is this page's Markdown twin. An unlisted page has none.
+import { RECIPE_PAGES } from '../data/catalog.mjs';
+import { recipeSelection } from '../data/recipes.mjs';
 import Icon from './Icon.astro';
 import { TAGLINE, REPO } from '../data/catalog.mjs';
 import { COMPANY, LICENSE, AUTHOR } from '../data/about.mjs';
@@ -16,6 +18,7 @@ const columns = [
     ['/install/', 'Install'],
     ['/functions/', 'Functions'],
     ['/how-tos/', 'How-tos'],
+    ...(recipeSelection(RECIPE_PAGES).navigation ? [['/recipes/', 'Recipes']] : []),
     ['/learn/', 'Learn'],
     ['/blog/', 'Blog'],
   ]],

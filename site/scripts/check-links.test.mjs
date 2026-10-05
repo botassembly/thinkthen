@@ -8,6 +8,8 @@ import { ALIASES, routeFile, preserver } from './redirect-contract.mjs';
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-links-'));
 const dist = path.join(root, 'dist');
 fs.symlinkSync(new URL('../../specification', import.meta.url).pathname, path.join(root, 'specification'));
+const cleanup = dir => { if (dir !== root) throw new Error('cleanup refuses unowned path'); fs.rmSync(dir, { recursive: true, force: true }); };
+assert.throws(() => cleanup(process.cwd()), /refuses unowned/);
 const checker = new URL('./check-links.mjs', import.meta.url).pathname;
 const write = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); };
 const stub = fixed => `<!doctype html><title>Redirect</title>${preserver(fixed)}<noscript><meta http-equiv="refresh" content="0;url=${fixed}"></noscript><meta name="robots" content="noindex"><link rel="canonical" href="https://thinkthen.dev${fixed}"><body><a href="${fixed}">Continue</a></body>`;
@@ -19,7 +21,7 @@ try {
   const page = routeFile(dist, '/fixture/');
   function run(link, expected, marker) {
     write(page, `<main><a href="${link}">Read</a></main>`);
-    const result = spawnSync(process.execPath, [checker], { cwd: root, encoding: 'utf8', timeout: 10000 });
+    const result = spawnSync(process.execPath, [checker], { cwd: root, encoding: 'utf8', timeout: 10000, env: {...process.env, THINKTHEN_DRAFTS: '0'} });
     assert.equal(result.status, expected, result.stderr);
     if (marker) assert.match(result.stderr, marker);
   }
@@ -40,5 +42,18 @@ try {
     [s => s.replace(preserver('/install/'), ''), /missing fragment preserver/],
   ]) { write(alias, mutate(original)); run('/functions/decide/#flags', 1, marker); }
   write(alias, original); run('/functions/decide/#flags', 0);
-  console.log('link checker plants: 12 cases passed');
-} finally { fs.rmSync(root, { recursive: true, force: true }); }
+  const recipe = routeFile(dist, '/recipes'); const recipeStub = fs.readFileSync(recipe, 'utf8');
+  const index = '<link rel="canonical" href="https://thinkthen.dev/recipes/"><main data-draft><h1>Recipes</h1><p>Draft catalog: waiting</p></main>';
+  const preview = () => spawnSync(process.execPath, [checker], { cwd: root, encoding: 'utf8', timeout: 10000, env: {...process.env, THINKTHEN_DRAFTS: '1'} });
+  write(recipe,index);write(page,'<main><a href="/recipes/">Recipes</a></main>');
+  assert.equal(preview().status,0);
+  run('/functions/decide/#flags',1,/draft posts in a normal build/);
+  write(recipe,recipeStub); assert.equal(preview().status,1);assert.match(preview().stderr,/expected recipe index/);
+  write(recipe,index.replace(' data-draft',''));assert.equal(preview().status,1);assert.match(preview().stderr,/missing draft index marker/);
+  fs.unlinkSync(recipe);assert.equal(preview().status,1);
+  write(recipe,index);
+  write(alias,original.replace(preserver('/install/'),''));assert.equal(preview().status,1);assert.match(preview().stderr,/missing fragment preserver/);
+  write(alias,original);assert.equal(preview().status,0);
+  write(recipe,recipeStub);run('/functions/decide/#flags',0);
+  console.log('link checker plants: 20 cases passed, normal and explicit draft index contracts');
+} finally { cleanup(root); }

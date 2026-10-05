@@ -1,0 +1,32 @@
+---
+// Goal: keep measured evidence separate from controlled repeatability proof.
+import fs from 'node:fs';
+import path from 'node:path';
+import Base from '../../layouts/Base.astro';
+import RecipeNode from '../../components/RecipeNode.astro';
+import { RECIPE_PAGES } from '../../data/catalog.mjs';
+import { recipeSelection, recipeProblems } from '../../data/recipes.mjs';
+export function getStaticPaths() {
+  for (const r of RECIPE_PAGES) {
+    const problems = recipeProblems(r);
+    if (problems.length) throw new Error(problems.join('\n'));
+  }
+  return recipeSelection(RECIPE_PAGES, import.meta.env.DEV || process.env.THINKTHEN_DRAFTS === '1').pages.map(recipe => ({ params: { slug: recipe.slug }, props: { recipe } }));
+}
+const { recipe: r } = Astro.props;
+const evidence = new Map([...r.measured,...r.fixtureAssertions].map(e => [e.id,e]));
+const artifact = file => fs.readFileSync(path.join(process.cwd(),r.example.replace(/^site\//,''),file), 'utf8');
+---
+<Base title={r.title} description={r.job} reading recipe={r.slug} draft={r.draft}>
+  <Fragment>
+    <h1>{r.title}</h1>
+    {r.draft && <p>Draft: {r.title} awaits a reviewed publication candidate.</p>}
+    <p class="lede">{r.goal}</p>
+    <p>{r.job}</p>
+    <p>Functions: {r.functions.map((f,i) => (<Fragment>{i ? ', ' : ''}<a href={`/functions/${f}/`}>{f}</a></Fragment>))}</p>
+    {r.body.map(node => (
+      <RecipeNode node={node} recipe={r} evidence={evidence} artifact={artifact} />
+    ))}
+    <p>Read the <a href="/learn/recording/">recording contract</a>, <a href="/functions/audit/">audit contract</a> and <a href="/functions/choose/#flags">reading rules</a> before adapting a recipe.</p>
+  </Fragment>
+</Base>

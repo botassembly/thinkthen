@@ -1,0 +1,19 @@
+---
+// Goal: list only recipes eligible in the declared build mode.
+import Base from '../../layouts/Base.astro';
+import { RECIPE_PAGES } from '../../data/catalog.mjs';
+import { recipeSelection } from '../../data/recipes.mjs';
+export function getStaticPaths() {
+  return recipeSelection(RECIPE_PAGES, import.meta.env.DEV || process.env.THINKTHEN_DRAFTS === '1').index
+    ? [{ params: { index: undefined } }] : [];
+}
+const selected = recipeSelection(RECIPE_PAGES, import.meta.env.DEV || process.env.THINKTHEN_DRAFTS === '1');
+---
+<Base title="Recipes" description="Tested questions, retained answers and measured evidence for caller-owned pipelines." reading draft={selected.draftIndex}>
+  <Fragment>
+    <h1>Recipes</h1>
+    {selected.draftIndex && <p>Draft catalog: these recipes await publication evidence.</p>}
+    <p>A recipe combines caller-owned preparation, a saved question and a measured interpretation.</p>
+    <ul>{selected.pages.map(r => <li data-draft={r.draft ? '' : undefined}><a href={`/recipes/${r.slug}/`}>{r.title}</a> — {r.job}{r.draft && ' Draft.'}</li>)}</ul>
+  </Fragment>
+</Base>

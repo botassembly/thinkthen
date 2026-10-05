@@ -1,0 +1,11 @@
+{
+  "stage_counts": {
+    "prepare": 7,
+    "replay": 0,
+    "cache-fill": 7,
+    "cache-hit": 0,
+    "negative": 0
+  },
+  "total": 14,
+  "errors": []
+}

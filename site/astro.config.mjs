@@ -1,4 +1,6 @@
 import { defineConfig } from 'astro/config';
+import { RECIPE_PAGES } from './src/data/catalog.mjs';
+import { recipeSelection } from './src/data/recipes.mjs';
 import remarkExamples from './src/lib/remark-examples.mjs';
 
 export default defineConfig({
@@ -12,7 +14,7 @@ export default defineConfig({
     '/surfaces': '/install/',
     '/backends': '/install/backends/',
     '/tutorial': '/learn/tutorial/',
-    '/recipes': '/how-tos/bash/',
+    ...(recipeSelection(RECIPE_PAGES, process.env.THINKTHEN_DRAFTS === '1' || process.argv.includes('dev')).index ? {} : { '/recipes': '/how-tos/bash/' }),
     // The shell recipes moved into the Bash techniques section.
     ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection']
       .map((slug) => [`/how-tos/${slug}`, `/how-tos/bash/${slug}/`])),

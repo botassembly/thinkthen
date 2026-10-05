@@ -2,7 +2,7 @@
 // Goal: show that ThinkThen reads like shell, and list the techniques and
 // recipes that teach it one form at a time.
 import SidePage from '../../../layouts/SidePage.astro';
-import { BASH, BASH_FIRST, TECHNIQUES, RECIPES } from '../../../data/catalog.mjs';
+import { BASH, BASH_FIRST, TECHNIQUES, SHELL_JOBS } from '../../../data/catalog.mjs';
 
 const plain = (text) => text.replaceAll('`', '');
 const first = (text) => `${plain(text).split('. ')[0].replace(/\.$/, '')}.`;
@@ -19,9 +19,9 @@ const first = (text) => `${plain(text).split('. ')[0].replace(/\.$/, '')}.`;
     ))}
   </ul>
 
-  <h2>Recipes</h2>
+  <h2>Shell jobs</h2>
   <ul>
-    {RECIPES.map((r) => (
+    {SHELL_JOBS.map((r) => (
       <li><a href={`/how-tos/bash/${r.slug}/`}>{r.title}</a> — {first(r.said)}</li>
     ))}
   </ul>
