@@ -460,7 +460,7 @@ fn sigterm_after_a_check_probe_fails_prints_no_report() {
     assert!(output.stderr.is_empty());
 }
 
-/// Ticket 0143: a split text holds up to the default width of 4 in flight.
+/// Ticket 0143: a split text holds up to explicit width 4 in flight.
 /// The text makes 14 one-question chunks, and none starts after the signal.
 #[test]
 fn sigint_between_recognition_chunks_starts_no_later_chunk() {
@@ -474,6 +474,8 @@ fn sigint_between_recognition_chunks_starts_no_later_chunk() {
         4,
         &[
             "recognize",
+            "--jobs",
+            "4",
             "--profile",
             &profile.to_string_lossy(),
             "--no-cache",

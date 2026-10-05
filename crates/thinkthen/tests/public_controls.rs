@@ -53,9 +53,18 @@ fn serial() -> MutexGuard<'static, ()> {
 }
 
 fn engine(base: &str) -> Engine {
+    engine_at(base, None, 30)
+}
+
+fn engine_at(base: &str, width: Option<u8>, timeout: u64) -> Engine {
     Engine::builder()
         .base_url(base)
         .and_then(|builder| builder.api_key("sk-public-controls"))
+        .and_then(|builder| builder.timeout(Duration::from_secs(timeout)))
+        .and_then(|builder| match width {
+            Some(width) => builder.throttle(width),
+            None => Ok(builder),
+        })
         .map(thinkthen::EngineBuilder::no_cache)
         .and_then(thinkthen::EngineBuilder::build)
         .expect("engine")
@@ -230,62 +239,73 @@ impl Runs {
     }
 }
 
-/// Four held sends fill the process throttle; a fifth call waits at the gate.
+/// Eight held sends fill the process throttle; a ninth call waits at the gate.
 #[test]
 fn a_stop_at_the_throttle_gate_sends_nothing_new_and_sent_work_finishes() {
-    let _serial = serial();
-    let backend = Backend::start().expect("backend");
-    let gated = engine(&format!("{}/arm/held/v1", backend.origin()));
-    let asked = question();
-    let shared = CancelToken::new();
-    thread::scope(|scope| {
-        let (gated, asked) = (&gated, &asked);
-        let holders: Vec<_> = (0..4)
-            .map(|_| {
-                let options = CallOptions::new().cancel(&shared);
-                scope.spawn(move || gated.decide_with(asked, "Refund me.", options))
-            })
-            .collect();
-        assert_eq!(backend.wait(4), 4, "four sends hold the gate");
+    alone(
+        "a_stop_at_the_throttle_gate_sends_nothing_new_and_sent_work_finishes",
+        || {
+            let _serial = serial();
+            let backend = Backend::start().expect("backend");
+            // The arrival bound must expire before held attempts do.
+            let gated = engine_at(&format!("{}/arm/held/v1", backend.origin()), None, 120);
+            let asked = question();
+            let shared = CancelToken::new();
+            thread::scope(|scope| {
+                let (gated, asked) = (&gated, &asked);
+                let holders: Vec<_> = (0..8)
+                    .map(|_| {
+                        let options = CallOptions::new().cancel(&shared);
+                        scope.spawn(move || gated.decide_with(asked, "Refund me.", options))
+                    })
+                    .collect();
+                let arrived = backend.wait(8);
+                if arrived != 8 {
+                    shared.cancel();
+                    backend.release();
+                }
+                assert_eq!(arrived, 8, "eight sends hold the gate");
 
-        // The caller's check stops the fifth call from the calling thread.
-        let runs = Runs::default();
-        let check = || runs.record(backend.count()) >= 3;
-        let options = CallOptions::new().cancel(&shared).interrupt(&check);
-        let result = gated.decide_with(asked, "Refund me too.", options);
-        assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
-        assert!(
-            runs.all_on(thread::current().id()),
-            "the check ran on a worker"
-        );
-        assert_eq!(runs.first_sent(), Some(4));
-        // A true check stops its own call alone; the shared token stays clear.
-        assert!(!shared.is_cancelled());
+                // The caller's check stops the ninth call from the calling thread.
+                let runs = Runs::default();
+                let check = || runs.record(backend.count()) >= 3;
+                let options = CallOptions::new().cancel(&shared).interrupt(&check);
+                let result = gated.decide_with(asked, "Refund me too.", options);
+                assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
+                assert!(
+                    runs.all_on(thread::current().id()),
+                    "the check ran on a worker"
+                );
+                assert_eq!(runs.first_sent(), Some(8));
+                // A true check stops its own call alone; the shared token stays clear.
+                assert!(!shared.is_cancelled());
 
-        // A token fired from another thread stops a waiting call.
-        let token = CancelToken::new();
-        let result = thread::scope(|inner| {
-            inner.spawn(|| {
-                thread::sleep(Duration::from_millis(150));
-                token.cancel();
+                // A token fired from another thread stops a waiting call.
+                let token = CancelToken::new();
+                let result = thread::scope(|inner| {
+                    inner.spawn(|| {
+                        thread::sleep(Duration::from_millis(150));
+                        token.cancel();
+                    });
+                    gated.decide_with(asked, "Refund me three.", CallOptions::new().cancel(&token))
+                });
+                assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
+
+                backend.release();
+                for holder in holders {
+                    assert_eq!(
+                        holder
+                            .join()
+                            .expect("holder")
+                            .ok()
+                            .map(thinkthen::Call::into_value),
+                        Some(Answer::Yes)
+                    );
+                }
             });
-            gated.decide_with(asked, "Refund me three.", CallOptions::new().cancel(&token))
-        });
-        assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
-
-        backend.release();
-        for holder in holders {
-            assert_eq!(
-                holder
-                    .join()
-                    .expect("holder")
-                    .ok()
-                    .map(thinkthen::Call::into_value),
-                Some(Answer::Yes)
-            );
-        }
-    });
-    assert_eq!(backend.count(), 4, "nothing new was sent");
+            assert_eq!(backend.count(), 8, "nothing new was sent");
+        },
+    );
 }
 
 #[test]
@@ -360,7 +380,7 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
 }
 
 /// The host check runs only while no send of the call is out. At the
-/// default throttle of 4, replies that overlap can leave no such moment
+/// historical default throttle of 4, replies that overlap can leave no such moment
 /// before the call ends, so at load 13 the old check at 4 missed it (ticket
 /// 0342) and a check at 4 or more still could (ticket 0352). One send at a
 /// time leaves that moment after every reply, so the check fires at exactly
@@ -420,84 +440,89 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
 
 #[test]
 fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
-    const PAYLOAD: &str = "the host check panicked";
-    let _serial = serial();
-    let backend = Backend::start().expect("backend");
-    let gated = engine(&format!("{}/arm/held/v1", backend.origin()));
-    let asked = question();
-    let runs = AtomicUsize::new(0);
-    let check = || {
-        if backend.count() == 4 && runs.fetch_add(1, Ordering::SeqCst) >= 2 {
-            resume_unwind(Box::new(PAYLOAD));
-        }
-        false
-    };
-    let texts = (0..8).map(|n| n.to_string());
-    let caught = thread::scope(|scope| {
-        let holders: Vec<_> = (0..4)
-            .map(|_| scope.spawn(|| gated.decide(&asked, "Hold the gate.")))
-            .collect();
-        assert_eq!(backend.wait(4), 4, "four sends hold the gate");
-        let single = catch_unwind(AssertUnwindSafe(|| {
-            gated.decide_with(&asked, "Refund me.", CallOptions::new().interrupt(&check))
-        }));
-        // An uncancelled waiter would send once the gate frees.
-        backend.release();
-        for holder in holders {
-            assert_eq!(
-                holder
-                    .join()
-                    .expect("holder")
-                    .ok()
-                    .map(thinkthen::Call::into_value),
-                Some(Answer::Yes)
-            );
-        }
-        single
-    });
-    let Err(payload) = caught else {
-        panic!("the panic never reached the caller");
-    };
-    assert_eq!(payload.downcast_ref::<&str>(), Some(&PAYLOAD));
-    assert_eq!(backend.count(), 4, "nothing was sent after the panic");
+    alone(
+        "a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join",
+        || {
+            const PAYLOAD: &str = "the host check panicked";
+            let _serial = serial();
+            let backend = Backend::start().expect("backend");
+            let gated = engine_at(&format!("{}/arm/held/v1", backend.origin()), Some(4), 30);
+            let asked = question();
+            let runs = AtomicUsize::new(0);
+            let check = || {
+                if backend.count() == 4 && runs.fetch_add(1, Ordering::SeqCst) >= 2 {
+                    resume_unwind(Box::new(PAYLOAD));
+                }
+                false
+            };
+            let texts = (0..8).map(|n| n.to_string());
+            let caught = thread::scope(|scope| {
+                let holders: Vec<_> = (0..4)
+                    .map(|_| scope.spawn(|| gated.decide(&asked, "Hold the gate.")))
+                    .collect();
+                assert_eq!(backend.wait(4), 4, "four sends hold the gate");
+                let single = catch_unwind(AssertUnwindSafe(|| {
+                    gated.decide_with(&asked, "Refund me.", CallOptions::new().interrupt(&check))
+                }));
+                // An uncancelled waiter would send once the gate frees.
+                backend.release();
+                for holder in holders {
+                    assert_eq!(
+                        holder
+                            .join()
+                            .expect("holder")
+                            .ok()
+                            .map(thinkthen::Call::into_value),
+                        Some(Answer::Yes)
+                    );
+                }
+                single
+            });
+            let Err(payload) = caught else {
+                panic!("the panic never reached the caller");
+            };
+            assert_eq!(payload.downcast_ref::<&str>(), Some(&PAYLOAD));
+            assert_eq!(backend.count(), 4, "nothing was sent after the panic");
 
-    // In a batch, the payload waits until every worker has joined.
-    let held = Backend::start().expect("backend");
-    let batch = engine(&format!("{}/arm/held/v1", held.origin()));
-    let runs = AtomicUsize::new(0);
-    let released = AtomicUsize::new(0);
-    let check = || {
-        if held.count() == 4 && runs.fetch_add(1, Ordering::SeqCst) >= 2 {
-            resume_unwind(Box::new(PAYLOAD));
-        }
-        false
-    };
-    let caught = thread::scope(|scope| {
-        scope.spawn(|| {
-            assert_eq!(held.wait(4), 4, "four two-record requests are in flight");
-            thread::sleep(Duration::from_millis(400));
-            held.release();
-            released.store(1, Ordering::SeqCst);
-        });
-        let caught = catch_unwind(AssertUnwindSafe(|| {
-            batch
-                .filter_with(
-                    &asked,
-                    texts,
-                    CallOptions::new()
-                        .interrupt(&check)
-                        .batch(BatchSetting::Records(
-                            std::num::NonZeroUsize::new(2).expect("two"),
-                        )),
-                )
-                .count()
-        }));
-        assert_eq!(released.load(Ordering::SeqCst), 1);
-        caught
-    });
-    let Err(payload) = caught else {
-        panic!("the panic never reached the caller");
-    };
-    assert_eq!(payload.downcast_ref::<&str>(), Some(&PAYLOAD));
-    assert_eq!(held.count(), 4, "nothing was sent after the panic");
+            // In a batch, the payload waits until every worker has joined.
+            let held = Backend::start().expect("backend");
+            let batch = engine_at(&format!("{}/arm/held/v1", held.origin()), Some(4), 30);
+            let runs = AtomicUsize::new(0);
+            let released = AtomicUsize::new(0);
+            let check = || {
+                if held.count() == 4 && runs.fetch_add(1, Ordering::SeqCst) >= 2 {
+                    resume_unwind(Box::new(PAYLOAD));
+                }
+                false
+            };
+            let caught = thread::scope(|scope| {
+                scope.spawn(|| {
+                    assert_eq!(held.wait(4), 4, "four two-record requests are in flight");
+                    thread::sleep(Duration::from_millis(400));
+                    held.release();
+                    released.store(1, Ordering::SeqCst);
+                });
+                let caught = catch_unwind(AssertUnwindSafe(|| {
+                    batch
+                        .filter_with(
+                            &asked,
+                            texts,
+                            CallOptions::new()
+                                .interrupt(&check)
+                                .batch(BatchSetting::Records(
+                                    std::num::NonZeroUsize::new(2).expect("two"),
+                                )),
+                        )
+                        .count()
+                }));
+                assert_eq!(released.load(Ordering::SeqCst), 1);
+                caught
+            });
+            let Err(payload) = caught else {
+                panic!("the panic never reached the caller");
+            };
+            assert_eq!(payload.downcast_ref::<&str>(), Some(&PAYLOAD));
+            assert_eq!(held.count(), 4, "nothing was sent after the panic");
+        },
+    );
 }

@@ -920,17 +920,22 @@ an_open_cache_folder_is_refused() {
 check an_open_cache_folder_is_refused
 
 echo "== engine settings"
-throttle_setting_holds_eight() {
-	fresh arm/held "thinkthen.throttle = 8"
-	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 64))"
-	bwait 8
-	sleep 0.3
-	same "$(bcount)" 8
-	brelease
-	wait "$HELD"
-	same "$(cat "$RUN/held.out")" 64
+omitted_and_explicit_throttles_hold_packed_requests() {
+    for cap in 8 6; do
+        if [ "$cap" = 8 ]; then fresh arm/held; else fresh arm/held "thinkthen.throttle = 6"; fi
+        held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 64))"
+        bwait "$cap" || :
+        sleep 0.3
+        arrived=$(bcount)
+        printf 'held throttle: expected %s, observed %s\n' "$cap" "$arrived"
+        same "$arrived" "$cap"
+        brelease
+        wait "$HELD"
+        same "$(cat "$RUN/held.out")" 64
+        same "$(bcount)" 32
+    done
 }
-check throttle_setting_holds_eight
+check omitted_and_explicit_throttles_hold_packed_requests
 the_throttle_keeps_the_environment() {
 	fresh generic "thinkthen.throttle = 8"
 	same "$(q -c "SELECT thinkthen_decide('$Q', 'env')")" t

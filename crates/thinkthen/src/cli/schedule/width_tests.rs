@@ -216,7 +216,7 @@ fn command_setup_child() {
 #[test]
 fn the_width_setup_maps_each_jobs_value_to_one_selection() {
     let widths: &'static Widths = Box::leak(Box::default());
-    assert_eq!(super::width_in(widths, None).expect("omitted"), 4);
+    assert_eq!(super::width_in(widths, None).expect("omitted"), 8);
     assert_eq!(widths.selected(), None);
     assert_eq!(super::width_in(widths, Some(4)).expect("explicit"), 4);
     assert_eq!(widths.selected(), Width::new(4).ok());
@@ -341,14 +341,16 @@ fn two_engines_share_the_cap() {
             &limits::process().widths,
         )
     });
-    let (most, _) = thread::scope(|scope| {
-        for client in clients.iter().flat_map(|client| [client; 4]) {
+    let (most, seen) = thread::scope(|scope| {
+        for client in clients.iter().flat_map(|client| [client; 6]) {
             let finished = &finished;
             scope.spawn(move || send_once(client, url, finished));
         }
-        drain(&held, 4, &finished, 8)
+        drain(&held, 8, &finished, 12)
     });
-    assert_eq!(most, 4, "two engines reach the one cap and no more");
+    assert_eq!(most, 8, "two engines reach the one cap and no more");
+    assert_eq!(seen.len(), 12);
+    assert_eq!(held.listener.count(), 12);
 }
 
 fn file(home: &Path, name: &str, text: &str) -> String {
@@ -421,9 +423,9 @@ fn every_command_path_shares_the_cap() {
                 assert!(result.is_ok(), "{line:?}: {result:?}");
             });
         }
-        drain(&held, 4, &finished, runs.len())
+        drain(&held, 8, &finished, runs.len())
     });
-    assert_eq!(most, 4, "the paths together reach the one cap and no more");
+    assert_eq!(most, 8, "the paths together reach the one cap and no more");
     let marks = [
         "direct-mark",
         "retried-mark",

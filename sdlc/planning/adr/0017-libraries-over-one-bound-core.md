@@ -248,3 +248,5 @@ Section 5 now gives every library engine a timeout, retry count, backend profile
 ## Amendment, 2026-09-28, by ticket 0212
 
 The Rust library's current public return and many-record contract is [ADR 0089](0089-rust-calls-carry-facts.md) and [ticket 0212](../../tickets/0212-rust-library-batching.md). Eager answers carry `Call<T>` and per-call `Facts`; lazy batches expose final facts at their terminal boundary. [Ticket 0239](../../tickets/0239-frame-batching-and-call-facts.md) applies that accepted carrier to the optional Rust Polars Series and frame methods. Eligible many-record calls use the shared batch planner and borrowed question and row observations. The earlier public-function inventory in section 8 is historical. This pointer does not extend native or SQL batching, and the default-Max iterator-pause proposal remains pending Ian's choice.
+
+Amendment, ticket 0400 slice C (2026-10-04): omitted throttle now uses 8. Explicit settings, range 1 through 32 and the first explicit process selection remain unchanged. Ian can overturn this default.
