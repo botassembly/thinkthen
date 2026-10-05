@@ -1,6 +1,6 @@
 # 0400 slice B: provider setup parser and captured settings
 
-Status: accepted and landed through `4ca5a9f9b`. Earlier candidate and pending checkpoint snapshots below retain their chronology. This record owns the lane 2 parser candidate based on main `110e6ac88`. Slice C owns concurrency defaults; slice D owns measured pages. No live job or ledger operation ran.
+Status: source accepted and merged checkpoint passed; fresh final receipt review and slice B landing pending. This record owns the lane 2 parser candidate based on main `110e6ac88`. Slice C owns concurrency defaults; slice D owns measured pages. No live job or ledger operation ran.
 
 ## Implementation
 
@@ -89,7 +89,3 @@ Actual documentation replay passed all 308 language and 42 SQL samples on the me
 | `target/0400b-checkpoint-final/final-after-windows-proof.json` | `b5bff36926176700213561f5a200aabe66a87b6532eb3f806de86992bc22c940` |
 
 The current checkpoint used owned 12G memory/1G swap user scopes, two offline Cargo jobs, isolated configuration and lane-owned outputs. The one record-only commit during the first lint attempt changed no tested product bytes; renewed lint used frozen `552672d61`. The complete original failed lint log is unavailable, as disclosed above. Slices C and D remain open.
-
-## Final acceptance and landing
-
-Fresh final receipt review accepted frozen `aca9d56372f15b726f8f23e67f61bcdeba79aeed` against main `6d26206aa`: `/tmp/thinkthen-0400b-final-receipt-review-cli-4s4ilr2r/review.md`. Slice B landed through `4ca5a9f9bbb45c2a9679ceb71bb9a1096208d134`. A tree comparison between that landing and the accepted candidate exits 0 with no difference. Earlier pending snapshots above remain historical statements, not pending current proof. The final receipt retains 115881 Rust lines, the accepted full test/specification and 350 actual documentation replays, and the no-new-live/native/stress/release limits. Slice C starts from this actual landing; no paid 0399 run was repeated.

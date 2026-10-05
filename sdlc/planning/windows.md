@@ -1,6 +1,6 @@
 # Windows
 
-Status: stage 0 landed through ticket 0373. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. Stage 1 has ready tickets 0380 to 0385, which wait for the `release/0.1` cut. Ian can overturn every stage, verdict and recommendation on this page.
+Status: stage 0 landed through ticket 0373. Ian's 2026-10-05 ruling keeps the command line/Rust crate, C DLL and Python wheel in 0.2; Node, C# and JVM move to 0.3. Each 0.2 target is tested once on a real Windows runner before release, in one combined run. Earlier size estimates remain historical.
 
 This page is the one home of the Windows plan. It holds the stages, the surfaces that stay Unix-only, the verdict for each surface, the decision record, the stage 1 difficulty report and the findings stage 0 leaves open.
 
@@ -15,7 +15,7 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 ## Stages
 
 0. **Groundwork (ticket 0373, milestone 0.2, landed).** The root workspace and `libraries/c` compile, pass Clippy and pass their tests on `x86_64-pc-windows-msvc`. The hand-started `windows` workflow proves it on `windows-2025`. Nothing ships. No Linux or macOS behavior changes.
-1. **First shipped surfaces (milestone 0.2, tickets 0380 to 0385).** The command line, the Rust crate, the C DLL, the Python wheel, the Node addon, C# and the JVM binding ship for Windows x86-64. The release workflow builds, tests and publishes them. The specification and the README name the Windows folders. Stage 1 also closes findings W1 to W7: the Ctrl-C exit, the Windows privacy checks, the port of the guarded XDG cases and the rest.
+1. **First shipped surfaces (milestone 0.2, tickets 0380 to 0382).** The command line, the Rust crate, the C DLL and the Python wheel ship for Windows x86-64. Node, C# and the JVM remain open for 0.3 under the 2026-10-05 ruling. The release workflow builds, tests and publishes them. The specification and the README name the Windows folders. Stage 1 also closes findings W1 to W7: the Ctrl-C exit, the Windows privacy checks, the port of the guarded XDG cases and the rest.
 2. **The other bindings and the SQL extensions.** C++, Go, Ruby, R, PHP, Swift, Dart, Zig, the Polars door, and the SQLite and DuckDB extensions. Each loads the stage 1 C DLL or builds the engine as stage 1 does.
 3. **Hardening.** Windows ARM64, finding W8, and the PostgreSQL question.
 
@@ -182,7 +182,7 @@ Ian's ruling, 2026-10-01: keep all Windows work in 0.2. The smaller option is no
 
 ## Stage 1 tickets
 
-Each ticket is ready, carries milestone 0.2, and waits for the `release/0.1` cut. Tickets 0381 to 0385 wait for ticket 0380 slice A, because it adds the fifth release target that the others build on. Tickets 0384 and 0385 also wait for 0381 slice A, which ships the DLL.
+Tickets 0380 to 0382 carry milestone 0.2; 0383 to 0385 carry milestone 0.3. The `release/0.1` cut has happened. Tickets 0381 to 0385 wait for ticket 0380 slice A, because it adds the fifth release target that the others build on. Tickets 0384 and 0385 also wait for 0381 slice A, which ships the DLL.
 
 | Ticket | Surface | Slices | Lines | Findings |
 | --- | --- | --- | --- | --- |

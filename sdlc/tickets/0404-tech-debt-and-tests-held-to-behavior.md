@@ -1,6 +1,6 @@
 # 0404: Tech debt cut, with tests held to behavior
 
-Status: ready. Not started.
+Status: ready. Start with behavior-based test names, duplicate-test cuts and record cleanup under Ian's 2026-10-05 ruling.
 
 Milestone: 0.2
 
@@ -11,6 +11,8 @@ Related: ticket 0119, the engine test audit. It stays separate, and this ticket 
 Closes: `sdlc/issues/2026-10-03-polars-deadline-test-races-its-deadline-under-load.md` (Debt 036), in slice B.
 
 ## Outcome
+
+First priority under Ian's 2026-10-05 ruling: rename or merge `*_0399`, `*_0400` and `*_0401` tests by the behavior they hold; delete only tests whose stronger replacements cover the same behavior. Consolidate existing records toward one record per ticket. Add no verification-runner features or receipt-forgery proof. Ticket 0119 stays separate.
 
 1. Tests that guard nothing the command-line, library, edge-case, contract or regression tests miss are gone. Each cut names the stronger test that still pins its behavior.
 2. Dead code, duplicate paths and test-only hooks in product source are gone, or each one that stays names why.

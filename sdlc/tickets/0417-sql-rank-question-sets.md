@@ -2,7 +2,7 @@
 
 Status: ready. Planning only. Depends on reviewed 0401 slice D. Fresh ticket/design review precedes product changes.
 
-Milestone: 0.2
+Milestone: later
 
 ## Outcome
 

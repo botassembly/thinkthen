@@ -1,8 +1,8 @@
 # 0383: Windows stage 1: the Node addon ships for Windows x86-64
 
-Status: ready. It waits for the `release/0.1` cut and for ticket 0380 slice A, which adds the fifth release target. No slice lands on main before the cut (ADR 0116 item 2). Plan: `sdlc/planning/windows.md`, stage 1. Ian ruled on 2026-10-01 to keep all Windows work in 0.2. The coordinator assigns a lane after the cut.
+Status: ready. Deferred to 0.3 under Ian's 2026-10-05 scope ruling; the ticket stays open.
 
-Milestone: 0.2
+Milestone: 0.3
 
 ## Outcome
 
