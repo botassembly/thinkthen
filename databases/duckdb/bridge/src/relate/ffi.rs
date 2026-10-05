@@ -247,7 +247,6 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
             asked.model = Some(model);
         }
         let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
-        engines::within_total(&asked, Vec::new())?;
         let total = asked.max_requests_total;
         let due = match call.deadline_ms() {
             None | Some(-1) => deadline_ms,
