@@ -1,6 +1,6 @@
 # 0400 slice C: the default throttle is eight
 
-Status: source-preserved C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`. Fresh prior High review accepted C source `5a74e1e74`; corrected combined source `4080bd327` passed focused checks, required lint and whole-C High review on candidate `00dafde673`; the subsequent root full checkpoint exposed a stale child-width oracle, corrected below with renewed bounded proof pending. D is landed, documentation work is active, and parent full/canonical/stress proof remains pending.
+Status: source-preserved C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`. Fresh prior High review accepted C source `5a74e1e74`; corrected combined source `4080bd327` passed focused checks, required lint and whole-C High review on candidate `00dafde673`; the subsequent root full checkpoint exposed a stale child-width oracle, corrected below with renewed bounded proof passed; fresh High review and the renewed root checkpoint remain pending. D is landed, documentation work is active, and parent full/canonical/stress proof remains pending.
 
 The final B source/receipt acceptance and byte-identical landing are recorded in the [B build record](0400-provider-setups-slice-b-build.md). C preserves the Windows and B source, ratchets and retained receipts. No paid 0399 call, native host run, dispatch, publication or release approval ran.
 
@@ -202,3 +202,26 @@ The correction changes only the independent literal expected width in the implic
 A focused width suite can pass while an existing fork fixture outside its selector still pins the old default. Preserve the parent/child ownership assertions and correct only the stale independent expectation; include the parent-launch fork cases in the bounded follow-up. The actual failed full checkpoint remains the regression evidence.
 
 Renewed frozen-source policy, formatting, exact ratchets, bounded parent-fork/engine-width/CLI-width and paired recognition checks, and required lint follow in distinct receipts. Fresh High review and the coordinator's renewed named full test/spec/surfaces checkpoint remain pending, together with 350 source-stale canonical entries, strict/final site proof, latest-main integration and authorized stress/SQLite proof. No manual proof hashes are updated. No full test/spec/stress, canonical, native, paid, CI, landing, rebase, publication or helper execution occurs in this bounded correction.
+
+
+### Frozen fork-default correction receipts
+
+Corrected source is `6725cad88d4aabde02e8abcc28ce0ff099764eb2`. The only Rust change against accepted candidate `00dafde67308ffb01c7770c9fe04157291ab596f` is `crates/thinkthen/src/engine/facade/fork_tests.rs:201`, literal 4 to 8. This final record-only successor changes no source, fixture, contract or ratchet. The fork file remains 289 nonblank lines; all 716 tracked Rust files satisfy the 500-line cap. Exact root and C/Python/Ruby/R/TypeScript/DuckDB/SQLite totals remain 118131, 5012, 4807, 2503, 2523, 1356, 4225 and 2540 respectively: zero growth.
+
+Distinct receipts under `target/0400c-checkpoint-final/`:
+
+| Receipt | Actual result |
+| --- | --- |
+| `fork-default-focus-6725cad88-complete.log` | exit 0, same frozen HEAD before/after; renewed offline policy on 254 packages, formatting, all eight exact ratchets, 18 library cases passed / 399 skipped, two paired recognition cases passed / 836 skipped |
+| `fork-default-lint-6725cad88.log` | required lint exit 0 on that unchanged source; policy/settings/tickets/children, caps/ratchets, formatting, all-target workspace Clippy and Rustdoc with warnings denied, 580 declared items and four refused inventory plants |
+| `fork-default-review-policy-6725cad88.log` | renewed offline policy after lint: 254 packages, all accepted tables/bans/dependencies match |
+
+Library selector is `test(engine::facade::fork_tests::a_child) | test(engine::width_tests) | test(cli::schedule::width_tests)`, retaining all four isolated parent-launch facade fork cases and fourteen engine/CLI width guards. Backend selector is `test(interrupt::recognition_0400::)`, running scalar omitted/default-eight and record explicit-four cancellation together. All 20 selected cases pass without fail-fast omissions; ignored stress rows are skipped. No new tests were added. Prior 71-case combined focus and required lint remain retained evidence, as do the original fixture-race and extraction failures.
+
+Heavy execution used the owned lane2 user scope, 12 GiB memory/1 GiB swap, forwarded lane lock, existing shared toolchain/cache mutation locks, two offline jobs, empty wrapper and allow-listed environment with owned scratch home. Required lint checked 35 external private names in tracked paths/files with none found; only counts are reported. Its existing owned dependency-free local-file refusal plant uses the inspected fetch wrapper, while ordinary Cargo calls remain offline. Expected registry-timeout plants print Killed; no surface or native execution is claimed by the registry check.
+
+Two launcher prerequisite failures remain separate from passing evidence. `fork-default-focus-6725cad88.log` and `fork-default-launch-diagnose.log` stop before policy because the scratch home exposes existing untracked Python caches; the final launcher pins tracked/index cleanliness and unchanged HEAD instead. `fork-default-focus-6725cad88-final.log` passes policy/formatting then exits 1 because passing the root ratchet as a named config changes its relative base. The corrected launcher invokes the root ratchet without a named argument and binding configs with their proper named arguments. These are launcher corrections only, with frozen source unchanged. No aborted receipt is relabeled as a passing run. Original root `test.log` and `checkpoint.log` were checked byte-identical after the successful bounded run.
+
+The whole correction is ready for fresh independent High review. The coordinator's renewed full checkpoint, latest-main integration, all 350 source-stale canonical replays, strict/final site proof and authorized stress/SQLite proof remain pending. Native Windows proof remains pending. No full test/spec/stress, canonical/native/paid/CI, helper, landing/rebase/publication or manual proof-hash update ran in this correction.
+
+Final record-only checks are retained as `fork-default-final-tickets.log` (zero failures) and `fork-default-final-private-count.log` (35 names, zero tracked-path/file hits). They change no frozen-source receipt.
