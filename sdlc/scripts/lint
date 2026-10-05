@@ -110,7 +110,7 @@ fi
 python3 sdlc/scripts/versions --self-test
 python3 sdlc/scripts/versions
 python3 sdlc/scripts/workflows --self-test
-python3 databases/duckdb/tools/inputs_0403_cases.py
+python3 databases/duckdb/tools/input_version_cases.py
 python3 sdlc/scripts/workflows
 python3 sdlc/scripts/installer-test
 python3 sdlc/scripts/windows-installer-test.py --self-test

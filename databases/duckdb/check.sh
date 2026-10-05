@@ -139,7 +139,7 @@ done
 
 echo "== source checks and deny"
 python3 tools/source_checks.py
-python3 tools/inputs_0403_cases.py
+python3 tools/input_version_cases.py
 node "$REPO/site/scripts/check-duckdb-versions.mjs"
 "$PY" tools/release_pack_cases.py "$host_target"
 cargo deny --locked --offline --manifest-path bridge/Cargo.toml check --config ../../deny.toml advisories bans licenses sources

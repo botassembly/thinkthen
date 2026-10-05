@@ -6,4 +6,4 @@ Both Linux versions passed genuine bridge/C++ builds, stock CLI/Python loads, re
 
 One whole-change High review found that the published consumer could accept an internal archive hardlink after extraction. It now calls the existing repository validator before extraction. The owning regression fails on the old code, rejects before unpack or DuckDB calls, and passes with the genuine archive. No new dependency, verifier or receipt system was added.
 
-Landing gates: full tests and lint. Other targets remain for the approved hosted rehearsal. The extension stays unsigned; dbt v1 is the documented route. Signing, community listing and dbt v2 support remain deferred.
+Landing gates: full tests and lint passed on the product landing. The obsolete preparation records were removed after a fresh review; the renamed dependency fixtures passed unchanged. Other targets remain for the approved hosted rehearsal. The extension stays unsigned; dbt v1 is the documented route. Signing, community listing and dbt v2 support remain deferred.
