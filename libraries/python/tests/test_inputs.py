@@ -1,5 +1,6 @@
 """What a call reads: refusals before any send, and the deadline rule."""
 
+import os
 import thinkthen as tt
 from conftest import child_env, clean_env, run
 
@@ -57,11 +58,12 @@ def test_a_question_file_over_one_mib_is_refused_before_any_send(backend, tmp_pa
     text = '{"decide":"Is it late?"}'
     over = tmp_path / "over.json"
     over.write_text(text + " " * (1_048_577 - len(text)))
+    files = (str(over),) if os.name == "nt" else (str(over), "/dev/zero")
     printed = run(REFUSED + f"""
-    for file in ({str(over)!r}, "/dev/zero"):
+    for file in {files!r}:
         said(lambda: tt.decide(tt.question(file=file), "one").value)
     """, child_env(backend, tmp_path))
-    assert printed.splitlines() == 2 * ["LocalError the question file is too large"]
+    assert printed.splitlines() == len(files) * ["LocalError the question file is too large"]
     assert backend.count() == 0
 
 

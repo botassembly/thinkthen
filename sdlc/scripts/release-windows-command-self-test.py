@@ -228,6 +228,9 @@ def main():
         sample = windows / "thinkthen-first-run.tar.gz"
         sample.write_bytes(b"sample")
         checksum(sample)
+        wheel = windows / f"thinkthen-{VERSION}-cp310-abi3-win_amd64.whl"
+        wheel.write_bytes(b"wheel fixture")
+        checksum(wheel)
         npm = base / "npm"
         npm.mkdir()
         version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -239,6 +242,7 @@ def main():
         expect(run("sh", str(gate), "collect", str(platforms), str(npm), str(collected)))
         assert {path.name for path in collected.iterdir()} == {
             c_zip.name, c_zip.name + ".sha256", archive.name, archive.name + ".sha256", sample.name, sample.name + ".sha256",
+            wheel.name, wheel.name + ".sha256",
             f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256",
             "fixture-x86_64-unknown-linux-gnu", "fixture-aarch64-unknown-linux-gnu",
             "fixture-x86_64-apple-darwin", "fixture-aarch64-apple-darwin"}

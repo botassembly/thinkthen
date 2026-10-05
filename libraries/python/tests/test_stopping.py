@@ -178,6 +178,7 @@ def test_a_token_fired_as_the_reply_lands_cancels_the_call(backend, tmp_path):
     assert backend.count() == 1
 
 
+@pytest.mark.skipif(os.name == "nt", reason="os.kill(SIGINT) does not deliver a Windows console Ctrl-C")
 def test_ctrl_c_stops_a_held_single_send_at_once(backend, tmp_path, within):
     """R4-23 (single): ``SIGINT`` during one held send raises ``Cancelled``
     within 100 ms, and the send is not repeated."""
@@ -193,6 +194,7 @@ def test_ctrl_c_stops_a_held_single_send_at_once(backend, tmp_path, within):
     settle(backend, child, 1)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="os.kill(SIGINT) does not deliver a Windows console Ctrl-C")
 def test_ctrl_c_stops_a_held_batch_at_once(backend, tmp_path, within):
     """Amendment change 3: ``SIGINT`` with a send held raises within 100 ms.
     After release the worker ends without another send."""
@@ -208,6 +210,7 @@ def test_ctrl_c_stops_a_held_batch_at_once(backend, tmp_path, within):
     settle(backend, child, 1)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="os.kill(SIGINT) does not deliver a Windows console Ctrl-C")
 def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path, within):
     """R2-25: only a ``KeyboardInterrupt`` becomes ``Cancelled``. A handler
     that exits surfaces its own ``SystemExit``."""
@@ -226,6 +229,7 @@ def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path, with
     settle(backend, child, 1)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="os.kill(SIGINT) does not deliver a Windows console Ctrl-C")
 def test_ctrl_c_stops_a_held_polars_column_at_once(backend, tmp_path, within):
     """R4-23, the Polars half: a column ``score`` runs on the detachable
     worker, so ``SIGINT`` with a send held raises within 100 ms and the

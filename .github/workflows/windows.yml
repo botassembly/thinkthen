@@ -1,15 +1,6 @@
-# Windows stage 0 (ticket 0373, sdlc/planning/windows.md), run only by hand.
-#
-# It runs Clippy and the tests of the root workspace and of libraries/c on
-# Windows. It ships nothing and promises users nothing. Start it from the
-# Actions tab or with `gh workflow run windows --ref BRANCH`; a dispatch runs
-# the branch's own copy of this file. The repository is public, so its
-# Windows runner minutes are free.
-#
-# No step holds a secret, reads a key, or sets a THINKTHEN_ variable. Nothing
-# here calls a paid backend. The runner downloads crates once with
-# `cargo fetch --locked`, as the release workflow does, and every build after
-# that runs offline. Each action is pinned to the commit SHA gate.yml uses.
+# Windows 0.2 core: CLI/Rust, C DLL and Python, dispatched only after approval.
+# No publishing or credentials. Product tests use fake keys and loopback.
+# Download locked dependencies first; build and test offline afterward.
 
 name: windows
 
@@ -25,7 +16,7 @@ defaults:
 
 jobs:
   stage-0:
-    name: clippy and tests, root workspace and libraries/c
+    name: Windows core tests and installed CLI, Rust, C and Python packages
     runs-on: windows-2025
     timeout-minutes: 120
     env:
@@ -44,6 +35,16 @@ jobs:
 
       - name: Install the toolchain that rust-toolchain.toml pins
         run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13', architecture: 'x64'}
+
+      - name: Download the pinned Python build and test packages
+        run: |
+          set -eu
+          python3 -m pip install --disable-pip-version-check 'maturin==1.15.0'
+          python3 -m pip download --only-binary=:all: --require-hashes -r libraries/python/requirements-dev.txt -d "$RUNNER_TEMP/python-packages/pandas3"
+          python3 -m pip download --only-binary=:all: --require-hashes -r libraries/python/requirements-pandas2.txt -d "$RUNNER_TEMP/python-packages/pandas2"
 
       # Restore and save are separate steps, so a failed run still saves its
       # build for the next run.
@@ -78,6 +79,7 @@ jobs:
           set -eu
           cargo fetch --locked
           cargo fetch --locked --manifest-path libraries/c/Cargo.toml
+          cargo fetch --locked --manifest-path libraries/python/Cargo.toml
 
       # Each check runs even after an earlier one fails, so one run shows
       # every result, and `--keep-going` checks every crate past a failing one.
@@ -99,6 +101,22 @@ jobs:
         if: ${{ !cancelled() }}
         working-directory: libraries/c
         run: cargo test --locked --offline --no-fail-fast
+
+      - name: Build and test the installed Windows Python wheel
+        if: ${{ !cancelled() }}
+        run: python3 libraries/python/check-windows.py --packages "$RUNNER_TEMP/python-packages"
+
+      - name: Pack the Windows core and consume the native C archive
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+          export CARGO_NET_OFFLINE=true
+          sdlc/scripts/release-pack x86_64-pc-windows-msvc native-platform command c python first-run
+          sdlc/scripts/release-pack x86_64-pc-windows-msvc native-crate crate
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+          python3 sdlc/scripts/release-windows-command.py platform native-platform "$version"
+          python3 sdlc/scripts/release-windows-c-smoke.py "native-platform/thinkthen-c-$version-x86_64-pc-windows-msvc.zip"
+          python3 sdlc/scripts/release-windows-smoke.py native-platform --crate-dir native-crate
 
       - name: Save the cargo registry and the build directories
         if: ${{ always() && steps.cache.outputs.cache-hit != 'true' }}

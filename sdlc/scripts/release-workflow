@@ -275,6 +275,8 @@ if not Path(sys.argv[1]).resolve().is_relative_to(Path(sys.argv[2]).resolve() / 
 PYWIN
 		cargo fetch --locked --manifest-path Cargo.toml
 		cargo fetch --locked --manifest-path libraries/c/Cargo.toml
+		cargo fetch --locked --manifest-path libraries/python/Cargo.toml
+		python3 -m pip install --disable-pip-version-check 'maturin==1.15.0'
 		exit 0
 	fi
 	case $(rustc --print sysroot) in "${RUSTUP_HOME:-$HOME/.rustup}"/toolchains/*) ;; *) fail 'Rust does not use the isolated official rustup sysroot' ;; esac

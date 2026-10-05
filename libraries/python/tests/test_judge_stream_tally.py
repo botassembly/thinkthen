@@ -2,6 +2,7 @@
 
 import os
 import signal
+import pytest
 
 from conftest import child_env, run, start
 
@@ -175,6 +176,7 @@ def test_tally_waits_for_two_started_held_calls(backend, tmp_path):
     assert backend.count() == 2
 
 
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="the forked stream guard requires os.fork")
 def test_stream_token_before_first_pull_and_fork_guard(backend, tmp_path):
     """A fired token sends nothing; a child cannot read its parent's stream."""
     printed = run("""
@@ -201,6 +203,7 @@ def test_stream_token_before_first_pull_and_fork_guard(backend, tmp_path):
     assert backend.count() == 2
 
 
+@pytest.mark.skipif(os.name == "nt", reason="os.kill(SIGINT) does not deliver a Windows console Ctrl-C")
 def test_stream_interrupt_retains_later_completion_receipt(backend, tmp_path):
     """The caller sees Cancelled promptly; the held reply later completes
     one row before Stop converts the outcome to cancellation. A later read
