@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 from install_check import Failure, check_index, check_result, validate_version
 from install_check_consumers import write_consumer
 from install_check_postgresql import stop_postgres
@@ -266,11 +267,17 @@ def sqlite(check):
 
 
 def duckdb(check):
-    folder = check.unpack(check.release(f'thinkthen-duckdb-{check.version}-{TARGET}.tar.gz'), check.root / 'duckdb')
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/cpp'))
     from inputs import selected, versions
     from verify_footer import verify
+    from verify_repository import verify_repository
+    archive = check.release(f'thinkthen-duckdb-{check.version}-{TARGET}.tar.gz')
+    try:
+        verify_repository(archive, TARGET, check.version)
+    except (OSError, ValueError, tarfile.TarError) as error:
+        raise Failure(f'DuckDB archive validation failed: {error}') from error
+    folder = check.unpack(archive, check.root / 'duckdb')
     host = check.run('duckdb', '-unsigned', '-noheader', '-list', ':memory:',
                      input='SELECT version(); PRAGMA platform;').splitlines()
     if len(host) != 2 or host[0] not in versions():
