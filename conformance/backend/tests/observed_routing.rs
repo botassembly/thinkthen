@@ -8,7 +8,7 @@ use std::net::{Shutdown, TcpStream};
 use conformance_backend::{Backend, Paths};
 use serde_json::{Value, json};
 
-const BODY: &str = r#"{"state":"refund","model":"pplx-decider-v1-27b","questions":{"q1":{"type":"noul","description":"attention?"}}}"#;
+const BODY: &str = r#"{"state":"refund","model":"pplx-decider-v1-27b","questions":{"q1":{"type":"noul","instructions":"attention?"}}}"#;
 
 fn send(
     backend: &Backend,

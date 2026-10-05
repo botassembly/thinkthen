@@ -417,6 +417,7 @@ fn new_engine(ruby: &Ruby, options: RHash) -> Result<EngineValue, Error> {
             .transpose()
     }
     let settings = Settings {
+        backend: read(ruby, options, "backend")?,
         base_url: read(ruby, options, "base_url")?,
         model: read(ruby, options, "model")?,
         throttle: read(ruby, options, "throttle")?,

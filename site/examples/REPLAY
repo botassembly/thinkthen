@@ -319,15 +319,11 @@ install/python/first-call.py
 install/python/functional/judge.py
 install/python/functional/stream.py
 install/python/functional/tally.py
-install/r/backends.R backend=liquid
-install/r/backends.R backend=ollama
-install/r/backends.R backend=typesafe
+install/r/backends.R
 install/r/data-frames.R
 install/r/first-call.R
 install/r/functional/judge.R
-install/ruby/backends.rb backend=liquid
-install/ruby/backends.rb backend=ollama
-install/ruby/backends.rb backend=typesafe
+install/ruby/backends.rb
 install/ruby/first-call.rb
 install/rust/backends.rs
 install/rust/first-call.rs

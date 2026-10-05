@@ -1,4 +1,5 @@
 library(thinkthen)
+tt_engine(backend = "typesafe")
 
 question <- "Does the customer ask for a refund?"
 texts <- c(

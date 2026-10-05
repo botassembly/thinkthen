@@ -36,7 +36,14 @@ const description = named
   : surface.blurb.replace(/`/g, '');
 if (description.length > 160) throw new Error(`/install/${surface.slug}/: the description runs ${description.length} characters, over 160`);
 const backendSample = ['env', 'builder', 'code'].includes(route) ? installSample(surface.slug, backendsName(surface.slug)) : null;
-const backendConstructor = { python: 'Engine(backend=)', typescript: 'new Engine({backend})', c: '"backend" in thinkthen_engine_new_with JSON' }[surface.slug] ?? 'EngineBuilder::backend';
+const backendConstructor = {
+  python: 'Engine(backend=)', typescript: 'new Engine({backend})', ruby: 'Engine.new(backend:)', r: 'tt_engine(backend =)',
+  c: '"backend" in thinkthen_engine_new_with JSON', cpp: 'create(settings)', 'objective-c': 'createWithSettings',
+  cobol: 'TT-ENGINE-NEW settings JSON', ada: 'Configure settings JSON', java: 'Door(settingsJson)',
+  kotlin: 'Door(settingsJson)', scala: 'Door(settingsJson)', csharp: 'Engine.Open(settingsJson)',
+  go: 'NewWith(settingsJSON)', swift: 'Engine(settingsJSON:)', zig: 'Engine.initWithSettings',
+  php: 'ThinkThen(library, settingsJson)', dart: 'Door.create(settings)',
+}[surface.slug] ?? 'EngineBuilder::backend';
 const backendAddress = surface.slug === 'typescript' ? 'baseUrl' : 'base_url';
 const backendInputs = backendSample?.folder ? files(`install/${surface.slug}/${backendSample.folder}`) : [];
 const backendBuild = backendSample ? buildLines(surface.slug, backendSample.file) : null;
@@ -132,7 +139,7 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
         <>
           {route === 'env'
             ? <p>{surface.name} reads its backend from the environment. Set <code>THINKTHEN_BACKEND</code> to the name below. Set the backend's key variable in the shell, and the same sample asks that backend.</p>
-            : <p><code>{backendConstructor}</code> names the backend in code, and it outranks the environment. The sample builds one engine for each backend and asks each the same question.</p>}
+            : <p><code>{backendConstructor}</code> names the backend in code, and it outranks the environment. The sample selects a backend before it asks the question. Each constructor accepts the names below.</p>}
           <table class="backend-routes">
             <tr><th>Backend</th><th>Name</th><th>Key variable</th></tr>
             {BACKEND_ROUTES.map((r) => (
@@ -144,10 +151,11 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
           ))}
           {backendInputs.length > 0 && <p>The {surface.name} project file names its sample, so this sample has its own.</p>}
           {backendInputs.map((file) => <Code code={file.text} file={file.name} caption={inputCaption(file.name)} />)}
-          <Code code={backendSample.code} file={backendSample.file} caption={['builder', 'code'].includes(route) ? `The Ollama engine names the second port, 11535. On the default port, leave ${backendAddress} out.` : null} label={`Copy the ${surface.name} backends sample`} />
+          <Code code={backendSample.code} file={backendSample.file} caption={['builder', 'code'].includes(route) && surface.slug !== 'r' ? `To use Ollama on a second port, supply ${backendAddress}. On the default port, leave it out.` : null} label={`Copy the ${surface.name} backends sample`} />
           {backendBuild && <Code code={backendBuildText} lang="bash" caption={`${backendBuild.lines.length ? 'Build and run' : 'Run'} it beside ${backendBuild.beside ?? `the unpacked archives, thinkthen-c/ and ${backendBuild.archive}/`}`} label={`Copy the ${surface.name} backends ${backendBuild.lines.length ? 'build' : 'run'} lines`} />}
           {backendSample.output && <Code code={backendSample.output} lang="output" caption={`What ${surface.name} printed on each backend`} copy={false} />}
           {route === 'builder' && <p><code>EngineBuilder::from_env</code> also reads <code>THINKTHEN_BACKEND</code> and <code>THINKTHEN_BASE_URL</code>.</p>}
+          {route === 'code' && surface.slug === 'r' && <p>R keeps one engine per session. Choose its backend with the full <code>backend</code> keyword before asking. Changing the settings requires a new session.</p>}
           {route === 'code' && <p>An omitted backend reads <code>THINKTHEN_BACKEND</code> and <code>THINKTHEN_BASE_URL</code>. Each named backend reads its own key variable. These constructors accept no key.</p>}
         </>
       )}

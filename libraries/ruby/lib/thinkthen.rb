@@ -168,8 +168,9 @@ module ThinkThen
   # as the module methods' engine does. The throttle is the most requests
   # in flight at once, per loaded copy of the library.
   class Engine
-    def initialize(base_url: nil, model: nil, throttle: nil, max_requests: nil, max_request_bytes: nil, cache: nil,
+    def initialize(backend: nil, base_url: nil, model: nil, throttle: nil, max_requests: nil, max_request_bytes: nil, cache: nil,
                    timeout: nil, max_retries: nil, record: nil, replay: nil, profile: nil, batch: nil, max_requests_total: nil)
+      ThinkThen.__send__(:text_setting, :backend, backend)
       ThinkThen.__send__(:text_setting, :base_url, base_url)
       ThinkThen.__send__(:text_setting, :model, model)
       ThinkThen.__send__(:whole_setting, :throttle, throttle)
@@ -185,7 +186,7 @@ module ThinkThen
         raise UsageError.new("cache is a folder path, false for none, or nil for the default", "usage")
       end
       batch = ThinkThen.__send__(:batch_of, batch)
-      @native = Native.engine({ base_url: base_url, model: model, throttle: throttle,
+      @native = Native.engine({ backend: backend, base_url: base_url, model: model, throttle: throttle,
         max_requests: max_requests, max_request_bytes: max_request_bytes,
         cache_at: cache || nil, no_cache: cache == false,
         timeout: timeout, max_retries: max_retries, record: record, replay: replay, profile: profile, batch: batch,

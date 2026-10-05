@@ -503,7 +503,7 @@ export const SURFACES = [
   },
   {
     slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
-    backends: 'env',
+    backends: 'code',
     lang: 'ruby', tab: 'Ruby',
     blurb: 'Any Enumerable goes in. Read the answer from `Call#value`.',
     unsureWord: '`nil`',
@@ -515,7 +515,7 @@ export const SURFACES = [
   },
   {
     slug: 'r', name: 'R', deckHeading: 'R',
-    backends: 'env',
+    backends: 'code',
     lang: 'r', tab: 'R',
     blurb: 'The ten functions work inside dplyr pipelines. Read the answer from `$value`.',
     unsureWord: '`NA`',
@@ -564,7 +564,7 @@ export const SURFACES = [
   },
   {
     slug: 'cpp', name: 'C++', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'cpp', tab: 'C++',
     blurb: 'One C++17 header over the C library. Calls return `CallResult` values. The engine frees itself when it goes out of scope.',
     unsureWord: '`tt::Outcome::notSure`',
@@ -582,7 +582,7 @@ export const SURFACES = [
   },
   {
     slug: 'objective-c', name: 'Objective-C', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'objective-c', tab: 'Objective-C',
     blurb: 'A `TTClient` over the C library, for GNU Objective-C with no Foundation.',
     unsureWord: '`TTOutcomeNotSure`',
@@ -599,7 +599,7 @@ export const SURFACES = [
   },
   {
     slug: 'cobol', name: 'COBOL', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'cobol', tab: 'COBOL',
     blurb: 'A copybook and called programs over the C library, for GnuCOBOL.',
     unsureWord: '`outcome-not-sure`',
@@ -618,7 +618,7 @@ export const SURFACES = [
   },
   {
     slug: 'ada', name: 'Ada', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'ada', tab: 'Ada',
     blurb: 'A `Thinkthen` package over the C library, for GNAT. Each call is a procedure with out parameters.',
     unsureWord: '`Not_Sure`',
@@ -636,7 +636,7 @@ export const SURFACES = [
   },
   {
     slug: 'java', name: 'Java', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'java', tab: 'Java',
     blurb: 'One `Door` class over the C library, for Java 21. Each call returns its answer and its run facts.',
     unsureWord: '`Outcome.NOT_SURE`',
@@ -656,7 +656,7 @@ export const SURFACES = [
   },
   {
     slug: 'kotlin', name: 'Kotlin', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'kotlin', tab: 'Kotlin',
     blurb: 'A `KotlinFacade` over the Java door. Its calls take strings.',
     unsureWord: '`Outcome.NOT_SURE`',
@@ -675,7 +675,7 @@ export const SURFACES = [
   },
   {
     slug: 'scala', name: 'Scala', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'scala', tab: 'Scala',
     blurb: 'A `ScalaFacade` over the Java door, for Scala 3. Its calls take strings.',
     unsureWord: '`Outcome.NOT_SURE`',
@@ -694,7 +694,7 @@ export const SURFACES = [
   },
   {
     slug: 'csharp', name: 'C#', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'csharp', tab: 'C#',
     blurb: 'An `Engine` over the C library, for .NET 8. Each call returns its answer and its run facts.',
     unsureWord: '`Outcome.NotSure`',
@@ -713,7 +713,7 @@ export const SURFACES = [
   },
   {
     slug: 'go', name: 'Go', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'go', tab: 'Go',
     blurb: 'A cgo package over the C library. Each call that sends takes a `context.Context` and returns a `Result` and an `error`.',
     unsureWord: '`thinkthen.Unsure`',
@@ -732,7 +732,7 @@ export const SURFACES = [
   },
   {
     slug: 'swift', name: 'Swift', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'swift', tab: 'Swift',
     blurb: 'A SwiftPM package over the C library, for Swift 6. Each call returns its answer and its run facts.',
     unsureWord: '`.unsure`',
@@ -751,7 +751,7 @@ export const SURFACES = [
   },
   {
     slug: 'zig', name: 'Zig', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'zig', tab: 'Zig',
     blurb: 'A Zig 0.15.2 module over the C library. Each call returns `.ok` or `.failed`.',
     unsureWord: '`.unsure`',
@@ -769,7 +769,7 @@ export const SURFACES = [
   },
   {
     slug: 'php', name: 'PHP', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'php', tab: 'PHP',
     blurb: 'One `ThinkThen` class over the C library, through PHP 8.3 FFI. Each call returns its answer and its run facts.',
     unsureWord: '`ThinkThen::UNSURE`',
@@ -790,7 +790,7 @@ export const SURFACES = [
   },
   {
     slug: 'dart', name: 'Dart', deckHeading: null,
-    backends: 'env',
+    backends: 'code',
     lang: 'dart', tab: 'Dart',
     blurb: 'One `Door` class over the C library, through Dart FFI. Each call returns its answer and its run facts.',
     unsureWord: '`Outcome.notSure`',

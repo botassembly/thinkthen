@@ -6,7 +6,7 @@ Every release of every surface shares one version number.
 
 Version 0.2 is in progress on main.
 
-Python, TypeScript and the C JSON door can select a named backend in their constructor. Packages that forward C settings JSON inherit `"backend"`. SQLite explicitly refuses this field until its process configuration supports it.
+Python, TypeScript, Ruby, R and the C JSON door can select a named backend in their constructor. Packages that forward C settings JSON inherit `"backend"`. DuckDB and PostgreSQL select a backend through their session settings. SQLite accepts `"backend"` in its process configuration before the first engine build. SQL accepts no address or key.
 
 The default throttle is 8 simultaneous requests on every surface. Explicit throttles retain their process-wide precedence and range of 1 through 32 (ticket 0400).
 

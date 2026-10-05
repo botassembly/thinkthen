@@ -73,7 +73,7 @@ test('explicit backend selects configured routing over captured address and keep
 
 test('a successful provider body at the wrong path fails the count expectation', async (t) => {
   const backend = await startBackend(t, {provider:'fake-provider'});
-  const body = '{"state":"refund","model":"pplx-decider-v1-27b","questions":{"q1":{"type":"noul","description":"attention?"}}}';
+  const body = '{"state":"refund","model":"pplx-decider-v1-27b","questions":{"q1":{"type":"noul","instructions":"attention?"}}}';
   const response = await fetch(`${backend.base('arm/full/capture')}/systemone`, {method:'POST',body,headers:{Authorization:'Bearer fake-provider'}});
   assert.equal(response.status, 200);
   await response.text();

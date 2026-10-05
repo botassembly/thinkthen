@@ -77,6 +77,8 @@ The details digest includes a question's saved calibration `profile`. A differen
 
 ## Settings
 
+`SET thinkthen_backend = 'typesafe'` selects a built-in or configured backend for the calling session. `RESET thinkthen_backend` restores captured environment selection. An explicit empty name refuses. SQL accepts no address or key. The Rust engine captures the selected key from the process environment when it builds. Connections with different backend names retain separate engines. The existing limit of 16 resident engines, held-plan refusal, idle eviction and process request totals still apply.
+
 The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`. SQL cannot name a backend address or a key. DuckDB reads these caller-session settings before each call:
 
 - `SET thinkthen_batch = 'max'` fills each compatible vector group up to the backend's limits. `SET thinkthen_batch = '1'` restores one distinct text per request and its old no-context wire identity; another positive decimal sets a member cap. `RESET thinkthen_batch` returns to `THINKTHEN_BATCH`, then a loaded question's `batch`, then `max`. Invalid text is refused before transport. A literal nonblank context in call settings is shared across one request and changes `meta.context_sha256` and request digests, not the question digest.
