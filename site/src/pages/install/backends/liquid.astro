@@ -32,7 +32,7 @@ const [status, one, lines, plan] = ['status', 'one', 'lines', 'check-plan'].map(
   <Terminal run={status} caption={status.see} />
 
   <h2>Check it</h2>
-  <p>A first check can outlast the default timeout. Pass <code>--timeout 90</code> on a first run. On 2026-09-30, a first check timed out at 30 seconds and passed with <code>--timeout 90</code>. The <a href="/reference/check/#limits">check page</a> says how long a check can take.</p>
+  <p>A first check can outlast the default timeout. Pass <code>--timeout 90</code> on a first run. On 2026-09-30, a first check timed out at 30 seconds and passed with <code>--timeout 90</code>. The <a href="/functions/check/#limits">check page</a> says how long a check can take.</p>
   <Terminal run={plan} caption={plan.see} />
   <CheckLines name="liquid" />
 

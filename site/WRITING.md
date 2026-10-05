@@ -112,7 +112,7 @@ Every line of code stays at 60 characters or fewer. Code reads down the page, no
 
 ### Examples leave out --details
 
-A page may name `--details` where the reference or an edge case needs it (docs checklist ruling of 2026-09-30). Examples leave it out. The one exception is the edge cases on the annotate reference page, whose examples live under `examples/reference/annotate/`. There `--details` is the behaviour the page teaches. Every other example shows the command, its plain value, and its exit code. To show where a probability sits, run the same example at a bar or a band. `check-samples` fails any other example script that asks for `--details`.
+A page may name `--details` where the reference or an edge case needs it (docs checklist ruling of 2026-09-30). Examples leave it out. The one exception is the edge cases on the canonical annotate function page, whose examples live under `examples/reference/annotate/`. There `--details` is the behaviour the page teaches. Every other example shows the command, its plain value, and its exit code. To show where a probability sits, run the same example at a bar or a band. `check-samples` fails any other example script that asks for `--details`.
 
 ### Keep a function page's example short
 

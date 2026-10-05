@@ -1,12 +1,11 @@
 ---
 // Goal: show how ThinkThen saves and reuses answers, what makes two questions the same, what --plan and --facts report, and why batching can change an answer.
-import SidePage from '../../layouts/SidePage.astro';
+import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
-import { REFERENCE_PAGES, referencePage, RECORDING_SEE } from '../../data/reference.mjs';
+import { RECORDING_SEE } from '../../data/reference.mjs';
 import { captioned } from '../../data/samples.mjs';
 import { setting } from '../../lib/settings-table.mjs';
 
-const page = referencePage('recording');
 const [plan, dryRun, miss, facts] = captioned('reference/answer-cache', RECORDING_SEE);
 const batch = setting('Batch');
 const prune = setting('Prune target');
@@ -20,7 +19,7 @@ const MODES = [
   ['`--no-cache`', 'no', 'every question', 'no'],
 ];
 ---
-<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'How ThinkThen saves and reuses answers, what makes two questions the same, what --plan and --facts report, and why batching can change an answer.' }} name="Reference">
+<Base title="Recording and the answer cache" description={'How ThinkThen saves and reuses answers, what makes two questions the same, what --plan and --facts report, and why batching can change an answer.'}>
   <h1>Recording and the answer cache</h1>
   <p class="lede">ThinkThen saves every good answer, one per question. Ask the same question again and it reads the saved answer instead of sending a request. <a href="/learn/caching/">Caching and replay</a> shows it at work.</p>
 
@@ -71,5 +70,5 @@ const MODES = [
 
   <p>Windows keeps aggregate usage counts in <code>%LOCALAPPDATA%\thinkthen\usage</code>. Its folder and recognized files must be owned by your user and grant access only to your user and Windows SYSTEM. ThinkThen creates missing objects privately and refuses unsafe existing objects before sending. A later count update failure keeps the judgment and prints a warning. These checks cover usage counts. The named answer-folder permission check remains Unix-only.</p>
 
-  <p class="pagelinks"><a href="/install/configuration/">Configuration</a> · <a href={spec('recording')}>The recording specification</a> · <a href="/reference/answers/#exit-codes">Every exit code</a></p>
-</SidePage>
+  <p class="pagelinks"><a href="/install/configuration/">Configuration</a> · <a href={spec('recording')}>The recording specification</a> · <a href="/learn/answers/#exit-codes">Every exit code</a></p>
+</Base>

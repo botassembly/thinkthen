@@ -1,34 +1,7 @@
-// The Reference section: the pages its side list shows, in order, and the
-// tables every function's reference page reads. The overview at /reference/
-// comes first, then one page per function, built from FUNCTIONS, so the side
-// list and the overview's cards share one source. Each later page keeps its
-// captions here, keyed by script name, so a page reads its words from one
-// place. Every default and range comes from specification/settings.md
-// through setting().
+// Shared reference tables and sample captions. Defaults and ranges come from specification/settings.md.
 
-import { FUNCTIONS } from './catalog.mjs';
 import { setting } from '../lib/settings-table.mjs';
 import { cutOn, CUT, LIST_RULE } from './flags.mjs';
-
-const nameOf = (fn) => fn.title || fn.name;
-
-export const REFERENCE_PAGES = [
-  { slug: '', title: 'Reference', label: 'Overview', group: null },
-  ...FUNCTIONS.map((fn) => ({ slug: `functions/${fn.name}`, title: `${nameOf(fn)} reference`, label: nameOf(fn), group: 'Functions', command: true, fn })),
-  { slug: 'answers', title: 'How answers work', label: 'How answers work', group: 'Across functions' },
-  { slug: 'question-sets', title: 'Question sets', label: 'Question sets', group: 'Across functions' },
-  { slug: 'recording', title: 'Recording and the answer cache', label: 'Recording and the answer cache', group: 'Across functions' },
-  { slug: 'audit', title: 'audit', label: 'audit', group: 'Tools', command: true },
-  { slug: 'diff', title: 'diff', label: 'diff', group: 'Tools', command: true },
-  { slug: 'check', title: 'check', label: 'check', group: 'Tools', command: true },
-  { slug: 'transform', title: 'transform', label: 'transform', group: 'Tools', command: true },
-].map((p) => ({ ...p, route: p.slug ? `/reference/${p.slug}/` : '/reference/' }));
-
-export const referencePage = (slug) => {
-  const page = REFERENCE_PAGES.find((p) => p.slug === slug);
-  if (!page) throw new Error(`reference: no page ${slug}`);
-  return page;
-};
 
 // ------------------------------------------------------------ thresholds
 

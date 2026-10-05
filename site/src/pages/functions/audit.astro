@@ -1,17 +1,16 @@
 ---
 // Goal: say what audit prints for each question, how it counts not-sure and tied answers apart, and that it sends no request.
-import SidePage from '../../layouts/SidePage.astro';
+import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
-import { REFERENCE_PAGES, referencePage, TOOLS_SEE } from '../../data/reference.mjs';
+import { TOOLS_SEE } from '../../data/reference.mjs';
 import { captioned } from '../../data/samples.mjs';
 import { PAGES } from '../../data/beatles.mjs';
 
-const page = referencePage('audit');
 const [counts] = captioned('reference/audit', TOOLS_SEE.audit);
 const bench = PAGES.find((p) => p.slug === 'audit');
 const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/audit.md';
 ---
-<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'What audit prints for each question, how it counts not-sure and tied answers apart, and that it sends no request.' }} name="Reference">
+<Base title="audit" description={'What audit prints for each question, how it counts not-sure and tied answers apart, and that it sends no request.'}>
   <h1><code>audit</code></h1>
   <p class="lede"><code>thinkthen audit RESULTS KEY</code> grades saved answers against answers you already know. It sends no request and reads no API key.</p>
 
@@ -34,5 +33,5 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
   <h2 id="any-bar">Any bar, at no cost</h2>
   <p><code>--threshold</code> reads the saved probabilities under another cut or band. No request is sent, because the probabilities are already saved. The <a href={bench.route}>Beatles audit page</a> grades the same ten songs at three bars. <code>--write FILE</code> writes the suggested threshold, when it holds steady, into the question file the answers came from.</p>
 
-  <p class="pagelinks"><a href="/reference/diff/">diff</a> · <a href="/trust/">Test it before you trust it</a> · <a href={spec}>The audit specification</a></p>
-</SidePage>
+  <p class="pagelinks"><a href="/functions/diff/">diff</a> · <a href="/trust/">Test it before you trust it</a> · <a href={spec}>The audit specification</a></p>
+</Base>

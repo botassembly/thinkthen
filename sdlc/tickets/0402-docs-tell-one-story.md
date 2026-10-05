@@ -1,6 +1,6 @@
 # 0402: The docs tell one story
 
-Status: ready. Not started. It waits for ticket 0401 only in slice D's transcript entry; slices A, B and C wait for nothing.
+Status: in progress. Slice A has a source candidate after 0401 D; fresh source review and the named coordinator checkpoint remain pending.
 
 Milestone: 0.2
 
@@ -99,3 +99,9 @@ Relabels: `sdlc/issues/2026-10-03-draft-function-link.md`, `sdlc/issues/2026-10-
 - Keeping `meta.requests` under its name in 0.2.
 - Documented wording for "nothing fits" on `choose` in place of a `--none` flag.
 - Pinning the score `confidence` gap in a contract check, with the spec saying ThinkThen reports the field as received, in place of a report to TypeSafe.
+
+## What the build taught us
+
+Slice A's [build record](../records/0402-a-one-home-build.md) records the frozen accepted design, actual failures and corrections, fragment and h4 omission plants, unchanged proof inputs and focused evidence. Fresh source review and coordinator-owned full proof remain pending.
+
+Slice A source received fresh acceptance at `6eba7e317`; its named documentation checkpoint actually replayed all 350 samples, verified zero stale proofs and passed the final site build. Final receipt review and A landing remain pending. B and C have complete accepted designs; their implementation waits for predecessor landings. D’s Rules recipe comparison remains pending.

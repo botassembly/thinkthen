@@ -27,3 +27,7 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <p>Perplexity's <a href="https://docs.perplexity.ai/docs/decisions/quickstart#rate-limits">published organization limit</a> is ten requests a second. Multiple processes share that provider limit, while each ThinkThen process gets its own configured rate. Divide the allowance across processes when they run together. Perplexity also limits token bursts, so a request can reach a provider limit before the request rate does.</p>
   <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
 </SidePage>
+
+<style>
+  p code { white-space: normal; overflow-wrap: anywhere; }
+</style>

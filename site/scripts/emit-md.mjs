@@ -117,6 +117,7 @@ function blocks(node, out) {
     if (cls.includes('tabs')) continue;
     if (kid.tag === 'h1') { out.push('# ' + tidy(inline(kid))); continue; }
     if (kid.tag === 'h2') { out.push('## ' + tidy(inline(kid))); continue; }
+    if (kid.tag === 'h4') { out.push('#### ' + tidy(inline(kid))); continue; }
     if (kid.tag === 'h3') { out.push('### ' + tidy(inline(kid))); continue; }
     if (kid.tag === 'p') {
       const line = tidy(inline(kid));

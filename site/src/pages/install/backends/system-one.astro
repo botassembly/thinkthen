@@ -34,7 +34,7 @@ const rate = setting('Requests a minute');
   <Terminal run={badRate} caption={badRate.see} />
 
   <h2>Check the server</h2>
-  <p><code>thinkthen check --url BASE</code> sends four fixed questions that cover every question shape ThinkThen asks. It prints one row each for the connection, the key, the endpoint, the four questions, and the usage counts. A row reads <code>ok</code>, <code>warning</code> or <code>critical</code>. It exits 0 only when no row is critical. Every request is real, so a hosted server may charge for it. The <a href="/reference/check/">check reference</a> explains every row.</p>
+  <p><code>thinkthen check --url BASE</code> sends four fixed questions that cover every question shape ThinkThen asks. It prints one row each for the connection, the key, the endpoint, the four questions, and the usage counts. A row reads <code>ok</code>, <code>warning</code> or <code>critical</code>. It exits 0 only when no row is critical. Every request is real, so a hosted server may charge for it. The <a href="/functions/check/">check reference</a> explains every row.</p>
   <Terminal run={plan} caption={plan.see} />
   <p>A threshold tuned on one model does not carry to another. Grade the new model on your own labeled records with <a href="/trust/">audit</a> before you trust it.</p>
 

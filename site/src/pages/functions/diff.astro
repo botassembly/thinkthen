@@ -1,12 +1,11 @@
 ---
 // Goal: say what diff prints for each changed answer, what each effect means, and how not-sure and tied answers count.
-import SidePage from '../../layouts/SidePage.astro';
+import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
-import { REFERENCE_PAGES, referencePage, TOOLS_SEE } from '../../data/reference.mjs';
+import { TOOLS_SEE } from '../../data/reference.mjs';
 import { captioned } from '../../data/samples.mjs';
 import { PAGES } from '../../data/beatles.mjs';
 
-const page = referencePage('diff');
 const [cuts] = captioned('reference/diff', TOOLS_SEE.diff);
 const bench = PAGES.find((p) => p.slug === 'diff');
 const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/diff.md';
@@ -18,7 +17,7 @@ const EFFECTS = [
   ['changed', 'any other change', ''],
 ];
 ---
-<SidePage pages={REFERENCE_PAGES} page={{ ...page, description: 'What diff prints for each changed answer, what each effect means, and how not-sure and tied answers count.' }} name="Reference">
+<Base title="diff" description={'What diff prints for each changed answer, what each effect means, and how not-sure and tied answers count.'}>
   <h1><code>diff</code></h1>
   <p class="lede"><code>thinkthen diff A B</code> prints only the saved answers that changed between two runs. It sends no request.</p>
 
@@ -35,5 +34,5 @@ const EFFECTS = [
   </table>
   <p>A not-sure answer and a tied answer count the same way. Each one becomes <code>resolved</code> when it turns right or wrong. Without a key, every effect is <code>null</code>. The <a href={bench.route}>Beatles diff page</a> compares a run from the title alone with a run that had context.</p>
 
-  <p class="pagelinks"><a href="/reference/audit/">audit</a> · <a href={spec}>The diff specification</a></p>
-</SidePage>
+  <p class="pagelinks"><a href="/functions/audit/">audit</a> · <a href={spec}>The diff specification</a></p>
+</Base>

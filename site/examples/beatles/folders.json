@@ -8,7 +8,6 @@
   "filter": "examples/filter",
   "rank": "examples/rank",
   "find": "examples/find",
-  "blind-spots": "results/runs/2026-09-26-thinkthen-jev",
   "rad": "examples/decide",
   "backends": "examples/decide"
 }
