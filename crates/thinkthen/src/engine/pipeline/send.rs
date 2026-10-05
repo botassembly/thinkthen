@@ -92,8 +92,9 @@ impl<'a> Sender<'a> {
             let mut answered = match cancel.stop().or(failed) {
                 Some(stop) => refused(half, stop),
                 None => {
-                    let body = built_in::join(
-                        job.state.json(),
+                    let body = built_in::join_images(
+                        job.state.wire_json(),
+                        job.state.images(),
                         &self.model,
                         half.iter().map(|(ask, _)| &*ask.question),
                     );
@@ -160,6 +161,13 @@ impl<'a> Sender<'a> {
         );
         let taken_at = store::now();
         let result = answer.and_then(|http| {
+            if asks
+                .first()
+                .is_some_and(|(ask, _)| ask.state.images().is_some())
+                && let Some(probe) = &self.store
+            {
+                probe.image_exchange(url, body, &http.body)?;
+            }
             let decoders: Vec<_> = asks.iter().map(|(ask, _)| ask.decoder.clone()).collect();
             match pack::split(&decoders, &http.body) {
                 Ok(split) => {

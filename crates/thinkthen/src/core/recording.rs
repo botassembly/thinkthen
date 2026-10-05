@@ -94,6 +94,18 @@ impl<'a> Exchange<'a> {
     #[must_use]
     pub(crate) fn digest(&self) -> Digest {
         let mut hasher = Sha256::new();
+        if built_in::request_has_images(self.request) {
+            hasher.update(built_in::IMAGE_DOMAIN);
+            for part in [
+                built_in::NAME.as_bytes(),
+                self.url.as_str().as_bytes(),
+                self.request,
+            ] {
+                hasher.update((part.len() as u64).to_be_bytes());
+                hasher.update(part);
+            }
+            return Digest(hex(&hasher.finalize()));
+        }
         hasher.update(built_in::NAME.as_bytes());
         hasher.update(b"\n");
         hasher.update(self.url.as_str().as_bytes());

@@ -15,6 +15,8 @@ pub(crate) mod failure;
 mod file_size;
 pub(crate) mod find;
 mod hint;
+mod image;
+mod image_format;
 pub(crate) mod intake;
 mod interrupt;
 pub(crate) mod judge;

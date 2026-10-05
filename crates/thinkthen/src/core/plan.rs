@@ -29,6 +29,7 @@ pub(crate) enum Descriptions {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Plan {
     evidence: Evidence,
+    image: Option<crate::core::image::ImageInput>,
     model: ModelName,
     descriptions: Descriptions,
     questions: Vec<Question>,
@@ -51,6 +52,7 @@ impl Plan {
         }
         Ok(Self {
             evidence,
+            image: None,
             model,
             descriptions,
             questions,
@@ -65,6 +67,15 @@ impl Plan {
         questions: Vec<Question>,
     ) -> Result<Self, EmptyPlanError> {
         Self::new(evidence, model, Descriptions::Authored, questions)
+    }
+
+    pub(crate) fn with_image(mut self, image: Option<crate::core::image::ImageInput>) -> Self {
+        self.image = image;
+        self
+    }
+
+    pub(crate) fn image(&self) -> Option<&crate::core::image::ImageInput> {
+        self.image.as_ref()
     }
 
     /// Read the evidence back.

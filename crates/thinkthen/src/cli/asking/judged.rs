@@ -61,6 +61,7 @@ pub(super) fn records(
 /// What one record's plan needs besides the record.
 pub(super) struct Planner<'a> {
     pub(super) asks: &'a Asks,
+    pub(super) image: Option<&'a crate::core::image::ImageInput>,
     pub(super) reading: &'a Reading,
     pub(super) asked: (ModelName, Descriptions),
     pub(super) context: Option<Evidence>,
@@ -99,7 +100,9 @@ impl Planner<'_> {
                 self.profile,
             )
         };
-        planned.map_err(|error| self.limits.refused(error, false))
+        planned
+            .map(|plan| plan.with_image(self.image.cloned()))
+            .map_err(|error| self.limits.refused(error, false))
     }
 
     /// The wire questions one record sends.
@@ -118,6 +121,9 @@ impl Planner<'_> {
     pub(super) fn refused(&self, error: PackError) -> Failure {
         match error {
             PackError::Profile(limit) => Failure::ProfileLimit(limit),
+            PackError::Context { .. } if self.image.is_some() => {
+                Failure::Usage("--image makes a request larger than the spike limit of 65536 bytes")
+            }
             PackError::Context {
                 initial,
                 kind,
@@ -266,6 +272,7 @@ pub(super) fn run(
     let asker = JudgeAsker {
         planner: Planner {
             asks: &judging.asks,
+            image: judging.image.as_ref(),
             reading,
             asked: judging.engine.backend().asked(),
             context,

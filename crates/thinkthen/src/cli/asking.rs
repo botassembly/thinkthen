@@ -233,6 +233,17 @@ pub(crate) fn run(
     let backend = environment
         .resolve(common.backend.as_deref(), common.url.as_deref(), asked)?
         .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    if common.image.is_some()
+        && !crate::core::adapters::built_in::backends::supports_images(common.backend.as_deref())
+    {
+        return Err(Failure::Usage(
+            "--image requires explicit --backend naming a supported image backend",
+        ));
+    }
+    if common.image.is_some() && !matches!(asks, Asks::Fixed(_)) {
+        return Err(Failure::Usage("--image requires one fixed scalar question"));
+    }
+    let image = crate::cli::image::read(common)?;
     // The configuration's model applies only on the unnamed path.
     let configured_model = (asked.is_none() && environment.named().is_none())
         .then(|| environment.model())
@@ -298,6 +309,7 @@ pub(crate) fn run(
         environment,
         folders,
         backend,
+        image,
         asks,
         threshold,
         view,
@@ -326,6 +338,7 @@ struct Judging<'a> {
     environment: &'a Environment,
     engine: Engine,
     asks: Asks,
+    image: Option<crate::core::image::ImageInput>,
     threshold: Option<Threshold>,
     view: View,
     keeping: Keeping,
@@ -341,6 +354,7 @@ struct JudgingInput<'a> {
     folders: Folders,
     backend: Backend,
     asks: Asks,
+    image: Option<crate::core::image::ImageInput>,
     threshold: Option<Threshold>,
     view: View,
     keeping: Keeping,
@@ -360,6 +374,7 @@ impl Judging<'_> {
             folders,
             backend,
             asks,
+            image,
             threshold,
             view,
             keeping,
@@ -374,6 +389,7 @@ impl Judging<'_> {
             environment,
             engine: engine(common, environment, folders, backend, profile, common.jobs)?,
             asks,
+            image,
             threshold,
             view,
             keeping,

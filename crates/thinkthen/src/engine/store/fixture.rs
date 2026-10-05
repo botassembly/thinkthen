@@ -271,7 +271,7 @@ impl Replayed {
 pub(crate) fn key_of(answer: &Answer, state: &str) -> Option<QuestionKey> {
     let url = Url::new(answer.url.clone()).ok()?;
     let model = model_json(&answer.model).ok()?;
-    Some(QuestionKey::of(&url, &model, state, &answer.question))
+    Some(QuestionKey::stored(&url, &model, state, &answer.question))
 }
 
 /// The error for an entry whose digest or state cannot be written.

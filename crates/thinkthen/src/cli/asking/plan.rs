@@ -46,6 +46,7 @@ pub(super) fn packed(
     let backend = &configuration.backend;
     let planner = Planner {
         asks: &configuration.asks,
+        image: configuration.image.as_ref(),
         reading,
         asked: backend.asked(),
         context,

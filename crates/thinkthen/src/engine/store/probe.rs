@@ -12,8 +12,8 @@ use crate::engine::error::Error;
 /// for (ticket 0367).
 #[derive(Clone, Debug)]
 pub(crate) struct Probe {
-    folder: PathBuf,
-    private: bool,
+    pub(super) folder: PathBuf,
+    pub(super) private: bool,
 }
 
 impl Probe {

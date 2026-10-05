@@ -31,6 +31,7 @@ pub(crate) struct State(Arc<Shared>);
 
 struct Shared {
     json: String,
+    wire: Option<(String, String)>,
     sha256: [u8; 32],
     evidence_bytes: usize,
 }
@@ -42,9 +43,34 @@ impl State {
         let sha256 = Sha256::digest(json.as_bytes()).into();
         Self(Arc::new(Shared {
             json,
+            wire: None,
             sha256,
             evidence_bytes,
         }))
+    }
+
+    pub(crate) fn with_images(json: String, images: Option<String>, evidence_bytes: usize) -> Self {
+        match images {
+            None => Self::new(json, evidence_bytes),
+            Some(images) => {
+                let stored = built_in::image_state(&json, &images);
+                let sha256 = Sha256::digest(stored.as_bytes()).into();
+                Self(Arc::new(Shared {
+                    json: stored,
+                    wire: Some((json, images)),
+                    sha256,
+                    evidence_bytes,
+                }))
+            }
+        }
+    }
+
+    pub(crate) fn wire_json(&self) -> &str {
+        self.0.wire.as_ref().map_or(self.json(), |(json, _)| json)
+    }
+
+    pub(crate) fn images(&self) -> Option<&str> {
+        self.0.wire.as_ref().map(|(_, images)| images.as_str())
     }
 
     pub(crate) fn json(&self) -> &str {
@@ -98,6 +124,33 @@ impl QuestionKey {
             hasher.update(part.as_bytes());
         }
         Self(hasher.finalize().into())
+    }
+
+    /// Images use length framing and a separate versioned domain; text stays unchanged.
+    pub(crate) fn with_images(
+        url: &Url,
+        model: &str,
+        state: &str,
+        question: &str,
+        images: Option<&str>,
+    ) -> Self {
+        let Some(images) = images else {
+            return Self::of(url, model, state, question);
+        };
+        let mut hasher = Sha256::new();
+        hasher.update(built_in::IMAGE_DOMAIN);
+        for part in [built_in::NAME, url.as_str(), model, state, question, images] {
+            hasher.update((part.len() as u64).to_be_bytes());
+            hasher.update(part.as_bytes());
+        }
+        Self(hasher.finalize().into())
+    }
+
+    pub(crate) fn stored(url: &Url, model: &str, state: &str, question: &str) -> Self {
+        match built_in::image_parts(state) {
+            Some((state, images)) => Self::with_images(url, model, &state, question, Some(&images)),
+            None => Self::of(url, model, state, question),
+        }
     }
 
     pub(crate) const fn bytes(&self) -> &[u8; 32] {
@@ -177,14 +230,24 @@ pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
         .evidence()
         .as_text()
         .map_err(|error| EncodeError::of(&error))?;
-    let state = State::new(parts.state, evidence.len());
+    let state = State::with_images(
+        parts.state,
+        parts.images,
+        evidence.len() + plan.image().map_or(0, |image| image.bytes.len()),
+    );
     let decoders = plan.questions().iter().flat_map(decoders);
     Ok(parts
         .questions
         .into_iter()
         .zip(decoders)
         .map(|(question, decoder)| Ask {
-            key: QuestionKey::of(url, &parts.model, state.json(), &question),
+            key: QuestionKey::with_images(
+                url,
+                &parts.model,
+                state.wire_json(),
+                &question,
+                state.images(),
+            ),
             state: state.clone(),
             question: Arc::from(question),
             decoder,
@@ -272,5 +335,7 @@ pub(crate) fn shares(usage: Option<Usage>, questions: usize) -> Vec<Option<Usage
         .collect()
 }
 
+#[cfg(test)]
+mod image_tests;
 #[cfg(test)]
 mod tests;

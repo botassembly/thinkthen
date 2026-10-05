@@ -82,6 +82,11 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
     },
 ];
 
+/// Explicit image backends admitted by experiment 0034.
+pub(crate) fn supports_images(name: Option<&str>) -> bool {
+    matches!(name, Some("liquid" | "llamacpp" | "openrouter"))
+}
+
 /// The named text workaround, with the existing Ollama sentence retained.
 pub(crate) fn dropped_detail(name: Option<&str>) -> &'static str {
     if name == Some("mlx") {

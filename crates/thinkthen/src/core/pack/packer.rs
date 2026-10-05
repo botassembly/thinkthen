@@ -42,6 +42,11 @@ impl PackLimits {
         let request = profile
             .and_then(|held| held.max_request_bytes)
             .map_or(self.ceiling, |most| most.min(self.ceiling));
+        let request = if state.images().is_some() {
+            request.min(65536)
+        } else {
+            request
+        };
         let questions_most = match (profile.and_then(|held| held.max_questions), self.questions) {
             (Some(one), Some(other)) => Some(one.min(other)),
             (one, other) => one.or(other),
@@ -196,8 +201,9 @@ impl<T> Packer<T> {
     /// Close the open request, for a pause, a full window or the end.
     pub(crate) fn close(&mut self) -> Option<Packed<T>> {
         let open = self.open.take()?;
-        let body = built_in::join(
-            open.state.json(),
+        let body = built_in::join_images(
+            open.state.wire_json(),
+            open.state.images(),
             &self.model,
             open.questions.iter().map(|question| &**question),
         );
@@ -211,7 +217,10 @@ impl<T> Packer<T> {
     /// The body bytes of a request of this state with no question.
     fn base(&self, state: &State) -> usize {
         // `{"state":` S `,"model":` M `,"questions":{` `}}`
-        state.json().len() + self.model.len() + 34
+        state.wire_json().len()
+            + self.model.len()
+            + 34
+            + state.images().map_or(0, |images| images.len() + 10)
     }
 
     fn fits(&self, open: &Open<T>, entry: &Entry<T>) -> bool {
@@ -237,6 +246,14 @@ impl<T> Packer<T> {
     /// Refuse a question that passes a limit in a request of its own.
     fn lone(&self, entry: &Entry<T>) -> Result<(), PackError> {
         let bytes = grown(self.base(&entry.state), 0, entry.question.len());
+        if entry.state.images().is_some() && bytes > 65536 {
+            return Err(PackError::Context {
+                initial: false,
+                kind: LimitKind::RequestBytes,
+                limit: 65536,
+                actual: bytes,
+            });
+        }
         let profile = self.limits.profile.as_ref();
         if self.limits.context
             && let Some((kind, limit, actual)) = self

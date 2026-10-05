@@ -149,8 +149,9 @@ impl<'de> serde::Deserialize<'de> for Criteria {
 /// Returns [`EncodeError`] when the body cannot be written as JSON.
 pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
     let parts = parts(plan)?;
-    Ok(join(
+    Ok(join_images(
         &parts.state,
+        parts.images.as_deref(),
         &parts.model,
         parts.questions.iter().map(String::as_str),
     ))
@@ -166,6 +167,7 @@ pub(crate) fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
 /// body carries, by ADR 0111 section 2. Each part is written once.
 pub(crate) struct Parts {
     pub(crate) state: String,
+    pub(crate) images: Option<String>,
     pub(crate) model: String,
     pub(crate) questions: Vec<String>,
 }
@@ -181,6 +183,7 @@ pub(crate) fn parts(plan: &Plan) -> Result<Parts, EncodeError> {
         .collect::<Result<_, _>>()?;
     Ok(Parts {
         state,
+        images: super::images(plan.image())?,
         model,
         questions,
     })
@@ -208,6 +211,23 @@ pub(crate) fn join<'a>(
         body.extend_from_slice(question.as_bytes());
     }
     body.extend_from_slice(b"}}");
+    body
+}
+
+/// Add the canonical image field; text requests keep the original join path.
+pub(crate) fn join_images<'a>(
+    state: &str,
+    images: Option<&str>,
+    model: &str,
+    questions: impl Iterator<Item = &'a str>,
+) -> Vec<u8> {
+    let mut body = join(state, model, questions);
+    if let Some(images) = images {
+        body.pop();
+        body.extend_from_slice(b",\"images\":");
+        body.extend_from_slice(images.as_bytes());
+        body.push(b'}');
+    }
     body
 }
 

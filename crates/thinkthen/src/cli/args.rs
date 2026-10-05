@@ -48,6 +48,8 @@ pub(crate) struct Cli {
 /// The options every judging verb takes.
 #[derive(Args)]
 pub(crate) struct Common {
+    #[arg(skip)]
+    pub(crate) image: Option<PathBuf>,
     /// Print one machine-readable run-facts line last on standard error.
     #[arg(long, hide_short_help = true)]
     pub(crate) facts: bool,
@@ -225,6 +227,9 @@ pub(crate) struct Common {
 /// Everything `decide` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct DecideArguments {
+    /// Attach one JPEG or PNG file to this scalar question (image spike).
+    #[arg(long, value_name = "FILE")]
+    pub(crate) image: Option<PathBuf>,
     /// The question to answer, or `@` and the path of a question file.
     ///
     /// As text it is one argument naming one visible fact. As `@FILE` it is a
@@ -381,6 +386,9 @@ pub(crate) struct RankArguments {
 /// Everything `choose` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct ChooseArguments {
+    /// Attach one JPEG or PNG file to this scalar question (image spike).
+    #[arg(long, value_name = "FILE")]
+    pub(crate) image: Option<PathBuf>,
     /// The question that states what decides the pick, or `@` and a file path.
     pub(crate) question: String,
 
@@ -466,6 +474,9 @@ pub(crate) struct TagArguments {
 /// Everything `score` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct ScoreArguments {
+    /// Attach one JPEG or PNG file to this scalar question (image spike).
+    #[arg(long, value_name = "FILE")]
+    pub(crate) image: Option<PathBuf>,
     /// The question that names what is being placed, or `@` and a file path.
     pub(crate) question: String,
 

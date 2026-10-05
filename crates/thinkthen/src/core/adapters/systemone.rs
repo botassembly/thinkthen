@@ -9,7 +9,9 @@
 //! endpoint sits under. Nothing outside this module names any of the four.
 
 pub(crate) mod backends;
+mod images;
 mod recorded;
+pub(crate) use images::{IMAGE_DOMAIN, image_parts, image_state, images, request_has_images};
 mod request;
 mod response;
 
@@ -20,7 +22,7 @@ use crate::core::text::ModelName;
 pub(crate) use crate::core::adapters::systemone::recorded::decoder;
 pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::{
-    drops_any, drops_detail, drops_detail_of, encode_raw, join, parts,
+    drops_any, drops_detail, drops_detail_of, encode_raw, join, join_images, parts,
 };
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode;

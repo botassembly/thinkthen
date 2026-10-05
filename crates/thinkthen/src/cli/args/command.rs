@@ -351,6 +351,12 @@ impl Command {
     /// Settle positional file routes before opening any evidence.
     pub(crate) fn route_inputs(&mut self) -> Result<(), crate::failure::Failure> {
         use crate::failure::Failure;
+        match self {
+            Self::Decide(a) => a.common.image = a.image.take(),
+            Self::Choose(a) => a.common.image = a.image.take(),
+            Self::Score(a) => a.common.image = a.image.take(),
+            _ => {}
+        }
         let (common, paths) = match self {
             Self::Decide(a) => (
                 &mut a.common,

@@ -80,6 +80,12 @@ mod from_record;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,
+    reason = "the image boundary fixture must run and inspect counted requests"
+)]
+mod images;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
     reason = "fixture setup and checked JSON rows stop the intake boundary proof"
 )]
 mod input_sources;
