@@ -56,7 +56,7 @@ else:base.mkdir(parents=True,exist_ok=True)
            'THINKTHEN_DUCKDB_CPP_STATIC_DIR': str(static), 'THINKTHEN_DUCKDB_CPP_BUILD': str(case.root / 'cmake-base')}
     build = tree / 'databases/duckdb/cpp/build.sh'
     alias = tree / 'databases/duckdb/build/thinkthen.duckdb_extension'
-    from source_pin_0403_cases import replacement_controls
+    from source_pin_cases import replacement_controls
     replacement_controls(case, source, commit, build, env, write_script)
     for version in ('v1.5.5', 'v1.5.4'):
         result = subprocess.run(['/bin/sh', str(build)], env={**env, 'THINKTHEN_DUCKDB_VERSION': version},
