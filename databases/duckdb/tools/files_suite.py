@@ -6,6 +6,9 @@ from pathlib import Path
 
 from harness import Backend, REPO_ROOT, case, expect, main, rows, run, said
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sqlite" / "tests"))
+from conditional_backend import ConditionalBackend
+
 FIXTURE = REPO_ROOT / 'specification/fixtures/files/documents'
 EXAMPLES = REPO_ROOT / 'databases/duckdb/examples/files.sql'
 
@@ -21,19 +24,42 @@ def ten_folder_examples_keep_original_documents_and_mapped_endpoints():
     source = source.replace('specification/fixtures/files/questions.json', str(FIXTURE.parent / 'questions.json'))
     source = '\n'.join(line for line in source.splitlines() if not line.startswith('--'))
     statements = [statement.strip() for statement in source.split(';') if statement.strip()]
-    expect(len(statements), 11, 'materialization plus all ten examples')
-    with Backend() as backend:
-        got = run(['SET thinkthen_cache=\'off\'', *statements], backend.base())
-        expected = [[i, p.read_text(), str(p), 1, 4] for i,p in enumerate(sorted(FIXTURE.iterdir()), 1)]
-        for index, values in ((2,[True,True]),(3,['policy','policy']),
-                              (4,[['refund','support','billing']]*2),(5,[0.1,0.1])):
+    expect(len(statements), 12, 'two reader units plus all ten examples')
+    expected = [[i, p.read_text(), str(p), 1, 4] for i,p in enumerate(sorted(FIXTURE.iterdir()), 1)]
+    lines = [[i, line, str(path), number, number]
+             for i,(path,number,line) in enumerate(
+                 ((p,n,line) for p in sorted(FIXTURE.iterdir())
+                  for n,line in enumerate(p.read_text().splitlines(),1)),1)]
+    with tempfile.TemporaryDirectory(prefix='thinkthen-files-cache-') as cache, Backend() as backend, ConditionalBackend(backend.base()) as proxy:
+        extra = {'THINKTHEN_CACHE': cache}
+        def reply(answers):
+            proxy.reply = json.dumps({'model':'jev-latest','answers':answers}).encode()
+        # Seed real judgment cache entries with controlled yes/no replies. The
+        # published WHERE runs over every source row and must reject five lines.
+        for row in lines:
+            probability = 0.9 if 'refund' in row[1].lower() else 0.1
+            reply({'q1':{'type':'noul','noul':probability}})
+            result = run(["SELECT thinkthen_decide('Does this line describe a refund?', " + literal(row[1]) + ")"], proxy.base, extra=extra)
+            expect(rows(result[0]), [[probability >= 0.5]], 'controlled accepted and rejected line')
+        got = []
+        for index,statement in enumerate(statements[2:]):
+            proxy.reply = None
+            if index == 5:
+                reply({'q1':{'type':'noul','noul':0.2},'q2':{'type':'noul','noul':0.8}})
+            elif index == 6:
+                reply({'q1':{'type':'choice','probabilities':{
+                    f'u{n:03}': 0.9 if n == 2 else 0.1 / 7 for n in range(1,9)}}})
+            result = run([*statements[:2],statement], proxy.base, extra=extra)
+            got.append(result[-1])
+        for index, values in ((0,[True,True]),(1,['policy','policy']),
+                              (2,[['refund','support','billing']]*2),(3,[0.1,0.1])):
             expect(rows(got[index]), [r+[v] for r,v in zip(expected,values)], 'row judgment original bytes/locations')
-        expect(rows(got[6]), expected, 'filter original document rows')
-        expect(rows(got[7]), [r+[i,0.9] for i,r in enumerate(expected,1)], 'rank joins source ids')
-        expect(rows(got[8]), [expected[0]+[0.9]], 'find mapped zero-based position')
-        expect([r[:5] for r in rows(got[9])], expected, 'annotation metadata stays outside original record')
-        expect([json.loads(r[5]) for r in rows(got[9])], [{'contract':True,'urgent':True}]*2, 'named annotations')
-        recognized = rows(got[10])
+        expect(rows(got[4]), lines[:3], 'filter accepts refund lines and rejects other source rows')
+        expect(rows(got[5]), [expected[1]+[1,0.8],expected[0]+[2,0.2]], 'rank orders whole files by controlled relevance')
+        expect(rows(got[6]), [lines[1]+[0.9]], 'find returns original refund policy line and file')
+        expect([r[:5] for r in rows(got[7])], expected, 'annotation metadata stays outside original record')
+        expect([json.loads(r[5]) for r in rows(got[7])], [{'contract':True,'urgent':True}]*2, 'named annotations')
+        recognized = rows(got[8])
         expect(len(recognized), 4, 'recognition rows for two requested kinds')
         for row in recognized:
             original = expected[row[0]-1]
@@ -41,14 +67,15 @@ def ten_folder_examples_keep_original_documents_and_mapped_endpoints():
             expect([ordinal,record,file], original[:3], 'recognition source')
             expect(record[start:end],name,'native Unicode offsets')
             expect([first,last], [1+record[:start].count('\n'),1+record[:end-1].count('\n')], 'recognized physical lines from actual offsets')
-        endpoints = rows(got[11])
+        endpoints = rows(got[9])
         expect(len(endpoints), 2, 'both directed document edges')
         for edge in endpoints:
             expect(edge[1:6], expected[edge[1]-1], 'actual source endpoint row')
             expect(edge[6:11], expected[edge[6]-1], 'actual target endpoint row')
             expect(edge[0], 'supports', 'relation')
             expect(edge[11], 0.9, 'edge probability')
-        expect(backend.count(), 13, 'exact packed and recognition requests for all ten examples')
+        expect(proxy.count(), 20, 'eight seeded lines and twelve remaining uncached judgment requests')
+        expect(backend.count(), 10, 'ten controlled replies stay on the existing proxy')
 
 
 @case
