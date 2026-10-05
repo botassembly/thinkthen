@@ -13,7 +13,7 @@ fn ask_at(backend: &Backend, requests: &[Value], cache: bool) -> Vec<(i32, Value
     ask_base(&base, requests, cache)
 }
 
-fn ask_base(base: &str, requests: &[Value], cache: bool) -> Vec<(i32, Value)> {
+pub(super) fn ask_base(base: &str, requests: &[Value], cache: bool) -> Vec<(i32, Value)> {
     ask_settings(base, requests, json!({"cache":cache,"max_retries":0}))
 }
 
