@@ -1,6 +1,6 @@
 # 0424: Replay DuckDB recognize and relate with a zero request cap
 
-Status: ready. Fresh High ticket review accepted.
+Status: complete. Fresh High source review accepted; both DuckDB host versions passed replay and spend checks. Full tests and lint run on the landing commit.
 Milestone: 0.2
 
 ## Outcome
