@@ -1,6 +1,6 @@
 # 0400 slice C: the default throttle is eight
 
-Status: C integration on landed rank main `b39774cce87105be419d6140ae4155bfc8cd733c`; whole-C and fork correction High reviews accepted. The renewed root checkpoint exposed the stale pipeline deadline-default oracle. Its one-literal correction now passes frozen focused proof and required lint; fresh High review and the next named root checkpoint remain pending. All 350 canonical entries remain source-stale; stress/native proof remains pending.
+Status: accepted C source integrated onto Docs A + Windows DLL A main `24212dffa80226a530e9a2f51161c436286c9ff3`. Old frozen candidate `557bbb28b` received final High ACCEPT and root full test/spec PASS. Its stress campaign failed; original logs remain intact. Merged focused validation and owned runner preparation are authorized; fresh final source review and a new named root checkpoint remain pending. Main binding proof stays untouched until actual fresh canonical replay.
 
 The final B source/receipt acceptance and byte-identical landing are recorded in the [B build record](0400-provider-setups-slice-b-build.md). C preserves the Windows and B source, ratchets and retained receipts. No paid 0399 call, native host run, dispatch, publication or release approval ran.
 
@@ -264,3 +264,27 @@ Execution used the owned lane2 user scope with 12 GiB memory / 1 GiB swap, the f
 All five historical root checkpoint/diagnostic logs were checked byte-identical after the run. The retained workspace diagnostic still has one actual failure; no outer launcher result or new focused pass relabels it. This candidate is clean and ready for fresh High review. The coordinator must name the next full checkpoint before running full test/spec/surfaces; those checks, latest-main integration, all 350 source-stale canonical entries, strict/final site proof and authorized stress/SQLite/native Windows proof remain pending. No full test/spec/stress, canonical/native/paid/CI, helper, rebase/landing/publication or manual proof-hash update ran here.
 
 Final record-only checks are retained in `deadline-default-final-tickets.log` (zero failures, captured exit 0), `deadline-default-final-private-count.log` (35 names, zero tracked path/file hits, exit 0) and `deadline-default-final-records-status.log` (captured outer exit 0). They change no frozen-source proof and disclose no external name.
+
+## Source-preserving Docs A / Windows DLL A integration
+
+Accepted candidate `557bbb28ba6e41c7be5f2c56f621ccec0c81fd23`, source `0206f59aecd424ad3cce2e03829b4e38ba6f8e2f`, and final High acceptance are the carried source authority. Main is `24212dffa80226a530e9a2f51161c436286c9ff3`. The prior builder aborted the published-content modify/delete conflict and restored clean accepted C. Root then explicitly authorized exactly one move: apply “the default sent 1,519” → “throttle 4 sent 1,519” to Docs A's canonical `site/src/pages/functions/[name]/index.astro`, retaining the complete main reference and removing its obsolete deleted page. This preserves a historical measurement at explicit four and makes no new experiment claim.
+
+Rebase encountered only that authorized move, the measured C ratchet and planning-record conflicts. Accepted C product/contract/test blobs compare byte-identical except the moved sentence and the additive C runner integration: main's new runner plus C's existing `mod throttle_0400;` registration. Main-only product bytes and `site/examples/bindings-proof.json` remain unchanged. The latest Docs A and Windows A completion context is retained. No additional true source conflict occurred.
+
+Measured root Rust total is 118131, zero growth from accepted C. C Rust is 5546 = main 5487 + accepted C 59 (58-line module and one registration); C fixtures remain main's 1329. Python/Ruby/R/TypeScript/DuckDB/SQLite remain 4807/2503/2523/1356/4225/2540. The root ratchet preserves the corrected `directory` schema. Existing main C platform/helper fixtures were reused, with no additional source, test, dependency or architecture growth.
+
+### Carried frozen root checkpoint and limitations
+
+Actual old-head summaries at `557bbb28b`: workspace 1409 passed / 26 skipped; library-only 143 / 4; consumers 21 / 3. Specification pages: 64 passed / 1 skipped, followed by separate supporting checks; demos: 24 green / 0 red. Root reports both full commands completed successfully. These remain proof for that old frozen head, not merged-head reruns.
+
+Root's completed `test-stress --run` exited 1. Twelve Rust filters pass; six surfaces pass, two fail and thirteen are not run. TypeScript's local-file Git refusal fixture was blocked by global offline mode; PostgreSQL lacked a private PGRX configuration. Several remaining surfaces lacked admitted cached tool paths; Rust/C/PHP/Go/C++ deliberately have no stress gate, and restoring caches does not turn those into passes. SQLite stress is not proven. Keep every original failure and missing-campaign/prerequisite distinction. The earlier diagnostic still has one actual failing case despite its outer zero; no receipt relabels it.
+
+All 43 original checkpoint logs compare byte-identical against the prior preserved digest manifest. New receipts use distinct artifact names. No full test/spec/surfaces/stress, actual canonical replay, strict/site, native/paid/CI or publication job ran in this integration preparation. Binding proof hashes were not recomputed manually. The separately named fresh campaign, if authorized later, must use only the existing `sdlc/scripts/test-stress --run`, with no narrow selectors or direct SQLite stress.
+
+### Owned runner preparation and what it taught us
+
+The [runner preparation record](0400-c-owned-runner-preparation.md) describes the concrete allow-listed launch, existing selective caches, private PostgreSQL configuration and strictly bounded dependency-free local-file exception. The namespace proposal was advisory and was not adopted. The existing environment and helpers are sufficient for the counted fixture boundary; no external download or credential/startup configuration is admitted.
+
+Initial runner receipts retain two setup corrections: the root ratchet must use its default invocation because a named config resolves directories from its own folder, and scratch Cargo plants must be outside the repository workspace. A copied wrapper's old absolute dispatcher path was also corrected. Preserve these actual failed receipts separately from successful fixture proof. Counted URL refusal and real Cargo execution establish the local-file boundary; they do not establish whole-host network isolation or a green stress campaign.
+
+Fresh final High source review must include the authorized sentence move and full normalized diff. Root will arrange that review and name any later checkpoint. Ian can overturn the scoped planning dispositions and runner preparation; no broader execution authority follows.

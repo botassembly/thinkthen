@@ -26,7 +26,7 @@ The strict selection pass scored choose at 644/800 receipt fields, including 177
 
 The 223/800 multi-value OCR cases used strict one-value or explicit-none scoring. The results cannot directly replace the earlier any-value-on-line scores. The small date and name boundary cases do not establish general support. Documentation keeps the narrow money/count/line scope and makes candidate discovery, exact copying and abstention explicit. Absence handling remains weak.
 
-Ian dropped extract as a function on 2026-10-04. No new function or annotate mode follows. This recipe still waits on experiment 4, which compares rule-proposed candidates confirmed by decide or choose with recognize alone. The strict selection pass did not perform that comparison and cannot replace it.
+Ian dropped extract as a function on 2026-10-04. No new function or annotate mode follows. The strict selection pass did not perform the comparison against recognize. The accepted completed 0031 comparison now resolves that measurement wait only for its frozen cohort and tested choose/custom-role recognize configurations; equivalent decide performance is unproved. The [reviewed planning record](2026-10-05-reviewed-experiment-planning.md) preserves unresolved outcomes, candidate misses and abstention limits. Publication proof remains pending.
 
 ## Completed work supersedes old routing asks
 
@@ -44,4 +44,4 @@ The text result establishes no image result. Images and matched-model comparison
 
 Recipe publication still requires a tested question file, labeled sample, recorded replay, audit output and commit-pinned measured source under ticket 0402. This owning record can supply public-safe provenance after it lands and the implementation pins its commit. The completed handoffs do not prove that each recipe sample has a convertible retained recording. The builder checks that prerequisite without a live call and leaves uncovered samples as drafts.
 
-The linking wording question and protective citation threshold remain unanswered. Experiment 4 remains outstanding. These limits do not block slices A, B or C or preparation of the Recipes harness.
+The linking wording question and protective citation threshold remain unanswered. 0031 resolves the Rules comparison measurement wait for its tested cohort only; its publication proof remains outstanding. These limits do not block slices A, B or C or preparation of the Recipes harness.
