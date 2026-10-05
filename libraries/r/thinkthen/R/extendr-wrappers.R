@@ -48,7 +48,7 @@ tt_recognize_column <- function(spec, path, texts, positions, deadline, completi
 
 tt_relate_frame <- function(spec, path, names, kinds, deadline, completion) .Call(wrap__tt_relate_frame, spec, path, names, kinds, deadline, completion)
 
-tt_engine_set <- function(base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch)
+tt_engine_set <- function(base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend)
 
 tt_completion_new <- function() .Call(wrap__tt_completion_new)
 

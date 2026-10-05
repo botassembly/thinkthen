@@ -164,6 +164,7 @@ fi
 
 echo "== suites"
 sh "$LIMIT" 900 "$PY" tools/backend_setups.py
+sh "$LIMIT" 900 "$PY" tools/named_backends.py
 for suite in verbs_suite rank_suite settings_suite signal_suite relate_suite databases_suite conformance; do
 	sh "$LIMIT" 900 "$PY" "tools/$suite.py"
 done

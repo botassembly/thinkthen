@@ -1,9 +1,44 @@
 {
   "backends": [
-    {"name":"liquid","key":"LIQUIDAI_API_KEY","model":"d1:free","path":"capture_systemone","form":"authored"},
-    {"name":"ollama","key":"OLLAMA_API_KEY","model":"nimble","path":"capture_systemone","form":"text"},
-    {"name":"openrouter","key":"OPENROUTER_API_KEY","model":"typesafe/jev-1.13","path":"capture_systemone","form":"both"},
-    {"name":"perplexity","key":"PERPLEXITY_API_KEY","model":"pplx-decider-v1-27b","path":"capture_decisions","form":"authored"},
-    {"name":"typesafe","key":"TYPESAFE_API_KEY","model":"jev-1.13.0","path":"capture_systemone","form":"authored"}
+    {
+      "name": "liquid",
+      "key": "LIQUIDAI_API_KEY",
+      "model": "d1:free",
+      "path": "capture_systemone",
+      "form": "authored",
+      "url": "https://api.liquid.ai/decisions/v1/systemone"
+    },
+    {
+      "name": "ollama",
+      "key": "OLLAMA_API_KEY",
+      "model": "nimble",
+      "path": "capture_systemone",
+      "form": "text",
+      "url": "http://localhost:11434/v1/systemone"
+    },
+    {
+      "name": "openrouter",
+      "key": "OPENROUTER_API_KEY",
+      "model": "typesafe/jev-1.13",
+      "path": "capture_systemone",
+      "form": "both",
+      "url": "https://openrouter.ai/api/v1/systemone"
+    },
+    {
+      "name": "perplexity",
+      "key": "PERPLEXITY_API_KEY",
+      "model": "pplx-decider-v1-27b",
+      "path": "capture_decisions",
+      "form": "authored",
+      "url": "https://api.perplexity.ai/v1/decisions"
+    },
+    {
+      "name": "typesafe",
+      "key": "TYPESAFE_API_KEY",
+      "model": "jev-1.13.0",
+      "path": "capture_systemone",
+      "form": "authored",
+      "url": "https://api.typesafe.ai/v1/systemone"
+    }
   ]
 }

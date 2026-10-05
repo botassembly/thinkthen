@@ -3,6 +3,14 @@ import thinkthen.Door;
 
 public class InstalledJava {
     public static void main(String[] args) {
+        if ("1".equals(System.getenv("TT_NAMED_BACKEND"))) {
+            try (var door = new Door("{\"backend\":\"local\",\"cache\":false}")) {
+                var answer = door.decide("Is it?", "named-java".getBytes(StandardCharsets.UTF_8));
+                if (answer.value().outcome() != 1 || answer.value().probability() != .9 || ((Number)answer.facts().get("requests_sent")).longValue() != 1) throw new AssertionError("named backend result");
+                System.out.println("JAVA_NAMED_BACKEND_PASS");
+            }
+            return;
+        }
         if ("1".equals(System.getenv("TT_PORTABLE_BATCH"))) {
             try (var door = new Door("{\"batch\":\"max\",\"cache\":false,\"throttle\":1,\"max_retries\":0}")) {
                 var texts = new String[]{"alpha", "café-5544", "omega", "line 2907", "tail"};

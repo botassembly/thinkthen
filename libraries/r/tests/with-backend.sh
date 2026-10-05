@@ -15,7 +15,8 @@ backend=$1 file=$2
 scratch_dir dir
 trap 'exec 3>&- 2>/dev/null || true; scratch_clean' EXIT
 mkfifo "$dir/in"
-"$backend" <"$dir/in" >"$dir/out" &
+markers=${TT_TEST_MARKERS:-'{}'}
+THINKTHEN_TEST_MARKERS="$markers" "$backend" <"$dir/in" >"$dir/out" &
 served=$!
 exec 3>"$dir/in"
 for _ in $(seq 1 600); do [ -s "$dir/out" ] && break; sleep 0.05; done

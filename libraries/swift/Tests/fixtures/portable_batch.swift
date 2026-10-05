@@ -8,7 +8,7 @@ enum PortableBatch {
         let corpus = try JSONSerialization.jsonObject(with: data) as! [String: Any]
         let question = corpus["question"] as! String
         let texts = corpus["texts"] as! [String]
-        let engine = try Engine()
+        let engine = try ProcessInfo.processInfo.environment["TT_PORTABLE_SETTINGS"].map { try Engine(settingsJSON: $0) } ?? Engine()
         defer { engine.close() }
         let answers = try engine.decideMany(question, texts)
         precondition(answers.value.count == 5 && answers.value.allSatisfy { $0.outcome == .yes && $0.probability == 0.9 })

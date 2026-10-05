@@ -1,3 +1,5 @@
+SET thinkthen.backend = 'typesafe';
+
 CREATE TABLE tickets (id int, body text);
 INSERT INTO tickets VALUES
     (1, 'Please refund my order. It arrived broken.'),

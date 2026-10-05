@@ -11,6 +11,7 @@ use clap::{Args, Parser};
 pub(crate) const DEFAULT_MAX_RETRIES: u32 = 3;
 
 mod annotate;
+mod backends;
 mod batching;
 mod command;
 mod common;
@@ -18,10 +19,10 @@ mod debug;
 mod find;
 mod relate;
 pub(crate) use annotate::AnnotateArguments;
+pub(crate) use backends::{BackendCommand, CheckArguments};
 pub(crate) use batching::Batching;
 pub(crate) use command::{
-    CacheCommand, CheckArguments, Command, ConvertArguments, PruneArguments, StatusArguments,
-    UnusedArguments,
+    CacheCommand, Command, ConvertArguments, PruneArguments, StatusArguments, UnusedArguments,
 };
 pub(crate) use find::FindArguments;
 pub(crate) use relate::RelateArguments;

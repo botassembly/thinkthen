@@ -14,6 +14,7 @@ use crate::{Failure, guard};
 /// The settings SQL stored, each applied over the environment at the build.
 #[derive(Debug, Default)]
 struct Stored {
+    backend: Option<String>,
     throttle: Option<u8>,
     batch: Option<BatchSetting>,
     max_requests: Option<Option<usize>>,
@@ -49,6 +50,9 @@ impl Stored {
     }
 
     fn apply(&self, mut builder: EngineBuilder) -> Result<EngineBuilder, thinkthen::Error> {
+        if let Some(value) = &self.backend {
+            builder = builder.backend(value)?;
+        }
         if let Some(value) = self.throttle {
             builder = builder.throttle(value)?;
         }
@@ -92,6 +96,7 @@ impl Stored {
 }
 
 static STORED: Mutex<Stored> = Mutex::new(Stored {
+    backend: None,
     throttle: None,
     batch: None,
     max_requests: None,
@@ -195,7 +200,7 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
         let mut next = Stored::default();
         for (key, value) in fields {
             match key.as_str() {
-                "backend" => return Err(Failure::usage("settings JSON has unknown key backend")),
+                "backend" => next.backend = value.as_str().map(str::to_owned),
                 "base_url" => return Err(Failure::usage("settings JSON has unknown key base_url")),
                 "max_estimated_input_tokens_total" => {
                     return Err(Failure::usage(

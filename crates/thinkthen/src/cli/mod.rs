@@ -220,7 +220,9 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
             args::CacheCommand::Convert(arguments) => cache::convert(arguments),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
-        Some(Command::Check(arguments)) => check::run(arguments, environment, writer),
+        Some(
+            Command::Check(arguments) | Command::Backends(args::BackendCommand::Check(arguments)),
+        ) => check::run(arguments, environment, writer),
         Some(Command::Transform(_) | Command::Audit(_) | Command::Diff(_)) => Err(Failure::Defect(
             "the catalog, audit, and diff return before setup",
         )),
@@ -287,6 +289,7 @@ fn in_default_cache(command: &Command, environment: &Environment) -> bool {
         Command::Cache(_)
         | Command::Status(_)
         | Command::Check(_)
+        | Command::Backends(_)
         | Command::Transform(_)
         | Command::Audit(_)
         | Command::Diff(_) => false,

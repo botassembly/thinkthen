@@ -121,7 +121,7 @@ def test_successful_wrong_provider_path_fails_the_count_expectation():
     import http.client
     backend = Backend({"provider": "fake-provider"})
     try:
-        body = '{"state":"refund","model":"pplx-decider-v1-27b","questions":{"q1":{"type":"noul","description":"attention?"}}}'
+        body = '{"state":"refund","model":"pplx-decider-v1-27b","questions":{"q1":{"type":"noul","instructions":"attention?"}}}'
         connection = http.client.HTTPConnection("127.0.0.1", backend.port)
         connection.request("POST", "/arm/full/capture/v1/systemone", body,
                            {"Authorization": "Bearer fake-provider"})

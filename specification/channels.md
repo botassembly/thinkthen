@@ -57,7 +57,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | 1 | Single-input `decide` only: the answer is no |
 | 2 | A usage error or an input error. The failing record sent nothing |
 | 3 | Single-input `decide` and `choose`: the answer is not sure. `find --none`: nothing fits |
-| 4 | The backend failed or sent a reply the adapter refused. For `check`, the report holds a critical line |
+| 4 | The backend failed or sent a reply the adapter refused. For `backends check`, the report holds a critical line |
 | 5 | A local failure: a file or a recording |
 | 6 | `annotate` or `relate` completed with at least one valid and one failed logical question |
 | 7 | `annotate --jsonl --details --batch 1 --on-error continue` completed with at least one missing-pointer error row |

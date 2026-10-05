@@ -268,49 +268,29 @@ functions/tag/sqlite.sql
 functions/tag/swift.swift
 functions/tag/typescript.ts
 functions/tag/zig.zig
-install/ada/backends.adb backend=liquid
-install/ada/backends.adb backend=ollama
-install/ada/backends.adb backend=typesafe
+install/ada/backends.adb
 install/ada/first_call.adb
 install/c/backends.c
 install/c/first-call.c
-install/cobol/backends.cob backend=liquid
-install/cobol/backends.cob backend=ollama
-install/cobol/backends.cob backend=typesafe
+install/cobol/backends.cob
 install/cobol/first-call.cob
-install/cpp/backends.cpp backend=liquid
-install/cpp/backends.cpp backend=ollama
-install/cpp/backends.cpp backend=typesafe
+install/cpp/backends.cpp
 install/cpp/first-call.cpp
-install/csharp/Backends.cs backend=liquid
-install/csharp/Backends.cs backend=ollama
-install/csharp/Backends.cs backend=typesafe
+install/csharp/Backends.cs
 install/csharp/FirstCall.cs
-install/dart/backends.dart backend=liquid
-install/dart/backends.dart backend=ollama
-install/dart/backends.dart backend=typesafe
+install/dart/backends.dart
 install/dart/first_call.dart
 install/duckdb/first-call.sql
-install/go/backends.go backend=liquid
-install/go/backends.go backend=ollama
-install/go/backends.go backend=typesafe
+install/go/backends.go
 install/go/first-call.go
-install/java/Backends.java backend=liquid
-install/java/Backends.java backend=ollama
-install/java/Backends.java backend=typesafe
+install/java/Backends.java
 install/java/FirstCall.java
-install/kotlin/Backends.kt backend=liquid
-install/kotlin/Backends.kt backend=ollama
-install/kotlin/Backends.kt backend=typesafe
+install/kotlin/Backends.kt
 install/kotlin/FirstCall.kt
-install/objective-c/backends.m backend=liquid
-install/objective-c/backends.m backend=ollama
-install/objective-c/backends.m backend=typesafe
+install/objective-c/backends.m
 install/objective-c/first-call.m
 install/pandas/first-call.py
-install/php/backends.php backend=liquid
-install/php/backends.php backend=ollama
-install/php/backends.php backend=typesafe
+install/php/backends.php
 install/php/first-call.php
 install/polars/first-call.py
 install/postgresql/first-call.sql
@@ -319,30 +299,20 @@ install/python/first-call.py
 install/python/functional/judge.py
 install/python/functional/stream.py
 install/python/functional/tally.py
-install/r/backends.R backend=liquid
-install/r/backends.R backend=ollama
-install/r/backends.R backend=typesafe
+install/r/backends.R
 install/r/data-frames.R
 install/r/first-call.R
 install/r/functional/judge.R
-install/ruby/backends.rb backend=liquid
-install/ruby/backends.rb backend=ollama
-install/ruby/backends.rb backend=typesafe
+install/ruby/backends.rb
 install/ruby/first-call.rb
 install/rust/backends.rs
 install/rust/first-call.rs
-install/scala/Backends.scala backend=liquid
-install/scala/Backends.scala backend=ollama
-install/scala/Backends.scala backend=typesafe
+install/scala/Backends.scala
 install/scala/FirstCall.scala
 install/sqlite/first-call.sql
-install/swift/backends/backends.swift backend=liquid
-install/swift/backends/backends.swift backend=ollama
-install/swift/backends/backends.swift backend=typesafe
+install/swift/backends/backends.swift
 install/swift/main.swift
 install/typescript/backends.ts
 install/typescript/first-call.ts
-install/zig/backends/backends.zig backend=liquid
-install/zig/backends/backends.zig backend=ollama
-install/zig/backends/backends.zig backend=typesafe
+install/zig/backends/backends.zig
 install/zig/first-call.zig
