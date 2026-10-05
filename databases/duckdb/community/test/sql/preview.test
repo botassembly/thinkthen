@@ -1,6 +1,6 @@
 # Load the actual extension into this run's fresh directory through DONT_LINK.
 statement ok
-SET extension_directory = '__TEST_DIR__/extensions';
+SET extension_directory = '${BUILD_DIR}/thinkthen-test-${TEST_UUID}/extensions';
 
 require thinkthen
 
