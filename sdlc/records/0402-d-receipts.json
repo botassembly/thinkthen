@@ -29,7 +29,7 @@
     "target/0402d-build/final-normal-check.log": "09eb0fd0647790a86913e11a6e864b38da2fb93194d8489622466211948a163a",
     "target/0402d-build/final-normal-source.log": "5577a8a65d95b366d0b0b8044a9006d84655f60eced7b08ce807f5e70ec9ad92",
     "target/0402d-build/final-normal.sh": "fd25a123200353c37d09af13757cddf59bb279d671196fad239b049a40587ec1",
-    "target/0402d-build/final-private-scan.log": "2cf518f6194ef2ddfa0e41733c1cfe5032cfc1b7d77bd70e631a3a358b4d397f",
+    "target/0402d-build/final-private-scan.log": "99c1f1adb4c54b5a51d617d9085f7bf61502ff5feab7f08fa8653d86fcab0196",
     "target/0402d-build/final-ratchet.log": "be21c9e4e5b761d3cf5d5e28dcda82536159d45e61696b51617b7489c8b5a13d",
     "target/0402d-build/final-shell-smoke.log": "d2ddc215689489e14574418a4ca966ed0cf63af04558040818705f8e57b73390",
     "target/0402d-build/final-strict.log": "d8a28d49070781af268c94e91f51150a4f8e3628d853a43cd75410db00fcbd30",
@@ -37,17 +37,6 @@
     "target/0402d-build/finalize-fixture.py": "4fd12435bbc07d91a8f74b79e5e021b24069115da6f262e2e3f247a08df1c30d",
     "target/0402d-build/fixture.sh": "c3eee06009e3455bb38060c7691faa6a8bb17a978ea10318e8ea6c751b6bc54a",
     "target/0402d-build/handoff-checks.sh": "56145e5a0dd1cab5b2797141ee95571173acdc71e14912a52c764645018484ee",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_42_17_946Z-debug-0.log": "8e8facd93cdfaa1f56a1e76d92db6827b92ef56c713407b2260728cf2a2b2777",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_44_00_468Z-debug-0.log": "b646a70f62d70e6d18c2c65b806884690c4664a0baa20d3c1393dd2c29ec9369",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_45_56_771Z-debug-0.log": "bc76143575e94a07f25a0d9f21518a2a85cd787803e4601d31a3c1da487228bb",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_47_29_281Z-debug-0.log": "cafd4b88923b7c39e97e5b6057304b92ffbc500563c6969f2776d37626366d55",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_48_00_794Z-debug-0.log": "9d3fc70b27220e84c4f3d35a26c08f4036cf37c565f04e133b2de6d698bd800b",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_52_53_429Z-debug-0.log": "4aba3f297199a71f48c1df45e885146016767e7f098b7579d784e5291604adde",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_53_25_135Z-debug-0.log": "2b3a3b12bb719f9e3ebd2e183e8b05125431070f5c92baae08442567bacd794c",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_55_12_254Z-debug-0.log": "cedcc9e2b3cc004d8cb293c164981d05114f24d806d958219dc9dde03f8949cd",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_55_43_681Z-debug-0.log": "a3436d1253e1cff42afe7034828f1fb7829b749f876e6e8dfd4890e7f7fcb6fd",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T06_59_48_183Z-debug-0.log": "602bc7d8fad46d7af8f0030a892a3a8e3be9305c0b241f1831f69e9548e399ff",
-    "target/0402d-build/home/.npm/_logs/2026-10-05T07_00_20_442Z-debug-0.log": "10204b92bca6634ef651f9c516efeecad4fd7207deef76d7e1c4231e4d8aa55d",
     "target/0402d-build/metadata.log": "8553338aedfb8b3046aed7ea2f48606b6501b87ab654abfb09e43f5117f7cba9",
     "target/0402d-build/metadata.test.mjs": "8760934d75d42273444f63de4cae163943440ebee4e51544868fc7f62ebafed9",
     "target/0402d-build/pinned-draft-build.log": "bd9505771823699f9658d990d78e5aa0d9f2d124f78f67003856feaf1b2c1035",
@@ -67,8 +56,9 @@
     "target/0402d-build/prepare-first.log": "3d684101282485eef9dda14539745a2854a6bca2bbe9e28841de7f0df999f2d6",
     "target/0402d-build/prepare-negative.log": "ef9bd2da7d4da310c39e074598cf96fcb65139905cb95a341f353e350a89ced7",
     "target/0402d-build/prepare-wire.log": "e139934e9e37659d5bd671a381345c22d14c506c1504d2b2b17b908bf650f5a3",
+    "target/0402d-build/private-scan-relative-home-failure.log": "60e7deb20ba10affafe94d0ea7aefc4cc3bd7d9a172d0744ce4e6dc6c6888040",
     "target/0402d-build/private-scan.log": "2cf518f6194ef2ddfa0e41733c1cfe5032cfc1b7d77bd70e631a3a358b4d397f",
-    "target/0402d-build/private-scan.py": "9d789350e4220e186e56594c1d150dfcb12029882f69108a866907f93fe34ed1",
+    "target/0402d-build/private-scan.py": "d0490b643635d8fd82ee378f49c2094338bddf690d199747aef7b6e31e1657ba",
     "target/0402d-build/receipt-manifest.py": "a56564f0b0abe742a86711f6ceb6ded9c8af6e2554f29e72554aa1ed52b259cb",
     "target/0402d-build/records.sh": "fa4a4caa93e360d4b88a02668a85e9bb5b8fa68cae0a559dad64c8fd6c2bfa43",
     "target/0402d-build/replay-final.log": "ae571c61b74427b2d752753706ea2806090bde3c79fe10df7e6a45e391bb6069",
@@ -155,5 +145,6 @@
       ],
       "source": "Working-tree code before fixture citation pin; no claim these are execution on the final source commit."
     }
-  }
+  },
+  "scan_note": "An early overbroad absolute-home scan counted relative owned scratch home paths in incidental npm log filenames. It was a false positive, not an operator-home disclosure. Curated receipts exclude those incidental logs; the corrected absolute-path scan passes."
 }

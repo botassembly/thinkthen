@@ -66,3 +66,8 @@ The pinned proof scope reports success, MemoryPeak 617185280 bytes, MemoryMax 12
 Earlier fixture failure logs are retained individually: request expectation mismatch, scalar replay expectation, audit exit expectation and malformed-recording diagnostic expectation. Early site iteration logs were overwritten during correction and are not claimed retained; their failures involved sample widths/comments, Astro syntax, a missed mechanical importer, nested main and retired prose wording. Final passing logs and independent negative/control receipts are retained. This limitation is explicit rather than inventing replacement original logs.
 
 Fresh independent source/receipt review and reviewed landing remain pending. No subagents, full test/spec/surfaces checkpoint, stress, real model, paid/live call, native proof, CI, tag, release or recipe promotion is performed by D. All six recipe issues remain open. Ian can overturn presentation and caller-owned demonstration choices; changes to evidence or publication disposition require separately reviewed support.
+
+
+## Final manifest scan correction
+
+The first handback scan used an overly broad substring and counted eleven relative owned-scratch filenames beneath `target/0402d-build/home/` as operator-home paths. None was an absolute operator path or a private-name match. The outer command sequence nevertheless proceeded after that scan failure; the failure log is retained as `private-scan-relative-home-failure.log`. The manifest now excludes incidental npm debug logs, the scan distinguishes absolute home paths, and the renewed check pins exit 0. The accepted plan remains unchanged. This is a receipt curation/scanner correction, not a source, recording, binding-proof or publication change.
