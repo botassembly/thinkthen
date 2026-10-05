@@ -22,7 +22,7 @@ pub(super) fn initialized() -> (Scratch, Listener) {
     let output = live(&scratch, &listener);
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"true\n");
-    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(listener.count(), 1);
     (scratch, listener)
 }
 pub(super) fn month(scratch: &Scratch) -> std::path::PathBuf {
@@ -46,7 +46,7 @@ fn native_creation_and_monthly_replacement_keep_exact_counts_and_private_access(
         support::assert_private(&path);
     }
     assert_eq!(live(&scratch, &listener).status.code(), Some(0));
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.count(), 2);
     let totals = support::status(&scratch);
     assert_eq!(totals["usage"]["total"]["requests_sent"], 2);
     assert_eq!(totals["usage"]["total"]["input_tokens"], 10);
@@ -84,7 +84,7 @@ fn foreign_usage_grants_and_owners_refuse_before_any_additional_request() {
             };
             let output = live(&scratch, &listener);
             assert_eq!(output.status.code(), Some(5), "{object} {grant}");
-            assert_eq!(listener.requests().len(), 1);
+            assert_eq!(listener.count(), 1);
             let subject = match object {
                 "root" => "the usage folder that thinkthen status names",
                 "lock" => ".lock",
@@ -120,7 +120,7 @@ fn unsafe_temporary_is_not_truncated_and_write_failure_keeps_the_judgment() {
     let output = live(&scratch, &listener);
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"true\n");
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.count(), 2);
     assert!(String::from_utf8_lossy(&output.stderr).contains("usage"));
     assert_eq!(
         fs::read(&temporary).expect("retained temporary"),
@@ -156,7 +156,7 @@ fn status_and_plan_keep_their_no_send_contract_beside_unsafe_usage() {
             .code(),
         Some(0)
     );
-    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(listener.count(), 1);
 }
 #[test]
 fn malformed_private_month_keeps_invalid_content_advice() {
@@ -164,7 +164,7 @@ fn malformed_private_month_keeps_invalid_content_advice() {
     fs::write(month(&scratch), b"malformed fixture").expect("malformed");
     let output = live(&scratch, &listener);
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(listener.count(), 1);
     assert!(String::from_utf8_lossy(&output.stderr).contains("invalid contents"));
     assert!(!String::from_utf8_lossy(&output.stderr).contains(support::ADVICE));
 }
@@ -203,7 +203,7 @@ fn native_configuration_writer_policy_warns_and_refuses_named_backends_without_l
             assert_eq!(output.status.code(), Some(5));
             assert_eq!(output.stderr, NAMED_REFUSAL.as_bytes());
         }
-        assert_eq!(listener.requests().len(), usize::from(!shared));
+        assert_eq!(listener.count(), usize::from(!shared));
         let printed = format!(
             "{}{}",
             String::from_utf8_lossy(&output.stdout),
@@ -233,7 +233,7 @@ fn null_usage_dacl_is_unrestricted_and_empty_dacl_is_unreadable() {
         assert!(descriptor.contains(dacl), "native descriptor {descriptor}");
         let output = live(&scratch, &listener);
         assert_eq!(output.status.code(), Some(5));
-        assert_eq!(listener.requests().len(), 1);
+        assert_eq!(listener.count(), 1);
         support::plant(&path, "", false);
         assert_eq!(
             fs::read(&path).expect("retained month after restoration"),
@@ -255,7 +255,7 @@ fn null_configuration_dacl_is_shared_and_named_backends_are_refused() {
     let listener = Listener::answering(|_| Canned::ok(support::ANSWER)).expect("counted backend");
     let output = live(&scratch, &listener);
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(listener.requests().len(), 0);
+    assert_eq!(listener.count(), 0);
     assert_eq!(output.stderr, NAMED_REFUSAL.as_bytes());
 }
 
@@ -280,7 +280,7 @@ fn a_usage_root_junction_refuses_without_touching_its_target() {
     );
     let output = live(&scratch, &listener);
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(listener.count(), 1);
     assert_eq!(
         fs::read(&target_month).expect("unchanged target bytes"),
         bytes
@@ -309,7 +309,7 @@ fn recognized_month_and_configuration_symlinks_refuse_without_target_mutation() 
             .expect("native symlink prerequisite; inability leaves this proof open");
         let output = live(&scratch, &listener);
         assert_eq!(output.status.code(), Some(5));
-        assert_eq!(listener.requests().len(), 1);
+        assert_eq!(listener.count(), 1);
         assert_eq!(fs::read(&target).expect("retained target"), bytes);
         assert_eq!(support::descriptor(&target), descriptor);
         fs::remove_file(&leaf).expect("remove owned link");

@@ -136,8 +136,9 @@ impl Home {
     /// Write the configuration file, or leave none when `text` is empty.
     pub(crate) fn config(&self, text: &str) -> &Self {
         if !text.is_empty() {
-            std::fs::write(self.config_folder().join("config.json"), text)
-                .expect("a configuration file");
+            let path = self.config_folder().join("config.json");
+            std::fs::write(&path, text).expect("a configuration file");
+            crate::child::private_file(&path).expect("a private configuration fixture");
         }
         self
     }

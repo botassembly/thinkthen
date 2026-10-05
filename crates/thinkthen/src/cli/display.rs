@@ -1,6 +1,6 @@
 //! Filter, rank and find text decoration at the output boundary.
 
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 
 use clap::Args;
 
@@ -152,7 +152,7 @@ impl Display {
                     .and_then(|()| writer.write_all(b"\n"))
                     .and_then(|()| writer.flush())
                 {
-                    Err(error) if error.kind() == ErrorKind::BrokenPipe => Ok(false),
+                    Err(error) if Failure::closed_output(&error) => Ok(false),
                     Err(error) => Err(Failure::Output(error)),
                     Ok(()) => Ok(true),
                 }

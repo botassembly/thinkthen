@@ -200,6 +200,14 @@ pub(crate) enum Failure {
     Render(RenderError),
 }
 
+impl Failure {
+    /// Windows reports a closing pipe as ERROR_PIPE_NOT_CONNECTED as well as BrokenPipe.
+    pub(crate) fn closed_output(error: &io::Error) -> bool {
+        error.kind() == io::ErrorKind::BrokenPipe
+            || cfg!(windows) && error.raw_os_error() == Some(233)
+    }
+}
+
 impl From<crate::schedule::Placed> for Failure {
     fn from(placed: crate::schedule::Placed) -> Self {
         placed.cause

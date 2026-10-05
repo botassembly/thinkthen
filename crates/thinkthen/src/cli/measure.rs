@@ -4,7 +4,7 @@
 //! and hands the bytes to the pure core. `sdlc/scripts/policy.py` holds it to that.
 
 use std::fmt;
-use std::io::{ErrorKind, Read as _, Write};
+use std::io::{Read as _, Write};
 use std::path::Path;
 
 use crate::core::measure::answer::{Rule, Shown};
@@ -277,7 +277,7 @@ pub(crate) fn write(mut writer: impl Write, text: &str) -> Result<(), Failure> {
         .write_all(text.as_bytes())
         .and_then(|()| writer.flush())
     {
-        Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(Failure::Output(error)),
+        Err(error) if !Failure::closed_output(&error) => Err(Failure::Output(error)),
         _ => Ok(()),
     }
 }

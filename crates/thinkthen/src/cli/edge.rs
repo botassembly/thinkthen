@@ -2,7 +2,7 @@
 
 use std::env;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, ErrorKind, IsTerminal as _, Read, Write};
+use std::io::{self, BufRead, BufReader, IsTerminal as _, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -397,7 +397,7 @@ pub(crate) fn waiting(input: Option<&Path>, writer: impl Write) {
 /// Returns [`Failure::Output`] when the write fails for any other reason.
 pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<bool, Failure> {
     match writeln!(writer, "{line}").and_then(|()| writer.flush()) {
-        Err(error) if error.kind() == ErrorKind::BrokenPipe => Ok(false),
+        Err(error) if Failure::closed_output(&error) => Ok(false),
         Err(error) => Err(Failure::Output(error)),
         Ok(()) => Ok(true),
     }
