@@ -505,9 +505,9 @@ EOF
 }
 
 if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
-	[ $# -gt 0 ] || set -- command c first-run
+	[ $# -gt 0 ] || set -- command c python first-run
 	for part in "$@"; do
-		case $part in command | c | first-run | crate) ;;
+		case $part in command | c | python | first-run | crate) ;;
 		*) echo "release-pack: $part is not a Windows stage 1 command part" >&2; exit 2 ;; esac
 	done
 else

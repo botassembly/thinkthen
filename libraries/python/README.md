@@ -2,6 +2,8 @@
 
 `import thinkthen as tt` calls the real engine through the public `thinkthen` crate. The binding is the unpublished crate `thinkthen-python` in its own Cargo workspace (ADR 0047). The design page is `sdlc/planning/libraries/python.md`.
 
+The 0.2 release adds an x86-64 Windows wheel (`win_amd64`) for Python 3.10 or later. Install it with `pip install thinkthen` after 0.2 is published. Its native Windows run remains pending. Linux and macOS keep their existing wheels. A development checkout builds it with the same `build-wheel.sh` maturin route under Git Bash. The Windows gate installs the release wheel outside the checkout, checks loopback answers and refusals, then runs the applicable tests with the test-only probe extension.
+
 ```python
 import thinkthen as tt
 

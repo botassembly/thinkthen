@@ -476,6 +476,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thinkthen",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -45,84 +45,11 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Outcome: Windows support and the first features after 0.1. 0.2 work lands on main after the `release/0.1` cut (ADR 0116).
+Ship the small working core approved by Ian on 2026-10-05. [The current plan](team-0-2-2026-10-04.md) owns the priority order, completion status, deferred work, delegated run approvals and exit criteria.
 
-Ian cut 0.2 to its core on 2026-10-05. Keep 0397 to 0405, 0377, 0416 and 0419. Move audit gaps 0406, 0407, 0408, 0409, 0410, 0413, 0414 and 0417 to later. Paragraph windows remain later. No score or pandas/DuckDB issue slice needs a new 0.2 ticket. Extract remains dropped; the ten functions remain.
+Remaining core: Windows Python 0382, binding/SQL backend choice 0377, backend checking rename 0416, DuckDB 1.5.4/1.5.5 builds 0403, agent skill 0419 and the small default-recognize check. Then run the authorized hosted rehearsal and real Windows test on the reviewed commit; missing required Windows behavior blocks release. Lower-priority file readers do not hold release and move to 0.3 if unfinished. Release QA and Ian's go complete the release.
 
-Order:
-
-1. Land 0400 slice C, the default of 8. 0402 slice D is already landed; recipe publication follows each accepted experiment result.
-2. 0398 slice B2, the R packaging fix, already landed at `ddfcbc74c`. Prepare one approval request covering the hosted rehearsal and one real Windows run for the command line/Rust crate, C DLL and Python wheel.
-3. Lane 1: finish 0381, then 0382. Node, C# and JVM stay open for 0.3.
-4. Lane 2: 0377, then 0416.
-5. Lane 3: 0403, then 0419.
-6. Gaps: 0404 starts with behavior-based test names, duplicate-test cuts and record cleanup.
-
-Proof for 0.2: one fresh review of the whole ticket or slice, then fix and land. A second review is allowed only when a substantial fix touches data loss, credentials, money, memory safety or user-visible correctness. Run the full test suite and lint on the landing commit. Replay docs examples only when docs or their outputs change. Add no verification-runner features, frozen fingerprints, forged-receipt controls or receipt reviews. Open runner findings on 0400 C are dropped. Write one record per ticket at landing, and keep ticket statuses to one or two sentences. Release rehearsal and Ian's approvals remain required.
-
-Waiting on experiments: provider entries, the "none" wording for choose and each recipe's measured numbers. [Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) uses rules to find candidates and decide or choose to confirm them. Reviewed 0031 supplies only the frozen-cohort comparison; publication proof remains pending.
-
-Completed foundation: [0397](../tickets/0397-main-moves-to-0-2-0.md) moves main to 0.2.0 and freezes `release/0.1`.
-
-Exit criteria, a coordinator default Ian can overturn:
-
-1. The retained 0.2 tickets land; recipe pages publish as their accepted numbers arrive.
-2. A clean rehearsal and a clean release QA round on the latest checkpoint.
-3. Ian gives the go.
-
-Blockers:
-
-- None. `release/0.1` is frozen under Ian's ruling of 2026-10-04. Main carries 0.2.0 (ticket 0397). Fixes land on main and ship in 0.2.
-
-Windows work follows [windows.md](windows.md):
-
-- [0373: Windows stage 0](../tickets/0373-windows-stage-0.md), landed before the cut. The root workspace and the C door build and pass their tests on Windows, and nothing ships. It changes no 0.1 behavior.
-- [0379: The root workspace tests pass on macOS](../tickets/0379-macos-root-suite.md), landed before the cut. It changes tests only.
-- Windows for 0.2: the command line and Rust crate (0380), C DLL (0381), and Python wheel (0382) ship for Windows x86-64. Each is tested once on a real Windows runner before release, in one combined run. Node (0383), C# (0384) and JVM (0385) move to 0.3 and remain open. 0381 and 0382 retain their prerequisite on 0380 slice A; the deferred tickets retain their technical prerequisites.
-
-Open items:
-
-- [0416: Move backend checking under the backend namespace](../tickets/0416-backend-command-namespace.md)
-
-
-- [0419: Official ThinkThen skill for agents](../tickets/0419-official-skill-for-agents.md), the separately reviewed promotion of docs item 22. It changes documentation and preserves empty-find behavior.
-- [0377: Each language binding and SQL extension names a backend in code](../tickets/0377-binding-backends.md)
-- [0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64](../tickets/0380-windows-command-line-and-rust-crate.md)
-- [0381: Windows stage 1: the C library ships as a DLL for Windows x86-64](../tickets/0381-windows-c-dll.md)
-- [0382: Windows stage 1: the Python wheel ships for Windows x86-64](../tickets/0382-windows-python-wheel.md)
-- [0393: npm publishes through staged publishing](../tickets/0393-npm-staged-publishing.md)
-- [A Flutter app file in the release bundle](../issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md)
-- [The bindings and SQL extensions cannot name a backend](../issues/2026-10-01-bindings-and-sql-extensions-name-no-backend.md)
-- [`rank --threshold P` keeps only records at or above a probability](../issues/2026-10-01-rank-keeps-only-records-over-a-threshold.md)
-- [`score --level NAME=MEANING` describes a level on the command line](../issues/2026-10-01-score-levels-described-on-the-command-line.md)
-- [SQL named forms `thinkthen_rank` and `thinkthen_filter`](../issues/2026-10-01-sql-names-for-rank-and-filter.md)
-- [SQLite `thinkthen_find` drops its `model` setting](../issues/2026-10-01-sqlite-find-drops-its-model-setting.md)
-- [`rank --details` prints `"value": null` on every row](../issues/2026-10-03-rank-details-prints-value-null.md)
-- [Search features: positions, several questions, and grep-style output](../issues/2026-10-03-search-features-positions-several-questions-and-grep-style-output.md)
-- [Help and warning gaps from the transcript how-to](../issues/2026-10-03-help-gaps-from-the-transcript-how-to.md)
-- [A glossary for call, request and decision](../issues/closed/2026-10-03-glossary-call-request-decision.md)
-- [AGENTS.md tells outside agents how to report](../issues/2026-10-03-agents-md-tells-outside-agents-how-to-report.md)
-- [The doc tests gate each checkpoint and each release](../issues/2026-10-03-doc-tests-gate-checkpoints-and-releases.md)
-- [`native_install` loses the C library when `CARGO_TARGET_DIR` is set](../issues/2026-10-03-native-install-ignores-cargo-target-dir.md)
-- [The pandas binding refuses a Series on four functions, and DuckDB's recognize takes no kind descriptions](../issues/2026-10-03-pandas-series-and-duckdb-recognize-descriptions.md)
-- [The `ruby` platform gem on RubyGems is still the 0.0.1 placeholder](../issues/2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md)
-- [The Polars deadline test races its own deadline under load](../issues/2026-10-03-polars-deadline-test-races-its-deadline-under-load.md)
-- Release process, from the 0.1 releases: [the rehearsal never runs the publish steps](../issues/2026-10-04-rehearsal-never-runs-the-publish-steps.md), [the public install checks are done by hand](../issues/2026-10-04-public-install-checks-are-done-by-hand.md), [the release tag can name an unrehearsed commit](../issues/2026-10-04-release-tag-can-differ-from-the-rehearsed-commit.md), [each patch release costs two hand passes](../issues/2026-10-04-each-patch-release-costs-two-hand-passes.md), [the R package's Linux install and pre-release proof](../issues/2026-10-04-r-install-on-linux-and-before-release.md), [two release secrets remain](../issues/2026-10-04-two-release-secrets-remain.md), and [a release needs two approvals](../issues/2026-10-04-a-release-needs-two-approvals.md)
-- Remaining tool draft: [Markdown repair tool](../issues/2026-10-03-draft-markdown-repair-tool.md).
-
-The approved core recipes publish through 0402:
-
-- [`rules-propose-model-confirms`: Rules propose, the model confirms](../issues/2026-10-03-draft-function-extract.md) — Frozen candidate-generation and choose comparison; no generic recognize failure claim.
-- [`verify-a-claim`: Verify a claim](../issues/2026-10-03-draft-function-verify.md) — A person reviews every supports result before action. Qualification remains later on this shared route.
-- [`ask-your-cache-with-duckdb`: Ask your cache with DuckDB](../issues/2026-10-05-recipe-ask-your-cache-with-duckdb.md) — Retained-data SQL with stock DuckDB 1.5.5, dbt v1 where used, and the documented unsigned development path.
-
-These recipes stay unpublished for later:
-
-- [`link-records`: Link records](../issues/2026-10-03-draft-function-link.md) — Link none measurements are being rerun; no wording improvement established.
-- [`navigate-many-documents`: Navigate many documents](../issues/2026-10-03-draft-function-navigate.md) — Held-out search did not generalize.
-- [`search-transcripts`: Search transcripts](../issues/2026-10-05-recipe-search-transcripts.md) — Held-out 13/29 passages versus broad search’s 15/29, with unequal reading lengths.
-
-Extract remains dropped. Qualification promises no automatic judgment. No recipe change authorizes an experiment continuation or paid call.
+Main carries 0.2.0; release/0.1 is frozen, and public install text stays 0.1.2 until 0.2 ships. dbt v1 is the documented route. No new function or grep alias is approved. The plan records the deferred audit gaps, recipes, Windows bindings, tables, signing and community listing.
 
 ## 0.3
 
@@ -143,6 +70,8 @@ Exit criteria: none. An item moves to a numbered milestone when its trigger fire
 Blockers: none.
 
 Open items:
+
+- [Windows static-library distribution waits for stage 3](../issues/2026-10-05-windows-static-library-waits-for-stage-3.md)
 
 - [0406: Rank questions preserve criteria and score ordering across core surfaces](../tickets/0406-rank-question-equivalence.md)
 - [0407: Supply independent context for each record](../tickets/0407-per-record-context.md)

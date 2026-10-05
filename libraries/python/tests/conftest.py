@@ -18,10 +18,18 @@ def pytest_configure(config):
 FAKE = "sk-fake-loopback-python-0105"
 REPO = pathlib.Path(__file__).resolve().parents[3]
 TARGET = pathlib.Path(os.environ.get("CARGO_TARGET_DIR") or REPO / "target")
-BINARY = TARGET / "debug" / "conformance-backend"
+BINARY = TARGET / "debug" / ("conformance-backend.exe" if os.name == "nt" else "conformance-backend")
 sys.path.insert(0, str(REPO / "conformance" / "children"))
-from children import child_env as clean_env  # noqa: E402  the shared helper, ticket 0127
+from children import child_env as shared_clean_env  # noqa: E402  the shared helper, ticket 0127
 from keys import question_keys  # noqa: E402,F401  re-exported for the tests
+
+
+def clean_env(keep=(), **values):
+    # Windows needs its system directory to load host DLLs. These defaults
+    # point at the gate's owned scratch directories, never the user's folders.
+    if os.name == "nt":
+        keep = (*keep, "SystemRoot", "TEMP", "TMP", "APPDATA", "LOCALAPPDATA")
+    return shared_clean_env(keep=keep, **values)
 
 
 def pytest_sessionstart(session):

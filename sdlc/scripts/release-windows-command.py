@@ -71,13 +71,20 @@ def platform(folder, version):
     """Reject stage 2 artifacts and incomplete Windows command bundles."""
     name = f"thinkthen-{version}-{TARGET}.zip"
     c_name = f"thinkthen-c-{version}-{TARGET}.zip"
-    wanted = {c_name, c_name + ".sha256", name, name + ".sha256", "thinkthen-first-run.tar.gz", "thinkthen-first-run.tar.gz.sha256"}
+    wheel = f"thinkthen-{version}-cp310-abi3-win_amd64.whl"
+    wanted = {c_name, c_name + ".sha256", name, name + ".sha256", wheel, wheel + ".sha256",
+              "thinkthen-first-run.tar.gz", "thinkthen-first-run.tar.gz.sha256"}
     if folder.is_symlink() or not folder.is_dir():
         raise ValueError("Windows platform folder is missing or linked")
     if {path.name for path in folder.iterdir()} != wanted:
-        raise ValueError("Windows platform must hold exactly the command ZIP, C ZIP and first-run sample with checksums")
+        raise ValueError("Windows platform must hold exactly the command ZIP, C ZIP, Python wheel and first-run sample with checksums")
     check(folder / name)
     windows_c.check(folder / c_name)
+    wheel_path, wheel_sum = folder / wheel, folder / (wheel + ".sha256")
+    if any(path.is_symlink() or not path.is_file() for path in (wheel_path, wheel_sum)):
+        raise ValueError("Python wheel or checksum is missing or linked")
+    if wheel_sum.read_text().strip() != f"{hashlib.sha256(wheel_path.read_bytes()).hexdigest()}  {wheel}":
+        raise ValueError("Python wheel differs from its checksum")
     sample = folder / "thinkthen-first-run.tar.gz"
     sidecar = folder / (sample.name + ".sha256")
     if any(path.is_symlink() or not path.is_file() for path in (sample, sidecar)):

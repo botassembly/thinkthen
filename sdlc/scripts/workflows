@@ -209,13 +209,13 @@ def release(name, doc):
     wheel_steps = wheel_job.get("steps") or []
     wheel_runs = [(i, step.get("run")) for i, step in enumerate(wheel_steps)
                   if step.get("if") is None and step.get("continue-on-error") is None]
-    verify = next((i for i, run in wheel_runs if run == "sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.whl' 4"), None)
+    verify = next((i for i, run in wheel_runs if run == "sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.whl' 5"), None)
     twine_install = next((i for i, run in wheel_runs if run and re.fullmatch(r"python3 -m pip install ['\"]?twine(?:==[0-9.]+)?['\"]?", run)), None)
     twine_check = next((i for i, run in wheel_runs if run == "python3 -m twine check --strict platform/*/thinkthen-*.whl"), None)
     if (wheel_job.get("if") is not None or wheel_job.get("continue-on-error") is not None or
             any(i is None for i in (verify, twine_install, twine_check)) or
             not verify < twine_install < twine_check):
-        out.append(f"{name}: job wheels must verify four wheels, install pinned twine, and check strictly in order")
+        out.append(f"{name}: job wheels must verify five wheels, install pinned twine, and check strictly in order")
     for job, active_version, condition in (("build", "3.10", "runner.os == 'macOS'"),
                                            ("smoke", "3.12", None)):
         job_steps = jobs.get(job, {}).get("steps") or []
@@ -448,7 +448,7 @@ def windows_release_rules(name, jobs):
         if kind == "build":
             for command in ("cargo clippy --locked --offline --workspace --all-targets -- -D warnings",
                             "cargo test --locked --offline --no-fail-fast --workspace --all-targets",
-                            'sdlc/scripts/release-pack "$TARGET" release-files command c first-run',
+                            'sdlc/scripts/release-pack "$TARGET" release-files command c python first-run',
                             "release-windows-command.py platform release-files"):
                 if command not in text:
                     out.append(f"{name}: build must check and pack the Windows command: {command}")
@@ -636,7 +636,7 @@ jobs:
   wheels:
     needs: [resolve, build]
     steps:
-      - run: sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.whl' 4
+      - run: sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.whl' 5
       - run: python3 -m pip install 'twine==6.2.0'
       - run: python3 -m twine check --strict platform/*/thinkthen-*.whl
   npm-pack: {needs: [resolve, build]}
@@ -832,11 +832,11 @@ def self_test():
         ("dry-crate-conditional", "release.yml", lambda t: t.replace('      - run: cargo publish --dry-run --locked --package thinkthen\n', '      - run: cargo publish --dry-run --locked --package thinkthen\n        if: false\n'),
          ["release.yml: job crate must dry-run cargo publish after package and before upload"]),
         ("dry-wheel-missing", "release.yml", lambda t: t.replace('      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl\n', ''),
-         ["release.yml: job wheels must verify four wheels, install pinned twine, and check strictly in order"]),
+         ["release.yml: job wheels must verify five wheels, install pinned twine, and check strictly in order"]),
         ("dry-wheel-unpinned", "release.yml", lambda t: t.replace("twine==6.2.0", "twine"),
          ["release.yml: job wheels installs twine with no version"]),
         ("dry-wheel-bypass", "release.yml", lambda t: t.replace('      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl\n', '      - run: python3 -m twine check --strict platform/*/thinkthen-*.whl\n        continue-on-error: true\n'),
-         ["release.yml: job wheels must verify four wheels, install pinned twine, and check strictly in order"]),
+         ["release.yml: job wheels must verify five wheels, install pinned twine, and check strictly in order"]),
         ("dry-tap-bypass", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb || true\n'),
          ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
         ("dry-tap-missing", "release.yml", lambda t: t.replace('        run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb\n', ''),

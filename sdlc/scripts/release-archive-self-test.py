@@ -465,7 +465,9 @@ def main():
         c_zip = C_FIXTURE["create"](windows, version)
         sample = windows / "thinkthen-first-run.tar.gz"
         sample.write_bytes(first_run)
-        for file in (win_zip, sample):
+        wheel = windows / f"thinkthen-{version}-cp310-abi3-win_amd64.whl"
+        wheel.write_bytes(b"wheel fixture")
+        for file in (win_zip, sample, wheel):
             file.with_name(file.name + ".sha256").write_text(
                 f"{hashlib.sha256(file.read_bytes()).hexdigest()}  {file.name}\n")
         npm = base / "npm"
@@ -479,7 +481,8 @@ def main():
         expected_files |= {f"fixture-{target}.bin" for target in
                            (other_target, "aarch64-apple-darwin", "x86_64-apple-darwin")}
         expected_files |= {f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256",
-                           c_zip.name, c_zip.name + ".sha256", win_zip.name, win_zip.name + ".sha256", sample.name, sample.name + ".sha256"}
+                           c_zip.name, c_zip.name + ".sha256", win_zip.name, win_zip.name + ".sha256", sample.name, sample.name + ".sha256",
+                           wheel.name, wheel.name + ".sha256"}
         if {file.name for file in collected.iterdir()} != expected_files:
             raise AssertionError("collect omitted or added a selected fixture file")
         original_c = c_zip.read_bytes()
