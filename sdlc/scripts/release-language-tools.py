@@ -6,6 +6,7 @@ The caller supplies GITHUB_ENV and GITHUB_PATH. Acquisition is opt-in.
 """
 
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -93,21 +94,28 @@ def verify_digest(path, kind, expected):
 def fetch(url, path, opener=urllib.request.urlopen, pause=time.sleep):
     if path.exists() or path.is_symlink():
         fail(f"download output already exists: {path}")
-    # Rehearsal run 36817514201 met an HTTP 503 here. Only the request retries. No
-    # file exists until a response arrives, so a retry never meets a partial file.
+    # Retry transient request and body failures within the same three-attempt limit.
+    # Remove only this download's partial output before retrying.
     for attempt in range(3):
         try:
-            response = opener(url, timeout=60)
-            break
+            with opener(url, timeout=60) as response:
+                headers = getattr(response, "headers", {})
+                if getattr(response, "status", None) == 206 or headers.get("Content-Range"):
+                    raise urllib.error.URLError("download returned a partial response")
+                with path.open("xb") as output:
+                    shutil.copyfileobj(response, output)
+                    length = headers.get("Content-Length")
+                    if length is not None and output.tell() != int(length):
+                        raise http.client.IncompleteRead(b"", int(length) - output.tell())
+            return
         except urllib.error.HTTPError as error:
             if attempt == 2 or (error.code < 500 and error.code != 429):
                 raise
-        except (urllib.error.URLError, TimeoutError, ConnectionError):
+        except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.IncompleteRead):
+            path.unlink(missing_ok=True)
             if attempt == 2:
                 raise
         pause(10 * (attempt + 1))
-    with response, path.open("xb") as output:
-        shutil.copyfileobj(response, output)
 
 
 def package_version(name, run=command):
