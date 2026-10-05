@@ -255,7 +255,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-0381-release-timeout-') as temporary:
         portable(Path(temporary))
     windows_source_oracles()
-    print('0381 release lifecycle: byte/success/nonzero/filled-output and inherited-output timeout/owned cleanup passed; Windows source oracles only')
+    posix = 'POSIX inherited-output/owned cleanup passed' if os.name == 'posix' else 'POSIX cleanup execution skipped'
+    print(f'0381 release lifecycle: byte/success/nonzero/filled-output passed; {posix}; Windows source oracles passed, native Windows full proof pending')
 
 
 if __name__ == '__main__':
