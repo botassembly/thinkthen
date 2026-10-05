@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 import shutil
 import subprocess
 import sys
@@ -70,6 +72,19 @@ def published_consumer(archive: Path, target: str, release: str, root: Path) -> 
             tools = Path(os.environ['THINKTHEN_TOOLCHAINS']) / 'duckdb' / versions()[0]
             check.env['PATH'] = str(tools) + os.pathsep + check.env['PATH']
             check.env.update(THINKTHEN_BASE_URL=backend.base(), THINKTHEN_API_KEY='sk-loopback-package-consumer')
+            recording = check.sample / 'recording/thinkthen.jsonl'
+            entries = [json.loads(line) for line in recording.read_text().splitlines()]
+            states = {item['sha256']: item['state'] for item in entries if 'sha256' in item}
+            for item in entries:
+                if 'key' not in item:
+                    continue
+                def key(url):
+                    parts = ['systemone', url, json.dumps(item['model']), states[item['state']], item['question']]
+                    return hashlib.sha256('\n'.join(parts).encode()).hexdigest()
+                assert item['key'] == key(item['url']), 'saved recording identity differs'
+                item['url'] = backend.base() + '/systemone'
+                item['key'] = key(item['url'])
+            recording.write_text('\n'.join(json.dumps(item, separators=(',', ':')) for item in entries) + '\n')
             local = archive
             if missing:
                 local = own / 'missing.tar.gz'
