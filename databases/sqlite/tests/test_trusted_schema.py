@@ -2,9 +2,11 @@
 """Explicit initial loading permits reviewed schema calls on one connection."""
 
 import os
+import pathlib
+import subprocess
 import sys
 
-from helper import Backend, child, environment, expect, main
+from helper import CLI, LIB, Backend, child, environment, expect, main
 from test_schema import ATTACK, DECIDE
 
 TRUSTED = """
@@ -146,6 +148,39 @@ say(results=results)
         expect(unchanged, True, "failed active reload preserves registration")
         expect(reload, "error during initialization: unable to delete/modify user-function due to active statements",
                "SQLite refuses changing mode through active SQL")
+
+
+def test_native_temp_views_remain_caller_sql_in_both_modes_under_off() -> None:
+    backend = Backend()
+    env = environment(backend)
+    env.pop("THINKTHEN_API_KEY")
+    question = pathlib.Path(env["SCRATCH"]) / "empty-question.json"
+    question.write_text('{"decide":""}')
+    for entry in ("sqlite3_thinkthen_init", "sqlite3_thinkthen_trusted_init"):
+        held = subprocess.run([CLI, "-batch", ":memory:"], env=env, capture_output=True, text=True,
+                              input=f"""
+.bail on
+.load {LIB} {entry}
+PRAGMA trusted_schema=OFF;
+SELECT sqlite_version();
+PRAGMA trusted_schema;
+CREATE TEMP VIEW preview AS SELECT thinkthen_plan('Is it red?', '{{"a":"red"}}') AS answer;
+SELECT json_extract(answer, '$.records') FROM preview;
+CREATE TEMP VIEW packed AS SELECT * FROM thinkthen_decide_many('Is it red?', '{{}}');
+SELECT count(*) FROM packed;
+CREATE TEMP VIEW controls AS SELECT thinkthen_budget_ms(0) AS answer;
+SELECT answer FROM controls;
+CREATE TEMP VIEW totals AS SELECT thinkthen_usage() AS answer;
+SELECT json_extract(answer, '$.requests_sent') FROM totals;
+CREATE TEMP VIEW named AS SELECT thinkthen_decide('@{question}', 'red');
+SELECT * FROM named;
+""")
+        expect(held.stdout.splitlines(), ["3.50.0", "0", "1", "0", "0", "0"],
+               f"{entry}: pinned host permits keyless TEMP plan, table and controls under OFF")
+        expect(held.returncode, 1, f"{entry}: TEMP question-file callback reaches its local parser refusal")
+        expect("thinkthen local:" in held.stderr, True, f"{entry}: file parser reports a local error")
+        expect("unsafe use" in held.stderr, False, f"{entry}: SQLite permits caller-created TEMP objects")
+    expect(backend.close(), 0, "keyless TEMP previews, empty tables and local refusals send nothing")
 
 
 if __name__ == "__main__":
