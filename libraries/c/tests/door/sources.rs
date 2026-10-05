@@ -1,7 +1,7 @@
 //! Explicit files keep source coordinates beside every native answer.
 use crate::cases::{Script, replies};
 use crate::{compile, crate_dir, run, scratch, text};
-use conformance_backend::Backend;
+use conformance_backend::{Backend, Canned, Listener};
 use serde_json::{Value, json};
 
 fn ask(backend: &Backend, requests: &[Value]) -> Vec<(i32, Value)> {
@@ -10,13 +10,18 @@ fn ask(backend: &Backend, requests: &[Value]) -> Vec<(i32, Value)> {
 
 fn ask_at(backend: &Backend, requests: &[Value], cache: bool) -> Vec<(i32, Value)> {
     let base = format!("{}/arm/full/capture/v1", backend.origin());
+    ask_base(&base, requests, cache)
+}
+
+fn ask_base(base: &str, requests: &[Value], cache: bool) -> Vec<(i32, Value)> {
     let mut script = Script::default();
     script.ask(
         "settings",
-        &[&base, &json!({"cache":cache,"max_retries":0}).to_string()],
+        &[base, &json!({"cache":cache,"max_retries":0}).to_string()],
     );
     for request in requests {
-        script.ask("call", &[&base, &request.to_string()]);
+        script.ask("call", &[base, &request.to_string()]);
+        script.ask("facts", &[base, ""]);
     }
     let output = run(
         &compile(&crate_dir().join("tests/c/driver.c")),
@@ -24,15 +29,16 @@ fn ask_at(backend: &Backend, requests: &[Value], cache: bool) -> Vec<(i32, Value
         &script.0,
     );
     assert!(output.status.success(), "{}", text(&output.stderr));
-    replies(&output.stdout)
-        .expect("framed replies")
-        .into_iter()
-        .skip(1)
-        .map(|(code, body)| {
-            (
-                code,
-                serde_json::from_str(&body).unwrap_or(json!({"message":body})),
-            )
+    let replies = replies(&output.stdout).expect("framed replies");
+    replies[1..]
+        .chunks_exact(2)
+        .map(|pair| {
+            let (code, body) = &pair[0];
+            let mut body: Value = serde_json::from_str(body).unwrap_or(json!({"message":body}));
+            if *code != 0 {
+                body["facts"] = serde_json::from_str(&pair[1].1).expect("error facts");
+            }
+            (*code, body)
         })
         .collect()
 }
@@ -235,4 +241,131 @@ fn moving_identical_evidence_changes_provenance_without_changing_cache_identity(
     assert!(body.contains("Refund me please."));
     assert!(!body.contains("first.txt") && !body.contains("second.txt"));
     assert!(!body.contains("first_line") && !body.contains("last_line"));
+}
+
+fn all_no_answers(body: &[u8]) -> Canned {
+    let request: Value = serde_json::from_slice(body).expect("request");
+    let answers: serde_json::Map<String, Value> = request["questions"]
+        .as_object()
+        .expect("questions")
+        .iter()
+        .map(|(key, question)| {
+            let answer = if question["type"] == "noul" {
+                json!({"type":"noul","noul":0.9})
+            } else {
+                let labels = question["criteria"].as_object().expect("labels");
+                let chosen = labels
+                    .keys()
+                    .find(|label| label.as_str() == "OUT")
+                    .or_else(|| labels.keys().next())
+                    .expect("label");
+                let probabilities: serde_json::Map<String, Value> = labels
+                    .keys()
+                    .map(|label| (label.clone(), json!(u8::from(label == chosen))))
+                    .collect();
+                json!({"type":"choice","choice":chosen,"probabilities":probabilities})
+            };
+            (key.clone(), answer)
+        })
+        .collect();
+    Canned::ok(&json!({"model":"jev-latest","answers":answers,"usage":{"input_tokens":1,"output_tokens":1}}).to_string())
+}
+
+#[test]
+fn later_file_failure_keeps_completed_work_and_withholds_whole_call_output() {
+    for verb in ["decide", "filter", "annotate", "recognize"] {
+        let folder = scratch(&format!("late-{verb}"));
+        std::fs::create_dir_all(&folder).expect("folder");
+        let first = folder.join("01.txt");
+        let second = folder.join("02.txt");
+        std::fs::write(&first, "Ada").expect("first");
+        std::fs::write(&second, "Bea").expect("second");
+        let changed = second.clone();
+        let listener = Listener::answering(move |body| {
+            std::fs::write(&changed, [0xff]).expect("invalidate unread next file");
+            all_no_answers(body)
+        })
+        .expect("listener");
+        let mut request = match verb {
+            "annotate" => json!({"annotate":{"version":1,"questions":{"first":{"decide":"Q?"}}}}),
+            "recognize" => json!({"version":1,"recognize":{"kinds":{"person":null}}}),
+            _ => json!({verb:"Q?"}),
+        };
+        request["source"] = json!({"paths":[first,second],"unit":"file"});
+        if verb != "recognize" {
+            request["call"] = json!({"batch":1});
+        }
+        let replies = ask_base(listener.base(), &[request], false);
+        let (code, reply) = &replies[0];
+        assert_eq!(*code, 1, "{verb}: {reply}");
+        assert!(reply.get("value").is_none(), "{reply}");
+        assert_eq!(reply["facts"]["records"], 1, "{verb}: {reply}");
+        assert_eq!(reply["facts"]["requests_sent"], 1, "{verb}: {reply}");
+        assert_eq!(listener.count(), 1);
+    }
+}
+
+#[test]
+fn located_details_serializes_original_text_and_source_rank_bounds_content() {
+    let backend = Backend::start().expect("backend");
+    let folder = scratch("details-and-rank-cap");
+    std::fs::create_dir_all(&folder).expect("folder");
+    let first = folder.join("first.txt");
+    let second = folder.join("second.txt");
+    std::fs::write(&first, "Ada\n").expect("first");
+    let replies = ask(
+        &backend,
+        &[json!({"decide":"Q?","details":true,"source":{"paths":[first],"unit":"file"}})],
+    );
+    assert_eq!(replies[0].0, 0);
+    assert_eq!(replies[0].1["value"][0]["value"]["input"], "Ada\n");
+    let count = backend.count();
+    let large = "x".repeat(8 * 1024 * 1024 + 1);
+    for path in [&first, &second] {
+        std::fs::write(path, &large).expect("large");
+    }
+    let replies = ask(
+        &backend,
+        &[json!({"rank":"Q?","source":{"paths":[first,second],"unit":"file"}})],
+    );
+    assert_eq!(replies[0].0, 1);
+    assert_eq!(replies[0].1["message"], "source rank input exceeds 16 MiB");
+    assert_eq!(backend.count(), count);
+}
+
+#[test]
+fn source_recognize_counts_the_failed_backend_call_exactly_once() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    let folder = scratch("recognize-failed-second");
+    std::fs::create_dir_all(&folder).expect("folder");
+    let first = folder.join("01.txt");
+    let second = folder.join("02.txt");
+    std::fs::write(&first, "Ada").expect("first");
+    std::fs::write(&second, "Bea").expect("second");
+    let requests = Arc::new(AtomicUsize::new(0));
+    let count = Arc::clone(&requests);
+    let listener = Listener::answering(move |body| {
+        if count.fetch_add(1, Ordering::SeqCst) == 0 {
+            all_no_answers(body)
+        } else {
+            Canned::status(503, "busy")
+        }
+    })
+    .expect("listener");
+    let replies = ask_base(
+        listener.base(),
+        &[
+            json!({"version":1,"recognize":{"kinds":{"person":null}},"source":{"paths":[first,second],"unit":"file"}}),
+        ],
+        false,
+    );
+    let (code, reply) = &replies[0];
+    assert_eq!(*code, 2, "{reply}");
+    assert!(reply.get("value").is_none());
+    assert_eq!(reply["facts"]["records"], 1, "{reply}");
+    assert_eq!(reply["facts"]["requests_sent"], 2, "{reply}");
+    assert_eq!(listener.count(), 2);
 }

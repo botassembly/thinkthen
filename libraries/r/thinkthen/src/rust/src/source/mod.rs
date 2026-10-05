@@ -2,9 +2,24 @@
 
 use serde_json::{Value, json};
 use thinkthen::{
-    CallOptions, DetailQuestion, Engine, Entity, Error, Facts, LoadedQuestion, Question,
+    CallOptions, DetailQuestion, Engine, Entity, Error, Evidence, Facts, LoadedQuestion, Question,
     QuestionSet, ReaderOptions, Recognize, Relate, SourceRecord, Tally,
 };
+
+/// Keep provenance with the original input while details serializes only evidence.
+struct DetailInput(SourceRecord<String>);
+
+impl Evidence for DetailInput {
+    fn evidence(&self) -> &str {
+        &self.0.record
+    }
+}
+
+impl serde::Serialize for DetailInput {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serde::Serialize::serialize(&self.0.record, serializer)
+    }
+}
 
 pub(crate) struct Selection {
     paths: Vec<String>,
@@ -65,8 +80,7 @@ pub(crate) fn execute(
             let LoadedQuestion::Question(asked) = Question::from_json(question)? else {
                 return Err(usage("filter keeps a record at a cut, not a band"));
             };
-            let records = selection.read()?.collect::<Result<Vec<_>, _>>()?;
-            let mut batch = engine.filter_with(&asked, records, options);
+            let mut batch = engine.try_filter_with(&asked, selection.read()?, options);
             let rows = batch
                 .by_ref()
                 .map(|row| located(&row?, json!(true)))
@@ -86,8 +100,16 @@ pub(crate) fn execute(
                 .filter(|_| body.len() == 1)
                 .ok_or_else(|| usage("rank takes its question text alone"))?;
             let asked = Question::rank(text)?;
-            let records = selection.read()?.collect::<Result<Vec<_>, _>>()?;
-            let call = engine.rank_with(&asked, records, options)?;
+            let mut bytes = 0usize;
+            let records = selection.read()?.map(|record| {
+                let record = record?;
+                bytes = bytes
+                    .checked_add(record.record.len())
+                    .filter(|&bytes| bytes <= 16 * 1024 * 1024)
+                    .ok_or_else(|| usage("source rank input exceeds 16 MiB"))?;
+                Ok(record)
+            });
+            let call = engine.try_rank_with(&asked, records, options)?;
             let rows = call
                 .value()
                 .iter()
@@ -103,22 +125,18 @@ pub(crate) fn execute(
         "find" => find(engine, question, selection, options)?,
         "annotate" => {
             let set = QuestionSet::from_json(question)?;
-            let records = selection.read()?.collect::<Result<Vec<_>, _>>()?;
-            let mut batch =
-                engine.annotate_with(&set, records.iter().map(|r| r.record.as_str()), options);
-            let answers = batch
+            let mut batch = engine.try_annotate_with(&set, selection.read()?, options);
+            let rows = batch
                 .by_ref()
-                .map(|row| decoded(&row?.value_json()))
-                .collect::<Result<Vec<_>, _>>()?;
+                .map(|row| {
+                    let row = row?;
+                    located(row.input(), decoded(&row.value_json())?)
+                })
+                .collect::<Result<Vec<_>, Error>>()?;
             let facts = batch
                 .facts()
                 .cloned()
                 .ok_or_else(|| defect("completed annotate has no facts"))?;
-            let rows = records
-                .iter()
-                .zip(answers)
-                .map(|(s, a)| located(s, a))
-                .collect::<Result<Vec<_>, _>>()?;
             (Value::Array(rows), facts)
         }
         "recognize" => recognize(engine, question, selection, options)?,
@@ -137,37 +155,33 @@ fn judgments<Q: DetailQuestion + ?Sized>(
     options: CallOptions<'_>,
     detailed: bool,
 ) -> Result<(Value, Facts), Error> {
-    let records = selection.read()?.collect::<Result<Vec<_>, _>>()?;
-    let mut batch =
-        engine.details_many_with(asked, records.iter().map(|r| r.record.as_str()), options);
-    let answers = batch
+    let records = selection.read()?.map(|record| record.map(DetailInput));
+    let mut batch = engine.try_details_many_with(asked, records, options);
+    let rows = batch
         .by_ref()
         .map(|row| {
             let row = row?;
-            if detailed {
-                return decoded(&row.value().to_json());
-            }
-            match row.value().value() {
-                thinkthen::Judgment::Decision(answer) => Ok(match answer {
-                    thinkthen::Answer::Yes => json!(true),
-                    thinkthen::Answer::No => json!(false),
-                    thinkthen::Answer::Unsure => Value::Null,
-                }),
-                thinkthen::Judgment::Choice(pick) => Ok(json!(pick)),
-                thinkthen::Judgment::Score(score) => Ok(json!(score)),
-                thinkthen::Judgment::Tags(tags) => Ok(json!(tags)),
-            }
+            let answer = if detailed {
+                decoded(&row.value().to_json())?
+            } else {
+                match row.value().value() {
+                    thinkthen::Judgment::Decision(answer) => match answer {
+                        thinkthen::Answer::Yes => json!(true),
+                        thinkthen::Answer::No => json!(false),
+                        thinkthen::Answer::Unsure => Value::Null,
+                    },
+                    thinkthen::Judgment::Choice(pick) => json!(pick),
+                    thinkthen::Judgment::Score(score) => json!(score),
+                    thinkthen::Judgment::Tags(tags) => json!(tags),
+                }
+            };
+            located(&row.input().0, answer)
         })
         .collect::<Result<Vec<_>, Error>>()?;
     let facts = batch
         .facts()
         .cloned()
         .ok_or_else(|| defect("completed judgments have no facts"))?;
-    let rows = records
-        .iter()
-        .zip(answers)
-        .map(|(s, a)| located(s, a))
-        .collect::<Result<Vec<_>, _>>()?;
     Ok((Value::Array(rows), facts))
 }
 
@@ -195,27 +209,7 @@ fn find(
         Some(Value::Bool(false)) | None => (),
         _ => return Err(usage("find takes none as true or false")),
     }
-    let mut records = Vec::new();
-    let mut bytes = 0usize;
-    let maximum = if body.get("none") == Some(&Value::Bool(true)) {
-        254
-    } else {
-        255
-    };
-    for source in selection.read()? {
-        let source = source?;
-        bytes = bytes
-            .checked_add(source.record.len())
-            .ok_or_else(|| usage("find input exceeds 16 MiB"))?;
-        if bytes > 16 * 1024 * 1024 {
-            return Err(usage("find input exceeds 16 MiB"));
-        }
-        if records.len() == maximum {
-            return Err(usage("find takes at most 255 units, or 254 with none"));
-        }
-        records.push(source);
-    }
-    let call = engine.find_with(&asked, records, options)?;
+    let call = engine.try_find_with(&asked, selection.read()?, options)?;
     let answer =
         if let (Some(source), Some(picked)) = (call.value().selected(), call.value().picked()) {
             located(
@@ -238,13 +232,18 @@ fn recognize(
     let asked = Recognize::from_json(question)?;
     let tally = Tally::new();
     let mut rows = Vec::new();
-    for source in selection.read()? {
-        let source = source?;
-        let call = tally.run(|| engine.recognize_with(&asked, &source.record, options))?;
-        let mut answer = decoded(&call.value().to_json())?;
-        locate_recognition(&source, &mut answer)?;
-        rows.push(located(&source, answer)?);
-    }
+    let records = selection.read()?;
+    let result = (|| {
+        for source in records {
+            let source = source?;
+            let call = tally.run(|| engine.recognize_with(&asked, &source.record, options))?;
+            let mut answer = decoded(&call.value().to_json())?;
+            locate_recognition(&source, &mut answer)?;
+            rows.push(located(&source, answer)?);
+        }
+        Ok::<(), Error>(())
+    })();
+    result.map_err(|error| error.with_facts(tally.facts()))?;
     Ok((Value::Array(rows), tally.facts()))
 }
 

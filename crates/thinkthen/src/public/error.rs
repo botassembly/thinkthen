@@ -148,7 +148,9 @@ impl Error {
         self.detail().facts.as_deref()
     }
 
-    pub(crate) fn with_facts(mut self, facts: Facts) -> Self {
+    /// Replace the attached facts without changing the error kind, message,
+    /// retryability or denial reasons. This does not add counts.
+    pub fn with_facts(mut self, facts: Facts) -> Self {
         match &mut self {
             Self::Usage(detail)
             | Self::Backend(detail)

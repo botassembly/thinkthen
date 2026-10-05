@@ -176,3 +176,82 @@ fn a_tag_row_whose_label_shares_overflow_fails() {
     );
     assert_eq!(listener.count(), 2);
 }
+
+#[test]
+fn fallible_input_keeps_packed_detail_and_grouped_annotation_request_bytes() {
+    let _serial = serial();
+    let captured = std::sync::Arc::new(Mutex::new(Vec::new()));
+    let observed = std::sync::Arc::clone(&captured);
+    let listener = Listener::answering(move |body| {
+        observed
+            .lock()
+            .expect("capture")
+            .push(String::from_utf8(body.to_vec()).expect("body"));
+        let request: serde_json::Value = serde_json::from_slice(body).expect("request");
+        let answers: serde_json::Map<String, serde_json::Value> = request["questions"]
+            .as_object()
+            .expect("questions")
+            .keys()
+            .map(|key| (key.clone(), serde_json::json!({"type":"noul","noul":0.9})))
+            .collect();
+        Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers}).to_string())
+    })
+    .expect("listener");
+    let engine = engine(listener.base());
+    let asked = question();
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+    )
+    .expect("set");
+    let records = ["alpha", "beta", "gamma", "delta"];
+    let options = CallOptions::new().batch(BatchSetting::Records(
+        std::num::NonZeroUsize::new(2).expect("two"),
+    ));
+    for annotation in [false, true] {
+        if annotation {
+            assert_eq!(
+                engine
+                    .annotate_with(&set, records, options)
+                    .collect::<Result<Vec<_>, _>>()
+                    .expect("old annotation")
+                    .len(),
+                4
+            );
+        } else {
+            assert_eq!(
+                engine
+                    .details_many_with(&asked, records, options)
+                    .collect::<Result<Vec<_>, _>>()
+                    .expect("old detail")
+                    .len(),
+                4
+            );
+        }
+        let mut original = std::mem::take(&mut *captured.lock().expect("capture"));
+        assert_eq!(original.len(), 2);
+        if annotation {
+            assert_eq!(
+                engine
+                    .try_annotate_with(&set, records.map(Ok), options)
+                    .collect::<Result<Vec<_>, _>>()
+                    .expect("fallible annotation")
+                    .len(),
+                4
+            );
+        } else {
+            assert_eq!(
+                engine
+                    .try_details_many_with(&asked, records.map(Ok), options)
+                    .collect::<Result<Vec<_>, _>>()
+                    .expect("fallible detail")
+                    .len(),
+                4
+            );
+        }
+        let mut fallible = std::mem::take(&mut *captured.lock().expect("capture"));
+        original.sort();
+        fallible.sort();
+        assert_eq!(original, fallible);
+    }
+    assert_eq!(listener.count(), 8);
+}

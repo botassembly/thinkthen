@@ -78,6 +78,23 @@ where
     I: Iterator + 'a,
     I::Item: Evidence,
 {
+    try_start(call, asker, records.map(Ok), pair)
+}
+
+/// Start the same ordered pipeline over a fallible caller iterator.
+pub(crate) fn try_start<'a, A, I, R, T: 'a>(
+    call: Call<'a>,
+    asker: A,
+    records: I,
+    pair: Pair<'a, A, R, T>,
+) -> Batch<'a, T>
+where
+    A: Asker<Input = Text> + Send + 'static,
+    A::Row: Send + 'static,
+    A::Error: From<Error> + Send + 'static,
+    I: Iterator<Item = Result<R, Error>> + 'a,
+    R: Evidence + 'a,
+{
     let (events, received) = channel();
     let cancel = call.stop.shared();
     let (engine, packing) = (call.engine, call.packing);
@@ -115,11 +132,11 @@ where
     }))
 }
 
-struct Pull<'a, A: Asker, I: Iterator, T> {
+struct Pull<'a, A: Asker, I: Iterator, R, T> {
     items: I,
-    held: VecDeque<I::Item>,
+    held: VecDeque<R>,
     ready: VecDeque<Result<T, Error>>,
-    pair: Pair<'a, A, I::Item, T>,
+    pair: Pair<'a, A, R, T>,
     events: Receiver<Event<A>>,
     port: Option<Port<A::Input, A::Error>>,
     stop: Stop<'a>,
@@ -133,12 +150,12 @@ struct Pull<'a, A: Asker, I: Iterator, T> {
     coordinator: Option<JoinHandle<()>>,
 }
 
-impl<A, I, T> Source<T> for Pull<'_, A, I, T>
+impl<A, I, R, T> Source<T> for Pull<'_, A, I, R, T>
 where
     A: Asker<Input = Text>,
     A::Error: From<Error>,
-    I: Iterator,
-    I::Item: Evidence,
+    I: Iterator<Item = Result<R, Error>>,
+    R: Evidence,
 {
     fn pull(&mut self) -> Option<Result<T, Error>> {
         if self.deferred && self.coordinator.is_some() {
@@ -181,12 +198,12 @@ fn ended_early<A: Asker>() -> Event<A> {
     Event::End(Err(Error::defect("the record scheduler ended early")))
 }
 
-impl<A, I, T> Pull<'_, A, I, T>
+impl<A, I, R, T> Pull<'_, A, I, R, T>
 where
     A: Asker<Input = Text>,
     A::Error: From<Error>,
-    I: Iterator,
-    I::Item: Evidence,
+    I: Iterator<Item = Result<R, Error>>,
+    R: Evidence,
 {
     /// Take one event; `Some` once the call has ended.
     fn take(&mut self, event: Event<A>) -> Option<Option<Result<T, Error>>> {
@@ -211,13 +228,14 @@ where
     fn feed(&mut self) {
         let input = match self.items.next() {
             None => Input::End,
-            Some(_) if self.most.is_some_and(|most| self.fed >= most) => {
+            Some(Err(error)) => Input::Failed(A::Error::from(error)),
+            Some(Ok(_)) if self.most.is_some_and(|most| self.fed >= most) => {
                 Input::Failed(A::Error::from(Error::usage(format!(
                     "this engine answers at most {} records in one call",
                     self.fed
                 ))))
             }
-            Some(item) => {
+            Some(Ok(item)) => {
                 let text = item.evidence().to_owned();
                 self.held.push_back(item);
                 self.fed += 1;
@@ -271,7 +289,7 @@ where
     }
 }
 
-impl<A: Asker, I: Iterator, T> Pull<'_, A, I, T> {
+impl<A: Asker, I: Iterator, R, T> Pull<'_, A, I, R, T> {
     /// Stop the coordinator and join it, draining attempts while it winds down.
     fn join(&mut self) -> Result<(), Error> {
         let Some(coordinator) = self.coordinator.take() else {
@@ -295,7 +313,7 @@ impl<A: Asker, I: Iterator, T> Pull<'_, A, I, T> {
     }
 }
 
-impl<A: Asker, I: Iterator, T> Drop for Pull<'_, A, I, T> {
+impl<A: Asker, I: Iterator, R, T> Drop for Pull<'_, A, I, R, T> {
     fn drop(&mut self) {
         let _joined = self.join();
     }

@@ -146,6 +146,21 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
+        self.try_annotate_with(questions, records.into_iter().map(Ok), options)
+    }
+
+    /// Fallible input for [`Engine::annotate_with`], preserving input order.
+    /// A reader failure ends the batch after its earlier admitted rows.
+    pub fn try_annotate_with<'a, I, T>(
+        &'a self,
+        questions: &'a QuestionSet,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Batch<'a, AnnotatedRecord<T>>
+    where
+        I: IntoIterator<Item = Result<T, Error>> + 'a,
+        T: Evidence + 'a,
+    {
         Batch::of((|| {
             options.without_context("annotate")?;
             let setting = selected_set_batch(&questions.0, &options, self.batch)?;
@@ -158,7 +173,7 @@ impl Engine {
                 stop,
                 most: self.most,
             };
-            Ok(pull::start(
+            Ok(pull::try_start(
                 call,
                 asker,
                 records.into_iter(),
