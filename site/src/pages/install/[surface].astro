@@ -95,7 +95,9 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
       <p>Use <code>dbt-core==1.12.5</code>, <code>dbt-duckdb==1.11.0</code> and <code>duckdb==1.5.5</code>. Unpack the public extension archive and set <code>THINKTHEN_EXT_DIR</code> to its absolute root, containing <code>v1.5.5/</code>. The adapter installs from that local repository.</p>
       <Code code={`python3 -m venv dbt-env
 . dbt-env/bin/activate
-python -m pip install dbt-core==1.12.5 dbt-duckdb==1.11.0 duckdb==1.5.5`} lang="bash" label="Copy the dbt v1 package pins" />
+python -m pip install dbt-core==1.12.5 dbt-duckdb==1.11.0 duckdb==1.5.5
+mkdir -p .dbt-extensions
+export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="Copy the dbt v1 package pins" />
       <p>Save this as <code>profiles.yml</code> beside your dbt project and set the project's profile to <code>thinkthen_dbt</code>. The backend key belongs in the process environment.</p>
       <Code code={`thinkthen_dbt:
   target: local
@@ -106,10 +108,12 @@ python -m pip install dbt-core==1.12.5 dbt-duckdb==1.11.0 duckdb==1.5.5`} lang="
       threads: 1
       config_options:
         allow_unsigned_extensions: true
+        extension_directory: "{{ env_var('THINKTHEN_DBT_EXTENSION_DIR') }}"
       extensions:
         - name: thinkthen
           repo: "'{{ env_var('THINKTHEN_EXT_DIR') }}'"`} lang="yaml" file="profiles.yml" label="Copy the dbt v1 startup profile" />
       <p>Run <code>dbt run --profiles-dir .</code> from the project. The adapter supplies <code>config_options</code> when it opens DuckDB. A later SQL <code>SET allow_unsigned_extensions</code> cannot change the setting. Enable unsigned extensions only for a local artifact you trust.</p>
+      <p>Keep this project's extension directory separate from DuckDB's existing installation. An extension installed from another repository can produce “the origin is different”. Use a fresh project-owned directory at startup and retry installation there. Changing XDG directories does not relocate DuckDB's extension directory. Do not replace or remove a user's existing extension to recover.</p>
       <p>The public unsigned archive does not currently support dbt2. Its attempted initialization SQL runs after DuckDB opens and fails before loading the extension. Community signing is in progress; a future signed artifact must match the DuckDB version embedded in dbt2 and pass an actual load test.</p>
     </>
   )}
@@ -140,6 +144,12 @@ python -m pip install dbt-core==1.12.5 dbt-duckdb==1.11.0 duckdb==1.5.5`} lang="
 
   <h2>Run facts</h2>
   <p>{parts(surface.facts).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+  {['duckdb', 'postgresql', 'sqlite'].includes(surface.slug) && (
+    <>
+      <p>SQL plans estimate input tokens before cache hits, retries and refusal splits. Output tokens, total price and future duration are unknown. Usage reports cumulative process totals, which cannot isolate concurrent calls. Packed request usage can repeat across result rows; do not sum those repeated values.</p>
+      <p>Measure statement wall time in the client; it includes database and client work. Apply a known tariff to complete provider-reported usage outside SQL using decimal arithmetic, and label the price as an estimate. Missing rates or incomplete attempt usage mean unknown cost. The provider's invoice determines actual charges.</p>
+    </>
+  )}
 
   {surface.errors && (
     <>
