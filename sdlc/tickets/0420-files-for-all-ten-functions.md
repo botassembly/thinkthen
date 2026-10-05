@@ -50,6 +50,55 @@ New located recognize input uses text units. Existing structured/field recogniti
 
 For plain text source records, relate uses the full record content as the entity name and kind `*`, as its existing lines mode does. Whole-file mode supplies the full document, not the filename, so the model sees the content it judges. Structured entity records retain caller-selected names/kinds. Relate still asks about supplied names and never silently runs recognize. Equal source name/kind pairs share one admitted entity and fan each accepted edge back to source occurrence pairs, as SQL already does. Existing non-source duplicate rejection stays unchanged. An endpoint carries its original source record and range. A document endpoint names its complete document range, not an invented supporting sentence.
 
+### Added public declarations
+
+These are the additive Rust reader and fallible-intake signatures implemented and reviewed in this ticket.
+
+```text
+ReaderOptions::unit: SourceUnit
+ReaderOptions::window: Option<usize>
+SourceRecord::file: String
+SourceRecord::first_line: usize
+SourceRecord::last_line: usize
+SourceRecord::record: T
+SourceUnit::File
+SourceUnit::Line
+SourceUnit::Window
+enum SourceUnit
+fn CallOptions::started(self) -> Result<CallOptions<'a>, Error>
+fn Engine::check_record_limit(&self, usize) -> Result<(), Error>
+fn Engine::try_annotate_with<'a, I, T>(&'a self, &'a QuestionSet, I, CallOptions<'a>) -> Batch<'a, AnnotatedRecord<T>> where I: IntoIterator<Item = Result<T, Error>> + 'a, T: Evidence + 'a
+fn Engine::try_details_many_with<'a, I, T, Q: DetailQuestion + ?Sized>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, Row<T, Details>> where I: IntoIterator<Item = Result<T, Error>> + 'a, T: Evidence + Serialize + 'a
+fn Engine::try_filter_with<'a, I, T>(&'a self, &'a Question, I, CallOptions<'a>) -> Batch<'a, T> where I: IntoIterator<Item = Result<T, Error>> + 'a, T: Evidence + 'a
+fn Engine::try_find_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Found<T>>, Error> where I: IntoIterator<Item = Result<T, Error>>, T: Evidence
+fn Engine::try_plan_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<PlanEstimate, Error> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = Result<T, Error>>, T: Evidence
+fn Engine::try_rank_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<Ranked<T>>>, Error> where I: IntoIterator<Item = Result<T, Error>>, T: Evidence
+fn Error::with_facts(self, Facts) -> Error
+fn FileReader::new(impl Into<String>, R, ReaderOptions) -> Result<FileReader<R>, Error>
+fn ReaderOptions::validate(self) -> Result<ReaderOptions, Error>
+fn SourceRecord::span_lines(&self, usize, usize) -> Result<(usize, usize), Error>
+fn enumerate_files(impl IntoIterator<Item = impl AsRef<Path>>) -> Result<Vec<PathBuf>, Error>
+fn read_files(impl IntoIterator<Item = impl AsRef<Path>>, ReaderOptions) -> Result<SourceRecords, Error>
+impl AsRef<str> for SourceRecord
+impl Default for ReaderOptions
+impl Default for SourceUnit
+impl Deserialize<'de> for ReaderOptions
+impl Deserialize<'de> for SourceRecord
+impl Deserialize<'de> for SourceUnit
+impl Evidence for SourceRecord
+impl Iterator for FileReader
+impl Iterator for SourceRecords
+impl Serialize for ReaderOptions
+impl Serialize for SourceRecord
+impl Serialize for SourceUnit
+struct FileReader<R>
+struct ReaderOptions
+struct SourceRecord<T>
+struct SourceRecords
+type FileReader::Item = Result<SourceRecord<String>, Error>
+type SourceRecords::Item = Result<SourceRecord<String>, Error>
+```
+
 ## Build slices
 
 1. Record the additive contract and build the shared bounded reader outside core. Add CLI folder/unit support and source locations through all ten, reusing intake and current parsers.
