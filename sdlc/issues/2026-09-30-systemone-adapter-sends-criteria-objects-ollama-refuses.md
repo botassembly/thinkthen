@@ -46,3 +46,9 @@ Ticket 0339 deferred these with the workaround. Each waits for a user who meets 
 - A re-pulled Ollama tag such as `nimble` keeps its cached answers until `--refresh-cache` or `--no-cache`.
 - Bindings and SQL reach the `ollama` form only when ADR 0114 build slice 2 gives them a `backend` setting.
 - `status` does not print the description form, and no backend has its own longer timeout.
+
+## Additional runtime limits from experiment 0030
+
+The 2026-10-04 run observed Ollama 0.35.1 loader and decision-encoder refusals for the tested Clef, Kev and Laya paths. Keep these availability limits with the existing description workaround; they do not rank models or call the ThinkThen adapter broken. The supported local setup retains nimble, and ticket 0421's final real check names the actual version and result.
+
+Primary implementation references: https://github.com/ollama/ollama/blob/v0.35.1/decision/systemone.go and https://github.com/ollama/ollama/blob/v0.35.1/server/routes.go . The existing object-criteria upstream report remains 18718. Hosted or newer versions are not claimed qualified by these observations.

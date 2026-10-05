@@ -130,6 +130,18 @@ pub(crate) fn evidence(text: &str) -> Result<core::Evidence, Error> {
 pub(super) const DECISIONS: &[Kind] = &[Kind::Decide, Kind::Banded];
 
 impl Engine {
+    /// Reuse resolved settings for backend compatibility calls with no storage.
+    #[cfg(feature = "cli")]
+    pub(crate) fn for_check(inner: &facade::Engine) -> Self {
+        Self {
+            inner: Arc::new(inner.clone()),
+            most: None,
+            profile: inner.profile().cloned(),
+            batch: None,
+            prices: None,
+        }
+    }
+
     /// Build from what the command reads: see [`EngineBuilder::from_env`].
     ///
     /// # Errors

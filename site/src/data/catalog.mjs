@@ -838,7 +838,7 @@ export const SURFACES = [
       ['.load ./thinkthen', null],
     ],
     particular: [
-      'Default loading permits top-level calls. A view or trigger cannot call its functions to spend requests or read files. Explicit trusted loading permits reviewed schema judgments while trusted_schema is ON.',
+      'Default loading permits top-level calls and blocks judgments from main and attached schema objects. Explicit trusted loading permits reviewed judgments from those schemas while trusted_schema is ON. Caller-created TEMP objects can call judgments, plans and controls in both modes, even with trusted_schema OFF. They can spend requests and read permitted question files.',
     ],
   },
   {
@@ -965,6 +965,7 @@ export const BACKEND_PAGES = [
   { slug: '', title: 'Backends', label: 'Overview', group: null },
   { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Built in' },
   { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Built in' },
+  { slug: 'local', title: 'Run a model locally', label: 'Run a model locally', group: 'Your own' },
   { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
   { slug: 'perplexity', title: 'Perplexity Decisions', label: 'Perplexity Decisions', group: 'Built in' },
   { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Built in' },

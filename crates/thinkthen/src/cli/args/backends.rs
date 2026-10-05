@@ -4,7 +4,7 @@ use clap::{Args, Subcommand};
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum BackendCommand {
-    /// Check that a backend you name works with this tool, over four fixed requests.
+    /// Check that a backend you name works with this tool, with rich probes and ten minimal function calls.
     ///
     /// It exits 0 only when no finding is critical. Every request is real spend.
     /// The report names the model asked for, the model sent, and the model each
@@ -26,7 +26,7 @@ pub(crate) struct CheckArguments {
     /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
     pub(crate) timeout: u64,
-    /// Print the four request bodies and stop. An optional key is checked
+    /// Print rich request bodies, function plans and request bounds. An optional key is checked
     /// against the address; no key is required and nothing is sent.
     #[arg(long = "plan")]
     pub(crate) dry_run: bool,

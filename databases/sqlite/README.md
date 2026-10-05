@@ -1,6 +1,6 @@
 # The SQLite extension
 
-`thinkthen-sqlite` is a loadable extension over the public Rust engine (ADR 0047 and ADR 0105). Build its release library, copy `libthinkthen0.so` to `thinkthen.so`, and load it with `.load ./thinkthen`. SQLite 3.50.0 or newer is required. The extension registers volatile, direct-only functions: an untrusted schema cannot call them to spend requests or read files.
+`thinkthen-sqlite` is a loadable extension over the public Rust engine (ADR 0047 and ADR 0105). Build its release library, copy `libthinkthen0.so` to `thinkthen.so`, and load it with `.load ./thinkthen`. SQLite 3.50.0 or newer is required. Default loading registers volatile, direct-only functions. Objects in main and attached schemas cannot call them to spend requests or read files. Caller-created TEMP objects remain callable, even with `trusted_schema=OFF`.
 
 ## Use reviewed views and ingestion triggers
 
@@ -13,16 +13,16 @@ PRAGMA trusted_schema=ON;
 
 A native host passes `sqlite3_thinkthen_trusted_init` as the entry-point argument to `sqlite3_load_extension`. Default loading uses `sqlite3_thinkthen_init`. [entry-points.txt](entry-points.txt) declares the extension's exports. Switch modes by closing the connection and loading once on a fresh connection.
 
-This choice permits reviewed schema SQL to spend paid requests and read permitted question files. Trust covers main, temp, every attached schema and later attachments while `trusted_schema` is ON. It provides no per-view or per-file trust isolation. Keep downloaded or unreviewed databases on separate default-loaded connections.
+This choice permits reviewed schema SQL to spend paid requests and read permitted question files. Trust covers main, every attached schema and later attachments while `trusted_schema` is ON. It provides no per-view or per-file trust isolation. Keep downloaded or unreviewed databases on separate default-loaded connections.
 
-Trusted registration permits judgment scalars, `thinkthen_plan` and judgment tables in views and triggers. SQLite may also evaluate judgments in CHECK and DEFAULT expressions. Configuration, usage, budget setters and removed spellings remain direct-only. Judgments retain neither INNOCUOUS nor DETERMINISTIC flags; SQLite still refuses non-deterministic generated columns and indexes. Loading changes neither `trusted_schema` nor the host's authorizer. With `trusted_schema=OFF`, schema judgment calls refuse before reading a question file or sending a request; top-level calls remain available. The ordinary permissions, budgets, cancellation and errors still apply.
+Trusted registration permits judgment scalars, `thinkthen_plan` and judgment tables in views and triggers. SQLite may also evaluate judgments in CHECK and DEFAULT expressions. Configuration, usage, budget setters and removed spellings retain DIRECTONLY and remain unavailable from main and attached schema objects. Judgments retain neither INNOCUOUS nor DETERMINISTIC flags; SQLite still refuses non-deterministic generated columns and indexes. Loading changes neither `trusted_schema` nor the host's authorizer. With `trusted_schema=OFF`, judgments from main and attached schema objects refuse before reading a question file or sending a request. Top-level calls remain available. SQLite treats caller-created TEMP objects as caller SQL: TEMP views and triggers can call judgments, plans, controls and judgment tables in both loading modes, even with `trusted_schema=OFF`. Such calls can spend paid requests and read permitted question files. This flag does not revoke TEMP calls. The ordinary permissions, budgets, cancellation and errors still apply.
 
 For example, a reviewed ingestion trigger can store a judgment:
 
 ```sql
 CREATE TABLE messages(body TEXT, is_red INTEGER);
 CREATE TRIGGER judge_message AFTER INSERT ON messages BEGIN
-  UPDATE messages SET is_red=thinkthen_decide('Is it red?', NEW.body)
+  UPDATE messages SET is_red=(SELECT thinkthen_decide('Is it red?', NEW.body) AS is_red)
   WHERE rowid=NEW.rowid;
 END;
 ```
@@ -88,10 +88,16 @@ The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document
 For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names as `'person,organisation'`. To supply descriptions, pass a recognize JSON object such as `'{"kinds":{"person":"A human name."}}'`, a full versioned recognize spec, or an `@file` containing that spec. A bare JSON array string such as `'["person"]'` currently names one literal kind, `["person"]`. Use `'person'` to request the person kind.
 
 ```sql
-SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person');
+SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person') AS recognized_names;
 ```
 
 `thinkthen_relate` runs a caller-supplied read-only `SELECT` yielding `id, name` or `id, name, kind` on the same connection. `rules` is one inline rule, a JSON array of rules, a JSON relate spec or `@file`. At most 255 distinct name/kind pairs enter a call. Equal pairs share one entity, and each answer edge expands to the ids that held its endpoints. Blank names/kinds and a 256th pair raise usage before a send.
+
+## Price and elapsed time
+
+SQL plans report an estimated input-token band before cache hits, retries or refusal splits. They do not predict output tokens, total dollars or future duration. SQL usage reports cumulative process totals, not the facts of one isolated call. Packed request metadata can appear on more than one result row; summing those rows counts the same request more than once.
+
+Measure wall time around the SQL statement in the client. This includes database and client work and is not engine-only time. For an external price estimate, apply a known input/output tariff to complete provider-reported usage with decimal arithmetic. The provider's invoice determines actual charges. Missing rates or incomplete attempt usage mean unknown cost, not zero. Cumulative SQL counters do not prove usage completeness for failed attempts, and subtracting shared counters cannot isolate concurrent calls.
 
 ## Runtime boundaries
 

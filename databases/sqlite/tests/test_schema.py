@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """A database file from somewhere else never reaches a function (R1-17, R2-1, decision 12).
 
-Every function is direct-only, so only top-level SQL calls it, whatever
-`trusted_schema` says. That holds from SQLite 3.50.0. Below it a CHECK
+Default loading is direct-only, so stored main and attached schema objects
+cannot call functions, whatever `trusted_schema` says. Caller-created TEMP
+objects remain callable. That holds from SQLite 3.50.0. Below it a CHECK
 constraint reaches a volatile function, so the extension refuses to load
 there. Each hostile file is written through `writable_schema`, because the
 floor host refuses to author these shapes with CREATE. A crafted file is
@@ -67,7 +68,7 @@ say(**said)
 """
 
 
-def test_every_schema_object_refuses_and_top_level_sql_answers() -> None:
+def test_every_stored_schema_object_refuses_and_top_level_sql_answers() -> None:
     """R1-17, under trusted_schema off and on."""
     backend = Backend()
     held = child(f"DECIDE = {DECIDE!r}\n" + ATTACK, environment(backend))

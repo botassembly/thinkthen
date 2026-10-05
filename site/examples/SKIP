@@ -44,3 +44,4 @@
 **/*.php.out     What a library sample that prints printed; smoke-bindings.mjs compares it.
 **/*.dart.out    What a library sample that prints printed; smoke-bindings.mjs compares it.
 REPLAY        The samples smoke-bindings.mjs and smoke-sql.mjs replay.
+install/backends/local/*.txt Local setup commands install or launch external decision servers; checks need a live owned model and are run by hand.

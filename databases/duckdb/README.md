@@ -86,6 +86,12 @@ The details digest includes a question's saved calibration `profile`. A differen
 
 `thinkthen_try_details` returns `{"status":"answered","details":...}` with the full scalar details object, or `{"status":"failed","error":{"kind":"usage","message":"check the row's question and arguments, or raise the process request total when it is spent","retryable":false}}`. Compatible distinct rows pack under the selected batch setting; a recoverable usage, local, or backend failure affects only its request's members and does not stop later requests. One partly answered reply keeps good and failed members beside each other without another send. SQL NULL question or text returns SQL NULL; NULL settings mean absent. Unresolved answers stay answered with JSON `null` in their details. Failed values omit questions, evidence, keys, paths, and backend addresses. Cancellation, deadlines, and defects still stop the statement.
 
+## Price and elapsed time
+
+SQL plans report an estimated input-token band before cache hits, retries or refusal splits. They do not predict output tokens, total dollars or future duration. SQL usage reports cumulative process totals, not the facts of one isolated call. Packed request metadata can appear on more than one result row; summing those rows counts the same request more than once.
+
+Measure wall time around the SQL statement in the client. This includes database and client work and is not engine-only time. For an external price estimate, apply a known input/output tariff to complete provider-reported usage with decimal arithmetic. The provider's invoice determines actual charges. Missing rates or incomplete attempt usage mean unknown cost, not zero. Cumulative SQL counters do not prove usage completeness for failed attempts, and subtracting shared counters cannot isolate concurrent calls.
+
 ## Settings
 
 `SET thinkthen_backend = 'typesafe'` selects a built-in or configured backend for the calling session. `RESET thinkthen_backend` restores captured environment selection. An explicit empty name refuses. SQL accepts no address or key. The Rust engine captures the selected key from the process environment when it builds. Connections with different backend names retain separate engines. The existing limit of 16 resident engines, held-plan refusal, idle eviction and process request totals still apply.
