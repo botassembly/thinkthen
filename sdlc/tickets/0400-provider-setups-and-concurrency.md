@@ -151,3 +151,6 @@ Slice B final state: fresh receipt review accepted frozen `aca9d56372f15b726f8f2
 
 
 Slice C builds from B’s actual byte-identical landing and changes only the shared fallback to 8. Counted omission/explicit-six fixtures reuse existing packed-call and child helpers; compiled CLI rows independently pin output, peak requests and reused connections. Historical panic/overlap fixtures remain explicit four. The new R case and routine R/SQLite cancellation paths cover the accepted review corrections. The complete-design recognition correction conflicts with the retained single-text jobs refusal; the [C build record](../records/0400-default-throttle-slice-c-build.md) records the failing receipt and coordinator question rather than claiming it passed. SQLite’s paired settings witness remains stress-owned and unrun here. Source review and the coordinator’s full/canonical checkpoint remain pending.
+
+
+C candidate `38af7059c` passes renewed policy and required lint after a one-line nesting correction. Its build record preserves actual focused counts, all ten mapping-removal/restoration receipts, exact landed-base ratchets, the accidentally selected TypeScript stress row and the unresolved recognition fixture/design gap. This is a candidate, not acceptance or landing; source review and parent full/canonical proof remain.
