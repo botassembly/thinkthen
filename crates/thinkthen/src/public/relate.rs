@@ -207,7 +207,7 @@ impl Entity {
         }
     }
 
-    fn of(held: &impl RelationEntityView) -> Self {
+    pub(super) fn of(held: &impl RelationEntityView) -> Self {
         Self {
             name: held.name().to_owned(),
             kind: held.kind().to_owned(),

@@ -124,18 +124,7 @@ impl CompleteAnnotationMember<'_> {
     /// The saved question key associated with this logical member.
     #[must_use]
     pub fn request(&self) -> &str {
-        match &self.canonical.legacy {
-            core::AnnotatedEntry::Answered(_) => self
-                .canonical
-                .legacy
-                .answered()
-                .map_or("", |(_, _, _, request)| request),
-            core::AnnotatedEntry::Failed(_) => self
-                .canonical
-                .legacy
-                .failed()
-                .map_or("", |(_, _, request)| request),
-        }
+        self.canonical.request()
     }
 }
 

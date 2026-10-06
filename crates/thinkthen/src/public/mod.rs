@@ -41,6 +41,7 @@ mod settings;
 pub use crate::core::settings::{For, Settings, SettingsError};
 pub use crate::core::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
 pub use crate::core::{MemberIdentity, Observation, Origin, QuestionSource, ResultIdentity};
+pub use crate::core::{RelationDirection, RelationMethod};
 /// The channel every ThinkThen binding waits on, so a forked child on macOS
 /// can wait too (ticket 0365). It is for the bindings, not a documented API.
 #[doc(hidden)]
@@ -78,6 +79,11 @@ pub use results::{
     Found, Judgment, NamedProbability, ObservedRow, Picked, Probabilities, QuestionDetail, Ranked,
     RankedRow, RecordObservation, Row, SetRanked, Tally, TallyStart, Usage,
 };
+pub use results::{
+    CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
+    RecognitionProbabilities,
+};
+pub use results::{CompleteRelated, CompleteRelationMember};
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
 

@@ -1,8 +1,6 @@
 //! Recognition in three steps (ADR 0056): BILOU boundaries over windowed
 //! requests, kinds and edges per step-1 request, then stated relations.
 
-use serde::Serialize;
-
 use super::each::Models;
 use super::{Answered, Asks, Bound, Engine, Request};
 use crate::core::relation::count_pairs;
@@ -21,50 +19,8 @@ pub(crate) const MAX_TEXT_BYTES: usize = 600_000;
 const MAX_RELATION_NAMES: usize = 255;
 const MAX_RELATION_QUESTIONS: usize = 4_000;
 
-/// The names one text holds, and the edges between them when rules were given.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "recognize"))]
-pub(crate) struct Recognized {
-    pub(crate) entities: Vec<RecognizedName>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) relations: Option<Vec<RelationEdge<RecognizedName>>>,
-}
-
-/// Every probability behind one text's names, as `--details` keeps them.
-#[derive(Debug, Default, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-#[cfg_attr(test, schemars(rename = "recognizeAnswer"))]
-pub(crate) struct Probabilities {
-    pub(crate) pieces: Vec<PieceOdds>,
-    pub(crate) names: Vec<NameOdds>,
-    pub(crate) pairs: Vec<PairOdds>,
-}
-
-/// One asked pair's probability.
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "pairOdds"))]
-pub(crate) struct PairOdds {
-    relation: String,
-    source: Place,
-    target: Place,
-    probability: f64,
-}
-
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "place"))]
-struct Place {
-    start: usize,
-    end: usize,
-}
-
-impl Place {
-    const fn of(name: &RecognizedName) -> Self {
-        Self {
-            start: name.start,
-            end: name.end,
-        }
-    }
-}
+use crate::core::{PairOdds, Place};
+pub(crate) use crate::core::{RecognitionOdds as Probabilities, RecognizedValue as Recognized};
 
 /// The request metadata of every stage, in construction order. `live` says
 /// whether any answer came from the backend rather than a recording or cache.

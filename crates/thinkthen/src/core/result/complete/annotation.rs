@@ -29,6 +29,13 @@ pub(crate) struct AnnotationMember {
 }
 
 impl AnnotationMember {
+    pub(crate) fn request(&self) -> &str {
+        match &self.legacy {
+            AnnotatedEntry::Answered(entry) => &entry.request,
+            AnnotatedEntry::Failed(entry) => &entry.request,
+        }
+    }
+
     pub(crate) const fn value(&self) -> Option<&crate::core::Value> {
         match &self.legacy {
             AnnotatedEntry::Answered(entry) => Some(&entry.value),

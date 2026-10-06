@@ -7,12 +7,19 @@ mod call;
 mod complete;
 mod complete_annotation;
 mod complete_find;
+mod complete_recognize;
+mod complete_relate;
+pub use complete_relate::{CompleteRelated, CompleteRelationMember};
 mod complete_record;
 pub use complete::{
     CompleteChoice, CompleteDecision, CompleteFilter, CompleteRank, CompleteScore, CompleteTags,
 };
 pub use complete_annotation::{CompleteAnnotated, CompleteAnnotationMember};
 pub use complete_find::CompleteFound;
+pub use complete_recognize::{
+    CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
+    RecognitionProbabilities,
+};
 pub use complete_record::CompleteRecord;
 mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome};

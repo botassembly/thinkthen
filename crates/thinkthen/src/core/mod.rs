@@ -37,7 +37,9 @@ mod probability;
 mod question;
 mod question_file;
 mod question_set;
+mod recognition_result;
 mod recognize;
+pub(crate) use recognition_result::{PairOdds, Place, RecognitionOdds, RecognizedValue};
 mod recognize_file;
 pub(crate) mod record_input;
 pub(crate) mod recording;
@@ -111,9 +113,14 @@ pub(crate) use crate::core::reply::{
 pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::complete::Atomic as CompleteAtomic;
 pub(crate) use crate::core::result::complete::Find as CompleteFind;
+pub(crate) use crate::core::result::complete::Recognition as CompleteRecognition;
 pub(crate) use crate::core::result::complete::{
     Annotation as CompleteAnnotation, AnnotationMember as CompleteAnnotationMember,
 };
+pub(crate) use crate::core::result::complete::{
+    Relation as CompleteRelation, RelationEntry as CompleteRelationEntry,
+};
+pub use crate::core::result::complete::{RelationDirection, RelationMethod};
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
     AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning,

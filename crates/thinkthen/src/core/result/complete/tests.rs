@@ -5,6 +5,8 @@ use crate::core::{
     RequestMeta, Threshold, Url, json_line,
 };
 
+mod aggregate;
+
 fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomic {
     let answer = Answer::new_yes_no(Probability::new(0.9).unwrap());
     let threshold = Threshold::default();

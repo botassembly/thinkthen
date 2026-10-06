@@ -2,6 +2,16 @@
 
 Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
+Native carrier WIP: all ten functions now have concrete complete types.
+Recognition's existing typed entities and stage distributions moved from the
+facade into core and retain their legacy serialization. New recognition
+accessors expose complete piece, name and pair tables; relation member
+carriers retain the complete answer distribution alongside accepted/rejected
+and failed member readings. Eight pure result serializer cases and the
+27 existing recognition CLI/loopback cases pass. Complete execution routes,
+identity propagation, CLI result/2 adoption and native public exchanges are
+still open; SQL and host adoption remain separate work.
+
 Milestone: 0.2
 
 Owner: builder.

@@ -1,0 +1,169 @@
+//! Complete relation values and borrowed logical members.
+
+use crate::core::{self, AnswerId, FailureId, ResultIdentity};
+use crate::public::{
+    Edge, Entity, Error, FailureCause, Probabilities, RelationDirection, RelationMethod, Usage,
+};
+use serde::{Serialize, Serializer};
+use std::fmt;
+
+/// A complete relation aggregate, retaining rejected and failed logical members.
+#[derive(Clone, PartialEq)]
+pub struct CompleteRelated {
+    pub(crate) canonical: core::CompleteRelation,
+    pub(crate) value: Vec<Edge>,
+}
+
+impl CompleteRelated {
+    /// Stable identity of the resolved aggregate.
+    #[must_use]
+    pub const fn answer_id(&self) -> &AnswerId {
+        self.canonical.identity.answer_id()
+    }
+
+    /// Accepted edges, in semantic order.
+    #[must_use]
+    pub fn value(&self) -> &[Edge] {
+        &self.value
+    }
+
+    /// Aligned response sources and observation identities.
+    #[must_use]
+    pub const fn identity(&self) -> &ResultIdentity {
+        &self.canonical.identity
+    }
+
+    /// Every relation question, including rejected and failed members.
+    pub fn members(&self) -> impl ExactSizeIterator<Item = CompleteRelationMember<'_>> {
+        self.canonical.members.iter().map(CompleteRelationMember)
+    }
+
+    /// Backend-reported usage, retaining absence.
+    #[must_use]
+    pub fn usage(&self) -> Option<Usage> {
+        self.canonical.usage().map(super::usage)
+    }
+
+    /// Write the complete canonical result/2 document.
+    ///
+    /// # Errors
+    /// Returns a defect if the typed result cannot be serialized.
+    pub fn to_json(&self) -> Result<String, Error> {
+        core::json_line(&self.canonical)
+            .map_err(|_| Error::defect("a complete relation result could not be written as JSON"))
+    }
+}
+
+impl fmt::Debug for CompleteRelated {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CompleteRelated")
+            .field("answer_id", self.answer_id())
+            .finish_non_exhaustive()
+    }
+}
+
+impl Serialize for CompleteRelated {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.canonical.serialize(serializer)
+    }
+}
+
+/// One borrowed relation reading, including full menu probabilities.
+pub struct CompleteRelationMember<'a>(&'a core::CompleteRelationEntry);
+
+impl CompleteRelationMember<'_> {
+    /// Authored relation name.
+    #[must_use]
+    pub fn relation(&self) -> &str {
+        &self.0.relation
+    }
+
+    /// Words read by the model for this rule.
+    #[must_use]
+    pub fn reads(&self) -> &str {
+        &self.0.reads
+    }
+
+    /// Pair or target-menu question method.
+    #[must_use]
+    pub const fn method(&self) -> RelationMethod {
+        self.0.method
+    }
+
+    /// Semantic direction of the rule.
+    #[must_use]
+    pub const fn direction(&self) -> RelationDirection {
+        self.0.direction
+    }
+
+    /// Original source endpoint.
+    #[must_use]
+    pub fn source(&self) -> Entity {
+        Entity::of(&self.0.source)
+    }
+
+    /// Chosen target, absent when none won or the menu failed.
+    #[must_use]
+    pub fn target(&self) -> Option<Entity> {
+        self.0.target.as_ref().map(Entity::of)
+    }
+
+    /// Successful member identity, including a successful null target.
+    #[must_use]
+    pub fn answer_id(&self) -> Option<&AnswerId> {
+        match &self.0.identity {
+            core::MemberIdentity::Answered(id) => Some(id),
+            core::MemberIdentity::Failed(_) => None,
+        }
+    }
+
+    /// Failed occurrence identity, absent for a success.
+    #[must_use]
+    pub fn failure_id(&self) -> Option<&FailureId> {
+        match &self.0.identity {
+            core::MemberIdentity::Failed(id) => Some(id),
+            core::MemberIdentity::Answered(_) => None,
+        }
+    }
+
+    /// Full successful distribution, including every unchosen target.
+    #[must_use]
+    pub fn probabilities(&self) -> Option<Probabilities> {
+        self.0.answer.as_ref().map(super::complete::probabilities)
+    }
+
+    /// Probability used by the existing relation selection rule.
+    #[must_use]
+    pub const fn probability(&self) -> Option<f64> {
+        self.0.probability
+    }
+
+    /// Whether this successful reading selected an edge.
+    #[must_use]
+    pub const fn accepted(&self) -> Option<bool> {
+        self.0.accepted
+    }
+
+    /// Existing backend member failure cause, absent on success.
+    #[must_use]
+    pub fn failure(&self) -> Option<FailureCause> {
+        self.0.failure.as_ref().map(|failure| {
+            crate::public::annotated::cause(core::FailedValue::new(*failure).cause())
+        })
+    }
+
+    /// Saved question key for this logical member.
+    #[must_use]
+    pub fn request(&self) -> &str {
+        &self.0.request
+    }
+}
+
+impl fmt::Debug for CompleteRelationMember<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CompleteRelationMember")
+            .field("answer_id", &self.answer_id())
+            .field("failure_id", &self.failure_id())
+            .finish_non_exhaustive()
+    }
+}
