@@ -1,5 +1,7 @@
 """Explicit host file rows and ten judgments over the shared folder fixture."""
+import errno
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -182,11 +184,17 @@ def relocated_documents_reuse_answers_and_never_send_source_metadata():
 
 
 @case
-def invalid_utf8_discovered_filename_is_refused_before_judgment():
+def invalid_utf8_filename_is_refused_by_reader_or_host_before_judgment():
     with tempfile.TemporaryDirectory(prefix='thinkthen-names-') as tmp, Backend() as backend:
-        import os
         Path(tmp,'a').write_text('valid\n')
-        descriptor=os.open(os.fsencode(tmp)+b'/z-\xff',os.O_CREAT|os.O_WRONLY,0o600)
+        try:
+            descriptor=os.open(os.fsencode(tmp)+b'/z-\xff',os.O_CREAT|os.O_WRONLY,0o600)
+        except OSError as error:
+            if sys.platform != 'darwin' or error.errno != errno.EILSEQ:
+                raise
+            expect(backend.count(),0,'host filename refusal sends nothing')
+            print('not run: invalid UTF-8 filename reader refusal; macOS rejected fixture creation with EILSEQ')
+            return
         os.close(descriptor)
         got=run([f"SELECT thinkthen_decide('Is it valid?',record) FROM thinkthen_read_files({literal(tmp)})"],backend.base())
         expect(said(got[0]),'thinkthen local: source filename must be UTF-8 (retryable: no)','exact filename refusal')
@@ -197,12 +205,14 @@ def invalid_utf8_discovered_filename_is_refused_before_judgment():
 def oversized_sorted_manifest_refuses_before_admitting_content():
     with tempfile.TemporaryDirectory(prefix='thinkthen-manifest-') as tmp, Backend() as backend:
         folder=Path(tmp)
-        for _ in range(14):
-            folder=folder/('d'*220)
+        # Stay below macOS's path limit while exceeding the same manifest cap.
+        for _ in range(2):
+            folder=folder/('d'*200)
             folder.mkdir()
-        needed=(16*1024*1024)//(len(str(folder))+8)+2
+        filename_bytes=200
+        needed=(16*1024*1024)//(len(os.fsencode(folder))+1+filename_bytes+1)+2
         for ordinal in range(needed):
-            (folder/f'{ordinal:06d}').touch()
+            (folder/(f'{ordinal:06d}-'+'f'*(filename_bytes-7))).touch()
         got=run([f"SELECT thinkthen_decide('Is it valid?',record) FROM thinkthen_read_files({literal(tmp)})"],backend.base())
         expect(said(got[0]),'thinkthen local: source manifest exceeds 16 MiB (retryable: no)','exact manifest refusal')
         expect(backend.count(),0,'oversized manifest admitted no content')
