@@ -125,6 +125,7 @@ pub(crate) struct Transport<'a> {
 /// its identity, and its HTTP attempts.
 #[derive(Clone)]
 pub(crate) struct Answered {
+    pub(crate) attempts: Vec<crate::core::AttemptObservation>,
     pub(crate) sources: Vec<crate::core::QuestionSource>,
     pub(crate) observations: Vec<crate::core::Observation>,
     pub(crate) reply: Reply,

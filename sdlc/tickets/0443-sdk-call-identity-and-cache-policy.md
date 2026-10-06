@@ -63,3 +63,168 @@ uses the same compiled version/call/request headers. MCP module/CLI ownership
 remains lane1; no alternate transport or engine is introduced.
 
 Local image integration WIP: ready 92084c66d is merged with shared profile propagation. The estimated-budget blanket refusal is omitted under Ian's correction: uncalibrated local images retain approximate encoded-body admission. The original Imajev decoder accepts independently optional reported counts, carries input887/output unknown through per-question storage and zero-send replay, and retains original request/response bodies in the explicit recording transaction. All 23 focused image regressions pass. Native result execution, migration, CLI schema adoption and the whole High review remain open.
+
+Native complete execution WIP: additive decide/choose/tag/score scalar and input routes, all six atomic many/record routes, and stable saved-score/described-decide ranking now return concrete result/2 carriers through the existing pipeline. Eager record admission validates every original, context and whole replacement shortlist before sending. Originals require neither Clone, Serialize nor Send. Logical IDs include effective normalized readings and original ordinals; cache/replay retain accepted observations and requested empty attempt lists. Six independent public exchange regressions pass, alongside 23 image, nine storage and eight complete serializer cases; affected Clippy passes. Aggregate execution, shared context integration, dynamic choose without fixed options, CLI/schema/corpus adoption and final public inventory remain open.
+
+### Added public declarations
+
+```rust
+impl Engine {
+    pub fn decide_complete_with<Q: DecisionQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteDecision>, Error>;
+    pub fn decide_input_complete_with<Q: DecisionQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        input: &QuestionInput,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteDecision>, Error>;
+    pub fn choose_complete_with<Q: DetailQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteChoice>, Error>;
+    pub fn choose_input_complete_with<Q: DetailQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        input: &QuestionInput,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteChoice>, Error>;
+    pub fn tag_complete_with<Q: DetailQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteTags>, Error>;
+    pub fn score_complete_with(
+        &self,
+        question: &Question,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteScore>, Error>;
+    pub fn score_input_complete_with(
+        &self,
+        question: &Question,
+        input: &QuestionInput,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteScore>, Error>;
+    pub fn decide_records_complete_with<Q, I, T>(
+        &self,
+        question: &Q,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteDecision>>>, Error>
+    where
+        Q: DecisionQuestion + ?Sized,
+        I: IntoIterator<Item = RecordInput<T>>,
+        T: InputEvidence,;
+    pub fn choose_records_complete_with<Q, I, T>(
+        &self,
+        question: &Q,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteChoice>>>, Error>
+    where
+        Q: DetailQuestion + ?Sized,
+        I: IntoIterator<Item = RecordInput<T>>,
+        T: InputEvidence,;
+    pub fn tag_records_complete_with<Q, I, T>(
+        &self,
+        question: &Q,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteTags>>>, Error>
+    where
+        Q: DetailQuestion + ?Sized,
+        I: IntoIterator<Item = RecordInput<T>>,
+        T: InputEvidence,;
+    pub fn score_records_complete_with<I, T>(
+        &self,
+        question: &Question,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteScore>>>, Error>
+    where
+        I: IntoIterator<Item = RecordInput<T>>,
+        T: InputEvidence,;
+    pub fn filter_records_complete_with<I, T>(
+        &self,
+        question: &Question,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteFilter>>>, Error>
+    where
+        I: IntoIterator<Item = RecordInput<T>>,
+        T: InputEvidence,;
+    pub fn rank_records_complete_with<I, T>(
+        &self,
+        question: &Question,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error>
+    where
+        I: IntoIterator<Item = RecordInput<T>>,
+        T: InputEvidence,;
+    pub fn rank_complete_with<I, T>(
+        &self,
+        question: &Question,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error>
+    where
+        I: IntoIterator<Item = T>,
+        T: InputEvidence,;
+    pub fn decide_many_complete_with<Q, I, T>(
+        &self,
+        question: &Q,
+        inputs: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteDecision>>>, Error>
+    where
+        Q: DecisionQuestion + ?Sized,
+        I: IntoIterator<Item = T>,
+        T: InputEvidence,;
+    pub fn choose_many_complete_with<Q, I, T>(
+        &self,
+        question: &Q,
+        inputs: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteChoice>>>, Error>
+    where
+        Q: DetailQuestion + ?Sized,
+        I: IntoIterator<Item = T>,
+        T: InputEvidence,;
+    pub fn tag_many_complete_with<Q, I, T>(
+        &self,
+        question: &Q,
+        inputs: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteTags>>>, Error>
+    where
+        Q: DetailQuestion + ?Sized,
+        I: IntoIterator<Item = T>,
+        T: InputEvidence,;
+    pub fn score_many_complete_with<I, T>(
+        &self,
+        question: &Question,
+        inputs: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteScore>>>, Error>
+    where
+        I: IntoIterator<Item = T>,
+        T: InputEvidence,;
+    pub fn filter_complete_with<I, T>(
+        &self,
+        question: &Question,
+        inputs: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteFilter>>>, Error>
+    where
+        I: IntoIterator<Item = T>,
+        T: InputEvidence,;
+}
+```

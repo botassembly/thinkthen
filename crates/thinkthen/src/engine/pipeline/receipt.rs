@@ -36,7 +36,13 @@ pub(crate) fn receipt(
     for answered in answers {
         usage.add_reported(answered.usage);
     }
+    let attempts: std::collections::BTreeMap<_, _> = answers
+        .iter()
+        .flat_map(|answer| answer.attempts.iter())
+        .map(|attempt| (attempt.ordinal(), attempt.clone()))
+        .collect();
     Ok(facade::Answered {
+        attempts: attempts.into_values().collect(),
         sources: answers
             .iter()
             .map(|answered| {

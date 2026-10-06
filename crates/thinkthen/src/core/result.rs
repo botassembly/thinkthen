@@ -400,6 +400,14 @@ pub(crate) struct DecisionResult {
 }
 
 impl DecisionResult {
+    pub(crate) fn with_captured_attempts(
+        mut self,
+        attempts: Option<Vec<AttemptObservation>>,
+    ) -> Self {
+        self.meta.attempts = attempts;
+        self
+    }
+
     /// Gather one judgment into the document the tool prints.
     ///
     /// `value` is the bare value the command would have printed, so a reader of

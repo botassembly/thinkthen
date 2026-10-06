@@ -73,6 +73,10 @@ impl QuestionSource {
         }
     }
 
+    pub(crate) const fn model(&self) -> &ModelName {
+        &self.answered_by
+    }
+
     /// Actual wire-question count that produced this observation; unknown history stays absent.
     #[must_use]
     pub fn batch_size(&self) -> Option<u32> {
@@ -104,6 +108,22 @@ pub struct ResultIdentity {
 }
 
 impl ResultIdentity {
+    pub(crate) const fn resolved(
+        answer_id: AnswerId,
+        origin: Option<Origin>,
+        question_sources: Vec<QuestionSource>,
+        observations: Vec<Observation>,
+        answered_by: Option<ModelName>,
+    ) -> Self {
+        Self {
+            answer_id,
+            origin,
+            question_sources,
+            observations,
+            answered_by,
+        }
+    }
+
     /// The logical answer ID, available without probability opt-in.
     #[must_use]
     pub const fn answer_id(&self) -> &AnswerId {

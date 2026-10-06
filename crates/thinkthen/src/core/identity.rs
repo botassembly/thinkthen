@@ -6,6 +6,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize};
 use thiserror::Error;
 
+pub(crate) mod answer;
 pub(crate) mod framing;
 pub(crate) mod legacy;
 

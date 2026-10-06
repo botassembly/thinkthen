@@ -80,6 +80,32 @@ impl RecordOptions {
         Self::from_labels(&labels)
     }
 
+    pub(crate) fn replacing(&self, question: &Question) -> Result<Question, Error> {
+        let core::Question::Choose { text, .. } = &question.core else {
+            return Err(Error::usage("record options are admitted only for choose"));
+        };
+        let labels = self
+            .options
+            .iter()
+            .map(|option| {
+                Ok((
+                    option.name.clone(),
+                    option
+                        .description
+                        .as_ref()
+                        .map(Description::core)
+                        .transpose()?,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        let mut question = question.clone();
+        question.core = core::Question::Choose {
+            text: text.clone(),
+            options: Labels::described(labels).map_err(Error::refused)?,
+        };
+        Ok(question)
+    }
+
     /// Borrow all options in the order they will be sent.
     #[must_use]
     pub fn options(&self) -> &[RecordOption] {

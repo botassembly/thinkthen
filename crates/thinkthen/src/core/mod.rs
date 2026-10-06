@@ -26,6 +26,7 @@ pub(crate) mod check;
 mod digest;
 mod find;
 mod identity;
+pub(crate) use identity::answer::{AtomicReading, RecordScope};
 pub(crate) use identity::legacy::{Metadata as LegacyMetadata, observation as legacy_observation};
 pub(crate) mod image;
 mod json;

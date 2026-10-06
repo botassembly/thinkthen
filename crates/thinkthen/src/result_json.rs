@@ -7,6 +7,7 @@ use crate::core::{
     question_sha256_with_profile,
 };
 use crate::engine::facade::Judgment;
+pub(crate) mod complete;
 
 /// What a detailed row names beside the judgment: the backend's address and the
 /// calibration profile the run compares.
@@ -41,7 +42,7 @@ pub(crate) fn decision(
     requests: Vec<String>,
 ) -> Result<(String, String), RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
-    let json = decision_with_digest(
+    let json = json_line(&decision_with_digest(
         run,
         judged,
         question,
@@ -51,7 +52,7 @@ pub(crate) fn decision(
         Some(requests),
         &digest,
         Vec::new(),
-    )?;
+    )?)?;
     Ok((json, digest))
 }
 
@@ -71,7 +72,7 @@ pub(crate) fn decision_row(
     attempts: Vec<crate::public::AttemptObservation>,
 ) -> Result<String, RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
-    decision_with_digest(
+    json_line(&decision_with_digest(
         run,
         judged,
         question,
@@ -81,7 +82,7 @@ pub(crate) fn decision_row(
         Some(requests),
         &digest,
         attempts,
-    )
+    )?)
 }
 
 /// One row that lists its question keys in `meta.requests`, by ADR 0111.
@@ -99,7 +100,7 @@ pub(crate) fn decision_with_requests(
     requests: Vec<String>,
 ) -> Result<String, RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
-    decision_with_digest(
+    json_line(&decision_with_digest(
         run,
         judged,
         question,
@@ -109,7 +110,7 @@ pub(crate) fn decision_with_requests(
         Some(requests),
         &digest,
         Vec::new(),
-    )
+    )?)
 }
 
 #[expect(
@@ -126,7 +127,7 @@ fn decision_with_digest(
     requests: Option<Vec<String>>,
     digest: &str,
     attempts: Vec<crate::public::AttemptObservation>,
-) -> Result<String, RenderError> {
+) -> Result<DecisionResult, RenderError> {
     let answered = &judged.answered;
     let meta = Meta::new(
         env!("CARGO_PKG_VERSION"),
@@ -147,7 +148,7 @@ fn decision_with_digest(
     .with_reported_usage(answered.reply.reported_usage())
     .with_attempts(attempts);
     let row = DecisionResult::new(shown, question, judged.answer.clone(), threshold, meta);
-    json_line(&match input {
+    Ok(match input {
         Some(record) => row.with_input(record),
         None => row,
     })

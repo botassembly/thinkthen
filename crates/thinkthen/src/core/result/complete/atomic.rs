@@ -15,6 +15,32 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
+    pub(crate) fn ranked(
+        mut self,
+        record: usize,
+        position: std::num::NonZeroUsize,
+    ) -> Result<Self, crate::core::RenderError> {
+        self.legacy.threshold = None;
+        self.rank_position = Some(position);
+        self.identity = crate::core::ResultIdentity::of(
+            crate::core::image::InputFunction::Rank,
+            &crate::core::RecordScope { record },
+            self.identity.question_sources().to_vec(),
+            self.identity.observations().to_vec(),
+            &crate::core::AtomicReading {
+                question: &self.legacy.question,
+                threshold: None,
+                rank_position: Some(position),
+            },
+            &[],
+        )?;
+        Ok(self)
+    }
+
+    pub(crate) const fn value(&self) -> &crate::core::Value {
+        &self.legacy.value
+    }
+
     pub(crate) const fn reported_usage(&self) -> Option<crate::core::ReportedUsage> {
         self.legacy.meta.reported_usage
     }

@@ -33,6 +33,7 @@ mod rank_question;
 mod rank_set;
 pub use rank_set::RankSet;
 mod choice;
+mod complete;
 mod engine;
 mod error;
 #[cfg(feature = "polars")]

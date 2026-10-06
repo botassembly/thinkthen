@@ -57,6 +57,7 @@ fn facade_answer(
                 .first()
                 .ok_or(EngineError::Defect("an annotate group had no answer"))?;
             Ok(Answered {
+                attempts: Vec::new(),
                 sources: answers
                     .iter()
                     .flat_map(|answered| answered.sources.clone())
