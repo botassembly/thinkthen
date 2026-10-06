@@ -73,3 +73,9 @@ held cancellation and backend-error secrecy. Refusals and replays count zero
 sends at owned loopback listeners. Legacy rank and SQLite 0433 regression
 checks are retained and executed. This is builder evidence for root's whole
 review, not a landing record, complete-result matrix or completion claim.
+
+Slice A code review: ACCEPT, 2026-10-06; fresh read-only High whole-family review of0066b0639. Full tests and lint run on the landing commit. Complete native result and declaration adoption stay open.
+
+## What the build taught us
+
+Recording replay must start with empty caches to prove the recordings supply the answers. The shared native turns merge preserves duplicate keyed records without a SQL-specific sorting implementation.
