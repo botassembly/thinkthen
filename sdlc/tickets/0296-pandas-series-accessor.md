@@ -5,7 +5,7 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 Milestone: 0.2
 
 Owner: builder.
-Ticket review: revised for vision; fresh review pending.
+Ticket review: ACCEPT, 2026-10-06; fresh read-only review of the corrected image contract.
 
 ## Outcome
 
