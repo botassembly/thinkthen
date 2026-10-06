@@ -23,6 +23,7 @@ use crate::schedule::{Judged, Output, Placed};
 /// One framed record, and the bytes it arrived as when it arrived as a line.
 pub(super) struct Held {
     pub(super) record: Record,
+    pub(super) images: Option<crate::public::ImageEvidence>,
     pub(super) arrived: Option<Vec<u8>>,
     pub(super) at: usize,
     pub(super) position: Option<crate::cli::intake::Position>,
@@ -47,17 +48,25 @@ pub(super) fn records(
             return None;
         }
         let held = source.next()?.and_then(|item| {
-            let (record, arrived) = match item.data {
-                crate::cli::intake::Data::Record(record) => (record, None),
+            let (record, arrived, images) = match item.data {
+                crate::cli::intake::Data::Record(record) => (record, None, None),
+                crate::cli::intake::Data::Images(images) => (
+                    reading
+                        .record(images.text().unwrap_or_default().as_bytes())
+                        .map_err(|error| Placed::at(Failure::record(error, streams), item.at))?,
+                    None,
+                    Some(images),
+                ),
                 crate::cli::intake::Data::Bytes(bytes) => {
                     let record = reading
                         .record(&bytes)
                         .map_err(|error| Placed::at(Failure::record(error, streams), item.at))?;
-                    (record, Some(bytes))
+                    (record, Some(bytes), None)
                 }
             };
             let held = Held {
                 record,
+                images,
                 arrived,
                 at: item.at,
                 position: item.position,
@@ -101,12 +110,26 @@ pub(super) struct Planner<'a> {
     pub(super) context: Option<Evidence>,
     pub(super) profile: Option<&'a BackendProfile>,
     pub(super) limits: Limits,
+    pub(super) route: crate::core::adapters::built_in::images::ImageRoute,
 }
 
 impl Planner<'_> {
     /// The quoted plan one record sends. A stream's record quotes the JSON
     /// value a batch has always quoted, and one document quotes its evidence.
-    pub(super) fn plans(&self, record: &Record) -> Result<Vec<Plan>, Failure> {
+    pub(super) fn plans(&self, held: &Held) -> Result<Vec<Plan>, Failure> {
+        if let Some(images) = &held.images {
+            return crate::core::image::plan(
+                self.asked.clone(),
+                images.state(),
+                self.context.as_ref(),
+                self.asks.questions(&held.record)?,
+                self.profile,
+                self.route,
+            )
+            .map(|plan| vec![plan])
+            .map_err(|error| self.limits.refused(error, false));
+        }
+        let record = &held.record;
         self.asks
             .questions(record)?
             .into_iter()
@@ -138,13 +161,10 @@ impl Planner<'_> {
     }
 
     /// The wire questions one record sends.
-    pub(super) fn asks(&self, url: &Url, record: &Record) -> Result<Vec<Ask>, Failure> {
+    pub(super) fn asks(&self, url: &Url, held: &Held) -> Result<Vec<Ask>, Failure> {
         let mut asks = Vec::new();
-        for plan in self.plans(record)? {
-            asks.extend(
-                pack::asks(url, &plan)
-                    .map_err(|_| Failure::Defect("a request could not be written as JSON"))?,
-            );
+        for plan in self.plans(held)? {
+            asks.extend(pack::asks(url, &plan).map_err(|error| super::encoded(&plan, error))?);
         }
         Ok(asks)
     }
@@ -188,7 +208,7 @@ impl Asker for JudgeAsker<'_> {
 
     fn asks(&self, held: &Held) -> Result<Vec<Ask>, Placed> {
         self.planner
-            .asks(&self.url, &held.record)
+            .asks(&self.url, held)
             .map_err(|error| Placed::at(error, held.at))
     }
 
@@ -261,6 +281,7 @@ impl JudgeAsker<'_> {
                 requests: answers.iter().map(|answered| answered.key.hex()).collect(),
                 attempts,
                 position: held.position.as_ref(),
+                images: held.images.as_ref(),
             },
         )?;
         if judgment.answered.replayed {
@@ -306,6 +327,7 @@ pub(super) fn run(
             context,
             profile: judging.engine.profile(),
             limits: Limits::new(judging.engine.profile()),
+            route: judging.engine.backend().image_route(),
         },
         url: judging.engine.backend().url().clone(),
         judging: &judging,

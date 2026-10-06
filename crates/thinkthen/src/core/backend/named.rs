@@ -242,6 +242,10 @@ impl Choice<'_> {
             .map(|backend| {
                 backend
                     .with_descriptions(named.descriptions)
+                    .with_image_route(crate::core::adapters::built_in::images::named(
+                        &named.name,
+                        &named.path,
+                    ))
                     .with_per_minute(named.per_minute)
             }),
         }

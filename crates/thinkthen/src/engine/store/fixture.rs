@@ -11,7 +11,7 @@ use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
 use super::{Found, JSONL, SQLITE, exists, storage};
-use crate::core::pack::{QuestionKey, model_json};
+use crate::core::pack::{QuestionKey, State, model_json};
 use crate::core::{Url, Usage, bytes_sha256, hex};
 use crate::engine::error::Error;
 
@@ -106,7 +106,9 @@ impl Entries {
     fn take(&mut self, line: &str) -> Result<(), &'static str> {
         match serde_json::from_str::<Line>(line).map_err(|_| "is not a question entry")? {
             Line::State(state) => {
-                if bytes_sha256(state.state.as_bytes()) != state.sha256 {
+                if bytes_sha256(state.state.as_bytes()) != state.sha256
+                    && hex(&State::image_sha256(&state.state)) != state.sha256
+                {
                     return Err("records a state under another digest");
                 }
                 self.states.insert(state.sha256, state.state);
@@ -271,7 +273,16 @@ impl Replayed {
 pub(crate) fn key_of(answer: &Answer, state: &str) -> Option<QuestionKey> {
     let url = Url::new(answer.url.clone()).ok()?;
     let model = model_json(&answer.model).ok()?;
-    Some(QuestionKey::of(&url, &model, state, &answer.question))
+    if hex(&State::image_sha256(state)) == answer.state {
+        Some(QuestionKey::images_of(
+            &url,
+            &model,
+            state,
+            &answer.question,
+        ))
+    } else {
+        Some(QuestionKey::of(&url, &model, state, &answer.question))
+    }
 }
 
 /// The error for an entry whose digest or state cannot be written.

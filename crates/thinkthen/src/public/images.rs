@@ -1,0 +1,197 @@
+//! Explicit immutable inputs shared by native and foreign image doors.
+
+mod calls;
+mod defaults;
+mod many;
+pub use defaults::{
+    choose_input, choose_input_with, decide_input, decide_input_with, details_input,
+    details_input_with, score_input, score_input_with,
+};
+mod validate;
+
+use serde::Serialize;
+use std::sync::Arc;
+
+use super::Error;
+use crate::core::image::{Image, ImageState};
+pub use crate::core::image::{ImageMedia, InputFunction};
+
+/// SDK compressed-byte bound per question, independent of vendor body limits.
+pub const MAX_IMAGE_BYTES: usize = 24 * 1024 * 1024;
+/// SDK attachment-count bound. Routes may narrow it.
+pub const MAX_IMAGES: usize = 8;
+
+/// An immutable original image whose media, dimensions and pixels were validated.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ImageInput(pub(crate) Image);
+
+impl ImageInput {
+    /// Validate compressed pixels without resizing or re-encoding.
+    ///
+    /// # Errors
+    /// Returns Usage for malformed media, pixels or exceeded SDK bounds.
+    pub fn new(media: ImageMedia, bytes: impl Into<Arc<[u8]>>) -> Result<Self, Error> {
+        let bytes = bytes.into();
+        let (width, height) = validate::decode(media, &bytes)?;
+        Ok(Self(Image {
+            media,
+            bytes,
+            width,
+            height,
+        }))
+    }
+
+    /// Explicit validated media.
+    #[must_use]
+    pub const fn media(&self) -> ImageMedia {
+        self.0.media
+    }
+    /// Original compressed bytes, without transformation.
+    #[must_use]
+    pub fn bytes(&self) -> &[u8] {
+        &self.0.bytes
+    }
+    /// Original pixel width.
+    #[must_use]
+    pub const fn width(&self) -> u32 {
+        self.0.width.get()
+    }
+    /// Original pixel height.
+    #[must_use]
+    pub const fn height(&self) -> u32 {
+        self.0.height.get()
+    }
+}
+
+impl Serialize for ImageInput {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct Encoded {
+            media: ImageMedia,
+            base64: String,
+            width: u32,
+            height: u32,
+        }
+        Encoded {
+            media: self.media(),
+            base64: self.0.base64(),
+            width: self.width(),
+            height: self.height(),
+        }
+        .serialize(serializer)
+    }
+}
+
+/// Optional ancillary text and ordered images. Duplicates remain separate entries.
+#[derive(Clone, Eq, PartialEq, Serialize)]
+pub struct ImageEvidence {
+    text: Option<String>,
+    images: Vec<ImageInput>,
+}
+
+impl std::fmt::Debug for ImageEvidence {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImageEvidence")
+            .field("text", &"<withheld>")
+            .field("images", &self.images)
+            .finish()
+    }
+}
+
+impl ImageEvidence {
+    /// Form one indivisible comparison input.
+    ///
+    /// # Errors
+    /// Returns Usage for no images, more than eight, or more than 24 MiB in total.
+    pub fn new(text: Option<String>, images: Vec<ImageInput>) -> Result<Self, Error> {
+        if images.is_empty() || images.len() > MAX_IMAGES {
+            return Err(Error::usage("image evidence requires 1 to 8 images"));
+        }
+        let bytes = images
+            .iter()
+            .try_fold(0usize, |sum, image| sum.checked_add(image.bytes().len()));
+        if bytes.is_none_or(|bytes| bytes > MAX_IMAGE_BYTES) {
+            return Err(Error::usage(
+                "image evidence exceeds the 25165824 compressed byte SDK limit",
+            ));
+        }
+        if text
+            .as_ref()
+            .is_some_and(|text| text.len() > crate::core::MAX_RECORD_BYTES)
+        {
+            return Err(Error::usage("image text exceeds the 16 MiB SDK limit"));
+        }
+        Ok(Self { text, images })
+    }
+    /// Authored ancillary text, if provided.
+    #[must_use]
+    pub fn text(&self) -> Option<&str> {
+        self.text.as_deref()
+    }
+    /// Validated images in original order, including duplicates.
+    #[must_use]
+    pub fn images(&self) -> &[ImageInput] {
+        &self.images
+    }
+
+    pub(crate) fn one(image: ImageInput) -> Self {
+        Self {
+            text: None,
+            images: vec![image],
+        }
+    }
+
+    pub(crate) fn state(&self) -> ImageState {
+        ImageState {
+            text: crate::core::Json::String(self.text.clone().unwrap_or_default()),
+            images: self.images.iter().map(|image| image.0.clone()).collect(),
+        }
+    }
+}
+
+/// Explicit text or image input; paths and ordinary byte arrays never imply images.
+#[derive(Clone, Eq, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum QuestionInput {
+    /// Existing text input.
+    Text(String),
+    /// Ordered immutable images and optional text.
+    Images(ImageEvidence),
+}
+
+impl std::fmt::Debug for QuestionInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Text(_) => f.write_str("QuestionInput::Text(<withheld>)"),
+            Self::Images(images) => images.fmt(f),
+        }
+    }
+}
+
+/// The record carrier the shared input scheduler accepts.
+/// This is separate from the existing text-only Evidence trait.
+pub trait InputEvidence {
+    /// Snapshot the explicit immutable input without inserting location metadata.
+    fn question_input(&self) -> QuestionInput;
+}
+impl<T: super::Evidence> InputEvidence for T {
+    fn question_input(&self) -> QuestionInput {
+        QuestionInput::Text(self.evidence().to_owned())
+    }
+}
+impl InputEvidence for QuestionInput {
+    fn question_input(&self) -> QuestionInput {
+        self.clone()
+    }
+}
+
+pub(crate) fn guard(function: InputFunction, input: &QuestionInput) -> Result<(), Error> {
+    if matches!(input, QuestionInput::Images(_)) && !function.accepts_images() {
+        Err(Error::usage(format!(
+            "{} accepts text only; images are unsupported",
+            function.name()
+        )))
+    } else {
+        Ok(())
+    }
+}

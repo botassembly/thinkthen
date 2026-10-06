@@ -55,10 +55,14 @@ impl SendBudget {
         &self,
         limit: Option<u64>,
         bytes: usize,
+        image_estimate: Option<u64>,
     ) -> Result<EstimatedReservation, ()> {
         let count = self.count(std::process::id());
         let bytes = u64::try_from(bytes).map_err(|_| ())?;
-        let amount = crate::core::PlanSummary::estimated_input_high(bytes).ok_or(())?;
+        let amount = match image_estimate {
+            Some(tokens) => tokens,
+            None => crate::core::PlanSummary::estimated_input_high(bytes).ok_or(())?,
+        };
         let mut spent = count.estimated.load(Ordering::Acquire);
         loop {
             let next = spent.checked_add(amount).ok_or(())?;

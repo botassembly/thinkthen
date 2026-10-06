@@ -43,6 +43,7 @@ struct RowContext<'a> {
     requests: Vec<String>,
     attempts: Vec<AttemptObservation>,
     position: Option<&'a crate::cli::intake::Position>,
+    images: Option<&'a crate::public::ImageEvidence>,
 }
 
 /// Build the one engine a command calls, from what the command resolved.
@@ -217,6 +218,9 @@ pub(crate) fn run(
         batch,
     } = asked;
     common.check_plan_name()?;
+    if common.images() && !settled.on().is_empty() {
+        return Err(Failure::Usage("images cannot accompany saved on pointers"));
+    }
     let threshold = settled.threshold();
     let view = view.checked()?;
     let asked = (!settled.sources().model_is_default()).then(|| settled.model().as_str());
@@ -227,12 +231,20 @@ pub(crate) fn run(
     );
     let request_size = batch
         .as_ref()
-        .filter(|_| !per_document || common.framing() != Framing::Document)
+        .filter(|tiers| {
+            if common.images() {
+                environment.request_size_selected(tiers.request_size)
+            } else {
+                !per_document || common.framing() != Framing::Document
+            }
+        })
         .map(|tiers| environment.request_size(tiers.request_size))
         .transpose()?;
-    let backend = environment
-        .resolve(common.backend.as_deref(), common.url.as_deref(), asked)?
-        .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    let backend = environment.resolve(common.backend.as_deref(), common.url.as_deref(), asked)?;
+    let backend = match request_size {
+        Some(size) => backend.with_request_size(size),
+        None => backend,
+    };
     // The configuration's model applies only on the unnamed path.
     let configured_model = (asked.is_none() && environment.named().is_none())
         .then(|| environment.model())
@@ -396,5 +408,16 @@ fn exit_code(outcome: Outcome) -> ExitCode {
         Outcome::Yes => ExitCode::from(0),
         Outcome::No => ExitCode::from(1),
         Outcome::Unresolved => ExitCode::from(3),
+    }
+}
+
+fn encoded(
+    plan: &crate::core::Plan,
+    error: crate::core::adapters::built_in::EncodeError,
+) -> Failure {
+    if plan.images().is_some() {
+        Failure::Image(error.to_string())
+    } else {
+        Failure::Defect("a request could not be written as JSON")
     }
 }

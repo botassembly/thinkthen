@@ -19,6 +19,7 @@ use crate::core::backend_profile::{BackendProfile, LimitKind, ProfileLimit};
 pub(crate) struct PackLimits {
     /// The request size a request closes at.
     pub(crate) ceiling: usize,
+    pub(crate) image_ceiling: Option<usize>,
     pub(crate) profile: Option<BackendProfile>,
     /// The inputs one request may answer: `--batch N`, a question step's
     /// full count, or 4,096.
@@ -42,7 +43,24 @@ impl PackLimits {
         let request = profile
             .and_then(|held| held.max_request_bytes)
             .map_or(self.ceiling, |most| most.min(self.ceiling));
+        let request = if state.body_limit().is_some() {
+            profile
+                .and_then(|held| held.max_request_bytes)
+                .into_iter()
+                .chain(self.image_ceiling)
+                .min()
+                .unwrap_or(usize::MAX)
+        } else {
+            request
+        };
+        let request = state
+            .body_limit()
+            .map_or(request, |limit| limit.min(request));
         let questions_most = match (profile.and_then(|held| held.max_questions), self.questions) {
+            (Some(one), Some(other)) => Some(one.min(other)),
+            (one, other) => one.or(other),
+        };
+        let questions_most = match (questions_most, state.questions_limit()) {
             (Some(one), Some(other)) => Some(one.min(other)),
             (one, other) => one.or(other),
         };
@@ -196,8 +214,7 @@ impl<T> Packer<T> {
     /// Close the open request, for a pause, a full window or the end.
     pub(crate) fn close(&mut self) -> Option<Packed<T>> {
         let open = self.open.take()?;
-        let body = built_in::join(
-            open.state.json(),
+        let body = open.state.body(
             &self.model,
             open.questions.iter().map(|question| &**question),
         );
@@ -211,7 +228,7 @@ impl<T> Packer<T> {
     /// The body bytes of a request of this state with no question.
     fn base(&self, state: &State) -> usize {
         // `{"state":` S `,"model":` M `,"questions":{` `}}`
-        state.json().len() + self.model.len() + 34
+        state.base_bytes(&self.model)
     }
 
     fn fits(&self, open: &Open<T>, entry: &Entry<T>) -> bool {
@@ -237,6 +254,20 @@ impl<T> Packer<T> {
     /// Refuse a question that passes a limit in a request of its own.
     fn lone(&self, entry: &Entry<T>) -> Result<(), PackError> {
         let bytes = grown(self.base(&entry.state), 0, entry.question.len());
+        if let Some(limit) = entry
+            .state
+            .body_limit()
+            .map(|limit| {
+                self.limits
+                    .image_ceiling
+                    .map_or(limit, |caller| caller.min(limit))
+            })
+            .filter(|limit| bytes > *limit)
+        {
+            return Err(PackError::Profile(built_in::images::body_limit(
+                limit, bytes,
+            )));
+        }
         let profile = self.limits.profile.as_ref();
         if self.limits.context
             && let Some((kind, limit, actual)) = self
@@ -283,7 +314,10 @@ impl<T> Packer<T> {
 /// `count` questions: its `"qN":` name, its bytes, and a comma after the first.
 fn grown(bytes: usize, count: usize, length: usize) -> usize {
     let name = 4 + (count + 1).to_string().len();
-    bytes + name + length + usize::from(count > 0)
+    bytes
+        .saturating_add(name)
+        .saturating_add(length)
+        .saturating_add(usize::from(count > 0))
 }
 
 #[cfg(test)]

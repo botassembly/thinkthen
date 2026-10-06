@@ -1,0 +1,1 @@
+{"model":"pplx-decider-v1-27b","answers":{"q1":{"type":"choice","choice":"red","probabilities":{"red":0.8,"blue":0.2},"confidence":0.8}},"usage":{"input_tokens":123,"output_tokens":0}}

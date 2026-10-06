@@ -11,8 +11,8 @@ use std::time::Duration;
 use crate::engine::facade;
 use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender, channel};
 use crate::engine::pipeline::{Asker, Failed, Flow, Host, Input, Packing, Port};
+use crate::public::InputEvidence;
 use crate::public::asking::Text;
-use crate::public::engine::Evidence;
 use crate::public::error::Error;
 use crate::public::options::{Stop, guarded};
 use crate::public::results::Facts;
@@ -76,7 +76,7 @@ where
     A::Row: Send + 'static,
     A::Error: From<Error> + Send + 'static,
     I: Iterator + 'a,
-    I::Item: Evidence,
+    I::Item: InputEvidence,
 {
     try_start(call, asker, records.map(Ok), pair)
 }
@@ -93,7 +93,7 @@ where
     A::Row: Send + 'static,
     A::Error: From<Error> + Send + 'static,
     I: Iterator<Item = Result<R, Error>> + 'a,
-    R: Evidence + 'a,
+    R: InputEvidence + 'a,
 {
     let (events, received) = channel();
     let cancel = call.stop.shared();
@@ -155,7 +155,7 @@ where
     A: Asker<Input = Text>,
     A::Error: From<Error>,
     I: Iterator<Item = Result<R, Error>>,
-    R: Evidence,
+    R: InputEvidence,
 {
     fn pull(&mut self) -> Option<Result<T, Error>> {
         if self.deferred && self.coordinator.is_some() {
@@ -203,7 +203,7 @@ where
     A: Asker<Input = Text>,
     A::Error: From<Error>,
     I: Iterator<Item = Result<R, Error>>,
-    R: Evidence,
+    R: InputEvidence,
 {
     /// Take one event; `Some` once the call has ended.
     fn take(&mut self, event: Event<A>) -> Option<Option<Result<T, Error>>> {
@@ -236,12 +236,12 @@ where
                 ))))
             }
             Some(Ok(item)) => {
-                let text = item.evidence().to_owned();
+                let input = item.question_input();
                 self.held.push_back(item);
                 self.fed += 1;
                 Input::Item(Text {
                     at: self.fed - 1,
-                    text,
+                    input,
                 })
             }
         };

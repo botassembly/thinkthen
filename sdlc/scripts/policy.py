@@ -42,13 +42,15 @@ LICENSE_EXCEPTIONS = {
     "webpki-roots": {"CDLA-Permissive-2.0"},
     # Ticket 0130: the `polars` feature's tree, as the root deny.toml admits it.
     "foldhash": {"Zlib"},
+    # image/PNG lock metadata includes flate2's optional Rust zlib implementation.
+    "zlib-rs": {"Zlib"},
     "slotmap": {"Zlib"},
     "xxhash-rust": {"BSL-1.0"},
     "ar_archive_writer": {"Apache-2.0 WITH LLVM-exception"},
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "arc-swap", "clap", "csv-core", "polars", "polars-core", "rusqlite", "serde", "serde_json", "sha2",
+        "arc-swap", "base64", "image", "jpeg-decoder", "clap", "csv-core", "polars", "polars-core", "rusqlite", "serde", "serde_json", "sha2",
         "signal-hook", "thiserror", "ureq",
     },
     "conformance-backend": {"serde", "serde_json"},
@@ -411,6 +413,11 @@ def check_crates() -> None:
             plant = {**dependencies, name: {**dependencies.get(name, {}), **changed}}
             if not feature_failures({**manifest, "dependencies": plant}):
                 fail("dependencies", f"a planted {name} that is not optional, or keeps its defaults, is refused")
+    for name in ("image", "jpeg-decoder"):
+        for changed in ({"default-features": True}, {"features": ["gif"]}, {"version": "*"}):
+            plant = {**dependencies, name: {**dependencies[name], **changed}}
+            if not feature_failures({**manifest, "dependencies": plant}):
+                fail("dependencies", f"image decoder broadening {name} {changed} is refused")
     for changed in ({"version": "0.40.2"}, {"default-features": True}, {"features": ["bundled", "blob"]}):
         plant = {**dependencies, "rusqlite": {**dependencies.get("rusqlite", {}), **changed}}
         if not feature_failures({**manifest, "dependencies": plant}):
@@ -458,6 +465,13 @@ def feature_failures(manifest: dict) -> list[str]:
         == {"default-features": False}
     ):
         held.append("rusqlite is pinned exactly, not optional, with default features off and no feature of its own")
+    image_dependencies = {
+        "image": {"version": "=0.25.10", "default-features": False, "features": ["png"]},
+        "base64": "=0.22.1",
+        "jpeg-decoder": {"version": "=0.3.2", "default-features": False},
+    }
+    if any(manifest.get("dependencies", {}).get(name) != spec for name, spec in image_dependencies.items()):
+        held.append("image validation uses exactly the pinned JPEG/PNG-only edge decoder and canonical base64 dependencies")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES["thinkthen"]:
         held.append("thinkthen declares the accepted development dependency set")
     return held
@@ -1046,7 +1060,7 @@ def check_postgresql_binding() -> None:
         fail("binding", "a planted build.rs, build key, cargo config, pg_ctl restart, unexpected_cfgs allow, or lint level is refused")
 
 
-CORE_ALLOWED_DEPENDENCIES = {"serde", "serde_json", "sha2", "thiserror"}
+CORE_ALLOWED_DEPENDENCIES = {"base64", "serde", "serde_json", "sha2", "thiserror"}
 CORE_PROHIBITED_PATHS = (
     ("std", "fs"),
     ("std", "env"),
@@ -1353,7 +1367,9 @@ def core_dependency_failures(text: str, dependencies: dict) -> list[str]:
     held = set()
     for root, package in dependency_roots(dependencies).items():
         direct = any(
-            tokens[place:place + 2] == [root, "::"] for place in range(len(tokens) - 1)
+            tokens[place:place + 2] == [root, "::"]
+            and not (place >= 2 and tokens[place - 1] == "::" and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", tokens[place - 2]))
+            for place in range(len(tokens) - 1)
         )
         if package not in CORE_ALLOWED_DEPENDENCIES and (root in imported_roots or direct):
             held.add(package)
@@ -1435,6 +1451,11 @@ def check_core_policy() -> None:
     if any(core_policy_failures(control) for control in policy_controls):
         fail("core", "comments, literals, lifetimes, and internal imports remain allowed")
     dependency_plants = (
+        (dependencies, "use crate::core::image::ImageState;", []),
+        (dependencies, "image::ImageReader::new();", ["image"]),
+        (dependencies, "::image::ImageReader::new();", ["image"]),
+        (dependencies, "use image as decoder;", ["image"]),
+        (dependencies, "jpeg_decoder::Decoder::new();", ["jpeg-decoder"]),
         (dependencies, "use clap::Parser;", ["clap"]),
         (dependencies, "windows_sys::Win32::Foundation::HANDLE", ["windows-sys"]),
         (dependencies, "use windows_sys as native;", ["windows-sys"]),

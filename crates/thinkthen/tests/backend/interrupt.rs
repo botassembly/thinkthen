@@ -15,6 +15,7 @@ use std::time::Duration;
 use crate::harness::{Canned, Listener, Observed, finish};
 
 mod facts_flush;
+mod image_input;
 mod recognition_width;
 
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
