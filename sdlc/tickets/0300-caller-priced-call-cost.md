@@ -85,12 +85,34 @@ atomic unchanged tally state and the actual overflowing call's final facts.
 The existing partial-live and concurrent once-rounding regressions remain.
 Root owns the original reviewer's narrow confirmation and full landing gates.
 
-Remaining focused gate evidence: `public_controls` returns 19 passed, four
-failed and one explicit stress ignore, identically on original 2922fd8a1 and
-the corrected source. Three cache oracles still expect a hit when their saved
-reply reports jev-latest and the effective request names jev-1.13.0:
-`caller_prices_round_the_combined_report_and_keep_no_send_zero`,
-`counters_and_cache_answers_match_the_real_attempts`, and
-`each_public_question_model_selects_its_own_cache_freshness`. The observed
-second call sends once, consistently with cache/2's mismatch-reuse refusal.
-These existing consumer expectations remain untouched for root/0444 coordination.
+Lane1 public-control oracle reconciliation on ddc70a256: the four existing
+failures reproduce before test edits. The three matching-model cache tests now
+report the literal effective requested model, as admitted by cache.md's lookup
+and freshness contract. The price/counter calls still ask the original questions
+and retain their three/one send counts. Per-question alias refresh still sends
+twice; the pinned override sends once then reuses its answer. Independent exact
+request-body assertions protect those original question bytes and model choices.
+Cached priced facts remain zero cost with neither reported token dimension.
+The existing native-store mismatch/ambiguous-history refusal test remains an
+independent negative oracle; v1 saved fixture bytes and legacy conversion are
+unchanged. Full `public_controls` passes 24 cases with one existing stress ignore;
+all ten native-store cases pass, including original v1/v2 identity and read-only
+replay checks. The obsolete aggregate-context refusals are reconciled under
+0414 in the existing 0456 ticket; no production compatibility workaround was
+needed.
+
+Focused native-complete checks pass all 63 cases, including mixed-model failure,
+raw priced totals and EOF deadline/prefix coverage. Public-controls Clippy with
+warnings denied, offline policy (268 packages), formatting and the exact ratchet
+also pass. Heavy checks use the lane/shared locks, 10G memory/1G swap, two jobs
+and a stripped offline environment with only owned fake-key loopback sends.
+
+Measured source grows 78 nonblank Rust lines (143881 → 143959): exact original
+request-byte checks, absent-token pricing checks and valid aggregate context
+responses/assertions replace the obsolete refusal rows. Existing counted
+listeners, serial guards and independent native-store mismatch coverage were
+checked and reused instead of adding a harness or duplicating negative tests.
+Shared-context checks move to one cohesive child test module to keep the source
+cap: parent 497, call-facts 465, context 105 nonblank lines. This step changes no
+production source, C/corpus files or saved v1 fixture; root owns confirmation
+and full landing gates.

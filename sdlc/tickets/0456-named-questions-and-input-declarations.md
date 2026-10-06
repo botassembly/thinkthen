@@ -346,12 +346,16 @@ grows 186 nonblank Rust lines (143695 → 143881), mainly public regressions usi
 the existing loopback fixtures and a controlled iterator. Root owns original
 reviewer confirmation and full landing gates; remaining adoption stays open.
 
-The same baseline comparison preserves the fourth existing `public_controls`
-failure, `ineligible_calls_refuse_shared_context_before_a_send`: its first find
-assertion expects Usage/refusal, while the coherent context path sends and the
-saved noul response yields Backend. This consumer remains untouched; root and
-the whole-set context owner retain its contract/oracle reconciliation. All four
-new pricing/EOF regressions fail on original source and pass on corrected source.
+The fourth existing `public_controls` failure is now reconciled in lane1's
+bounded test-only step. Ticket 0414's admitted outcome includes find, recognize
+and relate: their old shared-context refusal rows were obsolete. The released
+calls now use valid choice/boundary/decision replies and check typed results,
+one actual send each, original candidate/entity evidence and separate context.
+The still-ineligible decide/details calls retain exact Usage sentences, absent
+started facts and zero-send assertions. Full `public_controls` passes 24 cases
+with its one existing stress ignore. No staging/context production source is
+changed; 0300 records this step's measured source growth. All four new pricing/
+EOF regressions fail on original source and pass on corrected source.
 Corrected-source checks: 63 native complete and 63 routine public batch cases
 pass (two existing batch stress cases remain explicitly ignored), along with
 two tally unit cases and three legacy public tally consumers. Focused library/
