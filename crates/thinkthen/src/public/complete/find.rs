@@ -36,6 +36,19 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
+        self.find_complete_inputs(question, units, options, &[])
+    }
+    fn find_complete_inputs<I, T>(
+        &self,
+        question: &Question,
+        units: I,
+        options: CallOptions<'_>,
+        inputs: &[std::sync::Arc<crate::public::QuestionInput>],
+    ) -> Result<Call<CompleteFound<T>>, Error>
+    where
+        I: IntoIterator<Item = Result<T, Error>>,
+        T: Evidence,
+    {
         let (units, find, engine) = self.prepare_find(question, units, &options)?;
         let texts = units
             .iter()
@@ -44,8 +57,8 @@ impl Engine {
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
             let found = engine.find(&find, cancel).map_err(Error::from)?;
-            crate::public::bulk::observation::observe_find(
-                &stop, &engine, question, &find, &found,
+            crate::public::bulk::observation::observe_find_inputs(
+                &stop, &engine, question, &find, &found, inputs,
             )?;
             Ok(found)
         })?

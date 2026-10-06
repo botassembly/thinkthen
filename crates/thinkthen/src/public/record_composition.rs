@@ -186,6 +186,13 @@ impl RecordEvidence {
                 .collect(),
         })
     }
+    pub(crate) fn selected_record(&self) -> core::Record {
+        if self.original.literal().is_some() {
+            self.original.0.as_ref().clone()
+        } else {
+            core::Record::from_json(self.value.clone())
+        }
+    }
     pub(crate) fn batch_record(&self) -> core::batch::BatchRecord {
         core::batch::BatchRecord {
             evidence: self.evidence.clone(),

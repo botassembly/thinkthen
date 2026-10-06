@@ -33,11 +33,17 @@ fn saved_find_reads_selected_located_units_once_and_retains_every_original_candi
             .max_retries(0)
     };
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
+    let held = std::sync::Mutex::new(Vec::new());
+    let observer =
+        |event: thinkthen::RecordObservation<'_>| held.lock().unwrap().push(event.to_owned());
     let call = engine
         .try_find_records_complete_with(
             saved.question(),
             records(),
-            CallOptions::new().context("Guidance.").attempts(true),
+            CallOptions::new()
+                .context("Guidance.")
+                .attempts(true)
+                .observe(&observer),
         )
         .unwrap();
     assert_eq!(call.facts().records(), 1);
@@ -77,6 +83,15 @@ fn saved_find_reads_selected_located_units_once_and_retains_every_original_candi
     assert_eq!(listener.questions(), 1);
     drop(replay);
     drop(engine);
+    let events = held.lock().unwrap();
+    let detail = events
+        .iter()
+        .find_map(|event| match event {
+            thinkthen::OwnedRecordObservation::Question { detail, .. } => Some(detail.detail()),
+            _ => None,
+        })
+        .unwrap();
+    assert_find_sources(detail);
     std::fs::remove_dir_all(folder).unwrap();
 }
 
@@ -211,4 +226,17 @@ fn assert_original_candidates(result: &thinkthen::CompleteFound<QuestionInput>) 
         r#"{"z":null,"body":"Same.","a":[9]}"#
     );
     assert_eq!(second.location().unwrap().first_line(), Some(2));
+}
+
+#[cfg(test)]
+fn assert_find_sources(detail: thinkthen::QuestionDetail<'_>) {
+    let inputs = detail.inputs().collect::<Vec<_>>();
+    assert_eq!(inputs.len(), 3);
+    for (at, input) in inputs.iter().enumerate() {
+        let QuestionInput::Record(record) = input else {
+            panic!("original source")
+        };
+        assert_eq!(record.location().unwrap().first_line(), Some(at + 1));
+        assert_eq!(record.location().unwrap().file(), "private.jsonl");
+    }
 }

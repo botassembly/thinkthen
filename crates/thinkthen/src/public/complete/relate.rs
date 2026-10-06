@@ -12,6 +12,8 @@ use crate::public::{
     Call, CallOptions, CompleteRelated, Edge, Engine, Entity, Error, InputFunction, Relate,
 };
 use serde::Serialize;
+use std::sync::Arc;
+mod records;
 
 impl Engine {
     /// Relate one whole set, retaining rejected and failed logical members.
@@ -27,6 +29,17 @@ impl Engine {
         I: IntoIterator<Item = Entity>,
     {
         let entities = admitted(ask, entities)?;
+        self.relate_admitted_complete(ask, entities, options, false, &[])
+    }
+
+    fn relate_admitted_complete(
+        &self,
+        ask: &Relate,
+        entities: Vec<core::RelationEntity>,
+        options: CallOptions<'_>,
+        lines: bool,
+        inputs: &[Arc<crate::public::QuestionInput>],
+    ) -> Result<Call<CompleteRelated>, Error> {
         let engine = contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let prepared = facade::relations(&entities, &ask.0, engine.backend(), engine.profile())?;
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
@@ -40,7 +53,7 @@ impl Engine {
                     threshold,
                     cancel,
                     |question, answered| {
-                        crate::public::results::observe_question(
+                        crate::public::results::observe_question_inputs(
                             &stop,
                             engine.backend(),
                             (
@@ -51,6 +64,7 @@ impl Engine {
                             ),
                             answered,
                             &mut positions,
+                            (0, inputs),
                         )
                     },
                 )
@@ -84,13 +98,13 @@ impl Engine {
                 .identity(
                     InputFunction::Relate,
                     &core::RecordScope { record: 0 },
-                    &ask.0.question(false),
+                    &ask.0.question(lines),
                     &children,
                 )
                 .map_err(|_| super::wrong())?;
             let meta = meta(
                 &engine,
-                ask.0.question(false).sha256().map_err(|_| super::wrong())?,
+                ask.0.question(lines).sha256().map_err(|_| super::wrong())?,
                 Totals {
                     model: execution.model,
                     usage: execution.usage,
@@ -108,7 +122,7 @@ impl Engine {
                     identity,
                     value: execution.edges,
                     question: ask.0.clone(),
-                    lines: false,
+                    lines,
                     members,
                     meta,
                 },

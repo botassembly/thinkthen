@@ -23,6 +23,7 @@ pub(super) struct ActualQuestion {
     pub(super) reported_usage: Option<ReportedUsage>,
     pub(super) identity: Option<MemberIdentity>,
     pub(super) input: Option<Arc<QuestionInput>>,
+    pub(super) inputs: Vec<Arc<QuestionInput>>,
 }
 impl ObservedQuestion {
     pub(crate) fn with_receipt(mut self, receipt: &facade::Answered) -> Self {
@@ -33,6 +34,10 @@ impl ObservedQuestion {
     }
     pub(crate) fn with_input(mut self, input: Arc<QuestionInput>) -> Self {
         self.actual.input = Some(input);
+        self
+    }
+    pub(crate) fn with_inputs(mut self, inputs: &[Arc<QuestionInput>]) -> Self {
+        self.actual.inputs = inputs.to_vec();
         self
     }
     pub(crate) fn with_threshold(mut self, threshold: Option<core::Threshold>) -> Self {
@@ -178,6 +183,16 @@ impl QuestionDetail<'_> {
     #[must_use]
     pub fn input(&self) -> Option<&QuestionInput> {
         self.0.actual.input.as_deref()
+    }
+    /// Every original whole-set input, in order, with physical locations outside identity.
+    /// Atomic and per-record events expose their single input through the same iterator.
+    pub fn inputs(&self) -> impl Iterator<Item = &QuestionInput> {
+        self.0
+            .actual
+            .input
+            .iter()
+            .chain(self.0.actual.inputs.iter())
+            .map(AsRef::as_ref)
     }
 }
 

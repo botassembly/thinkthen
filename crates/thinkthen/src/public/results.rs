@@ -53,7 +53,9 @@ mod stage_observation;
 pub(crate) use observation::ObservedQuestion;
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
 pub use owned_observation::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
-pub(crate) use stage_observation::{observe_question, observe_question_at};
+pub(crate) use stage_observation::{
+    observe_question, observe_question_at, observe_question_inputs,
+};
 
 use serde::Serialize;
 

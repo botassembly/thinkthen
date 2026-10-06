@@ -66,6 +66,7 @@ withheld Debug, and prove zero additional cache sends.
 ### Added public declarations
 
 ```text
+fn QuestionDetail::inputs(&self) -> impl Iterator<Item = &QuestionInput>
 fn EngineBuilder::proxy(self, &ProxyActivation) -> EngineBuilder
 struct IdentityError
 impl Display for IdentityError

@@ -44,6 +44,29 @@ pub(crate) fn observe_question_at(
     positions: &mut [usize; 4],
     (index, input): (usize, Option<&Arc<QuestionInput>>),
 ) -> Result<(), EngineError> {
+    observe_question_inputs(
+        stop,
+        backend,
+        (function, stage, question, threshold),
+        answered,
+        positions,
+        (index, input.map_or(&[], std::slice::from_ref)),
+    )
+}
+
+pub(crate) fn observe_question_inputs(
+    stop: &Stop<'_>,
+    backend: &Backend,
+    (function, stage, question, threshold): (
+        InputFunction,
+        &'static str,
+        &core::Question,
+        Option<Threshold>,
+    ),
+    answered: &Answered,
+    positions: &mut [usize; 4],
+    (index, inputs): (usize, &[Arc<QuestionInput>]),
+) -> Result<(), EngineError> {
     if !stop.observing() {
         return Ok(());
     }
@@ -74,9 +97,9 @@ pub(crate) fn observe_question_at(
     .map(|detail| detail.with_receipt(answered).with_threshold(threshold))
     .and_then(|detail| detail.qualified(function, index, None, Some(stage), position))
     .map_err(|_| EngineError::Defect("an observed question identity could not be constructed"))?;
-    let detail = match input {
-        Some(input) => detail.with_input(Arc::clone(input)),
-        None => detail,
+    let detail = match inputs {
+        [input] => detail.with_input(Arc::clone(input)),
+        _ => detail.with_inputs(inputs),
     };
     stop.observe(RecordObservation::Question {
         index,

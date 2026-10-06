@@ -374,6 +374,7 @@ impl ObservedQuestion {
                     .map(|whole| whole.share(rows, position)),
                 identity: None,
                 input: None,
+                inputs: Vec::new(),
             },
             question_sha256,
             value,

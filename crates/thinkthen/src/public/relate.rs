@@ -14,6 +14,7 @@ use crate::public::recognize::{RelationRule, add_rule, cut, model};
 use crate::public::results::Written;
 
 mod observation;
+mod records;
 use crate::public::results::observe_question;
 use observation::observe_row;
 

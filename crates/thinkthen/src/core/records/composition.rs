@@ -3,6 +3,10 @@ use super::{Held, Reading, Record, RecordError, found};
 use crate::core::{Json, Pointer};
 
 impl Record {
+    pub(crate) fn from_json(value: Json) -> Self {
+        Self(Held::Json(value))
+    }
+
     pub(crate) fn context_text(&self, pointer: &Pointer) -> Result<&str, RecordError> {
         let Held::Json(value) = &self.0 else {
             return Err(RecordError::TextHasNoMembers);

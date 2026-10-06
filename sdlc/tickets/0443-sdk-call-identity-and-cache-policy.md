@@ -69,6 +69,11 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+fn Engine::relate_records_complete_with<I, T>(&self, &Relate, I, CallOptions<'_>) -> Result<Call<CompleteRecord<Vec<T>, CompleteRelated>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
+fn Engine::try_relate_records_complete_with<I, T>(&self, &Relate, I, CallOptions<'_>) -> Result<Call<CompleteRecord<Vec<T>, CompleteRelated>>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>>, T: InputEvidence
+fn Relate::from_records_json(&str) -> Result<Relate, Error>
+fn Relate::load_records(impl AsRef<Path>) -> Result<Relate, Error>
+fn Relate::record_fields(self, &str, &str) -> Result<Relate, Error>
 fn Engine::recognize_records_complete_with<I, T>(&self, &Recognize, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteRecognized>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
 fn Engine::try_recognize_records_complete_with<I, T>(&self, &Recognize, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteRecognized>>>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>>, T: InputEvidence
 fn Engine::try_find_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<CompleteFound<T>>, Error> where I: IntoIterator<Item = Result<T, Error>>, T: Evidence
@@ -257,3 +262,7 @@ This whole-set constituent adds 413 measured nonblank lines (139316 to 139729): 
 Located recognition WIP uses one native call/budget across eagerly admitted composed records and the existing stage scheduler. Each original occurrence retains its source coordinates, full probabilities, actual partial usage and per-row attempts; owned primitive observations carry the source occurrence and actual stage identity. A later started failure keeps completed-prefix facts and the failed source position. Native relate composition, CLI result/2/schema and host adoption remain open.
 
 The recognition constituent adds 404 measured nonblank lines (139729 to 140133): composed record execution using the existing first-stage admission/stage scheduler, original-aware serialization, extracted shared stage observations, and three outside-in cases. Existing scalar recognition rendering and observer construction are shared rather than duplicated. Files retain the 500-line cap.
+
+Native whole-set relate record execution retains all arbitrary originals and locations, selects saved/custom field pointers through the ordinary native record reader, and uses the existing pair/menu scheduler. The full aggregate `CompleteRecord<Vec<T>, CompleteRelated>` serializes its actual input set only when T implements Serialize. Literal source text remains literal with the ordinary wildcard-kind boundary; mixed input modes, duplicate entity identities and per-record controls refuse before sending. Located find and relate observers expose their ordered source inputs without a host JSON parser. CLI result/2/schema and C/MCP/family adoption remain open.
+
+The relation/source constituent adds 515 measured nonblank lines (140133 to 140648): shared native entity projection, complete whole-set originals, typed whole-set observer input iteration and two outside-in relation cases plus find observation coverage. The CLI delegates its recognized-name fallback to the same pure projection. Existing find and relate execution/rendering are reused, with no source reread or extra scheduler. All 40 focused native cases and 47 affected backend/CLI relation cases pass; affected Clippy and the 1323-declaration inventory pass.

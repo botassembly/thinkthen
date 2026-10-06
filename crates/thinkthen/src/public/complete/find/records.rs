@@ -7,6 +7,7 @@ use crate::public::{
 struct Unit<T> {
     original: T,
     text: String,
+    input: std::sync::Arc<QuestionInput>,
 }
 impl<T> Evidence for Unit<T> {
     fn evidence(&self) -> &str {
@@ -48,7 +49,12 @@ impl Engine {
             unit.and_then(|unit| prepare(unit, &mut bytes))
                 .map_err(|error| error.at_record(at))
         });
-        self.try_find_complete_with(question, units, options)?
+        let units = self.try_within_limit(units)?.collect::<Vec<_>>();
+        let inputs = units
+            .iter()
+            .map(|unit| std::sync::Arc::clone(&unit.input))
+            .collect::<Vec<_>>();
+        self.find_complete_inputs(question, units.into_iter().map(Ok), options, &inputs)?
             .try_map(|result| {
                 Ok(CompleteFound {
                     canonical: result.canonical,
@@ -66,10 +72,10 @@ fn prepare<T: InputEvidence>(unit: RecordInput<T>, bytes: &mut usize) -> Result<
     }
     let input = unit.original.question_input();
     crate::public::images::guard(InputFunction::Find, &input)?;
-    let (text, size) = match input {
+    let (text, size) = match &input {
         QuestionInput::Text(text) => {
             let size = text.len();
-            (text, size)
+            (text.clone(), size)
         }
         QuestionInput::Record(record) => (
             record.plain().to_owned(),
@@ -84,5 +90,6 @@ fn prepare<T: InputEvidence>(unit: RecordInput<T>, bytes: &mut usize) -> Result<
     Ok(Unit {
         original: unit.original,
         text,
+        input: std::sync::Arc::new(input),
     })
 }

@@ -14,6 +14,16 @@ pub(crate) fn observe_find(
     find: &core::Find,
     found: &facade::Found,
 ) -> Result<(), Error> {
+    observe_find_inputs(stop, engine, question, find, found, &[])
+}
+pub(crate) fn observe_find_inputs(
+    stop: &Stop<'_>,
+    engine: &facade::Engine,
+    question: &Question,
+    find: &core::Find,
+    found: &facade::Found,
+    inputs: &[std::sync::Arc<crate::public::QuestionInput>],
+) -> Result<(), Error> {
     if !stop.observing() {
         return Ok(());
     }
@@ -44,13 +54,10 @@ pub(crate) fn observe_find(
     detail.question_sha256 = find
         .question_sha256()
         .map_err(|_| Error::defect("a find digest could not be written"))?;
-    let detail = detail.with_receipt(&found.answered).qualified(
-        crate::public::InputFunction::Find,
-        0,
-        None,
-        None,
-        0,
-    )?;
+    let detail = detail
+        .with_receipt(&found.answered)
+        .with_inputs(inputs)
+        .qualified(crate::public::InputFunction::Find, 0, None, None, 0)?;
     stop.observe(RecordObservation::Question {
         index: 0,
         member: None,
