@@ -1,7 +1,13 @@
-//! Windows leaf privacy. No process handler is installed by these helpers.
+//! Windows leaf privacy and command-only console disposition.
 
 pub(crate) mod files;
 mod security;
+
+#[cfg(feature = "cli")]
+#[path = "windows/console/ffi.rs"]
+mod console;
+#[cfg(feature = "cli")]
+pub(crate) use console::enable_interrupts;
 
 #[cfg(test)]
 #[allow(

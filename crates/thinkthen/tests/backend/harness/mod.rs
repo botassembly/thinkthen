@@ -87,7 +87,7 @@ pub(crate) fn spawn_file(
     finish(child, &format!("thinkthen {}", arguments.join(" ")))
 }
 
-fn command(arguments: &[&str], environment: &[(&str, &str)]) -> Command {
+pub(crate) fn command(arguments: &[&str], environment: &[(&str, &str)]) -> Command {
     static SPAWNS: AtomicUsize = AtomicUsize::new(0);
     let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
         "spawn-home-{}-{}",

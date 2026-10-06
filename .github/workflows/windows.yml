@@ -112,12 +112,12 @@ jobs:
         run: |
           set -eu
           export CARGO_NET_OFFLINE=true
-          sdlc/scripts/release-pack x86_64-pc-windows-msvc native-platform command c python first-run
-          sdlc/scripts/release-pack x86_64-pc-windows-msvc native-crate crate
+          sdlc/scripts/release-pack x86_64-pc-windows-msvc target/native-platform command c python first-run
+          sdlc/scripts/release-pack x86_64-pc-windows-msvc target/native-crate crate
           version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
-          python3 sdlc/scripts/release-windows-command.py platform native-platform "$version"
-          python3 sdlc/scripts/release-windows-c-smoke.py "native-platform/thinkthen-c-$version-x86_64-pc-windows-msvc.zip"
-          python3 sdlc/scripts/release-windows-smoke.py native-platform --crate-dir native-crate
+          python3 sdlc/scripts/release-windows-command.py platform target/native-platform "$version"
+          python3 sdlc/scripts/release-windows-c-smoke.py "target/native-platform/thinkthen-c-$version-x86_64-pc-windows-msvc.zip"
+          python3 sdlc/scripts/release-windows-smoke.py target/native-platform --crate-dir target/native-crate
 
       - name: Save the cargo registry and the build directories
         if: ${{ always() && steps.cache.outputs.cache-hit != 'true' }}

@@ -1,8 +1,7 @@
 //! The `tag` expansion boundary through the compiled command.
 
-use crate::child::ChildEnvironment as _;
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 
 use super::file;
 use crate::harness::{Canned, Listener, finish, spawn};
@@ -266,9 +265,7 @@ fn earliest_tag_record_failure_wins_after_reverse_completion() {
 fn a_closed_tag_output_pipe_stops_quietly() {
     let listener =
         Listener::answering(|_| Canned::ok(&answer(&[0.9])).after(20)).expect("listener");
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
+    let mut child = crate::harness::command(&[], &[])
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "tag",
