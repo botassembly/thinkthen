@@ -1,9 +1,10 @@
 # 0455: Expose the ten functions through a local MCP server
 
-Status: ready. Fresh ticket review accepted the local MCP contract; implementation remains open.
+Status: in progress. Private protocol/admission and named consumer implementation is WIP; complete native result/2 integration and public CLI exposure remain open.
 Ticket review: ACCEPT, 2026-10-06; fresh read-only review.
 Milestone: 0.2
-Owner: builder.
+Owner: builder, lane1 `ticket/0455-mcp-ten-function-surface`.
+Risk: High. Local protocol dispatch and cancellation must preserve secrets, spend limits and started-failure behavior; broken output and EOF must cancel and join owned work.
 
 ## Outcome
 

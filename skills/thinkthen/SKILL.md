@@ -9,6 +9,8 @@ Examples target ThinkThen 0.2 or newer.
 
 ThinkThen judges evidence and returns typed values. It never executes commands or selected labels. Use ordinary search, exact matching and code for deterministic work. Use ThinkThen when the next decision needs a judgment about meaning. Read the selected evidence before making a claim; a model answer is not proof that a source is correct.
 
+The local ten-tool MCP SDK is accepted for 0.2 but remains WIP until native complete results and execution are integrated. Do not launch `thinkthen mcp` or assume MCP parity in a current build. After adoption, an agent supplies ordinary question files through `question_file` and explicit file/folder inputs through `source`; the server creates no questions and never acts on answers. [MCP installation and integration status](../../libraries/mcp/README.md) and [contract](../../specification/mcp.md) give the exact boundary.
+
 ## Pick the function
 
 | Verb | Use it for |

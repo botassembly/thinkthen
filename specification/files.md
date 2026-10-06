@@ -36,6 +36,8 @@ DuckDB and SQLite expose `thinkthen_read_files(path[, reader_options])` with `or
 
 Paragraphs, overlapping windows, discovery filters, watch mode, archives and binary extraction remain out of scope. The ten functions remain the only judging functions.
 
+The local MCP target accepts explicit `source:{paths:[...],unit:"line"|"window"|"file",window?,media?}` through these same native readers, and ordered `images:[PATH,...]` attachments for decide/choose/score. Inline strings never become paths. MCP retains original typed inputs and separate physical source carriers; it creates no question files. See [mcp.md](mcp.md) for the target and current adoption status.
+
 ## Explicit image files (0447/0448)
 
 Add `ReaderMedia::{Text,Image}` and `InputReaderOptions {reading:ReaderOptions,media:ReaderMedia}`; default media is text. `read_inputs` and handle-based `InputFileReader` use the shared reader. Image mode requires file units with no window. `SourceItem::Text(SourceRecord<String>)` retains the existing required text coordinates. `SourceItem::Image(ImageSourceRecord {record:ImageInput,file:String})` omits line fields entirely. Original media is decoded from content, never extension. Each folder file is a separate input, preserving enumeration order and duplicates. Filenames never enter image state or identity.

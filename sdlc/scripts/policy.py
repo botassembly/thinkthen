@@ -894,7 +894,8 @@ def check_bindings() -> None:
     for folder in sorted(path for path in [*REPO.glob("libraries/*"), *REPO.glob("databases/*")] if path.is_dir()):
         name = folder.relative_to(REPO).as_posix()
         crate = crates.get(name, name)
-        if name in feature_folders():
+        # MCP consumes the main executable; its Rust is covered by crate policy.
+        if name in feature_folders() or name == "libraries/mcp":
             continue
         noncargo = NONCARGO_MANIFESTS.get(name)
         if noncargo is not None:
@@ -1248,7 +1249,7 @@ def token_path_at(tokens: list[str], place: int, path: tuple[str, ...]) -> bool:
 
 
 # Core depends on none of the outer modules.
-CORE_REFUSED_ROOTS = {"engine", "cli", "public", "windows"}
+CORE_REFUSED_ROOTS = {"engine", "cli", "mcp", "public", "windows"}
 
 
 def direct_root_references(tokens: list[str], refused: set[str] = CORE_REFUSED_ROOTS) -> set[str]:
@@ -1313,7 +1314,7 @@ def core_policy_failures(text: str) -> list[str]:
 
 # ADR 0111 section 10: the engine names nothing from the public API, which
 # sits on top of it. The public API re-exports what callers need.
-ENGINE_REFUSED_ROOTS = {"public"}
+ENGINE_REFUSED_ROOTS = {"public", "mcp"}
 
 
 def engine_policy_failures(text: str) -> list[str]:

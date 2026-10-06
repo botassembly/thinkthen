@@ -70,8 +70,8 @@ Lines are served in order. A `wait` answers on its own line later and never hold
 ## Required 0.2 parity (0432 phase A)
 
 The `parity` section of `cases.json` is the independent public inventory:
-28 consumers, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
-CLI/C, three SQL extensions and three dataframe surfaces kept separate.
+29 consumers, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
+CLI/C/MCP, three SQL extensions and three dataframe surfaces kept separate.
 It references the existing 55 behavior cases, nine settings cases and type
 corpus rather than changing their landed schemas. `decide_many` is a decide
 input form; generic JSON compatibility calls do not qualify named or typed
@@ -135,3 +135,5 @@ count limit), and pinned llama.cpp's count/runtime prerequisites. Format
 refusals are SDK validation rulings. Owner-dependent media/large/malformed
 fixtures remain targets in the same canonical images corpus until 0447/0448
 supply them. Neither declarations nor schema checks qualify runtime cells.
+
+MCP is registered as planned by 0455. Its actual initialization/tools-call consumer qualifies no installed cells until complete native result/2 execution is adopted. Protocol fixtures do not emit parity.
