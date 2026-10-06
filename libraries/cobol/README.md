@@ -35,3 +35,51 @@ The executable plus the matching native shared library is the project-ready form
 `TT-ENGINE-NEW` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Unpublished 0.2 typed carrier slice (0430)
+
+This branch contains independent counted input/result carriers against the reviewed
+0426 layouts. It does not establish complete function parity. Native constructors
+and result/2 execution are dependencies; the complete integration and compile-only
+consumers remain in `pending/`. The existing compatibility consumers still use the
+released native API. No result/1 is converted to result/2 by these carriers.
+
+`copybooks/thinkthen-typed.cpy` provides counted native groups and closed
+constants. Scalars use binary widths or `float-long`; lists and strings use pointers
+plus 64-bit counts. Nested native records are named storage fields: overlay them with
+the matching typed BASED group using `SET ADDRESS OF`, as `checks/carrier_bounds.cob`
+shows. They are native record storage, never JSON for known engine fields. Check
+presence and kind/state constants before reading optional or union arms. Initialize
+input groups with `MOVE LOW-VALUES`, then set all required fields; explicitly set
+`v-deadline-ms` to -1 when no deadline is wanted. `INITIALIZE` would space-fill nested
+storage and is unsuitable. The typed bridge fixes surface `cobol` on every complete call.
+
+`TT_COPY_COUNTED` copies into a caller-sized field and refuses insufficient capacity
+without changing that field or its output count. `TT_ELEMENT` returns a zero-based
+borrowed element after range, multiplication, alignment and pointer arithmetic
+checks. Pass count/index/size/deadline scalars with `BY VALUE SIZE IS 8`, and media/function
+discriminators with `BY VALUE SIZE IS 4`; ordinary `BY VALUE` can narrow numeric
+arguments in GnuCOBOL. Caller buffers must be real readable/writable storage. BASED overlays borrow
+memory and must not be freed; only caller-allocated groups and native owners are
+freed. Keep owners live until all callers and overlays finish. A constructor clones
+nested images/questions; never finalize or free a handle during a native call.
+
+The `pending/tt_inputs.c` constructor bridge avoids by-value C structs in COBOL.
+`pending/tt_complete.c` names TT_DECIDE, TT_CHOOSE, TT_TAG, TT_SCORE, TT_FILTER,
+TT_RANK, TT_FIND, TT_ANNOTATE, TT_RECOGNIZE and TT_RELATE. It awaits complete C
+exports; it is not a fallback to JSON. The existing `TT-DECIDE` stays compatible.
+Result accessors use the reviewed native `thinkthen_result_*` functions with typed
+copybook storage. Image input uses counted native image handles, never base64 in
+compatibility JSON. Files/question files are explicit native paths; no COBOL reader,
+parser, cache, scheduler or model policy is added.
+
+Ruling: the supported ABI is Linux x86_64. Native counts are exact unsigned 64-bit
+values; coordinates are not shortened, and cost remains decimal text. A copy into
+any fixed PIC X field is bounded by that field's actual capacity and refuses rather
+than truncates. The existing 8192-byte compatibility JSON boundary stays unchanged
+(requests require room for NUL and results can occupy 8192 bytes). This is not a
+limit on counted typed data. Executed checks copy 9,000 bytes, refuse an 8-byte
+capacity without writes, preserve full-width counts, duplicates, descriptions,
+pointers, present empty context, false/null and Unicode/CRLF/NUL. Native cloning,
+binary image admission, all complete calls, zero-send text-only refusals and shared
+result/2/storage behavior remain required execution after native/C dependencies land.

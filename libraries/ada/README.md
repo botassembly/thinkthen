@@ -26,3 +26,41 @@ The four typed procedures `Decide`, `Decide_Many`, `Recognize`, and `Relate` ret
 `Configure(Client, Settings_JSON, Error)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Unpublished 0.2 typed carrier slice (0430)
+
+This branch contains independent counted input/result carriers against the reviewed
+0426 layouts. It does not establish complete function parity. Native constructors
+and result/2 execution are dependencies; the complete integration and compile-only
+consumers remain in `pending/`. The existing compatibility consumers still use the
+released native API. No result/1 is converted to result/2 by these carriers.
+
+`Thinkthen_C_Inputs`, `_Answers`, `_Entities`, `_Metadata`, `_Rows` and `_Events`
+expose every reviewed known field, including descriptions, context, record options,
+question sets, probabilities, IDs, facts, attempts, locations, member states and
+image metadata. `Thinkthen.Buffers` owns counted bytes; `Thinkthen.Views.Value`
+copies a counted string and `Element` reads a zero-based typed list element.
+Discriminators and presence flags select union/optional fields; check them before
+reading an arm. JSON is limited to caller-authored content. UTF-8 bytes, CRLF and
+NUL remain counted bytes; semantic validation belongs to native constructors.
+
+`Thinkthen.Typed` wraps question/file, image and source constructors with controlled
+owners and explicit codes. `Borrow` values live until the owner finalizes; constructors
+clone nested questions/images and caller storage before returning. Replacing an
+owner succeeds atomically; refusal preserves its old handle. Join every task before
+finalization. Image views borrow the image; complete result views will borrow their
+result and survive engine destruction. `Controls` sets deadline -1 and surface `ada`;
+it accepts the existing cancellation token. Complete wrappers fix surface `ada` on every call. Files are explicit native reader paths,
+with line, window, whole-file or image-file modes; no Ada file parser is introduced.
+
+The supported layout remains Linux x86_64. Native counts and token totals are exact
+64-bit values, and cost is counted decimal text. Ruling: copying a native string to
+Ada `String` requires at most `Natural'Last` bytes (2,147,483,647 on this GNAT target).
+Larger counts refuse before allocation; indexed native lists keep full native counts
+and refuse invalid indexes, misalignment and address arithmetic overflow. There is
+no 8 KB typed-data cap. Executed carrier boundary checks cover 9,000 bytes, the
+String-bound refusal, null/empty, false, duplicate order, Unicode/CRLF/NUL, missing
+versus maximum-width observed counts and exact cost strings. These are carrier
+checks; native constructors, all ten complete calls, lifetime cloning, file readers,
+secrecy, cancellation and shared result/2/storage cases still need actual execution
+once 0426 and native owners land.

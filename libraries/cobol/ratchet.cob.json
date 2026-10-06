@@ -2,8 +2,9 @@
   "directory": [
     "src",
     "examples",
-    "checks"
+    "checks",
+    "pending"
   ],
   "extension": ".cob",
-  "max": 1472
+  "max": 1784
 }

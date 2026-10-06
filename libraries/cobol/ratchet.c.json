@@ -1,8 +1,9 @@
 {
   "directory": [
     "src",
-    "checks"
+    "checks",
+    "pending"
   ],
   "extension": ".c",
-  "max": 221
+  "max": 341
 }

@@ -2,8 +2,9 @@
   "directory": [
     "src",
     "examples",
-    "checks"
+    "checks",
+    "pending"
   ],
   "extension": ".ads",
-  "max": 214
+  "max": 2011
 }

@@ -82,6 +82,9 @@ gnatmake -gnat2022 -I"$ROOT/src" "$ROOT/checks/facts_boundary.adb" -D "$TARGET" 
 for name in main direct; do
   gnatmake -gnat2022 -I"$ROOT/checks/legacy" "$ROOT/checks/legacy/$name.adb" -D "$TARGET/legacy" -o "$TARGET/legacy/$name" -largs -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
 done
+gnatmake -gnat2022 -I"$ROOT/src" "$ROOT/checks/buffer_bounds.adb" -D "$TARGET" -o "$TARGET/buffer_bounds" \
+  -largs -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
+LD_LIBRARY_PATH="$TARGET" "$TARGET/buffer_bounds"
 python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"
 python3 "$ROOT/checks/failure.py"
