@@ -1,0 +1,27 @@
+---
+// Goal: help readers apply bounded judgments in production and find a lesson.
+import Base from '../../layouts/Base.astro';
+import { PUBLISHED_GUIDES } from '../../data/guides.mjs';
+---
+<Base title="Guides" description="Put System One judgments to work with bounded questions, saved answers and checks on your own data." reading>
+  <h1>Guides</h1>
+  <p class="lede">Use System One models in production. Start with a bounded question, check the answers on your own data, and decide how your application handles not sure.</p>
+  {PUBLISHED_GUIDES.length > 0 && <section aria-labelledby="lessons">
+    <h2 id="lessons">Lessons</h2>
+    <ul>{PUBLISHED_GUIDES.map(guide => <li><a href={`/guides/${guide.slug}/`}>{guide.title}</a> — {guide.blurb}</li>)}</ul>
+  </section>}
+  <h2>Start here</h2>
+  <ul>
+    <li><a href="/learn/tutorial/">Work through the tutorial</a>. Ask a question and sort a stream of messages.</li>
+    <li><a href="/learn/caching/">Use caching and replay</a>. Reuse saved answers and test without a network call.</li>
+    <li><a href="/learn/answers/">Understand the answers</a>. Keep not sure and failures distinct from yes and no.</li>
+    <li><a href="/trust/">Test it before you trust it</a>. Check your questions against your own records.</li>
+  </ul>
+  <h2>Apply it to a pipeline</h2>
+  <ul>
+    <li><a href="/recipes/rules-propose-model-confirms/">Rules propose, model confirms</a>. Let rules gather candidates, then ask a bounded question.</li>
+    <li><a href="/recipes/verify-a-claim/">Verify a claim</a>. Compare a claim with the evidence you supply.</li>
+    <li><a href="/recipes/ask-your-cache-with-duckdb/">Ask your cache with DuckDB</a>. Explore saved answers with SQL.</li>
+  </ul>
+  <p>Each guide teaches one lesson, names its prerequisites and limits, and links to a video and an article. Keep your application in charge of what happens after an answer.</p>
+</Base>
