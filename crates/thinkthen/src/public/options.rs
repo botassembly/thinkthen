@@ -109,6 +109,7 @@ pub struct CallOptions<'a> {
     context: Option<&'a str>,
     observer: Option<Observer<'a>>,
     attempt_observer: Option<AttemptObserver<'a>>,
+    capture_attempts: bool,
     proxy: Option<&'a crate::public::ProxyActivation>,
     surface: Option<crate::public::Surface>,
 }
@@ -126,6 +127,7 @@ impl fmt::Debug for CallOptions<'_> {
             .field("context", &self.context.is_some())
             .field("observer", &self.observer.is_some())
             .field("attempt_observer", &self.attempt_observer.is_some())
+            .field("capture_attempts", &self.capture_attempts)
             .field("proxy", &self.proxy.is_some())
             .field("surface", &self.surface)
             .finish()
@@ -154,6 +156,7 @@ impl<'a> CallOptions<'a> {
             context: None,
             observer: None,
             attempt_observer: None,
+            capture_attempts: false,
             proxy: None,
             surface: None,
         }
@@ -231,6 +234,14 @@ impl<'a> CallOptions<'a> {
         observer: &'a (dyn Fn(AttemptObservation) + Send + Sync),
     ) -> Self {
         self.attempt_observer = Some(observer);
+        self
+    }
+
+    /// Retain ordered live attempts in final success and started-failure facts.
+    /// Requested zero-send work retains an empty list; the default retains none.
+    #[must_use]
+    pub const fn attempts(mut self, requested: bool) -> Self {
+        self.capture_attempts = requested;
         self
     }
 
@@ -387,6 +398,7 @@ impl<'a> Stop<'a> {
         }
         let deadline = options.deadline()?;
         let facts = CallFacts::start(options.surface.unwrap_or(crate::public::Surface::Rust))?;
+        facts.capture_attempts(options.capture_attempts || options.attempt_observer.is_some());
         let (sender, attempts) = if options.attempt_observer.is_some() {
             let (sender, receiver) = sync_channel(32);
             (Some(sender), Some(Mutex::new(receiver)))

@@ -45,7 +45,11 @@ impl Serialize for CompleteMeta<'_> {
             map.serialize_entry("context_sha256", digest)?;
         }
         if let Some(attempts) = &legacy.attempts {
-            map.serialize_entry("attempts", attempts)?;
+            let complete: Vec<_> = attempts
+                .iter()
+                .map(crate::core::AttemptObservation::complete)
+                .collect();
+            map.serialize_entry("attempts", &complete)?;
         }
         map.serialize_entry("origin", &identity.origin())?;
         map.serialize_entry("question_sources", identity.question_sources())?;

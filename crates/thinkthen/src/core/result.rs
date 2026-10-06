@@ -18,7 +18,7 @@ mod meta;
 mod profile_warning;
 mod record_value;
 
-pub use attempt::{AttemptObservation, AttemptOutcome};
+pub use attempt::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub(crate) use batch_warning::{BatchSetting, BatchWarning};
 pub(crate) use meta::Meta;
 pub(crate) use profile_warning::ProfileWarning;

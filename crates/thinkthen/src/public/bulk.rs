@@ -3,6 +3,7 @@
 mod annotate_observation;
 mod complete;
 mod details;
+pub(crate) mod functions;
 mod observation;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
 mod annotation;

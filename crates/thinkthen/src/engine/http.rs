@@ -306,8 +306,13 @@ impl Client {
             drop(sending);
             if let (Some(ordinal), Some(digest)) = (ordinal, cancel.attempt_digest()) {
                 let (info, outcome) = observed_result(&sent);
-                cancel
-                    .attempt_completed(info.clone().observation(ordinal, digest, wall_ms, outcome));
+                cancel.attempt_completed(info.clone().observation(
+                    ordinal,
+                    digest,
+                    &sdk_request_id,
+                    wall_ms,
+                    outcome,
+                ));
             }
             if let Err(attempt) = &sent
                 && is_retried(&attempt.failure)

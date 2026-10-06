@@ -83,7 +83,7 @@ X-ThinkThen-Call-Id: CallId
 X-ThinkThen-Request-Id: SdkRequestId
 ```
 
-The closed surface tokens are `cli`, `rust`, `c`, `python`, `pandas`, `python-polars`, `rust-polars`, `javascript`, `ruby`, `r`, `cpp`, `go`, `csharp`, `java`, `kotlin`, `scala`, `swift`, `zig`, `php`, `dart`, `objective-c`, `ada`, `cobol`, `flutter`, `duckdb`, `sqlite`, `postgresql`. TypeScript uses `javascript`. Outer wrappers explicitly supply their token; C validates it. Unknown tokens refuse locally. The version comes from the compiled Rust engine, not the wrapper package.
+The closed surface tokens are `cli`, `rust`, `c`, `python`, `pandas`, `python-polars`, `rust-polars`, `javascript`, `ruby`, `r`, `cpp`, `go`, `csharp`, `java`, `kotlin`, `scala`, `swift`, `zig`, `php`, `dart`, `objective-c`, `ada`, `cobol`, `flutter`, `duckdb`, `sqlite`, `postgresql`, `mcp`. TypeScript uses `javascript`. Outer wrappers explicitly supply their token; C validates it. Unknown tokens refuse locally. The version comes from the compiled Rust engine, not the wrapper package.
 
 A new invocation receives a new call ID. Each prepared send receives a new SDK request ID; status retries retain it and refusal-split children get new IDs. Every stage uses the engine's fixed endpoint, effective key and provider API type under ADR 0119. IDs contain no caller text, credential, address or model; transient call/request IDs enter neither cache keys, recordings nor count-only usage. Future proxy deduplication scopes request IDs to authenticated callers and compares bodies; differing bodies conflict. SDK accounting still counts actual sends and retries. Keep the existing rule that a transport failure is not retried.
 

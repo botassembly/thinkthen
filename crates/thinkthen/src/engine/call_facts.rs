@@ -17,6 +17,7 @@ impl fmt::Debug for CallFacts {
 }
 
 struct State {
+    attempts: Option<Vec<crate::core::AttemptObservation>>,
     invocation: super::invocation::Context,
     started: Instant,
     elapsed: Option<Duration>,
@@ -32,6 +33,7 @@ struct State {
 
 #[derive(Clone)]
 pub(crate) struct Snapshot {
+    pub(crate) attempts: Option<Vec<crate::core::AttemptObservation>>,
     pub(crate) call_id: Option<CallId>,
     pub(crate) elapsed: Duration,
     pub(crate) records: u64,
@@ -43,6 +45,19 @@ pub(crate) struct Snapshot {
 }
 
 impl CallFacts {
+    pub(crate) fn capture_attempts(&self, requested: bool) {
+        self.state().attempts = requested.then(Vec::new);
+    }
+
+    pub(crate) fn wants_attempts(&self) -> bool {
+        self.state().attempts.is_some()
+    }
+
+    pub(crate) fn attempt(&self, event: &crate::core::AttemptObservation) {
+        if let Some(attempts) = &mut self.state().attempts {
+            attempts.push(event.clone());
+        }
+    }
     pub(crate) fn start(surface: Surface) -> Result<Self, super::error::Error> {
         let facts = Self::new();
         let context = super::invocation::Context::new(surface);
@@ -53,6 +68,7 @@ impl CallFacts {
 
     pub(crate) fn new() -> Self {
         Self(Arc::new(Mutex::new(State {
+            attempts: None,
             invocation: super::invocation::Context::default(),
             started: Instant::now(),
             elapsed: None,
@@ -114,7 +130,12 @@ impl CallFacts {
 
     pub(crate) fn snapshot(&self) -> Snapshot {
         let state = self.state();
+        let attempts = state.attempts.clone().map(|mut attempts| {
+            attempts.sort_by_key(crate::core::AttemptObservation::ordinal);
+            attempts
+        });
         Snapshot {
+            attempts,
             call_id: state.invocation.call_id(),
             elapsed: state.elapsed.unwrap_or_else(|| state.started.elapsed()),
             records: state.records,

@@ -68,6 +68,10 @@ pub use crate::engine::fork_safe;
 pub use annotated::{Annotated, AnnotatedRecord, Failed, FailureCause, NamedAnnotation};
 pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
+pub use bulk::functions::{
+    choose_many, choose_many_with, decide_many, decide_many_with, score_many, score_many_with,
+    tag_many, tag_many_with,
+};
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind};
@@ -93,10 +97,11 @@ pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, Call, Candidate, CompleteAnnotated,
-    CompleteAnnotationMember, CompleteChoice, CompleteDecision, CompleteFilter, CompleteFound,
-    CompleteRank, CompleteRecord, CompleteScore, CompleteTags, Counters, Details, DoorReply, Facts,
-    Found, Judgment, NamedProbability, ObservedRow, Picked, Probabilities, QuestionDetail, Ranked,
-    RankedRow, RecordObservation, Row, SetRanked, Tally, TallyStart, Usage,
+    CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision, CompleteFacts,
+    CompleteFilter, CompleteFound, CompleteRank, CompleteRecord, CompleteScore, CompleteTags,
+    Counters, Details, DoorReply, Facts, Found, Judgment, NamedProbability, ObservedRow, Picked,
+    Probabilities, QuestionDetail, Ranked, RankedRow, RecordObservation, Row, SetRanked, Tally,
+    TallyStart, Usage,
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
@@ -391,115 +396,6 @@ where
     I: IntoIterator<Item = Entity>,
 {
     default_engine()?.relate_with(ask, entities, options)
-}
-
-/// [`Engine::decide_many`] on the [`default_engine`]; a failed build is the batch's first item.
-pub fn decide_many<'a, I, Q: DecisionQuestion + ?Sized>(
-    question: &'a Q,
-    records: I,
-) -> Batch<'a, Row<I::Item, Answer>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    decide_many_with(question, records, CallOptions::new())
-}
-
-/// [`Engine::decide_many_with`] on the [`default_engine`]; a failed build is the batch's first item.
-pub fn decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(
-    question: &'a Q,
-    records: I,
-    options: CallOptions<'a>,
-) -> Batch<'a, Row<I::Item, Answer>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    match default_engine() {
-        Ok(engine) => engine.decide_many_with(question, records, options),
-        Err(error) => Batch::failed(error),
-    }
-}
-
-/// [`Engine::choose_many`] on the [`default_engine`]; a failed build is the first row.
-pub fn choose_many<'a, I, C: Choice>(
-    question: &'a ChooseQuestion<C>,
-    records: I,
-) -> Batch<'a, Row<I::Item, Option<C>>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    choose_many_with(question, records, CallOptions::new())
-}
-
-/// [`Engine::choose_many_with`] on the [`default_engine`].
-pub fn choose_many_with<'a, I, C: Choice>(
-    question: &'a ChooseQuestion<C>,
-    records: I,
-    options: CallOptions<'a>,
-) -> Batch<'a, Row<I::Item, Option<C>>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    match default_engine() {
-        Ok(engine) => engine.choose_many_with(question, records, options),
-        Err(error) => Batch::failed(error),
-    }
-}
-
-/// [`Engine::score_many`] on the [`default_engine`]; a failed build is the first row.
-pub fn score_many<'a, I>(question: &'a Question, records: I) -> Batch<'a, Row<I::Item, f64>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    score_many_with(question, records, CallOptions::new())
-}
-
-/// [`Engine::score_many_with`] on the [`default_engine`].
-pub fn score_many_with<'a, I>(
-    question: &'a Question,
-    records: I,
-    options: CallOptions<'a>,
-) -> Batch<'a, Row<I::Item, f64>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    match default_engine() {
-        Ok(engine) => engine.score_many_with(question, records, options),
-        Err(error) => Batch::failed(error),
-    }
-}
-
-/// [`Engine::tag_many`] on the [`default_engine`]; a failed build is the first row.
-pub fn tag_many<'a, I, C: Choice>(
-    question: &'a TagQuestion<C>,
-    records: I,
-) -> Batch<'a, Row<I::Item, Vec<C>>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    tag_many_with(question, records, CallOptions::new())
-}
-
-/// [`Engine::tag_many_with`] on the [`default_engine`].
-pub fn tag_many_with<'a, I, C: Choice>(
-    question: &'a TagQuestion<C>,
-    records: I,
-    options: CallOptions<'a>,
-) -> Batch<'a, Row<I::Item, Vec<C>>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    match default_engine() {
-        Ok(engine) => engine.tag_many_with(question, records, options),
-        Err(error) => Batch::failed(error),
-    }
 }
 
 /// [`Engine::details`] on the [`default_engine`].

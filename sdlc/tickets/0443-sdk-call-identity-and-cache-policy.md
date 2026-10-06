@@ -57,3 +57,7 @@ V2 validated migration, provenance and complete runtime results remain open.
 The affected settings check also exposed missing image/media inventory cells
 in the merged image source. The existing admitted flags now have their row;
 this does not add a route or change image admission.
+
+The transport accepts the explicit closed mcp surface for approved0455 and
+uses the same compiled version/call/request headers. MCP module/CLI ownership
+remains lane1; no alternate transport or engine is introduced.

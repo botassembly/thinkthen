@@ -6,7 +6,9 @@ use std::fmt;
 mod call;
 mod complete;
 mod complete_annotation;
+mod complete_facts;
 mod complete_find;
+pub use complete_facts::CompleteFacts;
 mod complete_recognize;
 mod complete_relate;
 pub use complete_relate::{CompleteRelated, CompleteRelationMember};
@@ -22,7 +24,7 @@ pub use complete_recognize::{
 };
 pub use complete_record::CompleteRecord;
 mod found;
-pub use crate::core::{AttemptObservation, AttemptOutcome};
+pub use crate::core::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub use call::{Call, DoorReply, Facts};
 pub use found::{Candidate, Found, Picked};
 mod ranked;

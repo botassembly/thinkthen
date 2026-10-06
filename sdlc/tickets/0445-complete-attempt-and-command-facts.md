@@ -22,3 +22,28 @@ All ten functions and typed surfaces expose the supported opt-in attempts on suc
 ## Dependencies and ownership
 
 0442 settles result contract; 0443 owns outbound IDs. Host families expose attempt carriers; 0435 owns SQL facts and native failure route. Update every-surface facts guidance alongside owning implementation.
+
+Native WIP: CallOptions.attempts(bool) retains actual ordered attempts in final
+success/started-failure facts, including requested zero-send []. Prepared SDK
+IDs are distinct from screened provider request IDs. CompleteAttempt and
+CompleteFacts serialize those identities; released facts/attempt serialization
+remains its explicit compatibility shape. Existing caller-thread observers,
+joined late replies and join-before-unwind/drop behavior remain tested.
+Command timing, recording sidecars and complete execution routes remain open.
+
+### Added public declarations
+
+```text
+struct CompleteAttempt<'a>
+struct CompleteFacts<'a>
+impl Serialize for CompleteAttempt
+impl Serialize for CompleteFacts
+const fn AttemptObservation::sdk_request_id(&self) -> &SdkRequestId
+const fn AttemptObservation::complete(&self) -> CompleteAttempt<'_>
+const fn CallOptions::attempts(self, bool) -> CallOptions<'a>
+fn Facts::attempts(&self) -> Option<&[AttemptObservation]>
+fn Facts::complete(&self) -> Option<CompleteFacts<'_>>
+const fn CompleteFacts::call_id(&self) -> &CallId
+const fn CompleteFacts::counts(&self) -> &Facts
+fn CompleteFacts::attempts(&self) -> Option<&[AttemptObservation]>
+```

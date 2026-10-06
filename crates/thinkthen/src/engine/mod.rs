@@ -129,6 +129,13 @@ impl<'a> Cancel<'a> {
     }
 
     pub(crate) fn with_attempt_sink(&self, sink: AttemptSink) -> Self {
+        let sink = match self.attempt_sink.clone() {
+            None => sink,
+            Some(previous) => AttemptSink::new(move |event| {
+                (previous.0)(event.clone());
+                (sink.0)(event);
+            }),
+        };
         Self {
             attempt_sink: Some(sink),
             ..self.clone()
@@ -136,7 +143,9 @@ impl<'a> Cancel<'a> {
     }
 
     pub(crate) fn with_attempt_digest(&self, digest: &str) -> Self {
-        if self.attempt_sink.is_none() {
+        if self.attempt_sink.is_none()
+            && !self.facts.as_ref().is_some_and(CallFacts::wants_attempts)
+        {
             return self.clone();
         }
         Self {
@@ -147,13 +156,15 @@ impl<'a> Cancel<'a> {
 
     /// Allocate beside the durable send mark, before transport begins.
     pub(crate) fn attempt_started(&self) -> Option<u64> {
-        self.attempt_sink.as_ref()?;
         self.attempt_digest.as_ref()?;
         Some(self.attempts.fetch_add(1, Ordering::Relaxed) + 1)
     }
 
     /// Hand an owned event to the private sink after transport and body read.
     pub(crate) fn attempt_completed(&self, observation: crate::core::AttemptObservation) {
+        if let Some(facts) = &self.facts {
+            facts.attempt(&observation);
+        }
         if let Some(sink) = &self.attempt_sink {
             (sink.0)(observation);
         }

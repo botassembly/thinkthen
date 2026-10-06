@@ -15,6 +15,9 @@ use crate::public::error::Error;
 #[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "facts"))]
 pub struct Facts {
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    pub(super) attempts: Option<Vec<crate::public::AttemptObservation>>,
     // Explicit legacy serialization stays count-only; complete projection adopts this ID.
     #[serde(skip)]
     #[cfg_attr(test, schemars(skip))]
@@ -64,6 +67,7 @@ impl Facts {
             prices.estimate(input, output)
         });
         Self {
+            attempts: snapshot.attempts,
             call_id: snapshot.call_id,
             records: snapshot.records,
             requests_sent: snapshot.requests_sent,
@@ -86,6 +90,13 @@ impl Facts {
     #[must_use]
     pub const fn call_id(&self) -> Option<&CallId> {
         self.call_id.as_ref()
+    }
+
+    /// Requested ordered live attempts, retained even after a started failure.
+    /// None means unrequested; Some([]) means requested with zero sends.
+    #[must_use]
+    pub fn attempts(&self) -> Option<&[crate::public::AttemptObservation]> {
+        self.attempts.as_deref()
     }
 
     /// Live transport attempts, including retries and failed attempts.

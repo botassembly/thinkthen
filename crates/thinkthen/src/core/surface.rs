@@ -45,6 +45,7 @@ surfaces!(
     Kotlin => "kotlin", Scala => "scala", Swift => "swift", Zig => "zig", Php => "php",
     Dart => "dart", ObjectiveC => "objective-c", Ada => "ada", Cobol => "cobol",
     Flutter => "flutter", Duckdb => "duckdb", Sqlite => "sqlite", Postgresql => "postgresql",
+    Mcp => "mcp",
 );
 
 impl fmt::Display for Surface {
@@ -101,6 +102,7 @@ mod tests {
             "duckdb",
             "sqlite",
             "postgresql",
+            "mcp",
         ];
         for token in tokens {
             let surface = token.parse::<Surface>().unwrap();

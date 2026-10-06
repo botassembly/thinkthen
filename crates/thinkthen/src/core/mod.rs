@@ -130,7 +130,7 @@ pub(crate) use crate::core::result::{
     AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning,
     RecordValue, RequestMeta, Usage, share,
 };
-pub use crate::core::result::{AttemptObservation, AttemptOutcome};
+pub use crate::core::result::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
