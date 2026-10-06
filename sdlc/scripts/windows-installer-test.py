@@ -20,6 +20,26 @@ REPO = Path(__file__).resolve().parents[2]
 NAME = 'thinkthen-0.2.0-x86_64-pc-windows-msvc.zip'
 
 
+def prepare_private_fixture(root, host, env):
+    # Repair only the empty directory this test owns, before writing fixtures.
+    # Match the native Windows fixture SDDL, including inherited child access.
+    script = r'''
+$ErrorActionPreference = 'Stop'
+$path = $env:THINKTHEN_FIXTURE_PATH
+$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$acl = Get-Acl -LiteralPath $path
+$acl.SetSecurityDescriptorSddlForm("O:${sid}D:P(A;OICI;FA;;;${sid})(A;OICI;FA;;;SY)")
+Set-Acl -LiteralPath $path -AclObject $acl
+$acl = Get-Acl -LiteralPath $path
+if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid -or -not $acl.AreAccessRulesProtected) { throw 'Fixture root owner or protection differs.' }
+foreach ($rule in $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])) {
+    if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -notin @($sid, 'S-1-5-18')) { throw 'Fixture root grants foreign access.' }
+}
+'''
+    subprocess.run([host, '-NoProfile', '-NonInteractive', '-Command', script],
+                   env=env | {'THINKTHEN_FIXTURE_PATH': str(root)}, check=True, timeout=30)
+
+
 def pe():
     data = bytearray(128)
     data[:2] = b'MZ'
@@ -199,8 +219,12 @@ def main():
         parser.error('--binary requires Windows; Linux cannot prove native installation')
     if os.name == 'nt' and not args.binary:
         parser.error('Windows boundary suite requires --binary from a freshly checked release ZIP')
+    env = {key: value for key, value in os.environ.items()
+           if not key.upper().startswith('THINKTHEN_') and not key.upper().endswith('_API_KEY')}
     with tempfile.TemporaryDirectory(prefix='thinkthen-installer-fixtures-') as temporary:
         root = Path(temporary)
+        if os.name == 'nt':
+            prepare_private_fixture(root, hosts[0], env)
         with http.server.ThreadingHTTPServer(('127.0.0.1', 0), Server) as server:
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
@@ -212,8 +236,6 @@ def main():
                 table = cases(root, base)
                 case_file = root / 'cases.json'
                 case_file.write_text(json.dumps(table), encoding='utf-8')
-                env = {key: value for key, value in os.environ.items()
-                       if not key.upper().startswith('THINKTHEN_') and not key.upper().endswith('_API_KEY')}
                 for host in hosts:
                     for mode in ('transaction', 'replacement', 'committed', 'uncommitted'):
                         recovery = subprocess.run([host, '-NoProfile', '-NonInteractive', '-File',
