@@ -77,7 +77,8 @@ fn release(root: &Scratch) {
 fn descriptors(paths: &[PathBuf]) -> Vec<String> {
     let mut command = child::powershell(
         "foreach($path in (ConvertFrom-Json $env:THINKTHEN_FIXTURE_PATHS)){ $a=Get-Acl -LiteralPath $path; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; if($a.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid -or !$a.AreAccessRulesProtected){throw 'owner/protection'}; $r=@($a.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])); if($r.Count -ne 2){throw 'exact user/System rules'}; $ids=@($r | ForEach-Object {$_.IdentityReference.Value} | Sort-Object -Unique); if($ids.Count -ne 2 -or $ids -notcontains $sid -or $ids -notcontains 'S-1-5-18'){throw 'user/System identities'}; foreach($ace in $r){if($ace.AccessControlType -ne 'Allow' -or $ace.FileSystemRights -ne [System.Security.AccessControl.FileSystemRights]::FullControl -or @($sid,'S-1-5-18') -notcontains $ace.IdentityReference.Value){throw 'private rule'}}; $a.Sddl }",
-    );
+    )
+    .expect("native PowerShell environment");
     command.env(
         "THINKTHEN_FIXTURE_PATHS",
         serde_json::to_string(paths).expect("owned paths"),

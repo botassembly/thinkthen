@@ -71,7 +71,7 @@ impl Drop for Scratch {
     }
 }
 pub(crate) fn powershell(path: &Path, script: &str) -> String {
-    let mut command = crate::child::powershell(script);
+    let mut command = crate::child::powershell(script).expect("native PowerShell environment");
     command
         .env("THINKTHEN_FIXTURE_PATH", path)
         .stdin(Stdio::null())
