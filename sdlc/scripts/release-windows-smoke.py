@@ -22,6 +22,9 @@ REPO = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("windows_command", REPO / "sdlc/scripts/release-windows-command.py")
 COMMAND = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(COMMAND)
+INSTALLER_SPEC = importlib.util.spec_from_file_location("windows_installer", REPO / "sdlc/scripts/windows-installer-test.py")
+INSTALLER = importlib.util.module_from_spec(INSTALLER_SPEC)
+INSTALLER_SPEC.loader.exec_module(INSTALLER)
 QUESTION = "Does this report say what the person did before the problem appeared?"
 
 
@@ -216,6 +219,10 @@ def main():
                if not key.upper().startswith(("THINKTHEN_", "XDG_")) and not key.upper().endswith("_API_KEY")}
         env.setdefault("CARGO_HOME", str(Path.home() / ".cargo"))
         env.setdefault("RUSTUP_HOME", str(Path.home() / ".rustup"))
+        host = shutil.which("powershell")
+        if host is None:
+            raise RuntimeError("installer smoke requires Windows PowerShell 5.1")
+        INSTALLER.prepare_private_fixture(root, host, env)
         env.update(HOME=str(root / "home"), APPDATA=str(root / "Roaming"),
                    LOCALAPPDATA=str(root / "Local"), CARGO_NET_OFFLINE="true")
         for folder in ("home", "Roaming", "Local", "command", "sample"):
