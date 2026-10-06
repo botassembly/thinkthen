@@ -335,3 +335,24 @@ Declared native atomic/annotation streams and CLI judgments/annotation now stage
 Both public streamed regressions failed on the previous coordinator, which sent valid rows from the malformed batch and could surface a backend error first. Four focused public cases now pin bad-second-row zero sends, a preserved two-row prefix with input887/output unknown, declaration refusal before an unstored replay question lookup, and all-member annotation admission. The CLI case pins exact error sentences, rows, rank withholding and independently expected wire bodies. Existing 68 batching and 70 annotation checks plus five native streaming checks pass. Focused Clippy and the 1496-declaration inventory pass. Whole review and full landing gates remain root-owned.
 
 Source grows 411 nonblank Rust lines (142935 → 143346), for reusable bounded staging inside the existing coordinator, declaration admission on native/CLI callers and meaningful public/CLI regressions. No scheduler, cache namespace, test hook, proof tool or dependency is introduced. Materialized remaining convenience/aggregate admission, canonical result/2 schema/CLI, remaining complete rank-set/selection consumer needs and host adoption still remain open.
+
+Lane1 reviewer correction on coherent 2922fd8a1: the coordinator retains whether
+deadline admission abandoned staged inputs, so EOF cannot suppress their
+terminal stop. Controlled public iterators pin deadline delivery with zero
+sends and after two completed rows, retaining actual prefix counts, usage,
+attempts and invocation facts. The original EOF case returned normal exhaustion
+before this fix. Together with the 0300 pricing correction, measured source
+grows 186 nonblank Rust lines (143695 → 143881), mainly public regressions using
+the existing loopback fixtures and a controlled iterator. Root owns original
+reviewer confirmation and full landing gates; remaining adoption stays open.
+
+The same baseline comparison preserves the fourth existing `public_controls`
+failure, `ineligible_calls_refuse_shared_context_before_a_send`: its first find
+assertion expects Usage/refusal, while the coherent context path sends and the
+saved noul response yields Backend. This consumer remains untouched; root and
+the whole-set context owner retain its contract/oracle reconciliation. All four
+new pricing/EOF regressions fail on original source and pass on corrected source.
+Corrected-source checks: 63 native complete and 63 routine public batch cases
+pass (two existing batch stress cases remain explicitly ignored), along with
+two tally unit cases and three legacy public tally consumers. Focused library/
+native-test Clippy, offline policy, formatting and the exact ratchet pass.

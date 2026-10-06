@@ -72,6 +72,25 @@ PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready
 
 ## Native checked tally constituent, 2026-10-06
 
-The additive `Tally::facts_with_engine(&Engine)` snapshots the same locked, checked per-call totals as `facts()` and applies the existing exact engine pricing arithmetic once. It never subtracts process totals or sums rounded call estimates. Every included call must have complete priced usage; missing input/output or unpriced constituent facts omit cost. Empty work with configured prices yields `0.000000`. Legacy `facts()` retains its per-call rounded-cost behavior. Input and output availability are now tracked independently, preserving reported input887 when output is unknown. Accounting overflow commits no partial state; `Tally::run` retains the affected call's actual facts when returning an accounting defect.
+The additive `Tally::facts_with_engine(&Engine)` snapshots the same locked, checked per-call totals as `facts()` and applies the existing exact engine pricing arithmetic once. It never subtracts process totals or sums rounded call estimates. Every live call must have complete priced usage; missing live input/output or unpriced constituent facts omit cost. Priced zero-send cache/replay calls contribute zero without supplying reported tokens. Empty work with configured prices yields `0.000000`. Legacy `facts()` retains its per-call rounded-cost behavior. Input and output availability are now tracked independently, preserving reported input887 when output is unknown. Accounting overflow commits no partial state; `Tally::run` retains the affected call's actual facts when returning an accounting defect.
 
 The partial-usage public regression failed before this fix. Concurrent public calls pin the independent expected 98-token once-rounded result against two rounded-zero constituents; a started failure pins absent aggregate cost and truthful counts. The local overflow test checks atomicity and a clean new scope. Existing tally consumers and complete result serialization remain compatibility checks. This enables the dataframe owner to adopt checked pricing; it does not claim dataframe adoption, complete parity or landing. Source grows 168 nonblank Rust lines (142424 → 142592), for the snapshot implementation, public regressions, atomic overflow behavior and five declaration-neutral complete-result test fixtures. No dependency or proof tooling was added.
+
+Lane1 reviewer correction on coherent 2922fd8a1: retain checked known raw totals
+across absent reports and use them separately from reported-token availability
+for once-rounded pricing. The cache-only regression previously omitted cost;
+it now pins cache/replay-only zero, priced live/cache totals, absent reported
+tokens and unpriced-call omission. A public overflow across a cached call pins
+atomic unchanged tally state and the actual overflowing call's final facts.
+The existing partial-live and concurrent once-rounding regressions remain.
+Root owns the original reviewer's narrow confirmation and full landing gates.
+
+Remaining focused gate evidence: `public_controls` returns 19 passed, four
+failed and one explicit stress ignore, identically on original 2922fd8a1 and
+the corrected source. Three cache oracles still expect a hit when their saved
+reply reports jev-latest and the effective request names jev-1.13.0:
+`caller_prices_round_the_combined_report_and_keep_no_send_zero`,
+`counters_and_cache_answers_match_the_real_attempts`, and
+`each_public_question_model_selects_its_own_cache_freshness`. The observed
+second call sends once, consistently with cache/2's mismatch-reuse refusal.
+These existing consumer expectations remain untouched for root/0444 coordination.
