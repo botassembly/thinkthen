@@ -1697,10 +1697,6 @@
       "id": "metadata-decide",
       "verb": "decide",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "01-decide-yes-captured",
         "metadata": {
           "name": "refund",
@@ -1727,10 +1723,6 @@
       "id": "metadata-choose",
       "verb": "choose",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "06-choose-billing",
         "metadata": {
           "name": "refund",
@@ -1757,10 +1749,6 @@
       "id": "metadata-tag",
       "verb": "tag",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "09-tag-two",
         "metadata": {
           "name": "refund",
@@ -1787,10 +1775,6 @@
       "id": "metadata-score",
       "verb": "score",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "11-score-middle",
         "metadata": {
           "name": "refund",
@@ -1817,10 +1801,6 @@
       "id": "metadata-filter",
       "verb": "filter",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "13-filter-records",
         "metadata": {
           "name": "refund",
@@ -1847,10 +1827,6 @@
       "id": "metadata-rank",
       "verb": "rank",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "15-rank-records",
         "metadata": {
           "name": "refund",
@@ -1877,10 +1853,6 @@
       "id": "metadata-find",
       "verb": "find",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "18-find-second",
         "metadata": {
           "name": "refund",
@@ -1907,10 +1879,6 @@
       "id": "metadata-annotate",
       "verb": "annotate",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "17-annotate-mixed",
         "metadata": {
           "name": "refund",
@@ -1937,10 +1905,6 @@
       "id": "metadata-recognize",
       "verb": "recognize",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "41-offsets-past-an-accent-and-an-emoji",
         "metadata": {
           "name": "refund",
@@ -1967,10 +1931,6 @@
       "id": "metadata-relate",
       "verb": "relate",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "source_case": "51-same-kind-alerts",
         "metadata": {
           "name": "refund",
@@ -2113,10 +2073,6 @@
       "id": "annotate-member-validation-before-send",
       "verb": "annotate",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "question_set": {
           "version": 1,
           "questions": {
@@ -2170,10 +2126,6 @@
       "id": "annotate-document-json",
       "verb": "annotate",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "question_set": {
           "version": 1,
           "questions": {
@@ -2219,10 +2171,6 @@
       "id": "annotate-document-invalid-json",
       "verb": "annotate",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "question_set": {
           "version": 1,
           "questions": {
@@ -2419,10 +2367,6 @@
       "id": "mcp-question-inline-at",
       "verb": "decide",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "arguments": {
           "question": "@refund",
           "evidence": "x"
@@ -2443,10 +2387,6 @@
       "id": "mcp-question-explicit-name",
       "verb": "decide",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "arguments": {
           "question_name": "refund",
           "evidence": "x"
@@ -2467,10 +2407,6 @@
       "id": "mcp-question-mutually-exclusive",
       "verb": "decide",
       "input": {
-        "question": {
-          "decide": "Does this ask for a refund?",
-          "threshold": 0.5
-        },
         "arguments": {
           "question_name": "refund",
           "question_file": "refund.json",

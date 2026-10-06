@@ -33,11 +33,18 @@ class PublicAssertions(unittest.TestCase):
             (self.cell(consumer='javascript'), 'unknown parity cell'),
             (self.cell() + '\n' + self.cell(), 'duplicate parity cell'),
             (self.cell(status='skip'), 'skipped or unknown status'),
+            ('conformance: not_run=1 unselected=0\n' + self.cell(), 'required cases skipped'),
+            ('conformance: not_run=0 unselected=2\n' + self.cell(), 'required cases skipped'),
+            ('typed-decide: not run by the public API\n' + self.cell(), 'required case reported not run'),
             (self.cell(checks=['named', 'runtime']), 'missing named/compiler/runtime'),
             (self.cell(checks=['compile', 'runtime', 'runtime']), 'missing named/compiler/runtime'),
         ]:
             with self.subTest(cause=cause), self.assertRaisesRegex(ValueError, cause):
                 parity.cells(output, ['rust'], self.cases)
+
+    def test_zero_skip_counters_allow_complete_asserted_cells(self):
+        seen = parity.cells('conformance: not_run=0 unselected=0\n' + self.cell(), ['rust'], self.cases)
+        self.assertEqual(seen, {('rust', 'typed-decide'): 'pass'})
 
     def test_missing_cells_remain_missing_and_failed_process_invalidates_pass(self):
         seen = parity.cells(self.cell(), ['rust'], self.cases)

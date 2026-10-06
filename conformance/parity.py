@@ -116,6 +116,11 @@ def cells(output, consumers, cases):
     """Read asserted named cells, never infer typed support from generic tests."""
     found = {}
     for line in output.splitlines():
+        # Existing consumers already report these full-case counters.
+        if re.search(r'\b(?:not_run|unselected)=[1-9][0-9]*\b', line):
+            raise ValueError('required cases skipped or unselected')
+        if 'not run' in line.lower() and any(case in line for case in cases):
+            raise ValueError('required case reported not run')
         if not line.startswith(PREFIX):
             continue
         row = json.loads(line[len(PREFIX):])
