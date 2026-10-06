@@ -52,26 +52,21 @@ fn a_too_large_batch_halves_once_and_counts_the_refused_request() {
             &[],
             &lines(1..=5),
         );
-        if split {
+        let bodies = listener.requests();
+        bodies.iter().for_each(|request| {
+            assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
             assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{status}: {}",
-                text(&output.stderr)
+                request.header("authorization"),
+                Some("Bearer sk-test-value")
             );
+            let body: serde_json::Value = serde_json::from_slice(&request.body).expect("wire body");
+            assert_eq!(body["model"], "jev-1.13.0");
+        });
+        let sizes: Vec<_> = bodies.iter().map(|body| places(&body.body).len()).collect();
+        if split {
+            let diagnostic = text(&output.stderr);
+            assert_eq!(output.status.code(), Some(0), "{status}: {diagnostic}");
             assert!(output.stderr.is_empty(), "{status}");
-            let bodies = listener.requests();
-            for request in &bodies {
-                assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
-                assert_eq!(
-                    request.header("authorization"),
-                    Some("Bearer sk-test-value")
-                );
-                let body: serde_json::Value =
-                    serde_json::from_slice(&request.body).expect("wire body");
-                assert_eq!(body["model"], "jev-1.13.0");
-            }
-            let sizes: Vec<_> = bodies.iter().map(|body| places(&body.body).len()).collect();
             assert_eq!(sizes, [5, 3, 2], "{status}");
             let printed = details(&output);
             assert_eq!(printed.len(), 5, "{status}");
@@ -111,7 +106,7 @@ fn a_too_large_batch_halves_once_and_counts_the_refused_request() {
             assert_eq!(keys, expected, "{status}: each row names its question key");
         } else {
             assert_eq!(output.status.code(), Some(4), "{status}");
-            assert_eq!(sent(&listener), [5], "{status}");
+            assert_eq!(sizes, [5], "{status}");
             assert!(output.stdout.is_empty(), "{status}");
         }
     }
