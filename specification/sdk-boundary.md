@@ -27,7 +27,7 @@ Named backends and provider setup shortcuts keep the precedence in [backends.md]
 | Cache, refresh, no-cache, recording and strict replay | Keep | Storage and caller freshness controls, not route discovery; [recording.md](recording.md), tickets 0442–0444 |
 | Offline rereading with an explicit cut | Keep with zero sends | Reinterpret saved observations without changing runtime defaults; [recording.md](recording.md) |
 | Explicit runs audit/diff and transforms | Keep | User-invoked analysis and read-only transforms; [audit.md](audit.md), [diff.md](diff.md), [transform.md](transform.md), ticket 0440 |
-| Audit tuning and a caller-named output file | Keep explicit offline write only | Produce a separate proposed question file; never edit the input file, configuration or running engine |
+| Audit tuning and caller-requested question-file writes | Keep explicit offline write only | `--write QUESTIONS` edits the named question file in place; `--write-to` creates a separate file. Neither automatically mutates configuration or running-engine policy; [audit.md](audit.md#writing-the-bar) |
 | Call/request IDs, truthful retrieval/model facts and stable answer IDs | Keep under tickets 0442–0445 and 0450 | Describe sends and observations; confer no routing authority |
 | Reserved proxy question identity, resolved code threshold and override fields | Reserve schema/types in 0.2; refuse activation locally before lookup or send | Ticket 0450 owns validation. Ordinary vendor bytes exclude them; direct replies cannot attest them |
 | Explicit proxy mode and proxy override execution | Defer to an admitted 0.3 protocol | No current proxy protocol establishes capabilities, correspondence or policy persistence |
