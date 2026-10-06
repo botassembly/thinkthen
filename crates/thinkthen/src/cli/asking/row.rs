@@ -16,7 +16,7 @@ impl Judging<'_> {
         record: Record,
         question: Question,
         judged: &Judgment,
-        context: RowContext<'_>,
+        mut context: RowContext<'_>,
     ) -> Result<Judged, Failure> {
         let mismatch = self.mismatch_of(&question);
         let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
@@ -30,37 +30,7 @@ impl Judging<'_> {
             .map(|_| record.clone());
         let mut printed =
             if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {
-                // Ordinary rank has no cut and therefore no yes/no value.
-                // Graded rank keeps the score value that orders its records.
-                let shown = if self.keeping == Keeping::Ordered
-                    && !matches!(question, Question::Score { .. })
-                {
-                    Value::YesNo(None)
-                } else {
-                    judged.value.clone()
-                };
-                let run = Run {
-                    backend: self.engine.backend(),
-                    tuned_for: mismatch.tuned_for(),
-                    warning: mismatch.warning(),
-                    batch_setting: mismatch.batch_setting(),
-                    batch_warning: mismatch.batch_warning(),
-                    context_sha256: self
-                        .context
-                        .as_ref()
-                        .map(|context| context.digest().to_owned()),
-                };
-                let input = self.streams.then_some(record);
-                Some(decision_row(
-                    run,
-                    judged,
-                    question,
-                    self.threshold,
-                    shown,
-                    input,
-                    context.requests,
-                    context.attempts,
-                )?)
+                Some(self.detailed(record, question, judged, &mismatch, &mut context)?)
             } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
                 None
             } else if self.keeping.streams_only() {
@@ -102,6 +72,77 @@ impl Judging<'_> {
             partial_failure: false,
             profile_mismatch: mismatch.notice(),
         })
+    }
+    fn detailed(
+        &self,
+        record: Record,
+        question: Question,
+        judged: &Judgment,
+        mismatch: &crate::profile::Mismatch,
+        context: &mut RowContext<'_>,
+    ) -> Result<String, Failure> {
+        // Ordinary rank has no cut and therefore no yes/no value.
+        // Graded rank keeps the score value that orders its records.
+        let shown =
+            if self.keeping == Keeping::Ordered && !matches!(question, Question::Score { .. }) {
+                Value::YesNo(None)
+            } else {
+                judged.value.clone()
+            };
+        let run = Run {
+            backend: self.engine.backend(),
+            tuned_for: mismatch.tuned_for(),
+            warning: mismatch.warning(),
+            batch_setting: mismatch.batch_setting(),
+            batch_warning: mismatch.batch_warning(),
+            context_sha256: self
+                .context
+                .as_ref()
+                .map(|context| context.digest().to_owned()),
+        };
+        let input = self.streams.then_some(record);
+        let requests = std::mem::take(&mut context.requests);
+        let attempts = std::mem::take(&mut context.attempts);
+        if self.keeping == Keeping::Ordered {
+            Ok(decision_row(
+                run,
+                judged,
+                question,
+                self.threshold,
+                shown,
+                input,
+                requests,
+                attempts,
+            )?)
+        } else {
+            let function = if self.keeping == Keeping::Passing {
+                crate::core::image::InputFunction::Filter
+            } else {
+                match question {
+                    Question::Decide { .. } => crate::core::image::InputFunction::Decide,
+                    Question::Choose { .. } => crate::core::image::InputFunction::Choose,
+                    Question::Tag { .. } => crate::core::image::InputFunction::Tag,
+                    Question::Score { .. } => crate::core::image::InputFunction::Score,
+                }
+            };
+            let canonical = crate::result_json::complete::atomic(
+                run,
+                judged,
+                crate::result_json::complete::AtomicSpec {
+                    declarations: self.declarations.clone(),
+                    function,
+                    record: context.record,
+                    question,
+                    threshold: self.threshold,
+                    shown,
+                    rank_position: None,
+                },
+                requests,
+                input,
+                Some(attempts),
+            )?;
+            Ok(json_line(&canonical)?)
+        }
     }
     fn mismatch_of(&self, question: &Question) -> crate::profile::Mismatch {
         match question {

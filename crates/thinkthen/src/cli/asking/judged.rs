@@ -287,6 +287,10 @@ impl JudgeAsker<'_> {
             question,
             &judgment,
             RowContext {
+                record: held
+                    .at
+                    .checked_sub(1)
+                    .ok_or(Failure::Defect("an input occurrence lost its ordinal"))?,
                 arrived: held.arrived.as_deref(),
                 requests: answers.iter().map(|answered| answered.key.hex()).collect(),
                 attempts,

@@ -39,6 +39,7 @@ use reading::read_by;
 /// What one row shows beside its answer: the line it arrived as, the keys
 /// of its questions, and its requests' attempts.
 struct RowContext<'a> {
+    record: usize,
     arrived: Option<&'a [u8]>,
     requests: Vec<String>,
     attempts: Vec<AttemptObservation>,
@@ -309,6 +310,7 @@ pub(crate) fn run(
     )?;
     output.snapshot(snapshot);
     let configuration = JudgingInput {
+        declarations: settled.metadata().clone(),
         common,
         environment,
         folders,
@@ -339,6 +341,7 @@ pub(crate) fn run(
 
 /// One question over one engine, asked of every record in turn.
 struct Judging<'a> {
+    declarations: crate::core::declaration::QuestionMetadata,
     environment: &'a Environment,
     engine: Engine,
     asks: Asks,
@@ -353,6 +356,7 @@ struct Judging<'a> {
 }
 
 struct JudgingInput<'a> {
+    declarations: crate::core::declaration::QuestionMetadata,
     common: &'a Common,
     environment: &'a Environment,
     folders: Folders,
@@ -373,6 +377,7 @@ struct JudgingInput<'a> {
 impl Judging<'_> {
     fn new(input: JudgingInput<'_>) -> Result<Judging<'_>, Failure> {
         let JudgingInput {
+            declarations,
             common,
             environment,
             folders,
@@ -390,6 +395,7 @@ impl Judging<'_> {
             context,
         } = input;
         Ok(Judging {
+            declarations,
             environment,
             engine: engine(common, environment, folders, backend, profile, common.jobs)?,
             asks,

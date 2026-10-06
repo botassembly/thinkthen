@@ -68,6 +68,16 @@ fn close(schema: &mut Value, flattened: bool) {
     let Some(object) = schema.as_object_mut() else {
         return;
     };
+    // JSON Schema does not enforce the Rust integer format names.
+    let maximum = match object.get("format").and_then(Value::as_str) {
+        Some("uint16") => Some(u64::from(u16::MAX)),
+        Some("uint32") => Some(u64::from(u32::MAX)),
+        Some("uint64" | "uint") => Some(u64::MAX),
+        _ => None,
+    };
+    if let Some(maximum) = maximum {
+        object.insert("maximum".into(), json!(maximum));
+    }
     let required = object
         .get("required")
         .and_then(Value::as_array)

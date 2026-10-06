@@ -176,33 +176,68 @@ fn details(
         LoadedQuestion::Banded(question) => engine.details(question, text),
     };
     let details = details.map_err(|error| error.to_string())?;
-    let command = without("attempts", &command(case, path, base, text, true)?);
+    let legacy: serde_json::Value =
+        serde_json::from_str(&details.value().to_json()).map_err(|error| error.to_string())?;
+    let printed = command(case, path, base, text, true)?;
+    let complete: serde_json::Value =
+        serde_json::from_str(&printed).map_err(|error| error.to_string())?;
+    if legacy.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result/1")
+        || complete.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result/2")
+    {
+        return Err("the released and complete detail versions were not retained".into());
+    }
+    thinkthen::AnswerId::new(
+        complete
+            .get("answer_id")
+            .and_then(serde_json::Value::as_str)
+            .ok_or("no complete answer ID")?,
+    )
+    .map_err(|error| error.to_string())?;
     let last = text.bytes().filter(|&b| b == b'\n').count()
         + usize::from(!text.is_empty() && !text.ends_with('\n'));
-    let suffix = format!(
-        ",\"position\":{{\"file\":null,\"first\":1,\"last\":{}}}}}\n",
-        last.max(1)
-    );
-    let shared = command
-        .strip_suffix(&suffix)
-        .ok_or_else(|| format!("the command has no matching input position: {command}"))?;
-    same(
-        details.value().to_json() + "\n",
-        &(shared.to_owned() + "}\n"),
-    )
-}
-
-/// One `meta` list left out of a line. The command's `meta.attempts` is a
-/// command display; `Details` has none.
-fn without(field: &str, line: &str) -> String {
-    let marker = format!(r#","{field}":["#);
-    let Some(start) = line.find(&marker) else {
-        return line.to_owned();
-    };
-    let end = line[start..]
-        .find(']')
-        .map_or(line.len(), |end| start + end + 1);
-    format!("{}{}", &line[..start], &line[end..])
+    if complete.get("position")
+        != Some(&serde_json::json!({"file":null,"first":1,"last":last.max(1)}))
+    {
+        return Err("the complete command has no matching original position".into());
+    }
+    // Correlation IDs identify distinct live observations. Compare the retained
+    // legacy judgment fields, not the independent answers' transient identities.
+    for key in ["value", "question", "answer", "threshold"] {
+        if legacy.get(key) != complete.get(key) {
+            return Err(format!("the retained {key} differs"));
+        }
+    }
+    let legacy_meta = legacy
+        .get("meta")
+        .and_then(serde_json::Value::as_object)
+        .ok_or("no legacy meta")?;
+    let complete_meta = complete
+        .get("meta")
+        .and_then(serde_json::Value::as_object)
+        .ok_or("no complete meta")?;
+    for (key, value) in legacy_meta {
+        if complete_meta.get(key) != Some(value) {
+            return Err(format!("the retained meta.{key} differs"));
+        }
+    }
+    if complete_meta
+        .get("origin")
+        .and_then(serde_json::Value::as_str)
+        != Some("live")
+        || complete_meta
+            .get("requests")
+            .and_then(serde_json::Value::as_array)
+            .ok_or("no requests")?
+            .len()
+            != complete_meta
+                .get("observations")
+                .and_then(serde_json::Value::as_array)
+                .ok_or("no observations")?
+                .len()
+    {
+        return Err("the actual complete observation alignment differs".into());
+    }
+    Ok(1)
 }
 
 /// The command's standard output for one input.

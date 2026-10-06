@@ -1891,6 +1891,7 @@
         },
         {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 1,
           "type": "integer"
         }
@@ -1900,6 +1901,7 @@
       "properties": {
         "ordinal": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 1,
           "type": "integer"
         },
@@ -1920,6 +1922,7 @@
         },
         "server_ms": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer"
@@ -1935,6 +1938,7 @@
         },
         "wall_ms": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         }
@@ -2404,6 +2408,7 @@
             },
             "limit": {
               "format": "uint64",
+              "maximum": 18446744073709551615,
               "minimum": 0,
               "type": "integer"
             }
@@ -2423,6 +2428,7 @@
             },
             "limit": {
               "format": "uint64",
+              "maximum": 18446744073709551615,
               "minimum": 0,
               "type": "integer"
             }
@@ -2448,6 +2454,7 @@
             },
             "limit": {
               "format": "uint64",
+              "maximum": 18446744073709551615,
               "minimum": 0,
               "type": "integer"
             }
@@ -2474,6 +2481,7 @@
         },
         "cache_answers": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -2487,6 +2495,7 @@
         },
         "input_tokens": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer"
@@ -2499,6 +2508,7 @@
         },
         "output_tokens": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer"
@@ -2506,11 +2516,13 @@
         },
         "records": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
         "requests_sent": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -2909,6 +2921,7 @@
         },
         "failed_questions": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -2965,6 +2978,7 @@
         },
         "requests_sent": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -3096,6 +3110,7 @@
         },
         "first": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer"
@@ -3111,6 +3126,7 @@
         },
         "last": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer"
@@ -3134,6 +3150,7 @@
         },
         "batch_size": {
           "format": "uint32",
+          "maximum": 4294967295,
           "minimum": 1,
           "type": [
             "integer"
@@ -4043,6 +4060,7 @@
       "properties": {
         "at": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer"
@@ -4375,6 +4393,7 @@
       "properties": {
         "input_tokens": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer"
@@ -4382,6 +4401,7 @@
         },
         "output_tokens": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer"
@@ -4405,7 +4425,7 @@
     },
     "completeWordingVersion": {
       "format": "uint32",
-      "maximum": 2147483647,
+      "maximum": 4294967295,
       "minimum": 1,
       "type": "integer"
     },
@@ -4550,6 +4570,7 @@
       "anyOf": [
         {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 1,
           "type": "integer"
         },
@@ -4578,6 +4599,7 @@
       "properties": {
         "end": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -4586,11 +4608,13 @@
         },
         "length": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
         "start": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -4774,6 +4798,7 @@
         },
         "end": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -4789,6 +4814,7 @@
         },
         "start": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         }
@@ -4831,11 +4857,13 @@
       "properties": {
         "end": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
         "start": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -4859,11 +4887,13 @@
       "properties": {
         "end": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
         "start": {
           "format": "uint",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         }
