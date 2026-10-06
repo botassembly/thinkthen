@@ -57,7 +57,18 @@ Read `WRITING.md` first. It holds the page rules, the code rules, and how an exa
 
 ## The menu
 
-Five entries: Install, Functions, How-tos, Learn, and Blog. The Backends pages under `/install/backends/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
+The menu links Install, Functions, How-tos, Learn, Guides and Blog. Recipes appears when its published catalog is available. The Backends pages under `/install/backends/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
+
+## Guides
+
+`/guides/` links useful Learn and Recipe pages and lists published lessons.
+Copy `templates/guide.md` into `src/guides/` to write a lesson. `WRITING.md`
+defines the metadata, actual video/article requirements and draft exclusions.
+The lesson route reuses the existing Markdown renderer and base layout.
+`node scripts/guides.test.mjs` renders independent fixtures in a temporary copy,
+checks actual media links and replayed example presentation, and verifies draft
+exclusion from the section list, search, sitemap and Markdown exports. The
+fixtures never ship as lessons. This check runs in both build and check.
 
 ## Where the examples come from
 

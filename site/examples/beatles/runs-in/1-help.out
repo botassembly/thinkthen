@@ -9,8 +9,7 @@ annotate
 recognize
 relate
 help
-audit
-diff
+runs
 status
 backends
 cache
