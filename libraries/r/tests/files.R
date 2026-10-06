@@ -15,6 +15,24 @@ for (i in seq_along(questions)) {
   check("source rows present", length(rows) > 0)
   for (row in rows) check("physical file range and original newlines", row$first_line == 1 && row$last_line == 4 && grepl("\n", row$record, fixed = TRUE))
 }
+# Skipped blank lines do not renumber physical locations; repeated text remains separate.
+path <- tempfile(fileext = ".txt")
+writeLines(c("", "Le café 😀 Maria Chen arrived.", "", "Le café 😀 Maria Chen arrived."), path, useBytes = TRUE)
+ranked <- tt_files(list(rank = "Q?"), path)$value
+check("located rank indexes count records rather than physical lines",
+  identical(vapply(ranked, `[[`, 0L, "index"), 0:1) &&
+  identical(vapply(ranked, `[[`, 0L, "first_line"), c(2L, 4L)))
+recognized <- tt_files(questions[[9]], path)$value
+check("both duplicate source occurrences survive recognition", length(recognized) == 2L)
+for (i in seq_along(recognized)) {
+  row <- recognized[[i]]
+  span <- row$value$entities[[1]]
+  check("located multibyte spans keep native scalar offsets and physical lines",
+    identical(c(span$start, span$end, span$length), c(21L, 29L, 8L)) &&
+    identical(c(span$first_line, span$last_line), rep(c(2L, 4L)[i], 2)) &&
+    identical(substr(row$record, span$start + 1L, span$end), span$text))
+}
+unlink(path)
 before <- backend_count()
 check("invalid reader refused", identical(kind_of(tt_files(list(decide = "Q?"), "missing", window = 2)), "usage"))
 check("invalid reader sends nothing", backend_count() == before)
