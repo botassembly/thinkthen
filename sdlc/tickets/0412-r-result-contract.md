@@ -1,6 +1,6 @@
 # 0412: Document and test R index conventions
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Documentation and installed R consumer checks are built; branch handoff awaits root review, landing tests and lint.
 
 Milestone: 0.2
 
