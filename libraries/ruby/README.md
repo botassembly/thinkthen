@@ -56,6 +56,8 @@ The release channel uses RubyGems platform gems for the supported Linux and macO
 gem install thinkthen
 ```
 
+Each release also includes a matching-version plain Ruby fallback gem. If RubyGems selects it, installation prints the supported Ruby and platform requirements, and `require "thinkthen"` raises `LoadError`. It contains no native engine and cannot run calls. Native gems retain Ruby `>= 3.4, < 4` and the macOS 15.0 floor.
+
 From a source checkout, `setup-ruby.sh` builds the pinned Ruby 3.4.11 once per machine, with the network, into `~/.cache/thinkthen-toolchains/ruby/3.4.11`. `toolchain.env` pins both source archives by hash. `build.sh` builds the extension and the gem offline with that Ruby. `check.sh` is this surface's entry in the surface rung. It runs the file checks, the toolchain probe, the build, Clippy, the Rust unit tests, each Ruby test file, the conformance runner, the examples, the gem check, and the slide. Each test starts its own loopback backend and runs its calls in a scrubbed child with a fake key. Without the pinned prefix, `check.sh` prints "not run" and exits 77.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.

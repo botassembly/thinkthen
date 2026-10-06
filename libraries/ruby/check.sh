@@ -22,6 +22,7 @@ not_run() { echo "check ruby: not run: $*"; exit 77; }
 # version takes it. RubyGems matches arm64-darwin-24 only to darwin 24.
 gem_platform() {
   "$RUBY" -rrubygems/package -e 'platform = Gem::Package.new(ARGV[0]).spec.platform
+    exit if platform == Gem::Platform::RUBY
     exit unless platform.os == "darwin"
     abort "the macOS gem #{platform} names macOS version #{platform.version}" if platform.version
     %w[23 24 25].each do |darwin|
@@ -149,7 +150,7 @@ if [ "$profile" = smoke ]; then
   smoke_guard
   # The replay smoke (ticket 0335): the gem in a fresh gem folder, required from outside the checkout.
   ./build.sh
-  "$prefix/bin/gem" install --local --silent --no-document --install-dir "$plant/gems" thinkthen-*.gem
+  "$prefix/bin/gem" install --local --silent --no-document --install-dir "$plant/gems" thinkthen-*-*.gem
   cd "$plant"
   unset RUBYLIB
   GEM_PATH="$plant/gems" THINKTHEN_API_KEY=sk-smoke-loopback "$RUBY" -e 'require "thinkthen"
@@ -166,6 +167,11 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   # The copy sits inside the check's own plant folder, which its cleanup removes.
   . "$repo/sdlc/scripts/installed.sh"
   installed_tests "$repo" libraries/ruby "$plant"
+  if [ "${THINKTHEN_ARTIFACT##*/}" = "thinkthen-$(sed -n 's/^version = "\(.*\)"$/\1/p' ../../crates/thinkthen/Cargo.toml | head -n 1).gem" ]; then
+    "$RUBY" tests/test_package.rb -n test_fallback_install_explains_support_and_import_refuses_to_work
+    echo "check ruby: pass, installed fallback"
+    exit 0
+  fi
   gem_platform "$THINKTHEN_ARTIFACT"
   "$prefix/bin/gem" install --local --silent --no-document --install-dir "$scratch/gems" "$THINKTHEN_ARTIFACT"
   cd "$scratch/libraries/ruby"
@@ -208,7 +214,7 @@ done
 sh "$LIMIT" 120 "$RUBY" -I lib tests/conformance.rb || fail "the conformance runner failed"
 sh "$LIMIT" 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
 "$RUBY" -rrubygems/package -I lib -rthinkthen/version -e '
-  spec = Gem::Package.new(Dir["thinkthen-*.gem"].fetch(0)).spec
+  spec = Gem::Package.new(Dir["thinkthen-*-*.gem"].fetch(0)).spec
   version = File.read("../../crates/thinkthen/Cargo.toml")[/^version = "([^"]+)"/, 1]
   files = ["lib/thinkthen.rb", "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}", "lib/thinkthen/version.rb"]
   abort "the gem is not MIT" unless spec.licenses == ["MIT"]
