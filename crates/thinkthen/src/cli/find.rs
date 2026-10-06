@@ -28,6 +28,7 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let question::Prepared {
+        metadata,
         common,
         question,
         profile: saved_profile,
@@ -37,9 +38,8 @@ pub(crate) fn run(
     let mut display = Display::default();
     display.arguments = arguments.display.clone();
     display.validate(common)?;
-    let framing = framing(common);
-    let fields = fields(common)?;
-    let reading = Reading::new(framing, fields)?;
+    let reading =
+        Reading::new(framing(common), fields(common)?)?.with_item_schema(metadata.item_schema);
     let backend = environment.resolve(
         common.backend.as_deref(),
         common.url.as_deref(),

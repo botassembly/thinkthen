@@ -476,6 +476,9 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<crate::public::Call<Recognized>, Error> {
+        ask.0
+            .metadata
+            .validate_item(&crate::public::QuestionInput::Text(evidence.to_owned()))?;
         let engine =
             crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);

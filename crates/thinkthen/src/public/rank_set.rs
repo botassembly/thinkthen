@@ -84,7 +84,7 @@ impl Asker for SetDecisions {
             rows.push(member.row(
                 Text {
                     at: text.at,
-                    input: crate::public::QuestionInput::Text(String::new()),
+                    input: text.input.clone(),
                 },
                 own,
             ));
@@ -138,7 +138,13 @@ impl Engine {
         I::Item: Evidence,
     {
         let records = self.within_limit(records)?;
-        for record in records.as_slice() {
+        for (at, record) in records.as_slice().iter().enumerate() {
+            for member in questions.0.questions() {
+                member
+                    .metadata()
+                    .validate_item(&crate::public::InputEvidence::question_input(record))
+                    .map_err(|error| error.at_record(at))?;
+            }
             evidence(record.evidence())?;
         }
         let set = questions.0.clone();

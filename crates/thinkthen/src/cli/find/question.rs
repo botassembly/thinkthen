@@ -5,6 +5,7 @@ use crate::failure::Failure;
 use std::path::Path;
 
 pub(super) struct Prepared {
+    pub(super) metadata: crate::core::declaration::QuestionMetadata,
     pub(super) common: Common,
     pub(super) question: QuestionText,
     pub(super) profile: Option<ProfileName>,
@@ -19,6 +20,7 @@ impl Prepared {
                 Failure::Usage("`find` takes a question that is text, not white space")
             })?;
             return Ok(Self {
+                metadata: Default::default(),
                 common,
                 question,
                 profile: None,
@@ -55,6 +57,7 @@ impl Prepared {
             common.model = file.model.map(|model| model.as_str().to_owned());
         }
         Ok(Self {
+            metadata: file.metadata,
             common,
             question: file.text,
             profile: file.profile,

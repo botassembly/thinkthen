@@ -73,7 +73,11 @@ impl Engine {
         let records = self.try_within_limit(records)?;
         // A rank judges every record before it orders any, so a blank record
         // is refused before the first send.
-        for record in records.as_slice() {
+        for (at, record) in records.as_slice().iter().enumerate() {
+            question
+                .metadata
+                .validate_item(&super::super::InputEvidence::question_input(record))
+                .map_err(|error| error.at_record(at))?;
             evidence(record.evidence())?;
         }
         let mut batch = self.decisions(question, records, options, |item, (_, yes)| {
@@ -150,6 +154,12 @@ impl Engine {
         T: Evidence,
     {
         let (units, find, engine) = self.prepare_find(question, units, &options)?;
+        for (at, unit) in units.iter().enumerate() {
+            question
+                .metadata
+                .validate_item(&super::super::InputEvidence::question_input(unit))
+                .map_err(|error| error.at_record(at))?;
+        }
         let none = question.kind == Kind::FindNone;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {

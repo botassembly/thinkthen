@@ -27,7 +27,7 @@ pub use complete::{
     CompleteChoice, CompleteDecision, CompleteFilter, CompleteRank, CompleteScore, CompleteTags,
 };
 pub use complete_annotation::{CompleteAnnotated, CompleteAnnotationMember};
-pub use complete_find::CompleteFound;
+pub use complete_find::{CompleteFound, FindSelection};
 pub use complete_recognize::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
     RecognitionProbabilities,

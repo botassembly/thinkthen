@@ -80,6 +80,8 @@ mod relate_records;
 #[path = "native_complete/declarations.rs"]
 mod declarations;
 
+#[path = "native_complete/consumer_views.rs"]
+mod consumer_views;
 #[path = "native_complete/context.rs"]
 mod context;
 #[path = "native_complete/declaration_batches.rs"]

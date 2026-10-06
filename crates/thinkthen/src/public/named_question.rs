@@ -127,5 +127,7 @@ aggregate_loaders!(
     Recognize,
     RecognizeQuestionFile,
     Relate,
-    RecordChooseQuestion
+    RecordChooseQuestion,
+    FindQuestionFile,
+    RankSet
 );

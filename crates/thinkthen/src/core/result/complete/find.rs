@@ -20,6 +20,9 @@ impl Find {
     pub(crate) fn raw_pick(&self) -> &str {
         self.legacy.answer.pick()
     }
+    pub(crate) fn selected(&self) -> Option<usize> {
+        self.legacy.answer.selected()
+    }
     pub(crate) const fn question(&self) -> (&crate::core::QuestionText, bool) {
         self.legacy.question.parts()
     }

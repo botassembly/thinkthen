@@ -37,6 +37,30 @@ pub enum RecordObservation<'a> {
     },
 }
 
+impl RecordObservation<'_> {
+    /// Map a container's retained row back to its original presentation index.
+    /// Actual detail, identities, facts and source coordinates stay intact.
+    #[must_use]
+    pub fn remap_index(self, index: usize) -> Self {
+        match self {
+            Self::Question {
+                member,
+                stage,
+                position,
+                detail,
+                ..
+            } => Self::Question {
+                index,
+                member,
+                stage,
+                position,
+                detail,
+            },
+            Self::Row { value, .. } => Self::Row { index, value },
+        }
+    }
+}
+
 impl fmt::Debug for RecordObservation<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

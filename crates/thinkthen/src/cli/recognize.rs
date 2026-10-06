@@ -78,7 +78,8 @@ pub(crate) fn run(
     } else {
         arguments.common.framing()
     };
-    let reading = Reading::new(framing, pointers)?;
+    let reading =
+        Reading::new(framing, pointers)?.with_item_schema(spec.metadata.item_schema.clone());
     schedule::jobs_of(arguments.common.jobs, reading.streams())?;
     if (arguments.common.located() || arguments.common.input.len() > 1)
         && (!spec.on.is_empty()

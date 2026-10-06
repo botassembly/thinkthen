@@ -314,3 +314,67 @@ fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batche
     assert!(rank.stdout.is_empty());
     assert_eq!(listener.count(), 2);
 }
+
+#[test]
+fn cli_whole_set_functions_validate_typed_selected_values_before_sending() {
+    let root = Folder::new().unwrap();
+    let input = root.path().join("input.jsonl");
+    fs::write(
+        &input,
+        "{\"body\":false,\"private\":\"unprinted-secret\"}\n",
+    )
+    .unwrap();
+    let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
+    let cases = [
+        (
+            "find",
+            r#"{"find":"Which?","on":"/body","item_schema":{"type":"string"}}"#,
+        ),
+        (
+            "recognize",
+            r#"{"version":1,"recognize":{},"on":"/body","item_schema":{"type":"string"}}"#,
+        ),
+        (
+            "relate",
+            r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"item_schema":{"type":"string"}}"#,
+        ),
+    ];
+    for (function, question) in cases {
+        let path = root.path().join("question.json");
+        fs::write(&path, question).unwrap();
+        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        child_environment(&mut command, root.path());
+        let output = command
+            .env("THINKTHEN_API_KEY", "named-fixture-private")
+            .args([
+                function,
+                "@question.json",
+                "--jsonl",
+                "--url",
+                listener.base(),
+                "--model",
+                "fixed",
+                "--no-cache",
+                "--max-retries",
+                "0",
+            ])
+            .stdin(fs::File::open(&input).unwrap())
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{function}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(
+            stderr.contains("the item does not match item_schema"),
+            "{function}: {stderr}"
+        );
+        assert!(!stderr.contains("private"));
+        assert!(!stderr.contains("body"));
+        assert_eq!(listener.count(), 0);
+    }
+}
