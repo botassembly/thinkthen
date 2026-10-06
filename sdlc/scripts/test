@@ -73,6 +73,7 @@ CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/library-only" \
     --features bundled-sqlite --tests ${only:+-E "$only"}
 cargo $runner --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer --workspace
+python3 conformance/parity.py --validate
 sh specification/fixtures/question-file/self-test
 sh specification/fixtures/types/self-test
 sh conformance/children/test.sh

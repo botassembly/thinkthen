@@ -7902,5 +7902,4919 @@
         }
       }
     }
-  ]
+  ],
+  "parity": {
+    "schema": "thinkthen.parity-cases/1",
+    "functions": [
+      "decide",
+      "choose",
+      "tag",
+      "score",
+      "filter",
+      "rank",
+      "find",
+      "annotate",
+      "recognize",
+      "relate"
+    ],
+    "consumers": [
+      {
+        "id": "cli",
+        "surface": ".",
+        "owner": "0432",
+        "baseline": [
+          "cargo",
+          "test",
+          "--locked",
+          "--offline",
+          "-j2",
+          "--package",
+          "thinkthen",
+          "conformance_tests",
+          "--",
+          "--nocapture"
+        ]
+      },
+      {
+        "id": "rust",
+        "surface": "libraries/rust",
+        "owner": "0431",
+        "baseline": [
+          "cargo",
+          "test",
+          "--locked",
+          "--offline",
+          "-j2",
+          "--manifest-path",
+          "conformance/consumer/Cargo.toml",
+          "--target-dir",
+          "target/consumer",
+          "--package",
+          "consumer",
+          "--",
+          "--nocapture"
+        ]
+      },
+      {
+        "id": "c",
+        "surface": "libraries/c",
+        "owner": "0426",
+        "baseline": [
+          "sh",
+          "libraries/c/check.sh"
+        ]
+      },
+      {
+        "id": "python",
+        "surface": "libraries/python",
+        "owner": "0431",
+        "baseline": [
+          "sh",
+          "libraries/python/check.sh"
+        ]
+      },
+      {
+        "id": "typescript",
+        "surface": "libraries/typescript",
+        "owner": "0431",
+        "baseline": [
+          "sh",
+          "libraries/typescript/check.sh"
+        ]
+      },
+      {
+        "id": "javascript",
+        "surface": "libraries/typescript",
+        "owner": "0431",
+        "baseline": [
+          "sh",
+          "libraries/typescript/check.sh"
+        ]
+      },
+      {
+        "id": "ruby",
+        "surface": "libraries/ruby",
+        "owner": "0431",
+        "baseline": [
+          "sh",
+          "libraries/ruby/check.sh"
+        ]
+      },
+      {
+        "id": "r",
+        "surface": "libraries/r",
+        "owner": "0431",
+        "baseline": [
+          "sh",
+          "libraries/r/check.sh"
+        ]
+      },
+      {
+        "id": "go",
+        "surface": "libraries/go",
+        "owner": "0427",
+        "baseline": [
+          "sh",
+          "libraries/go/check.sh"
+        ]
+      },
+      {
+        "id": "csharp",
+        "surface": "libraries/csharp",
+        "owner": "0427",
+        "baseline": [
+          "sh",
+          "libraries/csharp/check.sh"
+        ]
+      },
+      {
+        "id": "java",
+        "surface": "libraries/jvm",
+        "owner": "0427",
+        "baseline": [
+          "sh",
+          "libraries/jvm/check.sh"
+        ]
+      },
+      {
+        "id": "kotlin",
+        "surface": "libraries/jvm",
+        "owner": "0427",
+        "baseline": [
+          "sh",
+          "libraries/jvm/check.sh"
+        ]
+      },
+      {
+        "id": "scala",
+        "surface": "libraries/jvm",
+        "owner": "0427",
+        "baseline": [
+          "sh",
+          "libraries/jvm/check.sh"
+        ]
+      },
+      {
+        "id": "cpp",
+        "surface": "libraries/cpp",
+        "owner": "0428",
+        "baseline": [
+          "sh",
+          "libraries/cpp/check.sh"
+        ]
+      },
+      {
+        "id": "swift",
+        "surface": "libraries/swift",
+        "owner": "0428",
+        "baseline": [
+          "sh",
+          "libraries/swift/check.sh"
+        ]
+      },
+      {
+        "id": "zig",
+        "surface": "libraries/zig",
+        "owner": "0428",
+        "baseline": [
+          "sh",
+          "libraries/zig/check.sh"
+        ]
+      },
+      {
+        "id": "objective-c",
+        "surface": "libraries/objective-c",
+        "owner": "0428",
+        "baseline": [
+          "sh",
+          "libraries/objective-c/check.sh"
+        ]
+      },
+      {
+        "id": "php",
+        "surface": "libraries/php",
+        "owner": "0429",
+        "baseline": [
+          "sh",
+          "libraries/php/check.sh"
+        ]
+      },
+      {
+        "id": "dart",
+        "surface": "libraries/dart",
+        "owner": "0429",
+        "baseline": [
+          "sh",
+          "libraries/dart/check.sh"
+        ]
+      },
+      {
+        "id": "flutter",
+        "surface": "libraries/dart",
+        "owner": "0429",
+        "baseline": [
+          "sh",
+          "libraries/dart/check.sh"
+        ]
+      },
+      {
+        "id": "ada",
+        "surface": "libraries/ada",
+        "owner": "0430",
+        "baseline": [
+          "sh",
+          "libraries/ada/check.sh"
+        ]
+      },
+      {
+        "id": "cobol",
+        "surface": "libraries/cobol",
+        "owner": "0430",
+        "baseline": [
+          "sh",
+          "libraries/cobol/check.sh"
+        ]
+      },
+      {
+        "id": "sqlite",
+        "surface": "databases/sqlite",
+        "owner": "0435",
+        "baseline": [
+          "sh",
+          "databases/sqlite/check.sh"
+        ]
+      },
+      {
+        "id": "duckdb",
+        "surface": "databases/duckdb",
+        "owner": "0435",
+        "baseline": [
+          "sh",
+          "databases/duckdb/check.sh"
+        ]
+      },
+      {
+        "id": "postgresql",
+        "surface": "databases/postgresql",
+        "owner": "0435",
+        "baseline": [
+          "sh",
+          "databases/postgresql/check.sh"
+        ]
+      },
+      {
+        "id": "pandas",
+        "surface": "libraries/python",
+        "owner": "0410",
+        "baseline": [
+          "sh",
+          "libraries/python/check.sh"
+        ]
+      },
+      {
+        "id": "python-polars",
+        "surface": "libraries/python",
+        "owner": "0410",
+        "baseline": [
+          "sh",
+          "libraries/python/check.sh"
+        ]
+      },
+      {
+        "id": "rust-polars",
+        "surface": "libraries/polars",
+        "owner": "0410",
+        "baseline": [
+          "sh",
+          "libraries/polars/check.sh"
+        ]
+      }
+    ],
+    "required_cases": [
+      {
+        "id": "01-decide-yes-captured",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "01-decide-yes-captured"
+        },
+        "expect": {
+          "case_ref": "01-decide-yes-captured"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "02-decide-no",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "02-decide-no"
+        },
+        "expect": {
+          "case_ref": "02-decide-no"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "03-decide-band-unsure",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "03-decide-band-unsure"
+        },
+        "expect": {
+          "case_ref": "03-decide-band-unsure"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "04-decide-band-yes",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "04-decide-band-yes"
+        },
+        "expect": {
+          "case_ref": "04-decide-band-yes"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "05-decide-meanings",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "05-decide-meanings"
+        },
+        "expect": {
+          "case_ref": "05-decide-meanings"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "06-choose-billing",
+        "verb": "choose",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "06-choose-billing"
+        },
+        "expect": {
+          "case_ref": "06-choose-billing"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "07-choose-unsure",
+        "verb": "choose",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "07-choose-unsure"
+        },
+        "expect": {
+          "case_ref": "07-choose-unsure"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "08-choose-tie",
+        "verb": "choose",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "08-choose-tie"
+        },
+        "expect": {
+          "case_ref": "08-choose-tie"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "09-tag-two",
+        "verb": "tag",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "09-tag-two"
+        },
+        "expect": {
+          "case_ref": "09-tag-two"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "10-tag-none",
+        "verb": "tag",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "10-tag-none"
+        },
+        "expect": {
+          "case_ref": "10-tag-none"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "11-score-middle",
+        "verb": "score",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "11-score-middle"
+        },
+        "expect": {
+          "case_ref": "11-score-middle"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "12-score-upper",
+        "verb": "score",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "12-score-upper"
+        },
+        "expect": {
+          "case_ref": "12-score-upper"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "13-filter-records",
+        "verb": "filter",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "13-filter-records"
+        },
+        "expect": {
+          "case_ref": "13-filter-records"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "14-filter-none",
+        "verb": "filter",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "14-filter-none"
+        },
+        "expect": {
+          "case_ref": "14-filter-none"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "15-rank-records",
+        "verb": "rank",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "15-rank-records"
+        },
+        "expect": {
+          "case_ref": "15-rank-records"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "16-rank-stable-tie",
+        "verb": "rank",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "16-rank-stable-tie"
+        },
+        "expect": {
+          "case_ref": "16-rank-stable-tie"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "17-annotate-mixed",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "17-annotate-mixed"
+        },
+        "expect": {
+          "case_ref": "17-annotate-mixed"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "17-annotate-partial",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "17-annotate-partial"
+        },
+        "expect": {
+          "case_ref": "17-annotate-partial"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "18-annotate-two-groups",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "18-annotate-two-groups"
+        },
+        "expect": {
+          "case_ref": "18-annotate-two-groups"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "18-find-second",
+        "verb": "find",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "18-find-second"
+        },
+        "expect": {
+          "case_ref": "18-find-second"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "19-find-none",
+        "verb": "find",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "19-find-none"
+        },
+        "expect": {
+          "case_ref": "19-find-none"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "20-usage-fault",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "20-usage-fault"
+        },
+        "expect": {
+          "case_ref": "20-usage-fault"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "21-backend-fault",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "21-backend-fault"
+        },
+        "expect": {
+          "case_ref": "21-backend-fault"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "22-local-fault",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "22-local-fault"
+        },
+        "expect": {
+          "case_ref": "22-local-fault"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "23-cancelled-fault",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "23-cancelled-fault"
+        },
+        "expect": {
+          "case_ref": "23-cancelled-fault"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "24-deadline-fault",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "24-deadline-fault"
+        },
+        "expect": {
+          "case_ref": "24-deadline-fault"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "25-defect-fault",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "25-defect-fault"
+        },
+        "expect": {
+          "case_ref": "25-defect-fault"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "26-filter-empty-list",
+        "verb": "filter",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "26-filter-empty-list"
+        },
+        "expect": {
+          "case_ref": "26-filter-empty-list"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "27-decide-many",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "27-decide-many"
+        },
+        "expect": {
+          "case_ref": "27-decide-many"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "28-decide-many-repeated-texts",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "28-decide-many-repeated-texts"
+        },
+        "expect": {
+          "case_ref": "28-decide-many-repeated-texts"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "29-usage-json-text",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "29-usage-json-text"
+        },
+        "expect": {
+          "case_ref": "29-usage-json-text"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "30-local-question-file",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "30-local-question-file"
+        },
+        "expect": {
+          "case_ref": "30-local-question-file"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "31-usage-rank-blank-question",
+        "verb": "rank",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "31-usage-rank-blank-question"
+        },
+        "expect": {
+          "case_ref": "31-usage-rank-blank-question"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "32-score-equal-distribution",
+        "verb": "score",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "32-score-equal-distribution"
+        },
+        "expect": {
+          "case_ref": "32-score-equal-distribution"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "33-tag-threshold-excludes",
+        "verb": "tag",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "33-tag-threshold-excludes"
+        },
+        "expect": {
+          "case_ref": "33-tag-threshold-excludes"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "34-annotate-repeated-texts",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "34-annotate-repeated-texts"
+        },
+        "expect": {
+          "case_ref": "34-annotate-repeated-texts"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "35-annotate-score-repeated-texts",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "35-annotate-score-repeated-texts"
+        },
+        "expect": {
+          "case_ref": "35-annotate-score-repeated-texts"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "36-annotate-two-columns",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "36-annotate-two-columns"
+        },
+        "expect": {
+          "case_ref": "36-annotate-two-columns"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "37-annotate-choose-one",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "37-annotate-choose-one"
+        },
+        "expect": {
+          "case_ref": "37-annotate-choose-one"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "38-annotate-score-one",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "38-annotate-score-one"
+        },
+        "expect": {
+          "case_ref": "38-annotate-score-one"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "39-annotate-tag-one",
+        "verb": "annotate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "39-annotate-tag-one"
+        },
+        "expect": {
+          "case_ref": "39-annotate-tag-one"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "40-decide-counters",
+        "verb": "decide",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "40-decide-counters"
+        },
+        "expect": {
+          "case_ref": "40-decide-counters"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "41-offsets-past-an-accent-and-an-emoji",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "41-offsets-past-an-accent-and-an-emoji"
+        },
+        "expect": {
+          "case_ref": "41-offsets-past-an-accent-and-an-emoji"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "42-recognize-C01-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "42-recognize-C01-relations"
+        },
+        "expect": {
+          "case_ref": "42-recognize-C01-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "43-recognize-C02-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "43-recognize-C02-relations"
+        },
+        "expect": {
+          "case_ref": "43-recognize-C02-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "44-recognize-C12-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "44-recognize-C12-relations"
+        },
+        "expect": {
+          "case_ref": "44-recognize-C12-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "45-recognize-C13-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "45-recognize-C13-relations"
+        },
+        "expect": {
+          "case_ref": "45-recognize-C13-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "46-recognize-C14-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "46-recognize-C14-relations"
+        },
+        "expect": {
+          "case_ref": "46-recognize-C14-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "47-recognize-C18-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "47-recognize-C18-relations"
+        },
+        "expect": {
+          "case_ref": "47-recognize-C18-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "48-recognize-C24-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "48-recognize-C24-relations"
+        },
+        "expect": {
+          "case_ref": "48-recognize-C24-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "49-recognize-C33-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "49-recognize-C33-relations"
+        },
+        "expect": {
+          "case_ref": "49-recognize-C33-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "50-recognize-C40-relations",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "50-recognize-C40-relations"
+        },
+        "expect": {
+          "case_ref": "50-recognize-C40-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "51-same-kind-alerts",
+        "verb": "relate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "51-same-kind-alerts"
+        },
+        "expect": {
+          "case_ref": "51-same-kind-alerts"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "52-cross-kind-staff",
+        "verb": "relate",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "52-cross-kind-staff"
+        },
+        "expect": {
+          "case_ref": "52-cross-kind-staff"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "53-recognize-either",
+        "verb": "recognize",
+        "kind": "behavior",
+        "input": {
+          "case_ref": "53-recognize-either"
+        },
+        "expect": {
+          "case_ref": "53-recognize-either"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-timeout-ends-a-slow-attempt",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "timeout-ends-a-slow-attempt"
+        },
+        "expect": {
+          "steps_ref": "timeout-ends-a-slow-attempt"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-max-retries-zero-sends-once",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "max-retries-zero-sends-once"
+        },
+        "expect": {
+          "steps_ref": "max-retries-zero-sends-once"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-profile-refuses-before-sending",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "profile-refuses-before-sending"
+        },
+        "expect": {
+          "steps_ref": "profile-refuses-before-sending"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-model-names-the-request",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "model-names-the-request"
+        },
+        "expect": {
+          "steps_ref": "model-names-the-request"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-record-sends-every-time",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "record-sends-every-time"
+        },
+        "expect": {
+          "steps_ref": "record-sends-every-time"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-replay-answers-from-the-folder-alone",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "replay-answers-from-the-folder-alone"
+        },
+        "expect": {
+          "steps_ref": "replay-answers-from-the-folder-alone"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-max-requests-refuses-past-the-limit",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "max-requests-refuses-past-the-limit"
+        },
+        "expect": {
+          "steps_ref": "max-requests-refuses-past-the-limit"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-cache-off-sends-again",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "cache-off-sends-again"
+        },
+        "expect": {
+          "steps_ref": "cache-off-sends-again"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "settings-request-bytes-splits-relations",
+        "verb": "decide",
+        "kind": "settings",
+        "input": {
+          "fixture": "conformance/settings.json",
+          "case_ref": "request-bytes-splits-relations"
+        },
+        "expect": {
+          "steps_ref": "request-bytes-splits-relations"
+        },
+        "preconditions": []
+      },
+      {
+        "id": "typed-decide",
+        "verb": "decide",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "01-decide-yes-captured"
+        },
+        "expect": {
+          "fields": {
+            "value": "boolean|null",
+            "answer.probability": "number"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-decide",
+        "verb": "decide",
+        "kind": "result2",
+        "input": {
+          "case_ref": "01-decide-yes-captured"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-decide",
+        "verb": "decide",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "01-decide-yes-captured"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-choose",
+        "verb": "choose",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "06-choose-billing"
+        },
+        "expect": {
+          "fields": {
+            "value": "string|null",
+            "answer.probabilities": "ordered-map<string,number>"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-choose",
+        "verb": "choose",
+        "kind": "result2",
+        "input": {
+          "case_ref": "06-choose-billing"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-choose",
+        "verb": "choose",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "06-choose-billing"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-tag",
+        "verb": "tag",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "09-tag-two"
+        },
+        "expect": {
+          "fields": {
+            "value": "array<string>",
+            "answer.probabilities": "ordered-map<string,number>"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-tag",
+        "verb": "tag",
+        "kind": "result2",
+        "input": {
+          "case_ref": "09-tag-two"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-tag",
+        "verb": "tag",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "09-tag-two"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-score",
+        "verb": "score",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "11-score-middle"
+        },
+        "expect": {
+          "fields": {
+            "value": "number",
+            "answer.probabilities": "ordered-map<string,number>"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-score",
+        "verb": "score",
+        "kind": "result2",
+        "input": {
+          "case_ref": "11-score-middle"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-score",
+        "verb": "score",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "11-score-middle"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-filter",
+        "verb": "filter",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "13-filter-records"
+        },
+        "expect": {
+          "fields": {
+            "value": "boolean",
+            "input": "caller-value",
+            "answer.probability": "number"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-filter",
+        "verb": "filter",
+        "kind": "result2",
+        "input": {
+          "case_ref": "13-filter-records"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-filter",
+        "verb": "filter",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "13-filter-records"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-rank",
+        "verb": "rank",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "15-rank-records"
+        },
+        "expect": {
+          "fields": {
+            "value": "positive-integer",
+            "input": "caller-value",
+            "answer.probability": "number"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [
+          "0436"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-rank",
+        "verb": "rank",
+        "kind": "result2",
+        "input": {
+          "case_ref": "15-rank-records"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-rank",
+        "verb": "rank",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "15-rank-records"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-find",
+        "verb": "find",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "18-find-second"
+        },
+        "expect": {
+          "fields": {
+            "value": "caller-value|null",
+            "answer.probabilities": "ordered-map<string,number>"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-find",
+        "verb": "find",
+        "kind": "result2",
+        "input": {
+          "case_ref": "18-find-second"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-find",
+        "verb": "find",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "18-find-second"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-annotate",
+        "verb": "annotate",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "17-annotate-mixed"
+        },
+        "expect": {
+          "fields": {
+            "input": "caller-value",
+            "value": "ordered-map<string,caller-value>",
+            "answers": "ordered-map<string,success|failure>"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-annotate",
+        "verb": "annotate",
+        "kind": "result2",
+        "input": {
+          "case_ref": "17-annotate-mixed"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-annotate",
+        "verb": "annotate",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "17-annotate-mixed"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-recognize",
+        "verb": "recognize",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "41-offsets-past-an-accent-and-an-emoji"
+        },
+        "expect": {
+          "fields": {
+            "value": "Recognized{entities:array<Entity>,relations:array<Edge>|null}",
+            "answer.pieces": "array<piece>",
+            "answer.names": "array<name>",
+            "answer.pairs": "array<pair>"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-recognize",
+        "verb": "recognize",
+        "kind": "result2",
+        "input": {
+          "case_ref": "41-offsets-past-an-accent-and-an-emoji"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-recognize",
+        "verb": "recognize",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "41-offsets-past-an-accent-and-an-emoji"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "typed-relate",
+        "verb": "relate",
+        "kind": "typed-result",
+        "input": {
+          "case_ref": "51-same-kind-alerts"
+        },
+        "expect": {
+          "fields": {
+            "value": "Related{edges:array<Edge>}",
+            "answer.questions": "array<relation-question>"
+          },
+          "landed_schema": "specification/result.schema.json",
+          "target_contract": "specification/result.md#result2-target-for-02"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "complete-relate",
+        "verb": "relate",
+        "kind": "result2",
+        "input": {
+          "case_ref": "51-same-kind-alerts"
+        },
+        "expect": {
+          "schema": "thinkthen.result/2",
+          "fields": {
+            "answer_id": "AnswerId",
+            "meta.origin": "Origin|null",
+            "meta.question_sources": "array<QuestionSource>",
+            "meta.observations": "array<ObservationId|FailureId>",
+            "facts.call_id": "CallId"
+          },
+          "optional_fields": {
+            "meta.answered_by": "ModelName"
+          }
+        },
+        "preconditions": [
+          "0443",
+          "0445",
+          "0450"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "files-relate",
+        "verb": "relate",
+        "kind": "located",
+        "input": {
+          "paths": [
+            "specification/fixtures/files/documents"
+          ],
+          "unit": "file",
+          "case_ref": "51-same-kind-alerts"
+        },
+        "expect": {
+          "locations": [
+            "01-policy.txt",
+            "02-contract.txt"
+          ],
+          "fields": {
+            "source.file": "string",
+            "source.first_line": "positive-integer",
+            "source.last_line": "positive-integer"
+          },
+          "evidence": "whole file bytes, not filenames"
+        },
+        "preconditions": [
+          "0426",
+          "0431",
+          "0410",
+          "0434"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "boundary-usage",
+        "verb": "decide",
+        "kind": "error",
+        "input": {
+          "case_ref": "20-usage-fault"
+        },
+        "expect": {
+          "kind": "usage",
+          "success": false,
+          "nonempty_diagnostic": true
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "boundary-backend",
+        "verb": "decide",
+        "kind": "error",
+        "input": {
+          "case_ref": "21-backend-fault"
+        },
+        "expect": {
+          "kind": "backend",
+          "success": false,
+          "nonempty_diagnostic": true
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "boundary-local",
+        "verb": "decide",
+        "kind": "error",
+        "input": {
+          "case_ref": "22-local-fault"
+        },
+        "expect": {
+          "kind": "local",
+          "success": false,
+          "nonempty_diagnostic": true
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "boundary-cancelled",
+        "verb": "decide",
+        "kind": "error",
+        "input": {
+          "case_ref": "23-cancelled-fault"
+        },
+        "expect": {
+          "kind": "cancelled",
+          "success": false,
+          "nonempty_diagnostic": true
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "boundary-deadline",
+        "verb": "decide",
+        "kind": "error",
+        "input": {
+          "case_ref": "24-deadline-fault"
+        },
+        "expect": {
+          "kind": "deadline",
+          "success": false,
+          "nonempty_diagnostic": true
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "boundary-defect",
+        "verb": "decide",
+        "kind": "error",
+        "input": {
+          "case_ref": "25-defect-fault"
+        },
+        "expect": {
+          "kind": "defect",
+          "success": false,
+          "nonempty_diagnostic": true
+        },
+        "preconditions": [
+          "0426"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "images-decide",
+        "verb": "decide",
+        "kind": "images",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "images": [
+            "specification/fixtures/images/red.png",
+            "specification/fixtures/images/blue.png",
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "ordered_images": [
+            "red",
+            "blue",
+            "red"
+          ],
+          "retains_duplicates": true,
+          "replay_requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448",
+          "0444"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-file-decide",
+        "verb": "decide",
+        "kind": "image-location",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "paths": [
+            "specification/fixtures/images/red.png"
+          ],
+          "unit": "file"
+        },
+        "expect": {
+          "items": 1,
+          "absent": [
+            "source.first_line",
+            "source.last_line"
+          ]
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "images-choose",
+        "verb": "choose",
+        "kind": "images",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "images": [
+            "specification/fixtures/images/red.png",
+            "specification/fixtures/images/blue.png",
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "ordered_images": [
+            "red",
+            "blue",
+            "red"
+          ],
+          "retains_duplicates": true,
+          "replay_requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448",
+          "0444"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-file-choose",
+        "verb": "choose",
+        "kind": "image-location",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "paths": [
+            "specification/fixtures/images/red.png"
+          ],
+          "unit": "file"
+        },
+        "expect": {
+          "items": 1,
+          "absent": [
+            "source.first_line",
+            "source.last_line"
+          ]
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "images-score",
+        "verb": "score",
+        "kind": "images",
+        "input": {
+          "case_ref": "11-score-middle",
+          "images": [
+            "specification/fixtures/images/red.png",
+            "specification/fixtures/images/blue.png",
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "ordered_images": [
+            "red",
+            "blue",
+            "red"
+          ],
+          "retains_duplicates": true,
+          "replay_requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448",
+          "0444"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-file-score",
+        "verb": "score",
+        "kind": "image-location",
+        "input": {
+          "case_ref": "11-score-middle",
+          "paths": [
+            "specification/fixtures/images/red.png"
+          ],
+          "unit": "file"
+        },
+        "expect": {
+          "items": 1,
+          "absent": [
+            "source.first_line",
+            "source.last_line"
+          ]
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-refusal-tag",
+        "verb": "tag",
+        "kind": "refusal",
+        "input": {
+          "case_ref": "09-tag-two",
+          "images": [
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "ruling": "text-only under team-0-2-2026-10-04; execute refusal, never skip"
+      },
+      {
+        "id": "image-refusal-filter",
+        "verb": "filter",
+        "kind": "refusal",
+        "input": {
+          "case_ref": "13-filter-records",
+          "images": [
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "ruling": "text-only under team-0-2-2026-10-04; execute refusal, never skip"
+      },
+      {
+        "id": "image-refusal-rank",
+        "verb": "rank",
+        "kind": "refusal",
+        "input": {
+          "case_ref": "15-rank-records",
+          "images": [
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "ruling": "text-only under team-0-2-2026-10-04; execute refusal, never skip"
+      },
+      {
+        "id": "image-refusal-find",
+        "verb": "find",
+        "kind": "refusal",
+        "input": {
+          "case_ref": "18-find-second",
+          "images": [
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "ruling": "text-only under team-0-2-2026-10-04; execute refusal, never skip"
+      },
+      {
+        "id": "image-refusal-annotate",
+        "verb": "annotate",
+        "kind": "refusal",
+        "input": {
+          "case_ref": "17-annotate-mixed",
+          "images": [
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "ruling": "text-only under team-0-2-2026-10-04; execute refusal, never skip"
+      },
+      {
+        "id": "image-refusal-recognize",
+        "verb": "recognize",
+        "kind": "refusal",
+        "input": {
+          "case_ref": "41-offsets-past-an-accent-and-an-emoji",
+          "images": [
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "ruling": "text-only under team-0-2-2026-10-04; execute refusal, never skip"
+      },
+      {
+        "id": "image-refusal-relate",
+        "verb": "relate",
+        "kind": "refusal",
+        "input": {
+          "case_ref": "51-same-kind-alerts",
+          "images": [
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "ruling": "text-only under team-0-2-2026-10-04; execute refusal, never skip"
+      },
+      {
+        "id": "image-dropping-route",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "route": "OpenRouter tested Clef/Clef-flash",
+          "images": [
+            "specification/fixtures/images/red.png"
+          ]
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0448"
+        ]
+      },
+      {
+        "id": "image-line-refusal",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "paths": [
+            "specification/fixtures/images/red.png"
+          ],
+          "unit": "line"
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447"
+        ]
+      },
+      {
+        "id": "image-window-refusal",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "paths": [
+            "specification/fixtures/images/red.png"
+          ],
+          "unit": "window",
+          "window": 2
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "preconditions": [
+          "0447"
+        ]
+      },
+      {
+        "id": "proxy-reservation-refusal",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "proxy": {}
+        },
+        "expect": {
+          "kind": "usage",
+          "requests": 0,
+          "store_accesses": 0
+        },
+        "preconditions": [
+          "0450"
+        ]
+      },
+      {
+        "id": "zero-observation-relate",
+        "verb": "relate",
+        "kind": "boundary",
+        "input": {
+          "entities": [
+            {
+              "name": "one",
+              "kind": "item"
+            }
+          ],
+          "relation": {
+            "source": "item",
+            "target": "*"
+          }
+        },
+        "expect": {
+          "meta.origin": null,
+          "meta.cached": false,
+          "meta.requests": [],
+          "meta.question_sources": [],
+          "meta.observations": [],
+          "absent": [
+            "meta.answered_by"
+          ],
+          "requests": 0
+        },
+        "preconditions": [
+          "0443",
+          "0450"
+        ]
+      },
+      {
+        "id": "storage-observation-identity",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "steps": [
+            "record",
+            "cache",
+            "replay",
+            "refresh",
+            "reread-original"
+          ]
+        },
+        "expect": {
+          "same_observation": [
+            "record",
+            "cache",
+            "replay"
+          ],
+          "new_observation": [
+            "refresh"
+          ],
+          "same_answer": [
+            "record",
+            "cache",
+            "replay",
+            "reread-original"
+          ],
+          "fresh_call_id": true,
+          "replay_requests": 0
+        },
+        "preconditions": [
+          "0444",
+          "0450"
+        ]
+      },
+      {
+        "id": "storage-no-store-record-refusal",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "cache_control": "no-store",
+          "record": true
+        },
+        "expect": {
+          "kind": "local",
+          "requests": 1,
+          "stored_answers": 0
+        },
+        "preconditions": [
+          "0443",
+          "0444"
+        ]
+      },
+      {
+        "id": "storage-damaged-replay",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "replay": "damaged versioned store"
+        },
+        "expect": {
+          "kind": "local",
+          "requests": 0
+        },
+        "preconditions": [
+          "0444"
+        ]
+      },
+      {
+        "id": "storage-ambiguous-replay",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "requested_model": "literal",
+          "reported_models": [
+            "A",
+            "B"
+          ],
+          "replay": true
+        },
+        "expect": {
+          "kind": "local",
+          "requests": 0
+        },
+        "preconditions": [
+          "0444"
+        ]
+      },
+      {
+        "id": "cancellation-held-call",
+        "verb": "decide",
+        "kind": "boundary",
+        "input": {
+          "arm": "held",
+          "cancel_after_requests": 1
+        },
+        "expect": {
+          "kind": "cancelled",
+          "no_success_value": true,
+          "workers_joined": true
+        },
+        "preconditions": []
+      },
+      {
+        "id": "annotate-packed-groups",
+        "verb": "annotate",
+        "kind": "packing",
+        "input": {
+          "case_ref": "18-annotate-two-groups",
+          "request": {
+            "state": "Each question quotes the text it asks about.",
+            "model": "jev-1.13.0",
+            "questions": {
+              "q1": {
+                "type": "noul",
+                "instructions": "The text is \"Short note.\". Is this concise?"
+              },
+              "q2": {
+                "type": "noul",
+                "instructions": "The text is \"Please refund me.\". Does this ask for a refund?"
+              }
+            }
+          }
+        },
+        "expect": {
+          "requests": 1,
+          "values": {
+            "summary": true,
+            "body": true
+          },
+          "probabilities": {
+            "summary": 0.9,
+            "body": 0.8
+          }
+        },
+        "preconditions": [],
+        "contract": "ADR 0111 section 5",
+        "historical_fixture": {
+          "packing": "one request contains both groups in member order (ADR 0111 section 5)",
+          "required_case": "annotate-packed-groups",
+          "saved_exchanges": "historical grammar oracle, not current transport count"
+        }
+      },
+      {
+        "id": "type-01-decide-yes-captured",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "01-decide-yes-captured"
+        },
+        "expect": {
+          "fixture_ref": "01-decide-yes-captured",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-02-decide-no",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "02-decide-no"
+        },
+        "expect": {
+          "fixture_ref": "02-decide-no",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-03-decide-band-unsure",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "03-decide-band-unsure"
+        },
+        "expect": {
+          "fixture_ref": "03-decide-band-unsure",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-described-choice",
+        "verb": "choose",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "described-choice"
+        },
+        "expect": {
+          "fixture_ref": "described-choice",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-09-tag-two",
+        "verb": "tag",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "09-tag-two"
+        },
+        "expect": {
+          "fixture_ref": "09-tag-two",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-10-tag-none",
+        "verb": "tag",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "10-tag-none"
+        },
+        "expect": {
+          "fixture_ref": "10-tag-none",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-11-score-middle",
+        "verb": "score",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "11-score-middle"
+        },
+        "expect": {
+          "fixture_ref": "11-score-middle",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-13-filter-records",
+        "verb": "filter",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "13-filter-records"
+        },
+        "expect": {
+          "fixture_ref": "13-filter-records",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-15-rank-records",
+        "verb": "rank",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "15-rank-records"
+        },
+        "expect": {
+          "fixture_ref": "15-rank-records",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-rank-without-probability",
+        "verb": "rank",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "rank-without-probability"
+        },
+        "expect": {
+          "fixture_ref": "rank-without-probability",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-18-find-second",
+        "verb": "find",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "18-find-second"
+        },
+        "expect": {
+          "fixture_ref": "18-find-second",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-find-without-probability",
+        "verb": "find",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "find-without-probability"
+        },
+        "expect": {
+          "fixture_ref": "find-without-probability",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-19-find-none",
+        "verb": "find",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "19-find-none"
+        },
+        "expect": {
+          "fixture_ref": "19-find-none",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-17-annotate-partial",
+        "verb": "annotate",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "17-annotate-partial"
+        },
+        "expect": {
+          "fixture_ref": "17-annotate-partial",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-41-offsets-past-an-accent-and-an-emoji",
+        "verb": "recognize",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "41-offsets-past-an-accent-and-an-emoji"
+        },
+        "expect": {
+          "fixture_ref": "41-offsets-past-an-accent-and-an-emoji",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-51-same-kind-alerts",
+        "verb": "relate",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "51-same-kind-alerts"
+        },
+        "expect": {
+          "fixture_ref": "51-same-kind-alerts",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-02-decide-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "02-decide-details"
+        },
+        "expect": {
+          "fixture_ref": "02-decide-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-usage",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "usage"
+        },
+        "expect": {
+          "fixture_ref": "usage",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-two-verbs",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "two-verbs"
+        },
+        "expect": {
+          "fixture_ref": "two-verbs",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-details-number",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "details-number"
+        },
+        "expect": {
+          "fixture_ref": "details-number",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-rank-question-number",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "rank-question-number"
+        },
+        "expect": {
+          "fixture_ref": "rank-question-number",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-rank-none-envelope",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "rank-none-envelope"
+        },
+        "expect": {
+          "fixture_ref": "rank-none-envelope",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-relate-string-record",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "relate-string-record"
+        },
+        "expect": {
+          "fixture_ref": "relate-string-record",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-filter-object-record",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "filter-object-record"
+        },
+        "expect": {
+          "fixture_ref": "filter-object-record",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-score-label-is-not-value",
+        "verb": "score",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "score-label-is-not-value"
+        },
+        "expect": {
+          "fixture_ref": "score-label-is-not-value",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-failure-null-is-not-marker",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "failure-null-is-not-marker"
+        },
+        "expect": {
+          "fixture_ref": "failure-null-is-not-marker",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-relate-array-is-not-door-value",
+        "verb": "relate",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "relate-array-is-not-door-value"
+        },
+        "expect": {
+          "fixture_ref": "relate-array-is-not-door-value",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-recognize-missing-end",
+        "verb": "recognize",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "recognize-missing-end"
+        },
+        "expect": {
+          "fixture_ref": "recognize-missing-end",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-record-row-null",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "record-row-null"
+        },
+        "expect": {
+          "fixture_ref": "record-row-null",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-detailed-kind-mismatch",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "detailed-kind-mismatch"
+        },
+        "expect": {
+          "fixture_ref": "detailed-kind-mismatch",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-find-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "find-details"
+        },
+        "expect": {
+          "fixture_ref": "find-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-details"
+        },
+        "expect": {
+          "fixture_ref": "annotate-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-details-empty-success",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-details-empty-success"
+        },
+        "expect": {
+          "fixture_ref": "annotate-details-empty-success",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-success-missing-answer",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-success-missing-answer"
+        },
+        "expect": {
+          "fixture_ref": "annotate-success-missing-answer",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-failed-entry",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-failed-entry"
+        },
+        "expect": {
+          "fixture_ref": "annotate-failed-entry",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-failed-entry-with-value",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-failed-entry-with-value"
+        },
+        "expect": {
+          "fixture_ref": "annotate-failed-entry-with-value",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-annotate-find-not-a-member",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "annotate-find-not-a-member"
+        },
+        "expect": {
+          "fixture_ref": "annotate-find-not-a-member",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-recognize-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "recognize-details"
+        },
+        "expect": {
+          "fixture_ref": "recognize-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-relate-details",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "relate-details"
+        },
+        "expect": {
+          "fixture_ref": "relate-details",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-call-success",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-call-success"
+        },
+        "expect": {
+          "fixture_ref": "c-call-success",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-call-success-missing-facts",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-call-success-missing-facts"
+        },
+        "expect": {
+          "fixture_ref": "c-call-success-missing-facts",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-detailed-record",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-detailed-record"
+        },
+        "expect": {
+          "fixture_ref": "c-detailed-record",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-detailed-record-missing-input",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-detailed-record-missing-input"
+        },
+        "expect": {
+          "fixture_ref": "c-detailed-record-missing-input",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-record-call-options",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-record-call-options"
+        },
+        "expect": {
+          "fixture_ref": "c-record-call-options",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-call-unknown-option",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-call-unknown-option"
+        },
+        "expect": {
+          "fixture_ref": "c-call-unknown-option",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-call-on-scalar",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-call-on-scalar"
+        },
+        "expect": {
+          "fixture_ref": "c-call-on-scalar",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-empty-call-on-scalar",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-empty-call-on-scalar"
+        },
+        "expect": {
+          "fixture_ref": "c-empty-call-on-scalar",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-empty-call-on-find",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-empty-call-on-find"
+        },
+        "expect": {
+          "fixture_ref": "c-empty-call-on-find",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-empty-call-on-recognize",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-empty-call-on-recognize"
+        },
+        "expect": {
+          "fixture_ref": "c-empty-call-on-recognize",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-empty-call-on-relate",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-empty-call-on-relate"
+        },
+        "expect": {
+          "fixture_ref": "c-empty-call-on-relate",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-c-annotate-context-refused",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "c-annotate-context-refused"
+        },
+        "expect": {
+          "fixture_ref": "c-annotate-context-refused",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-call-error",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "call-error"
+        },
+        "expect": {
+          "fixture_ref": "call-error",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-record-missing-pointer",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "record-missing-pointer"
+        },
+        "expect": {
+          "fixture_ref": "record-missing-pointer",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-record-error-cannot-be-an-answer",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "record-error-cannot-be-an-answer"
+        },
+        "expect": {
+          "fixture_ref": "record-error-cannot-be-an-answer",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-plan-p1",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "plan-p1"
+        },
+        "expect": {
+          "fixture_ref": "plan-p1",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-plan-tokens-are-a-band",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "plan-tokens-are-a-band"
+        },
+        "expect": {
+          "fixture_ref": "plan-tokens-are-a-band",
+          "schema": "specification/result.schema.json",
+          "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "image-admission-format-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "format"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-dimension-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "dimension"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-count-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "count"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-body-excess-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "body-excess"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-malformed-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "malformed"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-truncated-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "truncated"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-packing-overflow-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "packing-overflow"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-valid-above-spike-cap-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "valid-above-spike-cap"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-format-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "format"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-dimension-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "dimension"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-count-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "count"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-body-excess-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "body-excess"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-malformed-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "malformed"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-truncated-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "truncated"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-packing-overflow-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "packing-overflow"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-valid-above-spike-cap-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "valid-above-spike-cap"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-format-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "format"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-dimension-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "dimension"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-count-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "count"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-body-excess-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "body-excess"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-malformed-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "malformed"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-truncated-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "truncated"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-packing-overflow-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "packing-overflow"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-valid-above-spike-cap-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "valid-above-spike-cap"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      }
+    ],
+    "image_profiles": {
+      "liquid-d1": {
+        "adapter": "systemone",
+        "endpoint_path": "/decisions/v1/systemone",
+        "model": "d1",
+        "wire": "ordered top-level data URL images",
+        "max_images": 8,
+        "final_body_bytes": {
+          "upper": 4500000,
+          "inclusive": false
+        },
+        "patches": {
+          "size": 32,
+          "rounding": "ceil each dimension",
+          "total_max": 10000
+        },
+        "aspect_ratio_max": 100,
+        "refused_models": [
+          "d1:free"
+        ]
+      },
+      "perplexity-decider": {
+        "adapter": "decisions",
+        "endpoint_path": "/v1/decisions",
+        "model": "pplx-decider-v1-27b",
+        "wire": "state array of optional original state followed by ordered image_url items; no top-level images",
+        "final_body_bytes": {
+          "upper": 33554432,
+          "inclusive": true
+        },
+        "tiles": {
+          "size": 32,
+          "rounding": "nearest multiple of 32; ambiguous tie/zero boundaries require conservative ruling",
+          "per_image_max": 2048
+        },
+        "vendor_max_images": null,
+        "count_policy": "no documented vendor maximum; any SDK count bound must be stated separately",
+        "token_limit": {
+          "upper": 262144,
+          "inclusive": false,
+          "unit": "tokens, never inferred from bytes"
+        }
+      },
+      "llama-clef": {
+        "adapter": "systemone",
+        "endpoint_path": "/v1/systemone",
+        "wire": "ordered top-level data URL images",
+        "supported_revision": "d81235049384534c167caea52b85a694f6103d14",
+        "unsupported_revision": "a7b94df2c616bc1f62a73b964b4a71cb0dcc488e",
+        "max_images": 8,
+        "vendor_body_limit": null,
+        "runtime_prerequisites": [
+          "reviewed vision-capable model revision",
+          "matching projector",
+          "explicit configured context/batch/ubatch",
+          "proved model-specific vision-token upper bound"
+        ],
+        "unresolved_budget": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "local_model_name_is_not_capability": true
+      }
+    },
+    "image_admission_contract": {
+      "required_formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "unsupported_formats": [
+        "image/webp",
+        "image/gif"
+      ],
+      "unsupported_format_ruling": "SDK validation ruling, not a vendor capability claim",
+      "debug_and_errors_withhold": [
+        "bytes",
+        "data URLs",
+        "captions",
+        "keys"
+      ]
+    },
+    "image_admission_scenarios": {
+      "format": [
+        {
+          "id": "png-valid",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "media": "image/png",
+            "decode": "valid"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "jpeg-valid",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "valid fully decoded JPEG",
+            "media": "image/jpeg",
+            "dimensions": [
+              1,
+              1
+            ]
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "webp-unsupported",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "valid container in the unsupported format",
+            "media": "image/webp"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "gif-unsupported",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "valid container in the unsupported format",
+            "media": "image/gif"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "media-container-mismatch",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "declared_media": "image/jpeg"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "dimension": [
+        {
+          "id": "liquid-patches-at-limit",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              3200,
+              3200
+            ],
+            "decode": "valid",
+            "patches": 10000
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "liquid-patches-excess",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              3232,
+              3200
+            ],
+            "decode": "valid",
+            "patches": 10100
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "liquid-aspect-at-limit",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              3200,
+              32
+            ],
+            "decode": "valid",
+            "aspect_ratio": 100
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "liquid-aspect-excess",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              3232,
+              32
+            ],
+            "decode": "valid",
+            "aspect_ratio": 101
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "perplexity-1440-square",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              1440,
+              1440
+            ],
+            "decode": "valid",
+            "tiles": 2025
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "perplexity-2048-by-1024",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              2048,
+              1024
+            ],
+            "decode": "valid",
+            "tiles": 2048
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "perplexity-1600-by-1310-excess",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              1600,
+              1310
+            ],
+            "decode": "valid",
+            "tiles": 2050
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "count": [
+        {
+          "id": "liquid-d1-count-8",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "repeat": 8,
+            "preserve_duplicates": true,
+            "other_limits": "within bounds",
+            "runtime_prerequisites": null
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "liquid-d1-count-9",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "repeat": 9,
+            "preserve_duplicates": true,
+            "other_limits": "within bounds",
+            "runtime_prerequisites": null
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "llama-clef-count-8",
+          "profile_ref": "llama-clef",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "repeat": 8,
+            "preserve_duplicates": true,
+            "other_limits": "within bounds",
+            "runtime_prerequisites": "satisfied by owner proof"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "llama-clef-count-9",
+          "profile_ref": "llama-clef",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "repeat": 9,
+            "preserve_duplicates": true,
+            "other_limits": "within bounds",
+            "runtime_prerequisites": "satisfied by owner proof"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "body-excess": [
+        {
+          "id": "liquid-d1-body-4499999",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_serialized_body_bytes": 4499999,
+            "image_count_dimensions_aspect": "within bounds",
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "liquid-d1-body-4500000",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_serialized_body_bytes": 4500000,
+            "image_count_dimensions_aspect": "within bounds",
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "perplexity-decider-body-33554432",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_serialized_body_bytes": 33554432,
+            "image_count_dimensions_aspect": "within bounds",
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "perplexity-decider-body-33554433",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_serialized_body_bytes": 33554433,
+            "image_count_dimensions_aspect": "within bounds",
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "malformed": [
+        {
+          "id": "png-malformed-idat",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "mutation": "invalid compressed pixel data with independently correct container CRC; header alone stays valid"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "jpeg-malformed-scan",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "JPEG with valid dimensions/container header and invalid scan data"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "truncated": [
+        {
+          "id": "png-truncated",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "mutation": "truncate compressed IDAT stream before completion"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "jpeg-truncated",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "JPEG truncated within scan data"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "packing-overflow": [
+        {
+          "id": "liquid-d1-packed-body-overflow",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_packed_body_bytes": 4500000,
+            "account_for": [
+              "base64 expansion",
+              "repeated images",
+              "JSON escaping",
+              "delimiters"
+            ],
+            "indivisible_attachments": "cannot fit a single complete question even after splitting",
+            "no_drop_or_text_retry": true,
+            "individual_images": "fit the exact route limit separately",
+            "all_other_limits": "within exact profile bounds"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "perplexity-decider-packed-body-overflow",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_packed_body_bytes": 33554433,
+            "account_for": [
+              "base64 expansion",
+              "repeated images",
+              "JSON escaping",
+              "delimiters"
+            ],
+            "indivisible_attachments": "cannot fit a single complete question even after splitting",
+            "no_drop_or_text_retry": true,
+            "individual_images": "fit the exact route limit separately",
+            "all_other_limits": "within exact profile bounds"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "liquid-d1-complete-question-split",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "mode": "many inputs",
+            "input_count": 2,
+            "distinct_image_states": true,
+            "each_complete_question_bytes": "within route limit",
+            "unsplit_final_body_bytes_min": 4500001,
+            "each_question_retains": "all ordered images, duplicates and context",
+            "all_other_limits": "within exact profile bounds"
+          },
+          "expect": {
+            "requests": 2,
+            "all_sent_bodies_within_route_limit": true,
+            "all_ordered_attachments_in_each_split_child": true,
+            "no_drop_or_text_retry": true
+          }
+        },
+        {
+          "id": "perplexity-decider-complete-question-split",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "mode": "many inputs",
+            "input_count": 2,
+            "distinct_image_states": true,
+            "each_complete_question_bytes": "within route limit",
+            "unsplit_final_body_bytes_min": 33554433,
+            "each_question_retains": "all ordered images, duplicates and context",
+            "all_other_limits": "within exact profile bounds"
+          },
+          "expect": {
+            "requests": 2,
+            "all_sent_bodies_within_route_limit": true,
+            "all_ordered_attachments_in_each_split_child": true,
+            "no_drop_or_text_retry": true
+          }
+        }
+      ],
+      "valid-above-spike-cap": [
+        {
+          "id": "liquid-valid-above-both-spike-caps",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "original valid PNG above the historical spike cap; not padding a malformed container",
+            "media": "image/png",
+            "dimensions": [
+              256,
+              256
+            ],
+            "compressed_bytes_min": 32769,
+            "final_body_bytes_min": 65537,
+            "final_body_bytes_max": 4499999,
+            "patches": 64,
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        }
+      ]
+    }
+  }
 }
