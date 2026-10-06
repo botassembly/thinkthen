@@ -17,6 +17,7 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 | [files.md](files.md) | Explicit file/folder readers, located carriers and spans across all ten functions | Settled for 0.2 |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
+| [sdk-boundary.md](sdk-boundary.md) | One configured route per engine, retained caller controls and proxy business policy | Settled |
 | [recording.md](recording.md) | `--record` and `--replay`: offline answers, usage/privacy and bounded optional timing history | Settled; timing adoption pending |
 | [cache.md](cache.md) | Versioned question keys, offline validation/migration, model freshness and bounded Cache-Control storage policy | Settled for 0.2; adoption pending |
 | [decide.md](decide.md) | `decide` | Settled |

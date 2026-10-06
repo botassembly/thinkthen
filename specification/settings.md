@@ -4,6 +4,8 @@ Every setting, in one place. Ian ruled on 2026-09-26 that every setting is expla
 
 ## What counts as a setting
 
+Every setting follows [the SDK boundary](sdk-boundary.md): one endpoint, effective key and provider API type per built engine. Explicit direct model names retain their precedence as opaque provider parameters. Caller reading rules and resource controls remain explicit; the SDK installs no routing or business policy. The boundary table also rules on planned proxy controls.
+
 A setting is a value a caller chooses that changes how the tool reads, asks, answers, stores, or reports. Every flag in the command's help is one. The question text, the records, and help itself are not.
 
 ## Precedence

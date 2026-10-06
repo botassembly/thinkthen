@@ -158,6 +158,12 @@ fn repeated_names_and_two_rules_keep_one_pair_each_and_show_a_dropped_edge() {
     ));
     let requests = listener.requests();
     assert_eq!(requests.len(), 3, "one request per recognition stage");
+    for request in &requests {
+        assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
+        assert_eq!(request.header("authorization"), Some("Bearer secret-value"));
+        let body: Value = serde_json::from_slice(&request.body).expect("wire body");
+        assert_eq!(body["model"], "local-1");
+    }
     let body: Value = serde_json::from_slice(&requests[2].body).expect("relation request");
     assert_eq!(
         body,

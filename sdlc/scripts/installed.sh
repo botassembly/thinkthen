@@ -54,10 +54,20 @@ backend_count() {
 # with include/thinkthen.h, lib/libthinkthen.so and its soname link, and lib/pkgconfig/thinkthen.pc.
 # The replay smokes of the C door hosts load it from there (ticket 0335).
 native_install() {
-	cargo build --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib
+	cargo build --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib || return
+	# Query from the same directory as the build, so Cargo resolves relative environment
+	# paths and caller configuration itself, even when REPO is elsewhere.
+	native_metadata=$(cargo metadata --quiet --locked --offline --no-deps --format-version 1 \
+		--manifest-path "$1/libraries/c/Cargo.toml") || return
+	native_target=$(printf '%s\n' "$native_metadata" | jq -er '.target_directory') || return
+	native_artifact=$native_target/debug/libthinkthen_c.so
+	[ -f "$native_artifact" ] || {
+		printf 'native_install: missing native artifact: %s\n' "$native_artifact" >&2
+		return 1
+	}
 	mkdir -p "$2/include" "$2/lib/pkgconfig"
 	cp -- "$1/libraries/c/include/thinkthen.h" "$2/include/thinkthen.h"
-	cp -- "$1/libraries/c/target/debug/libthinkthen_c.so" "$2/lib/libthinkthen.so"
+	cp -- "$native_artifact" "$2/lib/libthinkthen.so"
 	ln -sfn libthinkthen.so "$2/lib/libthinkthen.so.0"
 	printf '%s\n' "prefix=$2" 'libdir=${prefix}/lib' 'includedir=${prefix}/include' 'Name: thinkthen' \
 		'Description: ThinkThen C door' 'Version: 0.0.1' 'Libs: -L${libdir} -lthinkthen' 'Cflags: -I${includedir}' \
