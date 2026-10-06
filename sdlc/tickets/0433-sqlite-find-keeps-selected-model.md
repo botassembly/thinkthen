@@ -1,6 +1,6 @@
 # 0433: Keep SQLite find’s selected model
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. The selected-model fix passes focused SQLite checks and awaits fresh review.
 
 Milestone: 0.2
 
