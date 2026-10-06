@@ -578,6 +578,72 @@ bare_text_is_never_a_path() {
 check bare_text_is_never_a_path
 
 echo "== named files"
+explicit_question_loader_keeps_authored_json_and_privilege_gate() {
+	fresh generic
+	mkdir -p "$RUN/question-loader"
+	printf ' {"decide":"Is red visible?"}\n' >"$RUN/question-loader/question.json"
+	printf '{"version":1,"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}\n' >"$RUN/question-loader/set.json"
+	printf '{"decide":"one","decide":"two"}\n' >"$RUN/question-loader/duplicate.json"
+	printf '{"version":1,"questions":{"first":{"decide":"First?"},"first":{"decide":"Second?"}}}\n' >"$RUN/question-loader/duplicate-set.json"
+	printf '{"decide":"private-loader-evidence"' >"$RUN/question-loader/broken.json"
+	printf '{"decide":"literal at filename?"}' >"$RUN/question-loader/@literal"
+	q -c 'CREATE ROLE tt_loader LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_question_file(text) TO tt_loader' >/dev/null
+	same "$(q -c "SELECT has_function_privilege('public','thinkthen_question_file(text)','EXECUTE')")" f
+	same "$(q -c 'SELECT thinkthen_question_file(NULL) IS NULL')" t
+	has "$(q -c "SELECT thinkthen_question_file('')")" 'thinkthen usage: question file path must be nonempty text without NUL (retryable: no)'
+	same "$(q -c "SELECT thinkthen_question_file('$RUN/question-loader/question.json') = pg_read_file('$RUN/question-loader/question.json')")" t
+	same "$(q -c "SELECT thinkthen_question_file('$RUN/question-loader/set.json') = pg_read_file('$RUN/question-loader/set.json')")" t
+	has "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('$RUN/question-loader/question.json')")" 'a named file needs pg_read_server_files'
+	fresh generic "thinkthen.file_directory = '$RUN/question-loader'"
+	same "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('question.json') = ' {\"decide\":\"Is red visible?\"}' || chr(10)")" t
+	same "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('@literal')")" '{"decide":"literal at filename?"}'
+	ln -s question.json "$RUN/question-loader/symlink.json"
+	ln "$RUN/question-loader/set.json" "$RUN/question-loader/hardlink.json"
+	mkfifo "$RUN/question-loader/fifo"
+	for name in symlink.json hardlink.json fifo . ../postgresql.conf.base; do
+		has "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('$name')")" 'thinkthen local:'
+	done
+	for name in duplicate.json duplicate-set.json broken.json; do
+		has "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('$name')")" 'the question file does not parse as a question or question set'
+	done
+	python3 -c 'import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b" " * 1048577)' "$RUN/question-loader/big.json"
+	has "$(PGUSER_AS=tt_loader q -c "SELECT thinkthen_question_file('big.json')")" 'over the 1048576 byte cap'
+	same "$(bcount)" 0
+}
+check explicit_question_loader_keeps_authored_json_and_privilege_gate
+
+stored_image_composites_use_native_order_and_strict_replay() {
+	export LIQUIDAI_API_KEY=sk-sql-image-loopback THINKTHEN_BACKEND=liquid
+	fresh generic
+	proxy_start images python3 ../sqlite/tests/image_backend.py "$RUN/images.bodies"
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/image_cases.py invalid "$SOCK"
+	# Recording is a server setting; the first public consumer stores originals
+	# in a persisted SQL table and reads its array in ordinal order.
+	q -c "ALTER SYSTEM SET thinkthen.record = '$RUN/image-record'" >/dev/null
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/image_cases.py verify "$SOCK"
+	q -c "ALTER SYSTEM RESET thinkthen.record" -c "ALTER SYSTEM SET thinkthen.replay = '$RUN/image-record'" -c 'ALTER SYSTEM SET thinkthen.max_requests_total = 0' >/dev/null
+	pg_stop
+	pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
+	python3 tests/image_cases.py replay "$SOCK"
+	proxy_stop
+	same "$PROXYCOUNT" 3
+	python3 tests/image_cases.py bodies "$RUN/images.bodies"
+	q -c 'ALTER SYSTEM RESET thinkthen.replay' -c 'ALTER SYSTEM RESET thinkthen.max_requests_total' >/dev/null
+}
+check stored_image_composites_use_native_order_and_strict_replay
+client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends() {
+	fresh generic
+	cargo build --locked --offline --example client_files
+	"${CARGO_TARGET_DIR:-target}/debug/examples/client_files" "$SOCK" "$RUN/client-source.txt"
+	# Two rank records, one find, two native recognition stages per source,
+	# and one relation request; readers and span mapping add no sends.
+	same "$(bcount)" 8
+}
+check client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends
 DID_NOT_READ="did not read: it must be a regular file at most 1048576 bytes"
 dev_zero_refuses_fast() {
 	fresh generic

@@ -121,3 +121,15 @@ FROM thinkthen_read_files('specification/fixtures/files/documents', '{"unit":"fi
 ```
 
 Files use the caller's native filesystem permissions. The reader remains DIRECTONLY even under `sqlite3_thinkthen_trusted_init`: stored main/attached views and triggers cannot read files. Caller-created TEMP objects retain SQLite's availability under either trusted_schema setting. A reader's source coordinates stay outside judging payloads and cache keys. `thinkthen_span_lines(record, first_line, start, end)` returns JSON with physical `first_line` and `last_line` from the shared native Unicode scalar mapper; retain the local recognize offsets alongside it. Relate joins both returned endpoint ids to their actual reader rows and admits at most 255 source rows before deduplication. PostgreSQL server paths remain deferred.
+
+## Explicit images (0.2 development)
+
+`thinkthen_image(bytes BLOB, mime TEXT)` returns a versioned tagged BLOB. `thinkthen_images(image, ...)` packs 1–8 values in authored order into another persistent tagged BLOB. Tags survive storage; every judgment revalidates them. MIME is exactly `image/png` or `image/jpeg`; the native reader/decoder validates original compressed pixels. Each question takes 1–8 images and at most 24 MiB of compressed bytes. Order and duplicates are preserved. Source file names stay outside model evidence and cache identity.
+
+`thinkthen_decide_images(question, images, text, settings)`, `thinkthen_choose_images`, `thinkthen_score_images` and `thinkthen_details_images` use the existing native image engine. The first three return their ordinary scalar value; the last returns native detailed JSON. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional.
+
+NULL constructor operands return NULL. NULL question or collection returns NULL without sending; NULL ancillary text means absent text and NULL settings means defaults. A NULL member inside a collection, empty collection, invalid media/pixels/tag or exceeded limit is Usage before sending. Unsure decide/choose is NULL; failures remain errors. Arbitrary BLOB/bytea, text, paths, URLs and generic JSON never become images implicitly. Other functions retain their text input contract.
+
+SQLite accepts image judgments with 2, 3 or 4 arguments; omitted trailing arguments mean NULL. `thinkthen_image_file(path)` explicitly selects one local regular image through the native reader. `thinkthen_image_file_name(image)` returns its retained source name, or NULL for a byte constructor. No text line positions are invented.
+
+Complete result/2 identities, invocation facts, started-failure facts and caller prices still await 0435 adoption of the shared native APIs (0442/0445/0450 and 0300). SQL rank sets remain owned by 0417. These image calls expose landed native details; this is not a full SDK parity claim.

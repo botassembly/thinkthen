@@ -93,6 +93,7 @@ verify_selected_package() {
 	done
 }
 older_suites() {
+	sh "$LIMIT" 900 "$PY" tools/images_suite.py
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
 	sh "$LIMIT" 900 "$PY" tools/files_suite.py
 	sh "$LIMIT" 900 "$PY" tools/rank_suite.py
@@ -164,6 +165,7 @@ if [ "$profile" = stress ]; then
 fi
 
 echo "== suites"
+sh "$LIMIT" 900 "$PY" tools/images_suite.py
 sh "$LIMIT" 900 "$PY" tools/backend_setups.py
 sh "$LIMIT" 900 "$PY" tools/named_backends.py
 for suite in files_suite verbs_suite rank_suite settings_suite signal_suite relate_suite databases_suite conformance; do

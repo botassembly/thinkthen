@@ -437,6 +437,7 @@ pub(crate) fn register(connection: &Connection, mode: Registration) -> rusqlite:
         connection.create_scalar_function("thinkthen_plan", arity, judgment, plan::plan)?;
     }
     connection.create_scalar_function("thinkthen_configure", 1, volatile, settings::configure)?;
+    crate::images::register(connection, volatile)?;
     register_removed(connection, volatile)?;
     Ok(())
 }
