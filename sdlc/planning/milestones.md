@@ -45,7 +45,7 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score. The SDK uses one configured route; business policy belongs to the proxy. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns both PM ask maps, dependencies, lane ownership and acceptance.
+Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score, the local MCP surface and additive named question/input declarations. The SDK uses one configured route; business policy belongs to the proxy. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns the retained seventeen asks and proposed 0456 intake, dependencies, lane ownership and acceptance.
 
 Already landed: version/release safety, backends/provider setups/default-eight, rank search, audit/docs/recipes, Windows CLI/Rust/C/Python, backend selection, DuckDB 1.5.4/1.5.5, agent skill, native files and local runtimes. These are retained behavior. Raw JSON compatibility methods and older qualification runs do not establish the newly required typed SDK parity.
 
@@ -104,13 +104,17 @@ Open owners:
 
 - [0452: Carry typed image values through SQL](../tickets/0452-sql-image-values-and-queries.md)
 
+- 0455: Local ten-function MCP server; accepted ticket and partial implementation remain on its parked branch, with native integration pending.
+
+- [0456: Add named questions and declared item inputs](../tickets/0456-named-questions-and-input-declarations.md), design WIP awaiting fresh High review before native/C/MCP/family adoption. Existing0407/0414 are must-land 0.2 dependencies.
+
 0.2 ships without the OpenAI Decisions backend (0441) or DuckDB community acceptance/signing (0415). Those integrations arrive in a 0.2 point release when their outside dependencies resolve and their checks pass. Vendor documentation starts image work now; experiment 0036 can adjust limits later and never blocks.
 
 Support work: [0453: Extend authorized live token admission](../tickets/0453-extend-authorized-live-token-admission.md) preserves charges for separately approved runs; experiments remain outside the release gate.
 
 SQLite find’s silent model override is first. Shared C/metadata/semantic contracts precede wide host edits; SQL, dataframe and host families proceed in noncolliding slices. 0432 generates current parity from the complete executed suite with no skips. 0441 is written now with preview access/schema as an external prerequisite, without guessed wire behavior or paid calls.
 
-Current work is planning, not release preparation. Final hosted rehearsal, real Windows qualification and QA run only after required implementation lands on the final reviewed commit; publishing still requires Ian’s go. Main is 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. 0447/0448/0452 add vision to 0.2; the plan records unsupported function/route refusals. 0449 keeps one endpoint/key/API type; 0450 reserves proxy overrides now; execution remains in 0.3 under an admitted proxy protocol. PostgreSQL evidence paths use the reviewed client-reader workaround in 0434. Windows Node/C#/JVM packaging remains 0.3; SDK parity on supported platforms is required now.
+The 0456 amendment is planning WIP, not release preparation. [0425 completion criteria](../tickets/0425-sdk-consistency-0-2-plan.md) require final executed parity including MCP, full Linux/hosted macOS gates on existing macos-15/15-intel runners, real Windows qualification, fresh docs-only image/MCP use, 0.1 file/cache compatibility and complete docs/changelog/release notes/known gaps. After Ian’s publication go, every public package installs/runs cleanly and selective 0035 runs on public 0.2. Account prerequisites remain pending owner confirmation, not live-verified; existing packaging owners handle them. M5 is bounded-check only and Yellow excluded. Final hosted rehearsal, real Windows qualification and QA run only after required implementation lands on the final reviewed commit; publishing still requires Ian’s go. Main is 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. 0447/0448/0452 add vision to 0.2; the plan records unsupported function/route refusals. 0449 keeps one endpoint/key/API type; 0450 reserves proxy overrides now; execution remains in 0.3 under an admitted proxy protocol. PostgreSQL evidence paths use the reviewed client-reader workaround in 0434. Windows Node/C#/JVM packaging remains 0.3; SDK parity on supported platforms is required now.
 
 ## 0.3
 
