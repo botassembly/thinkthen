@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 import * as esm from '../index.mjs';
 import { ask, childEnv, startBackend } from './backend.mjs';
 
-test('details equals the command --details document for the same question and text', async (t) => {
+test('scalar details answer fields equal the command --details document, except the command-only reader position', async (t) => {
   const backend = await startBackend(t);
   for (const [spec, argv] of [
     [{ decide: 'Does it ask for a refund?' }, ['decide', 'Does it ask for a refund?']],
@@ -24,6 +24,12 @@ test('details equals the command --details document for the same question and te
     assert.equal(command.status, 0, command.stderr);
     const document = JSON.parse(command.stdout);
     delete document.meta.attempts; // Only the command and the C door report attempts (ticket 0302).
+    // Scalar SDK text is not a file read, so its result carries no reader
+    // position. The command reads one stdin document, and records.md settles
+    // its position as lines one to one of a null file.
+    assert.deepEqual(document.position, { file: null, first: 1, last: 1 });
+    assert.equal(Object.hasOwn(value.value, 'position'), false);
+    delete document.position;
     assert.deepEqual(value.value, document);
   }
 });
