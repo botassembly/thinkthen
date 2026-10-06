@@ -1,6 +1,6 @@
 # 0432: Enforce shared behavior and generate the current parity table
 
-Status: in progress. Phase A declares shared cases and executes the existing baseline; family adoption and the mandatory full parity run remain open.
+Status: in progress. Slice A establishes the shared cases and adoption interface. Family implementation and the mandatory full parity run remain open.
 
 Milestone: 0.2
 
