@@ -39,3 +39,24 @@ Each GitHub release ships `thinkthen-php-VERSION-x86_64-unknown-linux-gnu.tar.gz
 `new ThinkThen($absoluteLibrary, $settingsJson)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## 0.2 typed integration in progress (0429)
+
+The private `src/complete` models and ten named `Requests` builders implement
+reviewed result/2 fields and typed inputs. They are deliberately absent from
+`autoload.php`. Existing methods above keep their released behavior. The
+independent fixtures exercise carriers and request construction; they do not
+establish complete native parity. [0429](../../sdlc/tickets/0429-php-dart-flutter-typed-parity.md)
+records the remaining actual C calls/views, ownership review and runtime cases.
+
+Private JSON readers require `stdClass` for objects and PHP arrays for lists,
+preserving `{}` versus `[]` and numeric option/member names as strings in ordered
+entry carriers. Known count fields admit exact signed 64-bit integers and reject
+larger values, strings, floats and booleans. Use `JSON_BIGINT_AS_STRING` when
+reading fixture JSON so overflow is rejected rather than rounded. Arbitrary
+original/author JSON remains content; do not coerce unsupported numeric tokens
+into a claimed typed native result. Native adaptation of larger unsigned counts
+and lossless arbitrary numeric payloads remains pending. An authored-null decide
+JSON value cannot distinguish the authored meaning from uncertainty; the private
+reader refuses it and requires the reviewed C view discriminator. Its carrier
+can retain authored null and Boolean meanings without reinterpretation.

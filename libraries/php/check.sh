@@ -81,7 +81,8 @@ command -v node >/dev/null 2>&1 || { echo 'php: not run: no node' >&2; exit 77; 
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.php.json
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
 "$python_bin" -c 'import json; p=json.load(open("composer.json")); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"}'
-for file in src/*.php examples/*.php fixtures/*.php; do "$php_bin" -d ffi.enable=1 -l "$file" >/dev/null; done
+for file in src/*.php src/complete/*.php examples/*.php fixtures/*.php; do "$php_bin" -d ffi.enable=1 -l "$file" >/dev/null; done
+"$php_bin" -n fixtures/complete_carriers.php
 lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
 locked "$lock" env CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2

@@ -116,6 +116,7 @@ python3 "$CHECKS/exports.py" "$TT_NATIVE_LIBRARY" "$ROOT/../c/include/thinkthen.
 "$TT_DART" pub get --offline --directory "$ROOT"
 "$TT_DART" format --output=none --set-exit-if-changed "$ROOT/lib" "$CHECKS/consumers"
 "$TT_DART" analyze "$ROOT/lib"
+"$TT_DART" run "$CHECKS/consumers/alpha/bin/complete_carriers.dart" "$ROOT/../php/fixtures/complete.json"
 for consumer in alpha bravo; do
   "$TT_DART" pub get --offline --directory "$CHECKS/consumers/$consumer"
   "$TT_DART" analyze "$CHECKS/consumers/$consumer/bin"
@@ -132,6 +133,7 @@ python3 "$CHECKS/plant-check.py"
 (cd "$FLUTTER/example" && "$TT_FLUTTER" pub get --offline)
 "$TT_FLUTTER" analyze --no-pub "$FLUTTER/lib"
 (cd "$FLUTTER/example" && "$TT_FLUTTER" analyze --no-pub lib test)
+(cd "$FLUTTER/example" && "$TT_FLUTTER" test --no-pub test/complete_carriers_test.dart)
 python3 "$FLUTTER/run.py"
 python3 "$FLUTTER/plant-check.py"
 python3 "$FLUTTER/embedder.py"

@@ -48,3 +48,21 @@ The local Linux file pilot packs this Dart source beside a separately built matc
 `Door.create(settings)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## 0.2 typed integration in progress (0429)
+
+Private `lib/src/complete` carriers and ten named `Requests` builders cover the
+reviewed result/2 and input shapes. They are not exported by `thinkthen_dart.dart`
+and call no legacy C door. Existing methods keep their behavior. Independent
+carrier/request fixtures compile and execute, but cannot establish complete
+native parity. [0429](../../sdlc/tickets/0429-php-dart-flutter-typed-parity.md)
+records the exact C call/view integration and runtime cases still required.
+
+Dart VM counts currently admit exact signed 64-bit integers; larger or noninteger
+known counts refuse rather than truncate. Native adaptation of larger unsigned
+counts and lossless arbitrary numeric payloads is still required. Dart has no
+union parameter syntax: named private builders check the closed question
+variants at admission and reject a wrong variant. Optional carriers distinguish
+absence from present zero, false, null and empty values. Authored-null decide
+JSON is ambiguous with uncertainty and refuses; the actual C view discriminator
+must construct its typed authored or unresolved variant. No reading is guessed.

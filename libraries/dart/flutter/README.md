@@ -9,3 +9,10 @@ The Flutter package is private (`publish_to: none`) and its source path dependen
 From the repository root, run `libraries/dart/check.sh` with a populated offline pub cache. It checks the Dart binding, Flutter host test, planted negatives, and real Linux embedder. `TT_FLUTTER` can name the installed Flutter executable.
 
 For a local Linux release-file check, pack `c dart flutter` together with `sdlc/scripts/release-pack`. Validate the resulting three files with `sdlc/scripts/release-go-cpp-pair OUT dart-flutter`. The Flutter archive keeps this private package and example; install it beside the matching unpacked Dart archive so the relative dependencies still resolve. Pass the Flutter, Dart, and C archive paths as `THINKTHEN_ARTIFACT`, `THINKTHEN_DART_ARTIFACT`, and `THINKTHEN_C_ARTIFACT` to `libraries/dart/check.sh`. This is a local Linux consumer proof, not a published Flutter package or proof for another platform.
+
+0429's private `lib/src/complete.dart` facade independently exposes the ten typed
+request builders to the Flutter consumer test. It remains outside the public
+`thinkthen_flutter.dart` export. The facade test compiles and executes carriers
+and independently expected requests separately from Dart. Actual Flutter
+complete calls, its `flutter` surface token and counted runtime parity await
+the reviewed complete C/native adapter; the legacy facade above stays intact.
