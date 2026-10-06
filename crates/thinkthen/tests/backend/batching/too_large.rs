@@ -61,6 +61,16 @@ fn a_too_large_batch_halves_once_and_counts_the_refused_request() {
             );
             assert!(output.stderr.is_empty(), "{status}");
             let bodies = listener.requests();
+            for request in &bodies {
+                assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
+                assert_eq!(
+                    request.header("authorization"),
+                    Some("Bearer sk-test-value")
+                );
+                let body: serde_json::Value =
+                    serde_json::from_slice(&request.body).expect("wire body");
+                assert_eq!(body["model"], "jev-1.13.0");
+            }
             let sizes: Vec<_> = bodies.iter().map(|body| places(&body.body).len()).collect();
             assert_eq!(sizes, [5, 3, 2], "{status}");
             let printed = details(&output);
