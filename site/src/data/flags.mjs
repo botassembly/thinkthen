@@ -28,6 +28,8 @@ const dflt = (name) => lower(setting(name).default);
 const THROTTLE = setting('Throttle');
 
 export const GLOBAL_FLAGS = [
+  flag('--image FILE', 'an original JPEG or PNG file, and it may repeat', 'off', 'Attaches ordered images to decide, choose or score on an admitted image backend. Other functions refuse images. Cannot accompany file-reader options or record framing.'),
+  flag('--media text or image', 'text or image', 'text', 'Selects whole-file media. Image media requires --input and --unit file without record framing; only decide, choose and score admit it. Text files keep their existing framing.'),
   flag('--window N', lower(setting('Text-line window').allowed), dflt('Text-line window'), 'Joins N physical text lines per item within each file. A final short window remains one item. Blank lines stay inside each window; a window containing only white space is skipped. It takes no JSON or table framing, evidence pointer, or saved `on`.'),
   flag('--input FILE_OR_FOLDER', lower(setting('Input file').allowed), dflt('Input file'), 'Selects files or folders explicitly on all ten functions. Repeat it in argument order. Folder contents follow sorted relative paths. See Files and folders for located output.'),
   flag('--unit line or file', lower(setting('Reader unit').allowed), setting('Reader unit').default, 'Selects physical lines or complete original files. Requires --input and refuses JSON/table framing and pointers. Existing file calls without reader options keep their framing.'),
