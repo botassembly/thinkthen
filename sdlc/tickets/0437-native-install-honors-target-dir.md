@@ -1,6 +1,6 @@
 # 0437: Honor the configured native build output folder
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: landed. Native installation copies the artifact from Cargo’s effective output folder and refuses a missing artifact clearly.
 
 Milestone: 0.2
 
