@@ -38,6 +38,9 @@ response and fires the existing native cancel token; already-sent native
 attempts finish and join under the native contract. EOF likewise cancels active
 work. Stoppable input reads are required, including a partial frame when stdout
 breaks; a permanently blocked reader is not a completed implementation.
+Windows stdio requires pipe handles. Own duplicates without changing or closing
+the process's inherited handles; interrupt only the registered MCP read/write
+and join its cancellation watcher. Flush must not wait for a peer to drain.
 
 Tool arguments select exactly one of `question` and `question_file`. Inline
 strings are literal text even when they start with `@`. Structured questions

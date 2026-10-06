@@ -116,13 +116,13 @@ impl Session {
         let thread = thread::spawn(move || {
             let result = runtime::serve(
                 move |stop| {
-                    BufReader::new(Input {
+                    Ok(BufReader::new(Input {
                         receiver,
                         cursor: Cursor::new(Vec::new()),
                         stop,
-                    })
+                    }))
                 },
-                |_| writer,
+                |_| Ok(writer),
                 fixture,
             );
             done.send(result).unwrap();
@@ -286,4 +286,115 @@ fn broken_output_unblocks_reader_and_joins_owned_dispatch_without_more_input() {
     assert_eq!(result.unwrap_err().kind(), io::ErrorKind::BrokenPipe);
     session.thread.take().unwrap().join().unwrap();
     assert_eq!(session.retired.load(Ordering::Acquire), 1);
+}
+
+#[cfg(unix)]
+#[test]
+fn cancellation_remains_readable_behind_full_output_and_eof_joins_every_owned_thread() {
+    use super::super::input::{PollInput, PollOutput};
+    use nix::poll::{PollFd, PollFlags, poll};
+    use std::io::BufRead;
+    use std::os::fd::AsFd;
+    let (mut caller, input) = std::os::unix::net::UnixStream::pair().unwrap();
+    let (read, write) = nix::unistd::pipe().unwrap();
+    let mut replies = BufReader::new(std::fs::File::from(read));
+    let output = std::fs::File::from(write);
+    let mut filler = output.try_clone().unwrap();
+    let (started, starts) = mpsc::channel();
+    let retired = Arc::new(AtomicUsize::new(0));
+    let fixture = Fixture {
+        started,
+        retired: Arc::clone(&retired),
+        hold: true,
+    };
+    let (sent, done) = mpsc::channel();
+    let server = thread::spawn(move || {
+        sent.send(runtime::serve(
+            move |stop| Ok(BufReader::new(PollInput::new(input, stop))),
+            move |stop| Ok(PollOutput::new(output, stop)),
+            fixture,
+        ))
+        .unwrap();
+    });
+    let initialize = json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{
+        "protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"fixture","version":"1"}}});
+    writeln!(caller, "{initialize}").unwrap();
+    let mut line = String::new();
+    replies.read_line(&mut line).unwrap();
+    assert_eq!(serde_json::from_str::<Value>(&line).unwrap()["id"], 1);
+    writeln!(
+        caller,
+        "{}",
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"})
+    )
+    .unwrap();
+    writeln!(
+        caller,
+        "{}",
+        json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+        "name":"decide","arguments":{"question":"q","evidence":"x"}}})
+    )
+    .unwrap();
+    starts.recv_timeout(BOUND).unwrap();
+    let mut full = false;
+    for _ in 0..256 {
+        if poll(&mut [PollFd::new(filler.as_fd(), PollFlags::POLLOUT)], 0u16).unwrap() == 0 {
+            full = true;
+            break;
+        }
+        filler.write_all(&[b'x'; 512]).unwrap();
+    }
+    assert!(full, "output backpressure established");
+    writeln!(
+        caller,
+        "{}",
+        json!({"jsonrpc":"2.0","id":3,"method":"ping"})
+    )
+    .unwrap();
+    // An invalid envelope queues an error; it cannot block the input reader
+    // trying to print that error ahead of the following cancellation.
+    writeln!(caller, "{{\"private\":\"withheld\"}}").unwrap();
+    writeln!(
+        caller,
+        "{}",
+        json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":2}})
+    )
+    .unwrap();
+    let due = std::time::Instant::now() + BOUND;
+    while retired.load(Ordering::Acquire) == 0 && std::time::Instant::now() < due {
+        thread::sleep(Duration::from_millis(5));
+    }
+    assert_eq!(
+        retired.load(Ordering::Acquire),
+        1,
+        "cancel read while output peer remains unread"
+    );
+    assert!(
+        done.try_recv().is_err(),
+        "session still owns blocked protocol output"
+    );
+    drop(caller); // EOF itself interrupts output, with its peer still open.
+    assert_eq!(
+        done.recv_timeout(BOUND).unwrap().unwrap_err().kind(),
+        io::ErrorKind::BrokenPipe
+    );
+    server.join().unwrap();
+    drop(filler);
+}
+
+#[test]
+fn reader_factory_failure_stops_session_before_dispatch_and_is_joined() {
+    let (started, starts) = mpsc::channel();
+    let fixture = Fixture {
+        started,
+        retired: Arc::new(AtomicUsize::new(0)),
+        hold: false,
+    };
+    let result = runtime::serve(
+        |_| Err::<BufReader<Cursor<Vec<u8>>>, _>(io::Error::other("input unavailable")),
+        |_| Ok(Vec::<u8>::new()),
+        fixture,
+    );
+    assert_eq!(result.unwrap_err().to_string(), "input unavailable");
+    assert!(starts.try_recv().is_err());
 }

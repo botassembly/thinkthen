@@ -272,7 +272,7 @@ WINDOWS_PRODUCTION_SPEC = {
     "version": "=0.61.2",
     "default-features": False,
     "features": ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization",
-                 "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_Console"],
+                 "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_Console", "Win32_System_IO"],
 }
 WINDOWS_TEST_SPEC = {
     "version": "=0.61.2", "default-features": False, "features": ["Win32_System_Console"],
@@ -1919,6 +1919,7 @@ WINDOWS_UNSAFE_LEAVES = {
     "crates/thinkthen/src/windows/security/ffi.rs": "windows",
     "crates/thinkthen/src/windows/files/ffi.rs": "windows",
     "crates/thinkthen/src/windows/console/ffi.rs": "windows",
+    "crates/thinkthen/src/mcp/input/windows/ffi.rs": "windows",
     "crates/thinkthen/tests/windows/ffi.rs": "all(windows, test)",
 }
 
@@ -1947,7 +1948,7 @@ def rust_attributes(tokens: list[str]) -> list[tuple[bool, list[str]]]:
 
 
 def windows_unsafe_failures(sources: dict[str, str]) -> list[str]:
-    """Confine unsafe tokens and lint allowances to the four reviewed leaves."""
+    """Confine unsafe tokens and lint allowances to the exact reviewed leaves."""
     held = []
     for relative, text in sources.items():
         tokens = rust_tokens(text)

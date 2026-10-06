@@ -63,8 +63,8 @@ struct State {
 /// stop fires. This allows joining input even on broken stdout. No engine/key
 /// is captured by the reader. Dispatch and all native workers join before exit.
 pub(super) fn serve<R, W, D>(
-    reader: impl FnOnce(CancelToken) -> R + Send + 'static,
-    writer: impl FnOnce(CancelToken) -> W,
+    reader: impl FnOnce(CancelToken) -> io::Result<R> + Send + 'static,
+    writer: impl FnOnce(CancelToken) -> io::Result<W>,
     executor: D,
 ) -> io::Result<()>
 where
@@ -73,7 +73,7 @@ where
     D: Executor,
 {
     let stop = CancelToken::new();
-    let output = Output::new(writer(stop.clone()));
+    let output = Output::new(writer(stop.clone())?);
     let active: Registry = Arc::new(Mutex::new(None));
     let (sender, receiver) = mpsc::sync_channel(4);
     let input = spawn_reader(reader, sender, stop.clone(), Arc::clone(&active))?;
@@ -246,7 +246,7 @@ fn immediate<D: Executor>(
 }
 
 fn spawn_reader<R>(
-    factory: impl FnOnce(CancelToken) -> R + Send + 'static,
+    factory: impl FnOnce(CancelToken) -> io::Result<R> + Send + 'static,
     sender: mpsc::SyncSender<Event>,
     stop: CancelToken,
     active: Registry,
@@ -257,8 +257,8 @@ where
     thread::Builder::new()
         .name("thinkthen-mcp-input".into())
         .spawn(move || {
-            let mut reader = factory(stop.clone());
-            let result = read_messages(&mut reader, &sender, &stop, &active);
+            let result = factory(stop.clone())
+                .and_then(|mut reader| read_messages(&mut reader, &sender, &stop, &active));
             stop.cancel();
             cancel_active(&active);
             result

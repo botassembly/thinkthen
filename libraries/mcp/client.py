@@ -4,12 +4,41 @@ A client owns only the process it launches. It never runs a shell or starts a
 process per tool call. Call cancel from another thread while a tool is pending.
 """
 import json
+import math
 import queue
 import subprocess
 import threading
 
 VERSION = '2025-11-25'
 MAX_MESSAGE = 64 * 1024 * 1024
+
+
+def _json(text):
+    def members(pairs):
+        value = {}
+        for name, item in pairs:
+            if name in value:
+                raise ValueError('duplicate JSON member')
+            value[name] = item
+        return value
+    def constant(_):
+        raise ValueError('nonfinite JSON number')
+    def number(text):
+        value = float(text)
+        if not math.isfinite(value):
+            raise ValueError('nonfinite JSON number')
+        return value
+    return json.loads(text, object_pairs_hook=members, parse_constant=constant, parse_float=number)
+
+
+def _same(left, right):
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return list(left) == list(right) and all(_same(left[name], right[name]) for name in left)
+    if isinstance(left, list):
+        return len(left) == len(right) and all(_same(a, b) for a, b in zip(left, right))
+    return left == right
 
 
 class ProtocolError(Exception):
@@ -81,8 +110,8 @@ class Client:
                 size = len(line) if isinstance(line, bytes) else len(line.encode('utf-8'))
                 if not line.endswith(ending) or size > MAX_MESSAGE:
                     raise ProtocolError('MCP output closed or exceeded its bound')
-                response = json.loads(line)
-            except (OSError, UnicodeError, ValueError):
+                response = _json(line)
+            except (OSError, UnicodeError, ValueError, RecursionError):
                 response = ProtocolError('invalid MCP output')
             except ProtocolError as error:
                 response = error
@@ -150,7 +179,11 @@ class Client:
         result = self._request('initialize', {'protocolVersion': VERSION, 'capabilities': {},
                                             'clientInfo': {'name': 'thinkthen-consumer', 'version': '0.2'}})
         if (not isinstance(result, dict) or result.get('protocolVersion') != VERSION
-                or not isinstance(result.get('capabilities', {}).get('tools'), dict)):
+                or not isinstance(result.get('capabilities'), dict)
+                or not isinstance(result['capabilities'].get('tools'), dict)
+                or not isinstance(result.get('serverInfo'), dict)
+                or not isinstance(result['serverInfo'].get('name'), str)
+                or not isinstance(result['serverInfo'].get('version'), str)):
             raise ProtocolError('unsupported MCP initialization')
         self._send({'jsonrpc': '2.0', 'method': 'notifications/initialized'})
         return result
@@ -159,7 +192,10 @@ class Client:
         return self._request('ping')
 
     def tools(self):
-        return self._request('tools/list')['tools']
+        result = self._request('tools/list')
+        if not isinstance(result, dict) or not isinstance(result.get('tools'), list):
+            raise ProtocolError('invalid MCP tool catalog')
+        return result['tools']
 
     def cancel(self, request_id):
         if type(request_id) not in (str, int):
@@ -180,10 +216,10 @@ class Client:
             content = result['content']
             if (not isinstance(structured, dict) or len(content) != 1
                     or content[0]['type'] != 'text'
-                    or json.loads(content[0]['text']) != structured
+                    or not _same(_json(content[0]['text']), structured)
                     or type(result.get('isError')) is not bool):
                 raise ProtocolError('invalid MCP tool result')
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, TypeError, ValueError, RecursionError):
             raise ProtocolError('invalid MCP tool result') from None
         if result['isError']:
             raise ToolError(structured)
@@ -226,7 +262,10 @@ class Client:
                 self._reader_thread.join(timeout=1)
             return
         process, self.process = self.process, None
-        process.stdin.close()
+        try:
+            process.stdin.close()
+        except (OSError, ValueError):
+            pass
         # The server receives EOF and must join its native calls. If it cannot
         # retire, terminate only this owned subprocess, never a process group.
         try:

@@ -101,3 +101,8 @@ pub(super) fn pipes() -> io::Result<(std::fs::File, std::fs::File)> {
     let output = io::stdout().as_fd().try_clone_to_owned()?;
     Ok((std::fs::File::from(input), std::fs::File::from(output)))
 }
+
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+pub(super) use windows::{PipeInput, PipeOutput, pipes};

@@ -14,10 +14,16 @@ from client import Client, ProtocolError, ToolError
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCUMENT = json.loads((ROOT / 'conformance/cases.json').read_text())
-# Independent behavior fixtures cover one real named call for each function.
-CASES = ('02-decide-no', '07-choose-unsure', '09-tag-two', '11-score-middle',
-         '13-filter-records', '15-rank-records', '18-find-second',
-         '17-annotate-mixed', '41-offsets-past-an-accent-and-an-emoji', '51-same-kind-alerts')
+# These cases need the same already-described atomic/set call shapes. More
+# negatives, ties, empty outputs and numeric distributions use existing arms.
+CASES = ('01-decide-yes-captured', '02-decide-no', '03-decide-band-unsure',
+         '04-decide-band-yes', '05-decide-meanings', '06-choose-billing',
+         '07-choose-unsure', '08-choose-tie', '09-tag-two', '10-tag-none',
+         '11-score-middle', '12-score-upper', '13-filter-records', '14-filter-none',
+         '15-rank-records', '16-rank-stable-tie', '18-find-second', '19-find-none',
+         '17-annotate-mixed', '32-score-equal-distribution', '33-tag-threshold-excludes',
+         '37-annotate-choose-one', '38-annotate-score-one',
+         '41-offsets-past-an-accent-and-an-emoji', '51-same-kind-alerts')
 
 
 def same(actual, expected):

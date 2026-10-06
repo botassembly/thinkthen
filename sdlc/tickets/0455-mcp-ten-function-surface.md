@@ -6,6 +6,16 @@ Milestone: 0.2
 Owner: builder, lane1 `ticket/0455-mcp-ten-function-surface`.
 Risk: High. Local protocol dispatch and cancellation must preserve secrets, spend limits and started-failure behavior; broken output and EOF must cancel and join owned work.
 
+Independent WIP now includes Windows owned pipe I/O with an operation-scoped
+thread registry and joined cancellation watcher, strict native grammar/loading
+regressions, and an expanded public named consumer. The High risk includes the
+exact Windows-only `src/mcp/input/windows/ffi.rs` cancellation leaf and the
+existing `windows-sys` package's required `Win32_System_IO` feature. Existing
+unsafe leaves and their guards remain unchanged. Windows build/runtime proof
+is still pending on the existing runner; Linux checks do not qualify it.
+Complete native execution, composition and result/2 schema remain dependencies,
+so no public MCP CLI or native parity pass is claimed.
+
 ## Outcome
 
 An installed ThinkThen command starts a local MCP server. Agents call the same ten functions with ordinary question files, explicit file or folder inputs, complete typed results and the existing settings and cache. MCP appears in the executed parity table.

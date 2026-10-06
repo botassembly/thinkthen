@@ -47,11 +47,27 @@ Run the independent client fixtures with `python3 libraries/mcp/test_client.py`.
 The existing surface consumer is `sh libraries/mcp/check.sh LOOPBACK_PORT`.
 `installed.py ABSOLUTE_BINARY` performs initialization, ping, the ten-tool
 catalog and an actual recorded decide call through an installed executable.
-`conformance.py LOOPBACK_PORT ABSOLUTE_BINARY` makes actual named calls for ten
-representative shared behavior cases, including false/null, record ordering,
+`conformance.py LOOPBACK_PORT ABSOLUTE_BINARY` makes actual named calls for 25
+shared behavior cases, including false/null, ties, empty results, record ordering,
 full-set selection, annotations, spans and edges. It checks native complete
 results and emits only those executed behavior cells. Remaining required cells
-stay missing in the shared parity runner. No fixture test emits parity.
+stay missing in the shared parity runner. No fixture test emits parity. The
+named client rejects duplicate/nonfinite JSON and mismatched content types or
+authored order; false cannot be accepted as zero.
+
+Unix stdio uses owned unbuffered descriptors and bounded polling. Windows now
+has private `PipeInput`/`PipeOutput` over owned pipe handles, with a joined
+cancellation watcher. Each synchronous operation registers its actual calling
+thread; the watcher retries cancellation across operation entry and holds the
+registry lock so it cannot cancel subsequent native or unrelated I/O. Output
+flush never waits for a peer to drain. Non-pipe Windows handles are refused.
+The sole new unsafe leaf is `src/mcp/input/windows/ffi.rs`, guarded by Windows,
+with a reasoned allowance and denied unsafe operations outside explicit blocks.
+The existing exact policy table admits only that added leaf and the existing
+`windows-sys` package's required `Win32_System_IO` feature; other allowances
+remain protected. See Microsoft's [synchronous cancellation contract](https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-cancelsynchronousio).
+Windows compilation and the owned subprocess pipe regressions require the
+existing Windows runner; they have not been run in this Linux lane.
 
 ## Exact integration left for native adoption
 
@@ -94,19 +110,23 @@ stay missing in the shared parity runner. No fixture test emits parity.
    in `cli/args/command.rs`, and dispatch in `cli/mod.rs` before ordinary judging
    environment/reader/interrupt setup. The module is already `cli`-gated in
    `lib.rs`. On Unix obtain unbuffered owned handles with `input::pipes()`;
-   use `BufReader::new(input::PollInput::new(input_file, stop))` as the `serve`
-   reader factory and `input::PollOutput::new(output_file, stop)` as its writer
+   use `Ok(BufReader::new(input::PollInput::new(input_file, stop)))` as the `serve`
+   reader factory and `Ok(input::PollOutput::new(output_file, stop))` as its writer
    factory. Do not use a global buffered stdout handle. Neither protocol input nor output can block shutdown.
    `serve` requires stoppable reads and joins both
-   reader and dispatch on EOF/output failure. Windows needs an existing safe
-   interruptible pipe reader; do not substitute an unjoinable blocking thread.
+   reader and dispatch on EOF/output failure, including factory failure. On
+   Windows use `input::pipes()`, reader factory
+   `input::PipeInput::new(input_file, stop).map(BufReader::new)` and writer
+   factory `input::PipeOutput::new(output_file, stop)`. Both factories are
+   fallible; retain their actual I/O errors. Windows pipe execution remains
+   unverified until the existing runner executes the guarded regressions.
    All decoding/loading belongs on dispatch, and native iteration must check
    the token between inputs. Preserve native joined in-flight attempt behavior.
 5. Move `libraries/mcp` from planned to landed only after actual installed and
    surface checks pass. Extend the consumer to the remaining 204-case parity
    inventory, full output-schema/type checks, complete source/image forms,
    secrecy, counted zero sends, error/cancellation and cache/replay cases after
-   native shapes settle. The present ten-case consumer and protocol tests do
+   native shapes settle. The present 25-case consumer and protocol tests do
    not qualify those cells. Connect `installed.py` to `release-smoke`'s
    `command_check` using the unpacked executable path; check loopback count
    before/after strict replay with its existing backend counter.
