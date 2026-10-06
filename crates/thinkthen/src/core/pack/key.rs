@@ -18,8 +18,44 @@ impl QuestionKey {
         state: &str,
         question: &str,
     ) -> Self {
-        let bytes = crate::core::identity::framing::digest(
+        Self::framed(
             "thinkthen.question-key/2",
+            url,
+            requested,
+            answered,
+            state,
+            question,
+        )
+    }
+
+    /// Explicit image inputs retain a distinct versioned key domain.
+    pub(crate) fn complete_image(
+        url: &Url,
+        requested: &str,
+        answered: &str,
+        state: &str,
+        question: &str,
+    ) -> Self {
+        Self::framed(
+            "thinkthen.image-question-key/2",
+            url,
+            requested,
+            answered,
+            state,
+            question,
+        )
+    }
+
+    fn framed(
+        domain: &str,
+        url: &Url,
+        requested: &str,
+        answered: &str,
+        state: &str,
+        question: &str,
+    ) -> Self {
+        let bytes = crate::core::identity::framing::digest(
+            domain,
             &[
                 built_in::NAME.as_bytes(),
                 url.as_str().as_bytes(),

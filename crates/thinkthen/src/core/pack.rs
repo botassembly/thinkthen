@@ -155,7 +155,22 @@ impl State {
     }
 
     pub(crate) fn key(&self, url: &Url, model: &str, question: &str) -> QuestionKey {
-        QuestionKey::complete(url, model, model, self.json(), question)
+        self.complete_key(url, model, model, question)
+    }
+
+    pub(crate) fn complete_key(
+        &self,
+        url: &Url,
+        requested: &str,
+        reported: &str,
+        question: &str,
+    ) -> QuestionKey {
+        let constructor = if self.0.image_wire.is_some() {
+            QuestionKey::complete_image
+        } else {
+            QuestionKey::complete
+        };
+        constructor(url, requested, reported, self.json(), question)
     }
 
     pub(crate) fn evidence_bytes(&self) -> usize {

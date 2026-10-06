@@ -1,6 +1,6 @@
 //! Image hits validate their referenced constituents in the answer's read snapshot.
 use super::{Found, SQLITE, Store, Stored, found};
-use crate::core::pack::{Ask, QuestionKey, model_json};
+use crate::core::pack::{Ask, QuestionKey};
 use crate::engine::{Cancel, error::Error};
 use rusqlite::{Connection, params_from_iter};
 use std::collections::HashMap;
@@ -91,16 +91,8 @@ fn valid(row: &rusqlite::Row<'_>, found: &Found, image: Option<&Ask>) -> rusqlit
         taken_at: row.get(14)?,
         origin: row.get(15)?,
     };
-    let verified = || {
-        let (question, _) = super::versioned::canonical_parts(&saved, state)?;
-        let state = super::versioned::canonical_state(&saved.state, state)?;
-        let url =
-            crate::core::posting_address(&saved.url).map_err(|_| super::versioned::invalid())?;
-        let model = model_json(&saved.model).map_err(|_| super::versioned::invalid())?;
-        let reported = model_json(&saved.answered_by).map_err(|_| super::versioned::invalid())?;
-        Ok::<_, Error>(
-            QuestionKey::complete(&url, &model, &reported, &state, &question) == found.key,
-        )
-    };
-    Ok(verified().unwrap_or(false))
+    Ok(
+        super::versioned::complete_key(&saved, state, &saved.answered_by)
+            .is_ok_and(|key| key == found.key),
+    )
 }

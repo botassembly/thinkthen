@@ -60,3 +60,12 @@ Focused public/CLI cases in native_store cover read-only bytes/mtime, independen
 fn Details::question_sources(&self) -> &[QuestionSource]
 fn Details::observations(&self) -> &[Observation]
 ```
+
+Native correction: v2 explicit images retain the `thinkthen.image-question-key/2`
+framing domain alongside image-state/1. Ordinary text keeps question-key/2.
+The existing validated state digest selects the domain during migration and
+snapshot replay; an image-looking ordinary JSON value does not infer images.
+A prior-failing independently framed public recording regression now passes,
+including original ordered duplicate attachments and zero-send strict replay.
+All 24 image and nine storage cases plus affected Clippy pass. Whole review and
+main landing remain open.

@@ -61,12 +61,8 @@ impl Entries {
             if version == 1 && legacy.hex() != answer.key {
                 return Err(invalid());
             }
-            let (question, _) = canonical_parts(&answer, state)?;
-            let canonical_state = canonical_state(&answer.state, state)?;
+            let key = complete_key(&answer, state, &answer.answered_by)?;
             let url = crate::core::posting_address(&answer.url).map_err(|_| invalid())?;
-            let model = model_json(&answer.model).map_err(|_| invalid())?;
-            let reported = model_json(&answer.answered_by).map_err(|_| invalid())?;
-            let key = QuestionKey::complete(&url, &model, &reported, &canonical_state, &question);
             if version == 1 && answer.observation_id.is_none() {
                 answer.observation_id = Some(legacy_id(&answer, state, None)?);
             }
@@ -93,13 +89,28 @@ impl Entries {
 }
 
 pub(super) fn lookup_key(answer: &Answer, state: &str) -> Result<QuestionKey, Error> {
+    complete_key(answer, state, &answer.model)
+}
+
+pub(super) fn complete_key(
+    answer: &Answer,
+    state: &str,
+    reported: &str,
+) -> Result<QuestionKey, Error> {
     let (question, _) = canonical_parts(answer, state)?;
+    // State identity, already validated above, distinguishes explicit images;
+    // ordinary JSON with an image-looking shape remains ordinary evidence.
+    let images = bytes_sha256(state.as_bytes()) != answer.state;
     let state = canonical_state(&answer.state, state)?;
     let url = crate::core::posting_address(&answer.url).map_err(|_| invalid())?;
     let model = model_json(&answer.model).map_err(|_| invalid())?;
-    Ok(QuestionKey::complete(
-        &url, &model, &model, &state, &question,
-    ))
+    let reported = model_json(reported).map_err(|_| invalid())?;
+    let constructor = if images {
+        QuestionKey::complete_image
+    } else {
+        QuestionKey::complete
+    };
+    Ok(constructor(&url, &model, &reported, &state, &question))
 }
 
 pub(super) fn canonical_parts(answer: &Answer, state: &str) -> Result<(String, String), Error> {

@@ -163,7 +163,8 @@ impl Accepted {
         let keys = asks
             .iter()
             .map(|(ask, _)| {
-                QuestionKey::complete(&url, &requested, &reported, ask.state.json(), &ask.question)
+                ask.state
+                    .complete_key(&url, &requested, &reported, &ask.question)
             })
             .collect();
         Ok(Self {
