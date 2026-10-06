@@ -135,9 +135,10 @@ impl Folder {
 pub(crate) fn private_file(path: &Path) -> std::io::Result<()> {
     #[cfg(windows)]
     {
-        let mut command = command("powershell.exe", &[]);
-        command.args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $acl=Get-Acl -LiteralPath $env:THINKTHEN_TEST_FIXTURE_PATH; $acl.SetSecurityDescriptorSddlForm(\"O:${sid}D:P(A;;FA;;;${sid})(A;;FA;;;SY)\"); Set-Acl -LiteralPath $env:THINKTHEN_TEST_FIXTURE_PATH -AclObject $acl"])
-            .env("THINKTHEN_TEST_FIXTURE_PATH", path);
+        let mut command = powershell(
+            "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $acl=Get-Acl -LiteralPath $env:THINKTHEN_TEST_FIXTURE_PATH; $acl.SetSecurityDescriptorSddlForm(\"O:${sid}D:P(A;;FA;;;${sid})(A;;FA;;;SY)\"); Set-Acl -LiteralPath $env:THINKTHEN_TEST_FIXTURE_PATH -AclObject $acl",
+        );
+        command.env("THINKTHEN_TEST_FIXTURE_PATH", path);
         let output = run::output(&mut command)?;
         if !output.status.success() {
             return Err(std::io::Error::other(format!(
@@ -152,6 +153,22 @@ pub(crate) fn private_file(path: &Path) -> std::io::Result<()> {
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
     }
     Ok(())
+}
+
+/// Native ACL fixtures load only the built-in modules, with no inherited
+/// module search path or module-analysis cache in the runner user's profile.
+#[cfg(windows)]
+pub(crate) fn powershell(script: &str) -> Command {
+    let root = PathBuf::from(std::env::var_os("SystemRoot").expect("Windows system directory"));
+    let modules = root.join("System32/WindowsPowerShell/v1.0/Modules");
+    let mut command = command("powershell.exe", &[]);
+    command.clear_environment()
+        .env("windir", &root)
+        .env("PSModulePath", &modules)
+        .env("PSModuleAnalysisCachePath", "NUL")
+        .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+            &format!("$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; Import-Module -Name ($env:PSModulePath + '/Microsoft.PowerShell.Security'), ($env:PSModulePath + '/Microsoft.PowerShell.Management'), ($env:PSModulePath + '/Microsoft.PowerShell.Utility'); $PSModuleAutoLoadingPreference='None'; {script}")]);
+    command
 }
 
 impl ChildEnvironment for Command {

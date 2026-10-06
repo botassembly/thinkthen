@@ -69,7 +69,17 @@ fn delivered(target: &OwnedHandle, acknowledgment: Option<&Path>) -> io::Result<
         // SAFETY: target owns the synchronization handle throughout this
         // bounded wait. No Rust memory is borrowed by the native call.
         match unsafe { WaitForSingleObject(target.as_raw_handle(), 10) } {
-            WAIT_OBJECT_0 => return Ok(()),
+            WAIT_OBJECT_0 => {
+                if acknowledgment
+                    .is_none_or(|path| matches!(std::fs::read(path), Ok(byte) if byte == b"1"))
+                {
+                    return Ok(());
+                }
+                return Err(io::Error::new(
+                    io::ErrorKind::BrokenPipe,
+                    "target exited without acknowledging the console event",
+                ));
+            }
             WAIT_FAILED => return Err(io::Error::last_os_error()),
             _ => {}
         }

@@ -45,6 +45,10 @@ impl State {
             installed: false,
             emulate,
         };
+        #[cfg(windows)]
+        if crate::windows::enable_interrupts().is_err() {
+            return state;
+        }
         for action in ACTIONS {
             if register(action, &state).is_err() {
                 return state;

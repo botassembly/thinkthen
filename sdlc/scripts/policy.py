@@ -270,7 +270,7 @@ WINDOWS_PRODUCTION_SPEC = {
     "version": "=0.61.2",
     "default-features": False,
     "features": ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization",
-                 "Win32_Storage_FileSystem", "Win32_System_Threading"],
+                 "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_Console"],
 }
 WINDOWS_TEST_SPEC = {
     "version": "=0.61.2", "default-features": False, "features": ["Win32_System_Console"],
@@ -313,7 +313,7 @@ def check_windows_manifest(manifest: dict) -> None:
         "dev-dependencies": {"windows-sys": copy.deepcopy(WINDOWS_TEST_SPEC)},
     }
     for changed in ({"version": "0.61.2"}, {"optional": True}, {"default-features": True},
-                    {"features": WINDOWS_PRODUCTION_SPEC["features"] + ["Win32_System_Console"]},
+                    {"features": WINDOWS_PRODUCTION_SPEC["features"] + ["Win32_System_Diagnostics_Debug"]},
                     {"features": WINDOWS_PRODUCTION_SPEC["features"] + ["Win32_Networking_WinSock"]}):
         plant = copy.deepcopy(baseline)
         plant["target"]["cfg(windows)"]["dependencies"]["windows-sys"].update(changed)
@@ -1896,6 +1896,7 @@ def check_facade() -> None:
 WINDOWS_UNSAFE_LEAVES = {
     "crates/thinkthen/src/windows/security/ffi.rs": "windows",
     "crates/thinkthen/src/windows/files/ffi.rs": "windows",
+    "crates/thinkthen/src/windows/console/ffi.rs": "windows",
     "crates/thinkthen/tests/windows/ffi.rs": "all(windows, test)",
 }
 
@@ -1924,7 +1925,7 @@ def rust_attributes(tokens: list[str]) -> list[tuple[bool, list[str]]]:
 
 
 def windows_unsafe_failures(sources: dict[str, str]) -> list[str]:
-    """Confine unsafe tokens and lint allowances to the three reviewed leaves."""
+    """Confine unsafe tokens and lint allowances to the four reviewed leaves."""
     held = []
     for relative, text in sources.items():
         tokens = rust_tokens(text)
@@ -2027,6 +2028,7 @@ def check_crate_roots() -> None:
 def check_sources() -> None:
     sources = sorted(
         source for folder in ("crates", "conformance") for source in (REPO / folder).rglob("*.rs")
+        if "target" not in source.relative_to(REPO).parts
     )
     if not sources:
         fail("size", "the workspace holds at least one Rust source file")

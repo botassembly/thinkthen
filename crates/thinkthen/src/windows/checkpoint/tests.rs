@@ -75,9 +75,13 @@ fn release(root: &Scratch) {
     fs::write(root.0.join("release"), b"1").expect("release owned writer");
 }
 fn descriptors(paths: &[PathBuf]) -> Vec<String> {
-    let mut command = child::command("powershell.exe", &[]);
-    command.clear_environment().args(["-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; foreach($path in (ConvertFrom-Json $env:THINKTHEN_FIXTURE_PATHS)){ $a=Get-Acl -LiteralPath $path; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; if($a.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid -or !$a.AreAccessRulesProtected){throw 'owner/protection'}; $r=@($a.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])); if($r.Count -ne 2){throw 'exact user/System rules'}; $ids=@($r | ForEach-Object {$_.IdentityReference.Value} | Sort-Object -Unique); if($ids.Count -ne 2 -or $ids -notcontains $sid -or $ids -notcontains 'S-1-5-18'){throw 'user/System identities'}; foreach($ace in $r){if($ace.AccessControlType -ne 'Allow' -or $ace.FileSystemRights -ne [System.Security.AccessControl.FileSystemRights]::FullControl -or @($sid,'S-1-5-18') -notcontains $ace.IdentityReference.Value){throw 'private rule'}}; $a.Sddl }"])
-        .env("THINKTHEN_FIXTURE_PATHS", serde_json::to_string(paths).expect("owned paths"));
+    let mut command = child::powershell(
+        "foreach($path in (ConvertFrom-Json $env:THINKTHEN_FIXTURE_PATHS)){ $a=Get-Acl -LiteralPath $path; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; if($a.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid -or !$a.AreAccessRulesProtected){throw 'owner/protection'}; $r=@($a.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])); if($r.Count -ne 2){throw 'exact user/System rules'}; $ids=@($r | ForEach-Object {$_.IdentityReference.Value} | Sort-Object -Unique); if($ids.Count -ne 2 -or $ids -notcontains $sid -or $ids -notcontains 'S-1-5-18'){throw 'user/System identities'}; foreach($ace in $r){if($ace.AccessControlType -ne 'Allow' -or $ace.FileSystemRights -ne [System.Security.AccessControl.FileSystemRights]::FullControl -or @($sid,'S-1-5-18') -notcontains $ace.IdentityReference.Value){throw 'private rule'}}; $a.Sddl }",
+    );
+    command.env(
+        "THINKTHEN_FIXTURE_PATHS",
+        serde_json::to_string(paths).expect("owned paths"),
+    );
     let output = crate::test_deadline::output(&mut command).expect("bounded native ACL inspection");
     assert!(
         output.status.success(),
@@ -210,6 +214,7 @@ fn usage_child() {
         _ => panic!("unknown fixture point"),
     };
     if let Some(selected) = selected {
+        let root = root.clone();
         *OBSERVER.lock().expect("observer") = Some((
             selected,
             Box::new(move |file| {
@@ -244,5 +249,10 @@ fn usage_child() {
         .decide(&question, "fixture evidence")
         .expect("canned public answer");
     assert_eq!(answer.into_value(), crate::Answer::Yes);
+    if selected.is_some() {
+        // The writer may pause longer than the public flush deadline while
+        // the parent inspects its native descriptor. Keep the host alive.
+        process::wait(&root.join("release"));
+    }
     engine.finish_usage();
 }

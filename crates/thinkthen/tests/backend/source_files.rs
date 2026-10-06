@@ -110,7 +110,11 @@ fn ten_folder_examples_retain_original_records_and_physical_sources() -> io::Res
         };
         let output = call(&listener, command, &[documents], &["--unit", unit])?;
         let rows = rows(&output);
-        let normalized = text(&output.stdout).replace(&format!("{}/", place.display()), "");
+        let prefix =
+            serde_json::to_string(&format!("{}{}", place.display(), std::path::MAIN_SEPARATOR))?;
+        let normalized = text(&output.stdout)
+            .replace(prefix.trim_matches('"'), "")
+            .replace(r"\\", "/");
         assert_eq!(
             normalized,
             fs::read_to_string(examples.join(format!("{golden}.out")))?,

@@ -1,10 +1,9 @@
 //! CSV and TSV parsing at the compiled binary edge.
 
-use crate::child::ChildEnvironment as _;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 
 use super::harness::{Canned, Listener, finish, spawn_one as spawn};
 
@@ -471,9 +470,7 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
     let response = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
     let listener =
         Listener::answering(move |_| Canned::ok(response).after(20)).expect("a listener");
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
+    let mut child = crate::harness::command(&[], &[])
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .env("THINKTHEN_BATCH", "1")
         .args([

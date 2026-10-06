@@ -71,15 +71,8 @@ impl Drop for Scratch {
     }
 }
 pub(crate) fn powershell(path: &Path, script: &str) -> String {
-    let mut command = Command::new("powershell.exe");
+    let mut command = crate::child::powershell(script);
     command
-        .clear_environment()
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            &format!("$ErrorActionPreference='Stop'; {script}"),
-        ])
         .env("THINKTHEN_FIXTURE_PATH", path)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
