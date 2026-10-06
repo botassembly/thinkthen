@@ -14,12 +14,16 @@ remain. Baseline process success never qualifies missing named/typed cells;
 missing toolchains, exit 77, missing checks, duplicate/unknown IDs and skips
 cannot pass strict parity. Each matrix command uses empty configuration.
 
-Fresh root whole-slice review accepted after offline policy and focused schema,
-public-consumer and Clippy checks; no agents or new dependencies. Landing checks
-include full tests/lint and the explicit baseline under 10 GiB memory, 1 GiB
-swap and two Cargo jobs. Baseline gaps remain in the generated matrix; named
-typed counts without adopted assertions are not checked. Families 0427–0431,
-C/native/images, SQL and frames own adoption through the interface in
+Focused offline policy, schema, public-consumer and Clippy checks passed.
+The phase A baseline executes CLI/Rust/C only and keeps every other required
+row missing/not checked. One real adopted cell is packed Rust annotate;
+complete named typed function counts remain not checked. CLI/Rust/C baseline
+commands exited 0; strict phase A exited 1 with 1 passed and 5,039 missing
+cells across all 28 rows. The three requested missing-function, known-field
+and skipped-case consistency checks refused their invalid cases. Earlier partial
+legacy-run logs remain uncommitted under `target/parity` and qualify nothing.
+Root fresh review, full tests/lint and landing remain with the coordinator.
+Families 0427–0431, C/native/images, SQL and frames adopt the interface in
 `conformance/README.md`. Overall 0432 remains open until all required cells
 execute and the passing full run becomes mandatory. Release rehearsal and
 Ian's publication approval remain required.

@@ -38,7 +38,9 @@ Lane claude-0, branch `ticket/0432-shared-parity-cases`, base origin/main
 integration only. Native engine/images/C and host-family implementation remain
 with their owners. `conformance/cases.json` declares the public rows and required
 cases; `conformance/README.md` defines the family adoption interface.
-`surfaces --parity` is explicit during transition and fails missing cells;
+`surfaces --parity-baseline` executes CLI/Rust/C for phase A and reports
+all other rows missing/not checked. `surfaces --parity` remains the complete
+explicit run during transition and fails missing cells;
 routine gates validate declarations without claiming complete parity.
 
 Phase A can land independently. Closing 0432 requires all families and

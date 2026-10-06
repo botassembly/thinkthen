@@ -17,6 +17,7 @@ mode=plain
 profile=routine
 registry_only=0
 parity=0
+parity_baseline=
 # `--publish TAG` copies the release files this run packs to ROOT/TAG through publish-builds.
 # ROOT is `--publish-root`, else THINKTHEN_PUBLISH_ROOT; with neither, it refuses. Only the coordinator asks for it.
 publish_tag= publish_root=
@@ -27,6 +28,7 @@ while [ "$#" -gt 0 ]; do
     --stress) profile=stress ;;
     --registry) registry_only=1 ;;
     --parity) parity=1; profile=full; mode=release ;;
+    --parity-baseline) parity=1; parity_baseline=--baseline; profile=full; mode=release ;;
     --publish) [ "$#" -ge 2 ] && [ "${2#-}" = "$2" ] || { echo 'surfaces: --publish needs a tag' >&2; exit 2; }; publish_tag=$2; shift ;;
     --publish-root) [ "$#" -ge 2 ] || { echo 'surfaces: --publish-root needs a folder' >&2; exit 2; }; publish_root=$2; shift ;;
     *) echo "surfaces: unknown option $1" >&2; exit 2 ;;
@@ -249,7 +251,7 @@ backend_start
 if [ "$parity" -eq 1 ]; then
     unset THINKTHEN_CONFORMANCE_IDS
     export THINKTHEN_TEST_PROFILE=full
-    python3 conformance/parity.py "$port"
+    python3 conformance/parity.py "$port" ${parity_baseline:+"$parity_baseline"}
     exit $?
 fi
 

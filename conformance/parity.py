@@ -19,6 +19,8 @@ PREFIX = 'parity: '
 def inventory():
     document = json.loads(DOCUMENT.read_text())
     parity = document['parity']
+    if parity['schema'] != 'thinkthen.parity-cases/1':
+        raise ValueError('unknown parity case schema')
     cases = parity['required_cases']
     consumers = parity['consumers']
     for label, rows in [('case', cases), ('consumer', consumers)]:
@@ -90,7 +92,7 @@ def cells(output, consumers, cases):
     return found
 
 
-def run(port):
+def run(port, baseline=False):
     parity = inventory()
     if os.environ.get('THINKTHEN_CONFORMANCE_IDS') is not None:
         raise ValueError('strict parity refuses a case selector')
@@ -105,21 +107,22 @@ def run(port):
     for command, ids in commands.items():
         label = '+'.join(ids)
         log = output_dir / (label + '.log')
-        print(f'parity baseline: {label}', flush=True)
-        args = list(command) + ([] if command[0] == 'cargo' else [port])
-        # Existing runners own scratch configuration and loopback backends.
-        # The surfaces rung has already removed unrelated environment values.
-        with tempfile.TemporaryDirectory(prefix='thinkthen-parity-config-') as config, log.open('w') as stream:
-            env = dict(os.environ, XDG_CONFIG_HOME=config)
-            process = subprocess.run(['sh', 'sdlc/scripts/time-limit', '1800', *args],
-                                     cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT, check=False)
-        code = process.returncode
+        code = None
         seen = {}
         error = None
-        try:
-            seen = cells(log.read_text(), ids, cases)
-        except (ValueError, KeyError, TypeError) as failure:
-            error = str(failure)
+        execute = not baseline or set(ids) <= {'cli', 'rust', 'c'}
+        if execute:
+            print(f'parity baseline: {label}', flush=True)
+            args = list(command) + ([] if command[0] == 'cargo' else [port])
+            with tempfile.TemporaryDirectory(prefix='thinkthen-parity-config-') as config, log.open('w') as stream:
+                env = dict(os.environ, XDG_CONFIG_HOME=config)
+                process = subprocess.run(['sh', 'sdlc/scripts/time-limit', '1800', *args],
+                                         cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT, check=False)
+            code = process.returncode
+            try:
+                seen = cells(log.read_text(), ids, cases)
+            except (ValueError, KeyError, TypeError) as failure:
+                error = str(failure)
         for consumer in ids:
             states = {}
             for case in cases:
@@ -128,16 +131,19 @@ def run(port):
             named = [verb for verb in parity['functions']
                      if states['typed-' + verb] == 'pass']
             matrix.append({'consumer': consumer, 'baseline_exit': code, 'baseline_error': error,
-                           'named_typed_functions': named if seen and not code and not error else None,
-                           'cells': states, 'log': str(log.relative_to(ROOT))})
-        print(f'parity baseline: {label} exit={code}; adopted cells={len(seen)}', flush=True)
+                           'named_typed_functions': named if any((consumer, 'typed-' + verb) in seen for verb in parity['functions']) and not code and not error else None,
+                           'adopted_case_count': sum(state == 'pass' for state in states.values()),
+                           'cells': states, 'log': str(log.relative_to(ROOT)) if execute else None})
+        if execute:
+            print(f'parity baseline: {label} exit={code}; adopted cells={len(seen)}', flush=True)
     (output_dir / 'matrix.json').write_text(json.dumps(matrix, indent=2) + '\n')
     lines = ['| Consumer | Baseline exit | Named typed functions | Required gaps |',
              '| --- | --- | --- | --- |']
     for row in matrix:
         count = 'not checked' if row['named_typed_functions'] is None else str(len(row['named_typed_functions']))
         gaps = sum(state != 'pass' for state in row['cells'].values())
-        lines.append(f"| {row['consumer']} | {row['baseline_exit']} | {count} | {gaps} |")
+        exit_code = row['baseline_exit'] if row['baseline_exit'] is not None else 'not checked'
+        lines.append(f"| {row['consumer']} | {exit_code} | {count} | {gaps} |")
     (output_dir / 'matrix.md').write_text('\n'.join(lines) + '\n')
     print('\n'.join(lines))
     return int(any(state != 'pass' for row in matrix for state in row['cells'].values()))
@@ -146,12 +152,14 @@ def run(port):
 def main():
     if sys.argv[1:] == ['--validate']:
         parity = inventory()
-        print(f"parity: {len(parity['consumers'])} public consumers; "
+        print(f"parity inventory: {len(parity['consumers'])} public consumers; "
               f"{len(parity['required_cases'])} required cases; declarations valid")
         return 0
+    if len(sys.argv) == 3 and sys.argv[2] == '--baseline':
+        return run(sys.argv[1], baseline=True)
     if len(sys.argv) == 2:
         return run(sys.argv[1])
-    raise ValueError('usage: parity.py --validate|PORT (called by surfaces --parity)')
+    raise ValueError('usage: parity.py --validate|PORT [--baseline] (called by surfaces)')
 
 
 if __name__ == '__main__':

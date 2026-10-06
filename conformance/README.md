@@ -75,7 +75,11 @@ corpus rather than changing their landed schemas. `decide_many` is a decide
 input form; generic JSON compatibility calls do not qualify named or typed
 cells. Counts from source are not execution evidence.
 
-Run `sdlc/scripts/surfaces --parity` explicitly during adoption. It runs the
+Run `sdlc/scripts/surfaces --parity-baseline` for phase A: only actual CLI,
+Rust and C consumers run; other rows remain missing/not checked. This bounded
+run also exits nonzero and cannot qualify full parity.
+
+Run `sdlc/scripts/surfaces --parity` explicitly for complete adoption. It runs the
 existing full consumers with no selector, writes logs and the current matrix
 to `target/parity/`, and exits nonzero for every failed or missing required
 cell, including exit 77. Routine gates validate the inventory and retain
