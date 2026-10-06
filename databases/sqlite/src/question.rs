@@ -8,7 +8,7 @@ use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::types::ValueRef;
-use thinkthen::{ErrorKind, For, LoadedQuestion, Question, QuestionSet, Settings};
+use thinkthen::{ErrorKind, For, LoadedQuestion, Question, QuestionSet, RankSet, Settings};
 
 use crate::Failure;
 
@@ -182,6 +182,13 @@ pub(crate) fn from_file(error: thinkthen::Error, file: bool) -> Failure {
 static QUESTIONS: LazyLock<Mutex<Parsed<LoadedQuestion>>> =
     LazyLock::new(|| Mutex::new(Parsed::new()));
 static SETS: LazyLock<Mutex<Parsed<QuestionSet>>> = LazyLock::new(|| Mutex::new(Parsed::new()));
+static RANK_SETS: LazyLock<Mutex<Parsed<RankSet>>> = LazyLock::new(|| Mutex::new(Parsed::new()));
+
+pub(crate) fn rank_set(argument: &str) -> Result<Arc<RankSet>, Failure> {
+    cached(&RANK_SETS, argument, "rank question set", |source, file| {
+        RankSet::from_json(source).map_err(|error| from_file(error, file))
+    })
+}
 
 /// The question one argument names: `'@name'`, JSON that starts with `{`, or
 /// plain text asked as a decide question at the default cut.

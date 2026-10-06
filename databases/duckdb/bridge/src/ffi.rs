@@ -13,6 +13,8 @@ mod complete_listed;
 #[path = "ffi/files/ffi.rs"]
 mod files;
 mod find;
+#[path = "ffi/images/ffi.rs"]
+mod images;
 mod listed;
 mod nested;
 mod panic;

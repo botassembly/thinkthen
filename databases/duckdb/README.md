@@ -155,3 +155,46 @@ LOAD takes SIGINT and chains to the host's own action. A Ctrl-C stops the runnin
 ## Build and check
 
 `tools/setup.sh --fetch` is the networked setup step. It verifies each supported version's stock CLI, Python module, pinned C++ source and static archives. `tools/setup.sh` alone checks those inputs and installs the pinned Python test requirements offline. `check.sh PORT` builds the C++ extension and Rust bridge, runs source and dependency checks, loads the extension in the stock CLI, and runs the loopback suites with fake keys. The old raw C API entry and its `libduckdb-sys` dependency are retired under ADR 0081; the Rust files `src/engines.rs` and `src/signal.rs` remain source imports of the C++ bridge. With `THINKTHEN_ARTIFACT` set to the release archive, the check unpacks the package and checks the installed binary without invoking a Rust build. The `surfaces` rung runs the check at its named integration checkpoint.
+
+## Explicit images (0.2 development)
+
+`thinkthen_image(bytes BLOB, mime VARCHAR)` returns `STRUCT(media VARCHAR, data BLOB, file VARCHAR)`. Pass an ordered list of these structs. MIME is exactly `image/png` or `image/jpeg`; the native reader/decoder validates original compressed pixels. Each question takes 1–8 images and at most 24 MiB of compressed bytes. Order and duplicates are preserved. Source file names stay outside model evidence and cache identity.
+
+`thinkthen_decide_images(question, images, text := NULL, settings := NULL)`, `thinkthen_choose_images`, `thinkthen_score_images` and `thinkthen_details_images` use the existing native image engine. The first three return their ordinary scalar value; the last returns native detailed JSON. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional.
+
+NULL constructor operands return NULL. NULL question or collection returns NULL without sending; NULL ancillary text means absent text and NULL settings means defaults. A NULL member inside a collection, empty collection, invalid media/pixels/tag or exceeded limit is Usage before sending. Unsure decide/choose is NULL; failures remain errors. Arbitrary BLOB/bytea, text, paths, URLs and generic JSON never become images implicitly. Other functions retain their text input contract.
+
+`thinkthen_image_file(path)` explicitly reads one local regular image with DuckDB filesystem permissions and the native handle reader. Its `file` field retains the source name; a byte constructor has NULL `file`. No text line positions are invented. `thinkthen_recognize` also accepts the existing native recognize JSON/question-file grammar with described kinds in addition to its retained name list.
+
+Complete result/2 identities, invocation facts, started-failure facts and caller prices still await 0435 adoption of the shared native APIs (0442/0445/0450 and 0300). The additive SQL rank-set route exposes native turns and combined count facts; complete rank result/identity adoption remains with 0417/0435. These image calls expose landed native details; this is not a full SDK parity claim.
+
+`thinkthen_rank_set(questions, keyed_json[, settings])` is the explicit additive
+rank-set route. It takes the native version-one ordered set of named decide
+questions, returns `key, rank, probability, question_name, facts`, and preserves
+each original keyed identity even when several keys have equal text. Each
+member sorts with the host's existing input-order ties; native turns visits
+each depth in authored member order, consumes duplicate visits, and emits
+each original once. `probability` and `question_name` belong to the selecting
+member. Use `ORDER BY rank` after a join and `LIMIT` for the merged prefix;
+every member still judges every record. The literal `thinkthen_rank` route
+retains its existing signatures and behavior.
+
+Settings take `batch`, `context` and `deadline_ms`; model/backend selection
+uses the existing host configuration. Per-call model, cuts, pointers and
+score members refuse before sending. One-member sets preserve the plain
+question's wire/cache identity. Recording each member individually supports
+strict set replay with zero sends. Described decide members retain their
+authored true/false meanings. Independent single described/saved-score rank
+awaits the native richer-rank API under 0406.
+
+`facts` comes directly from the same completed native call, counts original
+records and combined member requests, and repeats on every output row. It
+is the current count-facts shape; full observations, call/answer IDs and
+started-failure carriers await native/0435 adoption. An empty object yields
+no rows. Set JSON and files use native RankSet admission, preserving member
+order and rejecting duplicates, authored thresholds/on and non-decide kinds.
+
+Questions/keyed input and facts are VARCHAR JSON text. Questions may name an
+explicit `@file` through the existing DuckDB-authorized reader. NULL questions
+or keyed input yields no rows without file IO or sends; NULL settings uses
+defaults.
