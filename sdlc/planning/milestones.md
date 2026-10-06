@@ -84,6 +84,7 @@ Open owners:
 - [0440: Move audit and diff under runs](../tickets/0440-runs-audit-diff-command-tree.md)
 - [0441: Prepare the Decisions backend for preview access](../tickets/0441-openai-decisions-backend-preview.md)
 - [0442: Settle SDK identity, provenance and cache compatibility](../tickets/0442-proxy-ready-sdk-contract.md)
+- [0454: Make question grouping explicit and keep grouped answers distinct](../tickets/0454-group-questions-only-with-explicit-route-opt-in.md)
 - [0443: Carry SDK call identity and cache instructions](../tickets/0443-sdk-call-identity-and-cache-policy.md)
 - [0444: Version cache keys and preserve offline replay](../tickets/0444-versioned-cache-identity-and-replay.md)
 - [0445: Complete attempt observations and command facts](../tickets/0445-complete-attempt-and-command-facts.md)
