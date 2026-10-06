@@ -69,6 +69,9 @@ fn ResolvedQuestion::no(&self) -> Option<QuestionContent<'_>>
 struct FindReading<'a>
 fn FindReading::text(&self) -> QuestionContent<'_>
 const fn FindReading::offers_none(&self) -> bool
+const fn FindReading::profile(&self) -> Option<&str>
+fn Question::find_from_json(&str) -> Result<Question, Error>
+fn Question::load_find(impl AsRef<Path>) -> Result<Question, Error>
 struct ResolvedRelationRule<'a>
 fn ResolvedRelationRule::name(&self) -> &str
 fn ResolvedRelationRule::source(&self) -> &str
@@ -116,3 +119,5 @@ fn CompleteFilter::threshold(&self) -> Option<ResolvedThreshold>
 fn CompleteRank::question(&self) -> ResolvedQuestion<'_>
 fn CompleteRank::threshold(&self) -> Option<ResolvedThreshold>
 ```
+
+Saved native find preparation now uses the common ordered grammar and capped reader, retains model/profile and rejects authored cuts/candidates/batch. Actual execution retains original units and partial reported usage; CLI file selection shares the same parser and fields. Complete CLI result/2/schema adoption remains in progress.

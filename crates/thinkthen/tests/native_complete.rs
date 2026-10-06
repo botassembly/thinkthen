@@ -60,5 +60,9 @@ mod readings;
 mod calls;
 #[path = "native_complete/composition.rs"]
 mod composition;
+#[path = "native_complete/dynamic_choose.rs"]
+mod dynamic_choose;
+#[path = "native_complete/find_reading.rs"]
+mod find_reading;
 #[path = "native_complete/observers.rs"]
 mod observers;

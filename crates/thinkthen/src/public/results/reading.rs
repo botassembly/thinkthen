@@ -133,8 +133,14 @@ impl ResolvedQuestion<'_> {
 pub struct FindReading<'a> {
     pub(crate) text: &'a core::QuestionText,
     pub(crate) none: bool,
+    pub(crate) profile: Option<&'a str>,
 }
 impl FindReading<'_> {
+    /// Authored calibration profile, independent of runtime route limits.
+    #[must_use]
+    pub const fn profile(&self) -> Option<&str> {
+        self.profile
+    }
     /// Authored selection question.
     #[must_use]
     pub fn text(&self) -> QuestionContent<'_> {

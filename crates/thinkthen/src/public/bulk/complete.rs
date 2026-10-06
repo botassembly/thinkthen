@@ -203,6 +203,7 @@ impl Engine {
         let engine = crate::public::complete::contextual(self.asking(question)?, options)?;
         let find = Find::new(text.clone(), &texts, engine.backend().model().clone(), none)
             .map_err(|_| Error::usage(count_message))?;
+        let find = crate::public::find_question::profiled(find, question);
         Ok((units, find, engine))
     }
 

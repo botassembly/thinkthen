@@ -20,6 +20,7 @@ pub use input_files::{
     read_inputs,
 };
 mod files;
+mod find_question;
 pub use files::{
     FileReader, ReaderOptions, SourceRecord, SourceRecords, SourceUnit, enumerate_files, read_files,
 };
@@ -46,7 +47,9 @@ mod proxy;
 mod pull;
 mod question;
 mod question_file;
+mod record_choose;
 mod record_composition;
+pub use record_choose::RecordChooseQuestion;
 mod record_input;
 pub use crate::core::{Surface, SurfaceError};
 pub use proxy::{

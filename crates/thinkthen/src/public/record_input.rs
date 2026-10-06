@@ -84,6 +84,15 @@ impl RecordOptions {
         let core::Question::Choose { text, .. } = &question.core else {
             return Err(Error::usage("record options are admitted only for choose"));
         };
+        let mut question = question.clone();
+        question.core = core::Question::Choose {
+            text: text.clone(),
+            options: self.labels()?,
+        };
+        Ok(question)
+    }
+
+    pub(crate) fn labels(&self) -> Result<Labels, Error> {
         let labels = self
             .options
             .iter()
@@ -98,12 +107,7 @@ impl RecordOptions {
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()?;
-        let mut question = question.clone();
-        question.core = core::Question::Choose {
-            text: text.clone(),
-            options: Labels::described(labels).map_err(Error::refused)?,
-        };
-        Ok(question)
+        Labels::described(labels).map_err(Error::refused)
     }
 
     /// Borrow all options in the order they will be sent.

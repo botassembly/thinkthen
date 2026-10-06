@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::core::digest::hex;
 use crate::core::plan::Descriptions;
 use crate::core::{
-    Answer, Evidence, Labels, Meta, ModelName, Plan, Question, QuestionText, Record,
+    Answer, Evidence, Labels, Meta, ModelName, Plan, ProfileName, Question, QuestionText, Record,
 };
 
 /// Why a unit set cannot become one find request or result.
@@ -39,6 +39,7 @@ pub(crate) struct Find {
     text: QuestionText,
     none: bool,
     units: usize,
+    profile: Option<ProfileName>,
 }
 
 impl Find {
@@ -89,7 +90,16 @@ impl Find {
             text,
             none,
             units: evidence.len(),
+            profile: None,
         })
+    }
+
+    pub(crate) fn with_profile(mut self, profile: Option<ProfileName>) -> Self {
+        self.profile = profile;
+        self
+    }
+    pub(crate) fn profile(&self) -> Option<&ProfileName> {
+        self.profile.as_ref()
     }
 
     /// Read the internal choice plan sent to the adapter.
@@ -146,6 +156,7 @@ impl Find {
             verb: "find",
             text: &self.text,
             none: self.none,
+            profile: self.profile.as_ref(),
         })
         .map_err(|_| FindError::Render)
     }
@@ -164,6 +175,7 @@ impl Find {
             question: FindQuestionOwned {
                 text: self.text.clone(),
                 none: self.none,
+                profile: self.profile.clone(),
             },
             answer,
             threshold: None,
@@ -181,6 +193,8 @@ struct FindQuestion<'a> {
     verb: &'static str,
     text: &'a QuestionText,
     none: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<&'a ProfileName>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -189,9 +203,14 @@ struct FindQuestion<'a> {
 pub(super) struct FindQuestionOwned {
     text: QuestionText,
     none: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<ProfileName>,
 }
 
 impl FindQuestionOwned {
+    pub(crate) fn profile(&self) -> Option<&str> {
+        self.profile.as_ref().map(ProfileName::as_str)
+    }
     pub(crate) const fn parts(&self) -> (&QuestionText, bool) {
         (&self.text, self.none)
     }

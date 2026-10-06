@@ -34,8 +34,19 @@ struct RecordOption
 RecordOption::name: String
 RecordOption::description: Option<Description>
 struct RecordOptions
-fn RecordOptions::new(Vec<RecordOption>) -> Result<Self, Error>
-fn RecordOptions::project(&str, &str) -> Result<Self, Error>
+fn RecordOptions::new(Vec<RecordOption>) -> Result<RecordOptions, Error>
+fn RecordOptions::project(&str, &str) -> Result<RecordOptions, Error>
 fn RecordOptions::options(&self) -> &[RecordOption]
-fn Description::from_json(&str) -> Result<Self, Error>
+fn Description::from_json(&str) -> Result<Description, Error>
+struct RecordChooseQuestion
+fn Question::choose_records(&str) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::from_json(&str) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::load(impl AsRef<Path>) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::cut_at(self, f64) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::model(self, &str) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::text(&self) -> QuestionContent<'_>
+fn RecordChooseQuestion::threshold(&self) -> Option<ResolvedThreshold>
+fn Engine::choose_dynamic_records_complete_with<I, T>(&self, &RecordChooseQuestion, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteChoice>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
 ```
+
+Native execution now admits a required whole shortlist on every eager original, including later-record zero-send refusal and an empty zero-observation call. Saved choose controls use the existing resolver and batch precedence. Host adoption remains open.

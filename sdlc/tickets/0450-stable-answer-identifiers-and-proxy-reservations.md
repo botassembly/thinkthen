@@ -66,6 +66,89 @@ withheld Debug, and prove zero additional cache sends.
 ### Added public declarations
 
 ```text
+struct IdentityError
+impl Display for IdentityError
+impl Error for IdentityError
+struct CallId
+fn CallId::new(impl Into<String>) -> Result<CallId, IdentityError>
+fn CallId::as_str(&self) -> &str
+impl Hash for CallId
+impl Ord for CallId
+impl PartialOrd for CallId
+impl Serialize for CallId
+impl Deserialize<'de> for CallId
+impl Display for CallId
+impl FromStr for CallId
+type CallId::Err = IdentityError
+struct SdkRequestId
+fn SdkRequestId::new(impl Into<String>) -> Result<SdkRequestId, IdentityError>
+fn SdkRequestId::as_str(&self) -> &str
+impl Hash for SdkRequestId
+impl Ord for SdkRequestId
+impl PartialOrd for SdkRequestId
+impl Serialize for SdkRequestId
+impl Deserialize<'de> for SdkRequestId
+impl Display for SdkRequestId
+impl FromStr for SdkRequestId
+type SdkRequestId::Err = IdentityError
+struct ObservationId
+fn ObservationId::new(impl Into<String>) -> Result<ObservationId, IdentityError>
+fn ObservationId::as_str(&self) -> &str
+impl Hash for ObservationId
+impl Ord for ObservationId
+impl PartialOrd for ObservationId
+impl Serialize for ObservationId
+impl Deserialize<'de> for ObservationId
+impl Display for ObservationId
+impl FromStr for ObservationId
+type ObservationId::Err = IdentityError
+struct FailureId
+fn FailureId::new(impl Into<String>) -> Result<FailureId, IdentityError>
+fn FailureId::as_str(&self) -> &str
+impl Hash for FailureId
+impl Ord for FailureId
+impl PartialOrd for FailureId
+impl Serialize for FailureId
+impl Deserialize<'de> for FailureId
+impl Display for FailureId
+impl FromStr for FailureId
+type FailureId::Err = IdentityError
+struct AnswerId
+fn AnswerId::new(impl Into<String>) -> Result<AnswerId, IdentityError>
+fn AnswerId::as_str(&self) -> &str
+impl Hash for AnswerId
+impl Ord for AnswerId
+impl PartialOrd for AnswerId
+impl Serialize for AnswerId
+impl Deserialize<'de> for AnswerId
+impl Display for AnswerId
+impl FromStr for AnswerId
+type AnswerId::Err = IdentityError
+enum Origin
+Origin::Live
+Origin::Cache
+Origin::Replay
+Origin::Proxy
+Origin::Memory
+impl Serialize for Origin
+enum Observation
+Observation::Answered
+Observation::Answered::observation_id: ObservationId
+Observation::Failed
+Observation::Failed::failure_id: FailureId
+impl Serialize for Observation
+struct QuestionSource
+impl Serialize for QuestionSource
+fn QuestionSource::batch_size(&self) -> Option<u32>
+const fn QuestionSource::origin(&self) -> Origin
+fn QuestionSource::answered_by(&self) -> &str
+struct ResultIdentity
+impl Serialize for ResultIdentity
+const fn ResultIdentity::answer_id(&self) -> &AnswerId
+const fn ResultIdentity::origin(&self) -> Option<Origin>
+fn ResultIdentity::question_sources(&self) -> &[QuestionSource]
+fn ResultIdentity::observations(&self) -> &[Observation]
+fn ResultIdentity::answered_by(&self) -> Option<&str>
 struct OwnedQuestionDetail
 fn OwnedQuestionDetail::detail(&self) -> QuestionDetail<'_>
 fn QuestionDetail::to_owned(&self) -> OwnedQuestionDetail

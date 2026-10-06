@@ -69,6 +69,45 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+struct SurfaceError
+impl Display for SurfaceError
+impl Error for SurfaceError
+enum Surface
+Surface::Cli
+Surface::Rust
+Surface::C
+Surface::Python
+Surface::Pandas
+Surface::PythonPolars
+Surface::RustPolars
+Surface::Javascript
+Surface::Ruby
+Surface::R
+Surface::Cpp
+Surface::Go
+Surface::Csharp
+Surface::Java
+Surface::Kotlin
+Surface::Scala
+Surface::Swift
+Surface::Zig
+Surface::Php
+Surface::Dart
+Surface::ObjectiveC
+Surface::Ada
+Surface::Cobol
+Surface::Flutter
+Surface::Duckdb
+Surface::Sqlite
+Surface::Postgresql
+Surface::Mcp
+const fn Surface::as_str(self) -> &'static str
+impl Hash for Surface
+impl Display for Surface
+impl Serialize for Surface
+impl Deserialize<'de> for Surface
+impl FromStr for Surface
+type Surface::Err = SurfaceError
 fn Engine::annotate_complete_with<I, T>(&self, &QuestionSet, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error> where I: IntoIterator<Item = T>, T: InputEvidence
 fn Engine::annotate_records_complete_with<I, T>(&self, &QuestionSet, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
 fn Engine::choose_complete_with<Q: DetailQuestion + ?Sized>(&self, &Q, &str, CallOptions<'_>) -> Result<Call<CompleteChoice>, Error>
@@ -165,3 +204,5 @@ Original immutable record/input snapshots are shared to avoid one original copy
 per annotation member. Existing duplicate option decoding is removed. Source
 caps remain 500 nonblank lines. Full source/aggregate execution, dynamic choose,
 CLI/schema/corpus adoption and remaining public inventory are still in progress.
+
+Constituent WIP: saved find and mandatory per-record choose preparation share native ordered grammar, field selection, saved model/profile and existing batch precedence. Focused public and CLI tests cover actual independent wire bodies, original preservation, empty calls and zero-send later/file refusal. Source ratchet grows by 636 nonblank lines (137956 to 138592): concrete preparation/parser leaves, public carriers and outside-in regression cases. Whole result/2 CLI/schema, located execution and final host adoption remain open; no landing/review claim.

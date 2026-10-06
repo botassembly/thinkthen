@@ -42,13 +42,21 @@ pub(super) fn selected_batch(
     options: &CallOptions<'_>,
     engine: Option<core::Setting>,
 ) -> Result<core::Setting, Error> {
+    selected_batch_file(question.batch.as_ref(), options, engine)
+}
+
+pub(crate) fn selected_batch_file(
+    file: Option<&core::Json>,
+    options: &CallOptions<'_>,
+    engine: Option<core::Setting>,
+) -> Result<core::Setting, Error> {
     if let Some(typed) = options.batch_setting() {
         return Ok(typed.into());
     }
     if let Some(engine) = engine {
         return Ok(engine);
     }
-    let Some(file) = question.batch.as_ref() else {
+    let Some(file) = file else {
         return Ok(core::Setting::Max);
     };
     core::Setting::of_json(file).ok_or_else(|| {

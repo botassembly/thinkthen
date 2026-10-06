@@ -19,7 +19,11 @@ impl<T> CompleteFound<T> {
     #[must_use]
     pub fn question(&self) -> super::FindReading<'_> {
         let (text, none) = self.canonical.question();
-        super::FindReading { text, none }
+        super::FindReading {
+            text,
+            none,
+            profile: self.canonical.profile(),
+        }
     }
     /// Raw accepted leading unit identifier, before find's none-tie policy.
     #[must_use]

@@ -53,13 +53,13 @@ behavior. SDK/SQL/CLI adoption and the coherent whole review remain open.
 
 ```text
 struct RawRecord
-fn RawRecord::text(&str) -> Result<Self, Error>
-fn RawRecord::json(&str) -> Result<Self, Error>
+fn RawRecord::text(&str) -> Result<RawRecord, Error>
+fn RawRecord::json(&str) -> Result<RawRecord, Error>
 fn RawRecord::literal(&self) -> Option<&str>
 fn RawRecord::content(&self) -> Option<QuestionContent<'_>>
 impl Serialize for RawRecord
 struct SourceLocation
-fn SourceLocation::new(String, Option<usize>, Option<usize>) -> Result<Self, Error>
+fn SourceLocation::new(String, Option<usize>, Option<usize>) -> Result<SourceLocation, Error>
 fn SourceLocation::file(&self) -> &str
 const fn SourceLocation::first_line(&self) -> Option<usize>
 const fn SourceLocation::last_line(&self) -> Option<usize>
@@ -69,12 +69,12 @@ const fn RecordEvidence::original(&self) -> &RawRecord
 const fn RecordEvidence::selected(&self) -> QuestionContent<'_>
 fn RecordEvidence::images(&self) -> &[ImageInput]
 const fn RecordEvidence::location(&self) -> Option<&SourceLocation>
-fn RecordEvidence::with_location(self, SourceLocation) -> Self
-fn RecordEvidence::with_images(self, Vec<ImageInput>) -> Result<Self, Error>
+fn RecordEvidence::with_location(self, SourceLocation) -> RecordEvidence
+fn RecordEvidence::with_images(self, Vec<ImageInput>) -> Result<RecordEvidence, Error>
 impl InputEvidence for RecordEvidence
 impl Serialize for RecordEvidence
 struct RecordReading
-fn RecordReading::new(&[&str], Option<&str>, Option<&str>) -> Result<Self, Error>
+fn RecordReading::new(&[&str], Option<&str>, Option<&str>) -> Result<RecordReading, Error>
 fn RecordReading::compose(&self, RawRecord) -> Result<RecordInput<RecordEvidence>, Error>
 fn RecordReading::compose_source(&self, SourceItem) -> Result<RecordInput<QuestionInput>, Error>
 struct RecordInput<T>

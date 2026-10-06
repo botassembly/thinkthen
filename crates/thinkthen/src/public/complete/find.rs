@@ -42,6 +42,7 @@ impl Engine {
                 &FindReading {
                     question: &question.core,
                     candidates: &texts,
+                    profile: question.profile.as_ref(),
                 },
                 &[],
             )
@@ -58,6 +59,10 @@ impl Engine {
                     answered.requests_sent,
                     vec![answered.request.as_str().to_owned()],
                 )
+                .with_profile_warning(core::ProfileWarning::between(
+                    question.profile.as_ref(),
+                    engine.profile().map(core::BackendProfile::name),
+                ))
                 .with_context_sha256(
                     options
                         .context_text()
@@ -95,4 +100,5 @@ impl Engine {
 struct FindReading<'a> {
     question: &'a core::Question,
     candidates: &'a [String],
+    profile: Option<&'a core::ProfileName>,
 }

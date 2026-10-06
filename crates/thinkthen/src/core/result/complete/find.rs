@@ -13,6 +13,9 @@ pub(crate) struct Find {
 }
 
 impl Find {
+    pub(crate) fn profile(&self) -> Option<&str> {
+        self.legacy.question.profile()
+    }
     pub(crate) fn raw_pick(&self) -> &str {
         self.legacy.answer.pick()
     }
