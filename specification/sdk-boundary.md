@@ -4,7 +4,7 @@ Status: **Settled** by [ADR 0119](../sdlc/planning/adr/0119-one-configured-route
 
 ## One configured route
 
-Each built engine resolves one final posting endpoint, one effective key (or no key on an admitted local route), and one provider API type. The provider API type is the request/response adapter and its dialect; released behavior uses System One. The proposed OpenAI Decisions text target in ADR0122 selects its distinct pure adapter explicitly through the existing named-backend door, before engine use. A named backend's posting suffix, such as `decisions`, remains part of its endpoint, not a routing instruction.
+Each built engine resolves one final posting endpoint, one effective key (or no key on an admitted local route), and one provider API type. The provider API type is the request/response adapter and its dialect; released behavior uses System One. The accepted OpenAI Decisions text contract in ADR0122 selects its distinct pure adapter explicitly through the existing named-backend door, before engine use. A named backend's posting suffix, such as `decisions`, remains part of its endpoint, not a routing instruction.
 
 The engine fixes these values before a call. Every stage, packed request, retry and refusal-split child uses them. Concurrent calls on that engine cannot select another route. Changing the route requires an explicitly constructed engine. SQL session settings may construct a new engine for a later invocation; they never reroute a started invocation. A failed call cannot discover or switch to another provider, key or API type.
 

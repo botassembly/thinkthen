@@ -68,4 +68,4 @@ The `runs` parent exposes `audit` and `diff` as settled by ticket 0440. Publishe
 
 The top-level nouns `questions`, `items`, `answers`, `checks`, `datasets`, `setups`, `findings`, `people` and `search` are reserved by [ADR 0118](../sdlc/planning/adr/0118-backend-command-namespace.md). They are unimplemented and exit 2 as unrecognized commands. This adds no judging function or proxy.
 
-[Proposed ADR0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md) and the [OpenAI target](backends.md#openai-decisions-target-for-02) refresh existing0441 for must-land 0.2 text support after0442–0444. Fresh ticket review is next; released System One behavior and the seventeen-ask/catalog completion scope remain.
+[Accepted ADR0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md) and the [OpenAI target](backends.md#openai-decisions-target-for-02) refresh existing0441 for must-land 0.2 text support after0442–0444. The whole design and request-local identity correction were accepted; released System One behavior and the existing catalog completion scope remain.

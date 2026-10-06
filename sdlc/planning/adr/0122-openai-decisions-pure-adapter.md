@@ -1,6 +1,6 @@
 # ADR 0122: Select OpenAI Decisions through a pure adapter
 
-- Status: Accepted. Ian's 2026-10-06 ruling requires OpenAI text and permits the second adapter. Fresh 0441 review found one request-local-name identity gap; the correction below awaits root-owned narrow confirmation before implementation. Other design and probe checks are reused.
+- Status: Accepted. Ian's 2026-10-06 ruling requires OpenAI text and permits the second adapter. Fresh 0441 review found one request-local-name identity gap; the correction below was narrowly confirmed at `68d3bf000`. Other design and probe checks are reused.
 - Date: 2026-10-06
 - Owner: [0441](../../tickets/0441-openai-decisions-backend-preview.md).
 - Risk: High: credentials, spend and cross-adapter storage isolation.
