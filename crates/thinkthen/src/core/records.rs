@@ -206,8 +206,10 @@ impl Record {
             Json::Object(members) => members
                 .iter()
                 .map(|(name, held)| match held {
-                    Json::String(text) => Ok((name.clone(), Some(Description::text(text.clone())))),
-                    _ => Err(shape()),
+                    Json::Null => Ok((name.clone(), None)),
+                    _ => Description::of_json(held)
+                        .map(|description| (name.clone(), Some(description)))
+                        .ok_or_else(shape),
                 })
                 .collect::<Result<Vec<_>, RecordError>>()?,
             _ => return Err(shape()),

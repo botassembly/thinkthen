@@ -1,6 +1,6 @@
 # 0450: Give each answer a stable identifier and reserve proxy policy fields
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
 Milestone: 0.2
 Owner: builder.
@@ -29,3 +29,7 @@ Call IDs identify invocations; request IDs identify sends; question keys identif
 Expose answer_id on every new complete typed result regardless of whether probability details are requested. CLI details, SQL details/observations and frame carriers expose per-result/member identities, including filter rejections and rank omissions through observation routes. Existing bare CLI/scalar SQL/convenience outputs remain compatibility views without metadata. Typed C accessors expose IDs; old generic JSON envelopes retain compatibility, and an explicit additive identity-enabled complete route provides them. Update all strict new full-result readers coherently under 0442.
 
 Reserve proxy.question_id as an optional opaque bounded string and proxy.code_threshold as the existing normalized number/band/null grammar. Derive the code threshold from current precedence/defaults; a caller cannot supply a contradictory second threshold. Reserve meta.proxy.decision_id and override tagged none/threshold/decision, carrying code_threshold, effective_threshold where required, and typed code_value/overridden value for a decision override. Exact bounds and function-specific reading fields are settled in the shared contract before code. These are logical reserved SDK shapes, not invented HTTP paths or headers. In 0.2 emit no proxy attestation and apply no override; activation refuses before lookup/send. Unknown vendor fields remain tolerated but cannot populate this namespace. In 0.3 an explicitly configured validated proxy protocol may override even an explicit code threshold; preserve raw probabilities, code reading and effective reading, and replay recorded policy without contacting today’s proxy. Deferral prevents unvalidated business decisions and vendor leakage while the reserved shape and stable IDs land now.
+
+## Native work in progress
+
+Lane0 has distinct validated CallId, SdkRequestId, ObservationId, FailureId and AnswerId leaves, with exact lowercase hexadecimal parsing and safe validation diagnostics. Typed constituent identity/source carriers reserve the closed provenance values. Transport generation, stable pure derivation, storage persistence, runtime propagation and proxy activation refusal remain open; no runtime completion is claimed.

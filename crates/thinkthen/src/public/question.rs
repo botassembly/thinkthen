@@ -116,7 +116,7 @@ impl Description {
         &self.text
     }
 
-    fn of(value: Json) -> Result<Self, Error> {
+    pub(super) fn of(value: Json) -> Result<Self, Error> {
         let text =
             json_line(&value).map_err(|_| Error::defect("a description could not be written"))?;
         Ok(Self { value, text })

@@ -1,6 +1,6 @@
 # 0413: Supply per-record candidate options everywhere
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
 Milestone: 0.2
 
@@ -22,3 +22,7 @@ Choose batches across every SDK, keyed SQL and frames carry independent ordered 
 ## Dependencies and ownership
 
 0407 owns per-record context; family tickets adopt shared carriers.
+
+## Native work in progress
+
+Lane0 adds `RecordInput<T>`, validated ordered `RecordOptions` and `RecordOption`, reusing LabelBuilder and Record::choices. `Description::from_json` admits the existing string/object/array/null grammar through the shared ordered parser. Projected options now retain object/array/null descriptions as authored. Null option descriptions mean absent; shortlists replace rather than merge. Public admission tests pin order, descriptions, invalid candidates and withheld Debug. Execution routes and complete-result integration remain open. The unpublished C draft will receive optional choices and text-only optional context once, preserving released layouts without an extra draft record_v2 API.

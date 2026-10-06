@@ -29,6 +29,8 @@ mod plan;
 mod pull;
 mod question;
 mod question_file;
+mod record_input;
+pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
 mod relate;
 mod results;
@@ -36,6 +38,8 @@ mod set;
 mod settings;
 
 pub use crate::core::settings::{For, Settings, SettingsError};
+pub use crate::core::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
+pub use crate::core::{Observation, Origin, QuestionSource, ResultIdentity};
 /// The channel every ThinkThen binding waits on, so a forked child on macOS
 /// can wait too (ticket 0365). It is for the bindings, not a documented API.
 #[doc(hidden)]

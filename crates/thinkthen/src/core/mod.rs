@@ -23,6 +23,7 @@ mod budget;
 pub(crate) mod check;
 mod digest;
 mod find;
+mod identity;
 mod json;
 pub(crate) mod measure;
 mod order;
@@ -38,6 +39,7 @@ mod question_file;
 mod question_set;
 mod recognize;
 mod recognize_file;
+pub(crate) mod record_input;
 pub(crate) mod recording;
 mod records;
 mod relate_file;
@@ -118,6 +120,8 @@ pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
 pub(crate) use crate::core::threshold::{Outcome, Threshold, ThresholdError};
+pub use identity::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
+pub use result::{Observation, Origin, QuestionSource, ResultIdentity};
 
 pub(crate) use crate::core::find::FindAnswer;
 pub(crate) use crate::core::text::Url;
