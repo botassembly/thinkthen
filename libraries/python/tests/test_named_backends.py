@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from conftest import Backend, clean_env, run
+from conftest import Backend, clean_env, private_windows_configuration, run
 
 ROWS = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance/binding-backends.json").read_text())["backends"]
 SLOTS = ("generic_systemone", "generic_decisions", "generic_custom", "capture_systemone", "capture_decisions", "capture_custom", "other", "non_post")
@@ -26,6 +26,8 @@ def configuration(folder, value):
     directory = folder / ("Library/Application Support/thinkthen" if sys.platform == "darwin" else "config/thinkthen")
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "config.json").write_text(json.dumps({"schema": "thinkthen.config/1", **value}))
+    if sys.platform == "win32":
+        private_windows_configuration(directory / "config.json")
 
 
 @pytest.mark.parametrize("row", ROWS, ids=lambda row: row["name"])
@@ -75,7 +77,7 @@ def test_constructor_backend_errors_send_nothing(backend, tmp_path):
     failures = json.loads(output)
     assert failures[:4] == ["backend is text"] * 4
     assert failures[6:10] == ["backend is text"] * 4
-    assert "the built-in backends are `liquid`, `ollama`, `openrouter`, `perplexity` and `typesafe`" in failures[5]
+    assert "the built-in backends are `liquid`, `llamacpp`, `mlx`, `ollama`, `openrouter`, `perplexity` and `typesafe`" in failures[5]
     assert backend.count() == 0
 
 

@@ -33,6 +33,16 @@ def clean_env(keep=(), **values):
     return shared_clean_env(keep=keep, **values)
 
 
+def private_windows_configuration(path):
+    """Give only this Windows user and SYSTEM access to a fixture config."""
+    subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+                    "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; "
+                    "$a=Get-Acl -LiteralPath $env:FIXTURE_CONFIG; "
+                    "$a.SetSecurityDescriptorSddlForm(\"O:${sid}D:P(A;;FA;;;$sid)(A;;FA;;;SY)\"); "
+                    "Set-Acl -LiteralPath $env:FIXTURE_CONFIG -AclObject $a"],
+                   env=clean_env(FIXTURE_CONFIG=str(path)), check=True)
+
+
 def pytest_sessionstart(session):
     """check.sh unsets the key first. A key here means that step is gone."""
     if "THINKTHEN_API_KEY" in os.environ:
