@@ -1,6 +1,6 @@
 # 0412: Document and test R index conventions
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: complete. R documents original input positions, selected units, Unicode spans and physical source lines. Typed result/2 and image adoption remain with 0431.
 
 Milestone: 0.2
 

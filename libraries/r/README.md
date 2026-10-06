@@ -41,6 +41,38 @@ For a lazy table, dbplyr passes `thinkthen_decide` through to SQL without transl
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `tt_engine(cache = FALSE)`.
 
+## Indexes and source coordinates
+
+These conventions describe the existing named R calls. They do not establish the result/2, image or typed source-carrier parity owned by 0431.
+
+| Field or result | Convention |
+| --- | --- |
+| Column answers and recognition frames | Input order, including permitted `NA` positions |
+| `tt_rank(...)$value$place` | One-based **original input position**, not rank number; output rows are best first |
+| `tt_find(...)$value$place` | One-based selected original unit position |
+| Asking call `$details[[i]]$index` | Zero-based original input index, including gaps for omitted `NA` evidence |
+| Observation `$details[[i]]$position` | Zero-based question position within its member or recognition stage; not an input index or rank |
+| `tt_recognize` frame `start`, `end` | One-based inclusive Unicode character positions; `length = end - start + 1` |
+| `tt_files` located rank `index` | Native zero-based input record index; no R `place` conversion |
+| `tt_files` recognition span `start`, `end` | Native zero-based Unicode scalar start and exclusive end, local to the record |
+| `tt_files` `first_line`, `last_line` | Physical one-based inclusive source lines, on records and spans |
+
+For the saved shared rank case with native indexes `1, 2, 0`, R returns `place = c(2L, 3L, 1L)`. Its first output row is rank one but came from input position two. `top` truncates those output rows without renumbering `place`. Ties retain input order, and duplicate text records retain distinct positions. `tt_filter` returns the original selected records in input order, without adding an index column. Use the call observations when original indexes are needed; they also include judged records that were filtered out.
+
+The saved `18-find-second` case selects native input index `1` from `c("First passage.", "Second passage.", "Third passage.")`. The public `tt_find("Which passage answers the question?", units, none = TRUE)` result has `place = 2L`, `unit = "Second passage."`, and `probability = 0.8`. The native choice label is `u002`; a find observation's input `index` describes the whole comparison, not the selected candidate. The saved none case returns `NA_integer_` place, `NA_character_` unit and `NA_real_` probability. It is a successful absence. An invalid call raises a condition rather than returning a selected position. Fewer than two find units, including an empty vector, is usage. Empty rank returns a zero-row frame; neither empty call sends a request.
+
+For recognized `"Maria Chen"` at the beginning of ASCII text, native `[0, 10)` becomes R `start = 1`, `end = 10`, `length = 10`. In the saved multibyte text `"Le café 😀 Maria Chen arrived."`, native `[10, 20)` becomes R `start = 11`, `end = 20`, `length = 10`:
+
+```r
+text <- "Le café 😀 Maria Chen arrived."
+substr(text, 11, 20)                         # "Maria Chen"
+nchar(substr(text, 1, 10), type = "bytes")   # 14, not the native start 10
+```
+
+Offsets count Unicode scalar values, not UTF-8 bytes or displayed grapheme clusters. Convert only the native start by adding one for R `substr`; the exclusive native end already equals the inclusive R end. Do not use these numbers to slice raw bytes. An `NA` recognition input has an empty frame; an empty text or text with no recognized names also has no span rows. Missing permitted column inputs have no observation and send no request: input positions one and three remain observation indexes `0` and `2`, not `0` and `1`. An accounted failure can retain earlier observations; those do not assert a successful answer for the failed input.
+
+`tt_files` returns located native JSON values decoded into R lists, rather than the recognition data-frame conversion above. Slice a located span with `substr(row$record, span$start + 1, span$end)`. Blank line units are skipped but still count as physical lines: records on lines two and four have rank indexes `0` and `1`, while their `first_line` values remain `2` and `4`. Window/file spans remain local to their retained record text; their physical line ranges refer to the file. An exclusive end maps to the last included character's physical line. Find returns a located selection or `NULL` for none; a whole-call source failure returns no successful located result. See the [native reader contract](../files.md). Generic JSON access is compatibility access, not a claim of typed R parity.
+
 ## Run facts
 
 Every asking call's `$facts` gives final call-scoped records, requests sent, cache answers, elapsed seconds, and provider tokens or model when reported. `$details` holds owned, ordered question observations with zero-based original input indexes and per-row request shares. An accounted error carries the facts and details on its named R condition. A refusal before Rust accounting has no facts. An all-`NA` permitted column has a measured zero-work account.
@@ -133,4 +165,4 @@ No key is needed. Select replay before any asking call because R keeps one engin
 
 From `libraries/r`, `./check.sh` runs the complete offline surface check. It exits 77 and reports "not run" if R, a tested R dependency or a cached crate is missing. `tools/setup.sh` prepares pinned R dependencies on a networked machine. From the repository root, `sdlc/scripts/smoke libraries/r` installs into owned scratch, loads the native package and replays a saved answer; its loopback counter proves the consumer adds no requests.
 
-The result index conventions are described in this README's call and run-facts sections; 0412 owns their documentation. Explicit files and folders use the [library reader contract](../files.md) and [`tt_files` helper reference](thinkthen/man/tt_files.Rd), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments. 0431 owns the typed R carriers. R image support remains required for 0.2 under 0431/0447; this installation ticket does not implement it.
+The [index conventions](#indexes-and-source-coordinates) distinguish R positions, native offsets and physical source lines. Explicit files and folders use the [library reader contract](../files.md) and [`tt_files` helper reference](thinkthen/man/tt_files.Rd), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments. 0431 owns the typed R carriers. R image support remains required for 0.2 under 0431/0447; this installation ticket does not implement it.
