@@ -630,6 +630,86 @@
         "decide": "Wrong?"
       },
       "valid": false
+    },
+    {
+      "name": "declared-named-refund",
+      "verb": "decide",
+      "file": {
+        "decide": "Refund?",
+        "name": "refund",
+        "wording_version": 2,
+        "item_schema": {
+          "type": "string"
+        },
+        "context_schema": {
+          "type": "string"
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "named-choose",
+      "verb": "choose",
+      "file": {
+        "choose": "Which?",
+        "options": [
+          "a",
+          "b"
+        ],
+        "name": "choice_a-2",
+        "wording_version": 2147483647
+      },
+      "valid": true
+    },
+    {
+      "name": "invalid-author-name",
+      "verb": "decide",
+      "file": {
+        "decide": "Refund?",
+        "name": "../secret"
+      },
+      "valid": false
+    },
+    {
+      "name": "unsupported-item-schema-key",
+      "verb": "decide",
+      "file": {
+        "decide": "Refund?",
+        "item_schema": {
+          "type": "string",
+          "additionalProperties": true
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "unsupported-nested-object",
+      "verb": "decide",
+      "file": {
+        "decide": "Refund?",
+        "item_schema": {
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "invalid-zero-wording-version",
+      "verb": "score",
+      "file": {
+        "score": "Urgency?",
+        "levels": [
+          "low",
+          "high"
+        ],
+        "wording_version": 0
+      },
+      "valid": false
     }
   ]
 }

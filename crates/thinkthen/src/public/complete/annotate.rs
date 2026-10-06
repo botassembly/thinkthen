@@ -15,13 +15,13 @@ mod streaming;
 
 struct Prepared {
     text: Text,
-    context: Option<String>,
+    context: Option<core::Evidence>,
 }
 struct Held<T> {
     original: T,
     input: core::Record,
     question_input: Arc<QuestionInput>,
-    context: Option<String>,
+    context: Option<core::Evidence>,
 }
 struct Annotations {
     engine: Arc<facade::Engine>,
@@ -31,12 +31,17 @@ impl Asker for Annotations {
     type Input = Prepared;
     type Row = facade::Annotation;
     type Error = Error;
+    fn validates_batches(&self) -> bool {
+        self.set.questions().iter().any(|member| {
+            member.metadata().item_schema.is_some() || member.metadata().context_schema.is_some()
+        })
+    }
     fn label(&self, input: &Prepared) -> usize {
         input.text.at
     }
     fn asks(&self, input: &Prepared) -> Result<Vec<Ask>, Error> {
         let asks = Annotating::new(&self.engine, self.set.clone())
-            .with_context(input.context.as_deref())?
+            .with_typed_context(input.context.as_ref())
             .asks(&input.text)?;
         if input.context.is_some() {
             super::records::validate_context(&self.engine, &asks)?;
@@ -70,7 +75,11 @@ impl Engine {
         T: InputEvidence,
     {
         let setting = crate::public::bulk::selected_set_batch(&questions.0, &options, self.batch)?;
-        let (held, inputs) = prepare(self.within_limit(records)?, options.context_text())?;
+        let (held, inputs) = prepare(
+            &questions.0,
+            self.within_limit(records)?,
+            options.context_text(),
+        )?;
         let engine = Arc::clone(&self.inner);
         let asker = Annotations {
             engine: Arc::clone(&engine),
@@ -149,13 +158,14 @@ impl Engine {
 
 type Admission<T> = (Vec<Held<T>>, Vec<Prepared>);
 fn prepare<T: InputEvidence>(
+    set: &core::QuestionSet,
     records: impl Iterator<Item = RecordInput<T>>,
     fallback: Option<&str>,
 ) -> Result<Admission<T>, Error> {
     let mut held = Vec::new();
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
-        let (item, input) = prepare_record(record, fallback, at)?;
+        let (item, input) = prepare_record(set, record, fallback, at)?;
         held.push(item);
         inputs.push(input);
     }
@@ -232,12 +242,19 @@ fn complete_row<T>(
 }
 
 fn prepare_record<T: InputEvidence>(
+    set: &core::QuestionSet,
     record: RecordInput<T>,
     fallback: Option<&str>,
     at: usize,
 ) -> Result<(Held<T>, Prepared), Error> {
     if record.options.is_some() {
         return Err(Error::usage("record options are admitted only for choose"));
+    }
+    for member in set.questions() {
+        member
+            .metadata()
+            .validate_context(record.context.as_ref())
+            .map_err(|error| error.at_record(at))?;
     }
     let question_input = record.original.question_input();
     crate::public::images::guard(InputFunction::Annotate, &question_input)?;
@@ -253,16 +270,7 @@ fn prepare_record<T: InputEvidence>(
         QuestionInput::Record(record) => record.original().0.as_ref().clone(),
         QuestionInput::Images(_) => return Err(super::wrong()),
     };
-    let context = record
-        .context
-        .as_deref()
-        .or(fallback)
-        .filter(|text| !text.is_empty())
-        .map(|text| {
-            crate::public::engine::evidence(text)?;
-            Ok::<_, Error>(text.to_owned())
-        })
-        .transpose()?;
+    let context = crate::public::RecordContext::resolved(record.context.as_ref(), fallback)?;
     let snapshot = Arc::new(question_input.clone());
     Ok((
         Held {

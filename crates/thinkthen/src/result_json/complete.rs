@@ -5,6 +5,7 @@ use crate::core::{self, Question, RenderError, Threshold, Value};
 use crate::engine::facade::Judgment;
 
 pub(crate) struct AtomicSpec {
+    pub(crate) declarations: core::declaration::QuestionMetadata,
     pub(crate) function: InputFunction,
     pub(crate) record: usize,
     pub(crate) question: Question,
@@ -53,6 +54,7 @@ pub(crate) fn atomic(
     )?
     .with_captured_attempts(attempts);
     Ok(core::CompleteAtomic {
+        declarations: spec.declarations,
         identity,
         legacy,
         rank_position: spec.rank_position,

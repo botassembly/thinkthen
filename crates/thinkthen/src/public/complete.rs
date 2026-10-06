@@ -179,6 +179,7 @@ fn run<'a>(
 
 fn spec(function: InputFunction, question: &Question, shown: Value, record: usize) -> AtomicSpec {
     AtomicSpec {
+        declarations: question.metadata.clone(),
         function,
         record,
         question: question.core.clone(),

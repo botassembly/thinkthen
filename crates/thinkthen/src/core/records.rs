@@ -60,6 +60,9 @@ pub(crate) enum ReadingError {
 /// pointer is named, because the user typed it on the command line.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub(crate) enum RecordError {
+    /// The typed selected item did not match its declaration.
+    #[error("the item does not match item_schema")]
+    ItemSchema,
     /// The bytes of the record are not text.
     #[error("the record is not valid UTF-8")]
     NotUtf8,
@@ -262,6 +265,7 @@ impl Serialize for AnnotatedRecord {
 /// The framing and the pointers one run reads its records by.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Reading {
+    item_schema: Option<crate::core::InputDeclaration>,
     framing: Framing,
     fields: Vec<Pointer>,
     by_default: bool,
@@ -297,6 +301,7 @@ impl Reading {
             }
         }
         Ok(Self {
+            item_schema: None,
             framing,
             fields,
             by_default: false,
@@ -441,7 +446,7 @@ impl Reading {
     }
 
     /// What this reading selects from one record.
-    fn selected<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
+    fn selected_unchecked<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
         match (&record.0, self.fields.as_slice()) {
             (Held::Text(text), []) => Ok(Selected::Text(text)),
             (Held::Text(_), _) => Err(RecordError::TextHasNoMembers),

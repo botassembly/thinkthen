@@ -21,7 +21,10 @@ macro_rules! complete {
             /// Actual resolved primitive question and authored content.
             #[must_use]
             pub fn question(&self) -> super::ResolvedQuestion<'_> {
-                super::ResolvedQuestion(self.canonical.question())
+                super::ResolvedQuestion(
+                    self.canonical.question(),
+                    Some(&self.canonical.declarations),
+                )
             }
             /// Effective reading rule, absent for score and final rank positions.
             #[must_use]

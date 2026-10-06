@@ -51,12 +51,14 @@ mod question_file;
 mod record_choose;
 mod record_composition;
 pub use record_choose::RecordChooseQuestion;
+mod record_context;
 mod record_input;
 pub use crate::core::{Surface, SurfaceError};
 pub use proxy::{
     CodeThreshold, ProxyActivation, ProxyId, ProxyMetadata, ProxyOverride, ProxyRequest,
 };
 pub use record_composition::{RawRecord, RecordEvidence, RecordReading, SourceLocation};
+pub use record_context::{ObjectContext, RecordContext};
 pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
 mod recognize_question;
@@ -449,3 +451,13 @@ pub use results::{
 pub use results::{RecognitionReading, RelationReading, ResolvedRelationRule};
 
 pub use results::{CompleteCall, CompleteError, ErrorSnapshot};
+
+mod declarations;
+pub use crate::core::{
+    InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
+    WordingVersion,
+};
+
+mod question_metadata;
+
+pub(crate) mod named_question;

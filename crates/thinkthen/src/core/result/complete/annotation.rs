@@ -35,6 +35,7 @@ pub enum MemberIdentity {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct AnnotationMember {
+    pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: MemberIdentity,
     pub(crate) legacy: AnnotatedEntry,
     pub(crate) threshold: Option<crate::core::Threshold>,
@@ -73,14 +74,26 @@ impl Serialize for AnnotationMember {
             (MemberIdentity::Answered(id), AnnotatedEntry::Answered(entry)) => {
                 map.serialize_entry("answer_id", id)?;
                 map.serialize_entry("value", &entry.value)?;
-                map.serialize_entry("question", &entry.question)?;
+                map.serialize_entry(
+                    "question",
+                    &crate::core::declaration::ReadableQuestion {
+                        question: &entry.question,
+                        metadata: &self.declarations,
+                    },
+                )?;
                 map.serialize_entry("answer", &entry.answer)?;
                 map.serialize_entry("threshold", &entry.threshold)?;
                 map.serialize_entry("request", &entry.request)?;
             }
             (MemberIdentity::Failed(id), AnnotatedEntry::Failed(entry)) => {
                 map.serialize_entry("failure_id", id)?;
-                map.serialize_entry("question", &entry.question)?;
+                map.serialize_entry(
+                    "question",
+                    &crate::core::declaration::ReadableQuestion {
+                        question: &entry.question,
+                        metadata: &self.declarations,
+                    },
+                )?;
                 map.serialize_entry("failure", &entry.failure)?;
                 map.serialize_entry("request", &entry.request)?;
             }

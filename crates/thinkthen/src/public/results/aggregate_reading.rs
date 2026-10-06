@@ -43,6 +43,27 @@ impl ResolvedRelationRule<'_> {
 #[derive(Clone, Copy)]
 pub struct RecognitionReading<'a>(pub(crate) &'a core::RecognizeSpec);
 impl RecognitionReading<'_> {
+    /// Optional author name on the aggregate question, never its generated primitives.
+    #[must_use]
+    pub fn name(&self) -> Option<&crate::public::QuestionName> {
+        self.0.metadata.name.as_ref()
+    }
+    /// Optional author wording version.
+    #[must_use]
+    pub fn wording_version(&self) -> Option<crate::public::WordingVersion> {
+        self.0.metadata.wording_version
+    }
+    /// Optional selected item declaration.
+    #[must_use]
+    pub fn item_schema(&self) -> Option<&crate::public::InputDeclaration> {
+        self.0.metadata.item_schema.as_ref()
+    }
+    /// Optional explicit per-item context declaration.
+    #[must_use]
+    pub fn context_schema(&self) -> Option<&crate::public::InputDeclaration> {
+        self.0.metadata.context_schema.as_ref()
+    }
+
     /// Original declared kinds and arbitrary descriptions, in authored order.
     pub fn kinds(&self) -> impl ExactSizeIterator<Item = ResolvedOption<'_>> {
         self.0
@@ -81,6 +102,27 @@ pub struct RelationReading<'a> {
     pub(crate) lines: bool,
 }
 impl RelationReading<'_> {
+    /// Optional author name on the aggregate question, never its generated primitives.
+    #[must_use]
+    pub fn name(&self) -> Option<&crate::public::QuestionName> {
+        self.spec.metadata.name.as_ref()
+    }
+    /// Optional author wording version.
+    #[must_use]
+    pub fn wording_version(&self) -> Option<crate::public::WordingVersion> {
+        self.spec.metadata.wording_version
+    }
+    /// Optional selected item declaration.
+    #[must_use]
+    pub fn item_schema(&self) -> Option<&crate::public::InputDeclaration> {
+        self.spec.metadata.item_schema.as_ref()
+    }
+    /// Optional explicit per-item context declaration.
+    #[must_use]
+    pub fn context_schema(&self) -> Option<&crate::public::InputDeclaration> {
+        self.spec.metadata.context_schema.as_ref()
+    }
+
     /// Declared rules, in original plan order.
     pub fn relations(&self) -> impl ExactSizeIterator<Item = ResolvedRelationRule<'_>> {
         self.spec.relations.iter().map(ResolvedRelationRule)

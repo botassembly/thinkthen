@@ -133,7 +133,10 @@ fn shared_composition_refuses_missing_or_nonstring_controls_without_sending_or_e
         .unwrap()
         .compose(RawRecord::json(r#"{"body":false,"context":""}"#).unwrap())
         .unwrap();
-    assert_eq!(record.context.as_deref(), Some(""));
+    assert_eq!(
+        record.context,
+        Some(thinkthen::RecordContext::Text(String::new()))
+    );
     assert_eq!(record.original.selected().to_json().unwrap(), "false");
     assert_eq!(listener.count(), 0);
 }

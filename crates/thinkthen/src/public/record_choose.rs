@@ -12,6 +12,7 @@ use std::path::Path;
 /// It is not an executable primitive until those candidates have been admitted.
 #[derive(Clone)]
 pub struct RecordChooseQuestion {
+    pub(super) metadata: core::declaration::QuestionMetadata,
     text: core::QuestionText,
     threshold: Option<core::Threshold>,
     model: Option<core::ModelName>,
@@ -24,6 +25,7 @@ impl Question {
     /// Refuses blank question text.
     pub fn choose_records(text: &str) -> Result<RecordChooseQuestion, Error> {
         Ok(RecordChooseQuestion {
+            metadata: core::declaration::QuestionMetadata::default(),
             text: text_of(text)?,
             threshold: None,
             model: None,
@@ -56,6 +58,7 @@ impl RecordChooseQuestion {
             ));
         }
         Ok(Self {
+            metadata: file.metadata.clone(),
             text: resolved.text().clone(),
             threshold: resolved.threshold(),
             model: (!resolved.sources().model_is_default()).then(|| resolved.model().clone()),
@@ -96,6 +99,7 @@ impl RecordChooseQuestion {
     }
     fn with_options(&self, options: &RecordOptions) -> Result<Question, Error> {
         Ok(Question {
+            metadata: self.metadata.clone(),
             core: core::Question::Choose {
                 text: self.text.clone(),
                 options: options.labels()?,

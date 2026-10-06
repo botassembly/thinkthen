@@ -150,6 +150,7 @@ impl Engine {
             .questions()
             .iter()
             .map(|member| Question {
+                metadata: member.metadata().clone(),
                 core: member.question().clone(),
                 threshold: None,
                 model: None,

@@ -36,6 +36,7 @@ pub(crate) struct RelatePresence {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct RelateSpec {
+    pub(crate) metadata: crate::core::declaration::QuestionMetadata,
     fields: RelateFields,
     pub(crate) relations: Vec<RelationRule>,
     pub(crate) threshold: Threshold,
@@ -68,6 +69,8 @@ impl RelateQuestion<'_> {
 
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub(crate) enum RelateConfigError {
+    #[error(transparent)]
+    Declaration(#[from] crate::core::declaration::DeclarationError),
     #[error("a relate question file is one closed version-one object")]
     Shape,
     #[error("relate takes one or more distinct relation rules")]
@@ -106,6 +109,14 @@ pub(crate) enum EntitySetError {
 #[serde(deny_unknown_fields)]
 struct FileShape {
     version: u8,
+    #[serde(rename = "name")]
+    _name: Option<IgnoredAny>,
+    #[serde(rename = "wording_version")]
+    _wording_version: Option<IgnoredAny>,
+    #[serde(rename = "item_schema")]
+    _item_schema: Option<IgnoredAny>,
+    #[serde(rename = "context_schema")]
+    _context_schema: Option<IgnoredAny>,
     relate: RelateShape,
     /// Read from the parsed JSON by the shared cut reader.
     #[serde(rename = "threshold")]
@@ -138,6 +149,7 @@ impl RelateSpec {
             .collect::<Result<Vec<_>, _>>()?;
         validate_relations(&relations)?;
         Ok(Self {
+            metadata: crate::core::declaration::QuestionMetadata::default(),
             fields: RelateFields::defaults()?,
             relations,
             threshold: Threshold::default(),
@@ -193,6 +205,7 @@ impl RelateSpec {
             .transpose()
             .map_err(|_| RelateConfigError::Shape)?;
         Ok(Self {
+            metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
             fields,
             relations,
             threshold,

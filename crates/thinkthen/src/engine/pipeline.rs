@@ -54,6 +54,16 @@ pub(crate) trait Asker: Sync {
     fn gone(&self) -> bool {
         false
     }
+
+    /// Declared inputs admit a bounded packed batch before any lookup.
+    fn validates_batches(&self) -> bool {
+        false
+    }
+
+    /// Annotate's existing missing-pointer exception may skip just that input.
+    fn refuses_batch(&self, _error: &Self::Error) -> bool {
+        true
+    }
 }
 
 /// One wire question's answer, live or stored.

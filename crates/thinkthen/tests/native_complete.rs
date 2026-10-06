@@ -76,3 +76,13 @@ mod recognize_records;
 
 #[path = "native_complete/relate_records.rs"]
 mod relate_records;
+
+#[path = "native_complete/declarations.rs"]
+mod declarations;
+
+#[path = "native_complete/context.rs"]
+mod context;
+#[path = "native_complete/declaration_batches.rs"]
+mod declaration_batches;
+#[path = "native_complete/tally.rs"]
+mod tally;

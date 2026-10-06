@@ -43,7 +43,13 @@ impl Recognition {
         if let Some(input) = input {
             map.serialize_entry("input", input)?;
         }
-        map.serialize_entry("question", &self.question)?;
+        map.serialize_entry(
+            "question",
+            &crate::core::declaration::ReadableQuestion {
+                question: &self.question,
+                metadata: &self.question.metadata,
+            },
+        )?;
         map.serialize_entry("answer", &self.answer)?;
         map.serialize_entry(
             "meta",

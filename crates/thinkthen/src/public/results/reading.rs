@@ -74,8 +74,32 @@ impl ResolvedOption<'_> {
 
 /// The normalized atomic question that actually supplied this reading.
 #[derive(Clone, Copy)]
-pub struct ResolvedQuestion<'a>(pub(crate) &'a core::Question);
+pub struct ResolvedQuestion<'a>(
+    pub(crate) &'a core::Question,
+    pub(crate) Option<&'a core::declaration::QuestionMetadata>,
+);
 impl ResolvedQuestion<'_> {
+    /// Optional author name; independent of accepted observation provenance.
+    #[must_use]
+    pub fn name(&self) -> Option<&crate::public::QuestionName> {
+        self.1.and_then(|m| m.name.as_ref())
+    }
+    /// Optional author wording version.
+    #[must_use]
+    pub fn wording_version(&self) -> Option<crate::public::WordingVersion> {
+        self.1.and_then(|m| m.wording_version)
+    }
+    /// Optional declaration of the effective typed item.
+    #[must_use]
+    pub fn item_schema(&self) -> Option<&crate::public::InputDeclaration> {
+        self.1.and_then(|m| m.item_schema.as_ref())
+    }
+    /// Optional declaration of explicit per-item context.
+    #[must_use]
+    pub fn context_schema(&self) -> Option<&crate::public::InputDeclaration> {
+        self.1.and_then(|m| m.context_schema.as_ref())
+    }
+
     /// The actual primitive question kind, including score used by rank.
     #[must_use]
     pub fn kind(&self) -> QuestionKind {
@@ -131,11 +155,33 @@ impl ResolvedQuestion<'_> {
 /// Whole-set find's actual normalized question.
 #[derive(Clone, Copy)]
 pub struct FindReading<'a> {
+    pub(crate) metadata: &'a core::declaration::QuestionMetadata,
     pub(crate) text: &'a core::QuestionText,
     pub(crate) none: bool,
     pub(crate) profile: Option<&'a str>,
 }
 impl FindReading<'_> {
+    /// Optional author name; independent of accepted observation provenance.
+    #[must_use]
+    pub fn name(&self) -> Option<&crate::public::QuestionName> {
+        self.metadata.name.as_ref()
+    }
+    /// Optional author wording version.
+    #[must_use]
+    pub fn wording_version(&self) -> Option<crate::public::WordingVersion> {
+        self.metadata.wording_version
+    }
+    /// Optional declaration of the effective typed item.
+    #[must_use]
+    pub fn item_schema(&self) -> Option<&crate::public::InputDeclaration> {
+        self.metadata.item_schema.as_ref()
+    }
+    /// Optional declaration of explicit per-item context.
+    #[must_use]
+    pub fn context_schema(&self) -> Option<&crate::public::InputDeclaration> {
+        self.metadata.context_schema.as_ref()
+    }
+
     /// Authored calibration profile, independent of runtime route limits.
     #[must_use]
     pub const fn profile(&self) -> Option<&str> {

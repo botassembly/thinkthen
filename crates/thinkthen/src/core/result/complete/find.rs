@@ -8,6 +8,7 @@ use crate::core::{FindResult, Usage};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Find {
+    pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: ResultIdentity,
     pub(crate) legacy: FindResult,
 }
@@ -51,7 +52,13 @@ impl Find {
         map.serialize_entry("schema", "thinkthen.result/2")?;
         map.serialize_entry("answer_id", self.identity.answer_id())?;
         map.serialize_entry("value", &value)?;
-        map.serialize_entry("question", &row.question)?;
+        map.serialize_entry(
+            "question",
+            &crate::core::declaration::ReadableQuestion {
+                question: &row.question,
+                metadata: &self.declarations,
+            },
+        )?;
         map.serialize_entry("answer", &row.answer)?;
         map.serialize_entry("threshold", &row.threshold)?;
         map.serialize_entry(

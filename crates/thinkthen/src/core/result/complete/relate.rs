@@ -125,7 +125,13 @@ impl Relation {
         if let Some(input) = input {
             map.serialize_entry("input", input)?;
         }
-        map.serialize_entry("question", &self.question.question(self.lines))?;
+        map.serialize_entry(
+            "question",
+            &crate::core::declaration::ReadableQuestion {
+                question: &self.question.question(self.lines),
+                metadata: &self.question.metadata,
+            },
+        )?;
         map.serialize_entry(
             "answer",
             &Answers {

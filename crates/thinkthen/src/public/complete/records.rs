@@ -22,11 +22,14 @@ pub(super) struct Prepared {
     question: Question,
     context: Option<core::Evidence>,
 }
-pub(super) struct Records(pub(super) Arc<facade::Engine>);
+pub(super) struct Records(pub(super) Arc<facade::Engine>, pub(super) bool);
 impl Asker for Records {
     type Input = Prepared;
     type Row = Decided;
     type Error = Miss;
+    fn validates_batches(&self) -> bool {
+        self.1
+    }
     fn label(&self, input: &Prepared) -> usize {
         input.text.at
     }
@@ -192,7 +195,10 @@ impl Engine {
         )?;
         // Plan every admitted row before the invocation starts; no later invalid
         // shortlist/context/image can cause an eager partial send.
-        let asker = Records(Arc::clone(&engine));
+        let asker = Records(
+            Arc::clone(&engine),
+            question.metadata.item_schema.is_some() || question.metadata.context_schema.is_some(),
+        );
         for input in &inputs {
             asker.asks(input).map_err(pipeline_failure)?;
         }
@@ -303,16 +309,20 @@ pub(super) fn prepare_record<T: InputEvidence>(
         || Ok(question.clone()),
         |options| options.replacing(question),
     )?;
-    let context_text = record
-        .context
-        .as_deref()
-        .or(fallback)
-        .filter(|text| !text.is_empty());
-    let context_sha256 = context_text.map(|text| core::bytes_sha256(text.as_bytes()));
-    let context = context_text
-        .map(crate::public::engine::evidence)
+    question
+        .metadata
+        .validate_context(record.context.as_ref())
+        .map_err(|error| error.at_record(at))?;
+    let context = crate::public::RecordContext::resolved(record.context.as_ref(), fallback)?;
+    let context_sha256 = context
+        .as_ref()
+        .map(crate::public::record_context::digest)
         .transpose()?;
     let input = record.original.question_input();
+    question
+        .metadata
+        .validate_item(&input)
+        .map_err(|error| error.at_record(at))?;
     crate::public::images::guard(function, &input)?;
     if let crate::public::QuestionInput::Text(text) = &input {
         crate::public::engine::evidence(text)?;

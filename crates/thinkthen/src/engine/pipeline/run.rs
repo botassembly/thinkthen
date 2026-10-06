@@ -17,6 +17,7 @@ use crate::engine::usage::Counters;
 
 mod replies;
 mod slot;
+mod staging;
 use slot::Slot;
 
 /// How long input may pause before the open request goes out.
@@ -52,6 +53,7 @@ pub(super) struct Run<'a, A: Asker> {
     call: Call,
     store: Option<Store>,
     packer: Packer<(Ask, usize)>,
+    staging: Option<staging::Staging<A>>,
     counts: Counts<'a>,
     window: usize,
     jobs: usize,
@@ -82,11 +84,15 @@ impl<'a, A: Asker> Run<'a, A> {
         bounds: Bounds,
         counts: Counts<'a>,
     ) -> Self {
+        let staging = asker
+            .validates_batches()
+            .then(|| staging::Staging::new(&packer));
         Self {
             asker,
             call,
             store,
             packer,
+            staging,
             counts,
             window: bounds.window.max(1),
             jobs: bounds.jobs,
@@ -119,7 +125,7 @@ impl<'a, A: Asker> Run<'a, A> {
                 return;
             }
             if !self.halted && self.stopping.is_none() {
-                self.dispatch(host, work);
+                self.dispatch(host, work, cancel);
             }
             cancel.observed_block();
             self.receive(received, cancel);
@@ -150,13 +156,18 @@ impl<'a, A: Asker> Run<'a, A> {
             self.closed.clear();
             return self.busy != 0;
         }
-        !(self.exhausted && self.slots.is_empty() && self.busy == 0)
+        !(self.exhausted
+            && self.slots.is_empty()
+            && self.busy == 0
+            && !self.staging.as_ref().is_some_and(staging::Staging::is_open))
     }
 
     /// Close a full window, hand closed requests to free workers, and ask
     /// for one more input while the window has room.
-    fn dispatch(&mut self, host: &mut impl Host<A>, work: &Sender<Job>) {
-        if self.slots.len() >= self.window || self.exhausted {
+    fn dispatch(&mut self, host: &mut impl Host<A>, work: &Sender<Job>, cancel: &Cancel) {
+        let staged = self.staging.as_ref().map_or(0, staging::Staging::len);
+        if self.slots.len() + staged >= self.window || self.exhausted {
+            self.admit_stage(cancel);
             self.close();
         }
         while self.busy < self.jobs
@@ -168,7 +179,7 @@ impl<'a, A: Asker> Run<'a, A> {
             }
             self.busy += 1;
         }
-        if !self.reading && !self.exhausted && self.slots.len() < self.window {
+        if !self.reading && !self.exhausted && self.slots.len() + staged < self.window {
             self.reading = host.ask();
             self.exhausted |= !self.reading;
         }
@@ -176,7 +187,9 @@ impl<'a, A: Asker> Run<'a, A> {
 
     /// Wait for one input or reply, closing the open request at a pause.
     fn receive(&mut self, received: &Receiver<Event<A::Input, A::Error>>, cancel: &Cancel) {
-        let wait = if self.packer.is_open() && self.reading {
+        let open =
+            self.packer.is_open() || self.staging.as_ref().is_some_and(staging::Staging::is_open);
+        let wait = if open && self.reading {
             self.pause
                 .saturating_sub(self.arrived.elapsed())
                 .max(Duration::from_millis(1))
@@ -192,11 +205,13 @@ impl<'a, A: Asker> Run<'a, A> {
                 }
             }
             Err(RecvTimeoutError::Timeout) => {
-                if self.packer.is_open() && self.arrived.elapsed() >= self.pause {
+                if open && self.arrived.elapsed() >= self.pause {
+                    self.admit_stage(cancel);
                     self.close();
                 }
             }
             Err(RecvTimeoutError::Disconnected) => {
+                self.admit_stage(cancel);
                 self.exhausted = true;
                 self.reading = false;
             }
@@ -241,22 +256,50 @@ impl<'a, A: Asker> Run<'a, A> {
         self.reading = false;
         self.arrived = Instant::now();
         match input {
-            Input::End => self.exhausted = true,
+            Input::End => {
+                self.admit_stage(cancel);
+                self.exhausted = true;
+            }
             // A stopping call admits nothing more.
             Input::Item(_) | Input::Failed(_) if self.stopping.is_some() => {}
             Input::Failed(error) => {
+                self.refuse_stage(&error, cancel);
                 self.slots.push_back(Slot::failed(Failed::Asker(error)));
                 self.exhausted = true;
             }
             Input::Item(input) => {
-                let slot = self.admit(input, cancel);
-                self.slots.push_back(slot);
+                let asks = match self.asker.asks(&input) {
+                    Ok(asks) => asks,
+                    Err(error) => {
+                        self.refuse_stage(&error, cancel);
+                        self.slots.push_back(Slot::failed(Failed::Asker(error)));
+                        return;
+                    }
+                };
+                self.stage(input, asks, cancel);
+            }
+        }
+    }
+
+    fn stage(&mut self, input: A::Input, asks: Vec<Ask>, cancel: &Cancel) {
+        let label = self.asker.label(&input);
+        let Some(stage) = &mut self.staging else {
+            let slot = self.admit(input, asks, cancel);
+            self.slots.push_back(slot);
+            return;
+        };
+        match stage.add(input, asks, label) {
+            Ok(inputs) => self.admit_inputs(inputs, cancel),
+            Err(error) => {
+                stage.discard();
+                self.slots.push_back(Slot::failed(error));
+                self.exhausted = true;
             }
         }
     }
 
     /// Look one input's questions up, and pack the ones nothing answers.
-    fn admit(&mut self, input: A::Input, cancel: &Cancel) -> Slot<A> {
+    fn admit(&mut self, input: A::Input, asks: Vec<Ask>, cancel: &Cancel) -> Slot<A> {
         let place = self.first + self.slots.len();
         let label = self.asker.label(&input);
         let engine = |error| {
@@ -265,10 +308,6 @@ impl<'a, A: Asker> Run<'a, A> {
                 first: label,
                 last: label,
             })
-        };
-        let asks = match self.asker.asks(&input) {
-            Ok(asks) => asks,
-            Err(error) => return Slot::failed(Failed::Asker(error)),
         };
         let mut slot = Slot {
             input: Some(input),
@@ -322,6 +361,36 @@ impl<'a, A: Asker> Run<'a, A> {
             self.waiting.entry(key).or_default().push((place, position));
         }
         slot
+    }
+
+    fn admit_inputs(&mut self, inputs: Vec<staging::Admitted<A>>, cancel: &Cancel) {
+        for input in inputs {
+            if let Some(stop) = cancel.stop_between_sends() {
+                self.stopping = Some(stop);
+                self.closed.clear();
+                return;
+            }
+            let slot = self.admit(input.input, input.asks, cancel);
+            self.slots.push_back(slot);
+        }
+    }
+
+    fn admit_stage(&mut self, cancel: &Cancel) {
+        if let Some(stage) = &mut self.staging {
+            let inputs = stage.flush();
+            self.admit_inputs(inputs, cancel);
+        }
+    }
+
+    fn refuse_stage(&mut self, error: &A::Error, cancel: &Cancel) {
+        if self.staging.is_some() && self.asker.refuses_batch(error) {
+            if let Some(stage) = &mut self.staging {
+                stage.discard();
+            }
+            self.exhausted = true;
+        } else {
+            self.admit_stage(cancel);
+        }
     }
 
     fn lookup(&mut self, asks: &[Ask], cancel: &Cancel) -> Result<Vec<Option<Found>>, Error> {

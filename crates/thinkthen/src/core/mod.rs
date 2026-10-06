@@ -177,3 +177,9 @@ pub(crate) use identity::LogicalTrace;
 pub(crate) use question_set::NamedQuestion;
 
 pub(crate) use result::Fields as MetadataFields;
+
+pub(crate) mod declaration;
+pub use declaration::{
+    InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
+    WordingVersion,
+};
