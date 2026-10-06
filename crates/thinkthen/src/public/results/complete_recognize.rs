@@ -13,6 +13,12 @@ pub struct CompleteRecognized {
 }
 
 impl CompleteRecognized {
+    /// The actual resolved aggregate question and separate thresholds.
+    #[must_use]
+    pub fn question(&self) -> super::RecognitionReading<'_> {
+        super::RecognitionReading(&self.canonical.question)
+    }
+
     /// Borrow actual metadata without decoding a result document.
     #[must_use]
     pub fn meta(&self) -> super::ResultMetadata<'_> {

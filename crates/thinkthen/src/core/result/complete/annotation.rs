@@ -37,9 +37,20 @@ pub enum MemberIdentity {
 pub(crate) struct AnnotationMember {
     pub(crate) identity: MemberIdentity,
     pub(crate) legacy: AnnotatedEntry,
+    pub(crate) threshold: Option<crate::core::Threshold>,
+    pub(crate) sources: Vec<crate::core::QuestionSource>,
+    pub(crate) observations: Vec<crate::core::Observation>,
+    pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
 }
 
 impl AnnotationMember {
+    pub(crate) fn question(&self) -> &crate::core::Question {
+        match &self.legacy {
+            AnnotatedEntry::Answered(entry) => &entry.question,
+            AnnotatedEntry::Failed(entry) => &entry.question,
+        }
+    }
+
     pub(crate) fn request(&self) -> &str {
         match &self.legacy {
             AnnotatedEntry::Answered(entry) => &entry.request,

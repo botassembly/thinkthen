@@ -73,6 +73,32 @@ pub struct CompleteAnnotationMember<'a> {
 }
 
 impl CompleteAnnotationMember<'_> {
+    /// Actual normalized primitive question, retained on failures too.
+    #[must_use]
+    pub fn question(&self) -> super::ResolvedQuestion<'_> {
+        super::ResolvedQuestion(self.canonical.question())
+    }
+    /// Admitted reading rule, independent of whether the member succeeded.
+    #[must_use]
+    pub fn threshold(&self) -> Option<super::ResolvedThreshold> {
+        self.canonical.threshold.map(super::ResolvedThreshold::of)
+    }
+    /// Actual ordered sources represented by this member.
+    #[must_use]
+    pub fn question_sources(&self) -> &[crate::public::QuestionSource] {
+        &self.canonical.sources
+    }
+    /// Accepted observations or failed logical occurrences for this member.
+    #[must_use]
+    pub fn observations(&self) -> &[crate::public::Observation] {
+        &self.canonical.observations
+    }
+    /// Actual partial token counts, without filling missing dimensions.
+    #[must_use]
+    pub fn reported_usage(&self) -> Option<crate::public::ReportedUsage> {
+        self.canonical.reported_usage
+    }
+
     /// The member name in the authored question set.
     #[must_use]
     pub fn name(&self) -> &str {

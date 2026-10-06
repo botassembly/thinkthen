@@ -28,6 +28,11 @@ pub enum RelationDirection {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct RelationEntry {
     pub(crate) identity: MemberIdentity,
+    pub(crate) question: crate::core::Question,
+    pub(crate) threshold: crate::core::Threshold,
+    pub(crate) sources: Vec<crate::core::QuestionSource>,
+    pub(crate) observations: Vec<crate::core::Observation>,
+    pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) relation: String,
     pub(crate) reads: String,
     pub(crate) method: RelationMethod,

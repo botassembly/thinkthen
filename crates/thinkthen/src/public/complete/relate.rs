@@ -175,6 +175,11 @@ fn member(
     };
     Ok(core::CompleteRelationEntry {
         identity,
+        question: logical.question.clone(),
+        threshold: core::Threshold::cut(cut).map_err(Error::refused)?,
+        sources: logical.answered.sources.clone(),
+        observations: logical.answered.observations.clone(),
+        reported_usage: logical.answered.reply.reported_usage(),
         relation: logical.relation.name.clone(),
         reads: logical.relation.reads.clone(),
         method,

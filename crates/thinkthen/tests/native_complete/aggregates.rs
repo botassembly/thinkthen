@@ -14,6 +14,8 @@ fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original()
         )
         .unwrap();
     assert_eq!(found.value().selected(), None);
+    assert_eq!(found.value().raw_pick(), "none");
+    assert!(found.value().question().offers_none());
     assert_eq!(found.value().candidates()[0].input(), Some(&"first"));
     assert_eq!(found.value().candidates()[2].probability(), 0.5);
     assert!(found.value().candidates()[2].is_none());
@@ -25,14 +27,8 @@ fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original()
         json!({"u001":0.2,"u002":0.3,"none":0.5})
     );
     assert_eq!(row["meta"]["usage"], json!({"input_tokens":887}));
-    let meta = found.value().meta();
-    assert_eq!(meta.usage().unwrap().input_tokens(), Some(887));
-    assert_eq!(meta.usage().unwrap().output_tokens(), None);
-    assert_eq!(meta.requests_sent(), 1);
-    assert_eq!(meta.attempts().unwrap().len(), 1);
-    assert!(!meta.cached());
-    assert!(meta.context_sha256().is_some());
     assert_eq!(row["meta"]["attempts"].as_array().unwrap().len(), 1);
+    find_metadata(found.value().meta());
     let request: Value = serde_json::from_slice(&listener.requests()[0].body).unwrap();
     assert_eq!(
         request["state"],
@@ -83,7 +79,6 @@ fn native_annotation_keeps_member_null_failure_order_and_actual_batch_sources() 
     assert_eq!(row["meta"]["usage"], json!({"input_tokens":9}));
     assert_eq!(row["meta"]["failed_questions"], 1);
     annotation_metadata(result);
-    assert_eq!(row["meta"]["attempts"].as_array().unwrap().len(), 1);
     assert_eq!(result.identity().observations().len(), 3);
     assert!(
         result
@@ -125,6 +120,7 @@ fn complete_relations_keep_full_answers_rejections_failures_and_empty_metadata()
         .unwrap();
     assert_eq!(result.value().value().len(), 1);
     let members = result.value().members().collect::<Vec<_>>();
+    relation_reading(result.value());
     assert_eq!(members[0].probability(), Some(0.9));
     assert!(members[0].probabilities().is_some());
     assert!(members[0].answer_id().is_some());
@@ -226,6 +222,7 @@ fn all_recognition_stages_keep_context_separate_and_original_spans_with_partial_
                 .attempts(true),
         )
         .unwrap();
+    recognition_reading(found.value());
     let entities = found.value().value().entities();
     assert_eq!(
         (entities[0].text(), entities[0].start(), entities[0].end()),
@@ -288,4 +285,58 @@ fn empty_metadata(meta: thinkthen::ResultMetadata<'_>) {
     assert!(!meta.cached());
     assert_eq!(meta.requests_sent(), 0);
     assert_eq!(meta.attempts(), Some(&[][..]));
+}
+
+fn recognition_reading(result: &thinkthen::CompleteRecognized) {
+    let reading = result.question();
+    assert_eq!(
+        reading
+            .kinds()
+            .map(|k| k.name().to_owned())
+            .collect::<Vec<_>>(),
+        ["person", "organization"]
+    );
+    assert_eq!(reading.threshold(), thinkthen::ResolvedThreshold::Cut(0.5));
+    assert_eq!(
+        reading.relation_threshold(),
+        thinkthen::ResolvedThreshold::Cut(0.5)
+    );
+    assert_eq!(
+        reading
+            .relations()
+            .map(|r| (
+                r.name().to_owned(),
+                r.reads().to_owned(),
+                r.either(),
+                r.single()
+            ))
+            .collect::<Vec<_>>(),
+        [("works_for".into(), "works for".into(), false, false)]
+    );
+}
+fn relation_reading(result: &thinkthen::CompleteRelated) {
+    let reading = result.question();
+    assert_eq!(reading.fields(), Some(("/name", "/kind")));
+    assert_eq!(reading.threshold(), thinkthen::ResolvedThreshold::Cut(0.5));
+    for member in result.members() {
+        assert_eq!(member.question().kind(), thinkthen::QuestionKind::Decide);
+        assert_eq!(
+            member.threshold(),
+            Some(thinkthen::ResolvedThreshold::Cut(0.5))
+        );
+        assert_eq!(member.question_sources().len(), 1);
+        assert_eq!(member.observations().len(), 1);
+    }
+}
+
+fn find_metadata(meta: thinkthen::ResultMetadata<'_>) {
+    assert_eq!(
+        meta.usage().and_then(|usage| usage.input_tokens()),
+        Some(887)
+    );
+    assert_eq!(meta.usage().and_then(|usage| usage.output_tokens()), None);
+    assert_eq!(meta.requests_sent(), 1);
+    assert_eq!(meta.attempts().map(<[_]>::len), Some(1));
+    assert!(!meta.cached());
+    assert!(meta.context_sha256().is_some());
 }

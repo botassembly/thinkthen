@@ -18,6 +18,17 @@ macro_rules! complete {
         }
 
         impl $name {
+            /// Actual resolved primitive question and authored content.
+            #[must_use]
+            pub fn question(&self) -> super::ResolvedQuestion<'_> {
+                super::ResolvedQuestion(self.canonical.question())
+            }
+            /// Effective reading rule, absent for score and final rank positions.
+            #[must_use]
+            pub fn threshold(&self) -> Option<super::ResolvedThreshold> {
+                self.canonical.threshold().map(super::ResolvedThreshold::of)
+            }
+
             /// Borrow all actual result metadata without decoding JSON.
             #[must_use]
             pub fn meta(&self) -> super::ResultMetadata<'_> {
@@ -138,6 +149,12 @@ impl CompleteRank {
 }
 
 impl CompleteChoice {
+    /// The raw accepted leading label before the effective cut.
+    #[must_use]
+    pub fn raw_pick(&self) -> Option<&str> {
+        self.canonical.answer().leader()
+    }
+
     /// The selected label, or successful null.
     #[must_use]
     pub fn value(&self) -> Option<&str> {
@@ -154,6 +171,12 @@ impl CompleteTags {
 }
 
 impl CompleteScore {
+    /// The raw accepted level, distinct from the expected weighted value.
+    #[must_use]
+    pub fn raw_level(&self) -> Option<&str> {
+        self.canonical.answer().leader()
+    }
+
     /// The weighted position on the question's declared levels.
     #[must_use]
     pub const fn value(&self) -> f64 {

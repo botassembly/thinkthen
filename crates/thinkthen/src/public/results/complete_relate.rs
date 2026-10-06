@@ -15,6 +15,15 @@ pub struct CompleteRelated {
 }
 
 impl CompleteRelated {
+    /// The actual resolved relation plan and input mode.
+    #[must_use]
+    pub fn question(&self) -> super::RelationReading<'_> {
+        super::RelationReading {
+            spec: &self.canonical.question,
+            lines: self.canonical.lines,
+        }
+    }
+
     /// Borrow actual metadata without decoding a result document.
     #[must_use]
     pub fn meta(&self) -> super::ResultMetadata<'_> {
@@ -87,6 +96,32 @@ impl Serialize for CompleteRelated {
 pub struct CompleteRelationMember<'a>(&'a core::CompleteRelationEntry);
 
 impl CompleteRelationMember<'_> {
+    /// Actual normalized primitive question, retained on failures too.
+    #[must_use]
+    pub fn question(&self) -> super::ResolvedQuestion<'_> {
+        super::ResolvedQuestion(&self.0.question)
+    }
+    /// Admitted reading rule, independent of whether the member succeeded.
+    #[must_use]
+    pub fn threshold(&self) -> Option<super::ResolvedThreshold> {
+        Some(super::ResolvedThreshold::of(self.0.threshold))
+    }
+    /// Actual ordered sources represented by this member.
+    #[must_use]
+    pub fn question_sources(&self) -> &[crate::public::QuestionSource] {
+        &self.0.sources
+    }
+    /// Accepted observations or failed logical occurrences for this member.
+    #[must_use]
+    pub fn observations(&self) -> &[crate::public::Observation] {
+        &self.0.observations
+    }
+    /// Actual partial token counts, without filling missing dimensions.
+    #[must_use]
+    pub fn reported_usage(&self) -> Option<crate::public::ReportedUsage> {
+        self.0.reported_usage
+    }
+
     /// Authored relation name.
     #[must_use]
     pub fn relation(&self) -> &str {

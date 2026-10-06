@@ -51,6 +51,10 @@ pub(super) fn complete<T>(
             core::CompleteAnnotationMember {
                 identity,
                 legacy: entry.clone(),
+                threshold: named.threshold(),
+                sources: receipt.trace.sources.clone(),
+                observations: receipt.trace.observations.clone(),
+                reported_usage: receipt.trace.reply.reported_usage(),
             },
         ));
     }

@@ -146,6 +146,10 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
     let question = row.legacy.question;
     let answer = row.legacy.answer;
     let successful = AnnotationMember {
+        threshold: Some(Threshold::band(0.2, 0.95).unwrap()),
+        sources: Vec::new(),
+        observations: Vec::new(),
+        reported_usage: None,
         identity: MemberIdentity::Answered(AnswerId::new("c".repeat(64)).unwrap()),
         legacy: AnnotatedEntry::Answered(AnnotatedAnswer::new(
             Value::YesNo(None),
@@ -156,6 +160,10 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         )),
     };
     let failed = AnnotationMember {
+        threshold: Some(Threshold::default()),
+        sources: Vec::new(),
+        observations: Vec::new(),
+        reported_usage: None,
         identity: MemberIdentity::Failed(crate::core::FailureId::new("d".repeat(64)).unwrap()),
         legacy: AnnotatedEntry::Failed(AnnotatedFailure::new(
             question,
@@ -190,6 +198,10 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
     let mismatched = AnnotationMember {
         identity: MemberIdentity::Answered(AnswerId::new("c".repeat(64)).unwrap()),
         legacy: failed.legacy,
+        threshold: failed.threshold,
+        sources: failed.sources,
+        observations: failed.observations,
+        reported_usage: failed.reported_usage,
     };
     assert!(json_line(&mismatched).is_err());
 }

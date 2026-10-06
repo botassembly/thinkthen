@@ -191,6 +191,12 @@ pub(super) struct FindQuestionOwned {
     none: bool,
 }
 
+impl FindQuestionOwned {
+    pub(crate) const fn parts(&self) -> (&QuestionText, bool) {
+        (&self.text, self.none)
+    }
+}
+
 /// The mapped find answer and its selected zero-based unit.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findAnswer"))]
@@ -207,6 +213,10 @@ pub(crate) struct FindAnswer {
 }
 
 impl FindAnswer {
+    pub(crate) fn pick(&self) -> &str {
+        &self.pick
+    }
+
     /// Confidence reported for this distribution, when supplied.
     pub(crate) const fn confidence(&self) -> Option<f64> {
         self.confidence

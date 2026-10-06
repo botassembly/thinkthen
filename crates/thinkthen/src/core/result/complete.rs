@@ -52,7 +52,7 @@ pub enum Observation {
 }
 
 /// A logical question's retrieval origin and validated reported model.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct QuestionSource {
     origin: Origin,
     answered_by: ModelName,
@@ -97,7 +97,7 @@ impl QuestionSource {
 }
 
 /// One complete result's aligned constituent trace and stable logical ID.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct ResultIdentity {
     answer_id: AnswerId,
     origin: Option<Origin>,
@@ -157,3 +157,23 @@ impl ResultIdentity {
 
 #[cfg(test)]
 mod tests;
+
+impl std::fmt::Debug for QuestionSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QuestionSource")
+            .field("origin", &self.origin)
+            .field("answered_by", &"<withheld>")
+            .field("batch_size", &self.batch_size)
+            .finish()
+    }
+}
+impl std::fmt::Debug for ResultIdentity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResultIdentity")
+            .field("answer_id", &self.answer_id)
+            .field("origin", &self.origin)
+            .field("question_sources", &self.question_sources)
+            .field("observations", &self.observations)
+            .finish_non_exhaustive()
+    }
+}

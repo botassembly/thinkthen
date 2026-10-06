@@ -68,207 +68,31 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 
 ### Added public declarations
 
-```rust
-impl Engine {
-    pub fn decide_complete_with<Q: DecisionQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteDecision>, Error>;
-    pub fn decide_input_complete_with<Q: DecisionQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        input: &QuestionInput,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteDecision>, Error>;
-    pub fn choose_complete_with<Q: DetailQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteChoice>, Error>;
-    pub fn choose_input_complete_with<Q: DetailQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        input: &QuestionInput,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteChoice>, Error>;
-    pub fn tag_complete_with<Q: DetailQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteTags>, Error>;
-    pub fn score_complete_with(
-        &self,
-        question: &Question,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteScore>, Error>;
-    pub fn score_input_complete_with(
-        &self,
-        question: &Question,
-        input: &QuestionInput,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteScore>, Error>;
-    pub fn decide_records_complete_with<Q, I, T>(
-        &self,
-        question: &Q,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteDecision>>>, Error>
-    where
-        Q: DecisionQuestion + ?Sized,
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,;
-    pub fn choose_records_complete_with<Q, I, T>(
-        &self,
-        question: &Q,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteChoice>>>, Error>
-    where
-        Q: DetailQuestion + ?Sized,
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,;
-    pub fn tag_records_complete_with<Q, I, T>(
-        &self,
-        question: &Q,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteTags>>>, Error>
-    where
-        Q: DetailQuestion + ?Sized,
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,;
-    pub fn score_records_complete_with<I, T>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteScore>>>, Error>
-    where
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,;
-    pub fn filter_records_complete_with<I, T>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteFilter>>>, Error>
-    where
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,;
-    pub fn rank_records_complete_with<I, T>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error>
-    where
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,;
-    pub fn rank_complete_with<I, T>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error>
-    where
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,;
-    pub fn decide_many_complete_with<Q, I, T>(
-        &self,
-        question: &Q,
-        inputs: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteDecision>>>, Error>
-    where
-        Q: DecisionQuestion + ?Sized,
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,;
-    pub fn choose_many_complete_with<Q, I, T>(
-        &self,
-        question: &Q,
-        inputs: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteChoice>>>, Error>
-    where
-        Q: DetailQuestion + ?Sized,
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,;
-    pub fn tag_many_complete_with<Q, I, T>(
-        &self,
-        question: &Q,
-        inputs: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteTags>>>, Error>
-    where
-        Q: DetailQuestion + ?Sized,
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,;
-    pub fn score_many_complete_with<I, T>(
-        &self,
-        question: &Question,
-        inputs: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteScore>>>, Error>
-    where
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,;
-    pub fn filter_complete_with<I, T>(
-        &self,
-        question: &Question,
-        inputs: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteFilter>>>, Error>
-    where
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,;
-    pub fn find_complete_with<I>(
-        &self,
-        question: &Question,
-        units: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteFound<I::Item>>, Error>
-    where
-        I: IntoIterator,
-        I::Item: Evidence,;
-    pub fn recognize_complete_with(
-        &self,
-        ask: &Recognize,
-        evidence: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteRecognized>, Error>;
-    pub fn relate_complete_with<I>(
-        &self,
-        ask: &Relate,
-        entities: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteRelated>, Error>
-    where
-        I: IntoIterator<Item = Entity>,;
-    pub fn annotate_records_complete_with<I, T>(
-        &self,
-        questions: &QuestionSet,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error>
-    where
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,;
-    pub fn annotate_complete_with<I, T>(
-        &self,
-        questions: &QuestionSet,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error>
-    where
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,;
-
-}
+```text
+fn Engine::annotate_complete_with<I, T>(&self, &QuestionSet, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error> where I: IntoIterator<Item = T>, T: InputEvidence,
+fn Engine::annotate_records_complete_with<I, T>(&self, &QuestionSet, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence,
+fn Engine::choose_complete_with<Q: DetailQuestion + ?Sized>(&self, &Q, &str, CallOptions<'_>) -> Result<Call<CompleteChoice>, Error>
+fn Engine::choose_input_complete_with<Q: DetailQuestion + ?Sized>(&self, &Q, &QuestionInput, CallOptions<'_>) -> Result<Call<CompleteChoice>, Error>
+fn Engine::choose_many_complete_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteChoice>>>, Error> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = T>, T: InputEvidence,
+fn Engine::choose_records_complete_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteChoice>>>, Error> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence,
+fn Engine::decide_complete_with<Q: DecisionQuestion + ?Sized>(&self, &Q, &str, CallOptions<'_>) -> Result<Call<CompleteDecision>, Error>
+fn Engine::decide_input_complete_with<Q: DecisionQuestion + ?Sized>(&self, &Q, &QuestionInput, CallOptions<'_>) -> Result<Call<CompleteDecision>, Error>
+fn Engine::decide_many_complete_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteDecision>>>, Error> where Q: DecisionQuestion + ?Sized, I: IntoIterator<Item = T>, T: InputEvidence,
+fn Engine::decide_records_complete_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteDecision>>>, Error> where Q: DecisionQuestion + ?Sized, I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence,
+fn Engine::filter_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteFilter>>>, Error> where I: IntoIterator<Item = T>, T: InputEvidence,
+fn Engine::filter_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteFilter>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence,
+fn Engine::find_complete_with<I>(&self, &Question, I, CallOptions<'_>) -> Result<Call<CompleteFound<I::Item>>, Error> where I: IntoIterator, I::Item: Evidence,
+fn Engine::rank_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error> where I: IntoIterator<Item = T>, T: InputEvidence,
+fn Engine::rank_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence,
+fn Engine::recognize_complete_with(&self, &Recognize, &str, CallOptions<'_>) -> Result<Call<CompleteRecognized>, Error>
+fn Engine::relate_complete_with<I>(&self, &Relate, I, CallOptions<'_>) -> Result<Call<CompleteRelated>, Error> where I: IntoIterator<Item = Entity>,
+fn Engine::score_complete_with(&self, &Question, &str, CallOptions<'_>) -> Result<Call<CompleteScore>, Error>
+fn Engine::score_input_complete_with(&self, &Question, &QuestionInput, CallOptions<'_>) -> Result<Call<CompleteScore>, Error>
+fn Engine::score_many_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteScore>>>, Error> where I: IntoIterator<Item = T>, T: InputEvidence,
+fn Engine::score_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteScore>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence,
+fn Engine::tag_complete_with<Q: DetailQuestion + ?Sized>(&self, &Q, &str, CallOptions<'_>) -> Result<Call<CompleteTags>, Error>
+fn Engine::tag_many_complete_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteTags>>>, Error> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = T>, T: InputEvidence,
+fn Engine::tag_records_complete_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteTags>>>, Error> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence,
 ```
 
 Native aggregate execution WIP: find, annotate, recognize and relate now return concrete result/2 carriers. Ordered trace data is retained by the facade, including actual sources and accepted/failure observations; consumers do not reconstruct it from event JSON. Aggregate context wraps the existing state value as a typed context/evidence envelope on all actual requests and recognition admission probes. Existing convenience calls accept context through the same implementation. Native annotation retains original occurrences and partial members, and complete relate retains full successful distributions. Four additional outside-in public cases check ordered candidates, successful null/failure distinctions, every recognition stage and unchanged spans, partial usage and empty metadata. Typed consumer accessors, owned event identity/location, input composition, command completion and CLI/schema/corpus adoption remain open.

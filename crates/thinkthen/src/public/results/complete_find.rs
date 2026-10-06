@@ -15,6 +15,18 @@ pub struct CompleteFound<T> {
 }
 
 impl<T> CompleteFound<T> {
+    /// Actual whole-set question, including explicit none admission.
+    #[must_use]
+    pub fn question(&self) -> super::FindReading<'_> {
+        let (text, none) = self.canonical.question();
+        super::FindReading { text, none }
+    }
+    /// Raw accepted leading unit identifier, before find's none-tie policy.
+    #[must_use]
+    pub fn raw_pick(&self) -> &str {
+        self.canonical.raw_pick()
+    }
+
     /// Borrow actual metadata without decoding a result document.
     #[must_use]
     pub fn meta(&self) -> super::ResultMetadata<'_> {

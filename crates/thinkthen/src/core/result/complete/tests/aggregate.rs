@@ -73,6 +73,11 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
 
 fn member() -> RelationEntry {
     RelationEntry {
+        question: super::atomic(Vec::new(), Vec::new()).legacy.question,
+        threshold: crate::core::Threshold::default(),
+        sources: Vec::new(),
+        observations: Vec::new(),
+        reported_usage: None,
         identity: MemberIdentity::Answered(AnswerId::new("b".repeat(64)).unwrap()),
         relation: "works_for".into(),
         reads: "works for".into(),

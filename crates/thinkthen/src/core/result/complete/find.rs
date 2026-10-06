@@ -13,6 +13,13 @@ pub(crate) struct Find {
 }
 
 impl Find {
+    pub(crate) fn raw_pick(&self) -> &str {
+        self.legacy.answer.pick()
+    }
+    pub(crate) const fn question(&self) -> (&crate::core::QuestionText, bool) {
+        self.legacy.question.parts()
+    }
+
     pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
         self.legacy.meta.fields()
     }

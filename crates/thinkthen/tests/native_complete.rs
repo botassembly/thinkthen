@@ -52,3 +52,6 @@ mod records;
 
 #[path = "native_complete/aggregates.rs"]
 mod aggregates;
+
+#[path = "native_complete/readings.rs"]
+mod readings;

@@ -15,6 +15,13 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
+    pub(crate) const fn question(&self) -> &crate::core::Question {
+        &self.legacy.question
+    }
+    pub(crate) const fn threshold(&self) -> Option<crate::core::Threshold> {
+        self.legacy.threshold
+    }
+
     pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
         self.legacy.meta.fields()
     }

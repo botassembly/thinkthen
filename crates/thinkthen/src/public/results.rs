@@ -3,10 +3,16 @@
 
 use std::fmt;
 
+mod aggregate_reading;
 mod call;
 mod complete;
 mod metadata;
+mod reading;
+pub use aggregate_reading::{RecognitionReading, RelationReading, ResolvedRelationRule};
 pub use metadata::{BatchMismatch, ProfileMismatch, ResultMetadata};
+pub use reading::{
+    FindReading, QuestionContent, ResolvedOption, ResolvedQuestion, ResolvedThreshold,
+};
 mod complete_annotation;
 mod complete_facts;
 mod complete_find;

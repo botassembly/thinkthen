@@ -432,3 +432,9 @@ pub fn details_with<Q: DetailQuestion + ?Sized>(
 pub fn usage() -> Result<Counters, Error> {
     Ok(default_engine()?.usage())
 }
+
+pub use results::{
+    FindReading, QuestionContent, ResolvedOption, ResolvedQuestion, ResolvedThreshold,
+};
+
+pub use results::{RecognitionReading, RelationReading, ResolvedRelationRule};
