@@ -37,12 +37,38 @@ pub(super) fn prepare(
     let source = if common.image.is_empty() {
         Source::Images(crate::public::read_inputs(&common.input, options()).map_err(refused)?)
     } else {
+        Source::Attached(Attachment {
+            paths: common.image.clone(),
+            input: Some(Box::new(input)),
+        })
+    };
+    Ok(Intake {
+        sources: [source].into(),
+        reading: reading.clone(),
+        window: 1,
+        global: 0,
+    })
+}
+
+/// Read only when the shared detached reader asks for its first item, so
+/// cancellation can end the command even while the input handle waits for EOF.
+pub(super) struct Attachment {
+    paths: Vec<std::path::PathBuf>,
+    input: Option<Box<dyn Read + Send>>,
+}
+impl Attachment {
+    pub(super) fn next(&mut self) -> Option<Result<Piece, Failure>> {
+        let input = self.input.take()?;
+        Some(self.read(input))
+    }
+
+    fn read(&self, input: impl Read) -> Result<Piece, Failure> {
         // Attachments are one indivisible input: read and validate every file
         // before the first pipeline event. A directory never bundles images.
         let mut images = Vec::new();
         let mut names = Vec::new();
         let mut compressed = 0usize;
-        for path in &common.image {
+        for path in &self.paths {
             let name = path.to_str().ok_or_else(|| {
                 Failure::OpenInput(std::io::Error::other("source path is not valid UTF-8"))
             })?;
@@ -78,7 +104,7 @@ pub(super) fn prepare(
             .map_err(|_| Failure::Usage("image ancillary text is not valid UTF-8"))?;
         let evidence =
             ImageEvidence::new((!text.is_empty()).then_some(text), images).map_err(refused)?;
-        Source::Attached(Some(Piece {
+        Ok(Piece {
             position: Some(Position {
                 file: None,
                 first: None,
@@ -89,14 +115,8 @@ pub(super) fn prepare(
             }),
             data: Data::Images(evidence),
             advance: 1,
-        }))
-    };
-    Ok(Intake {
-        sources: [source].into(),
-        reading: reading.clone(),
-        window: 1,
-        global: 0,
-    })
+        })
+    }
 }
 pub(super) fn next(items: &mut SourceItems) -> Option<Result<Piece, Failure>> {
     Some(items.next()?.map_err(refused).and_then(|item| {

@@ -7,7 +7,7 @@ mod identity;
 
 const REPLY: &str =
     include_str!("../../../../specification/fixtures/images/liquid-decide-reply.json");
-fn fixture(name: &str) -> PathBuf {
+pub(super) fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../specification/fixtures/images")
         .join(name)

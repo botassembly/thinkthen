@@ -55,7 +55,7 @@ struct TextSource {
 
 enum Source {
     Images(crate::public::SourceItems),
-    Attached(Option<Piece>),
+    Attached(images::Attachment),
     Text(TextSource),
     Pending {
         file: PathBuf,
@@ -128,7 +128,7 @@ impl Source {
         }
         match self {
             Self::Images(items) => images::next(items),
-            Self::Attached(piece) => piece.take().map(Ok),
+            Self::Attached(attachment) => attachment.next(),
             Self::Pending { .. } => None,
             Self::Table(rows) => rows.next().map(|row| {
                 row.map(|record| Piece {
