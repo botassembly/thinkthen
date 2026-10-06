@@ -352,9 +352,10 @@ impl Command {
     pub(crate) fn route_inputs(&mut self) -> Result<(), crate::failure::Failure> {
         use crate::failure::Failure;
         match self {
-            Self::Decide(a) => a.common.image = a.image.take(),
-            Self::Choose(a) => a.common.image = a.image.take(),
-            Self::Score(a) => a.common.image = a.image.take(),
+            Self::Annotate(a) => a.common.image = std::mem::take(&mut a.image),
+            Self::Decide(a) => a.common.image = std::mem::take(&mut a.image),
+            Self::Choose(a) => a.common.image = std::mem::take(&mut a.image),
+            Self::Score(a) => a.common.image = std::mem::take(&mut a.image),
             _ => {}
         }
         let (common, paths) = match self {

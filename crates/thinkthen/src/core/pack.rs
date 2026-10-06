@@ -65,6 +65,22 @@ impl State {
         }
     }
 
+    /// A distinct cache condition for the entire ordered image question cohort.
+    fn grouped(self, questions: &[String]) -> Self {
+        let json = format!(
+            "thinkthen.image-group/1\n[{},[{}]]",
+            self.json(),
+            questions.join(",")
+        );
+        let sha256 = Sha256::digest(json.as_bytes()).into();
+        Self(Arc::new(Shared {
+            json,
+            wire: self.0.wire.clone(),
+            sha256,
+            evidence_bytes: self.evidence_bytes(),
+        }))
+    }
+
     pub(crate) fn wire_json(&self) -> &str {
         self.0.wire.as_ref().map_or(self.json(), |(json, _)| json)
     }
@@ -233,21 +249,23 @@ pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
     let state = State::with_images(
         parts.state,
         parts.images,
-        evidence.len() + plan.image().map_or(0, |image| image.bytes.len()),
+        evidence.len()
+            + plan.image().map_or(0, |images| {
+                images.iter().map(|image| image.bytes.len()).sum()
+            }),
     );
+    let state = if plan.image_group() {
+        state.grouped(&parts.questions)
+    } else {
+        state
+    };
     let decoders = plan.questions().iter().flat_map(decoders);
     Ok(parts
         .questions
         .into_iter()
         .zip(decoders)
         .map(|(question, decoder)| Ask {
-            key: QuestionKey::with_images(
-                url,
-                &parts.model,
-                state.wire_json(),
-                &question,
-                state.images(),
-            ),
+            key: QuestionKey::stored(url, &parts.model, state.json(), &question),
             state: state.clone(),
             question: Arc::from(question),
             decoder,

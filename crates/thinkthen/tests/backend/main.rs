@@ -83,6 +83,7 @@ mod from_record;
     reason = "the image boundary fixture must run and inspect counted requests"
 )]
 mod images;
+mod images_measurements;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,

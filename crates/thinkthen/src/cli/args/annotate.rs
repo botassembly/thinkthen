@@ -9,6 +9,10 @@ use super::{Batching, Common};
 /// Everything `annotate` was asked, before the set or evidence is read.
 #[derive(Args, Debug)]
 pub(crate) struct AnnotateArguments {
+    /// Attach up to two ordered JPEG or PNG files to all questions.
+    #[arg(long, value_name = "FILE")]
+    pub(crate) image: Vec<PathBuf>,
+
     /// A JSON question set containing the named questions to ask.
     pub(crate) questions: PathBuf,
 

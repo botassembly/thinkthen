@@ -29,7 +29,8 @@ pub(crate) enum Descriptions {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Plan {
     evidence: Evidence,
-    image: Option<crate::core::image::ImageInput>,
+    image_group: bool,
+    image: Option<Vec<crate::core::image::ImageInput>>,
     model: ModelName,
     descriptions: Descriptions,
     questions: Vec<Question>,
@@ -53,6 +54,7 @@ impl Plan {
         Ok(Self {
             evidence,
             image: None,
+            image_group: false,
             model,
             descriptions,
             questions,
@@ -69,13 +71,26 @@ impl Plan {
         Self::new(evidence, model, Descriptions::Authored, questions)
     }
 
-    pub(crate) fn with_image(mut self, image: Option<crate::core::image::ImageInput>) -> Self {
+    pub(crate) fn with_image(mut self, image: Option<Vec<crate::core::image::ImageInput>>) -> Self {
         self.image = image;
         self
     }
 
-    pub(crate) fn image(&self) -> Option<&crate::core::image::ImageInput> {
-        self.image.as_ref()
+    pub(crate) fn image(&self) -> Option<&[crate::core::image::ImageInput]> {
+        self.image.as_deref()
+    }
+
+    pub(crate) fn with_image_group(
+        mut self,
+        images: Option<Vec<crate::core::image::ImageInput>>,
+    ) -> Self {
+        self.image = images;
+        self.image_group = self.image.is_some();
+        self
+    }
+
+    pub(crate) const fn image_group(&self) -> bool {
+        self.image_group
     }
 
     /// Read the evidence back.

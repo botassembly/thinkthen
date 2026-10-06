@@ -128,7 +128,7 @@ impl FindCommon {
     /// Adapt the narrow parsed surface to the one shared request configuration.
     pub(crate) fn as_common(&self) -> Common {
         Common {
-            image: None,
+            image: Vec::new(),
             facts: self.facts,
             max_requests_total: self.max_requests_total,
             max_estimated_input_tokens_total: self.max_estimated_input_tokens_total,

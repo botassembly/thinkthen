@@ -96,6 +96,7 @@ pub(super) fn asks(
                 reading,
                 record,
             )?;
+            let plan = plan.with_image_group(judging.image.clone());
             let asks = pack::asks(url, &plan).map_err(|_| {
                 PrepareError::Other(Failure::Defect("a request could not be written as JSON"))
             })?;
@@ -286,13 +287,7 @@ impl Ended {
 fn placed(failed: Failed<Refused>, judging: &Judging<'_>) -> Placed {
     match failed {
         Failed::Asker(Refused { at, error }) => Placed::at(error.into_failure(), at),
-        Failed::Pack { error, at } => Placed::at(
-            match error {
-                pack::PackError::Profile(limit) => Failure::ProfileLimit(limit),
-                pack::PackError::Context { .. } => Failure::Defect("annotate packed a context"),
-            },
-            at,
-        ),
+        Failed::Pack { error, at } => Placed::at(super::pack_failure(error), at),
         Failed::Engine { error, first, last } => {
             let cause = Failure::from(error).with_replay_context(ReplayContext::Annotate);
             let cause = match cause {

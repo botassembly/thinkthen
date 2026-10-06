@@ -16,7 +16,7 @@ fn plan(image: Option<ImageInput>) -> Plan {
         }],
     )
     .expect("plan")
-    .with_image(image)
+    .with_image(image.map(|image| vec![image]))
 }
 
 #[test]

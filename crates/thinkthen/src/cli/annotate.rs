@@ -71,6 +71,7 @@ pub(crate) fn run(
         arguments.common.url.as_deref(),
         arguments.common.model.as_deref(),
     )?;
+    let image = crate::cli::image::read(&arguments.common)?;
     let folders = Folders::of(&arguments.common, environment)?;
     if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
@@ -85,7 +86,11 @@ pub(crate) fn run(
     } else {
         None
     };
-    let backend = backend.with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    let backend = backend.with_request_size(request_size.unwrap_or(if image.is_none() {
+        Backend::DEFAULT_REQUEST_SIZE
+    } else {
+        2_800_000
+    }));
     if request_size.is_some_and(|size| size > Backend::DEFAULT_REQUEST_SIZE) {
         environment.warn_request_size(&backend)?;
     }
@@ -110,7 +115,8 @@ pub(crate) fn run(
         profile,
         arguments.common.jobs,
     )?;
-    let judging = Judging::new(arguments, environment, engine, set, mismatch);
+    let mut judging = Judging::new(arguments, environment, engine, set, mismatch);
+    judging.image = image;
     if arguments.common.dry_run {
         return plan::dry_run(&judging, &reading, inputs, inputs_cap, &mut writer);
     }
@@ -213,6 +219,7 @@ fn reading(common: &Common) -> Result<Reading, Failure> {
 }
 
 pub(crate) struct Judging<'a> {
+    image: Option<Vec<crate::core::image::ImageInput>>,
     common: &'a Common,
     environment: &'a Environment,
     engine: Engine,
@@ -232,6 +239,7 @@ impl<'a> Judging<'a> {
     ) -> Self {
         let common = &arguments.common;
         Self {
+            image: None,
             streams: common.framing() != Framing::Document,
             continue_missing: arguments.on_error.is_some(),
             engine,
@@ -332,4 +340,14 @@ fn plan_for(
             _ => Failure::Defect("an annotate group asks nothing"),
         })
     })
+}
+
+/// Keep live and planned image overflow refusals identical.
+fn pack_failure(error: crate::core::pack::PackError) -> Failure {
+    match error {
+        crate::core::pack::PackError::Profile(limit) => Failure::ProfileLimit(limit),
+        crate::core::pack::PackError::Context { .. } => {
+            Failure::Usage("--image makes a request larger than the spike limit of 2800000 bytes")
+        }
+    }
 }

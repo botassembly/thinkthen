@@ -9,7 +9,7 @@ use std::sync::Arc;
 use super::Judging;
 use super::asker::{self, Framed};
 use crate::core::adapters::built_in;
-use crate::core::pack::{self, Entry, PackError, Packer};
+use crate::core::pack::{self, Entry, Packer};
 use crate::core::{PlanDocument, PlanSummary, Reading, json_line};
 use crate::edge;
 use crate::engine::pipeline::Packing;
@@ -60,10 +60,7 @@ pub(super) fn dry_run(
             .collect();
         packer
             .add(entries, &mut closed)
-            .map_err(|error| match error {
-                PackError::Profile(limit) => Failure::ProfileLimit(limit),
-                PackError::Context { .. } => Failure::Defect("annotate packed a context"),
-            })?;
+            .map_err(super::pack_failure)?;
     }
     closed.extend(packer.close());
     let mut group_requests = vec![0; judging.groups().len()];

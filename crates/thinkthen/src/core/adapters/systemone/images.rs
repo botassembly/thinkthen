@@ -34,15 +34,20 @@ fn base64(bytes: &[u8]) -> String {
     text
 }
 
-pub(crate) fn images(image: Option<&ImageInput>) -> Result<Option<String>, EncodeError> {
-    image
-        .map(|image| {
-            let url = format!(
-                "data:{};base64,{}",
-                image.media.mime(),
-                base64(&image.bytes)
-            );
-            serde_json::to_string(&[url]).map_err(|error| EncodeError::of(&error))
+pub(crate) fn images(images: Option<&[ImageInput]>) -> Result<Option<String>, EncodeError> {
+    images
+        .map(|images| {
+            let urls: Vec<_> = images
+                .iter()
+                .map(|image| {
+                    format!(
+                        "data:{};base64,{}",
+                        image.media.mime(),
+                        base64(&image.bytes)
+                    )
+                })
+                .collect();
+            serde_json::to_string(&urls).map_err(|error| EncodeError::of(&error))
         })
         .transpose()
 }

@@ -232,15 +232,12 @@ pub(crate) fn run(
         .transpose()?;
     let backend = environment
         .resolve(common.backend.as_deref(), common.url.as_deref(), asked)?
-        .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
-    if common.image.is_some()
-        && !crate::core::adapters::built_in::backends::supports_images(common.backend.as_deref())
-    {
-        return Err(Failure::Usage(
-            "--image requires explicit --backend naming a supported image backend",
-        ));
-    }
-    if common.image.is_some() && !matches!(asks, Asks::Fixed(_)) {
+        .with_request_size(request_size.unwrap_or(if common.image.is_empty() {
+            Backend::DEFAULT_REQUEST_SIZE
+        } else {
+            2_800_000
+        }));
+    if !common.image.is_empty() && !matches!(asks, Asks::Fixed(_)) {
         return Err(Failure::Usage("--image requires one fixed scalar question"));
     }
     let image = crate::cli::image::read(common)?;
@@ -338,7 +335,7 @@ struct Judging<'a> {
     environment: &'a Environment,
     engine: Engine,
     asks: Asks,
-    image: Option<crate::core::image::ImageInput>,
+    image: Option<Vec<crate::core::image::ImageInput>>,
     threshold: Option<Threshold>,
     view: View,
     keeping: Keeping,
@@ -354,7 +351,7 @@ struct JudgingInput<'a> {
     folders: Folders,
     backend: Backend,
     asks: Asks,
-    image: Option<crate::core::image::ImageInput>,
+    image: Option<Vec<crate::core::image::ImageInput>>,
     threshold: Option<Threshold>,
     view: View,
     keeping: Keeping,

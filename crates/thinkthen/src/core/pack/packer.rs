@@ -43,7 +43,7 @@ impl PackLimits {
             .and_then(|held| held.max_request_bytes)
             .map_or(self.ceiling, |most| most.min(self.ceiling));
         let request = if state.images().is_some() {
-            request.min(65536)
+            request.min(2_800_000)
         } else {
             request
         };
@@ -246,11 +246,11 @@ impl<T> Packer<T> {
     /// Refuse a question that passes a limit in a request of its own.
     fn lone(&self, entry: &Entry<T>) -> Result<(), PackError> {
         let bytes = grown(self.base(&entry.state), 0, entry.question.len());
-        if entry.state.images().is_some() && bytes > 65536 {
+        if entry.state.images().is_some() && bytes > 2_800_000 {
             return Err(PackError::Context {
                 initial: false,
                 kind: LimitKind::RequestBytes,
-                limit: 65536,
+                limit: 2_800_000,
                 actual: bytes,
             });
         }

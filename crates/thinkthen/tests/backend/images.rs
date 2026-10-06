@@ -6,22 +6,22 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
-const PNG: &[u8] = include_bytes!("../fixtures/images/pixel.png");
-const PNG_URL: &str = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
-const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":10,"output_tokens":2}}"#;
+pub(super) const PNG: &[u8] = include_bytes!("../fixtures/images/pixel.png");
+pub(super) const PNG_URL: &str = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+pub(super) const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":10,"output_tokens":2}}"#;
 const CHOICE: &str = r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"planet","confidence":0.9,"probabilities":{"planet":0.9,"vehicle":0.05,"building":0.05}}}}"#;
 const SCORE: &str = r#"{"model":"local-1","answers":{"q1":{"type":"score","score":1.9,"confidence":0.9,"legend":{"0":"none","1":"part","2":"entire"},"probabilities":{"0":0.0,"1":0.1,"2":0.9}}}}"#;
 
-fn folder(name: &str) -> PathBuf {
+pub(super) fn folder(name: &str) -> PathBuf {
     crate::recordings::folder(&format!("image-0034-{name}"))
 }
-fn file(root: &Path, name: &str, bytes: &[u8]) -> PathBuf {
+pub(super) fn file(root: &Path, name: &str, bytes: &[u8]) -> PathBuf {
     fs::create_dir_all(root).expect("owned folder");
     let path = root.join(name);
     fs::write(&path, bytes).expect("fixture");
     path
 }
-fn run(
+pub(super) fn run(
     listener: &Listener,
     backend: &str,
     verb: &str,
@@ -52,7 +52,7 @@ fn run(
     };
     spawn(&args, &env, b"Refund me please.").expect("compiled binary")
 }
-fn succeeds(output: &Output) {
+pub(super) fn succeeds(output: &Output) {
     assert_eq!(
         output.status.code(),
         Some(0),
@@ -331,12 +331,12 @@ fn invalid_files_and_modes_send_nothing() {
     let root = folder("invalid");
     let image = file(&root, "one.png", PNG);
     let invalid = file(&root, "fake.png", b"not an image");
-    let oversized = file(&root, "large.png", &vec![0; 32769]);
+    let oversized = file(&root, "large.png", &vec![0; 1048577]);
     let truncated = file(&root, "truncated.png", &PNG[..33]);
     let listener = Listener::serving(vec![]).expect("counting listener");
     for (path, flags, diagnostic) in [
         (&invalid, vec![], "JPEG or PNG bytes"),
-        (&oversized, vec![], "32768 bytes"),
+        (&oversized, vec![], "1048576 bytes"),
         (&truncated, vec![], "JPEG or PNG bytes"),
         (&root, vec![], "regular file"),
         (&root.join("missing.png"), vec![], "regular file"),
@@ -382,15 +382,7 @@ fn invalid_files_and_modes_send_nothing() {
     );
     assert_eq!(out.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&out.stderr).contains("supported image backend"));
-    for verb in [
-        "tag",
-        "filter",
-        "rank",
-        "find",
-        "recognize",
-        "relate",
-        "annotate",
-    ] {
+    for verb in ["tag", "filter", "rank", "find", "recognize", "relate"] {
         let out = run(
             &listener,
             "llamacpp",
@@ -445,11 +437,11 @@ fn jpeg_is_sent_as_jpeg_and_large_encoded_image_requests_fail_before_send() {
             "--no-cache",
         ],
         &[],
-        &vec![b'x'; 65536],
+        &vec![b'x'; 2_800_000],
     )
     .expect("command");
     assert_eq!(oversized.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&oversized.stderr).contains("spike limit of 65536 bytes"));
+    assert!(String::from_utf8_lossy(&oversized.stderr).contains("spike limit of 2800000 bytes"));
     assert_eq!(listener.connections(), 1);
     assert!(listener.requests().is_empty());
 }
