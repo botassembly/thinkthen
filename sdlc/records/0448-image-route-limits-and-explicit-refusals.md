@@ -4,6 +4,8 @@ Exact Liquid d1 and Perplexity decision routes enforce documented body/patch/asp
 
 Fresh dependency review rejected a reproducible zune JPEG panic. The corrected pinned PNG/image and jpeg-decoder graph passed its independent review; full-code review and the focused behavior correction review accepted. Decoder regressions, policy, Clippy and cargo-deny passed. Full tests and lint run on the landing commit. JPEG recovery and allocation limitations are documented; no universal bitstream certificate is claimed. Local profiles and required host adoption remain open.
 
+Local slice B is built from 5974abe80 with closed declarations, exact aliases and the measured SDK envelope. Pure decoded-input checks pass. Shared propagation is supplied separately for native/root integration; normalized partial usage, whole High review and full landing checks remain open. No calls, dependencies or publication were added.
+
 ## What the build taught us
 
 A provider format list does not authorize an unbounded decoder. Separate vendor limits, SDK safety bounds and measured local profiles; accepted transport alone cannot prove image use.
