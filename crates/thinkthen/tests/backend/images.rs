@@ -3,6 +3,8 @@ use crate::harness::{Canned, Listener, spawn};
 use serde_json::{Value, json};
 use std::{fs, path::PathBuf, process::Output};
 
+mod identity;
+
 const REPLY: &str =
     include_str!("../../../../specification/fixtures/images/liquid-decide-reply.json");
 fn fixture(name: &str) -> PathBuf {

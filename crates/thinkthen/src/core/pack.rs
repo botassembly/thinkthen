@@ -63,7 +63,7 @@ impl State {
         let evidence_bytes = crate::core::render::json_line(&input.text)
             .map_err(|error| EncodeError::of(&error))?
             .len();
-        let sha256 = Sha256::digest(json.as_bytes()).into();
+        let sha256 = Self::image_sha256(&json);
         Ok(Self(Arc::new(Shared {
             json,
             sha256,
@@ -141,6 +141,22 @@ impl State {
         &self.0.sha256
     }
 
+    /// Images occupy a separate hash domain from ordinary JSON evidence.
+    pub(crate) fn image_sha256(json: &str) -> [u8; 32] {
+        let mut hasher = Sha256::new();
+        hasher.update(b"thinkthen.image-state/1\n");
+        hasher.update(json.as_bytes());
+        hasher.finalize().into()
+    }
+
+    pub(crate) fn key(&self, url: &Url, model: &str, question: &str) -> QuestionKey {
+        if self.0.image_wire.is_some() {
+            QuestionKey::images_of(url, model, self.json(), question)
+        } else {
+            QuestionKey::of(url, model, self.json(), question)
+        }
+    }
+
     pub(crate) fn evidence_bytes(&self) -> usize {
         self.0.evidence_bytes
     }
@@ -173,7 +189,16 @@ impl QuestionKey {
     /// Hash the five parts. `model`, `state` and `question` are compact JSON,
     /// so none holds a raw line feed, and the address refuses control bytes.
     pub(crate) fn of(url: &Url, model: &str, state: &str, question: &str) -> Self {
+        Self::of_parts(Sha256::new(), url, model, state, question)
+    }
+
+    pub(crate) fn images_of(url: &Url, model: &str, state: &str, question: &str) -> Self {
         let mut hasher = Sha256::new();
+        hasher.update(b"thinkthen.image-question/1\n");
+        Self::of_parts(hasher, url, model, state, question)
+    }
+
+    fn of_parts(mut hasher: Sha256, url: &Url, model: &str, state: &str, question: &str) -> Self {
         for (place, part) in [built_in::NAME, url.as_str(), model, state, question]
             .into_iter()
             .enumerate()
@@ -273,7 +298,7 @@ pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
         .into_iter()
         .zip(decoders)
         .map(|(question, decoder)| Ask {
-            key: QuestionKey::of(url, &parts.model, state.json(), &question),
+            key: state.key(url, &parts.model, &question),
             state: state.clone(),
             question: Arc::from(question),
             decoder,
