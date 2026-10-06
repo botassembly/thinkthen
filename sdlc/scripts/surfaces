@@ -16,6 +16,7 @@ set -eu
 mode=plain
 profile=routine
 registry_only=0
+parity=0
 # `--publish TAG` copies the release files this run packs to ROOT/TAG through publish-builds.
 # ROOT is `--publish-root`, else THINKTHEN_PUBLISH_ROOT; with neither, it refuses. Only the coordinator asks for it.
 publish_tag= publish_root=
@@ -25,12 +26,16 @@ while [ "$#" -gt 0 ]; do
     --full-functional) profile=full ;;
     --stress) profile=stress ;;
     --registry) registry_only=1 ;;
+    --parity) parity=1; profile=full; mode=release ;;
     --publish) [ "$#" -ge 2 ] && [ "${2#-}" = "$2" ] || { echo 'surfaces: --publish needs a tag' >&2; exit 2; }; publish_tag=$2; shift ;;
     --publish-root) [ "$#" -ge 2 ] || { echo 'surfaces: --publish-root needs a folder' >&2; exit 2; }; publish_root=$2; shift ;;
     *) echo "surfaces: unknown option $1" >&2; exit 2 ;;
     esac
     shift
 done
+if [ "$parity" -eq 1 ] && { [ "$registry_only" -eq 1 ] || [ -n "$publish_tag" ]; }; then
+    echo 'surfaces: --parity cannot combine registry or publication' >&2; exit 2
+fi
 if [ -n "$publish_root" ] && [ -z "$publish_tag" ]; then
     echo 'surfaces: --publish-root needs --publish' >&2; exit 2
 fi
@@ -229,6 +234,7 @@ if [ "$registry_only" -eq 1 ]; then
 fi
 
 registry sdlc/surfaces.txt
+python3 conformance/parity.py --validate
 if [ -n "$publish_tag" ]; then
 	[ -z "$(git status --porcelain)" ] || { echo 'surfaces: --publish needs a clean committed tree' >&2; exit 1; }
 	publish_commit=$(git rev-parse HEAD)
@@ -239,6 +245,13 @@ fi
 usage_guard
 . "$(dirname -- "$0")/installed.sh"
 backend_start
+
+if [ "$parity" -eq 1 ]; then
+    unset THINKTHEN_CONFORMANCE_IDS
+    export THINKTHEN_TEST_PROFILE=full
+    python3 conformance/parity.py "$port"
+    exit $?
+fi
 
 failed=0 skipped=
 for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do

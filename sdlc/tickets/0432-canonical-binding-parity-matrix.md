@@ -1,6 +1,6 @@
 # 0432: Enforce shared behavior and generate the current parity table
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Phase A declares shared cases and executes the existing baseline; family adoption and the mandatory full parity run remain open.
 
 Milestone: 0.2
 
@@ -30,3 +30,18 @@ The historical 0405 table is not current proof. Platform availability determines
 ## Expanded matrix
 
 Require multi-image decide/choose/score, whole-file image inputs and stable full-result IDs on each public surface. Execute text-only and dropped-image-route refusals as declared cases, never skips. Use the same shared multi-image fixture and typed consumers; SQL adoption belongs to 0452. Rulings remain visible cells. Fixture configuration is explicit; consumers must not depend on ambient user configuration.
+
+## Phase A ownership and adoption
+
+Lane claude-0, branch `ticket/0432-shared-parity-cases`, base origin/main
+`bcafbc1a7`. Own shared declarations, fixtures and existing runner/matrix
+integration only. Native engine/images/C and host-family implementation remain
+with their owners. `conformance/cases.json` declares the public rows and required
+cases; `conformance/README.md` defines the family adoption interface.
+`surfaces --parity` is explicit during transition and fails missing cells;
+routine gates validate declarations without claiming complete parity.
+
+Phase A can land independently. Closing 0432 requires all families and
+semantic owners to adopt the cases, supply real named/compiler/runtime
+assertions, replace existing skips with boundary executions, and make the
+passing strict full run mandatory. No publication or release approval changes.
