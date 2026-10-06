@@ -13,6 +13,15 @@ pub struct CompleteAnnotated {
 }
 
 impl CompleteAnnotated {
+    /// Borrow actual metadata without decoding a result document.
+    #[must_use]
+    pub fn meta(&self) -> super::ResultMetadata<'_> {
+        super::ResultMetadata {
+            fields: self.canonical.metadata(),
+            identity: &self.canonical.identity,
+        }
+    }
+
     /// The stable root answer identity.
     #[must_use]
     pub const fn answer_id(&self) -> &AnswerId {

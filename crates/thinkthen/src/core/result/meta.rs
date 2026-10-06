@@ -35,6 +35,14 @@ pub(crate) struct Meta {
 }
 
 impl Meta {
+    pub(crate) fn with_captured_attempts(
+        mut self,
+        attempts: Option<Vec<crate::core::AttemptObservation>>,
+    ) -> Self {
+        self.attempts = attempts;
+        self
+    }
+
     /// Name the tool, who answered, at what cost, and whether a recording did.
     ///
     /// The result keeps the binary, resolved question, backend, cost, send

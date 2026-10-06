@@ -49,3 +49,6 @@ fn framed(parts: &[&str]) -> String {
 mod atomic;
 #[path = "native_complete/records.rs"]
 mod records;
+
+#[path = "native_complete/aggregates.rs"]
+mod aggregates;

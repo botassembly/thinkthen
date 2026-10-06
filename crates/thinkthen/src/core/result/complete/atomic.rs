@@ -15,6 +15,10 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
+    pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
+        self.legacy.meta.fields()
+    }
+
     pub(crate) fn ranked(
         mut self,
         record: usize,

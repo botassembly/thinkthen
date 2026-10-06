@@ -7,6 +7,7 @@ use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{Kind, Question};
 use crate::public::results::{Call, Found, Ranked};
+type PreparedFind<T> = (Vec<T>, Find, std::sync::Arc<crate::engine::facade::Engine>);
 
 impl Engine {
     /// Every record, most likely yes first; ties keep input order.
@@ -148,7 +149,27 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
-        options.without_context("find")?;
+        let (units, find, engine) = self.prepare_find(question, units, &options)?;
+        let none = question.kind == Kind::FindNone;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        stop.run_call(1, |cancel| {
+            let found = engine.find(&find, cancel).map_err(Error::from)?;
+            observe_find(&stop, &engine, question, &find, &found)?;
+            Ok(found)
+        })?
+        .try_map(|found| Found::new(units, none, &found))
+    }
+
+    pub(in crate::public) fn prepare_find<I, T>(
+        &self,
+        question: &Question,
+        units: I,
+        options: &CallOptions<'_>,
+    ) -> Result<PreparedFind<T>, Error>
+    where
+        I: IntoIterator<Item = Result<T, Error>>,
+        T: Evidence,
+    {
         only(question, &[Kind::Find, Kind::FindNone], "find")?;
         let none = question.kind == Kind::FindNone;
         let maximum = if none { 254 } else { 255 };
@@ -179,16 +200,10 @@ impl Engine {
         let core::Question::Decide { text, .. } = &question.core else {
             return Err(Error::defect("a find question held no text"));
         };
-        let engine = self.asking(question)?;
+        let engine = crate::public::complete::contextual(self.asking(question)?, options)?;
         let find = Find::new(text.clone(), &texts, engine.backend().model().clone(), none)
             .map_err(|_| Error::usage(count_message))?;
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        stop.run_call(1, |cancel| {
-            let found = engine.find(&find, cancel).map_err(Error::from)?;
-            observe_find(&stop, &engine, question, &find, &found)?;
-            Ok(found)
-        })?
-        .try_map(|found| Found::new(units, none, &found))
+        Ok((units, find, engine))
     }
 
     /// Hold a finite input whole, and refuse it over the request limit.

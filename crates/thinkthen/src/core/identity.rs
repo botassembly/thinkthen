@@ -7,6 +7,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use thiserror::Error;
 
 pub(crate) mod answer;
+mod trace;
+pub(crate) use trace::LogicalTrace;
 pub(crate) mod framing;
 pub(crate) mod legacy;
 

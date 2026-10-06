@@ -11,6 +11,17 @@ pub(crate) struct Annotation {
     pub(crate) identity: ResultIdentity,
     pub(crate) legacy: AnnotateResult,
     pub(crate) members: Vec<(String, AnnotationMember)>,
+    pub(crate) context_sha256: Option<String>,
+    pub(crate) attempts: Option<Vec<crate::core::AttemptObservation>>,
+}
+
+impl Annotation {
+    pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
+        let mut fields = self.legacy.meta.fields();
+        fields.context = self.context_sha256.as_deref();
+        fields.attempts = self.attempts.as_deref();
+        fields
+    }
 }
 
 /// The mutually exclusive identity of a successful reading or failed member.
@@ -96,6 +107,8 @@ impl Serialize for Annotation {
             &AnnotationMeta {
                 row: meta,
                 identity,
+                context_sha256: self.context_sha256.as_deref(),
+                attempts: self.attempts.as_deref(),
             },
         )?;
         map.end()
@@ -105,6 +118,8 @@ impl Serialize for Annotation {
 struct AnnotationMeta<'a> {
     row: &'a super::super::AnnotateMeta,
     identity: &'a ResultIdentity,
+    context_sha256: Option<&'a str>,
+    attempts: Option<&'a [crate::core::AttemptObservation]>,
 }
 
 impl Serialize for AnnotationMeta<'_> {
@@ -130,6 +145,18 @@ impl Serialize for AnnotationMeta<'_> {
         map.serialize_entry("failed_questions", &row.failed_questions)?;
         if let Some(warning) = &row.profile_warning {
             map.serialize_entry("profile_warning", warning)?;
+        }
+        if let Some(context) = self.context_sha256 {
+            map.serialize_entry("context_sha256", context)?;
+        }
+        if let Some(attempts) = self.attempts {
+            map.serialize_entry(
+                "attempts",
+                &attempts
+                    .iter()
+                    .map(crate::core::AttemptObservation::complete)
+                    .collect::<Vec<_>>(),
+            )?;
         }
         map.serialize_entry("origin", &identity.origin())?;
         map.serialize_entry("question_sources", identity.question_sources())?;

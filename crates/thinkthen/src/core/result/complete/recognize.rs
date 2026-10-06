@@ -17,6 +17,10 @@ pub(crate) struct Recognition {
 }
 
 impl Recognition {
+    pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
+        self.meta.fields()
+    }
+
     pub(crate) const fn reported_usage(&self) -> Option<crate::core::ReportedUsage> {
         self.meta.reported_usage
     }

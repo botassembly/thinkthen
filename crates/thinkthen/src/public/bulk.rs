@@ -4,9 +4,9 @@ mod annotate_observation;
 mod complete;
 mod details;
 pub(crate) mod functions;
-mod observation;
+pub(crate) mod observation;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
-mod annotation;
+pub(crate) mod annotation;
 
 use crate::core::{self, Value};
 use crate::engine::pipeline::Failed;
@@ -59,7 +59,7 @@ pub(super) fn selected_batch(
     })
 }
 
-pub(super) fn selected_set_batch(
+pub(crate) fn selected_set_batch(
     questions: &core::QuestionSet,
     options: &CallOptions<'_>,
     engine: Option<core::Setting>,

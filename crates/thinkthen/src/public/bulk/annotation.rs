@@ -24,15 +24,28 @@ pub(crate) struct Annotating {
     groups: Vec<Vec<usize>>,
     backend: core::Backend,
     profile: Option<core::BackendProfile>,
+    context: Option<String>,
 }
 
 impl Annotating {
+    pub(crate) fn with_context(mut self, context: Option<&str>) -> Result<Self, Error> {
+        self.context = context
+            .filter(|text| !text.is_empty())
+            .map(|text| {
+                evidence(text)?;
+                Ok::<_, Error>(text.to_owned())
+            })
+            .transpose()?;
+        Ok(self)
+    }
+
     pub(crate) fn new(engine: &facade::Engine, set: core::QuestionSet) -> Self {
         Self {
             groups: set.groups(),
             set,
             backend: engine.backend().clone(),
             profile: engine.profile().cloned(),
+            context: None,
         }
     }
 
@@ -89,6 +102,17 @@ impl Asker for Annotating {
                 pack::asks(self.backend.url(), &plan)
                     .map_err(|_| Error::defect("a request could not be written as JSON"))?,
             );
+        }
+        if let Some(context) = &self.context {
+            let model = pack::model_json(self.backend.model().as_str())
+                .map_err(|_| Error::defect("an aggregate model could not be written"))?;
+            for ask in &mut asks {
+                ask.state = ask
+                    .state
+                    .with_context(context)
+                    .map_err(|_| Error::defect("an aggregate context could not be written"))?;
+                ask.key = ask.state.key(self.backend.url(), &model, &ask.question);
+            }
         }
         Ok(asks)
     }
@@ -165,11 +189,11 @@ impl Engine {
         T: Evidence + 'a,
     {
         Batch::of((|| {
-            options.without_context("annotate")?;
             let setting = selected_set_batch(&questions.0, &options, self.batch)?;
             let stop = Stop::begin(options)?.with_prices(self.prices);
             let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
-            let asker = Annotating::new(&engine, set.clone());
+            let asker =
+                Annotating::new(&engine, set.clone()).with_context(options.context_text())?;
             let call = pull::Call {
                 packing: pull::packing(setting, false, false),
                 engine: Arc::clone(&engine),
@@ -206,7 +230,6 @@ impl Engine {
         texts: &[String],
         options: CallOptions<'_>,
     ) -> Result<Call<EachRow>, Error> {
-        options.without_context("annotate")?;
         let setting = selected_set_batch(&questions.0, &options, self.batch)?;
         let inputs = self
             .within_limit(texts)?
@@ -218,7 +241,7 @@ impl Engine {
             .collect();
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let (engine, set) = (Arc::clone(&self.inner), &questions.0);
-        let asker = Annotating::new(&engine, set.clone());
+        let asker = Annotating::new(&engine, set.clone()).with_context(options.context_text())?;
         let packing = pull::packing(setting, false, false);
         stop.run_call(texts.len(), |cancel| {
             let mut rows = Vec::with_capacity(texts.len());

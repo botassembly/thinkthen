@@ -172,3 +172,8 @@ mod tests {
         }
     }
 }
+
+pub(crate) use identity::LogicalTrace;
+pub(crate) use question_set::NamedQuestion;
+
+pub(crate) use result::Fields as MetadataFields;

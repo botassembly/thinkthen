@@ -5,6 +5,8 @@ use std::fmt;
 
 mod call;
 mod complete;
+mod metadata;
+pub use metadata::{BatchMismatch, ProfileMismatch, ResultMetadata};
 mod complete_annotation;
 mod complete_facts;
 mod complete_find;

@@ -143,6 +143,10 @@ impl<'a> Cancel<'a> {
         }
     }
 
+    pub(crate) fn detailed(&self) -> bool {
+        self.attempt_sink.is_some() || self.facts.as_ref().is_some_and(CallFacts::wants_attempts)
+    }
+
     pub(crate) fn with_attempt_digest(&self, digest: &str) -> Self {
         if self.attempt_sink.is_none()
             && !self.facts.as_ref().is_some_and(CallFacts::wants_attempts)

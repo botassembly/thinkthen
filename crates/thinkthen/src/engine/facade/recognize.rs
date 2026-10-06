@@ -1,6 +1,7 @@
 //! Recognition in three steps (ADR 0056): BILOU boundaries over windowed
 //! requests, kinds and edges per step-1 request, then stated relations.
 
+use super::context::contextual_requests;
 use super::each::Models;
 use super::{Answered, Asks, Bound, Engine, Request};
 use crate::core::relation::count_pairs;
@@ -26,6 +27,7 @@ pub(crate) use crate::core::{RecognitionOdds as Probabilities, RecognizedValue a
 /// whether any answer came from the backend rather than a recording or cache.
 #[derive(Debug, Default)]
 pub(crate) struct Aggregate {
+    pub(crate) trace: crate::core::LogicalTrace,
     pub(crate) model: Option<ModelName>,
     models: Models,
     shares: RowUsage,
@@ -78,7 +80,14 @@ impl Engine {
         cancel: &Cancel,
         mut observe: impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
     ) -> Result<Recognition, Error> {
-        let (pieces, asks, _) = step_one(&self.backend, self.profile.as_ref(), spec, text, limit)?;
+        let (pieces, asks, _) = step_one_context(
+            &self.backend,
+            self.profile.as_ref(),
+            spec,
+            text,
+            limit,
+            self.aggregate_context.as_deref(),
+        )?;
         let mut meta = Aggregate::default();
         let mut details = Probabilities::default();
         if pieces.is_empty() {
@@ -252,6 +261,8 @@ impl Engine {
             else {
                 return Err(Error::RecognizeLogical);
             };
+            meta.trace
+                .take(stage, question, &answered.sources, &answered.observations);
             observe(stage, question, &answered)?;
             for outcome in answered.reply.outcomes() {
                 match outcome {
@@ -279,6 +290,17 @@ pub(crate) fn step_one(
     text: &str,
     limit: usize,
 ) -> Result<StepOne, Error> {
+    step_one_context(backend, profile, spec, text, limit, None)
+}
+
+fn step_one_context(
+    backend: &Backend,
+    profile: Option<&BackendProfile>,
+    spec: &RecognizeSpec,
+    text: &str,
+    limit: usize,
+    context: Option<&str>,
+) -> Result<StepOne, Error> {
     if text.len() > limit {
         return Err(Error::TextTooLong {
             bytes: text.len(),
@@ -298,7 +320,7 @@ pub(crate) fn step_one(
             backend,
             &window_plan(backend, (text, &pieces), (0, 0), vec![probe])?,
         )?;
-        alone.requests(backend, profile, Bound::WHOLE)?;
+        contextual_requests(&alone, backend, profile, context)?;
     }
     let mut asks = Asks::default();
     for group in step_one_groups(pieces.len()) {
@@ -310,7 +332,7 @@ pub(crate) fn step_one(
             &window_plan(backend, (text, &pieces), (group.start, last), questions)?,
         )?;
     }
-    let requests = asks.requests(backend, profile, Bound::WHOLE)?;
+    let requests = contextual_requests(&asks, backend, profile, context)?;
     Ok((pieces, asks, requests))
 }
 

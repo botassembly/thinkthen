@@ -34,6 +34,7 @@ pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
+mod context;
 mod each;
 mod finish;
 #[cfg(test)]
@@ -81,6 +82,7 @@ pub(crate) struct Settings {
 #[derive(Clone)]
 pub(crate) struct Engine {
     backend: Backend,
+    aggregate_context: Option<String>,
     profile: Option<BackendProfile>,
     timeout: Duration,
     max_retries: u32,
@@ -149,6 +151,11 @@ pub(crate) struct Found {
 }
 
 impl Engine {
+    pub(crate) fn with_aggregate_context(mut self, context: Option<String>) -> Self {
+        self.aggregate_context = context;
+        self
+    }
+
     /// Select this engine's limit at each live transport reservation.
     pub(crate) fn with_process_budget(
         mut self,
@@ -183,6 +190,7 @@ impl Engine {
         let engine = Self {
             usage_path: settings.usage.path().map(PathBuf::from),
             backend: settings.backend,
+            aggregate_context: None,
             profile: settings.profile,
             timeout: settings.timeout,
             max_retries: settings.max_retries,

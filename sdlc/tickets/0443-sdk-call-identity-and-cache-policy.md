@@ -226,5 +226,56 @@ impl Engine {
     where
         I: IntoIterator<Item = T>,
         T: InputEvidence,;
+    pub fn find_complete_with<I>(
+        &self,
+        question: &Question,
+        units: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteFound<I::Item>>, Error>
+    where
+        I: IntoIterator,
+        I::Item: Evidence,;
+    pub fn recognize_complete_with(
+        &self,
+        ask: &Recognize,
+        evidence: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteRecognized>, Error>;
+    pub fn relate_complete_with<I>(
+        &self,
+        ask: &Relate,
+        entities: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteRelated>, Error>
+    where
+        I: IntoIterator<Item = Entity>,;
+    pub fn annotate_records_complete_with<I, T>(
+        &self,
+        questions: &QuestionSet,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error>
+    where
+        I: IntoIterator<Item = RecordInput<T>>,
+        T: InputEvidence,;
+    pub fn annotate_complete_with<I, T>(
+        &self,
+        questions: &QuestionSet,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error>
+    where
+        I: IntoIterator<Item = T>,
+        T: InputEvidence,;
+
 }
 ```
+
+Native aggregate execution WIP: find, annotate, recognize and relate now return concrete result/2 carriers. Ordered trace data is retained by the facade, including actual sources and accepted/failure observations; consumers do not reconstruct it from event JSON. Aggregate context wraps the existing state value as a typed context/evidence envelope on all actual requests and recognition admission probes. Existing convenience calls accept context through the same implementation. Native annotation retains original occurrences and partial members, and complete relate retains full successful distributions. Four additional outside-in public cases check ordered candidates, successful null/failure distinctions, every recognition stage and unchanged spans, partial usage and empty metadata. Typed consumer accessors, owned event identity/location, input composition, command completion and CLI/schema/corpus adoption remain open.
+
+Native consumer metadata WIP: all ten concrete complete routes expose a borrowed
+ResultMetadata view with actual provenance/identity, partial usage, logical keys,
+packing/profile warnings, context digest and requested attempts. Empty aggregates
+retain zero sends, absent reported model and captured empty attempt lists. C/MCP
+still need normalized question/readings, owned observations and shared record
+composition; CLI/schema adoption and the whole High review remain open.

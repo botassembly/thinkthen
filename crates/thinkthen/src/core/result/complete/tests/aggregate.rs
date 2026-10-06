@@ -94,7 +94,7 @@ fn relation_members_emit_success_or_failure_with_no_fabricated_success_fields() 
     assert_eq!(
         json_line(&answered).unwrap(),
         format!(
-            r#"{{"relation":"works_for","reads":"works for","method":"yes_no","direction":"source_to_target","source":{{"name":"Ada","kind":"person"}},"target":{{"name":"Acme","kind":"organization"}},"answer_id":"{}","probability":0.4,"accepted":false,"request":"saved-key"}}"#,
+            r#"{{"relation":"works_for","reads":"works for","method":"yes_no","direction":"source_to_target","source":{{"name":"Ada","kind":"person"}},"target":{{"name":"Acme","kind":"organization"}},"answer_id":"{}","probability":0.4,"accepted":false,"answer":{{"kind":"yes_no","probability":0.4}},"request":"saved-key"}}"#,
             "b".repeat(64),
         )
     );

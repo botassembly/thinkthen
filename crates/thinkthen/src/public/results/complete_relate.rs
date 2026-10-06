@@ -15,6 +15,15 @@ pub struct CompleteRelated {
 }
 
 impl CompleteRelated {
+    /// Borrow actual metadata without decoding a result document.
+    #[must_use]
+    pub fn meta(&self) -> super::ResultMetadata<'_> {
+        super::ResultMetadata {
+            fields: self.canonical.metadata(),
+            identity: &self.canonical.identity,
+        }
+    }
+
     /// Stable identity of the resolved aggregate.
     #[must_use]
     pub const fn answer_id(&self) -> &AnswerId {

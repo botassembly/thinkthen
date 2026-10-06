@@ -97,12 +97,12 @@ pub use relate::{Edge, Entity, Relate, RelateBuilder};
 #[cfg(test)]
 pub(crate) use results::QuestionJson;
 pub use results::{
-    Answer, AttemptObservation, AttemptOutcome, Call, Candidate, CompleteAnnotated,
+    Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, Candidate, CompleteAnnotated,
     CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision, CompleteFacts,
     CompleteFilter, CompleteFound, CompleteRank, CompleteRecord, CompleteScore, CompleteTags,
     Counters, Details, DoorReply, Facts, Found, Judgment, NamedProbability, ObservedRow, Picked,
-    Probabilities, QuestionDetail, Ranked, RankedRow, RecordObservation, Row, SetRanked, Tally,
-    TallyStart, Usage,
+    Probabilities, ProfileMismatch, QuestionDetail, Ranked, RankedRow, RecordObservation,
+    ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,

@@ -13,6 +13,10 @@ pub(crate) struct Find {
 }
 
 impl Find {
+    pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
+        self.legacy.meta.fields()
+    }
+
     pub(crate) fn confidence(&self) -> Option<f64> {
         self.legacy.answer.confidence()
     }

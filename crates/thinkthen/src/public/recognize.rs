@@ -151,7 +151,7 @@ pub(super) use crate::public::question::model_of as model;
 
 /// A recognition request: its kinds, relations, cuts, and model.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Recognize(RecognizeSpec);
+pub struct Recognize(pub(crate) RecognizeSpec);
 
 impl Recognize {
     /// Start one; with no kind every name takes the kind `ENTITY`.
@@ -409,6 +409,27 @@ pub struct Recognized {
 }
 
 impl Recognized {
+    pub(crate) fn from_native(found: core::RecognizedValue) -> Result<Self, Error> {
+        let json = Written::of(&found)?;
+        let row = Self {
+            json,
+            entities: found.entities.into_iter().map(RecognizedEntity).collect(),
+            relations: found.relations.map(|edges| {
+                edges
+                    .into_iter()
+                    .map(|edge| Relation {
+                        relation: edge.relation,
+                        source: RecognizedEntity(edge.source),
+                        target: RecognizedEntity(edge.target),
+                        probability: edge.probability,
+                        either: edge.either,
+                    })
+                    .collect()
+            }),
+        };
+        Ok(row)
+    }
+
     /// Every recognized name, in text order.
     #[must_use]
     pub fn entities(&self) -> &[RecognizedEntity] {
@@ -453,8 +474,8 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<crate::public::Call<Recognized>, Error> {
-        options.without_context("recognize")?;
-        let engine = self.for_model(ask.0.model.as_ref())?;
+        let engine =
+            crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
             let mut positions = [0; 4];
@@ -475,24 +496,7 @@ impl Engine {
                     },
                 )
                 .map_err(Error::from)?;
-            let found = found.value;
-            let json = Written::of(&found)?;
-            let row = Recognized {
-                json,
-                entities: found.entities.into_iter().map(RecognizedEntity).collect(),
-                relations: found.relations.map(|edges| {
-                    edges
-                        .into_iter()
-                        .map(|edge| Relation {
-                            relation: edge.relation,
-                            source: RecognizedEntity(edge.source),
-                            target: RecognizedEntity(edge.target),
-                            probability: edge.probability,
-                            either: edge.either,
-                        })
-                        .collect()
-                }),
-            };
+            let row = Recognized::from_native(found.value)?;
             observe_row(&stop, &row);
             Ok(row)
         })

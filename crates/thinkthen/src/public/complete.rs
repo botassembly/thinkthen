@@ -1,7 +1,12 @@
 //! Additive concrete complete calls retain the existing transport and scalar doors.
+mod annotate;
+mod find;
 mod many;
 mod rank;
+mod recognize;
 mod records;
+mod relate;
+mod trace;
 use crate::core::{self, Value};
 use crate::public::engine::only;
 use crate::public::question::{Kind, Question};
@@ -219,4 +224,19 @@ fn score(canonical: core::CompleteAtomic) -> Result<CompleteScore, Error> {
 }
 fn wrong() -> Error {
     Error::defect("a complete answer has another function's value")
+}
+
+pub(crate) fn contextual(
+    engine: std::sync::Arc<crate::engine::facade::Engine>,
+    options: &CallOptions<'_>,
+) -> Result<std::sync::Arc<crate::engine::facade::Engine>, Error> {
+    let Some(context) = options.context_text().filter(|text| !text.is_empty()) else {
+        return Ok(engine);
+    };
+    crate::public::engine::evidence(context)?;
+    Ok(std::sync::Arc::new(
+        (*engine)
+            .clone()
+            .with_aggregate_context(Some(context.to_owned())),
+    ))
 }

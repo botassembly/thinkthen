@@ -25,6 +25,8 @@ pub(crate) struct PreparedRelations {
 /// One logical pair or menu answer, including a recoverable failure.
 pub(crate) struct Logical {
     pub(crate) relation: RelationRule,
+    pub(crate) question: Question,
+    pub(crate) answered: Answered,
     pub(crate) asked: RelateAsk,
     pub(crate) outcome: AnswerOutcome,
     pub(crate) request: String,
@@ -33,6 +35,7 @@ pub(crate) struct Logical {
 /// Every logical answer, the edges drawn from them, and the metadata.
 #[derive(Default)]
 pub(crate) struct Execution {
+    pub(crate) trace: crate::core::LogicalTrace,
     pub(crate) edges: Vec<RelationEdge<RelationEntity>>,
     pub(crate) logical: Vec<Logical>,
     pub(crate) model: Option<ModelName>,
@@ -142,6 +145,12 @@ impl Engine {
             let question = questions
                 .get(place)
                 .ok_or(Error::Defect("a relation reply exceeds its pairs"))?;
+            execution.trace.take(
+                "relation",
+                question,
+                &answered.sources,
+                &answered.observations,
+            );
             observe(question, &answered)?;
             models.take(&answered, |held, model| match held {
                 Some(held) if held != model => Err(Error::ModelsDiffer(None)),
@@ -164,6 +173,8 @@ impl Engine {
             for outcome in answered.reply.outcomes() {
                 let logical = Logical {
                     relation: relation.clone(),
+                    question: question.clone(),
+                    answered: answered.clone(),
                     asked: asked.clone(),
                     outcome: outcome.clone(),
                     request: answered.request.as_str().to_owned(),

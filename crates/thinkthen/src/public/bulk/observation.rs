@@ -7,7 +7,7 @@ use crate::public::options::Stop;
 use crate::public::question::Question;
 use crate::public::results::{ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation};
 
-pub(super) fn observe_find(
+pub(crate) fn observe_find(
     stop: &Stop<'_>,
     engine: &facade::Engine,
     question: &Question,

@@ -17,7 +17,9 @@ pub use reported_usage::ReportedUsage;
 pub(crate) mod complete;
 pub use complete::{Observation, Origin, QuestionSource, ResultIdentity};
 mod batch_warning;
+mod fields;
 mod meta;
+pub(crate) use fields::Fields;
 mod profile_warning;
 mod record_value;
 

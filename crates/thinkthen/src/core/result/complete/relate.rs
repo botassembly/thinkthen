@@ -61,6 +61,7 @@ impl Serialize for RelationEntry {
                 map.serialize_entry("answer_id", id)?;
                 map.serialize_entry("probability", &p)?;
                 map.serialize_entry("accepted", &accepted)?;
+                map.serialize_entry("answer", &self.answer)?;
             }
             (MemberIdentity::Failed(id), None, None, None, Some(failure)) => {
                 map.serialize_entry("failure_id", id)?;
@@ -93,6 +94,10 @@ struct Answers<'a> {
 }
 
 impl Relation {
+    pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
+        self.meta.fields()
+    }
+
     pub(crate) const fn reported_usage(&self) -> Option<crate::core::ReportedUsage> {
         self.meta.reported_usage
     }

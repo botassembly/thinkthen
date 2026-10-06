@@ -19,6 +19,7 @@ use crate::core::reply::{AnswerOutcome, BackendFailure, BackendFailureCause};
 use crate::core::result::ReportedUsage;
 use crate::core::text::{Evidence, Url, Withheld};
 
+mod context;
 mod packer;
 mod split;
 
