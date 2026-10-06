@@ -1,6 +1,6 @@
 # 0433: Keep SQLite find’s selected model
 
-Status: in progress. The selected-model fix passes focused SQLite checks and awaits fresh review.
+Status: landed. SQLite find preserves the caller’s model through requests, cache and replay; engine defaults remain unchanged.
 
 Milestone: 0.2
 
