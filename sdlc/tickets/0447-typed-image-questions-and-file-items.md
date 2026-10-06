@@ -28,9 +28,9 @@ Image input is explicit; ordinary text, paths or BLOBs never become images impli
 
 Start from vendors’ documented limits now. Experiment 0036 is later feedback, not an implementation or release dependency.
 
-### Added public declarations
-
 The additive image input and file-reader APIs keep the existing text methods unchanged.
+
+### Added public declarations
 
 ```text
 ImageMedia::Jpeg
