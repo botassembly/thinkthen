@@ -2,6 +2,119 @@
 
 Status: **Settled** for the bare value, the object, the five answer kinds, the full distribution with `confidence`, and request identity. ADR 0010 accepted the original kinds, ADR 0030 accepted `find`, and the 2026-09-21 amendment to ADR 0017 accepted `meta.requests`. ADR 0048 amends `meta` for batches.
 
+## Result/2 target for 0.2
+
+Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). This section is the adoption contract, not a claim of landed behavior. Tickets 0443–0445, 0450 and the carrier owners below implement it. The remaining sections and their result/1 examples describe landed behavior until adoption. The generated [result schema](result.schema.json) continues to describe landed Rust serializers under ADR 0112; implementation changes it with those serializers and the strict complete-result readers, never by hand in this contract ticket.
+
+### Complete results and compatibility
+
+Every new complete result carries `schema:"thinkthen.result/2"` and required top-level `answer_id:AnswerId`. Identity is available without opting into probability details. Existing bare CLI, scalar SQL, convenience values and generic C compatibility views retain their projections. C retains its failed-call NULL/error-facts route. An additive complete C route exposes identity; ticket 0426 owns its exports and lifetimes. No changed rank value may claim result/1.
+
+Optional fields are omitted unless explicitly nullable. Existing question, entity, span, endpoint, location, distribution and confidence fields retain their types and meanings. This table fixes all ten complete result variants. All rows require `schema`, `answer_id` and `meta` in addition to the listed members.
+
+| Function | Required members | Value and optional members |
+| --- | --- | --- |
+| decide | value, question, answer, threshold | Boolean, authored meaning or null; input?, position?, input_file? |
+| choose | value, question, answer, threshold | Label or null; input?, position?, input_file? |
+| tag | value, question, answer, threshold | Ordered labels, including []; input?, position?, input_file? |
+| score | value, question, answer, threshold | Weighted number; threshold is null; input?, position?, input_file? |
+| filter | value, input, question, answer, threshold | Boolean; CLI details print only true rows; position? |
+| rank | value, input, question, answer, threshold | Positive integer final rank position; threshold is null; question_name?, position? |
+| find | value, question, answer, threshold | Selected original unit or null; threshold is null; position? |
+| annotate | input, value, answers | Ordered named entries; position? |
+| recognize | value, question, answer | Existing entities and optional relations; input? |
+| relate | value, question, answer | Accepted edge array, including [] |
+
+Plain, graded and set rank assign positions after selection and before top truncation under ticket 0436. They retain their probability/member details; a graded rank's weighted score remains in its answer distribution and reading rather than replacing the final rank position. Observation routes expose filter rejections and rank omissions with their own member identities; an omitted rank candidate has no invented final position.
+
+The five atomic answers remain `yes_no:{probability}`, `choice:{pick,probabilities,confidence?}`, `tag:{probabilities}`, `score:{level,probabilities,confidence?}` and `find:{pick,probabilities,confidence?}`, each tagged by its existing `kind`. Probability maps keep declared option order. Nullable successful values remain distinct from failures.
+
+An annotate success entry requires `answer_id,value,question,answer,threshold,request`. A failure entry requires `failure_id,question,failure,request` and omits the successful fields. The existing bare failure marker and six backend member causes remain unchanged. Recognize retains `answer:{pieces,names,pairs}` with complete probabilities. Relate retains `answer:{questions}`; each entry keeps `relation,reads,method,direction,source,target,request` and requires either success `answer_id,probability,accepted` or failure `failure_id,failure`. Existing nullable target rules remain.
+
+### Identity types and stable answers
+
+`CallId`, `SdkRequestId`, `ObservationId`, `FailureId` and `AnswerId` are distinct opaque validated types. Their JSON/header spelling is exactly 64 lowercase hexadecimal characters. Question keys and `request_sha256` are SHA-256 digests with that spelling, not call or send identities. Provider `request_id` remains its separate screened string type. IDs support correlation, not authentication.
+
+Call IDs identify invocations; SDK request IDs identify prepared sends. Both use practical collision resistance across concurrent calls and forked processes without caller-data hashing. Generator choice belongs to implementation; this contract adds no dependency. Observation IDs identify newly accepted wire answers at the engine edge. Cache/replay retain them; refresh allocates new ones even for equal probabilities; no-store keeps them only in memory. A failure ID identifies a failed logical occurrence and is never persisted as an answer. Repeated uses of one held observation keep its observation ID but retain their distinct logical scopes.
+
+Use UTF-8 and the framing function `F` defined in [cache.md](cache.md#version-2-identity). The answer ID is lowercase SHA-256 of:
+
+```text
+F("thinkthen.answer-id/1", function, canonical_scope_JSON,
+  ordered_observation_variants_JSON, normalized_reading_JSON,
+  ordered_child_IDs_JSON)
+```
+
+Scope identifies the original zero-based record occurrence, member name/ordinal, stage/question occurrence and candidate/span/endpoint identity as applicable. Reading includes resolved cuts/bands/defaults, authored meanings, score weights, find-none semantics, recognition/relation cuts, rank selection/member ownership and final rank position where one exists. Aggregate children follow semantic order; rank uses the complete order before top truncation. Empty aggregates use empty observation/child arrays and their resolved scope/reading, so they still have an answer ID.
+
+Normalize numeric spelling and defaults through existing typed serializers. Canonical objects follow the owning typed serializer's field order; arrays and option maps retain semantic order. Exclude surface, filesystem paths, retrieval origin, call/request IDs, timestamps, costs, packing and display from answer identity. Semantic text offsets/endpoints remain included. Compute before host index conversion. Duplicate members remain distinct; successful null differs from failure. Returning to the same reading over the same observations restores the answer ID. Core receives typed identities and performs only pure framing and reading. [Cache migration](cache.md#legacy-observation-identity) fixes legacy observation IDs.
+
+### Metadata and empty aggregates
+
+Retain existing metadata fields and optionality: `tool`, the applicable question/set digest, `url`, historical `model`, `usage?`, `requests_sent`, `cached`, `requests`, `failed_questions` and applicable profile/batch/context warnings. Add required `origin`, `question_sources` and `observations`; add optional scalar `answered_by`. `meta.proxy` is absent throughout 0.2.
+
+`question_sources` aligns one-to-one with `meta.requests` in logical question order, including repeated occurrences. Each entry requires `origin` and `answered_by`, the validated model reported by the response behind that occurrence, including a recoverable member failure in a validated response. `observations` has exactly the same alignment. Each entry is exclusively `{"observation_id":ObservationId}` or `{"failure_id":FailureId}`. Failed occurrences do not become stored answers. Whole transport failures return terminal errors rather than fabricated source entries.
+
+Emitted source origins are `live`, `cache`, `replay`. Reserve `proxy` and `memory` as type values without emitting them. A direct call to a proxy hostname over ordinary model wire is `live`. Explicit replay with observations is `replay`; otherwise any required live response makes the result `live`, and wholly cached observations make it `cache`. Mixed cache/live results retain each occurrence's actual source. Emit scalar `answered_by` only when nonempty constituent sources all agree. Retain current mixed-model refusals; this metadata admits no previously refused combination. Historical `meta.model` remains a compatibility field, not proof that mixed sources agree.
+
+When an aggregate has **zero stored or live observations**, required `origin` is JSON null, `question_sources` and `observations` are [], `requests` is [], `requests_sent` is 0, `cached` is false, and `answered_by` is omitted. This also applies in explicit replay mode: no source was retrieved. Retain the historical `model` fallback as a requested-model compatibility value, never an actual answered model. An empty actionable array with observations is different: it reports those observations' real origins/model.
+
+Reason: the landed relation planner can produce no questions for a lone entity with a wildcard single-target rule. `engine/facade/relate.rs` initializes its stored flag true and `cli/relate/result.rs` falls back to the requested model even with no reply. Result/2 must not interpret those defaults as a cache hit or an actual model answer. The existing case in `tests/backend/relate/menu.rs` proves this zero-send execution. Null provenance preserves the closed origin vocabulary without inventing a fourth source. This exception changes result/2 truthfulness; the result/1 examples below retain their historical meaning.
+
+| Case | origin | question_sources | answered_by | cached |
+| --- | --- | --- | --- | --- |
+| One live answer from model A | live | live/A | A | false |
+| One held answer from model A | cache | cache/A | A | true |
+| Explicit replay of that answer | replay | replay/A | A | true |
+| Held A plus live A | live | cache/A, live/A | A | false |
+| Admitted historical sources A and B | replay | replay/A, replay/B | omitted | true |
+| No logical questions or observations | null | [] | omitted | false |
+| Empty accepted edge array after live answers from A | live | live/A for each occurrence | A | false |
+
+### Call facts, transport and attempts
+
+Add required `facts.call_id` to every successful invocation, including zero-send success, and every started failure. Start means typed admission and route resolution succeeded and engine execution began, before lookup. Pre-start refusals have no invented facts. Terminal errors have no successful result, answer ID or fabricated result meta; they retain final facts and opt-in attempts. Keep the six public error kinds. Repeated SQL rows of one call share its call ID and facts; a summed tally does not invent a single call ID.
+
+Every actual send uses:
+
+```text
+User-Agent: thinkthen/<compiled-engine-semver> (<surface>)
+X-ThinkThen-Call-Id: CallId
+X-ThinkThen-Request-Id: SdkRequestId
+```
+
+The closed surface tokens are `cli`, `rust`, `c`, `python`, `pandas`, `python-polars`, `rust-polars`, `javascript`, `ruby`, `r`, `cpp`, `go`, `csharp`, `java`, `kotlin`, `scala`, `swift`, `zig`, `php`, `dart`, `objective-c`, `ada`, `cobol`, `flutter`, `duckdb`, `sqlite`, `postgresql`. TypeScript uses `javascript`. Outer wrappers explicitly supply their token; C validates it. Unknown tokens refuse locally. The version comes from the compiled Rust engine, not the wrapper package.
+
+A new invocation receives a new call ID. Each prepared send receives a new SDK request ID; status retries retain it and refusal-split children get new IDs. Every stage uses the engine's fixed endpoint, effective key and provider API type under ADR 0119. IDs contain no caller text, credential, address or model; transient call/request IDs enter neither cache keys, recordings nor count-only usage. Future proxy deduplication scopes request IDs to authenticated callers and compares bodies; differing bodies conflict. SDK accounting still counts actual sends and retries. Keep the existing rule that a transport failure is not retried.
+
+Opt-in attempts cover all ten functions on success and started failure. Unrequested attempts are absent; requested zero-send attempts are []. Each event requires `ordinal,request_sha256,wall_ms,outcome,sdk_request_id`; optional `status,server_ms,request_id` retain their meanings. Outcomes remain `ok,status,transport`. A packed event is shared by its represented rows; retries and split children have their own ordinals. The only provider observations are `x-envoy-upstream-service-time` and the existing adapter ID header, today `x-typesafe-request-id`. Missing time stays absent. Replay emits no current attempts.
+
+CLI `command_ms` is rounded-up elapsed milliseconds outside the **union** of HTTP/body-read intervals, from accepted command execution through worker, output and usage-writer completion, immediately before facts emission. Overlapping parallel intervals are never double-subtracted. Existing `seconds` remains total elapsed time. Edge clocks measure time; core does not. [recording.md](recording.md#optional-timing-history-for-02) fixes the bounded timing sidecar.
+
+### Reserved proxy types
+
+Request reservation is `proxy:{question_id?:Opaque,code_threshold:T}`. Opaque is 1–128 ASCII characters from `[A-Za-z0-9._-]`, without trimming. T is the existing normalized cut/band/null grammar and function admission. Derive it from current precedence/defaults; reject a contradictory supplied value. Attach reservations to each logical member. Annotate/rank sets retain member-specific readings; score/find use null. Recognize additionally reserves `code_relation_threshold:T` for its separately scoped relation reading.
+
+Reserved metadata is `proxy:{decision_id:Opaque,override:Override}`. The closed variants are:
+
+```text
+{kind:"none",code_threshold:T}
+{kind:"threshold",code_threshold:T,effective_threshold:T}
+{kind:"decision",code_threshold:T,code_value:V,value:V}
+```
+
+V is the target function's typed actionable value. Threshold overrides admit only that function's existing reading rules; recognition relation targets are separately scoped. These types reserve no HTTP path, header or executable protocol. In 0.2 **any activation**, including empty/null proxy input, returns usage failure before lookup, store access or send. Ordinary vendor bytes exclude reservations; unknown vendor fields/headers cannot populate proxy metadata. Apply no override and emit no attestation. Execution waits for an admitted explicit 0.3 proxy protocol; no hostname or model alias grants authority.
+
+### Adoption dependencies
+
+0443 owns transport/provenance and Cache-Control; 0444 owns storage validation/migration; 0445 owns attempts and command timing; 0450 owns answer identities/reservations; 0436 owns rank positions. 0426–0431 adopt complete typed carriers and strict readers; 0410/0296 own frames; 0435 owns SQL facts/observations; 0411 owns rereading; 0432 owns parity. 0447/0448 supply admitted image serialization and limits. 0449's single-route contract precedes this adoption. 0426's additive C exports and handle/string lifetimes remain its signature dependency.
+
+Adoption updates generated schema, all ten detailed variants in the shared corpus, strict full-result decoders and examples together. Existing recordings remain historical fixtures until 0444 converts them in one controlled update; result/2 cannot be claimed by changing a schema label alone. The changelog distinguishes this target from behavior already built.
+
+## Landed result/1 behavior
+
+The sections below describe the existing views, shapes and examples. Result/2 above supersedes them only as its owning implementation tickets adopt it.
+
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
 The C JSON door returns `{"value":VALUE,"facts":FACTS}` for every successful asking call. `VALUE` keeps the bare shape below, or the detailed object when `details:true` is requested. The four judgment verbs also accept a `records` array; their `VALUE` is an ordered array of bare judgments or full detailed record objects. Each detailed record keeps its whole original `input`, request digest, batch receipt and applicable warnings and context digest. A failed C call returns `NULL`; `thinkthen_error_facts_json` then exposes final started-call facts. The direct `{"usage":true}` response remains the engine's counters rather than a call result. Each engine counts its own calls and its clones', and a host that keeps several engines adds them; the durable usage totals give the process view.

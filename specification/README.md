@@ -13,12 +13,13 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--plan`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
-| [result.md](result.md) | The bare value, the `--details` object, and the five answer kinds | Settled |
+| [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types; landed result/1 distinguished | Settled; 0.2 adoption pending |
 | [files.md](files.md) | Explicit file/folder readers, located carriers and spans across all ten functions | Settled for 0.2 |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [sdk-boundary.md](sdk-boundary.md) | One configured route per engine, retained caller controls and proxy business policy | Settled |
-| [recording.md](recording.md) | `--record` and `--replay`: a folder of exchanges that runs again with no network | Settled |
+| [recording.md](recording.md) | `--record` and `--replay`: offline answers, usage/privacy and bounded optional timing history | Settled; timing adoption pending |
+| [cache.md](cache.md) | Versioned question keys, offline validation/migration, model freshness and bounded Cache-Control storage policy | Settled for 0.2; adoption pending |
 | [decide.md](decide.md) | `decide` | Settled |
 | [choose.md](choose.md) | `choose` | Settled |
 | [tag.md](tag.md) | `tag` | Settled |
@@ -37,6 +38,8 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.
+
+[ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md) fixes the coordinated result/2 and cache/2 target. The generated result schema and existing examples still describe landed result/1 until the owning implementation changes serializers, corpus and complete-result readers together. The target preserves bare/scalar compatibility, never claims a cache hit or answered model without observations, and reserves proxy types without activating them. It depends on 0449's one-route boundary under ADR 0119; 0443/0444/0445/0450 and the typed carrier tickets own adoption.
 
 ## Status words
 
