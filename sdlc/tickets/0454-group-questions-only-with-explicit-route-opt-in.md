@@ -1,9 +1,10 @@
 # 0454: Make question grouping explicit and keep grouped answers distinct
 
-Status: open. Implementation follows fresh ticket review.
+Status: ready. Fresh High ticket review accepted; implementation joins the native lane.
 
 Milestone: 0.2
 Owner: builder.
+Ticket review: ACCEPT, 2026-10-06; fresh read-only High review.
 Risk: High, answer correctness and cache/replay identity.
 
 ## Outcome
@@ -24,7 +25,7 @@ Routes without established grouped/single equivalence ask one wire question per 
 
 Grouped lookup cannot remove a cached member and then silently change the remaining group's context. Until equivalence is established, bypassing grouped local reuse is preferable to claiming per-question equivalence. Explicit record/replay must retain enough membership to reproduce the observed group identity and distinguish it from a scalar observation.
 
-Do not infer missing historical grouping facts during v1 conversion. Preserve original rows and deterministic observation IDs; keep historical/unspecified observations in a separate compatibility namespace and identify them truthfully on explicit historical replay. They cannot become an online scalar or grouped cache hit by assumption. Refuse unknown/damaged/conflicting migration locally before a send. Update ADR 0120, the key formula, schema and examples together with implementation. Preserve explicit old replay compatibility without attesting equivalence it never measured.
+Do not infer missing historical grouping facts during v1 conversion. Preserve original rows and deterministic observation IDs; keep historical/unspecified observations in a separate compatibility namespace and identify them truthfully on explicit historical replay. They cannot become an online scalar or grouped cache hit by assumption. Refuse unknown/damaged/conflicting migration locally before a send. Update ADR 0120, the key formula, schema and examples together with implementation. Reconcile annotate.md's conflicting per-question and exact-chunk reuse clauses. Supersede ADR 0111's affected grouping/reuse promises explicitly; distinguish logical evidence selection, record batching and actual wire membership. Preserve explicit old replay compatibility without attesting equivalence it never measured.
 
 ## Ownership and completion
 
