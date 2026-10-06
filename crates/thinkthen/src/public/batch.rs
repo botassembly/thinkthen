@@ -3,6 +3,7 @@
 
 use std::fmt;
 
+use crate::public::Call;
 use crate::public::error::Error;
 use crate::public::results::Facts;
 
@@ -35,6 +36,18 @@ impl<'a, T: 'a> Batch<'a, T> {
     #[must_use]
     pub fn facts(&self) -> Option<&Facts> {
         self.source.facts()
+    }
+
+    /// Exhaust this native batch and return its ordered values with joined final facts.
+    /// # Errors
+    /// Returns the first terminal error with its final facts; earlier observer rows remain visible.
+    pub fn into_call(mut self) -> Result<Call<Vec<T>>, Error> {
+        let values = self.by_ref().collect::<Result<Vec<_>, _>>()?;
+        let facts = self
+            .facts()
+            .cloned()
+            .ok_or_else(|| Error::defect("a completed batch has no facts"))?;
+        Ok(Call::new(values, facts))
     }
 
     /// A batch that yields one error, then nothing.

@@ -22,6 +22,8 @@ use crate::core::threshold::{Threshold, ThresholdError};
 pub(crate) enum PartError {
     /// The group's pointers could not form a reading; a parsed set checked them.
     Reading(ReadingError),
+    /// A declaration refused the actual selected typed item.
+    Declaration(crate::core::declaration::DeclarationError),
     /// The record's selection is text, or holds nothing at a pointer.
     Record(RecordError),
 }
@@ -117,6 +119,7 @@ impl fmt::Debug for QuestionSetError {
 /// One named and fully resolved question.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct NamedQuestion {
+    metadata: crate::core::declaration::QuestionMetadata,
     name: String,
     question: Question,
     threshold: Option<Threshold>,
@@ -124,6 +127,9 @@ pub(crate) struct NamedQuestion {
 }
 
 impl NamedQuestion {
+    pub(crate) const fn metadata(&self) -> &crate::core::declaration::QuestionMetadata {
+        &self.metadata
+    }
     /// Read the stable output name.
     #[must_use]
     pub(crate) fn name(&self) -> &str {
@@ -180,6 +186,7 @@ impl QuestionSet {
                 return Err(QuestionSetError::Duplicate(name));
             }
             questions.push(NamedQuestion {
+                metadata: crate::core::declaration::QuestionMetadata::default(),
                 name,
                 question,
                 threshold,
@@ -191,6 +198,16 @@ impl QuestionSet {
             profile: None,
             batch: None,
         })
+    }
+
+    pub(crate) fn with_metadata(
+        mut self,
+        metadata: impl Iterator<Item = crate::core::declaration::QuestionMetadata>,
+    ) -> Self {
+        for (question, metadata) in self.questions.iter_mut().zip(metadata) {
+            question.metadata = metadata;
+        }
+        self
     }
 
     /// Read the resolved questions in file order.
@@ -245,6 +262,29 @@ impl QuestionSet {
     ) -> Result<Evidence, PartError> {
         let first = group.first().and_then(|place| self.questions.get(*place));
         let on = first.map_or(&[][..], |first| first.on.as_slice());
+        if !reads_root(on) && !matches!(record.value, Json::Object(_) | Json::Array(_)) {
+            let name = first.map_or(String::new(), |first| first.name.clone());
+            return Err(PartError::Record(RecordError::TextPart(name)));
+        }
+        let selected = if reads_root(on) {
+            record.value.clone()
+        } else {
+            let reading =
+                Reading::new(Framing::Document, on.to_vec()).map_err(PartError::Reading)?;
+            reading
+                .batch_record(&crate::core::Record::from_json(record.value.clone()))
+                .map_err(PartError::Record)?
+                .value
+        };
+        for named in group.iter().filter_map(|place| self.questions.get(*place)) {
+            if let Some(schema) = &named.metadata.item_schema
+                && !schema.accepts(&selected)
+            {
+                return Err(PartError::Declaration(
+                    crate::core::declaration::DeclarationError,
+                ));
+            }
+        }
         if reads_root(on) {
             return Ok(record.evidence.clone());
         }

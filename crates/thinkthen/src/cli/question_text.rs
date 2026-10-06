@@ -22,3 +22,21 @@ pub(crate) fn read(path: &Path, unopened: fn(io::Error) -> Failure) -> Result<St
         )),
     })
 }
+
+/// Resolve a path already stripped of its explicit @, through the native loader.
+pub(crate) fn reference(
+    path: &Path,
+    unopened: fn(io::Error) -> Failure,
+) -> Result<String, Failure> {
+    use crate::public::named_question::{Reference, named_text};
+    let Some(value) = path.to_str() else {
+        return read(path, unopened);
+    };
+    match Reference::of_path(value)
+        .map_err(|error| Failure::NamedQuestion(error.detail().message().to_owned()))?
+    {
+        Reference::Path(path) => read(&path, unopened),
+        Reference::Name(name) => named_text(&name)
+            .map_err(|error| Failure::NamedQuestion(error.detail().message().to_owned())),
+    }
+}

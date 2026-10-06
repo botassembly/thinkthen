@@ -83,9 +83,8 @@ pub(crate) fn digest(url: &str, request: &[u8]) -> String {
         .collect()
 }
 
-/// Every question key of one request body, in wire order, by ADR 0111
-/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
-/// one question as the body carries them, joined by line feeds.
+/// Independent result/2 question keys in wire order; these fixtures report
+/// the requested model, so both normalized model fields have the same bytes.
 pub(crate) fn keys(url: &str, body: &[u8]) -> Vec<String> {
     #[derive(serde::Deserialize)]
     struct Parts<'a> {
@@ -106,15 +105,21 @@ pub(crate) fn keys(url: &str, body: &[u8]) -> Vec<String> {
     questions
         .into_iter()
         .map(|(_, question)| {
-            let joined = [
+            let mut digest = Sha256::new();
+            digest.update(b"thinkthen.question-key/2\0");
+            for part in [
                 "systemone",
                 url,
                 parts.model.get(),
+                parts.model.get(),
                 parts.state.get(),
                 question.get(),
-            ]
-            .join("\n");
-            Sha256::digest(joined.as_bytes())
+            ] {
+                digest.update((part.len() as u64).to_be_bytes());
+                digest.update(part.as_bytes());
+            }
+            digest
+                .finalize()
                 .iter()
                 .map(|byte| format!("{byte:02x}"))
                 .collect()

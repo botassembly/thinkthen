@@ -2,8 +2,8 @@
 //! union of what a folder holds.
 //!
 //! The fixture is read first, then the live file, then every old
-//! `DIGEST.json` entry in name order. On one key the newer `taken_at` wins, and
-//! a tie keeps the entry read first, so the fixture keeps its own. Every
+//! `DIGEST.json` entry in name order. Conflicting answers or histories under
+//! one normalized key refuse the whole conversion. Every
 //! converted answer takes `taken_at` 0, so the same folder always writes the
 //! same bytes. The live file is removed once its entries are in the fixture,
 //! because a replay refuses a folder holding both. The live file's write lock
@@ -59,10 +59,12 @@ pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
         None
     };
     if let Some(connection) = &live {
-        held.merge(Entries::read(connection)?);
+        held = held.normalized()?;
+        held.merge(Entries::read(connection)?.normalized()?)?;
     }
     let mut summary = Summary::default();
-    held.merge(old_entries(folder, quote, &mut summary)?);
+    held = held.normalized()?;
+    held.merge(old_entries(folder, quote, &mut summary)?.normalized()?)?;
     summary.answers = held.answers.len();
     replace(folder, &jsonl, held.written()?.as_bytes())?;
     if let Some(connection) = live {
@@ -88,8 +90,7 @@ fn locked(sqlite: &Path) -> Result<Connection, Error> {
     Ok(connection)
 }
 
-/// Every good answer of the folder's old entries, the first file in name
-/// order keeping a key two of them give.
+/// Every good answer of the folder's old entries, refusing conflicting history.
 fn old_entries(folder: &Path, quote: bool, summary: &mut Summary) -> Result<Entries, Error> {
     let mut names = Vec::new();
     for item in fs::read_dir(folder).map_err(|_| Error::RecordingStorage)? {
@@ -117,10 +118,20 @@ fn old_entries(folder: &Path, quote: bool, summary: &mut Summary) -> Result<Entr
         summary.unquoted += converted.iter().filter(|answer| answer.unquoted).count();
         for answer in converted {
             let state = bytes_sha256(answer.state.as_bytes());
-            let (input_tokens, output_tokens) =
-                answer.usage.map(|usage| usage.token_counts()).unzip();
+            let (input_tokens, output_tokens) = (
+                answer
+                    .usage
+                    .and_then(crate::core::ReportedUsage::input_tokens),
+                answer
+                    .usage
+                    .and_then(crate::core::ReportedUsage::output_tokens),
+            );
             entries.states.insert(state.clone(), answer.state);
-            entries.answers.entry(answer.key.hex()).or_insert(Answer {
+            let saved = Answer {
+                key_version: None,
+                adapter: None,
+                observation_id: Some(answer.observation_id),
+                batch_size: None,
                 key: answer.key.hex(),
                 url: answer.url,
                 model: answer.model,
@@ -132,7 +143,15 @@ fn old_entries(folder: &Path, quote: bool, summary: &mut Summary) -> Result<Entr
                 output_tokens,
                 taken_at: 0,
                 origin: answer.origin.as_str().to_owned(),
-            });
+            };
+            if entries
+                .answers
+                .get(&saved.key)
+                .is_some_and(|held| held != &saved)
+            {
+                return Err(super::versioned::invalid());
+            }
+            entries.answers.insert(saved.key.clone(), saved);
         }
     }
     Ok(entries)

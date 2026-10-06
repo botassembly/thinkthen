@@ -22,7 +22,7 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
         {
             return Err(error(true, RecognizeConfigError::Shape));
         }
-        let text = question_text::read(Path::new(path), Failure::OpenQuestionFile)?;
+        let text = question_text::reference(Path::new(path), Failure::OpenQuestionFile)?;
         RecognizeSpec::parse(&text).map_err(|why| error(true, why))?
     } else {
         let kinds = command_kinds(arguments)?;

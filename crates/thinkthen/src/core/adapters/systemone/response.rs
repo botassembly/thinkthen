@@ -102,8 +102,10 @@ fn unique_some<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Wire
 /// The token counts a response reports.
 #[derive(Debug, Deserialize)]
 struct ResponseUsage {
-    input_tokens: u64,
-    output_tokens: u64,
+    #[serde(default)]
+    input_tokens: Option<u64>,
+    #[serde(default)]
+    output_tokens: Option<u64>,
 }
 
 mod observed;

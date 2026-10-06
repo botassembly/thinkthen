@@ -116,7 +116,7 @@ impl Description {
         &self.text
     }
 
-    fn of(value: Json) -> Result<Self, Error> {
+    pub(super) fn of(value: Json) -> Result<Self, Error> {
         let text =
             json_line(&value).map_err(|_| Error::defect("a description could not be written"))?;
         Ok(Self { value, text })
@@ -232,6 +232,7 @@ impl DescriptionBuilder {
 /// `Debug` names the kind alone.
 #[derive(Clone, PartialEq)]
 pub struct Question {
+    pub(crate) metadata: core::declaration::QuestionMetadata,
     pub(crate) core: core::Question,
     pub(crate) threshold: Option<Threshold>,
     pub(crate) model: Option<ModelName>,
@@ -326,6 +327,7 @@ impl Question {
     /// Returns [`Error::Usage`] for blank text.
     pub fn decide(text: &str) -> Result<DecideBuilder, Error> {
         Ok(DecideBuilder {
+            metadata: core::declaration::QuestionMetadata::default(),
             text: text_of(text)?,
             yes: None,
             no: None,
@@ -452,6 +454,7 @@ impl Question {
             Verb::Score => Kind::Score,
         };
         let question = Self {
+            metadata: file.metadata.clone(),
             core,
             threshold,
             model,
@@ -521,7 +524,7 @@ impl Question {
         Ok(self)
     }
 
-    pub(super) const fn yes_no(
+    pub(super) fn yes_no(
         text: QuestionText,
         yes: Option<Meaning>,
         no: Option<Meaning>,
@@ -529,6 +532,7 @@ impl Question {
         kind: Kind,
     ) -> Self {
         Self {
+            metadata: core::declaration::QuestionMetadata::default(),
             core: core::Question::Decide { text, yes, no },
             threshold,
             model: None,

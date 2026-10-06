@@ -71,7 +71,10 @@
       "verb": "choose",
       "file": {
         "choose": "Which team?",
-        "options": ["billing", "other"],
+        "options": [
+          "billing",
+          "other"
+        ],
         "batch": "max"
       },
       "valid": true
@@ -81,7 +84,10 @@
       "verb": "choose",
       "file": {
         "choose": "Which team?",
-        "options": ["billing", "other"],
+        "options": [
+          "billing",
+          "other"
+        ],
         "batch": 0
       },
       "valid": false
@@ -103,7 +109,10 @@
       "verb": "tag",
       "file": {
         "tag": "Which topics?",
-        "labels": ["billing", "urgent"],
+        "labels": [
+          "billing",
+          "urgent"
+        ],
         "batch": "max"
       },
       "valid": true
@@ -113,7 +122,10 @@
       "verb": "tag",
       "file": {
         "tag": "Which topics?",
-        "labels": ["billing", "urgent"],
+        "labels": [
+          "billing",
+          "urgent"
+        ],
         "batch": 0
       },
       "valid": false
@@ -151,7 +163,10 @@
       "verb": "score",
       "file": {
         "score": "How much disruption?",
-        "levels": ["low", "high"],
+        "levels": [
+          "low",
+          "high"
+        ],
         "batch": 2
       },
       "valid": true
@@ -161,7 +176,10 @@
       "verb": "score",
       "file": {
         "score": "How much disruption?",
-        "levels": ["low", "high"],
+        "levels": [
+          "low",
+          "high"
+        ],
         "batch": "2"
       },
       "valid": false
@@ -539,6 +557,157 @@
             }
           ]
         }
+      },
+      "valid": false
+    },
+    {
+      "name": "find-text",
+      "verb": "find",
+      "file": {
+        "find": "Which unit?"
+      },
+      "valid": true
+    },
+    {
+      "name": "find-structured-reading",
+      "verb": "find",
+      "file": {
+        "find": {
+          "z": "Which unit?",
+          "a": [
+            "Read both."
+          ]
+        },
+        "model": "saved-model",
+        "profile": "saved-profile"
+      },
+      "valid": true
+    },
+    {
+      "name": "find-selected-reading",
+      "verb": "find",
+      "file": {
+        "find": "Which unit?",
+        "on": "/body"
+      },
+      "valid": true
+    },
+    {
+      "name": "find-authored-cut",
+      "verb": "find",
+      "file": {
+        "find": "Which unit?",
+        "threshold": 0.8
+      },
+      "valid": false
+    },
+    {
+      "name": "find-authored-candidates",
+      "verb": "find",
+      "file": {
+        "find": "Which unit?",
+        "options": [
+          "wrong",
+          "invented"
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "find-record-batch",
+      "verb": "find",
+      "file": {
+        "find": "Which unit?",
+        "batch": 1
+      },
+      "valid": false
+    },
+    {
+      "name": "find-two-verbs",
+      "verb": "find",
+      "file": {
+        "find": "Which unit?",
+        "decide": "Wrong?"
+      },
+      "valid": false
+    },
+    {
+      "name": "declared-named-refund",
+      "verb": "decide",
+      "file": {
+        "decide": "Refund?",
+        "name": "refund",
+        "wording_version": 2,
+        "item_schema": {
+          "type": "string"
+        },
+        "context_schema": {
+          "type": "string"
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "named-choose",
+      "verb": "choose",
+      "file": {
+        "choose": "Which?",
+        "options": [
+          "a",
+          "b"
+        ],
+        "name": "choice_a-2",
+        "wording_version": 2147483647
+      },
+      "valid": true
+    },
+    {
+      "name": "invalid-author-name",
+      "verb": "decide",
+      "file": {
+        "decide": "Refund?",
+        "name": "../secret"
+      },
+      "valid": false
+    },
+    {
+      "name": "unsupported-item-schema-key",
+      "verb": "decide",
+      "file": {
+        "decide": "Refund?",
+        "item_schema": {
+          "type": "string",
+          "additionalProperties": true
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "unsupported-nested-object",
+      "verb": "decide",
+      "file": {
+        "decide": "Refund?",
+        "item_schema": {
+          "type": "object",
+          "properties": {
+            "body": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "invalid-zero-wording-version",
+      "verb": "score",
+      "file": {
+        "score": "Urgency?",
+        "levels": [
+          "low",
+          "high"
+        ],
+        "wording_version": 0
       },
       "valid": false
     }

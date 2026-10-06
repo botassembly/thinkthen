@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use super::{Values, evidence, observe_annotated, observe_annotated_questions, selected_set_batch};
-use crate::core::{self, Json, pack, pack::Ask, quoted_plan};
+use crate::core::{self, pack, pack::Ask, quoted_plan};
 use crate::engine::facade::{self, Annotation, GroupAnswer, QuestionAnswer};
 use crate::engine::pipeline::{Answered, Asker, Failed, Flow};
 use crate::public::annotated::AnnotatedRecord;
@@ -24,15 +24,33 @@ pub(crate) struct Annotating {
     groups: Vec<Vec<usize>>,
     backend: core::Backend,
     profile: Option<core::BackendProfile>,
+    context: Option<core::Json>,
 }
 
 impl Annotating {
+    pub(crate) fn with_context(mut self, context: Option<&str>) -> Result<Self, Error> {
+        self.context = context
+            .filter(|text| !text.is_empty())
+            .map(|text| {
+                evidence(text)?;
+                Ok::<_, Error>(core::Json::String(text.to_owned()))
+            })
+            .transpose()?;
+        Ok(self)
+    }
+
+    pub(crate) fn with_typed_context(mut self, context: Option<&core::Evidence>) -> Self {
+        self.context = context.map(core::Evidence::as_json);
+        self
+    }
+
     pub(crate) fn new(engine: &facade::Engine, set: core::QuestionSet) -> Self {
         Self {
             groups: set.groups(),
             set,
             backend: engine.backend().clone(),
             profile: engine.profile().cloned(),
+            context: None,
         }
     }
 
@@ -49,22 +67,35 @@ impl Asker for Annotating {
     type Input = Text;
     type Row = Annotation;
     type Error = Error;
+    fn validates_batches(&self) -> bool {
+        self.set.questions().iter().any(|member| {
+            member.metadata().item_schema.is_some() || member.metadata().context_schema.is_some()
+        })
+    }
 
     fn label(&self, text: &Text) -> usize {
         text.at
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Error> {
-        let record = record(
-            &self.set,
-            text.plain(crate::public::InputFunction::Annotate)?,
-        )?;
+        let record = match &text.input {
+            crate::public::QuestionInput::Record(record) if record.images().is_empty() => {
+                record.batch_record()
+            }
+            _ => record(
+                &self.set,
+                text.plain(crate::public::InputFunction::Annotate)?,
+            )?,
+        };
         let mut asks = Vec::new();
         for places in &self.groups {
             let evidence =
                 self.set
                     .group_evidence(places, &record)
                     .map_err(|error| match error {
+                        core::PartError::Declaration(_) => {
+                            Error::usage("the item does not match item_schema")
+                        }
                         core::PartError::Record(error) => Error::refused(error),
                         core::PartError::Reading(_) => {
                             Error::defect("a checked question set could not read its parts")
@@ -89,6 +120,17 @@ impl Asker for Annotating {
                 pack::asks(self.backend.url(), &plan)
                     .map_err(|_| Error::defect("a request could not be written as JSON"))?,
             );
+        }
+        if let Some(context) = &self.context {
+            let model = pack::model_json(self.backend.model().as_str())
+                .map_err(|_| Error::defect("an aggregate model could not be written"))?;
+            for ask in &mut asks {
+                ask.state = ask
+                    .state
+                    .with_context_value(context)
+                    .map_err(|_| Error::defect("an aggregate context could not be written"))?;
+                ask.key = ask.state.key(self.backend.url(), &model, &ask.question);
+            }
         }
         Ok(asks)
     }
@@ -165,11 +207,11 @@ impl Engine {
         T: Evidence + 'a,
     {
         Batch::of((|| {
-            options.without_context("annotate")?;
             let setting = selected_set_batch(&questions.0, &options, self.batch)?;
             let stop = Stop::begin(options)?.with_prices(self.prices);
             let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
-            let asker = Annotating::new(&engine, set.clone());
+            let asker =
+                Annotating::new(&engine, set.clone()).with_context(options.context_text())?;
             let call = pull::Call {
                 packing: pull::packing(setting, false, false),
                 engine: Arc::clone(&engine),
@@ -206,7 +248,6 @@ impl Engine {
         texts: &[String],
         options: CallOptions<'_>,
     ) -> Result<Call<EachRow>, Error> {
-        options.without_context("annotate")?;
         let setting = selected_set_batch(&questions.0, &options, self.batch)?;
         let inputs = self
             .within_limit(texts)?
@@ -218,7 +259,7 @@ impl Engine {
             .collect();
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let (engine, set) = (Arc::clone(&self.inner), &questions.0);
-        let asker = Annotating::new(&engine, set.clone());
+        let asker = Annotating::new(&engine, set.clone()).with_context(options.context_text())?;
         let packing = pull::packing(setting, false, false);
         stop.run_call(texts.len(), |cancel| {
             let mut rows = Vec::with_capacity(texts.len());
@@ -315,14 +356,18 @@ pub(crate) fn rendered(
             .details
             .iter()
             .zip(&annotation.receipts)
-            .map(|((name, entry), receipt)| {
+            .zip(set.questions())
+            .map(|(((name, entry), receipt), named)| {
                 let detail = ObservedQuestion::from_annotated(
                     entry,
                     set.profile(),
                     engine.backend(),
                     model,
                     (receipt.usage, receipt.requests_sent, receipt.replayed),
-                )?;
+                )?
+                .with_receipt(&receipt.trace)
+                .with_threshold(named.threshold())
+                .with_declarations(named.metadata());
                 Ok((name.clone(), detail))
             })
             .collect::<Result<Vec<_>, Error>>()?
@@ -339,12 +384,8 @@ pub(crate) fn rendered(
 
 /// One record as its groups read it. Only a part group parses the text, once,
 /// as the command reads a whole document, so a root-only set sends it as given.
-pub(crate) fn record(set: &core::QuestionSet, text: &str) -> Result<core::BatchRecord, Error> {
+pub(crate) fn record(_set: &core::QuestionSet, text: &str) -> Result<core::BatchRecord, Error> {
     let evidence = evidence(text)?;
-    if set.first_part().is_none() {
-        let value = Json::String(text.to_owned());
-        return Ok(core::BatchRecord { evidence, value });
-    }
     let usage = |error: core::RecordError| Error::usage(error.to_string());
     let reading = core::Reading::new(core::Framing::Document, Vec::new())
         .map_err(|_| Error::defect("a document reading takes no pointer"))?;

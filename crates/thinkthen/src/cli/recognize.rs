@@ -235,7 +235,8 @@ fn judged_record(
             aggregate.usage,
             RequestMeta::new(!aggregate.live, aggregate.requests_sent, aggregate.requests)
                 .with_profile_warning(running.mismatch.warning()),
-        );
+        )
+        .with_reported_usage(aggregate.reported_usage);
         json_line(&Detailed {
             schema: crate::core::RESULT_SCHEMA,
             value: &value,

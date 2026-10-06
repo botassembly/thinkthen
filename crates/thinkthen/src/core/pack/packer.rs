@@ -131,6 +131,19 @@ struct Open<T> {
 }
 
 impl<T> Packer<T> {
+    /// The same admission bounds, with no retained request or caller handles.
+    pub(crate) fn fresh<U>(&self) -> Packer<U> {
+        Packer::new(self.limits.clone(), self.model.clone())
+    }
+
+    pub(crate) const fn inputs_limit(&self) -> usize {
+        self.limits.inputs
+    }
+
+    pub(crate) fn first_open_item(&self) -> Option<&T> {
+        self.open.as_ref().and_then(|open| open.items.first())
+    }
+
     /// Pack for one backend. `model` is the model's compact JSON string.
     pub(crate) const fn new(limits: PackLimits, model: String) -> Self {
         Self {

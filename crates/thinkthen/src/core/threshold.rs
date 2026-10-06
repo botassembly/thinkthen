@@ -131,6 +131,13 @@ impl Threshold {
         }
     }
 
+    pub(crate) const fn bounds(self) -> (f64, Option<f64>) {
+        match self.0 {
+            Rule::Band { low, high } => (low, Some(high)),
+            Rule::Cut(value) => (value, None),
+        }
+    }
+
     /// Read one probability under this rule.
     pub(crate) fn judge(self, probability: Probability) -> Outcome {
         let probability = probability.as_f64();

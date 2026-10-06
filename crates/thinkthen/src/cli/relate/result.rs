@@ -127,7 +127,8 @@ pub(super) fn details<'a>(
         )
         .with_failed_questions(execution.failed)
         .with_profile_warning(output.warning.clone()),
-    );
+    )
+    .with_reported_usage(execution.reported_usage);
     let threshold = output.spec.threshold.cut_value().unwrap_or(0.5);
     let questions = execution
         .logical

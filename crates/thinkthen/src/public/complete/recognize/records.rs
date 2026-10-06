@@ -1,0 +1,124 @@
+//! Recognize located records with one call, one budget and the existing stage scheduler.
+use super::rendered;
+use crate::engine::facade;
+use crate::public::{
+    Call, CallOptions, CompleteRecognized, CompleteRecord, Engine, Error, InputEvidence,
+    InputFunction, QuestionInput, Recognize, Recognized, RecordInput, options::Stop,
+};
+use std::sync::Arc;
+
+struct Unit<T> {
+    original: T,
+    input: Arc<QuestionInput>,
+    text: String,
+}
+impl Engine {
+    /// Recognize selected native record text while retaining each original and location.
+    /// # Errors
+    /// All first-stage input/profile boundaries are admitted before sending. Started
+    /// stage failures retain the single call's completed prefix and final facts.
+    #[allow(
+        clippy::type_complexity,
+        reason = "Original occurrences retain concrete complete results"
+    )]
+    pub fn recognize_records_complete_with<I, T>(
+        &self,
+        ask: &Recognize,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRecognized>>>, Error>
+    where
+        I: IntoIterator<Item = RecordInput<T>>,
+        T: InputEvidence,
+    {
+        self.try_recognize_records_complete_with(ask, records.into_iter().map(Ok), options)
+    }
+
+    /// Recognize a fallible native reader through the same eager admission and scheduler.
+    /// # Errors
+    /// Later reader errors, images and per-record controls refuse before any send.
+    #[allow(
+        clippy::type_complexity,
+        reason = "Original occurrences retain concrete complete results"
+    )]
+    pub fn try_recognize_records_complete_with<I, T>(
+        &self,
+        ask: &Recognize,
+        records: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRecognized>>>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
+        T: InputEvidence,
+    {
+        let engine =
+            crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
+        let units =
+            self.try_within_limit(records.into_iter().enumerate().map(|(at, record)| {
+                record
+                    .and_then(|record| prepare(&engine, ask, record))
+                    .map_err(|error| error.at_record(at))
+            }))?;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        stop.run_call(0, |cancel| {
+            let mut rows = Vec::new();
+            for (at, unit) in units.enumerate() {
+                cancel.stop_or_remaining().map_err(Error::from)?;
+                let before = stop.facts().attempts().map_or(0, <[_]>::len);
+                let found = super::execute(
+                    &engine,
+                    ask,
+                    &unit.text,
+                    cancel,
+                    &stop,
+                    (at, Some(&unit.input)),
+                )
+                .map_err(|error| Error::from(error).at_record(at))?;
+                let value = Recognized::from_native(found.value.clone())?;
+                stop.observe(crate::public::RecordObservation::Row {
+                    index: at,
+                    value: crate::public::ObservedRow::Recognized(&value),
+                });
+                let attempts = stop
+                    .facts()
+                    .attempts()
+                    .map(|attempts| attempts.iter().skip(before).cloned().collect());
+                let result = rendered(&engine, ask, found, value, (at, &options, attempts))?;
+                rows.push(CompleteRecord {
+                    original: unit.original,
+                    ordinal: at,
+                    result,
+                });
+                cancel.finished_records(1);
+            }
+            Ok(rows)
+        })
+    }
+}
+fn prepare<T: InputEvidence>(
+    engine: &facade::Engine,
+    ask: &Recognize,
+    record: RecordInput<T>,
+) -> Result<Unit<T>, Error> {
+    if record.context.is_some() || record.options.is_some() {
+        return Err(Error::usage(
+            "recognize takes one call context and no per-record controls",
+        ));
+    }
+    let input = Arc::new(record.original.question_input());
+    ask.0.metadata.validate_item(&input)?;
+    crate::public::images::guard(InputFunction::Recognize, &input)?;
+    let text = match input.as_ref() {
+        QuestionInput::Text(text) => text.clone(),
+        QuestionInput::Record(record) => record.plain().to_owned(),
+        QuestionInput::Images(_) => return Err(crate::public::complete::wrong()),
+    };
+    engine
+        .admit_recognition(&ask.0, &text)
+        .map_err(Error::from)?;
+    Ok(Unit {
+        original: record.original,
+        input,
+        text,
+    })
+}
