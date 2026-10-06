@@ -68,10 +68,15 @@ impl Asker for Annotating {
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Error> {
-        let record = record(
-            &self.set,
-            text.plain(crate::public::InputFunction::Annotate)?,
-        )?;
+        let record = match &text.input {
+            crate::public::QuestionInput::Record(record) if record.images().is_empty() => {
+                record.batch_record()
+            }
+            _ => record(
+                &self.set,
+                text.plain(crate::public::InputFunction::Annotate)?,
+            )?,
+        };
         let mut asks = Vec::new();
         for places in &self.groups {
             let evidence =
@@ -338,14 +343,17 @@ pub(crate) fn rendered(
             .details
             .iter()
             .zip(&annotation.receipts)
-            .map(|((name, entry), receipt)| {
+            .zip(set.questions())
+            .map(|(((name, entry), receipt), named)| {
                 let detail = ObservedQuestion::from_annotated(
                     entry,
                     set.profile(),
                     engine.backend(),
                     model,
                     (receipt.usage, receipt.requests_sent, receipt.replayed),
-                )?;
+                )?
+                .with_receipt(&receipt.trace)
+                .with_threshold(named.threshold());
                 Ok((name.clone(), detail))
             })
             .collect::<Result<Vec<_>, Error>>()?

@@ -58,3 +58,7 @@ mod readings;
 
 #[path = "native_complete/calls.rs"]
 mod calls;
+#[path = "native_complete/composition.rs"]
+mod composition;
+#[path = "native_complete/observers.rs"]
+mod observers;

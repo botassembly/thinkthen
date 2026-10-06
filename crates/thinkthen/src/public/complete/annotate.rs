@@ -154,15 +154,18 @@ fn prepare<T: InputEvidence>(
         if record.options.is_some() {
             return Err(Error::usage("record options are admitted only for choose"));
         }
-        let input = record.original.question_input();
-        crate::public::images::guard(InputFunction::Annotate, &input)?;
-        let QuestionInput::Text(text) = input else {
-            return Err(super::wrong());
+        let question_input = record.original.question_input();
+        crate::public::images::guard(InputFunction::Annotate, &question_input)?;
+        let input = match &question_input {
+            QuestionInput::Text(text) => {
+                crate::public::engine::evidence(text)?;
+                reading
+                    .annotation_record(text.as_bytes())
+                    .map_err(Error::refused)?
+            }
+            QuestionInput::Record(record) => record.original().0.as_ref().clone(),
+            QuestionInput::Images(_) => return Err(super::wrong()),
         };
-        crate::public::engine::evidence(&text)?;
-        let input = reading
-            .annotation_record(text.as_bytes())
-            .map_err(Error::refused)?;
         let context = record
             .context
             .as_deref()
@@ -176,7 +179,7 @@ fn prepare<T: InputEvidence>(
         inputs.push(Prepared {
             text: Text {
                 at,
-                input: QuestionInput::Text(text),
+                input: question_input,
             },
             context: context.clone(),
         });
@@ -206,7 +209,7 @@ struct Rows<'a, 'o, T> {
     values: Vec<CompleteAnnotated>,
     failure: Option<Error>,
 }
-impl<T> Rows<'_, '_, T> {
+impl<T: InputEvidence> Rows<'_, '_, T> {
     fn take(&mut self, row: pull::Row<Annotations>) -> Flow {
         match self.completed(row) {
             Ok(value) => {
@@ -223,12 +226,16 @@ impl<T> Rows<'_, '_, T> {
         let annotation = row.map_err(failed)?;
         let at = self.values.len();
         let held = self.held.get(at).ok_or_else(super::wrong)?;
-        let observed = crate::public::bulk::annotation::rendered(
+        let mut observed = crate::public::bulk::annotation::rendered(
             self.set,
             self.engine,
             annotation.clone(),
             self.stop.observing(),
         )?;
+        let input = Arc::new(held.original.question_input());
+        for (_, detail) in &mut observed.observed {
+            *detail = detail.clone().with_input(Arc::clone(&input));
+        }
         crate::public::bulk::observe_annotated(&observed, at, self.stop)?;
         if annotation.failed_questions == annotation.details.len() && !annotation.details.is_empty()
         {

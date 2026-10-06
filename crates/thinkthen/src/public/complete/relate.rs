@@ -43,7 +43,12 @@ impl Engine {
                         crate::public::results::observe_question(
                             &stop,
                             engine.backend(),
-                            ("relation", question),
+                            (
+                                InputFunction::Relate,
+                                "relation",
+                                question,
+                                Some(ask.0.threshold),
+                            ),
                             answered,
                             &mut positions,
                         )
@@ -66,12 +71,7 @@ impl Engine {
             Ok((execution, value))
         })?
         .try_map(|(execution, value)| {
-            let members = execution
-                .logical
-                .iter()
-                .enumerate()
-                .map(|(at, logical)| member(logical, &entities, at, threshold))
-                .collect::<Result<Vec<_>, _>>()?;
+            let members = members(&execution.logical, &entities, threshold)?;
             let children = members
                 .iter()
                 .filter_map(|member| match &member.identity {
@@ -116,6 +116,17 @@ impl Engine {
             })
         })
     }
+}
+fn members(
+    logical: &[facade::Logical],
+    entities: &[core::RelationEntity],
+    threshold: f64,
+) -> Result<Vec<core::CompleteRelationEntry>, Error> {
+    logical
+        .iter()
+        .enumerate()
+        .map(|(at, logical)| member(logical, entities, at, threshold))
+        .collect()
 }
 #[derive(Serialize)]
 struct Scope<'a> {

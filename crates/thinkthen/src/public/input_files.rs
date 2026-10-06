@@ -66,13 +66,13 @@ impl InputEvidence for SourceItem {
     fn question_input(&self) -> QuestionInput {
         match self {
             Self::Text(text) => QuestionInput::Text(text.record.clone()),
-            Self::Image(image) => QuestionInput::Images(ImageEvidence::one(image.record.clone())),
+            Self::Image(image) => image.question_input(),
         }
     }
 }
 impl InputEvidence for ImageSourceRecord {
     fn question_input(&self) -> QuestionInput {
-        QuestionInput::Images(ImageEvidence::one(self.record.clone()))
+        QuestionInput::Images(ImageEvidence::one(self.record.clone()).located(self.file.clone()))
     }
 }
 

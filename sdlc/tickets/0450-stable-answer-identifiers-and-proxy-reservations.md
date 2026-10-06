@@ -48,3 +48,51 @@ Native WIP: accepted wire answers now receive one fresh ObservationId, stored ou
 Native atomic execution WIP: pure length-framed logical answer IDs now use typed function, original ordinal, ordered accepted observation IDs and resolved question/threshold/rank position. Retrieval origin, surface, batch count and transient IDs remain outside the digest. Default-equivalent cuts, cache/replay/coalescing, changed cuts and rank duplicate occurrences are checked through public calls with an independent framing oracle. Aggregate/member/stage identities and CLI result/2 adoption remain open.
 
 Native aggregate WIP: facade construction order retains aligned sources/observations and normalized stage questions. Aggregate IDs include the resolved reading and ordered successful child IDs; annotation members retain their original ordinal/name/position, relation members retain source/target endpoints and position. Failed members use actual occurrence failure IDs and never fabricate answers. The public aggregate cases verify empty provenance and cache-stable recognition IDs. Owned observer identities and CLI/schema adoption remain open.
+
+Native observer WIP: borrowed question details now expose normalized actual
+questions, admitted rules, raw accepted picks, aligned sources/observations and
+partial reported usage. `to_owned` retains those typed fields and input snapshots
+past callbacks and engine destruction. Native record snapshots retain the complete
+arbitrary original, ordered images and physical source location when supplied;
+immutable input snapshots are shared across annotation members. No event parser
+or reconstructed transport identity is required. Failed events retain actual
+FailureId; successful null carries an answer ID. Question answer IDs qualify the
+logical primitive by original/member/stage position; ranked and aggregate final
+result IDs remain the distinct complete-result identities. Existing observer JSON
+and row callbacks retain their released form. Public live/cache and partial
+annotation cases compare owned IDs to complete members, pin partial counts and
+withheld Debug, and prove zero additional cache sends.
+
+### Added public declarations
+
+```text
+struct OwnedQuestionDetail
+fn OwnedQuestionDetail::detail(&self) -> QuestionDetail<'_>
+fn QuestionDetail::to_owned(&self) -> OwnedQuestionDetail
+const fn QuestionDetail::question(&self) -> ResolvedQuestion<'_>
+fn QuestionDetail::threshold(&self) -> Option<ResolvedThreshold>
+fn QuestionDetail::raw_pick(&self) -> Option<&str>
+fn QuestionDetail::question_sources(&self) -> &[QuestionSource]
+fn QuestionDetail::observations(&self) -> &[Observation]
+fn QuestionDetail::answer_id(&self) -> Option<&AnswerId>
+fn QuestionDetail::failure_id(&self) -> Option<&FailureId>
+const fn QuestionDetail::reported_usage(&self) -> Option<ReportedUsage>
+fn QuestionDetail::input(&self) -> Option<&QuestionInput>
+fn RecordObservation::to_owned(&self) -> OwnedRecordObservation
+enum OwnedObservedRow
+OwnedObservedRow::Judgment(Judgment)
+OwnedObservedRow::Annotated(Vec<NamedAnnotation>)
+OwnedObservedRow::Recognized(Recognized)
+OwnedObservedRow::Find(Option<usize>)
+OwnedObservedRow::Relations(Vec<Edge>)
+enum OwnedRecordObservation
+OwnedRecordObservation::Question
+OwnedRecordObservation::Question::index: usize
+OwnedRecordObservation::Question::member: Option<String>
+OwnedRecordObservation::Question::stage: Option<&'static str>
+OwnedRecordObservation::Question::position: usize
+OwnedRecordObservation::Question::detail: OwnedQuestionDetail
+OwnedRecordObservation::Row
+OwnedRecordObservation::Row::index: usize
+OwnedRecordObservation::Row::value: OwnedObservedRow
+```

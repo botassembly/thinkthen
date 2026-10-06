@@ -489,7 +489,16 @@ impl Engine {
                         observe_question(
                             &stop,
                             engine.backend(),
-                            (stage, question),
+                            (
+                                crate::public::InputFunction::Recognize,
+                                stage,
+                                question,
+                                match stage {
+                                    "boundary" => None,
+                                    "relation" => Some(ask.0.relation_threshold),
+                                    _ => Some(ask.0.threshold),
+                                },
+                            ),
                             answered,
                             &mut positions,
                         )

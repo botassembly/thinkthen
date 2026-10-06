@@ -341,7 +341,12 @@ impl Engine {
                         observe_question(
                             &stop,
                             engine.backend(),
-                            ("relation", question),
+                            (
+                                crate::public::InputFunction::Relate,
+                                "relation",
+                                question,
+                                Some(ask.0.threshold),
+                            ),
                             answered,
                             &mut positions,
                         )

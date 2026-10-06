@@ -14,6 +14,7 @@ use crate::core::pointer::Pointer;
 use crate::core::question::{Labels, LabelsError};
 use crate::core::render::{RenderError, json_line};
 use crate::core::text::{BlankTextError, Description, Evidence, EvidenceShapeError, Withheld};
+mod composition;
 
 /// The most one record may hold before the tool refuses to judge it.
 ///
@@ -82,6 +83,9 @@ pub(crate) enum RecordError {
     /// The selected entity member is not text.
     #[error("the entity value at `{0}` is not a string")]
     EntityText(String),
+    /// The selected context is not an authored string.
+    #[error("the context value at `{0}` is not a string")]
+    ContextText(String),
     /// A complete structured entity document is not one list.
     #[error("the entity document is one JSON array")]
     EntityDocument,
@@ -111,7 +115,7 @@ pub(crate) enum RecordError {
 }
 
 /// One record, as it arrived, which `--details` prints back under `input`.
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, Eq, PartialEq, Serialize)]
 #[serde(transparent)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "Json"))]
 pub(crate) struct Record(Held);
@@ -133,7 +137,7 @@ impl std::fmt::Debug for Record {
 }
 
 /// What one record holds, which the framing decides.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 enum Held {
     /// A text record, which is one line or one whole document.

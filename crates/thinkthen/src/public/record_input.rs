@@ -112,7 +112,7 @@ impl RecordOptions {
         &self.options
     }
 
-    fn from_labels(labels: &Labels) -> Result<Self, Error> {
+    pub(crate) fn from_labels(labels: &Labels) -> Result<Self, Error> {
         let options = labels
             .descriptions()
             .map(option_from_label)
@@ -147,7 +147,5 @@ fn option_from_label(
 }
 
 fn description_from_core(description: &core::Description) -> Result<Description, Error> {
-    let json = core::json_line(description.as_json())
-        .map_err(|_| Error::defect("an option description could not be written"))?;
-    Description::from_json(&json)
+    Description::of(description.as_json().clone())
 }

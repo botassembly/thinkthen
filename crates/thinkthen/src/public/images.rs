@@ -87,6 +87,8 @@ impl Serialize for ImageInput {
 pub struct ImageEvidence {
     text: Option<String>,
     images: Vec<ImageInput>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    location: Option<super::SourceLocation>,
 }
 
 impl std::fmt::Debug for ImageEvidence {
@@ -109,7 +111,11 @@ impl ImageEvidence {
             text.as_ref().map_or(0, String::len),
         )
         .map_err(Error::refused)?;
-        Ok(Self { text, images })
+        Ok(Self {
+            text,
+            images,
+            location: None,
+        })
     }
     /// Authored ancillary text, if provided.
     #[must_use]
@@ -121,11 +127,22 @@ impl ImageEvidence {
     pub fn images(&self) -> &[ImageInput] {
         &self.images
     }
+    /// Physical source provenance, excluded from model evidence and identity.
+    #[must_use]
+    pub const fn location(&self) -> Option<&super::SourceLocation> {
+        self.location.as_ref()
+    }
+
+    pub(crate) fn located(mut self, file: String) -> Self {
+        self.location = Some(super::SourceLocation::image(file));
+        self
+    }
 
     pub(crate) fn one(image: ImageInput) -> Self {
         Self {
             text: None,
             images: vec![image],
+            location: None,
         }
     }
 
@@ -145,6 +162,8 @@ pub enum QuestionInput {
     Text(String),
     /// Ordered immutable images and optional text.
     Images(ImageEvidence),
+    /// Native-selected original record with separate images and provenance.
+    Record(super::RecordEvidence),
 }
 
 impl std::fmt::Debug for QuestionInput {
@@ -152,6 +171,7 @@ impl std::fmt::Debug for QuestionInput {
         match self {
             Self::Text(_) => f.write_str("QuestionInput::Text(<withheld>)"),
             Self::Images(images) => images.fmt(f),
+            Self::Record(record) => record.fmt(f),
         }
     }
 }
@@ -174,7 +194,12 @@ impl InputEvidence for QuestionInput {
 }
 
 pub(crate) fn guard(function: InputFunction, input: &QuestionInput) -> Result<(), Error> {
-    if matches!(input, QuestionInput::Images(_)) && !function.accepts_images() {
+    let has_images = match input {
+        QuestionInput::Images(_) => true,
+        QuestionInput::Record(record) => !record.images().is_empty(),
+        QuestionInput::Text(_) => false,
+    };
+    if has_images && !function.accepts_images() {
         Err(Error::usage(format!(
             "{} accepts text only; images are unsupported",
             function.name()

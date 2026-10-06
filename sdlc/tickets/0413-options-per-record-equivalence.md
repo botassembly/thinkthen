@@ -26,3 +26,16 @@ Choose batches across every SDK, keyed SQL and frames carry independent ordered 
 ## Native work in progress
 
 Lane0 adds `RecordInput<T>`, validated ordered `RecordOptions` and `RecordOption`, reusing LabelBuilder and Record::choices. `Description::from_json` admits the existing string/object/array/null grammar through the shared ordered parser. Projected options now retain object/array/null descriptions as authored. Null option descriptions mean absent; shortlists replace rather than merge. Public admission tests pin order, descriptions, invalid candidates and withheld Debug. Execution routes and complete-result integration remain open. The unpublished C draft will receive optional choices and text-only optional context once, preserving released layouts without an extra draft record_v2 API.
+
+### Added public declarations
+
+```text
+struct RecordOption
+RecordOption::name: String
+RecordOption::description: Option<Description>
+struct RecordOptions
+fn RecordOptions::new(Vec<RecordOption>) -> Result<Self, Error>
+fn RecordOptions::project(&str, &str) -> Result<Self, Error>
+fn RecordOptions::options(&self) -> &[RecordOption]
+fn Description::from_json(&str) -> Result<Self, Error>
+```

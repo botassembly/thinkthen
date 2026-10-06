@@ -46,10 +46,12 @@ pub use tally::{Tally, TallyStart};
 mod member;
 pub(crate) use member::Member;
 mod observation;
+mod owned_observation;
 #[cfg(test)]
 pub(crate) use observation::QuestionJson;
 pub(crate) use observation::{ObservedQuestion, observe_question};
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
+pub use owned_observation::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
 
 use serde::Serialize;
 

@@ -273,7 +273,9 @@ impl<'a> QuestionDetail<'a> {
 }
 
 /// Owned only within the current bounded worker result.
+#[derive(Clone)]
 pub(crate) struct ObservedQuestion {
+    pub(super) actual: super::owned_observation::ActualQuestion,
     pub(crate) question_sha256: String,
     pub(crate) value: Option<Judgment>,
     pub(crate) failure: Option<core::BackendFailure>,
@@ -361,6 +363,21 @@ impl ObservedQuestion {
             AnswerOutcome::Failed(failed) => (None, Some(*failed), None, None),
         };
         Ok(Self {
+            actual: super::owned_observation::ActualQuestion {
+                question: question.clone(),
+                threshold,
+                raw_pick: match answer {
+                    AnswerOutcome::Answered(answer) => answer.leader().map(str::to_owned),
+                    _ => None,
+                },
+                sources: Vec::new(),
+                observations: Vec::new(),
+                reported_usage: reply
+                    .reported_usage()
+                    .map(|whole| whole.share(rows, position)),
+                identity: None,
+                input: None,
+            },
             question_sha256,
             value,
             failure,
@@ -393,7 +410,12 @@ fn stage_slot(stage: &str) -> Option<usize> {
 pub(crate) fn observe_question(
     stop: &Stop<'_>,
     backend: &Backend,
-    (stage, question): (&'static str, &core::Question),
+    (function, stage, question, threshold): (
+        crate::public::InputFunction,
+        &'static str,
+        &core::Question,
+        Option<Threshold>,
+    ),
     answered: &Answered,
     positions: &mut [usize; 4],
 ) -> Result<(), EngineError> {
@@ -424,7 +446,9 @@ pub(crate) fn observe_question(
         1,
         0,
     )
-    .map_err(|_| EngineError::Defect("an observed question digest could not be written"))?;
+    .map(|detail| detail.with_receipt(answered).with_threshold(threshold))
+    .and_then(|detail| detail.qualified(function, 0, None, Some(stage), position))
+    .map_err(|_| EngineError::Defect("an observed question identity could not be constructed"))?;
     stop.observe(RecordObservation::Question {
         index: 0,
         member: None,

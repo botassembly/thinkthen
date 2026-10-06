@@ -44,6 +44,13 @@ pub(crate) fn observe_find(
     detail.question_sha256 = find
         .question_sha256()
         .map_err(|_| Error::defect("a find digest could not be written"))?;
+    let detail = detail.with_receipt(&found.answered).qualified(
+        crate::public::InputFunction::Find,
+        0,
+        None,
+        None,
+        0,
+    )?;
     stop.observe(RecordObservation::Question {
         index: 0,
         member: None,

@@ -356,7 +356,13 @@ pub(crate) fn judged(
         Err(_) => None,
     };
     if let Some(decided) = decided.filter(|_| stop.observing()) {
-        let observed = decided.observed(question, backend)?;
+        let observed = decided.observed(question, backend)?.qualified(
+            crate::public::asking::observed_function(question),
+            index,
+            None,
+            None,
+            0,
+        )?;
         stop.observe(RecordObservation::Question {
             index,
             member: None,
