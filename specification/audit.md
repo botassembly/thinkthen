@@ -2,21 +2,23 @@
 
 Status: **Settled** by ticket 0113, amended by tickets 0125, 0135, 0256 and 0257.
 
-`thinkthen audit RESULTS KEY` grades saved answers against an answer key and suggests a bar. It reads `decide`, `filter`, `choose`, `tag`, `score`, `rank`, `find`, `annotate`, `recognize`, and `relate` results. It prints agreement with a Wilson interval, both disagreement directions, precision and f1, AUC, calibration, a coverage curve, and a suggested bar tuned on one part and checked on the other. It shows how steady that bar is across twenty splits. With `--write` it puts a steady bar into the question file the results came from. With `--write QUESTIONS --write-to OUTPUT` it creates a tuned candidate at a new path and keeps the source unchanged. It sends no request and reads no API key.
+`thinkthen runs audit RESULTS KEY` grades saved answers against an answer key and suggests a bar. It reads `decide`, `filter`, `choose`, `tag`, `score`, `rank`, `find`, `annotate`, `recognize`, and `relate` results. It prints agreement with a Wilson interval, both disagreement directions, precision and f1, AUC, calibration, a coverage curve, and a suggested bar tuned on one part and checked on the other. It shows how steady that bar is across twenty splits. With `--write` it puts a steady bar into the question file the results came from. With `--write QUESTIONS --write-to OUTPUT` it creates a tuned candidate at a new path and keeps the source unchanged. It sends no request and reads no API key.
 
 The definition is a prototype measurement script, with its tests and README. The script's history was removed, so no commit holds it now. `crates/thinkthen/tests/fixtures/measure/README.md` gives the file checksums, and they are the record. Where this page and the prototype disagree, the golden files in that folder decide. "Departures" lists every known difference.
 
 ```sh
-thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl
-thinkthen audit results.jsonl key.jsonl --threshold 0.4 --table
+thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen runs audit - key.jsonl
+thinkthen runs audit results.jsonl key.jsonl --threshold 0.4 --table
 ```
 
 Before tuning the wording of a question that chains two facts, compare its saved final answers with a host pipeline that asks the two facts separately and passes the first answer into the second call. Audit both final-answer sets against the same key, and count an unresolved first hop in the full cohort even when it produces no second-hop result row. [The replayable two-call how-to](../demos/47-split-a-chained-question/) shows the handoff and review branch. In its measured cohort the direct question got 22 of 60 right; the pipeline got 51 of 59 completed second hops, or 51 of 60 when the one tied first hop counts as wrong. Matching cached second-hop requests reduced sends in that saved run, but a cold run has no equal-cost promise.
 
 ## Command line
 
+Ticket 0440 makes `runs audit` the visible spelling. Top-level `audit` remains a hidden compatibility alias with identical options, output, diagnostics and exit codes.
+
 ```text
-thinkthen audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--id POINTER] [--seed N] [--target A]
+thinkthen runs audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--id POINTER] [--seed N] [--target A]
                             [--optimize accuracy|precision|recall|f1] [--match strict|overlap] [--write QUESTIONS] [--write-to OUTPUT]
                             [--curve] [--pooled] [--table] [--cases]
 ```

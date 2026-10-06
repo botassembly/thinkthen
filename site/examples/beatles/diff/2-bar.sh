@@ -1,4 +1,4 @@
-thinkthen diff memory.jsonl context.jsonl \
+thinkthen runs diff memory.jsonl context.jsonl \
   --threshold 0.5 \
   --key key.jsonl |
 jq -c 'if .summary

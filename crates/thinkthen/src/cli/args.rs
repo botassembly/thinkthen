@@ -18,6 +18,7 @@ mod common;
 mod debug;
 mod find;
 mod relate;
+mod runs;
 pub(crate) use annotate::AnnotateArguments;
 pub(crate) use backends::{BackendCommand, CheckArguments};
 pub(crate) use batching::Batching;
@@ -26,6 +27,7 @@ pub(crate) use command::{
 };
 pub(crate) use find::FindArguments;
 pub(crate) use relate::RelateArguments;
+pub(crate) use runs::RunsCommand;
 
 /// Semantic commands for the shell: if, grep, and sort that understand meaning
 #[derive(Debug, Parser)]

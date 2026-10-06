@@ -227,7 +227,7 @@ pub(crate) fn run(arguments: &[&str], input: &[u8]) -> Output {
 
 /// Run `audit` with these arguments and input: the exit code, standard output, and standard error.
 pub(crate) fn audit(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
-    measure(&[&["audit"], arguments].concat(), input)
+    measure(&[&["runs", "audit"], arguments].concat(), input)
 }
 
 /// Run a command line with this input: the exit code, standard output, and standard error.

@@ -1,6 +1,6 @@
 # The recognize keys
 
-Two answer keys for `recognize`, and one `jq` filter. Ticket 0164 put them here, so any `recognize` run can be graded with one `thinkthen audit --match strict` command. `sdlc/scripts/recognize-keys` checks every offset on the lint rung, and the spec rung runs the blocks on this page.
+Two answer keys for `recognize`, and one `jq` filter. Ticket 0164 put them here, so any `recognize` run can be graded with one `thinkthen runs audit --match strict` command. `sdlc/scripts/recognize-keys` checks every offset on the lint rung, and the spec rung runs the blocks on this page.
 
 | File | What it holds |
 | --- | --- |
@@ -51,7 +51,7 @@ jq -s -c '{lines: length, names: ([.[].value.entities[]] | length), stated: ([.[
 ```sh
 jq -c --argjson kinds '["person"]' -f kinds.jq names.jsonl > person-key.jsonl
 thinkthen recognize person --jsonl --field /text --threshold 0.01 --details < names.jsonl \
-  | thinkthen audit - person-key.jsonl --match strict --table
+  | thinkthen runs audit - person-key.jsonl --match strict --table
 ```
 
 The block below builds answers from the key with `jq`, each name said at strength 1, and grades them. Perfect answers under all ten kinds match every name. One moved offset costs one match. Answers under `person` alone fail against the whole key, and grade against the key filtered to `person`. Then a place said as a person counts as extra.
@@ -64,7 +64,7 @@ answers() {
   jq -c --argjson kinds "$1" '{input: {id}, value: {entities: [.value.entities[] | select(.kind | IN($kinds[])) | .strength = 1]},
     question: {verb: "recognize", kinds: ($kinds | map({key: ., value: .}) | from_entries), threshold: 0.5}}' names.jsonl
 }
-grade() { thinkthen audit - "$1" --match strict --table | sed -n 2p; }
+grade() { thinkthen runs audit - "$1" --match strict --table | sed -n 2p; }
 
 answers "$(jq -s -c '[.[].value.entities[].kind] | unique' names.jsonl)" > "$work/all.jsonl"
 grade names.jsonl < "$work/all.jsonl" \
@@ -74,7 +74,7 @@ jq -c 'if .input.id == "n001" then .value.entities[0].start += 1 else . end' "$w
 
 answers '["person"]' > "$work/person.jsonl"
 set +e
-thinkthen audit "$work/person.jsonl" names.jsonl --table > /dev/null 2> "$work/error"
+thinkthen runs audit "$work/person.jsonl" names.jsonl --table > /dev/null 2> "$work/error"
 code=$?
 set -e
 test "$code" -eq 2
@@ -99,10 +99,10 @@ jq -c --argjson kinds "$core" -f kinds.jq names.jsonl > "$work/core-key.jsonl"
 jq -c --argjson kinds "$core" '{input: {id}, value: {entities: [.value.entities[] | .strength = 1]},
   question: {verb: "recognize", kinds: ($kinds | map({key: ., value: .}) | from_entries), threshold: 0.5}}' \
   "$work/core-key.jsonl" > "$work/core.jsonl"
-thinkthen audit "$work/core.jsonl" "$work/core-key.jsonl" --table | sed -n 2p \
+thinkthen runs audit "$work/core.jsonl" "$work/core-key.jsonl" --table | sed -n 2p \
   | mustmatch "  matched 347, extra 0, missed 0: precision 1.000   recall 1.000   f1 1.000"
 jq -c 'if .input.id == "n173" then .value.entities += [{name: "Christmas", kind: "thing", start: 12, end: 21, strength: 1}] else . end' \
-  "$work/core.jsonl" | thinkthen audit - "$work/core-key.jsonl" --table | sed -n 2p \
+  "$work/core.jsonl" | thinkthen runs audit - "$work/core-key.jsonl" --table | sed -n 2p \
   | mustmatch "  matched 347, extra 1, missed 0: precision 0.997   recall 1.000   f1 0.999"
 ```
 
@@ -116,9 +116,9 @@ jq -c '{id, value: .relations}' relations.jsonl > "$work/key.jsonl"
 plan="$(jq -s -c '[.[].relations[] | {name: .relation, source: .source.kind, target: .target.kind, reads: .relation, either: false}] | unique' relations.jsonl)"
 jq -c --argjson plan "$plan" '{input: {id}, value: [.relations[] | .probability = 1], question: {verb: "relate", relations: $plan, threshold: 0.5}, unstated}' \
   relations.jsonl > "$work/stated.jsonl"
-thinkthen audit "$work/stated.jsonl" "$work/key.jsonl" --table | sed -n 2p \
+thinkthen runs audit "$work/stated.jsonl" "$work/key.jsonl" --table | sed -n 2p \
   | mustmatch "  matched 27, extra 0, missed 0: precision 1.000   recall 1.000   f1 1.000"
-jq -c '.value += [.unstated[]? | .probability = 1]' "$work/stated.jsonl" | thinkthen audit - "$work/key.jsonl" --table | sed -n 2p \
+jq -c '.value += [.unstated[]? | .probability = 1]' "$work/stated.jsonl" | thinkthen runs audit - "$work/key.jsonl" --table | sed -n 2p \
   | mustmatch "  matched 27, extra 5, missed 0: precision 0.844   recall 1.000   f1 0.915"
 ```
 
@@ -135,7 +135,7 @@ trap 'rm -rf "$work"' EXIT
 replay() { env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize "$@" --details --jsonl --field /text --jobs 8; }
 jq -c --argjson kinds '["person","place","organisation","work","thing"]' -f kinds.jq names.jsonl > "$work/key.jsonl"
 replay person place organisation work thing --replay recordings/five < names.jsonl \
-  | thinkthen audit - "$work/key.jsonl" --match strict --table | sed -n 2p \
+  | thinkthen runs audit - "$work/key.jsonl" --match strict --table | sed -n 2p \
   | mustmatch "  matched 292, extra 36, missed 55: precision 0.890   recall 0.841   f1 0.865"
 ```
 
@@ -144,7 +144,7 @@ With no kinds, every name has the kind `ENTITY`, and `audit` grades the whole ke
 ```bash
 set -euo pipefail
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize --replay recordings/none --details --jsonl --field /text --jobs 8 < names.jsonl \
-  | thinkthen audit - names.jsonl --match strict --table | sed -n 2p \
+  | thinkthen runs audit - names.jsonl --match strict --table | sed -n 2p \
   | mustmatch "  matched 336, extra 52, missed 36: precision 0.866   recall 0.903   f1 0.884"
 ```
 
@@ -156,7 +156,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 jq -c --argjson kinds '["person"]' -f kinds.jq names.jsonl > "$work/key.jsonl"
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize person --replay recordings/person --details --jsonl --field /text --jobs 8 < names.jsonl \
-  | thinkthen audit - "$work/key.jsonl" --match strict --table | sed -n 2p \
+  | thinkthen runs audit - "$work/key.jsonl" --match strict --table | sed -n 2p \
   | mustmatch "  matched 80, extra 19, missed 10: precision 0.808   recall 0.889   f1 0.847"
 ```
 
@@ -172,9 +172,9 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize person song a
   | jq -c -f edges-as-relate.jq > "$work/edges.jsonl"
 jq -c '{id, value: .relations}' relations.jsonl > "$work/stated.jsonl"
 jq -c '{id, value: [.unstated[]?]}' relations.jsonl > "$work/unstated.jsonl"
-thinkthen audit "$work/edges.jsonl" "$work/stated.jsonl" --match strict --table | sed -n 2p \
+thinkthen runs audit "$work/edges.jsonl" "$work/stated.jsonl" --match strict --table | sed -n 2p \
   | mustmatch "  matched 20, extra 6, missed 7: precision 0.769   recall 0.741   f1 0.755"
-thinkthen audit "$work/edges.jsonl" "$work/unstated.jsonl" --match strict --table | sed -n 2p \
+thinkthen runs audit "$work/edges.jsonl" "$work/unstated.jsonl" --match strict --table | sed -n 2p \
   | mustmatch "  matched 0, extra 26, missed 5: precision 0.000   recall 0.000   f1 0.000"
 ```
 
@@ -190,7 +190,7 @@ jq -r .text long.jsonl | env -u THINKTHEN_API_KEY thinkthen recognize person pla
   | mustmatch '{"pieces":1183,"request_count":30,"most":40,"whole":false}'
 jq -c --argjson kinds "$kinds" -f kinds.jq long.jsonl > "$work/key.jsonl"
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize person place organisation work thing --replay recordings/long --details --jsonl --field /text < long.jsonl > "$work/run.jsonl"
-thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict --table | sed -n 2p \
+thinkthen runs audit "$work/run.jsonl" "$work/key.jsonl" --match strict --table | sed -n 2p \
   | mustmatch "  matched 60, extra 2, missed 3: precision 0.968   recall 0.952   f1 0.960"
 jq --argjson words "$(jq -r .text long.jsonl | wc -w)" '.meta.usage.input_tokens / $words | round' "$work/run.jsonl" | mustmatch '258'
 ```
@@ -204,26 +204,26 @@ trap 'rm -rf "$work"' EXIT
 replay() { env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize "$@" --replay recordings/five --details --jsonl --field /text --jobs 8 < names.jsonl; }
 jq -c --argjson kinds '["person","place","organisation","work","thing"]' -f kinds.jq names.jsonl > "$work/key.jsonl"
 replay person place organisation work thing > "$work/run.jsonl"
-thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict --table | mustmatch "recognize  (recognize, 200 rows, 200 labeled, 0 failed, rule as run)
+thinkthen runs audit "$work/run.jsonl" "$work/key.jsonl" --match strict --table | mustmatch "recognize  (recognize, 200 rows, 200 labeled, 0 failed, rule as run)
   matched 292, extra 36, missed 55: precision 0.890   recall 0.841   f1 0.865
   suggested cut 0.53 (most f1 on the tuning part; seeded split, tuned on 100, checked on 100 held out): held f1 0.875 as run -> 0.869 at the cut
   steady: 0.5 on 11 of 20 splits, range 0.5 to 0.55; beat the run's rule on 0 of 20 held parts (seed 0)
   crossed: cuts 0.53 and 0.5, each checked on the other part: f1 0.862
   at the suggested cut on the held part: precision 0.899, recall 0.840, f1 0.869"
-thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict | jq -c '{auc, calibration, coverage, curve}' \
+thinkthen runs audit "$work/run.jsonl" "$work/key.jsonl" --match strict | jq -c '{auc, calibration, coverage, curve}' \
   | mustmatch '{"auc":null,"calibration":null,"coverage":null,"curve":null}'
-thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict --threshold 0.5 --table | sed -n 2p \
+thinkthen runs audit "$work/run.jsonl" "$work/key.jsonl" --match strict --threshold 0.5 --table | sed -n 2p \
   | mustmatch "  matched 292, extra 36, missed 55: precision 0.890   recall 0.841   f1 0.865"
-thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict --threshold 0.9 --table | sed -n 2p \
+thinkthen runs audit "$work/run.jsonl" "$work/key.jsonl" --match strict --threshold 0.9 --table | sed -n 2p \
   | mustmatch "  matched 215, extra 11, missed 132: precision 0.951   recall 0.620   f1 0.750"
 
 printf '%s\n' '{"version":1,"recognize":{"kinds":{"person":null,"place":null,"organisation":null,"work":null,"thing":null}},"threshold":0.01}' > "$work/five.json"
 replay "@$work/five.json" > "$work/low.jsonl"
-thinkthen audit "$work/low.jsonl" "$work/key.jsonl" --write "$work/five.json" 2>&1 >/dev/null \
+thinkthen runs audit "$work/low.jsonl" "$work/key.jsonl" --write "$work/five.json" 2>&1 >/dev/null \
   | mustmatch "thinkthen: audit: wrote threshold 0.44 for the question; it was 0.01"
 mustmatch '{"version":1,"recognize":{"kinds":{"person":null,"place":null,"organisation":null,"work":null,"thing":null}},"threshold":0.44,"model":"jev-1.13.0"}' < "$work/five.json"
 replay "@$work/five.json" > "$work/again.jsonl"
-thinkthen audit "$work/again.jsonl" "$work/key.jsonl" --write "$work/five.json" 2>&1 >/dev/null \
+thinkthen runs audit "$work/again.jsonl" "$work/key.jsonl" --write "$work/five.json" 2>&1 >/dev/null \
   | mustmatch "thinkthen: audit: kept the bar for the question; the steady bar beat it on 0 of 20 held parts"
 ```
 

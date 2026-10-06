@@ -34,7 +34,7 @@ jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$work/draft.jsonl" \
   | mustmatch '{"rows":24,"accuracy":0.875,"false_positive":3,"false_negative":0}'
 cp draft.json "$work/draft.json"
 jq -c '{id, value: .label}' claims.jsonl \
-  | thinkthen audit "$work/draft.jsonl" - --write "$work/draft.json" > /dev/null 2>&1
+  | thinkthen runs audit "$work/draft.jsonl" - --write "$work/draft.json" > /dev/null 2>&1
 jq -c '{threshold, model}' "$work/draft.json" | mustmatch '{"threshold":0.57,"model":"jev-1.13.0"}'
 ```
 
