@@ -46,7 +46,7 @@ fn native_originals_need_no_clone_send_or_serialization_and_context_controls_wir
             .enumerate()
             .map(|(at, context)| RecordInput {
                 original: original(at),
-                context: context.map(str::to_owned),
+                context: context.map(Into::into),
                 options: None,
             })
     };

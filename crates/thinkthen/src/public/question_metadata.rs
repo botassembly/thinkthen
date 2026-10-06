@@ -132,13 +132,12 @@ impl QuestionMetadata {
             Err(Error::usage("the item does not match item_schema"))
         }
     }
-    pub(crate) fn validate_text_context(&self, context: Option<&str>) -> Result<(), Error> {
-        if let (Some(schema), Some(context)) = (&self.context_schema, context)
-            && !schema.accepts(&crate::core::Json::String(context.to_owned()))
-        {
-            return Err(Error::usage(
-                "the per-item context does not match context_schema",
-            ));
+    pub(crate) fn validate_context(
+        &self,
+        context: Option<&super::RecordContext>,
+    ) -> Result<(), Error> {
+        if let Some(context) = context {
+            context.validate(self.context_schema.as_ref())?;
         }
         Ok(())
     }

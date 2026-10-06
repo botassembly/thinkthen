@@ -276,7 +276,7 @@ fn an_explicit_per_record_context_obeys_the_caller_byte_cap_before_its_row_sends
             },
             RecordInput {
                 original: "Second.",
-                context: Some("x".repeat(200)),
+                context: Some("x".repeat(200).into()),
                 options: None,
             },
         ]

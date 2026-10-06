@@ -305,16 +305,12 @@ pub(super) fn prepare_record<T: InputEvidence>(
     )?;
     question
         .metadata
-        .validate_text_context(record.context.as_deref())
+        .validate_context(record.context.as_ref())
         .map_err(|error| error.at_record(at))?;
-    let context_text = record
-        .context
-        .as_deref()
-        .or(fallback)
-        .filter(|text| !text.is_empty());
-    let context_sha256 = context_text.map(|text| core::bytes_sha256(text.as_bytes()));
-    let context = context_text
-        .map(crate::public::engine::evidence)
+    let context = crate::public::RecordContext::resolved(record.context.as_ref(), fallback)?;
+    let context_sha256 = context
+        .as_ref()
+        .map(crate::public::record_context::digest)
         .transpose()?;
     let input = record.original.question_input();
     question

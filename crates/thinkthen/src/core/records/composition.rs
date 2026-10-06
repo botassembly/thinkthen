@@ -8,12 +8,16 @@ impl Record {
     }
 
     pub(crate) fn context_text(&self, pointer: &Pointer) -> Result<&str, RecordError> {
+        self.context_value(pointer)?
+            .as_str()
+            .ok_or_else(|| RecordError::ContextText(pointer.as_str().to_owned()))
+    }
+
+    pub(crate) fn context_value(&self, pointer: &Pointer) -> Result<&Json, RecordError> {
         let Held::Json(value) = &self.0 else {
             return Err(RecordError::TextHasNoMembers);
         };
-        found(pointer, value)?
-            .as_str()
-            .ok_or_else(|| RecordError::ContextText(pointer.as_str().to_owned()))
+        found(pointer, value)
     }
 
     pub(crate) fn text(&self) -> Option<&str> {
