@@ -41,7 +41,18 @@ pub(crate) fn declarations(header: &str) -> Result<Vec<String>, &'static str> {
         .filter(|line| !line.trim_start().starts_with('#'))
         .collect::<Vec<_>>()
         .join("\n");
-    if code.split(';').any(missing_prototype) {
+    let mut structure_depth = 0_usize;
+    for statement in code.split(';') {
+        if structure_depth > 0 || statement.trim_start().starts_with("typedef struct") {
+            structure_depth += statement.matches('{').count();
+            structure_depth = structure_depth
+                .checked_sub(statement.matches('}').count())
+                .ok_or("malformed header declaration")?;
+        } else if missing_prototype(statement) {
+            return Err("malformed header declaration");
+        }
+    }
+    if structure_depth != 0 {
         return Err("malformed header declaration");
     }
     let mut names = BTreeSet::new();
@@ -97,7 +108,7 @@ mod tests {
     fn independent_declarations_and_refusals() {
         assert_eq!(
             declarations(
-                "/* thinkthen_hidden(void); */\nvoid thinkthen_z(void);\nconst char *thinkthen_a(int n);"
+                "/* thinkthen_hidden(void); */\ntypedef struct { int n; thinkthen_string_v1 value; } thinkthen_record_v1;\nvoid thinkthen_z(void);\nconst char *thinkthen_a(int n);"
             ),
             Ok(vec!["thinkthen_a".into(), "thinkthen_z".into()])
         );

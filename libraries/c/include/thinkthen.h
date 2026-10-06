@@ -49,9 +49,9 @@
  *
  * Version 0.1.0 freezes the symbol names, the `thinkthen_answer` layout,
  * the argument types (exact-width `size_t` lengths and counts, `int64_t`
- * budgets), and the return codes. Every open-shaped result crosses as JSON
- * text; `thinkthen_answer` is the one struct that crosses the boundary,
- * and it never grows a field.
+ * budgets), and the return codes. Its open-shaped results cross as JSON
+ * text and its `thinkthen_answer` layout never grows a field. Additive
+ * counted handles and frozen current-native view layouts appear below.
  */
 
 #ifndef THINKTHEN_H
@@ -427,6 +427,217 @@ int thinkthen_relate_with_facts_opts(const thinkthen_engine *engine,
  * `thinkthen_relate` returned, or their `_opts` twins. NULL is accepted
  * and ignored. */
 void thinkthen_free_string(char *text);
+
+typedef struct thinkthen_question thinkthen_question;
+typedef struct thinkthen_source thinkthen_source;
+typedef struct thinkthen_image thinkthen_image;
+typedef struct thinkthen_result thinkthen_result;
+
+typedef struct thinkthen_string_v1 { const char *data; size_t len; } thinkthen_string_v1;
+typedef struct thinkthen_strings_v1 { const thinkthen_string_v1 *data; size_t len; } thinkthen_strings_v1;
+typedef struct thinkthen_optional_string_v1 { int present; thinkthen_string_v1 value; } thinkthen_optional_string_v1;
+typedef struct thinkthen_optional_size_v1 { int present; size_t value; } thinkthen_optional_size_v1;
+typedef struct thinkthen_optional_u64_v1 { int present; uint64_t value; } thinkthen_optional_u64_v1;
+typedef struct thinkthen_optional_u16_v1 { int present; uint16_t value; } thinkthen_optional_u16_v1;
+typedef struct thinkthen_optional_double_v1 { int present; double value; } thinkthen_optional_double_v1;
+typedef struct thinkthen_optional_discriminator_v1 { int present; uint32_t value; } thinkthen_optional_discriminator_v1;
+
+#define THINKTHEN_CONTENT_TEXT_V1 UINT32_C(1)
+#define THINKTHEN_CONTENT_JSON_V1 UINT32_C(2)
+typedef struct thinkthen_content_v1 { uint32_t kind; thinkthen_string_v1 data; } thinkthen_content_v1;
+typedef struct thinkthen_optional_content_v1 { int present; thinkthen_content_v1 value; } thinkthen_optional_content_v1;
+
+#define THINKTHEN_RULE_DEFAULT_V1 UINT32_C(0) /* input-only missing reading */
+#define THINKTHEN_RULE_NULL_V1 UINT32_C(1)
+#define THINKTHEN_RULE_CUT_V1 UINT32_C(2)
+#define THINKTHEN_RULE_BAND_V1 UINT32_C(3)
+/* CUT uses low; BAND uses low/high; NULL/DEFAULT use neither. */
+typedef struct thinkthen_rule_v1 { uint32_t kind; double low; double high; } thinkthen_rule_v1;
+typedef struct thinkthen_optional_rule_v1 { int present; thinkthen_rule_v1 value; } thinkthen_optional_rule_v1;
+
+#define THINKTHEN_FUNCTION_DECIDE_V1 UINT32_C(1)
+#define THINKTHEN_FUNCTION_CHOOSE_V1 UINT32_C(2)
+#define THINKTHEN_FUNCTION_TAG_V1 UINT32_C(3)
+#define THINKTHEN_FUNCTION_SCORE_V1 UINT32_C(4)
+#define THINKTHEN_FUNCTION_FILTER_V1 UINT32_C(5)
+#define THINKTHEN_FUNCTION_RANK_V1 UINT32_C(6)
+#define THINKTHEN_FUNCTION_FIND_V1 UINT32_C(7)
+#define THINKTHEN_FUNCTION_ANNOTATE_V1 UINT32_C(8)
+#define THINKTHEN_FUNCTION_RECOGNIZE_V1 UINT32_C(9)
+#define THINKTHEN_FUNCTION_RELATE_V1 UINT32_C(10)
+
+typedef struct thinkthen_choice_v1 {
+    thinkthen_string_v1 name;
+    thinkthen_optional_content_v1 description;
+    thinkthen_optional_double_v1 weight;
+} thinkthen_choice_v1;
+typedef struct thinkthen_choices_v1 { const thinkthen_choice_v1 *data; size_t len; } thinkthen_choices_v1;
+typedef struct thinkthen_relation_v1 {
+    thinkthen_string_v1 name;
+    thinkthen_string_v1 source;
+    thinkthen_string_v1 target;
+    thinkthen_optional_string_v1 reads;
+    int either;
+    int single;
+} thinkthen_relation_v1;
+typedef struct thinkthen_relations_v1 { const thinkthen_relation_v1 *data; size_t len; } thinkthen_relations_v1;
+typedef struct thinkthen_member_spec_v1 {
+    thinkthen_string_v1 name;
+    const thinkthen_question *question;
+} thinkthen_member_spec_v1;
+typedef struct thinkthen_member_specs_v1 { const thinkthen_member_spec_v1 *data; size_t len; } thinkthen_member_specs_v1;
+typedef struct thinkthen_question_spec_v1 {
+    uint32_t kind;
+    thinkthen_content_v1 text;
+    thinkthen_optional_content_v1 yes;
+    thinkthen_optional_content_v1 no;
+    thinkthen_choices_v1 choices;
+    thinkthen_rule_v1 threshold;
+    thinkthen_rule_v1 relation_threshold;
+    thinkthen_optional_string_v1 model;
+    thinkthen_optional_string_v1 profile;
+    thinkthen_optional_size_v1 batch;
+    int batch_max;
+    int none;
+    thinkthen_strings_v1 on;
+    thinkthen_member_specs_v1 members;
+    thinkthen_choices_v1 kinds;
+    thinkthen_relations_v1 relations;
+    thinkthen_optional_string_v1 name_pointer;
+    thinkthen_optional_string_v1 kind_pointer;
+} thinkthen_question_spec_v1;
+
+typedef struct thinkthen_images_v1 { const thinkthen_image *const *data; size_t len; } thinkthen_images_v1;
+#define THINKTHEN_IMAGE_JPEG_V1 UINT32_C(1)
+#define THINKTHEN_IMAGE_PNG_V1 UINT32_C(2)
+/* Reserved for native image adoption; this slice returns no image views.
+ * An image view's bytes and filename borrow its image until image free;
+ * a result image view borrows its result until result free. */
+typedef struct thinkthen_image_view_v1 {
+    uint32_t media;
+    const uint8_t *bytes;
+    size_t bytes_len;
+    uint32_t width;
+    uint32_t height;
+    thinkthen_optional_string_v1 filename;
+} thinkthen_image_view_v1;
+typedef struct thinkthen_image_views_v1 { const thinkthen_image_view_v1 *data; size_t len; } thinkthen_image_views_v1;
+typedef struct thinkthen_optional_image_views_v1 { int present; thinkthen_image_views_v1 value; } thinkthen_optional_image_views_v1;
+typedef struct thinkthen_record_v1 {
+    thinkthen_optional_content_v1 original;
+    thinkthen_optional_content_v1 context;
+    thinkthen_choices_v1 options;
+    thinkthen_images_v1 images;
+} thinkthen_record_v1;
+#define THINKTHEN_SOURCE_LINE_V1 UINT32_C(1)
+#define THINKTHEN_SOURCE_WINDOW_V1 UINT32_C(2)
+#define THINKTHEN_SOURCE_FILE_V1 UINT32_C(3)
+#define THINKTHEN_SOURCE_IMAGE_FILE_V1 UINT32_C(4)
+typedef struct thinkthen_source_spec_v1 {
+    thinkthen_strings_v1 paths;
+    uint32_t unit;
+    size_t window;
+} thinkthen_source_spec_v1;
+typedef struct thinkthen_controls_v1 {
+    int64_t deadline_ms;
+    thinkthen_cancel_token *cancel;
+    thinkthen_optional_content_v1 context;
+    thinkthen_optional_size_v1 batch;
+    int batch_max;
+    int attempts;
+    thinkthen_string_v1 surface;
+} thinkthen_controls_v1;
+
+/* Current-native helpers expose result/1 fields, not the result/2 target.
+ * Flat value payloads are zero unless selected by kind; decide_kind is
+ * NULL=0, BOOLEAN=1, AUTHORED=2. Uncertainty is a successful NULL value.
+ * MEMBER_SUCCESS=1, MEMBER_FAILURE=2; failure is one of FAILURE_* below.
+ * A cached flag means cache OR replay; it never asserts result/2 origin.
+ */
+#define THINKTHEN_DECIDE_NULL_V1 UINT32_C(0)
+#define THINKTHEN_DECIDE_BOOLEAN_V1 UINT32_C(1)
+#define THINKTHEN_DECIDE_AUTHORED_V1 UINT32_C(2)
+#define THINKTHEN_MEMBER_SUCCESS_V1 UINT32_C(1)
+#define THINKTHEN_MEMBER_FAILURE_V1 UINT32_C(2)
+#define THINKTHEN_FAILURE_MISSING_ANSWER_V1 UINT32_C(1)
+#define THINKTHEN_FAILURE_WRONG_KIND_V1 UINT32_C(2)
+#define THINKTHEN_FAILURE_MISSING_PROBABILITY_V1 UINT32_C(3)
+#define THINKTHEN_FAILURE_INVALID_PROBABILITY_V1 UINT32_C(4)
+#define THINKTHEN_FAILURE_INVALID_DISTRIBUTION_V1 UINT32_C(5)
+#define THINKTHEN_FAILURE_UNEXPECTED_PROBABILITY_V1 UINT32_C(6)
+#define THINKTHEN_ATTEMPT_OK_V1 UINT32_C(1)
+#define THINKTHEN_ATTEMPT_STATUS_V1 UINT32_C(2)
+#define THINKTHEN_ATTEMPT_TRANSPORT_V1 UINT32_C(3)
+typedef struct thinkthen_current_value_v1 { uint32_t kind; uint32_t decide_kind; int boolean; thinkthen_optional_content_v1 authored; thinkthen_optional_string_v1 choice; thinkthen_strings_v1 tags; double score; } thinkthen_current_value_v1;
+typedef struct thinkthen_probability_v1 { thinkthen_string_v1 name; double probability; } thinkthen_probability_v1;
+typedef struct thinkthen_probabilities_v1 { const thinkthen_probability_v1 *data; size_t len; } thinkthen_probabilities_v1;
+typedef struct thinkthen_location_v1 { thinkthen_optional_string_v1 file; thinkthen_optional_size_v1 first_line; thinkthen_optional_size_v1 last_line; } thinkthen_location_v1;
+typedef struct thinkthen_optional_location_v1 { int present; thinkthen_location_v1 value; } thinkthen_optional_location_v1;
+typedef struct thinkthen_current_facts_v1 { uint64_t cache_answers; thinkthen_optional_string_v1 estimated_cost_usd; thinkthen_optional_u64_v1 input_tokens; thinkthen_optional_string_v1 model; thinkthen_optional_u64_v1 output_tokens; uint64_t records; uint64_t requests_sent; double seconds; } thinkthen_current_facts_v1;
+typedef struct thinkthen_current_meta_v1 { thinkthen_string_v1 question_sha256; thinkthen_string_v1 model; thinkthen_string_v1 url; thinkthen_strings_v1 requests; uint64_t requests_sent; int cached; int usage_present; uint64_t input_tokens; uint64_t output_tokens; thinkthen_optional_string_v1 tuned_for; thinkthen_optional_string_v1 running; } thinkthen_current_meta_v1;
+typedef struct thinkthen_current_row_v1 { thinkthen_optional_content_v1 input; thinkthen_optional_location_v1 position; thinkthen_optional_size_v1 index; thinkthen_optional_double_v1 probability; thinkthen_optional_string_v1 question_name; } thinkthen_current_row_v1;
+typedef struct thinkthen_current_atomic_v1 { thinkthen_current_row_v1 common; thinkthen_current_value_v1 value; thinkthen_optional_double_v1 yes_probability; thinkthen_probabilities_v1 probabilities; thinkthen_optional_string_v1 nearest; thinkthen_optional_double_v1 confidence; thinkthen_current_meta_v1 meta; } thinkthen_current_atomic_v1;
+typedef struct thinkthen_current_member_v1 { thinkthen_string_v1 name; uint32_t state; thinkthen_current_value_v1 value; uint32_t failure; } thinkthen_current_member_v1;
+typedef struct thinkthen_current_members_v1 { const thinkthen_current_member_v1 *data; size_t len; } thinkthen_current_members_v1;
+typedef struct thinkthen_current_candidate_v1 { thinkthen_current_row_v1 common; double probability; } thinkthen_current_candidate_v1;
+typedef struct thinkthen_current_candidates_v1 { const thinkthen_current_candidate_v1 *data; size_t len; } thinkthen_current_candidates_v1;
+typedef struct thinkthen_current_find_v1 { thinkthen_current_row_v1 selected; thinkthen_current_candidates_v1 candidates; } thinkthen_current_find_v1;
+typedef struct thinkthen_current_annotation_v1 { thinkthen_current_row_v1 common; thinkthen_current_members_v1 members; } thinkthen_current_annotation_v1;
+typedef struct thinkthen_entity_v1 { thinkthen_string_v1 text; size_t start; size_t end; size_t length; thinkthen_string_v1 kind; double strength; } thinkthen_entity_v1;
+typedef struct thinkthen_entities_v1 { const thinkthen_entity_v1 *data; size_t len; } thinkthen_entities_v1;
+typedef struct thinkthen_entity_edge_v1 { thinkthen_string_v1 relation; thinkthen_entity_v1 source; thinkthen_entity_v1 target; double probability; int either; } thinkthen_entity_edge_v1;
+typedef struct thinkthen_entity_edges_v1 { const thinkthen_entity_edge_v1 *data; size_t len; } thinkthen_entity_edges_v1;
+typedef struct thinkthen_current_recognition_v1 { thinkthen_current_row_v1 common; thinkthen_entities_v1 entities; int relations_present; thinkthen_entity_edges_v1 relations; } thinkthen_current_recognition_v1;
+typedef struct thinkthen_endpoint_v1 { thinkthen_string_v1 name; thinkthen_string_v1 kind; } thinkthen_endpoint_v1;
+typedef struct thinkthen_edge_v1 { thinkthen_string_v1 relation; thinkthen_endpoint_v1 source; thinkthen_endpoint_v1 target; double probability; int either; } thinkthen_edge_v1;
+typedef struct thinkthen_edges_v1 { const thinkthen_edge_v1 *data; size_t len; } thinkthen_edges_v1;
+typedef struct thinkthen_current_rows_v1 { const thinkthen_current_row_v1 *data; size_t len; } thinkthen_current_rows_v1;
+typedef struct thinkthen_current_relations_v1 { thinkthen_edges_v1 edges; thinkthen_current_rows_v1 inputs; } thinkthen_current_relations_v1;
+typedef struct thinkthen_current_question_v1 { size_t index; thinkthen_optional_string_v1 member; thinkthen_optional_string_v1 stage; size_t position; thinkthen_current_meta_v1 meta; uint32_t state; thinkthen_current_value_v1 value; uint32_t failure; thinkthen_optional_double_v1 yes_probability; thinkthen_probabilities_v1 probabilities; thinkthen_optional_double_v1 confidence; size_t failed_questions; } thinkthen_current_question_v1;
+typedef struct thinkthen_current_attempt_v1 { uint64_t ordinal; thinkthen_string_v1 request_sha256; uint64_t wall_ms; uint32_t outcome; thinkthen_optional_u16_v1 status; thinkthen_optional_u64_v1 server_ms; thinkthen_optional_string_v1 request_id; } thinkthen_current_attempt_v1;
+typedef struct thinkthen_current_summary_v1 { uint32_t function; size_t count; size_t question_count; thinkthen_current_facts_v1 facts; int attempts_present; size_t attempt_count; } thinkthen_current_summary_v1;
+/* Counted strings and Content data are UTF-8 and need no terminator. NULL data is
+ * valid only at length zero. Flags are 0/1. Callers initialize descriptors.
+ * Constructors clone buffers and member questions. Sources and questions
+ * are immutable and may be shared across calls. Calls borrow live handles
+ * until return. Every nonzero return leaves outputs unchanged.
+ * Current views borrow result memory until result_free, including nested
+ * arrays/strings, and survive freeing engine/question/source. Accessors do
+ * not change saved failures. Free(NULL) is harmless; free each owner once,
+ * after every borrower finishes. Forged/stale/concurrently freed nonnull
+ * handles violate the existing contract; there is no handle registry.
+ * Current calls require text sources: images, record options/context and
+ * nonempty surface tokens are refused until their native doors are ready.
+ * NULL controls uses NO_DEADLINE; explicit zero is an expired deadline.
+ * No result/2 complete exports or image execution exports are published.
+ */
+int thinkthen_question_new(const thinkthen_engine *, const thinkthen_question_spec_v1 *, thinkthen_question **);
+int thinkthen_question_load(const thinkthen_engine *, thinkthen_string_v1, thinkthen_question **);
+void thinkthen_question_free(thinkthen_question *);
+int thinkthen_source_records(const thinkthen_engine *, const thinkthen_record_v1 *, size_t, thinkthen_source **);
+int thinkthen_source_files(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
+void thinkthen_source_free(thinkthen_source *);
+int thinkthen_decide_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_choose_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_tag_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_score_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_filter_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_rank_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_find_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_annotate_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_recognize_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_relate_current(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+void thinkthen_result_free(thinkthen_result *);
+int thinkthen_result_current_summary(const thinkthen_result *, thinkthen_current_summary_v1 *);
+int thinkthen_result_current_atomic(const thinkthen_result *, size_t, thinkthen_current_atomic_v1 *);
+int thinkthen_result_current_filter(const thinkthen_result *, size_t, thinkthen_current_row_v1 *);
+int thinkthen_result_current_rank(const thinkthen_result *, size_t, thinkthen_current_row_v1 *);
+int thinkthen_result_current_find(const thinkthen_result *, size_t, thinkthen_current_find_v1 *);
+int thinkthen_result_current_annotate(const thinkthen_result *, size_t, thinkthen_current_annotation_v1 *);
+int thinkthen_result_current_recognize(const thinkthen_result *, size_t, thinkthen_current_recognition_v1 *);
+int thinkthen_result_current_relate(const thinkthen_result *, size_t, thinkthen_current_relations_v1 *);
+int thinkthen_result_current_question(const thinkthen_result *, size_t, thinkthen_current_question_v1 *);
+int thinkthen_result_current_attempt(const thinkthen_result *, size_t, thinkthen_current_attempt_v1 *);
 
 #ifdef __cplusplus
 }

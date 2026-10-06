@@ -20,6 +20,10 @@ A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with t
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_engine_new_with("{\"cache\":false}")`. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move its folder.
 
+## Counted typed calls
+
+[The typed C contract](TYPED.md) describes 0426 slice A: owned counted question/source handles, ten named `*_current` calls, and typed current-native values, probabilities, structures, locations, facts and observations. These additive helpers expose native result/1. Complete result/2 and image execution remain open with their native owners; the prior calls stay compatible.
+
 ## Windows x86-64
 
 The development archive `thinkthen-c-0.2.0-x86_64-pc-windows-msvc.zip` contains exactly `include/thinkthen.h`, `bin/thinkthen.dll` and `lib/thinkthen.dll.lib`, with a separate SHA-256 sidecar. The `.lib` imports the public DLL; it is not a static implementation. From an x64 MSVC developer shell, compile a consumer after extraction:

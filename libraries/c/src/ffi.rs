@@ -10,6 +10,9 @@
 
 use std::ffi::{CStr, CString, c_char};
 
+/// Counted typed descriptors and current-native helpers.
+#[path = "ffi/current/ffi.rs"]
+pub mod current;
 #[path = "ffi/texts/ffi.rs"]
 mod texts;
 #[path = "ffi/typed_facts/ffi.rs"]

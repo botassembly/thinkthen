@@ -1,6 +1,6 @@
 # 0426: Expose typed C calls and complete result carriers
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Slice A provides counted C constructors and typed current-native helpers on lane claude-1; result/2 and image adoption remain open.
 
 Milestone: 0.2
 
@@ -24,6 +24,10 @@ C consumers can construct all ten inputs and inspect every stable output field w
 Settle shared schema with 0408, 0300 and 0442 first. This ticket owns the additive C ABI and ownership contract; host families adopt it. Semantic owners 0406/0407/0413/0414/0418 implement shared behavior, not duplicate host parsers.
 
 ## Design notes
+
+Slice A uses the reviewed counted input signatures and publishes distinct `*_current` helpers over native result/1; complete result/2 exports remain unpublished until native adoption can supply their required facts and identities. [The C contract](../../libraries/c/TYPED.md) fixes the current helper scope, ownership and remaining gaps. Fresh High code review and all landing gates remain with the coordinator. Ian can overturn the additive current helper spellings before publication.
+
+Builder checks: the existing C suite passed 3 unit and 70 integration tests, including 11 typed consumer cases under its sanitizer execution and exact header/export inventories. The final NULL-relation-cut refusal passed its focused zero-send regression. Offline policy, full C-target Clippy with warnings denied, formatting and C11/C++17 header compilation passed. The header inventory reader now distinguishes nested struct fields from top-level declarations; its existing malformed-declaration refusals remain. Added C modules own descriptor cloning and view backing storage and reuse native execution; the measured core source ratchet is unchanged. This is builder evidence, not landing qualification or full 0426 parity.
 
 Review exact exported signatures before code. Existing ABI symbols remain valid. The borrowed/owned lifetime contract and invalid-handle behavior must be explicit; memory safety needs High review.
 
