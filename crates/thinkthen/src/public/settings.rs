@@ -337,7 +337,7 @@ impl EngineBuilder {
         Ok(self)
     }
 
-    /// Parse one closed version-one backend profile without reading a file.
+    /// Parse one closed backend profile without reading a file.
     /// # Errors
     /// Returns [`Error::Usage`] for an invalid profile object.
     pub fn profile_json(mut self, value: &str) -> Result<Self, Error> {

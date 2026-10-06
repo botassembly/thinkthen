@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Found, JSONL, SQLITE, exists, storage};
 use crate::core::pack::{QuestionKey, State, model_json};
-use crate::core::{Url, Usage, bytes_sha256, hex};
+use crate::core::{ReportedUsage, Url, bytes_sha256, hex};
 use crate::engine::error::Error;
 
 /// One state line.
@@ -253,11 +253,15 @@ impl Replayed {
     pub(super) fn read(path: &Path) -> Result<Self, Error> {
         let answers = read(path)?.answers.into_values().map(|answer| {
             let key = bytes_of(&answer.key).ok_or(Error::Defect("a checked key was not hex"))?;
-            let usage = answer.input_tokens.zip(answer.output_tokens);
+            let usage = Some(ReportedUsage::new(
+                answer.input_tokens,
+                answer.output_tokens,
+            ))
+            .filter(|usage| usage.input_tokens().is_some() || usage.output_tokens().is_some());
             let found = Found {
                 answer: answer.answer,
                 answered_by: answer.answered_by,
-                usage: usage.map(|(input, output)| Usage::new(input, output)),
+                usage,
             };
             Ok((key, found))
         });

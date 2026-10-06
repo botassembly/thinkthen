@@ -38,6 +38,12 @@ impl CompleteRelated {
         self.canonical.members.iter().map(CompleteRelationMember)
     }
 
+    /// Independently reported counts; omitted dimensions stay unknown.
+    #[must_use]
+    pub fn reported_usage(&self) -> Option<crate::public::ReportedUsage> {
+        self.canonical.reported_usage()
+    }
+
     /// Backend-reported usage, retaining absence.
     #[must_use]
     pub fn usage(&self) -> Option<Usage> {

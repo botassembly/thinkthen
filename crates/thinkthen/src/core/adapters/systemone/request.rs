@@ -150,8 +150,12 @@ impl<'de> serde::Deserialize<'de> for Criteria {
 pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
     let parts = parts(plan)?;
     if let Some(images) = plan.images() {
-        let state =
-            crate::core::pack::State::images(images, plan.image_route(), plan.model().as_str())?;
+        let state = crate::core::pack::State::images(
+            images,
+            plan.image_route(),
+            plan.model().as_str(),
+            plan.image_profile(),
+        )?;
         let body = state.body(&parts.model, parts.questions.iter().map(String::as_str));
         if state.body_limit().is_some_and(|limit| body.len() > limit) {
             return Err(EncodeError::of(&"image route body limit exceeded"));

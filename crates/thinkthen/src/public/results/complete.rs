@@ -42,6 +42,12 @@ macro_rules! complete {
                 self.canonical.answer().confidence().map(|p| p.as_f64())
             }
 
+            /// Independently reported counts; omitted dimensions stay unknown.
+            #[must_use]
+            pub fn reported_usage(&self) -> Option<crate::public::ReportedUsage> {
+                self.canonical.reported_usage()
+            }
+
             /// Reported usage for this result; missing usage stays absent.
             #[must_use]
             pub fn usage(&self) -> Option<Usage> {

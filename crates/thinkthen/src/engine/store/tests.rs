@@ -37,7 +37,7 @@ fn row<'a>(state: &'a State, question: &'a str, answer: &'a str) -> Row<'a> {
         question,
         answer,
         answered_by: "jev-1.2",
-        usage: Some(Usage::new(7, 1)),
+        usage: Some(crate::core::ReportedUsage::from_complete(Usage::new(7, 1))),
         taken_at: 1_700_000_000,
         origin: "live",
     }
@@ -103,7 +103,10 @@ fn a_cache_answers_a_hit_misses_the_rest_and_replaces_under_record() {
         (hit.answer.as_str(), hit.answered_by.as_str()),
         ("{\"n\":1}", "jev-1.2")
     );
-    assert_eq!(hit.usage, Some(Usage::new(7, 1)));
+    assert_eq!(
+        hit.usage,
+        Some(crate::core::ReportedUsage::from_complete(Usage::new(7, 1)))
+    );
 
     let mut record = Store::open(folder.path(), Mode::Record, false, None).expect("open");
     assert!(!record.looks_up() && record.writes());

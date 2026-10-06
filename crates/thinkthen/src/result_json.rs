@@ -144,6 +144,7 @@ fn decision_with_digest(
         .with_batch_warning(run.batch_warning)
         .with_context_sha256(run.context_sha256),
     )
+    .with_reported_usage(answered.reply.reported_usage())
     .with_attempts(attempts);
     let row = DecisionResult::new(shown, question, judged.answer.clone(), threshold, meta);
     json_line(&match input {

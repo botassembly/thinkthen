@@ -133,12 +133,15 @@ fn a_stored_answer_of_the_wrong_shape_does_not_decode() {
 #[test]
 fn shares_split_usage_evenly_with_the_remainder_to_the_earliest() {
     assert_eq!(
-        shares(Some(Usage::new(10, 3)), 4),
+        shares(
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(10, 3))),
+            4
+        ),
         vec![
-            Some(Usage::new(3, 1)),
-            Some(Usage::new(3, 1)),
-            Some(Usage::new(2, 1)),
-            Some(Usage::new(2, 0)),
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(3, 1))),
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(3, 1))),
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(2, 1))),
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(2, 0))),
         ]
     );
     assert_eq!(shares(None, 2), vec![None, None]);

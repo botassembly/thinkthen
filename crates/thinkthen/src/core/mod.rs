@@ -128,9 +128,9 @@ pub use crate::core::result::complete::{RelationDirection, RelationMethod};
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
     AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning,
-    RecordValue, RequestMeta, Usage, share,
+    RecordValue, ReportedSum, RequestMeta, Usage, share,
 };
-pub use crate::core::result::{AttemptObservation, AttemptOutcome, CompleteAttempt};
+pub use crate::core::result::{AttemptObservation, AttemptOutcome, CompleteAttempt, ReportedUsage};
 pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };

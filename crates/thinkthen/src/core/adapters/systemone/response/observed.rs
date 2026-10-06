@@ -1,9 +1,9 @@
-use crate::core::{Plan, Question, Reply, Usage};
+use crate::core::{Plan, Question, Reply, ReportedUsage};
 
 use super::{DecodeError, Response, decode_each, decode_response};
 
 pub(crate) struct Decoded {
-    pub(crate) usage: Option<Usage>,
+    pub(crate) usage: Option<ReportedUsage>,
     pub(crate) reply: Result<Reply, DecodeError>,
 }
 
@@ -24,8 +24,9 @@ pub(crate) fn decode_questions(questions: &[Question], body: &[u8]) -> Decoded {
     let usage = response
         .usage
         .as_ref()
-        .map(|usage| Usage::new(usage.input_tokens, usage.output_tokens));
-    let reply = decode_response(questions, response, usage);
+        .map(|usage| ReportedUsage::new(usage.input_tokens, usage.output_tokens));
+    let reply = decode_response(questions, response, usage.and_then(ReportedUsage::complete))
+        .map(|reply| reply.with_reported_usage(usage));
     Decoded { usage, reply }
 }
 
@@ -34,7 +35,10 @@ pub(crate) fn decode_questions(questions: &[Question], body: &[u8]) -> Decoded {
 pub(crate) fn decode_answers(
     questions: &[Question],
     body: &[u8],
-) -> (Option<Usage>, Result<super::EachAnswer, DecodeError>) {
+) -> (
+    Option<ReportedUsage>,
+    Result<super::EachAnswer, DecodeError>,
+) {
     let response: Response = match serde_json::from_slice(body) {
         Ok(response) => response,
         Err(error) => {
@@ -47,6 +51,6 @@ pub(crate) fn decode_answers(
     let usage = response
         .usage
         .as_ref()
-        .map(|usage| Usage::new(usage.input_tokens, usage.output_tokens));
+        .map(|usage| ReportedUsage::new(usage.input_tokens, usage.output_tokens));
     (usage, decode_each(questions, &response))
 }

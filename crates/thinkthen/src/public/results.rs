@@ -229,6 +229,7 @@ pub struct Details {
     requests_sent: u64,
     cached: bool,
     usage: Option<Usage>,
+    reported_usage: Option<core::ReportedUsage>,
     confidence: Option<f64>,
     url: String,
     json: Written,
@@ -289,6 +290,7 @@ impl Details {
             requests_sent: judged.answered.requests_sent,
             cached: judged.answered.replayed,
             usage: reply.usage().map(usage),
+            reported_usage: reply.reported_usage(),
             confidence: answer.confidence().map(|held| held.as_f64()),
             url: backend.url().as_str().to_owned(),
             json: Written(json),
@@ -300,6 +302,12 @@ impl Details {
     #[must_use]
     pub fn to_json(&self) -> String {
         self.json.text()
+    }
+
+    /// Independently reported counts, retaining unknown input or output.
+    #[must_use]
+    pub const fn reported_usage(&self) -> Option<core::ReportedUsage> {
+        self.reported_usage
     }
 
     /// The value under the question's rule.

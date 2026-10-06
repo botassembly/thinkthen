@@ -37,6 +37,7 @@ pub(crate) struct Execution {
     pub(crate) logical: Vec<Logical>,
     pub(crate) model: Option<ModelName>,
     pub(crate) usage: Option<Usage>,
+    pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) replayed: bool,
     pub(crate) requests_sent: u64,
     pub(crate) requests: Vec<String>,
@@ -150,7 +151,7 @@ impl Engine {
                     Ok(())
                 }
             })?;
-            usage.add(answered.reply.usage());
+            usage.add_reported(answered.reply.reported_usage());
             add_meta(&mut execution, &answered)?;
             let asked = prepared
                 .asked
@@ -179,6 +180,7 @@ impl Engine {
         })?;
         execution.model = models.model().cloned();
         execution.usage = usage.total()?;
+        execution.reported_usage = usage.reported()?;
         Ok(execution)
     }
 }

@@ -8,10 +8,11 @@ impl Store {
         &mut self,
         rows: &[Row<'_>],
         storable: bool,
+        original: Option<&super::Original>,
         cancel: &Cancel,
     ) -> Result<(), Error> {
         if storable {
-            return self.write(rows, cancel);
+            return self.write_original(rows, original, cancel);
         }
         match self.mode {
             Mode::Record => Err(Error::RecordingForbidden),

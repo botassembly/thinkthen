@@ -30,6 +30,7 @@ pub(crate) struct Aggregate {
     models: Models,
     shares: RowUsage,
     pub(crate) usage: Option<Usage>,
+    pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) live: bool,
     pub(crate) requests_sent: u64,
     pub(crate) requests: Vec<String>,
@@ -140,6 +141,7 @@ impl Engine {
         )?;
         meta.model = meta.models.model().cloned();
         meta.usage = meta.shares.total()?;
+        meta.reported_usage = meta.shares.reported()?;
         Ok(Recognition {
             value: Recognized {
                 entities,
@@ -403,7 +405,7 @@ impl Aggregate {
         self.models.take(answered, |held, model| {
             super::annotate::check_model(held, model, requested)
         })?;
-        self.shares.add(answered.reply.usage());
+        self.shares.add_reported(answered.reply.reported_usage());
         self.live |= !answered.replayed;
         self.requests_sent = self
             .requests_sent

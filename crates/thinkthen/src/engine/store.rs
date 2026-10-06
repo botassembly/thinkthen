@@ -15,7 +15,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use rusqlite::{Connection, OpenFlags};
 
-use crate::core::Usage;
+use crate::core::ReportedUsage;
 use crate::core::pack::{Ask, QuestionKey, State};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
@@ -23,7 +23,9 @@ use crate::engine::error::Error;
 mod convert;
 mod fixture;
 mod images;
+mod original;
 mod policy;
+pub(crate) use original::Original;
 mod probe;
 mod prune;
 pub(crate) use convert::convert;
@@ -77,7 +79,7 @@ pub(crate) enum Mode {
 pub(crate) struct Found {
     pub(crate) answer: String,
     pub(crate) answered_by: String,
-    pub(crate) usage: Option<Usage>,
+    pub(crate) usage: Option<ReportedUsage>,
 }
 
 /// One answer to write, with every column of its row.
@@ -89,7 +91,7 @@ pub(crate) struct Row<'a> {
     pub(crate) question: &'a str,
     pub(crate) answer: &'a str,
     pub(crate) answered_by: &'a str,
-    pub(crate) usage: Option<Usage>,
+    pub(crate) usage: Option<ReportedUsage>,
     pub(crate) taken_at: i64,
     pub(crate) origin: &'a str,
 }
@@ -348,15 +350,16 @@ pub(crate) fn waiting<T>(
 type Stored = (Vec<u8>, Result<Found, Error>);
 
 fn found(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stored> {
-    let tokens = row
-        .get::<_, Option<i64>>(3)?
-        .zip(row.get::<_, Option<i64>>(4)?);
-    let usage = tokens.and_then(|(input, output)| {
-        Some(Usage::new(
-            u64::try_from(input).ok()?,
-            u64::try_from(output).ok()?,
-        ))
-    });
+    let count = |at| {
+        row.get::<_, Option<i64>>(at).and_then(|count| {
+            count
+                .map(u64::try_from)
+                .transpose()
+                .map_err(|_| rusqlite::Error::IntegralValueOutOfRange(at, -1))
+        })
+    };
+    let usage = Some(ReportedUsage::new(count(3)?, count(4)?))
+        .filter(|usage| usage.input_tokens().is_some() || usage.output_tokens().is_some());
     let answer = Found {
         answer: row.get(1)?,
         answered_by: row.get(2)?,
@@ -390,7 +393,8 @@ fn insert(connection: &Connection, rows: &[Row<'_>]) -> rusqlite::Result<()> {
     for row in rows {
         add_state.execute((row.state.sha256().as_slice(), row.state.json()))?;
         let id: i64 = state.query_row([row.state.sha256().as_slice()], |found| found.get(0))?;
-        let tokens = row.usage.map(Usage::token_counts);
+        let input = row.usage.and_then(ReportedUsage::input_tokens);
+        let output = row.usage.and_then(ReportedUsage::output_tokens);
         let signed = |value: u64| i64::try_from(value).ok();
         answer.execute(rusqlite::params![
             row.key.bytes().as_slice(),
@@ -400,8 +404,8 @@ fn insert(connection: &Connection, rows: &[Row<'_>]) -> rusqlite::Result<()> {
             row.question,
             row.answer,
             row.answered_by,
-            tokens.and_then(|(input, _)| signed(input)),
-            tokens.and_then(|(_, output)| signed(output)),
+            input.and_then(signed),
+            output.and_then(signed),
             row.taken_at,
             row.origin,
         ])?;

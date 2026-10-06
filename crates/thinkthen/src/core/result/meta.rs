@@ -15,6 +15,9 @@ pub(crate) struct Meta {
     pub(super) model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) usage: Option<Usage>,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    pub(super) reported_usage: Option<super::ReportedUsage>,
     pub(super) requests_sent: u64,
     pub(super) cached: bool,
     pub(super) requests: Vec<String>,
@@ -61,6 +64,7 @@ impl Meta {
             url,
             model,
             usage,
+            reported_usage: usage.map(super::ReportedUsage::from_complete),
             requests_sent,
             cached: replayed,
             requests,
@@ -71,6 +75,11 @@ impl Meta {
             context_sha256,
             attempts: None,
         }
+    }
+
+    pub(crate) fn with_reported_usage(mut self, usage: Option<super::ReportedUsage>) -> Self {
+        self.reported_usage = usage;
+        self
     }
 
     pub(crate) fn with_attempts(mut self, attempts: Vec<crate::core::AttemptObservation>) -> Self {

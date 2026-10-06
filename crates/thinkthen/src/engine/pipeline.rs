@@ -10,7 +10,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use crate::core::AttemptObservation;
-use crate::core::Usage;
+use crate::core::ReportedUsage;
 use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, PackError, PackLimits, Packer, QuestionKey};
 use crate::engine::error::Error;
@@ -65,7 +65,7 @@ pub(crate) struct Answered {
     /// The model the reply named.
     pub(crate) answered_by: Arc<str>,
     /// This question's share of its request's usage.
-    pub(crate) usage: Option<Usage>,
+    pub(crate) usage: Option<ReportedUsage>,
     /// Whether the store answered it.
     pub(crate) cached: bool,
     /// This question's share of its request's HTTP attempts.

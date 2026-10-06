@@ -93,6 +93,10 @@ struct Answers<'a> {
 }
 
 impl Relation {
+    pub(crate) const fn reported_usage(&self) -> Option<crate::core::ReportedUsage> {
+        self.meta.reported_usage
+    }
+
     pub(crate) const fn usage(&self) -> Option<Usage> {
         self.meta.usage
     }

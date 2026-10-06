@@ -16,7 +16,7 @@ use crate::core::digest::hex;
 use crate::core::plan::Plan;
 use crate::core::question::Question;
 use crate::core::reply::{AnswerOutcome, BackendFailure, BackendFailureCause};
-use crate::core::result::Usage;
+use crate::core::result::ReportedUsage;
 use crate::core::text::{Evidence, Url, Withheld};
 
 mod packer;
@@ -55,9 +55,10 @@ impl State {
         input: &crate::core::image::ImageState,
         route: built_in::images::ImageRoute,
         model: &str,
+        profile: Option<&crate::core::BackendProfile>,
     ) -> Result<Self, EncodeError> {
         let wire = route
-            .admit(model, input)
+            .admit_profiled(model, input, profile)
             .map_err(|error| EncodeError::of(&error))?;
         let json = serde_json::to_string(input).map_err(|error| EncodeError::of(&error))?;
         let evidence_bytes = crate::core::render::json_line(&input.text)
@@ -119,6 +120,9 @@ impl State {
 
     pub(crate) fn estimated_tokens(&self, model: &str, questions: &[Arc<str>]) -> Option<u64> {
         let wire = self.0.image_wire.as_ref()?;
+        if !wire.image_tokens_known {
+            return None;
+        }
         let text_bytes = self
             .evidence_bytes()
             .checked_add(model.len())?
@@ -289,7 +293,12 @@ pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
         .as_text()
         .map_err(|error| EncodeError::of(&error))?;
     let state = match plan.images() {
-        Some(images) => State::images(images, plan.image_route(), plan.model().as_str())?,
+        Some(images) => State::images(
+            images,
+            plan.image_route(),
+            plan.model().as_str(),
+            plan.image_profile(),
+        )?,
         None => State::new(parts.state, evidence.len()),
     };
     let decoders = plan.questions().iter().flat_map(decoders);
@@ -380,7 +389,7 @@ fn synthetic<'a>(
 
 /// Each question's even share of a request's usage, the remainder to the
 /// earliest, by ADR 0111 section 3.
-pub(crate) fn shares(usage: Option<Usage>, questions: usize) -> Vec<Option<Usage>> {
+pub(crate) fn shares(usage: Option<ReportedUsage>, questions: usize) -> Vec<Option<ReportedUsage>> {
     (0..questions)
         .map(|position| usage.map(|usage| usage.share(questions, position)))
         .collect()

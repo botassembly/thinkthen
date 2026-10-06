@@ -10,7 +10,7 @@ use crate::core::adapters::built_in;
 use crate::core::batch::{QUOTED, quoted};
 use crate::core::json::Json;
 use crate::core::pack::{QuestionKey, shares, split};
-use crate::core::result::Usage;
+use crate::core::result::ReportedUsage;
 use crate::core::text::Url;
 
 /// Where a converted answer came from.
@@ -42,7 +42,7 @@ pub(crate) struct Converted {
     pub(crate) question: String,
     pub(crate) answer: String,
     pub(crate) answered_by: String,
-    pub(crate) usage: Option<Usage>,
+    pub(crate) usage: Option<ReportedUsage>,
     pub(crate) origin: Origin,
     /// Written only in the old form, which a replay on this version misses.
     pub(crate) unquoted: bool,

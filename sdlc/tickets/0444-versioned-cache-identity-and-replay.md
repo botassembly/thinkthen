@@ -30,3 +30,24 @@ Saved answers carry enough validated identity to rebuild their key without a cal
 0449 removes SDK group interpretation; retain conservative requested/reported-model comparison, known mutable-alias refresh and ambiguous offline replay refusal. Do not add discovery, target maps or routing. A mutable selector that echoes itself cannot prove freshness: caller no-cache/refresh or provider no-store is required, and future explicit proxy calls bypass local reuse until an admitted policy-version contract proves safety. Do not claim the key formula alone fixes echoed aliases.
 
 When this change is pushed to main, notify the experiments team through pm with the commit, changed behavior and affected experiment 0035 steps. They rerun only affected steps without waiting for release. Note the notification in this ticket’s single landing record.
+
+Native WIP partial usage: optional reported dimensions now remain independent through decoding, wire shares, SQLite/JSONL lookup, zero-send replay and aggregate receipts. Explicit recording retains exact request and response bodies (no headers) in the answers' SQLite transaction. The Imajev fixture reports input887 and no output; no output zero is synthesized. Result/1 retains its full-count usage projection, and result/2 metadata and typed accessors retain partial counts. Versioned keys and validated migration remain open.
+
+### Added public declarations
+
+```rust
+struct ReportedUsage
+impl Serialize for ReportedUsage
+const fn ReportedUsage::input_tokens(self) -> Option<u64>
+const fn ReportedUsage::output_tokens(self) -> Option<u64>
+const fn Details::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteDecision::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteChoice::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteTags::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteScore::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteFilter::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteRank::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteFound::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteRecognized::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteRelated::reported_usage(&self) -> Option<ReportedUsage>
+```

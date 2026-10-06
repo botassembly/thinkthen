@@ -20,7 +20,7 @@ impl Serialize for CompleteMeta<'_> {
         map.serialize_entry("question_sha256", &legacy.question_sha256)?;
         map.serialize_entry("url", &legacy.url)?;
         map.serialize_entry("model", &legacy.model)?;
-        if let Some(usage) = &legacy.usage {
+        if let Some(usage) = &legacy.reported_usage {
             map.serialize_entry("usage", usage)?;
         }
         map.serialize_entry("requests_sent", &legacy.requests_sent)?;

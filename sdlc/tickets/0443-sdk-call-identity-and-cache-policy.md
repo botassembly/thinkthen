@@ -61,3 +61,5 @@ this does not add a route or change image admission.
 The transport accepts the explicit closed mcp surface for approved0455 and
 uses the same compiled version/call/request headers. MCP module/CLI ownership
 remains lane1; no alternate transport or engine is introduced.
+
+Local image integration WIP: ready 92084c66d is merged with shared profile propagation. The estimated-budget blanket refusal is omitted under Ian's correction: uncalibrated local images retain approximate encoded-body admission. The original Imajev decoder accepts independently optional reported counts, carries input887/output unknown through per-question storage and zero-send replay, and retains original request/response bodies in the explicit recording transaction. All 23 focused image regressions pass. Native result execution, migration, CLI schema adoption and the whole High review remain open.

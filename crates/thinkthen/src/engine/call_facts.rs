@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use std::{fmt, sync::MutexGuard};
 
 use super::Cancel;
-use crate::core::{CallId, Surface, Usage};
+use crate::core::{CallId, ReportedSum, ReportedUsage, Surface, Usage};
 
 #[derive(Clone)]
 pub(crate) struct CallFacts(Arc<Mutex<State>>);
@@ -25,6 +25,7 @@ struct State {
     requests_sent: u64,
     cache_answers: u64,
     tokens: Option<Usage>,
+    reported: ReportedSum,
     live_replies: u64,
     missing_usage: bool,
     token_sum_valid: bool,
@@ -40,6 +41,7 @@ pub(crate) struct Snapshot {
     pub(crate) requests_sent: u64,
     pub(crate) cache_answers: u64,
     pub(crate) tokens: Option<Usage>,
+    pub(crate) reported: Option<ReportedUsage>,
     pub(crate) cost_complete: bool,
     pub(crate) model: Option<String>,
 }
@@ -76,6 +78,7 @@ impl CallFacts {
             requests_sent: 0,
             cache_answers: 0,
             tokens: None,
+            reported: ReportedSum::default(),
             live_replies: 0,
             missing_usage: false,
             token_sum_valid: true,
@@ -98,9 +101,11 @@ impl CallFacts {
     }
 
     /// A received response counts even if its logical answer cannot be decoded.
-    pub(crate) fn live_reply(&self, usage: Option<Usage>) {
+    pub(crate) fn live_reply(&self, reported: Option<ReportedUsage>) {
         let mut state = self.state();
         state.live_replies += 1;
+        state.reported.add(reported);
+        let usage = reported.and_then(ReportedUsage::complete);
         match (state.tokens, usage) {
             (_, None) => state.missing_usage = true,
             (Some(previous), Some(next)) => {
@@ -141,6 +146,7 @@ impl CallFacts {
             records: state.records,
             requests_sent: state.requests_sent,
             cache_answers: state.cache_answers,
+            reported: state.reported.total().ok().flatten(),
             tokens: (!state.missing_usage && state.live_replies > 0)
                 .then_some(state.tokens)
                 .flatten(),
@@ -176,9 +182,9 @@ impl Cancel<'_> {
         }
     }
 
-    pub(crate) fn live_reply(&self, usage: Option<Usage>) {
+    pub(crate) fn live_reply(&self, reported: Option<ReportedUsage>) {
         if let Some(facts) = &self.facts {
-            facts.live_reply(usage);
+            facts.live_reply(reported);
         }
     }
 

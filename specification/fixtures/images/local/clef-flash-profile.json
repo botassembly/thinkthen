@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.backend-profile/2",
+  "name": "clef-flash-0036",
+  "image_profile": {
+    "id": "clef-flash-llamacpp-v0.6.0-0036",
+    "model_alias": "flash-local-0036"
+  }
+}

@@ -72,8 +72,12 @@ impl Facts {
             records: snapshot.records,
             requests_sent: snapshot.requests_sent,
             cache_answers: snapshot.cache_answers,
-            input_tokens: tokens.map(|(input, _)| input),
-            output_tokens: tokens.map(|(_, output)| output),
+            input_tokens: snapshot
+                .reported
+                .and_then(crate::core::ReportedUsage::input_tokens),
+            output_tokens: snapshot
+                .reported
+                .and_then(crate::core::ReportedUsage::output_tokens),
             estimated_cost_usd,
             seconds: snapshot.elapsed.as_secs_f64(),
             model: snapshot.model,

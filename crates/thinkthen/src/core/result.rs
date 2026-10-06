@@ -11,6 +11,9 @@ use crate::core::text::{ModelName, Url};
 use crate::core::threshold::Threshold;
 
 mod attempt;
+mod reported_usage;
+pub(crate) use reported_usage::ReportedSum;
+pub use reported_usage::ReportedUsage;
 pub(crate) mod complete;
 pub use complete::{Observation, Origin, QuestionSource, ResultIdentity};
 mod batch_warning;
@@ -256,6 +259,9 @@ pub(crate) struct AnnotateMeta {
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    reported_usage: Option<ReportedUsage>,
     requests_sent: u64,
     cached: bool,
     requests: Vec<String>,
@@ -291,12 +297,17 @@ impl AnnotateMeta {
             url,
             model,
             usage,
+            reported_usage: usage.map(ReportedUsage::from_complete),
             requests_sent,
             cached: replayed,
             requests,
             failed_questions,
             profile_warning,
         }
+    }
+    pub(crate) fn with_reported_usage(mut self, usage: Option<ReportedUsage>) -> Self {
+        self.reported_usage = usage;
+        self
     }
 }
 

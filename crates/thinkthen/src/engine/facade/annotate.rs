@@ -75,6 +75,7 @@ pub(crate) struct Annotation {
     pub(crate) receipts: Vec<MemberReceipt>,
     pub(crate) model: Option<ModelName>,
     pub(crate) usage: Option<Usage>,
+    pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) requests: Vec<String>,
     pub(crate) requests_sent: u64,
     pub(crate) replayed: bool,
@@ -104,6 +105,7 @@ pub(crate) fn assemble(
         receipts: Vec::new(),
         model: None,
         usage: None,
+        reported_usage: None,
         requests: Vec::new(),
         requests_sent: 0,
         replayed: true,
@@ -119,7 +121,7 @@ pub(crate) fn assemble(
             check_model(&mut annotation.model, chunk.reply.model(), requested)?;
         }
         annotation.requests.extend(chunk.keys.iter().cloned());
-        usage.add(chunk.reply.usage());
+        usage.add_reported(chunk.reply.reported_usage());
         annotation.replayed &= chunk.replayed;
         annotation.requests_sent = annotation
             .requests_sent
@@ -129,6 +131,7 @@ pub(crate) fn assemble(
             take_answers(set, &chunk, &mut values, &mut details, &mut receipts)?;
     }
     annotation.usage = usage.total()?;
+    annotation.reported_usage = usage.reported()?;
     annotation.model = annotation.model.or(stored_model);
     annotation.values = pair(set, values, "a question has no value")?;
     annotation.details = pair(set, details, "a question has no detailed answer")?;

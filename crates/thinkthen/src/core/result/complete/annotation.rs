@@ -116,7 +116,7 @@ impl Serialize for AnnotationMeta<'_> {
         map.serialize_entry("questions_sha256", &row.questions_sha256)?;
         map.serialize_entry("url", &row.url)?;
         map.serialize_entry("model", &row.model)?;
-        if let Some(usage) = &row.usage {
+        if let Some(usage) = &row.reported_usage {
             map.serialize_entry("usage", usage)?;
         }
         map.serialize_entry("requests_sent", &row.requests_sent)?;

@@ -432,7 +432,7 @@ impl<'a, A: Asker> Run<'a, A> {
             })
             .collect();
         let written = match self.store.as_mut() {
-            Some(store) => store.accept(&rows, done.storable, cancel),
+            Some(store) => store.accept(&rows, done.storable, done.original.as_ref(), cancel),
             None => Ok(()),
         };
         drop(rows);

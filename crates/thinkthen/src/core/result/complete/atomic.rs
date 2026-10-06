@@ -15,6 +15,10 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
+    pub(crate) const fn reported_usage(&self) -> Option<crate::core::ReportedUsage> {
+        self.legacy.meta.reported_usage
+    }
+
     pub(crate) const fn usage(&self) -> Option<Usage> {
         self.legacy.meta.usage
     }

@@ -117,8 +117,14 @@ fn old_entries(folder: &Path, quote: bool, summary: &mut Summary) -> Result<Entr
         summary.unquoted += converted.iter().filter(|answer| answer.unquoted).count();
         for answer in converted {
             let state = bytes_sha256(answer.state.as_bytes());
-            let (input_tokens, output_tokens) =
-                answer.usage.map(|usage| usage.token_counts()).unzip();
+            let (input_tokens, output_tokens) = (
+                answer
+                    .usage
+                    .and_then(crate::core::ReportedUsage::input_tokens),
+                answer
+                    .usage
+                    .and_then(crate::core::ReportedUsage::output_tokens),
+            );
             entries.states.insert(state.clone(), answer.state);
             entries.answers.entry(answer.key.hex()).or_insert(Answer {
                 key: answer.key.hex(),
