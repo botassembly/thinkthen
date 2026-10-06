@@ -2,7 +2,7 @@
 use super::sources::{all_no_answers, ask_settings};
 use crate::child::ChildEnvironment as _;
 use crate::{compile, crate_dir, scratch, text};
-use conformance_backend::{Backend, Listener};
+use conformance_backend::{Backend, Listener, Rendezvous};
 use serde_json::{Value, json};
 
 fn files(label: &str) -> Vec<std::path::PathBuf> {
@@ -47,7 +47,18 @@ fn source_recognition_caps_records_across_scalar_calls_and_leaves_tail_unread() 
 #[test]
 fn source_recognition_uses_one_deadline_for_every_record() {
     let paths = files("recognize-call-deadline");
-    let listener = Listener::answering(|body| all_no_answers(body).after(80)).expect("listener");
+    // Complete the first record immediately; hold the next reply until the
+    // call has stopped. No response delay has to fit between two timer ticks.
+    let release = std::sync::Arc::new(Rendezvous::new(2));
+    let listener = Listener::answering(move |body| {
+        let reply = all_no_answers(body);
+        if text(body).contains("Bea") {
+            reply.after_release(release.clone())
+        } else {
+            reply
+        }
+    })
+    .expect("listener");
     let output = std::process::Command::new(compile(
         &crate_dir().join("tests/c/source_recognize_deadline.c"),
     ))
@@ -65,6 +76,7 @@ fn source_recognition_uses_one_deadline_for_every_record() {
     assert_eq!(facts["records"], 1);
     assert_eq!(facts["requests_sent"], 2);
     assert_eq!(listener.count(), 2);
+    // Listener retirement releases its held response, including on failure.
 }
 
 #[test]
