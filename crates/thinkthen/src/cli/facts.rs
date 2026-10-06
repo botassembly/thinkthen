@@ -46,6 +46,7 @@ pub(crate) fn enabled(command: &Command) -> bool {
         | Command::Check(_)
         | Command::Backends(_)
         | Command::Transform(_)
+        | Command::Runs(_)
         | Command::Audit(_)
         | Command::Diff(_) => false,
     }

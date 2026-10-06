@@ -19,7 +19,7 @@ const EFFECTS = [
 ---
 <Base title="diff" description={'What diff prints for each changed answer, what each effect means, and how not-sure and tied answers count.'}>
   <h1><code>diff</code></h1>
-  <p class="lede"><code>thinkthen diff A B</code> prints only the saved answers that changed between two runs. It sends no request.</p>
+  <p class="lede"><code>thinkthen runs diff A B</code> prints only the saved answers that changed between two runs. It sends no request.</p>
 
   <h2 id="two-runs-or-two-cuts">Two runs, or two cuts</h2>
   <p>With two files, <code>diff</code> pairs each answer in <code>A</code> with the answer in <code>B</code> for the same record and answer name. With one file and <code>--compare-threshold</code>, it reads the same run under two rules. <code>A</code> reads under <code>--threshold</code>, and <code>B</code> under <code>--compare-threshold</code>. It warns when two paired answers came from different questions.</p>

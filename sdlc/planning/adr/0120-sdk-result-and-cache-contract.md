@@ -1,6 +1,6 @@
 # ADR 0120: SDK result and cache contract
 
-- Status: **Accepted** contract under Ian's authorized 0.2 outcome; fresh High whole-contract review and landing remain with the coordinator.
+- Status: **Accepted** contract under Ian's authorized 0.2 outcome; fresh High whole-contract review accepted; landed with 0442.
 - Date: 2026-10-06
 - Risk: **High**: storage compatibility, secrecy and result schema.
 - Owner: [ticket 0442](../../tickets/0442-proxy-ready-sdk-contract.md).
@@ -29,7 +29,7 @@ These are bounded truthfulness corrections to the adopted draft; other settled c
 
 ## Adoption and compatibility
 
-0443/0444/0445/0450 implement transport/storage/attempts/identity. 0436 adopts rank; 0426–0431 adopt carriers; 0410/0296 frames; 0435 SQL; 0411 rereading; 0432 parity; 0447/0448 image serialization/admission. 0426 owns remaining additive C signatures and lifetimes. 0449 precedes landing; the coordinator merges final main before 0442 lands. This ticket changes contracts only and claims no runtime completion.
+0443/0444/0445/0450 implement transport/storage/attempts/identity. 0436 adopts rank; 0426–0431 adopt carriers; 0410/0296 frames; 0435 SQL; 0411 rereading; 0432 parity; 0447/0448 image serialization/admission. 0426 owns remaining additive C signatures and lifetimes. 0449 preceded the reviewed 0442 landing. This ticket changes contracts only and claims no runtime completion.
 
 ## What Ian can overturn
 

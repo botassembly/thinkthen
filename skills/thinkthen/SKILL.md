@@ -34,6 +34,8 @@ Completed record runs and explicit multiple-document runs exit 0 even when indiv
 
 Exit 2 means invalid usage/input, 4 backend failure, 5 local failure and 70 a defect. Failed streams can leave a completed prefix; do not treat it as a finished dataset. Capture the status under `set -e` with `command && rc=0 || rc=$?`. Read stderr for the cause; failure is never a negative answer.
 
+For saved run analysis, use `thinkthen runs audit results.jsonl key.jsonl` to grade answers against a key, and `thinkthen runs diff before.jsonl after.jsonl` to show changed answers. Both run offline without a key or request. Published top-level `audit` and `diff` remain hidden compatibility aliases; use the `runs` forms in new commands.
+
 ## Shortlists and abstention
 
 Use `filter` when each candidate must meet a criterion independently. Use `rank --top N` when you need the best N of many records. `--top` limits output, not requests. `find` compares the entire candidate set in one aggregate request. With `--none`, it accepts 2–254 candidates totaling at most 16 MiB of original input. Without `--none`, the maximum is 255. A selected candidate exits 0; model-selected none exits 3 with empty stdout (`value: null` in details). Empty input exits 0 with empty stdout/stderr and sends nothing. One candidate is invalid for `find`.

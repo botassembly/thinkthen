@@ -7,3 +7,5 @@ Fresh High read-only review: ACCEPT. Existing live fixtures, syntax and old-help
 ## What the build taught us
 
 Encoded image admission can greatly exceed vendor billing tokens. Separate token allowance from the approved dollar cap. Older helpers safely refuse extension rows; operators must use the updated helper. Inspect status before retrying an ambiguous append or sync failure.
+
+After landing, the coordinator used the helper to add 1,231,988,070 tokens for approved 0036/0037 preparation. Charges remained 475,976,740; no job launched. Shared mailroom answer d37418b preserves the separate $15/$10 monetary caps and closes all five admission asks.

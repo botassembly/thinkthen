@@ -51,7 +51,7 @@ fn diff_warns_at_different_batch_settings_and_not_at_an_unknown_one() {
 }
 
 fn diff(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
-    measure(&[&["diff"], arguments].concat(), input)
+    measure(&[&["runs", "diff"], arguments].concat(), input)
 }
 
 const NO_PAIR: &str = "thinkthen: diff: warning: no answer paired; check that both runs hold the same record ids and answer names\n";

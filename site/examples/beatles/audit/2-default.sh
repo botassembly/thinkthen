@@ -1,4 +1,4 @@
-thinkthen audit shown.jsonl shown-key.jsonl |
+thinkthen runs audit shown.jsonl shown-key.jsonl |
 jq '{
   songs: .rows,
   right,

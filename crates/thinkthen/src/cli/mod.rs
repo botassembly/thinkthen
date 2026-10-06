@@ -60,20 +60,20 @@ pub fn entry() -> ExitCode {
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
     }
-    if let Some(Command::Transform(arguments)) = &cli.command {
-        return match transform::run(&arguments.command, stdout.lock()) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(failure) => failure::report(&failure, stderr.lock()),
-        };
-    }
-    if let Some(Command::Audit(arguments)) = &cli.command {
-        return match audit::run(arguments, stdout.lock()) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(failure) => failure::report(&failure, stderr.lock()),
-        };
-    }
-    if let Some(Command::Diff(arguments)) = &cli.command {
-        return match diff::run(arguments, stdout.lock()) {
+    let offline = match &cli.command {
+        Some(Command::Transform(arguments)) => {
+            Some(transform::run(&arguments.command, stdout.lock()))
+        }
+        Some(Command::Audit(arguments) | Command::Runs(args::RunsCommand::Audit(arguments))) => {
+            Some(audit::run(arguments, stdout.lock()))
+        }
+        Some(Command::Diff(arguments) | Command::Runs(args::RunsCommand::Diff(arguments))) => {
+            Some(diff::run(arguments, stdout.lock()))
+        }
+        _ => None,
+    };
+    if let Some(result) = offline {
+        return match result {
             Ok(()) => ExitCode::SUCCESS,
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
@@ -217,9 +217,11 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
         Some(
             Command::Check(arguments) | Command::Backends(args::BackendCommand::Check(arguments)),
         ) => check::run(arguments, environment, writer),
-        Some(Command::Transform(_) | Command::Audit(_) | Command::Diff(_)) => Err(Failure::Defect(
-            "the catalog, audit, and diff return before setup",
-        )),
+        Some(Command::Transform(_) | Command::Runs(_) | Command::Audit(_) | Command::Diff(_)) => {
+            Err(Failure::Defect(
+                "the catalog, audit, and diff return before setup",
+            ))
+        }
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }
@@ -285,6 +287,7 @@ fn in_default_cache(command: &Command, environment: &Environment) -> bool {
         | Command::Check(_)
         | Command::Backends(_)
         | Command::Transform(_)
+        | Command::Runs(_)
         | Command::Audit(_)
         | Command::Diff(_) => false,
     }

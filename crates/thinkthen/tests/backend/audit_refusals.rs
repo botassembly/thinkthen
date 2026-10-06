@@ -410,6 +410,36 @@ fn words(arguments: &str, folder: &Path) -> Vec<String> {
         .collect()
 }
 
+fn offline_cases(root: &Path) -> Vec<(Vec<String>, &'static str)> {
+    let owned = |list: &[&str]| list.iter().map(|word| (*word).to_owned()).collect();
+    let mut lines: Vec<(Vec<String>, &str)> = GOLDENS
+        .iter()
+        .map(|(_, arguments)| (owned(&[&["audit"], *arguments].concat()), ""))
+        .collect();
+    lines.extend(
+        TABLES
+            .iter()
+            .map(|(_, [results, key])| (owned(&["audit", results, key, "--table"]), "")),
+    );
+    lines.extend(
+        DIFF_GOLDENS
+            .iter()
+            .chain(&DIFF_TABLES)
+            .flat_map(|(_, arguments)| {
+                [
+                    (owned(&[&["diff"], *arguments].concat()), ""),
+                    (owned(&[&["diff"], *arguments, &["--table"]].concat()), ""),
+                ]
+            }),
+    );
+    lines.extend(
+        REFUSALS
+            .iter()
+            .map(|(arguments, input, _, _)| (words(arguments, root), *input)),
+    );
+    lines
+}
+
 #[test]
 fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
     let root = std::env::temp_dir().join(format!("thinkthen-0113-guarded-{}", std::process::id()));
@@ -426,67 +456,49 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
     // send count, the key check and the tree still hold.
     #[cfg(unix)]
     fs::set_permissions(root.join("locked"), fs::Permissions::from_mode(0o000)).expect("locked");
-    let owned = |list: &[&str]| list.iter().map(|word| (*word).to_owned()).collect();
-    let mut lines: Vec<(Vec<String>, &str)> = GOLDENS
-        .iter()
-        .map(|(_, arguments)| (owned(&[&["audit"], *arguments].concat()), ""))
-        .collect();
-    lines.extend(
-        TABLES
-            .iter()
-            .map(|(_, [results, key])| (owned(&["audit", results, key, "--table"]), "")),
-    );
-    lines.extend(
-        DIFF_GOLDENS
-            .iter()
-            .chain(&DIFF_TABLES)
-            .map(|(_, arguments)| (owned(&[&["diff"], *arguments, &["--table"]].concat()), "")),
-    );
-    lines.extend(
-        DIFF_GOLDENS
-            .iter()
-            .map(|(_, arguments)| (owned(&[&["diff"], *arguments].concat()), "")),
-    );
-    lines.extend(
-        REFUSALS
-            .iter()
-            .map(|(arguments, input, _, _)| (words(arguments, &root), *input)),
-    );
-    for (arguments, input) in lines {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-        command
-            .args(&arguments)
-            .clear_environment()
-            .current_dir(fixtures())
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        for variable in [
-            "HOME",
-            "XDG_CONFIG_HOME",
-            "XDG_CACHE_HOME",
-            "THINKTHEN_CACHE",
-        ] {
-            command.env(variable, root.join("locked").join(variable));
-        }
-        let mut child = command
-            .env("THINKTHEN_API_KEY", "canary-0113")
-            .env("THINKTHEN_BASE_URL", &url)
-            .spawn()
-            .expect("the binary runs");
-        let mut stdin = child.stdin.take().expect("standard input");
-        let _ignored = stdin.write_all(input.as_bytes());
-        drop(stdin);
-        let output = wait::finish(child, "thinkthen").expect("the binary finishes");
-        assert!(
-            matches!(output.status.code(), Some(0 | 2 | 5)),
-            "{arguments:?}"
-        );
-        for channel in [&output.stdout, &output.stderr] {
+    for (arguments, input) in offline_cases(&root) {
+        let nested = [&["runs".to_owned()][..], &arguments].concat();
+        let mut baseline = None;
+        for arguments in [arguments, nested] {
+            let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+            command
+                .args(&arguments)
+                .clear_environment()
+                .current_dir(fixtures())
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            for variable in [
+                "HOME",
+                "XDG_CONFIG_HOME",
+                "XDG_CACHE_HOME",
+                "THINKTHEN_CACHE",
+            ] {
+                command.env(variable, root.join("locked").join(variable));
+            }
+            let mut child = command
+                .env("THINKTHEN_API_KEY", "canary-0113")
+                .env("THINKTHEN_BASE_URL", &url)
+                .spawn()
+                .expect("the binary runs");
+            let mut stdin = child.stdin.take().expect("standard input");
+            let _ignored = stdin.write_all(input.as_bytes());
+            drop(stdin);
+            let output = wait::finish(child, "thinkthen").expect("the binary finishes");
             assert!(
-                !String::from_utf8_lossy(channel).contains("canary-0113"),
+                matches!(output.status.code(), Some(0 | 2 | 5)),
                 "{arguments:?}"
             );
+            for channel in [&output.stdout, &output.stderr] {
+                assert!(
+                    !String::from_utf8_lossy(channel).contains("canary-0113"),
+                    "{arguments:?}"
+                );
+            }
+            let observed = (output.status.code(), output.stdout, output.stderr);
+            if let Some(previous) = baseline.replace(observed.clone()) {
+                assert_eq!(observed, previous, "{arguments:?}");
+            }
         }
     }
     #[cfg(unix)]

@@ -70,7 +70,7 @@ The public Beatles Bench measured both forms on 2026-09-30 with `jev-1.13.0` at 
 
 The menu trades recall for precision. On the 182 songs, recall fell from 0.693 to 0.551. Where the right album was missing, pairs named an album for every song, because a pair can pass the cut for every listed album. The menu answered none for 16 of 31 songs, and named a wrong album for 11 at or above the cut and 4 below it. Where the right album was listed, it answered none for 2 of the 182 songs, and an exact tie at the top left 5 more without an album.
 
-A cut tuned by `thinkthen audit` on half the sets chose 0.47. On the held half, the menu won where the album was missing, F1 0.526 against 0.373, and tied on sets that each hold the right album, 0.680 against 0.689. Liquid d1 is not yet measured.
+A cut tuned by `thinkthen runs audit` on half the sets chose 0.47. On the held half, the menu won where the album was missing, F1 0.526 against 0.373, and tied on sets that each hold the right album, 0.680 against 0.689. Liquid d1 is not yet measured.
 
 ## Plan
 
