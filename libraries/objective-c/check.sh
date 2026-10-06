@@ -66,6 +66,8 @@ TARGET="$ROOT/checks/target"
 mkdir -p "$TARGET"
 python3 "$ROOT/checks/privacy.py"
 for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done
+gcc -std=gnu11 -Wall -Wextra -Werror -x objective-c -I"$ROOT/Sources" "$ROOT/Sources/TTComplete.c" "$ROOT/checks/carriers.m" "$ROOT/Sources/TTJSON.c" -o "$TARGET/carriers"
+"$TARGET/carriers"
 cargo build --locked --offline --manifest-path "$REPO/libraries/c/Cargo.toml" --lib -j2
 ln -sf "$NATIVE" "$CARGO_TARGET_DIR/debug/libthinkthen.so.0"
 CARGO_TARGET_DIR="$REPO/target" cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2

@@ -8,7 +8,7 @@ artifacts = package / "target/artifacts"
 artifacts.mkdir(parents=True, exist_ok=True)
 members = [package / name for name in ("LICENSE", "README.md", "Package.swift", "Examples/main.swift",
     "Sources/CThinkThen/include/thinkthen.h", "Sources/CThinkThen/module.modulemap",
-    "Sources/ThinkThen/ThinkThen.swift", "Tests/TypeCase/main.swift")]
+    "Sources/ThinkThen/ThinkThen.swift", "Sources/ThinkThen/Complete.swift", "Tests/TypeCase/main.swift")]
 assert all(path.is_file() for path in members)
 with zipfile.ZipFile(artifacts / "thinkthen-swift-0.0.1.zip", "w") as archive:
     for path in members:

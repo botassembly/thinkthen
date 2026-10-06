@@ -1,4 +1,5 @@
 const std = @import("std");
+pub const complete = @import("complete.zig");
 pub const c = @cImport({
     @cInclude("thinkthen.h");
 });

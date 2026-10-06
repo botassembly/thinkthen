@@ -5,7 +5,7 @@ import tarfile
 package = Path(__file__).resolve().parent.parent
 artifacts = package / "target/artifacts"
 artifacts.mkdir(parents=True, exist_ok=True)
-members = ["LICENSE", "README.md", "build.zig", "build.zig.zon", "examples/decide.zig", "src/thinkthen.zig"]
+members = ["LICENSE", "README.md", "build.zig", "build.zig.zon", "examples/decide.zig", "src/thinkthen.zig", "src/complete.zig"]
 with tarfile.open(artifacts / "thinkthen-zig-0.0.1-src.tar.gz", "w:gz") as archive:
     for name in members:
         assert (package / name).is_file(), name

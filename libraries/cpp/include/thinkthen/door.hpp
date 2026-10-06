@@ -1,6 +1,7 @@
 #pragma once
 #include <thinkthen/thinkthen.h>
 #include "json.hpp"
+#include "complete.hpp"
 #include <algorithm>
 #include <memory>
 #include <optional>
