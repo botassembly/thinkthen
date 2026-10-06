@@ -91,6 +91,10 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             }));
         }
         let question = Question::find(&argument)?;
+        let question = match settings.model() {
+            Some(model) => question.with_model(model)?,
+            None => question,
+        };
         let question = if none {
             question.offering_none()?
         } else {

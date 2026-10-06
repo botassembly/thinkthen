@@ -16,7 +16,7 @@ One reviewed contract defines the SDK metadata, proxy-compatible transport ident
 - Starts from: Current main c64b71859; 0405 audit is historical and predates 0377/0420. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 9 and 10.
 - Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
 - Changes: Record the chosen public schema/headers, origin and concrete model rules, cache-control policy, key formula and offline migration before implementation. Update result/settings/recording/cache specifications and ADRs together.
-- Proof: Review invariants against existing cache/replay, six errors, retry/split accounting and secrecy. Use saved examples to show mixed origins/models, pinned/group lookup, replay ambiguity, no-store recording refusal and safe v1 conversion. No runtime migration or network request during design.
+- Proof: Review invariants against existing cache/replay, six errors, retry/split accounting and secrecy. Use saved examples to show mixed origins/models, literal requested/reported-model lookup, replay ambiguity, no-store recording refusal and safe v1 conversion. No runtime migration or network request during design.
 - Defers: Proxy service/screens, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
 ## Dependencies and ownership
