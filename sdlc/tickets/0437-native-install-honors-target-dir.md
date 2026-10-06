@@ -1,6 +1,6 @@
 # 0437: Honor the configured native build output folder
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Implementation and focused checks are ready for whole-change review; root owns landing.
 
 Milestone: 0.2
 
