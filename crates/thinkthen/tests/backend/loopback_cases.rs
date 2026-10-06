@@ -17,8 +17,7 @@ use serde_json::value::RawValue;
 
 use crate::harness::spawn_one as spawn;
 
-#[path = "../../../../conformance/consumer/consumer/tests/public/keys.rs"]
-mod shared_keys;
+use crate::support::shared_keys;
 
 mod selection;
 use selection::selected_ids;

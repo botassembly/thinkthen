@@ -352,7 +352,9 @@ impl Replayed {
 
     pub(super) fn connection(connection: &Connection) -> Result<Self, Error> {
         connection.execute_batch("BEGIN").map_err(storage)?;
-        let indexed = Entries::read(connection).and_then(Self::indexed);
+        let indexed = Entries::read(connection)
+            .and_then(Self::indexed)
+            .map_err(super::versioned::sqlite_error);
         let ended = connection.execute_batch("ROLLBACK").map_err(storage);
         indexed.and_then(|index| ended.map(|()| index))
     }

@@ -7,6 +7,10 @@ use std::{
 };
 use thinkthen::{ErrorKind, Question};
 
+#[path = "../src/test_deadline/child.rs"]
+mod child;
+use child::ChildEnvironment as _;
+
 struct Folder(PathBuf);
 impl Folder {
     fn new() -> std::io::Result<Self> {
@@ -38,10 +42,15 @@ fn config(root: &Path) -> PathBuf {
 }
 fn child_environment(command: &mut Command, root: &Path) {
     command
-        .env("HOME", root)
+        .clear_environment()
+        .home(root)
         .env("XDG_CONFIG_HOME", root)
         .env("APPDATA", root)
         .current_dir(root);
+    for folder in [child::Folder::Cache, child::Folder::Usage] {
+        let (name, value) = folder.variable(root);
+        command.env(name, value);
+    }
 }
 
 #[test]
@@ -151,6 +160,10 @@ fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_er
         String::from_utf8_lossy(&accepted.stderr)
     );
     assert_eq!(listener.count(), 1);
+    assert!(
+        child::Folder::Usage.under(root.path()).is_dir(),
+        "the live call writes only owned usage"
+    );
     assert_eq!(
         serde_json::from_slice::<serde_json::Value>(&listener.requests()[0].body).unwrap(),
         serde_json::json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{"q1":{"type":"noul","instructions":r#"The text is {"body":"Refund me.","ready":false}. Refund?"#}}})
@@ -313,4 +326,8 @@ fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batche
     assert_eq!(rank.status.code(), Some(2));
     assert!(rank.stdout.is_empty());
     assert_eq!(listener.count(), 2);
+    assert!(
+        child::Folder::Usage.under(root.path()).is_dir(),
+        "the completed prefix writes only owned usage"
+    );
 }
