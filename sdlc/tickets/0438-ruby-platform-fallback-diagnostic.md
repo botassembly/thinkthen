@@ -1,6 +1,6 @@
 # 0438: Replace Ruby’s unsupported-platform placeholder route
 
-Status: in progress. Accepted ticket implementation in lane 0 on `ticket/0438-ruby-platform-fallback`.
+Status: complete. Matching-version diagnostic fallback and release packaging reviewed and checked.
 
 Milestone: 0.2
 
