@@ -91,3 +91,6 @@ mod tally;
 
 #[path = "native_complete/set_rank.rs"]
 mod set_rank;
+
+#[path = "native_complete/admission_cancel.rs"]
+mod admission_cancel;

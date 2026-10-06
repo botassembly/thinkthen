@@ -78,12 +78,14 @@ impl Engine {
         I: IntoIterator<Item = RecordInput<T>>,
         T: InputEvidence,
     {
+        let options = options.started()?;
+        options.admission()?;
         let questions = questions(&set.0);
         let setting = crate::public::bulk::selected_set_batch(&set.0, &options, self.batch)?;
         let (held, inputs) = prepare(
             &questions,
-            self.within_limit(records)?,
-            options.context_text(),
+            self.within_admission(records, &options)?,
+            &options,
         )?;
         let engine = Arc::clone(&self.inner);
         let asker = SetRecords {
@@ -172,11 +174,13 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
         T: InputEvidence,
     {
-        let records = self.try_within_limit(
+        let options = options.started()?;
+        let records = self.try_within_admission(
             records
                 .into_iter()
                 .enumerate()
                 .map(|(at, record)| record.map_err(|error| error.at_record(at))),
+            &options,
         )?;
         self.rank_set_records_complete_with(set, records, options)
     }
@@ -198,15 +202,17 @@ fn questions(set: &core::QuestionSet) -> Vec<Question> {
 fn prepare<T: InputEvidence>(
     questions: &[Question],
     records: impl Iterator<Item = RecordInput<T>>,
-    fallback: Option<&str>,
+    options: &CallOptions<'_>,
 ) -> Result<Admission<T>, Error> {
     let mut held = Vec::new();
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
+        options.admission()?;
         if record.options.is_some() {
             return Err(Error::usage("rank accepts no per-item options").at_record(at));
         }
         let input = record.original.question_input();
+        options.admission()?;
         let mut members = Vec::with_capacity(questions.len());
         let mut context_sha256 = None;
         for question in questions {
@@ -218,7 +224,7 @@ fn prepare<T: InputEvidence>(
                     context: record.context.clone(),
                     options: None,
                 },
-                fallback,
+                options.context_text(),
                 at,
             )?;
             context_sha256 = item.context_sha256;

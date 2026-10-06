@@ -41,18 +41,25 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
         T: InputEvidence,
     {
+        let options = options.started()?;
+        options.admission()?;
         let mut pairs = Vec::new();
         let mut inputs = Vec::new();
         let mut originals = Vec::new();
         let mut lines = None;
         let mut bytes = 0usize;
-        let records = self.try_within_limit(records.into_iter().take(256).enumerate().map(
-            |(at, record)| {
-                record
-                    .and_then(|record| prepare(ask, record, (&mut lines, &mut bytes)))
-                    .map_err(|error| error.at_record(at))
-            },
-        ))?;
+        let records = self.try_within_admission(
+            records
+                .into_iter()
+                .take(256)
+                .enumerate()
+                .map(|(at, record)| {
+                    record
+                        .and_then(|record| prepare(ask, record, (&mut lines, &mut bytes)))
+                        .map_err(|error| error.at_record(at))
+                }),
+            &options,
+        )?;
         for (original, input, pair) in records {
             pairs.push(pair);
             inputs.push(input);

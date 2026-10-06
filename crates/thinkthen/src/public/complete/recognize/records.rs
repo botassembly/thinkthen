@@ -51,14 +51,18 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
         T: InputEvidence,
     {
+        let options = options.started()?;
+        options.admission()?;
         let engine =
             crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
-        let units =
-            self.try_within_limit(records.into_iter().enumerate().map(|(at, record)| {
+        let units = self.try_within_admission(
+            records.into_iter().enumerate().map(|(at, record)| {
                 record
                     .and_then(|record| prepare(&engine, ask, record))
                     .map_err(|error| error.at_record(at))
-            }))?;
+            }),
+            &options,
+        )?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(0, |cancel| {
             let mut rows = Vec::new();
