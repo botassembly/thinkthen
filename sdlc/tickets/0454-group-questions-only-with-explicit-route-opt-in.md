@@ -1,10 +1,9 @@
 # 0454: Store actual batch size and preserve per-question caching
 
-Status: ready. Ian's per-question cache ruling is accepted by fresh High ticket review; implementation joins the native lane.
+Status: in progress. Corrected ticket has fresh High ACCEPT; lane0 adds actual observation batch-size metadata and preserves per-question cache identity.
 
 Milestone: 0.2
 Owner: builder.
-Ticket review: ACCEPT, 2026-10-06; fresh High review of corrected scope at 3cfdd70b7.
 Risk: High, stored-observation compatibility and truthful answer metadata.
 
 ## Outcome
@@ -26,3 +25,7 @@ ADR 0120's exclusion of packing from key identity remains in force. 0444 impleme
 Reconcile annotate.md's contradictory exact-chunk/whole-group reasking clause with the retained per-question reuse promise. Logical evidence selection, record batching and actual wire membership are separate concepts. A changed group alone does not invalidate already stored individual questions. Document that grouping may move model answers and that reuse returns the recorded observation rather than guaranteeing fresh scalar equivalence.
 
 Implement in the same native lane, then expose the field through 0426–0431, SQL and frames. 0432 enforces the actual public consumers. Record the exact bounded field/grammar with code, one fresh High code review of the native change, and one short record at landing. This ticket remains open until required carriers and behavior are checked. Both corrected PM asks receive this ticket and ruling.
+
+## Native work in progress
+
+Complete question-source carriers expose optional batch_size: NonZeroU32 as JSON integer and Option<u32> through the typed accessor. Historical absence stays absent. No batch count, group membership or forced scalar policy enters an identity. The superseded group-key WIP was removed before committing. Annotation clauses now retain per-question reuse and distinguish evidence selection, record-batch bounds and actual wire-question count. Persistence, retry/split/coalescing propagation and the 13/5/8 overlap regression remain open.

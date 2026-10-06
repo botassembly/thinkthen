@@ -186,7 +186,7 @@ struct FindQuestion<'a> {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findQuestion"))]
 #[serde(tag = "verb", rename = "find")]
-struct FindQuestionOwned {
+pub(super) struct FindQuestionOwned {
     text: QuestionText,
     none: bool,
 }
@@ -207,6 +207,11 @@ pub(crate) struct FindAnswer {
 }
 
 impl FindAnswer {
+    /// Confidence reported for this distribution, when supplied.
+    pub(crate) const fn confidence(&self) -> Option<f64> {
+        self.confidence
+    }
+
     /// The selected unit, or none when `none` shares or owns the lead.
     #[must_use]
     pub(crate) const fn selected(&self) -> Option<usize> {
@@ -230,11 +235,11 @@ fn ordered<S: Serializer>(entries: &[(String, f64)], serializer: S) -> Result<S:
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findDetails"))]
 pub(crate) struct FindResult {
     schema: &'static str,
-    value: Option<Record>,
-    question: FindQuestionOwned,
-    answer: FindAnswer,
-    threshold: Option<()>,
-    meta: Meta,
+    pub(super) value: Option<Record>,
+    pub(super) question: FindQuestionOwned,
+    pub(super) answer: FindAnswer,
+    pub(super) threshold: Option<()>,
+    pub(super) meta: Meta,
 }
 
 #[cfg(test)]

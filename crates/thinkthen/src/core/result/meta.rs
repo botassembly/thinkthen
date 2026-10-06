@@ -9,26 +9,26 @@ use crate::core::text::{ModelName, Url};
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "meta"))]
 pub(crate) struct Meta {
-    tool: String,
-    question_sha256: String,
-    url: Url,
-    model: ModelName,
+    pub(super) tool: String,
+    pub(super) question_sha256: String,
+    pub(super) url: Url,
+    pub(super) model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
-    usage: Option<Usage>,
-    requests_sent: u64,
-    cached: bool,
-    requests: Vec<String>,
-    failed_questions: usize,
+    pub(super) usage: Option<Usage>,
+    pub(super) requests_sent: u64,
+    pub(super) cached: bool,
+    pub(super) requests: Vec<String>,
+    pub(super) failed_questions: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
-    profile_warning: Option<ProfileWarning>,
+    pub(super) profile_warning: Option<ProfileWarning>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    batch_setting: Option<BatchSetting>,
+    pub(super) batch_setting: Option<BatchSetting>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    batch_warning: Option<BatchWarning>,
+    pub(super) batch_warning: Option<BatchWarning>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    context_sha256: Option<String>,
+    pub(super) context_sha256: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    attempts: Option<Vec<crate::core::AttemptObservation>>,
+    pub(super) attempts: Option<Vec<crate::core::AttemptObservation>>,
 }
 
 impl Meta {

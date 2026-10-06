@@ -15,6 +15,7 @@ mod asking;
 mod batch;
 mod builders;
 mod bulk;
+mod rank_question;
 mod rank_set;
 pub use rank_set::RankSet;
 mod choice;
@@ -39,7 +40,7 @@ mod settings;
 
 pub use crate::core::settings::{For, Settings, SettingsError};
 pub use crate::core::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
-pub use crate::core::{Observation, Origin, QuestionSource, ResultIdentity};
+pub use crate::core::{MemberIdentity, Observation, Origin, QuestionSource, ResultIdentity};
 /// The channel every ThinkThen binding waits on, so a forked child on macOS
 /// can wait too (ticket 0365). It is for the bindings, not a documented API.
 #[doc(hidden)]
@@ -71,9 +72,11 @@ pub use relate::{Edge, Entity, Relate, RelateBuilder};
 #[cfg(test)]
 pub(crate) use results::QuestionJson;
 pub use results::{
-    Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, DoorReply,
-    Facts, Found, Judgment, NamedProbability, ObservedRow, Picked, Probabilities, QuestionDetail,
-    Ranked, RankedRow, RecordObservation, Row, SetRanked, Tally, TallyStart, Usage,
+    Answer, AttemptObservation, AttemptOutcome, Call, Candidate, CompleteAnnotated,
+    CompleteAnnotationMember, CompleteChoice, CompleteDecision, CompleteFilter, CompleteFound,
+    CompleteRank, CompleteRecord, CompleteScore, CompleteTags, Counters, Details, DoorReply, Facts,
+    Found, Judgment, NamedProbability, ObservedRow, Picked, Probabilities, QuestionDetail, Ranked,
+    RankedRow, RecordObservation, Row, SetRanked, Tally, TallyStart, Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;

@@ -26,3 +26,12 @@ Every request identifies its actual engine version and public surface; every cal
 ## Revised SDK boundary and identity
 
 0449 resolves one endpoint/key/API-type before work. Direct model selectors stay opaque explicit parameters; no model group/fallback/automatic policy routing. Coordinate 0450 observation/answer identity via the existing ID facility. Transient call/request IDs remain absent from answer recordings; persistent observation identity is separate allowed record metadata under 0444. Reserved proxy fields never enter ordinary vendor bytes, and direct replies cannot attest them.
+
+Native lane0 WIP: concrete typed result/2 carriers and serializers now cover
+the six atomic readings, annotation successes/failures and whole-set find;
+record carriers retain caller originals without extra trait bounds. Pure
+serializer checks preserve explicit legacy result/1 projection, successful
+null versus failure, numeric rank positions and zero-observation metadata.
+These are constituent types, not completed public execution routes.
+Transport headers, persistent observation propagation and shared storage
+integration remain open pending the image source handoff.

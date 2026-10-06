@@ -71,7 +71,6 @@ pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
 pub(crate) use crate::core::digest::{bytes_sha256, hex};
 pub(crate) use crate::core::find::Find;
-#[cfg(test)]
 pub(crate) use crate::core::find::FindResult;
 pub(crate) use crate::core::json::Json;
 pub(crate) use crate::core::json::JsonError;
@@ -110,6 +109,11 @@ pub(crate) use crate::core::reply::{
     AnswerOutcome, BackendFailure, BackendFailureCause, FailedValue, Reply,
 };
 pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
+pub(crate) use crate::core::result::complete::Atomic as CompleteAtomic;
+pub(crate) use crate::core::result::complete::Find as CompleteFind;
+pub(crate) use crate::core::result::complete::{
+    Annotation as CompleteAnnotation, AnnotationMember as CompleteAnnotationMember,
+};
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
     AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning,
@@ -121,6 +125,7 @@ pub(crate) use crate::core::text::{
 };
 pub(crate) use crate::core::threshold::{Outcome, Threshold, ThresholdError};
 pub use identity::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
+pub use result::complete::MemberIdentity;
 pub use result::{Observation, Origin, QuestionSource, ResultIdentity};
 
 pub(crate) use crate::core::find::FindAnswer;

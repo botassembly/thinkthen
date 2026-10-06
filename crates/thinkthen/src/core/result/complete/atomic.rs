@@ -1,0 +1,52 @@
+//! Complete atomic judgments share the frozen legacy answer representation.
+
+use serde::ser::SerializeMap;
+use serde::{Serialize, Serializer};
+
+use super::{CompleteMeta, ResultIdentity};
+use crate::core::{Answer, DecisionResult, Usage};
+
+/// The complete canonical document for decide, choose, tag, score, filter or rank.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Atomic {
+    pub(crate) identity: ResultIdentity,
+    pub(crate) legacy: DecisionResult,
+    pub(crate) rank_position: Option<std::num::NonZeroUsize>,
+}
+
+impl Atomic {
+    pub(crate) const fn usage(&self) -> Option<Usage> {
+        self.legacy.meta.usage
+    }
+
+    pub(crate) const fn answer(&self) -> &Answer {
+        &self.legacy.answer
+    }
+}
+
+impl Serialize for Atomic {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let row = &self.legacy;
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("schema", "thinkthen.result/2")?;
+        map.serialize_entry("answer_id", self.identity.answer_id())?;
+        match self.rank_position {
+            Some(position) => map.serialize_entry("value", &position)?,
+            None => map.serialize_entry("value", &row.value)?,
+        }
+        if let Some(input) = &row.input {
+            map.serialize_entry("input", input)?;
+        }
+        map.serialize_entry("question", &row.question)?;
+        map.serialize_entry("answer", &row.answer)?;
+        map.serialize_entry("threshold", &row.threshold)?;
+        map.serialize_entry(
+            "meta",
+            &CompleteMeta {
+                legacy: &row.meta,
+                identity: &self.identity,
+            },
+        )?;
+        map.end()
+    }
+}

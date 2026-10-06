@@ -11,7 +11,7 @@ use crate::core::text::{ModelName, Url};
 use crate::core::threshold::Threshold;
 
 mod attempt;
-mod complete;
+pub(crate) mod complete;
 pub use complete::{Observation, Origin, QuestionSource, ResultIdentity};
 mod batch_warning;
 mod meta;

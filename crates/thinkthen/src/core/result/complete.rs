@@ -4,6 +4,16 @@ use serde::Serialize;
 
 use crate::core::{AnswerId, FailureId, ModelName, ObservationId};
 
+mod annotation;
+mod atomic;
+mod find;
+pub use annotation::MemberIdentity;
+pub(crate) use annotation::{Annotation, AnnotationMember};
+pub(crate) use find::Find;
+mod meta;
+pub(crate) use atomic::Atomic;
+use meta::CompleteMeta;
+
 /// The actual source of one logical question's accepted reply.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -41,9 +51,17 @@ pub enum Observation {
 pub struct QuestionSource {
     origin: Origin,
     answered_by: ModelName,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    batch_size: Option<std::num::NonZeroU32>,
 }
 
 impl QuestionSource {
+    /// Actual wire-question count that produced this observation; unknown history stays absent.
+    #[must_use]
+    pub fn batch_size(&self) -> Option<u32> {
+        self.batch_size.map(std::num::NonZeroU32::get)
+    }
+
     /// Where this occurrence's response was retrieved.
     #[must_use]
     pub const fn origin(&self) -> Origin {
@@ -99,3 +117,6 @@ impl ResultIdentity {
         self.answered_by.as_ref().map(ModelName::as_str)
     }
 }
+
+#[cfg(test)]
+mod tests;

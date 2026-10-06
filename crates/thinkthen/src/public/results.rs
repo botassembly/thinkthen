@@ -4,6 +4,16 @@
 use std::fmt;
 
 mod call;
+mod complete;
+mod complete_annotation;
+mod complete_find;
+mod complete_record;
+pub use complete::{
+    CompleteChoice, CompleteDecision, CompleteFilter, CompleteRank, CompleteScore, CompleteTags,
+};
+pub use complete_annotation::{CompleteAnnotated, CompleteAnnotationMember};
+pub use complete_find::CompleteFound;
+pub use complete_record::CompleteRecord;
 mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome};
 pub use call::{Call, DoorReply, Facts};
