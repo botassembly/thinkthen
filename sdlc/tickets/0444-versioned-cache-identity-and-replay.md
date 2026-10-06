@@ -71,3 +71,20 @@ A prior-failing independently framed public recording regression now passes,
 including original ordered duplicate attachments and zero-send strict replay.
 All 24 image and nine storage cases plus affected Clippy pass. Whole review and
 main landing remain open.
+
+Lane1 legacy-key diagnosis: the saved C integration log's two failures are
+`cases::portable::c_json_records_keep_fixture_questions_and_keys_in_one_request`
+and `cases::every_applicable_shared_case_passes_through_the_door`. Committed C
+consumer be26fdc13 computes LF-joined v1 keys in tests/door/cases/wire.rs; the
+shared-case planner uses that same helper. Native public calls reproduce the
+distinction for the portable questions and shared case 01: wire questions remain
+byte-identical, while metadata keys match independently framed question-key/2.
+The accepted cache contract, committed in e3d665981, explicitly rules under
+Validation and migration: "`meta.requests` uses v2 question keys after adoption,
+requiring one controlled example/fixture update by 0444." ADR 0120 decisions 3–4
+retain original v1 validation before rekeying and committed offline fixtures.
+The added public regression replays original valid v1 rows without sends or
+file writes; existing recording/1 conversion regressions remain passing.
+No native compatibility exception or C expectation edit is made here. Root must
+coordinate the authorized metadata-oracle adoption with the C/corpus owners;
+original v1 stored keys and request-envelope validation remain distinct.
