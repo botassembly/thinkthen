@@ -48,6 +48,10 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
     // keep their compatibility spelling and permissiveness.
     strict::graph(definitions, "completeCall");
     strict::graph(definitions, "Surface");
+    definitions
+        .get_mut("completeUsage")
+        .expect("reported usage")["anyOf"] =
+        json!([{"required":["input_tokens"]},{"required":["output_tokens"]}]);
     let meta = definitions.get_mut("completeMeta").expect("complete meta");
     meta["oneOf"] = json!([
         {"required":["question_sha256"],"not":{"required":["questions_sha256"]}},

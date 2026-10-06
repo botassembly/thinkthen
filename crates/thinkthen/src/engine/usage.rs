@@ -7,8 +7,6 @@ use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use crate::core::Usage;
-
 mod counts;
 pub(crate) use counts::Counts;
 mod attempt;
@@ -98,15 +96,6 @@ impl Counters {
         self.add(Counts {
             requests_sent: 1,
             retries: u64::from(retry),
-            ..Counts::default()
-        });
-    }
-
-    pub(crate) fn tokens(&self, usage: Usage) {
-        let (input_tokens, output_tokens) = usage.token_counts();
-        self.add(Counts {
-            input_tokens,
-            output_tokens,
             ..Counts::default()
         });
     }

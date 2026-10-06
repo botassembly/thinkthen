@@ -31,6 +31,18 @@ remains its explicit compatibility shape. Existing caller-thread observers,
 joined late replies and join-before-unwind/drop behavior remain tested.
 Command timing, recording sidecars and complete execution routes remain open.
 
+CLI usage constituent: final run facts now sum actually reported input/output
+independently, retaining input887 when output is absent on successful or refused
+answers. Count-only durable totals add each known dimension without treating a
+missing counter delta as observed zero. Full-cost estimates still require all
+sent replies to report both counts. The compiled-command regression failed
+before this fix; existing facts/pricing/overflow/cancellation cases pass. Native
+cache/replay cases also distinguish empty usage from explicitly reported zero,
+and the strict complete schema rejects a present empty usage object. Source
+grows 76 nonblank Rust lines (145934 to 146010) for those outside-in cases and
+shared partial-count bookkeeping; the unused full-count helper was removed.
+Command timing, sidecars, aggregate CLI and host adoption remain unfinished.
+
 ### Added public declarations
 
 ```text

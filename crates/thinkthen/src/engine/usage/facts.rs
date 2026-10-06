@@ -2,15 +2,15 @@
 
 use std::sync::PoisonError;
 
-use crate::core::{ModelName, Prices, Usage};
+use crate::core::{ModelName, Prices, ReportedSum, ReportedUsage};
 
 use super::{Counters, Counts};
 
 #[derive(Debug)]
 pub(super) struct State {
     records: u64,
-    live_with_usage: u64,
-    live_without_usage: u64,
+    live_replies: u64,
+    reported: ReportedSum,
     model: Option<ModelName>,
     mixed_models: bool,
     pub(super) token_sum_valid: bool,
@@ -21,8 +21,8 @@ impl Default for State {
     fn default() -> Self {
         Self {
             records: 0,
-            live_with_usage: 0,
-            live_without_usage: 0,
+            live_replies: 0,
+            reported: ReportedSum::default(),
             model: None,
             mixed_models: false,
             token_sum_valid: true,
@@ -35,7 +35,7 @@ impl Default for State {
 pub(crate) struct Snapshot {
     pub(crate) counts: Counts,
     pub(crate) records: u64,
-    pub(crate) usage_known: bool,
+    pub(crate) reported: Option<ReportedUsage>,
     pub(crate) estimated_cost_usd: Option<String>,
     pub(crate) model: Option<String>,
 }
@@ -60,20 +60,23 @@ impl Counters {
     }
 
     /// Record whether a live reply supplied usage. Never invent zero tokens.
-    pub(crate) fn live_reply(&self, usage: Option<Usage>) {
+    pub(crate) fn live_reply(&self, usage: Option<ReportedUsage>) {
         if let Some(usage) = usage {
-            self.tokens(usage);
+            // A missing dimension contributes no counter delta. Its absence
+            // remains in ReportedSum, so these totals never become reply facts.
+            self.add(Counts {
+                input_tokens: usage.input_tokens().unwrap_or(0),
+                output_tokens: usage.output_tokens().unwrap_or(0),
+                ..Counts::default()
+            });
         }
         let mut queue = self
             .shared
             .queue
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
-        if usage.is_some() {
-            queue.facts.live_with_usage = queue.facts.live_with_usage.saturating_add(1);
-        } else {
-            queue.facts.live_without_usage = queue.facts.live_without_usage.saturating_add(1);
-        }
+        queue.facts.live_replies = queue.facts.live_replies.saturating_add(1);
+        queue.facts.reported.add(usage);
     }
 
     /// Remember the answer's reported model, including replayed answers.
@@ -95,18 +98,18 @@ impl Counters {
         let lock = self.shared.queue.lock();
         let poisoned = lock.is_err();
         let queue = lock.unwrap_or_else(PoisonError::into_inner);
-        let usage_known = !poisoned
-            && queue.facts.token_sum_valid
-            && queue.facts.live_with_usage > 0
-            && queue.facts.live_without_usage == 0;
+        let reported = (!poisoned)
+            .then(|| queue.facts.reported.total().ok().flatten())
+            .flatten();
         let cost_complete = !poisoned
             && queue.facts.token_sum_valid
-            && queue.facts.live_without_usage == 0
-            && queue.facts.live_with_usage == queue.totals.requests_sent;
+            && queue.facts.live_replies == queue.totals.requests_sent
+            && (queue.facts.live_replies == 0
+                || reported.and_then(ReportedUsage::complete).is_some());
         Snapshot {
             counts: queue.totals,
             records: queue.facts.records,
-            usage_known,
+            reported,
             estimated_cost_usd: queue.facts.prices.and_then(|prices| {
                 cost_complete.then(|| {
                     prices.estimate(queue.totals.input_tokens, queue.totals.output_tokens)

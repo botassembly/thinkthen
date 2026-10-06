@@ -2729,6 +2729,83 @@
           "answered_by": "reported"
         }
       }
+    },
+    {
+      "name": "native-result2-empty-usage-is-absent",
+      "definition": "completeDecide",
+      "schema_only": true,
+      "response_valid": false,
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {},
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 1
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      }
     }
   ]
 }

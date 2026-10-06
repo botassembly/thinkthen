@@ -97,3 +97,5 @@ mod admission_cancel;
 
 #[path = "native_complete/schema.rs"]
 mod schema;
+#[path = "native_complete/unknown_usage.rs"]
+mod unknown_usage;

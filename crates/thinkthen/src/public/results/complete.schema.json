@@ -2781,6 +2781,18 @@
       "unevaluatedProperties": false
     },
     "completeUsage": {
+      "anyOf": [
+        {
+          "required": [
+            "input_tokens"
+          ]
+        },
+        {
+          "required": [
+            "output_tokens"
+          ]
+        }
+      ],
       "properties": {
         "input_tokens": {
           "format": "uint64",

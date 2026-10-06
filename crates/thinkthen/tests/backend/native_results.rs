@@ -38,6 +38,21 @@ fn withheld(output: &std::process::Output, sentinel: &str) {
     assert!(!String::from_utf8_lossy(&output.stdout).contains(sentinel));
     assert!(!String::from_utf8_lossy(&output.stderr).contains(sentinel));
 }
+#[cfg(test)]
+fn partial_facts(output: &std::process::Output) {
+    let facts: Value = serde_json::from_slice(&output.stderr).unwrap();
+    assert_eq!(facts["input_tokens"], 887);
+    assert!(facts.get("output_tokens").is_none());
+    assert!(facts.get("estimated_cost_usd").is_none());
+}
+#[cfg(test)]
+fn complete_sources(row: &Value, count: usize) {
+    assert_eq!(
+        row["meta"]["question_sources"].as_array().unwrap().len(),
+        count
+    );
+    assert!(row["meta"]["attempts"][0]["sdk_request_id"].is_string());
+}
 #[test]
 fn atomic_command_details_keep_actual_partial_usage_probabilities_and_independent_wire_questions() {
     let fixtures = [
@@ -91,6 +106,7 @@ fn atomic_command_details_keep_actual_partial_usage_probabilities_and_independen
         arguments.extend(labels);
         arguments.extend([
             "--details",
+            "--facts",
             "--no-cache",
             "--url",
             listener.base(),
@@ -117,11 +133,8 @@ fn atomic_command_details_keep_actual_partial_usage_probabilities_and_independen
         assert_eq!(row["value"], value);
         assert_eq!(row["meta"]["origin"], "live");
         assert_eq!(row["meta"]["usage"], json!({"input_tokens":887}));
-        assert_eq!(
-            row["meta"]["question_sources"].as_array().unwrap().len(),
-            if verb == "tag" { 2 } else { 1 }
-        );
-        assert!(row["meta"]["attempts"][0]["sdk_request_id"].is_string());
+        partial_facts(&output);
+        complete_sources(&row, if verb == "tag" { 2 } else { 1 });
         assert_eq!(
             serde_json::from_slice::<Value>(&listener.requests()[0].body).unwrap(),
             json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":expected})

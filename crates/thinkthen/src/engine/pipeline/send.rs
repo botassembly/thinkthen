@@ -244,18 +244,14 @@ impl<'a> Sender<'a> {
         let decoders: Vec<_> = asks.iter().map(|(ask, _)| ask.decoder.clone()).collect();
         match pack::split(&decoders, body) {
             Ok(split) => {
-                self.transport
-                    .usage
-                    .live_reply(split.usage.and_then(crate::core::ReportedUsage::complete));
+                self.transport.usage.live_reply(split.usage);
                 cancel.live_reply(split.usage);
                 self.transport.usage.answered_by(&split.model);
                 cancel.answered_by(split.model.as_str());
                 Ok(split)
             }
             Err((error, usage)) => {
-                self.transport
-                    .usage
-                    .live_reply(usage.and_then(crate::core::ReportedUsage::complete));
+                self.transport.usage.live_reply(usage);
                 cancel.live_reply(usage);
                 Err(Error::from(error))
             }
