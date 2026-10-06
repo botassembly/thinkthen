@@ -66,6 +66,7 @@ withheld Debug, and prove zero additional cache sends.
 ### Added public declarations
 
 ```text
+fn EngineBuilder::proxy(self, &ProxyActivation) -> EngineBuilder
 struct IdentityError
 impl Display for IdentityError
 impl Error for IdentityError
@@ -178,4 +179,41 @@ OwnedRecordObservation::Question::detail: OwnedQuestionDetail
 OwnedRecordObservation::Row
 OwnedRecordObservation::Row::index: usize
 OwnedRecordObservation::Row::value: OwnedObservedRow
+enum MemberIdentity
+MemberIdentity::Answered(AnswerId)
+MemberIdentity::Failed(FailureId)
+struct ProxyId
+impl Serialize for ProxyId
+fn ProxyId::new(impl Into<String>) -> Result<ProxyId, Error>
+fn ProxyId::as_str(&self) -> &str
+struct CodeThreshold
+impl Serialize for CodeThreshold
+const fn CodeThreshold::none() -> CodeThreshold
+fn CodeThreshold::cut(f64) -> Result<CodeThreshold, Error>
+fn CodeThreshold::band(f64, f64) -> Result<CodeThreshold, Error>
+struct ProxyRequest
+impl Serialize for ProxyRequest
+ProxyRequest::question_id: Option<ProxyId>
+ProxyRequest::code_threshold: CodeThreshold
+ProxyRequest::code_relation_threshold: Option<CodeThreshold>
+enum ProxyActivation
+impl Serialize for ProxyActivation
+ProxyActivation::Null
+ProxyActivation::Empty
+ProxyActivation::Request(ProxyRequest)
+enum ProxyOverride<V>
+impl Serialize for ProxyOverride
+ProxyOverride::None
+ProxyOverride::None::code_threshold: CodeThreshold
+ProxyOverride::Threshold
+ProxyOverride::Threshold::code_threshold: CodeThreshold
+ProxyOverride::Threshold::effective_threshold: CodeThreshold
+ProxyOverride::Decision
+ProxyOverride::Decision::code_threshold: CodeThreshold
+ProxyOverride::Decision::code_value: V
+ProxyOverride::Decision::value: V
+struct ProxyMetadata<V>
+impl Serialize for ProxyMetadata
+ProxyMetadata::decision_id: ProxyId
+ProxyMetadata::reading: ProxyOverride<V>
 ```

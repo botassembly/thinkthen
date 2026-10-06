@@ -66,3 +66,5 @@ mod dynamic_choose;
 mod find_reading;
 #[path = "native_complete/observers.rs"]
 mod observers;
+#[path = "native_complete/streaming.rs"]
+mod streaming;

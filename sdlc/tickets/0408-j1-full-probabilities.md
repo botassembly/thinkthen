@@ -118,6 +118,154 @@ fn CompleteFilter::question(&self) -> ResolvedQuestion<'_>
 fn CompleteFilter::threshold(&self) -> Option<ResolvedThreshold>
 fn CompleteRank::question(&self) -> ResolvedQuestion<'_>
 fn CompleteRank::threshold(&self) -> Option<ResolvedThreshold>
+struct CompleteDecision
+impl Serialize for CompleteDecision
+fn CompleteDecision::meta(&self) -> ResultMetadata<'_>
+const fn CompleteDecision::answer_id(&self) -> &AnswerId
+const fn CompleteDecision::identity(&self) -> &ResultIdentity
+fn CompleteDecision::probabilities(&self) -> Probabilities
+fn CompleteDecision::confidence(&self) -> Option<f64>
+fn CompleteDecision::usage(&self) -> Option<Usage>
+fn CompleteDecision::to_json(&self) -> Result<String, Error>
+struct CompleteChoice
+impl Serialize for CompleteChoice
+fn CompleteChoice::meta(&self) -> ResultMetadata<'_>
+const fn CompleteChoice::answer_id(&self) -> &AnswerId
+const fn CompleteChoice::identity(&self) -> &ResultIdentity
+fn CompleteChoice::probabilities(&self) -> Probabilities
+fn CompleteChoice::confidence(&self) -> Option<f64>
+fn CompleteChoice::usage(&self) -> Option<Usage>
+fn CompleteChoice::to_json(&self) -> Result<String, Error>
+struct CompleteTags
+impl Serialize for CompleteTags
+fn CompleteTags::meta(&self) -> ResultMetadata<'_>
+const fn CompleteTags::answer_id(&self) -> &AnswerId
+const fn CompleteTags::identity(&self) -> &ResultIdentity
+fn CompleteTags::probabilities(&self) -> Probabilities
+fn CompleteTags::confidence(&self) -> Option<f64>
+fn CompleteTags::usage(&self) -> Option<Usage>
+fn CompleteTags::to_json(&self) -> Result<String, Error>
+struct CompleteScore
+impl Serialize for CompleteScore
+fn CompleteScore::meta(&self) -> ResultMetadata<'_>
+const fn CompleteScore::answer_id(&self) -> &AnswerId
+const fn CompleteScore::identity(&self) -> &ResultIdentity
+fn CompleteScore::probabilities(&self) -> Probabilities
+fn CompleteScore::confidence(&self) -> Option<f64>
+fn CompleteScore::usage(&self) -> Option<Usage>
+fn CompleteScore::to_json(&self) -> Result<String, Error>
+struct CompleteFilter
+impl Serialize for CompleteFilter
+fn CompleteFilter::meta(&self) -> ResultMetadata<'_>
+const fn CompleteFilter::answer_id(&self) -> &AnswerId
+const fn CompleteFilter::identity(&self) -> &ResultIdentity
+fn CompleteFilter::probabilities(&self) -> Probabilities
+fn CompleteFilter::confidence(&self) -> Option<f64>
+fn CompleteFilter::usage(&self) -> Option<Usage>
+fn CompleteFilter::to_json(&self) -> Result<String, Error>
+struct CompleteRank
+impl Serialize for CompleteRank
+fn CompleteRank::meta(&self) -> ResultMetadata<'_>
+const fn CompleteRank::answer_id(&self) -> &AnswerId
+const fn CompleteRank::identity(&self) -> &ResultIdentity
+fn CompleteRank::probabilities(&self) -> Probabilities
+fn CompleteRank::confidence(&self) -> Option<f64>
+fn CompleteRank::usage(&self) -> Option<Usage>
+fn CompleteRank::to_json(&self) -> Result<String, Error>
+const fn CompleteDecision::value(&self) -> Answer
+fn CompleteChoice::value(&self) -> Option<&str>
+fn CompleteTags::value(&self) -> &[String]
+const fn CompleteScore::value(&self) -> f64
+const fn CompleteFilter::value(&self) -> bool
+const fn CompleteRank::value(&self) -> usize
+struct CompleteRecord<T, R>
+const fn CompleteRecord::original(&self) -> &T
+const fn CompleteRecord::ordinal(&self) -> usize
+const fn CompleteRecord::result(&self) -> &R
+fn CompleteRecord::into_parts(self) -> (T, R)
+struct CompleteFound<T>
+impl Serialize for CompleteFound
+fn CompleteFound::meta(&self) -> ResultMetadata<'_>
+const fn CompleteFound::answer_id(&self) -> &AnswerId
+const fn CompleteFound::identity(&self) -> &ResultIdentity
+fn CompleteFound::to_json(&self) -> Result<String, Error> where T: Serialize
+fn CompleteFound::usage(&self) -> Option<Usage>
+struct CompleteAnnotated
+impl Serialize for CompleteAnnotated
+fn CompleteAnnotated::meta(&self) -> ResultMetadata<'_>
+const fn CompleteAnnotated::answer_id(&self) -> &AnswerId
+const fn CompleteAnnotated::identity(&self) -> &ResultIdentity
+fn CompleteAnnotated::to_json(&self) -> Result<String, Error>
+struct CompleteRecognized
+impl Serialize for CompleteRecognized
+fn CompleteRecognized::meta(&self) -> ResultMetadata<'_>
+const fn CompleteRecognized::answer_id(&self) -> &AnswerId
+const fn CompleteRecognized::identity(&self) -> &ResultIdentity
+fn CompleteRecognized::to_json(&self) -> Result<String, Error>
+fn CompleteRecognized::usage(&self) -> Option<Usage>
+struct CompleteRelated
+impl Serialize for CompleteRelated
+fn CompleteRelated::meta(&self) -> ResultMetadata<'_>
+const fn CompleteRelated::answer_id(&self) -> &AnswerId
+const fn CompleteRelated::identity(&self) -> &ResultIdentity
+fn CompleteRelated::to_json(&self) -> Result<String, Error>
+fn CompleteRelated::usage(&self) -> Option<Usage>
+fn CompleteFound::selected(&self) -> Option<&T>
+fn CompleteFound::candidates(&self) -> &[Candidate<T>]
+fn CompleteFound::confidence(&self) -> Option<f64>
+fn CompleteFound::into_selected(self) -> Option<T>
+fn CompleteAnnotated::members(&self) -> impl ExactSizeIterator<Item = CompleteAnnotationMember<'_>>
+struct CompleteAnnotationMember<'a>
+fn CompleteAnnotationMember::name(&self) -> &str
+fn CompleteAnnotationMember::answer_id(&self) -> Option<&AnswerId>
+fn CompleteAnnotationMember::failure_id(&self) -> Option<&FailureId>
+fn CompleteAnnotationMember::value(&self) -> Option<Judgment>
+fn CompleteAnnotationMember::probabilities(&self) -> Option<Probabilities>
+fn CompleteAnnotationMember::confidence(&self) -> Option<f64>
+fn CompleteAnnotationMember::failure(&self) -> Option<FailureCause>
+fn CompleteAnnotationMember::request(&self) -> &str
+const fn CompleteRecognized::value(&self) -> &Recognized
+fn CompleteRecognized::probabilities(&self) -> RecognitionProbabilities<'_>
+struct RecognitionProbabilities<'a>
+fn RecognitionProbabilities::pieces(&self) -> impl ExactSizeIterator<Item = PieceProbabilities<'_>>
+fn RecognitionProbabilities::names(&self) -> impl ExactSizeIterator<Item = NameProbabilities<'_>>
+fn RecognitionProbabilities::pairs(&self) -> impl ExactSizeIterator<Item = PairProbability<'_>>
+struct PieceProbabilities<'a>
+fn PieceProbabilities::range(&self) -> Range<usize>
+fn PieceProbabilities::tags(&self) -> Vec<NamedProbability>
+struct NameProbabilities<'a>
+fn NameProbabilities::range(&self) -> Range<usize>
+fn NameProbabilities::kinds(&self) -> Option<Vec<NamedProbability>>
+fn NameProbabilities::edges(&self) -> Option<Vec<NamedProbability>>
+struct PairProbability<'a>
+fn PairProbability::relation(&self) -> &str
+fn PairProbability::source(&self) -> Range<usize>
+fn PairProbability::target(&self) -> Range<usize>
+fn PairProbability::probability(&self) -> f64
+fn CompleteRelated::value(&self) -> &[Edge]
+fn CompleteRelated::members(&self) -> impl ExactSizeIterator<Item = CompleteRelationMember<'_>>
+struct CompleteRelationMember<'a>
+fn CompleteRelationMember::relation(&self) -> &str
+fn CompleteRelationMember::reads(&self) -> &str
+fn CompleteRelationMember::source(&self) -> Entity
+fn CompleteRelationMember::target(&self) -> Option<Entity>
+fn CompleteRelationMember::answer_id(&self) -> Option<&AnswerId>
+fn CompleteRelationMember::failure_id(&self) -> Option<&FailureId>
+fn CompleteRelationMember::probabilities(&self) -> Option<Probabilities>
+fn CompleteRelationMember::failure(&self) -> Option<FailureCause>
+fn CompleteRelationMember::request(&self) -> &str
+const fn CompleteRelationMember::method(&self) -> RelationMethod
+const fn CompleteRelationMember::direction(&self) -> RelationDirection
+const fn CompleteRelationMember::probability(&self) -> Option<f64>
+const fn CompleteRelationMember::accepted(&self) -> Option<bool>
+enum RelationMethod
+RelationMethod::YesNo
+RelationMethod::Choice
+impl Serialize for RelationMethod
+enum RelationDirection
+RelationDirection::SourceToTarget
+RelationDirection::Either
+impl Serialize for RelationDirection
 ```
 
 Saved native find preparation now uses the common ordered grammar and capped reader, retains model/profile and rejects authored cuts/candidates/batch. Actual execution retains original units and partial reported usage; CLI file selection shares the same parser and fields. Complete CLI result/2/schema adoption remains in progress.

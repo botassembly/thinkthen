@@ -34,6 +34,7 @@ Command timing, recording sidecars and complete execution routes remain open.
 ### Added public declarations
 
 ```text
+const fn Facts::call_id(&self) -> Option<&CallId>
 struct CompleteAttempt<'a>
 struct CompleteFacts<'a>
 impl Serialize for CompleteAttempt

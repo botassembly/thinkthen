@@ -30,3 +30,11 @@ The current result specification requires thinkthen.result/2 and a changelog ent
 ## Native work in progress
 
 Separate canonical result/2 atomic serialization accepts a positive integer rank position while retaining the legacy result/1 projection. CompleteRank exposes the position and complete probabilities. Pure serializer cases pin integer semantics and unchanged legacy null. Position finalization, runtime routing, CLI/schema/corpus adoption and observation routes remain open.
+
+### Added public declarations
+
+```text
+fn Question::rank_described(&str, Option<Description>, Option<Description>) -> Result<Question, Error>
+fn Question::rank_from_json(&str) -> Result<Question, Error>
+fn Question::load_rank(impl AsRef<Path>) -> Result<Question, Error>
+```

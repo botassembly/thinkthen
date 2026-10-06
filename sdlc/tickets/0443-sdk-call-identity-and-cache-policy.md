@@ -69,6 +69,13 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+fn Batch::into_call(self) -> Result<Call<Vec<T>>, Error>
+fn Engine::try_decide_records_complete_with<'a, Q, I, T>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteDecision>> where Q: DecisionQuestion + ?Sized, I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
+fn Engine::try_choose_records_complete_with<'a, Q, I, T>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteChoice>> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
+fn Engine::try_tag_records_complete_with<'a, Q, I, T>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteTags>> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
+fn Engine::try_score_records_complete_with<'a, I, T>(&'a self, &'a Question, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteScore>> where I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
+fn Engine::try_filter_records_complete_with<'a, I, T>(&'a self, &'a Question, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteFilter>> where I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
+fn Engine::try_annotate_records_complete_with<'a, I, T>(&'a self, &'a QuestionSet, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteAnnotated>> where I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
 struct SurfaceError
 impl Display for SurfaceError
 impl Error for SurfaceError
@@ -170,6 +177,32 @@ impl Serialize for StopCause
 impl Serialize for SendBudgetDenial
 impl Serialize for EstimatedInputDenial
 impl Serialize for CompleteRecord
+struct ResultMetadata<'a>
+const fn ResultMetadata::tool(&self) -> &str
+const fn ResultMetadata::question_sha256(&self) -> Option<&str>
+const fn ResultMetadata::questions_sha256(&self) -> Option<&str>
+const fn ResultMetadata::url(&self) -> &str
+const fn ResultMetadata::model(&self) -> &str
+const fn ResultMetadata::usage(&self) -> Option<ReportedUsage>
+const fn ResultMetadata::requests_sent(&self) -> u64
+const fn ResultMetadata::requests(&self) -> &[String]
+const fn ResultMetadata::failed_questions(&self) -> usize
+const fn ResultMetadata::identity(&self) -> &ResultIdentity
+const fn ResultMetadata::context_sha256(&self) -> Option<&str>
+const fn ResultMetadata::attempts(&self) -> Option<&[AttemptObservation]>
+fn ResultMetadata::cached(&self) -> bool
+fn ResultMetadata::profile_warning(&self) -> Option<ProfileMismatch<'_>>
+fn ResultMetadata::batch_setting(&self) -> Option<BatchSetting>
+fn ResultMetadata::batch_warning(&self) -> Option<BatchMismatch<'_>>
+struct ProfileMismatch<'a>
+fn ProfileMismatch::tuned_for(&self) -> &str
+fn ProfileMismatch::running(&self) -> &str
+struct BatchMismatch<'a>
+fn BatchMismatch::tuned_for(&self) -> Option<BatchSetting>
+fn BatchMismatch::running(&self) -> Option<BatchSetting>
+fn EngineBuilder::refresh_cache(self, bool) -> EngineBuilder
+const fn CallOptions::surface(self, Surface) -> CallOptions<'a>
+const fn CallOptions::proxy(self, &'a ProxyActivation) -> CallOptions<'a>
 ```
 
 Native aggregate execution WIP: find, annotate, recognize and relate now return concrete result/2 carriers. Ordered trace data is retained by the facade, including actual sources and accepted/failure observations; consumers do not reconstruct it from event JSON. Aggregate context wraps the existing state value as a typed context/evidence envelope on all actual requests and recognition admission probes. Existing convenience calls accept context through the same implementation. Native annotation retains original occurrences and partial members, and complete relate retains full successful distributions. Four additional outside-in public cases check ordered candidates, successful null/failure distinctions, every recognition stage and unchanged spans, partial usage and empty metadata. Typed consumer accessors, owned event identity/location, input composition, command completion and CLI/schema/corpus adoption remain open.
@@ -206,3 +239,7 @@ caps remain 500 nonblank lines. Full source/aggregate execution, dynamic choose,
 CLI/schema/corpus adoption and remaining public inventory are still in progress.
 
 Constituent WIP: saved find and mandatory per-record choose preparation share native ordered grammar, field selection, saved model/profile and existing batch precedence. Focused public and CLI tests cover actual independent wire bodies, original preservation, empty calls and zero-send later/file refusal. Source ratchet grows by 636 nonblank lines (137956 to 138592): concrete preparation/parser leaves, public carriers and outside-in regression cases. Whole result/2 CLI/schema, located execution and final host adoption remain open; no landing/review claim.
+
+Constituent WIP: complete fallible record routes for decide/choose/tag/score/filter/annotate reuse the existing native pull bridge and joined pipeline. Preparation snapshots selected evidence, controls and location once while originals stay on their caller thread without Clone/Serialize/Send requirements. Batch::into_call retains actual final facts. Per-record contexts are admitted through the existing packer with the caller/profile byte caps before that row sends. Streaming retains completed-prefix behavior; eager sources continue to admit the whole set before sends. Located aggregate execution and CLI result/2 adoption remain open.
+
+This streaming constituent raises the exact measured source ratchet by 724 nonblank lines (138592 to 139316): generic caller-thread preparation in the existing pull bridge, concrete complete stream entry points, shared annotation preparation/rendering, and five outside-in regressions. The old bridge behavior remains covered by all 63 non-stress public batch cases. Signature inventory is reconciled against intended declarations in the owning tickets; no alternate dispatch, records or proof tool was introduced.

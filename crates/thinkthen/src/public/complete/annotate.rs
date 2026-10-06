@@ -11,6 +11,7 @@ use crate::public::{
 use crate::public::{asking::Text, bulk::annotation::Annotating, options::Stop, pull};
 use std::sync::Arc;
 mod render;
+mod streaming;
 
 struct Prepared {
     text: Text,
@@ -19,6 +20,7 @@ struct Prepared {
 struct Held<T> {
     original: T,
     input: core::Record,
+    question_input: Arc<QuestionInput>,
     context: Option<String>,
 }
 struct Annotations {
@@ -33,9 +35,13 @@ impl Asker for Annotations {
         input.text.at
     }
     fn asks(&self, input: &Prepared) -> Result<Vec<Ask>, Error> {
-        Annotating::new(&self.engine, self.set.clone())
+        let asks = Annotating::new(&self.engine, self.set.clone())
             .with_context(input.context.as_deref())?
-            .asks(&input.text)
+            .asks(&input.text)?;
+        if input.context.is_some() {
+            super::records::validate_context(&self.engine, &asks)?;
+        }
+        Ok(asks)
     }
     fn row(
         &self,
@@ -146,48 +152,12 @@ fn prepare<T: InputEvidence>(
     records: impl Iterator<Item = RecordInput<T>>,
     fallback: Option<&str>,
 ) -> Result<Admission<T>, Error> {
-    let reading =
-        core::Reading::new(core::Framing::Document, Vec::new()).map_err(Error::refused)?;
     let mut held = Vec::new();
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
-        if record.options.is_some() {
-            return Err(Error::usage("record options are admitted only for choose"));
-        }
-        let question_input = record.original.question_input();
-        crate::public::images::guard(InputFunction::Annotate, &question_input)?;
-        let input = match &question_input {
-            QuestionInput::Text(text) => {
-                crate::public::engine::evidence(text)?;
-                reading
-                    .annotation_record(text.as_bytes())
-                    .map_err(Error::refused)?
-            }
-            QuestionInput::Record(record) => record.original().0.as_ref().clone(),
-            QuestionInput::Images(_) => return Err(super::wrong()),
-        };
-        let context = record
-            .context
-            .as_deref()
-            .or(fallback)
-            .filter(|text| !text.is_empty())
-            .map(|text| {
-                crate::public::engine::evidence(text)?;
-                Ok::<_, Error>(text.to_owned())
-            })
-            .transpose()?;
-        inputs.push(Prepared {
-            text: Text {
-                at,
-                input: question_input,
-            },
-            context: context.clone(),
-        });
-        held.push(Held {
-            original: record.original,
-            input,
-            context,
-        });
+        let (item, input) = prepare_record(record, fallback, at)?;
+        held.push(item);
+        inputs.push(input);
     }
     Ok((held, inputs))
 }
@@ -223,31 +193,90 @@ impl<T: InputEvidence> Rows<'_, '_, T> {
         }
     }
     fn completed(&self, row: pull::Row<Annotations>) -> Result<CompleteAnnotated, Error> {
-        let annotation = row.map_err(failed)?;
         let at = self.values.len();
         let held = self.held.get(at).ok_or_else(super::wrong)?;
-        let mut observed = crate::public::bulk::annotation::rendered(
-            self.set,
-            self.engine,
-            annotation.clone(),
-            self.stop.observing(),
-        )?;
-        let input = Arc::new(held.original.question_input());
-        for (_, detail) in &mut observed.observed {
-            *detail = detail.clone().with_input(Arc::clone(&input));
-        }
-        crate::public::bulk::observe_annotated(&observed, at, self.stop)?;
-        if annotation.failed_questions == annotation.details.len() && !annotation.details.is_empty()
-        {
-            return Err(crate::public::asking::backend_failed());
-        }
-        render::complete(
-            self.engine,
-            self.set,
-            annotation,
-            held,
-            at,
-            self.stop.facts().attempts().is_some(),
-        )
+        complete_row(self.engine, self.set, self.stop, held, at, row)
     }
+}
+
+fn complete_row<T>(
+    engine: &facade::Engine,
+    set: &core::QuestionSet,
+    stop: &Stop<'_>,
+    held: &Held<T>,
+    at: usize,
+    row: pull::Row<Annotations>,
+) -> Result<CompleteAnnotated, Error> {
+    let annotation = row.map_err(failed)?;
+    let mut observed = crate::public::bulk::annotation::rendered(
+        set,
+        engine,
+        annotation.clone(),
+        stop.observing(),
+    )?;
+    for (_, detail) in &mut observed.observed {
+        *detail = detail.clone().with_input(Arc::clone(&held.question_input));
+    }
+    crate::public::bulk::observe_annotated(&observed, at, stop)?;
+    if annotation.failed_questions == annotation.details.len() && !annotation.details.is_empty() {
+        return Err(crate::public::asking::backend_failed());
+    }
+    render::complete(
+        engine,
+        set,
+        annotation,
+        held,
+        at,
+        stop.facts().attempts().is_some(),
+    )
+}
+
+fn prepare_record<T: InputEvidence>(
+    record: RecordInput<T>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<(Held<T>, Prepared), Error> {
+    if record.options.is_some() {
+        return Err(Error::usage("record options are admitted only for choose"));
+    }
+    let question_input = record.original.question_input();
+    crate::public::images::guard(InputFunction::Annotate, &question_input)?;
+    let input = match &question_input {
+        QuestionInput::Text(text) => {
+            crate::public::engine::evidence(text)?;
+            let reading =
+                core::Reading::new(core::Framing::Document, Vec::new()).map_err(Error::refused)?;
+            reading
+                .annotation_record(text.as_bytes())
+                .map_err(Error::refused)?
+        }
+        QuestionInput::Record(record) => record.original().0.as_ref().clone(),
+        QuestionInput::Images(_) => return Err(super::wrong()),
+    };
+    let context = record
+        .context
+        .as_deref()
+        .or(fallback)
+        .filter(|text| !text.is_empty())
+        .map(|text| {
+            crate::public::engine::evidence(text)?;
+            Ok::<_, Error>(text.to_owned())
+        })
+        .transpose()?;
+    let snapshot = Arc::new(question_input.clone());
+    Ok((
+        Held {
+            original: record.original,
+            input,
+            question_input: snapshot,
+            context: context.clone(),
+        },
+        Prepared {
+            text: Text {
+                at,
+                input: question_input,
+            },
+            context,
+        },
+    ))
 }

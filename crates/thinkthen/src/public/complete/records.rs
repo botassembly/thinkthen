@@ -17,12 +17,12 @@ use crate::public::{
 };
 use std::sync::Arc;
 
-struct Prepared {
+pub(super) struct Prepared {
     text: Text,
     question: Question,
     context: Option<core::Evidence>,
 }
-struct Records(Arc<facade::Engine>);
+pub(super) struct Records(pub(super) Arc<facade::Engine>);
 impl Asker for Records {
     type Input = Prepared;
     type Row = Decided;
@@ -31,7 +31,12 @@ impl Asker for Records {
         input.text.at
     }
     fn asks(&self, input: &Prepared) -> Result<Vec<Ask>, Miss> {
-        Decisions::new(&self.0, &input.question, input.context.clone()).asks(&input.text)
+        let asks =
+            Decisions::new(&self.0, &input.question, input.context.clone()).asks(&input.text)?;
+        if input.context.is_some() {
+            validate_context(&self.0, &asks).map_err(Miss::Refused)?;
+        }
+        Ok(asks)
     }
     fn row(&self, input: Prepared, answers: Vec<Answered>) -> Result<Decided, Miss> {
         Decisions::new(&self.0, &input.question, input.context).row(input.text, answers)
@@ -41,10 +46,10 @@ struct Admitted<T> {
     held: Vec<Held<T>>,
     inputs: Vec<Prepared>,
 }
-struct Held<T> {
-    original: T,
-    question: Question,
-    context_sha256: Option<String>,
+pub(super) struct Held<T> {
+    pub(super) original: T,
+    pub(super) question: Question,
+    pub(super) context_sha256: Option<String>,
 }
 
 impl Engine {
@@ -191,11 +196,7 @@ impl Engine {
         for input in &inputs {
             asker.asks(input).map_err(pipeline_failure)?;
         }
-        let mut packing = pull::packing(
-            setting,
-            inputs.iter().any(|input| input.context.is_some()),
-            false,
-        );
+        let mut packing = pull::packing(setting, false, false);
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let requested_attempts = stop.facts().attempts().is_some();
         packing.detailed = requested_attempts;
@@ -247,7 +248,7 @@ impl Engine {
     }
 }
 
-fn pipeline_failure(miss: Miss) -> Error {
+pub(super) fn pipeline_failure(miss: Miss) -> Error {
     match miss {
         Miss::Refused(error) => error,
         Miss::Failed(_) => Error::defect("admission produced an answer"),
@@ -268,7 +269,7 @@ fn mapped<T, R>(
         .collect()
 }
 
-fn filter(canonical: core::CompleteAtomic) -> Result<CompleteFilter, Error> {
+pub(super) fn filter(canonical: core::CompleteAtomic) -> Result<CompleteFilter, Error> {
     let Value::YesNo(Some(value)) = *canonical.value() else {
         return Err(super::wrong());
     };
@@ -284,36 +285,63 @@ fn prepare<T: InputEvidence>(
     let mut held = Vec::new();
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
-        let question = record.options.as_ref().map_or_else(
-            || Ok(question.clone()),
-            |options| options.replacing(question),
-        )?;
-        let context_text = record
-            .context
-            .as_deref()
-            .or(fallback)
-            .filter(|text| !text.is_empty());
-        let context_sha256 = context_text.map(|text| core::bytes_sha256(text.as_bytes()));
-        let context = context_text
-            .map(crate::public::engine::evidence)
-            .transpose()?;
-        let input = record.original.question_input();
-        crate::public::images::guard(function, &input)?;
-        if let crate::public::QuestionInput::Text(text) = &input {
-            crate::public::engine::evidence(text)?;
-        }
-        inputs.push(Prepared {
-            text: Text { at, input },
-            question: question.clone(),
-            context,
-        });
-        held.push(Held {
-            original: record.original,
-            question,
-            context_sha256,
-        });
+        let (item, input) = prepare_record(function, question, record, fallback, at)?;
+        inputs.push(input);
+        held.push(item);
     }
     Ok(Admitted { held, inputs })
+}
+
+pub(super) fn prepare_record<T: InputEvidence>(
+    function: InputFunction,
+    question: &Question,
+    record: RecordInput<T>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<(Held<T>, Prepared), Error> {
+    let question = record.options.as_ref().map_or_else(
+        || Ok(question.clone()),
+        |options| options.replacing(question),
+    )?;
+    let context_text = record
+        .context
+        .as_deref()
+        .or(fallback)
+        .filter(|text| !text.is_empty());
+    let context_sha256 = context_text.map(|text| core::bytes_sha256(text.as_bytes()));
+    let context = context_text
+        .map(crate::public::engine::evidence)
+        .transpose()?;
+    let input = record.original.question_input();
+    crate::public::images::guard(function, &input)?;
+    if let crate::public::QuestionInput::Text(text) = &input {
+        crate::public::engine::evidence(text)?;
+    }
+    Ok((
+        Held {
+            original: record.original,
+            question: question.clone(),
+            context_sha256,
+        },
+        Prepared {
+            text: Text { at, input },
+            question,
+            context,
+        },
+    ))
+}
+
+impl Prepared {
+    pub(super) fn duplicate(&self) -> Self {
+        Self {
+            text: Text {
+                at: self.text.at,
+                input: self.text.input.clone(),
+            },
+            question: self.question.clone(),
+            context: self.context.clone(),
+        }
+    }
 }
 
 fn take_row<T>(
@@ -342,4 +370,30 @@ fn take_row<T>(
             Flow::Stop
         }
     }
+}
+
+pub(super) fn validate_context(engine: &facade::Engine, asks: &[Ask]) -> Result<(), Error> {
+    let limits = engine.pack_limits(pull::packing(core::Setting::Max, true, false));
+    let model =
+        core::pack::model_json(engine.backend().model().as_str()).map_err(|_| super::wrong())?;
+    let mut packer = core::pack::Packer::new(limits, model);
+    let mut closed = Vec::new();
+    for ask in asks {
+        packer
+            .check_state(&ask.state)
+            .map_err(crate::public::asking::packed)?;
+    }
+    let entries = asks
+        .iter()
+        .map(|ask| core::pack::Entry {
+            state: ask.state.clone(),
+            question: Arc::clone(&ask.question),
+            options: pipeline::options(ask),
+            item: (),
+        })
+        .collect();
+    packer
+        .add(entries, &mut closed)
+        .map_err(crate::public::asking::packed)?;
+    Ok(())
 }
