@@ -10,11 +10,6 @@ use pyo3::prelude::*;
 use super::ffi::{ArrowArray, ArrowArrayStream, ArrowSchema, EMPTY_ARRAY, EMPTY_SCHEMA, STREAM};
 use super::out::{capsule, stream_destructor};
 
-unsafe extern "C" {
-    // In CPython's full API, not in the limited API an abi3 build sees.
-    fn PyGILState_Check() -> c_int;
-}
-
 #[derive(Debug)]
 struct State {
     remaining: usize,
@@ -53,13 +48,18 @@ unsafe extern "C" fn get_schema(_stream: *mut ArrowArrayStream, out: *mut ArrowS
 
 /// Abort unless the lock is held, then drop one reference to the token.
 unsafe fn locked_drop(token: *mut c_void) {
-    // SAFETY: every CPython this module loads into exports the symbol,
-    // and `token` holds one strong reference taken in `get_next`.
+    // SAFETY: these GIL-state functions are in the Python 3.10 stable ABI.
+    // Ensure reports the lock state before acquiring it. A detached release
+    // still aborts before touching the token; it cannot repair an unsafe caller.
+    // The exit gate keeps worker releases ahead of interpreter finalization.
+    // `token` holds one strong reference taken by this producer.
     unsafe {
-        if PyGILState_Check() == 0 {
+        let state = ffi::PyGILState_Ensure();
+        if state != ffi::PyGILState_STATE::PyGILState_LOCKED {
             std::process::abort();
         }
         ffi::Py_DecRef(token.cast());
+        ffi::PyGILState_Release(state);
     }
 }
 
