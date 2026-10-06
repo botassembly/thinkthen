@@ -19,6 +19,7 @@ mod forms;
 mod images;
 mod keyed;
 mod question_file;
+mod rank_set;
 mod relate;
 mod removed;
 mod scalar;

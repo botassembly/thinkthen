@@ -132,4 +132,34 @@ NULL constructor operands return NULL. NULL question or collection returns NULL 
 
 SQLite accepts image judgments with 2, 3 or 4 arguments; omitted trailing arguments mean NULL. `thinkthen_image_file(path)` explicitly selects one local regular image through the native reader. `thinkthen_image_file_name(image)` returns its retained source name, or NULL for a byte constructor. No text line positions are invented.
 
-Complete result/2 identities, invocation facts, started-failure facts and caller prices still await 0435 adoption of the shared native APIs (0442/0445/0450 and 0300). SQL rank sets remain owned by 0417. These image calls expose landed native details; this is not a full SDK parity claim.
+Complete result/2 identities, invocation facts, started-failure facts and caller prices still await 0435 adoption of the shared native APIs (0442/0445/0450 and 0300). The additive SQL rank-set route exposes native turns and combined count facts; complete rank result/identity adoption remains with 0417/0435. These image calls expose landed native details; this is not a full SDK parity claim.
+
+`thinkthen_rank_set(questions, keyed_json[, settings])` is the explicit additive
+rank-set route. It takes the native version-one ordered set of named decide
+questions, returns `key, rank, probability, question_name, facts`, and preserves
+each original keyed identity even when several keys have equal text. Each
+member sorts with the host's existing input-order ties; native turns visits
+each depth in authored member order, consumes duplicate visits, and emits
+each original once. `probability` and `question_name` belong to the selecting
+member. Use `ORDER BY rank` after a join and `LIMIT` for the merged prefix;
+every member still judges every record. The literal `thinkthen_rank` route
+retains its existing signatures and behavior.
+
+Settings take `batch`, `context` and `deadline_ms`; model/backend selection
+uses the existing host configuration. Per-call model, cuts, pointers and
+score members refuse before sending. One-member sets preserve the plain
+question's wire/cache identity. Recording each member individually supports
+strict set replay with zero sends. Described decide members retain their
+authored true/false meanings. Independent single described/saved-score rank
+awaits the native richer-rank API under 0406.
+
+`facts` comes directly from the same completed native call, counts original
+records and combined member requests, and repeats on every output row. It
+is the current count-facts shape; full observations, call/answer IDs and
+started-failure carriers await native/0435 adoption. An empty object yields
+no rows. Set JSON and files use native RankSet admission, preserving member
+order and rejecting duplicates, authored thresholds/on and non-decide kinds.
+
+Questions/keyed input and facts are TEXT JSON. Questions may name an explicit
+`@file` through the existing question reader. NULL questions or keyed input
+raises required-argument Usage without sends; NULL settings uses defaults.
