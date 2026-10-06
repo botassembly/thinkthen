@@ -5,7 +5,9 @@
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
 #[cfg(unix)]
-use crate::ffi::carriers::{AnswerV1, MetaV1, ObservationV1, QuestionViewV1, RecordV1, SummaryV1};
+use crate::ffi::carriers::{
+    AnswerV1, DetailsV1, MetaV1, ObservationV1, QuestionViewV1, RecordV1, SummaryV1,
+};
 use crate::ffi::carriers::{DecideValueDataV1, MemberValueDataV1};
 #[cfg(unix)]
 use std::mem::align_of;
@@ -21,6 +23,7 @@ fn c11_and_cpp17_consumers_match_reviewed_signatures_and_rust_carrier_layouts() 
             align_of::<QuestionViewV1>(),
         ),
         ("ANSWER", size_of::<AnswerV1>(), align_of::<AnswerV1>()),
+        ("DETAILS", size_of::<DetailsV1>(), align_of::<DetailsV1>()),
         ("META", size_of::<MetaV1>(), align_of::<MetaV1>()),
         ("SUMMARY", size_of::<SummaryV1>(), align_of::<SummaryV1>()),
         (

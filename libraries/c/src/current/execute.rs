@@ -145,6 +145,9 @@ fn execute(
                 atomic(engine, q, records, options, storage, (kind, question))
             }
         },
+        Native::DynamicChoose(_) => Err(Failure::usage(
+            "private legacy projections take fixed choose questions",
+        )),
         Native::Set(set) => {
             let mut batch = engine.try_annotate_with(set, records, options);
             let rows = batch

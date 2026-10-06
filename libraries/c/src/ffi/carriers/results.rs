@@ -135,3 +135,30 @@ layout!(SummaryV1 {
     attempts: OptionalAttemptsV1,
     error: OptionalErrorV1,
 });
+// Additive detail views preserve the canonical v1 layouts above.
+layout!(ReportedUsageV1 {
+    present: i32,
+    input_tokens: super::OptionalU64V1,
+    output_tokens: super::OptionalU64V1,
+});
+layout!(SourceDetailV1 {
+    origin: u32,
+    answered_by: StringV1,
+    batch_size: OptionalSizeV1,
+});
+layout!(SourceDetailsV1 { data: *const SourceDetailV1, len: usize });
+layout!(InputViewV1 {
+    original: OptionalContentV1,
+    position: OptionalLocationV1,
+    images: OptionalImageViewsV1,
+});
+layout!(InputViewsV1 { data: *const InputViewV1, len: usize });
+layout!(DetailsV1 {
+    question: OptionalQuestionV1,
+    threshold: OptionalRuleV1,
+    raw_pick: OptionalStringV1,
+    usage: ReportedUsageV1,
+    question_sources: SourceDetailsV1,
+    observations: super::ObservationIdentitiesV1,
+    inputs: InputViewsV1,
+});

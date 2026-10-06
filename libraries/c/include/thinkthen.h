@@ -971,8 +971,82 @@ typedef struct thinkthen_summary_v1 {
     thinkthen_optional_error_v1 error;
 } thinkthen_summary_v1;
 
-/* Unpublished 0426 carriers under implementation. Complete calls/accessors
- * are not exported until native result/2 integration is ready.
+/* Additive complete detail accessors; all pointers borrow result ownership.
+ * The singular question-observation observation_id is NULL/zero-length for
+ * aggregate questions; details.observations retains every actual identity. */
+typedef struct thinkthen_reported_usage_v1 {
+    int present;
+    thinkthen_optional_u64_v1 input_tokens;
+    thinkthen_optional_u64_v1 output_tokens;
+} thinkthen_reported_usage_v1;
+typedef struct thinkthen_source_detail_v1 {
+    uint32_t origin;
+    thinkthen_string_v1 answered_by;
+    thinkthen_optional_size_v1 batch_size;
+} thinkthen_source_detail_v1;
+typedef struct thinkthen_source_details_v1 { const thinkthen_source_detail_v1 *data; size_t len; } thinkthen_source_details_v1;
+typedef struct thinkthen_input_view_v1 {
+    thinkthen_optional_content_v1 original;
+    thinkthen_optional_location_v1 position;
+    thinkthen_optional_image_views_v1 images;
+} thinkthen_input_view_v1;
+typedef struct thinkthen_input_views_v1 { const thinkthen_input_view_v1 *data; size_t len; } thinkthen_input_views_v1;
+typedef struct thinkthen_details_v1 {
+    thinkthen_optional_question_v1 question;
+    thinkthen_optional_rule_v1 threshold;
+    thinkthen_optional_string_v1 raw_pick;
+    thinkthen_reported_usage_v1 usage;
+    thinkthen_source_details_v1 question_sources;
+    thinkthen_observation_identities_v1 observations;
+    thinkthen_input_views_v1 inputs;
+} thinkthen_details_v1;
+/* Row ordinals match function-specific accessors. Observation ordinals match
+ * result_observation. Wrong/out-of-range ordinals return EUSAGE unchanged.
+ * usage.present retains a reported usage object even with an unknown dimension;
+ * each token dimension has its own presence flag. Input views retain originals,
+ * not model projections. Multirow summaries have no invented aggregate meta/ID. */
+int thinkthen_result_details(const thinkthen_result *, size_t, thinkthen_details_v1 *);
+int thinkthen_result_observation_details(const thinkthen_result *, size_t, thinkthen_details_v1 *);
+
+int thinkthen_decide_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_choose_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_tag_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_score_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_filter_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_rank_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_find_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_annotate_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_recognize_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+int thinkthen_relate_complete(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
+void thinkthen_result_free(thinkthen_result *);
+int thinkthen_result_summary(const thinkthen_result *, thinkthen_summary_v1 *);
+int thinkthen_result_observation(const thinkthen_result *, size_t, thinkthen_observation_v1 *);
+int thinkthen_result_decide(const thinkthen_result *, size_t, thinkthen_decide_view_v1 *);
+int thinkthen_result_choose(const thinkthen_result *, size_t, thinkthen_choose_view_v1 *);
+int thinkthen_result_tag(const thinkthen_result *, size_t, thinkthen_tag_view_v1 *);
+int thinkthen_result_score(const thinkthen_result *, size_t, thinkthen_score_view_v1 *);
+int thinkthen_result_filter(const thinkthen_result *, size_t, thinkthen_filter_view_v1 *);
+int thinkthen_result_rank(const thinkthen_result *, size_t, thinkthen_rank_view_v1 *);
+int thinkthen_result_find(const thinkthen_result *, size_t, thinkthen_find_view_v1 *);
+int thinkthen_result_annotate(const thinkthen_result *, size_t, thinkthen_annotate_view_v1 *);
+int thinkthen_result_recognize(const thinkthen_result *, size_t, thinkthen_recognize_view_v1 *);
+int thinkthen_result_relate(const thinkthen_result *, size_t, thinkthen_relate_view_v1 *);
+/* Snapshot the calling thread's last failure for engine, or its failed-build
+ * slot for engine=NULL. Never clears/replaces that slot.
+ * With no saved failure: returns OK and writes *out=NULL (no allocation).
+ * With a pre-start failure: returns OK and writes an owned FAILURE result;
+ * facts/attempts are absent. With a started failure: returns OK and writes an
+ * owned FAILURE result with final facts and opt-in attempts, even if []
+ * because no send occurred. Both failure snapshots have absent schema,
+ * answer_id and function, count=observation_count=0, and meta.present=0.
+ * error is present; no origin/model/request/answer provenance is invented.
+ * The return value describes snapshot creation, not the saved failure code.
+ * out=NULL returns EUSAGE without changing the saved failure.
+ */
+int thinkthen_error_complete(const thinkthen_engine *, thinkthen_result **);
+
+/* Unpublished 0426 integration carriers, pending whole-ticket qualification.
+ * Complete calls use the existing native engine and immutable owned results.
  * Constructors clone caller buffers and referenced question/image values.
  * Image views borrow immutable image memory until image_free.
  * Frees accept NULL; nonnull handles must be live and freed exactly once

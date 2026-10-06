@@ -50,6 +50,12 @@ fn a_panic_behind_the_door_is_the_fixed_nonretryable_defect() {
         (DEFECT, DEFECT, 0)
     );
     assert_eq!(message_of(&engine), "defect: a panic crossed the C door");
+    let result = crate::complete::failure(super::snapshot(Some(&engine)).expect("snapshot"))
+        .expect("complete failure");
+    assert_eq!(result.summary.state, 2);
+    assert_eq!(result.summary.error.value.code, DEFECT);
+    assert_eq!(result.summary.facts.present, 0);
+    assert_eq!(result.summary.meta.present, 0);
     assert_eq!(guard(Some(&engine), DEFECT, || USAGE), USAGE);
 }
 

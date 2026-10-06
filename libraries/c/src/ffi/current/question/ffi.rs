@@ -142,7 +142,8 @@ pub(super) unsafe fn build(spec: &QuestionSpecV1) -> Result<String, Failure> {
                 2 => "choose",
                 3 => "tag",
                 4 => "score",
-                6 => "rank",
+                6 if spec.choices.len != 0 => "score",
+                6 => "decide",
                 _ => "find",
             };
             body.put(verb, read::content(spec.text)?)?;
@@ -151,7 +152,7 @@ pub(super) unsafe fn build(spec: &QuestionSpecV1) -> Result<String, Failure> {
                     match spec.kind {
                         2 => "options",
                         3 => "labels",
-                        4 => "levels",
+                        4 | 6 => "levels",
                         _ => "options",
                     },
                     choices(spec.choices)?,
@@ -216,7 +217,7 @@ unsafe fn controls(body: &mut Object, spec: &QuestionSpecV1, set: bool) -> Resul
         if spec.batch_max != 0 {
             body.put("batch", "max")?;
         }
-        if spec.none != 0 {
+        if spec.none != 0 && spec.kind != 7 {
             body.put("none", true)?;
         }
         if spec.on.len != 0 {
@@ -224,46 +225,6 @@ unsafe fn controls(body: &mut Object, spec: &QuestionSpecV1, set: bool) -> Resul
         }
     }
     Ok(())
-}
-
-pub(super) unsafe fn plain(
-    spec: &QuestionSpecV1,
-) -> Result<crate::current::QuestionHandle, Failure> {
-    read::flag(spec.none)?;
-    if spec.choices.len != 0
-        || spec.members.len != 0
-        || spec.on.len != 0
-        || spec.kinds.len != 0
-        || spec.relations.len != 0
-        || spec.yes.present != 0
-        || spec.no.present != 0
-        || spec.model.present != 0
-        || spec.profile.present != 0
-        || spec.batch.present != 0
-        || spec.batch_max != 0
-        || spec.name_pointer.present != 0
-        || spec.kind_pointer.present != 0
-        || spec.threshold.kind > 1
-        || spec.relation_threshold.kind != 0
-        || (spec.kind == 6 && spec.none != 0)
-    {
-        return Err(Failure::usage(
-            "current plain rank/find accept text and find's none only",
-        ));
-    }
-    // SAFETY: the active text buffer follows the descriptor's counted extent.
-    let content = unsafe { read::content(spec.text) }?;
-    let crate::current::Content::Text(text) = content else {
-        return Err(Failure::usage("current plain rank/find require text"));
-    };
-    let mut json = Object::default();
-    json.put(if spec.kind == 6 { "rank" } else { "find" }, &text)?;
-    if spec.none != 0 {
-        json.put("none", true)?;
-    }
-    let json = serde_json::to_string(&json)
-        .map_err(|_| Failure::defect("native plain question could not be written"))?;
-    crate::current::plain(spec.kind, text, spec.none != 0, json)
 }
 
 pub(super) unsafe fn descriptor(

@@ -37,6 +37,7 @@ pub(crate) struct Failure {
     retryable: bool,
     message: String,
     facts: Option<Box<Facts>>,
+    stopped: Option<thinkthen::Stopped>,
 }
 
 impl fmt::Debug for Failure {
@@ -65,6 +66,7 @@ impl Failure {
             retryable: false,
             message: message.into(),
             facts: None,
+            stopped: None,
         }
     }
 
@@ -75,6 +77,7 @@ impl Failure {
             retryable: false,
             message: message.into(),
             facts: None,
+            stopped: None,
         }
     }
 
@@ -85,6 +88,7 @@ impl Failure {
             retryable: false,
             message: format!("defect: {message}"),
             facts: None,
+            stopped: None,
         }
     }
 
@@ -103,6 +107,7 @@ impl From<thinkthen::Error> for Failure {
             retryable: error.retryable(),
             message: error.to_string(),
             facts: error.facts().map(|facts| Box::new(facts.clone())),
+            stopped: Some(error.stopped()),
         }
     }
 }
@@ -114,6 +119,7 @@ pub(crate) struct Last {
     message: CString,
     facts: Option<CString>,
     native_facts: Option<Box<Facts>>,
+    stopped: Option<thinkthen::Stopped>,
 }
 
 impl Last {
@@ -129,6 +135,7 @@ impl Last {
                 .as_ref()
                 .and_then(|facts| CString::new(facts_json(facts)).ok()),
             native_facts: failure.facts,
+            stopped: failure.stopped,
         }
     }
 }
@@ -280,16 +287,13 @@ pub(crate) fn facts(held: Option<&Held>) -> *const std::ffi::c_char {
 }
 
 /// Independent saved-error data; no successful-result provenance is synthesized.
-#[allow(
-    dead_code,
-    reason = "private complete error integration awaits native IDs and structured stops"
-)]
 #[derive(Clone)]
 pub(crate) struct FailureSnapshot {
     pub(crate) code: i32,
     pub(crate) retryable: bool,
     pub(crate) message: String,
     pub(crate) facts: Option<Box<Facts>>,
+    pub(crate) stopped: Option<thinkthen::Stopped>,
 }
 impl fmt::Debug for FailureSnapshot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -301,16 +305,13 @@ impl fmt::Debug for FailureSnapshot {
     }
 }
 /// Clone under the existing thread/engine lock; never clears or replaces the saved error.
-#[allow(
-    dead_code,
-    reason = "private complete error integration awaits native IDs and structured stops"
-)]
 pub(crate) fn snapshot(held: Option<&Held>) -> Option<FailureSnapshot> {
     last(held, |last| FailureSnapshot {
         code: last.code,
         retryable: last.retryable,
         message: last.message.to_string_lossy().into_owned(),
         facts: last.native_facts.clone(),
+        stopped: last.stopped,
     })
 }
 

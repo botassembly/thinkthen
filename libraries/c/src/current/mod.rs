@@ -1,12 +1,12 @@
 //! Owned typed inputs and private native conversion storage.
 #![allow(
     dead_code,
-    reason = "complete execution adapters await the native result/2 landing; no temporary C ABI is exported"
+    reason = "released projection regressions retain private descriptors and view helpers"
 )]
 pub(crate) mod descriptors;
 #[cfg(test)]
 mod execute;
-mod question;
+pub(crate) mod question;
 mod values;
 pub(crate) use descriptors::QuestionData;
 #[cfg(test)]
@@ -24,13 +24,14 @@ pub struct QuestionHandle {
     pub(crate) json: String,
     pub(crate) native: question::Native,
     pub(crate) descriptor: Option<Box<QuestionData>>,
+    pub(crate) reading: Option<thinkthen::RecordReading>,
 }
 impl fmt::Debug for QuestionHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("QuestionHandle").finish_non_exhaustive()
     }
 }
-pub(crate) use question::{load, parse, plain};
+pub(crate) use question::{load, parse};
 
 #[derive(Clone)]
 pub(crate) enum Content {
@@ -205,7 +206,11 @@ impl SourceHandle {
 
 /// Owned view backing allocations. Moving the owner cannot move their bytes.
 #[derive(Default)]
-pub(crate) struct Storage(pub(crate) Vec<Box<dyn std::any::Any>>);
+pub(crate) struct Storage(
+    pub(crate) Vec<Box<dyn std::any::Any>>,
+    pub(crate) Vec<crate::ffi::carriers::DetailsV1>,
+    pub(crate) Vec<crate::ffi::carriers::RowV1>,
+);
 impl Storage {
     pub(crate) fn array<T: 'static>(&mut self, values: Vec<T>) -> (*const T, usize) {
         if values.is_empty() {

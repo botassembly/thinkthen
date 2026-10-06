@@ -30,6 +30,9 @@ typedef int (*summary_fn)(const thinkthen_result *, thinkthen_summary_v1 *);
 SIGNATURE(thinkthen_result_summary, summary_fn);
 typedef int (*observation_fn)(const thinkthen_result *, size_t, thinkthen_observation_v1 *);
 SIGNATURE(thinkthen_result_observation, observation_fn);
+typedef int (*details_fn)(const thinkthen_result *, size_t, thinkthen_details_v1 *);
+SIGNATURE(thinkthen_result_details, details_fn);
+SIGNATURE(thinkthen_result_observation_details, details_fn);
 typedef int (*failure_fn)(const thinkthen_engine *, thinkthen_result **);
 SIGNATURE(thinkthen_error_complete, failure_fn);
 
@@ -39,6 +42,8 @@ STATIC_ASSERT(sizeof(thinkthen_record_v1)==RUST_RECORD_SIZE);
 STATIC_ASSERT(ALIGNOF(thinkthen_record_v1)==RUST_RECORD_ALIGN);
 STATIC_ASSERT(sizeof(thinkthen_question_view_v1)==RUST_QUESTION_SIZE);
 STATIC_ASSERT(ALIGNOF(thinkthen_question_view_v1)==RUST_QUESTION_ALIGN);
+STATIC_ASSERT(sizeof(thinkthen_details_v1)==RUST_DETAILS_SIZE);
+STATIC_ASSERT(ALIGNOF(thinkthen_details_v1)==RUST_DETAILS_ALIGN);
 STATIC_ASSERT(sizeof(thinkthen_answer_v1)==RUST_ANSWER_SIZE);
 STATIC_ASSERT(ALIGNOF(thinkthen_answer_v1)==RUST_ANSWER_ALIGN);
 STATIC_ASSERT(sizeof(thinkthen_meta_v1)==RUST_META_SIZE);

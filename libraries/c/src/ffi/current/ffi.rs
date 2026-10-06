@@ -11,7 +11,7 @@ pub mod images;
 #[path = "question/ffi.rs"]
 mod question;
 #[path = "read/ffi.rs"]
-mod read;
+pub(crate) mod read;
 use crate::Door;
 use crate::current::{self, QuestionHandle, Source, SourceHandle};
 use crate::failures::{Failure, OK, guard};
@@ -33,11 +33,19 @@ pub unsafe extern "C" fn thinkthen_question_new(
             |_| {
                 read::required(out)?;
                 let spec = read::reference(spec)?;
-                let mut question = if spec.kind == 7 || (spec.kind == 6 && spec.members.len == 0) {
-                    question::plain(spec)
+                let mut question = if spec.kind == 6 && spec.members.len == 0 {
+                    current::question::rank(question::build(spec)?)
+                } else if spec.kind == 2 && spec.choices.len == 0 {
+                    current::question::dynamic(question::build(spec)?)
                 } else {
                     current::parse(spec.kind, question::build(spec)?)
                 }?;
+                if spec.kind == 7 && read::flag(spec.none)? {
+                    let current::question::Native::Find(q) = &mut question.native else {
+                        return Err(Failure::defect("native find constructor lost its kind"));
+                    };
+                    *q = q.clone().offering_none()?;
+                }
                 question.descriptor = Some(Box::new(question::descriptor(spec)?));
                 Ok(question)
             },
