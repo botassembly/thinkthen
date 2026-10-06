@@ -72,6 +72,10 @@ impl From<EngineError> for Failure {
                 Self::Usage("the process send budget was spent before a retry")
             }
             EngineError::EstimatedInput(reason) => Self::EstimatedInput(reason),
+            EngineError::ImageEstimatedInput(reason) => Self::Image(reason.to_string().replace(
+                "encoded-body-bytes-908-v1",
+                "text-bytes-908-plus-image-tiles-v1",
+            )),
             EngineError::TokenLimit => Self::TokenLimit,
             EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),
             EngineError::Reply(error) => Self::Reply(error),

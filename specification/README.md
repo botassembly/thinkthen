@@ -14,7 +14,7 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
 | [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types; landed result/1 distinguished | Settled; 0.2 adoption pending |
-| [files.md](files.md) | Explicit file/folder readers, located carriers and spans across all ten functions | Settled for 0.2 |
+| [files.md](files.md) | Explicit text/image readers, located carriers and spans; ordered native/CLI image inputs | Settled for 0.2 |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [sdk-boundary.md](sdk-boundary.md) | One configured route per engine, retained caller controls and proxy business policy | Settled |

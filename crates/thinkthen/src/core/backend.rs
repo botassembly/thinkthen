@@ -31,6 +31,8 @@ pub(crate) struct Backend {
     model: ModelName,
     descriptions: Descriptions,
     request_size: usize,
+    explicit_request_size: bool,
+    image_route: built_in::images::ImageRoute,
     per_minute: Option<NonZeroU32>,
 }
 
@@ -105,6 +107,8 @@ impl Backend {
             model,
             descriptions: Descriptions::Authored,
             request_size: DEFAULT_REQUEST_SIZE,
+            explicit_request_size: false,
+            image_route: built_in::images::ImageRoute::Unsupported,
             per_minute: None,
         }
     }
@@ -142,6 +146,8 @@ impl Backend {
             model: ModelName::new(model)?,
             descriptions: Descriptions::Authored,
             request_size: DEFAULT_REQUEST_SIZE,
+            explicit_request_size: false,
+            image_route: built_in::images::ImageRoute::Unsupported,
             per_minute: None,
         })
     }
@@ -150,6 +156,20 @@ impl Backend {
     /// than [`Descriptions::Authored`] (ADR 0115).
     pub(crate) const fn with_descriptions(mut self, descriptions: Descriptions) -> Self {
         self.descriptions = descriptions;
+        self
+    }
+
+    pub(crate) const fn with_image_route(mut self, route: built_in::images::ImageRoute) -> Self {
+        self.image_route = route;
+        self
+    }
+
+    pub(crate) const fn image_route(&self) -> built_in::images::ImageRoute {
+        self.image_route
+    }
+
+    pub(crate) fn with_model(mut self, model: ModelName) -> Self {
+        self.model = model;
         self
     }
 
@@ -168,6 +188,7 @@ impl Backend {
     /// Carry the command's resolved request size into both planners.
     pub(crate) fn with_request_size(mut self, size: usize) -> Self {
         self.request_size = size;
+        self.explicit_request_size = true;
         self
     }
 
@@ -219,6 +240,9 @@ impl Backend {
 
     /// The request-byte ceiling a relation plan splits under and a batch closes at.
     #[must_use]
+    pub(crate) fn image_ceiling(&self) -> Option<usize> {
+        self.explicit_request_size.then_some(self.request_size)
+    }
     pub(crate) fn ceiling(&self) -> usize {
         self.request_size
     }

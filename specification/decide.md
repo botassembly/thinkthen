@@ -10,6 +10,8 @@ thinkthen decide QUESTION|@FILE [--true TEXT] [--false TEXT] [--threshold T|LOW:
 
 ## What it reads
 
+Version0.2 adds explicit ordered JPEG/PNG inputs through repeatable `--image FILE`, or separate located whole-file items through `--input PATH --unit file --media image`. Image-only input needs no caption. Native `Engine::decide_input` and its `_with`/`_many` forms retain typed answers and facts. Admission and formats follow [ADR0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md); the existing text rules below remain unchanged.
+
 One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines`, `--jsonl`, `--csv`, and `--tsv` turn the input into records, and [records.md](records.md) gives the rules.
 
 `QUESTION` is one argument. It states a fact that is true or false of the evidence. The model reads it as the question. A question that is empty or holds only white space is a usage error. `@FILE` reads the question from a question file instead, and [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.

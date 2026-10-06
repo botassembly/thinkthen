@@ -92,6 +92,9 @@ pub(super) fn run(
     let records = source.map(|item| {
         let item = item.map_err(|placed| placed.cause)?;
         match item.data {
+            crate::cli::intake::Data::Images(_) => Err(Failure::Usage(
+                "recognize accepts text only; images are unsupported",
+            )),
             Data::Record(record) => Ok(record),
             Data::Bytes(bytes) => reading
                 .record(&bytes)

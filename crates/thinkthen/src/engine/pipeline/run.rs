@@ -326,10 +326,7 @@ impl<'a, A: Asker> Run<'a, A> {
 
     fn lookup(&mut self, asks: &[Ask], cancel: &Cancel) -> Result<Vec<Option<Found>>, Error> {
         match self.store.as_mut().filter(|store| store.looks_up()) {
-            Some(store) => {
-                let keys: Vec<_> = asks.iter().map(|ask| ask.key).collect();
-                store.lookup(&keys, cancel)
-            }
+            Some(store) => store.lookup_asks(asks, cancel),
             None => Ok(vec![None; asks.len()]),
         }
     }

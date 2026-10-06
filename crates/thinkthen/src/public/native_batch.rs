@@ -176,7 +176,7 @@ impl Engine {
             .enumerate()
             .map(|(at, text)| Text {
                 at,
-                text: text.clone(),
+                input: crate::public::QuestionInput::Text(text.clone()),
             })
             .collect();
         stop.run_call(count, |cancel| {

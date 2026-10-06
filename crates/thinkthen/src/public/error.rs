@@ -233,7 +233,8 @@ impl From<EngineError> for Error {
             | Self::Defect(detail) => {
                 detail.retryable = error.retryable();
                 detail.estimated_input_denial = match error {
-                    EngineError::EstimatedInput(reason) => Some(reason),
+                    EngineError::EstimatedInput(reason)
+                    | EngineError::ImageEstimatedInput(reason) => Some(reason),
                     _ => None,
                 };
                 detail.send_budget_denial = match error {
@@ -270,6 +271,12 @@ fn message(error: &EngineError) -> String {
             return format!("the process send budget was spent before retrying status {status}");
         }
         EngineError::EstimatedInput(reason) => return reason.to_string(),
+        EngineError::ImageEstimatedInput(reason) => {
+            return reason.to_string().replace(
+                "encoded-body-bytes-908-v1",
+                "text-bytes-908-plus-image-tiles-v1",
+            );
+        }
         EngineError::TokenLimit => "the backend answered with status 400",
         EngineError::ReplyTooLarge(limit) => return reply_too_large(*limit),
         EngineError::Reply(decode) => return format!("the reply was refused: {decode}"),

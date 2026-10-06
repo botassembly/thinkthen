@@ -48,6 +48,7 @@ pub(crate) struct Cancel<'a> {
     process_budget: Option<crate::engine::send_budget::ProcessBudget>,
     /// The call's own cap on the process request total.
     call_total: Option<u64>,
+    estimated_tokens: Option<u64>,
     facts: Option<CallFacts>,
     attempts: Arc<AtomicU64>,
     attempt_sink: Option<AttemptSink>,

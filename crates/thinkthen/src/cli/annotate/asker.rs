@@ -391,6 +391,14 @@ impl Parser {
                     error: PrepareError::Other(Failure::record(error, self.reading.streams())),
                 })?,
             crate::cli::intake::Data::Record(record) => record,
+            crate::cli::intake::Data::Images(_) => {
+                return Err(Refused {
+                    at,
+                    error: PrepareError::Other(Failure::Usage(
+                        "annotate accepts text only; images are unsupported",
+                    )),
+                });
+            }
         };
         if !self.details {
             super::collisions(&self.set, &record).map_err(|error| Refused {

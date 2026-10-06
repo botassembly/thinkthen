@@ -176,6 +176,10 @@ impl Environment {
         self.batch.as_deref()
     }
 
+    pub(crate) fn request_size_selected(&self, flag: Option<&str>) -> bool {
+        flag.is_some() || self.max_request_bytes.is_some()
+    }
+
     /// Resolve the byte limit only for a command where the setting acts.
     pub(crate) fn request_size(&self, flag: Option<&str>) -> Result<usize, Failure> {
         let chosen = flag.or(self.max_request_bytes.as_deref());

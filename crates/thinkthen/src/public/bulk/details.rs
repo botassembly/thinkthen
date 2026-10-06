@@ -56,6 +56,22 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>> + 'a,
         T: Evidence + Serialize + 'a,
     {
+        self.try_details_input_many_with(question, records, options)
+    }
+
+    /// Full details over fallible explicit input items, including image files.
+    /// # Errors
+    /// Reader failures retain earlier completed rows; image admission sends nothing.
+    pub fn try_details_input_many_with<'a, I, T, Q: DetailQuestion + ?Sized>(
+        &'a self,
+        question: &'a Q,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Batch<'a, Row<T, Details>>
+    where
+        I: IntoIterator<Item = Result<T, Error>> + 'a,
+        T: crate::public::InputEvidence + Serialize + 'a,
+    {
         let question = question.question();
         Batch::of((|| {
             only(

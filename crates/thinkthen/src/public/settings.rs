@@ -75,6 +75,7 @@ pub struct EngineBuilder {
     max_estimated_input_tokens_total: Option<u64>,
     prices: Option<Prices>,
     max_request_bytes: usize,
+    explicit_request_bytes: bool,
     batch: Option<crate::core::Setting>,
     env_batch: Option<String>,
     cache: Cache,
@@ -147,6 +148,7 @@ impl EngineBuilder {
             max_estimated_input_tokens_total: None,
             prices: None,
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
+            explicit_request_bytes: false,
             batch: None,
             env_batch: None,
             cache: Cache::Default,
@@ -172,13 +174,6 @@ impl EngineBuilder {
         Backend::resolve(Some(value), None, DEFAULT_MODEL).map_err(Error::refused)?;
         self.base_url = Some(value.to_owned());
         Ok(self)
-    }
-
-    /// Supply a reserved proxy activation. Build refuses before reading local resources.
-    #[must_use]
-    pub fn proxy(mut self, _value: &crate::public::ProxyActivation) -> Self {
-        self.proxy_supplied = true;
-        self
     }
 
     /// Send this key with each live attempt, and only to the base address.
@@ -265,6 +260,7 @@ impl EngineBuilder {
             ));
         }
         self.max_request_bytes = value;
+        self.explicit_request_bytes = true;
         Ok(self)
     }
 
@@ -399,7 +395,11 @@ impl EngineBuilder {
             prices,
             profile: setup_profile,
         } = self.selected()?;
-        let backend = backend.with_request_size(self.max_request_bytes);
+        let backend = if self.explicit_request_bytes {
+            backend.with_request_size(self.max_request_bytes)
+        } else {
+            backend
+        };
         if backend.address_contains_key(key.as_ref().map(|Secret(value)| value.as_ref())) {
             return Err(Error::usage(KEY_IN_ADDRESS));
         }

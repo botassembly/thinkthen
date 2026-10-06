@@ -21,6 +21,7 @@ fn entry(state: &State, question: &str, item: usize) -> Entry<usize> {
 
 fn limits(inputs: usize) -> PackLimits {
     PackLimits {
+        image_ceiling: None,
         ceiling: 96_000,
         profile: None,
         inputs,

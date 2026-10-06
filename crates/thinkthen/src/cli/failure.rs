@@ -71,6 +71,8 @@ pub(crate) enum Failure {
     UsageOverflow,
     /// A command-line shape was understood but cannot act.
     Usage(&'static str),
+    /// Safe numeric image admission/decoder refusal, with no input bytes.
+    Image(String),
     /// Estimated input admission refused this final encoded body.
     EstimatedInput(crate::public::EstimatedInputDenial),
     /// `--jobs` differs from the width this process already selected.
@@ -307,6 +309,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Stopped { .. } | Failure::BatchFailed { .. } | Failure::PartialReply { .. } => {
             (70, "defect: a stopped run reports its cause".to_owned())
         }
+        Failure::Image(message) => (2, message.clone()),
         Failure::Defect(what) => (70, format!("defect: {what}")),
         Failure::Render(error) => (70, format!("defect: {error}")),
         Failure::Measure(refusal) => (refusal.code(), refusal.to_string()),

@@ -57,6 +57,11 @@ enum Shape {
 pub(crate) struct EvidenceShapeError;
 
 impl Evidence {
+    /// Empty ancillary text is valid only beside validated images.
+    pub(crate) fn image_text(text: String) -> Self {
+        Self(Shape::Text(text))
+    }
+
     /// Take text that is not blank as the evidence a judgment reads.
     ///
     /// # Errors

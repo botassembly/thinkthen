@@ -17,6 +17,10 @@ impl Serialize for ProfileName {
 }
 
 impl ProfileName {
+    pub(crate) fn image_route() -> Self {
+        Self("image-route".to_owned())
+    }
+
     /// Read a safe profile name.
     pub(crate) fn new(value: &str) -> Result<Self, ProfileError> {
         if value.is_empty()

@@ -301,7 +301,7 @@ impl Engine {
         self.try_decisions(question, records.into_iter().map(Ok), options, pair)
     }
 
-    fn try_decisions<'a, I, R: Evidence + 'a, T: 'a>(
+    pub(crate) fn try_decisions<'a, I, R: super::InputEvidence + 'a, T: 'a>(
         &self,
         question: &Question,
         records: I,

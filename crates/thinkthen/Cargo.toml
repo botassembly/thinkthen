@@ -30,6 +30,11 @@ host-sqlite = []
 polars = ["dep:polars", "dep:polars-core", "polars/lazy", "bundled-sqlite"]
 
 [dependencies]
+# Ticket 0447: bounded edge decoding; compressed pixels have no std decoder.
+image = { version = "=0.25.10", default-features = false, features = ["png"] }
+base64 = "=0.22.1"
+# Separate JPEG decoder avoids zune 0.5.15 malformed progressive-image panic.
+jpeg-decoder = { version = "=0.3.2", default-features = false }
 arc-swap = "=1.7.1"
 clap = { version = "4.6.7", features = ["derive"], optional = true }
 csv-core = { version = "0.1.13", optional = true }

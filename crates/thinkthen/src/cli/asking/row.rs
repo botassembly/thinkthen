@@ -18,18 +18,7 @@ impl Judging<'_> {
         judged: &Judgment,
         context: RowContext<'_>,
     ) -> Result<Judged, Failure> {
-        let mismatch = match &question {
-            Question::Decide { text, .. }
-                if matches!(self.asks, super::Asks::Set(_))
-                    && text.as_json().as_str().is_none() =>
-            {
-                self.mismatch.clone().with_batch(
-                    None,
-                    crate::core::Setting::Records(std::num::NonZeroUsize::MIN),
-                )
-            }
-            _ => self.mismatch.clone(),
-        };
+        let mismatch = self.mismatch_of(&question);
         let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
         let order_value = match &judged.value {
             Value::Score(position) => Some(*position),
@@ -97,7 +86,9 @@ impl Judging<'_> {
         if self.view.details {
             crate::cli::intake::locate(&mut printed, context.position)?;
         }
-        self.source_output(original, &mut printed, context.position)?;
+        if !self.image_output(context.images, &mut printed, context.position)? {
+            self.source_output(original, &mut printed, context.position)?;
+        }
         if self.documents && !context.position.is_some_and(|p| p.located) {
             crate::cli::intake::document(&mut printed, context.position, self.view.details)?;
         }
@@ -111,6 +102,40 @@ impl Judging<'_> {
             partial_failure: false,
             profile_mismatch: mismatch.notice(),
         })
+    }
+    fn mismatch_of(&self, question: &Question) -> crate::profile::Mismatch {
+        match question {
+            Question::Decide { text, .. }
+                if matches!(self.asks, super::Asks::Set(_))
+                    && text.as_json().as_str().is_none() =>
+            {
+                self.mismatch.clone().with_batch(
+                    None,
+                    crate::core::Setting::Records(std::num::NonZeroUsize::MIN),
+                )
+            }
+            _ => self.mismatch.clone(),
+        }
+    }
+    fn image_output(
+        &self,
+        images: Option<&crate::public::ImageEvidence>,
+        printed: &mut Option<String>,
+        position: Option<&crate::cli::intake::Position>,
+    ) -> Result<bool, Failure> {
+        let Some(images) = images else {
+            return Ok(false);
+        };
+        if self.view.details {
+            crate::cli::intake::image_input(printed, images)?;
+            crate::cli::intake::source_members(printed, position)?;
+        } else if let Some(position) = position.filter(|p| p.located) {
+            *printed = printed
+                .as_ref()
+                .map(|value| crate::cli::intake::source_value(images, value, position))
+                .transpose()?;
+        }
+        Ok(true)
     }
     fn source_output(
         &self,

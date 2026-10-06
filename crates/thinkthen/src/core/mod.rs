@@ -24,6 +24,7 @@ pub(crate) mod check;
 mod digest;
 mod find;
 mod identity;
+pub(crate) mod image;
 mod json;
 pub(crate) mod measure;
 mod order;
