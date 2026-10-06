@@ -194,6 +194,9 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
     if let Some(command) = cli.command.as_ref().filter(|command| command.reads_input()) {
         edge::waiting(command.input(), io::stderr().lock());
     }
+    if let Some(command) = &cli.command {
+        command.check_images()?;
+    }
     let input = io::stdin();
     match &cli.command {
         Some(Command::Decide(arguments)) => judge::decide(arguments, environment, input, writer),

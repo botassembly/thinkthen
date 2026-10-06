@@ -175,6 +175,11 @@ fn judged_item(
             .record(bytes)
             .map_err(|error| Failure::record(error, streams))?,
         Data::Record(record) => record.clone(),
+        Data::Images(_) => {
+            return Err(Failure::Usage(
+                "recognize accepts text only; images are unsupported",
+            ));
+        }
     };
     let mut judged = judged_record(running, reading, spec, record, streams)?;
     if let Some(position) = item

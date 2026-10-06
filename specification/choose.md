@@ -10,6 +10,8 @@ thinkthen choose QUESTION|@FILE [OPTION...] [--option LABEL=DESCRIPTION] [--thre
 
 ## What it reads
 
+Version0.2 adds explicit ordered JPEG/PNG inputs through repeatable `--image FILE`, or separate located whole-file items through `--input PATH --unit file --media image`. Image-only input needs no caption. Native `Engine::choose_input` and its `_with`/`_many` forms retain typed answers and facts. Admission and formats follow [ADR0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md); the existing text rules below remain unchanged.
+
 One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines`, `--jsonl`, `--csv`, and `--tsv` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
 
 In record mode, `choose` fills each request with pick-one questions up to the batch and backend limits. `--batch N` caps its records per request; `--batch 1` sends one record a request, in the same quoted form. `--context FILE` sends that file's text once as shared evidence per batch. Both typed options require record mode. `THINKTHEN_BATCH` and a question file's `batch` are ignored for one document. See [records.md](records.md) for cuts, size limits, and output order.

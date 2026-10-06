@@ -179,7 +179,7 @@ impl Engine {
             self.check_record_limit(at)?;
             let text = Text {
                 at,
-                text: item.evidence().to_owned(),
+                input: crate::public::QuestionInput::Text(item.evidence().to_owned()),
             };
             let asks = asker.asks(&text).map_err(|miss| match miss {
                 Miss::Refused(error) => error,

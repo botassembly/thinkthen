@@ -4,6 +4,7 @@ use super::{Common, Framing};
 
 impl Common {
     pub(crate) fn check_plan_name(&self) -> Result<(), crate::failure::Failure> {
+        self.check_image_modes()?;
         if self.retired_dry_run {
             return Err(crate::failure::Failure::Usage(
                 "--dry-run was renamed --plan",
@@ -53,5 +54,38 @@ impl Common {
         } else {
             Framing::Document
         }
+    }
+}
+
+impl Common {
+    pub(crate) fn images(&self) -> bool {
+        !self.image.is_empty() || self.media.as_deref() == Some("image")
+    }
+    fn check_image_modes(&self) -> Result<(), crate::failure::Failure> {
+        use crate::failure::Failure;
+        if self.image.len() > crate::public::MAX_IMAGES {
+            return Err(Failure::Usage("image evidence requires 1 to 8 images"));
+        }
+        let framed = self.lines
+            || self.jsonl
+            || self.csv
+            || self.tsv
+            || self.window.is_some()
+            || !self.field.is_empty();
+        if !self.image.is_empty()
+            && (framed || !self.input.is_empty() || self.unit.is_some() || self.media.is_some())
+        {
+            return Err(Failure::Usage(
+                "--image cannot accompany --input, --media, --unit or record framing",
+            ));
+        }
+        if self.media.as_deref() == Some("image")
+            && (framed || self.input.is_empty() || self.unit.as_deref() != Some("file"))
+        {
+            return Err(Failure::Usage(
+                "--media image requires --input and --unit file without record framing",
+            ));
+        }
+        Ok(())
     }
 }

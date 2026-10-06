@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use crate::core::AttemptObservation;
-use crate::core::adapters::built_in;
 use crate::core::pack::{self, Ask, Split, State};
 use crate::core::recording::Exchange as Recorded;
 use crate::engine::error::Error;
@@ -92,11 +91,9 @@ impl<'a> Sender<'a> {
             let mut answered = match cancel.stop().or(failed) {
                 Some(stop) => refused(half, stop),
                 None => {
-                    let body = built_in::join(
-                        job.state.json(),
-                        &self.model,
-                        half.iter().map(|(ask, _)| &*ask.question),
-                    );
+                    let body = job
+                        .state
+                        .body(&self.model, half.iter().map(|(ask, _)| &*ask.question));
                     self.one(&body, half, cancel)
                 }
             };
@@ -115,9 +112,48 @@ impl<'a> Sender<'a> {
         done
     }
 
+    fn image_body(&self, bytes: usize, asks: &[(Ask, usize)]) -> Result<(), Error> {
+        let limit = asks
+            .first()
+            .and_then(|(ask, _)| ask.state.body_limit())
+            .map(|vendor| {
+                self.engine
+                    .backend()
+                    .image_ceiling()
+                    .into_iter()
+                    .chain(
+                        self.engine
+                            .profile()
+                            .and_then(|profile| profile.max_request_bytes),
+                    )
+                    .fold(vendor, usize::min)
+            });
+        if let Some(limit) = limit.filter(|&limit| bytes > limit) {
+            return Err(Error::ProfileLimit(
+                crate::core::adapters::built_in::images::body_limit(limit, bytes),
+            ));
+        }
+        Ok(())
+    }
+
+    fn image_estimate(&self, asks: &[(Ask, usize)]) -> Option<u64> {
+        asks.first().and_then(|(ask, _)| {
+            let questions = asks
+                .iter()
+                .map(|(ask, _)| Arc::clone(&ask.question))
+                .collect::<Vec<_>>();
+            ask.state.estimated_tokens(&self.model, &questions)
+        })
+    }
+
     /// One request's attempts, from the first live key read to its split.
     fn one(&self, body: &[u8], asks: Vec<(Ask, usize)>, cancel: &Cancel) -> Done {
-        let budgeted = cancel.with_process_budget(self.transport.send_budget.clone());
+        if let Err(error) = self.image_body(body.len(), &asks) {
+            return refused(asks, error);
+        }
+        let budgeted = cancel
+            .with_process_budget(self.transport.send_budget.clone())
+            .with_estimated_tokens(self.image_estimate(&asks));
         // A zero limit refuses before the key is read, so a bad key never
         // outranks a spent budget.
         if budgeted.has_zero_send_limit()

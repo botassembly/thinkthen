@@ -84,7 +84,7 @@ impl Asker for SetDecisions {
             rows.push(member.row(
                 Text {
                     at: text.at,
-                    text: String::new(),
+                    input: crate::public::QuestionInput::Text(String::new()),
                 },
                 own,
             ));

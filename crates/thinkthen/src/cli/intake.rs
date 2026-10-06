@@ -3,6 +3,7 @@
 use std::collections::VecDeque;
 use std::io::{BufRead, Read};
 
+mod images;
 mod snapshot;
 pub(crate) use snapshot::Snapshot;
 use std::path::PathBuf;
@@ -20,8 +21,12 @@ use crate::table::{Kind, Rows};
 #[derive(Clone, Serialize)]
 pub(crate) struct Position {
     pub(crate) file: Option<String>,
-    pub(crate) first: usize,
-    pub(crate) last: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) first: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) last: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) images: Option<Vec<String>>,
     #[serde(skip)]
     pub(crate) source: usize,
     #[serde(skip)]
@@ -31,6 +36,7 @@ pub(crate) struct Position {
 pub(crate) enum Data {
     Bytes(Vec<u8>),
     Record(Record),
+    Images(crate::public::ImageEvidence),
 }
 
 pub(crate) struct Item {
@@ -48,6 +54,8 @@ struct TextSource {
 }
 
 enum Source {
+    Images(crate::public::SourceItems),
+    Attached(images::Attachment),
     Text(TextSource),
     Pending {
         file: PathBuf,
@@ -81,8 +89,9 @@ impl TextSource {
                     .file
                     .as_ref()
                     .map(|path| path.to_string_lossy().into_owned()),
-                first,
-                last: self.line.max(first),
+                first: Some(first),
+                last: Some(self.line.max(first)),
+                images: None,
             }),
             data: Data::Bytes(bytes),
             advance: if streams { count } else { 1 },
@@ -118,6 +127,8 @@ impl Source {
             };
         }
         match self {
+            Self::Images(items) => images::next(items),
+            Self::Attached(attachment) => attachment.next(),
             Self::Pending { .. } => None,
             Self::Table(rows) => rows.next().map(|row| {
                 row.map(|record| Piece {
@@ -175,6 +186,9 @@ impl Intake {
         has_on: bool,
         snapshot: bool,
     ) -> Result<(Self, Option<Snapshot>), Failure> {
+        if common.images() {
+            return images::prepare(common, reading, input, has_on).map(|intake| (intake, None));
+        }
         let window = window(common, has_on)?;
         let paths = crate::enumerate_files(&common.input)
             .map_err(|error| Failure::OpenInput(std::io::Error::other(error.to_string())))?;
@@ -347,8 +361,13 @@ pub(crate) fn source_members(
         return Ok(());
     };
     member(line, "file", &position.file)?;
-    member(line, "first_line", &position.first)?;
-    member(line, "last_line", &position.last)
+    if let Some(first) = position.first {
+        member(line, "first_line", &first)?;
+    }
+    if let Some(last) = position.last {
+        member(line, "last_line", &last)?;
+    }
+    Ok(())
 }
 
 /// Retain source and original input beside a value without altering caller keys.
@@ -363,4 +382,15 @@ pub(crate) fn source_value(
     ));
     source_members(&mut line, Some(position))?;
     line.ok_or(Failure::Defect("a located value has no carrier"))
+}
+
+/// Retain explicit image evidence beside full result facts.
+pub(crate) fn image_input(
+    line: &mut Option<String>,
+    input: &crate::public::ImageEvidence,
+) -> Result<(), Failure> {
+    if let Some(line) = line {
+        member(line, "input", input)?;
+    }
+    Ok(())
 }

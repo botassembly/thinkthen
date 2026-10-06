@@ -51,6 +51,7 @@ pub(super) fn packed(
         context,
         profile: configuration.profile.as_ref(),
         limits: Limits::new(configuration.profile.as_ref()),
+        route: backend.image_route(),
     };
     let packing = Packing {
         questions: None,
@@ -71,10 +72,10 @@ pub(super) fn packed(
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
         let mut entries = Vec::new();
-        for plan in planner.plans(&held.record)? {
+        for plan in planner.plans(&held)? {
             dropped |= built_in::drops_detail(&plan);
-            let asks = pack::asks(backend.url(), &plan)
-                .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
+            let asks =
+                pack::asks(backend.url(), &plan).map_err(|error| super::encoded(&plan, error))?;
             entries.extend(
                 asks.into_iter()
                     .filter(|ask| seen.insert(ask.key))
@@ -127,6 +128,7 @@ fn packer(
     packing: Packing,
 ) -> Result<Packer<()>, Failure> {
     let limits = PackLimits {
+        image_ceiling: backend.image_ceiling(),
         ceiling: backend.ceiling(),
         profile: planner.profile.cloned(),
         inputs: packing.inputs.unwrap_or(MOST_INPUTS).max(1),

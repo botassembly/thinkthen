@@ -15,7 +15,19 @@ use crate::public::results::{Member, ObservedQuestion};
 /// One caller text and its zero-based place.
 pub(crate) struct Text {
     pub(crate) at: usize,
-    pub(crate) text: String,
+    pub(crate) input: super::QuestionInput,
+}
+
+impl Text {
+    pub(crate) fn plain(&self, function: super::InputFunction) -> Result<&str, Error> {
+        match &self.input {
+            super::QuestionInput::Text(text) => Ok(text),
+            super::QuestionInput::Images(_) => Err(Error::usage(format!(
+                "{} accepts text only; images are unsupported",
+                function.name()
+            ))),
+        }
+    }
 }
 
 /// What one question needs of each text beside the text.
@@ -25,6 +37,8 @@ pub(crate) struct Decisions {
     url: core::Url,
     context: Option<core::Evidence>,
     profile: Option<core::BackendProfile>,
+    kind: super::question::Kind,
+    route: crate::core::adapters::built_in::images::ImageRoute,
 }
 
 impl Decisions {
@@ -39,6 +53,8 @@ impl Decisions {
             url: engine.backend().url().clone(),
             context,
             profile: engine.profile().cloned(),
+            kind: question.kind,
+            route: engine.backend().image_route(),
         }
     }
 }
@@ -74,18 +90,48 @@ impl Asker for Decisions {
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Miss> {
-        let record = evidence(&text.text).map_err(Miss::Refused)?;
-        let plan = quoted_plan_of(
-            self.asked.clone(),
-            record,
-            &Json::String(text.text.clone()),
-            self.context.as_ref(),
-            vec![self.question.clone()],
-            self.profile.as_ref(),
-        )
-        .map_err(|error| Miss::Refused(planned(error)))?;
-        pack::asks(&self.url, &plan)
-            .map_err(|_| Miss::Refused(Error::defect("a request could not be written as JSON")))
+        let plan = match &text.input {
+            super::QuestionInput::Text(text) => {
+                let record = evidence(text).map_err(Miss::Refused)?;
+                quoted_plan_of(
+                    self.asked.clone(),
+                    record,
+                    &Json::String(text.clone()),
+                    self.context.as_ref(),
+                    vec![self.question.clone()],
+                    self.profile.as_ref(),
+                )
+                .map_err(|error| Miss::Refused(planned(error)))?
+            }
+            super::QuestionInput::Images(images) => {
+                use super::{InputFunction, question::Kind};
+                let function = match self.kind {
+                    Kind::Decide | Kind::Banded => InputFunction::Decide,
+                    Kind::Choose => InputFunction::Choose,
+                    Kind::Score => InputFunction::Score,
+                    Kind::Tag => InputFunction::Tag,
+                    Kind::Rank => InputFunction::Rank,
+                    Kind::Find | Kind::FindNone => InputFunction::Find,
+                };
+                super::images::guard(function, &text.input)?;
+                core::image::plan(
+                    self.asked.clone(),
+                    images.state(),
+                    self.context.as_ref(),
+                    vec![self.question.clone()],
+                    self.profile.as_ref(),
+                    self.route,
+                )
+                .map_err(|error| Miss::Refused(planned(error)))?
+            }
+        };
+        pack::asks(&self.url, &plan).map_err(|error| {
+            if plan.images().is_some() {
+                Miss::Refused(Error::usage(error.to_string()))
+            } else {
+                Miss::Refused(Error::defect("a request could not be written as JSON"))
+            }
+        })
     }
 
     fn row(&self, _text: Text, answers: Vec<Answered>) -> Result<Decided, Miss> {

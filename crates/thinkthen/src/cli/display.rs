@@ -149,7 +149,7 @@ impl Display {
                 writer,
                 &format!(
                     "{score}{}{printed}",
-                    self.prefix(position, position.first, true)
+                    self.prefix(position, position.first.unwrap_or(1), true)
                 ),
             );
         };
@@ -167,13 +167,13 @@ impl Display {
             .ok_or(Failure::Defect("a neighbor view has no snapshot"))?;
         snapshot.lines(
             position.source,
-            position.first.saturating_sub(around).max(1),
-            position.last.saturating_add(around),
+            position.first.unwrap_or(1).saturating_sub(around).max(1),
+            position.last.unwrap_or(1).saturating_add(around),
             |line, bytes| {
                 let prefix = self.prefix(
                     position,
                     line,
-                    (position.first..=position.last).contains(&line),
+                    (position.first.unwrap_or(1)..=position.last.unwrap_or(1)).contains(&line),
                 );
                 match writer
                     .write_all(prefix.as_bytes())

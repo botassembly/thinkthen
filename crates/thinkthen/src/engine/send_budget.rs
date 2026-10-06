@@ -88,6 +88,11 @@ impl Cancel<'_> {
                 .is_some_and(|selected| self.process_limit(selected) == Some(0))
     }
 
+    pub(crate) fn with_estimated_tokens(mut self, tokens: Option<u64>) -> Self {
+        self.estimated_tokens = tokens;
+        self
+    }
+
     pub(crate) fn reserve_send(
         &self,
         last_status: Option<u16>,
@@ -126,7 +131,7 @@ impl Cancel<'_> {
             .map(|selected| {
                 selected
                     .budget
-                    .reserve_estimated(selected.estimated, body_bytes)
+                    .reserve_estimated(selected.estimated, body_bytes, self.estimated_tokens)
                     .map_err(|()| self.estimated_denial(selected.estimated, last_status))
             })
             .transpose()?;
@@ -147,7 +152,11 @@ impl Cancel<'_> {
             (None, true) => crate::core::EstimatedInputDenial::AdditionalRequest { limit },
             (None, false) => crate::core::EstimatedInputDenial::InitialRequest { limit },
         };
-        error::Error::EstimatedInput(reason)
+        if self.estimated_tokens.is_some() {
+            error::Error::ImageEstimatedInput(reason)
+        } else {
+            error::Error::EstimatedInput(reason)
+        }
     }
 }
 
