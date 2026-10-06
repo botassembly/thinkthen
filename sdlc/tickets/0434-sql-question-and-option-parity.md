@@ -1,6 +1,6 @@
 # 0434: Match SQL question inputs and descriptions
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Slice A implements the reviewed SQL inputs and images. Native 0456 additions and final complete SQL adoption remain open.
 
 Milestone: 0.2
 
@@ -54,3 +54,5 @@ implementation is awaited. The loader delegates validation to today's
 Question/QuestionSet APIs until that owner supplies the shared loader
 validation API for this door. No SQL-local input-declaration parser or
 `@NAME` resolution is introduced here.
+
+- Code review: ACCEPT 2026-10-06. Fresh High whole-family review; the sole NULL-before-kind-validation defect was corrected and its resolution confirmed.

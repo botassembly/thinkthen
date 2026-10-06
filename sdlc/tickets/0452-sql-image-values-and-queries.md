@@ -1,6 +1,6 @@
 # 0452: Carry typed image values through SQL
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Slice A implements the reviewed SQL inputs and images. Complete result/facts and rank-set integration belong to 0435/0417; final parity remains open.
 
 Milestone: 0.2
 Owner: builder.
@@ -90,3 +90,5 @@ a fake key to the built-in endpoint. No real key or paid authorization was
 used. The tests now capture backend and the explicit loopback URL in the same
 environment tier; no SQL backend setter can replace that address. This is
 recorded for the whole High review, not represented as an offline test pass.
+
+- Code review: ACCEPT 2026-10-06. Fresh High whole-family review; the sole NULL-before-kind-validation defect was corrected and its resolution confirmed.
