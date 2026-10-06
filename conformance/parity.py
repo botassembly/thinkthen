@@ -119,7 +119,17 @@ def run(port, baseline=False):
             print(f'parity baseline: {label}', flush=True)
             args = list(command) + ([] if command[0] == 'cargo' else [port])
             with tempfile.TemporaryDirectory(prefix='thinkthen-parity-config-') as config, log.open('w') as stream:
-                env = dict(os.environ, XDG_CONFIG_HOME=config)
+                names = ('PATH', 'HOME', 'PWD', 'LANG', 'LC_ALL', 'TMPDIR',
+                         'XDG_RUNTIME_DIR', 'XDG_CACHE_HOME', 'XDG_STATE_HOME',
+                         'CARGO_BUILD_JOBS', 'CARGO_HOME', 'RUSTUP_HOME',
+                         'RUSTUP_TOOLCHAIN', 'RUSTC_WRAPPER', 'SCCACHE_CONF',
+                         'R_LIBS_USER', 'THINKTHEN_HEAVY_LOCK',
+                         'THINKTHEN_HEAVY_LOCK_HELD', 'THINKTHEN_TOOLCHAINS',
+                         'THINKTHEN_DUCKDB_CLI', 'SQLITE_AMALGAMATION',
+                         'THINKTHEN_PRIVATE_NAMES', 'THINKTHEN_PUBLISH_ROOT')
+                env = {name: value for name in names
+                       if (value := os.environ.get(name)) is not None}
+                env['XDG_CONFIG_HOME'] = config
                 process = subprocess.run(['sh', 'sdlc/scripts/time-limit', '1800', *args],
                                          cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT, check=False)
             code = process.returncode
