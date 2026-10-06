@@ -41,3 +41,5 @@ FindSelection::None
 fn CompleteFound::selection(&self) -> FindSelection
 fn RecordObservation::remap_index(self, usize) -> RecordObservation<'_>
 ```
+
+Native set-rank handoff: `Engine::rank_set_records_complete_with` and plain/fallible equivalents now supply typed `CompleteSetRank` final/member results through one ordinary engine. Located `RecordInput` originals and explicit contexts use existing composition; member views retain all actual probabilities, identities and partial metadata. Frame adoption remains with its owner.

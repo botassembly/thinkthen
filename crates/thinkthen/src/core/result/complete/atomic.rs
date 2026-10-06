@@ -5,6 +5,7 @@ use serde::{Serialize, Serializer};
 
 use super::{CompleteMeta, ResultIdentity};
 use crate::core::{Answer, DecisionResult, Usage};
+mod set_rank;
 
 /// The complete canonical document for decide, choose, tag, score, filter or rank.
 #[derive(Clone, Debug, PartialEq)]
@@ -72,6 +73,15 @@ impl Atomic {
         input: Option<&T>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        self.serialize_with_named_input(input, None, serializer)
+    }
+
+    pub(crate) fn serialize_with_named_input<S: Serializer, T: Serialize>(
+        &self,
+        input: Option<&T>,
+        question_name: Option<&str>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("schema", "thinkthen.result/2")?;
@@ -82,6 +92,9 @@ impl Atomic {
         }
         if let Some(input) = input {
             map.serialize_entry("input", input)?;
+        }
+        if let Some(name) = question_name {
+            map.serialize_entry("question_name", name)?;
         }
         map.serialize_entry(
             "question",

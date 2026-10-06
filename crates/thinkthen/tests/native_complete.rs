@@ -88,3 +88,6 @@ mod context;
 mod declaration_batches;
 #[path = "native_complete/tally.rs"]
 mod tally;
+
+#[path = "native_complete/set_rank.rs"]
+mod set_rank;

@@ -23,6 +23,7 @@ mod complete_recognize;
 mod complete_relate;
 pub use complete_relate::{CompleteRelated, CompleteRelationMember};
 mod complete_record;
+mod complete_set_rank;
 pub use complete::{
     CompleteChoice, CompleteDecision, CompleteFilter, CompleteRank, CompleteScore, CompleteTags,
 };
@@ -33,6 +34,7 @@ pub use complete_recognize::{
     RecognitionProbabilities,
 };
 pub use complete_record::CompleteRecord;
+pub use complete_set_rank::{CompleteRankMember, CompleteSetRank};
 mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub use call::{Call, DoorReply, Facts};

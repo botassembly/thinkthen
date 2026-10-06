@@ -238,7 +238,26 @@ fn observed(
     index: usize,
     rows: Vec<Result<Decided, Miss>>,
 ) -> Result<Vec<f64>, Error> {
-    let mut probabilities = Vec::with_capacity(rows.len());
+    observed_judgments(set, questions, backend, stop, index, rows)?
+        .into_iter()
+        .map(|(judged, _)| {
+            judged
+                .answer
+                .yes()
+                .ok_or_else(|| Error::defect("a decide answer lost its probability"))
+        })
+        .collect()
+}
+
+pub(crate) fn observed_judgments(
+    set: &core::QuestionSet,
+    questions: &[Question],
+    backend: &core::Backend,
+    stop: &Stop<'_>,
+    index: usize,
+    rows: Vec<Result<Decided, Miss>>,
+) -> Result<Vec<crate::public::engine::Keyed>, Error> {
+    let mut judgments = Vec::with_capacity(rows.len());
     let mut failed = false;
     for ((named, question), row) in set.questions().iter().zip(questions).zip(rows) {
         let decided = match row {
@@ -269,12 +288,7 @@ fn observed(
             }
         }
         if let Some(judged) = decided.judgment(question) {
-            probabilities.push(
-                judged
-                    .answer
-                    .yes()
-                    .ok_or_else(|| Error::defect("a decide answer lost its probability"))?,
-            );
+            judgments.push((judged, decided.keys));
         }
     }
     if failed {
@@ -289,5 +303,5 @@ fn observed(
             return Err(Error::cancelled());
         }
     }
-    Ok(probabilities)
+    Ok(judgments)
 }

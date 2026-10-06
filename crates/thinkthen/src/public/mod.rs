@@ -110,10 +110,10 @@ pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, Candidate, CompleteAnnotated,
     CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision, CompleteFacts,
-    CompleteFilter, CompleteFound, CompleteRank, CompleteRecord, CompleteScore, CompleteTags,
-    Counters, Details, DoorReply, Facts, Found, Judgment, NamedProbability, ObservedRow, Picked,
-    Probabilities, ProfileMismatch, QuestionDetail, Ranked, RankedRow, RecordObservation,
-    ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
+    CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord, CompleteScore,
+    CompleteSetRank, CompleteTags, Counters, Details, DoorReply, Facts, Found, Judgment,
+    NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail, Ranked,
+    RankedRow, RecordObservation, ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
