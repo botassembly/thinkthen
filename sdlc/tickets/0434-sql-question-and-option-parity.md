@@ -49,7 +49,8 @@ whole review; it is not a landing record or a completion claim.
   are Local. Existing 1 MiB, role and administrator confinement rules apply.
   No server evidence/image reader is added.
 
-0456 is active design work, not an accepted schema. The loader delegates
-validation to today's Question/QuestionSet APIs. When 0456 lands, its owner
-must supply the shared loader validation API for this door; no SQL-local
-input-declaration parser or `@NAME` resolution is introduced here.
+0456's accepted shared design/plan slice A landed at bf373969c; native
+implementation is awaited. The loader delegates validation to today's
+Question/QuestionSet APIs until that owner supplies the shared loader
+validation API for this door. No SQL-local input-declaration parser or
+`@NAME` resolution is introduced here.

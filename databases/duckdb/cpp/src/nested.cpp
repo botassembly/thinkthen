@@ -63,7 +63,10 @@ unique_ptr<FunctionData> BindNested(ClientContext &context, ScalarFunction &func
 				}
 			} else {
 				bound->constant_argument = value.GetValue<string>();
-				ValidateNested(kind, ResolveQuestion(context, *bound->constant_argument), {});
+				// Rich recognize kinds resolve only after the executing row's NULL check.
+				if (kind != 8) {
+					ValidateNested(kind, ResolveQuestion(context, *bound->constant_argument), {});
+				}
 			}
 		}
 	}

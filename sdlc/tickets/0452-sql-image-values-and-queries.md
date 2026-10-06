@@ -68,8 +68,9 @@ the landed native details only until then. 0417 requires the shared complete ran
 observation/carrier API at the SQL boundary. `Engine::rank_set_with`, `RankSet`
 and `SetRanked` are already landed; 0417 still needs their SQL adapter with
 member observations, selecting names, retained host keys and combined facts. No full parity claim is made
-while those dependent public calls and checks are absent. 0456's named input
-design remains pending; no schema or `@NAME` semantics are invented here.
+while those dependent public calls and checks are absent. 0456's shared
+design/plan slice A landed at bf373969c after acceptance; native implementation
+is awaited. No separate schema parser or `@NAME` semantics are invented here.
 
 Image values retain an optional `file` source name (NULL for bytes). SQLite
 exposes `thinkthen_image_file_name(image)`; DuckDB/composite callers read the

@@ -5,7 +5,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from harness import Backend, case, expect, main, rows, run
+from harness import Backend, case, expect, main, rows, run, said
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'sqlite/tests'))
 from image_backend import ImageBackend, FIXTURE, expected_body
@@ -107,6 +107,37 @@ def rich_recognize_invalid_arrays_mixed_and_duplicates_send_nothing():
         for result in got:
             expect('thinkthen usage:' in result.get('error', ''), True, 'native grammar refusal')
         expect(backend.count(), 0, 'invalid rich recognize never sends')
+
+
+@case
+def null_recognize_evidence_skips_constant_rich_kinds_and_file_io():
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        missing = str(Path(folder) / 'unreadable-kinds.json')
+        trace = Path(folder) / 'file-io.trace'
+        invalid = ('[broken', '["Person"]',
+                   '{"recognize":{"kinds":["Person",{"Place":"where"}]}}',
+                   '{"recognize":{"kinds":{"Person":"human","Person":"duplicate"}}}')
+        statements = [f"SELECT thinkthen_recognize(NULL, {literal(source)})" for source in invalid]
+        statements += [f"SELECT thinkthen_recognize(NULL, {literal('@' + missing)})",
+                       "SET enable_external_access = false",
+                       f"SELECT thinkthen_recognize(NULL, {literal('@' + missing)})",
+                       f"SELECT thinkthen_recognize(input, {literal('[broken')}) FROM (VALUES (NULL::VARCHAR),(NULL::VARCHAR)) t(input)"]
+        # Reuse the existing public-consumer tracer on Linux; other hosts keep
+        # the same NULL and permission regressions without a Linux syscall tool.
+        wrap = ['strace', '-f', '-e', 'trace=openat,newfstatat,statx,access,readlink', '-o', str(trace)] if sys.platform == 'linux' else None
+        got = run(statements, backend.base(), keyless=True,
+                  extra={'THINKTHEN_MAX_REQUESTS_TOTAL':'0'}, wrap=wrap)
+        expect([rows(result) for result in got[:5]], [[[None]]] * 5, 'NULL evidence skips constant invalid grammar and missing kinds file')
+        expect(rows(got[-2]), [[None]], 'NULL evidence skips host file permission checks')
+        expect(rows(got[-1]), [[None],[None]], 'each NULL row skips constant rich kinds validation')
+        if wrap:
+            calls = trace.read_text().splitlines()
+            expect(bool(calls), True, 'existing tracer observed the public consumer')
+            expect(sum(f'"{missing}"' in line for line in calls), 0, 'NULL kinds file is never opened or inspected')
+        refused = run([f"SELECT thinkthen_recognize('evidence', {literal('@' + missing)})"],
+                      backend.base(), keyless=True, extra={'THINKTHEN_MAX_REQUESTS_TOTAL':'0'})
+        expect(said(refused[0]), f'thinkthen local: the question file {missing} was not read: it does not exist or could not be opened (retryable: no)', 'non-NULL evidence still requires readable rich kinds')
+        expect(backend.count(), 0, 'NULL evidence and unreadable non-NULL kinds send nothing')
 
 
 if __name__ == '__main__':
