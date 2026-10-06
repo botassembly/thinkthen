@@ -53,3 +53,24 @@ STATIC_ASSERT(ALIGNOF(thinkthen_summary_v1)==RUST_SUMMARY_ALIGN);
 STATIC_ASSERT(sizeof(thinkthen_observation_v1)==RUST_OBSERVATION_SIZE);
 STATIC_ASSERT(ALIGNOF(thinkthen_observation_v1)==RUST_OBSERVATION_ALIGN);
 #endif
+
+#ifdef RUST_AUTHOR_SIZE
+STATIC_ASSERT(sizeof(thinkthen_question_author_v1)==RUST_AUTHOR_SIZE);
+STATIC_ASSERT(ALIGNOF(thinkthen_question_author_v1)==RUST_AUTHOR_ALIGN);
+STATIC_ASSERT(sizeof(thinkthen_input_declaration_v1)==RUST_DECLARATION_SIZE);
+STATIC_ASSERT(ALIGNOF(thinkthen_input_declaration_v1)==RUST_DECLARATION_ALIGN);
+STATIC_ASSERT(sizeof(thinkthen_input_property_v1)==RUST_PROPERTY_SIZE);
+STATIC_ASSERT(ALIGNOF(thinkthen_input_property_v1)==RUST_PROPERTY_ALIGN);
+#endif
+typedef int (*authored_fn)(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, thinkthen_question **);
+SIGNATURE(thinkthen_question_new_authored, authored_fn);
+typedef int (*load_named_fn)(const thinkthen_engine *, uint32_t, thinkthen_string_v1, thinkthen_question **);
+SIGNATURE(thinkthen_question_load_named, load_named_fn);
+SIGNATURE(thinkthen_question_load_reference, load_named_fn);
+typedef int (*author_fn)(const thinkthen_question *, thinkthen_question_author_v1 *);
+SIGNATURE(thinkthen_question_author, author_fn);
+typedef int (*result_author_fn)(const thinkthen_result *, size_t, thinkthen_question_author_v1 *);
+SIGNATURE(thinkthen_result_question_author, result_author_fn);
+SIGNATURE(thinkthen_result_observation_author, result_author_fn);
+typedef int (*member_author_fn)(const thinkthen_result *, size_t, size_t, thinkthen_question_author_v1 *);
+SIGNATURE(thinkthen_result_member_author, member_author_fn);

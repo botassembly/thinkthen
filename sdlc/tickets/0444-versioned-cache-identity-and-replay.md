@@ -88,3 +88,15 @@ file writes; existing recording/1 conversion regressions remain passing.
 No native compatibility exception or C expectation edit is made here. Root must
 coordinate the authorized metadata-oracle adoption with the C/corpus owners;
 original v1 stored keys and request-envelope validation remain distinct.
+
+Authorized C/shared legacy oracle adoption (0426 integration): the Rust public
+consumer and C share one independent specification/cache.md framed v2 helper.
+Reported model is supplied explicitly from each saved response; the final URL
+is the actual owned loopback fixture endpoint. Canonical legacy request-digest
+placeholders still identify their original request, then map to these v2 keys.
+No production hash, saved v1 row/recording, question bytes or packed counts change.
+Synthetic case 40 previously requested jev-1.13.0 but reported jev-latest while
+expecting a cache hit. Under v2 freshness that mismatch correctly resends; this
+controlled synthetic fixture now reports jev-1.13.0 and its detailed model
+expectation agrees. Its exact request and two-calls/one-send/one-cache-answer
+expectations stay intact. Captured historical mismatches are preserved.

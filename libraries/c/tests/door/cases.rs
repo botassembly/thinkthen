@@ -124,9 +124,13 @@ fn stored(backend: &Backend, case: &Members, folder: &Path) -> Checked {
     );
     let mut wanted = BTreeSet::new();
     for exchange in member(case, "exchanges").as_array().into_iter().flatten() {
+        let response = &exchange["response"];
         wanted.extend(keys(
             &served,
             exchange["request"].as_str().unwrap_or_default().as_bytes(),
+            response["model"]
+                .as_str()
+                .ok_or("no saved reported model")?,
         )?);
     }
     let failed = expect["success"]["failed_questions"].as_u64().unwrap_or(0);

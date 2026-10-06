@@ -6,7 +6,8 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #[cfg(unix)]
 use crate::ffi::carriers::{
-    AnswerV1, DetailsV1, MetaV1, ObservationV1, QuestionViewV1, RecordV1, SummaryV1,
+    AnswerV1, DetailsV1, InputDeclarationV1, InputPropertyV1, MetaV1, ObservationV1,
+    QuestionAuthorV1, QuestionViewV1, RecordV1, SummaryV1,
 };
 use crate::ffi::carriers::{DecideValueDataV1, MemberValueDataV1};
 #[cfg(unix)]
@@ -16,6 +17,21 @@ use std::mem::size_of;
 #[test]
 fn c11_and_cpp17_consumers_match_reviewed_signatures_and_rust_carrier_layouts() {
     let sizes = [
+        (
+            "AUTHOR",
+            size_of::<QuestionAuthorV1>(),
+            align_of::<QuestionAuthorV1>(),
+        ),
+        (
+            "DECLARATION",
+            size_of::<InputDeclarationV1>(),
+            align_of::<InputDeclarationV1>(),
+        ),
+        (
+            "PROPERTY",
+            size_of::<InputPropertyV1>(),
+            align_of::<InputPropertyV1>(),
+        ),
         ("RECORD", size_of::<RecordV1>(), align_of::<RecordV1>()),
         (
             "QUESTION",

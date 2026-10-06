@@ -25,7 +25,15 @@ static thinkthen_question *make(thinkthen_engine *e,unsigned kind) {
     }
     thinkthen_relation_v1 rule={0};
     if(kind==10) { rule.name=STR("supports"); rule.source=STR("*"); rule.target=STR("*"); spec.relations=(thinkthen_relations_v1){&rule,1}; }
-    thinkthen_question *q=NULL; assert(thinkthen_question_new(e,&spec,&q)==0 && q);
+    thinkthen_question_author_v1 author={0};
+    author.name=(thinkthen_optional_string_v1){1,STR("call-check")};
+    author.wording_version=(thinkthen_optional_u64_v1){1,17};
+    if(kind<8) author.item_schema.kind=1;
+    thinkthen_question *q=NULL;
+    assert(thinkthen_question_new_authored(e,&spec,kind==8?NULL:&author,&q)==0 && q);
+    thinkthen_question_author_v1 borrowed={0}; assert(thinkthen_question_author(q,&borrowed)==0);
+    assert(borrowed.name.present==(kind!=8));
+    if(kind!=8) assert(same(borrowed.name.value,"call-check") && borrowed.wording_version.value==17);
     if(kind==8) { thinkthen_question_free((thinkthen_question *)members[0].question); thinkthen_question_free((thinkthen_question *)members[1].question); }
     return q;
 }
@@ -64,6 +72,11 @@ static void check(thinkthen_result *r,unsigned kind,int files) {
     if(kind==8) { thinkthen_annotate_view_v1 v={0}; assert(thinkthen_result_annotate(r,0,&v)==0); row=v.common; assert(v.answers.len==2 && same(v.answers.data[0].name,"z_first")); assert(v.answers.data[0].data.success.value.data.decide.kind==2); assert(same(v.answers.data[1].data.success.answer.data.choice.pick,"z-first")); }
     if(kind==9) { thinkthen_recognize_view_v1 v={0}; assert(thinkthen_result_recognize(r,0,&v)==0); row=v.common; assert(v.value.entities.len>0 && v.answer.pieces.len>0 && v.answer.names.len>0); }
     if(kind==10) { thinkthen_relate_view_v1 v={0}; assert(thinkthen_result_relate(r,0,&v)==0); row=v.common; assert(v.value.len==2 && v.questions.len==2); assert(v.questions.data[0].data.success.answer_id.len==64); }
+    thinkthen_question_author_v1 author={0}; assert(thinkthen_result_question_author(r,0,&author)==0);
+    assert(author.name.present==(kind!=8));
+    if(kind!=8) assert(same(author.name.value,"call-check") && author.wording_version.present && author.wording_version.value==17);
+    if(kind==8) { assert(thinkthen_result_member_author(r,0,0,&author)==0); assert(same(author.name.value,"call-check") && author.wording_version.value==17); }
+    else assert(thinkthen_result_member_author(r,0,0,&author)==THINKTHEN_EUSAGE);
     common(row,kind==5 || kind==6 ? 1:kind);
     thinkthen_details_v1 detail={0}; assert(thinkthen_result_details(r,0,&detail)==0);
     assert(detail.inputs.len==((kind==7 || kind==10)?2:1));
@@ -76,6 +89,8 @@ static void check(thinkthen_result *r,unsigned kind,int files) {
     size_t question_count=0,row_count=0;
     for(size_t i=0;i<summary.observation_count;++i) {
         thinkthen_observation_v1 o={0}; assert(thinkthen_result_observation(r,i,&o)==0);
+        thinkthen_question_author_v1 observed={0}; assert(thinkthen_result_observation_author(r,i,&observed)==0);
+        if(o.kind==THINKTHEN_EVENT_ROW_V1) assert(observed.name.present==(kind!=8));
         if(o.kind==THINKTHEN_EVENT_QUESTION_V1) { ++question_count; assert(o.data.question.state==1); assert(o.data.question.data.success.answer_id.len==64);
             thinkthen_details_v1 d={0}; assert(thinkthen_result_observation_details(r,i,&d)==0);
             assert(d.question.present && d.inputs.len>0 && d.observations.len==d.question_sources.len);

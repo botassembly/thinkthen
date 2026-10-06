@@ -17,10 +17,7 @@ pub(crate) fn ask(
     options: CallOptions<'_>,
     completed: &mut Option<Facts>,
 ) -> Result<ResultHandle, Failure> {
-    if !(question.fits(kind)
-        || kind == 6
-            && matches!(&question.native, Native::Atomic(LoadedQuestion::Question(q)) if matches!(q.kind(), thinkthen::QuestionKind::Decide | thinkthen::QuestionKind::Score)))
-    {
+    if !question.fits_complete(kind) {
         return Err(Failure::usage(
             "the question kind does not match the named call",
         ));
@@ -44,6 +41,9 @@ pub(crate) fn ask(
         (&mut storage, &events, completed),
     )?;
     let events = events.into_inner().unwrap_or_else(PoisonError::into_inner);
+    let authors = std::mem::take(&mut storage.3);
+    let member_authors = std::mem::take(&mut storage.4);
+    let observation_authors = observations::authors(&mut storage, &events, &rows, &authors)?;
     let row_details = std::mem::take(&mut storage.1);
     let observation_details = events
         .iter()
@@ -100,6 +100,9 @@ pub(crate) fn ask(
         summary,
         rows,
         observations,
+        authors,
+        member_authors,
+        observation_authors,
         row_details,
         observation_details,
     })
@@ -163,7 +166,7 @@ fn execute(
             )
         ),
         (Native::Atomic(LoadedQuestion::Question(_)), 6) => {
-            let q = thinkthen::Question::rank_from_json(&question.json)?;
+            let q = question.rank_reading()?;
             collect!(completed;
                 engine.rank_records_complete_with(&q, records, options),
                 |r| rows::rank(

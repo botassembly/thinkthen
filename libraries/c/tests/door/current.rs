@@ -239,3 +239,109 @@ fn complete_native_readings_keep_projection_originals_authored_nulls_and_failed_
         }
     }
 }
+
+#[test]
+fn complete_author_declarations_and_explicit_object_context_keep_native_types() {
+    for (mode, sends) in [("success", 3), ("refused", 0)] {
+        let backend = Backend::start().expect("owned loopback");
+        let mode = std::path::PathBuf::from(mode);
+        let output = run_with(
+            &compile(&crate_dir().join("tests/c/complete_authors.c")),
+            &format!("{}/arm/full/capture/v1", backend.origin()),
+            b"",
+            &[("TYPED_AUTHOR_MODE", &mode)],
+        );
+        assert_eq!(
+            (output.status.code(), text(&output.stderr)),
+            (Some(0), String::new())
+        );
+        assert_eq!(backend.count(), sends);
+        if sends != 0 {
+            let capture: serde_json::Value =
+                serde_json::from_str(&backend.capture()).expect("capture");
+            let requests = capture["bodies"].as_array().expect("three bodies");
+            assert_eq!(requests.len(), 3);
+            let bodies = requests
+                .iter()
+                .map(|b| {
+                    serde_json::from_str::<serde_json::Value>(b.as_str().expect("body"))
+                        .expect("request")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                bodies[0]["state"],
+                serde_json::json!({"flag": false, "unselected": null})
+            );
+            assert_eq!(bodies[1]["state"], "shared fallback");
+            assert_eq!(
+                bodies[2]["state"],
+                "Each question quotes the text it asks about."
+            );
+            assert!(
+                bodies[0]["questions"]["q1"]["instructions"]
+                    .as_str()
+                    .expect("instructions")
+                    .contains("typed evidence")
+            );
+        }
+    }
+}
+#[test]
+fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_precedence() {
+    let backend = Backend::start().expect("owned loopback");
+    let config = super::scratch("named-config");
+    let questions = config.join("thinkthen/questions");
+    std::fs::create_dir_all(&questions).expect("questions");
+    for (name, body) in [
+        (
+            "catalog",
+            r#"{"name":"catalog","wording_version":31,"decide":"Need attention?"}"#,
+        ),
+        (
+            "mismatch",
+            r#"{"name":"different","decide":"Need attention?"}"#,
+        ),
+        ("broken", r#"{"name":"broken","decide":"Need attention?"}"#),
+        (
+            "members",
+            r#"{"version":1,"questions":{"ready":{"name":"member-check","decide":"Need attention?"}}}"#,
+        ),
+        (
+            "dynamic",
+            r#"{"name":"dynamic","wording_version":33,"choose":"Choose one?"}"#,
+        ),
+        (
+            "recognition",
+            r#"{"version":1,"name":"recognition","wording_version":33,"recognize":{"kinds":{},"relations":[]}}"#,
+        ),
+        (
+            "relation",
+            r#"{"version":1,"name":"relation","wording_version":33,"relate":{"relations":[{"name":"supports","source":"*","target":"*"}]}}"#,
+        ),
+    ] {
+        std::fs::write(questions.join(format!("{name}.json")), body).expect("named question");
+    }
+    let cwd = super::scratch("named-working-directory");
+    std::fs::write(
+        cwd.join("catalog"),
+        r#"{"name":"catalog","wording_version":32,"decide":"Need attention?"}"#,
+    )
+    .expect("local collision");
+    std::fs::write(cwd.join("broken"), "not question JSON").expect("invalid local collision");
+    let mode = std::path::PathBuf::from("named");
+    let output = run_with(
+        &compile(&crate_dir().join("tests/c/complete_authors.c")),
+        &format!("{}/generic/v1", backend.origin()),
+        b"",
+        &[
+            ("TYPED_AUTHOR_MODE", &mode),
+            ("XDG_CONFIG_HOME", &config),
+            ("TYPED_WORKING_DIRECTORY", &cwd),
+        ],
+    );
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(backend.count(), 7);
+}

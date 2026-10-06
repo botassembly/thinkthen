@@ -275,3 +275,48 @@ pub(crate) unsafe extern "C" fn thinkthen_result_observation_details(
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.observation_details.get(at).copied()) }
 }
+
+/// Borrow the authored metadata of one complete row.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_question_author(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut crate::ffi::carriers::QuestionAuthorV1,
+) -> i32 {
+    // SAFETY: view validates owner/output and get validates the ordinal.
+    unsafe { view(owner, out, |r| r.authors.get(at).copied()) }
+}
+/// Borrow one annotation member's actual authored metadata.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_member_author(
+    owner: *const ResultHandle,
+    at: usize,
+    member: usize,
+    out: *mut crate::ffi::carriers::QuestionAuthorV1,
+) -> i32 {
+    // SAFETY: view validates owner/output; both ordinals use checked access.
+    unsafe {
+        view(owner, out, |r| {
+            r.member_authors
+                .get(at)
+                .and_then(|members| members.get(member))
+                .copied()
+        })
+    }
+}
+/// Borrow one native observation's actual authored metadata.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_observation_author(
+    owner: *const ResultHandle,
+    at: usize,
+    out: *mut crate::ffi::carriers::QuestionAuthorV1,
+) -> i32 {
+    // SAFETY: view validates owner/output and get validates the ordinal.
+    unsafe { view(owner, out, |r| r.observation_authors.get(at).copied()) }
+}

@@ -38,10 +38,12 @@ macro_rules! union_layout {
     };
 }
 mod answers;
+mod author;
 mod inputs;
 mod metadata;
 mod results;
 pub use answers::*;
+pub use author::*;
 pub use inputs::*;
 pub use metadata::*;
 pub use results::*;

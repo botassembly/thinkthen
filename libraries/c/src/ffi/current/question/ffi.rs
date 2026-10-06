@@ -87,7 +87,10 @@ unsafe fn relations(value: RelationsV1) -> Result<Vec<Object>, Failure> {
         })
         .collect()
 }
-pub(super) unsafe fn build(spec: &QuestionSpecV1) -> Result<String, Failure> {
+pub(super) unsafe fn build(
+    spec: &QuestionSpecV1,
+    author: Option<&crate::current::author::Author>,
+) -> Result<String, Failure> {
     let mut body = Object::default();
     if !(1..=10).contains(&spec.kind) {
         return Err(Failure::usage("invalid question kind"));
@@ -105,6 +108,11 @@ pub(super) unsafe fn build(spec: &QuestionSpecV1) -> Result<String, Failure> {
             let mut members = Object::default();
             for member in read::slice(spec.members.data, spec.members.len)? {
                 let question = read::reference(member.question)?;
+                if question.json.is_empty() {
+                    return Err(Failure::usage(
+                        "native named set members await authored serialization",
+                    ));
+                }
                 let raw: Box<RawValue> = serde_json::from_str(&question.json)
                     .map_err(|_| Failure::defect("saved question cannot be read"))?;
                 members.put(read::string(member.name)?, raw)?;
@@ -167,8 +175,30 @@ pub(super) unsafe fn build(spec: &QuestionSpecV1) -> Result<String, Failure> {
         }
         controls(&mut body, spec, set)?;
     }
+    append_author(&mut body, author)?;
     serde_json::to_string(&body)
         .map_err(|_| Failure::defect("question descriptor cannot be written"))
+}
+
+fn append_author(
+    body: &mut Object,
+    author: Option<&crate::current::author::Author>,
+) -> Result<(), Failure> {
+    if let Some(author) = author {
+        if let Some(name) = &author.name {
+            body.put("name", name.as_str())?;
+        }
+        if let Some(version) = author.version {
+            body.put("wording_version", version.get())?;
+        }
+        if let Some(schema) = &author.item {
+            body.put("item_schema", schema)?;
+        }
+        if let Some(schema) = &author.context {
+            body.put("context_schema", schema)?;
+        }
+    }
+    Ok(())
 }
 
 unsafe fn controls(body: &mut Object, spec: &QuestionSpecV1, set: bool) -> Result<(), Failure> {

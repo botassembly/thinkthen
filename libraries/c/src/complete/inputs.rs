@@ -99,12 +99,10 @@ fn compose(
     };
     let context = match retained.context.as_ref() {
         None => None,
-        Some(Content::Text(text)) => Some(text.clone()),
-        Some(Content::Json(_)) => {
-            return Err(Failure::usage(
-                "per-record context requires text until native declared context is supplied",
-            ));
-        }
+        Some(Content::Text(text)) => Some(thinkthen::RecordContext::Text(text.clone())),
+        Some(Content::Json(raw)) => Some(thinkthen::RecordContext::Object(
+            thinkthen::ObjectContext::new(&RawRecord::json(raw.get())?)?,
+        )),
     };
     let options = options(&retained.options)?;
     Ok(RecordInput {

@@ -1,6 +1,7 @@
 //! Full annotation, recognition and relation tables from native getters.
 use super::{inputs::Original, observations, questions, rows};
 use crate::current::Storage;
+use crate::current::author::{Author, native_author};
 use crate::failures::Failure;
 use crate::ffi::carriers::{
     AnnotateViewV1, ContentV1, EndpointV1, MemberDataV1, MemberFailureV1, MemberSuccessV1,
@@ -21,9 +22,11 @@ pub(super) fn annotate(
     let r = row.result();
     let mut common = s.original_row(Some(row.original()), r.meta());
     let mut questions = Vec::new();
+    let mut authors = Vec::new();
     let members = r
         .members()
         .map(|m| {
+            authors.push(s.author(&native_author!(m.question())));
             let question = s.resolved_question(m.question(), m.threshold())?;
             let (ptr, _) = s.array(vec![question]);
             questions.push(QuestionMemberV1 {
@@ -82,15 +85,8 @@ pub(super) fn annotate(
             })
         })
         .collect::<Result<Vec<_>, Failure>>()?;
-    let (data, len) = s.array(questions);
-    common.question = OptionalQuestionV1 {
-        present: 1,
-        value: QuestionViewV1 {
-            kind: 8,
-            members: QuestionMembersV1 { data, len },
-            ..QuestionViewV1::default()
-        },
-    };
+    s.row_author(&Author::default(), authors);
+    common.question = annotation_question(s, questions);
     let (data, len) = s.array(members);
     s.row_details(
         common,
@@ -109,6 +105,18 @@ pub(super) fn annotate(
         data: output,
     })
 }
+fn annotation_question(s: &mut Storage, questions: Vec<QuestionMemberV1>) -> OptionalQuestionV1 {
+    let (data, len) = s.array(questions);
+    OptionalQuestionV1 {
+        present: 1,
+        value: QuestionViewV1 {
+            kind: 8,
+            members: QuestionMembersV1 { data, len },
+            ..QuestionViewV1::default()
+        },
+    }
+}
+
 pub(super) fn recognize(
     s: &mut Storage,
     row: &CompleteRecord<Original, CompleteRecognized>,
@@ -116,6 +124,7 @@ pub(super) fn recognize(
     let r = row.result();
     let mut common = s.original_row(Some(row.original()), r.meta());
     let q = r.question();
+    s.row_author(&native_author!(q), Vec::new());
     common.question = OptionalQuestionV1 {
         present: 1,
         value: QuestionViewV1 {
@@ -229,6 +238,7 @@ pub(super) fn relate(
         },
     };
     let q = r.question();
+    s.row_author(&native_author!(q), Vec::new());
     common.question = OptionalQuestionV1 {
         present: 1,
         value: QuestionViewV1 {

@@ -6,6 +6,8 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 /// Canonical reviewed C input descriptors and target borrowed views.
 pub use crate::ffi::carriers;
+#[path = "author/ffi.rs"]
+mod author;
 #[path = "images/ffi.rs"]
 pub mod images;
 #[path = "question/ffi.rs"]
@@ -26,35 +28,8 @@ pub unsafe extern "C" fn thinkthen_question_new(
     spec: *const QuestionSpecV1,
     out: *mut *mut QuestionHandle,
 ) -> i32 {
-    // SAFETY: only null or live descriptors/outputs reach this boundary.
-    unsafe {
-        super::typed(
-            engine,
-            |_| {
-                read::required(out)?;
-                let spec = read::reference(spec)?;
-                let mut question = if spec.kind == 6 && spec.members.len == 0 {
-                    current::question::rank(question::build(spec)?)
-                } else if spec.kind == 2 && spec.choices.len == 0 {
-                    current::question::dynamic(question::build(spec)?)
-                } else {
-                    current::parse(spec.kind, question::build(spec)?)
-                }?;
-                if spec.kind == 7 && read::flag(spec.none)? {
-                    let current::question::Native::Find(q) = &mut question.native else {
-                        return Err(Failure::defect("native find constructor lost its kind"));
-                    };
-                    *q = q.clone().offering_none()?;
-                }
-                question.descriptor = Some(Box::new(question::descriptor(spec)?));
-                Ok(question)
-            },
-            |_, value| {
-                *out = Box::into_raw(Box::new(value));
-                OK
-            },
-        )
-    }
+    // SAFETY: unchanged descriptors pass through the same guarded constructor.
+    unsafe { author::new(engine, spec, std::ptr::null(), out) }
 }
 /// Load a bounded native question or question-set file.
 /// # Safety

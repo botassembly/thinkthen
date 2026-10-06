@@ -3,6 +3,7 @@
     dead_code,
     reason = "released projection regressions retain private descriptors and view helpers"
 )]
+pub(crate) mod author;
 pub(crate) mod descriptors;
 #[cfg(test)]
 mod execute;
@@ -22,6 +23,7 @@ use thinkthen::{Evidence, InputReaderOptions};
 #[derive(Clone)]
 pub struct QuestionHandle {
     pub(crate) json: String,
+    pub(crate) author: Box<author::AuthorOwner>,
     pub(crate) native: question::Native,
     pub(crate) descriptor: Option<Box<QuestionData>>,
     pub(crate) reading: Option<thinkthen::RecordReading>,
@@ -210,6 +212,8 @@ pub(crate) struct Storage(
     pub(crate) Vec<Box<dyn std::any::Any>>,
     pub(crate) Vec<crate::ffi::carriers::DetailsV1>,
     pub(crate) Vec<crate::ffi::carriers::RowV1>,
+    pub(crate) Vec<crate::ffi::carriers::QuestionAuthorV1>,
+    pub(crate) Vec<Vec<crate::ffi::carriers::QuestionAuthorV1>>,
 );
 impl Storage {
     pub(crate) fn array<T: 'static>(&mut self, values: Vec<T>) -> (*const T, usize) {

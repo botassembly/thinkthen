@@ -147,3 +147,27 @@ fn question(
         data,
     })
 }
+
+pub(super) fn authors(
+    s: &mut Storage,
+    events: &[OwnedRecordObservation],
+    rows: &[RowObservationV1],
+    authors: &[crate::ffi::carriers::QuestionAuthorV1],
+) -> Result<Vec<crate::ffi::carriers::QuestionAuthorV1>, Failure> {
+    use crate::current::author::native_author;
+    events
+        .iter()
+        .map(|event| match event {
+            OwnedRecordObservation::Question { detail, .. } => {
+                let detail = detail.detail();
+                Ok(s.author(&native_author!(detail.question())))
+            }
+            OwnedRecordObservation::Row { index, .. } => rows
+                .iter()
+                .position(|row| row.index == *index)
+                .and_then(|at| authors.get(at))
+                .copied()
+                .ok_or_else(|| Failure::defect("native row event lost its author snapshot")),
+        })
+        .collect()
+}

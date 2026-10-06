@@ -1056,6 +1056,63 @@ int thinkthen_error_complete(const thinkthen_engine *, thinkthen_result **);
  */
 int thinkthen_question_new(const thinkthen_engine *, const thinkthen_question_spec_v1 *, thinkthen_question **);
 int thinkthen_question_load(const thinkthen_engine *, thinkthen_string_v1 path, thinkthen_question **);
+/* Additive 0456 declarations. kind: ABSENT=0, STRING=1, OBJECT=2.
+ * Object properties preserve authored order; property kinds STRING=1,
+ * NUMBER=2, BOOLEAN=3, STRING_LIST=4. Required names preserve their order.
+ * Non-object declarations require empty property/required arrays.
+ * name/version absence is explicit; no inferred name or default version.
+ */
+enum thinkthen_input_declaration_kind_v1 {
+    THINKTHEN_DECLARATION_ABSENT_V1=0, THINKTHEN_DECLARATION_STRING_V1=1,
+    THINKTHEN_DECLARATION_OBJECT_V1=2
+};
+enum thinkthen_input_property_kind_v1 {
+    THINKTHEN_PROPERTY_STRING_V1=1, THINKTHEN_PROPERTY_NUMBER_V1=2,
+    THINKTHEN_PROPERTY_BOOLEAN_V1=3, THINKTHEN_PROPERTY_STRING_LIST_V1=4
+};
+enum thinkthen_question_loader_role_v1 {
+    THINKTHEN_LOAD_ATOMIC_V1=1, THINKTHEN_LOAD_SET_V1=2,
+    THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1=3, THINKTHEN_LOAD_RECOGNIZE_V1=4,
+    THINKTHEN_LOAD_RELATE_V1=5
+};
+typedef struct thinkthen_input_property_v1 {
+    thinkthen_string_v1 name; uint32_t kind;
+} thinkthen_input_property_v1;
+typedef struct thinkthen_input_properties_v1 {
+    const thinkthen_input_property_v1 *data; size_t len;
+} thinkthen_input_properties_v1;
+typedef struct thinkthen_input_declaration_v1 {
+    uint32_t kind;
+    thinkthen_input_properties_v1 properties;
+    thinkthen_strings_v1 required;
+} thinkthen_input_declaration_v1;
+typedef struct thinkthen_question_author_v1 {
+    thinkthen_optional_string_v1 name;
+    thinkthen_optional_u64_v1 wording_version;
+    thinkthen_input_declaration_v1 item_schema, context_schema;
+} thinkthen_question_author_v1;
+/* Construct through the same native grammar, with separately counted author
+ * metadata. author=NULL means no author metadata. All inputs are cloned.
+ */
+int thinkthen_question_new_authored(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, thinkthen_question **);
+/* Borrow metadata owned by this immutable question until question_free. */
+int thinkthen_question_author(const thinkthen_question *, thinkthen_question_author_v1 *);
+/* Explicit native loader role: ATOMIC=1, SET=2, DYNAMIC_CHOOSE=3,
+ * RECOGNIZE=4, RELATE=5. No host search or fallback after file refusal.
+ * These native-loaded handles execute directly. Embedding them as typed set
+ * members awaits a native authored serialization/set composition API.
+ */
+int thinkthen_question_load_named(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 name, thinkthen_question **);
+int thinkthen_question_load_reference(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 reference, thinkthen_question **);
+/* Borrow native author snapshots until result_free. Row/member ordinals
+ * follow the existing named result accessors and annotation member order.
+ * Set envelopes and generated internal questions carry absent author fields.
+ * Invalid owner/output/ordinal or a member on a non-annotation row is Usage
+ * and leaves output unchanged. Observation includes both question/row events.
+ */
+int thinkthen_result_question_author(const thinkthen_result *, size_t row, thinkthen_question_author_v1 *);
+int thinkthen_result_member_author(const thinkthen_result *, size_t row, size_t member, thinkthen_question_author_v1 *);
+int thinkthen_result_observation_author(const thinkthen_result *, size_t observation, thinkthen_question_author_v1 *);
 void thinkthen_question_free(thinkthen_question *);
 int thinkthen_image_clone(const thinkthen_engine *, const uint8_t *, size_t, uint32_t media, thinkthen_optional_string_v1 filename, thinkthen_image **);
 int thinkthen_image_view(const thinkthen_image *, thinkthen_image_view_v1 *);

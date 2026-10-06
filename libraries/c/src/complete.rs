@@ -17,6 +17,9 @@ pub(crate) struct ResultHandle {
     pub(crate) summary: SummaryV1,
     pub(crate) rows: Vec<RowObservationV1>,
     pub(crate) observations: Vec<ObservationV1>,
+    pub(crate) authors: Vec<crate::ffi::carriers::QuestionAuthorV1>,
+    pub(crate) member_authors: Vec<Vec<crate::ffi::carriers::QuestionAuthorV1>>,
+    pub(crate) observation_authors: Vec<crate::ffi::carriers::QuestionAuthorV1>,
     pub(crate) row_details: Vec<crate::ffi::carriers::DetailsV1>,
     pub(crate) observation_details: Vec<crate::ffi::carriers::DetailsV1>,
 }
@@ -63,6 +66,9 @@ pub(crate) fn failure(
         },
         rows: Vec::new(),
         observations: Vec::new(),
+        authors: Vec::new(),
+        member_authors: Vec::new(),
+        observation_authors: Vec::new(),
         row_details: Vec::new(),
         observation_details: Vec::new(),
     })

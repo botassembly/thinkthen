@@ -36,31 +36,65 @@ pub(crate) fn parse(kind: u32, json: String) -> Result<QuestionHandle, Failure> 
         10 => Native::Relate(Relate::from_json(&json)?),
         _ => return Err(Failure::usage("invalid question kind")),
     };
-    Ok(QuestionHandle {
+    Ok(finish(json, native, reading))
+}
+pub(crate) fn dynamic(json: String) -> Result<QuestionHandle, Failure> {
+    let native = Native::DynamicChoose(RecordChooseQuestion::from_json(&json)?);
+    Ok(finish(json, native, None))
+}
+pub(crate) fn rank(json: String) -> Result<QuestionHandle, Failure> {
+    let native = Native::Rank(Question::rank_from_json(&json)?);
+    Ok(finish(json, native, None))
+}
+fn finish(
+    json: String,
+    native: Native,
+    reading: Option<thinkthen::RecordReading>,
+) -> QuestionHandle {
+    use super::author::{Author, AuthorOwner, native_author};
+    let author = match &native {
+        Native::Atomic(q) => native_author!(q),
+        Native::Rank(q) | Native::Find(q) => native_author!(q),
+        Native::DynamicChoose(q) => native_author!(q),
+        Native::Recognize(q) => native_author!(q),
+        Native::Relate(q) => native_author!(q),
+        Native::Set(_) | Native::RankSet(_) => Author::default(),
+    };
+    QuestionHandle {
         json,
         native,
         descriptor: None,
         reading,
-    })
+        author: Box::new(AuthorOwner::new(author)),
+    }
 }
-pub(crate) fn dynamic(json: String) -> Result<QuestionHandle, Failure> {
-    let native = Native::DynamicChoose(RecordChooseQuestion::from_json(&json)?);
-    Ok(QuestionHandle {
-        json,
-        native,
-        descriptor: None,
-        reading: None,
-    })
+/// Explicit native loader role; no host filesystem/name resolver is involved.
+pub(crate) fn named(role: u32, value: &str, reference: bool) -> Result<QuestionHandle, Failure> {
+    macro_rules! load {
+        ($ty:ty) => {
+            if reference {
+                <$ty>::load_reference(value)?
+            } else {
+                <$ty>::load_named(value)?
+            }
+        };
+    }
+    let mut reading = None;
+    let native = match role {
+        1 => Native::Atomic(load!(Question)),
+        2 => Native::Set(load!(QuestionSet)),
+        3 => Native::DynamicChoose(load!(RecordChooseQuestion)),
+        4 => {
+            let (q, selected) = load!(thinkthen::RecognizeQuestionFile).into_parts();
+            reading = Some(selected);
+            Native::Recognize(q)
+        }
+        5 => Native::Relate(load!(Relate)),
+        _ => return Err(Failure::usage("invalid native named question role")),
+    };
+    Ok(finish(String::new(), native, reading))
 }
-pub(crate) fn rank(json: String) -> Result<QuestionHandle, Failure> {
-    let native = Native::Rank(Question::rank_from_json(&json)?);
-    Ok(QuestionHandle {
-        json,
-        native,
-        descriptor: None,
-        reading: None,
-    })
-}
+
 pub(crate) fn load(path: &str) -> Result<QuestionHandle, Failure> {
     let json = thinkthen::read_question_file(path)
         .map_err(|_| Failure::local("the question file could not supply bounded UTF-8 content"))?;
@@ -85,6 +119,22 @@ pub(crate) fn load(path: &str) -> Result<QuestionHandle, Failure> {
     parsed.map_err(|_| Failure::local("the question file has invalid question content"))
 }
 impl QuestionHandle {
+    pub(crate) fn fits_complete(&self, kind: u32) -> bool {
+        self.fits(kind)
+            || kind == 6
+                && matches!(&self.native,
+            Native::Atomic(LoadedQuestion::Question(q)) if matches!(q.kind(), thinkthen::QuestionKind::Decide | thinkthen::QuestionKind::Score))
+    }
+
+    pub(crate) fn rank_reading(&self) -> Result<Question, Failure> {
+        if self.json.is_empty() {
+            return Err(Failure::usage(
+                "native named rank conversion awaits authored rank API",
+            ));
+        }
+        Ok(Question::rank_from_json(&self.json)?)
+    }
+
     pub(crate) fn fits(&self, kind: u32) -> bool {
         match (&self.native, kind) {
             (Native::Atomic(question), 1..=5) => {

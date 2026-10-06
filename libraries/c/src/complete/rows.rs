@@ -1,5 +1,6 @@
 //! Concrete row views use native readings, raw selections and original occurrences.
 use super::{inputs::Original, metadata, questions};
+use crate::current::author::native_author;
 use crate::current::{Content, Storage};
 use crate::failures::Failure;
 use crate::ffi::carriers::{
@@ -115,6 +116,7 @@ macro_rules! atomic {
         ) -> Result<RowObservationV1, Failure> {
             let r = row.result();
             let question = r.question();
+            s.row_author(&native_author!(question), Vec::new());
             let answer = s.answer(
                 question_kind(question),
                 &r.probabilities(),
@@ -209,6 +211,7 @@ pub(super) fn rank(
     raw: Option<&str>,
 ) -> Result<RowObservationV1, Failure> {
     let r = row.result();
+    s.row_author(&native_author!(r.question()), Vec::new());
     let answer = s.answer(
         question_kind(r.question()),
         &r.probabilities(),
@@ -245,6 +248,7 @@ pub(super) fn find(
     r: &thinkthen::CompleteFound<Original>,
     events: &[thinkthen::OwnedRecordObservation],
 ) -> Result<RowObservationV1, Failure> {
+    s.row_author(&native_author!(r.question()), Vec::new());
     let mut common = s.original_row(None, r.meta());
     common.question = OptionalQuestionV1 {
         present: 1,

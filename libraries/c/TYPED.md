@@ -30,14 +30,91 @@ Additive `thinkthen_result_details(result, row, out)` and `thinkthen_result_obse
 
 ## Native dependencies still open
 
-This checkpoint uses pushed native 76e925432 and merged main only. It does not merge active lane0 files. Complete `RankSet` execution is missing: legacy `rank_set_with` cannot supply final complete rows, question_name, original ordinal and final identity. The complete C route refuses that variant before sends.
+The integration includes the committed 8140d01dc foundation and 8463aa30c correction with current main; no active lane0 files are merged. 0456 author metadata/declarations and explicit object context are now adopted through native APIs. Native named/reference loaders execute directly for atomic questions, sets, dynamic choose, recognize and relate. Additive constructor and borrowed question/row/member/observation author views are specified below. Native declaration admission stages invalid later records before any sends.
 
-Native resolved primitive questions expose content/options/yes/no and readings, but no typed authored model/profile/batch/on getters. `FindReading` lacks authored model/on; `RecognitionReading` lacks authored model/on; `RelationReading` lacks authored model. These authored slots stay absent rather than being guessed from effective response metadata. Atomic/rank non-root selection and custom relate pointer admission remain native gaps. Located annotation text has no public native route through the annotation text parser while retaining its location; unlocated annotation text uses the native parser, including valid JSON and invalid JSON literals. Native annotation record composition currently keeps located literal text verbatim. This distinction requires a native correction before qualification.
+The remaining native interface requirements are:
 
-0456's coherent native update is pending: optional name/wording_version/item_schema/context_schema getters/setters, typed declarations, named/reference loaders and declared object per-record contexts. The C bridge currently accepts text context and refuses object context. Exact additive C declaration/metadata APIs will be recorded in 0426 before family adoption after those native interfaces are supplied.
+- A complete saved rank-set record route returning final facts, native row identity, original ordinal and question_name. The existing legacy `rank_set_with` cannot provide those complete values.
+- Authored-only `ResolvedQuestion` model/profile/batch/on getters; `FindReading` model/on; `RecognitionReading` model/on; `RelationReading` model. Existing effective response metadata cannot substitute for authored settings. 0456 name/version/declaration getters are available and mapped.
+- Native complete admission for custom relate field pointers and a located annotation text composition path that preserves native JSON-versus-literal parsing and original coordinates. Existing atomic/rank loader non-root `on` refusals remain unchanged; selected evidence requires a coherent native route.
+- Native named/reference rank admission, plus native authored serialization or set composition retaining all saved member settings. Named atomic handles can execute atomic judgments, but C cannot reparse them for rank or embed them in the existing descriptor-built set without that native support. No host file/name resolver or reconstructed authored JSON is added. `FindQuestionFile` has no native named/reference loader; find literal/builder metadata works through the existing native grammar.
+
+These are integration dependencies, not manufactured absent data or a claim that the native whole ticket is complete. Their concrete remaining needs are recorded in 0426.
 
 ## Verification and qualification
 
-The existing ASan/LSan public consumer harness now executes all ten calls against owned loopback replies, for both records and native files (exactly 13 requests per run), strict saved-answer rereading and cache hits, per-record contexts/candidates, native partial-member failures, authored nulls, selected find files, ordered duplicate images on decide/choose/score, native image files and seven zero-send image refusals. It retains existing constructor, layout, secrecy, cancellation and private projection regressions. Existing JSON request-key checks currently expose two failures against this native checkpoint; their expectations remain intact.
+The existing ASan/LSan public consumer harness now executes all ten calls against owned loopback replies, for both records and native files (exactly 13 requests per run), strict saved-answer rereading and cache hits, per-record contexts/candidates, native partial-member failures, authored nulls, selected find files, ordered duplicate images on decide/choose/score, native image files and seven zero-send image refusals. It retains existing constructor, layout, secrecy, cancellation and private projection regressions. The legacy C key checks now share an independent documented v2 oracle with the Rust public consumer. Original fixture question bytes and v1 validation/replay remain distinct. The synthetic cache-hit fixture reports its literal requested model, preserving its original request and cache counts. The portable C consumer additionally exercises a read-only original v1 snapshot and verifies zero sends and unchanged bytes/mtime.
 
 Root owns the fresh High whole-change review, native integration, full landing gates, release rehearsal, Ian's approvals and the one landing record. This pushed integration checkpoint is not a complete parity or source landing claim.
+
+## Coherent 0456 integration API
+
+The following additive API preserves every existing layout and symbol. Native declarations validate both constructors and execution. Explicit object context uses native `ObjectContext` and `RecordContext`; literal JSON-looking text remains text.
+
+```c
+/* Additive 0456 declarations. kind: ABSENT=0, STRING=1, OBJECT=2.
+ * Object properties preserve authored order; property kinds STRING=1,
+ * NUMBER=2, BOOLEAN=3, STRING_LIST=4. Required names preserve their order.
+ * Non-object declarations require empty property/required arrays.
+ * name/version absence is explicit; no inferred name or default version.
+ */
+enum thinkthen_input_declaration_kind_v1 {
+    THINKTHEN_DECLARATION_ABSENT_V1=0, THINKTHEN_DECLARATION_STRING_V1=1,
+    THINKTHEN_DECLARATION_OBJECT_V1=2
+};
+enum thinkthen_input_property_kind_v1 {
+    THINKTHEN_PROPERTY_STRING_V1=1, THINKTHEN_PROPERTY_NUMBER_V1=2,
+    THINKTHEN_PROPERTY_BOOLEAN_V1=3, THINKTHEN_PROPERTY_STRING_LIST_V1=4
+};
+enum thinkthen_question_loader_role_v1 {
+    THINKTHEN_LOAD_ATOMIC_V1=1, THINKTHEN_LOAD_SET_V1=2,
+    THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1=3, THINKTHEN_LOAD_RECOGNIZE_V1=4,
+    THINKTHEN_LOAD_RELATE_V1=5
+};
+typedef struct thinkthen_input_property_v1 {
+    thinkthen_string_v1 name; uint32_t kind;
+} thinkthen_input_property_v1;
+typedef struct thinkthen_input_properties_v1 {
+    const thinkthen_input_property_v1 *data; size_t len;
+} thinkthen_input_properties_v1;
+typedef struct thinkthen_input_declaration_v1 {
+    uint32_t kind;
+    thinkthen_input_properties_v1 properties;
+    thinkthen_strings_v1 required;
+} thinkthen_input_declaration_v1;
+typedef struct thinkthen_question_author_v1 {
+    thinkthen_optional_string_v1 name;
+    thinkthen_optional_u64_v1 wording_version;
+    thinkthen_input_declaration_v1 item_schema, context_schema;
+} thinkthen_question_author_v1;
+/* Construct through the same native grammar, with separately counted author
+ * metadata. author=NULL means no author metadata. All inputs are cloned.
+ */
+int thinkthen_question_new_authored(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, thinkthen_question **);
+/* Borrow metadata owned by this immutable question until question_free. */
+int thinkthen_question_author(const thinkthen_question *, thinkthen_question_author_v1 *);
+/* Explicit native loader role: ATOMIC=1, SET=2, DYNAMIC_CHOOSE=3,
+ * RECOGNIZE=4, RELATE=5. No host search or fallback after file refusal.
+ * These native-loaded handles execute directly. Embedding them as typed set
+ * members awaits a native authored serialization/set composition API.
+ */
+int thinkthen_question_load_named(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 name, thinkthen_question **);
+int thinkthen_question_load_reference(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 reference, thinkthen_question **);
+/* Borrow native author snapshots until result_free. Row/member ordinals
+ * follow the existing named result accessors and annotation member order.
+ * Set envelopes and generated internal questions carry absent author fields.
+ * Invalid owner/output/ordinal or a member on a non-annotation row is Usage
+ * and leaves output unchanged. Observation includes both question/row events.
+ */
+int thinkthen_result_question_author(const thinkthen_result *, size_t row, thinkthen_question_author_v1 *);
+int thinkthen_result_member_author(const thinkthen_result *, size_t row, size_t member, thinkthen_question_author_v1 *);
+int thinkthen_result_observation_author(const thinkthen_result *, size_t observation, thinkthen_question_author_v1 *);
+```
+
+Current integration checks pass: 19 Rust tests and all 69 C public-consumer tests,
+C all-targets Clippy, shared Rust corpus and its Clippy, C11/C++17 layouts and
+signatures, exact static/dynamic header exports, offline policy and measured
+root/C ratchets. Actual loopback counts remain 13 for each ten-call records/files
+run, 7 for native named roles, 3 for typed context, 0 for declaration refusals.
+Read-only original-v1 replay preserves bytes/mtime and sends nothing. Root's
+whole High review and landing gates remain pending native completion.

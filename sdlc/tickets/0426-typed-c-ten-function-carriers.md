@@ -134,3 +134,137 @@ header export inventories passed. C `cargo test --locked --offline` finished wit
 and `cases::every_applicable_shared_case_passes_through_the_door` (15 shared
 request-key expectations differ). Both C ratchets equal measured totals. These
 are C-local integration checks, not root landing gates.
+
+## Coherent 0456 integration API
+
+The following additive API preserves every existing layout and symbol. Native declarations validate both constructors and execution. Explicit object context uses native `ObjectContext` and `RecordContext`; literal JSON-looking text remains text.
+
+```c
+/* Additive 0456 declarations. kind: ABSENT=0, STRING=1, OBJECT=2.
+ * Object properties preserve authored order; property kinds STRING=1,
+ * NUMBER=2, BOOLEAN=3, STRING_LIST=4. Required names preserve their order.
+ * Non-object declarations require empty property/required arrays.
+ * name/version absence is explicit; no inferred name or default version.
+ */
+enum thinkthen_input_declaration_kind_v1 {
+    THINKTHEN_DECLARATION_ABSENT_V1=0, THINKTHEN_DECLARATION_STRING_V1=1,
+    THINKTHEN_DECLARATION_OBJECT_V1=2
+};
+enum thinkthen_input_property_kind_v1 {
+    THINKTHEN_PROPERTY_STRING_V1=1, THINKTHEN_PROPERTY_NUMBER_V1=2,
+    THINKTHEN_PROPERTY_BOOLEAN_V1=3, THINKTHEN_PROPERTY_STRING_LIST_V1=4
+};
+enum thinkthen_question_loader_role_v1 {
+    THINKTHEN_LOAD_ATOMIC_V1=1, THINKTHEN_LOAD_SET_V1=2,
+    THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1=3, THINKTHEN_LOAD_RECOGNIZE_V1=4,
+    THINKTHEN_LOAD_RELATE_V1=5
+};
+typedef struct thinkthen_input_property_v1 {
+    thinkthen_string_v1 name; uint32_t kind;
+} thinkthen_input_property_v1;
+typedef struct thinkthen_input_properties_v1 {
+    const thinkthen_input_property_v1 *data; size_t len;
+} thinkthen_input_properties_v1;
+typedef struct thinkthen_input_declaration_v1 {
+    uint32_t kind;
+    thinkthen_input_properties_v1 properties;
+    thinkthen_strings_v1 required;
+} thinkthen_input_declaration_v1;
+typedef struct thinkthen_question_author_v1 {
+    thinkthen_optional_string_v1 name;
+    thinkthen_optional_u64_v1 wording_version;
+    thinkthen_input_declaration_v1 item_schema, context_schema;
+} thinkthen_question_author_v1;
+/* Construct through the same native grammar, with separately counted author
+ * metadata. author=NULL means no author metadata. All inputs are cloned.
+ */
+int thinkthen_question_new_authored(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, thinkthen_question **);
+/* Borrow metadata owned by this immutable question until question_free. */
+int thinkthen_question_author(const thinkthen_question *, thinkthen_question_author_v1 *);
+/* Explicit native loader role: ATOMIC=1, SET=2, DYNAMIC_CHOOSE=3,
+ * RECOGNIZE=4, RELATE=5. No host search or fallback after file refusal.
+ * These native-loaded handles execute directly. Embedding them as typed set
+ * members awaits a native authored serialization/set composition API.
+ */
+int thinkthen_question_load_named(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 name, thinkthen_question **);
+int thinkthen_question_load_reference(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 reference, thinkthen_question **);
+/* Borrow native author snapshots until result_free. Row/member ordinals
+ * follow the existing named result accessors and annotation member order.
+ * Set envelopes and generated internal questions carry absent author fields.
+ * Invalid owner/output/ordinal or a member on a non-annotation row is Usage
+ * and leaves output unchanged. Observation includes both question/row events.
+ */
+int thinkthen_result_question_author(const thinkthen_result *, size_t row, thinkthen_question_author_v1 *);
+int thinkthen_result_member_author(const thinkthen_result *, size_t row, size_t member, thinkthen_question_author_v1 *);
+int thinkthen_result_observation_author(const thinkthen_result *, size_t observation, thinkthen_question_author_v1 *);
+```
+
+## Current coherent native integration and remaining interfaces
+
+Merged committed native 8140d01dc and 8463aa30c (including current main) at the
+clean pushed checkpoint; no uncommitted lane0 input is used. The source-count
+merge conflict was resolved by measuring 143695 nonblank Rust lines from the
+configured directories. The additions above now map actual native 0456
+name/version/declaration getters on questions, complete rows, annotation members
+and native question/row observations. Typed object context is constructed with
+native RawRecord/ObjectContext/RecordContext. All ten real judgments run with
+metadata after their original handles/buffers are freed; named/reference native
+roles also execute real judgments. Invalid later declared records/context send
+nothing. No production hash, parser, cache, scheduler, IDs or authored settings
+are reconstructed at the host.
+
+Exact remaining native getter needs: authored `ResolvedQuestion::{model,
+profile,batch,on}`, `FindReading::{model,on}`, `RecognitionReading::{model,on}`,
+and `RelationReading::model`. Existing author name/wording_version/item_schema/
+context_schema getters are adopted; effective metadata.model is not used to
+fill authored model. Complete saved rank-set execution still needs a public
+record route and complete row values with question_name/original ordinal/native
+identity/final facts. Custom relate pointers and located annotation text need
+native admission/composition while keeping original coordinates and native
+JSON-versus-literal parsing. Existing atomic/rank non-root on refusal is retained
+until a coherent native record-selection route is supplied.
+
+Additional native loader needs identified while adopting the actual available
+interfaces: rank-specific named/reference admission (ordinary LoadedQuestion
+cannot preserve whether a cut was authored during host conversion), and native
+authored serialization or complete set composition for native-loaded members.
+The existing C member constructor serializes its already-owned original
+question grammar; native named handles expose no equivalent original grammar.
+They are refused as new typed members rather than reconstructed from incomplete
+getters. FindQuestionFile has no named/reference loader; native literal/builder
+find metadata is adopted without adding a new grammar. The additive named C
+roles are precisely the five native-supported roles documented above.
+
+The controlled shared/C v2 oracle adoption is coordinated in existing 0444.
+Rust and C consumers now reuse one independent framing/fixture-mapping helper.
+Only synthetic case 40's reported model and corresponding detailed-model
+expectation change, aligning the fixture with its literal requested model so
+its two-calls/one-send/one-cache-answer behavior remains valid under v2 freshness.
+Every request/question byte and distinct case remains; all committed v1 saved
+record fixtures stay unchanged. The existing portable C test additionally pins
+original fixture question bytes and read-only v1 replay bytes/mtime with zero
+sends through the actual JSON compatibility door.
+
+Current checkpoint checks: C `cargo test --locked --offline` passes 19/19 Rust
+and 69/69 public-consumer tests, including all ten sanitizer judgments for
+records/files (13 sends each), five native named roles (7 sends), declared
+object/absent/empty context (3 sends) and seven staged declaration refusals
+(0 sends). Full C shared corpus: 55 cases, 53 applicable pass, 0 fail, the
+same 2 established inapplicable cases. C/C++ layout/signature checks and exact
+static/dynamic installed-header export checks pass. C all-targets Clippy with
+-D warnings, shared Rust public consumer Clippy, formatting and offline
+policy.py pass. The shared Rust public corpus passes the same 53 applicable
+cases with no failures. The original-v1 portable C replay check passes with
+unchanged request/question bytes, no new sends and unchanged saved bytes/mtime.
+
+Measured ceilings now equal actual: root 143731 Rust lines, C 13899 Rust lines,
+C 2177 C lines. Root growth from the measured merge total 143695 is the shared
+independent fixture/key oracle; C growth from 13236/1983 is typed author storage,
+validated additive FFI, native loader/context adoption and actual consumer
+coverage. Duplication was checked in the existing descriptor constructor,
+complete question/row/observation storage and both legacy key helpers: the
+constructor is shared, backing conversions are reused, and duplicate key/
+fixture mapping algorithms are replaced with the one shared independent oracle.
+No new dependency or runner is introduced. These are integration checks;
+root retains fresh whole High C+shared-oracle review and full landing gates
+once native dependencies are main. No full parity or source landing is claimed.
