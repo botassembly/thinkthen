@@ -67,7 +67,6 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     frame = pl.DataFrame({"body": texts})
     said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body").value)
     said(lambda: engine.annotate(form, texts, on="body").value)
-    said(lambda: engine.filter(late, pl.Series(texts)).value)
     said(lambda: engine.relate(pl.Series(texts), relations={"r": ("a", "b")}).value)
     said(lambda: engine.details(late, pl.Series(texts)).value)
     try:
@@ -94,8 +93,7 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     assert printed.splitlines() == [
         FRAMES,
         FRAMES,
-        f"UsageError {LISTS}",
-        f"UsageError {LISTS}",
+        "UsageError entity 0 is not a (name, kind) pair, a dict with name and kind, or an Entity",
         "UsageError details reads one str, not a column",
         "UsageError the column's Arrow format is 'l', not text",
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on=",

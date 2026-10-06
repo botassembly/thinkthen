@@ -68,3 +68,15 @@ Fresh High code review found that the constructor inventory had missed `public/r
 ## Current ownership
 
 PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4 and 9 promotes this open remainder to 0.2. Shared price semantics and checked Python/R frame aggregation stay here. 0426–0431 own host carrier edits after this contract settles, including Flutter/Kotlin/Scala consumers. 0435 owns SQL settings/details/failure adoption. 0432 requires priced/unpriced/partial-usage/overflow/replay cases in all public consumers. No duplicated pricing algorithm or registry work.
+
+## Active dataframe slice, 2026-10-06
+
+Builder: Sol High on `ticket/0410-dataframes-ten-functions`, lane claude-2. Risk: High for Arrow/native ownership, nullable and duplicate row identity, and checked cost aggregation. Main and saved0431 remain read-only; no native engine/core/cache/result edits. Independent frame and optional Series dispatch work is in progress; this is not completion or landing evidence.
+
+Native integration needed: an engine-priced tally snapshot (for example `Tally::facts_with_engine(&Engine)`) that gates on every constituent call's cost completeness, uses atomically checked raw token totals, and calls `Engine::estimate_reported_cost` once. Empty priced work must report zero. It must never sum rounded strings; failures must retain representable counts without publishing an aggregate success. Native lane owns the setter/snapshot and shared tally changes.
+
+## Private dataframe pricing handoff, 2026-10-06
+
+Public Rust column consumers prove 49 + 49 input tokens at 0.01 USD per million tokens round once to `0.000001`, and raw token overflow omits cost without poisoning the next call. These reuse native price arithmetic, with no float billing calculation. Existing count-only usage remains native-owned.
+
+Composed recognition collections explicitly refuse priced engines before any send until the native checked engine-priced aggregation API exists; rounded per-call prices are never presented as a valid composed estimate. Public Rust and pandas 2/3 consumers pin the refusal sentence and count zero loopback sends. This limitation applies to Rust and Python dataframe recognition. The proposed snapshot above must cover empty work, missing constituent usage, overflow, partial failure and concurrent aggregation. Shared tally code was not edited. No pricing remainder is marked complete.
