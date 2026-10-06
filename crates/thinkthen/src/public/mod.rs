@@ -27,10 +27,15 @@ mod native_batch;
 mod options;
 mod panic;
 mod plan;
+mod proxy;
 mod pull;
 mod question;
 mod question_file;
 mod record_input;
+pub use crate::core::{Surface, SurfaceError};
+pub use proxy::{
+    CodeThreshold, ProxyActivation, ProxyId, ProxyMetadata, ProxyOverride, ProxyRequest,
+};
 pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
 mod relate;

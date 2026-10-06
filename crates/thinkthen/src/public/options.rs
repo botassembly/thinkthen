@@ -109,6 +109,7 @@ pub struct CallOptions<'a> {
     context: Option<&'a str>,
     observer: Option<Observer<'a>>,
     attempt_observer: Option<AttemptObserver<'a>>,
+    proxy: Option<&'a crate::public::ProxyActivation>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -124,6 +125,7 @@ impl fmt::Debug for CallOptions<'_> {
             .field("context", &self.context.is_some())
             .field("observer", &self.observer.is_some())
             .field("attempt_observer", &self.attempt_observer.is_some())
+            .field("proxy", &self.proxy.is_some())
             .finish()
     }
 }
@@ -150,6 +152,7 @@ impl<'a> CallOptions<'a> {
             context: None,
             observer: None,
             attempt_observer: None,
+            proxy: None,
         }
     }
 
@@ -157,6 +160,13 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn cancel(mut self, value: &'a CancelToken) -> Self {
         self.cancel = Some(value);
+        self
+    }
+
+    /// Supply a reserved proxy activation. Every supplied variant refuses before execution.
+    #[must_use]
+    pub const fn proxy(mut self, value: &'a crate::public::ProxyActivation) -> Self {
+        self.proxy = Some(value);
         self
     }
 
@@ -360,6 +370,11 @@ pub(crate) struct Stop<'a> {
 impl<'a> Stop<'a> {
     /// Fix the deadline and refuse a call whose token already fired.
     pub(crate) fn begin(options: CallOptions<'a>) -> Result<Self, Error> {
+        if options.proxy.is_some() {
+            return Err(Error::usage(
+                "proxy activation is reserved and is not supported in 0.2",
+            ));
+        }
         let facts = CallFacts::new();
         let (sender, attempts) = if options.attempt_observer.is_some() {
             let (sender, receiver) = sync_channel(32);

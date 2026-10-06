@@ -80,6 +80,7 @@ pub struct EngineBuilder {
     cache: Cache,
     seeded: Option<Seeded>,
     server: bool,
+    proxy_supplied: bool,
     timeout: Duration,
     max_retries: u32,
     profile: Option<Profile>,
@@ -151,6 +152,7 @@ impl EngineBuilder {
             cache: Cache::Default,
             seeded: None,
             server: false,
+            proxy_supplied: false,
             timeout: Duration::from_secs(30),
             max_retries: 3,
             profile: None,
@@ -170,6 +172,13 @@ impl EngineBuilder {
         Backend::resolve(Some(value), None, DEFAULT_MODEL).map_err(Error::refused)?;
         self.base_url = Some(value.to_owned());
         Ok(self)
+    }
+
+    /// Supply a reserved proxy activation. Build refuses before reading local resources.
+    #[must_use]
+    pub fn proxy(mut self, _value: &crate::public::ProxyActivation) -> Self {
+        self.proxy_supplied = true;
+        self
     }
 
     /// Send this key with each live attempt, and only to the base address.
@@ -371,6 +380,11 @@ impl EngineBuilder {
     /// when a [`EngineBuilder::shared_host`] folder is not private. Returns
     /// [`Error::Local`] when a shared host cannot create or read its folder.
     pub fn build(self) -> Result<super::Engine, Error> {
+        if self.proxy_supplied {
+            return Err(Error::usage(
+                "proxy activation is reserved and is not supported in 0.2",
+            ));
+        }
         let batch = match (self.batch, self.env_batch.as_deref()) {
             (Some(setting), _) => Some(setting),
             (None, Some(value)) => Some(crate::core::Setting::parse(value).ok_or_else(|| {

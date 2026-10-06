@@ -2,6 +2,15 @@
 
 Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
+Native admission WIP: reserved opaque IDs, normalized code readings,
+question/recognition reservations and typed response overrides are concrete
+types. Explicit null, empty and populated activation all refuse with the
+same usage sentence at the public call/builder edge. Counted loopback public
+tests pin zero sends, no started facts, refusal before replay loading and
+Debug secrecy without imposing a Debug bound on actionable values. Surface
+tokens are closed validated values; transport adoption and stable ID
+computation/propagation remain open.
+
 Milestone: 0.2
 Owner: builder.
 Ticket review: ACCEPT, 2026-10-06; fresh read-only review. Conflicting image deferrals corrected where found.
