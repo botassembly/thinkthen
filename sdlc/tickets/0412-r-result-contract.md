@@ -1,21 +1,21 @@
-# 0412: Document R index adapters in the binding contract
+# 0412: Document and test R index conventions
 
-Status: ready. Planning record only; fresh ticket review precedes implementation.
+Status: ready. Planning only; implementation follows accepted ticket review.
 
-Milestone: later
+Milestone: 0.2
 
 ## Outcome
 
-Binding-author guidance explicitly allows R one-based place and its relation to canonical zero-based indexes, matching the existing R runtime and conformance conversion. Preserve R outputs.
+R’s one-based result positions and canonical zero-based mapping are explicit and tested without changing existing R results.
 
 ## Evidence
 
-- Starts from: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`, [0405 audit](../records/0405-audit-report.md). BINDING-AUTHOR.md states index/record/probability expectations; R rank/find returns one-based place. Its runner intentionally converts to canonical indexes; recognize span conventions already document host offsets.
-- Keeps: existing request bytes, digests, cache identity, result shapes, failures and host adapters whenever the new capability is unused.
-- Changes: document r index adapters in the binding contract. Product work starts only after the contract and ticket receive fresh review.
-- Proof: Check rank duplicates/ties, find none and offsets through current R runner; consumer examples show the index mapping. Do not change runtime indexes as a prose fix.
-- Defers: Small documentation reconciliation; no universal host shape migration.
+- Starts from: Existing ticket and 0405 audit; landed 0377/0401D/0420 are the current baseline, replacing the older audit-only matrix. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4.
+- Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
+- Changes: Update binding-author guidance and R consumer examples, distinguishing result indexes from physical one-based source lines and host span offsets.
+- Proof: Rank duplicate/tie and find-none fixtures prove mapping; located spans retain physical coordinates.
+- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
-## What Ian can overturn
+## Dependencies and ownership
 
-The additive API and slice order within this outcome. No external action or new cost follows from this planning record.
+0431 owns typed R source carriers; 0439 owns Linux install instructions.

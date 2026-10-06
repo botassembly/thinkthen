@@ -1,29 +1,21 @@
-# 0296 — pandas Series accessor (F5)
+# 0296: Add the pandas Series accessor for all ten functions
 
-Status: deferred until after the 0.1 release, by the queue batches Quick Fix of 2026-09-30, a coordinator default Ian can overturn. Python already takes a pandas `Series` in the four verbs and returns one with the caller's index and name (`libraries/python/README.md`); the `.tt` accessor is additive sugar, so shipping it later breaks no consumer. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
+Status: ready. Planning only; implementation follows accepted ticket review.
 
-Milestone: later
+Milestone: 0.2
 
 ## Outcome
 
-Opt-in import thinkthen.pandas registers series.tt decide/choose/score/tag, returning a Series with original index/name through one packed engine call. Base import stays independent of pandas; pandas remains eager. Use chunked reader examples for bounded memory and explicit tally for facts.
-
-## Prerequisites and proposed files
-
-Prerequisite: F1/F2. Proposed file families: `libraries/python/thinkthen/{pandas.py,__init__.pyi}; libraries/python/tests/{test_pandas.py,test_call.py}; Python pyproject/README/ratchets`. Refresh exact nested helpers, package member inventories, nonblank source headroom and current Lanes claims before implementation. No source file is claimed by this preparation draft.
-
-## Smallest meaningful proof
-
-pandas 2.3.3 and 3.0.6 Series replay preserves nulls/name/index and one exact body. Count exact accepted loopback request bodies and pin exit codes and refusal sentences where applicable; record source and installed-host receipts separately. Run only the affected functional cases, measured ratchets, focused format/policy/pages/tickets/diff. [Shared proof routes](../records/2026-09-29-sql-frame-redesign-proofs.md) name optional stress and later package qualification.
+Opt-in import thinkthen.pandas registers series.tt named routes for all ten functions while base import stays independent of pandas.
 
 ## Evidence
 
-- Starts from: Main `869710193`, accepted ADR 0107, experiment 2038 HANDOFF and saved spikes, and the [preparation](../records/2026-09-29-sql-frame-redesign-preparation.md).
-- Keeps: Existing successful values, owned facts, NULL/not-sure, cache identity, six error kinds, offline replay and privacy except the accepted changes.
-- Changes: Opt-in pandas Series accessor preserving index and name.
-- Proof: pandas 2.3.3 and 3.0.6 Series replay preserves nulls/name/index and one exact body. Use the [independent corpus](../records/2026-09-29-sql-frame-redesign-corpus.md) and captured wire bodies.
-- Defers: Unrelated package/release qualification, provider work, marketing site, token cap and per-record cache; named prerequisites remain.
+- Starts from: Existing ticket and 0405 audit; landed 0377/0401D/0420 are the current baseline, replacing the older audit-only matrix. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4 and 7.
+- Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
+- Changes: Preserve Series index/name/nulls and appropriate whole-set outputs, typed details/facts and public engine settings. Reuse existing pandas adaptation; accessor dispatch stays here and function semantics stay in 0410.
+- Proof: Installed public Series consumers exercise all ten saved cases; original index/name/duplicate identities survive; import without pandas remains valid. Count replay zero sends and retained calls.
+- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
-## What the build taught us
+## Dependencies and ownership
 
-Pending implementation: record corrected assumptions, preparation misses, proof adjustments and remaining limits before landing.
+0410 supplies missing dataframe functions; 0431 typed source carriers and 0300 costs feed the same accessors.

@@ -1,21 +1,21 @@
-# 0411: Prove changed reading rules on every binding route
+# 0411: Reread stored answers under changed rules on every surface
 
-Status: ready. Planning record only; fresh ticket review precedes implementation.
+Status: ready. Planning only; implementation follows accepted ticket review.
 
-Milestone: later
+Milestone: 0.2
 
 ## Outcome
 
-Every supported binding route has a named counted strict-replay test for each free reading rule, with no second send. Report intentional functions without reading cuts and unsupported stages explicitly.
+All named SDK, SQL and dataframe routes reread stored answers under each free reading rule with zero additional calls.
 
 ## Evidence
 
-- Starts from: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`, [0405 audit](../records/0405-audit-report.md). The 0405 matrix locates ordinary function and settings replay cases but not a complete changed-rule/no-send matrix. CLI disposable probes and Rust core reading establish engine behavior, not every host adapter.
-- Keeps: existing request bytes, digests, cache identity, result shapes, failures and host adapters whenever the new capability is unused.
-- Changes: prove changed reading rules on every binding route. Product work starts only after the contract and ticket receive fresh review.
-- Proof: Change cuts while keeping wire bytes; pin outputs and listener counts. Cover column variants, generic JSON, native Call.details, member rules, recognition relation dependencies and host index conversions.
-- Defers: No new store fingerprint or broad live tests. 0408 owns missing carriers; 0404 owns unrelated gate cleanup.
+- Starts from: Existing ticket and 0405 audit; landed 0377/0401D/0420 are the current baseline, replacing the older audit-only matrix. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4.
+- Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
+- Changes: Extend existing canonical saved cases and public settings adapters; function contracts without a reading cut are explicit, never skipped.
+- Proof: Change cuts with identical wire identity; pin output/counts for native details, member rules, entity/relation dependencies, frames and R index conversion.
+- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
-## What Ian can overturn
+## Dependencies and ownership
 
-The additive API and slice order within this outcome. No external action or new cost follows from this planning record.
+0408 owns missing details; 0432 owns common enforcement; no new fingerprint or store-verification framework.

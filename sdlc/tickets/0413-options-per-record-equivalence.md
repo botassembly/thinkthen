@@ -1,21 +1,21 @@
-# 0413: Supply candidate options independently for each record
+# 0413: Supply per-record candidate options everywhere
 
-Status: ready. Planning record only; fresh ticket review precedes implementation.
+Status: ready. Planning only; implementation follows accepted ticket review.
 
-Milestone: later
+Milestone: 0.2
 
 ## Outcome
 
-Rust/C/SQL integrated many-record choose can carry candidate options per record, equivalent to CLI choose --options. Keep fixed-question calls unchanged. Define candidate identity and description/order rules before code.
+Choose batches across every SDK, keyed SQL and frames carry independent ordered candidates and descriptions for each original record.
 
 ## Evidence
 
-- Starts from: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`, [0405 audit](../records/0405-audit-report.md). CLI Asks::FromRecord uses a pointer and record.choices; Rust/C fixed many questions capture one option set. SQL scalar members expression and caller separate calls already allow per-item candidates, but a keyed many collection does not.
-- Keeps: existing request bytes, digests, cache identity, result shapes, failures and host adapters whenever the new capability is unused.
-- Changes: supply candidate options independently for each record. Product work starts only after the contract and ticket receive fresh review.
-- Proof: Compare two records with different shortlists and descriptions, duplicate labels, missing pointer, excluded correct option and none; pin original record, candidate identity, wire bytes and strict-replay counts.
-- Defers: Candidate set belongs to item, not reusable wording. Dynamic tag/annotate options already have a separate open issue; do not duplicate it. Foreign batch adapters later.
+- Starts from: Existing ticket and 0405 audit; landed 0377/0401D/0420 are the current baseline, replacing the older audit-only matrix. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4.
+- Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
+- Changes: Define identity/order/description/refusal semantics before code; reuse CLI options projection and preserve fixed-question calls. Dynamic tag/annotate options remain their separately scoped issue.
+- Proof: Two different shortlists, descriptions, duplicate/missing labels, missing pointer, none and excluded candidates pin wire bytes, originals and zero-send invalid/replay cases.
+- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
-## What Ian can overturn
+## Dependencies and ownership
 
-The additive API and slice order within this outcome. No external action or new cost follows from this planning record.
+0407 owns per-record context; family tickets adopt shared carriers.

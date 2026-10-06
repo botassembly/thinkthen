@@ -2,9 +2,9 @@
 
 Status: open for five parts: full detail on every verb, backend time and request IDs past ticket 0302, caller-priced cost on the remaining hosts (ticket 0300), SQL per-call facts, and the docs. Item 5, the `meta.usage` name, is settled. Shortened 2026-09-30. It absorbs the closed `closed/2026-09-23-record-the-backends-own-time-for-each-call.md`.
 
-Milestone: later
+Milestone: 0.2
 
-Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: tickets 0300 and 0302 for items 2 and 3, ticket 0314 slice 4 for item 1, the builder for item 6.
+Priority: 0.2 under the 2026-10-06 PM outcome. Owners: 0408 and 0426–0432 for complete typed details; 0300 for prices/checked frame costs; 0435 for SQL invocation facts; 0443 for SDK identity/provenance; 0445 for the 0302 attempt/time remainder. Each owner updates its public documentation.
 
 Ian ruled on 2026-09-26 that library results carry `facts` on every call, with no setting and no second call. `--facts` controls only what the command line prints. Ian can overturn this ruling.
 
@@ -51,3 +51,7 @@ Register 61 asked that per-record token shares carry a name saying they are even
 Each surface's README names `facts`. The site shows no raw HTTP exchange with its `usage`, and no site page says where a library or SQL call's run facts come from. Both belong to the builder, which owns `site/`.
 
 Target-package and runner qualification belongs to `2026-09-25-release-and-install-for-0-1.md`.
+
+## 2026-10-06 scope
+
+All five open parts are required in 0.2 through the owners above. The SQL deferral from 0423 is superseded by 0435. Missing server time is documented and checked from saved/loopback responses; the earlier proposed paid diagnostic is outside this plan. No invented server time or guessed cost.

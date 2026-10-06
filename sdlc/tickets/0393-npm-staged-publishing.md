@@ -36,4 +36,7 @@ Milestone: 0.2
 - Staged publishing on npm at all. Direct publishing works today.
 - A second approval on npmjs.com after the GitHub `release` environment approval.
 
-## What the build taught us
+
+## Current planning boundary
+
+PM ask 8 keeps this existing ticket as npm’s owner. Registry setup and direct publishing already exist; the missing outcome is staged publishing. Validate the exact supported npm command/version against official documentation before changing the workflow. Plan and offline workflow tests do not change registry settings or publish a package. Integration rehearsal and actual staging are later authorized qualification steps; no such run is scheduled by 0425.

@@ -45,13 +45,53 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Ship the working core and the files/local-runtime additions approved by Ian on 2026-10-05. [The current plan](team-0-2-2026-10-04.md) owns order, completion status, delegated run approvals and exit criteria.
+Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns the twelve-ask map, dependencies, lane ownership and acceptance.
 
-Core items through the default-recognize check and the current Windows source corrections have landed. Experiment 0033's actual SQL/dbt/install findings take priority over files: [0422](../tickets/0422-trusted-sqlite-schema-calls.md) explicitly trusted SQLite schemas, [0423](../tickets/0423-sql-priced-invocation-facts.md) accurate external-pricing guidance, and public PostgreSQL grants/dbt startup setup. [0415](../tickets/0415-signed-duckdb-community-listing.md) owns signed DuckDB/dbt2 loading: offline community rehearsal, then the approved submission under imaurer. Listing publication remains DuckDB's decision; a mismatched signed ABI does not qualify dbt2.
+Already landed: version/release safety, backends/provider setups/default-eight, rank search, audit/docs/recipes, Windows CLI/Rust/C/Python, backend selection, DuckDB 1.5.4/1.5.5, agent skill, native files and local runtimes. These are retained behavior. Raw JSON compatibility methods and older qualification runs do not establish the newly required typed SDK parity.
 
-Complete [0421](../tickets/0421-local-runtime-backends.md), built-in llama.cpp and MLX alongside Ollama with the approved real runtime checks, and [0420](../tickets/0420-files-for-all-ten-functions.md), files for all ten functions. One shared folder fixture covers CLI, Python and database examples; DuckDB and SQLite readers ship, while Postgres server-file access waits. Existing text, record and column calls retain their behavior.
+Open owners:
 
-Run one final authorized rehearsal and real Windows test over the expanded reviewed commit, then release QA and Ian's go. Missing required Windows behavior blocks release. Main carries 0.2.0; release/0.1 is frozen, and public install text stays 0.1.2 until 0.2 ships. dbt v1 remains the supported documented route; dbt2 awaits a matching signed artifact and actual consumer qualification. No grep alias or new semantic function is approved. Unrelated sized gaps remain deferred.
+- [0296: Add the pandas Series accessor for all ten functions](../tickets/0296-pandas-series-accessor.md)
+- [0300: ---](../tickets/0300-caller-priced-call-cost.md)
+- [0393: npm publishes through staged publishing](../tickets/0393-npm-staged-publishing.md)
+- [0406: Preserve rank criteria and score ordering on every surface](../tickets/0406-rank-question-equivalence.md)
+- [0407: Supply separate per-record context everywhere](../tickets/0407-per-record-context.md)
+- [0408: Expose complete probabilities and details everywhere](../tickets/0408-j1-full-probabilities.md)
+- [0409: Match TypeScript rank and find types to runtime](../tickets/0409-typescript-rank-find-contract.md)
+- [0410: Complete all ten dataframe functions and located files](../tickets/0410-column-function-equivalence.md)
+- [0411: Reread stored answers under changed rules on every surface](../tickets/0411-binding-reading-replay-proof.md)
+- [0412: Document and test R index conventions](../tickets/0412-r-result-contract.md)
+- [0413: Supply per-record candidate options everywhere](../tickets/0413-options-per-record-equivalence.md)
+- [0414: Separate context from aggregate evidence everywhere](../tickets/0414-separate-shared-context.md)
+- [0417: Rank question sets on every SQL surface](../tickets/0417-sql-rank-question-sets.md)
+- [0418: Rank question sets through typed language and frame APIs](../tickets/0418-binding-rank-question-sets.md)
+- [0425: Put the complete SDK outcome into the 0.2 plan](../tickets/0425-sdk-consistency-0-2-plan.md)
+- [0426: Expose typed C calls and complete result carriers](../tickets/0426-typed-c-ten-function-carriers.md)
+- [0427: Complete Go, C# and JVM typed parity](../tickets/0427-go-csharp-jvm-typed-parity.md)
+- [0428: Complete C++, Swift, Zig and Objective-C typed parity](../tickets/0428-cpp-swift-zig-objc-typed-parity.md)
+- [0429: Complete PHP, Dart and Flutter typed parity](../tickets/0429-php-dart-flutter-typed-parity.md)
+- [0430: Complete Ada and COBOL typed parity](../tickets/0430-ada-cobol-typed-parity.md)
+- [0431: Complete typed located results in existing named SDKs](../tickets/0431-named-sdk-located-result-parity.md)
+- [0432: Enforce shared behavior and generate the current parity table](../tickets/0432-canonical-binding-parity-matrix.md)
+- [0433: Keep SQLite find’s selected model](../tickets/0433-sqlite-find-keeps-selected-model.md)
+- [0434: Match SQL question inputs and descriptions](../tickets/0434-sql-question-and-option-parity.md)
+- [0435: Return isolated SQL call facts and caller-priced cost](../tickets/0435-sql-call-facts-and-prices.md)
+- [0436: Return rank position in detailed rank values](../tickets/0436-rank-details-return-rank-position.md)
+- [0437: Honor the configured native build output folder](../tickets/0437-native-install-honors-target-dir.md)
+- [0438: Replace Ruby’s unsupported-platform placeholder route](../tickets/0438-ruby-platform-fallback-diagnostic.md)
+- [0439: Document Linux R installation](../tickets/0439-r-linux-install-guide.md)
+- [0440: Move audit and diff under runs](../tickets/0440-runs-audit-diff-command-tree.md)
+- [0441: Prepare the Decisions backend for preview access](../tickets/0441-openai-decisions-backend-preview.md)
+- [0442: Settle SDK identity, provenance and cache compatibility](../tickets/0442-proxy-ready-sdk-contract.md)
+- [0443: Carry SDK call identity and cache instructions](../tickets/0443-sdk-call-identity-and-cache-policy.md)
+- [0444: Version cache keys and preserve offline replay](../tickets/0444-versioned-cache-identity-and-replay.md)
+- [0445: Complete attempt observations and command facts](../tickets/0445-complete-attempt-and-command-facts.md)
+- [Every surface gives back run facts](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), through the explicit owners in the plan.
+- [0415: Signed DuckDB community listing](../tickets/0415-signed-duckdb-community-listing.md), submitted upstream; publication remains DuckDB’s decision.
+
+SQLite find’s silent model override is first. Shared C/metadata/semantic contracts precede wide host edits; SQL, dataframe and host families proceed in noncolliding slices. 0432 generates current parity from the complete executed suite with no skips. 0441 is written now with preview access/schema as an external prerequisite, without guessed wire behavior or paid calls.
+
+Current work is planning, not release preparation. Final hosted rehearsal, real Windows qualification and QA run only after required implementation lands on the final reviewed commit; publishing still requires Ian’s go. Main is 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. PostgreSQL evidence paths use the reviewed client-reader workaround in 0434. Windows Node/C#/JVM packaging remains 0.3; SDK parity on supported platforms is required now.
 
 ## 0.3
 
@@ -77,30 +117,16 @@ Open items:
 
 - [Windows static-library distribution waits for stage 3](../issues/2026-10-05-windows-static-library-waits-for-stage-3.md)
 
-- [0406: Rank questions preserve criteria and score ordering across core surfaces](../tickets/0406-rank-question-equivalence.md)
-- [0407: Supply independent context for each record](../tickets/0407-per-record-context.md)
-- [0408: Expose complete question probabilities through C JSON and SQL details](../tickets/0408-j1-full-probabilities.md)
-- [0409: Match TypeScript rank and find declarations to runtime](../tickets/0409-typescript-rank-find-contract.md)
-- [0410: Complete dataframe function coverage](../tickets/0410-column-function-equivalence.md)
-- [0413: Supply candidate options independently for each record](../tickets/0413-options-per-record-equivalence.md)
-- [0414: Define separate context on aggregate functions](../tickets/0414-separate-shared-context.md)
-- [0417: SQL rank accepts a question set](../tickets/0417-sql-rank-question-sets.md)
 
-- [0411: Prove changed reading rules on every binding route](../tickets/0411-binding-reading-replay-proof.md)
-- [0412: Document R index adapters in the binding contract](../tickets/0412-r-result-contract.md)
-- [0418: Language rank accepts a question set](../tickets/0418-binding-rank-question-sets.md)
 
 - [0119: Functional audit of the engine tests](../tickets/0119-mutation-audit-of-the-engine-tests.md)
 - [0295 — Polars namespace and SIGINT (F4)](../tickets/0295-polars-namespace-and-sigint.md)
-- [0296 — pandas Series accessor (F5)](../tickets/0296-pandas-series-accessor.md)
-- [0300: Caller-priced cost in call and run facts](../tickets/0300-caller-priced-call-cost.md)
 - [The new-user stumble register](../issues/2026-09-20-new-user-stumble-register.md)
 - [Annotate options from a file or a record](../issues/2026-09-23-annotate-options-from-a-file-or-a-record.md)
 - [Rank by graded relevance: custom weights and rank fusion](../issues/2026-09-24-rank-by-graded-relevance-for-search-reranking.md)
 - [Docs and how-tos owed](../issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md)
 - [Public library API gaps](../issues/2026-09-25-public-library-api-gaps.md)
 - [recognize and relate: scale](../issues/2026-09-25-recognize-and-relate-scale-and-shape.md)
-- [Every surface should give back what Jev tells us about each run](../issues/2026-09-26-every-surface-should-give-back-run-facts.md)
 - [Relation pairs span the whole text](../issues/2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md)
 - [Tuning loop asks: cases to label, repeated runs, and cost beside the score](../issues/2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md)
 - [A lone record over the size setting is sent, and one backend refusal stops the file](../issues/2026-09-30-a-lone-oversized-record-is-sent-anyway.md)
