@@ -4,6 +4,9 @@ Status: ready. Reserved 2026-10-03 from the 0.1.1 release run. Not started.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 1. The release workflow's `npm` job publishes with `npm stage publish`, as npm recommends for trusted publishing. The package waits on npmjs.com until a maintainer approves it there.
@@ -36,4 +39,7 @@ Milestone: 0.2
 - Staged publishing on npm at all. Direct publishing works today.
 - A second approval on npmjs.com after the GitHub `release` environment approval.
 
-## What the build taught us
+
+## Current planning boundary
+
+PM ask 8 keeps this existing ticket as npm’s owner. Registry setup and direct publishing already exist; the missing outcome is staged publishing. Validate the exact supported npm command/version against official documentation before changing the workflow. Plan and offline workflow tests do not change registry settings or publish a package. Integration rehearsal and actual staging are later authorized qualification steps; no such run is scheduled by 0425.

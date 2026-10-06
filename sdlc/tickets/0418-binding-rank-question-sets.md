@@ -1,17 +1,24 @@
-# 0418: Language rank accepts a question set
+# 0418: Rank question sets through typed language and frame APIs
 
-Status: ready. Planning only. Depends on reviewed 0401 slice D. Fresh ticket/design review precedes product changes.
+Status: ready. Planning only; implementation follows accepted ticket review.
 
-Milestone: later
+Milestone: 0.2
+
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
 
 ## Outcome
 
-C and each language binding, including supported dataframe variants ranks over the same saved decide question set as the planned CLI/Rust rank_set API. Use the pure turns merge from 0401D, preserve input identities and member name, and report combined facts. A one-member set matches the existing single-question route. A reviewed additive API/carrier retains every existing row shape and plain-text rank behavior.
+C, every SDK and supported dataframe variant exposes saved decide question-set rank with the landed shared turns merge and full member/final facts.
 
 ## Evidence
 
-- Starts from: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`, [0405 report](../records/0405-audit-report.md) and planned [0401D](0401-rank-search-flags.md). Current public rank accepts one question; the question-set behavior is planned and must not be described as shipped. Ian’s audit treats cross-surface parity separately from the original Rust-only implementation default.
-- Keeps: single-question bytes, stable tie order, documented host position mapping, cache identities, ordinary score/criteria work in 0406, and all existing output types.
-- Changes: an additive question-set rank route on the named surfaces, using the already reviewed shared merge rule. Settle public carrier and key-order semantics in a fresh design slice before code.
-- Proof: cross-surface comparison to independently declared turns cases, duplicate rows, distinct question scales, ties, top/LIMIT composition, one-member equivalence, strict replay of individual member runs with zero sends, and member naming/facts. Refuse invalid member kinds/cuts/on before sending. Keep host-specific indexes and SQL keys explicitly mapped.
-- Defers: new merge rules, score members, filter question sets, provider work and a breaking existing-result migration. Foreign release work is later in 0418; SQL parity is 0.2 in 0417.
+- Starts from: Existing ticket and 0405 audit; landed 0377/0401D/0420 are the current baseline, replacing the older audit-only matrix. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4.
+- Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
+- Changes: Define additive typed input/output; retain original indexes/member names and single-question behavior. Remove the old foreign-later deferral.
+- Proof: Same independent turns cases as 0417 through each named public method; stable ties, duplicates, one-member equivalence, invalid inputs and zero-send replay.
+- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
+
+## Dependencies and ownership
+
+0401D is landed; 0426–0431 own host carriers; 0410 owns frames; 0432 enforces full coverage.

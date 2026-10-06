@@ -1,21 +1,24 @@
-# 0409: Match TypeScript rank and find declarations to runtime
+# 0409: Match TypeScript rank and find types to runtime
 
-Status: ready. Planning record only; fresh ticket review precedes implementation.
+Status: ready. Planning only; implementation follows accepted ticket review.
 
-Milestone: later
+Milestone: 0.2
+
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
 
 ## Outcome
 
-The TypeScript compiler accepts only question shapes supported by rank/find runtime, or runtime supports an independently reviewed additive shape. Retain literal text calls. Reconcile with 0406 before choosing richer rank shapes.
+TypeScript declarations match actual supported rank/find inputs and refuse unsupported combinations before sends.
 
 ## Evidence
 
-- Starts from: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`, [0405 audit](../records/0405-audit-report.md). index.d.ts accepts DecideSpec for rank/find while index.js textFrom refuses every key beyond decide; verbs.test.mjs pins threshold rejection. JavaScript runtime is separate from the TypeScript contract.
-- Keeps: existing request bytes, digests, cache identity, result shapes, failures and host adapters whenever the new capability is unused.
-- Changes: match typescript rank and find declarations to runtime. Product work starts only after the contract and ticket receive fresh review.
-- Proof: Compile valid/invalid consumer examples and run matching loopback calls; reject unsupported settings before sends. Test threshold, criteria, model/profile and literal @/{ text.
-- Defers: Small declaration fix qualifies for 0.2. Richer find contract is outside scope.
+- Starts from: Existing ticket and 0405 audit; landed 0377/0401D/0420 are the current baseline, replacing the older audit-only matrix. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4.
+- Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
+- Changes: Adopt 0406 richer rank contract while retaining literal text; find must not inherit unsupported score/criteria forms.
+- Proof: Compile valid/invalid consumers and run matching JS calls; test thresholds, criteria, model/profile, literal @/{ and explicit file variants.
+- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
-## What Ian can overturn
+## Dependencies and ownership
 
-The additive API and slice order within this outcome. No external action or new cost follows from this planning record.
+0431 owns located overloads; 0418 owns rank sets.

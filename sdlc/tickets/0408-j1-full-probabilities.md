@@ -1,21 +1,24 @@
-# 0408: Expose complete question probabilities through C JSON and SQL details
+# 0408: Expose complete probabilities and details everywhere
 
-Status: ready. Planning record only; fresh ticket review precedes implementation.
+Status: ready. Planning only; implementation follows accepted ticket review.
 
-Milestone: later
+Milestone: 0.2
+
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
 
 ## Outcome
 
-Add an explicit details route for generic C JSON bulk/aggregate calls and SQL aggregate functions that preserves each underlying question probability, identity and failure. Keep bare value/facts and all existing row shapes unchanged. Foreign wrappers inherit additive C support or follow later.
+Every surface offers complete ordered question probabilities, identities, confidence when supplied and failure details, including questions that contribute no selected output.
 
 ## Evidence
 
-- Starts from: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`, [0405 audit](../records/0405-audit-report.md). C ENVELOPE only permits details on four judgments. Generic find writes picked winner, annotate bare named values, recognize entities and relate accepted edges. Native Rust observation and CLI detailed output already hold richer data. SQL find candidates are complete and must not be treated as a gap.
-- Keeps: existing request bytes, digests, cache identity, result shapes, failures and host adapters whenever the new capability is unused.
-- Changes: expose complete question probabilities through c json and sql details. Product work starts only after the contract and ticket receive fresh review.
-- Proof: Compare full distribution, dropped filter rows, failed annotation member versus null, find none, recognition stages and rejected relation edges with native observations. Count strict replay sends and pin secrecy.
-- Defers: Existing run-accounting remainder issue owns earlier unproved full-detail evidence. This ticket supplies the narrower confirmed C/SQL carrier gap; do not duplicate backend choice or change bare outputs.
+- Starts from: Existing ticket and 0405 audit; landed 0377/0401D/0420 are the current baseline, replacing the older audit-only matrix. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4.
+- Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
+- Changes: Extend shared details carriers and SQL details without changing bare outputs. Cover dropped filter rows, find none/all candidates, failed annotation members, recognition stages and rejected relation edges.
+- Proof: Compare each distribution and member state to independent saved expectations; check started failure, replay zero sends and secrecy.
+- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
-## What Ian can overturn
+## Dependencies and ownership
 
-The additive API and slice order within this outcome. No external action or new cost follows from this planning record.
+0426–0431 expose typed fields; 0435 owns invocation facts; 0432 enforces them.

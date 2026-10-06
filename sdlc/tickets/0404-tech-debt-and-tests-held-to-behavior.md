@@ -1,6 +1,6 @@
 # 0404: Remove the proof spiral
 
-Status: implemented. Permanent rules, machinery removal, record consolidation and behavior-based tests have landed; full tests and lint on this last landing are running.
+Status: landed. Permanent lighter rules, machinery removal and consolidated behavior tests landed through 1bcc271fc with full tests and lint passing. Follow those rules for the expanded SDK scope.
 
 Milestone: 0.2
 

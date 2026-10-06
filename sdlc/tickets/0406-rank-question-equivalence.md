@@ -1,21 +1,24 @@
-# 0406: Rank questions preserve criteria and score ordering across core surfaces
+# 0406: Preserve rank criteria and score ordering on every surface
 
-Status: ready. Planning record only; fresh ticket review precedes implementation.
+Status: ready. Planning only; implementation follows accepted ticket review.
 
-Milestone: later
+Milestone: 0.2
+
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
 
 ## Outcome
 
-Rust, C and SQL rank accept the same saved decide criteria and saved score question that the command accepts. Keep ordinary rank result types and ordering. Describe any additive carrier needed for score ranking before code. Foreign wrappers follow later reviewed slices.
+CLI, Rust, C, every language, all SQL and dataframe variants rank over the same described decide criteria or saved score question while retaining stable order and input identity.
 
 ## Evidence
 
-- Starts from: landed `ff047d8c50ce39ed9ab0acd22695c4960a963d38`, [0405 audit](../records/0405-audit-report.md). crates/thinkthen/src/public/bulk.rs:285 only admits Kind::Rank; libraries/c/src/call.rs:267 builds Question::rank from text alone; databases/postgresql/src/keyed.rs:178 and DuckDB/SQLite rank do the same. CLI graded_rank tests already prove score-file ordering.
-- Keeps: existing request bytes, digests, cache identity, result shapes, failures and host adapters whenever the new capability is unused.
-- Changes: rank questions preserve criteria and score ordering across core surfaces. Product work starts only after the contract and ticket receive fresh review.
-- Proof: Add counted replay parity for described decide and score files, weighted score ties, model/profile overrides and retained plain rank bytes; preserve threshold refusal and zero-send invalid input.
-- Defers: 0401 owns multiquestion rank; this ticket owns existing single-question equivalence. Find has no score/criteria contract and is not silently widened.
+- Starts from: Existing ticket and 0405 audit; landed 0377/0401D/0420 are the current baseline, replacing the older audit-only matrix. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 4.
+- Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
+- Changes: Use the existing score/criteria grammar and shared rank implementation; define any additive typed carrier before code. Single-question equivalence stays here; question sets belong to 0417/0418.
+- Proof: Saved described decide/score cases pin weighted ordering, ties, ordinary bytes, model override, invalid cuts and zero-send replay.
+- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
-## What Ian can overturn
+## Dependencies and ownership
 
-The additive API and slice order within this outcome. No external action or new cost follows from this planning record.
+0426–0431 own foreign carriers; 0409 owns TypeScript declarations.

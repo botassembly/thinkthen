@@ -1,6 +1,6 @@
 # 0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64
 
-Status: in progress: slices A/B/C landed through `6d26206aa`, providing Windows command packaging, the development installer and native runtime privacy/interruption code. An authorized real Windows run, W1/W2 closure, remaining slice D scope and signing/distribution decisions remain.
+Status: landed. Windows command/Rust source and native behavior passed on c64b71859 in runs 37409599783 and 37409602101. The expanded final commit is requalified after SDK work under 0425.
 
 Milestone: 0.2
 
