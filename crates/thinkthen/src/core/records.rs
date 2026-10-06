@@ -14,6 +14,7 @@ use crate::core::pointer::Pointer;
 use crate::core::question::{Labels, LabelsError};
 use crate::core::render::{RenderError, json_line};
 use crate::core::text::{BlankTextError, Description, Evidence, EvidenceShapeError, Withheld};
+mod composition;
 
 /// The most one record may hold before the tool refuses to judge it.
 ///
@@ -59,6 +60,9 @@ pub(crate) enum ReadingError {
 /// pointer is named, because the user typed it on the command line.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub(crate) enum RecordError {
+    /// The typed selected item did not match its declaration.
+    #[error("the item does not match item_schema")]
+    ItemSchema,
     /// The bytes of the record are not text.
     #[error("the record is not valid UTF-8")]
     NotUtf8,
@@ -82,6 +86,9 @@ pub(crate) enum RecordError {
     /// The selected entity member is not text.
     #[error("the entity value at `{0}` is not a string")]
     EntityText(String),
+    /// The selected context is not an authored string.
+    #[error("the context value at `{0}` is not a string")]
+    ContextText(String),
     /// A complete structured entity document is not one list.
     #[error("the entity document is one JSON array")]
     EntityDocument,
@@ -111,7 +118,7 @@ pub(crate) enum RecordError {
 }
 
 /// One record, as it arrived, which `--details` prints back under `input`.
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, Eq, PartialEq, Serialize)]
 #[serde(transparent)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "Json"))]
 pub(crate) struct Record(Held);
@@ -133,7 +140,7 @@ impl std::fmt::Debug for Record {
 }
 
 /// What one record holds, which the framing decides.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 enum Held {
     /// A text record, which is one line or one whole document.
@@ -206,8 +213,10 @@ impl Record {
             Json::Object(members) => members
                 .iter()
                 .map(|(name, held)| match held {
-                    Json::String(text) => Ok((name.clone(), Some(Description::text(text.clone())))),
-                    _ => Err(shape()),
+                    Json::Null => Ok((name.clone(), None)),
+                    _ => Description::of_json(held)
+                        .map(|description| (name.clone(), Some(description)))
+                        .ok_or_else(shape),
                 })
                 .collect::<Result<Vec<_>, RecordError>>()?,
             _ => return Err(shape()),
@@ -256,6 +265,7 @@ impl Serialize for AnnotatedRecord {
 /// The framing and the pointers one run reads its records by.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Reading {
+    item_schema: Option<crate::core::InputDeclaration>,
     framing: Framing,
     fields: Vec<Pointer>,
     by_default: bool,
@@ -291,6 +301,7 @@ impl Reading {
             }
         }
         Ok(Self {
+            item_schema: None,
             framing,
             fields,
             by_default: false,
@@ -435,7 +446,7 @@ impl Reading {
     }
 
     /// What this reading selects from one record.
-    fn selected<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
+    fn selected_unchecked<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
         match (&record.0, self.fields.as_slice()) {
             (Held::Text(text), []) => Ok(Selected::Text(text)),
             (Held::Text(_), _) => Err(RecordError::TextHasNoMembers),

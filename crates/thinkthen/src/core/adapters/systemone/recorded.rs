@@ -5,6 +5,16 @@ use crate::core::json::Json;
 use crate::core::question::{Labels, Question};
 use crate::core::text::QuestionText;
 
+/// Validate the concrete wire type and serialize its owned fields in adapter order.
+pub(crate) fn canonical_question(text: &str) -> Option<(String, Question)> {
+    // Json rejects duplicate keys, including options, before the typed reader.
+    let original = Json::parse(text).ok()?;
+    let decoded = decoder(&original)?;
+    let question: super::request::RequestQuestion = serde_json::from_str(text).ok()?;
+    let canonical = serde_json::to_string(&question).ok()?;
+    Some((canonical, decoded))
+}
+
 /// The member one wire question holds under `name`.
 fn field<'a>(question: &'a Json, name: &str) -> Option<&'a Json> {
     let Json::Object(members) = question else {

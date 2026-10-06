@@ -1,0 +1,98 @@
+{
+  "clef": {
+    "source_commit": "d81235049384534c167caea52b85a694f6103d14",
+    "context": 8192,
+    "batch": 8192,
+    "ubatch": 8192,
+    "files": [
+      {
+        "filename": "Clef-Q4_K_M.gguf",
+        "bytes": 19232219200,
+        "sha256": "bd9b8ae24c5752a2bb5e2733d5168340d5f04457e02b8bf0d1bc9285ec3d4f61"
+      },
+      {
+        "filename": "projector-ranged.gguf",
+        "bytes": 931146304,
+        "sha256": "2a3e89934a6dbd7d4c53868cd810b89c50095dd324f846d62f4e8c779547e234"
+      },
+      {
+        "filename": "llama-server",
+        "bytes": 33472,
+        "sha256": "3f9e3a35c1df3b4d6ad8c2c0f7190aff53becafdd48f043500bdd7c91642eed4"
+      }
+    ],
+    "slots": 1
+  },
+  "flash": {
+    "source_commit": "d81235049384534c167caea52b85a694f6103d14",
+    "context": 8192,
+    "batch": 8192,
+    "ubatch": 8192,
+    "files": [
+      {
+        "filename": "Clef-Flash-Q4_K_M.gguf",
+        "bytes": 6486448288,
+        "sha256": "fd3e90605e8103307dca37cb5a8cdb036267e2fe3cb2d908d80a8ceb9ec0638c"
+      },
+      {
+        "filename": "mmproj-Clef-Flash-BF16.gguf",
+        "bytes": 921704928,
+        "sha256": "a98ed89767816b8505e126904c4f9102976d35c88321d9deb97ac67d1626d143"
+      }
+    ],
+    "slots": 1,
+    "revision": "4a192915ef971886004b5b13294f2b4c7a7fc39d"
+  },
+  "imajev": {
+    "source_commit": "ccf586d43d2a580319b6535c893668904d909eb9",
+    "context": 4096,
+    "batch": null,
+    "ubatch": null,
+    "files": [
+      {
+        "filename": "adapter_model.safetensors",
+        "bytes": 62566192,
+        "sha256": "4c8981a9e2a7e5ab64169c00f34264919b2945b46fe8359bc68e5d22d9a80773"
+      },
+      {
+        "filename": "decision_readout.safetensors",
+        "bytes": 2089072,
+        "sha256": "85a3567949e535615540ff01aa4cb833f7335ee2ff7797b219993604c3771f85"
+      },
+      {
+        "filename": "adapters.safetensors",
+        "bytes": 62559200,
+        "sha256": "5b7a0c64993129763280a209bd50f77e40c9ea8e607b079e4bb36f59f79bdc8e"
+      },
+      {
+        "filename": "decision_readout.safetensors",
+        "bytes": 2089246,
+        "sha256": "7e70bcb99a49b259268ca0ed6bf6c54e1018c2b6528a80b3660700c3c8660e8d"
+      },
+      {
+        "filename": "model.safetensors-00001-of-00001.safetensors",
+        "bytes": 4548221488,
+        "sha256": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1"
+      },
+      {
+        "filename": "model.safetensors.index.json",
+        "bytes": 64460,
+        "sha256": "aca8afed9da75b0f050b408d270766fd77627f1af401e240f61c3b47d0db02f9"
+      },
+      {
+        "filename": "server.py",
+        "bytes": 31141,
+        "sha256": "3c1cf13135bc96cc4a4a46d8f9c3e3c9ed3e10738f677cd9bc9a6d9c36200795"
+      }
+    ],
+    "adapter_revision": "0426f7b1c73804b64fab5802e04f401420ec774c",
+    "base_revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+    "mlx": "0.32.3",
+    "mlx_vlm": "0.7.1",
+    "readout_codes": 255,
+    "prompt_layout": "standard",
+    "rotations": 1,
+    "thinking": "off",
+    "calibration": null
+  }
+}

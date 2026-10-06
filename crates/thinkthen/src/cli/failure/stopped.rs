@@ -39,7 +39,7 @@ pub(super) fn report(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
             4,
             format!("the reply for records {first} to {last} gave record {at} no usable answer; "),
         ),
-        Failure::RecordingStorage => return Some(say(cause, writer)),
+        Failure::RecordingStorage | Failure::RecordingForbidden => return Some(say(cause, writer)),
         _ => (say(cause, writer), String::new()),
     };
     let withheld = if *held {

@@ -114,3 +114,61 @@ fn sqlite_image_replay_refuses_corrupt_constituents_and_identity_without_sending
     drop(replay);
     std::fs::remove_dir_all(folder).unwrap();
 }
+
+#[test]
+fn image_v2_recording_keeps_its_separate_key_domain_and_replays_with_zero_sends() {
+    let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
+    let folder = folder();
+    let build = || {
+        Engine::builder()
+            .backend("liquid")
+            .unwrap()
+            .base_url(listener.base())
+            .unwrap()
+            .model("d1")
+            .unwrap()
+            .no_cache()
+    };
+    let recorder = build().record(&folder).unwrap().build().unwrap();
+    recorder.decide_input(&question(), &pair()).unwrap();
+    drop(recorder);
+    let red = url(RED, "image/png");
+    let blue = url(BLUE, "image/png");
+    let red = red.split_once(',').unwrap().1;
+    let blue = blue.split_once(',').unwrap().1;
+    let expected_state = format!(
+        r#"{{"schema":"thinkthen.image-state/1","text":"Compare originals.","images":[{{"media":"image/png","base64":"{red}"}},{{"media":"image/png","base64":"{blue}"}},{{"media":"image/png","base64":"{red}"}}]}}"#
+    );
+    let db = Connection::open(folder.join("thinkthen.sqlite")).unwrap();
+    let (saved_key, posting, reported, state): (String, String, String, String) = db.query_row(
+        "SELECT lower(hex(a.key)),a.url,a.answered_by,s.state FROM answers a JOIN states s ON s.id=a.state",
+        [], |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?))).unwrap();
+    assert_eq!(state, expected_state);
+    assert_eq!(posting, format!("{}/systemone", listener.base()));
+    assert_eq!(reported, "d1");
+    let mut hash = Sha256::new();
+    hash.update(b"thinkthen.image-question-key/2\0");
+    for part in [
+        "systemone",
+        posting.as_str(),
+        "\"d1\"",
+        "\"d1\"",
+        expected_state.as_str(),
+        r#"{"type":"noul","instructions":"Is red visible?"}"#,
+    ] {
+        hash.update((part.len() as u64).to_be_bytes());
+        hash.update(part);
+    }
+    let expected = hash
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    assert_eq!(saved_key, expected);
+    drop(db);
+    let replay = build().replay(&folder).unwrap().build().unwrap();
+    replay.decide_input(&question(), &pair()).unwrap();
+    assert_eq!(listener.count(), 1);
+    drop(replay);
+    std::fs::remove_dir_all(folder).unwrap();
+}

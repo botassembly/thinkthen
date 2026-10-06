@@ -282,6 +282,12 @@ fn address(base: &str, path: &str) -> Result<Url, BackendError> {
     if base.is_empty() {
         return Err(BackendError::Blank(BlankTextError::Url));
     }
+    if base
+        .chars()
+        .any(|character| character.is_control() || character.is_whitespace())
+    {
+        return Err(BackendError::NotAnAddress);
+    }
     let base = base.trim_end_matches('/');
     let (scheme, rest) = after_scheme(base).ok_or(BackendError::InvalidScheme)?;
     // The address is printed in a plan and kept in a recording, so a base that
@@ -300,6 +306,12 @@ fn address(base: &str, path: &str) -> Result<Url, BackendError> {
     }
     let rest = canonical_rest(rest, host);
     Ok(Url::new(format!("{scheme}{rest}/{path}"))?)
+}
+
+/// Normalize an already resolved posting URL without appending an endpoint again.
+pub(crate) fn posting_address(value: &str) -> Result<Url, BackendError> {
+    let url = address(value, "")?;
+    Url::new(url.as_str().trim_end_matches('/')).map_err(BackendError::Blank)
 }
 
 /// Lowercase literal ASCII letters in an unbracketed host and keep every other byte.

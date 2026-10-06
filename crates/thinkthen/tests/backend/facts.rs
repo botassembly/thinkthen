@@ -13,6 +13,8 @@ use crate::harness::{Canned, Listener, spawn};
 
 // Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
 #[cfg(unix)]
+mod filtered;
+#[cfg(unix)]
 mod priced;
 #[cfg(unix)]
 mod usage_lock;
@@ -45,84 +47,6 @@ fn line(output: &std::process::Output) -> Value {
             .is_some_and(|seconds| seconds >= 0.0)
     );
     facts
-}
-
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
-#[test]
-fn the_facts_line_counts_filtered_records_and_matches_status() {
-    let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("facts-filter-home");
-    let _removed = fs::remove_dir_all(&home);
-    fs::create_dir_all(&home).expect("private home");
-    let state = Folder::Usage.variable(&home);
-    let listener = Listener::answering(answered).expect("loopback");
-    let input = batching::lines(1..=25);
-    let arguments = [
-        "filter",
-        QUESTION,
-        "--lines",
-        "--batch",
-        "10",
-        "--facts",
-        "--no-cache",
-        "--url",
-        listener.base(),
-    ];
-    let output = spawn(
-        &arguments,
-        &[KEY, (state.0, state.1.as_str())],
-        input.as_bytes(),
-    )
-    .expect("compiled filter");
-    assert_eq!(output.status.code(), Some(0));
-    assert_eq!(
-        output.stdout.iter().filter(|&&byte| byte == b'\n').count(),
-        11
-    );
-    assert_eq!(listener.count(), 3);
-    let facts = line(&output);
-    let mut pinned = facts.clone();
-    pinned
-        .as_object_mut()
-        .expect("facts object")
-        .remove("seconds");
-    assert_eq!(
-        pinned,
-        json!({"schema":"thinkthen.run/1","records":25,"requests_sent":3,
-            "retries":0,"cache_answers":0,"input_tokens":300,"output_tokens":30,
-            "model":"jev-1.13.0"})
-    );
-    assert_eq!(String::from_utf8_lossy(&output.stderr).lines().count(), 1);
-    let status =
-        spawn(&["status", "--json"], &[(state.0, &state.1)], b"").expect("compiled status");
-    let status: Value = serde_json::from_slice(&status.stdout).expect("status JSON");
-    for field in [
-        "requests_sent",
-        "retries",
-        "cache_answers",
-        "input_tokens",
-        "output_tokens",
-    ] {
-        assert_eq!(facts[field], status["usage"]["total"][field], "{field}");
-    }
-    let ordinary = spawn(
-        &[
-            "filter",
-            QUESTION,
-            "--lines",
-            "--batch",
-            "10",
-            "--no-cache",
-            "--url",
-            listener.base(),
-        ],
-        &[KEY],
-        input.as_bytes(),
-    )
-    .expect("ordinary filter");
-    assert_eq!(ordinary.status.code(), Some(0));
-    assert_eq!(ordinary.stdout, output.stdout);
-    assert!(ordinary.stderr.is_empty());
 }
 
 #[test]

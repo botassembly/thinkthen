@@ -14,9 +14,12 @@ struct State {
     records: u64,
     requests_sent: u64,
     cache_answers: u64,
+    // Checked known totals; missing reports affect snapshots, not accumulation.
     input_tokens: Option<u64>,
     output_tokens: Option<u64>,
-    missing_usage: bool,
+    missing_input: bool,
+    missing_output: bool,
+    missing_priced_facts: bool,
     model: Option<String>,
     mixed_models: bool,
     cost_micro_usd: u64,
@@ -72,10 +75,14 @@ impl Tally {
         let started = self.start();
         let result = call();
         match &result {
-            Ok(call) => started.finish(call.facts())?,
+            Ok(call) => started
+                .finish(call.facts())
+                .map_err(|error| error.with_facts(call.facts().clone()))?,
             Err(error) => {
                 if let Some(facts) = error.facts() {
-                    started.finish(facts)?;
+                    started
+                        .finish(facts)
+                        .map_err(|error| error.with_facts(facts.clone()))?;
                 }
             }
         }
@@ -83,18 +90,48 @@ impl Tally {
     }
 
     /// A snapshot of calls recorded so far. Token usage remains absent when
-    /// any included call lacked reported usage.
+    /// any included call lacked that reported dimension.
     #[must_use]
     pub fn facts(&self) -> Facts {
         let state = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        state.snapshot()
+    }
+}
+
+impl Tally {
+    /// Snapshot checked raw totals, rounding once under this engine's prices.
+    /// Live calls need complete priced facts; priced zero-send calls add zero.
+    /// Missing reported tokens stay absent even when current cost is known.
+    #[must_use]
+    pub fn facts_with_engine(&self, engine: &crate::public::Engine) -> Facts {
+        let state = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut facts = state.snapshot();
+        let totals = if state.missing_priced_facts {
+            None
+        } else {
+            Some((
+                state.input_tokens.unwrap_or(0),
+                state.output_tokens.unwrap_or(0),
+            ))
+        };
+        facts.estimated_cost_usd =
+            totals.and_then(|(input, output)| engine.estimate_reported_cost(input, output));
+        facts
+    }
+}
+impl State {
+    fn snapshot(&self) -> Facts {
+        let state = self;
         Facts {
+            attempts: None,
+            call_id: None,
             records: state.records,
             requests_sent: state.requests_sent,
             cache_answers: state.cache_answers,
-            input_tokens: (!state.missing_usage)
+            input_tokens: (!state.missing_input)
                 .then_some(state.input_tokens)
                 .flatten(),
-            output_tokens: (!state.missing_usage)
+            output_tokens: (!state.missing_output)
                 .then_some(state.output_tokens)
                 .flatten(),
             estimated_cost_usd: (state.first.is_some() && !state.missing_cost).then(|| {
@@ -137,7 +174,7 @@ impl TallyStart<'_> {
                     .ok_or_else(|| Error::defect("tally token count overflowed"))?,
             ),
             (None, Some(b)) => Some(b),
-            _ => None,
+            (previous, None) => previous,
         };
         let output = match (state.output_tokens, facts.output_tokens) {
             (Some(a), Some(b)) => Some(
@@ -145,7 +182,7 @@ impl TallyStart<'_> {
                     .ok_or_else(|| Error::defect("tally token count overflowed"))?,
             ),
             (None, Some(b)) => Some(b),
-            _ => None,
+            (previous, None) => previous,
         };
         state.first = Some(
             state
@@ -158,7 +195,11 @@ impl TallyStart<'_> {
         state.cache_answers = cached;
         state.input_tokens = input;
         state.output_tokens = output;
-        state.missing_usage |= facts.input_tokens.is_none() || facts.output_tokens.is_none();
+        state.missing_input |= facts.input_tokens.is_none();
+        state.missing_output |= facts.output_tokens.is_none();
+        state.missing_priced_facts |= facts.estimated_cost_usd.is_none()
+            || (facts.requests_sent > 0
+                && (facts.input_tokens.is_none() || facts.output_tokens.is_none()));
         match facts
             .estimated_cost_usd
             .as_deref()
@@ -220,6 +261,8 @@ mod tests {
 
     fn facts(requests_sent: u64, cache_answers: u64, model: Option<&str>) -> Facts {
         Facts {
+            attempts: None,
+            call_id: None,
             cache_answers,
             estimated_cost_usd: None,
             input_tokens: None,
@@ -246,5 +289,28 @@ mod tests {
             }
             assert_eq!(tally.facts().model(), model);
         }
+    }
+
+    #[test]
+    fn token_overflow_leaves_the_snapshot_unchanged_and_a_new_scope_clean() {
+        let tally = Tally::new();
+        let mut first = facts(1, 0, Some("m"));
+        first.input_tokens = Some(u64::MAX);
+        first.output_tokens = Some(2);
+        first.estimated_cost_usd = Some("0.000000".into());
+        tally.start().finish(&first).unwrap();
+        let mut next = facts(1, 0, Some("m"));
+        next.input_tokens = Some(1);
+        next.output_tokens = Some(3);
+        next.estimated_cost_usd = Some("0.000000".into());
+        let before = serde_json::to_value(tally.facts()).unwrap();
+        let error = tally.start().finish(&next).unwrap_err();
+        assert!(matches!(error, crate::public::Error::Defect { .. }));
+        assert_eq!(serde_json::to_value(tally.facts()).unwrap(), before);
+        let fresh = Tally::new();
+        fresh.start().finish(&next).unwrap();
+        assert_eq!(fresh.facts().input_tokens(), Some(1));
+        assert_eq!(fresh.facts().output_tokens(), Some(3));
+        assert_eq!(fresh.facts().requests_sent(), 1);
     }
 }

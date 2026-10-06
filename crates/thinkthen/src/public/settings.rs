@@ -5,17 +5,17 @@ mod budgets;
 mod environment;
 mod prices;
 mod server;
+mod storage;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::config;
 use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, KEY_IN_ADDRESS, ModelName, Prices};
 use crate::engine::Width;
 use crate::engine::error::Error as EngineError;
-use crate::engine::facade::{Key, Settings, Storage};
+use crate::engine::facade::{Key, Settings};
 use crate::engine::facade::{Roots, RootsError};
 use crate::engine::usage::Counters;
 use crate::public::BatchSetting;
@@ -81,6 +81,8 @@ pub struct EngineBuilder {
     cache: Cache,
     seeded: Option<Seeded>,
     server: bool,
+    proxy_supplied: bool,
+    refresh_cache: bool,
     timeout: Duration,
     max_retries: u32,
     profile: Option<Profile>,
@@ -112,6 +114,7 @@ impl fmt::Debug for EngineBuilder {
             .field("cache", &self.cache)
             .field("seeded", &self.seeded)
             .field("server", &self.server)
+            .field("refresh_cache", &self.refresh_cache)
             .field("timeout", &self.timeout)
             .field("max_retries", &self.max_retries)
             .field("profile", &self.profile)
@@ -153,6 +156,8 @@ impl EngineBuilder {
             cache: Cache::Default,
             seeded: None,
             server: false,
+            proxy_supplied: false,
+            refresh_cache: false,
             timeout: Duration::from_secs(30),
             max_retries: 3,
             profile: None,
@@ -332,7 +337,7 @@ impl EngineBuilder {
         Ok(self)
     }
 
-    /// Parse one closed version-one backend profile without reading a file.
+    /// Parse one closed backend profile without reading a file.
     /// # Errors
     /// Returns [`Error::Usage`] for an invalid profile object.
     pub fn profile_json(mut self, value: &str) -> Result<Self, Error> {
@@ -374,6 +379,11 @@ impl EngineBuilder {
     /// when a [`EngineBuilder::shared_host`] folder is not private. Returns
     /// [`Error::Local`] when a shared host cannot create or read its folder.
     pub fn build(self) -> Result<super::Engine, Error> {
+        if self.proxy_supplied {
+            return Err(Error::usage(
+                "proxy activation is reserved and is not supported in 0.2",
+            ));
+        }
         let batch = match (self.batch, self.env_batch.as_deref()) {
             (Some(setting), _) => Some(setting),
             (None, Some(value)) => Some(crate::core::Setting::parse(value).ok_or_else(|| {
@@ -448,57 +458,6 @@ impl EngineBuilder {
             batch,
             self.prices.or(prices),
         )
-    }
-
-    fn storage(&self) -> Result<Storage, Error> {
-        if matches!((&self.record, &self.replay), (Some(record), Some(replay)) if record != replay)
-        {
-            return Err(Error::usage(
-                "record and replay name two different folders, and one engine keeps one",
-            ));
-        }
-        if self.record.is_some() || self.replay.is_some() {
-            if matches!(self.cache, Cache::At(_)) {
-                return Err(Error::usage(
-                    "a cache folder is record and replay on one folder, so it stands beside neither",
-                ));
-            }
-            return Ok(Storage {
-                record: self.record.clone(),
-                replay: self.replay.clone(),
-                private_default: false,
-                cache_answers: false,
-                refresh_cache: false,
-            });
-        }
-        let (folder, private_default) = match &self.cache {
-            Cache::Off => return Ok(Storage::default()),
-            Cache::At(folder) => (folder.clone(), false),
-            Cache::Default => match &self.seeded {
-                Some(seeded) if seeded.platform && (self.server || !seeded.enabled) => {
-                    return Ok(Storage::default());
-                }
-                None if self.server => return Ok(Storage::default()),
-                Some(seeded) => (
-                    seeded
-                        .folder
-                        .clone()
-                        .ok_or_else(|| Error::usage(NO_DEFAULT_CACHE))?,
-                    seeded.platform,
-                ),
-                None => (
-                    config::cache_path().ok_or_else(|| Error::usage(NO_DEFAULT_CACHE))?,
-                    true,
-                ),
-            },
-        };
-        Ok(Storage {
-            record: Some(folder.clone()),
-            replay: Some(folder),
-            private_default,
-            cache_answers: true,
-            refresh_cache: false,
-        })
     }
 }
 

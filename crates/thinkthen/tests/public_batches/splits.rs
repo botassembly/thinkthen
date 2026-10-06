@@ -177,7 +177,7 @@ fn a_halved_request_keeps_one_question_key_per_member() {
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
-    let keys = super::identity::question_keys(listener.url(), &requests[0].body);
+    let keys = super::identity::question_keys(listener.url(), &requests[0].body, "jev-latest");
     let member = |index: usize, name: &str, key: usize, sent: u64| {
         (index, name.to_owned(), vec![keys[key].clone()], sent)
     };
@@ -367,7 +367,7 @@ fn a_refused_request_and_both_halves_keep_exact_send_shares() {
         })
         .collect::<Vec<_>>();
     assert_eq!(sizes, [2, 1, 1]);
-    let keys = super::identity::question_keys(listener.url(), &requests[0].body);
+    let keys = super::identity::question_keys(listener.url(), &requests[0].body, "jev-latest");
     let seen = seen.lock().expect("observations");
     assert_eq!(
         seen.as_slice(),
