@@ -1,6 +1,6 @@
 # 0449: Keep each SDK engine on one configured route
 
-Status: built; awaiting fresh code review and landing.
+Status: landed. The permanent single-route contract and focused transport assertions preserve explicit caller controls; proxy business policy stays outside the SDK.
 
 Milestone: 0.2
 Owner: Codex builder, lane claude-1.
