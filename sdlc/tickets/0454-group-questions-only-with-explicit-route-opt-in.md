@@ -1,9 +1,10 @@
 # 0454: Store actual batch size and preserve per-question caching
 
-Status: open. Ian's corrected ruling supersedes the earlier grouping-key proposal; focused ticket review follows.
+Status: ready. Ian's per-question cache ruling is accepted by fresh High ticket review; implementation joins the native lane.
 
 Milestone: 0.2
 Owner: builder.
+Ticket review: ACCEPT, 2026-10-06; fresh High review of corrected scope at 3cfdd70b7.
 Risk: High, stored-observation compatibility and truthful answer metadata.
 
 ## Outcome
