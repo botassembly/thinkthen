@@ -79,3 +79,6 @@ mod relate_records;
 
 #[path = "native_complete/declarations.rs"]
 mod declarations;
+
+#[path = "native_complete/tally.rs"]
+mod tally;
