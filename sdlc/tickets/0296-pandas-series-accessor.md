@@ -5,7 +5,7 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 Milestone: 0.2
 
 Owner: builder.
-Ticket review: accepted 2026-10-06; blocking findings corrected.
+Ticket review: ACCEPT, 2026-10-06; fresh read-only review of the corrected image contract.
 
 ## Outcome
 
@@ -17,8 +17,12 @@ Opt-in import thinkthen.pandas registers series.tt named routes for all ten func
 - Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
 - Changes: Preserve Series index/name/nulls and appropriate whole-set outputs, typed details/facts and public engine settings. Reuse existing pandas adaptation; accessor dispatch stays here and function semantics stay in 0410.
 - Proof: Installed public Series consumers exercise all ten saved cases; original index/name/duplicate identities survive; import without pandas remains valid. Count replay zero sends and retained calls.
-- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
+- Defers: Proxy service/screens, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
 ## Dependencies and ownership
 
 0410 supplies missing dataframe functions; 0431 typed source carriers and 0300 costs feed the same accessors.
+
+## Vision and identity adoption
+
+Adopt ordered typed image decide/choose/score from 0447, pre-send route limits and refusals from 0448, answer IDs and proxy reservations from 0450 and the one-route boundary from 0449. Reuse 0410 dataframe semantics and the native reader. Public Series accessor cases cover one image, multiple ordered images, whole-file image items, index/name/null/duplicate preservation, complete typed results and IDs, cache/record/replay with zero additional sends. Text-only functions and unsupported routes refuse image inputs with counted zero sends. No raw JSON door substitutes for accessor support.

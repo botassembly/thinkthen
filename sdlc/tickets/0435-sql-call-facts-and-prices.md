@@ -5,7 +5,7 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 Milestone: 0.2
 
 Owner: builder.
-Ticket review: accepted 2026-10-06; blocking findings corrected.
+Ticket review: ACCEPT, 2026-10-06; fresh read-only review. Conflicting image deferrals corrected where found.
 
 ## Outcome
 
@@ -17,7 +17,7 @@ Each SQL invocation returns final facts and optional exact caller-priced cost fr
 - Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
 - Changes: Add facts to the existing details result from its owning Rust Call, including call_id. Preserve ordinary scalar/table outputs and cumulative usage APIs. Adopt the engine-scoped price pair and shared exact arithmetic from 0300.
 - Proof: A details call sends/evaluates once; concurrent invocations retain isolated counts. Packed rows repeat one invocation’s facts and call_id, so deduplicating that ID counts its sends once. Never subtract cumulative usage snapshots or sum historical per-row usage shares. Test exact rounding, incomplete usage, overflow, cache/replay zero spend and started-failure facts through the reviewed native SQL error route.
-- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
+- Defers: Proxy service/screens, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
 ## Dependencies and ownership
 
@@ -26,3 +26,7 @@ Each SQL invocation returns final facts and optional exact caller-priced cost fr
 ## Design notes
 
 Specify an accessible started-failure facts route for each SQL host before code. If a native error cannot carry an object, use a bounded reviewed additive failure-result route rather than a cumulative counter. No second evaluation. Caller prices are estimates, never provider bills.
+
+## Full-result answer identity
+
+0450 IDs belong on SQL full details/observation results from the same native evaluation. Ordinary scalar values retain compatibility. Expose per-logical-result IDs independently from invocation call_id; repeated packed invocation facts do not collapse distinct logical answers. Coordinate image overloads in 0452 without a second judgment.

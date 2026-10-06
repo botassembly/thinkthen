@@ -16,6 +16,8 @@ Use one fresh review of the whole ticket or slice, then fix and land. A second r
 
 ## Boundaries
 
+Each engine resolves one endpoint, one effective key and one provider API type. Business routing, model groups, fallback providers, A/B policy, curation and automatic threshold tuning belong to the proxy. Keep explicit direct model/reading choices and offline analysis as caller controls; add no SDK business policy.
+
 `crates/thinkthen/src/core` touches no file, environment, socket, clock, or process. The command parses at the edge and passes typed values inward; attributes and `policy.py` enforce inward dependencies.
 
 `thinkthen` judges and never acts: it runs no commands or free-text instructions. It writes only user-named files, its platform cache, and count-only usage totals in its platform state folder; it never creates or edits read-only configuration.
