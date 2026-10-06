@@ -123,3 +123,13 @@ its valid null and failed marker. Existing runner skips remain visible missing
 cells until owners replace them with real boundary executions. Text-only image
 rulings, dropped-image routes and PostgreSQL's client-reader workaround require
 executed boundary cases; a written ruling never passes a cell by itself.
+
+The 0448 admission cases resolve `input.scenarios_ref` through
+`parity.image_admission_scenarios`, and each scenario's `profile_ref` through
+`parity.image_profiles`. Every scenario is required at its actual named image
+door. The profile limits distinguish Liquid's strict decimal body/patch/aspect
+bounds, Perplexity's 32 MiB body and nearest-32 tile bounds (no invented vendor
+count limit), and pinned llama.cpp's count/runtime prerequisites. Format
+refusals are SDK validation rulings. Owner-dependent media/large/malformed
+fixtures remain targets in the same canonical images corpus until 0447/0448
+supply them. Neither declarations nor schema checks qualify runtime cells.

@@ -11657,7 +11657,1164 @@
           "compile",
           "runtime"
         ]
+      },
+      {
+        "id": "image-admission-format-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "format"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-dimension-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "dimension"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-count-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "count"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-body-excess-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "body-excess"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-malformed-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "malformed"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-truncated-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "truncated"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-packing-overflow-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "packing-overflow"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-valid-above-spike-cap-decide",
+        "verb": "decide",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "01-decide-yes-captured",
+          "scenarios_ref": "valid-above-spike-cap"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-format-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "format"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-dimension-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "dimension"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-count-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "count"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-body-excess-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "body-excess"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-malformed-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "malformed"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-truncated-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "truncated"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-packing-overflow-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "packing-overflow"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-valid-above-spike-cap-choose",
+        "verb": "choose",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "06-choose-billing",
+          "scenarios_ref": "valid-above-spike-cap"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-format-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "format"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-dimension-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "dimension"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-count-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "count"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-body-excess-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "body-excess"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-malformed-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "malformed"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-truncated-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "truncated"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-packing-overflow-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "packing-overflow"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
+      },
+      {
+        "id": "image-admission-valid-above-spike-cap-score",
+        "verb": "score",
+        "kind": "image-admission",
+        "input": {
+          "case_ref": "11-score-middle",
+          "scenarios_ref": "valid-above-spike-cap"
+        },
+        "expect": {
+          "all_scenarios_required": true,
+          "refusals_count_connections": true,
+          "support_checks_original_bytes_order_and_typed_result": true
+        },
+        "preconditions": [
+          "0447",
+          "0448"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "fixture_status": "owner-dependent target; native owner materializes missing fixtures in the canonical images corpus; no runtime PASS until all scenarios assert"
       }
-    ]
+    ],
+    "image_profiles": {
+      "liquid-d1": {
+        "adapter": "systemone",
+        "endpoint_path": "/decisions/v1/systemone",
+        "model": "d1",
+        "wire": "ordered top-level data URL images",
+        "max_images": 8,
+        "final_body_bytes": {
+          "upper": 4500000,
+          "inclusive": false
+        },
+        "patches": {
+          "size": 32,
+          "rounding": "ceil each dimension",
+          "total_max": 10000
+        },
+        "aspect_ratio_max": 100,
+        "refused_models": [
+          "d1:free"
+        ]
+      },
+      "perplexity-decider": {
+        "adapter": "decisions",
+        "endpoint_path": "/v1/decisions",
+        "model": "pplx-decider-v1-27b",
+        "wire": "state array of optional original state followed by ordered image_url items; no top-level images",
+        "final_body_bytes": {
+          "upper": 33554432,
+          "inclusive": true
+        },
+        "tiles": {
+          "size": 32,
+          "rounding": "nearest multiple of 32; ambiguous tie/zero boundaries require conservative ruling",
+          "per_image_max": 2048
+        },
+        "vendor_max_images": null,
+        "count_policy": "no documented vendor maximum; any SDK count bound must be stated separately",
+        "token_limit": {
+          "upper": 262144,
+          "inclusive": false,
+          "unit": "tokens, never inferred from bytes"
+        }
+      },
+      "llama-clef": {
+        "adapter": "systemone",
+        "endpoint_path": "/v1/systemone",
+        "wire": "ordered top-level data URL images",
+        "supported_revision": "d81235049384534c167caea52b85a694f6103d14",
+        "unsupported_revision": "a7b94df2c616bc1f62a73b964b4a71cb0dcc488e",
+        "max_images": 8,
+        "vendor_body_limit": null,
+        "runtime_prerequisites": [
+          "reviewed vision-capable model revision",
+          "matching projector",
+          "explicit configured context/batch/ubatch",
+          "proved model-specific vision-token upper bound"
+        ],
+        "unresolved_budget": {
+          "kind": "usage",
+          "requests": 0
+        },
+        "local_model_name_is_not_capability": true
+      }
+    },
+    "image_admission_contract": {
+      "required_formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "unsupported_formats": [
+        "image/webp",
+        "image/gif"
+      ],
+      "unsupported_format_ruling": "SDK validation ruling, not a vendor capability claim",
+      "debug_and_errors_withhold": [
+        "bytes",
+        "data URLs",
+        "captions",
+        "keys"
+      ]
+    },
+    "image_admission_scenarios": {
+      "format": [
+        {
+          "id": "png-valid",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "media": "image/png",
+            "decode": "valid"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "jpeg-valid",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "valid fully decoded JPEG",
+            "media": "image/jpeg",
+            "dimensions": [
+              1,
+              1
+            ]
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "webp-unsupported",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "valid container in the unsupported format",
+            "media": "image/webp"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "gif-unsupported",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "valid container in the unsupported format",
+            "media": "image/gif"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "media-container-mismatch",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "declared_media": "image/jpeg"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "dimension": [
+        {
+          "id": "liquid-patches-at-limit",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              3200,
+              3200
+            ],
+            "decode": "valid",
+            "patches": 10000
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "liquid-patches-excess",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              3232,
+              3200
+            ],
+            "decode": "valid",
+            "patches": 10100
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "liquid-aspect-at-limit",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              3200,
+              32
+            ],
+            "decode": "valid",
+            "aspect_ratio": 100
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "liquid-aspect-excess",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              3232,
+              32
+            ],
+            "decode": "valid",
+            "aspect_ratio": 101
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "perplexity-1440-square",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              1440,
+              1440
+            ],
+            "decode": "valid",
+            "tiles": 2025
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "perplexity-2048-by-1024",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              2048,
+              1024
+            ],
+            "decode": "valid",
+            "tiles": 2048
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "perplexity-1600-by-1310-excess",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "dimensions": [
+              1600,
+              1310
+            ],
+            "decode": "valid",
+            "tiles": 2050
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "count": [
+        {
+          "id": "liquid-d1-count-8",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "repeat": 8,
+            "preserve_duplicates": true,
+            "other_limits": "within bounds",
+            "runtime_prerequisites": null
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "liquid-d1-count-9",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "repeat": 9,
+            "preserve_duplicates": true,
+            "other_limits": "within bounds",
+            "runtime_prerequisites": null
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "llama-clef-count-8",
+          "profile_ref": "llama-clef",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "repeat": 8,
+            "preserve_duplicates": true,
+            "other_limits": "within bounds",
+            "runtime_prerequisites": "satisfied by owner proof"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "llama-clef-count-9",
+          "profile_ref": "llama-clef",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "repeat": 9,
+            "preserve_duplicates": true,
+            "other_limits": "within bounds",
+            "runtime_prerequisites": "satisfied by owner proof"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "body-excess": [
+        {
+          "id": "liquid-d1-body-4499999",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_serialized_body_bytes": 4499999,
+            "image_count_dimensions_aspect": "within bounds",
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "liquid-d1-body-4500000",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_serialized_body_bytes": 4500000,
+            "image_count_dimensions_aspect": "within bounds",
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "perplexity-decider-body-33554432",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_serialized_body_bytes": 33554432,
+            "image_count_dimensions_aspect": "within bounds",
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        },
+        {
+          "id": "perplexity-decider-body-33554433",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_serialized_body_bytes": 33554433,
+            "image_count_dimensions_aspect": "within bounds",
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "malformed": [
+        {
+          "id": "png-malformed-idat",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "mutation": "invalid compressed pixel data with independently correct container CRC; header alone stays valid"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "jpeg-malformed-scan",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "JPEG with valid dimensions/container header and invalid scan data"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "truncated": [
+        {
+          "id": "png-truncated",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "existing_image": "specification/fixtures/images/red.png",
+            "mutation": "truncate compressed IDAT stream before completion"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "jpeg-truncated",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "JPEG truncated within scan data"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        }
+      ],
+      "packing-overflow": [
+        {
+          "id": "liquid-d1-packed-body-overflow",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_packed_body_bytes": 4500000,
+            "account_for": [
+              "base64 expansion",
+              "repeated images",
+              "JSON escaping",
+              "delimiters"
+            ],
+            "indivisible_attachments": "cannot fit a single complete question even after splitting",
+            "no_drop_or_text_retry": true,
+            "individual_images": "fit the exact route limit separately",
+            "all_other_limits": "within exact profile bounds"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "perplexity-decider-packed-body-overflow",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "media": "image/png",
+            "decode": "valid",
+            "final_packed_body_bytes": 33554433,
+            "account_for": [
+              "base64 expansion",
+              "repeated images",
+              "JSON escaping",
+              "delimiters"
+            ],
+            "indivisible_attachments": "cannot fit a single complete question even after splitting",
+            "no_drop_or_text_retry": true,
+            "individual_images": "fit the exact route limit separately",
+            "all_other_limits": "within exact profile bounds"
+          },
+          "expect": {
+            "kind": "usage",
+            "requests": 0,
+            "cli_exit": 2
+          }
+        },
+        {
+          "id": "liquid-d1-complete-question-split",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "mode": "many inputs",
+            "input_count": 2,
+            "distinct_image_states": true,
+            "each_complete_question_bytes": "within route limit",
+            "unsplit_final_body_bytes_min": 4500001,
+            "each_question_retains": "all ordered images, duplicates and context",
+            "all_other_limits": "within exact profile bounds"
+          },
+          "expect": {
+            "requests": 2,
+            "all_sent_bodies_within_route_limit": true,
+            "all_ordered_attachments_in_each_split_child": true,
+            "no_drop_or_text_retry": true
+          }
+        },
+        {
+          "id": "perplexity-decider-complete-question-split",
+          "profile_ref": "perplexity-decider",
+          "construction": {
+            "mode": "many inputs",
+            "input_count": 2,
+            "distinct_image_states": true,
+            "each_complete_question_bytes": "within route limit",
+            "unsplit_final_body_bytes_min": 33554433,
+            "each_question_retains": "all ordered images, duplicates and context",
+            "all_other_limits": "within exact profile bounds"
+          },
+          "expect": {
+            "requests": 2,
+            "all_sent_bodies_within_route_limit": true,
+            "all_ordered_attachments_in_each_split_child": true,
+            "no_drop_or_text_retry": true
+          }
+        }
+      ],
+      "valid-above-spike-cap": [
+        {
+          "id": "liquid-valid-above-both-spike-caps",
+          "profile_ref": "liquid-d1",
+          "construction": {
+            "fixture_requirement": "original valid PNG above the historical spike cap; not padding a malformed container",
+            "media": "image/png",
+            "dimensions": [
+              256,
+              256
+            ],
+            "compressed_bytes_min": 32769,
+            "final_body_bytes_min": 65537,
+            "final_body_bytes_max": 4499999,
+            "patches": 64,
+            "explicit_sdk_byte_limit": "unset"
+          },
+          "expect": {
+            "requests": 1,
+            "images_preserved": true,
+            "no_resize": true
+          }
+        }
+      ]
+    }
   }
 }

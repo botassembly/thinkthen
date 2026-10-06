@@ -55,6 +55,10 @@ def inventory():
         if case['verb'] not in parity['functions'] or not case['expect']:
             raise ValueError(f"{case['id']}: unknown verb or empty expectation")
         given = case['input']
+        if 'scenarios_ref' in given:
+            scenarios = parity['image_admission_scenarios'].get(given['scenarios_ref'])
+            if not scenarios or any(row['profile_ref'] not in parity['image_profiles'] for row in scenarios):
+                raise ValueError(f"{case['id']}: unknown image admission scenarios or profile")
         if 'case_ref' in given:
             source = {'conformance/settings.json': settings,
                       'specification/fixtures/types/corpus.json': types}.get(given.get('fixture'), canonical)
