@@ -37,6 +37,32 @@ pub(crate) fn receipt(
         usage.add_reported(answered.usage);
     }
     Ok(facade::Answered {
+        sources: answers
+            .iter()
+            .map(|answered| {
+                let model = ModelName::reported(answered.answered_by.to_string())
+                    .map_err(|_| Error::Defect("an observation names no model"))?;
+                Ok(crate::core::QuestionSource::new(
+                    answered.origin,
+                    model,
+                    answered.batch_size,
+                ))
+            })
+            .collect::<Result<_, Error>>()?,
+        observations: answers
+            .iter()
+            .map(|answered| match &answered.observation_id {
+                Some(observation_id) => Ok(crate::core::Observation::Answered {
+                    observation_id: observation_id.clone(),
+                }),
+                None if answered.answer.is_err() => Ok(crate::core::Observation::Failed {
+                    failure_id: crate::engine::invocation::failure_id()?,
+                }),
+                None => Err(Error::Defect(
+                    "an accepted answer has no observation identity",
+                )),
+            })
+            .collect::<Result<_, Error>>()?,
         reply: Reply::new(model, outcomes, usage.total()?).with_reported_usage(usage.reported()?),
         replayed: answers.iter().all(|answered| answered.cached),
         request: Digest::named(

@@ -35,6 +35,7 @@ impl Origin {
 /// One good answer of an old entry, with every part of its question entry.
 #[derive(Debug)]
 pub(crate) struct Converted {
+    pub(crate) observation_id: crate::core::ObservationId,
     pub(crate) key: QuestionKey,
     pub(crate) url: String,
     pub(crate) model: String,
@@ -77,12 +78,7 @@ impl Converting {
 /// fixed sentence, because its questions already quote their records. With
 /// `quote`, a single-record exchange is also written in the quoted form.
 pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Converting> {
-    let entry: Entry =
-        serde_json::from_slice(bytes).map_err(|error| Converting::Unreadable(place(error)))?;
-    if entry.schema != SCHEMA || entry.adapter != built_in::NAME {
-        return Err(Converting::Unreadable(EntryError::Schema));
-    }
-    let url = Url::new(&entry.url).map_err(|_| Converting::Unreadable(EntryError::Mismatched))?;
+    let (entry, url) = admitted_entry(bytes)?;
     let body = entry.request.get();
     let (state, model, questions) = parts(body).ok_or(Converting::Unjoined)?;
     let written = |value: &Json| serde_json::to_string(value).map_err(|_| Converting::Unjoined);
@@ -128,6 +124,14 @@ pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Conve
     };
     let unquoted =
         matches!(form, Some(Requote::Quoted(_) | Requote::Unquotable)) && requoted.is_none();
+    let original_usage = reported_counts(entry.response.get())?;
+    let metadata = crate::core::LegacyMetadata {
+        answered_by: Some(reply.model.as_str()),
+        input_tokens: original_usage.0,
+        output_tokens: original_usage.1,
+        taken_at: None,
+        origin: None,
+    };
     let mut converted = Vec::new();
     for (place, answer) in reply.answers.into_iter().enumerate() {
         let (Ok(answer), Some(question), Some(usage)) =
@@ -135,7 +139,17 @@ pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Conve
         else {
             continue;
         };
+        let original_key = QuestionKey::of(&url, &model_json, &state_json, question);
+        let canonical = canonical_answer(
+            decoders.get(place).ok_or(Converting::Unanswered)?,
+            &answer,
+            reply.model.as_str(),
+        )?;
+        let observation_id =
+            crate::core::legacy_observation(&original_key.hex(), &canonical, &metadata)
+                .map_err(|_| Converting::Unanswered)?;
         let row = |state: &str, question: &str, origin: Origin| Converted {
+            observation_id: observation_id.clone(),
             key: QuestionKey::of(&url, &model_json, state, question),
             url: entry.url.clone(),
             model: model.clone(),
@@ -156,6 +170,54 @@ pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Conve
         return Err(Converting::Unanswered);
     }
     Ok(converted)
+}
+
+fn admitted_entry(bytes: &[u8]) -> Result<(Entry, Url), Converting> {
+    let entry: Entry =
+        serde_json::from_slice(bytes).map_err(|error| Converting::Unreadable(place(error)))?;
+    if entry.schema != SCHEMA || entry.adapter != built_in::NAME {
+        return Err(Converting::Unreadable(EntryError::Schema));
+    }
+    let url = Url::new(&entry.url).map_err(|_| Converting::Unreadable(EntryError::Mismatched))?;
+    Ok((entry, url))
+}
+
+fn canonical_answer(
+    decoder: &crate::core::Question,
+    answer: &str,
+    model: &str,
+) -> Result<String, Converting> {
+    let outcomes = crate::core::pack::read(std::slice::from_ref(decoder), &[Ok(answer)], model)
+        .map_err(|_| Converting::Unanswered)?;
+    let [crate::core::AnswerOutcome::Answered(decoded)] = outcomes.as_slice() else {
+        return Err(Converting::Unanswered);
+    };
+    serde_json::to_string(decoded).map_err(|_| Converting::Unanswered)
+}
+
+/// Preserve original missing versus null counts for identity, before generated shares.
+type Counts = (Option<Option<u64>>, Option<Option<u64>>);
+fn reported_counts(response: &str) -> Result<Counts, Converting> {
+    fn present<'de, D: serde::Deserializer<'de>>(
+        reader: D,
+    ) -> Result<Option<Option<u64>>, D::Error> {
+        serde::Deserialize::deserialize(reader).map(Some)
+    }
+    #[derive(serde::Deserialize)]
+    struct Usage {
+        #[serde(default, deserialize_with = "present")]
+        input_tokens: Option<Option<u64>>,
+        #[serde(default, deserialize_with = "present")]
+        output_tokens: Option<Option<u64>>,
+    }
+    #[derive(serde::Deserialize)]
+    struct Response {
+        usage: Option<Usage>,
+    }
+    let response: Response = serde_json::from_str(response).map_err(|_| Converting::Unanswered)?;
+    Ok(response.usage.map_or((None, None), |usage| {
+        (usage.input_tokens, usage.output_tokens)
+    }))
 }
 
 /// The request's state, model and wire questions, in order.

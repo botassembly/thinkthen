@@ -238,7 +238,7 @@ fn observed(
             Ok(decided) => decided,
             Err(Miss::Failed(decided)) => {
                 failed = true;
-                decided
+                *decided
             }
             Err(Miss::Refused(error)) => return Err(error),
         };

@@ -23,8 +23,12 @@ use crate::engine::error::Error;
 mod convert;
 mod fixture;
 mod images;
+mod rows;
+use rows::{found, insert, signed};
+mod migration;
 mod original;
 mod policy;
+mod versioned;
 pub(crate) use original::Original;
 mod probe;
 mod prune;
@@ -56,9 +60,13 @@ CREATE TABLE IF NOT EXISTS answers (
   input_tokens  INTEGER,
   output_tokens INTEGER,
   taken_at      INTEGER NOT NULL,
-  origin        TEXT NOT NULL
+  origin        TEXT NOT NULL,
+  key_version   INTEGER NOT NULL,
+  adapter       TEXT NOT NULL,
+  observation_id TEXT NOT NULL,
+  batch_size    INTEGER
 );
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;
 ";
 
 /// How a call uses its folder, by the modes table of ADR 0111 section 3.
@@ -77,6 +85,9 @@ pub(crate) enum Mode {
 /// One stored answer as a lookup returns it.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Found {
+    pub(crate) key: QuestionKey,
+    pub(crate) observation_id: crate::core::ObservationId,
+    pub(crate) batch_size: Option<std::num::NonZeroU32>,
     pub(crate) answer: String,
     pub(crate) answered_by: String,
     pub(crate) usage: Option<ReportedUsage>,
@@ -84,6 +95,8 @@ pub(crate) struct Found {
 
 /// One answer to write, with every column of its row.
 pub(crate) struct Row<'a> {
+    pub(crate) observation_id: crate::core::ObservationId,
+    pub(crate) batch_size: Option<std::num::NonZeroU32>,
     pub(crate) key: QuestionKey,
     pub(crate) url: &'a str,
     pub(crate) model: &'a str,
@@ -152,7 +165,9 @@ impl Store {
                     let read = replayed.map_or_else(|| Replayed::read(&jsonl).map(Arc::new), Ok);
                     store.replayed = Some(read?);
                 }
-                (true, false) => store.connection = Some(read_only(&sqlite)?),
+                (true, false) => {
+                    store.replayed = Some(Arc::new(Replayed::connection(&read_only(&sqlite)?)?))
+                }
                 (false, false) => {}
             }
         } else if fs::symlink_metadata(folder).is_ok() {
@@ -163,6 +178,16 @@ impl Store {
             }
         }
         Ok(store)
+    }
+
+    /// Writing modes validate/upgrade an existing store even when refresh skips lookup.
+    pub(crate) fn prepared(mut self, cancel: &Cancel) -> Result<Self, Error> {
+        if self.writes()
+            && (exists(&self.folder.join(SQLITE))? || exists(&self.folder.join(JSONL))?)
+        {
+            self.connect(cancel)?;
+        }
+        Ok(self)
     }
 
     /// Whether this mode answers from the store.
@@ -215,7 +240,7 @@ impl Store {
             self.connect(cancel)?;
         }
         if let Some(replayed) = &self.replayed {
-            return Ok(keys.iter().map(|key| replayed.get(key)).collect());
+            return keys.iter().map(|key| replayed.get(key)).collect();
         }
         let Some(connection) = self.connection.as_ref() else {
             return Ok(vec![None; keys.len()]);
@@ -283,7 +308,7 @@ impl Store {
         if version == 0 {
             let jsonl = self.folder.join(JSONL);
             let fixture = if exists(&jsonl)? {
-                Some(fixture::read(&jsonl)?)
+                Some(fixture::read(&jsonl)?.normalized()?)
             } else {
                 None
             };
@@ -296,8 +321,8 @@ impl Store {
                 self.waiting(cancel, || connection.execute_batch(SCHEMA))?;
                 fixture.as_ref().map_or(Ok(()), import)
             })?;
-        } else if version != 1 {
-            return Err(Error::RecordingStorage);
+        } else {
+            self.migrate(&connection, cancel)?;
         }
         self.connection = Some(connection);
         Ok(())
@@ -349,25 +374,6 @@ pub(crate) fn waiting<T>(
 /// One stored answer beside its key's bytes.
 type Stored = (Vec<u8>, Result<Found, Error>);
 
-fn found(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stored> {
-    let count = |at| {
-        row.get::<_, Option<i64>>(at).and_then(|count| {
-            count
-                .map(u64::try_from)
-                .transpose()
-                .map_err(|_| rusqlite::Error::IntegralValueOutOfRange(at, -1))
-        })
-    };
-    let usage = Some(ReportedUsage::new(count(3)?, count(4)?))
-        .filter(|usage| usage.input_tokens().is_some() || usage.output_tokens().is_some());
-    let answer = Found {
-        answer: row.get(1)?,
-        answered_by: row.get(2)?,
-        usage,
-    };
-    Ok((row.get(0)?, Ok(answer)))
-}
-
 /// Unix seconds now, the time a reply arrived.
 pub(crate) fn now() -> i64 {
     SystemTime::now()
@@ -375,42 +381,6 @@ pub(crate) fn now() -> i64 {
         .map_or(0, |elapsed| {
             i64::try_from(elapsed.as_secs()).unwrap_or(i64::MAX)
         })
-}
-
-fn insert(connection: &Connection, rows: &[Row<'_>]) -> rusqlite::Result<()> {
-    let mut add_state =
-        connection.prepare("INSERT OR IGNORE INTO states (sha256, state) VALUES (?1, ?2)")?;
-    let mut state = connection.prepare("SELECT id FROM states WHERE sha256 = ?1")?;
-    let mut answer = connection
-        .prepare(
-            "INSERT INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
-             ON CONFLICT(key) DO UPDATE SET url = excluded.url, model = excluded.model, state = excluded.state,
-               question = excluded.question, answer = excluded.answer, answered_by = excluded.answered_by,
-               input_tokens = excluded.input_tokens, output_tokens = excluded.output_tokens,
-               taken_at = excluded.taken_at, origin = excluded.origin",
-        )?;
-    for row in rows {
-        add_state.execute((row.state.sha256().as_slice(), row.state.json()))?;
-        let id: i64 = state.query_row([row.state.sha256().as_slice()], |found| found.get(0))?;
-        let input = row.usage.and_then(ReportedUsage::input_tokens);
-        let output = row.usage.and_then(ReportedUsage::output_tokens);
-        let signed = |value: u64| i64::try_from(value).ok();
-        answer.execute(rusqlite::params![
-            row.key.bytes().as_slice(),
-            row.url,
-            row.model,
-            id,
-            row.question,
-            row.answer,
-            row.answered_by,
-            input.and_then(signed),
-            output.and_then(signed),
-            row.taken_at,
-            row.origin,
-        ])?;
-    }
-    Ok(())
 }
 
 fn read_only(path: &Path) -> Result<Connection, Error> {

@@ -71,7 +71,7 @@ pub(crate) enum Miss {
     /// The call refused the text before any send.
     Refused(Error),
     /// The backend failed its question; the receipt stays for observers.
-    Failed(Decided),
+    Failed(Box<Decided>),
 }
 
 impl From<Error> for Miss {
@@ -147,7 +147,7 @@ impl Asker for Decisions {
         };
         match decided.outcome {
             AnswerOutcome::Answered(_) => Ok(decided),
-            AnswerOutcome::Failed(_) => Err(Miss::Failed(decided)),
+            AnswerOutcome::Failed(_) => Err(Miss::Failed(Box::new(decided))),
         }
     }
 }

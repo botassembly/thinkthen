@@ -1,6 +1,5 @@
 //! Image hits validate their referenced constituents in the answer's read snapshot.
 use super::{Found, SQLITE, Store, Stored, found};
-use crate::core::Url;
 use crate::core::pack::{Ask, QuestionKey, model_json};
 use crate::engine::{Cancel, error::Error};
 use rusqlite::{Connection, params_from_iter};
@@ -32,31 +31,26 @@ pub(super) fn select(
     images: &HashMap<[u8; 32], &Ask>,
 ) -> rusqlite::Result<Vec<Stored>> {
     let marks = vec!["?"; chunk.len()].join(",");
-    let sql = if images.is_empty() {
-        format!(
-            "SELECT key, answer, answered_by, input_tokens, output_tokens FROM answers WHERE key IN ({marks})"
-        )
-    } else {
-        format!(
-            "SELECT a.key, a.answer, a.answered_by, a.input_tokens, a.output_tokens,
-            a.url, a.model, a.question, s.sha256, s.state
-            FROM answers a LEFT JOIN states s ON s.id=a.state WHERE a.key IN ({marks})"
-        )
-    };
+    let sql = format!(
+        "SELECT a.key, a.answer, a.answered_by, a.input_tokens, a.output_tokens,
+         a.observation_id, a.batch_size, a.key_version, a.adapter,
+         a.url, a.model, a.question, s.sha256, s.state, a.taken_at, a.origin
+         FROM answers a LEFT JOIN states s ON s.id=a.state WHERE a.key IN ({marks})"
+    );
     let mut statement = connection.prepare(&sql)?;
     let rows = statement.query_map(
         params_from_iter(chunk.iter().map(QuestionKey::bytes)),
         |row| {
             let (key, answer) = found(row)?;
-            let answer = if let Some(ask) = images.get(key.as_slice())
-                && !valid(row, ask)?
-            {
-                Err(Error::Entry(
+            let answer = match answer {
+                Ok(answer) if valid(row, &answer, images.get(key.as_slice()).copied())? => {
+                    Ok(answer)
+                }
+                Ok(_) => Err(Error::Entry(
                     SQLITE.to_owned(),
-                    "stored image constituents or identity are invalid".to_owned(),
-                ))
-            } else {
-                answer
+                    "stored constituents or identity are invalid".to_owned(),
+                )),
+                Err(error) => Err(error),
             };
             Ok((key, answer))
         },
@@ -64,20 +58,49 @@ pub(super) fn select(
     rows.collect()
 }
 
-fn valid(row: &rusqlite::Row<'_>, ask: &Ask) -> rusqlite::Result<bool> {
-    // Exact canonical envelope equality checks schema version, ancillary state,
-    // every ordered media/base64 byte and duplicate against the current typed
-    // input, whose compressed pixels were already validated at the edge. No
-    // marker guessing, second decoder, or large stored-state copy is needed.
-    if row.get_ref(9)?.as_str().ok() != Some(ask.state.json())
-        || row.get_ref(8)?.as_blob().ok() != Some(ask.state.sha256().as_slice())
-    {
+fn valid(row: &rusqlite::Row<'_>, found: &Found, image: Option<&Ask>) -> rusqlite::Result<bool> {
+    let Some(state) = row.get_ref(13)?.as_str().ok() else {
+        return Ok(false);
+    };
+    let Some(digest) = row.get_ref(12)?.as_blob().ok() else {
+        return Ok(false);
+    };
+    // An image hit also compares each original ordered constituent with the
+    // current validated input in this same read snapshot.
+    if image.is_some_and(|ask| state != ask.state.json() || digest != ask.state.sha256()) {
         return Ok(false);
     }
-    let url = Url::new(row.get::<_, String>(5)?).ok();
-    let model = model_json(&row.get::<_, String>(6)?).ok();
-    let question: String = row.get(7)?;
-    Ok(url
-        .zip(model)
-        .is_some_and(|(url, model)| ask.state.key(&url, &model, &question) == ask.key))
+    let saved = super::Answer {
+        key_version: Some(2),
+        adapter: Some(crate::core::adapters::built_in::NAME.to_owned()),
+        key: found.key.hex(),
+        observation_id: Some(found.observation_id.clone()),
+        batch_size: found.batch_size,
+        url: row.get(9)?,
+        model: row.get(10)?,
+        question: row.get(11)?,
+        state: crate::core::hex(digest),
+        answer: found.answer.clone(),
+        answered_by: found.answered_by.clone(),
+        input_tokens: found
+            .usage
+            .and_then(crate::core::ReportedUsage::input_tokens),
+        output_tokens: found
+            .usage
+            .and_then(crate::core::ReportedUsage::output_tokens),
+        taken_at: row.get(14)?,
+        origin: row.get(15)?,
+    };
+    let verified = || {
+        let (question, _) = super::versioned::canonical_parts(&saved, state)?;
+        let state = super::versioned::canonical_state(&saved.state, state)?;
+        let url =
+            crate::core::posting_address(&saved.url).map_err(|_| super::versioned::invalid())?;
+        let model = model_json(&saved.model).map_err(|_| super::versioned::invalid())?;
+        let reported = model_json(&saved.answered_by).map_err(|_| super::versioned::invalid())?;
+        Ok::<_, Error>(
+            QuestionKey::complete(&url, &model, &reported, &state, &question) == found.key,
+        )
+    };
+    Ok(verified().unwrap_or(false))
 }

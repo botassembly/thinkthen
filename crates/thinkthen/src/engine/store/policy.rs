@@ -42,8 +42,16 @@ impl Store {
         for row in rows {
             self.waiting(cancel, || {
                 connection.execute(
-                    "DELETE FROM answers WHERE key = ?1",
-                    [row.key.bytes().as_slice()],
+                    "DELETE FROM answers WHERE key = ?1 OR
+                       (url = ?2 AND model = ?3 AND question = ?4 AND
+                        state IN (SELECT id FROM states WHERE sha256 = ?5))",
+                    rusqlite::params![
+                        row.key.bytes().as_slice(),
+                        row.url,
+                        row.model,
+                        row.question,
+                        row.state.sha256().as_slice()
+                    ],
                 )
             })?;
         }

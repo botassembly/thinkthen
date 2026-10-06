@@ -6,6 +6,9 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize};
 use thiserror::Error;
 
+pub(crate) mod framing;
+pub(crate) mod legacy;
+
 /// Why a correlation identity is invalid; the supplied bytes are withheld.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 #[error("an identity is exactly 64 lowercase hexadecimal characters")]

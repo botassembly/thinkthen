@@ -3,7 +3,6 @@
 #[cfg(test)]
 use std::collections::BTreeMap;
 
-#[cfg(test)]
 use serde::Deserialize;
 use serde::{Serialize, Serializer};
 use serde_json::value::RawValue;
@@ -48,9 +47,9 @@ impl<'de> Deserialize<'de> for Questions {
 }
 
 /// One named question inside a request, in the shape its verb asks for.
-#[derive(Serialize)]
-#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum RequestQuestion {
     /// A yes/no question, which the vendor calls `noul`.
     Noul {
@@ -75,8 +74,9 @@ pub(crate) enum RequestQuestion {
 /// The tool's own words for these two are `--true` and `--false`, and this
 /// module alone knows they travel here. An absent or null description has no
 /// wire member; a question with neither carries no `criteria` at all.
-#[derive(Serialize)]
-#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
+#[serde(deny_unknown_fields)]
 pub(crate) struct NoulCriteria {
     #[serde(rename = "true", skip_serializing_if = "Option::is_none")]
     yes: Option<Json>,
@@ -114,10 +114,8 @@ impl Serialize for Criteria {
 }
 
 /// The visitor that reads a `criteria` map back, keeping its document order.
-#[cfg(test)]
 struct Keys;
 
-#[cfg(test)]
 impl<'de> serde::de::Visitor<'de> for Keys {
     type Value = Criteria;
 
@@ -134,7 +132,6 @@ impl<'de> serde::de::Visitor<'de> for Keys {
     }
 }
 
-#[cfg(test)]
 impl<'de> serde::Deserialize<'de> for Criteria {
     /// Read the keys back in document order, so a fixture pins that order.
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {

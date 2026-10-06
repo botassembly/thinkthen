@@ -29,3 +29,5 @@ Implement in the same native lane, then expose the field through 0426–0431, SQ
 ## Native work in progress
 
 Complete question-source carriers expose optional batch_size: NonZeroU32 as JSON integer and Option<u32> through the typed accessor. Historical absence stays absent. No batch count, group membership or forced scalar policy enters an identity. The superseded group-key WIP was removed before committing. Annotation clauses now retain per-question reuse and distinguish evidence selection, record-batch bounds and actual wire-question count. Persistence, retry/split/coalescing propagation and the 13/5/8 overlap regression remain open.
+
+Native WIP: public/CLI native_store overlap regression independently expects A–M, N–R and S–Z wire bodies (13/5/8 missing questions), followed by counted zero-send replay. Stored observations retain their original batch_size and IDs; cache coalescing does not change counts, and missing legacy counts remain absent. Batch size does not enter either question-key/2 or legacy observation identity. Whole native integration/review and final adoption remain open.

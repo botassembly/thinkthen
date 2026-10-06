@@ -57,6 +57,14 @@ fn facade_answer(
                 .first()
                 .ok_or(EngineError::Defect("an annotate group had no answer"))?;
             Ok(Answered {
+                sources: answers
+                    .iter()
+                    .flat_map(|answered| answered.sources.clone())
+                    .collect(),
+                observations: answers
+                    .iter()
+                    .flat_map(|answered| answered.observations.clone())
+                    .collect(),
                 reply: crate::core::Reply::new(
                     first.reply.model().clone(),
                     answers

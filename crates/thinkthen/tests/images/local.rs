@@ -320,7 +320,7 @@ fn retries_cache_replay_cancellation_and_batch_changes_keep_the_same_image_quest
         if attempts.fetch_add(1, Ordering::Relaxed) == 0 {
             Canned::status(503, "retry")
         } else {
-            Canned::ok(REPLY)
+            Canned::ok(&REPLY.replace("\"local\"", "\"clef-local-0036\""))
         }
     })
     .unwrap();

@@ -17,6 +17,7 @@
 pub(crate) mod adapters;
 mod answer;
 mod backend;
+pub(crate) use backend::posting_address;
 mod backend_profile;
 pub(crate) mod batch;
 mod budget;
@@ -25,6 +26,7 @@ pub(crate) mod check;
 mod digest;
 mod find;
 mod identity;
+pub(crate) use identity::legacy::{Metadata as LegacyMetadata, observation as legacy_observation};
 pub(crate) mod image;
 mod json;
 pub(crate) mod measure;

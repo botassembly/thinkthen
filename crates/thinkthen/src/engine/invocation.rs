@@ -59,6 +59,16 @@ pub(crate) fn request_id() -> Result<SdkRequestId, Error> {
         .map_err(|_| Error::Defect("a generated request identity is invalid"))
 }
 
+pub(crate) fn observation_id() -> Result<crate::core::ObservationId, Error> {
+    crate::core::ObservationId::new(fresh(b"thinkthen.observation-id/1")?)
+        .map_err(|_| Error::Defect("a generated observation identity is invalid"))
+}
+
+pub(crate) fn failure_id() -> Result<crate::core::FailureId, Error> {
+    crate::core::FailureId::new(fresh(b"thinkthen.failure-id/1")?)
+        .map_err(|_| Error::Defect("a generated failure identity is invalid"))
+}
+
 /// A shared invocation starts once after admission; clones share its identity.
 #[derive(Clone)]
 pub(crate) struct Context {

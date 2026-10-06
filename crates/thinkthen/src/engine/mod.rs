@@ -7,6 +7,7 @@ use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
 pub(crate) mod call_facts;
+pub(crate) mod image;
 mod invocation;
 mod send_budget;
 pub(crate) use call_facts::CallFacts;

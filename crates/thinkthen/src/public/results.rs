@@ -219,6 +219,8 @@ impl Counters {
 /// One judgment with the probabilities and request facts behind it.
 #[derive(Clone, PartialEq)]
 pub struct Details {
+    sources: Vec<core::QuestionSource>,
+    observations: Vec<core::Observation>,
     value: Judgment,
     probabilities: Probabilities,
     nearest: Option<String>,
@@ -280,6 +282,8 @@ impl Details {
         )
         .map_err(|_| written())?;
         Ok(Self {
+            sources: judged.answered.sources.clone(),
+            observations: judged.answered.observations.clone(),
             value: judgment(&judged.value),
             probabilities,
             nearest: answer.level().map(str::to_owned),
@@ -302,6 +306,18 @@ impl Details {
     #[must_use]
     pub fn to_json(&self) -> String {
         self.json.text()
+    }
+
+    /// Actual sources and original wire-question counts in question order.
+    #[must_use]
+    pub fn question_sources(&self) -> &[core::QuestionSource] {
+        &self.sources
+    }
+
+    /// Accepted observation or failed occurrence identities in question order.
+    #[must_use]
+    pub fn observations(&self) -> &[core::Observation] {
+        &self.observations
     }
 
     /// Independently reported counts, retaining unknown input or output.

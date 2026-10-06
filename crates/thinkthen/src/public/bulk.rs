@@ -351,7 +351,8 @@ pub(crate) fn judged(
     row: pull::Row<Decisions>,
 ) -> Result<crate::engine::facade::Judgment, Error> {
     let decided = match &row {
-        Ok(decided) | Err(Failed::Asker(Miss::Failed(decided))) => Some(decided),
+        Ok(decided) => Some(decided),
+        Err(Failed::Asker(Miss::Failed(decided))) => Some(decided.as_ref()),
         Err(_) => None,
     };
     if let Some(decided) = decided.filter(|_| stop.observing()) {

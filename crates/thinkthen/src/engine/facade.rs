@@ -108,7 +108,8 @@ pub(super) struct State {
     /// The process request and estimated input totals.
     total: crate::engine::budget::SendBudget,
     /// The replay folder's fixture, read once for this process.
-    pub(super) replayed: Option<Arc<crate::engine::store::Replayed>>,
+    pub(super) replayed:
+        std::sync::OnceLock<Result<Option<Arc<crate::engine::store::Replayed>>, Error>>,
 }
 
 /// The transport settings one call's sends share.
@@ -124,6 +125,8 @@ pub(crate) struct Transport<'a> {
 /// its identity, and its HTTP attempts.
 #[derive(Clone)]
 pub(crate) struct Answered {
+    pub(crate) sources: Vec<crate::core::QuestionSource>,
+    pub(crate) observations: Vec<crate::core::Observation>,
     pub(crate) reply: Reply,
     pub(crate) replayed: bool,
     pub(crate) request: Digest,
@@ -217,14 +220,9 @@ impl Engine {
 
     /// State built from the immutable settings alone, as process `pid`.
     fn fresh(&self, pid: u32, usage: Arc<Counters>, cancel: &Cancel) -> Result<State, Error> {
-        let storage = &self.storage;
         let limits = crate::engine::limits::of(pid, cancel)?;
         let widths = &limits.widths;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
-        let replayed = match (&storage.record, &storage.replay) {
-            (None, Some(folder)) => crate::engine::store::Replayed::of(folder)?,
-            _ => None,
-        };
         let secure = self.backend.is_secure();
         let client = match self.roots.as_ref() {
             Some(roots) => Client::with_roots(self.timeout, secure, widths, Some(roots)),
@@ -237,7 +235,7 @@ impl Engine {
             usage,
             width,
             total: limits.total.clone(),
-            replayed,
+            replayed: std::sync::OnceLock::new(),
         })
     }
 

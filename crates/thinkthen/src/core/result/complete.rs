@@ -61,6 +61,18 @@ pub struct QuestionSource {
 }
 
 impl QuestionSource {
+    pub(crate) const fn new(
+        origin: Origin,
+        answered_by: ModelName,
+        batch_size: Option<std::num::NonZeroU32>,
+    ) -> Self {
+        Self {
+            origin,
+            answered_by,
+            batch_size,
+        }
+    }
+
     /// Actual wire-question count that produced this observation; unknown history stays absent.
     #[must_use]
     pub fn batch_size(&self) -> Option<u32> {

@@ -7,7 +7,6 @@ pub use defaults::{
     choose_input, choose_input_with, decide_input, decide_input_with, details_input,
     details_input_with, score_input, score_input_with,
 };
-mod validate;
 
 use serde::Serialize;
 use std::sync::Arc;
@@ -17,9 +16,9 @@ use crate::core::image::{Image, ImageState};
 pub use crate::core::image::{ImageMedia, InputFunction};
 
 /// SDK compressed-byte bound per question, independent of vendor body limits.
-pub const MAX_IMAGE_BYTES: usize = 24 * 1024 * 1024;
+pub const MAX_IMAGE_BYTES: usize = crate::engine::image::MAX_IMAGE_BYTES;
 /// SDK attachment-count bound. Routes may narrow it.
-pub const MAX_IMAGES: usize = 8;
+pub const MAX_IMAGES: usize = crate::engine::image::MAX_IMAGES;
 
 /// An immutable original image whose media, dimensions and pixels were validated.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -32,7 +31,8 @@ impl ImageInput {
     /// Returns Usage for malformed media, pixels or exceeded SDK bounds.
     pub fn new(media: ImageMedia, bytes: impl Into<Arc<[u8]>>) -> Result<Self, Error> {
         let bytes = bytes.into();
-        let (width, height) = validate::decode(media, &bytes)?;
+        let (width, height) =
+            crate::engine::image::decode(media, &bytes).map_err(Error::refused)?;
         Ok(Self(Image {
             media,
             bytes,
@@ -104,23 +104,11 @@ impl ImageEvidence {
     /// # Errors
     /// Returns Usage for no images, more than eight, or more than 24 MiB in total.
     pub fn new(text: Option<String>, images: Vec<ImageInput>) -> Result<Self, Error> {
-        if images.is_empty() || images.len() > MAX_IMAGES {
-            return Err(Error::usage("image evidence requires 1 to 8 images"));
-        }
-        let bytes = images
-            .iter()
-            .try_fold(0usize, |sum, image| sum.checked_add(image.bytes().len()));
-        if bytes.is_none_or(|bytes| bytes > MAX_IMAGE_BYTES) {
-            return Err(Error::usage(
-                "image evidence exceeds the 25165824 compressed byte SDK limit",
-            ));
-        }
-        if text
-            .as_ref()
-            .is_some_and(|text| text.len() > crate::core::MAX_RECORD_BYTES)
-        {
-            return Err(Error::usage("image text exceeds the 16 MiB SDK limit"));
-        }
+        crate::engine::image::validate_set(
+            images.iter().map(|image| image.bytes().len()),
+            text.as_ref().map_or(0, String::len),
+        )
+        .map_err(Error::refused)?;
         Ok(Self { text, images })
     }
     /// Authored ancillary text, if provided.
