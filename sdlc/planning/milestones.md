@@ -82,7 +82,7 @@ Open owners:
 - [0438: Replace Ruby’s unsupported-platform placeholder route](../tickets/0438-ruby-platform-fallback-diagnostic.md)
 - [0439: Document Linux R installation](../tickets/0439-r-linux-install-guide.md)
 - [0440: Move audit and diff under runs](../tickets/0440-runs-audit-diff-command-tree.md)
-- [0441: Prepare the Decisions backend for preview access](../tickets/0441-openai-decisions-backend-preview.md)
+- [0441: Ship OpenAI Decisions text in 0.2](../tickets/0441-openai-decisions-backend-preview.md)
 - [0442: Settle SDK identity, provenance and cache compatibility](../tickets/0442-proxy-ready-sdk-contract.md)
 - [0443: Carry SDK call identity and cache instructions](../tickets/0443-sdk-call-identity-and-cache-policy.md)
 - [0444: Version cache keys and preserve offline replay](../tickets/0444-versioned-cache-identity-and-replay.md)
@@ -108,15 +108,17 @@ Open owners:
 
 - [0456: Add named questions and declared item inputs](../tickets/0456-named-questions-and-input-declarations.md), shared design accepted after fresh High review; native/C/MCP/family implementation remains required. Existing0407/0414 are must-land 0.2 dependencies.
 
-0.2 ships without the OpenAI Decisions backend (0441) or DuckDB community acceptance/signing (0415). Those integrations arrive in a 0.2 point release when their outside dependencies resolve and their checks pass. Vendor documentation starts image work now; experiment 0036 can adjust limits later and never blocks.
+Ian’s 2026-10-06 ruling requires OpenAI Decisions text (0441) before 0.2 ships, after0442–0444. Admitted docs and environment-only key access supersede its preview deferral; root owns bounded calls and fresh review. DuckDB community acceptance/signing (0415) alone can follow in a point release. Vendor documentation starts image work now; experiment 0036 can adjust limits later and never blocks.
 
 Support work: [0453: Extend authorized live token admission](../tickets/0453-extend-authorized-live-token-admission.md) preserves charges for separately approved runs; experiments remain outside the release gate.
 
-SQLite find’s silent model override is first. Shared C/metadata/semantic contracts precede wide host edits; SQL, dataframe and host families proceed in noncolliding slices. 0432 generates current parity from the complete executed suite with no skips. 0441 is written now with preview access/schema as an external prerequisite, without guessed wire behavior or paid calls.
+SQLite find’s silent model override is first. Shared C/metadata/semantic contracts precede wide host edits; SQL, dataframe and host families proceed in noncolliding slices. 0432 generates current parity from the complete executed suite with no skips. 0441 now defines the first second pure adapter and a root-owned $2 first probe within the shared $20 aggregate. Lane2 designs only; native lane0 stays active. Implementation and final shared conformance follow0442–0444.
 
 The 0456 amendment is a reviewed implementation plan, not release preparation. [0425 completion criteria](../tickets/0425-sdk-consistency-0-2-plan.md) require final executed parity including MCP, full Linux/hosted macOS gates on existing macos-15/15-intel runners, real Windows qualification, fresh docs-only image/MCP use, 0.1 file/cache compatibility and complete docs/changelog/release notes/known gaps. After Ian’s publication go, every public package installs/runs cleanly and selective 0035 runs on public 0.2. Account prerequisites remain pending owner confirmation, not live-verified; existing packaging owners handle them. M5 is bounded-check only and Yellow excluded. Final hosted rehearsal, real Windows qualification and QA run only after required implementation lands on the final reviewed commit; publishing still requires Ian’s go. Main is 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. 0447/0448/0452 add vision to 0.2; the plan records unsupported function/route refusals. 0449 keeps one endpoint/key/API type; 0450 reserves proxy overrides now; execution remains in 0.3 under an admitted proxy protocol. PostgreSQL evidence paths use the reviewed client-reader workaround in 0434. Windows Node/C#/JVM packaging remains 0.3; SDK parity on supported platforms is required now.
 
 ## 0.3
+
+Ian dropped cluster on 2026-10-06: authored categories use choose/tag. The close-call none option for choose remains a 0.3 idea; existing winning-probability cuts and exact-tie abstention remain in 0.2. No OpenAI confidence formula is inferred.
 
 Outcome: add the remaining Windows bindings after the 0.2 core release. These tickets stay open under Ian's 2026-10-05 ruling.
 
