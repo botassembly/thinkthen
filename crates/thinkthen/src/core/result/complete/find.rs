@@ -37,13 +37,17 @@ impl Find {
     }
 }
 
-impl Serialize for Find {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+impl Find {
+    pub(crate) fn serialize_with_value<S: Serializer, T: Serialize>(
+        &self,
+        value: Option<&T>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("schema", "thinkthen.result/2")?;
         map.serialize_entry("answer_id", self.identity.answer_id())?;
-        map.serialize_entry("value", &row.value)?;
+        map.serialize_entry("value", &value)?;
         map.serialize_entry("question", &row.question)?;
         map.serialize_entry("answer", &row.answer)?;
         map.serialize_entry("threshold", &row.threshold)?;
@@ -55,5 +59,11 @@ impl Serialize for Find {
             },
         )?;
         map.end()
+    }
+}
+
+impl Serialize for Find {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.serialize_with_value(self.legacy.value.as_ref(), serializer)
     }
 }

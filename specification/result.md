@@ -75,6 +75,22 @@ Reason: the landed relation planner can produce no questions for a lone entity w
 
 Add required `facts.call_id` to every successful invocation, including zero-send success, and every started failure. Start means typed admission and route resolution succeeded and engine execution began, before lookup. Pre-start refusals have no invented facts. Terminal errors have no successful result, answer ID or fabricated result meta; they retain final facts and opt-in attempts. Keep the six public error kinds. Repeated SQL rows of one call share its call ID and facts; a summed tally does not invent a single call ID.
 
+The additive native `Call::complete()` view serializes `{value,facts}` with a
+concrete result/2 document (or ordered result/2 records) and complete invocation
+facts. The released generic door and count-only `Facts` serialization retain
+their existing fields. `Error::complete()` serializes `{error,facts?}`: error
+contains the existing safe `kind,message,retryable`, structured
+`stopped:{at?,cause,status?,retryable}`, and any actual typed budget denial.
+`at` is the known original one-based stopping record; cancellation, deadlines
+and unknown positions omit it. The cause vocabulary is `usage,local,no_key,
+transport,status,too_large,reply,backend,cancelled,deadline,defect`. Denials use
+a closed `kind` tag and retain their existing limit/last-status fields. A token
+already cancelled during admission has no started facts; a deadline failure
+inside engine execution retains them. No failure envelope contains a successful
+value, answer ID or result metadata. Serialization of caller-owned record/find
+originals requires Serialize only when writing JSON, never to execute or inspect
+the typed result. It retains their authored order and complete original payload.
+
 Every actual send uses:
 
 ```text

@@ -88,8 +88,11 @@ impl<T> CompleteFound<T> {
     ///
     /// # Errors
     /// Returns a defect if the typed result cannot be serialized.
-    pub fn to_json(&self) -> Result<String, Error> {
-        core::json_line(&self.canonical)
+    pub fn to_json(&self) -> Result<String, Error>
+    where
+        T: Serialize,
+    {
+        core::json_line(self)
             .map_err(|_| Error::defect("a complete find could not be written as JSON"))
     }
 }
@@ -102,8 +105,9 @@ impl<T> fmt::Debug for CompleteFound<T> {
     }
 }
 
-impl<T> Serialize for CompleteFound<T> {
+impl<T: Serialize> Serialize for CompleteFound<T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.canonical.serialize(serializer)
+        self.canonical
+            .serialize_with_value(self.found.selected(), serializer)
     }
 }

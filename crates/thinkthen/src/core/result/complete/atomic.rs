@@ -65,8 +65,12 @@ impl Atomic {
     }
 }
 
-impl Serialize for Atomic {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+impl Atomic {
+    pub(crate) fn serialize_with_input<S: Serializer, T: Serialize>(
+        &self,
+        input: Option<&T>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("schema", "thinkthen.result/2")?;
@@ -75,7 +79,7 @@ impl Serialize for Atomic {
             Some(position) => map.serialize_entry("value", &position)?,
             None => map.serialize_entry("value", &row.value)?,
         }
-        if let Some(input) = &row.input {
+        if let Some(input) = input {
             map.serialize_entry("input", input)?;
         }
         map.serialize_entry("question", &row.question)?;
@@ -89,5 +93,11 @@ impl Serialize for Atomic {
             },
         )?;
         map.end()
+    }
+}
+
+impl Serialize for Atomic {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.serialize_with_input(self.legacy.input.as_ref(), serializer)
     }
 }

@@ -93,6 +93,44 @@ fn Engine::score_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_
 fn Engine::tag_complete_with<Q: DetailQuestion + ?Sized>(&self, &Q, &str, CallOptions<'_>) -> Result<Call<CompleteTags>, Error>
 fn Engine::tag_many_complete_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteTags>>>, Error> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = T>, T: InputEvidence,
 fn Engine::tag_records_complete_with<Q, I, T>(&self, &Q, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteTags>>>, Error> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence,
+struct CompleteCall<'a, T>
+impl Serialize for CompleteCall
+fn Call::complete(&self) -> Option<CompleteCall<'_, T>>
+const fn CompleteCall::value(&self) -> &T
+const fn CompleteCall::facts(&self) -> &CompleteFacts<'_>
+struct CompleteError<'a>
+impl Serialize for CompleteError
+fn Error::complete(&self) -> CompleteError<'_>
+const fn CompleteError::error(&self) -> &ErrorSnapshot<'_>
+const fn CompleteError::facts(&self) -> Option<&CompleteFacts<'_>>
+struct ErrorSnapshot<'a>
+impl Serialize for ErrorSnapshot
+const fn ErrorSnapshot::kind(&self) -> ErrorKind
+const fn ErrorSnapshot::message(&self) -> &str
+const fn ErrorSnapshot::stopped(&self) -> Stopped
+struct Stopped
+impl Serialize for Stopped
+const fn Error::stopped(&self) -> Stopped
+const fn Stopped::at(&self) -> Option<usize>
+const fn Stopped::cause(&self) -> StopCause
+const fn Stopped::status(&self) -> Option<u16>
+const fn Stopped::retryable(&self) -> bool
+enum StopCause
+StopCause::Usage
+StopCause::Local
+StopCause::NoKey
+StopCause::Transport
+StopCause::Status
+StopCause::TooLarge
+StopCause::Reply
+StopCause::Backend
+StopCause::Cancelled
+StopCause::Deadline
+StopCause::Defect
+impl Serialize for StopCause
+impl Serialize for SendBudgetDenial
+impl Serialize for EstimatedInputDenial
+impl Serialize for CompleteRecord
 ```
 
 Native aggregate execution WIP: find, annotate, recognize and relate now return concrete result/2 carriers. Ordered trace data is retained by the facade, including actual sources and accepted/failure observations; consumers do not reconstruct it from event JSON. Aggregate context wraps the existing state value as a typed context/evidence envelope on all actual requests and recognition admission probes. Existing convenience calls accept context through the same implementation. Native annotation retains original occurrences and partial members, and complete relate retains full successful distributions. Four additional outside-in public cases check ordered candidates, successful null/failure distinctions, every recognition stage and unchanged spans, partial usage and empty metadata. Typed consumer accessors, owned event identity/location, input composition, command completion and CLI/schema/corpus adoption remain open.
@@ -103,3 +141,14 @@ packing/profile warnings, context digest and requested attempts. Empty aggregate
 retain zero sends, absent reported model and captured empty attempt lists. C/MCP
 still need normalized question/readings, owned observations and shared record
 composition; CLI/schema adoption and the whole High review remain open.
+
+Native complete-call WIP: additive typed Call/Error projections now serialize
+actual complete facts and structured stops without changing legacy Facts/door
+serialization. The existing pipeline supplies original stopping positions;
+pre-start refusals omit facts, started deadline failures retain zero-send facts,
+and status failures retain joined attempts. Record and find serialization retain
+complete caller originals and order; execution still imposes no Serialize bound.
+Four outside-in saved-exchange cases and all 17 native complete cases pass, plus
+eight complete serializer cases and affected Clippy. Owned observer/input
+composition, remaining native source execution and CLI/schema adoption remain
+open; C/MCP adapters and whole review/landing are not claimed complete.

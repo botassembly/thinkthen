@@ -102,15 +102,19 @@ impl Serialize for Members<'_> {
     }
 }
 
-impl Serialize for Annotation {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+impl Annotation {
+    pub(crate) fn serialize_with_input<S: Serializer, T: Serialize>(
+        &self,
+        input: &T,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
         let meta = &row.meta;
         let identity = &self.identity;
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("schema", "thinkthen.result/2")?;
         map.serialize_entry("answer_id", identity.answer_id())?;
-        map.serialize_entry("input", &row.input)?;
+        map.serialize_entry("input", input)?;
         map.serialize_entry("value", &row.value)?;
         map.serialize_entry("answers", &Members(&self.members))?;
         map.serialize_entry(
@@ -176,5 +180,11 @@ impl Serialize for AnnotationMeta<'_> {
             map.serialize_entry("answered_by", model)?;
         }
         map.end()
+    }
+}
+
+impl Serialize for Annotation {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.serialize_with_input(&self.legacy.input, serializer)
     }
 }

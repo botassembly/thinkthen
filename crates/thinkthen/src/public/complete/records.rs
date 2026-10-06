@@ -338,7 +338,7 @@ fn take_row<T>(
             Flow::Continue
         }
         Err(error) => {
-            *failure = Some(error);
+            *failure = Some(error.at_record(at));
             Flow::Stop
         }
     }

@@ -55,3 +55,6 @@ mod aggregates;
 
 #[path = "native_complete/readings.rs"]
 mod readings;
+
+#[path = "native_complete/calls.rs"]
+mod calls;

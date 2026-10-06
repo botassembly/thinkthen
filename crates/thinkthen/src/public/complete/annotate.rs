@@ -214,7 +214,7 @@ impl<T> Rows<'_, '_, T> {
                 Flow::Continue
             }
             Err(error) => {
-                self.failure = Some(error);
+                self.failure = Some(error.at_record(self.values.len()));
                 Flow::Stop
             }
         }

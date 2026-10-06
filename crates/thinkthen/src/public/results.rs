@@ -14,7 +14,9 @@ pub use reading::{
     FindReading, QuestionContent, ResolvedOption, ResolvedQuestion, ResolvedThreshold,
 };
 mod complete_annotation;
+mod complete_call;
 mod complete_facts;
+pub use complete_call::{CompleteCall, CompleteError, ErrorSnapshot};
 mod complete_find;
 pub use complete_facts::CompleteFacts;
 mod complete_recognize;

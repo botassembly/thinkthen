@@ -75,7 +75,7 @@ pub use bulk::functions::{
 };
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
-pub use error::{Error, ErrorDetail, ErrorKind};
+pub use error::{Error, ErrorDetail, ErrorKind, StopCause, Stopped};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use native_batch::RecoverableDetails;
@@ -438,3 +438,5 @@ pub use results::{
 };
 
 pub use results::{RecognitionReading, RelationReading, ResolvedRelationRule};
+
+pub use results::{CompleteCall, CompleteError, ErrorSnapshot};

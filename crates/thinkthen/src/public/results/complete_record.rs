@@ -43,3 +43,28 @@ impl<T, R> fmt::Debug for CompleteRecord<T, R> {
             .finish_non_exhaustive()
     }
 }
+
+macro_rules! serialize_atomic {
+    ($($result:ident),+ $(,)?) => { $(
+        impl<T: serde::Serialize> serde::Serialize for CompleteRecord<T, super::$result> {
+            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                self.result.canonical.serialize_with_input(Some(&self.original), serializer)
+            }
+        }
+    )+ };
+}
+serialize_atomic!(
+    CompleteDecision,
+    CompleteChoice,
+    CompleteTags,
+    CompleteScore,
+    CompleteFilter,
+    CompleteRank
+);
+impl<T: serde::Serialize> serde::Serialize for CompleteRecord<T, super::CompleteAnnotated> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.result
+            .canonical
+            .serialize_with_input(&self.original, serializer)
+    }
+}

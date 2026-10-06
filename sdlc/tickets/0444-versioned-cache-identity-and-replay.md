@@ -35,7 +35,7 @@ Native WIP partial usage: optional reported dimensions now remain independent th
 
 ### Added public declarations
 
-```rust
+```text
 struct ReportedUsage
 impl Serialize for ReportedUsage
 const fn ReportedUsage::input_tokens(self) -> Option<u64>
@@ -50,6 +50,8 @@ fn CompleteRank::reported_usage(&self) -> Option<ReportedUsage>
 fn CompleteFound::reported_usage(&self) -> Option<ReportedUsage>
 fn CompleteRecognized::reported_usage(&self) -> Option<ReportedUsage>
 fn CompleteRelated::reported_usage(&self) -> Option<ReportedUsage>
+fn Details::question_sources(&self) -> &[QuestionSource]
+fn Details::observations(&self) -> &[Observation]
 ```
 
 Native WIP storage slice: framed question-key/2 includes the normalized existing posting URL and requested/reported models, outside batch and persistent IDs. Writable v1 stores validate every constituent and normalize in one rollback-capable transaction; read-only replay indexes the same validated snapshot in memory. Conflicting normalized histories and ambiguous historical models refuse before sends. Existing image digest/key domains stay available for original v1 validation. SQL hit validation covers text and image constituents in the hit's read snapshot. Undecodable saved answers refuse rather than trigger a repair send. Explicit original exchange bodies now survive SQLite-to-fixture conversion; no request header or transient ID is saved. Counts beyond SQLite integer bounds refuse storage atomically rather than silently become unknown.
