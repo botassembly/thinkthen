@@ -88,3 +88,41 @@ file writes; existing recording/1 conversion regressions remain passing.
 No native compatibility exception or C expectation edit is made here. Root must
 coordinate the authorized metadata-oracle adoption with the C/corpus owners;
 original v1 stored keys and request-envelope validation remain distinct.
+
+Lane1 CLI oracle correction on actual native-foundation candidate 1bbcc0bb1:
+the full-test replay failure reproduces in shared case 01 (v2 1c38… versus
+legacy v1 2bc2…). Current facade/staged metadata now uses the accepted shared
+oracle from 54c557c3e, including each saved response's literal reported model.
+The unchanged v1 helper stays with historical captured-fixture validation;
+original exchange digest placeholders, questions and recording bytes stay
+distinct. The all-selected command wire run also reproduced 30 key failures
+from substituting the requested model for different saved reported models;
+its endpoint mapping now reuses that same shared oracle. No C/corpus or
+production key/hash change, regenerated expectation, ignore or weakened
+identity assertion is introduced.
+
+The affected Relate replay example independently reproduces its original
+v1 missing-pair key from unchanged state/question bytes; documented v2 framing
+gives the current 9be378… key. Only that diagnostic's expected hash changes;
+the complete page passes all four blocks and its historical recording stays
+unchanged. Focused replay case passes, the whole private CLI corpus passes
+seven tests (two existing child entrypoints remain runner-owned), all 55 wire
+cases are selected with 46 passes and the same nine in-process/repacked cases,
+and all ten public native-store tests pass, including byte/mtime read-only
+replay, distinct v1/v2 identity, mismatches and original body conversion.
+Library/backend Clippy, offline policy (268 packages), formatting and ratchet
+pass. Additional `cargo clippy -p thinkthen --tests -- -D warnings` fails on
+the unchanged image test's unfulfilled `clippy::unwrap_used` expectation at
+`core/adapters/systemone/images/local_tests.rs:16`; no allowance, ignore or
+out-of-scope image edit is made. Root retains this broader lint finding.
+
+Measured source grows 17 nonblank Rust lines (143995 → 144012): reuse the
+already accepted shared metadata map, keep the historical validator separate,
+and remove the wire runner's duplicated model assumption. The four affected
+Rust files have 487, 298, 465 and 476 nonblank lines; no new framework or
+dependency is needed. Checks use empty owned configuration, stripped key
+variables, offline two-job 10G/1G scopes and lane/shared locks. The count-only
+private-name scan checks 35 patterns: zero path hits, one starting/current
+tracked-file hit with an unchanged hit set, zero edited-file hits. Root retains
+that existing scan issue and reruns full gates on the actual new merge
+candidate; overall native/host parity remains open.

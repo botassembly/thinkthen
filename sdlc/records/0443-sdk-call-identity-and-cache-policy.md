@@ -7,3 +7,22 @@ The whole native foundation review accepted after the mixed-model scalar correct
 ## What the build taught us
 
 Reported token availability and current cost are separate facts. A cached priced call costs zero without inventing token counts. Streaming admission must report unfinished input when a deadline arrives at EOF. Keep test fixtures aligned with the admitted contract while retaining their distinct refusal and replay coverage.
+
+The actual 1bbcc0bb1 full-test candidate exposed a remaining CLI v1 metadata
+oracle in replay case 01. Lane1 reuses the already accepted shared v2 oracle
+for facade/staged metadata and the all-selected wire corpus, preserving saved
+reported models, original questions and historical v1 validation/recordings.
+The wire run independently failed 30 model-identity expectations before this
+adoption. One independently derived Relate diagnostic hash changes in its
+executable example; its four blocks pass. Focused CLI corpus checks pass seven
+tests with two existing runner-owned child entrypoints, and all 46 applicable
+wire cases pass out of 55 selected; the same nine belong to in-process/repacked
+paths. All ten public native-store checks pass. Library/backend Clippy, offline
+policy, formatting and exact ratchet pass; measured growth is 17 nonblank Rust lines
+(143995 → 144012), with no production/C/corpus change or new record/tool.
+The count-only private-name check retains one existing tracked-file hit from
+the starting candidate, with zero edited-file hits. Additional test-target
+Clippy fails on the unchanged image test's unfulfilled `unwrap_used`
+expectation at `core/adapters/systemone/images/local_tests.rs:16`. Root owns
+these findings, confirmation and full gates on the actual merge candidate.
+Parity remains open.
