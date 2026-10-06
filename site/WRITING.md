@@ -254,3 +254,35 @@ Recipe narrative uses the closed body model in `recipes.mjs`. Titles, goals, job
 `check-recipes.mjs` checks actual HTML, Markdown and llms exports against source carriers, rejects numerical narrative outside them and verifies visibility. Controlled loopback recordings prove replay and wiring, never provider performance. Audit agreement on a tiny fixture never becomes a quality rate. Candidate absence, misses, none, not sure and failures retain separate full-population counts. Variable option labels require item-aware audits.
 
 Normal all-draft builds retain `/recipes` as the fragment-preserving Bash redirect and emit no recipe details, index twin or listing. Explicit draft preview generates the static index through `[...index].astro` and marked draft details with visible draft notices in exports. Preview alone adds no global menu/footer entry. A published entry requires runnable examples, measured outcomes with ordinary source attribution and one whole-change review. Only that later disposition enables global navigation. Every other alias remains fixed.
+
+## Guides
+
+Guides teach one production lesson. Copy `templates/guide.md` to
+`src/guides/<slug>.md`; the template itself is outside the published catalog.
+The existing Astro Markdown renderer and `Base.astro` carry the lesson.
+Front matter declares `slug`, `title`, `blurb`, `goal`, an explicit `draft`
+boolean, and nonempty `prerequisites` and `limits` lists. Optional `card` and
+`cardAlt` use the existing social-card rules.
+
+Marketing supplies the lesson body and actual media. Set `video` to the real
+HTTPS video URL and `blog` to an actual HTTPS article URL or canonical
+`/blog/<slug>/` path. Published lessons require both; placeholder URLs are not
+publication evidence. Check external destinations during editorial review;
+offline builds validate their shape, and existing link checks resolve internal
+paths. Do not invent media or publish empty lessons to populate the index.
+
+Keep `draft: true` until the lesson, media and examples are reviewed. Drafts
+can omit media. They render only in development or a `THINKTHEN_DRAFTS=1` build,
+with a visible draft notice and no search mark, canonical link or Markdown twin.
+They never enter Guides lists, sitemap or llms exports, including in draft builds.
+A normal build emits no draft lesson page. The Guides landing remains useful
+through its Learn and Recipe links even when no lessons are published.
+
+Use the existing `<!-- example: page/name -->` and `<!-- file: path -->`
+directives for examples. They read saved files under `examples/` and share the
+existing replay and code checks; raw code fences remain refused. Attribute
+findings to public evidence. Models demonstrate compatibility, not rankings.
+Separate caller-owned preparation from proxy policy; never imply that routing,
+curation or fine-tuning services have shipped. Image lessons must follow the
+admitted function and route limits. The batching findings from experiment 0036
+inform later lessons; this template makes no new benchmark or accuracy claim.

@@ -525,8 +525,8 @@ export const SURFACES = [
     errors: 'Each failure arrives as an R condition named for its kind, such as `thinkthen_usage`. Each condition carries `retryable`.',
     settings: '`tt_engine()` takes each setting as an argument and reads the environment for the rest. `record =` writes a recording to a folder. `replay =` answers from that recording with no connection.',
     install: [
-      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'R-universe builds the package from each release. macOS and Windows get a built package. On Linux this line builds from source and needs Rust\'s `cargo` and `rustc`.'],
-      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/", "https://cloud.r-project.org"))', 'Linux without Rust: the built package for R 4.6 on x86-64. Use `resolute-aarch64` on ARM.'],
+      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'Public installation remains 0.1.2 until 0.2 publishes. On Linux this route builds from source: R 4.2+, jsonlite 2.0.0+, R development headers, C compiler/linker, make, cargo and rustc 1.95.0+; installation fetches Rust dependencies.'],
+      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/", "https://cloud.r-project.org"))', 'Ubuntu 26.04 (Resolute), R 4.6, x86-64 only. Use `resolute-arm64` for ARM64. Dependencies or missing binaries can fall back to source; keep source prerequisites then.'],
     ],
     particular: [
       'A column goes in and the answered column is in `$value`.',

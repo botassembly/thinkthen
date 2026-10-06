@@ -19,6 +19,8 @@ all_missing <- tt_recognize(c(NA_character_, NA_character_), "person")
 check("all missing recognition has no-work facts and no question event",
       identical(all_missing$facts$records, 0L) && identical(all_missing$facts$requests_sent, 0L) &&
       is.null(all_missing$facts$model) && length(all_missing$details) == 0L)
+check("empty recognition has no spans and sends nothing", sent_by(check("empty recognition frame",
+  identical(tt_recognize("", "person")$value[[1]], found[[2]]))) == 0L)
 check("the one-based offsets slice each name in R", identical(substring(sentence, found[[1]]$start, found[[1]]$end), found[[1]]$text) &&
       identical(found[[1]]$length, found[[1]]$end - found[[1]]$start + 1))
 check("tidyr::unnest gives one row a name", identical(nrow(unnest(data.frame(body = sentence, names = I(found[1])), names)), 2L))

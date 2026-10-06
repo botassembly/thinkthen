@@ -275,8 +275,9 @@ fn read_units(
             evidence,
             position: Position {
                 file: file.clone(),
-                first: line,
-                last: line,
+                first: Some(line),
+                last: Some(line),
+                images: None,
                 source: 0,
                 located: false,
             },

@@ -41,6 +41,15 @@ check("find needs two units", identical(kind_of(tt_find("Q?", "one")$value), "us
 check("a none other than TRUE or FALSE is refused before any request", sent_by(check("the none sentence",
   identical(message_of(tt_find("Q?", c("u1", "u2"), none = NA)$value), "none is TRUE or FALSE"))) == 0)
 
+# Duplicate texts retain distinct original positions even when their answers tie.
+check("tied duplicates keep original places", identical(
+  tt_rank("Duplicate order?", c("same", "other", "same"))$value$place, 1:3))
+check("empty rank has typed empty columns and sends nothing", sent_by(check("empty rank shape",
+  identical(tt_rank("Empty order?", character())$value,
+    data.frame(place = integer(), record = character(), probability = numeric())))) == 0L)
+check("empty find is usage and sends nothing", sent_by(check("empty find kind",
+  identical(kind_of(tt_find("Empty selection?", character())), "usage"))) == 0L)
+
 # details: the command's --details document.
 details <- tt_details(tt_question(score = "How urgent?", levels = levels3), "urgent now")$value
 check("details on a score question carries the level", identical(details$answer$level, "Routine."))
@@ -152,4 +161,4 @@ invisible(tt_decide("Q?", c("u1-new", "u2-new"))$value)
 check("two judgments are two sends", identical(tt_usage()$requests_sent - before$requests_sent, 2L))
 check("the counters name five counts", identical(names(before), c("requests_sent", "retries", "input_tokens", "output_tokens", "cache_answers")))
 
-finish("verbs", 28L)
+finish("verbs", 30L)

@@ -12,7 +12,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
 ---
 <Base title="audit" description={'What audit prints for each question, how it counts not-sure and tied answers apart, and that it sends no request.'}>
   <h1><code>audit</code></h1>
-  <p class="lede"><code>thinkthen audit RESULTS KEY</code> grades saved answers against answers you already know. It sends no request and reads no API key.</p>
+  <p class="lede"><code>thinkthen runs audit RESULTS KEY</code> grades saved answers against answers you already know. It sends no request and reads no API key.</p>
 
   <h2 id="what-it-reads">What it reads</h2>
   <p><code>RESULTS</code> holds saved result lines, as <code>--details</code> writes them, from any of the ten functions. <code>KEY</code> holds the right answer for some of the records, matched by <code>id</code>. <code>--id POINTER</code> names another field. <code>RESULTS</code> may be <code>-</code> for standard input.</p>

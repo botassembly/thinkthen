@@ -16,7 +16,7 @@ const audit = run('beatles/audit', '2-default');
   <p class="lede">The model reports probabilities behind its answers. You set supported reading rules and count the misses on your own labeled records.</p>
 
   <h2>Grade it on your own records</h2>
-  <p>Take records you have already labeled. Put your labels in a key file, one per record. <code>thinkthen audit</code> grades ThinkThen's saved answers against the key. <code>thinkthen audit --help</code> shows how to save them.</p>
+  <p>Take records you have already labeled. Put your labels in a key file, one per record. <code>thinkthen runs audit</code> grades ThinkThen's saved answers against the key. <code>thinkthen runs audit --help</code> shows how to save them.</p>
   <Terminal run={audit} caption={`Jev was asked whether each song is on Abbey Road. ${auditPage.see['2-default']}`} />
   <p>The <a href={auditPage.route}>audit page</a> grades the same records at other bars.</p>
 

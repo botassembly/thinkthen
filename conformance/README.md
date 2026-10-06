@@ -12,6 +12,8 @@ The mixed `annotate` case keeps successful `decide`, `choose`, `score`, and `tag
 
 `rank` expectations name zero-based input indexes in output order beside their yes probabilities. `find` expectations name the selected zero-based input index, or `null`, and list every candidate probability in input order. Its `none` candidate appears last with a null index. A host maps these indexes back to its own container.
 
+Binding authors must distinguish input identity from presentation coordinates. R rank/find `place` is the original input index plus one, not the rank row number; observation `index` remains zero-based even when missing column inputs are omitted. Native recognition spans count Unicode scalar values with a zero-based start and exclusive end. R recognition frames add one only to start for inclusive `substr` positions; the located `tt_files` compatibility helper retains native spans. Neither is a UTF-8 byte range. Physical source lines remain one-based and inclusive, including skipped blank lines. Cases 15/16, 18/19 and 41/42 supply independent rank, selection/absence and ASCII/multibyte expectations to the installed R consumer. Result/2 answer identity must be computed from the canonical native reading before host coordinate conversion, per [the result contract](../specification/result.md); this documentation does not implement or claim that adoption.
+
 Cases 26 and above came from the retired surfaces branch through ticket 0091. Each names its branch case under `provenance.branch`. A case that waits on a ruling names it under `provenance.pending`, and it still runs and must pass. Case names say `unsure`, per ADR 0017 section 6 item 4. The specification uses that machine word and says "not sure" in prose.
 
 A `single` answer's `details` also carry the run facts: `usage`, the exchange reply's counts, absent when the reply has none; `requests_sent` of 1; and `cached` of `false`. Each surface runner makes its details call the text's first send, so these hold. The command's own runner is the exception. It replays in process, so it sees `requests_sent` of 0, and it leaves these run facts to the command's spec pages. A choice or score answer carries `confidence` when its reply does, and is absent otherwise. The file holds no `url`, because the loopback port changes each run. Each surface runner compares `meta.url` with the address it served, `BASE/systemone`.
@@ -64,3 +66,72 @@ Each test starts its own backend. The count, the held gate, the rounds, and the 
 3. Close standard input at the end, and read the final count.
 
 Lines are served in order. A `wait` answers on its own line later and never holds up the lines behind it. Its `wait ` prefix tells it from a `count` line when the two interleave. A `wait` still pending at the end can print before or after the final count. Rust tests call `Backend::wait`, `Backend::round`, and `Backend::release` in process.
+
+## Required 0.2 parity (0432 phase A)
+
+The `parity` section of `cases.json` is the independent public inventory:
+28 consumers, with Java/Kotlin/Scala, Dart/Flutter, TypeScript/JavaScript,
+CLI/C, three SQL extensions and three dataframe surfaces kept separate.
+It references the existing 55 behavior cases, nine settings cases and type
+corpus rather than changing their landed schemas. `decide_many` is a decide
+input form; generic JSON compatibility calls do not qualify named or typed
+cells. Counts from source are not execution evidence.
+
+Run `sdlc/scripts/surfaces --parity-baseline` for phase A: only actual CLI,
+Rust and C consumers run; other rows remain missing/not checked. This bounded
+run also exits nonzero and cannot qualify full parity.
+
+Run `sdlc/scripts/surfaces --parity` explicitly for complete adoption. It runs the
+existing full consumers with no selector, writes logs and the current matrix
+to `target/parity/`, and exits nonzero for every failed or missing required
+cell, including exit 77. Routine gates validate the inventory and retain
+current green behavior; they do not require unfinished parity adoption.
+After all owners adopt the inventory, 0432 must make this full run mandatory
+and pass it before closing. The overall ticket remains open.
+
+Each required declaration has `id`, one of the ten `verb` values, `kind`,
+`input`, `expect` and `preconditions`. References resolve to existing fixtures;
+expectations are independent of implementations. `preconditions` name owner
+tickets, not exemptions. Result/2 IDs/provenance and image cases are target
+contracts until their native owners land. The generated result schema and
+type corpus remain result/1. PNG fixtures are deterministic one-pixel red and
+blue images: ordered red/blue/red attachments retain a duplicate. They prove
+transport and admission, not model accuracy. Native image owners supply the
+saved response/wire oracle for their admitted route before support qualifies.
+
+A family's existing consumer checks its named public method, the declaration's
+expected fields/values/errors and counted loopback sends. Compiler checks must
+access known probabilities, facts, spans, edges, locations and ID fields with
+real public types. Runtime checks validate their values. On completion, print
+one JSON line on stdout, for example:
+
+```text
+parity: {"consumer":"rust","case":"annotate-packed-groups","checks":["named","runtime"],"status":"pass"}
+```
+
+The `checks` list must equal the declaration's list (default `named,runtime`;
+typed cells also require `compile`). Emit `fail` for a completed failed case;
+never emit a pass from a generic JSON call, schema-only validation, selector,
+ruling or missing toolchain. A shared folder must emit separate consumer IDs
+at each actual door. Unknown/duplicate IDs and skipped statuses fail. Process
+failure invalidates all its emitted cells. With no adopted output, named door
+counts remain **not checked**, even when the baseline command passed.
+
+`annotate-packed-groups` pins ADR 0111's single packed request and member
+probabilities, through the public Rust consumer. The old two-group exchanges
+remain the historical per-group grammar oracle; they are not the current
+transport expectation. The partial-member case remains required, including
+its valid null and failed marker. Existing runner skips remain visible missing
+cells until owners replace them with real boundary executions. Text-only image
+rulings, dropped-image routes and PostgreSQL's client-reader workaround require
+executed boundary cases; a written ruling never passes a cell by itself.
+
+The 0448 admission cases resolve `input.scenarios_ref` through
+`parity.image_admission_scenarios`, and each scenario's `profile_ref` through
+`parity.image_profiles`. Every scenario is required at its actual named image
+door. The profile limits distinguish Liquid's strict decimal body/patch/aspect
+bounds, Perplexity's 32 MiB body and nearest-32 tile bounds (no invented vendor
+count limit), and pinned llama.cpp's count/runtime prerequisites. Format
+refusals are SDK validation rulings. Owner-dependent media/large/malformed
+fixtures remain targets in the same canonical images corpus until 0447/0448
+supply them. Neither declarations nor schema checks qualify runtime cells.

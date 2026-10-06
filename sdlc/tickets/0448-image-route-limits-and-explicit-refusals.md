@@ -1,6 +1,6 @@
 # 0448: Enforce documented image limits and refuse dropped images
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Native/CLI hosted slice A reviewed and landing. Local runtime profiles and required host adoption remain open.
 
 Milestone: 0.2
 Owner: builder.

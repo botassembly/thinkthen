@@ -14,7 +14,7 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
 | [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types; landed result/1 distinguished | Settled; 0.2 adoption pending |
-| [files.md](files.md) | Explicit file/folder readers, located carriers and spans across all ten functions | Settled for 0.2 |
+| [files.md](files.md) | Explicit text/image readers, located carriers and spans; ordered native/CLI image inputs | Settled for 0.2 |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [sdk-boundary.md](sdk-boundary.md) | One configured route per engine, retained caller controls and proxy business policy | Settled |
@@ -31,8 +31,8 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 | [recognize.md](recognize.md) | `recognize` and its beta relation output | Settled |
 | [relate.md](relate.md) | `relate`, complete entity sets, relation plans, and edges | Settled |
 | [transform.md](transform.md) | `transform list` and `transform show`, the read-only catalog of built-in `jq` transforms | Settled |
-| [audit.md](audit.md) | `audit`, which grades the saved answers of all ten commands against an answer key | Settled |
-| [diff.md](diff.md) | `diff`, which shows the saved answers that changed between two runs or two cuts | Settled |
+| [audit.md](audit.md) | `runs audit`, which grades the saved answers of all ten commands against an answer key | Settled |
+| [diff.md](diff.md) | `runs diff`, which shows the saved answers that changed between two runs or two cuts | Settled |
 | [check.md](check.md) | `backends check`, which sends four rich probes and minimal calls through ten functions to a named backend and reports whether it works with this tool | Settled |
 | [settings.md](settings.md) | Reference: every setting, its default, and its spelling on each surface, with a link to the page that fixes it | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
@@ -59,9 +59,11 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `find QUESTION` | Picks the unit that best answers a question, out of a set the model sees at once |
 | `recognize [KIND]...` | Finds every name in one text and gives each one a kind |
 | `relate RELATION...` | Finds named relationships in one complete entity set |
-| `audit RESULTS KEY` | Grades saved answers against an answer key and suggests a bar |
-| `diff A [B]` | Shows the saved answers that changed between two runs or two cuts |
+| `runs audit RESULTS KEY` | Grades saved answers against an answer key and suggests a bar |
+| `runs diff A [B]` | Shows the saved answers that changed between two runs or two cuts |
 | `transform list`, `transform show NAME` | Lists and prints the built-in `jq` transforms |
 | `backends check` | Checks that a backend you name works with this tool, and exits 0 only when nothing is critical |
 
-The top-level nouns `questions`, `items`, `answers`, `checks`, `datasets`, `runs`, `setups`, `findings`, `people` and `search` are reserved by [ADR 0118](../sdlc/planning/adr/0118-backend-command-namespace.md). They are unimplemented and exit 2 as unrecognized commands. This adds no judging function or proxy.
+The `runs` parent exposes `audit` and `diff` as settled by ticket 0440. Published top-level `audit` and `diff` remain hidden compatibility aliases with the same options, output, diagnostics and exit codes. Both spellings read saved inputs without setup or requests.
+
+The top-level nouns `questions`, `items`, `answers`, `checks`, `datasets`, `setups`, `findings`, `people` and `search` are reserved by [ADR 0118](../sdlc/planning/adr/0118-backend-command-namespace.md). They are unimplemented and exit 2 as unrecognized commands. This adds no judging function or proxy.

@@ -240,54 +240,16 @@ pub(crate) enum Command {
     #[command(display_order = 1005)]
     Transform(crate::cli::transform::TransformArguments),
 
-    /// Grade saved answers against an answer key and suggest a bar.
-    ///
-    /// RESULTS holds the lines `decide`, `filter`, `choose`, `tag`, `score`,
-    /// `rank`, `find`, `annotate`, `recognize`, or `relate` printed with
-    /// --details, and KEY holds one
-    /// JSON object per record: its id, the right value, and an optional part of
-    /// tune or held. audit prints agreement with its 95% interval, both kinds of
-    /// disagreement, precision and f1, AUC, calibration, a coverage curve, and a
-    /// suggested bar tuned on one part and checked on the other. An answer
-    /// inside a band is not sure, and it counts apart from right and wrong.
-    /// recognize names and relate edges get precision, recall, and f1.
-    ///
-    /// A key may give each record a part of tune or held; without parts audit
-    /// splits the records itself and shows how steady its bar is.
-    /// --cases instead prints one JSON line per saved case with its keyed
-    /// outcome, probabilities, available usage and question identity.
-    /// It keeps failed, unlabeled, unsure and tied cases distinct.
-    ///
-    /// --write changes one threshold in the file and prints the old value on
-    /// standard error.
-    /// --write QUESTIONS --write-to OUTPUT instead creates a tuned file at a
-    /// new path and keeps QUESTIONS unchanged. An existing OUTPUT is refused.
-    ///
-    /// audit sends no request and reads no key.
-    ///
-    /// To grade a recording, replay it with --details and pass the output:
-    ///
-    /// thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl
-    #[command(display_order = 1000)]
+    /// Grade or compare saved answers without sending a request.
+    #[command(display_order = 1000, subcommand)]
+    Runs(super::runs::RunsCommand),
+
+    /// Published compatibility spelling for runs audit.
+    #[command(hide = true)]
     Audit(crate::cli::audit::AuditArguments),
 
-    /// Show which saved answers changed between two runs or two cuts.
-    ///
-    /// A and B hold the lines `decide`, `choose`, `recognize`, or `relate` printed for the same
-    /// records. Without B, diff compares A under --threshold with A under --compare-threshold.
-    /// Two cuts on one run cost nothing. The probabilities are already saved. Each change prints
-    /// one JSON line, or under --table one line and a line per changed item. A summary with its
-    /// McNemar test prints last. With --key, a changed answer says whether it gained or lost a right
-    /// answer, and a changed record counts the key names or edges each side matched. An answer
-    /// inside a band is not sure.
-    ///
-    /// diff pairs answers by record id and answer name only. It compares
-    /// question digests only when both runs saved --details.
-    ///
-    /// diff sends no request and reads no key.
-    ///
-    /// thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table
-    #[command(display_order = 1001)]
+    /// Published compatibility spelling for runs diff.
+    #[command(hide = true)]
     Diff(crate::cli::diff::DiffArguments),
 }
 
@@ -414,6 +376,7 @@ impl Command {
                 | Self::Check(_)
                 | Self::Backends(_)
                 | Self::Transform(_)
+                | Self::Runs(_)
                 | Self::Audit(_)
                 | Self::Diff(_)
         )
@@ -437,6 +400,7 @@ impl Command {
             | Self::Check(_)
             | Self::Backends(_)
             | Self::Transform(_)
+            | Self::Runs(_)
             | Self::Audit(_)
             | Self::Diff(_) => None,
         }
@@ -462,6 +426,7 @@ impl Command {
             Self::Cache(_)
             | Self::Status(_)
             | Self::Transform(_)
+            | Self::Runs(_)
             | Self::Audit(_)
             | Self::Diff(_) => 1,
         }
@@ -476,4 +441,37 @@ pub(crate) struct StatusArguments {
     /// The named backend: a base with its own key variable and model. It outranks THINKTHEN_BACKEND.
     #[arg(long, value_name = "NAME")]
     pub(crate) backend: Option<String>,
+}
+
+impl Command {
+    pub(crate) fn check_images(&self) -> Result<(), crate::failure::Failure> {
+        use crate::failure::Failure;
+        let refusal = match self {
+            Self::Tag(a) if a.common.images() => {
+                Some("tag accepts text only; images are unsupported")
+            }
+            Self::Filter(a) if a.common.images() => {
+                Some("filter accepts text only; images are unsupported")
+            }
+            Self::Rank(a) if a.common.images() => {
+                Some("rank accepts text only; images are unsupported")
+            }
+            Self::Annotate(a) if a.common.images() => {
+                Some("annotate accepts text only; images are unsupported")
+            }
+            Self::Find(a)
+                if !a.common.image.is_empty() || a.common.media.as_deref() == Some("image") =>
+            {
+                Some("find accepts text only; images are unsupported")
+            }
+            Self::Recognize(a) if a.common.images() => {
+                Some("recognize accepts text only; images are unsupported")
+            }
+            Self::Relate(a) if a.common.images() => {
+                Some("relate accepts text only; images are unsupported")
+            }
+            _ => None,
+        };
+        refusal.map_or(Ok(()), |message| Err(Failure::Usage(message)))
+    }
 }

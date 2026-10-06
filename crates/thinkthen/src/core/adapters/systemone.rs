@@ -9,6 +9,7 @@
 //! endpoint sits under. Nothing outside this module names any of the four.
 
 pub(crate) mod backends;
+pub(crate) mod images;
 mod recorded;
 mod request;
 mod response;

@@ -470,6 +470,8 @@ part_typescript() {
 part_ruby() {
 	[ -n "$reuse" ] || sh libraries/ruby/build.sh
 	for gem in libraries/ruby/thinkthen-"$V"-*.gem; do keep "$gem"; done
+	# Ship the platform-independent diagnostic once, alongside Linux x86-64.
+	if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then keep "libraries/ruby/thinkthen-$V.gem"; fi
 }
 
 # The crate and the R package name the commit the manifest names, so they need a clean committed tree.

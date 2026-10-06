@@ -28,4 +28,5 @@ if [ "$(uname -s)" = Darwin ]; then
   install_name_tool -id "@rpath/thinkthen.$dlext" "lib/thinkthen/thinkthen.$dlext"
 fi
 rm -f -- *.gem
-"$(dirname -- "$RUBY")/gem" build thinkthen.gemspec --silent >/dev/null
+THINKTHEN_RUBY_FALLBACK=0 "$(dirname -- "$RUBY")/gem" build thinkthen.gemspec --silent >/dev/null
+THINKTHEN_RUBY_FALLBACK=1 "$(dirname -- "$RUBY")/gem" build thinkthen.gemspec --silent >/dev/null

@@ -49,6 +49,7 @@ pub(crate) enum Error {
     SendBudgetRetry(u16),
     /// The estimated input admission refused one final body.
     EstimatedInput(crate::core::EstimatedInputDenial),
+    ImageEstimatedInput(crate::core::EstimatedInputDenial),
     /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
     TokenLimit,
     /// The reply passed its request's limit of this many bytes and was not kept.
@@ -146,6 +147,7 @@ impl Error {
         matches!(
             self,
             Self::EstimatedInput(_)
+                | Self::ImageEstimatedInput(_)
                 | Self::SendBudgetFirst
                 | Self::SendBudgetAdditional
                 | Self::SendBudgetRetry(_)
@@ -175,6 +177,7 @@ impl Error {
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_)
             | Self::EstimatedInput(_)
+            | Self::ImageEstimatedInput(_)
             | Self::SendBudgetFirst
             | Self::SendBudgetAdditional
             | Self::ProfileLimit(_)

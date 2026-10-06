@@ -1,8 +1,9 @@
 {
   "directory": [
     "lib",
-    "tests"
+    "tests",
+    "fallback/lib"
   ],
   "extension": ".rb",
-  "max": 2605
+  "max": 2716
 }

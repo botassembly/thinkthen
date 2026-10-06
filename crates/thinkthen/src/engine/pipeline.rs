@@ -281,6 +281,7 @@ impl Engine {
     /// The limits a request of this call closes at.
     pub(crate) fn pack_limits(&self, packing: Packing) -> PackLimits {
         PackLimits {
+            image_ceiling: self.backend().image_ceiling(),
             ceiling: if packing.sized {
                 self.backend().ceiling()
             } else {

@@ -2,19 +2,21 @@
 
 Status: **Settled** by ticket 0114. Ticket 0165 added `recognize` and `relate`.
 
-`thinkthen diff A [B]` compares two runs over the same records, or two cuts on one run. It lists each answer that changed, says which way it moved, and runs the exact McNemar test. For `recognize` and `relate` it lists the names or edges each record gained, lost, or changed in kind, as "Names and edges" says. It sends no request and reads no API key.
+`thinkthen runs diff A [B]` compares two runs over the same records, or two cuts on one run. It lists each answer that changed, says which way it moved, and runs the exact McNemar test. For `recognize` and `relate` it lists the names or edges each record gained, lost, or changed in kind, as "Names and edges" says. It sends no request and reads no API key.
 
 The definition is the `diff` half of a prototype measurement script. The script's history was removed, so no commit holds it now. `crates/thinkthen/tests/fixtures/measure/README.md` gives the file checksums, and they are the record. Where this page and the prototype disagree, the golden files in that folder decide. diff shares its readers, rule text, and failure rows with [audit](audit.md).
 
 ```sh
-thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table
-thinkthen diff runs/before.jsonl --key key.jsonl --compare-threshold 0.4
+thinkthen runs diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table
+thinkthen runs diff runs/before.jsonl --key key.jsonl --compare-threshold 0.4
 ```
 
 ## Command line
 
+Ticket 0440 makes `runs diff` the visible spelling. Top-level `diff` remains a hidden compatibility alias with identical options, output, diagnostics and exit codes.
+
 ```text
-thinkthen diff A [B] [--key KEY] [--threshold RULE] [--compare-threshold RULE] [--id POINTER] [--match strict|overlap] [--table]
+thinkthen runs diff A [B] [--key KEY] [--threshold RULE] [--compare-threshold RULE] [--id POINTER] [--match strict|overlap] [--table]
 ```
 
 - `A` and `B` hold saved result lines. At most one input, `KEY` included, may be `-` for standard input.

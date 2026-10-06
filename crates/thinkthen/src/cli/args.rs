@@ -18,6 +18,7 @@ mod common;
 mod debug;
 mod find;
 mod relate;
+mod runs;
 pub(crate) use annotate::AnnotateArguments;
 pub(crate) use backends::{BackendCommand, CheckArguments};
 pub(crate) use batching::Batching;
@@ -26,6 +27,7 @@ pub(crate) use command::{
 };
 pub(crate) use find::FindArguments;
 pub(crate) use relate::RelateArguments;
+pub(crate) use runs::RunsCommand;
 
 /// Semantic commands for the shell: if, grep, and sort that understand meaning
 #[derive(Debug, Parser)]
@@ -74,6 +76,12 @@ pub(crate) struct Common {
     /// Read the records from FILE instead of from standard input.
     #[arg(long, value_name = "FILE")]
     pub(crate) input: Vec<PathBuf>,
+    /// Attach an original JPEG or PNG; repeat to preserve image order.
+    #[arg(long, value_name = "FILE")]
+    pub(crate) image: Vec<PathBuf>,
+    /// Select text or image media for whole files.
+    #[arg(long, value_parser = ["text", "image"], value_name = "MEDIA")]
+    pub(crate) media: Option<String>,
 
     /// Join N physical text lines into each item, within each file.
     #[arg(long, value_name = "N")]
@@ -83,14 +91,12 @@ pub(crate) struct Common {
     #[arg(long, value_parser = ["line", "file"], value_name = "UNIT")]
     pub(crate) unit: Option<String>,
 
-    /// Take each line as one text record.
     ///
     /// Value verbs keep `input` beside `value`. Record-returning verbs return
     /// records. `annotate` enriches object records.
     #[arg(long, conflicts_with_all = ["jsonl", "csv", "tsv"])]
     pub(crate) lines: bool,
 
-    /// Take each line as one JSON record.
     ///
     /// Value verbs keep `input` beside `value`. Record-returning verbs return
     /// records. `annotate` enriches object records.
@@ -126,7 +132,6 @@ pub(crate) struct Common {
     #[arg(long = "plan")]
     pub(crate) dry_run: bool,
 
-    /// The removed spelling is parsed only to give the migration sentence.
     #[arg(long = "dry-run", hide = true)]
     pub(crate) retired_dry_run: bool,
 

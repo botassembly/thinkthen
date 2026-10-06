@@ -10,6 +10,8 @@ thinkthen score QUESTION|@FILE [LEVEL...] [--details] [RECORD] [BACKEND]
 
 ## What it reads
 
+Version0.2 adds explicit ordered JPEG/PNG inputs through repeatable `--image FILE`, or separate located whole-file items through `--input PATH --unit file --media image`. Image-only input needs no caption. Native `Engine::score_input` and its `_with`/`_many` forms retain typed answers and facts. Admission and formats follow [ADR0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md); the existing text rules below remain unchanged.
+
 One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines`, `--jsonl`, `--csv`, and `--tsv` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
 
 `QUESTION` comes first and names what is being placed. Each `LEVEL` is one argument. `score` takes 2 to 10 levels, lowest first. A duplicate level is a usage error, and so is a level that is empty, that holds only white space, or that holds a control character, because a level is one line of printable text. `@FILE` reads the question and its levels from a question file instead, where `levels` may be an ordered map from each name to its description; the model then reads the descriptions in order and a result still lists the names. [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence.

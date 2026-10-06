@@ -142,13 +142,22 @@ run_case <- function(case, served) {
     },
     rank = {
       ranking <- case$expect$success$operation$ranking
-      ranked <- tt_rank(asked$decide, evidence)$value
+      call <- tt_rank(asked$decide, evidence)
+      ranked <- call$value
+      same("ranked records", ranked$record, evidence[vapply(ranking, function(at) at$index + 1L, integer(1))])
+      same("original observation indexes", sort(unique(vapply(call$details, `[[`, 0, "index"))), seq_along(evidence) - 1L)
       same("places", ranked$place, vapply(ranking, function(at) at$index + 1L, integer(1)))
       same("probabilities", ranked$probability, vapply(ranking, function(at) at$probability, numeric(1)))
     },
     find = {
       operation <- case$expect$success$operation
-      found <- tt_find(asked$find, unlist(asked$units), none = asked$none)$value
+      call <- tt_find(asked$find, unlist(asked$units), none = asked$none)
+      found <- call$value
+      if (case$id == "18-find-second") {
+        same("saved canonical selected index", operation$selected, 1L)
+        same("R selected original position", found$place, 2L)
+        same("canonical selected candidate", call$details[[1]]$answer, "u002")
+      }
       picked <- Filter(function(row) identical(row$index, operation$selected), operation$probabilities)
       same("found", found, if (is.null(operation$selected)) list(place = NA_integer_, unit = NA_character_, probability = NA_real_)
            else list(place = operation$selected + 1L, unit = asked$units[[operation$selected + 1L]], probability = picked[[1]]$probability))
@@ -171,6 +180,25 @@ run_case <- function(case, served) {
       same("lengths", found$length, vapply(want$entities, function(one) as.double(one$length), 0))
       same("kinds", found$kind, vapply(want$entities, `[[`, "", "kind"))
       same("strengths", found$strength, vapply(want$entities, function(one) as.double(one$strength), 0))
+      if (case$id == "41-offsets-past-an-accent-and-an-emoji") {
+        path <- tempfile(fileext = ".txt")
+        writeBin(charToRaw(enc2utf8(case$text)), path)
+        before <- tt_usage()$requests_sent
+        located <- tt_files(case$question, path, unit = "file")
+        sends <- tt_usage()$requests_sent - before
+        same("located recognition reuses native cached answers", sends, 0L)
+        spans <- located$value[[1]]$value$entities
+        same("located native starts", lapply(spans, `[[`, "start"), lapply(want$entities, `[[`, "start"))
+        same("located native ends", lapply(spans, `[[`, "end"), lapply(want$entities, `[[`, "end"))
+        for (span in spans) {
+          same("physical span lines", c(span$first_line, span$last_line), c(1L, 1L))
+          same("native scalar slice", substr(case$text, span$start + 1L, span$end), span$text)
+        }
+        same("multibyte R span", c(found$start, found$end, found$length), c(11, 20, 10))
+        same("multibyte native span", c(spans[[1]]$start, spans[[1]]$end), c(10, 20))
+        same("prefix UTF-8 bytes differ from scalar offset", nchar(substr(case$text, 1, 10), type = "bytes"), 14L)
+        unlink(path)
+      }
       relations <- attr(found, "relations")
       same("relations", nrow(relations) %||% 0L, length(want$relations))
       for (at in seq_along(want$relations)) {

@@ -13,15 +13,16 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use rusqlite::{Connection, OpenFlags, params_from_iter};
+use rusqlite::{Connection, OpenFlags};
 
 use crate::core::Usage;
-use crate::core::pack::{QuestionKey, State};
+use crate::core::pack::{Ask, QuestionKey, State};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
 mod convert;
 mod fixture;
+mod images;
 mod probe;
 mod prune;
 pub(crate) use convert::convert;
@@ -195,6 +196,15 @@ impl Store {
         keys: &[QuestionKey],
         cancel: &Cancel,
     ) -> Result<Vec<Option<Found>>, Error> {
+        self.lookup_with(keys, cancel, &HashMap::new())
+    }
+
+    fn lookup_with(
+        &mut self,
+        keys: &[QuestionKey],
+        cancel: &Cancel,
+        images: &HashMap<[u8; 32], &Ask>,
+    ) -> Result<Vec<Option<Found>>, Error> {
         if self.connection.is_none()
             && self.writes()
             && (exists(&self.folder.join(SQLITE))? || exists(&self.folder.join(JSONL))?)
@@ -209,12 +219,11 @@ impl Store {
         };
         let mut by_key = HashMap::new();
         for chunk in keys.chunks(500) {
-            by_key.extend(self.waiting(cancel, || select(connection, chunk))?);
+            by_key.extend(self.waiting(cancel, || images::select(connection, chunk, images))?);
         }
-        Ok(keys
-            .iter()
-            .map(|key| by_key.get(key.bytes().as_slice()).cloned())
-            .collect())
+        keys.iter()
+            .map(|key| by_key.get(key.bytes().as_slice()).cloned().transpose())
+            .collect()
     }
 
     /// Write every answer of one reply in one transaction, replacing any
@@ -335,21 +344,7 @@ pub(crate) fn waiting<T>(
 }
 
 /// One stored answer beside its key's bytes.
-type Stored = (Vec<u8>, Found);
-
-/// The stored answers among one chunk of keys, each beside its key.
-fn select(connection: &Connection, chunk: &[QuestionKey]) -> rusqlite::Result<Vec<Stored>> {
-    let marks = vec!["?"; chunk.len()].join(",");
-    let sql = format!(
-        "SELECT key, answer, answered_by, input_tokens, output_tokens FROM answers WHERE key IN ({marks})"
-    );
-    let mut statement = connection.prepare(&sql)?;
-    let rows = statement.query_map(
-        params_from_iter(chunk.iter().map(QuestionKey::bytes)),
-        found,
-    )?;
-    rows.collect()
-}
+type Stored = (Vec<u8>, Result<Found, Error>);
 
 fn found(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stored> {
     let tokens = row
@@ -366,7 +361,7 @@ fn found(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stored> {
         answered_by: row.get(2)?,
         usage,
     };
-    Ok((row.get(0)?, answer))
+    Ok((row.get(0)?, Ok(answer)))
 }
 
 /// Unix seconds now, the time a reply arrived.

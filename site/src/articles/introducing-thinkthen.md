@@ -50,7 +50,7 @@ Not sure exits 3, so a person reads it. A failure gets its own [exit code](/lear
 
 You don't train a model. You don't label a dataset first. The question is plain words.
 
-You still measure before you trust it. Label some real cases, then run `thinkthen audit`. It grades saved answers against your labels, and you pick the threshold from that. [Test it before you trust it](/trust/) shows how.
+You still measure before you trust it. Label some real cases, then run `thinkthen runs audit`. It grades saved answers against your labels, and you pick the threshold from that. [Test it before you trust it](/trust/) shows how.
 
 ## It runs in your language
 

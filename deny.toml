@@ -50,6 +50,8 @@ allow = [
 # kept, and none requires shared source. Each exception names its crate, so a
 # new crate under the same license still fails.
 exceptions = [
+    # The PNG decoder lock includes flate2's optional Rust zlib implementation.
+    { crate = "zlib-rs", allow = ["Zlib"] },
     # Zlib: the default hasher of hashbrown 0.17, which polars-arrow and
     # polars-compute use.
     { crate = "foldhash", allow = ["Zlib"] },

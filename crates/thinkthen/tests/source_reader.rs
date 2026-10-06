@@ -115,3 +115,73 @@ fn reader_debug_withholds_arbitrary_reader_evidence_before_and_after_intake() {
         }
     }
 }
+
+#[test]
+fn image_handles_keep_original_bytes_and_omit_text_line_positions() {
+    use thinkthen::{ImageMedia, InputFileReader, InputReaderOptions, ReaderMedia, SourceItem};
+    let bytes = include_bytes!("../../../specification/fixtures/images/red.png");
+    let options = InputReaderOptions {
+        reading: ReaderOptions {
+            unit: SourceUnit::File,
+            window: None,
+        },
+        media: ReaderMedia::Image,
+    };
+    let mut reader = InputFileReader::new("renamed.jpeg", Cursor::new(bytes), options).unwrap();
+    let row = reader.next().unwrap().unwrap();
+    let SourceItem::Image(image) = &row else {
+        panic!("explicit image mode");
+    };
+    assert_eq!(image.record.media(), ImageMedia::Png);
+    assert_eq!(image.record.bytes(), bytes);
+    assert_eq!((image.record.width(), image.record.height()), (1, 1));
+    let json = serde_json::to_value(row).unwrap();
+    assert!(json.get("first_line").is_none());
+    assert!(json.get("last_line").is_none());
+    assert!(reader.next().is_none());
+    assert!(
+        InputFileReader::new(
+            "image",
+            Cursor::new(bytes),
+            InputReaderOptions {
+                reading: ReaderOptions::default(),
+                media: ReaderMedia::Image
+            }
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn image_read_failure_is_local_and_the_handle_stops_after_one_error() {
+    use std::io::{self, BufRead, Read};
+    use thinkthen::{ErrorKind, InputFileReader, InputReaderOptions, ReaderMedia};
+    struct Broken;
+    impl Read for Broken {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            Err(io::Error::other("PRIVATE_IMAGE_BYTES"))
+        }
+    }
+    impl BufRead for Broken {
+        fn fill_buf(&mut self) -> io::Result<&[u8]> {
+            Err(io::Error::other("PRIVATE_IMAGE_BYTES"))
+        }
+        fn consume(&mut self, _: usize) {}
+    }
+    let mut reader = InputFileReader::new(
+        "image",
+        Broken,
+        InputReaderOptions {
+            reading: ReaderOptions {
+                unit: SourceUnit::File,
+                window: None,
+            },
+            media: ReaderMedia::Image,
+        },
+    )
+    .unwrap();
+    let error = reader.next().unwrap().unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Local);
+    assert!(!format!("{error:?}").contains("PRIVATE_IMAGE_BYTES"));
+    assert!(reader.next().is_none());
+}

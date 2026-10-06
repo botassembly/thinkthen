@@ -93,8 +93,8 @@ pub(super) fn read(
             SourceRecord {
                 record,
                 file: position.file.unwrap_or_default(),
-                first_line: position.first,
-                last_line: position.last,
+                first_line: position.first.unwrap_or(1),
+                last_line: position.last.unwrap_or(1),
             },
         ));
     }

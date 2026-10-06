@@ -4,7 +4,7 @@ Every setting, in one place. Ian ruled on 2026-09-26 that every setting is expla
 
 ## What counts as a setting
 
-Every setting follows [the SDK boundary](sdk-boundary.md): one endpoint, effective key and provider API type per built engine. Explicit direct model names retain their precedence as opaque provider parameters. Caller reading rules and resource controls remain explicit; the SDK installs no routing or business policy. The boundary table also rules on planned proxy controls.
+Every setting follows [the SDK boundary](sdk-boundary.md): one endpoint, effective key and provider API type per built engine. Explicit direct model names retain their precedence as opaque provider parameters. Caller reading rules and resource controls remain explicit; the SDK installs no routing or business policy. The boundary table also rules on future proxy controls.
 
 A setting is a value a caller chooses that changes how the tool reads, asks, answers, stores, or reports. Every flag in the command's help is one. The question text, the records, and help itself are not.
 
@@ -151,3 +151,5 @@ A ticket that adds or changes a setting updates its row in the same commit. `sdl
 ## Rank question sets
 
 CLI `rank @FILE` and Rust `RankSet::from_json` / `RankSet::load` accept ordered decide sets under [rank.md](rank.md#rank-question-sets). Top-level batch and calibration profile keep their existing precedence and meaning. Authored cuts and member pointers are refused before normalization; `--field` is common to all members. CLI true/false overrides are refused because the set owns its meanings. Backend/model, context, intake and display controls retain their ordinary rules. Rust `rank_set_with` shares one `CallOptions` across members and returns the complete merged order. SQL support remains 0417 for 0.2; C and other language sets remain 0418 later.
+
+0447/0448 image inputs distinguish the ordinary96,000-byte soft packing target from an explicitly selected max_request_bytes hard image ceiling. Explicit caller limits and backend profiles may narrow vendor image admission. SDK decode/retained-byte bounds and vendor limits are separate, as recorded in [ADR0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md). Image estimated-input admission uses text bytes plus per-question image patches/tiles and labels that estimate; it never treats base64 pixels as exact text tokens or guarantees provider billing/context admission.

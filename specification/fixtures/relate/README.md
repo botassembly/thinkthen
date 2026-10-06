@@ -60,11 +60,11 @@ for set in bands cities cities-plus; do
     < "$fixture/$set.jsonl" | jq -c '.' >> "$work/results.jsonl"
 done
 {
-  thinkthen audit "$work/results.jsonl" "$fixture/key.jsonl" --match strict --table | sed -n '2p'
+  thinkthen runs audit "$work/results.jsonl" "$fixture/key.jsonl" --match strict --table | sed -n '2p'
   for id in 1 2 3; do
     sed -n "${id}p" "$work/results.jsonl" > "$work/result.jsonl"
     jq -c --argjson id "$id" 'select(.id == $id) | .id = 1' "$fixture/key.jsonl" > "$work/key.jsonl"
-    thinkthen audit "$work/result.jsonl" "$work/key.jsonl" --match strict --table | sed -n '2p'
+    thinkthen runs audit "$work/result.jsonl" "$work/key.jsonl" --match strict --table | sed -n '2p'
   done
 } | mustmatch '  matched 28, extra 3, missed 0: precision 0.903   recall 1.000   f1 0.949
   matched 12, extra 3, missed 0: precision 0.800   recall 1.000   f1 0.889

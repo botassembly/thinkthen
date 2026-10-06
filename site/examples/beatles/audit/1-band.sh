@@ -1,4 +1,4 @@
-thinkthen audit shown.jsonl shown-key.jsonl \
+thinkthen runs audit shown.jsonl shown-key.jsonl \
   --threshold 0.2:0.8 |
 jq '{
   songs: .rows,
