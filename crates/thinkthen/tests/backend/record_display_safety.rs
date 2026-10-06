@@ -4,7 +4,7 @@ use crate::find_display::{PICKED, body, call as find_call};
 use crate::harness::{Canned, Listener};
 use crate::input_sources::{answer, folder, text};
 use crate::record_display::call;
-use crate::support::stored;
+use crate::support::{keys, stored};
 use std::{fs, io};
 
 #[test]
@@ -279,7 +279,12 @@ fn snapshot_counts_original_crlf_bytes_and_retains_ordinary_lazy_bound() -> io::
 #[test]
 fn views_share_recording_keys_and_replay_without_sending_or_a_key() -> io::Result<()> {
     let listener = Listener::answering(|_| Canned::ok(PICKED))?;
-    let place = folder("find-display-replay")?;
+    let root = folder("find-display-replay")?;
+    let place = (0_u64..)
+        .map(|at| root.join(format!("{}-{at}", std::process::id())))
+        .find(|path| !path.exists())
+        .expect("unused recording folder");
+    fs::create_dir(&place)?;
     let plain = place.join("plain");
     let shown = place.join("shown");
     let input = b"first\nsecond\n";
@@ -310,7 +315,12 @@ fn views_share_recording_keys_and_replay_without_sending_or_a_key() -> io::Resul
         b"-- 0.99\n1-first\n2:second\n"
     );
     assert_eq!(body(&listener), ordinary);
-    assert_eq!(stored(&plain)?, stored(&shown)?);
+    let expected_keys = keys(listener.url(), &ordinary);
+    for recording in [&plain, &shown] {
+        let entries = stored(recording)?;
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0]["key"].as_str(), Some(expected_keys[0].as_str()));
+    }
     for (flags, expected) in [
         (vec![], b"second\n".as_slice()),
         (vec!["-n"], b"2:second\n".as_slice()),
