@@ -147,6 +147,12 @@ Source growth for this constituent is 1582 nonblank Rust lines (140842 → 14242
 ### Added public declarations
 
 ```text
+fn Question::load_rank_named(&str) -> Result<Question, Error>
+fn Question::load_rank_reference(&str) -> Result<Question, Error>
+fn Question::load_find_named(&str) -> Result<Question, Error>
+fn Question::load_find_reference(&str) -> Result<Question, Error>
+fn Relate::load_records_named(&str) -> Result<Relate, Error>
+fn Relate::load_records_reference(&str) -> Result<Relate, Error>
 fn FindQuestionFile::load_named(&str) -> Result<FindQuestionFile, Error>
 fn FindQuestionFile::load_reference(&str) -> Result<FindQuestionFile, Error>
 fn RankSet::load_named(&str) -> Result<RankSet, Error>
@@ -348,3 +354,10 @@ Legacy finite rank, find, annotation, recognize and typed-entity relate now vali
 Three public cases and a CLI aggregate case pin zero sends on invalid typed input, explicit synthetic-none tie selection, exact request content and observation remapping after omitted dataframe nulls. Source grows 348 nonblank Rust lines (143346 → 143694), for shared admission, typed consumer views and public/CLI behavior tests. Existing reading/metadata validation is reused; duplicate projection and scheduling were checked before this growth. Canonical result/2 schema/CLI, complete rank-set and remaining host adoption still remain open.
 
 Focused validation: the three public consumer cases and CLI aggregate refusal pass, as do affected Clippy, offline policy, format and the 1505-declaration inventory (four existing plants refused). Root owns whole review and full landing gates.
+
+
+Explicit native file-role completion, 2026-10-06: all new named/reference loaders now reject an unambiguously different saved role with Usage and `the question file uses another function`. Syntax, duplicate keys, unsupported grammar and multiple roles stay with the owning parser and the existing Local file/content boundary. The role check shares the ordinary ordered native JSON reader and has no host counterpart. Existing released literal-path loaders retain their error behavior. New rank/find-specific named/reference methods reuse their existing parser/resolver; record-relate named/reference methods preserve authored field pointers through the existing record grammar. No caller must inspect known question JSON to choose a saved preparation path.
+
+The isolated public-name fixture now exercises seven wrong-role refusals, ordinary path compatibility, native rank/find saved preparation and record-relate pointer admission. Main and other lanes remain untouched. Canonical complete-result schema/CLI and host adoption remain open.
+
+Focused checks pass: all four native-name/CLI cases, affected Clippy, format and the 1524-declaration public inventory (four existing plants refused). Source grows 153 nonblank Rust lines (144850 → 145003), for pure role admission, six explicit consumer loaders and outside-in role/path checks. Existing capped reading, native reference precedence and verb parsers were checked and reused; the loader macros replace duplicate entry-point plumbing.

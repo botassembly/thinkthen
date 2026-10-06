@@ -159,6 +159,7 @@ fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_er
 
 #[cfg(test)]
 fn check_named(root: &Path) {
+    check_roles(root);
     let named = Question::load_named("refund").unwrap();
     assert_eq!(named.name().unwrap().as_str(), "refund");
     assert!(
@@ -377,4 +378,69 @@ fn cli_whole_set_functions_validate_typed_selected_values_before_sending() {
         assert!(!stderr.contains("body"));
         assert_eq!(listener.count(), 0);
     }
+}
+
+#[cfg(test)]
+fn check_roles(root: &Path) {
+    for (name, body) in [
+        ("finder", r#"{"find":"Which?","wording_version":2}"#),
+        ("recognizer", r#"{"version":1,"recognize":{}}"#),
+        ("ranker", r#"{"decide":"Ready?","wording_version":2}"#),
+        (
+            "connections",
+            r#"{"version":1,"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#,
+        ),
+    ] {
+        fs::write(config(root).join(format!("questions/{name}.json")), body).unwrap();
+        fs::write(root.join(format!("{name}.json")), body).unwrap();
+    }
+    for error in [
+        Question::load_named("finder").unwrap_err(),
+        thinkthen::QuestionSet::load_named("recognizer").unwrap_err(),
+        thinkthen::RecognizeQuestionFile::load_named("finder").unwrap_err(),
+        thinkthen::Relate::load_named("recognizer").unwrap_err(),
+        thinkthen::RecordChooseQuestion::load_named("ranker").unwrap_err(),
+        thinkthen::RankSet::load_reference("@finder.json").unwrap_err(),
+        Question::load_rank_reference("@recognizer.json").unwrap_err(),
+    ] {
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(
+            error.detail().message(),
+            "the question file uses another function"
+        );
+        assert!(error.facts().is_none());
+    }
+    // Released literal-path loader keeps its file/content error boundary.
+    assert_eq!(
+        Question::load(root.join("finder.json")).unwrap_err().kind(),
+        ErrorKind::Local
+    );
+    assert_eq!(
+        Question::load_rank_named("ranker").unwrap().kind(),
+        thinkthen::QuestionKind::Rank
+    );
+    assert_eq!(
+        Question::load_rank_reference("@ranker.json")
+            .unwrap()
+            .kind(),
+        thinkthen::QuestionKind::Rank
+    );
+    assert_eq!(
+        Question::load_find_named("finder").unwrap().kind(),
+        thinkthen::QuestionKind::Find
+    );
+    assert_eq!(
+        Question::load_find_reference("@finder.json")
+            .unwrap()
+            .kind(),
+        thinkthen::QuestionKind::Find
+    );
+    assert!(thinkthen::Relate::load_records_named("connections").is_ok());
+    assert!(thinkthen::Relate::load_records_reference("@connections.json").is_ok());
+    assert_eq!(
+        thinkthen::Relate::load_named("connections")
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Local
+    );
 }

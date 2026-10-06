@@ -1,5 +1,6 @@
 //! Explicit named/reference loading through the ordinary capped reader.
 use super::{Error, LoadedQuestion, Question, QuestionName};
+use crate::core::QuestionRole;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -69,65 +70,97 @@ impl Reference {
     }
 }
 
+fn role_text(text: String, role: QuestionRole) -> Result<String, Error> {
+    if role.differs(&text) {
+        return Err(Error::usage("the question file uses another function"));
+    }
+    Ok(text)
+}
+fn named_role(name: &str, role: QuestionRole) -> Result<String, Error> {
+    role_text(named_text(name)?, role)
+}
+fn reference_role(value: &str, role: QuestionRole) -> Result<String, Error> {
+    match Reference::resolve(value)? {
+        Reference::Path(path) => role_text(
+            super::question_file::load_text(&path, "question file")?,
+            role,
+        ),
+        Reference::Name(name) => named_role(&name, role),
+    }
+}
+fn file_error(error: Error) -> Error {
+    Error::local(error.detail().message())
+}
 impl Question {
     /// Load exactly NAME.json from the native config questions folder.
     /// # Errors
-    /// Invalid names are Usage; unavailable, escaping or malformed files are Local.
+    /// Invalid names or another file role are Usage; unavailable/invalid files are Local.
     pub fn load_named(name: &str) -> Result<LoadedQuestion, Error> {
-        Self::from_json(&named_text(name)?).map_err(|error| Error::local(error.detail().message()))
+        Self::from_json(&named_role(name, QuestionRole::Atomic)?).map_err(file_error)
     }
-    /// Load an explicit @ reference, preserving existing working-directory paths.
+    /// Load an explicit @ reference, preserving working-directory path precedence.
     /// # Errors
-    /// Refuses missing @ and file/name errors using the ordinary error boundaries.
+    /// Refuses missing @, wrong roles and file/name failures at their native boundaries.
     pub fn load_reference(value: &str) -> Result<LoadedQuestion, Error> {
-        match Reference::resolve(value)? {
-            Reference::Path(path) => Self::load(path),
-            Reference::Name(name) => Self::load_named(&name),
-        }
+        Self::from_json(&reference_role(value, QuestionRole::Atomic)?).map_err(file_error)
     }
 }
-
-impl super::QuestionSet {
-    /// Load a named question set with the ordinary closed set grammar.
-    /// # Errors
-    /// Invalid names are Usage; unavailable or malformed files are Local.
-    pub fn load_named(name: &str) -> Result<Self, Error> {
-        Self::from_json(&named_text(name)?).map_err(|error| Error::local(error.detail().message()))
-    }
-    /// Load an explicit @ reference as a question set.
-    /// # Errors
-    /// Uses the same path precedence and failures as Question::load_reference.
-    pub fn load_reference(value: &str) -> Result<Self, Error> {
-        match Reference::resolve(value)? {
-            Reference::Path(path) => Self::load(path),
-            Reference::Name(name) => Self::load_named(&name),
-        }
-    }
-}
-
-macro_rules! aggregate_loaders {
-    ($($role:ident),+) => {$(
+macro_rules! role_loaders {
+    ($($role:ident => $kind:ident),+ $(,)?) => {$(
         impl super::$role {
-            /// Load a named file through this role's existing grammar and capped reader.
+            /// Load a named file through the role's existing grammar and capped reader.
             /// # Errors
-            /// Invalid names are Usage; unavailable or malformed files are Local.
+            /// Invalid names or another role are Usage; unavailable/invalid files are Local.
             pub fn load_named(name: &str) -> Result<Self, Error> {
-                Self::from_json(&named_text(name)?).map_err(|error| Error::local(error.detail().message()))
+                Self::from_json(&named_role(name,QuestionRole::$kind)?).map_err(file_error)
             }
             /// Load an explicit @ reference with ordinary local-path precedence.
             /// # Errors
-            /// Uses this role's existing path loader and the native named loader.
+            /// Uses the same role/name and file/content boundaries as load_named.
             pub fn load_reference(value: &str) -> Result<Self, Error> {
-                match Reference::resolve(value)? { Reference::Path(path) => Self::load(path), Reference::Name(name) => Self::load_named(&name) }
+                Self::from_json(&reference_role(value,QuestionRole::$kind)?).map_err(file_error)
             }
         }
     )+};
 }
-aggregate_loaders!(
-    Recognize,
-    RecognizeQuestionFile,
+role_loaders!(QuestionSet=>Set, Recognize=>Recognize, RecognizeQuestionFile=>Recognize,
+    Relate=>Relate, RecordChooseQuestion=>Choose, FindQuestionFile=>Find, RankSet=>Set);
+macro_rules! selected_loaders {
+    ($owner:ident, $named:ident, $reference:ident, $parser:ident, $role:ident) => {
+        impl super::$owner {
+            /// Load this explicit saved reading by validated native name.
+            /// # Errors
+            /// Wrong role/name is Usage; unavailable or invalid saved content is Local.
+            pub fn $named(name: &str) -> Result<Self, Error> {
+                Self::$parser(&named_role(name, QuestionRole::$role)?).map_err(file_error)
+            }
+            /// Load this explicit saved reading by native @ reference.
+            /// # Errors
+            /// Preserves local-path precedence and the named role/content boundaries.
+            pub fn $reference(value: &str) -> Result<Self, Error> {
+                Self::$parser(&reference_role(value, QuestionRole::$role)?).map_err(file_error)
+            }
+        }
+    };
+}
+selected_loaders!(
+    Question,
+    load_rank_named,
+    load_rank_reference,
+    rank_from_json,
+    Rank
+);
+selected_loaders!(
+    Question,
+    load_find_named,
+    load_find_reference,
+    find_from_json,
+    Find
+);
+selected_loaders!(
     Relate,
-    RecordChooseQuestion,
-    FindQuestionFile,
-    RankSet
+    load_records_named,
+    load_records_reference,
+    from_records_json,
+    Relate
 );
