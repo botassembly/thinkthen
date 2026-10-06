@@ -1,5 +1,7 @@
 # Backends
 
+The permanent [SDK boundary](sdk-boundary.md) fixes one endpoint, effective key and provider API type per built engine. All stages, retries and split children keep that route. Direct model names remain opaque caller parameters; the SDK performs no group discovery or provider fallback. ADR 0119 settles this boundary alongside the transport rules below.
+
 Status: **Settled**, amended by ADR 0048, for the wire shape, the key, the address, the request, the `systemone` adapter, and every adapter row.
 
 `thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.

@@ -198,7 +198,18 @@ fn a_retried_status_is_still_sent_again() {
     let output =
         decide(&listener, &["--details"], &[], EVIDENCE).expect("the compiled binary runs");
 
-    assert_eq!(listener.requests().len(), 2);
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 2);
+    for request in &requests {
+        assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
+        assert_eq!(
+            request.header("authorization"),
+            Some("Bearer sk-resend-secret")
+        );
+        let body: serde_json::Value = serde_json::from_slice(&request.body).expect("wire body");
+        assert_eq!(body["model"], "jev-1.13.0");
+    }
+    assert_eq!(requests[0].body, requests[1].body, "retry keeps the body");
     assert_eq!(output.status.code(), Some(0));
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(printed.contains(r#""requests_sent":2,"#), "{printed}");
