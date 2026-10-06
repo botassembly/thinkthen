@@ -83,6 +83,7 @@ def test_iteration_reports_a_later_content_failure_after_the_first_record(tmp_pa
 
 
 def test_published_ten_function_script_replays_original_sources_without_requests(backend, tmp_path):
+    import json, os
     from conftest import REPO
     script = REPO / "site/examples/learn/python/files.py"
     recording = REPO / "site/recordings"
@@ -96,7 +97,15 @@ def test_published_ten_function_script_replays_original_sources_without_requests
             {replacement!r})
         exec(compile(code, str(script), "exec"))
     ''', child_env(backend, tmp_path))
-    assert output == script.with_suffix(".py.out").read_text()
+    expected = script.with_suffix(".py.out").read_text()
+    if os.name == "nt":
+        # Folder entries use native separators; explicit window paths keep their spelling.
+        folder, windows = expected.split("\nwindows\n")
+        for filename in ("01-policy.txt", "02-contract.txt"):
+            folder = folder.replace(f'"file": "documents/{filename}"',
+                                    f'"file": {json.dumps(str(Path("documents") / filename))}')
+        expected = folder + "\nwindows\n" + windows
+    assert output == expected
     assert backend.count() == 0
 
 

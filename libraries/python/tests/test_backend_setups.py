@@ -1,8 +1,7 @@
 """Selected setup limits reach the Python consumer before any transport."""
 import json
 import sys
-import subprocess
-from conftest import child_env, run
+from conftest import child_env, private_windows_configuration, run
 
 
 def test_captured_setup_profile_refuses_and_explicit_profile_wins(backend, tmp_path):
@@ -17,12 +16,7 @@ def test_captured_setup_profile_refuses_and_explicit_profile_wins(backend, tmp_p
             "url": backend.base(), "key_env": "LOCAL_SETUP_KEY", "model": "m",
             "profile": {"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 3}}}}))
     if sys.platform == "win32":
-        subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
-                        "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; "
-                        "$a=Get-Acl -LiteralPath $env:FIXTURE_CONFIG; "
-                        "$a.SetSecurityDescriptorSddlForm(\"O:${sid}D:P(A;;FA;;;$sid)(A;;FA;;;SY)\"); "
-                        "Set-Acl -LiteralPath $env:FIXTURE_CONFIG -AclObject $a"],
-                       env=env | {"FIXTURE_CONFIG": str(folder / "config.json")}, check=True)
+        private_windows_configuration(folder / "config.json")
     refused = run('''
         import thinkthen as tt
         try:

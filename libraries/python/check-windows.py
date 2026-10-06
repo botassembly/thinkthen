@@ -42,6 +42,12 @@ def main():
         shutil.copytree(REPO / 'conformance', scratch / 'conformance',
                         ignore=shutil.ignore_patterns('target', '__pycache__'))
         shutil.copytree(REPO / 'specification/fixtures/batching', scratch / 'specification/fixtures/batching')
+        shutil.copytree(REPO / 'specification/fixtures/files', scratch / 'specification/fixtures/files')
+        for relative in ('site/examples/learn/python/files.py', 'site/examples/learn/python/files.py.out',
+                         'site/recordings/thinkthen.jsonl'):
+            destination = scratch / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / relative, destination)
         env['RUSTFLAGS'] = (f'--remap-path-prefix={REPO.as_posix()}=/build/source '
                             f'--remap-path-prefix={env["CARGO_HOME"]}=/build/cargo '
                             f'--remap-path-prefix={Path.home().as_posix()}=/build/home')
