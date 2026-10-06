@@ -130,6 +130,8 @@ def main():
         expect(run("python3", str(SCRIPT), "pack", str(binary), str(archive)))
         assert first == archive.read_bytes(), "ZIP is not deterministic"
         checksum(archive)
+        archive.with_name(archive.name + ".sha256").write_bytes(
+            f"{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\r\n".encode("ascii"))
         expect(run("python3", str(SCRIPT), "check", str(archive)))
         with zipfile.ZipFile(archive) as source:
             assert source.namelist() == ["thinkthen.exe"]
@@ -164,8 +166,10 @@ def main():
         expect(run("python3", str(SCRIPT), "pack", str(binary), str(archive)))
         checksum(archive)
         sidecar = archive.with_name(archive.name + ".sha256")
-        sidecar.write_text("0" * 64 + "  " + archive.name + "\n")
-        expect(run("python3", str(SCRIPT), "check", str(archive)), 1, "differs from its checksum")
+        for value in ("0" * 64 + "  " + archive.name,
+                      hashlib.sha256(archive.read_bytes()).hexdigest() + "  other.zip"):
+            sidecar.write_text(value + "\n")
+            expect(run("python3", str(SCRIPT), "check", str(archive)), 1, "differs from its checksum")
         sidecar.unlink()
         expect(run("python3", str(SCRIPT), "check", str(archive)), 1, "missing or linked")
         # Run the real shell packer against a synthetic Windows host and build output.
@@ -185,6 +189,11 @@ def main():
             '#!/bin/sh\nmkdir -p "$CARGO_TARGET_DIR/' + TARGET + '/release"\n'
             'cp "$WINDOWS_TEST_BINARY" "$CARGO_TARGET_DIR/' + TARGET + '/release/thinkthen.exe"\n')
         (tools / "cygpath").write_text('#!/bin/sh\nprintf "%s\\n" "$2"\n')
+        # Reproduce the Windows default binary marker without changing bytes.
+        (tools / "sha256sum").write_text(
+            '#!/usr/bin/env python3\nimport hashlib, pathlib, sys\n'
+            'for name in sys.argv[1:]:\n'
+            ' print(f"{hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()} *{name}")\n')
         for tool in tools.iterdir():
             tool.chmod(0o755)
         build = base / "build"

@@ -129,7 +129,10 @@ fn ten_folder_examples_retain_original_records_and_physical_sources() -> io::Res
     assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
     assert_eq!(
         text(&output.stdout),
-        format!("{}\n", place.join("documents/01-policy.txt").display())
+        format!(
+            "{}\n",
+            place.join("documents").join("01-policy.txt").display()
+        )
     );
     Ok(())
 }
