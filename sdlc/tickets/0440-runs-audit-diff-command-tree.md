@@ -1,6 +1,6 @@
 # 0440: Move audit and diff under runs
 
-Status: landed. Implementation on `ticket/0440-runs-audit-diff` in `thinkthen-claude-0`; fresh code review and landing remain with the coordinator.
+Status: landed. Canonical commands and hidden aliases work; no ticket work remains.
 
 Milestone: 0.2
 
