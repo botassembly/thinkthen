@@ -21,10 +21,12 @@ impl Scratch {
         Self(path)
     }
     pub(crate) fn usage(&self) -> PathBuf {
-        self.0.join("AppData/Local/thinkthen/usage")
+        crate::child::Folder::Usage.in_home(&self.0)
     }
     pub(crate) fn config(&self) -> PathBuf {
-        self.0.join("AppData/Roaming/thinkthen/config.json")
+        crate::child::Folder::Config
+            .in_home(&self.0)
+            .join("config.json")
     }
     pub(crate) fn command(&self, arguments: &[&str]) -> Command {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
@@ -96,6 +98,19 @@ pub(crate) fn descriptor(path: &Path) -> String {
         path,
         "(Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH).Sddl",
     )
+}
+pub(crate) fn assert_dacl(path: &Path, null: bool) {
+    let predicate = if null {
+        "$null -eq $raw.DiscretionaryAcl"
+    } else {
+        "$null -ne $raw.DiscretionaryAcl -and $raw.DiscretionaryAcl.Count -eq 0 -and ($raw.ControlFlags -band [System.Security.AccessControl.ControlFlags]::DiscretionaryAclPresent) -ne 0 -and ($raw.ControlFlags -band [System.Security.AccessControl.ControlFlags]::DiscretionaryAclProtected) -ne 0"
+    };
+    powershell(
+        path,
+        &format!(
+            "$a=Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH; $raw=[System.Security.AccessControl.RawSecurityDescriptor]::new($a.GetSecurityDescriptorBinaryForm(),0); if(!({predicate})){{throw 'native null/empty DACL prerequisite'}}; 'verified'"
+        ),
+    );
 }
 pub(crate) fn plant(path: &Path, extra: &str, foreign_owner: bool) {
     let owner = if foreign_owner { "BA" } else { "${sid}" };

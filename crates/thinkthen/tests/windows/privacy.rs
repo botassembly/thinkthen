@@ -227,10 +227,9 @@ fn null_usage_dacl_is_unrestricted_and_empty_dacl_is_unreadable() {
                 "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $a=Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH; $a.SetSecurityDescriptorSddlForm(\"O:${{sid}}{dacl}\"); Set-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH -AclObject $a"
             ),
         );
-        // Inspect the actual descriptor representation. An empty rule list alone
-        // cannot distinguish an unrestricted null list from a denying empty list.
-        let descriptor = support::descriptor(&path);
-        assert!(descriptor.contains(dacl), "native descriptor {descriptor}");
+        // .NET may omit a null DACL from SDDL. Inspect the binary descriptor
+        // to distinguish an unrestricted null list from a present empty list.
+        support::assert_dacl(&path, dacl == "D:NO_ACCESS_CONTROL");
         let output = live(&scratch, &listener);
         assert_eq!(output.status.code(), Some(5));
         assert_eq!(listener.count(), 1);
@@ -251,7 +250,7 @@ fn null_configuration_dacl_is_shared_and_named_backends_are_refused() {
         &scratch.config(),
         "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $a=Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH; $a.SetSecurityDescriptorSddlForm(\"O:$sid`D:NO_ACCESS_CONTROL\"); Set-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH -AclObject $a",
     );
-    assert!(support::descriptor(&scratch.config()).contains("NO_ACCESS_CONTROL"));
+    support::assert_dacl(&scratch.config(), true);
     let listener = Listener::answering(|_| Canned::ok(support::ANSWER)).expect("counted backend");
     let output = live(&scratch, &listener);
     assert_eq!(output.status.code(), Some(5));

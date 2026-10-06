@@ -116,7 +116,19 @@ scratch_dir stage
 
 # The build folder of the crate in $1, by the one rule every check reads.
 built() { echo "${CARGO_TARGET_DIR:-$REPO/$1/target}"; }
-sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+sha256() {
+	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+		# Windows sha256sum defaults to a binary '*' marker. Our sidecars use
+		# two spaces on every target. Hash binary bytes without text translation.
+		python3 - "$@" <<'PYTHON'
+import hashlib, pathlib, sys
+for name in sys.argv[1:]:
+    print(f"{hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()}  {name}")
+PYTHON
+	elif command -v sha256sum >/dev/null; then sha256sum "$@"
+	else shasum -a 256 "$@"
+	fi
+}
 # pack NAME FOLDER: tar FOLDER's contents into OUT/NAME and write OUT/NAME.sha256.
 pack() {
 	tar -czf "$OUT/$1" -C "$2" .
