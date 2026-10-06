@@ -1,12 +1,12 @@
 # 0456: Add named questions and declared item inputs
 
-Status: draft. The PM intake is approved; shared format design and a fresh ticket review precede implementation.
+Status: ready. The shared design passed fresh High review after correcting annotate document admission. Slice A records the design and plan; native implementation and all surface adoption remain open.
 
 Milestone: 0.2
 
-Owner: native builder after fresh High ticket/design review; lane2 holds planning WIP only.
+Owner: native builder; lane 2 holds the reviewed design and plan slice.
 Risk: High: input disclosure and question-file compatibility. Preserve 0.1 loading and keep declaration failures before model sends.
-Ticket review: pending fresh High whole-ticket/design review; no acceptance or implementation claim.
+Ticket review: ACCEPT 2026-10-06. Fresh High review; the sole typed-annotate finding was corrected and its resolution confirmed.
 Dependencies: no new dependencies planned; use existing typed JSON, serde and native reader. A real new dependency requires the Rust standards second reviewer.
 
 ## Outcome
@@ -27,7 +27,7 @@ Settle this shared format before complete C/MCP and binding-family adoption. One
 
 ## Proposed shared contract for review
 
-Ian approved this additive format amendment on 2026-10-06. This section is the one design home until fresh High review; implementation updates question-file/settings/records/result contracts, generated schemas and their shared corpus together. It neither activates ADR 0120 proxy reservations nor supersedes ADR 0119. Ian can overturn field names, name bounds, collision rules and declaration admission through a reviewed amendment.
+Ian approved this additive format amendment on 2026-10-06. Fresh High review accepted this design; implementation updates question-file/settings/records/result contracts, generated schemas and their shared corpus together. It neither activates ADR 0120 proxy reservations nor supersedes ADR 0119. Ian can overturn field names, name bounds, collision rules and declaration admission through a reviewed amendment.
 
 ### Author metadata and format
 

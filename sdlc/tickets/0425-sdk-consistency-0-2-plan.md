@@ -22,7 +22,7 @@ Every PM ask has a ticket owner, dependencies, retained behavior and an acceptan
 
 ## Required completion amendment, 2026-10-06
 
-Authority: PM message `2026-10-06-pm-what-0-2-done-means-beyond-the-tickets-and-two-cleanups.md`, ask 1. This amendment awaits fresh review with 0456; the original planning landing does not accept this amendment or qualify product completion. Keep all previous seventeen asks, core/host scope, release rehearsal and Ian's publication go.
+Authority: PM message `2026-10-06-pm-what-0-2-done-means-beyond-the-tickets-and-two-cleanups.md`, ask 1. Fresh High review accepted this amendment with 0456 after correcting its typed-document admission rule. The planning amendment does not qualify product completion. Keep all previous seventeen asks, core/host scope, release rehearsal and Ian's publication go.
 
 Before publication, the final reviewed release candidate must pass the complete executed parity table including MCP 0455 (0432), full Linux gates and full hosted macOS gates on the existing `macos-15` and `macos-15-intel` release runners, the real Windows behavior qualification, and release QA/rehearsal. Required gates are install/lint/test/spec and affected complete surfaces/package checkpoints, with no required cells skipped. Use existing gates/runners; this plan adds no qualification workflow or runner feature. M5 performs bounded checks only; Yellow remains excluded from ThinkThen under the standing workspace README. Neither substitutes for hosted macOS qualification.
 
