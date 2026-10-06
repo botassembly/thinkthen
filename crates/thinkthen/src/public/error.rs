@@ -291,6 +291,9 @@ fn message(error: &EngineError) -> String {
             "the cache or recording folder holds a malformed entry"
         }
         EngineError::RecordingStorage => "the recording folder could not be written",
+        EngineError::RecordingForbidden => {
+            "the reply forbids storage, so the recording cannot be written"
+        }
         EngineError::RecordingPathIsFile => "the recording folder names a file",
         EngineError::DefaultCachePrivate => {
             "the default cache folder is not private; set its permissions to 0700 or use no_cache"

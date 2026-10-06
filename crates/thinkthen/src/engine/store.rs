@@ -23,6 +23,7 @@ use crate::engine::error::Error;
 mod convert;
 mod fixture;
 mod images;
+mod policy;
 mod probe;
 mod prune;
 pub(crate) use convert::convert;

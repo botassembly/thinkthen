@@ -183,6 +183,7 @@ pub(crate) enum Failure {
     StoreHotJournal,
     Entry(String, String),
     RecordingStorage,
+    RecordingForbidden,
     RecordingPathIsFile,
     DefaultCacheUnavailable,
     DefaultCachePrivate,
@@ -282,6 +283,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         | Failure::StoreHotJournal
         | Failure::Entry(_, _)
         | Failure::RecordingStorage
+        | Failure::RecordingForbidden
         | Failure::RecordingPathIsFile => (
             70,
             "defect: a recording failure was not reported".to_owned(),

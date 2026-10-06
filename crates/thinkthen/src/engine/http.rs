@@ -293,7 +293,14 @@ impl Client {
             marked();
             let sending = cancel.sending();
             let started = Instant::now();
-            let sent = send(&self.agent, exchange, limit, invocation, &sdk_request_id);
+            let sent = send(
+                &self.agent,
+                exchange,
+                limit,
+                invocation,
+                &sdk_request_id,
+                cancel.cache_refresh,
+            );
             let wall_ms = u64::try_from(started.elapsed().as_nanos().div_ceil(1_000_000).max(1))
                 .unwrap_or(u64::MAX);
             drop(sending);
@@ -316,7 +323,10 @@ impl Client {
             }
             let attempt = match sent {
                 Ok(answer) => {
-                    return Ok(HttpAnswer { body: answer.body });
+                    return Ok(HttpAnswer {
+                        body: answer.body,
+                        storable: answer.storable,
+                    });
                 }
                 Err(attempt) => attempt,
             };
@@ -345,6 +355,7 @@ impl Client {
 /// One successful HTTP reply and every attempt that produced it.
 pub(crate) struct HttpAnswer {
     pub(crate) body: Vec<u8>,
+    pub(crate) storable: bool,
 }
 
 /// What one exchange needs, gathered at the edge before anything opens.
@@ -398,6 +409,7 @@ impl From<Error> for Attempt {
 struct Sent {
     body: Vec<u8>,
     info: ResponseInfo,
+    storable: bool,
 }
 
 /// Say whether this failure earns another attempt: only a retried status does.

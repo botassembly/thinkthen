@@ -41,3 +41,19 @@ same call ID. Seven public/CLI loopback cases independently pin bodies,
 headers, concurrency, retries, splits, empty aggregates and zero-send refusal.
 Legacy serialized facts remain unchanged. Canonical facts serialization,
 persistent observations, cache policy and complete execution routes remain open.
+
+Native storage-policy WIP: bounded Cache-Control parsing returns only storage
+permission; repeated fields, exact no-store names, quoted values, malformed
+syntax and each parser bound are covered. The existing send/transaction spine
+returns nonstorable cached calls without writing, rejects explicit recording
+locally after the successful send, and evicts working answers transactionally
+only on valid nonstorable refresh. Native EngineBuilder.refresh_cache(bool)
+uses the existing freshness mode; retries and split children send no-cache.
+Eight outside-in public/CLI policy cases include prior-failing regressions.
+A partial nonstorable refresh evicts only accepted questions; failed-question
+history remains held for a later invocation.
+V2 validated migration, provenance and complete runtime results remain open.
+
+The affected settings check also exposed missing image/media inventory cells
+in the merged image source. The existing admitted flags now have their row;
+this does not add a route or change image admission.

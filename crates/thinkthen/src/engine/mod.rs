@@ -52,6 +52,7 @@ pub(crate) struct Cancel<'a> {
     estimated_tokens: Option<u64>,
     facts: Option<CallFacts>,
     invocation: invocation::Context,
+    cache_refresh: bool,
     attempts: Arc<AtomicU64>,
     attempt_sink: Option<AttemptSink>,
     attempt_digest: Option<Arc<str>>,
@@ -106,6 +107,12 @@ impl Drop for Sending<'_> {
 }
 
 impl<'a> Cancel<'a> {
+    pub(crate) fn with_cache_refresh(&self, refresh: bool) -> Self {
+        Self {
+            cache_refresh: refresh,
+            ..self.clone()
+        }
+    }
     pub(crate) fn with_surface(&self, surface: crate::core::Surface) -> Self {
         Self {
             invocation: invocation::Context::new(surface),

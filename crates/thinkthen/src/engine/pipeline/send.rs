@@ -30,6 +30,7 @@ pub(super) struct Done {
     pub(super) requests_sent: u64,
     pub(super) attempts: Arc<[AttemptObservation]>,
     pub(super) taken_at: i64,
+    pub(super) storable: bool,
 }
 
 /// What every worker of one call shares.
@@ -152,6 +153,12 @@ impl<'a> Sender<'a> {
             return refused(asks, error);
         }
         let budgeted = cancel
+            .with_cache_refresh(
+                self.engine.storage().refresh_cache
+                    || crate::core::adapters::built_in::is_mutable_alias(
+                        self.engine.backend().model(),
+                    ),
+            )
             .with_process_budget(self.transport.send_budget.clone())
             .with_estimated_tokens(self.image_estimate(&asks));
         // A zero limit refuses before the key is read, so a bad key never
@@ -195,6 +202,7 @@ impl<'a> Sender<'a> {
             },
         );
         let taken_at = store::now();
+        let storable = answer.as_ref().is_ok_and(|answer| answer.storable);
         let result = answer.and_then(|http| {
             let decoders: Vec<_> = asks.iter().map(|(ask, _)| ask.decoder.clone()).collect();
             match pack::split(&decoders, &http.body) {
@@ -224,6 +232,7 @@ impl<'a> Sender<'a> {
             requests_sent: sent.load(Ordering::Relaxed),
             attempts: attempts.into(),
             taken_at,
+            storable,
         }
     }
 
@@ -272,5 +281,6 @@ fn refused(asks: Vec<(Ask, usize)>, error: Error) -> Done {
         requests_sent: 0,
         attempts: Arc::from([]),
         taken_at: 0,
+        storable: false,
     }
 }

@@ -16,6 +16,7 @@ pub(super) fn send(
     limit: Duration,
     invocation: &crate::engine::invocation::Invocation,
     sdk_request_id: &crate::core::SdkRequestId,
+    refresh: bool,
 ) -> Result<Sent, Box<Attempt>> {
     let request = agent
         .post(exchange.url)
@@ -26,6 +27,11 @@ pub(super) fn send(
         .header("user-agent", invocation.user_agent())
         .header("X-ThinkThen-Call-Id", invocation.call_id.as_str())
         .header("X-ThinkThen-Request-Id", sdk_request_id.as_str());
+    let request = if refresh {
+        request.header("cache-control", "no-cache")
+    } else {
+        request
+    };
     let request = match exchange.key.as_str() {
         "" => request,
         key => request.header("authorization", &format!("Bearer {key}")),
@@ -37,6 +43,13 @@ pub(super) fn send(
         ))))
     })?;
     let status = response.status().as_u16();
+    let storable = crate::core::cache_control::permits(
+        response
+            .headers()
+            .get_all("cache-control")
+            .iter()
+            .map(|value| value.as_bytes()),
+    );
     let header =
         |name: &str| unique(response.headers(), name).and_then(|value| value.to_str().ok());
     let info = ResponseInfo::of(
@@ -85,14 +98,14 @@ pub(super) fn send(
                     error => Error::Transport(transport(&error, false)),
                 },
                 asked: None,
-                info: ResponseInfo {
-                    status: info.status,
-                    server_ms: info.server_ms,
-                    request_id: info.request_id.clone(),
-                },
+                info: info.clone(),
             })
         })?;
-    Ok(Sent { body, info })
+    Ok(Sent {
+        body,
+        info,
+        storable,
+    })
 }
 
 fn unique<'a>(

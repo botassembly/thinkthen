@@ -20,6 +20,7 @@ mod backend;
 mod backend_profile;
 pub(crate) mod batch;
 mod budget;
+pub(crate) mod cache_control;
 pub(crate) mod check;
 mod digest;
 mod find;
