@@ -36,3 +36,5 @@ Each call owns a one-shot cancellation token. Its watcher joins before token fre
 `NewWith(settingsJSON)` accepts `{"backend":"local"}` to select the `local` entry in the read-only ThinkThen configuration. Use `{"base_url":"http://localhost:11434/v1"}` for a direct address instead. A named backend supplies its address, model, wire settings and key environment variable; explicit constructor settings take precedence. Omitting `backend` preserves ordinary environment/default selection. A missing or invalid name fails before sending.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+Prepared complete requests and owned typed carriers are available; complete native execution remains pending. [Ticket 0427](../../sdlc/tickets/0427-go-csharp-jvm-typed-parity.md#current-implementation-and-integration-requirements) describes the APIs, checks and exact integration requirements. Existing calls keep their current behavior.

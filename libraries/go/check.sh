@@ -90,7 +90,7 @@ printf '%s\n' '-----BEGIN PRIVATE KEY----- planted' >"$out/guard-plant/README.md
 if "$python_bin" fixtures/guard.py "$out/guard-plant" >/dev/null 2>&1; then
     echo 'go: private marker plant passed' >&2; exit 1
 fi
-test -z "$(gofmt -l thinkthen.go result.go thinkthen_test.go recovery_test.go examples/decide/main.go fixtures/type_case.go)"
+test -z "$(gofmt -l .)"
 cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
 cp "$repo/libraries/c/include/thinkthen.h" "$out/native/include/thinkthen.h"
 cp "$repo/libraries/c/target/debug/libthinkthen_c.so" "$out/native/lib/libthinkthen.so"
@@ -111,6 +111,7 @@ export PKG_CONFIG_PATH="$out/native/lib/pkgconfig" LD_LIBRARY_PATH="$out/native/
 export GOCACHE="$out/cache" GOMODCACHE="$out/modcache" GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
 THINKTHEN_PORTABLE_NATIVE="$out/native" "$python_bin" fixtures/portable_batch.py
+"$go_bin" test -run '^(TestComplete|TestAtomicFixtures|TestRequestsKeep)' .
 "$go_bin" vet ./...
 "$go_bin" build -o "$out/type-case" ./fixtures/type_case.go
 "$python_bin" fixtures/packing_negative.py

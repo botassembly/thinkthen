@@ -41,6 +41,7 @@ def sent():
 
 
 try:
+    assert type_case(["carriers"], child_env(), "owned carrier fixtures") == {"carriers": "pass"}
     with tempfile.TemporaryDirectory(prefix="thinkthen-csharp-types-") as cache:
         # Ticket 0291, before any case sends: P1 and one invalid plan run with
         # no key through the public Engine.Plan; the zero budgets and the zero

@@ -35,7 +35,7 @@ classpath = ":".join(str(jars / f"thinkthen-{part}.jar") for part in ("door", "k
 compiler_env = child_env(JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"),
                          PATH=str(JDK / "bin") + ":" + os.environ.get("PATH", "/usr/bin:/bin"))
 java = [str(JDK / "bin/java"), "--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dthinkthen.library=" + str(TARGET / "native/libthinkthen.so")]
-subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java")], env=compiler_env, check=True)
+subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java"), str(HERE / "CarrierChecks.java")], env=compiler_env, check=True)
 subprocess.run([str(KOTLIN / "bin/kotlinc"), "-J-XX:ActiveProcessorCount=2", "-jvm-target", "21", "-classpath", classpath, str(HERE / "TypeCase.kt"), "-d", str(classes)], env=compiler_env, check=True)
 subprocess.run([str(SCALA / "bin/scalac"), "-J-XX:ActiveProcessorCount=2", "-classpath", classpath, "-d", str(classes), str(HERE / "TypeCase.scala")], env=compiler_env, check=True)
 backend, port = shared.start_backend()
@@ -59,6 +59,10 @@ def sent():
 
 
 try:
+    # Pure carrier fixtures are independent checks and never counted as parity cases.
+    subprocess.run(java + ["-cp", f"{classes}:{classpath}", "CarrierChecks"], env=compiler_env, check=True)
+    assert type_case(["carriers"], compiler_env, "owned carrier fixtures", "kotlin") == {"carriers": "pass"}
+    assert type_case(["carriers"], compiler_env, "owned carrier fixtures", "scala") == {"carriers": "pass"}
     if selected is None:
         # Ticket 0291, before any case sends: P1 and one invalid plan run with
         # no key through the public Door.plan; the zero budgets and the zero
