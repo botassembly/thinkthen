@@ -50,6 +50,7 @@ run_with_file_limit() {
 	shift
 	ledger=$dir/.git/thinkthen-live/ledger
 	limit=$(wc -c <"$ledger")
+	limit=$((limit + ${append_bytes:-0}))
 	run_command "$dir" /usr/bin/python3 -c '
 import os, resource, signal, sys
 size = int(sys.argv[1])
@@ -57,6 +58,40 @@ resource.setrlimit(resource.RLIMIT_FSIZE, (size, size))
 signal.signal(signal.SIGXFSZ, signal.SIG_IGN)
 os.execv(sys.argv[2], sys.argv[2:])
 ' "$limit" "$dir/sdlc/scripts/live" "$@"
+}
+
+run_with_fault() {
+	dir=$1
+	fault=$2
+	shift 2
+	run_command "$dir" /usr/bin/python3 -IS -c '
+import fcntl, os, runpy, sys
+fault, script, *arguments = sys.argv[1:]
+def blocked(*args, **kwargs):
+    raise AssertionError("control command captured a key or launched a job")
+os.execve = blocked
+if fault == "sync":
+    def failed_sync(descriptor):
+        raise OSError("fixture sync failure")
+    os.fsync = failed_sync
+elif fault == "key":
+    class NoKey(dict):
+        get = blocked
+    os.environb = NoKey()
+elif fault == "owner":
+    original = os.lstat
+    def wrong_owner(path):
+        details = list(original(path))
+        details[4] += 1
+        return os.stat_result(details)
+    os.lstat = wrong_owner
+elif fault == "lock":
+    def failed_lock(*args):
+        raise OSError("fixture lock failure")
+    fcntl.flock = failed_lock
+sys.argv = [script, *arguments]
+runpy.run_path(script, run_name="__main__")
+' "$fault" "$dir/sdlc/scripts/live" "$@"
 }
 
 assert_status() {
@@ -71,6 +106,10 @@ missing=$(repo missing)
 run "$missing" --status
 assert_status 1
 assert_has 'run sdlc/scripts/live --init'
+run_with_fault "$missing" key --add-tokens 1
+assert_status 1
+assert_has 'run sdlc/scripts/live --init'
+[ ! -e "$missing/.git/thinkthen-live" ] || fail 'extension initialized missing authority'
 
 init=$(repo init)
 run "$init" --init
@@ -99,6 +138,64 @@ THINKTHEN_API_KEY=dummy run "$init" --max-tokens 1 job.sh
 assert_status 1
 assert_has 'exceeds the 0 tokens remaining'
 
+extended=$(repo extended)
+run "$extended" --init
+printf '#!/bin/sh\nprintf x >>runs\n' >"$extended/job.sh"
+THINKTHEN_API_KEY=dummy run "$extended" --max-tokens 4 job.sh
+assert_status 0
+cp "$extended/.git/thinkthen-live/ledger" "$extended/ledger.before"
+run_command "$extended" env -u THINKTHEN_API_KEY "$extended/sdlc/scripts/live" --add-tokens 20
+assert_status 0
+[ -z "$output" ] || fail "successful extension printed output: $output"
+rm "$extended/target/debug/thinkthen"
+run_with_fault "$extended" key --add-tokens 3
+assert_status 0
+printf '#!/bin/sh\nexit 0\n' >"$extended/target/debug/thinkthen"
+chmod 755 "$extended/target/debug/thinkthen"
+THINKTHEN_API_KEY=dummy run "$extended" --max-tokens 5 job.sh
+assert_status 0
+run "$extended" --add-tokens 7
+assert_status 0
+run "$extended" --status
+assert_status 0
+[ "$output" = 'limit_tokens 40
+charged_tokens 9
+remaining_tokens 31' ] || fail "extension lost a charge: $output"
+cat "$extended/ledger.before" >"$extended/ledger.expected"
+printf 'extension 20\nextension 3\ncharge 5\nextension 7\n' >>"$extended/ledger.expected"
+cmp -s "$extended/ledger.expected" "$extended/.git/thinkthen-live/ledger" || fail 'extension changed prior rows'
+[ "$(wc -c <"$extended/runs" | tr -d ' ')" -eq 2 ] || fail 'extension launched a job'
+before=$(cksum "$extended/.git/thinkthen-live/ledger")
+for amount in 0 00 01 +1 -1 1.0 ' 1' '1 ' 1e3 9223372036854775808 999999999999999999999999999999; do
+	run_with_fault "$extended" key --add-tokens "$amount"
+	assert_status 2
+	[ "$output" = 'live: usage: sdlc/scripts/live --add-tokens N' ] || fail "unexpected extension usage: $output"
+done
+for arguments in '--add-tokens' '--add-tokens 1 job.sh'; do
+	run_with_fault "$extended" key $arguments
+	assert_status 2
+	[ "$output" = 'live: usage: sdlc/scripts/live --add-tokens N' ] || fail "unexpected extension usage: $output"
+done
+[ "$(cksum "$extended/.git/thinkthen-live/ledger")" = "$before" ] || fail 'invalid amount changed ledger'
+
+maximum=$(repo maximum)
+run "$maximum" --init
+run "$maximum" --add-tokens 9223372036854775797
+assert_status 0
+printf '#!/bin/sh\nexit 0\n' >"$maximum/job.sh"
+THINKTHEN_API_KEY=dummy run "$maximum" --max-tokens 9223372036854775807 job.sh
+assert_status 0
+run "$maximum" --status
+assert_status 0
+[ "$output" = 'limit_tokens 9223372036854775807
+charged_tokens 9223372036854775807
+remaining_tokens 0' ] || fail "signed-64-bit totals changed: $output"
+before=$(cksum "$maximum/.git/thinkthen-live/ledger")
+run "$maximum" --add-tokens 1
+assert_status 1
+[ "$output" = 'live: token admission would exceed 9223372036854775807' ] || fail "unexpected overflow refusal: $output"
+[ "$(cksum "$maximum/.git/thinkthen-live/ledger")" = "$before" ] || fail 'overflow changed ledger'
+
 concurrent=$(repo concurrent)
 run "$concurrent" --init
 printf '#!/bin/sh\nprintf x >>runs\n' >"$concurrent/job.sh"
@@ -114,6 +211,64 @@ run "$concurrent" --status
 assert_has 'charged_tokens 10'
 THINKTHEN_API_KEY=dummy run "$concurrent" --max-tokens 1 job.sh
 assert_status 1
+run "$concurrent" --add-tokens 10
+assert_status 0
+(cd "$concurrent" && THINKTHEN_API_KEY=seven sdlc/scripts/live --max-tokens 7 job.sh) &
+first=$!
+(cd "$concurrent" && THINKTHEN_API_KEY=three sdlc/scripts/live --max-tokens 3 job.sh) &
+second=$!
+(cd "$concurrent" && env -u THINKTHEN_API_KEY sdlc/scripts/live --add-tokens 11) &
+third=$!
+(cd "$concurrent" && env -u THINKTHEN_API_KEY sdlc/scripts/live --add-tokens 13) &
+fourth=$!
+wait "$first"
+wait "$second"
+wait "$third"
+wait "$fourth"
+[ "$(wc -c <"$concurrent/runs" | tr -d ' ')" -eq 4 ] || fail 'concurrent admission launched or lost jobs'
+run "$concurrent" --status
+assert_status 0
+[ "$output" = 'limit_tokens 44
+charged_tokens 20
+remaining_tokens 24' ] || fail "concurrent admission lost rows: $output"
+[ "$(wc -l <"$concurrent/.git/thinkthen-live/ledger" | tr -d ' ')" -eq 10 ] || fail 'concurrent rows lost'
+
+unsafe=$(repo unsafe)
+run "$unsafe" --init
+for entry in . lock ledger initialized; do
+	path=$unsafe/.git/thinkthen-live/$entry
+	if [ "$entry" = . ]; then mode=700; bad=770; else mode=600; bad=660; fi
+	chmod "$bad" "$path"
+	run_with_fault "$unsafe" key --add-tokens 1
+	assert_status 1
+	assert_has 'unsafe type, owner, or mode'
+	chmod "$mode" "$path"
+	if [ "$entry" != . ]; then
+		mv "$path" "$path.real"
+		ln -s "$entry.real" "$path"
+		run "$unsafe" --add-tokens 1
+		assert_status 1
+		assert_has 'unsafe type, owner, or mode'
+		rm "$path"
+		mv "$path.real" "$path"
+	fi
+done
+authority=$unsafe/.git/thinkthen-live
+mv "$authority" "$authority.real"
+ln -s thinkthen-live.real "$authority"
+run "$unsafe" --add-tokens 1
+assert_status 1
+assert_has 'unsafe type, owner, or mode'
+rm "$authority"
+mv "$authority.real" "$authority"
+run_with_fault "$unsafe" owner --add-tokens 1
+assert_status 1
+assert_has 'unsafe type, owner, or mode'
+before=$(cksum "$unsafe/.git/thinkthen-live/ledger")
+run_with_fault "$unsafe" lock --add-tokens 1
+assert_status 1
+[ "$output" = 'live: the live authority lock is unavailable' ] || fail "unexpected lock refusal: $output"
+[ "$(cksum "$unsafe/.git/thinkthen-live/ledger")" = "$before" ] || fail 'failed lock changed ledger'
 
 language=$(repo language)
 run "$language" --init
@@ -138,6 +293,28 @@ printf 'charge ' >>"$malformed/.git/thinkthen-live/ledger"
 run "$malformed" --status
 assert_status 1
 assert_has 'ledger is malformed'
+before=$(cksum "$malformed/.git/thinkthen-live/ledger")
+run "$malformed" --add-tokens 1
+assert_status 1
+assert_has 'ledger is malformed'
+[ "$(cksum "$malformed/.git/thinkthen-live/ledger")" = "$before" ] || fail 'partial ledger extended'
+
+invalid_rows=$(repo invalid-rows)
+run "$invalid_rows" --init
+cp "$invalid_rows/.git/thinkthen-live/ledger" "$invalid_rows/ledger.before"
+for rows in 'extension 0' 'extension 01' 'extension -1' 'refund 1' 'extension 9223372036854775807' 'charge 11
+extension 1' 'extension 9223372036854775797
+charge 9223372036854775807
+charge 1'; do
+	cat "$invalid_rows/ledger.before" >"$invalid_rows/.git/thinkthen-live/ledger"
+	printf '%s\n' "$rows" >>"$invalid_rows/.git/thinkthen-live/ledger"
+	run "$invalid_rows" --status
+	assert_status 1
+	[ "$output" = 'live: the live ledger is malformed; live work is disabled' ] || fail "unexpected ledger refusal: $output"
+	run "$invalid_rows" --add-tokens 1
+	assert_status 1
+	assert_has 'ledger is malformed'
+done
 
 unknown=$(repo unknown)
 run "$unknown" --init
@@ -160,6 +337,10 @@ assert_has 'already initialized'
 run "$lost" --status
 assert_status 1
 assert_has 'ledger is missing; live work is disabled'
+run "$lost" --add-tokens 1
+assert_status 1
+assert_has 'ledger is missing; live work is disabled'
+[ ! -e "$lost/.git/thinkthen-live/ledger" ] || fail 'extension recreated lost ledger'
 
 unterminated=$(repo unterminated)
 run "$unterminated" --init
@@ -193,6 +374,25 @@ assert_status 1
 	fail "unexpected storage refusal: $output"
 cmp -s "$storage/ledger.before" "$storage/.git/thinkthen-live/ledger" || fail 'failed append changed the ledger'
 [ ! -e "$storage/should-not-run" ] || fail 'job ran after storage failure'
+run_with_file_limit "$storage" --add-tokens 1
+assert_status 1
+[ "$output" = 'live: the extension may have been recorded; inspect --status before retry' ] || fail "unexpected append refusal: $output"
+cmp -s "$storage/ledger.before" "$storage/.git/thinkthen-live/ledger" || fail 'failed extension changed ledger'
+run_with_fault "$storage" sync --add-tokens 2
+assert_status 1
+[ "$output" = 'live: the extension may have been recorded; inspect --status before retry' ] || fail "unexpected sync refusal: $output"
+run "$storage" --status
+assert_status 0
+[ "$output" = 'limit_tokens 12
+charged_tokens 0
+remaining_tokens 12' ] || fail "failed sync hid extension: $output"
+append_bytes=5 run_with_file_limit "$storage" --add-tokens 3
+assert_status 1
+assert_has 'the extension may have been recorded; inspect --status before retry'
+run "$storage" --status
+assert_status 1
+assert_has 'ledger is malformed'
+[ ! -e "$storage/should-not-run" ] || fail 'extension ran a job after storage failure'
 
 status_repo=$(repo statuses)
 run "$status_repo" --init
@@ -261,6 +461,9 @@ assert_status 0
 [ -e "$migration/migrated-job-ran" ] || fail 'completed migration did not launch'
 cp "$authority/state-v1-retired.json" "$authority/state.json"
 run "$migration" --status
+assert_status 1
+assert_has 'legacy live state exists'
+run "$migration" --add-tokens 1
 assert_status 1
 assert_has 'legacy live state exists'
 
