@@ -1,0 +1,7 @@
+# QuickFix: private Windows installer fixture root
+
+Native Windows qualification 37397805293, job 112057830332, passed root, C and Python tests, memory probes, pandas checks, the installed command consumer and the MSVC DLL smoke. Its final installer boundary suite stopped before native cases because the Python temporary fixture root inherited an access grant that let another identity replace an install ancestor. The failure identified the fixture root itself. This evidence does not establish a production installer false positive.
+
+Before writing native fixtures, the harness now restricts its own empty temporary root to the current user and Windows SYSTEM. It uses the existing native test SDDL pattern, protects the DACL, grants inheritable child access and rereads the owner and access rules. It changes no existing installer destination. Production permission checks and the existing replacement, unsafe target, junction, refusal and recovery retention cases remain unchanged.
+
+Fixture construction passed all 84 cases and confirmed identical root and site installers. The existing routing self-test passed both host routes and three refusal plants. Python syntax and diff checks passed. No PowerShell host was available locally, so actual AST execution and native ACL/NTFS behavior remain unproved by these checks. The coordinator owns fresh source review, integrated landing checks and the authorized native Windows rerun.
