@@ -86,3 +86,46 @@ fn images_and_structured_evidence_have_distinct_keys_and_replay_their_own_answer
     assert_eq!(counts, (2, 2));
     fs::remove_dir_all(parent).unwrap();
 }
+
+#[test]
+fn corrupt_sqlite_image_replay_exits_local_without_output_or_sends() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let cache = crate::batching::folder("corrupt-image-replay");
+    let red = fixture("red.png");
+    let call = |mode| {
+        super::call(
+            &listener,
+            &[
+                "decide",
+                "Q?",
+                "--image",
+                red.to_str().unwrap(),
+                mode,
+                &cache,
+            ],
+            b"",
+        )
+    };
+    assert_eq!(call("--record").status.code(), Some(0));
+    let database = std::path::Path::new(&cache).join("thinkthen.sqlite");
+    let connection = rusqlite::Connection::open(&database).unwrap();
+    connection
+        .execute("UPDATE states SET state='PRIVATE_CORRUPT_ENVELOPE'", [])
+        .unwrap();
+    drop(connection);
+    let before = fs::read(&database).unwrap();
+    let output = call("--replay");
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(
+        text(&output.stderr),
+        "thinkthen: the entry `thinkthen.sqlite` was refused: stored image constituents or identity are invalid\n"
+    );
+    assert!(output.stdout.is_empty());
+    assert_eq!(listener.count(), 1, "strict replay sends nothing");
+    assert_eq!(
+        fs::read(&database).unwrap(),
+        before,
+        "replay writes nothing"
+    );
+    fs::remove_dir_all(cache).unwrap();
+}

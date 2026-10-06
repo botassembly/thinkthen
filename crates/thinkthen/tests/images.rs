@@ -10,6 +10,9 @@ use thinkthen::{
     Question, QuestionInput,
 };
 
+#[path = "images/replay.rs"]
+mod replay;
+
 const RED: &[u8] = include_bytes!("../../../specification/fixtures/images/red.png");
 const BLUE: &[u8] = include_bytes!("../../../specification/fixtures/images/blue.png");
 const LARGE: &[u8] = include_bytes!("../../../specification/fixtures/images/above-spike.png");
