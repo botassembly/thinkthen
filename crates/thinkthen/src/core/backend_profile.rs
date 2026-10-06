@@ -63,7 +63,7 @@ impl BackendProfile {
         let version_two =
             value.member("schema").and_then(Json::as_str) == Some("thinkthen.backend-profile/2");
         for (name, _) in members {
-            if ![
+            if !([
                 "schema",
                 "name",
                 "max_evidence_bytes",
@@ -72,7 +72,7 @@ impl BackendProfile {
                 "max_options",
             ]
             .contains(&name.as_str())
-                && !(version_two && name == "image_profile")
+                || version_two && name == "image_profile")
             {
                 return Err(ProfileError::UnknownKey);
             }
@@ -174,7 +174,7 @@ pub(crate) enum ProfileError {
     #[error("is one JSON object")]
     Object,
     /// The schema is absent or wrong.
-    #[error("has schema `thinkthen.backend-profile/1` or `thinkthen.backend-profile/2`")]
+    #[error("has schema `thinkthen.backend-profile/1`")]
     Schema,
     /// The name is absent or unsafe.
     #[error("has a nonempty lowercase name using letters, digits, hyphens, or underscores")]

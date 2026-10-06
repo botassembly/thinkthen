@@ -4,7 +4,7 @@ Decide, choose and score accept ordered JPEG/PNG images, scalar/batch inputs and
 
 Fresh code review found image/text cache collisions, blocked attachment cancellation and missing stored-image validation. The fixes pass distinct-key replay, first-signal termination and corruption regressions; focused High correction review accepted. Native image13, estimate1, reader7, CLI image7, interruption2 and existing store8 checks passed. The landing gate found stale standalone consumer locks; their new registry packages and checksums now match the reviewed root lock, without replacing existing registry versions. Full tests and lint run on the corrected landing commit. Local profiles and C/host/SQL/frame adoption remain open. No paid calls ran.
 
-Local slice B is built from 5974abe80 with closed declarations, exact aliases and the measured SDK envelope. Pure decoded-input checks pass. Shared propagation is supplied separately for native/root integration; normalized partial usage, whole High review and full landing checks remain open. No calls, dependencies or publication were added.
+Local slice B is built from 5974abe80 with closed declarations, exact aliases and the measured SDK envelope. Pure decoded-input checks, policy, format and ratchet pass. An isolated propagation candidate passes focused Clippy and 21 SDK/CLI image cases; its original Imajev partial-usage regression remains explicitly pending native integration. Shared propagation is supplied separately; whole High review and full landing checks remain with root. No model calls or dependencies were added.
 
 ## What the build taught us
 

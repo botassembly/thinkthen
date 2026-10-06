@@ -13,6 +13,7 @@ const IMAJEV: &str =
     include_str!("../../../../../../../specification/fixtures/images/local/imajev-profile.json");
 const PNG: &[u8] = include_bytes!("../../../../../../../specification/fixtures/images/red.png");
 
+#[expect(clippy::unwrap_used, reason = "decoded fixture pixels must be valid")]
 fn state(bytes: &[u8], media: ImageMedia, count: usize) -> ImageState {
     let image = ImageInput::new(media, bytes.to_vec()).unwrap();
     ImageState {

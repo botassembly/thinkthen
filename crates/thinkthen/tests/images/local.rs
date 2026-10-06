@@ -21,6 +21,7 @@ const IMAJEV: &str =
     include_str!("../../../../specification/fixtures/images/local/imajev-profile.json");
 const REPLY: &str = r#"{"model":"local","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":123,"output_tokens":0}}"#;
 
+#[expect(clippy::unwrap_used, reason = "fixture setup must be valid")]
 fn build(
     listener: &Listener,
     backend: &str,
@@ -51,6 +52,18 @@ fn pair() -> thinkthen::QuestionInput {
     )
 }
 
+#[expect(clippy::unwrap_used, reason = "fixture choices must be valid")]
+fn choose() -> thinkthen::ChooseQuestion<super::Color> {
+    Question::choose::<super::Color>("Which color?")
+        .unwrap()
+        .option(super::Color::Red, None)
+        .unwrap()
+        .option(super::Color::Blue, None)
+        .unwrap()
+        .build()
+        .unwrap()
+}
+
 #[test]
 fn admitted_profiles_send_original_jpeg_png_order_and_duplicates_through_scalar_doors() {
     for (profile, model) in [
@@ -58,7 +71,12 @@ fn admitted_profiles_send_original_jpeg_png_order_and_duplicates_through_scalar_
         (FLASH, "flash-local-0036"),
         (IMAJEV, "imajev-2b"),
     ] {
-        let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+        let reply = if profile == IMAJEV {
+            r#"{"model":"imajev-2b","answers":{"q1":{"type":"noul","noul":0.9}}}"#
+        } else {
+            REPLY
+        };
+        let listener = Listener::answering(move |_| Canned::ok(reply)).unwrap();
         let engine = build(&listener, "llamacpp", model, profile)
             .build()
             .unwrap();
@@ -71,7 +89,10 @@ fn admitted_profiles_send_original_jpeg_png_order_and_duplicates_through_scalar_
         );
         let call = engine.decide_input(&question(), &images).unwrap();
         assert_eq!(call.value(), &Answer::Yes);
-        assert_eq!(call.facts().input_tokens(), Some(123));
+        assert_eq!(
+            call.facts().input_tokens(),
+            (profile != IMAJEV).then_some(123)
+        );
         let duplicate = input(None, vec![fixture(RED, ImageMedia::Png); 2]);
         engine.decide_input(&question(), &duplicate).unwrap();
         let bodies = listener.requests();
@@ -88,16 +109,19 @@ fn admitted_profiles_send_original_jpeg_png_order_and_duplicates_through_scalar_
             serde_json::from_slice::<Value>(&bodies[1].body).unwrap()["images"],
             json!([url(RED, "image/png"), url(RED, "image/png")])
         );
+    }
+}
+
+#[test]
+fn image_choice_and_score_preserve_criteria_and_the_complete_pair() {
+    for (profile, model) in [
+        (CLEF, "clef-local-0036"),
+        (FLASH, "flash-local-0036"),
+        (IMAJEV, "imajev-2b"),
+    ] {
         let chosen=Listener::answering(|_|Canned::ok(r#"{"model":"local","answers":{"q1":{"type":"choice","probabilities":{"red":0.8,"blue":0.2}}}}"#)).unwrap();
         let engine = build(&chosen, "llamacpp", model, profile).build().unwrap();
-        let choose = Question::choose::<super::Color>("Which color?")
-            .unwrap()
-            .option(super::Color::Red, None)
-            .unwrap()
-            .option(super::Color::Blue, None)
-            .unwrap()
-            .build()
-            .unwrap();
+        let choose = choose();
         assert_eq!(
             engine.choose_input(&choose, &pair()).unwrap().value(),
             &Some(super::Color::Red)
@@ -118,11 +142,11 @@ fn admitted_profiles_send_original_jpeg_png_order_and_duplicates_through_scalar_
             .build()
             .unwrap();
         assert_eq!(*engine.score_input(&score, &pair()).unwrap().value(), 0.8);
-        for captured in [chosen.requests(), scored.requests()] {
+        for (captured, kind) in [(chosen.requests(), "choose"), (scored.requests(), "score")] {
             assert_eq!(captured.len(), 1);
             assert_eq!(
-                serde_json::from_slice::<Value>(&captured[0].body).unwrap()["images"],
-                json!([url(RED, "image/png"), url(BLUE, "image/png")])
+                serde_json::from_slice::<Value>(&captured[0].body).unwrap(),
+                json!({"state":"Compare originals.","model":model,"questions":super::questions(kind),"images":[url(RED, "image/png"), url(BLUE, "image/png")]})
             );
         }
     }
@@ -182,6 +206,16 @@ fn unknown_unprofiled_incompatible_routes_and_overrides_send_nothing_while_text_
             .unwrap_err()
             .kind(),
         ErrorKind::Usage
+    );
+    let constrained = build(&listener, "llamacpp", "clef-local-0036", CLEF)
+        .max_estimated_input_tokens_total(Some(u64::MAX))
+        .build()
+        .unwrap();
+    let error = constrained.decide_input(&question(), &pair()).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.to_string(),
+        "local image token estimates are unavailable"
     );
     assert_eq!(listener.count(), 0);
     engine.decide(&overridden, "Original text.").unwrap();
@@ -246,14 +280,7 @@ fn exact_final_json_and_caller_limits_are_checked_before_sending() {
             .kind(),
         ErrorKind::Usage
     );
-    let choose = Question::choose::<super::Color>("Which color?")
-        .unwrap()
-        .option(super::Color::Red, None)
-        .unwrap()
-        .option(super::Color::Blue, None)
-        .unwrap()
-        .build()
-        .unwrap();
+    let choose = choose();
     let limited = CLEF.replace("\"image_profile\":", "\"max_options\":1,\"image_profile\":");
     let limited = build(&listener, "llamacpp", "clef-local-0036", &limited)
         .build()
@@ -453,35 +480,32 @@ fn native_partial_usage_recording_keeps_input_unknown_mass_and_absent_output_ver
         "../../../../specification/fixtures/images/local/0036-imajev-partial.json"
     ))
     .unwrap();
-    let response = exchange["response"].clone();
-    let original = response.clone();
-    let listener = Listener::answering(move |_| Canned::ok(&response.to_string())).unwrap();
+    let original = exchange["response"].clone();
+    let response = original.to_string();
+    let listener = Listener::answering(move |_| Canned::ok(&response)).unwrap();
     let place = folder();
     let engine = build(&listener, "llamacpp", "imajev-2b", IMAJEV)
         .record(&place)
         .unwrap()
         .build()
         .unwrap();
-    // Decoding partial observations belongs to the native owner. This test
-    // protects raw persistence independently of normalized decoding success.
-    let _ = engine.details_input(&question(), &pair());
+    let call = engine
+        .details_input(&question(), &pair())
+        .expect("native integration accepts original partial usage");
+    assert_eq!(call.facts().input_tokens(), Some(887));
+    assert_eq!(call.facts().output_tokens(), None);
     assert_eq!(listener.count(), 1);
     let files = std::fs::read_dir(place.join("exchanges"))
         .unwrap()
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
-    assert_eq!(files.len(), 1);
     let recorded: Value = serde_json::from_slice(&std::fs::read(files[0].path()).unwrap()).unwrap();
     assert_eq!(recorded["response"], original);
-    assert_eq!(recorded["response"]["usage"]["input_tokens"], 887);
-    assert!(recorded["response"]["usage"].get("output_tokens").is_none());
     assert_eq!(
-        recorded["response"]["answers"]["q1"]["noul"],
-        0.6316676506859308
-    );
-    assert_eq!(
-        recorded["response"]["answers"]["q1"]["unknown_probability"],
-        0.0009922848031868846
+        call.value().probabilities(),
+        &thinkthen::Probabilities::YesNo {
+            yes: 0.6316676506859308
+        }
     );
     assert_eq!(recorded["response"]["answers"]["q1"]["abstained"], false);
     drop(engine);
