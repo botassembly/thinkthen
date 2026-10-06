@@ -6,4 +6,8 @@ Extended existing installed public consumers using shared rank/tie, successful s
 
 Focused checks passed: offline production R install; verbs (64 checks, 30 loopback requests), files (47/18), recognition (19/14), engine secrecy (11/5), shared settings/replay (45/13), portable identity (4/1), and shared conformance (50 pass, zero fail, five existing unsupported cases; 81 requests). Installed R smoke/strict replay passed with only its one seed request. README Unicode example and Rd parsing, host ratchet and diff whitespace passed. Builds used lane locking, systemd 10G memory/1G swap limits and two Cargo jobs; no remote model calls or paid calls.
 
-Fresh whole-slice self-review checked documentation against native and host code, fixture independence, empty/absence/error boundaries and final tests. No agents were used, as requested. Root retains independent fresh review, full tests/lint on the landing commit and the final update to this record. Result/2, typed source/image adoption and complete parity remain with 0431 and native owners; existing unsupported shared cases remain explicit. This branch does not claim 0.2 qualification.
+Fresh read-only whole-change review accepted `69aad3192` without findings. Full tests and lint run on the landing commit before main is pushed. Result/2, typed source/image adoption and complete parity remain with 0431 and native owners; existing unsupported shared cases remain explicit. This change documents working R behavior without claiming full 0.2 parity.
+
+## What the build taught us
+
+An original input position, a rank position, a Unicode character offset and a physical source line describe different things. The installed public consumers keep those distinctions visible without changing R's existing results.

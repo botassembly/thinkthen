@@ -1,6 +1,6 @@
 # 0412: Document and test R index conventions
 
-Status: in progress. Documentation and installed R consumer checks are built; branch handoff awaits root review, landing tests and lint.
+Status: complete. R documents original input positions, selected units, Unicode spans and physical source lines. Typed result/2 and image adoption remain with 0431.
 
 Milestone: 0.2
 
