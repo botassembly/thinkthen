@@ -31,3 +31,7 @@ Rust ships `Description` and `DescriptionBuilder`. TypeScript's `index.d.ts` now
 The product-side asks of 2026-09-22, which Ian can overturn: a string stays valid everywhere; the library never reorders or normalizes the object; the same object gives the same digest on every surface. A typed annotate class serializes to the same JSON as the question file, so the cache is shared. Python follows the Pydantic AI mapping: `bool` is decide, `Literal` or `Enum` is choose, an ordered `IntEnum` is score, `list[Literal]` is tag, a nested class is an annotate form. Rust uses builders with no derive macro.
 
 Done when Python accepts a typed description, including for recognize kinds, the typed annotate form is built or ruled out, and the cross-surface digest test passes.
+
+## 2026-10-06 ownership
+
+Item 7’s typed description and named annotate carriers are now required in 0.2 through 0426–0431, with cross-surface byte/digest equality in 0432. Description strings and structured JSON objects supported by the native grammar must both survive host conversion without reordering or normalization. Python typed carriers need no new class-derivation feature. Item 6’s warm-call feature remains later; this issue’s overall milestone continues to describe that remaining feature.

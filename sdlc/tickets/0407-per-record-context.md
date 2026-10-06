@@ -19,3 +19,9 @@ Eligible record judgments, filter, rank and annotate accept independent per-reco
 ## Dependencies and ownership
 
 Coordinate 0413 per-record options and family carrier ownership.
+
+## Record association and identity
+
+Per-record context is associated with the stable input record/key before sorting, filtering, deduplication or splitting. Missing per-record context falls back to shared context; an explicit empty string supplies empty context and suppresses that fallback. Never concatenate contexts implicitly. Null/non-string record contexts are Usage before sends. Keep the original evidence separately recoverable.
+
+Coordinate 0442/0444: the effective context is part of canonical shared state and therefore question identity. Identical evidence/question with different effective contexts cannot deduplicate or hit each other’s cache/replay entry; equal effective pairs may reuse. Tests use distinguishable record/context pairs, including duplicate evidence with different contexts and reordered keyed/frame inputs, and pin independently expected associations/answers through splitting. Count distinct-context misses, equal-context reuse and offline strict replay.

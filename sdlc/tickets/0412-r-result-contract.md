@@ -19,3 +19,7 @@ R’s one-based result positions and canonical zero-based mapping are explicit a
 ## Dependencies and ownership
 
 0431 owns typed R source carriers; 0439 owns Linux install instructions.
+
+## Successful find acceptance
+
+Include a saved successful find selecting a non-first candidate. Assert its R one-based selected position and canonical zero-based input index independently. Retain the none result, duplicate/tie and physical-coordinate checks.

@@ -9,3 +9,7 @@ Every function page opens with the same simple call in every language. Two gaps 
 2. DuckDB's `thinkthen_recognize` takes only kind names. The command line and the other bindings can send a description for each kind. The `recognize` page opens on kind names only.
 
 Neither belonged in 0.1. Each is a small change on one binding, and each keeps the old form working. When either lands, the site moves its samples back to the plain form.
+
+## 2026-10-06 ownership
+
+0410 owns pandas function/input parity and updates the affected plain-Series examples. 0434 owns DuckDB kind descriptions and its recognize example. Both are required in 0.2; 0296 owns accessor dispatch separately.

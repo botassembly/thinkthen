@@ -23,3 +23,7 @@ Rust, Python, TypeScript/JavaScript, Ruby and R expose all ten file routes with 
 ## Design notes
 
 JavaScript runtime and TypeScript compile consumers are distinct checks. A file relocation changes coordinates while identical evidence preserves provider/cache identity. Decoded field projection cannot fabricate a physical source map.
+
+## Existing API issue
+
+Own item 7 of the public-library-api-gaps issue for these SDKs: string and structured description objects, including recognize kinds, and typed named annotate carriers preserve the native grammar and request identity. 0426–0430 adopt the same contract; 0432 compares shared bytes/digests. No Python reflection/derive framework is required.
