@@ -7,7 +7,7 @@ import stat
 import subprocess
 import sys
 
-MAXIMUM = 999_999_999
+MAXIMUM = 9_223_372_036_854_775_807
 SAFE_ENV = {b"PATH": b"/usr/bin:/bin", b"LC_ALL": b"C"}
 
 
@@ -152,13 +152,21 @@ def read_ledger(authority):
             raise ValueError
         limit = canonical_number(limit_fields[1], True)
         charged = canonical_number(charged_fields[1])
+        if charged > limit:
+            raise ValueError
         for row in rows[3:]:
             fields = row.split(" ")
-            if len(fields) != 2 or fields[0] != "charge":
+            if len(fields) != 2:
                 raise ValueError
-            charged += canonical_number(fields[1], True)
-        if charged > limit or charged > MAXIMUM:
-            raise ValueError
+            amount = canonical_number(fields[1], True)
+            if fields[0] == "charge":
+                charged += amount
+            elif fields[0] == "extension":
+                limit += amount
+            else:
+                raise ValueError
+            if charged > limit or limit > MAXIMUM:
+                raise ValueError
         return path, limit, charged
     except (OSError, UnicodeError, ValueError):
         refuse("the live ledger is malformed; live work is disabled")
@@ -237,6 +245,39 @@ def capture_key():
     return key
 
 
+def append_row(ledger, kind, amount):
+    row = f"{kind} {amount}\n".encode("ascii")
+    try:
+        descriptor = os.open(ledger, os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            if os.write(descriptor, row) != len(row):
+                raise OSError("short ledger write")
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    except OSError:
+        refuse(f"the {kind} may have been recorded; inspect --status before retry")
+
+
+def add_tokens(arguments, authority):
+    try:
+        if len(arguments) != 2:
+            raise ValueError
+        amount = canonical_number(arguments[1], True)
+    except ValueError:
+        refuse("usage: sdlc/scripts/live --add-tokens N", 2)
+    lock = lock_authority(authority)
+    try:
+        legacy_absent(authority)
+        ledger, limit, _ = read_ledger(authority)
+        if amount > MAXIMUM - limit:
+            refuse(f"token admission would exceed {MAXIMUM}")
+        append_row(ledger, "extension", amount)
+        return 0
+    finally:
+        os.close(lock)
+
+
 def reservation_value(text):
     try:
         return canonical_number(text, True)
@@ -282,17 +323,7 @@ def launch(arguments, checkout, authority, key):
         remaining = limit - charged
         if reservation > remaining:
             refuse(f"reservation {reservation} exceeds the {remaining} tokens remaining, so no call goes out")
-        row = f"charge {reservation}\n".encode("ascii")
-        try:
-            descriptor = os.open(ledger, os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW | os.O_CLOEXEC)
-            try:
-                if os.write(descriptor, row) != len(row):
-                    raise OSError("short ledger write")
-                os.fsync(descriptor)
-            finally:
-                os.close(descriptor)
-        except OSError:
-            refuse("the charge may have been recorded; inspect --status before retry")
+        append_row(ledger, "charge", reservation)
     finally:
         os.close(lock)
     environment = dict(os.environb)
@@ -308,13 +339,16 @@ def launch(arguments, checkout, authority, key):
 def main():
     checkout = checkout_path()
     action = sys.argv[1] if len(sys.argv) == 2 else None
-    key = None if action in ("--init", "--status") else capture_key()
+    extension = sys.argv[1:2] == ["--add-tokens"]
+    key = None if action in ("--init", "--status") or extension else capture_key()
     common = common_path(checkout)
     authority = os.path.join(common, b"thinkthen-live")
     if action == "--init":
         return initialize(checkout, common)
     if action == "--status":
         return status(authority)
+    if extension:
+        return add_tokens(sys.argv[1:], authority)
     legacy_absent(authority)
     return launch(sys.argv[1:], checkout, authority, key)
 

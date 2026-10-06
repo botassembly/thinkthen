@@ -1,6 +1,6 @@
 # 0453: Extend authorized live token admission without losing charges
 
-Status: ready.
+Status: landed.
 Milestone: 0.2
 Owner: builder.
 Ticket review: ACCEPT, 2026-10-06; fresh High read-only review.
