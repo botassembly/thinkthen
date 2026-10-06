@@ -5,7 +5,7 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 Milestone: 0.2
 
 Owner: builder.
-Ticket review: accepted 2026-10-06; blocking findings corrected.
+Ticket review: revised for the second PM message; fresh review pending.
 
 ## Outcome
 
@@ -22,3 +22,7 @@ All named SDK, SQL and dataframe routes reread stored answers under each free re
 ## Dependencies and ownership
 
 0408 owns missing details; 0432 owns common enforcement; no new fingerprint or store-verification framework.
+
+## Answer identity when rereading
+
+0450 requires a different answer ID for a different normalized reading of stored observations, even if the bare value stays equal; restoring the original rule restores its ID. Full typed, SQL and frame consumers test this with zero sends. IDs do not change merely because retrieval origin, host index spelling or call ID changes.

@@ -45,7 +45,7 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns the twelve-ask map, dependencies, lane ownership and acceptance.
+Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score. The SDK uses one configured route; business policy belongs to the proxy. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns the twelve-ask map, dependencies, lane ownership and acceptance.
 
 Already landed: version/release safety, backends/provider setups/default-eight, rank search, audit/docs/recipes, Windows CLI/Rust/C/Python, backend selection, DuckDB 1.5.4/1.5.5, agent skill, native files and local runtimes. These are retained behavior. Raw JSON compatibility methods and older qualification runs do not establish the newly required typed SDK parity.
 
@@ -90,15 +90,29 @@ Open owners:
 - [Every surface gives back run facts](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), through the explicit owners in the plan.
 - [0415: Signed DuckDB community listing](../tickets/0415-signed-duckdb-community-listing.md), submitted upstream; publication remains DuckDB’s decision.
 
+- [0446: Add vision and the SDK boundary to the 0.2 plan](../tickets/0446-vision-and-sdk-boundary-0-2-plan.md)
+
+- [0447: Execute typed image questions and read image files](../tickets/0447-typed-image-questions-and-file-items.md)
+
+- [0448: Enforce documented image limits and refuse dropped images](../tickets/0448-image-route-limits-and-explicit-refusals.md)
+
+- [0449: Keep each SDK engine on one configured route](../tickets/0449-one-route-sdk-boundary.md)
+
+- [0450: Give each answer a stable identifier and reserve proxy policy fields](../tickets/0450-stable-answer-identifiers-and-proxy-reservations.md)
+
+- [0451: Create production Guides and a reusable lesson template](../tickets/0451-production-guides-section-and-template.md)
+
+- [0452: Carry typed image values through SQL](../tickets/0452-sql-image-values-and-queries.md)
+
 SQLite find’s silent model override is first. Shared C/metadata/semantic contracts precede wide host edits; SQL, dataframe and host families proceed in noncolliding slices. 0432 generates current parity from the complete executed suite with no skips. 0441 is written now with preview access/schema as an external prerequisite, without guessed wire behavior or paid calls.
 
-Current work is planning, not release preparation. Final hosted rehearsal, real Windows qualification and QA run only after required implementation lands on the final reviewed commit; publishing still requires Ian’s go. Main is 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. PostgreSQL evidence paths use the reviewed client-reader workaround in 0434. Windows Node/C#/JVM packaging remains 0.3; SDK parity on supported platforms is required now.
+Current work is planning, not release preparation. Final hosted rehearsal, real Windows qualification and QA run only after required implementation lands on the final reviewed commit; publishing still requires Ian’s go. Main is 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. 0447/0448/0452 add vision to 0.2; the plan records unsupported function/route refusals. 0449 keeps one endpoint/key/API type; 0450 reserves proxy overrides now and executes them in 0.3. PostgreSQL evidence paths use the reviewed client-reader workaround in 0434. Windows Node/C#/JVM packaging remains 0.3; SDK parity on supported platforms is required now.
 
 ## 0.3
 
 Outcome: add the remaining Windows bindings after the 0.2 core release. These tickets stay open under Ian's 2026-10-05 ruling.
 
-Future outcomes: support additional decision-provider endpoints and API versions, then images and other modalities when their contracts are known. These are outcomes only.
+Future outcomes: support additional decision-provider endpoints and API versions, then other modalities when their contracts are known; admitted image questions are already required in 0.2. These are outcomes only.
 
 Open items:
 

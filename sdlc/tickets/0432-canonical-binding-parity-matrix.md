@@ -5,7 +5,7 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 Milestone: 0.2
 
 Owner: builder.
-Ticket review: accepted 2026-10-06; blocking findings corrected.
+Ticket review: revised for the second PM message; fresh review pending.
 
 ## Outcome
 
@@ -26,3 +26,7 @@ Agree case/schema changes before parallel host work; integrate each semantic/fam
 ## Design notes
 
 The historical 0405 table is not current proof. Platform availability determines which job executes a consumer; a missing required platform is blocked, not a passing cell. No receipts, fingerprints, provenance chains or checker self-audits.
+
+## Expanded matrix
+
+Require multi-image decide/choose/score, whole-file image inputs and stable full-result IDs on each public surface. Execute text-only and dropped-image-route refusals as declared cases, never skips. Use the same shared multi-image fixture and typed consumers; SQL adoption belongs to 0452. Rulings remain visible cells. Fixture configuration is explicit; consumers must not depend on ambient user configuration.
