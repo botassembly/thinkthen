@@ -219,9 +219,12 @@ if ($NativeBinary) {
                             'pending-preflight-mismatch', 'pending-receipt-1176', 'pending-receipt-1177',
                             'pending-receipt-after', 'binary-1177', 'installed-receipt-1177',
                             'after-binary', 'rollback-command-absent', 'rollback-receipt-absent')) {
-        $target = Join-Path $FixtureRoot ('installed space ' + [char] 0x3a9 + '-' + [guid]::NewGuid().ToString('D'))
+        $requestedTarget = Join-Path $FixtureRoot ('installed space ' + [char] 0x3a9 + '-' + [guid]::NewGuid().ToString('D'))
+        # Framework expands short parent names; compare receipts with the same
+        # normalized path while still installing from the original spelling.
+        $target = Get-InstallDirectory $requestedTarget
         New-PrivateDirectory $target
-        $env:THINKTHEN_INSTALL_DIR = $target
+        $env:THINKTHEN_INSTALL_DIR = $requestedTarget
         $exe = Join-Path $target 'thinkthen.exe'
         $receiptName = Join-Path $target 'thinkthen.install.json'
         $script:Owned = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
