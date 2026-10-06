@@ -140,7 +140,7 @@ impl Asker for Annotating {
                 _ => Error::defect("an annotate group asks nothing"),
             })?;
             asks.extend(
-                pack::asks(self.backend.url(), &plan)
+                pack::asks_for(self.backend.api_type(), self.backend.url(), &plan)
                     .map_err(|_| Error::defect("a request could not be written as JSON"))?,
             );
         }

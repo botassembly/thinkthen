@@ -4,7 +4,7 @@ The permanent [SDK boundary](sdk-boundary.md) fixes one endpoint, effective key 
 
 Status: **Settled**, amended by ADR 0048, for the wire shape, the key, the address, the request, the `systemone` adapter, and every adapter row.
 
-Released behavior speaks System One under ADR0010. The proposed [ADR0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md) adds an explicitly selected OpenAI Decisions text adapter for 0.2; the target below awaits fresh 0441 review and implementation. Existing routes keep their wire shape. Every token count and probability in an example here is illustrative.
+Released behavior speaks System One under ADR0010. The accepted [ADR0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md) adds an explicitly selected OpenAI Decisions text adapter for 0.2; the development text contract is below. Existing routes keep their wire shape. Every token count and probability in an example here is illustrative.
 
 A backend is an address and a model. `THINKTHEN_BASE_URL` or the configuration file's `url` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. A named backend pairs an address with its own key variables and a model; see [Named backends](#named-backends). An explicit profile may add a stable name and local limits. It never selects either value.
 
@@ -50,7 +50,7 @@ With no backend named, the key is read from `THINKTHEN_API_KEY`. A named backend
 
 Settled by ADR 0114 and ADR 0115. Ian can overturn each default they record.
 
-Seven backends are built in:
+The built-in backends are:
 
 | Name | Base | Path | Key variables, first nonblank wins | Model | Descriptions |
 | --- | --- | --- | --- | --- | --- |
@@ -58,6 +58,7 @@ Seven backends are built in:
 | `llamacpp` | `http://localhost:8080/v1` | `systemone` | `LLAMACPP_API_KEY` | `local` | as authored |
 | `mlx` | `http://localhost:8000/v1` | `systemone` | `MLX_API_KEY` | `strands-decider-2B-hobson-v19` | as text, a Strands schema workaround |
 | `ollama` | `http://localhost:11434/v1` | `systemone` | `OLLAMA_API_KEY` | `nimble` | as text (workaround) |
+| `openai` | `https://api.openai.com/v1` | `decisions` | `OPENAI_API_KEY` | `gpt-6-luna` | complete JSON as text |
 | `openrouter` | `https://openrouter.ai/api/v1` | `systemone` | `OPENROUTER_API_KEY` | `typesafe/jev-1.13` | as authored, with both yes-or-no sides |
 | `perplexity` | `https://api.perplexity.ai/v1` | `decisions` | `PERPLEXITY_API_KEY` | `pplx-decider-v1-27b` | as authored |
 | `typesafe` | `https://api.typesafe.ai/v1` | `systemone` | `TYPESAFE_API_KEY` | `jev-1.13.0` | as authored |
@@ -163,7 +164,7 @@ An adapter is two pure functions.
 - **encode** takes a plan and returns the request body as bytes. A plan holds the evidence, the model name, and an ordered list of named questions.
 - **decode** takes the response body as bytes and returns the model that answered, one answer per named question, and the usage the backend reported.
 
-An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. Released behavior compiles `systemone`. The OpenAI target selects a second adapter explicitly at the edge, under proposed ADR0122. The adapter name `systemone` still leads every question key, so an answer stored today names the shape it was asked in.
+An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. Released behavior compiles `systemone`. The OpenAI target selects a second adapter explicitly at the edge, under accepted ADR0122. Each versioned question key carries its explicit adapter discriminator. System One/v1 bytes and identities remain unchanged.
 
 A reply that is not a `systemone` response at all is exit code 4, and the message names the line and column the reading stopped at and never the text it stopped on. A backend can send back whatever was sent to it, so a diagnostic never repeats a reply.
 
@@ -347,7 +348,7 @@ Imajev's native `noul` is the folded decision score `p(true) + 0.5*p(unknown)`. 
 
 ## OpenAI Decisions target for 0.2
 
-Status: **Draft** under [ADR 0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md), existing 0441; fresh whole-ticket review precedes implementation. Ian requires text before 0.2 releases. This section describes the target, not released support.
+Status: **Settled** under [ADR 0122](../sdlc/planning/adr/0122-openai-decisions-pure-adapter.md), existing 0441, with accepted whole-design and request-local identity correction review. This describes development 0.2 text behavior; public installation remains 0.1.2.
 
 ### Selection and boundaries
 

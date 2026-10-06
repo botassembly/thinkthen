@@ -72,7 +72,7 @@ fn valid(row: &rusqlite::Row<'_>, found: &Found, image: Option<&Ask>) -> rusqlit
     }
     let saved = super::Answer {
         key_version: Some(2),
-        adapter: Some(crate::core::adapters::built_in::NAME.to_owned()),
+        adapter: Some(row.get(8)?),
         key: found.key.hex(),
         observation_id: Some(found.observation_id.clone()),
         batch_size: found.batch_size,

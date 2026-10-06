@@ -118,9 +118,9 @@ pub(super) fn asks(
                 reading,
                 record,
             )?;
-            let asks = pack::asks(url, &plan).map_err(|_| {
-                PrepareError::Other(Failure::Defect("a request could not be written as JSON"))
-            })?;
+            let asks = pack::asks_for(judging.engine().backend().api_type(), url, &plan).map_err(
+                |_| PrepareError::Other(Failure::Defect("a request could not be written as JSON")),
+            )?;
             Ok((group, asks))
         })
         .collect()

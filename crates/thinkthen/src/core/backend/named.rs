@@ -8,7 +8,7 @@
 use std::fmt;
 use std::num::NonZeroU32;
 
-use crate::core::adapters::built_in::backends::BUILT_INS;
+use crate::core::adapters::{ApiType, built_ins};
 use crate::core::backend::{Backend, BackendError, KEY_VAR};
 use crate::core::plan::Descriptions;
 use crate::core::{BackendProfile, Prices};
@@ -16,6 +16,7 @@ use crate::core::{BackendProfile, Prices};
 /// One named backend: a built-in or a configuration entry.
 #[derive(Clone, Eq, PartialEq)]
 pub(crate) struct Named {
+    api_type: ApiType,
     name: String,
     base: String,
     path: String,
@@ -47,6 +48,7 @@ impl Named {
     /// Its descriptions start as authored; the validated setup may select BothSides.
     pub(crate) fn new(name: &str, base: &str, key: &str, model: &str) -> Self {
         Self {
+            api_type: ApiType::Primary,
             name: name.to_owned(),
             base: base.to_owned(),
             path: crate::core::adapters::built_in::ENDPOINT_PATH.to_owned(),
@@ -89,10 +91,10 @@ impl Named {
 
     /// The built-in backend of this name, if one exists.
     pub(crate) fn built_in(name: &str) -> Option<Self> {
-        BUILT_INS
-            .iter()
-            .find(|built_in| built_in.name == name)
-            .map(|built_in| Self {
+        built_ins()
+            .find(|(built_in, _)| built_in.name == name)
+            .map(|(built_in, api_type)| Self {
+                api_type,
                 name: built_in.name.to_owned(),
                 base: built_in.base.to_owned(),
                 path: built_in.path.to_owned(),
@@ -125,17 +127,15 @@ pub(crate) fn valid_name(name: &str) -> bool {
 
 /// Every key variable a built-in backend reads.
 pub(crate) fn built_in_keys() -> impl Iterator<Item = &'static str> {
-    BUILT_INS
-        .iter()
-        .flat_map(|built_in| built_in.keys.iter().copied())
+    built_ins().flat_map(|(built_in, _)| built_in.keys.iter().copied())
 }
 
 /// The built-in names as the unknown-name sentence lists them.
 pub(crate) fn built_in_list() -> String {
-    let names: Vec<String> = BUILT_INS
-        .iter()
-        .map(|built_in| format!("`{}`", built_in.name))
+    let mut names: Vec<String> = built_ins()
+        .map(|(built_in, _)| format!("`{}`", built_in.name))
         .collect();
+    names.sort();
     match names.split_last() {
         Some((last, [])) => last.clone(),
         Some((last, rest)) => format!("{} and {last}", rest.join(", ")),
@@ -241,6 +241,7 @@ impl Choice<'_> {
             )
             .map(|backend| {
                 backend
+                    .with_api_type(named.api_type)
                     .with_descriptions(named.descriptions)
                     .with_image_route(crate::core::adapters::built_in::images::named(
                         &named.name,
@@ -300,20 +301,19 @@ impl Choice<'_> {
             return Ok(());
         };
         for variable in &named.keys {
-            let Some(owner) = BUILT_INS
-                .iter()
-                .find(|built_in| built_in.keys.contains(&variable.as_str()))
+            let Some((owner, _)) =
+                built_ins().find(|(built_in, _)| built_in.keys.contains(&variable.as_str()))
             else {
                 continue;
             };
-            let other = BUILT_INS.iter().find(|built_in| {
+            let other = built_ins().find(|(built_in, _)| {
                 built_in.name != owner.name
                     && Backend::resolve(Some(built_in.base), None, built_in.model)
                         .ok()
                         .filter(|base| !base.is_loopback())
                         .is_some_and(|base| base.host().map(comparable).as_ref() == Some(&host))
             });
-            if let Some(other) = other {
+            if let Some((other, _)) = other {
                 return Err(BackendError::KeyElsewhere {
                     name: named.name.clone(),
                     variable: variable.clone(),

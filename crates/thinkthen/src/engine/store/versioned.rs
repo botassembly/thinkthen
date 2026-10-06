@@ -6,7 +6,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde::Deserialize;
 
 use super::{Answer, Entries, JSONL};
-use crate::core::adapters::built_in;
+use crate::core::adapters::{ApiType, built_in};
 use crate::core::pack::{self, QuestionKey, State, model_json};
 use crate::core::{AnswerOutcome, Json, ModelName, ObservationId, Url, bytes_sha256, hex};
 use crate::engine::error::Error;
@@ -54,11 +54,17 @@ impl Entries {
                 || answer
                     .adapter
                     .as_deref()
-                    .is_some_and(|adapter| adapter != built_in::NAME)
+                    .is_some_and(|adapter| ApiType::from_name(adapter).is_none())
             {
                 return Err(invalid());
             }
-            if version == 1 && legacy.hex() != answer.key {
+            if version == 1
+                && (legacy.hex() != answer.key
+                    || answer
+                        .adapter
+                        .as_deref()
+                        .is_some_and(|name| name != built_in::NAME))
+            {
                 return Err(invalid());
             }
             let key = complete_key(&answer, state, &answer.answered_by)?;
@@ -67,7 +73,11 @@ impl Entries {
                 answer.observation_id = Some(legacy_id(&answer, state, None)?);
             }
             if version == 2
-                && (answer.adapter.as_deref() != Some(built_in::NAME)
+                && (answer
+                    .adapter
+                    .as_deref()
+                    .and_then(ApiType::from_name)
+                    .is_none()
                     || answer.observation_id.is_none()
                     || key.hex() != answer.key)
             {
@@ -76,7 +86,9 @@ impl Entries {
             answer.key = key.hex();
             answer.url = url.as_str().to_owned();
             answer.key_version = Some(2);
-            answer.adapter = Some(built_in::NAME.to_owned());
+            if version == 1 {
+                answer.adapter = Some(built_in::NAME.to_owned());
+            }
             if let Some(held) = normalized.insert(answer.key.clone(), answer.clone())
                 && held != answer
             {
@@ -110,7 +122,15 @@ pub(super) fn complete_key(
     } else {
         QuestionKey::complete
     };
-    Ok(constructor(&url, &model, &reported, &state, &question))
+    let api = adapter(answer)?;
+    Ok(if api == ApiType::Primary {
+        constructor(&url, &model, &reported, &state, &question)
+    } else {
+        if images {
+            return Err(invalid());
+        }
+        QuestionKey::complete_for(api, &url, &model, &reported, &state, &question)
+    })
 }
 
 pub(super) fn canonical_parts(answer: &Answer, state: &str) -> Result<(String, String), Error> {
@@ -121,8 +141,11 @@ pub(super) fn canonical_parts(answer: &Answer, state: &str) -> Result<(String, S
         return Err(invalid());
     }
     canonical_state(&answer.state, state)?;
-    let (question, decoder) = built_in::canonical_question(&answer.question).ok_or_else(invalid)?;
-    let outcomes = pack::read(&[decoder], &[Ok(&answer.answer)], &answer.answered_by)
+    let api = adapter(answer)?;
+    let (question, decoder) = api
+        .canonical_question(&answer.question)
+        .ok_or_else(invalid)?;
+    let outcomes = pack::read_for(api, &[decoder], &[Ok(&answer.answer)], &answer.answered_by)
         .map_err(|_| invalid())?;
     let [AnswerOutcome::Answered(decoded)] = outcomes.as_slice() else {
         return Err(invalid());
@@ -186,4 +209,12 @@ pub(super) fn canonical_state(digest: &str, state: &str) -> Result<String, Error
         images: images.into(),
     };
     serde_json::to_string(&restored).map_err(|_| invalid())
+}
+
+fn adapter(answer: &Answer) -> Result<ApiType, Error> {
+    match (answer.key_version.unwrap_or(1), answer.adapter.as_deref()) {
+        (1, None) => Ok(ApiType::Primary),
+        (_, Some(name)) => ApiType::from_name(name).ok_or_else(invalid),
+        _ => Err(invalid()),
+    }
 }

@@ -16,8 +16,9 @@ pub(super) fn send(
     limit: Duration,
     invocation: &crate::engine::invocation::Invocation,
     sdk_request_id: &crate::core::SdkRequestId,
-    refresh: bool,
+    controls: (bool, crate::core::adapters::ApiType),
 ) -> Result<Sent, Box<Attempt>> {
+    let (refresh, api) = controls;
     let request = agent
         .post(exchange.url)
         .config()
@@ -55,7 +56,7 @@ pub(super) fn send(
     let info = ResponseInfo::of(
         status,
         header("x-envoy-upstream-service-time"),
-        header(crate::core::adapters::built_in::ATTEMPT_REQUEST_ID_HEADER),
+        header(api.request_id_header()),
         exchange,
     );
     if !(200..300).contains(&status) {

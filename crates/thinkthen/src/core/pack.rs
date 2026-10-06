@@ -21,16 +21,18 @@ use crate::core::text::{Evidence, Url, Withheld};
 
 mod context;
 mod packer;
+mod reading;
 mod split;
 
 pub(crate) use packer::{Entry, PackError, PackLimits, Packer};
-pub(crate) use split::{Split, split};
+pub(crate) use split::{Split, split, split_for};
 
 /// The state one request shares, as the body carries it, and its SHA-256.
 #[derive(Clone)]
 pub(crate) struct State(Arc<Shared>);
 
 struct Shared {
+    api: crate::core::adapters::ApiType,
     json: String,
     sha256: [u8; 32],
     evidence_bytes: usize,
@@ -43,11 +45,25 @@ impl State {
     pub(crate) fn new(json: String, evidence_bytes: usize) -> Self {
         let sha256 = Sha256::digest(json.as_bytes()).into();
         Self(Arc::new(Shared {
+            api: Default::default(),
             json,
             sha256,
             evidence_bytes,
             image_wire: None,
         }))
+    }
+
+    pub(crate) fn with_api(self, api: crate::core::adapters::ApiType) -> Self {
+        Self(Arc::new(Shared {
+            api,
+            json: self.0.json.clone(),
+            sha256: self.0.sha256,
+            evidence_bytes: self.0.evidence_bytes,
+            image_wire: self.0.image_wire.clone(),
+        }))
+    }
+    pub(crate) fn api(&self) -> crate::core::adapters::ApiType {
+        self.0.api
     }
 
     /// Typed image constituents enter the existing state hash, while the
@@ -67,6 +83,7 @@ impl State {
             .len();
         let sha256 = Self::image_sha256(&json);
         Ok(Self(Arc::new(Shared {
+            api: Default::default(),
             json,
             sha256,
             evidence_bytes,
@@ -84,7 +101,7 @@ impl State {
             .image_wire
             .as_ref()
             .map_or(self.json(), |wire| &wire.state);
-        let mut body = built_in::join(state, model, questions);
+        let mut body = self.api().join(state, model, questions);
         if let Some(images) = self
             .0
             .image_wire
@@ -101,7 +118,7 @@ impl State {
 
     pub(crate) fn base_bytes(&self, model: &str) -> usize {
         let wire = self.0.image_wire.as_ref();
-        wire.map_or(self.json().len(), |wire| wire.state.len())
+        wire.map_or(self.api().input_bytes(self.json()), |wire| wire.state.len())
             + model.len()
             + 34
             + wire
@@ -170,7 +187,11 @@ impl State {
         } else {
             QuestionKey::complete
         };
-        constructor(url, requested, reported, self.json(), question)
+        if self.api() == crate::core::adapters::ApiType::Primary {
+            constructor(url, requested, reported, self.json(), question)
+        } else {
+            QuestionKey::complete_for(self.api(), url, requested, reported, self.json(), question)
+        }
     }
 
     pub(crate) fn evidence_bytes(&self) -> usize {
@@ -180,7 +201,7 @@ impl State {
 
 impl PartialEq for State {
     fn eq(&self, other: &Self) -> bool {
-        self.sha256() == other.sha256()
+        self.api() == other.api() && self.sha256() == other.sha256()
     }
 }
 
@@ -236,7 +257,15 @@ pub(crate) fn state(evidence: &Evidence) -> Result<State, EncodeError> {
 
 /// The wire questions one plan sends, in order, each with its key.
 pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
-    let parts = built_in::parts(plan)?;
+    asks_for(crate::core::adapters::ApiType::Primary, url, plan)
+}
+
+pub(crate) fn asks_for(
+    api: crate::core::adapters::ApiType,
+    url: &Url,
+    plan: &Plan,
+) -> Result<Vec<Ask>, EncodeError> {
+    let parts = api.parts(plan)?;
     let evidence = plan
         .evidence()
         .as_text()
@@ -248,7 +277,7 @@ pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
             plan.model().as_str(),
             plan.image_profile(),
         )?,
-        None => State::new(parts.state, evidence.len()),
+        None => State::new(parts.state, evidence.len()).with_api(api),
     };
     let decoders = plan.questions().iter().flat_map(decoders);
     Ok(parts
@@ -266,7 +295,7 @@ pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
 
 /// The logical question that reads each of this question's wire answers
 /// alone: a yes/no question per tag label, and the question itself otherwise.
-fn decoders(question: &Question) -> Vec<Question> {
+pub(crate) fn decoders(question: &Question) -> Vec<Question> {
     match question {
         Question::Tag { text, labels } => (0..labels.count())
             .map(|_| Question::Decide {
@@ -298,6 +327,23 @@ pub(crate) fn read(
     answers: &[Stored<'_>],
     model: &str,
 ) -> Result<Vec<AnswerOutcome>, DecodeError> {
+    read_for(
+        crate::core::adapters::ApiType::Primary,
+        questions,
+        answers,
+        model,
+    )
+}
+
+pub(crate) fn read_for(
+    api: crate::core::adapters::ApiType,
+    questions: &[Question],
+    answers: &[Stored<'_>],
+    model: &str,
+) -> Result<Vec<AnswerOutcome>, DecodeError> {
+    if api != crate::core::adapters::ApiType::Primary {
+        return reading::read(api, questions, answers);
+    }
     let mut rest = answers;
     let mut outcomes = Vec::with_capacity(questions.len());
     for question in questions {

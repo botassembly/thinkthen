@@ -23,6 +23,6 @@ impl State {
         let json = serde_json::to_string(&Context { context, evidence })
             .map_err(|error| EncodeError::of(&error))?;
         let bytes = json.len();
-        Ok(Self::new(json, bytes))
+        Ok(Self::new(json, bytes).with_api(self.api()))
     }
 }

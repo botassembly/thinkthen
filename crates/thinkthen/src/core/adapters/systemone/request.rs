@@ -5,7 +5,6 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 use serde::{Serialize, Serializer};
-use serde_json::value::RawValue;
 
 use crate::core::adapters::systemone::{EncodeError, wire_name};
 use crate::core::json::Json;
@@ -164,12 +163,6 @@ pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
         &parts.model,
         parts.questions.iter().map(String::as_str),
     ))
-}
-
-/// Write the plan as the request body the plan document embeds.
-pub(crate) fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
-    let body = String::from_utf8(encode(plan)?).map_err(|error| EncodeError::of(&error))?;
-    RawValue::from_string(body).map_err(|error| EncodeError::of(&error))
 }
 
 /// One plan's state, model and wire questions, each as the compact JSON the
