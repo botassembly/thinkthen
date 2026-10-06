@@ -49,6 +49,7 @@ pub(super) fn complete<T>(
         members.push((
             name.clone(),
             core::CompleteAnnotationMember {
+                declarations: named.metadata().clone(),
                 identity,
                 legacy: entry.clone(),
                 threshold: named.threshold(),

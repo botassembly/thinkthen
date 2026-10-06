@@ -449,3 +449,13 @@ pub use results::{
 pub use results::{RecognitionReading, RelationReading, ResolvedRelationRule};
 
 pub use results::{CompleteCall, CompleteError, ErrorSnapshot};
+
+mod declarations;
+pub use crate::core::{
+    InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
+    WordingVersion,
+};
+
+mod question_metadata;
+
+pub(crate) mod named_question;

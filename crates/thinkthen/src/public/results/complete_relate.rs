@@ -99,7 +99,7 @@ impl CompleteRelationMember<'_> {
     /// Actual normalized primitive question, retained on failures too.
     #[must_use]
     pub fn question(&self) -> super::ResolvedQuestion<'_> {
-        super::ResolvedQuestion(&self.0.question)
+        super::ResolvedQuestion(&self.0.question, None)
     }
     /// Admitted reading rule, independent of whether the member succeeded.
     #[must_use]

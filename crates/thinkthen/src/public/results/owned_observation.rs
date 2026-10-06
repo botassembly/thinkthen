@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub(super) struct ActualQuestion {
+    pub(super) declarations: core::declaration::QuestionMetadata,
     pub(super) question: core::Question,
     pub(super) threshold: Option<core::Threshold>,
     pub(super) raw_pick: Option<String>,
@@ -26,6 +27,13 @@ pub(super) struct ActualQuestion {
     pub(super) inputs: Vec<Arc<QuestionInput>>,
 }
 impl ObservedQuestion {
+    pub(crate) fn with_declarations(
+        mut self,
+        metadata: &core::declaration::QuestionMetadata,
+    ) -> Self {
+        self.actual.declarations = metadata.clone();
+        self
+    }
     pub(crate) fn with_receipt(mut self, receipt: &facade::Answered) -> Self {
         self.actual.sources.clone_from(&receipt.sources);
         self.actual.observations.clone_from(&receipt.observations);
@@ -135,7 +143,7 @@ impl QuestionDetail<'_> {
     /// The normalized logical primitive actually asked, including declared order.
     #[must_use]
     pub const fn question(&self) -> ResolvedQuestion<'_> {
-        ResolvedQuestion(&self.0.actual.question)
+        ResolvedQuestion(&self.0.actual.question, Some(&self.0.actual.declarations))
     }
     /// Actual admitted reading rule, including failed members.
     #[must_use]

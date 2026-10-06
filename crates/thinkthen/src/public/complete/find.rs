@@ -50,6 +50,18 @@ impl Engine {
         T: Evidence,
     {
         let (units, find, engine) = self.prepare_find(question, units, &options)?;
+        for (at, unit) in units.iter().enumerate() {
+            let input = inputs.get(at).map(|input| input.as_ref());
+            match input {
+                Some(input) => question.metadata.validate_item(input),
+                None => question
+                    .metadata
+                    .validate_item(&crate::public::QuestionInput::Text(
+                        unit.evidence().to_owned(),
+                    )),
+            }
+            .map_err(|error| error.at_record(at))?;
+        }
         let texts = units
             .iter()
             .map(|unit| unit.evidence().to_owned())
@@ -117,6 +129,7 @@ impl Engine {
             let public = Found::new(units, none, &found)?;
             Ok(CompleteFound {
                 canonical: core::CompleteFind {
+                    declarations: question.metadata.clone(),
                     identity,
                     legacy: find.result(picked, found.selection, meta),
                 },

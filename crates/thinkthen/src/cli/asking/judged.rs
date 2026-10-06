@@ -118,6 +118,12 @@ impl Planner<'_> {
     /// value a batch has always quoted, and one document quotes its evidence.
     pub(super) fn plans(&self, held: &Held) -> Result<Vec<Plan>, Failure> {
         if let Some(images) = &held.images {
+            if self.reading.declares_item() && images.text().is_none() {
+                return Err(Failure::Record(crate::core::RecordError::ItemSchema));
+            }
+            if self.reading.declares_item() {
+                self.reading.evidence(&held.record)?;
+            }
             return crate::core::image::plan(
                 self.asked.clone(),
                 images.state(),

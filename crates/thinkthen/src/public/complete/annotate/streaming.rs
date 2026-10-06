@@ -50,7 +50,7 @@ impl Engine {
         };
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let (held, prepared) = record
-                .and_then(|record| prepare_record(record, options.context_text(), at))
+                .and_then(|record| prepare_record(&questions.0, record, options.context_text(), at))
                 .map_err(|error| error.at_record(at))?;
             preparing
                 .asks(&prepared)

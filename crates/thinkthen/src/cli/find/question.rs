@@ -25,7 +25,8 @@ impl Prepared {
                 sources: None,
             });
         };
-        let text = crate::cli::question_text::read(Path::new(path), Failure::OpenQuestionFile)?;
+        let text =
+            crate::cli::question_text::reference(Path::new(path), Failure::OpenQuestionFile)?;
         let file = QuestionFile::parse_find(&text)?;
         let sources = Sources::for_find(
             if !common.field.is_empty() {

@@ -49,6 +49,7 @@ impl Question {
             ));
         }
         Ok(Self {
+            metadata: file.metadata.clone(),
             core: resolved
                 .question()
                 .cloned()

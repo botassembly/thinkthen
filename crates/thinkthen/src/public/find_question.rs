@@ -27,6 +27,7 @@ impl FindQuestionFile {
         let mut question = Question::yes_no(file.text, None, None, None, Kind::Find);
         question.model = file.model;
         question.profile = file.profile;
+        question.metadata = file.metadata;
         Ok(Self {
             question,
             reading,

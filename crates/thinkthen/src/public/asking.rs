@@ -228,6 +228,7 @@ impl Decided {
         observed.requests.clone_from(&self.keys);
         Ok(observed
             .with_receipt(&self.answered)
+            .with_declarations(&question.metadata)
             .with_input(self.input.clone()))
     }
 

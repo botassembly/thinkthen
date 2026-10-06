@@ -106,6 +106,7 @@ fn prepare<T: InputEvidence>(
         ));
     }
     let input = Arc::new(record.original.question_input());
+    ask.0.metadata.validate_item(&input)?;
     crate::public::images::guard(InputFunction::Recognize, &input)?;
     let text = match input.as_ref() {
         QuestionInput::Text(text) => text.clone(),

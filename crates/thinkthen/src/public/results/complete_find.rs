@@ -20,6 +20,7 @@ impl<T> CompleteFound<T> {
     pub fn question(&self) -> super::FindReading<'_> {
         let (text, none) = self.canonical.question();
         super::FindReading {
+            metadata: &self.canonical.declarations,
             text,
             none,
             profile: self.canonical.profile(),

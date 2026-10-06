@@ -66,6 +66,7 @@ pub(crate) struct Typed {
 /// The question that results, with the source of every setting.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Resolved {
+    metadata: crate::core::declaration::QuestionMetadata,
     question: Option<Question>,
     text: QuestionText,
     threshold: Option<Threshold>,
@@ -76,6 +77,9 @@ pub(crate) struct Resolved {
 }
 
 impl Resolved {
+    pub(crate) const fn metadata(&self) -> &crate::core::declaration::QuestionMetadata {
+        &self.metadata
+    }
     /// The question to ask, or `None` when each record carries its own options.
     #[must_use]
     pub(crate) const fn question(&self) -> Option<&Question> {
@@ -238,6 +242,7 @@ pub(crate) fn resolve(
     let (on, on_source) = on_of(typed, file)?;
     let (question, labels_source) = resolved_question(verb, &question_text, yes, no, typed, file)?;
     Ok(Resolved {
+        metadata: file.map(|file| file.metadata.clone()).unwrap_or_default(),
         question,
         text: question_text,
         threshold,

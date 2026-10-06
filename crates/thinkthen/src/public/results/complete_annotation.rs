@@ -76,7 +76,10 @@ impl CompleteAnnotationMember<'_> {
     /// Actual normalized primitive question, retained on failures too.
     #[must_use]
     pub fn question(&self) -> super::ResolvedQuestion<'_> {
-        super::ResolvedQuestion(self.canonical.question())
+        super::ResolvedQuestion(
+            self.canonical.question(),
+            Some(&self.canonical.declarations),
+        )
     }
     /// Admitted reading rule, independent of whether the member succeeded.
     #[must_use]

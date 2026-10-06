@@ -361,6 +361,7 @@ impl ObservedQuestion {
         };
         Ok(Self {
             actual: super::owned_observation::ActualQuestion {
+                declarations: core::declaration::QuestionMetadata::default(),
                 question: question.clone(),
                 threshold,
                 raw_pick: match answer {

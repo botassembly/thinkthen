@@ -76,3 +76,6 @@ mod recognize_records;
 
 #[path = "native_complete/relate_records.rs"]
 mod relate_records;
+
+#[path = "native_complete/declarations.rs"]
+mod declarations;

@@ -303,6 +303,10 @@ pub(super) fn prepare_record<T: InputEvidence>(
         || Ok(question.clone()),
         |options| options.replacing(question),
     )?;
+    question
+        .metadata
+        .validate_text_context(record.context.as_deref())
+        .map_err(|error| error.at_record(at))?;
     let context_text = record
         .context
         .as_deref()
@@ -313,6 +317,10 @@ pub(super) fn prepare_record<T: InputEvidence>(
         .map(crate::public::engine::evidence)
         .transpose()?;
     let input = record.original.question_input();
+    question
+        .metadata
+        .validate_item(&input)
+        .map_err(|error| error.at_record(at))?;
     crate::public::images::guard(function, &input)?;
     if let crate::public::QuestionInput::Text(text) = &input {
         crate::public::engine::evidence(text)?;

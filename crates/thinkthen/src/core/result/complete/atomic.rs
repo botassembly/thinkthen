@@ -9,6 +9,7 @@ use crate::core::{Answer, DecisionResult, Usage};
 /// The complete canonical document for decide, choose, tag, score, filter or rank.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Atomic {
+    pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: ResultIdentity,
     pub(crate) legacy: DecisionResult,
     pub(crate) rank_position: Option<std::num::NonZeroUsize>,
@@ -82,7 +83,13 @@ impl Atomic {
         if let Some(input) = input {
             map.serialize_entry("input", input)?;
         }
-        map.serialize_entry("question", &row.question)?;
+        map.serialize_entry(
+            "question",
+            &crate::core::declaration::ReadableQuestion {
+                question: &row.question,
+                metadata: &self.declarations,
+            },
+        )?;
         map.serialize_entry("answer", &row.answer)?;
         map.serialize_entry("threshold", &row.threshold)?;
         map.serialize_entry(
