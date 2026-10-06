@@ -14,6 +14,7 @@ import sys
 import importlib.util
 import contextlib
 import io
+from unittest import mock
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -110,6 +111,24 @@ def interruption_routing(smoke, base):
         smoke.run = original
 
 
+def python_host_environment(smoke, base):
+    """Copied Windows environment keys still reach the isolated wheel child."""
+    for system, drive in (("SystemRoot", "SystemDrive"), ("SYSTEMROOT", "SYSTEMDRIVE")):
+        expected = {"PATH": "owned-tools", system: "owned-system", drive: "C:",
+                    "TEMP": str(base), "TMP": str(base), "HOME": str(base / "home"),
+                    "APPDATA": str(base / "Roaming"), "LOCALAPPDATA": str(base / "Local")}
+        supplied = expected | {"THINKTHEN_API_KEY": "ambient-fake-key", "HTTP_PROXY": "ambient-proxy"}
+        stop = RuntimeError("stop before creating fixture virtual environment")
+        with mock.patch.object(smoke, "run", side_effect=stop) as child:
+            try:
+                smoke.python_smoke(base, supplied, VERSION, base)
+            except RuntimeError as error:
+                assert error is stop
+            else:
+                raise AssertionError("virtual environment creation did not reach the child boundary")
+        child.assert_called_once_with([sys.executable, "-I", "-m", "venv", str(base / "python")], expected)
+
+
 def main():
     # The command smoke must send the recording's bytes through a Windows pipe unchanged.
     spec = importlib.util.spec_from_file_location("windows_smoke", REPO / "sdlc/scripts/release-windows-smoke.py")
@@ -120,6 +139,7 @@ def main():
               os.environ.copy(), text=evidence, output=evidence.hex())
     with tempfile.TemporaryDirectory(prefix="thinkthen-windows-pack-") as temporary:
         base = Path(temporary)
+        python_host_environment(smoke, base)
         interruption_routing(smoke, base)
         host_setup(base)
         binary = base / "thinkthen.exe"

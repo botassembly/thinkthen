@@ -94,8 +94,9 @@ def interrupt(binary, env):
 
 def python_smoke(platform, env, version, root):
     """Install the packed wheel away from source and count its real requests."""
-    names = ('PATH', 'SystemRoot', 'SystemDrive', 'TEMP', 'TMP', 'HOME', 'APPDATA', 'LOCALAPPDATA')
-    env = {name: env[name] for name in names if name in env}
+    names = ('PATH', 'SYSTEMROOT', 'SYSTEMDRIVE', 'TEMP', 'TMP', 'HOME', 'APPDATA', 'LOCALAPPDATA')
+    # Windows os.environ uppercases names; main copies it into a plain dict.
+    env = {name: value for name, value in env.items() if name.upper() in names}
     venv = root / 'python'
     run([sys.executable, '-I', '-m', 'venv', str(venv)], env)
     python = str(venv / 'Scripts/python.exe')
