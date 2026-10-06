@@ -45,13 +45,12 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score. The SDK uses one configured route; business policy belongs to the proxy. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns both PM ask maps, dependencies, lane ownership and acceptance.
+Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score and the local MCP SDK surface. The SDK uses one configured route; business policy belongs to the proxy. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. [The current plan](team-0-2-2026-10-04.md) owns both PM ask maps, dependencies, lane ownership and acceptance.
 
 Already landed: version/release safety, backends/provider setups/default-eight, rank search, audit/docs/recipes, Windows CLI/Rust/C/Python, backend selection, DuckDB 1.5.4/1.5.5, agent skill, native files and local runtimes. These are retained behavior. Raw JSON compatibility methods and older qualification runs do not establish the newly required typed SDK parity.
 
 Open owners:
 
-- [0400 slice D: Reconcile provider setup measured rows](../tickets/0400-provider-setups-and-concurrency.md), using landed 0421 runtime evidence without new paid calls.
 - [0296: Add the pandas Series accessor for all ten functions](../tickets/0296-pandas-series-accessor.md)
 - [0300: ---](../tickets/0300-caller-priced-call-cost.md)
 - [0393: npm publishes through staged publishing](../tickets/0393-npm-staged-publishing.md)
@@ -61,7 +60,6 @@ Open owners:
 - [0409: Match TypeScript rank and find types to runtime](../tickets/0409-typescript-rank-find-contract.md)
 - [0410: Complete all ten dataframe functions and located files](../tickets/0410-column-function-equivalence.md)
 - [0411: Reread stored answers under changed rules on every surface](../tickets/0411-binding-reading-replay-proof.md)
-- [0412: Document and test R index conventions](../tickets/0412-r-result-contract.md)
 - [0413: Supply per-record candidate options everywhere](../tickets/0413-options-per-record-equivalence.md)
 - [0414: Separate context from aggregate evidence everywhere](../tickets/0414-separate-shared-context.md)
 - [0417: Rank question sets on every SQL surface](../tickets/0417-sql-rank-question-sets.md)
@@ -74,16 +72,10 @@ Open owners:
 - [0430: Complete Ada and COBOL typed parity](../tickets/0430-ada-cobol-typed-parity.md)
 - [0431: Complete typed located results in existing named SDKs](../tickets/0431-named-sdk-located-result-parity.md)
 - [0432: Enforce shared behavior and generate the current parity table](../tickets/0432-canonical-binding-parity-matrix.md)
-- [0433: Keep SQLite find’s selected model](../tickets/0433-sqlite-find-keeps-selected-model.md)
 - [0434: Match SQL question inputs and descriptions](../tickets/0434-sql-question-and-option-parity.md)
 - [0435: Return isolated SQL call facts and caller-priced cost](../tickets/0435-sql-call-facts-and-prices.md)
 - [0436: Return rank position in detailed rank values](../tickets/0436-rank-details-return-rank-position.md)
-- [0437: Honor the configured native build output folder](../tickets/0437-native-install-honors-target-dir.md)
-- [0438: Replace Ruby’s unsupported-platform placeholder route](../tickets/0438-ruby-platform-fallback-diagnostic.md)
-- [0439: Document Linux R installation](../tickets/0439-r-linux-install-guide.md)
-- [0440: Move audit and diff under runs](../tickets/0440-runs-audit-diff-command-tree.md)
 - [0441: Prepare the Decisions backend for preview access](../tickets/0441-openai-decisions-backend-preview.md)
-- [0442: Settle SDK identity, provenance and cache compatibility](../tickets/0442-proxy-ready-sdk-contract.md)
 - [0443: Carry SDK call identity and cache instructions](../tickets/0443-sdk-call-identity-and-cache-policy.md)
 - [0444: Version cache keys and preserve offline replay](../tickets/0444-versioned-cache-identity-and-replay.md)
 - [0445: Complete attempt observations and command facts](../tickets/0445-complete-attempt-and-command-facts.md)
@@ -96,7 +88,6 @@ Open owners:
 
 - [0448: Enforce documented image limits and refuse dropped images](../tickets/0448-image-route-limits-and-explicit-refusals.md)
 
-- [0449: Keep each SDK engine on one configured route](../tickets/0449-one-route-sdk-boundary.md)
 
 - [0450: Give each answer a stable identifier and reserve proxy policy fields](../tickets/0450-stable-answer-identifiers-and-proxy-reservations.md)
 
@@ -109,6 +100,8 @@ Open owners:
 Support work: [0453: Extend authorized live token admission](../tickets/0453-extend-authorized-live-token-admission.md) preserves charges for separately approved runs; experiments remain outside the release gate.
 
 SQLite find’s silent model override is first. Shared C/metadata/semantic contracts precede wide host edits; SQL, dataframe and host families proceed in noncolliding slices. 0432 generates current parity from the complete executed suite with no skips. 0441 is written now with preview access/schema as an external prerequisite, without guessed wire behavior or paid calls.
+
+- [0455: Expose the ten functions through a local MCP server](../tickets/0455-mcp-ten-function-surface.md)
 
 Current work is planning, not release preparation. Final hosted rehearsal, real Windows qualification and QA run only after required implementation lands on the final reviewed commit; publishing still requires Ian’s go. Main is 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. 0447/0448/0452 add vision to 0.2; the plan records unsupported function/route refusals. 0449 keeps one endpoint/key/API type; 0450 reserves proxy overrides now; execution remains in 0.3 under an admitted proxy protocol. PostgreSQL evidence paths use the reviewed client-reader workaround in 0434. Windows Node/C#/JVM packaging remains 0.3; SDK parity on supported platforms is required now.
 
