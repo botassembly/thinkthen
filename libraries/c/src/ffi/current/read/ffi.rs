@@ -83,3 +83,30 @@ pub(super) unsafe fn strings(value: StringsV1) -> Result<Vec<String>, Failure> {
         })
         .collect()
 }
+
+pub(super) unsafe fn choices(
+    value: super::carriers::ChoicesV1,
+) -> Result<Vec<crate::current::Choice>, Failure> {
+    // SAFETY: every initialized entry and its active buffers has its counted extent.
+    unsafe { slice(value.data, value.len) }?
+        .iter()
+        .map(|choice| {
+            let weight = if flag(choice.weight.present)? {
+                if !choice.weight.value.is_finite() {
+                    return Err(Failure::usage("choice weight must be finite"));
+                }
+                Some(choice.weight.value)
+            } else {
+                None
+            };
+            // SAFETY: active counted text/content is readable through this call.
+            unsafe {
+                Ok(crate::current::Choice {
+                    name: string(choice.name)?.to_owned(),
+                    description: optional_content(choice.description)?,
+                    weight,
+                })
+            }
+        })
+        .collect()
+}

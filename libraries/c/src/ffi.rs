@@ -10,7 +10,10 @@
 
 use std::ffi::{CStr, CString, c_char};
 
-/// Counted typed descriptors and current-native helpers.
+/// Canonical counted descriptors and borrowed carrier layouts.
+pub mod carriers;
+
+/// Counted constructors; native complete execution integration stays private.
 #[path = "ffi/current/ffi.rs"]
 pub mod current;
 #[path = "ffi/texts/ffi.rs"]

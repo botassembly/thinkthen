@@ -1,16 +1,16 @@
 //! Run existing native doors with owned inputs; no parser, reader or scheduler here.
+use super::private::CurrentSummaryV1;
 use super::{
     Input, QuestionHandle, ResultHandle, SourceHandle, Storage,
     question::Native,
     views::{self, Row},
 };
 use crate::failures::Failure;
-use crate::ffi::current::carriers::CurrentSummaryV1;
 use std::sync::{
     Mutex, PoisonError,
     atomic::{AtomicUsize, Ordering},
 };
-use thinkthen::{CallOptions, Engine, Facts, LoadedQuestion, RecordObservation, Tally};
+use thinkthen::{CallOptions, Engine, Evidence, Facts, LoadedQuestion, RecordObservation, Tally};
 
 pub(crate) fn ask(
     engine: &Engine,
@@ -118,6 +118,23 @@ fn execute(
     output: (&mut Storage, &AtomicUsize),
 ) -> Result<(Vec<Row>, Facts), Failure> {
     let (storage, input_index) = output;
+    match &source.0 {
+        super::Source::Files(_, options) if options.media == thinkthen::ReaderMedia::Image => {
+            return Err(Failure::usage(
+                "private result/1 projection accepts text only",
+            ));
+        }
+        super::Source::Records(records)
+            if records.iter().any(|record| {
+                !record.images.is_empty() || record.context.is_some() || !record.options.is_empty()
+            }) =>
+        {
+            return Err(Failure::usage(
+                "private result/1 projection cannot discard context, options or images",
+            ));
+        }
+        _ => {}
+    }
     let records = source.read()?;
     match &question.native {
         Native::Atomic(loaded) => match loaded {
@@ -266,8 +283,7 @@ fn entities(
                     let input = input?;
                     engine.check_record_limit(at)?;
                     input_index.store(input.index, Ordering::Relaxed);
-                    let call =
-                        tally.run(|| engine.recognize_with(q, input.original.text(), options))?;
+                    let call = tally.run(|| engine.recognize_with(q, input.evidence(), options))?;
                     rows.push(Row::Recognition(views::recognition(
                         storage,
                         &input,
@@ -291,8 +307,11 @@ fn entities(
                     return Err(Failure::usage("relate takes at most 255 records"));
                 }
                 let entity = match input.original {
-                    super::Content::Json(ref raw) => thinkthen::Entity::from_record(raw.get())?,
-                    super::Content::Text(ref text) => thinkthen::Entity::new(text, "*")?,
+                    Some(super::Content::Json(ref raw)) => {
+                        thinkthen::Entity::from_record(raw.get())?
+                    }
+                    Some(super::Content::Text(ref text)) => thinkthen::Entity::new(text, "*")?,
+                    None => return Err(Failure::usage("relate accepts text only")),
                 };
                 if input.position.is_none() || !entities.contains(&entity) {
                     entities.push(entity);
@@ -302,7 +321,7 @@ fn entities(
             let call = engine.relate_with(q, entities, options)?;
             let mut result = views::relations(storage, call.value());
             let (data, len) = storage.array(inputs);
-            result.inputs = crate::ffi::current::carriers::CurrentRowsV1 { data, len };
+            result.inputs = super::private::CurrentRowsV1 { data, len };
             Ok((vec![Row::Relations(result)], call.facts().clone()))
         }
         _ => Err(Failure::defect("entity dispatch received another kind")),
@@ -331,15 +350,15 @@ fn find(
         .value()
         .candidates()
         .iter()
-        .map(|c| crate::ffi::current::carriers::CurrentCandidateV1 {
+        .map(|c| super::private::CurrentCandidateV1 {
             common: views::row(storage, c.input()),
             probability: c.probability(),
         })
         .collect();
     let (data, len) = storage.array(candidates);
-    let find = crate::ffi::current::carriers::CurrentFindV1 {
+    let find = super::private::CurrentFindV1 {
         selected: row,
-        candidates: crate::ffi::current::carriers::CurrentCandidatesV1 { data, len },
+        candidates: super::private::CurrentCandidatesV1 { data, len },
     };
     Ok((vec![Row::Find(find)], call.facts().clone()))
 }

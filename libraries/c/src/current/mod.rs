@@ -1,21 +1,29 @@
-//! Owned native inputs and typed result/1 helpers; no new semantic pipeline.
+//! Owned typed inputs and private native conversion storage.
+#![allow(
+    dead_code,
+    reason = "complete execution adapters await the native result/2 landing; no temporary C ABI is exported"
+)]
+pub(crate) mod descriptors;
+#[cfg(test)]
 mod execute;
 mod question;
+mod values;
+pub(crate) use descriptors::QuestionData;
+#[cfg(test)]
 mod views;
 use crate::failures::Failure;
-use crate::ffi::current::carriers::{
-    ContentV1, CurrentAttemptV1, CurrentQuestionV1, CurrentSummaryV1, OptionalStringV1, StringV1,
-};
+use crate::ffi::current::carriers::{ContentV1, OptionalStringV1, StringV1};
 use serde::Serialize;
 use serde_json::value::RawValue;
 use std::fmt;
-use thinkthen::{Evidence, ReaderOptions, SourceRecord};
+use thinkthen::{Evidence, InputReaderOptions};
 
 /// Immutable question, independent of every constructor buffer/member handle.
 #[derive(Clone)]
 pub struct QuestionHandle {
     pub(crate) json: String,
     pub(crate) native: question::Native,
+    pub(crate) descriptor: Option<Box<QuestionData>>,
 }
 impl fmt::Debug for QuestionHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -45,10 +53,68 @@ impl Serialize for Content {
         }
     }
 }
+/// Validated immutable image plus caller-authored filename, never guessed media.
+#[derive(Clone)]
+pub struct ImageHandle {
+    pub(crate) native: thinkthen::ImageInput,
+    pub(crate) filename: Option<String>,
+}
+impl fmt::Debug for ImageHandle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ImageHandle")
+            .field("media", &self.native.media())
+            .field("width", &self.native.width())
+            .field("height", &self.native.height())
+            .finish_non_exhaustive()
+    }
+}
+impl ImageHandle {
+    pub(crate) fn view(&self) -> crate::ffi::carriers::ImageViewV1 {
+        crate::ffi::carriers::ImageViewV1 {
+            media: match self.native.media() {
+                thinkthen::ImageMedia::Jpeg => 1,
+                thinkthen::ImageMedia::Png => 2,
+            },
+            bytes: self.native.bytes().as_ptr(),
+            bytes_len: self.native.bytes().len(),
+            width: self.native.width(),
+            height: self.native.height(),
+            filename: self
+                .filename
+                .as_ref()
+                .map_or_else(OptionalStringV1::default, |name| OptionalStringV1 {
+                    present: 1,
+                    value: StringV1 {
+                        data: if name.is_empty() {
+                            std::ptr::null()
+                        } else {
+                            name.as_ptr().cast()
+                        },
+                        len: name.len(),
+                    },
+                }),
+        }
+    }
+}
+#[derive(Clone)]
+pub(crate) struct Choice {
+    pub(crate) name: String,
+    pub(crate) description: Option<Content>,
+    pub(crate) weight: Option<f64>,
+}
+#[derive(Clone)]
+pub(crate) struct Position {
+    pub(crate) file: String,
+    pub(crate) first_line: Option<usize>,
+    pub(crate) last_line: Option<usize>,
+}
 #[derive(Clone)]
 pub(crate) struct Input {
-    pub(crate) original: Content,
-    pub(crate) position: Option<SourceRecord<()>>,
+    pub(crate) original: Option<Content>,
+    pub(crate) context: Option<Content>,
+    pub(crate) options: Vec<Choice>,
+    pub(crate) images: Vec<ImageHandle>,
+    pub(crate) position: Option<Position>,
     pub(crate) index: usize,
 }
 impl Serialize for Input {
@@ -58,17 +124,64 @@ impl Serialize for Input {
 }
 impl Evidence for Input {
     fn evidence(&self) -> &str {
-        self.original.text()
+        self.original.as_ref().map_or("", Content::text)
     }
 }
-// Serialize only original evidence for the native detail/annotation pipeline.
-// Its physical metadata remains in the adapter-owned position.
-
-/// An immutable record snapshot or explicit native reader selection.
+impl Input {
+    pub(crate) fn from_source(index: usize, item: thinkthen::SourceItem) -> Self {
+        match item {
+            thinkthen::SourceItem::Text(text) => Self {
+                original: Some(Content::Text(text.record)),
+                context: None,
+                options: Vec::new(),
+                images: Vec::new(),
+                index,
+                position: Some(Position {
+                    file: text.file,
+                    first_line: Some(text.first_line),
+                    last_line: Some(text.last_line),
+                }),
+            },
+            thinkthen::SourceItem::Image(image) => Self {
+                original: None,
+                context: None,
+                options: Vec::new(),
+                index,
+                images: vec![ImageHandle {
+                    native: image.record,
+                    filename: Some(image.file.clone()),
+                }],
+                position: Some(Position {
+                    file: image.file,
+                    first_line: None,
+                    last_line: None,
+                }),
+            },
+        }
+    }
+    pub(crate) fn question_input(&self) -> Result<thinkthen::QuestionInput, Failure> {
+        let text = self.original.as_ref().map(|v| v.text().to_owned());
+        if self.images.is_empty() {
+            return Ok(thinkthen::QuestionInput::Text(text.ok_or_else(|| {
+                Failure::usage("text records require original content")
+            })?));
+        }
+        Ok(thinkthen::QuestionInput::Images(
+            thinkthen::ImageEvidence::new(
+                text,
+                self.images
+                    .iter()
+                    .map(|image| image.native.clone())
+                    .collect(),
+            )?,
+        ))
+    }
+}
+/// An immutable record snapshot or explicit shared native reader selection.
 pub struct SourceHandle(pub(crate) Source);
 pub(crate) enum Source {
     Records(Vec<Input>),
-    Files(Vec<String>, ReaderOptions),
+    Files(Vec<String>, InputReaderOptions),
 }
 impl fmt::Debug for SourceHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -81,19 +194,9 @@ impl SourceHandle {
         match &self.0 {
             Source::Records(records) => Ok(Box::new(records.iter().cloned().map(Ok))),
             Source::Files(paths, options) => {
-                let reader = thinkthen::read_files(paths, *options)?;
+                let reader = thinkthen::read_inputs(paths, *options)?;
                 Ok(Box::new(reader.enumerate().map(|(index, record)| {
-                    let record = record?;
-                    Ok(Input {
-                        original: Content::Text(record.record),
-                        position: Some(SourceRecord {
-                            record: (),
-                            file: record.file,
-                            first_line: record.first_line,
-                            last_line: record.last_line,
-                        }),
-                        index,
-                    })
+                    Ok(Input::from_source(index, record?))
                 })))
             }
         }
@@ -136,14 +239,16 @@ impl Storage {
         }
     }
 }
+#[cfg(test)]
 /// Result view memory belongs entirely to this owner, never to the engine.
-pub struct ResultHandle {
+pub(crate) struct ResultHandle {
     pub(crate) _storage: Storage,
-    pub(crate) summary: CurrentSummaryV1,
+    pub(crate) summary: private::CurrentSummaryV1,
     pub(crate) rows: Vec<views::Row>,
-    pub(crate) questions: Vec<CurrentQuestionV1>,
-    pub(crate) attempts: Vec<CurrentAttemptV1>,
+    pub(crate) questions: Vec<private::CurrentQuestionV1>,
+    pub(crate) attempts: Vec<private::CurrentAttemptV1>,
 }
+#[cfg(test)]
 impl fmt::Debug for ResultHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ResultHandle")
@@ -152,5 +257,11 @@ impl fmt::Debug for ResultHandle {
             .finish_non_exhaustive()
     }
 }
+#[cfg(test)]
 pub(crate) use execute::ask;
+#[cfg(test)]
 pub(crate) use views::Row;
+
+#[cfg(test)]
+#[path = "../ffi/current/carriers.rs"]
+pub(crate) mod private;

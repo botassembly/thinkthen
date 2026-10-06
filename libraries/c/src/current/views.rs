@@ -1,21 +1,23 @@
 //! Project native typed values directly into stable owned C views.
-use super::{Content, Input, Storage};
-use crate::ffi::current::carriers::{
+use super::private::{
     CurrentAnnotationV1, CurrentAtomicV1, CurrentAttemptV1, CurrentFactsV1, CurrentMemberV1,
     CurrentMembersV1, CurrentMetaV1, CurrentQuestionV1, CurrentRecognitionV1, CurrentRelationsV1,
-    CurrentRowV1, CurrentValueV1, EdgeV1, EdgesV1, EndpointV1, EntitiesV1, EntityEdgeV1,
-    EntityEdgesV1, EntityV1, LocationV1, OptionalContentV1, OptionalDoubleV1, OptionalLocationV1,
-    OptionalSizeV1, OptionalU16V1, OptionalU64V1, ProbabilitiesV1, ProbabilityV1, StringsV1,
+    CurrentRowV1, CurrentValueV1,
+};
+use super::{Content, Input, Storage};
+use crate::ffi::carriers::{
+    LocationV1, OptionalContentV1, OptionalDoubleV1, OptionalLocationV1, OptionalSizeV1,
+    OptionalU16V1, OptionalU64V1, ProbabilitiesV1, ProbabilityV1, StringsV1,
 };
 use thinkthen::{
     Annotated, Answer, Details, Facts, FailureCause, Judgment, Probabilities, QuestionDetail,
-    Recognized, RecognizedEntity,
+    Recognized,
 };
 #[derive(Clone)]
 pub(crate) enum Row {
     Atomic(Box<CurrentAtomicV1>),
     Original(CurrentRowV1),
-    Find(crate::ffi::current::carriers::CurrentFindV1),
+    Find(super::private::CurrentFindV1),
     Annotation(CurrentAnnotationV1),
     Recognition(CurrentRecognitionV1),
     Relations(CurrentRelationsV1),
@@ -123,15 +125,18 @@ pub(crate) fn row(s: &mut Storage, input: Option<&Input>) -> CurrentRowV1 {
             present: 1,
             value: LocationV1 {
                 file: s.optional_string(Some(&p.file)),
-                first_line: size(Some(p.first_line)),
-                last_line: size(Some(p.last_line)),
+                first_line: size(p.first_line),
+                last_line: size(p.last_line),
             },
         });
     CurrentRowV1 {
-        input: OptionalContentV1 {
-            present: 1,
-            value: s.content(&input.original),
-        },
+        input: input
+            .original
+            .as_ref()
+            .map_or_else(OptionalContentV1::default, |original| OptionalContentV1 {
+                present: 1,
+                value: s.content(original),
+            }),
         position,
         index: size(Some(input.index)),
         ..CurrentRowV1::default()
@@ -226,60 +231,18 @@ pub(crate) fn annotation(
         members: CurrentMembersV1 { data, len },
     })
 }
-fn entity(s: &mut Storage, e: &RecognizedEntity) -> EntityV1 {
-    EntityV1 {
-        text: s.string(e.text()),
-        start: e.start(),
-        end: e.end(),
-        length: e.length(),
-        kind: s.string(e.kind()),
-        strength: e.strength(),
-    }
-}
 pub(crate) fn recognition(s: &mut Storage, input: &Input, r: &Recognized) -> CurrentRecognitionV1 {
-    let entities = r.entities().iter().map(|e| entity(s, e)).collect();
-    let (data, len) = s.array(entities);
-    let entities = EntitiesV1 { data, len };
-    let relations = r
-        .relations()
-        .unwrap_or_default()
-        .iter()
-        .map(|e| EntityEdgeV1 {
-            relation: s.string(e.relation()),
-            source: entity(s, e.source()),
-            target: entity(s, e.target()),
-            probability: e.probability(),
-            either: i32::from(e.either()),
-        })
-        .collect();
-    let (data, len) = s.array(relations);
+    let value = s.recognition_value(r);
     CurrentRecognitionV1 {
         common: row(s, Some(input)),
-        entities,
-        relations_present: i32::from(r.relations().is_some()),
-        relations: EntityEdgesV1 { data, len },
+        entities: value.entities,
+        relations_present: value.relations.present,
+        relations: value.relations.value,
     }
 }
 pub(crate) fn relations(s: &mut Storage, edges: &[thinkthen::Edge]) -> CurrentRelationsV1 {
-    let edges = edges
-        .iter()
-        .map(|e| EdgeV1 {
-            relation: s.string(e.relation()),
-            source: EndpointV1 {
-                name: s.string(e.source().name()),
-                kind: s.string(e.source().kind()),
-            },
-            target: EndpointV1 {
-                name: s.string(e.target().name()),
-                kind: s.string(e.target().kind()),
-            },
-            probability: e.probability(),
-            either: i32::from(e.either()),
-        })
-        .collect();
-    let (data, len) = s.array(edges);
     CurrentRelationsV1 {
-        edges: EdgesV1 { data, len },
+        edges: s.edges(edges),
         ..CurrentRelationsV1::default()
     }
 }

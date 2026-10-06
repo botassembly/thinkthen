@@ -22,7 +22,11 @@ pub(crate) fn parse(kind: u32, json: String) -> Result<QuestionHandle, Failure> 
         10 => Native::Relate(Relate::from_json(&json)?),
         _ => return Err(Failure::usage("invalid question kind")),
     };
-    Ok(QuestionHandle { json, native })
+    Ok(QuestionHandle {
+        json,
+        native,
+        descriptor: None,
+    })
 }
 pub(crate) fn load(path: &str) -> Result<QuestionHandle, Failure> {
     let json = thinkthen::read_question_file(path)
@@ -72,5 +76,9 @@ pub(crate) fn plain(
         let q = Question::find(&text)?;
         Native::Find(if none { q.offering_none()? } else { q })
     };
-    Ok(QuestionHandle { json, native })
+    Ok(QuestionHandle {
+        json,
+        native,
+        descriptor: None,
+    })
 }

@@ -265,3 +265,61 @@ pub(super) unsafe fn plain(
         .map_err(|_| Failure::defect("native plain question could not be written"))?;
     crate::current::plain(spec.kind, text, spec.none != 0, json)
 }
+
+pub(super) unsafe fn descriptor(
+    spec: &QuestionSpecV1,
+) -> Result<crate::current::QuestionData, Failure> {
+    // SAFETY: called only after native validation of live initialized descriptors.
+    unsafe {
+        let members = read::slice(spec.members.data, spec.members.len)?
+            .iter()
+            .map(|member| {
+                Ok((
+                    read::string(member.name)?.to_owned(),
+                    read::reference(member.question)?.clone(),
+                ))
+            })
+            .collect::<Result<Vec<_>, Failure>>()?;
+        let relations = read::slice(spec.relations.data, spec.relations.len)?
+            .iter()
+            .map(|r| {
+                Ok(crate::current::descriptors::Relation {
+                    name: read::string(r.name)?.to_owned(),
+                    source: read::string(r.source)?.to_owned(),
+                    target: read::string(r.target)?.to_owned(),
+                    reads: read::optional_string(r.reads)?,
+                    either: read::flag(r.either)?,
+                    single: read::flag(r.single)?,
+                })
+            })
+            .collect::<Result<Vec<_>, Failure>>()?;
+        Ok(crate::current::QuestionData {
+            kind: spec.kind,
+            text: if spec.kind < 8 && spec.members.len == 0 {
+                Some(read::content(spec.text)?)
+            } else {
+                None
+            },
+            yes: read::optional_content(spec.yes)?,
+            no: read::optional_content(spec.no)?,
+            choices: read::choices(spec.choices)?,
+            threshold: spec.threshold,
+            relation_threshold: spec.relation_threshold,
+            model: read::optional_string(spec.model)?,
+            profile: read::optional_string(spec.profile)?,
+            batch: if read::flag(spec.batch.present)? {
+                Some(spec.batch.value)
+            } else {
+                None
+            },
+            batch_max: read::flag(spec.batch_max)?,
+            none: read::flag(spec.none)?,
+            on: read::strings(spec.on)?,
+            members,
+            kinds: read::choices(spec.kinds)?,
+            relations,
+            name_pointer: read::optional_string(spec.name_pointer)?,
+            kind_pointer: read::optional_string(spec.kind_pointer)?,
+        })
+    }
+}

@@ -1,6 +1,6 @@
 # 0426: Expose typed C calls and complete result carriers
 
-Status: in progress. Slice A provides counted C constructors and typed current-native helpers on lane claude-1; result/2 and image adoption remain open.
+Status: in progress. Lane claude-2 implements canonical C layouts, counted inputs and immutable image ownership; complete native result/2 integration and whole-change qualification remain open.
 
 Milestone: 0.2
 
@@ -25,9 +25,9 @@ Settle shared schema with 0408, 0300 and 0442 first. This ticket owns the additi
 
 ## Design notes
 
-Slice A uses the reviewed counted input signatures and publishes distinct `*_current` helpers over native result/1; complete result/2 exports remain unpublished until native adoption can supply their required facts and identities. [The C contract](../../libraries/c/TYPED.md) fixes the current helper scope, ownership and remaining gaps. Fresh High code review and all landing gates remain with the coordinator. Ian can overturn the additive current helper spellings before publication.
+The coordinator accepted the reviewed complete signatures retained in [the private integration contract](../../libraries/c/src/complete-signatures.h) with the ruling that unpublished `record_v1` can include context and candidates. Preserve released symbols/layouts; do not freeze a temporary `*_current` ABI or invent `record_v2`. The branch reuses 22f9f787b constructors, storage and native regression behavior. [The C contract](../../libraries/c/TYPED.md) describes the unpublished target and its remaining integration. No complete exports, publication, parity claim or landing record precedes actual native support and root's fresh High whole-change review.
 
-Builder checks: the existing C suite passed 3 unit and 70 integration tests, including 11 typed consumer cases under its sanitizer execution and exact header/export inventories. The final NULL-relation-cut refusal passed its focused zero-send regression. Offline policy, full C-target Clippy with warnings denied, formatting and C11/C++17 header compilation passed. The header inventory reader now distinguishes nested struct fields from top-level declarations; its existing malformed-declaration refusals remain. Added C modules own descriptor cloning and view backing storage and reuse native execution; the measured core source ratchet is unchanged. This is builder evidence, not landing qualification or full 0426 parity.
+Current independent implementation clones ordered context/candidates/images, uses native pixel validation and shared text/image readers, provides stable borrowed image views, and stores canonical question/value/location/image view backing allocations. Complete result/2 identities, metadata, facts/attempts, stopped errors and all ten execution/accessor routes remain native integration work. Lane0 is read-only to this builder; its active WIP is not merged. Final full tests/lint on the landing candidate remain with the coordinator.
 
 Review exact exported signatures before code. Existing ABI symbols remain valid. The borrowed/owned lifetime contract and invalid-handle behavior must be explicit; memory safety needs High review.
 

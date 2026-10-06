@@ -22,7 +22,7 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 ## Counted typed calls
 
-[The typed C contract](TYPED.md) describes 0426 slice A: owned counted question/source handles, ten named `*_current` calls, and typed current-native values, probabilities, structures, locations, facts and observations. These additive helpers expose native result/1. Complete result/2 and image execution remain open with their native owners; the prior calls stay compatible.
+[The typed C contract](TYPED.md) describes the unpublished 0426 work: counted question/source/image constructors, immutable image views and canonical result/2 carrier layouts. Complete execution/accessor integration awaits the native result/2 APIs. Released calls remain compatible.
 
 ## Windows x86-64
 
