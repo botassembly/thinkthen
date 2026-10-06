@@ -26,3 +26,14 @@ CLI, Rust, C, every language, all SQL and dataframe variants rank over the same 
 ## Native work in progress
 
 Lane0 adds Question::rank_described, rank_from_json and load_rank through the existing parser/resolver and capped reader. Saved decide criteria reject authored cuts/bands; saved score retains ordered levels, descriptions, model and batch. Public admission tests compare independently authored saved and built criteria, score equivalence and invalid inputs. Ranking execution and complete result integration remain open.
+
+## SQL adoption dependency (0417 family, 2026-10-06)
+
+The additive SQL rank-set route adopts native described decide members, with
+public wire-criteria and ordering checks on all three hosts. This does not
+complete this ticket's independent single-question/saved-score outcome.
+On the SQL slice’s main baseline adab36bea, `Engine::rank_with` accepts Kind::Rank from `Question::rank(text)`; saved
+`Question::from_json` returns Decide/Score with no public conversion to rank.
+Native owner must expose saved described decide/score rank admission and its
+weighted ordering before SQL can adopt it; no SQL-local sort/parser is added.
+Existing plain single-question rank remains unchanged.

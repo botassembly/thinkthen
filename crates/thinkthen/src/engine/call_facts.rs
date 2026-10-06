@@ -30,6 +30,7 @@ struct State {
     missing_usage: bool,
     token_sum_valid: bool,
     model: Option<String>,
+    mixed_models: bool,
 }
 
 #[derive(Clone)]
@@ -83,6 +84,7 @@ impl CallFacts {
             missing_usage: false,
             token_sum_valid: true,
             model: None,
+            mixed_models: false,
         })))
     }
 
@@ -119,7 +121,16 @@ impl CallFacts {
     }
 
     pub(crate) fn answered_by(&self, model: &str) {
-        self.state().model.get_or_insert_with(|| model.to_owned());
+        let mut state = self.state();
+        if state
+            .model
+            .as_deref()
+            .is_some_and(|previous| previous != model)
+        {
+            state.mixed_models = true;
+        } else if state.model.is_none() {
+            state.model = Some(model.to_owned());
+        }
     }
 
     pub(crate) fn finished_records(&self, records: usize) {
@@ -153,7 +164,7 @@ impl CallFacts {
             cost_complete: state.token_sum_valid
                 && !state.missing_usage
                 && state.live_replies == state.requests_sent,
-            model: state.model.clone(),
+            model: (!state.mixed_models).then(|| state.model.clone()).flatten(),
         }
     }
 }
