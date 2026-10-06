@@ -76,7 +76,7 @@ A saved find reading uses the same ordered parser and capped reader:
 {"find": "TEXT", "on": "/body", "model": "NAME", "profile": "NAME"}
 ```
 
-Its candidates are the actual complete ordered input set. It takes no `options`, `threshold`, or `batch`. Typed `--field` replaces the whole `on` list and typed `--model` replaces the saved model. `Question::find_from_json` and `Question::load_find` retain the authored text, model and profile; native callers select non-root evidence through `RecordReading` rather than embedding a second reader in the question.
+Its candidates are the actual complete ordered input set. It takes no `options`, `threshold`, or `batch`. Typed `--field` replaces the whole `on` list and typed `--model` replaces the saved model. `Question::find_from_json` and `Question::load_find` retain the authored text, model and profile; native callers use `FindQuestionFile::from_json` or `load` to retain the question and the complete `RecordReading` pointer list together. Its typed getters and `into_parts` supply ordinary composition; actual execution uses `find_records_complete_with` or its fallible counterpart. The question-only loaders refuse non-root pointers rather than discarding them.
 
 Native `Question::choose_records` prepares a choose reading with candidates supplied explicitly by every `RecordInput`. `RecordChooseQuestion::from_json` and `load` retain saved text, cut, model, profile and batch. Each original's `RecordOptions` replaces the whole saved shortlist. Every eager original is admitted before sending; a missing later shortlist refuses the whole call. An empty call has zero observations and invents no executable question.
 

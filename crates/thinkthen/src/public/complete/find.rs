@@ -4,6 +4,7 @@ use crate::public::options::Stop;
 use crate::public::{
     Call, CallOptions, CompleteFound, Engine, Error, Evidence, Found, InputFunction, Question,
 };
+mod records;
 
 impl Engine {
     /// Select from the whole admitted ordered set, retaining every candidate probability.
@@ -19,8 +20,23 @@ impl Engine {
         I: IntoIterator,
         I::Item: Evidence,
     {
-        let (units, find, engine) =
-            self.prepare_find(question, units.into_iter().map(Ok), &options)?;
+        self.try_find_complete_with(question, units.into_iter().map(Ok), options)
+    }
+
+    /// Admit a fallible whole set before executing the complete find question.
+    /// # Errors
+    /// Reader, count or byte failures refuse before sending; started failures retain final facts.
+    pub fn try_find_complete_with<I, T>(
+        &self,
+        question: &Question,
+        units: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteFound<T>>, Error>
+    where
+        I: IntoIterator<Item = Result<T, Error>>,
+        T: Evidence,
+    {
+        let (units, find, engine) = self.prepare_find(question, units, &options)?;
         let texts = units
             .iter()
             .map(|unit| unit.evidence().to_owned())

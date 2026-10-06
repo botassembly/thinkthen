@@ -68,3 +68,5 @@ mod find_reading;
 mod observers;
 #[path = "native_complete/streaming.rs"]
 mod streaming;
+#[path = "native_complete/whole_sources.rs"]
+mod whole_sources;

@@ -12,6 +12,16 @@ use std::sync::Arc;
 #[derive(Clone, Eq, PartialEq)]
 pub struct RawRecord(pub(crate) Arc<core::Record>);
 impl RawRecord {
+    pub(crate) fn retained_bytes(&self) -> Result<usize, Error> {
+        self.literal().map_or_else(
+            || {
+                core::json_line(self)
+                    .map(|text| text.len())
+                    .map_err(|_| Error::defect("an original record could not be measured"))
+            },
+            |text| Ok(text.len()),
+        )
+    }
     /// Retain literal text, including strings that happen to contain JSON.
     /// # Errors
     /// Refuses invalid record size through the ordinary record reader.

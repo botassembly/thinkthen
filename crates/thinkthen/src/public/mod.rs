@@ -24,6 +24,7 @@ mod find_question;
 pub use files::{
     FileReader, ReaderOptions, SourceRecord, SourceRecords, SourceUnit, enumerate_files, read_files,
 };
+pub use find_question::FindQuestionFile;
 
 mod annotated;
 mod asking;

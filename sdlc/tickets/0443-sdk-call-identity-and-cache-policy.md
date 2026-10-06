@@ -69,6 +69,10 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+fn Engine::try_find_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<CompleteFound<T>>, Error> where I: IntoIterator<Item = Result<T, Error>>, T: Evidence
+fn Engine::find_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<CompleteFound<T>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
+fn Engine::try_find_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<CompleteFound<T>>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>>, T: InputEvidence
+fn Engine::try_rank_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>>, T: InputEvidence
 fn Batch::into_call(self) -> Result<Call<Vec<T>>, Error>
 fn Engine::try_decide_records_complete_with<'a, Q, I, T>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteDecision>> where Q: DecisionQuestion + ?Sized, I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
 fn Engine::try_choose_records_complete_with<'a, Q, I, T>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteChoice>> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
@@ -243,3 +247,7 @@ Constituent WIP: saved find and mandatory per-record choose preparation share na
 Constituent WIP: complete fallible record routes for decide/choose/tag/score/filter/annotate reuse the existing native pull bridge and joined pipeline. Preparation snapshots selected evidence, controls and location once while originals stay on their caller thread without Clone/Serialize/Send requirements. Batch::into_call retains actual final facts. Per-record contexts are admitted through the existing packer with the caller/profile byte caps before that row sends. Streaming retains completed-prefix behavior; eager sources continue to admit the whole set before sends. Located aggregate execution and CLI result/2 adoption remain open.
 
 This streaming constituent raises the exact measured source ratchet by 724 nonblank lines (138592 to 139316): generic caller-thread preparation in the existing pull bridge, concrete complete stream entry points, shared annotation preparation/rendering, and five outside-in regressions. The old bridge behavior remains covered by all 63 non-stress public batch cases. Signature inventory is reconciled against intended declarations in the owning tickets; no alternate dispatch, records or proof tool was introduced.
+
+Whole-set native WIP now consumes fallible composed find candidates directly, retains every original and source location through cache/replay, and admits fallible rank originals before any send. Find uses call-wide context and refuses per-record context/options instead of dropping them. FindQuestionFile keeps the saved evidence pointers with the question using the ordinary parser/reader, so consumers need no second question parser. Located recognize/relate integration and CLI result/2 remain open.
+
+This whole-set constituent adds 413 measured nonblank lines (139316 to 139729): concrete saved find question/reading preparation, composed candidate preservation, fallible find/rank admission and three outside-in source/replay cases. All 35 native complete cases and affected Clippy pass; signature inventory and offline policy run before push.

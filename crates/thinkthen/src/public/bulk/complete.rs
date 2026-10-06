@@ -224,7 +224,10 @@ impl Engine {
         Ok(())
     }
 
-    fn try_within_limit<I, T>(&self, records: I) -> Result<std::vec::IntoIter<T>, Error>
+    pub(in crate::public) fn try_within_limit<I, T>(
+        &self,
+        records: I,
+    ) -> Result<std::vec::IntoIter<T>, Error>
     where
         I: IntoIterator<Item = Result<T, Error>>,
     {
