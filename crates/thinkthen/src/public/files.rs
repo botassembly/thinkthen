@@ -1,6 +1,5 @@
 //! Explicit file selection and located records outside the pure core.
 
-use std::collections::VecDeque;
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
@@ -268,71 +267,40 @@ fn descend(path: &Path, files: &mut Vec<PathBuf>, bytes: &mut usize) -> Result<(
     Ok(())
 }
 
-/// A native file selection that holds a bounded manifest and opens one file at a time.
+/// A native text selection over the shared input reader.
 #[derive(Debug)]
-pub struct SourceRecords {
-    paths: VecDeque<(PathBuf, String)>,
-    options: ReaderOptions,
-    current: Option<FileReader<std::io::BufReader<std::fs::File>>>,
-    stopped: bool,
-}
+pub struct SourceRecords(super::input_files::SourceItems);
 
-/// Select explicit paths, with no path inference from evidence strings.
-///
+/// Select explicit text paths, preserving existing ReaderOptions literals.
 /// # Errors
-/// Returns errors for invalid options or enumeration failures before any file is read.
+/// Returns errors for invalid options or enumeration failures.
 pub fn read_files(
     paths: impl IntoIterator<Item = impl AsRef<Path>>,
     options: ReaderOptions,
 ) -> Result<SourceRecords, Error> {
-    let options = options.validate()?;
-    let paths = enumerate_files(paths)?
-        .into_iter()
-        .map(|path| source_name(&path).map(|name| (path, name)))
-        .collect::<Result<_, _>>()?;
-    Ok(SourceRecords {
+    super::input_files::read_inputs(
         paths,
-        options,
-        current: None,
-        stopped: false,
-    })
+        super::input_files::InputReaderOptions {
+            reading: options,
+            media: super::input_files::ReaderMedia::Text,
+        },
+    )
+    .map(SourceRecords)
 }
 
 impl Iterator for SourceRecords {
     type Item = Result<SourceRecord<String>, Error>;
-
     fn next(&mut self) -> Option<Self::Item> {
-        if self.stopped {
-            return None;
-        }
-        loop {
-            if let Some(record) = self.current.as_mut().and_then(Iterator::next) {
-                self.stopped = record.is_err();
-                return Some(record);
+        self.0.next().map(|item| match item? {
+            super::input_files::SourceItem::Text(text) => Ok(text),
+            super::input_files::SourceItem::Image(_) => {
+                Err(Error::defect("a text reader returned an image"))
             }
-            self.current = None;
-            let (path, name) = self.paths.pop_front()?;
-            let opened = open_regular(&path);
-            let file = match opened {
-                Ok(file) => file,
-                Err(_) => {
-                    self.stopped = true;
-                    return Some(Err(Error::local("source file could not be opened")));
-                }
-            };
-            self.current = match FileReader::new(name, std::io::BufReader::new(file), self.options)
-            {
-                Ok(reader) => Some(reader),
-                Err(error) => {
-                    self.stopped = true;
-                    return Some(Err(error));
-                }
-            };
-        }
+        })
     }
 }
 
-fn open_regular(path: &Path) -> std::io::Result<std::fs::File> {
+pub(super) fn open_regular(path: &Path) -> std::io::Result<std::fs::File> {
     let file = crate::engine::usage::open_read(path)?;
     if !file.metadata()?.is_file() {
         return Err(std::io::Error::other("source is not regular"));
@@ -340,7 +308,7 @@ fn open_regular(path: &Path) -> std::io::Result<std::fs::File> {
     Ok(file)
 }
 
-fn source_name(path: &Path) -> Result<String, Error> {
+pub(super) fn source_name(path: &Path) -> Result<String, Error> {
     path.to_str()
         .map(str::to_owned)
         .ok_or_else(|| Error::local("source path is not valid UTF-8"))

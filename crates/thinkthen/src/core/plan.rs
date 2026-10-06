@@ -32,6 +32,8 @@ pub(crate) struct Plan {
     model: ModelName,
     descriptions: Descriptions,
     questions: Vec<Question>,
+    images: Option<crate::core::image::ImageState>,
+    image_route: crate::core::adapters::built_in::images::ImageRoute,
 }
 
 impl Plan {
@@ -54,6 +56,8 @@ impl Plan {
             model,
             descriptions,
             questions,
+            images: None,
+            image_route: crate::core::adapters::built_in::images::ImageRoute::Unsupported,
         })
     }
 
@@ -65,6 +69,22 @@ impl Plan {
         questions: Vec<Question>,
     ) -> Result<Self, EmptyPlanError> {
         Self::new(evidence, model, Descriptions::Authored, questions)
+    }
+
+    pub(crate) fn with_images(
+        mut self,
+        state: crate::core::image::ImageState,
+        route: crate::core::adapters::built_in::images::ImageRoute,
+    ) -> Self {
+        self.images = Some(state);
+        self.image_route = route;
+        self
+    }
+    pub(crate) fn images(&self) -> Option<&crate::core::image::ImageState> {
+        self.images.as_ref()
+    }
+    pub(crate) const fn image_route(&self) -> crate::core::adapters::built_in::images::ImageRoute {
+        self.image_route
     }
 
     /// Read the evidence back.

@@ -55,7 +55,10 @@ impl Asker for Annotating {
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Error> {
-        let record = record(&self.set, &text.text)?;
+        let record = record(
+            &self.set,
+            text.plain(crate::public::InputFunction::Annotate)?,
+        )?;
         let mut asks = Vec::new();
         for places in &self.groups {
             let evidence =
@@ -210,7 +213,7 @@ impl Engine {
             .enumerate()
             .map(|(at, text)| Text {
                 at,
-                text: text.clone(),
+                input: crate::public::QuestionInput::Text(text.clone()),
             })
             .collect();
         let stop = Stop::begin(options)?.with_prices(self.prices);

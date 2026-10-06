@@ -51,6 +51,12 @@ pub(crate) struct FindCommon {
     /// Read the lines or records from FILE instead of standard input.
     #[arg(long, value_name = "FILE")]
     pub(crate) input: Vec<PathBuf>,
+    /// Attach an original JPEG or PNG; repeat to preserve image order.
+    #[arg(long, value_name = "FILE")]
+    pub(crate) image: Vec<PathBuf>,
+    /// Read whole files as explicitly selected text or image media.
+    #[arg(long, value_parser = ["text", "image"], value_name = "MEDIA")]
+    pub(crate) media: Option<String>,
     /// Select physical line records or whole files.
     #[arg(long, value_parser = ["line", "file"], value_name = "UNIT")]
     pub(crate) unit: Option<String>,
@@ -139,6 +145,8 @@ impl FindCommon {
             max_estimated_input_tokens_total: self.max_estimated_input_tokens_total,
             details: self.details,
             input: self.input.clone(),
+            image: self.image.clone(),
+            media: self.media.clone(),
             window: self.window.clone(),
             unit: self.unit.clone(),
             lines: self.lines,

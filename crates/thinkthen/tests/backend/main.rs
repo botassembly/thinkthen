@@ -74,6 +74,7 @@ mod facts;
 mod find;
 mod find_display;
 mod from_record;
+mod images;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,

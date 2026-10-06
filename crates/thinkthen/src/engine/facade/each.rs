@@ -154,6 +154,7 @@ fn packer(
     let model = pack::model_json(backend.model().as_str())
         .map_err(|_| Error::Defect("a model could not be written as JSON"))?;
     let limits = PackLimits {
+        image_ceiling: backend.image_ceiling(),
         ceiling: if bound.sized {
             backend.ceiling()
         } else {
@@ -224,6 +225,7 @@ impl Engine {
         let body = crate::core::adapters::built_in::encode(plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         let limits = PackLimits {
+            image_ceiling: self.backend.image_ceiling(),
             ceiling: self.backend.ceiling(),
             profile: Some(profile.clone()),
             inputs: usize::MAX,

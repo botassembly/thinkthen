@@ -25,8 +25,8 @@ pub(super) fn locate(
     let record = SourceRecord {
         record: text,
         file: position.file.clone().unwrap_or_default(),
-        first_line: position.first,
-        last_line: position.last,
+        first_line: position.first.unwrap_or(1),
+        last_line: position.last.unwrap_or(1),
     };
     let entities = value
         .get_mut("entities")

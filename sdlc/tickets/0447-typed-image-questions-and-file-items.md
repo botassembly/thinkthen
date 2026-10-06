@@ -1,6 +1,6 @@
 # 0447: Execute typed image questions and read image files
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Native/CLI implementation in ticket/0447-native-images awaits coordinator dependency/code review and landing. Unknown local physical-batch/projector profiles remain refused; ticket stays open for that genuine prerequisite and host coverage.
 
 Milestone: 0.2
 Owner: builder.

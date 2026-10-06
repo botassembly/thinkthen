@@ -33,6 +33,7 @@ struct Shared {
     json: String,
     sha256: [u8; 32],
     evidence_bytes: usize,
+    image_wire: Option<built_in::images::ImageWire>,
 }
 
 impl State {
@@ -44,7 +45,92 @@ impl State {
             json,
             sha256,
             evidence_bytes,
+            image_wire: None,
         }))
+    }
+
+    /// Typed image constituents enter the existing state hash, while the
+    /// separately admitted wire state stays specific to this fixed route.
+    pub(crate) fn images(
+        input: &crate::core::image::ImageState,
+        route: built_in::images::ImageRoute,
+        model: &str,
+    ) -> Result<Self, EncodeError> {
+        let wire = route
+            .admit(model, input)
+            .map_err(|error| EncodeError::of(&error))?;
+        let json = serde_json::to_string(input).map_err(|error| EncodeError::of(&error))?;
+        let evidence_bytes = crate::core::render::json_line(&input.text)
+            .map_err(|error| EncodeError::of(&error))?
+            .len();
+        let sha256 = Sha256::digest(json.as_bytes()).into();
+        Ok(Self(Arc::new(Shared {
+            json,
+            sha256,
+            evidence_bytes,
+            image_wire: Some(wire),
+        })))
+    }
+
+    pub(crate) fn body<'a>(
+        &self,
+        model: &str,
+        questions: impl Iterator<Item = &'a str>,
+    ) -> Vec<u8> {
+        let state = self
+            .0
+            .image_wire
+            .as_ref()
+            .map_or(self.json(), |wire| &wire.state);
+        let mut body = built_in::join(state, model, questions);
+        if let Some(images) = self
+            .0
+            .image_wire
+            .as_ref()
+            .and_then(|wire| wire.images.as_ref())
+        {
+            body.pop();
+            body.extend_from_slice(b",\"images\":");
+            body.extend_from_slice(images.as_bytes());
+            body.push(b'}');
+        }
+        body
+    }
+
+    pub(crate) fn base_bytes(&self, model: &str) -> usize {
+        let wire = self.0.image_wire.as_ref();
+        wire.map_or(self.json().len(), |wire| wire.state.len())
+            + model.len()
+            + 34
+            + wire
+                .and_then(|wire| wire.images.as_ref())
+                .map_or(0, |images| images.len() + 10)
+    }
+
+    pub(crate) fn body_limit(&self) -> Option<usize> {
+        self.0.image_wire.as_ref().map(|wire| wire.body_limit)
+    }
+    pub(crate) fn questions_limit(&self) -> Option<usize> {
+        self.0
+            .image_wire
+            .as_ref()
+            .and_then(|wire| wire.questions_limit)
+    }
+
+    pub(crate) fn estimated_tokens(&self, model: &str, questions: &[Arc<str>]) -> Option<u64> {
+        let wire = self.0.image_wire.as_ref()?;
+        let text_bytes = self
+            .evidence_bytes()
+            .checked_add(model.len())?
+            .checked_add(34)?;
+        let text_bytes = questions.iter().try_fold(text_bytes, |sum, question| {
+            sum.checked_add(question.len() + 32)
+        })?;
+        let text = crate::core::PlanSummary::estimated_input_high(u64::try_from(text_bytes).ok()?)?;
+        text.checked_add(
+            wire.tokens_per_question
+                .checked_mul(u64::try_from(questions.len()).ok()?)?,
+        )
     }
 
     pub(crate) fn json(&self) -> &str {
@@ -177,7 +263,10 @@ pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
         .evidence()
         .as_text()
         .map_err(|error| EncodeError::of(&error))?;
-    let state = State::new(parts.state, evidence.len());
+    let state = match plan.images() {
+        Some(images) => State::images(images, plan.image_route(), plan.model().as_str())?,
+        None => State::new(parts.state, evidence.len()),
+    };
     let decoders = plan.questions().iter().flat_map(decoders);
     Ok(parts
         .questions

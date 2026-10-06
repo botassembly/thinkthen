@@ -302,3 +302,7 @@ When MLX renders a nonempty object or list as text, the rich check row warns wit
 [Run a model locally](https://thinkthen.dev/install/backends/local/) gives the pinned source, model and setup commands. Experiment 0030, reported 2026-10-04, established route and schema prerequisites. It does not establish model accuracy or every possible function input.
 
 The [MLX runtime issue](../sdlc/issues/2026-10-05-mlx-score-criteria-need-text-rendering.md) owns the text workaround, score-level limit and unproved structured instructions. The [llama.cpp runtime issue](../sdlc/issues/2026-10-05-llamacpp-runtime-limits.md) owns the native route, decision encoding and supported setup bounds.
+
+## Native image route admission (0447/0448)
+
+[ADR0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md) records exact original-byte protocols and documented boundaries for explicitly selected Liquid d1 and Perplexity pplx-decider-v1-27b. Native JPEG/PNG support refuses other formats; vendor format lists do not widen the decoder. Local image admission requires a proven model/projector/context/batch/ubatch profile and currently refuses. Named provider-wide support or URL suffixes never enable images. Text remains operational.
