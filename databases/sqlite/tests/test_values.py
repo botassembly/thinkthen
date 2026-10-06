@@ -9,7 +9,7 @@ import os
 import socket
 import sys
 
-from helper import Backend, child, environment, expect, main
+from helper import Backend, Child, child, environment, expect, main
 from conditional_backend import ConditionalBackend
 
 BANDED = json.dumps({"decide": "Is it red?", "threshold": "0.2:0.8"})
@@ -58,6 +58,60 @@ say(result=run(db, "SELECT thinkthen_find(?, ?, ?)",
         result = json.loads(held["result"][0][0])
         expect(result, selected, "original selected unit and input-order probabilities")
     expect(backend.close(), 0, "fixed replies did not reach the generic arm")
+
+
+def test_find_model_override_keeps_default_cache_and_strict_replay_identity() -> None:
+    """Override B is cached and replayable while default A stays a distinct request."""
+    backend = Backend()
+    env = environment(backend, "arm/full/capture")
+    asking = Child("""
+db = connect()
+db.execute('SELECT thinkthen_configure(?)', ('{"model":"judge-a"}',))
+sql = 'SELECT thinkthen_find(?, ?, ?)'
+units = '["first","second"]'
+bad = ['', '   ', 'judge\\nwrong', 7]
+say(invalid=[run(db, sql, ('Which?', units, json.dumps({'model': model}))) for model in bad])
+sys.stdin.readline()
+override = run(db, sql, ('Which?', units, '{"model":"judge-b"}'))
+cached = run(db, sql, ('Which?', units, '{"model":"judge-b"}'))
+say(override=override, cached=cached)
+sys.stdin.readline()
+say(default=run(db, sql, ('Which?', units, '{}')))
+""", env)
+    invalid = asking.read()["invalid"]
+    for result in invalid:
+        expect(isinstance(result, str) and result.startswith("thinkthen usage: "), True,
+               "invalid model is a usage failure")
+        expect(result.endswith(" (retryable: no)"), True, "invalid model is not retryable")
+    expect(backend.count(), 0, "invalid overrides send nothing")
+    asking.send()
+    seeded = asking.read()
+    selected = {"index": 0, "value": "first", "probability": 0.9,
+                "candidates": [{"index": 0, "probability": 0.9}, {"index": 1, "probability": 0.1}]}
+    for name in ("override", "cached"):
+        expect(json.loads(seeded[name][0][0]), selected, name + " retains the result shape")
+    expect(backend.count(), 1, "the repeated override uses its cache")
+    expect([json.loads(body)["model"] for body in backend.capture()], ["judge-b"],
+           "the override reaches the wire")
+    replayed = child("""
+db = connect()
+db.execute('SELECT thinkthen_configure(?)', (json.dumps({
+    'model': 'judge-a', 'cache': False, 'replay': os.environ['THINKTHEN_CACHE']}),))
+sql = 'SELECT thinkthen_find(?, ?, ?)'
+units = '["first","second"]'
+say(override=run(db, sql, ('Which?', units, '{"model":"judge-b"}')),
+    default=run(db, sql, ('Which?', units, '{}')))
+""", env)
+    expect(replayed["override"], seeded["override"], "strict replay finds the B identity")
+    expect(replayed["default"],
+           "thinkthen local: the replay folder holds no answer for this question (retryable: no)",
+           "strict replay refuses the unrecorded A identity")
+    expect(backend.count(), 1, "strict replay sends nothing on hit or miss")
+    asking.send()
+    expect(json.loads(asking.result()["default"][0][0]), selected, "ordinary call retains its result")
+    expect([json.loads(body)["model"] for body in backend.capture()], ["judge-b", "judge-a"],
+           "the per-call override leaves the engine default unchanged")
+    expect(backend.close(), 2, "only B and the later default A send")
 
 
 def test_find_null_empty_and_invalid_inputs_never_send() -> None:
