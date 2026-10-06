@@ -1,6 +1,6 @@
 # 0448: Enforce documented image limits and refuse dropped images
 
-Status: in progress. Native/CLI implementation in ticket/0447-native-images awaits coordinator dependency/code review and landing. Unknown local physical-batch/projector profiles remain refused; ticket stays open for that genuine prerequisite and host coverage.
+Status: in progress. Native/CLI hosted slice A reviewed and landing. Local runtime profiles and required host adoption remain open.
 
 Milestone: 0.2
 Owner: builder.
