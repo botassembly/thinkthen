@@ -11,6 +11,7 @@ mod counts;
 pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
+mod timing;
 pub(crate) use facts::Snapshot as RunSnapshot;
 mod files;
 mod lock;
@@ -37,6 +38,7 @@ pub(crate) struct Counters {
 struct Shared {
     queue: Mutex<Queue>,
     changed: Condvar,
+    http: timing::Timeline,
 }
 
 #[derive(Debug, Default)]

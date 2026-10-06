@@ -38,6 +38,7 @@ pub(crate) struct Snapshot {
     pub(crate) reported: Option<ReportedUsage>,
     pub(crate) estimated_cost_usd: Option<String>,
     pub(crate) model: Option<String>,
+    pub(crate) http_time: Option<std::time::Duration>,
 }
 
 impl Counters {
@@ -107,6 +108,7 @@ impl Counters {
             && (queue.facts.live_replies == 0
                 || reported.and_then(ReportedUsage::complete).is_some());
         Snapshot {
+            http_time: self.shared.http.total(),
             counts: queue.totals,
             records: queue.facts.records,
             reported,

@@ -43,6 +43,21 @@ grows 76 nonblank Rust lines (145934 to 146010) for those outside-in cases and
 shared partial-count bookkeeping; the unused full-count helper was removed.
 Command timing, sidecars, aggregate CLI and host adoption remain unfinished.
 
+Command timing constituent: `--facts` now includes `command_ms`, rounded up
+after subtracting the monotonic union of actual HTTP/body-read scopes from
+accepted command execution. Measurement continues through ordered output and
+usage-writer completion; total `seconds` keeps its original meaning. A shared
+constant-space timeline counts overlapping workers once, closes through unwind,
+and omits an invalid measurement instead of fabricating it. The prior-failing
+compiled-command case holds two parallel replies and then keeps stdin open:
+backend time is excluded once and subsequent input waiting remains command time.
+The timeline's table covers its own disjoint/overlap behavior. Existing facts,
+pricing, stop/flush and native tally checks pass. Timing sidecars and remaining
+CLI/host adoption stay open; this is no whole-ticket completion claim.
+Source grows 221 nonblank Rust lines (146010 to 146231) for the shared
+constant-space clock, actual transport integration and outside-in command case;
+HTTP timing and configuration warning helpers keep the existing flows readable.
+
 ### Added public declarations
 
 ```text

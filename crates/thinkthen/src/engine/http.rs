@@ -23,7 +23,7 @@ use observation::{ResponseInfo, observed_result};
 #[cfg(test)]
 use retry::honored;
 use retry::{bounded_wait, draw, floor, longest, too_long};
-use send::send;
+use send::timed;
 #[cfg(test)]
 use send::{io_transport, transport};
 
@@ -292,17 +292,14 @@ impl Client {
             let ordinal = cancel.attempt_started();
             marked();
             let sending = cancel.sending();
-            let started = Instant::now();
-            let sent = send(
+            let (sent, wall_ms) = timed(
                 &self.agent,
                 exchange,
                 limit,
-                invocation,
-                &sdk_request_id,
+                (invocation, &sdk_request_id),
                 cancel.cache_refresh,
+                usage,
             );
-            let wall_ms = u64::try_from(started.elapsed().as_nanos().div_ceil(1_000_000).max(1))
-                .unwrap_or(u64::MAX);
             drop(sending);
             if let (Some(ordinal), Some(digest)) = (ordinal, cancel.attempt_digest()) {
                 let (info, outcome) = observed_result(&sent);
