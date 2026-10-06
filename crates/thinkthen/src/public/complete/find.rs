@@ -1,9 +1,7 @@
 //! Complete whole-set selection retains the dedicated find grammar and originals.
-use crate::core::{self, Meta, RequestMeta, ResultIdentity};
+use crate::core;
 use crate::public::options::Stop;
-use crate::public::{
-    Call, CallOptions, CompleteFound, Engine, Error, Evidence, Found, InputFunction, Question,
-};
+use crate::public::{Call, CallOptions, CompleteFound, Engine, Error, Evidence, Found, Question};
 mod records;
 
 impl Engine {
@@ -75,44 +73,6 @@ impl Engine {
             Ok(found)
         })?
         .try_map(|found| {
-            let identity = ResultIdentity::of(
-                InputFunction::Find,
-                &core::RecordScope { record: 0 },
-                found.answered.sources.clone(),
-                found.answered.observations.clone(),
-                &FindReading {
-                    question: &question.core,
-                    candidates: &texts,
-                    profile: question.profile.as_ref(),
-                },
-                &[],
-            )
-            .map_err(|_| Error::defect("a find identity could not be constructed"))?;
-            let answered = &found.answered;
-            let meta = Meta::new(
-                env!("CARGO_PKG_VERSION"),
-                find.question_sha256().map_err(|_| super::wrong())?,
-                engine.backend().url().clone(),
-                answered.reply.model().clone(),
-                answered.reply.usage(),
-                RequestMeta::new(
-                    answered.replayed,
-                    answered.requests_sent,
-                    vec![answered.request.as_str().to_owned()],
-                )
-                .with_profile_warning(core::ProfileWarning::between(
-                    question.profile.as_ref(),
-                    engine.profile().map(core::BackendProfile::name),
-                ))
-                .with_context_sha256(
-                    options
-                        .context_text()
-                        .filter(|text| !text.is_empty())
-                        .map(|text| core::bytes_sha256(text.as_bytes())),
-                ),
-            )
-            .with_reported_usage(answered.reply.reported_usage())
-            .with_captured_attempts(stop.facts().attempts().map(<[_]>::to_vec));
             let none = question.kind == crate::public::question::Kind::FindNone;
             let picked = found
                 .selection
@@ -128,19 +88,25 @@ impl Engine {
                 .transpose()?;
             let public = Found::new(units, none, &found)?;
             Ok(CompleteFound {
-                canonical: core::CompleteFind {
-                    declarations: question.metadata.clone(),
-                    identity,
-                    legacy: find.result(picked, found.selection, meta),
-                },
+                canonical: crate::result_json::complete::find(
+                    &engine,
+                    &find,
+                    found,
+                    crate::result_json::complete::FindRow {
+                        declarations: question.metadata.clone(),
+                        question: question.core.clone(),
+                        candidates: texts,
+                        input: picked,
+                        context_sha256: options
+                            .context_text()
+                            .filter(|text| !text.is_empty())
+                            .map(|text| core::bytes_sha256(text.as_bytes())),
+                        attempts: stop.facts().attempts().map(<[_]>::to_vec),
+                    },
+                )
+                .map_err(|_| super::wrong())?,
                 found: public,
             })
         })
     }
-}
-#[derive(serde::Serialize)]
-struct FindReading<'a> {
-    question: &'a core::Question,
-    candidates: &'a [String],
-    profile: Option<&'a core::ProfileName>,
 }

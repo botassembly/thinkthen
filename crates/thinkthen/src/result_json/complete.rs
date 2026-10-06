@@ -1,10 +1,12 @@
 //! Complete serialization uses typed judgments and actual traces, never JSON reconstruction.
 mod annotate;
+mod find;
 use super::{Run, decision_with_digest};
 use crate::core::image::InputFunction;
 use crate::core::{self, Question, RenderError, Threshold, Value};
 use crate::engine::facade::Judgment;
 pub(crate) use annotate::{AnnotationRow, annotation};
+pub(crate) use find::{FindRow, find};
 
 pub(crate) struct AtomicSpec {
     pub(crate) declarations: core::declaration::QuestionMetadata,

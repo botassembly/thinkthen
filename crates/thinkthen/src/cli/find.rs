@@ -4,8 +4,8 @@ use std::io::{Read, Write};
 use std::process::ExitCode;
 
 use crate::core::{
-    Backend, Evidence, Find, Framing, MAX_RECORD_BYTES, Meta, PlanDocument, PlanSummary, Pointer,
-    Reading, Record, RequestMeta, json_line,
+    Backend, Evidence, Find, Framing, MAX_RECORD_BYTES, PlanDocument, PlanSummary, Pointer,
+    Reading, Record, json_line,
 };
 
 use crate::args::{Common, FindArguments};
@@ -35,11 +35,9 @@ pub(crate) fn run(
         sources,
     } = question::Prepared::new(arguments)?;
     let common = &common;
-    let mut display = Display::default();
-    display.arguments = arguments.display.clone();
-    display.validate(common)?;
-    let reading =
-        Reading::new(framing(common), fields(common)?)?.with_item_schema(metadata.item_schema);
+    let mut display = display(arguments, common)?;
+    let reading = Reading::new(framing(common), fields(common)?)?
+        .with_item_schema(metadata.item_schema.clone());
     let backend = environment.resolve(
         common.backend.as_deref(),
         common.url.as_deref(),
@@ -80,6 +78,7 @@ pub(crate) fn run(
         });
     }
     let evidence: Vec<_> = units.iter().map(|unit| unit.evidence.clone()).collect();
+    let resolved = question::resolved(&question);
     let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
         .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?
         .with_profile(saved_profile);
@@ -94,16 +93,17 @@ pub(crate) fn run(
         );
     }
     let engine = engine.ok_or(Failure::Defect("a live find run has no engine"))?;
-    let found = engine.find(&find, environment.cancel()).map_err(|error| {
+    let cancel = environment.cancel().with_captured_attempts(common.details);
+    let found = engine.find(&find, &cancel).map_err(|error| {
         Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len()))
     })?;
     let rendered = rendered(
         common,
         &find,
-        (&backend, profile.as_ref()),
+        &engine,
         &reading,
         &units,
-        found,
+        (found, metadata, resolved),
     )?;
     display.emit_row(
         &mut writer,
@@ -117,6 +117,13 @@ pub(crate) fn run(
     } else {
         ExitCode::from(3)
     })
+}
+
+fn display(arguments: &FindArguments, common: &Common) -> Result<Display, Failure> {
+    let mut display = Display::default();
+    display.arguments = arguments.display.clone();
+    display.validate(common)?;
+    Ok(display)
 }
 
 /// Print the plan. `target` is the backend and its first key variable.
@@ -308,16 +315,16 @@ fn read_units(
 fn rendered(
     common: &Common,
     find: &Find,
-    (backend, profile): (&Backend, Option<&crate::core::BackendProfile>),
+    engine: &facade::Engine,
     reading: &Reading,
     units: &[Unit],
-    found: Found,
+    (found, declarations, question): (
+        Found,
+        crate::core::declaration::QuestionMetadata,
+        crate::core::Question,
+    ),
 ) -> Result<Rendered, Failure> {
-    let Found {
-        selection: selected,
-        answered,
-    } = found;
-    let reply = &answered.reply;
+    let selected = &found.selection;
     let place = selected.selected();
     let unit = place
         .map(|place| {
@@ -338,24 +345,26 @@ fn rendered(
         .transpose()?;
     let mut line = if common.details {
         let value = unit.map(|unit| unit.record.clone());
-        let meta = Meta::new(
-            env!("CARGO_PKG_VERSION"),
-            find.question_sha256()
-                .map_err(|_| Failure::Defect("a find question could not be digested"))?,
-            backend.url().clone(),
-            reply.model().clone(),
-            reply.usage(),
-            RequestMeta::new(
-                answered.replayed,
-                answered.requests_sent,
-                vec![answered.request.as_str().to_owned()],
-            )
-            .with_profile_warning(crate::core::ProfileWarning::between(
-                find.profile(),
-                profile.map(crate::core::BackendProfile::name),
-            )),
-        );
-        Some(json_line(&find.result(value, selected, meta))?)
+        let candidates = units
+            .iter()
+            .map(|unit| unit.evidence.as_text().map(|text| text.into_owned()))
+            .collect::<Result<Vec<_>, _>>()?;
+        let attempts = Some(found.answered.attempts.clone());
+        let canonical = crate::result_json::complete::find(
+            engine,
+            find,
+            found,
+            crate::result_json::complete::FindRow {
+                declarations,
+                question,
+                candidates,
+                input: value,
+                context_sha256: None,
+                attempts,
+            },
+        )
+        .map_err(|_| Failure::Defect("a complete find result could not be constructed"))?;
+        Some(json_line(&canonical)?)
     } else {
         unit.map(|unit| {
             reading

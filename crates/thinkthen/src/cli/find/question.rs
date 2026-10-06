@@ -65,3 +65,11 @@ impl Prepared {
         })
     }
 }
+
+pub(super) fn resolved(text: &QuestionText) -> crate::core::Question {
+    crate::core::Question::Decide {
+        text: text.clone(),
+        yes: None,
+        no: None,
+    }
+}

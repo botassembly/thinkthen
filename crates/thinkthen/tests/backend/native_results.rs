@@ -5,6 +5,7 @@ use std::io::Write;
 use std::process::Stdio;
 mod annotation;
 pub(crate) mod compatibility;
+mod find;
 
 #[cfg(test)]
 pub(crate) fn validate(rows: &[(String, Value)]) {
