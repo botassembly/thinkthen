@@ -817,6 +817,36 @@
         }
       ]
     },
+    "SourceFields": {
+      "properties": {
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "type": "object"
+    },
     "StopCause": {
       "oneOf": [
         {
@@ -1620,7 +1650,29 @@
           },
           "type": "object"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "meta": {
           "$ref": "#/$defs/completeMeta"
         },
@@ -1837,9 +1889,34 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -2129,9 +2206,34 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -2296,9 +2398,34 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -2662,9 +2789,34 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -2717,6 +2869,28 @@
         },
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -3273,9 +3447,34 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -3622,7 +3821,29 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "meta": {
           "$ref": "#/$defs/completeMeta"
         },
@@ -3658,7 +3879,29 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "meta": {
           "$ref": "#/$defs/completeMeta"
         },
@@ -3914,9 +4157,34 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"
@@ -4007,6 +4275,37 @@
           "unevaluatedProperties": false
         }
       ]
+    },
+    "completeSourceFields": {
+      "properties": {
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
     },
     "completeStopCause": {
       "oneOf": [
@@ -4339,9 +4638,34 @@
         "answer_id": {
           "$ref": "#/$defs/completeAnswerId"
         },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
         "input": true,
         "input_file": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "meta": {
           "$ref": "#/$defs/completeMeta"

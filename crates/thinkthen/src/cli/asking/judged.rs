@@ -26,6 +26,7 @@ pub(super) struct Held {
     pub(super) images: Option<crate::public::ImageEvidence>,
     pub(super) arrived: Option<Vec<u8>>,
     pub(super) at: usize,
+    pub(super) ordinal: usize,
     pub(super) position: Option<crate::cli::intake::Position>,
 }
 
@@ -41,13 +42,14 @@ pub(super) fn records(
     let streams = reading.streams();
     let limited = configuration.keeping == Keeping::Ordered && configuration.common.located();
     let mut remaining = crate::core::MAX_RECORD_BYTES;
-    let mut source = source;
+    let mut source = source.enumerate();
     let mut stopped = false;
     Ok(Box::new(std::iter::from_fn(move || {
         if stopped {
             return None;
         }
-        let held = source.next()?.and_then(|item| {
+        let (ordinal, item) = source.next()?;
+        let held = item.and_then(|item| {
             let (record, arrived, images) = match item.data {
                 crate::cli::intake::Data::Record(record) => (record, None, None),
                 crate::cli::intake::Data::Images(images) => (
@@ -69,6 +71,7 @@ pub(super) fn records(
                 images,
                 arrived,
                 at: item.at,
+                ordinal,
                 position: item.position,
             };
             if limited {
@@ -287,10 +290,7 @@ impl JudgeAsker<'_> {
             question,
             &judgment,
             RowContext {
-                record: held
-                    .at
-                    .checked_sub(1)
-                    .ok_or(Failure::Defect("an input occurrence lost its ordinal"))?,
+                record: held.ordinal,
                 arrived: held.arrived.as_deref(),
                 requests: answers.iter().map(|answered| answered.key.hex()).collect(),
                 attempts,

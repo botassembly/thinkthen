@@ -75,10 +75,23 @@ impl super::Counters {
 #[cfg(test)]
 mod tests {
     use super::*;
+    type Case = (&'static [(bool, u64)], u64);
+    fn measure(base: Instant, events: &[(bool, u64)]) -> Option<Duration> {
+        let mut clock = Clock::default();
+        for (enter, at) in events {
+            let now = base + Duration::from_millis(*at);
+            if *enter {
+                clock.enter(now);
+            } else {
+                clock.leave(now);
+            }
+        }
+        clock.total(base + Duration::from_millis(300))
+    }
     #[test]
     fn http_scopes_sum_disjoint_intervals_and_count_overlaps_once() {
         let base = Instant::now();
-        let cases: &[(&[(bool, u64)], u64)] = &[
+        let cases: &[Case] = &[
             (&[], 0),
             (&[(true, 10), (false, 110), (true, 120), (false, 220)], 200),
             (&[(true, 10), (true, 30), (false, 110), (false, 130)], 120),
@@ -95,17 +108,8 @@ mod tests {
             ),
         ];
         for (events, expected) in cases {
-            let mut clock = Clock::default();
-            for (enter, at) in *events {
-                let now = base + Duration::from_millis(*at);
-                if *enter {
-                    clock.enter(now);
-                } else {
-                    clock.leave(now);
-                }
-            }
             assert_eq!(
-                clock.total(base + Duration::from_millis(300)),
+                measure(base, events),
                 Some(Duration::from_millis(*expected))
             );
         }

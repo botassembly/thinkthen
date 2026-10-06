@@ -354,6 +354,16 @@ pub(crate) fn document(
 }
 
 /// Add flat source coordinates to an explicit located result.
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+pub(crate) struct SourceFields<'a> {
+    file: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    first_line: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_line: Option<usize>,
+}
+
 pub(crate) fn source_members(
     line: &mut Option<String>,
     position: Option<&Position>,
@@ -361,13 +371,19 @@ pub(crate) fn source_members(
     let (Some(line), Some(position)) = (line, position.filter(|p| p.located)) else {
         return Ok(());
     };
-    member(line, "file", &position.file)?;
-    if let Some(first) = position.first {
-        member(line, "first_line", &first)?;
-    }
-    if let Some(last) = position.last {
-        member(line, "last_line", &last)?;
-    }
+    let fields = crate::core::json_line(&SourceFields {
+        file: position.file.as_deref(),
+        first_line: position.first,
+        last_line: position.last,
+    })?;
+    let fields = fields
+        .strip_prefix('{')
+        .and_then(|s| s.strip_suffix('}'))
+        .ok_or(Failure::Defect("source coordinates are not an object"))?;
+    let end = line
+        .strip_suffix('}')
+        .ok_or(Failure::Defect("a located row is not an object"))?;
+    *line = format!("{end},{fields}}}");
     Ok(())
 }
 

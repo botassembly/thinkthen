@@ -16,6 +16,7 @@ pub(super) fn register(generator: &mut SchemaGenerator) {
         generator.subschema_for::<crate::public::CompleteError<'_>>(),
         generator.subschema_for::<crate::public::Surface>(),
         generator.subschema_for::<crate::cli::intake::Position>(),
+        generator.subschema_for::<crate::cli::intake::SourceFields<'_>>(),
     ];
 }
 pub(super) fn finish(definitions: &mut Map<String, Value>) {
@@ -94,6 +95,10 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
         .expect("complete attempt");
     attempt["properties"]["ordinal"]["minimum"] = json!(1);
     attempt["properties"]["request_sha256"]["pattern"] = json!("^[0-9a-f]{64}$");
+    locations(definitions);
+    functions(definitions);
+}
+fn locations(definitions: &mut Map<String, Value>) {
     for name in [
         "completeAtomic",
         "completeAnnotation",
@@ -105,12 +110,28 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
         // These existing located-row fields remain presentation only.
         row["properties"]["position"] = json!({"$ref":"#/$defs/completePosition"});
         if name == "completeAtomic" {
-            row["properties"]["input_file"] = json!({"type":"string"});
+            row["properties"]["input_file"] = json!({"type":["string","null"]});
         }
+    }
+    strict::graph(definitions, "SourceFields");
+    let fields = definitions["completeSourceFields"]["properties"]
+        .as_object()
+        .expect("source coordinates")
+        .clone();
+    for name in [
+        "completeAtomic",
+        "completeAnnotation",
+        "completeFind",
+        "completeRecognition",
+        "completeRelation",
+    ] {
+        let properties = definitions.get_mut(name).expect("row")["properties"]
+            .as_object_mut()
+            .expect("properties");
+        properties.extend(fields.clone());
     }
     definitions.insert("completePosition".into(), definitions["Position"].clone());
     strict::graph(definitions, "completePosition");
-    functions(definitions);
 }
 fn functions(definitions: &mut Map<String, Value>) {
     for (name, verb, value, threshold, input) in [

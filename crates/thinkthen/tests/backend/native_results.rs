@@ -3,9 +3,11 @@ use crate::harness::{Canned, Listener, spawn};
 use serde_json::{Value, json};
 use std::io::Write;
 use std::process::Stdio;
+mod annotation;
+pub(crate) mod compatibility;
 
 #[cfg(test)]
-fn validate(rows: &[(String, Value)]) {
+pub(crate) fn validate(rows: &[(String, Value)]) {
     let script = r#"
 import json,sys
 from jsonschema import Draft202012Validator

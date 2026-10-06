@@ -124,22 +124,7 @@ fn generated(reference: &str) -> String {
             ]),
         ),
     ];
-    // Each result type below is a named definition.
-    let _registered = [
-        generator.subschema_for::<Recognized>(),
-        generator.subschema_for::<DecisionResult>(),
-        generator.subschema_for::<FindResult>(),
-        generator.subschema_for::<AnnotateResult>(),
-        generator.subschema_for::<Detailed<'_>>(),
-        generator.subschema_for::<Details<'_>>(),
-        generator.subschema_for::<RecordValue<Bare>>(),
-        generator.subschema_for::<Row<'_>>(),
-        generator.subschema_for::<Counters>(),
-        generator.subschema_for::<DoorReply>(),
-        generator.subschema_for::<CallError>(),
-        generator.subschema_for::<QuestionJson<'_>>(),
-        generator.subschema_for::<PlanEstimate>(),
-    ];
+    register(&mut generator);
     complete::register(&mut generator);
     let mut definitions: Map<String, Value> = generator.take_definitions(true);
     complete::finish(&mut definitions);
@@ -171,6 +156,25 @@ fn generated(reference: &str) -> String {
         "$defs": definitions,
     });
     serde_json::to_string_pretty(&root).expect("schema text") + "\n"
+}
+
+fn register(generator: &mut schemars::SchemaGenerator) {
+    // Each result type below is a named definition.
+    let _registered = [
+        generator.subschema_for::<Recognized>(),
+        generator.subschema_for::<DecisionResult>(),
+        generator.subschema_for::<FindResult>(),
+        generator.subschema_for::<AnnotateResult>(),
+        generator.subschema_for::<Detailed<'_>>(),
+        generator.subschema_for::<Details<'_>>(),
+        generator.subschema_for::<RecordValue<Bare>>(),
+        generator.subschema_for::<Row<'_>>(),
+        generator.subschema_for::<Counters>(),
+        generator.subschema_for::<DoorReply>(),
+        generator.subschema_for::<CallError>(),
+        generator.subschema_for::<QuestionJson<'_>>(),
+        generator.subschema_for::<PlanEstimate>(),
+    ];
 }
 
 #[test]
