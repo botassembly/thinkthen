@@ -3487,7 +3487,7 @@
           "evidence": "refund now",
           "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"refund now\\\". Does the writer ask for a refund?\"}}}",
           "response": {
-            "model": "jev-latest",
+            "model": "jev-1.13.0",
             "answers": {
               "q1": {
                 "type": "noul",
@@ -3514,7 +3514,7 @@
                   "kind": "yes_no",
                   "probability": 0.97
                 },
-                "model": "jev-latest",
+                "model": "jev-1.13.0",
                 "usage": {
                   "input_tokens": 10,
                   "output_tokens": 2
