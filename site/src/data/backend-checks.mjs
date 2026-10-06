@@ -42,6 +42,11 @@ export const CHECKS = {
       model: 'typesafe/jev-1.13', date: '2026-10-04', commit: '4349b91b3', exit: 0, critical: 0, warning: 0,
       source: `${RECORDS}/records/0399-backend-paths.md`,
     },
+    ...['cloudflare/clef', 'cloudflare/clef-flash'].map((model) => ({
+      model, date: '2026-10-05', exit: 0, critical: 0, warning: 0,
+      source: `${RECORDS}/records/0400-provider-setups-and-width.md`,
+      said: `On 2026-10-05, experiment 0034 asked ${model} through OpenRouter and passed its 15-request text check with no critical findings or warnings. Its image controls showed no observable image use; the experimental exchanges establish no released image support or accuracy.`,
+    })),
   ],
   perplexity: [
     {
