@@ -241,6 +241,7 @@ impl Engine {
         start: impl FnOnce(Port<A::Input, A::Error>) -> H,
         cancel: &Cancel,
     ) -> Result<(), Error> {
+        cancel.invocation()?;
         let state = self.state(cancel)?;
         let store = self.store(&state)?;
         let model = pack::model_json(self.backend().model().as_str())

@@ -110,18 +110,7 @@ pub fn entry() -> ExitCode {
             (ExitCode::from(code), stopped)
         }
     };
-    if environment.usage().finish() {
-        let mut writer = stderr.lock();
-        let advice = environment.usage().failed_file().map_or_else(
-            || "check the usage folder permissions and free space".to_owned(),
-            |(name, category)| format!("local usage file {name} has {category}"),
-        );
-        let _unwritten = writeln!(
-            writer,
-            "thinkthen: usage counters could not be updated; {advice}"
-        )
-        .and_then(|()| writer.flush());
-    }
+    finish_usage(&environment);
     if wants_facts {
         let snapshot = environment.usage().run_snapshot();
         let elapsed = started.elapsed();
@@ -131,11 +120,32 @@ pub fn entry() -> ExitCode {
         } else {
             stopped
         };
-        facts::write(writer, snapshot, elapsed, stopped);
+        facts::write(
+            writer,
+            snapshot,
+            elapsed,
+            stopped,
+            environment.cancel().call_id(),
+        );
     }
     match activation.finish(code) {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
+    }
+}
+
+fn finish_usage(environment: &Environment) {
+    if environment.usage().finish() {
+        let mut writer = io::stderr().lock();
+        let advice = environment.usage().failed_file().map_or_else(
+            || "check the usage folder permissions and free space".to_owned(),
+            |(name, category)| format!("local usage file {name} has {category}"),
+        );
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: usage counters could not be updated; {advice}"
+        )
+        .and_then(|()| writer.flush());
     }
 }
 
@@ -171,6 +181,7 @@ fn report_early(
             crate::engine::usage::Counters::default().run_snapshot(),
             started.elapsed(),
             Some(failure::facts::Stopped::of(failure, code)),
+            None,
         );
     }
     ExitCode::from(code)

@@ -7,6 +7,7 @@ use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
 pub(crate) mod call_facts;
+mod invocation;
 mod send_budget;
 pub(crate) use call_facts::CallFacts;
 pub(crate) use limits::{Permit, WidthActive, Widths};
@@ -50,6 +51,7 @@ pub(crate) struct Cancel<'a> {
     call_total: Option<u64>,
     estimated_tokens: Option<u64>,
     facts: Option<CallFacts>,
+    invocation: invocation::Context,
     attempts: Arc<AtomicU64>,
     attempt_sink: Option<AttemptSink>,
     attempt_digest: Option<Arc<str>>,
@@ -104,6 +106,21 @@ impl Drop for Sending<'_> {
 }
 
 impl<'a> Cancel<'a> {
+    pub(crate) fn with_surface(&self, surface: crate::core::Surface) -> Self {
+        Self {
+            invocation: invocation::Context::new(surface),
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn invocation(&self) -> Result<&invocation::Invocation, error::Error> {
+        self.invocation.get()
+    }
+
+    pub(crate) fn call_id(&self) -> Option<crate::core::CallId> {
+        self.invocation.call_id()
+    }
+
     pub(crate) fn with_attempt_sink(&self, sink: AttemptSink) -> Self {
         Self {
             attempt_sink: Some(sink),

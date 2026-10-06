@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use std::{fmt, sync::MutexGuard};
 
 use super::Cancel;
-use crate::core::Usage;
+use crate::core::{CallId, Surface, Usage};
 
 #[derive(Clone)]
 pub(crate) struct CallFacts(Arc<Mutex<State>>);
@@ -17,6 +17,7 @@ impl fmt::Debug for CallFacts {
 }
 
 struct State {
+    invocation: super::invocation::Context,
     started: Instant,
     elapsed: Option<Duration>,
     records: u64,
@@ -31,6 +32,7 @@ struct State {
 
 #[derive(Clone)]
 pub(crate) struct Snapshot {
+    pub(crate) call_id: Option<CallId>,
     pub(crate) elapsed: Duration,
     pub(crate) records: u64,
     pub(crate) requests_sent: u64,
@@ -41,8 +43,17 @@ pub(crate) struct Snapshot {
 }
 
 impl CallFacts {
+    pub(crate) fn start(surface: Surface) -> Result<Self, super::error::Error> {
+        let facts = Self::new();
+        let context = super::invocation::Context::new(surface);
+        context.get()?;
+        facts.state().invocation = context;
+        Ok(facts)
+    }
+
     pub(crate) fn new() -> Self {
         Self(Arc::new(Mutex::new(State {
+            invocation: super::invocation::Context::default(),
             started: Instant::now(),
             elapsed: None,
             records: 0,
@@ -104,6 +115,7 @@ impl CallFacts {
     pub(crate) fn snapshot(&self) -> Snapshot {
         let state = self.state();
         Snapshot {
+            call_id: state.invocation.call_id(),
             elapsed: state.elapsed.unwrap_or_else(|| state.started.elapsed()),
             records: state.records,
             requests_sent: state.requests_sent,
@@ -121,7 +133,9 @@ impl CallFacts {
 
 impl Cancel<'_> {
     pub(crate) fn with_facts(&self, facts: CallFacts) -> Self {
+        let invocation = facts.state().invocation.clone();
         Self {
+            invocation,
             facts: Some(facts),
             ..self.clone()
         }

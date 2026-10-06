@@ -33,5 +33,11 @@ record carriers retain caller originals without extra trait bounds. Pure
 serializer checks preserve explicit legacy result/1 projection, successful
 null versus failure, numeric rank positions and zero-observation metadata.
 These are constituent types, not completed public execution routes.
-Transport headers, persistent observation propagation and shared storage
-integration remain open pending the image source handoff.
+The actual landed image source is merged. Native started calls now carry
+one opaque call ID through success/failure facts; prepared sends carry distinct
+SDK request IDs and compiled version/surface headers. Status retries retain
+those IDs, split children get new request IDs, and CLI final facts use the
+same call ID. Seven public/CLI loopback cases independently pin bodies,
+headers, concurrency, retries, splits, empty aggregates and zero-send refusal.
+Legacy serialized facts remain unchanged. Canonical facts serialization,
+persistent observations, cache policy and complete execution routes remain open.

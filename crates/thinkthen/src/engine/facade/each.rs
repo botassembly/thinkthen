@@ -257,6 +257,7 @@ impl Engine {
         cancel: &Cancel,
         mut each: impl FnMut(usize, Answered) -> Result<(), Error>,
     ) -> Result<(), Error> {
+        cancel.invocation()?;
         if asks.is_empty() {
             return Ok(());
         }

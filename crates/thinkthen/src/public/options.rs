@@ -110,6 +110,7 @@ pub struct CallOptions<'a> {
     observer: Option<Observer<'a>>,
     attempt_observer: Option<AttemptObserver<'a>>,
     proxy: Option<&'a crate::public::ProxyActivation>,
+    surface: Option<crate::public::Surface>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -126,6 +127,7 @@ impl fmt::Debug for CallOptions<'_> {
             .field("observer", &self.observer.is_some())
             .field("attempt_observer", &self.attempt_observer.is_some())
             .field("proxy", &self.proxy.is_some())
+            .field("surface", &self.surface)
             .finish()
     }
 }
@@ -153,6 +155,7 @@ impl<'a> CallOptions<'a> {
             observer: None,
             attempt_observer: None,
             proxy: None,
+            surface: None,
         }
     }
 
@@ -167,6 +170,13 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn proxy(mut self, value: &'a crate::public::ProxyActivation) -> Self {
         self.proxy = Some(value);
+        self
+    }
+
+    /// Identify the outer wrapper explicitly for the compiled-engine User-Agent.
+    #[must_use]
+    pub const fn surface(mut self, value: crate::public::Surface) -> Self {
+        self.surface = Some(value);
         self
     }
 
@@ -375,7 +385,8 @@ impl<'a> Stop<'a> {
                 "proxy activation is reserved and is not supported in 0.2",
             ));
         }
-        let facts = CallFacts::new();
+        let deadline = options.deadline()?;
+        let facts = CallFacts::start(options.surface.unwrap_or(crate::public::Surface::Rust))?;
         let (sender, attempts) = if options.attempt_observer.is_some() {
             let (sender, receiver) = sync_channel(32);
             (Some(sender), Some(Mutex::new(receiver)))
@@ -383,7 +394,7 @@ impl<'a> Stop<'a> {
             (None, None)
         };
         let mut base = Cancel::default()
-            .with_deadline(options.deadline()?)
+            .with_deadline(deadline)
             .with_token(options.cancel.map(CancelToken::flag))
             .with_send_budget(
                 options

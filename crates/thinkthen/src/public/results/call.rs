@@ -5,7 +5,7 @@ use std::fmt;
 use serde::Serialize;
 use serde_json::value::RawValue;
 
-use crate::core::Prices;
+use crate::core::{CallId, Prices};
 use crate::engine::call_facts::Snapshot;
 use crate::public::error::Error;
 
@@ -15,6 +15,10 @@ use crate::public::error::Error;
 #[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "facts"))]
 pub struct Facts {
+    // Explicit legacy serialization stays count-only; complete projection adopts this ID.
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    pub(super) call_id: Option<CallId>,
     pub(super) cache_answers: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, schemars(with = "String"))]
@@ -60,6 +64,7 @@ impl Facts {
             prices.estimate(input, output)
         });
         Self {
+            call_id: snapshot.call_id,
             records: snapshot.records,
             requests_sent: snapshot.requests_sent,
             cache_answers: snapshot.cache_answers,
@@ -75,6 +80,12 @@ impl Facts {
     #[must_use]
     pub const fn records(&self) -> u64 {
         self.records
+    }
+
+    /// This invocation's opaque ID, absent on a caller's aggregate tally.
+    #[must_use]
+    pub const fn call_id(&self) -> Option<&CallId> {
+        self.call_id.as_ref()
     }
 
     /// Live transport attempts, including retries and failed attempts.
