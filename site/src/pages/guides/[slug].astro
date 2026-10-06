@@ -1,0 +1,27 @@
+---
+// Goal: teach one production lesson with its prerequisites, limits and media.
+import Base from '../../layouts/Base.astro';
+import { GUIDES } from '../../data/guides.mjs';
+export function getStaticPaths() {
+  return GUIDES.map(guide => ({ params: { slug: guide.slug }, props: { guide } }));
+}
+const { guide } = Astro.props;
+const { Content } = guide;
+---
+<Base title={guide.title} description={guide.blurb} image={guide.card} imageAlt={guide.cardAlt} reading draft={guide.draft} noindex={guide.draft}>
+  <p><a href="/guides/">Guides</a></p>
+  <h1>{guide.title}</h1>
+  {guide.draft && <p data-draft>Draft: this lesson is incomplete and stays unpublished.</p>}
+  <p class="lede">{guide.goal}</p>
+  <h2>Prerequisites</h2>
+  <ul>{guide.prerequisites.map(item => <li>{item}</li>)}</ul>
+  <h2>Limits</h2>
+  <ul>{guide.limits.map(item => <li>{item}</li>)}</ul>
+  {(guide.video || guide.blog) && <nav aria-label="Lesson media">
+    <ul>
+      {guide.video && <li><a href={guide.video}>Watch the video</a></li>}
+      {guide.blog && <li><a href={guide.blog}>Read the article</a></li>}
+    </ul>
+  </nav>}
+  <article class="prose"><Content /></article>
+</Base>

@@ -171,7 +171,7 @@ export function cAssertProblems(label, text, offset = 0) {
 }
 
 // The code blocks in an article follow the same rules as the examples.
-export function articleProblems(name, text) {
+export function articleProblems(name, text, folder = 'articles') {
   const found = [];
   const lines = text.split('\n');
   let tag = null;
@@ -184,12 +184,12 @@ export function articleProblems(name, text) {
       const block = lines.slice(start, i);
       block.forEach((l, j) => {
         if ([...l].length > WIDTH && !EXEMPT.some((e) => e.test(l, ext === '.json' ? 'x.json' : `x${ext}`))) {
-          found.push(`src/articles/${name}:${start + j + 1}: ${[...l].length} characters, over ${WIDTH}`);
+          found.push(`src/${folder}/${name}:${start + j + 1}: ${[...l].length} characters, over ${WIDTH}`);
         }
-        if (COMMENT[ext]?.test(l)) found.push(`src/articles/${name}:${start + j + 1}: a comment in a code block`);
+        if (COMMENT[ext]?.test(l)) found.push(`src/${folder}/${name}:${start + j + 1}: a comment in a code block`);
       });
-      found.push(...namedAnswers(`src/articles/${name}`, block.join('\n'), tag, tag, start));
-      if (ext === '.c') found.push(...cAssertProblems(`src/articles/${name}`, block.join('\n'), start));
+      found.push(...namedAnswers(`src/${folder}/${name}`, block.join('\n'), tag, tag, start));
+      if (ext === '.c') found.push(...cAssertProblems(`src/${folder}/${name}`, block.join('\n'), start));
       tag = null;
     }
   });
@@ -223,9 +223,14 @@ function main() {
     if (shown < EXAMPLE_LINES.min || shown > EXAMPLE_LINES.max) problems.push(`examples/functions/${fn.name}/${first}: the page's example shows ${shown} lines of script and output. Keep it from ${EXAMPLE_LINES.min} to ${EXAMPLE_LINES.max}.`);
   }
 
-  const articles = path.join(site, 'src', 'articles');
-  for (const name of fs.readdirSync(articles).filter((n) => n.endsWith('.md'))) {
-    problems.push(...articleProblems(name, fs.readFileSync(path.join(articles, name), 'utf8')));
+  for (const folder of ['articles', 'guides']) {
+    const dir = path.join(site, 'src', folder);
+    if (!fs.existsSync(dir)) continue;
+    for (const name of fs.readdirSync(dir).filter(n => n.endsWith('.md'))) {
+      const text = fs.readFileSync(path.join(dir, name), 'utf8');
+      problems.push(...articleProblems(name, text, folder));
+      if (!/^(---\n(?:.*\n)*?goal: .+\n|<!-- Goal: .+ -->\n)/.test(text)) problems.push(`src/${folder}/${name}: no goal. Add a goal: field or start with <!-- Goal: -->.`);
+    }
   }
 
   // Every page says what it must communicate, before anything else.
@@ -239,10 +244,7 @@ function main() {
     const second = fs.readFileSync(file, 'utf8').split('\n')[1] || '';
     if (!second.startsWith('// Goal: ')) problems.push(`${path.relative(site, file)}: no goal. Start the front matter with // Goal: and one sentence.`);
   }
-  for (const name of fs.readdirSync(articles).filter((n) => n.endsWith('.md'))) {
-    const text = fs.readFileSync(path.join(articles, name), 'utf8');
-    if (!/^(---\n(?:.*\n)*?goal: .+\n|<!-- Goal: .+ -->\n)/.test(text)) problems.push(`src/articles/${name}: no goal. Add a goal: field or start with <!-- Goal: -->.`);
-  }
+
 
   if (problems.length) {
     console.error(`check-samples: ${problems.length} problems\n  ${problems.join('\n  ')}`);
