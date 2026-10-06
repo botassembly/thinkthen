@@ -15,6 +15,8 @@ pub use reading::{
 };
 mod complete_annotation;
 mod complete_call;
+mod complete_schema;
+pub use complete_schema::complete_call_schema;
 mod complete_facts;
 pub use complete_call::{CompleteCall, CompleteError, ErrorSnapshot};
 mod complete_find;

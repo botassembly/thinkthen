@@ -1,6 +1,5 @@
 //! Complete recognition uses the scheduler's typed stage distributions.
 
-use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
 use super::{CompleteMeta, ResultIdentity};
@@ -30,35 +29,44 @@ impl Recognition {
     }
 }
 
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeRecognition")
+)]
+pub(crate) struct Document<'a, T: Serialize> {
+    schema: super::wire::Version,
+    answer_id: &'a crate::core::AnswerId,
+    value: &'a RecognizedValue,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input: Option<&'a T>,
+    question: crate::core::declaration::ReadableQuestion<
+        'a,
+        crate::core::recognize_file::QuestionDocument<'a>,
+    >,
+    answer: &'a RecognitionOdds,
+    meta: CompleteMeta<'a>,
+}
 impl Recognition {
     pub(crate) fn serialize_with_input<S: Serializer, T: Serialize>(
         &self,
         input: Option<&T>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("schema", "thinkthen.result/2")?;
-        map.serialize_entry("answer_id", self.identity.answer_id())?;
-        map.serialize_entry("value", &self.value)?;
-        if let Some(input) = input {
-            map.serialize_entry("input", input)?;
-        }
-        map.serialize_entry(
-            "question",
-            &crate::core::declaration::ReadableQuestion {
-                question: &self.question,
+        Document {
+            schema: super::wire::Version::V2,
+            answer_id: self.identity.answer_id(),
+            value: &self.value,
+            input,
+            question: crate::core::declaration::ReadableQuestion {
+                question: &self.question.document(),
                 metadata: &self.question.metadata,
             },
-        )?;
-        map.serialize_entry("answer", &self.answer)?;
-        map.serialize_entry(
-            "meta",
-            &CompleteMeta {
-                legacy: &self.meta,
-                identity: &self.identity,
-            },
-        )?;
-        map.end()
+            answer: &self.answer,
+            meta: CompleteMeta::of(&self.meta, &self.identity),
+        }
+        .serialize(serializer)
     }
 }
 

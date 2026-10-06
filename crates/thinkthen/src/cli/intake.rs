@@ -19,6 +19,7 @@ use crate::table::{Kind, Rows};
 
 /// A display location, independent of the pipeline's global label.
 #[derive(Clone, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 pub(crate) struct Position {
     pub(crate) file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

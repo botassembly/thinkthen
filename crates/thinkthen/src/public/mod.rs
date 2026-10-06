@@ -114,6 +114,7 @@ pub use results::{
     CompleteSetRank, CompleteTags, Counters, Details, DoorReply, Facts, Found, Judgment,
     NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail, Ranked,
     RankedRow, RecordObservation, ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
+    complete_call_schema,
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,

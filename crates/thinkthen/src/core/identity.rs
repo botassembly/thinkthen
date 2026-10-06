@@ -22,7 +22,8 @@ macro_rules! identity {
         #[doc = $doc]
         #[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
         #[serde(transparent)]
-        pub struct $name(String);
+        #[cfg_attr(test, derive(schemars::JsonSchema))]
+        pub struct $name(#[cfg_attr(test, schemars(regex(pattern = "^[0-9a-f]{64}$")))] String);
 
         impl $name {
             /// Validate the exact opaque spelling, without trimming.

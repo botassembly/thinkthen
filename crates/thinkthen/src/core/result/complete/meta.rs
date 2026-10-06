@@ -1,62 +1,79 @@
-//! Complete metadata retains legacy fields and explicitly reports observations.
-
-use serde::ser::SerializeMap;
-use serde::{Serialize, Serializer};
-
+//! One actual serialized metadata type supplies native documents and their schema.
 use super::ResultIdentity;
 use crate::core::{Meta, Origin};
+use serde::Serialize;
 
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "completeMeta"))]
 pub(crate) struct CompleteMeta<'a> {
-    pub(crate) legacy: &'a Meta,
-    pub(crate) identity: &'a ResultIdentity,
+    tool: &'a str,
+    #[cfg_attr(test, schemars(regex(pattern = "^[0-9a-f]{64}$")))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    question_sha256: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(regex(pattern = "^[0-9a-f]{64}$")))]
+    questions_sha256: Option<&'a str>,
+    url: &'a str,
+    model: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<crate::core::ReportedUsage>,
+    requests_sent: u64,
+    cached: bool,
+    requests: &'a [String],
+    failed_questions: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile_warning: Option<&'a crate::core::ProfileWarning>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    batch_setting: Option<crate::core::BatchSetting>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    batch_warning: Option<&'a crate::core::BatchWarning>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    context_sha256: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attempts: Option<Vec<crate::core::CompleteAttempt<'a>>>,
+    origin: Option<Origin>,
+    question_sources: &'a [crate::core::QuestionSource],
+    observations: &'a [crate::core::Observation],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    answered_by: Option<&'a str>,
 }
-
-impl Serialize for CompleteMeta<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let legacy = self.legacy;
-        let identity = self.identity;
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("tool", &legacy.tool)?;
-        map.serialize_entry("question_sha256", &legacy.question_sha256)?;
-        map.serialize_entry("url", &legacy.url)?;
-        map.serialize_entry("model", &legacy.model)?;
-        if let Some(usage) = &legacy.reported_usage {
-            map.serialize_entry("usage", usage)?;
+impl<'a> CompleteMeta<'a> {
+    pub(crate) fn of(legacy: &'a Meta, identity: &'a ResultIdentity) -> Self {
+        Self::from_fields(legacy.fields(), identity)
+    }
+    pub(crate) fn from_fields(
+        fields: crate::core::MetadataFields<'a>,
+        identity: &'a ResultIdentity,
+    ) -> Self {
+        Self {
+            tool: fields.tool,
+            question_sha256: (!fields.plural).then_some(fields.digest),
+            questions_sha256: fields.plural.then_some(fields.digest),
+            url: fields.url,
+            model: fields.model,
+            usage: fields.usage,
+            requests_sent: fields.sent,
+            cached: !identity.question_sources().is_empty()
+                && identity
+                    .question_sources()
+                    .iter()
+                    .all(|source| matches!(source.origin(), Origin::Cache | Origin::Replay)),
+            requests: fields.requests,
+            failed_questions: fields.failed,
+            profile_warning: fields.profile,
+            batch_setting: fields.batch,
+            batch_warning: fields.batch_warning,
+            context_sha256: fields.context,
+            attempts: fields.attempts.map(|attempts| {
+                attempts
+                    .iter()
+                    .map(crate::core::AttemptObservation::complete)
+                    .collect()
+            }),
+            origin: identity.origin(),
+            question_sources: identity.question_sources(),
+            observations: identity.observations(),
+            answered_by: identity.answered_by(),
         }
-        map.serialize_entry("requests_sent", &legacy.requests_sent)?;
-        let cached = !identity.question_sources().is_empty()
-            && identity
-                .question_sources()
-                .iter()
-                .all(|source| matches!(source.origin(), Origin::Cache | Origin::Replay));
-        map.serialize_entry("cached", &cached)?;
-        map.serialize_entry("requests", &legacy.requests)?;
-        map.serialize_entry("failed_questions", &legacy.failed_questions)?;
-        if let Some(warning) = &legacy.profile_warning {
-            map.serialize_entry("profile_warning", warning)?;
-        }
-        if let Some(setting) = &legacy.batch_setting {
-            map.serialize_entry("batch_setting", setting)?;
-        }
-        if let Some(warning) = &legacy.batch_warning {
-            map.serialize_entry("batch_warning", warning)?;
-        }
-        if let Some(digest) = &legacy.context_sha256 {
-            map.serialize_entry("context_sha256", digest)?;
-        }
-        if let Some(attempts) = &legacy.attempts {
-            let complete: Vec<_> = attempts
-                .iter()
-                .map(crate::core::AttemptObservation::complete)
-                .collect();
-            map.serialize_entry("attempts", &complete)?;
-        }
-        map.serialize_entry("origin", &identity.origin())?;
-        map.serialize_entry("question_sources", identity.question_sources())?;
-        map.serialize_entry("observations", identity.observations())?;
-        if let Some(model) = identity.answered_by() {
-            map.serialize_entry("answered_by", model)?;
-        }
-        map.end()
     }
 }

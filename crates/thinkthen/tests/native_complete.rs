@@ -94,3 +94,6 @@ mod set_rank;
 
 #[path = "native_complete/admission_cancel.rs"]
 mod admission_cancel;
+
+#[path = "native_complete/schema.rs"]
+mod schema;

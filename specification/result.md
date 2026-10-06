@@ -4,7 +4,7 @@ Status: **Settled** for the bare value, the object, the five answer kinds, the f
 
 ## Result/2 target for 0.2
 
-Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). This section is the adoption contract, not a claim of landed behavior. Tickets 0443–0445, 0450 and the carrier owners below implement it. The remaining sections and their result/1 examples describe landed behavior until adoption. The generated [result schema](result.schema.json) continues to describe landed Rust serializers under ADR 0112; implementation changes it with those serializers and the strict complete-result readers, never by hand in this contract ticket.
+Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). This section is the adoption contract, not a claim of landed behavior. Tickets 0443–0445, 0450 and the carrier owners below implement it. The remaining sections and their result/1 examples describe landed behavior until adoption. The generated [result schema](result.schema.json) contains native result/2 definitions alongside retained result/1 compatibility definitions under ADR 0112. The additive native `complete_call_schema()` supplies the packaged strict complete success/error schema to consumers such as MCP. Both artifacts derive from the production serializers; they do not establish host or CLI adoption.
 
 ### Complete results and compatibility
 

@@ -1,6 +1,5 @@
 //! Complete whole-set find keeps its dedicated question and ordered distribution.
 
-use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
 use super::{CompleteMeta, ResultIdentity};
@@ -44,6 +43,17 @@ impl Find {
     }
 }
 
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "completeFind"))]
+pub(crate) struct Document<'a, T: Serialize> {
+    schema: super::wire::Version,
+    answer_id: &'a crate::core::AnswerId,
+    value: Option<&'a T>,
+    question: crate::core::declaration::ReadableQuestion<'a, crate::core::find::FindQuestionOwned>,
+    answer: &'a crate::core::FindAnswer,
+    threshold: Option<()>,
+    meta: CompleteMeta<'a>,
+}
 impl Find {
     pub(crate) fn serialize_with_value<S: Serializer, T: Serialize>(
         &self,
@@ -51,27 +61,19 @@ impl Find {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let row = &self.legacy;
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("schema", "thinkthen.result/2")?;
-        map.serialize_entry("answer_id", self.identity.answer_id())?;
-        map.serialize_entry("value", &value)?;
-        map.serialize_entry(
-            "question",
-            &crate::core::declaration::ReadableQuestion {
+        Document {
+            schema: super::wire::Version::V2,
+            answer_id: self.identity.answer_id(),
+            value,
+            question: crate::core::declaration::ReadableQuestion {
                 question: &row.question,
                 metadata: &self.declarations,
             },
-        )?;
-        map.serialize_entry("answer", &row.answer)?;
-        map.serialize_entry("threshold", &row.threshold)?;
-        map.serialize_entry(
-            "meta",
-            &CompleteMeta {
-                legacy: &row.meta,
-                identity: &self.identity,
-            },
-        )?;
-        map.end()
+            answer: &row.answer,
+            threshold: row.threshold,
+            meta: CompleteMeta::of(&row.meta, &self.identity),
+        }
+        .serialize(serializer)
     }
 }
 

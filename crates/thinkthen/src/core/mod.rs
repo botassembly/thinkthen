@@ -183,3 +183,6 @@ pub use declaration::{
     InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
     WordingVersion,
 };
+
+#[cfg(test)]
+pub(crate) use result::complete as complete_documents;
