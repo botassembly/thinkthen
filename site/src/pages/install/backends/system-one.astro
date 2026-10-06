@@ -29,7 +29,7 @@ const rate = setting('Requests a minute');
   <p>A name uses 1 to 32 lowercase letters, digits, and hyphens, and may not reuse a built-in name. The <a href="/install/configuration/">Configuration page</a> says where the file lives.</p>
 
   <h2>Pace the requests</h2>
-  <p>ThinkThen sets no pace of its own. <code>requests_per_minute</code> on an entry caps how many requests one process starts each minute, retries included. It takes {rate.allowed.toLowerCase()}. A built-in's name may appear under <code>backends</code> with a rate and nothing else. <code>THINKTHEN_REQUESTS_PER_MINUTE</code> outranks the file. The limit holds within one process. <a href="/install/settings/#requests-a-minute">Requests a minute</a> gives the rule.</p>
+  <p>ThinkThen sets no pace of its own. <code>requests_per_minute</code> on an entry caps how many requests one process starts each minute, retries included. It takes {rate.allowed.toLowerCase()}. In development 0.2, a built-in's entry may hold a rate, a paired caller input/output price and an inline backend profile. Its address, path, key, model and wire form stay fixed. An explicit profile or price pair outranks the selected setup; setup prices outrank the top-level pair. These fields select no automatic rate or image capability. <code>THINKTHEN_REQUESTS_PER_MINUTE</code> outranks the file. The limit holds within one process. <a href="/install/settings/#requests-a-minute">Requests a minute</a> gives the rule.</p>
   <Code code={bad.text} file={bad.name} caption={`${bad.name}, a rate out of range`} />
   <Terminal run={badRate} caption={badRate.see} />
 

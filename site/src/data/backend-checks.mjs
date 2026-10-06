@@ -8,8 +8,20 @@
 const RECORDS = 'https://github.com/botassembly/thinkthen/blob/main/sdlc';
 
 export const CHECKS = {
-  llamacpp: [],
-  mlx: [],
+  llamacpp: [
+    {
+      model: 'local (Clef-Flash Q4_K_M)', date: '2026-10-05', exit: 0, critical: 0, warning: 0,
+      source: `${RECORDS}/records/0421-local-runtime-backends.md`,
+      said: 'On 2026-10-05, llama.cpp v0.6.0 with Clef-Flash Q4_K_M and alias local passed four rich text probes and all ten functions on M5 through the Linux CLI, exit 0, with no warnings. No image request ran.',
+    },
+  ],
+  mlx: [
+    {
+      model: 'strands-decider-2B-hobson-v19', date: '2026-10-05', exit: 0, critical: 0, warning: 3,
+      source: `${RECORDS}/records/0421-local-runtime-backends.md`,
+      said: 'On 2026-10-05, the pinned Strands MLX setup passed all ten text functions on M5 through the Linux CLI, exit 0, with three expected description warnings. No image request ran.',
+    },
+  ],
   typesafe: [
     // The run passed no --model. specification/check.md at b50e0425c
     // resolves the model from the option, then the configuration file,
