@@ -149,7 +149,7 @@ for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
 done
 
 step 'types'
-target/npm/node_modules/.bin/tsc --noEmit --strict --module node16 --moduleResolution node16 --target es2022 tests/types.test.ts tests/backend_types.test.ts
+target/npm/node_modules/.bin/tsc --noEmit --strict --module node16 --moduleResolution node16 --target es2022 tests/types.test.ts tests/backend_types.test.ts tests/complete_types.test.ts
 
 step 'the loader refuses a platform it does not ship, with the pinned sentence'
 refused=$(node -e 'Object.defineProperty(process, "platform", { value: "win32" }); try { require("./loader.js") } catch (e) { console.log(e.message) }')

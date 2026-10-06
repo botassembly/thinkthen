@@ -61,3 +61,24 @@ Each release also includes a matching-version plain Ruby fallback gem. If RubyGe
 From a source checkout, `setup-ruby.sh` builds the pinned Ruby 3.4.11 once per machine, with the network, into `~/.cache/thinkthen-toolchains/ruby/3.4.11`. `toolchain.env` pins both source archives by hash. `build.sh` builds the extension and the gem offline with that Ruby. `check.sh` is this surface's entry in the surface rung. It runs the file checks, the toolchain probe, the build, Clippy, the Rust unit tests, each Ruby test file, the conformance runner, the examples, the gem check, and the slide. Each test starts its own loopback backend and runs its calls in a scrubbed child with a fake key. Without the pinned prefix, `check.sh` prints "not run" and exits 77.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Result/2 integration in progress (0431)
+
+Private host carriers and named request builders cover the reviewed result/2
+contract for all ten functions. They preserve explicit question files, described
+options/kinds and annotation members, JSON records/context/candidates, located
+files and ordered duplicate image attachments. Strict carrier decoding retains
+probabilities, IDs, provenance, final facts, attempts, annotation failures, spans
+and both relation endpoints; it never promotes result/1 or generates missing IDs.
+The independent fixtures test serialization and accessors, not installed parity.
+
+Complete execution remains private until the native owner supplies result/2
+serializers, identity/provenance/facts/attempts and complete results for every
+admitted input; C-backed integration also needs 0426's actual complete calls,
+accessors and owned failure snapshots. Native image construction/admission,
+question-file loading, file reading, cache/replay and cancellation stay native.
+Private builders retain original bytes without guessing media or dimensions;
+the other seven functions explicitly refuse images. Rich rank and rank sets
+await the native complete path. Existing bare and generic JSON calls keep their
+current behavior. Public complete consumers and counted replay/storage/image
+conformance cases have not run, so this work makes no complete parity claim.

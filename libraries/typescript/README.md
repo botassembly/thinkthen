@@ -55,3 +55,29 @@ Facts, details, and annotate rows are the engine's JSON, so a member this packag
 `new tt.Engine({backend: "liquid"})` selects a named backend in code. The Rust builder captures its key from that backend's environment variable. Explicit `backend` outranks environment and configuration selection. With `baseUrl` too, the selected key, posting path, description form and setup prices/profile apply at that address. An explicit model or profile overrides its setup value. No TypeScript key option exists. Omission preserves the environment-driven default engine.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Result/2 integration in progress (0431)
+
+Private host carriers and named request builders cover the reviewed result/2
+contract for all ten functions. They preserve explicit question files, described
+options/kinds and annotation members, JSON records/context/candidates, located
+files and ordered duplicate image attachments. Strict carrier decoding retains
+probabilities, IDs, provenance, final facts, attempts, annotation failures, spans
+and both relation endpoints; it never promotes result/1 or generates missing IDs.
+The independent fixtures test serialization and accessors, not installed parity.
+
+Complete execution remains private until the native owner supplies result/2
+serializers, identity/provenance/facts/attempts and complete results for every
+admitted input; C-backed integration also needs 0426's actual complete calls,
+accessors and owned failure snapshots. Native image construction/admission,
+question-file loading, file reading, cache/replay and cancellation stay native.
+Private builders retain original bytes without guessing media or dimensions;
+the other seven functions explicitly refuse images. Rich rank and rank sets
+await the native complete path. Existing bare and generic JSON calls keep their
+current behavior. Public complete consumers and counted replay/storage/image
+conformance cases have not run, so this work makes no complete parity claim.
+
+The public rank/find text declaration now matches its current native admission:
+a literal string, a text-only `{decide: string}` or a built question checked at
+runtime. Score/criteria/model/profile/cut forms are available as private target
+carriers for rank; current public execution still refuses them.

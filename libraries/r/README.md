@@ -166,3 +166,28 @@ No key is needed. Select replay before any asking call because R keeps one engin
 From `libraries/r`, `./check.sh` runs the complete offline surface check. It exits 77 and reports "not run" if R, a tested R dependency or a cached crate is missing. `tools/setup.sh` prepares pinned R dependencies on a networked machine. From the repository root, `sdlc/scripts/smoke libraries/r` installs into owned scratch, loads the native package and replays a saved answer; its loopback counter proves the consumer adds no requests.
 
 The [index conventions](#indexes-and-source-coordinates) distinguish R positions, native offsets and physical source lines. Explicit files and folders use the [library reader contract](../files.md) and [`tt_files` helper reference](thinkthen/man/tt_files.Rd), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments. 0431 owns the typed R carriers. R image support remains required for 0.2 under 0431/0447; this installation ticket does not implement it.
+
+## Result/2 integration in progress (0431)
+
+Private host carriers and named request builders cover the reviewed result/2
+contract for all ten functions. They preserve explicit question files, described
+options/kinds and annotation members, JSON records/context/candidates, located
+files and ordered duplicate image attachments. Strict carrier decoding retains
+probabilities, IDs, provenance, final facts, attempts, annotation failures, spans
+and both relation endpoints; it never promotes result/1 or generates missing IDs.
+The independent fixtures test serialization and accessors, not installed parity.
+
+Complete execution remains private until the native owner supplies result/2
+serializers, identity/provenance/facts/attempts and complete results for every
+admitted input; C-backed integration also needs 0426's actual complete calls,
+accessors and owned failure snapshots. Native image construction/admission,
+question-file loading, file reading, cache/replay and cancellation stay native.
+Private builders retain original bytes without guessing media or dimensions;
+the other seven functions explicitly refuse images. Rich rank and rank sets
+await the native complete path. Existing bare and generic JSON calls keep their
+current behavior. Public complete consumers and counted replay/storage/image
+conformance cases have not run, so this work makes no complete parity claim.
+
+Private wire carriers keep native scalar offsets. Public R accessors retain
+the documented one-based text positions and separate zero-based located native
+spans; no offset is converted without the actual original source.

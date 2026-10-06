@@ -90,6 +90,18 @@ export interface ChooseManyOptions extends ManyCallOptions { options: LabelSet; 
 export interface ScoreManyOptions extends ManyCallOptions { levels: LabelSet; }
 export interface TagManyOptions extends ManyCallOptions { labels: LabelSet; }
 
+/** Current native rank/find text form. Rich rank specifications use the private
+ * integration carriers until the native complete execution path lands. */
+export interface TextQuestion {
+  decide: string;
+  threshold?: never;
+  true?: never;
+  false?: never;
+  model?: never;
+  profile?: never;
+  batch?: never;
+}
+
 export interface RankOptions extends ManyCallOptions {
   /** Keep the first `top` of the ordered result. */
   top?: number;
@@ -363,8 +375,8 @@ export interface Verbs {
   tag_many(question: string, records: readonly string[], options: TagManyOptions): Promise<Call<string[][]>>;
   tag_many(question: TagSpec | Question, records: readonly string[], options?: ManyCallOptions): Promise<Call<string[][]>>;
   filter(question: string | Question | DecideSpec, records: readonly string[], options?: ManyCallOptions): Promise<Call<string[]>>;
-  rank(question: string | Question | DecideSpec, records: readonly string[], options?: RankOptions): Promise<Call<Ranked[]>>;
-  find(question: string | Question | DecideSpec, units: readonly string[], options?: FindOptions): Promise<Call<Found | null>>;
+  rank(question: string | Question | TextQuestion, records: readonly string[], options?: RankOptions): Promise<Call<Ranked[]>>;
+  find(question: string | Question | TextQuestion, units: readonly string[], options?: FindOptions): Promise<Call<Found | null>>;
   /** A set member whose `on` names a part reads it from each record as JSON text. */
   annotate(set: QuestionSet, records: readonly string[], options?: AnnotateCallOptions): Promise<Call<AnnotatedRow[]>>;
   details(question: string | Question | QuestionSpec, text: string, options?: CallOptions): Promise<Call<Details>>;
