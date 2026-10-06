@@ -70,3 +70,5 @@ these targets. Existing image scenarios still need their owner's wire/response
 and missing media fixtures. The runner refuses incomplete execution rather
 than substituting generic JSON or schema/fixture decoding. Main routine gates
 remain transitional; full parity is required at adoption completion.
+
+Slice B code review: ACCEPT, 2026-10-06; fresh read-only whole-slice review of b13645e08. Shared integration can land independently; final required consumer execution remains open.

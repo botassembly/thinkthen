@@ -7,3 +7,7 @@ Fresh code review found the lint environment inventory mismatch and missing imag
 ## What the build taught us
 
 An old runner exiting successfully does not prove a new typed API. Missing cells remain missing; named/compiler/runtime assertions must execute at each public door. This slice establishes the adoption interface and keeps overall 0432 open. Final completion requires every consumer and the mandatory full run, with no required skips. Baseline matrices stay in build output.
+
+## Shared integration slice B
+
+The corpus now requires 293 cases across 29 consumers, including 89 new named-question, input-declaration and MCP targets. The runner rejects missing or skipped executions and generates function, file and image counts from actual assertions. Ten bounded regressions passed. Fresh whole-slice code review accepted b13645e08. Full tests and lint run on the landing commit. Native admission, installed MCP and family adoption remain open; this slice does not claim SDK parity.
