@@ -7,3 +7,5 @@ One fresh read-only review accepted the change. The complete installed TypeScrip
 ## What the build taught us
 
 Compare shared contract fields while asserting each surface's documented reader behavior explicitly.
+
+Integrated lint found the omitted six-line fixture ceiling update. The measured `.mjs` total is now 1489; the existing ceiling follows that measurement. This records the added explicit reader assertions and changes no behavior or counting rule.
