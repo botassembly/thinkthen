@@ -1,6 +1,6 @@
 # 0381: Windows stage 1: the C library ships as a DLL for Windows x86-64
 
-Status: in progress. Slice A's Windows C DLL packaging and MSVC consumer implementation landed at `24212dffa`; the combined native run remains pending approval. Windows 0.2 distributes the DLL only; the static library waits for stage 3.
+Status: landed. C DLL/MSVC loading and native behavior passed on c64b71859 in runs 37409599783 and 37409602101. Static-library distribution remains deferred; 0425 owns final expanded-commit qualification.
 
 Milestone: 0.2
 

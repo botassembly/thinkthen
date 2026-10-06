@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 C, every SDK and supported dataframe variant exposes saved decide question-set rank with the landed shared turns merge and full member/final facts.

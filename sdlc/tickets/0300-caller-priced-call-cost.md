@@ -10,6 +10,9 @@ Status: in progress. Core, CLI and C source stage landed after fresh High code A
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 Let a caller who knows its own USD input and output token prices see a whole-call or whole-command **estimated** cost next to final facts. Preserve every existing value, token field, request count, failure kind, C symbol and count-only month. The opt-in pair is engine scoped; CLI gets it from the configuration file. There is no provider tariff lookup, bill guarantee, price-based admission or new paid call. Token admission 0299, backend timing/IDs and durable non-CLI status have separate owners.

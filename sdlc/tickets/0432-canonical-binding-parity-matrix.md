@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 The existing build ladder fails when a required public variant lacks a named function, admitted input, stable result field, error or canonical behavior. Every binding executes the complete shared suite with no skipped cases.

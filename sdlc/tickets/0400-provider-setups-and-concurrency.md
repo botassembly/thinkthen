@@ -1,6 +1,6 @@
 # 0400: One setup format per provider, local servers and Clef documented, and a default throttle of 8
 
-Status: in progress. Slices A, B and C landed: provider setups work and the shared default is 8. Slice D waits for accepted provider measurements.
+Status: in progress. Provider setups and default-eight slices A/B/C landed; accepted real local-runtime setup evidence also landed through 0421. Slice D’s remaining measured-row/site reconciliation uses that evidence without new paid calls.
 
 Milestone: 0.2
 

@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 Rust, Python, TypeScript/JavaScript, Ruby and R expose all ten file routes with complete typed located results and final facts.

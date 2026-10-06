@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 thinkthen runs audit and thinkthen runs diff are the visible commands. Existing audit/diff names remain working hidden aliases.

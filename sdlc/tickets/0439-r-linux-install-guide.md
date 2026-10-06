@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 A Linux R reader can install the supported package using complete documented prerequisites and exercise a named call.

@@ -4,6 +4,9 @@ Status: ready. Reserved 2026-10-03 from the 0.1.1 release run. Not started.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 1. The release workflow's `npm` job publishes with `npm stage publish`, as npm recommends for trusted publishing. The package waits on npmjs.com until a maintainer approves it there.

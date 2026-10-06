@@ -1,8 +1,11 @@
 # 0425: Put the complete SDK outcome into the 0.2 plan
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: landed. The complete reviewed 0.2 plan assigns every PM ask, dependencies and acceptance checks. Product implementation remains open in its owning tickets.
 
 Milestone: 0.2
+
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
 
 ## Outcome
 

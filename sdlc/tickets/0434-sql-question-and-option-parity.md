@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 DuckDB, SQLite and PostgreSQL agree on rich question/option inputs and explicit file references. PostgreSQL’s evidence-file limitation has a reviewed workaround.

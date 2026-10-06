@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 CLI, Rust, C, every language, all SQL and dataframe variants rank over the same described decide criteria or saved score question while retaining stable order and input identity.

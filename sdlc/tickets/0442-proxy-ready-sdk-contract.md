@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 One reviewed contract defines the SDK metadata, proxy-compatible transport identity and versioned cache/replay migration used by all surfaces.

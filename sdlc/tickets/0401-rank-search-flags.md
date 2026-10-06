@@ -1,6 +1,6 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: landed. All four slices landed through `b39774cce`. SQL question sets and foreign question sets remain later in tickets 0417 and 0418.
+Status: landed. All four slices landed through b39774cce. SQL and foreign rank question sets are required in 0.2 through 0417 and 0418.
 
 Landed: fb428165487488a9decbaf08c2269a64c2f57442
 

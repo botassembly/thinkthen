@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 DuckDB, SQLite and PostgreSQL rank the same saved decide question set using landed 0401D’s turns merge, preserving keys, member names, combined facts and stable ties.

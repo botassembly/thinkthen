@@ -51,6 +51,7 @@ Already landed: version/release safety, backends/provider setups/default-eight, 
 
 Open owners:
 
+- [0400 slice D: Reconcile provider setup measured rows](../tickets/0400-provider-setups-and-concurrency.md), using landed 0421 runtime evidence without new paid calls.
 - [0296: Add the pandas Series accessor for all ten functions](../tickets/0296-pandas-series-accessor.md)
 - [0300: ---](../tickets/0300-caller-priced-call-cost.md)
 - [0393: npm publishes through staged publishing](../tickets/0393-npm-staged-publishing.md)

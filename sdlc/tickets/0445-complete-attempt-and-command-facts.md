@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 All ten functions and typed surfaces expose the supported opt-in attempts on success and started failure. Recording-side timing remains separate from header-free answer bodies.

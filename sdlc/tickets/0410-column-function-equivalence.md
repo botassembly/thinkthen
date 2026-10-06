@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 pandas, Python Polars and Rust Polars expose all ten functions, equivalent identity/results/errors/storage, and typed located-file routes.

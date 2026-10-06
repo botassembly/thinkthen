@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 Annotate, find, recognize and relate accept separate shared context across CLI/Rust/C/SDK/SQL/frames without changing evidence identity or offsets.
@@ -19,3 +22,7 @@ Annotate, find, recognize and relate accept separate shared context across CLI/R
 ## Dependencies and ownership
 
 0407 owns per-record context; family/SQL/frame owners expose this shared contract.
+
+## Context delivery acceptance
+
+The native semantic tests assert independently declared request bodies: shared context reaches every applicable stage and every packed/split request of annotate, find, recognize and relate, separately from evidence. A context-only cache-key change cannot pass. Preserve context-free bytes and evidence/offset invariants. Family, SQL and dataframe consumers reuse these expected exchanges through their named methods in 0432.

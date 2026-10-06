@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 Supported Ruby consumers receive a real native package. Unsupported Ruby/platform consumers receive an explicit diagnostic instead of silently installing the old 0.0.1 placeholder.

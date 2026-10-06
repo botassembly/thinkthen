@@ -4,6 +4,9 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 
 Milestone: 0.2
 
+Owner: builder.
+Ticket review: accepted 2026-10-06; blocking findings corrected.
+
 ## Outcome
 
 Saved answers carry enough validated identity to rebuild their key without a call. Equivalent endpoint spellings share keys; changing concrete group targets never serves a stale online answer.
