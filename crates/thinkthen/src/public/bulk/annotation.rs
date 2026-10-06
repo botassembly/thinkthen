@@ -67,6 +67,11 @@ impl Asker for Annotating {
     type Input = Text;
     type Row = Annotation;
     type Error = Error;
+    fn validates_batches(&self) -> bool {
+        self.set.questions().iter().any(|member| {
+            member.metadata().item_schema.is_some() || member.metadata().context_schema.is_some()
+        })
+    }
 
     fn label(&self, text: &Text) -> usize {
         text.at

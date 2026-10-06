@@ -22,11 +22,14 @@ pub(super) struct Prepared {
     question: Question,
     context: Option<core::Evidence>,
 }
-pub(super) struct Records(pub(super) Arc<facade::Engine>);
+pub(super) struct Records(pub(super) Arc<facade::Engine>, pub(super) bool);
 impl Asker for Records {
     type Input = Prepared;
     type Row = Decided;
     type Error = Miss;
+    fn validates_batches(&self) -> bool {
+        self.1
+    }
     fn label(&self, input: &Prepared) -> usize {
         input.text.at
     }
@@ -192,7 +195,10 @@ impl Engine {
         )?;
         // Plan every admitted row before the invocation starts; no later invalid
         // shortlist/context/image can cause an eager partial send.
-        let asker = Records(Arc::clone(&engine));
+        let asker = Records(
+            Arc::clone(&engine),
+            question.metadata.item_schema.is_some() || question.metadata.context_schema.is_some(),
+        );
         for input in &inputs {
             asker.asks(input).map_err(pipeline_failure)?;
         }

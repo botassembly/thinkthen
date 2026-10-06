@@ -208,6 +208,10 @@ impl Asker for JudgeAsker<'_> {
     type Row = Vec<Judged>;
     type Error = Placed;
 
+    fn validates_batches(&self) -> bool {
+        self.planner.reading.declares_item()
+    }
+
     fn label(&self, held: &Held) -> usize {
         held.at
     }

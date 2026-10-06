@@ -31,6 +31,11 @@ impl Asker for Annotations {
     type Input = Prepared;
     type Row = facade::Annotation;
     type Error = Error;
+    fn validates_batches(&self) -> bool {
+        self.set.questions().iter().any(|member| {
+            member.metadata().item_schema.is_some() || member.metadata().context_schema.is_some()
+        })
+    }
     fn label(&self, input: &Prepared) -> usize {
         input.text.at
     }

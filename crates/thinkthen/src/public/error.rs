@@ -152,7 +152,9 @@ impl Error {
     }
 
     pub(crate) fn at_record(mut self, ordinal: usize) -> Self {
-        if !matches!(self.kind(), ErrorKind::Cancelled | ErrorKind::Deadline) {
+        if !matches!(self.kind(), ErrorKind::Cancelled | ErrorKind::Deadline)
+            && self.detail().stopped.at.is_none()
+        {
             self.detail_mut().stopped.at = ordinal.checked_add(1);
         }
         self

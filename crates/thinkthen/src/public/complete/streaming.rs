@@ -148,7 +148,9 @@ impl Engine {
         let attempts = stop.facts().attempts().is_some();
         let mut packing = pull::packing(setting, false, false);
         packing.detailed = attempts;
-        let preparing = Records(Arc::clone(&engine));
+        let validates =
+            question.metadata.item_schema.is_some() || question.metadata.context_schema.is_some();
+        let preparing = Records(Arc::clone(&engine), validates);
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let (held, prepared) = record
                 .and_then(|record| {
@@ -161,7 +163,7 @@ impl Engine {
                 .map_err(|error| error.at_record(at))?;
             Ok(Original { held, prepared })
         });
-        let asker = Records(Arc::clone(&engine));
+        let asker = Records(Arc::clone(&engine), validates);
         let call = pull::Call {
             engine: Arc::clone(&engine),
             stop,

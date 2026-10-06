@@ -37,6 +37,7 @@ impl Text {
 
 /// What one question needs of each text beside the text.
 pub(crate) struct Decisions {
+    metadata: crate::core::declaration::QuestionMetadata,
     question: core::Question,
     asked: (ModelName, core::Descriptions),
     url: core::Url,
@@ -53,6 +54,7 @@ impl Decisions {
         context: Option<core::Evidence>,
     ) -> Self {
         Self {
+            metadata: question.metadata.clone(),
             question: question.core.clone(),
             asked: engine.backend().asked(),
             url: engine.backend().url().clone(),
@@ -91,11 +93,18 @@ impl Asker for Decisions {
     type Row = Decided;
     type Error = Miss;
 
+    fn validates_batches(&self) -> bool {
+        self.metadata.item_schema.is_some() || self.metadata.context_schema.is_some()
+    }
+
     fn label(&self, text: &Text) -> usize {
         text.at
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Miss> {
+        self.metadata
+            .validate_item(&text.input)
+            .map_err(Miss::Refused)?;
         let plan = match &text.input {
             super::QuestionInput::Text(text) => {
                 let record = evidence(text).map_err(Miss::Refused)?;

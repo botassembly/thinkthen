@@ -82,5 +82,7 @@ mod declarations;
 
 #[path = "native_complete/context.rs"]
 mod context;
+#[path = "native_complete/declaration_batches.rs"]
+mod declaration_batches;
 #[path = "native_complete/tally.rs"]
 mod tally;
