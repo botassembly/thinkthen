@@ -1,6 +1,6 @@
 # 0440: Move audit and diff under runs
 
-Status: in progress. Implementation on `ticket/0440-runs-audit-diff` in `thinkthen-claude-0`; fresh code review and landing remain with the coordinator.
+Status: landed. Implementation on `ticket/0440-runs-audit-diff` in `thinkthen-claude-0`; fresh code review and landing remain with the coordinator.
 
 Milestone: 0.2
 
