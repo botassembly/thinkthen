@@ -49,17 +49,88 @@ Every asking call's `$facts` gives final call-scoped records, requests sent, cac
 
 `tt_usage()` returns this engine's running totals of requests sent, retries, cache answers and tokens.
 
-## Building and checking
+## Install on Linux
 
-```sh
-R CMD INSTALL -l rlib thinkthen    # builds the crate with cargo --locked --offline
-./check.sh                         # the whole check, offline
+Public installation remains **0.1.2** until 0.2 is published. The current source checkout is a **0.2.0 development build**. Installing the command or the C library alone does not install the R package.
+
+Use R 4.2 or later and jsonlite 2.0.0 or later. A source install also needs R development headers, a C compiler and linker, make, and Rust's `cargo` and `rustc` on PATH. Public 0.1.2 requires Rust 1.95.0 or later; this development checkout pins Rust 1.95.0 in `rust-toolchain.toml`. On Debian/Ubuntu, the R/compiler prerequisites are `r-base-dev` and `build-essential`; other distributions use their corresponding development packages. dplyr, dbplyr, purrr, tidyr and igraph are optional for application code, and required by the complete surface check.
+
+### R-universe
+
+```r
+install.packages("thinkthen", type = "source",
+  repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))
+library(thinkthen)
+packageVersion("thinkthen")
 ```
 
-`check.sh` needs R 4.2 or later, jsonlite 2.0.0, dplyr, tidyr, igraph, and the cargo cache. It reports "not run" and exits 77 when one is missing. `tools/setup.sh` fetches the pinned R archives on a networked machine. Each R test file runs against its own loopback backend through `tests/with-backend.sh`, and no test can reach a paid backend.
+The source route downloads the exact package version's Rust engine from crates.io and resolves its Cargo dependencies during installation, so it needs network access as well as the source prerequisites. It is different from the vendored offline tarball below. Check `packageVersion()` after installing: R-universe serves its current indexed version, not a permanently pinned 0.1.2 archive.
 
-`tools/make-tarball.sh` runs inside a `git archive` tree and builds a source tarball with the `thinkthen` crate and every registry crate vendored. It installs with an empty cargo home and no network.
+On **Ubuntu 26.04 (Resolute), R 4.6, x86-64**, the existing binary route avoids compiling ThinkThen:
 
-R-universe builds and serves the package under `botassembly` from each GitHub release. CRAN holds no copy. macOS and Windows get a built package from `https://botassembly.r-universe.dev`. On Linux that address serves the source package, which needs Rust's `cargo` and `rustc`. A Linux machine without Rust installs the built package from `https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/`, or `resolute-aarch64` on ARM. `NOTES.md` holds the rulings and the measured behavior.
+```r
+install.packages("thinkthen", repos = c(
+  "https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/",
+  "https://cloud.r-project.org"))
+library(thinkthen)
+```
 
-Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+Use `resolute-arm64` for the corresponding ARM64 build. Do not use these binaries as a general Linux route: match the distribution, architecture and R series. CRAN dependencies may still build from source, and `install.packages()` can fall back to source when a binary is missing. Keep the source prerequisites in that case. See [R-universe's Linux binary requirements](https://docs.r-universe.dev/install/binaries.html).
+
+On 2026-10-06, the [source index](https://botassembly.r-universe.dev/src/contrib/PACKAGES) and the [x86-64 R 4.6 binary index](https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/src/contrib/PACKAGES) listed 0.1.2; the ARM64 R 4.6 index also listed 0.1.2. These index checks establish availability, not a public installation rehearsal on every host. No public 0.2 package is claimed here.
+
+### Source package or development checkout
+
+For an existing vendored source archive produced by `tools/make-tarball.sh`, install into a directory you own (replace the archive path with yours):
+
+```sh
+mkdir -p rlib
+R CMD INSTALL --library=rlib /path/to/thinkthen_0.1.2.tar.gz
+R_LIBS_USER="$PWD/rlib" Rscript --vanilla -e 'library(thinkthen); packageVersion("thinkthen")'
+```
+
+The vendored archive carries the Rust engine and registry dependencies. Cargo builds it with `--locked --offline`, including with an empty Cargo home. R, jsonlite and the source compiler prerequisites must already be installed; the tarball does not vendor R packages.
+
+From the **current development checkout**, run at the repository root:
+
+```sh
+mkdir -p libraries/r/rlib
+CARGO_NET_OFFLINE=true CARGO_BUILD_JOBS=2 R CMD INSTALL \
+  --library=libraries/r/rlib libraries/r/thinkthen
+R_LIBS_USER="$PWD/libraries/r/rlib" Rscript --vanilla -e 'library(thinkthen); packageVersion("thinkthen")'
+```
+
+This builds 0.2.0 from the local Rust engine. It needs the pinned toolchain and cached dependencies for `libraries/r/thinkthen/src/rust/Cargo.lock`. A missing cached crate is a prerequisite failure; on a networked preparation machine, `cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml` fills that cache. `tools/make-tarball.sh OUT_DIR` creates the vendored package only inside a `git archive` tree, not a checkout.
+
+`library(thinkthen)` loads the installed package's `libs/thinkthen.so` and its registered native routines. The Rust engine is linked into that shared object; no separate `libthinkthen.so`, C archive or `LD_LIBRARY_PATH` setting is needed. If loading fails, check `.libPaths()`, `find.package("thinkthen")`, the installed jsonlite version and the host/binary compatibility before retrying.
+
+### Replay a saved answer without a key
+
+Download and unpack the public 0.1.2 sample once:
+
+```sh
+curl -fsSL https://github.com/botassembly/thinkthen/releases/download/v0.1.2/thinkthen-first-run.tar.gz | tar -xz
+```
+
+Start a fresh R session with the installed package on its library path, in the directory containing `thinkthen-first-run`. The following call uses only the saved answer and sends no model request, including on a replay miss:
+
+```r
+library(thinkthen)
+root <- "thinkthen-first-run"
+tt_engine(replay = file.path(root, "recording"), cache = FALSE)
+question <- "Does this report say what the person did before the problem appeared?"
+text <- readChar(file.path(root, "report.txt"),
+                 file.info(file.path(root, "report.txt"))$size)
+call <- tt_decide(question, text)
+stopifnot(identical(call$value, TRUE), call$facts$requests_sent == 0)
+call$value
+# [1] TRUE
+```
+
+No key is needed. Select replay before any asking call because R keeps one engine per session. The download needs network access; replay does not. For the development checkout, the same saved report and recording live in `demos/27-test-with-no-network` (use that path as `root`).
+
+## Checking
+
+From `libraries/r`, `./check.sh` runs the complete offline surface check. It exits 77 and reports "not run" if R, a tested R dependency or a cached crate is missing. `tools/setup.sh` prepares pinned R dependencies on a networked machine. From the repository root, `sdlc/scripts/smoke libraries/r` installs into owned scratch, loads the native package and replays a saved answer; its loopback counter proves the consumer adds no requests.
+
+The result index conventions are described in this README's call and run-facts sections; 0412 owns their documentation. Explicit files and folders use the [library reader contract](../files.md) and [`tt_files` helper reference](thinkthen/man/tt_files.Rd), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments. 0431 owns the typed R carriers. R image support remains required for 0.2 under 0431/0447; this installation ticket does not implement it.
