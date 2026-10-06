@@ -6,6 +6,11 @@ Every release of every surface shares one version number.
 
 Version 0.2 is in progress on main.
 
+The settled 0.2 SDK target uses `thinkthen.result/2` for new complete results with stable answer IDs, truthful source/model metadata and call/request identity. Rank details will return final rank positions under 0436. Bare CLI, scalar SQL, convenience values and generic C compatibility projections remain. These contracts are recorded by 0442; runtime/generated-schema/strict-reader adoption remains with 0443–0445, 0450 and carrier tickets.
+
+The cache/2 target includes literal requested/reported models, normalized final endpoints and image media/bytes/order in versioned identity. Upgrade validates v1 records offline before transactional conversion; read-only replay changes no bytes. Damaged or ambiguous stores refuse before sends. Old/new concurrent writers and downgrade of migrated stores are unsupported; an old writer needs an unmigrated copy. Response no-store will prohibit persistence; refresh will send no-cache and evict old working answers after a good nonstorable reply. Explicit recording will fail locally for such a reply. Reserved proxy types refuse activation in 0.2; override execution waits for an admitted 0.3 protocol.
+
+
 Python, TypeScript, Ruby, R and the C JSON door can select a named backend in their constructor. Packages that forward C settings JSON inherit `"backend"`. DuckDB and PostgreSQL select a backend through their session settings. SQLite accepts `"backend"` in its process configuration before the first engine build. SQL accepts no address or key.
 
 The default throttle is 8 simultaneous requests on every surface. Explicit throttles retain their process-wide precedence and range of 1 through 32 (ticket 0400).
