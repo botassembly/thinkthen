@@ -47,3 +47,28 @@ Phase A can land independently. Closing 0432 requires all families and
 semantic owners to adopt the cases, supply real named/compiler/runtime
 assertions, replace existing skips with boundary executions, and make the
 passing strict full run mandatory. No publication or release approval changes.
+
+## Shared integration in lane 2
+
+Branch `ticket/0432-parity-integration`, read-only main baseline `bf373969c`.
+Own declarations, shared fixtures, existing runner/table and test-rung integration.
+The independent 0456 fixture targets include named/path collisions and refusal,
+authored metadata, actual selected items, separate per-item/shared context,
+finite/staged-stream admission, annotate members/documents, image ancillary
+items and cache/replay validation. All retain 0407/0414 as required dependencies.
+MCP uses the saved 0455 public consumer inventory and is a required pending
+row; installed execution remains open. No host/native/C implementation is
+changed and no completion or landing record is claimed by this integration.
+
+Concrete native/MCP coordination dependency: the main closed surface list and
+generated result schema do not yet admit `mcp`. 0455/native owners must supply
+that token/schema change with `thinkthen mcp` and `libraries/mcp/check.sh`, then
+move the pending row to the settled inventory/register its surface. 0456's
+native loaders, declarations, actual-item admission and resolved typed metadata
+must land with generated question/result schemas before families can execute
+these targets. Existing image scenarios still need their owner's wire/response
+and missing media fixtures. The runner refuses incomplete execution rather
+than substituting generic JSON or schema/fixture decoding. Main routine gates
+remain transitional; full parity is required at adoption completion.
+
+Slice B code review: ACCEPT, 2026-10-06; fresh read-only whole-slice review of b13645e08. Shared integration can land independently; final required consumer execution remains open.
