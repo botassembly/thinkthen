@@ -11,6 +11,7 @@ fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomi
     let answer = Answer::new_yes_no(Probability::new(0.9).unwrap());
     let threshold = Threshold::default();
     Atomic {
+        declarations: Default::default(),
         rank_position: None,
         legacy: DecisionResult::new(
             answer.read(Some(threshold)).0,
@@ -119,6 +120,7 @@ fn complete_find_keeps_its_whole_set_question_and_all_ordered_probabilities() {
     let answer = Answer::new_choice(distribution, None).unwrap();
     let base = atomic(Vec::new(), Vec::new());
     let canonical = super::Find {
+        declarations: Default::default(),
         identity: base.identity,
         legacy: find.result(None, find.select(&answer).unwrap(), base.legacy.meta),
     };
@@ -146,6 +148,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
     let question = row.legacy.question;
     let answer = row.legacy.answer;
     let successful = AnnotationMember {
+        declarations: Default::default(),
         threshold: Some(Threshold::band(0.2, 0.95).unwrap()),
         sources: Vec::new(),
         observations: Vec::new(),
@@ -160,6 +163,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         )),
     };
     let failed = AnnotationMember {
+        declarations: Default::default(),
         threshold: Some(Threshold::default()),
         sources: Vec::new(),
         observations: Vec::new(),
@@ -196,6 +200,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         assert!(!failure_json.contains(absent));
     }
     let mismatched = AnnotationMember {
+        declarations: Default::default(),
         identity: MemberIdentity::Answered(AnswerId::new("c".repeat(64)).unwrap()),
         legacy: failed.legacy,
         threshold: failed.threshold,

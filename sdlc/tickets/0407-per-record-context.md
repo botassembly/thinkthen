@@ -25,7 +25,7 @@ Coordinate 0413 per-record options and family carrier ownership.
 
 ## Record association and identity
 
-Per-record context is associated with the stable input record/key before sorting, filtering, deduplication or splitting. Missing per-record context falls back to shared context; an explicit empty string supplies empty context and suppresses that fallback. Never concatenate contexts implicitly. Null/non-string record contexts are Usage before sends. Keep the original evidence separately recoverable.
+Per-record context is associated with the stable input record/key before sorting, filtering, deduplication or splitting. Missing per-record context falls back to shared context; an explicit empty string supplies empty context and suppresses that fallback. Never concatenate contexts implicitly. Null/non-string record contexts are Usage before sends unless an explicit 0456 object declaration admits actual typed object context. Keep the original evidence separately recoverable.
 
 Coordinate 0442/0444: the effective context is part of canonical shared state and therefore question identity. Identical evidence/question with different effective contexts cannot deduplicate or hit each other’s cache/replay entry; equal effective pairs may reuse. Tests use distinguishable record/context pairs, including duplicate evidence with different contexts and reordered keyed/frame inputs, and pin independently expected associations/answers through splitting. Count distinct-context misses, equal-context reuse and offline strict replay.
 
@@ -38,7 +38,8 @@ record parser, or retains literal text. `RecordReading` uses the ordinary field
 selection and existing context/candidate pointers. It yields the existing
 `RecordInput<RecordEvidence>` with separate controls; selected content alone
 reaches the current quoted/image planner and annotation group reader. Explicit
-empty context suppresses call fallback; null/non-string/missing controls refuse.
+empty context suppresses call fallback; null/non-string/missing controls refuse
+unless the declared 0456 object route admits an actual selected object.
 Original map order, false/null, excluded fields, duplicate images and actual
 physical coordinates remain recoverable through typed getters. Source image
 filenames carry no invented line coordinates and never enter identity. No

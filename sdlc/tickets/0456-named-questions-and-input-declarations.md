@@ -302,6 +302,36 @@ struct InputProperty
 struct ObjectDeclaration
 struct QuestionName
 struct WordingVersion
+struct ObjectContext
+fn ObjectContext::new(&RawRecord) -> Result<ObjectContext, Error>
+const fn ObjectContext::content(&self) -> QuestionContent<'_>
+impl Serialize for ObjectContext
+enum RecordContext
+RecordContext::Text(String)
+RecordContext::Object(ObjectContext)
+impl From<String> for RecordContext
+impl From<&str> for RecordContext
+impl Serialize for RecordContext
+RecordInput::context: Option<RecordContext>
+fn RecordReading::with_context_schema(self, InputDeclaration) -> RecordReading
 ```
 
 Focused constituent checks: 46 native complete cases passed before the declaration test was split by behavior; the final five declaration tests and both isolated native-name/CLI tests passed. The production question-file corpus and published schema self-test passed, as did the 74-row settings check, offline policy (268 resolved packages), format, affected Clippy and public inventory (1484 declarations; four existing plants refused). Root whole-code High review and full landing gates remain pending.
+
+### Retired public declarations
+
+```text
+RecordInput::context: Option<String>
+```
+
+The unpublished native record-input draft now settles `context` as `Option<RecordContext>`, with concrete text and validated ordered-object variants. Existing released scalar/convenience functions and the old C ABI are unchanged. `ObjectContext::new(&RawRecord)` accepts an already parsed object; literal JSON-looking text never becomes an object. `RecordReading::with_context_schema` admits an explicitly selected object through the same ordered record/pointer reader; each question independently validates it before lookup/send. The original record, selected evidence and physical coordinates stay separate. Undeclared context remains text only. Annotation wraps the typed context around the existing state without changing evidence or offsets; text context bytes remain compatible. Cache/replay use actual typed state, with no declaration metadata in identity. Whole-set shared context remains text.
+
+Three public regressions pin exact ordered object wire bodies, finite invalid-row zero sends, absence/fallback, null and JSON-looking text refusal, original preservation, annotation separation and zero-send replay of the accepted observation. Growth is 343 nonblank Rust lines (142592 → 142935), for the typed context carrier, reused native composition/packing integration and caller behavior checks. Streaming batch admission, remaining convenience paths, canonical result/2 schema/CLI and hosts are still open.
+
+## Bounded streamed declaration admission constituent, 2026-10-06
+
+Declared native atomic/annotation streams and CLI judgments/annotation now stage a bounded group of prepared inputs through the existing pure packer before looking any of them up. Record caps, state/body/profile/question limits and the existing input pause bound admission; split questions retain their whole logical input. A declaration/read refusal discards its uncommitted stage, while earlier admitted/dispatched work retains its ordered completed prefix and final facts. The existing send coordinator, global concurrency, configured batch sizes/defaults/precedence, retries, per-question keys and actual observed wire counts remain in use. Admission stages are not a new wire grouping policy. Native stop diagnostics retain an already known original bad-record position rather than replacing it with the first discarded row. Annotate's existing missing-pointer exception still flushes valid staged inputs and refuses only that input; declaration failures are terminal.
+
+Both public streamed regressions failed on the previous coordinator, which sent valid rows from the malformed batch and could surface a backend error first. Four focused public cases now pin bad-second-row zero sends, a preserved two-row prefix with input887/output unknown, declaration refusal before an unstored replay question lookup, and all-member annotation admission. The CLI case pins exact error sentences, rows, rank withholding and independently expected wire bodies. Existing 68 batching and 70 annotation checks plus five native streaming checks pass. Focused Clippy and the 1496-declaration inventory pass. Whole review and full landing gates remain root-owned.
+
+Source grows 411 nonblank Rust lines (142935 → 143346), for reusable bounded staging inside the existing coordinator, declaration admission on native/CLI callers and meaningful public/CLI regressions. No scheduler, cache namespace, test hook, proof tool or dependency is introduced. Materialized remaining convenience/aggregate admission, canonical result/2 schema/CLI, remaining complete rank-set/selection consumer needs and host adoption still remain open.

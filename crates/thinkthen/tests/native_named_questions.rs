@@ -243,3 +243,74 @@ fn check_named(root: &Path) {
         );
     }
 }
+
+#[test]
+fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batches() {
+    let root = Folder::new().unwrap();
+    fs::create_dir_all(config(root.path()).join("questions")).unwrap();
+    fs::write(
+        config(root.path()).join("questions/refund.json"),
+        r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#,
+    )
+    .unwrap();
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":0.2}},"usage":{"input_tokens":887}}"#)).unwrap();
+    let input = root.path().join("input.jsonl");
+    let run = |function: &str| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        child_environment(&mut command, root.path());
+        command
+            .env("THINKTHEN_API_KEY", "named-fixture-private")
+            .args([
+                function,
+                "@refund",
+                "--jsonl",
+                "--batch",
+                "2",
+                "--url",
+                listener.base(),
+                "--model",
+                "fixed",
+                "--no-cache",
+                "--max-retries",
+                "0",
+            ])
+            .stdin(fs::File::open(&input).unwrap())
+            .output()
+            .unwrap()
+    };
+    fs::write(&input, "\"Valid.\"\n12\n\"Unread-private.\"\n").unwrap();
+    let refused = run("decide");
+    assert_eq!(refused.status.code(), Some(2));
+    assert!(refused.stdout.is_empty());
+    let stderr = String::from_utf8(refused.stderr).unwrap();
+    assert_eq!(
+        stderr,
+        "thinkthen: the item does not match item_schema\nthinkthen: stopped at record 2; 0 records finished\n"
+    );
+    assert!(!stderr.contains("private"));
+    assert_eq!(listener.count(), 0);
+    fs::write(
+        &input,
+        "\"A.\"\n\"B.\"\n\"C.\"\nfalse\n\"Unread-private.\"\n",
+    )
+    .unwrap();
+    let stopped = run("decide");
+    assert_eq!(stopped.status.code(), Some(2));
+    assert_eq!(
+        String::from_utf8(stopped.stdout).unwrap(),
+        "{\"input\":\"A.\",\"value\":true}\n{\"input\":\"B.\",\"value\":false}\n"
+    );
+    assert_eq!(
+        String::from_utf8(stopped.stderr).unwrap(),
+        "thinkthen: the item does not match item_schema\nthinkthen: stopped at record 4; 2 records finished\n"
+    );
+    assert_eq!(listener.count(), 1);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&listener.requests()[0].body).unwrap(),
+        serde_json::json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"A.\". Refund?"},"q2":{"type":"noul","instructions":"The text is \"B.\". Refund?"}}})
+    );
+    let rank = run("rank");
+    assert_eq!(rank.status.code(), Some(2));
+    assert!(rank.stdout.is_empty());
+    assert_eq!(listener.count(), 2);
+}

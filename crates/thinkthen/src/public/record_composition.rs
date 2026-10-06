@@ -226,6 +226,7 @@ pub struct RecordReading {
     reading: core::Reading,
     context: Option<core::Pointer>,
     options: Option<core::Pointer>,
+    context_schema: Option<super::InputDeclaration>,
 }
 impl RecordReading {
     /// Admit ordered pointers using the ordinary reader, including field-name clashes.
@@ -245,11 +246,19 @@ impl RecordReading {
             reading: core::Reading::new(core::Framing::Jsonl, fields).map_err(Error::refused)?,
             context: context.map(pointer).transpose()?,
             options: options.map(pointer).transpose()?,
+            context_schema: None,
         })
+    }
+    /// Declare the selected per-item context's actual type before composition.
+    /// The question independently admits it again before lookup or sends.
+    #[must_use]
+    pub fn with_context_schema(mut self, schema: super::InputDeclaration) -> Self {
+        self.context_schema = Some(schema);
+        self
     }
     /// Compose one original without inserting context, candidates or provenance into evidence.
     /// # Errors
-    /// Refuses missing fields, blank evidence, nonstring context or invalid candidates.
+    /// Refuses missing fields, blank evidence, invalid context or candidates.
     pub fn compose(&self, original: RawRecord) -> Result<RecordInput<RecordEvidence>, Error> {
         let selected = self
             .reading
@@ -258,9 +267,18 @@ impl RecordReading {
         let context = self
             .context
             .as_ref()
-            .map(|pointer| original.0.context_text(pointer).map(str::to_owned))
-            .transpose()
-            .map_err(Error::refused)?;
+            .map(|pointer| match self.context_schema.as_ref() {
+                Some(schema) => {
+                    let value = original.0.context_value(pointer).map_err(Error::refused)?;
+                    super::RecordContext::selected(value, Some(schema))
+                }
+                None => original
+                    .0
+                    .context_text(pointer)
+                    .map(super::RecordContext::from)
+                    .map_err(Error::refused),
+            })
+            .transpose()?;
         let options = self
             .options
             .as_ref()

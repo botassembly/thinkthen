@@ -101,7 +101,8 @@ pub(super) fn complete<T>(
             context_sha256: held
                 .context
                 .as_ref()
-                .map(|text| core::bytes_sha256(text.as_bytes())),
+                .map(crate::public::record_context::digest)
+                .transpose()?,
             attempts: attempts.then(|| events.into_values().collect()),
         },
     })

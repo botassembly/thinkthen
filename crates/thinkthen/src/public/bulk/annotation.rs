@@ -24,7 +24,7 @@ pub(crate) struct Annotating {
     groups: Vec<Vec<usize>>,
     backend: core::Backend,
     profile: Option<core::BackendProfile>,
-    context: Option<String>,
+    context: Option<core::Json>,
 }
 
 impl Annotating {
@@ -33,10 +33,15 @@ impl Annotating {
             .filter(|text| !text.is_empty())
             .map(|text| {
                 evidence(text)?;
-                Ok::<_, Error>(text.to_owned())
+                Ok::<_, Error>(core::Json::String(text.to_owned()))
             })
             .transpose()?;
         Ok(self)
+    }
+
+    pub(crate) fn with_typed_context(mut self, context: Option<&core::Evidence>) -> Self {
+        self.context = context.map(core::Evidence::as_json);
+        self
     }
 
     pub(crate) fn new(engine: &facade::Engine, set: core::QuestionSet) -> Self {
@@ -62,6 +67,11 @@ impl Asker for Annotating {
     type Input = Text;
     type Row = Annotation;
     type Error = Error;
+    fn validates_batches(&self) -> bool {
+        self.set.questions().iter().any(|member| {
+            member.metadata().item_schema.is_some() || member.metadata().context_schema.is_some()
+        })
+    }
 
     fn label(&self, text: &Text) -> usize {
         text.at
@@ -117,7 +127,7 @@ impl Asker for Annotating {
             for ask in &mut asks {
                 ask.state = ask
                     .state
-                    .with_context(context)
+                    .with_context_value(context)
                     .map_err(|_| Error::defect("an aggregate context could not be written"))?;
                 ask.key = ask.state.key(self.backend.url(), &model, &ask.question);
             }

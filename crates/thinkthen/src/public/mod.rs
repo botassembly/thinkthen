@@ -51,12 +51,14 @@ mod question_file;
 mod record_choose;
 mod record_composition;
 pub use record_choose::RecordChooseQuestion;
+mod record_context;
 mod record_input;
 pub use crate::core::{Surface, SurfaceError};
 pub use proxy::{
     CodeThreshold, ProxyActivation, ProxyId, ProxyMetadata, ProxyOverride, ProxyRequest,
 };
 pub use record_composition::{RawRecord, RecordEvidence, RecordReading, SourceLocation};
+pub use record_context::{ObjectContext, RecordContext};
 pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
 mod recognize_question;

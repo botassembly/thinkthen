@@ -2,17 +2,17 @@
 
 use std::fmt;
 
-use super::{Description, Error, Question};
+use super::{Description, Error, Question, RecordContext};
 use crate::core::{self, Labels, Pointer};
 
 /// One original item with optional context and replacement choose candidates.
-/// `None` context falls back to the call context; `Some("")` suppresses it.
+/// `None` context falls back to the call context; explicit empty text suppresses it.
 #[derive(Clone, PartialEq)]
 pub struct RecordInput<T> {
     /// The original evidence, retained without cloning or serialization.
     pub original: T,
     /// Exact per-record context, or the call's fallback when absent.
-    pub context: Option<String>,
+    pub context: Option<RecordContext>,
     /// The entire ordered replacement shortlist, or fixed question options.
     pub options: Option<RecordOptions>,
 }
