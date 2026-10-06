@@ -68,6 +68,7 @@ pub(super) fn read(
             .filter(|&bytes| bytes <= crate::core::MAX_RECORD_BYTES)
             .ok_or(Failure::Usage("source relate input exceeds 16 MiB"))?;
         let record = reading.record(&bytes).map_err(Failure::from)?;
+        record.validate_item(spec.metadata.item_schema.as_ref())?;
         let (name, kind) = if text {
             (reading.as_it_arrived(&bytes)?, "*")
         } else {

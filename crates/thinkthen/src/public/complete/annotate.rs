@@ -74,11 +74,13 @@ impl Engine {
         I: IntoIterator<Item = RecordInput<T>>,
         T: InputEvidence,
     {
+        let options = options.started()?;
+        options.admission()?;
         let setting = crate::public::bulk::selected_set_batch(&questions.0, &options, self.batch)?;
         let (held, inputs) = prepare(
             &questions.0,
-            self.within_limit(records)?,
-            options.context_text(),
+            self.within_admission(records, &options)?,
+            &options,
         )?;
         let engine = Arc::clone(&self.inner);
         let asker = Annotations {
@@ -160,12 +162,14 @@ type Admission<T> = (Vec<Held<T>>, Vec<Prepared>);
 fn prepare<T: InputEvidence>(
     set: &core::QuestionSet,
     records: impl Iterator<Item = RecordInput<T>>,
-    fallback: Option<&str>,
+    options: &CallOptions<'_>,
 ) -> Result<Admission<T>, Error> {
     let mut held = Vec::new();
     let mut inputs = Vec::new();
     for (at, record) in records.enumerate() {
-        let (item, input) = prepare_record(set, record, fallback, at)?;
+        options.admission()?;
+        let (item, input) = prepare_record(set, record, options.context_text(), at)?;
+        options.admission()?;
         held.push(item);
         inputs.push(input);
     }

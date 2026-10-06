@@ -545,6 +545,2111 @@
     {"name":"record-missing-pointer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}},
     {"name":"record-error-cannot-be-an-answer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"},"value":null},"response_valid":false},
     {"name":"plan-p1","definition":"plan","plan_input":{"verb":"decide","question":"asks for a refund","input":["Refund me please."],"settings":{}},"response":{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false,"first_body_utf8":"{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Refund me please.\\\". asks for a refund\"}}}"}},
-    {"name":"plan-tokens-are-a-band","definition":"plan","response":{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":[93,166],"upper_bound":false,"first_body_utf8":null},"response_valid":false}
+    {"name":"plan-tokens-are-a-band","definition":"plan","response":{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":[93,166],"upper_bound":false,"first_body_utf8":null},"response_valid":false},
+    {
+      "name": "native-result2-decide-false-author-declarations",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-decide-null",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": null,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": "0.2:0.8",
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-choose-tie",
+      "definition": "completeChoose",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": null,
+        "question": {
+          "verb": "choose",
+          "text": "Which?",
+          "options": [
+            "z",
+            "a"
+          ]
+        },
+        "answer": {
+          "kind": "choice",
+          "pick": "z",
+          "probabilities": {
+            "z": 0.5,
+            "a": 0.5
+          },
+          "confidence": 0.4
+        },
+        "threshold": null,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-tag-empty",
+      "definition": "completeTag",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": [],
+        "question": {
+          "verb": "tag",
+          "text": "Topics?",
+          "labels": [
+            "z",
+            "a"
+          ]
+        },
+        "answer": {
+          "kind": "tag",
+          "probabilities": {
+            "z": 0.1,
+            "a": 0.2
+          }
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-score-weighted",
+      "definition": "completeScore",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": 0.75,
+        "question": {
+          "verb": "score",
+          "text": "Grade?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        },
+        "answer": {
+          "kind": "score",
+          "level": "high",
+          "probabilities": {
+            "low": 0.25,
+            "high": 0.75
+          }
+        },
+        "threshold": null,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-filter-original",
+      "definition": "completeFilter",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        },
+        "input": {
+          "input": false,
+          "value": null,
+          "meta": [
+            "original"
+          ]
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-rank-position",
+      "definition": "completeRank",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": 2,
+        "question": {
+          "verb": "score",
+          "text": "Grade?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        },
+        "answer": {
+          "kind": "score",
+          "level": "high",
+          "probabilities": {
+            "low": 0.25,
+            "high": 0.75
+          }
+        },
+        "threshold": null,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        },
+        "input": {
+          "body": "original"
+        },
+        "question_name": "quality"
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-find-raw-real-pick-none-selection",
+      "definition": "completeFind",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": null,
+        "question": {
+          "verb": "find",
+          "text": "Which?",
+          "none": true
+        },
+        "answer": {
+          "kind": "find",
+          "pick": "u001",
+          "probabilities": {
+            "u001": 0.5,
+            "u002": 0.0,
+            "none": 0.5
+          }
+        },
+        "threshold": null,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-annotate-null-and-failed",
+      "definition": "completeAnnotation",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "input": {
+          "body": "original"
+        },
+        "value": {
+          "ok": null,
+          "failed": {
+            "failed": {"kind": "backend", "cause": "missing_probability"}
+          }
+        },
+        "answers": {
+          "ok": {
+            "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "value": false,
+            "question": {
+              "verb": "decide",
+              "text": {
+                "original": [
+                  false,
+                  null
+                ]
+              },
+              "name": "refund",
+              "wording_version": 7,
+              "item_schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            },
+            "answer": {
+              "kind": "yes_no",
+              "probability": 0.1
+            },
+            "threshold": 0.5,
+            "request": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "failed": {
+            "failure_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "question": {
+              "verb": "decide",
+              "text": "Good?"
+            },
+            "failure": {
+              "kind": "backend",
+              "cause": "missing_probability"
+            },
+            "request": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 1,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "questions_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-recognize-zero-observations",
+      "definition": "completeRecognition",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": {
+          "entities": []
+        },
+        "question": {
+          "verb": "recognize",
+          "kinds": {},
+          "threshold": 0.5,
+          "relation_threshold": 0.5
+        },
+        "answer": {
+          "pieces": [],
+          "names": [],
+          "pairs": []
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "requests_sent": 0,
+          "cached": false,
+          "requests": [],
+          "failed_questions": 0,
+          "origin": null,
+          "question_sources": [],
+          "observations": []
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-relate-zero-observations",
+      "definition": "completeRelation",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": [],
+        "question": {
+          "verb": "relate",
+          "fields": null,
+          "relations": [],
+          "threshold": 0.5
+        },
+        "answer": {
+          "questions": []
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "requests_sent": 0,
+          "cached": false,
+          "requests": [],
+          "failed_questions": 0,
+          "origin": null,
+          "question_sources": [],
+          "observations": []
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-call-partial-usage-zero-reported-time",
+      "definition": "completeCall",
+      "response": {
+        "value": {
+          "schema": "thinkthen.result/2",
+          "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "value": false,
+          "question": {
+            "verb": "decide",
+            "text": {
+              "original": [
+                false,
+                null
+              ]
+            },
+            "name": "refund",
+            "wording_version": 7,
+            "item_schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "type": "string"
+                },
+                "ready": {
+                  "type": "boolean"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "body"
+              ]
+            }
+          },
+          "answer": {
+            "kind": "yes_no",
+            "probability": 0.1
+          },
+          "threshold": 0.5,
+          "meta": {
+            "tool": "thinkthen 0.2.0",
+            "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "url": "http://127.0.0.1:1/v1/systemone",
+            "model": "reported",
+            "usage": {
+              "input_tokens": 887
+            },
+            "requests_sent": 1,
+            "cached": false,
+            "requests": [
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "failed_questions": 0,
+            "origin": "live",
+            "question_sources": [
+              {
+                "origin": "live",
+                "answered_by": "reported",
+                "batch_size": 13
+              }
+            ],
+            "observations": [
+              {
+                "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            ],
+            "answered_by": "reported"
+          }
+        },
+        "facts": {
+          "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "cache_answers": 0,
+          "input_tokens": 887,
+          "model": "reported",
+          "records": 1,
+          "requests_sent": 1,
+          "seconds": 0.0,
+          "attempts": [
+            {
+              "ordinal": 1,
+              "request_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "sdk_request_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "wall_ms": 0,
+              "outcome": "ok",
+              "status": 200,
+              "server_ms": 0
+            }
+          ]
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-admission-usage",
+      "definition": "completeCall",
+      "response": {
+        "error": {
+          "kind": "usage",
+          "message": "Safe native failure.",
+          "retryable": false,
+          "stopped": {
+            "cause": "usage",
+            "retryable": false
+          }
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-admission-local",
+      "definition": "completeCall",
+      "response": {
+        "error": {
+          "kind": "local",
+          "message": "Safe native failure.",
+          "retryable": false,
+          "stopped": {
+            "cause": "local",
+            "retryable": false
+          }
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-admission-backend",
+      "definition": "completeCall",
+      "response": {
+        "error": {
+          "kind": "backend",
+          "message": "Safe native failure.",
+          "retryable": false,
+          "stopped": {
+            "cause": "backend",
+            "retryable": false
+          }
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-admission-cancelled",
+      "definition": "completeCall",
+      "response": {
+        "error": {
+          "kind": "cancelled",
+          "message": "Safe native failure.",
+          "retryable": false,
+          "stopped": {
+            "cause": "cancelled",
+            "retryable": false
+          }
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-admission-deadline",
+      "definition": "completeCall",
+      "response": {
+        "error": {
+          "kind": "deadline",
+          "message": "Safe native failure.",
+          "retryable": false,
+          "stopped": {
+            "cause": "deadline",
+            "retryable": false
+          }
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-admission-defect",
+      "definition": "completeCall",
+      "response": {
+        "error": {
+          "kind": "defect",
+          "message": "Safe native failure.",
+          "retryable": false,
+          "stopped": {
+            "cause": "defect",
+            "retryable": false
+          }
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-started-status-failure",
+      "definition": "completeCall",
+      "response": {
+        "error": {
+          "kind": "backend",
+          "message": "Safe status failure.",
+          "retryable": true,
+          "stopped": {
+            "at": 2,
+            "cause": "status",
+            "status": 503,
+            "retryable": true
+          }
+        },
+        "facts": {
+          "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "cache_answers": 0,
+          "input_tokens": 887,
+          "model": "reported",
+          "records": 1,
+          "requests_sent": 1,
+          "seconds": 0.0,
+          "attempts": [
+            {
+              "ordinal": 1,
+              "request_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "sdk_request_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "wall_ms": 0,
+              "outcome": "ok",
+              "status": 200,
+              "server_ms": 0
+            }
+          ]
+        }
+      },
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-surface-mcp",
+      "definition": "completeSurface",
+      "response": "mcp",
+      "schema_only": true
+    },
+    {
+      "name": "native-result2-surface-mcp-case",
+      "definition": "completeSurface",
+      "response": "MCP",
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-rank-null",
+      "definition": "completeRank",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": null,
+        "question": {
+          "verb": "score",
+          "text": "Grade?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        },
+        "answer": {
+          "kind": "score",
+          "level": "high",
+          "probabilities": {
+            "low": 0.25,
+            "high": 0.75
+          }
+        },
+        "threshold": null,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        },
+        "input": {
+          "body": "original"
+        },
+        "question_name": "quality"
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-missing-answer-id",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": null,
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-null-output-usage",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887,
+            "output_tokens": null
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-transient-id-in-body",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-unknown-proxy-meta",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "proxy": {}
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-zero-batch-count",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 0
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-null-batch-count",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": null
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-upper-answer-id",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-unknown-declaration-feature",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ],
+            "$ref": "external"
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-both-observation-identities",
+      "definition": "completeDecide",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": false,
+        "question": {
+          "verb": "decide",
+          "text": {
+            "original": [
+              false,
+              null
+            ]
+          },
+          "name": "refund",
+          "wording_version": 7,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.1
+        },
+        "threshold": 0.5,
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "failure_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            }
+          ],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-both-member-identities",
+      "definition": "completeAnnotation",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "input": {
+          "body": "original"
+        },
+        "value": {
+          "ok": null,
+          "failed": {
+            "failed": {"kind": "backend", "cause": "missing_probability"}
+          }
+        },
+        "answers": {
+          "ok": {
+            "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "value": false,
+            "question": {
+              "verb": "decide",
+              "text": {
+                "original": [
+                  false,
+                  null
+                ]
+              },
+              "name": "refund",
+              "wording_version": 7,
+              "item_schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            },
+            "answer": {
+              "kind": "yes_no",
+              "probability": 0.1
+            },
+            "threshold": 0.5,
+            "request": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "failure_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          },
+          "failed": {
+            "failure_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "question": {
+              "verb": "decide",
+              "text": "Good?"
+            },
+            "failure": {
+              "kind": "backend",
+              "cause": "missing_probability"
+            },
+            "request": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "usage": {
+            "input_tokens": 887
+          },
+          "requests_sent": 1,
+          "cached": false,
+          "requests": [
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "failed_questions": 1,
+          "origin": "live",
+          "question_sources": [
+            {
+              "origin": "live",
+              "answered_by": "reported",
+              "batch_size": 13
+            }
+          ],
+          "observations": [
+            {
+              "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ],
+          "answered_by": "reported",
+          "questions_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-empty-live-origin",
+      "definition": "completeRecognition",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": {
+          "entities": []
+        },
+        "question": {
+          "verb": "recognize",
+          "kinds": {},
+          "threshold": 0.5,
+          "relation_threshold": 0.5
+        },
+        "answer": {
+          "pieces": [],
+          "names": [],
+          "pairs": []
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "requests_sent": 0,
+          "cached": false,
+          "requests": [],
+          "failed_questions": 0,
+          "origin": "live",
+          "question_sources": [],
+          "observations": []
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-empty-invented-model",
+      "definition": "completeRecognition",
+      "response": {
+        "schema": "thinkthen.result/2",
+        "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "value": {
+          "entities": []
+        },
+        "question": {
+          "verb": "recognize",
+          "kinds": {},
+          "threshold": 0.5,
+          "relation_threshold": 0.5
+        },
+        "answer": {
+          "pieces": [],
+          "names": [],
+          "pairs": []
+        },
+        "meta": {
+          "tool": "thinkthen 0.2.0",
+          "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "url": "http://127.0.0.1:1/v1/systemone",
+          "model": "reported",
+          "requests_sent": 0,
+          "cached": false,
+          "requests": [],
+          "failed_questions": 0,
+          "origin": null,
+          "question_sources": [],
+          "observations": [],
+          "answered_by": "reported"
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-null-facts-output",
+      "definition": "completeCall",
+      "response": {
+        "value": {
+          "schema": "thinkthen.result/2",
+          "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "value": false,
+          "question": {
+            "verb": "decide",
+            "text": {
+              "original": [
+                false,
+                null
+              ]
+            },
+            "name": "refund",
+            "wording_version": 7,
+            "item_schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "type": "string"
+                },
+                "ready": {
+                  "type": "boolean"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "body"
+              ]
+            }
+          },
+          "answer": {
+            "kind": "yes_no",
+            "probability": 0.1
+          },
+          "threshold": 0.5,
+          "meta": {
+            "tool": "thinkthen 0.2.0",
+            "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "url": "http://127.0.0.1:1/v1/systemone",
+            "model": "reported",
+            "usage": {
+              "input_tokens": 887
+            },
+            "requests_sent": 1,
+            "cached": false,
+            "requests": [
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "failed_questions": 0,
+            "origin": "live",
+            "question_sources": [
+              {
+                "origin": "live",
+                "answered_by": "reported",
+                "batch_size": 13
+              }
+            ],
+            "observations": [
+              {
+                "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            ],
+            "answered_by": "reported"
+          }
+        },
+        "facts": {
+          "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "cache_answers": 0,
+          "input_tokens": 887,
+          "model": "reported",
+          "records": 1,
+          "requests_sent": 1,
+          "seconds": 0.0,
+          "attempts": [
+            {
+              "ordinal": 1,
+              "request_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "sdk_request_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "wall_ms": 0,
+              "outcome": "ok",
+              "status": 200,
+              "server_ms": 0
+            }
+          ],
+          "output_tokens": null
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
+      "name": "native-result2-attempt-zero-ordinal",
+      "definition": "completeCall",
+      "response": {
+        "value": {
+          "schema": "thinkthen.result/2",
+          "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "value": false,
+          "question": {
+            "verb": "decide",
+            "text": {
+              "original": [
+                false,
+                null
+              ]
+            },
+            "name": "refund",
+            "wording_version": 7,
+            "item_schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "type": "string"
+                },
+                "ready": {
+                  "type": "boolean"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "body"
+              ]
+            }
+          },
+          "answer": {
+            "kind": "yes_no",
+            "probability": 0.1
+          },
+          "threshold": 0.5,
+          "meta": {
+            "tool": "thinkthen 0.2.0",
+            "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "url": "http://127.0.0.1:1/v1/systemone",
+            "model": "reported",
+            "usage": {
+              "input_tokens": 887
+            },
+            "requests_sent": 1,
+            "cached": false,
+            "requests": [
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "failed_questions": 0,
+            "origin": "live",
+            "question_sources": [
+              {
+                "origin": "live",
+                "answered_by": "reported",
+                "batch_size": 13
+              }
+            ],
+            "observations": [
+              {
+                "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            ],
+            "answered_by": "reported"
+          }
+        },
+        "facts": {
+          "call_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "cache_answers": 0,
+          "input_tokens": 887,
+          "model": "reported",
+          "records": 1,
+          "requests_sent": 1,
+          "seconds": 0.0,
+          "attempts": [
+            {
+              "ordinal": 0,
+              "request_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "sdk_request_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "wall_ms": 0,
+              "outcome": "ok",
+              "status": 200,
+              "server_ms": 0
+            }
+          ]
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    }
   ]
 }

@@ -159,6 +159,7 @@ fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_er
 
 #[cfg(test)]
 fn check_named(root: &Path) {
+    check_roles(root);
     let named = Question::load_named("refund").unwrap();
     assert_eq!(named.name().unwrap().as_str(), "refund");
     assert!(
@@ -313,4 +314,133 @@ fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batche
     assert_eq!(rank.status.code(), Some(2));
     assert!(rank.stdout.is_empty());
     assert_eq!(listener.count(), 2);
+}
+
+#[test]
+fn cli_whole_set_functions_validate_typed_selected_values_before_sending() {
+    let root = Folder::new().unwrap();
+    let input = root.path().join("input.jsonl");
+    fs::write(
+        &input,
+        "{\"body\":false,\"private\":\"unprinted-secret\"}\n",
+    )
+    .unwrap();
+    let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
+    let cases = [
+        (
+            "find",
+            r#"{"find":"Which?","on":"/body","item_schema":{"type":"string"}}"#,
+        ),
+        (
+            "recognize",
+            r#"{"version":1,"recognize":{},"on":"/body","item_schema":{"type":"string"}}"#,
+        ),
+        (
+            "relate",
+            r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"item_schema":{"type":"string"}}"#,
+        ),
+    ];
+    for (function, question) in cases {
+        let path = root.path().join("question.json");
+        fs::write(&path, question).unwrap();
+        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        child_environment(&mut command, root.path());
+        let output = command
+            .env("THINKTHEN_API_KEY", "named-fixture-private")
+            .args([
+                function,
+                "@question.json",
+                "--jsonl",
+                "--url",
+                listener.base(),
+                "--model",
+                "fixed",
+                "--no-cache",
+                "--max-retries",
+                "0",
+            ])
+            .stdin(fs::File::open(&input).unwrap())
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{function}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(
+            stderr.contains("the item does not match item_schema"),
+            "{function}: {stderr}"
+        );
+        assert!(!stderr.contains("private"));
+        assert!(!stderr.contains("body"));
+        assert_eq!(listener.count(), 0);
+    }
+}
+
+#[cfg(test)]
+fn check_roles(root: &Path) {
+    for (name, body) in [
+        ("finder", r#"{"find":"Which?","wording_version":2}"#),
+        ("recognizer", r#"{"version":1,"recognize":{}}"#),
+        ("ranker", r#"{"decide":"Ready?","wording_version":2}"#),
+        (
+            "connections",
+            r#"{"version":1,"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#,
+        ),
+    ] {
+        fs::write(config(root).join(format!("questions/{name}.json")), body).unwrap();
+        fs::write(root.join(format!("{name}.json")), body).unwrap();
+    }
+    for error in [
+        Question::load_named("finder").unwrap_err(),
+        thinkthen::QuestionSet::load_named("recognizer").unwrap_err(),
+        thinkthen::RecognizeQuestionFile::load_named("finder").unwrap_err(),
+        thinkthen::Relate::load_named("recognizer").unwrap_err(),
+        thinkthen::RecordChooseQuestion::load_named("ranker").unwrap_err(),
+        thinkthen::RankSet::load_reference("@finder.json").unwrap_err(),
+        Question::load_rank_reference("@recognizer.json").unwrap_err(),
+    ] {
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(
+            error.detail().message(),
+            "the question file uses another function"
+        );
+        assert!(error.facts().is_none());
+    }
+    // Released literal-path loader keeps its file/content error boundary.
+    assert_eq!(
+        Question::load(root.join("finder.json")).unwrap_err().kind(),
+        ErrorKind::Local
+    );
+    assert_eq!(
+        Question::load_rank_named("ranker").unwrap().kind(),
+        thinkthen::QuestionKind::Rank
+    );
+    assert_eq!(
+        Question::load_rank_reference("@ranker.json")
+            .unwrap()
+            .kind(),
+        thinkthen::QuestionKind::Rank
+    );
+    assert_eq!(
+        Question::load_find_named("finder").unwrap().kind(),
+        thinkthen::QuestionKind::Find
+    );
+    assert_eq!(
+        Question::load_find_reference("@finder.json")
+            .unwrap()
+            .kind(),
+        thinkthen::QuestionKind::Find
+    );
+    assert!(thinkthen::Relate::load_records_named("connections").is_ok());
+    assert!(thinkthen::Relate::load_records_reference("@connections.json").is_ok());
+    assert_eq!(
+        thinkthen::Relate::load_named("connections")
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Local
+    );
 }

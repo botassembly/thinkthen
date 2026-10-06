@@ -91,8 +91,8 @@ pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::price::Prices;
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub(crate) use crate::core::question_file::{
-    Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
-    resolve, safe_key,
+    Cutting, QuestionFile, QuestionFileError, QuestionRole, Resolved, Source, Sources, Typed, Verb,
+    pointers, resolve, safe_key,
 };
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
@@ -183,3 +183,6 @@ pub use declaration::{
     InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
     WordingVersion,
 };
+
+#[cfg(test)]
+pub(crate) use result::complete as complete_documents;

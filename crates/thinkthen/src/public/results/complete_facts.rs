@@ -2,10 +2,15 @@
 
 use super::Facts;
 use crate::public::{AttemptObservation, CallId};
-use serde::{Serialize, Serializer, ser::SerializeMap};
+use serde::{Serialize, Serializer};
 
 /// Borrowed final facts for exactly one admitted invocation.
 #[derive(Debug)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(with = "Document<'static>")
+)]
 pub struct CompleteFacts<'a> {
     facts: &'a Facts,
     call_id: &'a CallId,
@@ -42,31 +47,42 @@ impl CompleteFacts<'_> {
     }
 }
 
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "completeFacts"))]
+struct Document<'a> {
+    call_id: &'a CallId,
+    cache_answers: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    estimated_cost_usd: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    model: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    output_tokens: Option<u64>,
+    records: u64,
+    requests_sent: u64,
+    seconds: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attempts: Option<Vec<crate::public::CompleteAttempt<'a>>>,
+}
 impl Serialize for CompleteFacts<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let facts = self.facts;
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("call_id", self.call_id)?;
-        map.serialize_entry("cache_answers", &facts.cache_answers)?;
-        if let Some(value) = &facts.estimated_cost_usd {
-            map.serialize_entry("estimated_cost_usd", value)?;
+        Document {
+            call_id: self.call_id,
+            cache_answers: facts.cache_answers,
+            estimated_cost_usd: facts.estimated_cost_usd.as_deref(),
+            input_tokens: facts.input_tokens,
+            model: facts.model.as_deref(),
+            output_tokens: facts.output_tokens,
+            records: facts.records,
+            requests_sent: facts.requests_sent,
+            seconds: facts.seconds,
+            attempts: self
+                .attempts()
+                .map(|attempts| attempts.iter().map(AttemptObservation::complete).collect()),
         }
-        if let Some(value) = facts.input_tokens {
-            map.serialize_entry("input_tokens", &value)?;
-        }
-        if let Some(value) = &facts.model {
-            map.serialize_entry("model", value)?;
-        }
-        if let Some(value) = facts.output_tokens {
-            map.serialize_entry("output_tokens", &value)?;
-        }
-        map.serialize_entry("records", &facts.records)?;
-        map.serialize_entry("requests_sent", &facts.requests_sent)?;
-        map.serialize_entry("seconds", &facts.seconds)?;
-        if let Some(attempts) = self.attempts() {
-            let complete: Vec<_> = attempts.iter().map(AttemptObservation::complete).collect();
-            map.serialize_entry("attempts", &complete)?;
-        }
-        map.end()
+        .serialize(serializer)
     }
 }

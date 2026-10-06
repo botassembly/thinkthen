@@ -7,6 +7,16 @@ use serde::{Serialize, Serializer};
 use crate::core::{self, AnswerId, ResultIdentity};
 use crate::public::{Candidate, Error, Found, Usage};
 
+/// Actual find selection after its stable synthetic-none tie rule.
+/// Find has no threshold abstention; a successful none is an admitted candidate.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FindSelection {
+    /// Selected zero-based original unit.
+    Unit(usize),
+    /// The explicitly offered synthetic none won or shared the lead.
+    None,
+}
+
 /// A complete whole-set find with every candidate and its probability.
 #[derive(Clone, PartialEq)]
 pub struct CompleteFound<T> {
@@ -15,6 +25,14 @@ pub struct CompleteFound<T> {
 }
 
 impl<T> CompleteFound<T> {
+    /// Actual mapped selection, distinct from the backend's raw leading pick.
+    #[must_use]
+    pub fn selection(&self) -> FindSelection {
+        self.canonical
+            .selected()
+            .map_or(FindSelection::None, FindSelection::Unit)
+    }
+
     /// Actual whole-set question, including explicit none admission.
     #[must_use]
     pub fn question(&self) -> super::FindReading<'_> {

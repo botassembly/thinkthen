@@ -3,6 +3,7 @@ mod annotate;
 mod find;
 mod many;
 mod rank;
+mod rank_set;
 mod recognize;
 mod records;
 mod relate;

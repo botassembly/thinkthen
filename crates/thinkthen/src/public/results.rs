@@ -15,6 +15,8 @@ pub use reading::{
 };
 mod complete_annotation;
 mod complete_call;
+mod complete_schema;
+pub use complete_schema::complete_call_schema;
 mod complete_facts;
 pub use complete_call::{CompleteCall, CompleteError, ErrorSnapshot};
 mod complete_find;
@@ -23,16 +25,18 @@ mod complete_recognize;
 mod complete_relate;
 pub use complete_relate::{CompleteRelated, CompleteRelationMember};
 mod complete_record;
+mod complete_set_rank;
 pub use complete::{
     CompleteChoice, CompleteDecision, CompleteFilter, CompleteRank, CompleteScore, CompleteTags,
 };
 pub use complete_annotation::{CompleteAnnotated, CompleteAnnotationMember};
-pub use complete_find::CompleteFound;
+pub use complete_find::{CompleteFound, FindSelection};
 pub use complete_recognize::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
     RecognitionProbabilities,
 };
 pub use complete_record::CompleteRecord;
+pub use complete_set_rank::{CompleteRankMember, CompleteSetRank};
 mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub use call::{Call, DoorReply, Facts};

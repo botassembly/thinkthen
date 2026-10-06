@@ -28,6 +28,37 @@ pub(crate) struct Annotating {
 }
 
 impl Annotating {
+    fn input_record(&self, text: &Text) -> Result<core::BatchRecord, Error> {
+        match &text.input {
+            crate::public::QuestionInput::Record(record) if record.images().is_empty() => {
+                Ok(record.batch_record())
+            }
+            _ => record(
+                &self.set,
+                text.plain(crate::public::InputFunction::Annotate)?,
+            ),
+        }
+    }
+
+    fn admit_declarations(&self, text: &Text) -> Result<(), Error> {
+        let record = self.input_record(text)?;
+        for places in &self.groups {
+            match self.set.group_evidence(places, &record) {
+                Ok(_) | Err(core::PartError::Record(core::RecordError::Missed(_))) => {}
+                Err(core::PartError::Declaration(_)) => {
+                    return Err(Error::usage("the item does not match item_schema"));
+                }
+                Err(core::PartError::Record(error)) => return Err(Error::refused(error)),
+                Err(core::PartError::Reading(_)) => {
+                    return Err(Error::defect(
+                        "a checked question set could not read its parts",
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn with_context(mut self, context: Option<&str>) -> Result<Self, Error> {
         self.context = context
             .filter(|text| !text.is_empty())
@@ -78,15 +109,7 @@ impl Asker for Annotating {
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Error> {
-        let record = match &text.input {
-            crate::public::QuestionInput::Record(record) if record.images().is_empty() => {
-                record.batch_record()
-            }
-            _ => record(
-                &self.set,
-                text.plain(crate::public::InputFunction::Annotate)?,
-            )?,
-        };
+        let record = self.input_record(text)?;
         let mut asks = Vec::new();
         for places in &self.groups {
             let evidence =
@@ -249,7 +272,7 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<Call<EachRow>, Error> {
         let setting = selected_set_batch(&questions.0, &options, self.batch)?;
-        let inputs = self
+        let inputs: Vec<_> = self
             .within_limit(texts)?
             .enumerate()
             .map(|(at, text)| Text {
@@ -260,6 +283,13 @@ impl Engine {
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let (engine, set) = (Arc::clone(&self.inner), &questions.0);
         let asker = Annotating::new(&engine, set.clone()).with_context(options.context_text())?;
+        if asker.validates_batches() {
+            for input in &inputs {
+                asker
+                    .admit_declarations(input)
+                    .map_err(|error| error.at_record(input.at))?;
+            }
+        }
         let packing = pull::packing(setting, false, false);
         stop.run_call(texts.len(), |cancel| {
             let mut rows = Vec::with_capacity(texts.len());

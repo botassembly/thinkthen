@@ -82,9 +82,20 @@ mod relate_records;
 #[path = "native_complete/declarations.rs"]
 mod declarations;
 
+#[path = "native_complete/consumer_views.rs"]
+mod consumer_views;
 #[path = "native_complete/context.rs"]
 mod context;
 #[path = "native_complete/declaration_batches.rs"]
 mod declaration_batches;
 #[path = "native_complete/tally.rs"]
 mod tally;
+
+#[path = "native_complete/set_rank.rs"]
+mod set_rank;
+
+#[path = "native_complete/admission_cancel.rs"]
+mod admission_cancel;
+
+#[path = "native_complete/schema.rs"]
+mod schema;

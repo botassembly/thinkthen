@@ -280,5 +280,7 @@ fn admitted(
         .take(256)
         .map(|entity| (entity.name().to_owned(), entity.kind().to_owned()))
         .collect::<Vec<_>>();
-    ask.0.admit(&pairs).map_err(Error::refused)
+    let entities = ask.0.admit(&pairs).map_err(Error::refused)?;
+    ask.validate_pairs(&pairs)?;
+    Ok(entities)
 }

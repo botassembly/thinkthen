@@ -73,7 +73,11 @@ impl Engine {
         let records = self.try_within_limit(records)?;
         // A rank judges every record before it orders any, so a blank record
         // is refused before the first send.
-        for record in records.as_slice() {
+        for (at, record) in records.as_slice().iter().enumerate() {
+            question
+                .metadata
+                .validate_item(&super::super::InputEvidence::question_input(record))
+                .map_err(|error| error.at_record(at))?;
             evidence(record.evidence())?;
         }
         let mut batch = self.decisions(question, records, options, |item, (_, yes)| {
@@ -150,6 +154,12 @@ impl Engine {
         T: Evidence,
     {
         let (units, find, engine) = self.prepare_find(question, units, &options)?;
+        for (at, unit) in units.iter().enumerate() {
+            question
+                .metadata
+                .validate_item(&super::super::InputEvidence::question_input(unit))
+                .map_err(|error| error.at_record(at))?;
+        }
         let none = question.kind == Kind::FindNone;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
@@ -182,7 +192,7 @@ impl Engine {
         let mut bytes = 0usize;
         for unit in units {
             let unit = unit?;
-            self.check_limit(held.len())?;
+            self.check_record_limit(held.len())?;
             if held.len() == maximum {
                 return Err(Error::usage(count_message));
             }
@@ -215,15 +225,6 @@ impl Engine {
         self.try_within_limit(records.into_iter().map(Ok))
     }
 
-    fn check_limit(&self, admitted: usize) -> Result<(), Error> {
-        if let Some(most) = self.most.filter(|&most| admitted >= most) {
-            return Err(Error::usage(format!(
-                "this engine answers at most {most} records in one call"
-            )));
-        }
-        Ok(())
-    }
-
     pub(in crate::public) fn try_within_limit<I, T>(
         &self,
         records: I,
@@ -231,12 +232,6 @@ impl Engine {
     where
         I: IntoIterator<Item = Result<T, Error>>,
     {
-        let mut held = Vec::new();
-        for record in records {
-            let record = record?;
-            self.check_limit(held.len())?;
-            held.push(record);
-        }
-        Ok(held.into_iter())
+        self.try_within_admission(records, &CallOptions::new())
     }
 }
