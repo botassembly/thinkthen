@@ -221,7 +221,7 @@ impl fmt::Debug for RecordEvidence {
 }
 
 /// Existing field selection plus separate context and candidate pointers.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct RecordReading {
     reading: core::Reading,
     context: Option<core::Pointer>,
@@ -329,5 +329,11 @@ impl RecordReading {
                 })
             }
         }
+    }
+}
+
+impl fmt::Debug for RecordReading {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RecordReading").finish_non_exhaustive()
     }
 }

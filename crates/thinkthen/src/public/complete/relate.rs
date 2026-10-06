@@ -116,6 +116,7 @@ impl Engine {
                 },
                 &options,
                 stop.facts().attempts().map(<[_]>::to_vec),
+                ask.0.profile.as_ref(),
             );
             Ok(CompleteRelated {
                 canonical: core::CompleteRelation {

@@ -13,6 +13,7 @@ use crate::public::options::{CallOptions, Stop};
 use crate::public::recognize::{RelationRule, add_rule, cut, model};
 use crate::public::results::Written;
 
+mod debug;
 mod observation;
 mod records;
 use crate::public::results::observe_question;
@@ -22,7 +23,7 @@ use observation::observe_row;
 const MOST_ENTITIES: usize = 255;
 
 /// A relate request: its rules, cut, and model.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Relate(pub(crate) RelateSpec);
 
 impl Relate {
@@ -65,7 +66,6 @@ impl Relate {
 }
 
 /// A relate request under construction.
-#[derive(Debug)]
 pub struct RelateBuilder {
     relations: Vec<core::RelationRule>,
     threshold: Option<f64>,
@@ -217,7 +217,7 @@ impl Entity {
 }
 
 /// One relation between two given entities.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Edge {
     relation: String,
     source: Entity,

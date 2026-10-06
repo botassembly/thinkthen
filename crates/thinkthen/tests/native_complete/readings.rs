@@ -107,3 +107,39 @@ fn reported_model_remains_truthful_but_debug_cannot_echo_a_private_value() {
     assert!(!shown.contains("complete-private"));
     assert_eq!(listener.count(), 1);
 }
+
+#[test]
+fn aggregate_request_debug_withholds_authored_names_models_and_private_rules() {
+    let secret = "private-credential-shaped-input";
+    let kind = thinkthen::Kind::new(secret, None).unwrap();
+    let rule = thinkthen::RelationRule::one_way(secret, "*", "*").unwrap();
+    let recognize = thinkthen::Recognize::builder()
+        .kind(kind.clone())
+        .unwrap()
+        .relation(rule.clone())
+        .unwrap()
+        .model(secret)
+        .unwrap();
+    let relate = thinkthen::Relate::builder()
+        .relation(rule.clone())
+        .unwrap()
+        .model(secret)
+        .unwrap();
+    let reading = thinkthen::RecordReading::new(&[&format!("/{secret}")], None, None).unwrap();
+    let saved = thinkthen::RecognizeQuestionFile::from_json(&format!(
+        r#"{{"version":1,"recognize":{{}},"on":"/{secret}"}}"#
+    ))
+    .unwrap();
+    assert!(!format!("{reading:?}").contains(secret));
+    assert!(!format!("{saved:?}").contains(secret));
+    for rendered in [
+        format!("{kind:?}"),
+        format!("{rule:?}"),
+        format!("{recognize:?}"),
+        format!("{relate:?}"),
+        format!("{:?}", recognize.build().unwrap()),
+        format!("{:?}", relate.build().unwrap()),
+    ] {
+        assert!(!rendered.contains(secret));
+    }
+}

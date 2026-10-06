@@ -18,6 +18,7 @@ pub(super) fn meta(
     totals: Totals,
     options: &CallOptions<'_>,
     attempts: Option<Vec<core::AttemptObservation>>,
+    profile: Option<&core::ProfileName>,
 ) -> Meta {
     Meta::new(
         env!("CARGO_PKG_VERSION"),
@@ -29,6 +30,10 @@ pub(super) fn meta(
         totals.usage,
         RequestMeta::new(totals.cached, totals.sent, totals.requests)
             .with_failed_questions(totals.failed)
+            .with_profile_warning(core::ProfileWarning::between(
+                profile,
+                engine.profile().map(core::BackendProfile::name),
+            ))
             .with_context_sha256(
                 options
                     .context_text()

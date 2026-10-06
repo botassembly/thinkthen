@@ -47,6 +47,12 @@ call/error projections, input composition and CLI/schema adoption remain open.
 ### Added public declarations
 
 ```text
+struct RecognizeQuestionFile
+fn RecognizeQuestionFile::from_json(&str) -> Result<RecognizeQuestionFile, Error>
+fn RecognizeQuestionFile::load(impl AsRef<Path>) -> Result<RecognizeQuestionFile, Error>
+const fn RecognizeQuestionFile::question(&self) -> &Recognize
+const fn RecognizeQuestionFile::reading(&self) -> &RecordReading
+fn RecognizeQuestionFile::into_parts(self) -> (Recognize, RecordReading)
 struct FindQuestionFile
 fn FindQuestionFile::from_json(&str) -> Result<FindQuestionFile, Error>
 fn FindQuestionFile::load(impl AsRef<Path>) -> Result<FindQuestionFile, Error>

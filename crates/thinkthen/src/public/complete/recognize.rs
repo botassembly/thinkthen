@@ -79,6 +79,7 @@ pub(super) fn rendered(
         },
         options,
         attempts,
+        ask.0.profile.as_ref(),
     );
     Ok(CompleteRecognized {
         canonical: core::CompleteRecognition {

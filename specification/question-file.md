@@ -210,3 +210,5 @@ thinkthen decide @refund.json --threshold 0.9 < message.txt
 ```sh
 thinkthen choose @teams.json --jsonl --field /body < tickets.jsonl
 ```
+
+Native `RecognizeQuestionFile::from_json` and `load` retain the ordinary saved recognition grammar together with its full `on` pointer list and shared `RecordReading`. Consumers pass that composition to native complete record recognition, retaining full originals and actual source coordinates. The released whole-text `Recognize` loaders continue to refuse non-root `on`. Saved recognition and relation profile names remain in resolved readings; complete metadata carries the ordinary warning when an explicit runtime profile differs.

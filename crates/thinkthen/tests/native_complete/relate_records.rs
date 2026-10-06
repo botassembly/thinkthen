@@ -10,7 +10,7 @@ fn located_relations_project_saved_fields_once_and_replay_actual_original_set() 
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"actual-model","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}},"usage":{"input_tokens":887}}"#)).unwrap();
     let folder = folder();
     let path = folder.join("relate.json");
-    std::fs::write(&path, r#"{"version":1,"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"follows","source":"person","target":"person","reads":"follows"}]},"model":"saved-model"}"#).unwrap();
+    std::fs::write(&path, r#"{"version":1,"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"follows","source":"person","target":"person","reads":"follows"}]},"model":"saved-model","profile":"calibrated"}"#).unwrap();
     let ask = Relate::load_records(&path).unwrap();
     assert_eq!(Relate::load(&path).unwrap_err().kind(), ErrorKind::Local);
     let original = b"{\"private\":false,\"person\":{\"name\":\"Ada\",\"kind\":\"person\"}}\n{\"private\":null,\"person\":{\"name\":\"Grace\",\"kind\":\"person\"}}\n";
@@ -31,6 +31,10 @@ fn located_relations_project_saved_fields_once_and_replay_actual_original_set() 
             .model("engine-model")
             .unwrap()
             .api_key("complete-private")
+            .unwrap()
+            .profile_json(
+                r#"{"schema":"thinkthen.backend-profile/1","name":"running","max_questions":400}"#,
+            )
             .unwrap()
             .max_retries(0)
     };
@@ -186,6 +190,10 @@ type RelatedRecords = thinkthen::Call<
 #[cfg(test)]
 fn assert_relation_call(call: &RelatedRecords, listener: &Listener) {
     assert_eq!(call.value().original().len(), 2);
+    let meta = call.value().result().meta();
+    let warning = meta.profile_warning().unwrap();
+    assert_eq!(warning.tuned_for(), "calibrated");
+    assert_eq!(warning.running(), "running");
     assert_eq!(
         call.value().result().question().fields(),
         Some(("/person/name", "/person/kind"))

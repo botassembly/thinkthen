@@ -208,3 +208,65 @@ fn started_recognition_failure_retains_completed_prefix_and_actual_failure_locat
     assert_eq!(record.location().unwrap().first_line(), Some(9));
     assert_eq!(listener.count(), 3);
 }
+
+#[test]
+fn saved_recognition_selection_uses_native_reading_and_keeps_profile_warning_and_original() {
+    let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .model("engine-model")
+        .unwrap()
+        .api_key("complete-private")
+        .unwrap()
+        .no_cache()
+        .max_retries(0)
+        .profile_json(
+            r#"{"schema":"thinkthen.backend-profile/1","name":"running","max_questions":400}"#,
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+    let folder = folder();
+    let path = folder.join("recognize.json");
+    std::fs::write(
+        &path,
+        r#"{"version":1,"recognize":{},"on":"/body","model":"saved-model","profile":"calibrated"}"#,
+    )
+    .unwrap();
+    let saved = thinkthen::RecognizeQuestionFile::load(&path).unwrap();
+    assert_eq!(Recognize::load(&path).unwrap_err().kind(), ErrorKind::Local);
+    let original = RawRecord::json(r#"{"body":"Ada met Acme.","private":false}"#).unwrap();
+    let call = engine
+        .recognize_records_complete_with(
+            saved.question(),
+            [saved.reading().compose(original).unwrap()],
+            CallOptions::new(),
+        )
+        .unwrap();
+    assert_eq!(
+        call.value()[0].result().question().profile(),
+        Some("calibrated")
+    );
+    let meta = call.value()[0].result().meta();
+    let warning = meta.profile_warning().unwrap();
+    assert_eq!(warning.tuned_for(), "calibrated");
+    assert_eq!(warning.running(), "running");
+    let document = serde_json::to_value(&call.value()[0]).unwrap();
+    assert_eq!(
+        document["input"],
+        json!({"body":"Ada met Acme.","private":false})
+    );
+    assert_eq!(
+        document["meta"]["profile_warning"],
+        json!({"tuned_for":"calibrated","running":"running"})
+    );
+    for request in listener.requests() {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        assert_eq!(body["model"], "saved-model");
+        assert_eq!(body["state"], "Ada met Acme.");
+    }
+    assert_eq!(listener.count(), 2);
+    assert_eq!(listener.questions(), 5);
+    std::fs::remove_dir_all(folder).unwrap();
+}

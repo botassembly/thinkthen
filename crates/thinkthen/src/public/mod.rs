@@ -59,6 +59,8 @@ pub use proxy::{
 pub use record_composition::{RawRecord, RecordEvidence, RecordReading, SourceLocation};
 pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
+mod recognize_question;
+pub use recognize_question::RecognizeQuestionFile;
 mod relate;
 mod results;
 mod set;
