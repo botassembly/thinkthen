@@ -194,6 +194,15 @@ def main():
             '#!/usr/bin/env python3\nimport hashlib, pathlib, sys\n'
             'for name in sys.argv[1:]:\n'
             ' print(f"{hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()} *{name}")\n')
+        # Native Python translates text stdout to CRLF, including redirected sidecars.
+        (tools / "python3").write_text(
+            f"#!{sys.executable}\nimport io, os, sys\n"
+            'if sys.argv[1] == "-":\n'
+            r' sys.stdout = io.TextIOWrapper(sys.stdout.buffer, newline="\r\n")' + '\n'
+            ' sys.argv = sys.argv[1:]\n'
+            ' exec(compile(sys.stdin.read(), "<stdin>", "exec"))\n'
+            'else:\n'
+            ' os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n')
         for tool in tools.iterdir():
             tool.chmod(0o755)
         build = base / "build"
@@ -208,6 +217,18 @@ def main():
             assert {path.name for path in out.iterdir()} == {archive.name, sidecar.name}
             assert packed.read_bytes() == first
             expect(run("python3", str(SCRIPT), "check", str(packed)))
+            assert packed.with_name(packed.name + ".sha256").read_bytes() == (
+                f"{hashlib.sha256(first).hexdigest()}  {packed.name}\n".encode("ascii"))
+        wheels = source / "libraries/python/target/release-wheel"
+        wheels.mkdir(parents=True)
+        wheel = wheels / f"thinkthen-{VERSION}-cp310-abi3-win_amd64.whl"
+        wheel.write_bytes(b"wheel fixture\r\n")
+        packed_wheels = base / "packed-wheels" / ("platform-" + TARGET)
+        expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET, str(packed_wheels), "python", env=env))
+        assert (packed_wheels / (wheel.name + ".sha256")).read_bytes() == (
+            f"{hashlib.sha256(wheel.read_bytes()).hexdigest()}  {wheel.name}\n".encode("ascii"))
+        expect(run("sh", str(REPO / "sdlc/scripts/release-workflow"), "verify-family",
+                   str(packed_wheels.parent), "thinkthen-*.whl", "1"))
         # The default runner path uses a scratch build instead of a caller's target directory.
         scratch = base / "scratch"
         scratch.mkdir()

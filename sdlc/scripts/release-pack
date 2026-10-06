@@ -119,11 +119,11 @@ built() { echo "${CARGO_TARGET_DIR:-$REPO/$1/target}"; }
 sha256() {
 	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 		# Windows sha256sum defaults to a binary '*' marker. Our sidecars use
-		# two spaces on every target. Hash binary bytes without text translation.
+		# two spaces and LF on every target. Avoid native stdout CRLF translation.
 		python3 - "$@" <<'PYTHON'
 import hashlib, pathlib, sys
 for name in sys.argv[1:]:
-    print(f"{hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()}  {name}")
+    sys.stdout.buffer.write(f"{hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()}  {name}\n".encode("ascii"))
 PYTHON
 	elif command -v sha256sum >/dev/null; then sha256sum "$@"
 	else shasum -a 256 "$@"
