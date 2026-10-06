@@ -119,6 +119,9 @@ text <- readChar(file.path(args[1], "report.txt"), file.info(file.path(args[1], 
 stopifnot("thinkthen" %in% names(getLoadedDLLs()))
 call <- tt_decide(question, text)
 stopifnot(identical(call$value, TRUE), call$facts$requests_sent == 0)
+miss <- tryCatch(tt_decide(question, paste0(text, " Replay miss.")), thinkthen_local = identity)
+stopifnot(inherits(miss, "thinkthen_local"), identical(miss$retryable, FALSE),
+          identical(conditionMessage(miss), "the replay folder holds no answer for this question"))
 value <- if (identical(call$value, TRUE)) "true" else if (identical(call$value, FALSE)) "false" else "null"
 cat('{"value":', value, ',"requests_sent":', call$facts$requests_sent, '}\\n', sep = "")
 ''',

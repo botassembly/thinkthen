@@ -53,10 +53,11 @@ if [ "$profile" = smoke ]; then
     value <- tt_decide(Sys.getenv("THINKTHEN_TEST_SMOKE_QUESTION"), Sys.getenv("THINKTHEN_TEST_SMOKE_TEXT"))$value
     cat(sprintf("smoke: %s\n", if (is.null(value) || is.na(value)) "null" else tolower(value)))' "$scratch"
   # Ticket 0439: reuse the installed public consumer for the guide's strict replay.
-  mkdir -p "$scratch/sample" "$scratch/home" "$scratch/config" "$scratch/cache"
-  cp -R "$root/demos/27-test-with-no-network/recording" "$scratch/sample/recording"
-  cp "$root/demos/27-test-with-no-network/report.txt" "$scratch/sample/report.txt"
-  printf '%s' 'Does this report say what the person did before the problem appeared?' >"$scratch/sample/question.txt"
+  mkdir -p "$scratch/sample/recording" "$scratch/home" "$scratch/config" "$scratch/cache"
+  # The seed preserves request identity, including the counted loopback URL.
+  cp -R "$THINKTHEN_CACHE/." "$scratch/sample/recording/"
+  printf '%s' "$THINKTHEN_TEST_SMOKE_TEXT" >"$scratch/sample/report.txt"
+  printf '%s' "$THINKTHEN_TEST_SMOKE_QUESTION" >"$scratch/sample/question.txt"
   python3 - "$root/sdlc/scripts" "$scratch" <<'PYCONSUMER'
 import sys
 from pathlib import Path
@@ -67,6 +68,7 @@ PYCONSUMER
   replay=$(env -i PATH="$PATH" HOME="$scratch/home" LANG="${LANG:-C.UTF-8}" \
     LC_ALL="${LC_ALL:-C.UTF-8}" R_LIBS="$scratch:$libs" XDG_CONFIG_HOME="$scratch/config" \
     XDG_CACHE_HOME="$scratch/cache" XDG_STATE_HOME="$XDG_STATE_HOME" \
+    THINKTHEN_BASE_URL="$THINKTHEN_BASE_URL" THINKTHEN_API_KEY=sk-smoke-loopback \
     Rscript --vanilla "$scratch/consumer.R" "$scratch/sample")
   [ "$replay" = '{"value":true,"requests_sent":0}' ] || { echo 'r: saved-answer replay failed' >&2; exit 1; }
   echo 'smoke: true'
