@@ -19,3 +19,5 @@ Rehearse the community build offline, then submit thinkthen to DuckDB's communit
 ## What Ian can overturn
 
 Version/target policy and submission details. The approved outside pull request needs no second permission request while those details stay unchanged.
+
+0.2 ships without DuckDB community acceptance/signing. Integrate the signed listing in a 0.2 point release when DuckDB makes it available and its checks pass.

@@ -25,3 +25,5 @@ Decide, choose and score accept one or more ordered images per question on every
 ## Design notes
 
 Image input is explicit; ordinary text, paths or BLOBs never become images implicitly. Core receives bytes but opens no file. Refuse image line/window framing and do not bundle a folder into one question. A question’s attachments travel together; splitting to fit a request may partition questions, never discard or separate attachments. Required 0.2 image functions are decide/choose/score. Tag/filter/rank/annotate/find are text-only until admitted function-specific evidence and a reviewed amendment; recognize/relate remain text-only. Every such refusal executes through every public surface with zero sends. Ordinary raw-JSON compatibility doors cannot satisfy typed support. Existing text SourceRecord stays valid; use an additive image location carrier instead of fabricating first_line/last_line.
+
+Start from vendors’ documented limits now. Experiment 0036 is later feedback, not an implementation or release dependency.
