@@ -150,7 +150,7 @@ fn complete_relations_keep_full_answers_rejections_failures_and_empty_metadata()
 }
 
 #[cfg(test)]
-fn recognized_response(body: &[u8]) -> Canned {
+pub(super) fn recognized_response(body: &[u8]) -> Canned {
     let request: Value = serde_json::from_slice(body).unwrap();
     let mut answers = serde_json::Map::new();
     for (name, question) in request["questions"].as_object().unwrap() {

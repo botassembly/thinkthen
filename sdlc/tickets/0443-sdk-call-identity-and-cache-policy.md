@@ -69,6 +69,8 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+fn Engine::recognize_records_complete_with<I, T>(&self, &Recognize, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteRecognized>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
+fn Engine::try_recognize_records_complete_with<I, T>(&self, &Recognize, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteRecognized>>>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>>, T: InputEvidence
 fn Engine::try_find_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<CompleteFound<T>>, Error> where I: IntoIterator<Item = Result<T, Error>>, T: Evidence
 fn Engine::find_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<CompleteFound<T>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
 fn Engine::try_find_records_complete_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<CompleteFound<T>>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>>, T: InputEvidence
@@ -251,3 +253,7 @@ This streaming constituent raises the exact measured source ratchet by 724 nonbl
 Whole-set native WIP now consumes fallible composed find candidates directly, retains every original and source location through cache/replay, and admits fallible rank originals before any send. Find uses call-wide context and refuses per-record context/options instead of dropping them. FindQuestionFile keeps the saved evidence pointers with the question using the ordinary parser/reader, so consumers need no second question parser. Located recognize/relate integration and CLI result/2 remain open.
 
 This whole-set constituent adds 413 measured nonblank lines (139316 to 139729): concrete saved find question/reading preparation, composed candidate preservation, fallible find/rank admission and three outside-in source/replay cases. All 35 native complete cases and affected Clippy pass; signature inventory and offline policy run before push.
+
+Located recognition WIP uses one native call/budget across eagerly admitted composed records and the existing stage scheduler. Each original occurrence retains its source coordinates, full probabilities, actual partial usage and per-row attempts; owned primitive observations carry the source occurrence and actual stage identity. A later started failure keeps completed-prefix facts and the failed source position. Native relate composition, CLI result/2/schema and host adoption remain open.
+
+The recognition constituent adds 404 measured nonblank lines (139729 to 140133): composed record execution using the existing first-stage admission/stage scheduler, original-aware serialization, extracted shared stage observations, and three outside-in cases. Existing scalar recognition rendering and observer construction are shared rather than duplicated. Files retain the 500-line cap.

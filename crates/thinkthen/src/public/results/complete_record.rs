@@ -59,7 +59,8 @@ serialize_atomic!(
     CompleteTags,
     CompleteScore,
     CompleteFilter,
-    CompleteRank
+    CompleteRank,
+    CompleteRecognized
 );
 impl<T: serde::Serialize> serde::Serialize for CompleteRecord<T, super::CompleteAnnotated> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

@@ -70,3 +70,6 @@ mod observers;
 mod streaming;
 #[path = "native_complete/whole_sources.rs"]
 mod whole_sources;
+
+#[path = "native_complete/recognize_records.rs"]
+mod recognize_records;

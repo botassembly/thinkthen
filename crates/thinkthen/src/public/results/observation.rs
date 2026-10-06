@@ -5,11 +5,8 @@ use std::fmt;
 use serde::Serialize;
 
 use crate::core::{self, AnswerOutcome, Backend, ModelName, ProfileName, Threshold};
-use crate::engine::error::Error as EngineError;
-use crate::engine::facade::Answered;
 use crate::public::annotated::{FailureCause, NamedAnnotation, cause};
 use crate::public::error::Error;
-use crate::public::options::Stop;
 use crate::public::recognize::Recognized;
 use crate::public::relate::Edge;
 
@@ -394,70 +391,4 @@ impl ObservedQuestion {
             failed_questions: usize::from(failure.is_some()),
         })
     }
-}
-
-fn stage_slot(stage: &str) -> Option<usize> {
-    match stage {
-        "boundary" => Some(0),
-        "kind" => Some(1),
-        "edge" => Some(2),
-        "relation" => Some(3),
-        _ => None,
-    }
-}
-
-/// Name one answered logical question of a `recognize` or `relate` step.
-pub(crate) fn observe_question(
-    stop: &Stop<'_>,
-    backend: &Backend,
-    (function, stage, question, threshold): (
-        crate::public::InputFunction,
-        &'static str,
-        &core::Question,
-        Option<Threshold>,
-    ),
-    answered: &Answered,
-    positions: &mut [usize; 4],
-) -> Result<(), EngineError> {
-    if !stop.observing() {
-        return Ok(());
-    }
-    let [outcome] = answered.reply.outcomes() else {
-        return Err(EngineError::Defect(
-            "an observed question has more than one answer",
-        ));
-    };
-    let place = stage_slot(stage).ok_or(EngineError::Defect("an observed stage is unknown"))?;
-    let current = positions
-        .get_mut(place)
-        .ok_or(EngineError::Defect("an observed stage has no counter"))?;
-    let position = *current;
-    *current += 1;
-    let detail = ObservedQuestion::from_reply(
-        question,
-        None,
-        None,
-        backend,
-        outcome,
-        &answered.reply,
-        answered.request.as_str(),
-        answered.requests_sent,
-        answered.replayed,
-        1,
-        0,
-    )
-    .map(|detail| detail.with_receipt(answered).with_threshold(threshold))
-    .and_then(|detail| detail.qualified(function, 0, None, Some(stage), position))
-    .map_err(|_| EngineError::Defect("an observed question identity could not be constructed"))?;
-    stop.observe(RecordObservation::Question {
-        index: 0,
-        member: None,
-        stage: Some(stage),
-        position,
-        detail: QuestionDetail::of(&detail),
-    });
-    if stop.observer_panicked() {
-        return Err(EngineError::Defect("the question observer panicked"));
-    }
-    Ok(())
 }

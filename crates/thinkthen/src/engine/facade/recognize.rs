@@ -58,6 +58,19 @@ fn asked_stages(asked: &[Asked]) -> impl Iterator<Item = &'static str> + '_ {
 }
 
 impl Engine {
+    /// Admit all first-stage/profile/context boundaries before a whole input set starts.
+    pub(crate) fn admit_recognition(&self, spec: &RecognizeSpec, text: &str) -> Result<(), Error> {
+        step_one_context(
+            &self.backend,
+            self.profile.as_ref(),
+            spec,
+            text,
+            MAX_TEXT_BYTES,
+            self.aggregate_context.as_deref(),
+        )
+        .map(|_| ())
+    }
+
     /// Recognize the names in one text, then relate them when rules were given.
     /// A text over `limit` bytes is refused before any request.
     pub(crate) fn recognize(

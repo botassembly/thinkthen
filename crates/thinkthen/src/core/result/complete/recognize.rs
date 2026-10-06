@@ -30,13 +30,17 @@ impl Recognition {
     }
 }
 
-impl Serialize for Recognition {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+impl Recognition {
+    pub(crate) fn serialize_with_input<S: Serializer, T: Serialize>(
+        &self,
+        input: Option<&T>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("schema", "thinkthen.result/2")?;
         map.serialize_entry("answer_id", self.identity.answer_id())?;
         map.serialize_entry("value", &self.value)?;
-        if let Some(input) = &self.input {
+        if let Some(input) = input {
             map.serialize_entry("input", input)?;
         }
         map.serialize_entry("question", &self.question)?;
@@ -49,5 +53,11 @@ impl Serialize for Recognition {
             },
         )?;
         map.end()
+    }
+}
+
+impl Serialize for Recognition {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.serialize_with_input(self.input.as_ref(), serializer)
     }
 }
