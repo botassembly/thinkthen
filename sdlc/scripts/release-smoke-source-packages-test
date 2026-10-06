@@ -23,7 +23,7 @@ for family in c go cpp csharp jvm swift zig php dart flutter ada objective-c cob
 	: >"$work/bundle/thinkthen-$family-$version-$target.tar.gz.sha256"
 done
 for name in "thinkthen-$version-x86_64-unknown-linux-musl.tar.gz" "thinkthen-$version.tgz" \
-	"thinkthen-$version-cp310-abi3-manylinux_2_34_x86_64.whl" "thinkthen-$version-x86_64-linux.gem" \
+	"thinkthen-$version-cp310-abi3-manylinux_2_34_x86_64.whl" "thinkthen-$version-x86_64-linux.gem" "thinkthen-$version.gem" \
 	thinkthen-first-run.tar.gz; do
 	: >"$work/bundle/$name"
 	: >"$work/bundle/$name.sha256"
@@ -38,6 +38,13 @@ expect_refusal() {
 	grep -Fqx "$1" "$work/out" || { cat "$work/out" >&2; exit 1; }
 	[ ! -e "$work/backend-started" ] || { echo 'release backend started for invalid source packages' >&2; exit 1; }
 }
+fallback=thinkthen-$version.gem
+mv "$work/bundle/$fallback" "$work/fallback.saved"
+expect_refusal "release-smoke: missing or linked $fallback"
+mv "$work/fallback.saved" "$work/bundle/$fallback"
+mv "$work/bundle/$fallback.sha256" "$work/fallback.sha256.saved"
+expect_refusal "release-smoke: missing or linked $fallback.sha256"
+mv "$work/fallback.sha256.saved" "$work/bundle/$fallback.sha256"
 go=thinkthen-go-$version-$target.tar.gz
 mv "$work/bundle/$go" "$work/go.saved"
 mv "$work/bundle/$go.sha256" "$work/go.sha256.saved"

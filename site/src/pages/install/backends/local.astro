@@ -16,22 +16,32 @@ const sample = (name) => fs.readFileSync(`examples/install/backends/local/${name
   <h1>Run a model locally</h1>
   <p class="lede">A local decision server receives your question and text on your own machine. ThinkThen connects to it with a named backend. The loopback setup needs no key.</p>
 
+  <p>Public installation remains 0.1.2. The <code>llamacpp</code>/<code>mlx</code> built-ins and the ten-function check below belong to development 0.2.</p>
+
   <h2>llama.cpp</h2>
-  <p>This Apple silicon setup pins llama.cpp v0.6.0 and Clef-Flash Q4_K_M. It passed the four rich probes and all ten functions on M5. Clef-Flash was chosen for its smaller download, about 6.5 GB, rather than its accuracy. Allow additional memory for the running model. Its <a href="https://huggingface.co/ggml-org/Clef-Flash-GGUF/tree/4a7a08c09bc63baf043b62b5ba89dd67a0357d95">model files</a> carry the Apache 2.0 license. Other machines need their platform build options; this check qualifies the Apple silicon setup.</p>
+  <p>This Apple silicon setup pins llama.cpp v0.6.0 and Clef-Flash Q4_K_M. On 2026-10-05 it passed the four rich text probes and all ten functions on M5 through the Linux CLI and a loopback tunnel, with exit 0 and no warnings. The <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0421-local-runtime-backends.md">0421 record</a> owns this result. No image request ran. Clef-Flash was chosen for its smaller download, about 6.5 GB, rather than its accuracy. Allow additional memory for the running model. Its <a href="https://huggingface.co/ggml-org/Clef-Flash-GGUF/tree/4a7a08c09bc63baf043b62b5ba89dd67a0357d95">model files</a> carry the Apache 2.0 license. Other machines need their platform build options; this check qualifies the Apple silicon setup.</p>
   <Code code={sample('llamacpp')} file="llamacpp.txt" lang="bash" />
   <p><code>--alias {llama.model}</code> sets the model id that <code>--backend {llama.name}</code> sends. ThinkThen reaches <code>{llama.base}</code>. Use <code>--model</code> if you choose another server alias. A chat-compatible build needs the native <code>/v1/systemone</code> route and supported decision weights. HTTP 501 can mean that the model lacks that route. The <a href="https://github.com/ggml-org/llama.cpp/blob/d81235049384534c167caea52b85a694f6103d14/tools/server/README.md">server documentation</a> describes its options. Keep context and physical batch within the model's bounds and large enough for the full prompt.</p>
 
   <p>ThinkThen batch settings count records per request. llama.cpp <code>--batch-size</code> and <code>--ubatch-size</code> control physical prompt processing; a larger <code>--ctx-size</code> does not increase them. The full prompt must fit the physical limits. SQL plans count prepared requests before retries and refusal splits, so a one-attempt request allowance can stop a larger call after a size refusal. Keep the request guard and allow the attempts your workload needs within its authorized budget.</p>
+
+  <p>The example has one server slot. ThinkThen's default throttle of eight can queue requests at the server, consuming each attempt's timeout. The older 2026-10-02 experiment loaded four slots: Laya used 0.6 GiB, Kev-4B 11.2 GiB and OpenJev 52.9 GiB of server memory with large KV caches. These are measured configurations, not hardware minimums. That experiment needed source after the System One merge <code>a4cb4c61f</code>; release b11351 predates it. A 744-token Laya request needed ubatch 2048 instead of 512. The pinned v0.6.0 example already includes the route and larger physical batches.</p>
 
   <h2>MLX on Apple silicon</h2>
   <p>Use the Strands decision server on a Mac with Apple silicon. The <a href="https://huggingface.co/StrandsAgents/strands-decider-2B-hobson-v19">public checkpoint</a> needs its named base model. The loader fetches both; allow disk space for both and follow their model cards. A plain MLX chat server does not provide this decision interface.</p>
   <Code code={sample('mlx')} file="mlx.txt" lang="bash" />
   <p>ThinkThen sends model <code>{mlx.model}</code> to <code>{mlx.base}</code>. The <a href="https://github.com/strands-labs/strands-decider/blob/75c9fd32e664954cdc18481434018aa507eee8fb/src/strands_decider/cli.py">pinned server</a> uses the checkpoint basename as its model id. Its score schema requires 2–10 string levels. The MLX backend sends description objects as their <code>what</code> text. A rich check probe or <code>--plan</code> warns when other fields are left out.</p>
 
+  <p>On 2026-10-05, the pinned Strands server and checkpoint passed all ten text functions on M5 through the Linux CLI, exit 0, with three expected description warnings. The run used Python 3.13.13 and MLX 0.32.3. It measured neither accuracy nor images.</p>
+
   <h2>Ollama</h2>
   <p>Install Ollama from <a href="https://ollama.com/download">its download page</a>. Pull <code>{ollama.model}</code> with <code>ollama pull {ollama.model}</code>, then start its server on loopback.</p>
   <Code code={sample('ollama')} file="ollama.txt" lang="bash" />
   <p>ThinkThen reaches <code>{ollama.base}</code>. Ollama's loader and decision encoder must support the chosen model. Experiment 0030 found loader and encoder refusals in version 0.35.1. A model working in llama.cpp does not establish Ollama support. The <a href="/install/backends/ollama/">Ollama page</a> explains its text-description workaround.</p>
+
+  <h2>Other measured local evidence</h2>
+  <p>The retained 2026-10-02 Lichen 0.1.0 server used gemma-4-26B-A4B QAT and answered one request at a time: median 0.947 seconds, 95th percentile 1.978 seconds, server memory 17.0 GiB. It reached ThinkThen by an explicit loopback System One address, without a built-in backend. Current upstream limits and images remain unverified. The <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0400-provider-setups-and-width.md">provider evidence record</a> retains the measured limits.</p>
+  <p>Experiment 0034 also passed the text check with local Clef Q4_K_M on v0.6.0, using a separate weight pin, BF16 projector and 8192 context/batch/ubatch. Its image exchanges belong to an experimental branch. Product image work is in review fixes under 0447/0448; these recordings establish no released library or SQL image support or accuracy result. <a href="/install/backends/openrouter/">Clef through OpenRouter</a> has a separate image limitation.</p>
 
   <h2>Check the running model</h2>
   <p>Run the line for the server you started in another terminal. Each check sends real requests.</p>

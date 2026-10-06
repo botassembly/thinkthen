@@ -21,6 +21,8 @@ const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.t
   <p>The default model is a pinned version. TypeSafe can move an alias to a new model, and the pinned version stays the same. Name another version with <code>--model</code> only when you mean to change the model behind a run.</p>
   <p>On 2026-09-29, <a href="https://typesafe.ai/">TypeSafe's public site</a> advertised Jev input at $42 per billion tokens. Check your account terms for the rate you will pay.</p>
 
+  <p>The admitted <a href="https://github.com/botassembly/thinkthen-exp/tree/7c8197b5/experiments/0033-jev-in-your-database">0033 database report</a> retained a 2026-10-05 direct Jev 1.13.0 tariff of $0.042 per million input tokens and free output. Its thirty database/function workflows on public 0.1.2 returned typed answers with recorded installation caveats. Those operational results measure no accuracy ranking and do not qualify development 0.2 APIs. Calculated usage cost is not an invoice.</p>
+
   <h2>Two ways to reach it</h2>
   <p>With no backend named, ThinkThen posts to the same address with the same model and reads the key from <code>{KEY_VARIABLE}</code>. With <code>--backend {b.name}</code>, it reads the key from <code>{b.keys[0]}</code>. Both reach the same model, and both share the answer cache.</p>
   <Terminal run={one} caption={one.see} />

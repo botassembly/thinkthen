@@ -8,8 +8,20 @@
 const RECORDS = 'https://github.com/botassembly/thinkthen/blob/main/sdlc';
 
 export const CHECKS = {
-  llamacpp: [],
-  mlx: [],
+  llamacpp: [
+    {
+      model: 'local (Clef-Flash Q4_K_M)', date: '2026-10-05', exit: 0, critical: 0, warning: 0,
+      source: `${RECORDS}/records/0421-local-runtime-backends.md`,
+      said: 'On 2026-10-05, llama.cpp v0.6.0 with Clef-Flash Q4_K_M and alias local passed four rich text probes and all ten functions on M5 through the Linux CLI, exit 0, with no warnings. No image request ran.',
+    },
+  ],
+  mlx: [
+    {
+      model: 'strands-decider-2B-hobson-v19', date: '2026-10-05', exit: 0, critical: 0, warning: 3,
+      source: `${RECORDS}/records/0421-local-runtime-backends.md`,
+      said: 'On 2026-10-05, the pinned Strands MLX setup passed all ten text functions on M5 through the Linux CLI, exit 0, with three expected description warnings. No image request ran.',
+    },
+  ],
   typesafe: [
     // The run passed no --model. specification/check.md at b50e0425c
     // resolves the model from the option, then the configuration file,
@@ -30,6 +42,11 @@ export const CHECKS = {
       model: 'typesafe/jev-1.13', date: '2026-10-04', commit: '4349b91b3', exit: 0, critical: 0, warning: 0,
       source: `${RECORDS}/records/0399-backend-paths.md`,
     },
+    ...['cloudflare/clef', 'cloudflare/clef-flash'].map((model) => ({
+      model, date: '2026-10-05', exit: 0, critical: 0, warning: 0,
+      source: `${RECORDS}/records/0400-provider-setups-and-width.md`,
+      said: `On 2026-10-05, experiment 0034 asked ${model} through OpenRouter and passed its 15-request text check with no critical findings or warnings. Its image controls showed no observable image use; the experimental exchanges establish no released image support or accuracy.`,
+    })),
   ],
   perplexity: [
     {

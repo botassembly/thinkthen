@@ -71,7 +71,18 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
       <tr><td><code>{line}</code></td>{notes && <td>{parts(note || '').map((x) => x.code ? <code>{x.part}</code> : x.part)}</td>}</tr>
     ))}
   </table>
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment.</p>
+  {surface.slug === 'r' && (
+    <>
+      <h3>Linux package loading and saved answers</h3>
+      <p>The source and Resolute R 4.6 indexes listed 0.1.2 on 2026-10-06. Match the binary's distribution, R series and architecture. R-universe serves its current index; check <code>packageVersion("thinkthen")</code> after installing. A current source checkout builds development 0.2.0. The <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/r/README.md#install-on-linux">Linux R guide</a> gives the source archive and checkout commands, prerequisites and index conventions.</p>
+      <p><code>library(thinkthen)</code> loads the package's <code>libs/thinkthen.so</code> and registered native routines. Its Rust engine is linked in; no separate C library or <code>LD_LIBRARY_PATH</code> setting is needed. Use an installed jsonlite 2.0.0 or later. If loading fails, check <code>.libPaths()</code>, <code>find.package("thinkthen")</code> and binary compatibility.</p>
+      <p>Download the 0.1.2 sample once, then start a fresh R session in the directory containing <code>thinkthen-first-run</code>. Replay needs no key and sends no model requests, even on a miss.</p>
+      <Code code={'curl -fsSL https://github.com/botassembly/thinkthen/releases/download/v0.1.2/thinkthen-first-run.tar.gz | tar -xz'} lang="bash" />
+      <Code code={'library(thinkthen)\nroot <- "thinkthen-first-run"\ntt_engine(replay = file.path(root, "recording"), cache = FALSE)\nquestion <- "Does this report say what the person did before the problem appeared?"\ntext <- readChar(file.path(root, "report.txt"),\n                 file.info(file.path(root, "report.txt"))$size)\ncall <- tt_decide(question, text)\nstopifnot(identical(call$value, TRUE), call$facts$requests_sent == 0)\ncall$value\n# [1] TRUE'} lang="r" />
+      <p>The download needs network access; replay does not. Select replay before asking because R keeps one engine per session. For development builds, use <code>demos/27-test-with-no-network</code> in the checkout as <code>root</code>. <a href="https://docs.r-universe.dev/install/binaries.html">R-universe's binary documentation</a> explains the supported Linux host requirements.</p>
+    </>
+  )}
+  <p>{surface.slug === 'r' ? 'For live calls, set' : 'Set'} <code>{KEY_VARIABLE}</code> in the environment.</p>
   {surface.slug === 'sqlite' && (
     <>
       <h3>Use reviewed views and ingestion triggers</h3>

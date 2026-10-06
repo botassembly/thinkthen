@@ -144,6 +144,7 @@ if [ -n "$source_packages" ]; then
 		case ${file##*/} in "thinkthen-$V.tgz" | "thinkthen-$V.tgz.sha256") ;; *) echo "release-smoke: extra npm entry ${file##*/}" >&2; exit 1 ;; esac
 	done
 	require_file thinkthen-first-run.tar.gz
+	if [ "$(uname -s):$(uname -m)" = Linux:x86_64 ]; then require_file "thinkthen-$V.gem"; fi
 	for extension in whl gem; do
 		count=0
 		for file in "$DIR"/thinkthen-"$V"-*.$extension; do
@@ -156,7 +157,7 @@ if [ -n "$source_packages" ]; then
 		[ "$count" -eq 1 ] || { echo "release-smoke: expected one installed $extension, got $count" >&2; exit 1; }
 		for file in "$DIR"/thinkthen-*.$extension*; do
 			[ -e "$file" ] || [ -L "$file" ] || continue
-			case ${file##*/} in "$name" | "$name.sha256") ;; *) echo "release-smoke: extra $extension entry ${file##*/}" >&2; exit 1 ;; esac
+			case ${file##*/} in "$name" | "$name.sha256" | "thinkthen-$V.gem" | "thinkthen-$V.gem.sha256") ;; *) echo "release-smoke: extra $extension entry ${file##*/}" >&2; exit 1 ;; esac
 		done
 	done
 fi

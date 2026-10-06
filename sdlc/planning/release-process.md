@@ -35,7 +35,7 @@ A rehearsal checks the publish inputs for each registry (ticket 0398 slice A):
 | crates.io | `cargo publish --dry-run --locked --package thinkthen` after source packaging | Upload and trusted publisher |
 | PyPI | `twine check --strict` on all four wheels | Upload and trusted publisher |
 | npm | `npm publish --dry-run` on the exact packed file | Upload and trusted publisher |
-| RubyGems | Four checked platform gems | `gem push` and trusted publisher |
+| RubyGems | Four checked platform gems and one matching-version Ruby diagnostic fallback | `gem push` and trusted publisher |
 | NuGet | Packed package and offline protocol checks | Push and trusted publisher |
 | Maven Central | Packed artifacts and signatures from a throwaway rehearsal key | Upload with the release signing key |
 | pub.dev | `dart pub publish --dry-run` | Upload and trusted publisher |
