@@ -5,7 +5,7 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 Milestone: 0.2
 
 Owner: builder.
-Ticket review: revised for the second PM message; fresh review pending.
+Ticket review: ACCEPT, 2026-10-06; fresh read-only review. Conflicting image deferrals corrected where found.
 
 ## Outcome
 
@@ -17,7 +17,7 @@ All named SDK, SQL and dataframe routes reread stored answers under each free re
 - Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
 - Changes: Extend existing canonical saved cases and public settings adapters; function contracts without a reading cut are explicit, never skipped.
 - Proof: Change cuts with identical wire identity; pin output/counts for native details, member rules, entity/relation dependencies, frames and R index conversion.
-- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
+- Defers: Proxy service/screens, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
 ## Dependencies and ownership
 
@@ -26,3 +26,5 @@ All named SDK, SQL and dataframe routes reread stored answers under each free re
 ## Answer identity when rereading
 
 0450 requires a different answer ID for a different normalized reading of stored observations, even if the bare value stays equal; restoring the original rule restores its ID. Full typed, SQL and frame consumers test this with zero sends. IDs do not change merely because retrieval origin, host index spelling or call ID changes.
+
+Adopt the ordered image and storage contracts from 0447, 0448 and 0444. Saved multi-image decide and choose cases must reread changed cuts with unchanged request identity, expected results and zero sends on every full-result surface. Restoring a cut restores the answer ID. Image score explicitly has no reading cut; its saved ordered images and full result replay with zero sends. Image implementation stays with its existing owners.

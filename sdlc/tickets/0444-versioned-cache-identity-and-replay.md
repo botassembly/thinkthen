@@ -5,7 +5,7 @@ Status: ready. Planning only; implementation follows accepted ticket review.
 Milestone: 0.2
 
 Owner: builder.
-Ticket review: revised for the second PM message; fresh review pending.
+Ticket review: ACCEPT, 2026-10-06; fresh read-only review. Conflicting image deferrals corrected where found.
 
 ## Outcome
 
@@ -17,7 +17,7 @@ Saved answers carry enough validated identity to rebuild their key without a cal
 - Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
 - Changes: Implement 0442’s versioned pure key, canonical posting URL, requested/concrete model identity and validated offline store conversion. Preserve original rows on failed atomic migration. Read-only replay indexes in memory. Unknown/damaged/incomplete records refuse locally before any send.
 - Proof: Two processes share keys for trailing-slash/host-case variants; distinct paths differ. Rebuild saved keys offline. Pin valid v1 conversion/idempotence/read-only bytes and tampered/missing-field zero-send refusal. Pinned models cache; opaque selector returning model1 then model2 goes live again and cannot reuse model1. Multiple historical concrete versions refuse ambiguous replay with zero sends. Keep jev-latest refresh and no key/address leakage.
-- Defers: Proxy service/screens, images, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
+- Defers: Proxy service/screens, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
 ## Dependencies and ownership
 
