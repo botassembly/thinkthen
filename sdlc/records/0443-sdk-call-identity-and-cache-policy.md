@@ -26,3 +26,5 @@ Clippy fails on the unchanged image test's unfulfilled `unwrap_used`
 expectation at `core/adapters/systemone/images/local_tests.rs:16`. Root owns
 these findings, confirmation and full gates on the actual merge candidate.
 Parity remains open.
+
+The landing correction also removes one unused test lint expectation. The existing test-wide Clippy setting already permits fixture unwraps, so the expectation was unfulfilled; fixture behavior stays intact. Source total is 144011 after this one-line removal. Full landing checks follow.
