@@ -94,6 +94,7 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
             "the recording folder could not be read or written; check its permissions and free space"
                 .to_owned(),
         ),
+        Failure::RecordingForbidden => (5, "the reply forbids storage, so the recording cannot be written".to_owned()),
         Failure::RecordingPathIsFile => (
             5,
             "the recording directory is a file; choose another path or remove the file".to_owned(),

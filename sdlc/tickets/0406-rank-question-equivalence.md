@@ -1,6 +1,6 @@
 # 0406: Preserve rank criteria and score ordering on every surface
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
 Milestone: 0.2
 
@@ -22,3 +22,7 @@ CLI, Rust, C, every language, all SQL and dataframe variants rank over the same 
 ## Dependencies and ownership
 
 0426–0431 own foreign carriers; 0409 owns TypeScript declarations.
+
+## Native work in progress
+
+Lane0 adds Question::rank_described, rank_from_json and load_rank through the existing parser/resolver and capped reader. Saved decide criteria reject authored cuts/bands; saved score retains ordered levels, descriptions, model and batch. Public admission tests compare independently authored saved and built criteria, score equivalence and invalid inputs. Ranking execution and complete result integration remain open.

@@ -29,7 +29,8 @@ pub(super) fn finish(
             RequestMeta::new(replayed, annotation.requests_sent, annotation.requests)
                 .with_failed_questions(failed_questions)
                 .with_profile_warning(judging.mismatch.warning()),
-        );
+        )
+        .with_reported_usage(annotation.reported_usage);
         json_line(&AnnotateResult::new(
             record,
             annotation.values,

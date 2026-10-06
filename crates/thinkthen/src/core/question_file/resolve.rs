@@ -121,7 +121,7 @@ impl Resolved {
 /// Where each setting of one question came from.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct Sources {
-    verb: Verb,
+    verb: Option<Verb>,
     question: Source,
     yes: Source,
     no: Source,
@@ -133,6 +133,19 @@ pub(crate) struct Sources {
 }
 
 impl Sources {
+    pub(crate) const fn for_find(on: Source, model: Source) -> Self {
+        Self {
+            verb: None,
+            question: Source::File,
+            yes: Source::Default,
+            no: Source::Default,
+            labels: Source::Default,
+            threshold: Source::Default,
+            takes_threshold: false,
+            on,
+            model,
+        }
+    }
     /// True when a question file settled the question, which a plan names.
     #[must_use]
     pub(crate) const fn question_is_from_file(&self) -> bool {
@@ -155,10 +168,11 @@ impl Serialize for Sources {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut named: Vec<(&str, Source)> = vec![("question", self.question)];
         match self.verb {
-            Verb::Decide => named.extend([("true", self.yes), ("false", self.no)]),
-            Verb::Choose => named.push(("options", self.labels)),
-            Verb::Tag => named.push(("labels", self.labels)),
-            Verb::Score => named.push(("levels", self.labels)),
+            Some(Verb::Decide) => named.extend([("true", self.yes), ("false", self.no)]),
+            Some(Verb::Choose) => named.push(("options", self.labels)),
+            Some(Verb::Tag) => named.push(("labels", self.labels)),
+            Some(Verb::Score) => named.push(("levels", self.labels)),
+            None => {}
         }
         if self.takes_threshold {
             named.push(("threshold", self.threshold));
@@ -231,7 +245,7 @@ pub(crate) fn resolve(
         on,
         profile: file.and_then(|held| held.profile.clone()),
         sources: Sources {
-            verb,
+            verb: Some(verb),
             question: question_source,
             yes: yes_source,
             no: no_source,

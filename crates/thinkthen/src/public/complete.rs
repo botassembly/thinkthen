@@ -1,0 +1,243 @@
+//! Additive concrete complete calls retain the existing transport and scalar doors.
+mod annotate;
+mod find;
+mod many;
+mod rank;
+mod recognize;
+mod records;
+mod relate;
+mod streaming;
+mod trace;
+use crate::core::{self, Value};
+use crate::public::engine::only;
+use crate::public::question::{Kind, Question};
+use crate::public::{
+    self, Call, CallOptions, CompleteChoice, CompleteDecision, CompleteScore, CompleteTags,
+    DecisionQuestion, DetailQuestion, Engine, Error, InputFunction, QuestionInput,
+};
+use crate::result_json::{
+    Run,
+    complete::{AtomicSpec, atomic},
+};
+
+impl Engine {
+    /// Complete yes/no result with identity and every probability.
+    ///
+    /// # Errors
+    /// Uses the same admission, cancellation and backend failures as decide_with.
+    pub fn decide_complete_with<Q: DecisionQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteDecision>, Error> {
+        self.decide_input_complete_with(question, &QuestionInput::Text(text.to_owned()), options)
+    }
+
+    /// Complete decision for explicitly typed text or ordered images.
+    ///
+    /// # Errors
+    /// Refuses unsupported image routes before sending, otherwise as decide_with.
+    pub fn decide_input_complete_with<Q: DecisionQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        input: &QuestionInput,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteDecision>, Error> {
+        self.atomic_complete(InputFunction::Decide, question.question(), input, options)?
+            .try_map(decision)
+    }
+
+    /// Complete choice retains every ordered declared option's probability.
+    ///
+    /// # Errors
+    /// Uses the same admission and call errors as choose_with.
+    pub fn choose_complete_with<Q: DetailQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteChoice>, Error> {
+        self.choose_input_complete_with(question, &QuestionInput::Text(text.to_owned()), options)
+    }
+
+    /// Complete choice for explicitly typed text or ordered images.
+    ///
+    /// # Errors
+    /// Refuses unsupported images and non-choice questions before sending.
+    pub fn choose_input_complete_with<Q: DetailQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        input: &QuestionInput,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteChoice>, Error> {
+        self.atomic_complete(InputFunction::Choose, question.question(), input, options)?
+            .try_map(choice)
+    }
+
+    /// Complete tag result retains selected and rejected labels' probabilities.
+    ///
+    /// # Errors
+    /// Refuses non-tag questions; otherwise uses the existing tag call failures.
+    pub fn tag_complete_with<Q: DetailQuestion + ?Sized>(
+        &self,
+        question: &Q,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteTags>, Error> {
+        self.atomic_complete(
+            InputFunction::Tag,
+            question.question(),
+            &QuestionInput::Text(text.to_owned()),
+            options,
+        )?
+        .try_map(tags)
+    }
+
+    /// Complete score retains the weighted reading and the full distribution.
+    ///
+    /// # Errors
+    /// Uses the same admission and call errors as score_with.
+    pub fn score_complete_with(
+        &self,
+        question: &Question,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteScore>, Error> {
+        self.score_input_complete_with(question, &QuestionInput::Text(text.to_owned()), options)
+    }
+
+    /// Complete score for explicitly typed text or ordered images.
+    ///
+    /// # Errors
+    /// Refuses unsupported images and non-score questions before sending.
+    pub fn score_input_complete_with(
+        &self,
+        question: &Question,
+        input: &QuestionInput,
+        options: CallOptions<'_>,
+    ) -> Result<Call<CompleteScore>, Error> {
+        self.atomic_complete(InputFunction::Score, question, input, options)?
+            .try_map(score)
+    }
+
+    fn atomic_complete(
+        &self,
+        function: InputFunction,
+        question: &Question,
+        input: &QuestionInput,
+        options: CallOptions<'_>,
+    ) -> Result<Call<core::CompleteAtomic>, Error> {
+        admitted(function, question)?;
+        let call = self.keyed_input(question, input, options)?;
+        let attempts = call.facts().attempts().map(<[_]>::to_vec);
+        let engine = self.asking(question)?;
+        call.try_map(|(judged, keys)| {
+            atomic(
+                run(&engine, question, self.profile.as_ref()),
+                &judged,
+                spec(function, question, judged.value.clone(), 0),
+                keys,
+                None,
+                attempts,
+            )
+            .map_err(|_| Error::defect("a complete result could not be constructed"))
+        })
+    }
+}
+
+fn admitted(function: InputFunction, question: &Question) -> Result<(), Error> {
+    let kinds: &[Kind] = match function {
+        InputFunction::Decide => &[Kind::Decide, Kind::Banded],
+        InputFunction::Choose => &[Kind::Choose],
+        InputFunction::Tag => &[Kind::Tag],
+        InputFunction::Score => &[Kind::Score],
+        InputFunction::Filter => &[Kind::Decide],
+        InputFunction::Rank => &[Kind::Rank, Kind::Score],
+        _ => return Err(Error::defect("a set function entered atomic admission")),
+    };
+    only(question, kinds, function.name())
+}
+
+fn run<'a>(
+    engine: &'a crate::engine::facade::Engine,
+    question: &'a Question,
+    profile: Option<&'a core::BackendProfile>,
+) -> Run<'a> {
+    Run {
+        backend: engine.backend(),
+        tuned_for: question.profile.as_ref(),
+        warning: core::ProfileWarning::between(
+            question.profile.as_ref(),
+            profile.map(core::BackendProfile::name),
+        ),
+        batch_setting: None,
+        batch_warning: None,
+        context_sha256: None,
+    }
+}
+
+fn spec(function: InputFunction, question: &Question, shown: Value, record: usize) -> AtomicSpec {
+    AtomicSpec {
+        function,
+        record,
+        question: question.core.clone(),
+        threshold: question.threshold,
+        shown,
+        rank_position: None,
+    }
+}
+
+fn decision(canonical: core::CompleteAtomic) -> Result<CompleteDecision, Error> {
+    let Value::YesNo(value) = *canonical.value() else {
+        return Err(wrong());
+    };
+    let value = match value {
+        Some(true) => public::Answer::Yes,
+        Some(false) => public::Answer::No,
+        None => public::Answer::Unsure,
+    };
+    Ok(CompleteDecision { canonical, value })
+}
+fn choice(canonical: core::CompleteAtomic) -> Result<CompleteChoice, Error> {
+    let Value::Choice(value) = canonical.value() else {
+        return Err(wrong());
+    };
+    Ok(CompleteChoice {
+        value: value.clone(),
+        canonical,
+    })
+}
+fn tags(canonical: core::CompleteAtomic) -> Result<CompleteTags, Error> {
+    let Value::Tag(value) = canonical.value() else {
+        return Err(wrong());
+    };
+    Ok(CompleteTags {
+        value: value.clone(),
+        canonical,
+    })
+}
+fn score(canonical: core::CompleteAtomic) -> Result<CompleteScore, Error> {
+    let Value::Score(value) = *canonical.value() else {
+        return Err(wrong());
+    };
+    Ok(CompleteScore { canonical, value })
+}
+fn wrong() -> Error {
+    Error::defect("a complete answer has another function's value")
+}
+
+pub(crate) fn contextual(
+    engine: std::sync::Arc<crate::engine::facade::Engine>,
+    options: &CallOptions<'_>,
+) -> Result<std::sync::Arc<crate::engine::facade::Engine>, Error> {
+    let Some(context) = options.context_text().filter(|text| !text.is_empty()) else {
+        return Ok(engine);
+    };
+    crate::public::engine::evidence(context)?;
+    Ok(std::sync::Arc::new(
+        (*engine)
+            .clone()
+            .with_aggregate_context(Some(context.to_owned())),
+    ))
+}

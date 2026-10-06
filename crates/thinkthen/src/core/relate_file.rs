@@ -351,3 +351,5 @@ fn checked_text(value: &str) -> Result<String, RelateConfigError> {
 #[cfg(test)]
 #[path = "relate_file/tests.rs"]
 mod tests;
+
+mod records;

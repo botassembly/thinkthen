@@ -5,17 +5,17 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use super::send::{Done, Job};
+use super::send::Job;
 use super::{Answered, Asker, Event, Failed, Flow, Host};
-use crate::core::ModelName;
-use crate::core::pack::{self, Ask, Entry, Packer, QuestionKey};
+use crate::core::pack::{Ask, Entry, Packer, QuestionKey};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender};
 use crate::engine::pipeline::Input;
-use crate::engine::store::{Found, JSONL, Row, Store};
+use crate::engine::store::{Found, Store};
 use crate::engine::usage::Counters;
 
+mod replies;
 mod slot;
 use slot::Slot;
 
@@ -328,132 +328,6 @@ impl<'a, A: Asker> Run<'a, A> {
         match self.store.as_mut().filter(|store| store.looks_up()) {
             Some(store) => store.lookup_asks(asks, cancel),
             None => Ok(vec![None; asks.len()]),
-        }
-    }
-
-    /// A stored answer as an answer, or `Err(None)` when it no longer
-    /// decodes under a cache, which counts it a miss.
-    fn stored(
-        &self,
-        ask: &Ask,
-        found: Found,
-        label: usize,
-        cancel: &Cancel,
-    ) -> Result<Answered, Option<Error>> {
-        let decodes = pack::read(
-            std::slice::from_ref(&ask.decoder),
-            &[Ok(found.answer.as_str())],
-            &found.answered_by,
-        )
-        .is_ok_and(|outcomes| {
-            outcomes
-                .iter()
-                .all(|outcome| matches!(outcome, crate::core::AnswerOutcome::Answered(_)))
-        });
-        if !decodes {
-            return Err(self
-                .store
-                .as_ref()
-                .filter(|store| store.replays())
-                .map(|_| {
-                    Error::Entry(
-                        JSONL.to_owned(),
-                        format!(
-                            "holds an answer to question `{}` that no longer decodes",
-                            ask.key.hex()
-                        ),
-                    )
-                }));
-        }
-        if self.counts.cache_answers {
-            self.counts.usage.cache_answer();
-            cancel.cache_answer();
-        }
-        if let Ok(model) = ModelName::new(found.answered_by.clone()) {
-            self.counts.usage.answered_by(&model);
-        }
-        cancel.answered_by(&found.answered_by);
-        Ok(Answered {
-            key: ask.key,
-            answer: Ok(Arc::from(found.answer)),
-            answered_by: Arc::from(found.answered_by),
-            usage: found.usage,
-            cached: true,
-            requests_sent: 0,
-            attempts: Arc::from([]),
-            span: (label, label),
-        })
-    }
-
-    /// Store a reply's good answers and hand every answer to the inputs that wait on it.
-    fn answered(&mut self, done: Done, cancel: &Cancel) {
-        let span = done
-            .asks
-            .iter()
-            .fold((usize::MAX, 0), |(low, high), (_, label)| {
-                (low.min(*label), high.max(*label))
-            });
-        let split = match done.result {
-            Ok(split) => split,
-            Err(error) => {
-                // Every earlier input's questions went out before this
-                // request, so their rows and this failure still print.
-                if !self.continues && self.stopping.is_none() {
-                    self.stopping = Some(error.clone());
-                    self.closed.clear();
-                }
-                return self.fail_all(&done.asks, &error, span);
-            }
-        };
-        if split.answers.len() != done.asks.len() {
-            let error = Error::Defect("a reply answered the wrong number of questions");
-            return self.fail_all(&done.asks, &error, span);
-        }
-        let count = done.asks.len();
-        let shares = pack::shares(split.usage, count);
-        let rows: Vec<Row<'_>> = done
-            .asks
-            .iter()
-            .zip(&split.answers)
-            .zip(&shares)
-            .filter_map(|(((ask, _), answer), usage)| {
-                Some(Row {
-                    key: ask.key,
-                    url: &self.call.url,
-                    model: &self.call.model,
-                    state: &ask.state,
-                    question: &ask.question,
-                    answer: answer.as_deref().ok()?,
-                    answered_by: split.model.as_str(),
-                    usage: *usage,
-                    taken_at: done.taken_at,
-                    origin: "live",
-                })
-            })
-            .collect();
-        let written = match self.store.as_mut() {
-            Some(store) => store.write(&rows, cancel),
-            None => Ok(()),
-        };
-        drop(rows);
-        if let Err(error) = written {
-            return self.fail_all(&done.asks, &error, span);
-        }
-        let answered_by: Arc<str> = Arc::from(split.model.as_str());
-        for (position, (((ask, _), answer), usage)) in
-            done.asks.iter().zip(split.answers).zip(shares).enumerate()
-        {
-            let answered = Answered {
-                key: ask.key,
-                answer: answer.map(Arc::from),
-                answered_by: Arc::clone(&answered_by),
-                usage,
-                cached: false,
-                requests_sent: crate::core::share(done.requests_sent, count, position),
-                attempts: Arc::clone(&done.attempts),
-                span,
-            };
-            self.deliver(&ask.key, answered);
         }
     }
 

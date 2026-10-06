@@ -7,6 +7,8 @@ use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
 pub(crate) mod call_facts;
+pub(crate) mod image;
+mod invocation;
 mod send_budget;
 pub(crate) use call_facts::CallFacts;
 pub(crate) use limits::{Permit, WidthActive, Widths};
@@ -50,6 +52,8 @@ pub(crate) struct Cancel<'a> {
     call_total: Option<u64>,
     estimated_tokens: Option<u64>,
     facts: Option<CallFacts>,
+    invocation: invocation::Context,
+    cache_refresh: bool,
     attempts: Arc<AtomicU64>,
     attempt_sink: Option<AttemptSink>,
     attempt_digest: Option<Arc<str>>,
@@ -104,15 +108,49 @@ impl Drop for Sending<'_> {
 }
 
 impl<'a> Cancel<'a> {
+    pub(crate) fn with_cache_refresh(&self, refresh: bool) -> Self {
+        Self {
+            cache_refresh: refresh,
+            ..self.clone()
+        }
+    }
+    pub(crate) fn with_surface(&self, surface: crate::core::Surface) -> Self {
+        Self {
+            invocation: invocation::Context::new(surface),
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn invocation(&self) -> Result<&invocation::Invocation, error::Error> {
+        self.invocation.get()
+    }
+
+    pub(crate) fn call_id(&self) -> Option<crate::core::CallId> {
+        self.invocation.call_id()
+    }
+
     pub(crate) fn with_attempt_sink(&self, sink: AttemptSink) -> Self {
+        let sink = match self.attempt_sink.clone() {
+            None => sink,
+            Some(previous) => AttemptSink::new(move |event| {
+                (previous.0)(event.clone());
+                (sink.0)(event);
+            }),
+        };
         Self {
             attempt_sink: Some(sink),
             ..self.clone()
         }
     }
 
+    pub(crate) fn detailed(&self) -> bool {
+        self.attempt_sink.is_some() || self.facts.as_ref().is_some_and(CallFacts::wants_attempts)
+    }
+
     pub(crate) fn with_attempt_digest(&self, digest: &str) -> Self {
-        if self.attempt_sink.is_none() {
+        if self.attempt_sink.is_none()
+            && !self.facts.as_ref().is_some_and(CallFacts::wants_attempts)
+        {
             return self.clone();
         }
         Self {
@@ -123,13 +161,15 @@ impl<'a> Cancel<'a> {
 
     /// Allocate beside the durable send mark, before transport begins.
     pub(crate) fn attempt_started(&self) -> Option<u64> {
-        self.attempt_sink.as_ref()?;
         self.attempt_digest.as_ref()?;
         Some(self.attempts.fetch_add(1, Ordering::Relaxed) + 1)
     }
 
     /// Hand an owned event to the private sink after transport and body read.
     pub(crate) fn attempt_completed(&self, observation: crate::core::AttemptObservation) {
+        if let Some(facts) = &self.facts {
+            facts.attempt(&observation);
+        }
         if let Some(sink) = &self.attempt_sink {
             (sink.0)(observation);
         }

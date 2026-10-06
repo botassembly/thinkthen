@@ -1738,6 +1738,8 @@ def check_measure_policy() -> None:
 # HTTP module, so no other production file reaches the HTTP library. Ticket
 # 0304 slice 3d: only the one accessor names the process send limits.
 HTTP_DOOR = "crates/thinkthen/src/engine/http.rs"
+# 0443 extracts the one prepared send to keep both HTTP leaves below the cap.
+HTTP_LEAVES = {HTTP_DOOR, "crates/thinkthen/src/engine/http/send.rs"}
 WIDTH_DOOR = "crates/thinkthen/src/engine/limits.rs"
 WIDTH_STATE = "PROCESS_LIMITS"
 # Ticket 0078: an embedding host keeps its signal dispositions.
@@ -1753,7 +1755,7 @@ def door_failures(sources: dict[str, list[str]]) -> list[str]:
     """Name each second live-send door and each second width-state reference."""
     held = []
     for relative, tokens in sorted(sources.items()):
-        if "ureq" in tokens and relative != HTTP_DOOR and not is_test_source(relative):
+        if "ureq" in tokens and relative not in HTTP_LEAVES and not is_test_source(relative):
             held.append(f"{relative} reaches ureq outside {HTTP_DOOR}")
         if ("signal_hook" in tokens and relative.startswith(ENGINE)
                 and not is_test_source(relative)):
@@ -1777,6 +1779,7 @@ def check_doors() -> None:
     plants = (
         ("crates/thinkthen/src/cli/find.rs", "ureq::post(url).send(body)"),
         ("crates/thinkthen/src/engine/request.rs", "use ureq::Agent;"),
+        ("crates/thinkthen/src/engine/http/other.rs", "ureq::post(url).send(body)"),
         ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::limits::PROCESS_LIMITS.current()"),
         ("crates/thinkthen/src/engine/width_tests.rs", "&super::limits::PROCESS_LIMITS"),
         (WIDTH_DOOR, "fn second() -> &'static Limits { &PROCESS_LIMITS }"),

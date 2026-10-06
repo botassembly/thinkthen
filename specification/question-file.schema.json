@@ -18,9 +18,34 @@
     },
     {
       "$ref": "#/$defs/relate"
+    },
+    {
+      "$ref": "#/$defs/find"
     }
   ],
   "$defs": {
+    "find": {
+      "description": "A whole-set find reading; candidates come from the actual ordered input units. Cuts, batch and authored candidates are absent.",
+      "type": "object",
+      "required": [
+        "find"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "find": {
+          "$ref": "#/$defs/questionText"
+        },
+        "on": {
+          "$ref": "#/$defs/pointers"
+        },
+        "model": {
+          "$ref": "#/$defs/name"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        }
+      }
+    },
     "decide": {
       "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under. A question file's `batch` is the most records of a stream one request carries. An annotate question set's entries take no `batch`.",
       "type": "object",

@@ -88,6 +88,8 @@ impl Tally {
     pub fn facts(&self) -> Facts {
         let state = self.0.lock().unwrap_or_else(PoisonError::into_inner);
         Facts {
+            attempts: None,
+            call_id: None,
             records: state.records,
             requests_sent: state.requests_sent,
             cache_answers: state.cache_answers,
@@ -220,6 +222,8 @@ mod tests {
 
     fn facts(requests_sent: u64, cache_answers: u64, model: Option<&str>) -> Facts {
         Facts {
+            attempts: None,
+            call_id: None,
             cache_answers,
             estimated_cost_usd: None,
             input_tokens: None,

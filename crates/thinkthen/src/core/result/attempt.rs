@@ -22,6 +22,9 @@ pub enum AttemptOutcome {
 #[derive(Clone, Eq, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "attempt"))]
 pub struct AttemptObservation {
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    pub(crate) sdk_request_id: crate::core::SdkRequestId,
     pub(crate) ordinal: u64,
     pub(crate) request_sha256: String,
     pub(crate) wall_ms: u64,
@@ -37,6 +40,21 @@ pub struct AttemptObservation {
 }
 
 impl AttemptObservation {
+    /// Opaque prepared-send identity; status retries retain it.
+    #[must_use]
+    pub const fn sdk_request_id(&self) -> &crate::core::SdkRequestId {
+        &self.sdk_request_id
+    }
+
+    /// Complete result/2 projection, including the outbound SDK identity.
+    /// Ordinary serialization retains the released legacy attempt shape.
+    #[must_use]
+    pub const fn complete(&self) -> CompleteAttempt<'_> {
+        CompleteAttempt {
+            legacy: self,
+            sdk_request_id: &self.sdk_request_id,
+        }
+    }
     /// One-based send-mark order within this call or command.
     #[must_use]
     pub const fn ordinal(&self) -> u64 {
@@ -78,6 +96,14 @@ impl AttemptObservation {
     pub fn request_id(&self) -> Option<&str> {
         self.request_id.as_deref()
     }
+}
+
+/// Borrowed complete attempt document; no raw transport headers are retained.
+#[derive(Debug, Serialize)]
+pub struct CompleteAttempt<'a> {
+    #[serde(flatten)]
+    legacy: &'a AttemptObservation,
+    sdk_request_id: &'a crate::core::SdkRequestId,
 }
 
 impl fmt::Debug for AttemptObservation {

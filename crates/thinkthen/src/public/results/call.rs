@@ -5,7 +5,7 @@ use std::fmt;
 use serde::Serialize;
 use serde_json::value::RawValue;
 
-use crate::core::Prices;
+use crate::core::{CallId, Prices};
 use crate::engine::call_facts::Snapshot;
 use crate::public::error::Error;
 
@@ -15,6 +15,13 @@ use crate::public::error::Error;
 #[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "facts"))]
 pub struct Facts {
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    pub(super) attempts: Option<Vec<crate::public::AttemptObservation>>,
+    // Explicit legacy serialization stays count-only; complete projection adopts this ID.
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    pub(super) call_id: Option<CallId>,
     pub(super) cache_answers: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, schemars(with = "String"))]
@@ -60,11 +67,17 @@ impl Facts {
             prices.estimate(input, output)
         });
         Self {
+            attempts: snapshot.attempts,
+            call_id: snapshot.call_id,
             records: snapshot.records,
             requests_sent: snapshot.requests_sent,
             cache_answers: snapshot.cache_answers,
-            input_tokens: tokens.map(|(input, _)| input),
-            output_tokens: tokens.map(|(_, output)| output),
+            input_tokens: snapshot
+                .reported
+                .and_then(crate::core::ReportedUsage::input_tokens),
+            output_tokens: snapshot
+                .reported
+                .and_then(crate::core::ReportedUsage::output_tokens),
             estimated_cost_usd,
             seconds: snapshot.elapsed.as_secs_f64(),
             model: snapshot.model,
@@ -75,6 +88,19 @@ impl Facts {
     #[must_use]
     pub const fn records(&self) -> u64 {
         self.records
+    }
+
+    /// This invocation's opaque ID, absent on a caller's aggregate tally.
+    #[must_use]
+    pub const fn call_id(&self) -> Option<&CallId> {
+        self.call_id.as_ref()
+    }
+
+    /// Requested ordered live attempts, retained even after a started failure.
+    /// None means unrequested; Some([]) means requested with zero sends.
+    #[must_use]
+    pub fn attempts(&self) -> Option<&[crate::public::AttemptObservation]> {
+        self.attempts.as_deref()
     }
 
     /// Live transport attempts, including retries and failed attempts.

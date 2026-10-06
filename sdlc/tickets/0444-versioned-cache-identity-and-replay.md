@@ -1,6 +1,6 @@
 # 0444: Version cache keys and preserve offline replay
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
 Milestone: 0.2
 
@@ -30,3 +30,44 @@ Saved answers carry enough validated identity to rebuild their key without a cal
 0449 removes SDK group interpretation; retain conservative requested/reported-model comparison, known mutable-alias refresh and ambiguous offline replay refusal. Do not add discovery, target maps or routing. A mutable selector that echoes itself cannot prove freshness: caller no-cache/refresh or provider no-store is required, and future explicit proxy calls bypass local reuse until an admitted policy-version contract proves safety. Do not claim the key formula alone fixes echoed aliases.
 
 When this change is pushed to main, notify the experiments team through pm with the commit, changed behavior and affected experiment 0035 steps. They rerun only affected steps without waiting for release. Note the notification in this ticket’s single landing record.
+
+Native WIP partial usage: optional reported dimensions now remain independent through decoding, wire shares, SQLite/JSONL lookup, zero-send replay and aggregate receipts. Explicit recording retains exact request and response bodies (no headers) in the answers' SQLite transaction. The Imajev fixture reports input887 and no output; no output zero is synthesized. Result/1 retains its full-count usage projection, and result/2 metadata and typed accessors retain partial counts. Versioned key/migration execution is now concrete WIP; whole native review, held-model warning integration, schema/corpus adoption and final landing remain open.
+
+### Added public declarations
+
+```text
+struct ReportedUsage
+impl Serialize for ReportedUsage
+const fn ReportedUsage::input_tokens(self) -> Option<u64>
+const fn ReportedUsage::output_tokens(self) -> Option<u64>
+const fn Details::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteDecision::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteChoice::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteTags::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteScore::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteFilter::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteRank::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteFound::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteRecognized::reported_usage(&self) -> Option<ReportedUsage>
+fn CompleteRelated::reported_usage(&self) -> Option<ReportedUsage>
+fn Details::question_sources(&self) -> &[QuestionSource]
+fn Details::observations(&self) -> &[Observation]
+```
+
+Native WIP storage slice: framed question-key/2 includes the normalized existing posting URL and requested/reported models, outside batch and persistent IDs. Writable v1 stores validate every constituent and normalize in one rollback-capable transaction; read-only replay indexes the same validated snapshot in memory. Conflicting normalized histories and ambiguous historical models refuse before sends. Existing image digest/key domains stay available for original v1 validation. SQL hit validation covers text and image constituents in the hit's read snapshot. Undecodable saved answers refuse rather than trigger a repair send. Explicit original exchange bodies now survive SQLite-to-fixture conversion; no request header or transient ID is saved. Counts beyond SQLite integer bounds refuse storage atomically rather than silently become unknown.
+
+Focused public/CLI cases in native_store cover read-only bytes/mtime, independent expected framing/legacy identity, v1 migration/idempotence, collision rollback, malformed unrelated entries in all modes, changed reported models and offline ambiguity, 13/5/8 per-question missing pieces, coalescing/refresh observation identity, and original body conversion/replay. These are constituent checks, not whole-ticket acceptance. Root owns the experiments notification after main landing.
+
+```rust
+fn Details::question_sources(&self) -> &[QuestionSource]
+fn Details::observations(&self) -> &[Observation]
+```
+
+Native correction: v2 explicit images retain the `thinkthen.image-question-key/2`
+framing domain alongside image-state/1. Ordinary text keeps question-key/2.
+The existing validated state digest selects the domain during migration and
+snapshot replay; an image-looking ordinary JSON value does not infer images.
+A prior-failing independently framed public recording regression now passes,
+including original ordered duplicate attachments and zero-send strict replay.
+All 24 image and nine storage cases plus affected Clippy pass. Whole review and
+main landing remain open.

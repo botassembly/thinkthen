@@ -3,9 +3,10 @@
 mod annotate_observation;
 mod complete;
 mod details;
-mod observation;
+pub(crate) mod functions;
+pub(crate) mod observation;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
-mod annotation;
+pub(crate) mod annotation;
 
 use crate::core::{self, Value};
 use crate::engine::pipeline::Failed;
@@ -41,13 +42,21 @@ pub(super) fn selected_batch(
     options: &CallOptions<'_>,
     engine: Option<core::Setting>,
 ) -> Result<core::Setting, Error> {
+    selected_batch_file(question.batch.as_ref(), options, engine)
+}
+
+pub(crate) fn selected_batch_file(
+    file: Option<&core::Json>,
+    options: &CallOptions<'_>,
+    engine: Option<core::Setting>,
+) -> Result<core::Setting, Error> {
     if let Some(typed) = options.batch_setting() {
         return Ok(typed.into());
     }
     if let Some(engine) = engine {
         return Ok(engine);
     }
-    let Some(file) = question.batch.as_ref() else {
+    let Some(file) = file else {
         return Ok(core::Setting::Max);
     };
     core::Setting::of_json(file).ok_or_else(|| {
@@ -58,7 +67,7 @@ pub(super) fn selected_batch(
     })
 }
 
-pub(super) fn selected_set_batch(
+pub(crate) fn selected_set_batch(
     questions: &core::QuestionSet,
     options: &CallOptions<'_>,
     engine: Option<core::Setting>,
@@ -350,11 +359,18 @@ pub(crate) fn judged(
     row: pull::Row<Decisions>,
 ) -> Result<crate::engine::facade::Judgment, Error> {
     let decided = match &row {
-        Ok(decided) | Err(Failed::Asker(Miss::Failed(decided))) => Some(decided),
+        Ok(decided) => Some(decided),
+        Err(Failed::Asker(Miss::Failed(decided))) => Some(decided.as_ref()),
         Err(_) => None,
     };
     if let Some(decided) = decided.filter(|_| stop.observing()) {
-        let observed = decided.observed(question, backend)?;
+        let observed = decided.observed(question, backend)?.qualified(
+            crate::public::asking::observed_function(question),
+            index,
+            None,
+            None,
+            0,
+        )?;
         stop.observe(RecordObservation::Question {
             index,
             member: None,

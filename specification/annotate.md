@@ -136,17 +136,34 @@ unusable answer and makes a completed run exit 6. A reply with no usable
 answer in any group stops the run at exit 4. It publishes none of that record's
 answers, even when a sibling `on` group answered successfully. A failed request
 covering several records cannot identify which member caused it;
-`--on-error continue` does not recover that whole batch. Separating questions
-into different `on` groups spends more requests and limits which questions
-share a partial reply or a changed request. It does not preserve sibling-group
-answers when one group wholly fails. Each question is stored alone, so editing one question sends only that
-question again under the same cache.
+The continuation option does not recover that whole batch. An on group
+selects logical evidence; it is not necessarily a separate HTTP request.
+Different selections can share a request when their effective state and
+packing limits permit it. A wholly failed logical group still prevents
+publishing that record's sibling-group answers. Each question is stored alone,
+so editing one question sends only that question again under the same cache.
 
 ## Cautions
 
 A profile enforces only limits stated in bytes, expanded questions, or options. A backend limit stated only in tokens remains unenforceable without a tokenizer or a measured byte ceiling.
 
-Each exact encoded chunk has its own cache key. A group that fits remains one historical chunk, so adding or changing one question asks that whole group again for every record. A split group reuses only chunks whose exact bytes and positions remain unchanged; changing one question can also move later chunk boundaries and their keys. An answer near its threshold can move when neighboring questions change. In six deliberately borderline cases, one answer moved from `false` to not sure when neighboring questions joined it. The largest probability shift was 0.04. Keep the group fixed while comparing runs and retain `--details` probabilities. Use a narrower, distinct `on` group when the record permits it and the questions need separate stability.
+Cache identity belongs to each wire question's effective state, instructions,
+route and model, independently of which neighboring questions share a
+request. Changing a record-batch limit or request boundary therefore sends
+only missing questions and retains already recorded observations. Record
+batching bounds how many records are admitted to one pack; actual wire
+membership counts the questions that pack sends, including expanded tag
+labels and annotation members. Neither the configured bound nor the actual
+count enters a question key.
+
+Grouping can move a model answer. Reuse returns the recorded observation;
+it makes no claim that a fresh scalar request would answer identically.
+Keep the experimental conditions fixed when comparing probabilities. Ticket
+0454 adds optional actual successful-request wire-question counts to result/2
+question sources and stored observations. Cache, replay and coalescing retain
+the original count; split children record their own counts. Missing historical
+counts stay absent. This metadata is an adoption target until the native slice
+lands.
 
 ## An eval is `annotate` and a saved run
 

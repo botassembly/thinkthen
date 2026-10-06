@@ -36,12 +36,19 @@ pub(crate) fn observe_annotated_questions(
         return Ok(());
     }
     for (position, (name, detail)) in row.observed.iter().enumerate() {
+        let detail = detail.clone().qualified(
+            crate::public::InputFunction::Annotate,
+            index,
+            Some(name),
+            None,
+            position,
+        )?;
         stop.observe(RecordObservation::Question {
             index,
             member: Some(name),
             stage: None,
             position,
-            detail: QuestionDetail::of(detail),
+            detail: QuestionDetail::of(&detail),
         });
         if stop.observer_panicked() {
             return Err(Error::defect("the annotation observer panicked"));

@@ -278,7 +278,7 @@ fn open(folder: &Path, writable: bool) -> Result<Option<Connection>, Error> {
     let version: i64 = waiting(BUSY, &cancel, || {
         connection.query_row("PRAGMA user_version", [], |row| row.get(0))
     })?;
-    if version != 1 {
+    if !matches!(version, 1 | 2) {
         return Err(Error::RecordingStorage);
     }
     Ok(Some(connection))

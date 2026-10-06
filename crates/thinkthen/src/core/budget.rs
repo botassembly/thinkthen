@@ -1,7 +1,8 @@
 //! Why a send budget or estimated input admission refused a live attempt.
 
 /// Why a process send budget refused a live attempt.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SendBudgetDenial {
     /// No attempt for this call was sent.
     BeforeFirstSend,
@@ -15,7 +16,8 @@ pub enum SendBudgetDenial {
 }
 
 /// Why estimated input admission refused one final encoded body.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum EstimatedInputDenial {
     /// Before this call's first request.
     InitialRequest {

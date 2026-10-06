@@ -238,12 +238,18 @@ fn observed(
             Ok(decided) => decided,
             Err(Miss::Failed(decided)) => {
                 failed = true;
-                decided
+                *decided
             }
             Err(Miss::Refused(error)) => return Err(error),
         };
         if stop.observing() {
-            let observed = decided.observed(question, backend)?;
+            let observed = decided.observed(question, backend)?.qualified(
+                crate::public::InputFunction::Rank,
+                index,
+                Some(named.name()),
+                None,
+                0,
+            )?;
             stop.observe(RecordObservation::Question {
                 index,
                 member: Some(named.name()),

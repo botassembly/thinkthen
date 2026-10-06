@@ -73,6 +73,7 @@ mod exchange;
 mod facts;
 mod find;
 mod find_display;
+mod find_file;
 mod from_record;
 mod images;
 #[allow(

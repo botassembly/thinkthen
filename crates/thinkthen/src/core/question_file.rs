@@ -409,6 +409,7 @@ fn verb_of(members: &[(String, Json)]) -> Result<Verb, QuestionFileError> {
 }
 
 mod fields;
+mod find;
 mod profile;
 mod resolve;
 
