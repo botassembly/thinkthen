@@ -24,10 +24,10 @@ installed_tests() {
 }
 
 # backend_start: build and start the conformance loopback backend from the repository root, with
-# its input on fd 3. It builds online, as surfaces always has. It sets `port` and `backend`, its
+# its input on fd 3. It builds from the offline cache. It sets `port` and `backend`, its
 # folder, and stops it on exit.
 backend_start() {
-	cargo build --locked --quiet --package conformance-backend
+	cargo build --locked --offline --quiet --package conformance-backend
 	scratch_dir backend
 	trap 'exec 3>&-; scratch_clean' EXIT
 	mkfifo "$backend/in"

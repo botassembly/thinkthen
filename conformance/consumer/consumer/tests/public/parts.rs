@@ -186,3 +186,95 @@ pub(crate) fn found(engine: &Engine, asked: &Value, success: &Value) -> Checked 
     let selected = found.selected().and_then(|unit| at(&units, unit));
     same("selected", &json!(selected), &operation["selected"])
 }
+
+#[test]
+fn annotate_groups_share_one_request_and_retain_each_probability() {
+    let document: Value =
+        serde_json::from_str(include_str!("../../../../cases.json")).expect("shared cases");
+    let case = document["parity"]["required_cases"]
+        .as_array()
+        .expect("required cases")
+        .iter()
+        .find(|case| case["id"] == "annotate-packed-groups")
+        .expect("packed annotate case");
+    let source = document["cases"]
+        .as_array()
+        .expect("behavior cases")
+        .iter()
+        .find(|source| source["id"] == case["input"]["case_ref"])
+        .expect("source case");
+    let expected_body = case["input"]["request"].clone();
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let seen = Arc::clone(&captured);
+    let listener = Listener::answering(move |body| {
+        seen.lock().expect("capture").push(
+            serde_json::from_slice::<Value>(body).expect("request"),
+        );
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#)
+    }).expect("listener");
+    let engine = engine(listener.base()).expect("engine");
+    #[derive(serde::Deserialize)]
+    struct Original {
+        cases: Vec<OriginalCase>,
+    }
+    #[derive(serde::Deserialize)]
+    struct OriginalCase {
+        id: String,
+        question_set: Option<Box<serde_json::value::RawValue>>,
+    }
+    let original: Original = serde_json::from_str(include_str!("../../../../cases.json"))
+        .expect("original member order");
+    let raw = original
+        .cases
+        .iter()
+        .find(|row| row.id == source["id"])
+        .expect("original case");
+    let set = QuestionSet::from_json(raw.question_set.as_ref().expect("question set").get())
+        .expect("set");
+    let record = source["record"].to_string();
+    let probabilities = Mutex::new(serde_json::Map::new());
+    let observe = |event: thinkthen::RecordObservation<'_>| {
+        if let thinkthen::RecordObservation::Question {
+            member: Some(name),
+            detail,
+            ..
+        } = event
+            && let Some(thinkthen::Probabilities::YesNo { yes }) = detail.probabilities()
+        {
+            probabilities
+                .lock()
+                .expect("probabilities")
+                .insert(name.to_owned(), Value::from(*yes));
+        }
+    };
+    let result = engine
+        .annotate_with(
+            &set,
+            [record],
+            thinkthen::CallOptions::new().observe(&observe),
+        )
+        .next()
+        .expect("row")
+        .expect("annotated");
+    let bodies = captured.lock().expect("capture");
+    assert_eq!(
+        bodies.len(),
+        case["expect"]["requests"].as_u64().expect("count") as usize
+    );
+    assert_eq!(bodies[0], expected_body);
+    assert_eq!(result.values().len(), 2);
+    for entry in result.values() {
+        assert_eq!(
+            entry.value(),
+            &thinkthen::Annotated::Decision(thinkthen::Answer::Yes)
+        );
+        assert_eq!(case["expect"]["values"][entry.name()], Value::Bool(true));
+    }
+    assert_eq!(
+        Value::Object(probabilities.into_inner().expect("probabilities")),
+        case["expect"]["probabilities"]
+    );
+    use std::io::Write;
+    writeln!(std::io::stdout().lock(), "parity: {{\"consumer\":\"rust\",\"case\":\"annotate-packed-groups\",\"checks\":[\"named\",\"runtime\"],\"status\":\"pass\"}}")
+        .expect("case output");
+}

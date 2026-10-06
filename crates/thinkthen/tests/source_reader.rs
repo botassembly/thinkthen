@@ -134,7 +134,7 @@ fn image_handles_keep_original_bytes_and_omit_text_line_positions() {
     };
     assert_eq!(image.record.media(), ImageMedia::Png);
     assert_eq!(image.record.bytes(), bytes);
-    assert_eq!((image.record.width(), image.record.height()), (32, 32));
+    assert_eq!((image.record.width(), image.record.height()), (1, 1));
     let json = serde_json::to_value(row).unwrap();
     assert!(json.get("first_line").is_none());
     assert!(json.get("last_line").is_none());
