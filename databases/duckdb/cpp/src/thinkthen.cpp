@@ -4,6 +4,7 @@
 #include "bridge.hpp"
 #include "find.hpp"
 #include "files.hpp"
+#include "images.hpp"
 #include "nested.hpp"
 #include "portable.hpp"
 #include "relate.hpp"
@@ -40,6 +41,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	RegisterNested(loader);
 	RegisterFind(loader);
 	RegisterFiles(loader);
+	RegisterImages(loader);
 	RegisterUsage(loader);
 	RegisterRemoved(loader);
 	RegisterRelate(loader);

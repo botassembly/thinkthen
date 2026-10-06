@@ -21,6 +21,7 @@ mod budget;
 )]
 mod ffi;
 mod files;
+mod images;
 mod many;
 mod question;
 mod recognize_document;
