@@ -10,7 +10,7 @@
 //! each group in its own request, and ADR 0111 section 5 packs a record's
 //! groups into one, as the command's wire run also skips it.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fmt;
 use std::io::Write;
 use std::num::NonZeroUsize;
@@ -37,7 +37,7 @@ fn singleton_requests<'a>() -> CallOptions<'a> {
 
 pub(crate) type Checked<T = ()> = Result<T, String>;
 pub(crate) use crate::values::same;
-use crate::values::{detailed, digest, keys, selected_ids, swap};
+use crate::values::{detailed, fixture_keys, selected_ids, swap};
 
 thinkthen::choices! { enum Team { Billing => "billing", Shipping => "shipping", Other => "other" } }
 thinkthen::choices! { enum Mark { Billing => "billing", Urgent => "urgent", Security => "security" } }
@@ -171,11 +171,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let served = format!("{base}/systemone");
     let exchanges = case["exchanges"].as_array().cloned().unwrap_or_default();
     // Every row lists question keys, by ADR 0111.
-    let mut renamed = BTreeMap::new();
-    for exchange in &exchanges {
-        let request = exchange["request"].as_str().unwrap_or_default().as_bytes();
-        renamed.insert(digest(CANONICAL, request), json!(keys(&served, request)?));
-    }
+    let renamed = fixture_keys(CANONICAL, &served, &exchanges)?;
     let success = swap(&case["expect"]["success"], &renamed);
     let texts: Vec<&str> = exchanges
         .iter()

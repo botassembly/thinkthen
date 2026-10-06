@@ -3,9 +3,38 @@
 
 use std::fmt;
 
+mod aggregate_reading;
 mod call;
+mod complete;
+mod metadata;
+mod reading;
+pub use aggregate_reading::{RecognitionReading, RelationReading, ResolvedRelationRule};
+pub use metadata::{BatchMismatch, ProfileMismatch, ResultMetadata};
+pub use reading::{
+    FindReading, QuestionContent, ResolvedOption, ResolvedQuestion, ResolvedThreshold,
+};
+mod complete_annotation;
+mod complete_call;
+mod complete_facts;
+pub use complete_call::{CompleteCall, CompleteError, ErrorSnapshot};
+mod complete_find;
+pub use complete_facts::CompleteFacts;
+mod complete_recognize;
+mod complete_relate;
+pub use complete_relate::{CompleteRelated, CompleteRelationMember};
+mod complete_record;
+pub use complete::{
+    CompleteChoice, CompleteDecision, CompleteFilter, CompleteRank, CompleteScore, CompleteTags,
+};
+pub use complete_annotation::{CompleteAnnotated, CompleteAnnotationMember};
+pub use complete_find::CompleteFound;
+pub use complete_recognize::{
+    CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
+    RecognitionProbabilities,
+};
+pub use complete_record::CompleteRecord;
 mod found;
-pub use crate::core::{AttemptObservation, AttemptOutcome};
+pub use crate::core::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub use call::{Call, DoorReply, Facts};
 pub use found::{Candidate, Found, Picked};
 mod ranked;
@@ -17,10 +46,16 @@ pub use tally::{Tally, TallyStart};
 mod member;
 pub(crate) use member::Member;
 mod observation;
+mod owned_observation;
 #[cfg(test)]
 pub(crate) use observation::QuestionJson;
-pub(crate) use observation::{ObservedQuestion, observe_question};
+mod stage_observation;
+pub(crate) use observation::ObservedQuestion;
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
+pub use owned_observation::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
+pub(crate) use stage_observation::{
+    observe_question, observe_question_at, observe_question_inputs,
+};
 
 use serde::Serialize;
 
@@ -200,6 +235,8 @@ impl Counters {
 /// One judgment with the probabilities and request facts behind it.
 #[derive(Clone, PartialEq)]
 pub struct Details {
+    sources: Vec<core::QuestionSource>,
+    observations: Vec<core::Observation>,
     value: Judgment,
     probabilities: Probabilities,
     nearest: Option<String>,
@@ -210,6 +247,7 @@ pub struct Details {
     requests_sent: u64,
     cached: bool,
     usage: Option<Usage>,
+    reported_usage: Option<core::ReportedUsage>,
     confidence: Option<f64>,
     url: String,
     json: Written,
@@ -260,6 +298,8 @@ impl Details {
         )
         .map_err(|_| written())?;
         Ok(Self {
+            sources: judged.answered.sources.clone(),
+            observations: judged.answered.observations.clone(),
             value: judgment(&judged.value),
             probabilities,
             nearest: answer.level().map(str::to_owned),
@@ -270,6 +310,7 @@ impl Details {
             requests_sent: judged.answered.requests_sent,
             cached: judged.answered.replayed,
             usage: reply.usage().map(usage),
+            reported_usage: reply.reported_usage(),
             confidence: answer.confidence().map(|held| held.as_f64()),
             url: backend.url().as_str().to_owned(),
             json: Written(json),
@@ -281,6 +322,24 @@ impl Details {
     #[must_use]
     pub fn to_json(&self) -> String {
         self.json.text()
+    }
+
+    /// Actual sources and original wire-question counts in question order.
+    #[must_use]
+    pub fn question_sources(&self) -> &[core::QuestionSource] {
+        &self.sources
+    }
+
+    /// Accepted observation or failed occurrence identities in question order.
+    #[must_use]
+    pub fn observations(&self) -> &[core::Observation] {
+        &self.observations
+    }
+
+    /// Independently reported counts, retaining unknown input or output.
+    #[must_use]
+    pub const fn reported_usage(&self) -> Option<core::ReportedUsage> {
+        self.reported_usage
     }
 
     /// The value under the question's rule.

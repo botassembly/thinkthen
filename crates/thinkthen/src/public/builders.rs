@@ -1,6 +1,7 @@
 //! The question builders: each step checks its value and the last step
 //! closes the question.
 
+use super::{InputDeclaration, QuestionName, WordingVersion};
 use std::fmt;
 use std::marker::PhantomData;
 
@@ -14,6 +15,7 @@ use crate::public::question::{
 
 /// A `decide` question under construction. `Debug` withholds what it asks.
 pub struct DecideBuilder {
+    pub(super) metadata: core::declaration::QuestionMetadata,
     pub(super) text: QuestionText,
     pub(super) yes: Option<Meaning>,
     pub(super) no: Option<Meaning>,
@@ -86,6 +88,7 @@ impl DecideBuilder {
 
     fn finish(self, rule: Threshold, kind: Kind) -> Question {
         let mut question = Question::yes_no(self.text, self.yes, self.no, Some(rule), kind);
+        question.metadata = self.metadata;
         question.model = self.model;
         question
     }
@@ -94,6 +97,7 @@ impl DecideBuilder {
 /// The labels and model a list question gathers before it closes. `Debug`
 /// counts the labels and withholds the text and the labels.
 pub(super) struct Listing {
+    pub(super) metadata: core::declaration::QuestionMetadata,
     pub(super) text: QuestionText,
     pub(super) labels: Vec<(String, Option<core::Description>)>,
     pub(super) model: Option<ModelName>,
@@ -111,6 +115,7 @@ impl fmt::Debug for Listing {
 impl Listing {
     pub(super) fn new(text: &str) -> Result<Self, Error> {
         Ok(Self {
+            metadata: core::declaration::QuestionMetadata::default(),
             text: text_of(text)?,
             labels: Vec::new(),
             model: None,
@@ -165,6 +170,7 @@ impl Listing {
             ),
         };
         Ok(Question {
+            metadata: self.metadata,
             core,
             threshold,
             model: self.model,
@@ -382,6 +388,7 @@ impl ScoreBuilder {
     pub fn build(self) -> Result<Question, Error> {
         let levels = Labels::levels(self.0.labels).map_err(Error::refused)?;
         Ok(Question {
+            metadata: self.0.metadata,
             core: core::Question::Score {
                 text: self.0.text,
                 levels,
@@ -406,4 +413,20 @@ impl Question {
         model_of(&mut self.model, value)?;
         Ok(self)
     }
+}
+
+impl DecideBuilder {
+    super::question_metadata::accessors!(metadata);
+}
+impl LabelBuilder {
+    super::question_metadata::accessors!(listing.metadata);
+}
+impl ScoreBuilder {
+    super::question_metadata::accessors!(0.metadata);
+}
+impl<C: Choice> ChooseBuilder<C> {
+    super::question_metadata::accessors!(0.metadata);
+}
+impl<C: Choice> TagBuilder<C> {
+    super::question_metadata::accessors!(0.metadata);
 }

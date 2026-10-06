@@ -36,7 +36,7 @@ fn read_top(question: &str) -> Result<Top, Failure> {
     let Some(path) = path_of(question) else {
         return Ok((None, None));
     };
-    let text = question_text::read(Path::new(path), Failure::OpenQuestionFile)?;
+    let text = question_text::reference(Path::new(path), Failure::OpenQuestionFile)?;
     let (file, batch) = QuestionFile::parse_top(&text)?;
     Ok((Some(file), batch))
 }

@@ -12,6 +12,8 @@ use crate::engine::usage::RunSnapshot;
 #[derive(Serialize)]
 struct Line {
     schema: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    call_id: Option<crate::core::CallId>,
     records: u64,
     requests_sent: u64,
     retries: u64,
@@ -57,10 +59,12 @@ pub(crate) fn write(
     snapshot: RunSnapshot,
     elapsed: Duration,
     stopped: Option<Stopped>,
+    call_id: Option<crate::core::CallId>,
 ) {
     let tokens = snapshot.usage_known;
     let line = Line {
         schema: "thinkthen.run/1",
+        call_id,
         records: snapshot.records,
         requests_sent: snapshot.counts.requests_sent,
         retries: snapshot.counts.retries,

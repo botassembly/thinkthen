@@ -1,6 +1,6 @@
 # 0456: Add named questions and declared item inputs
 
-Status: ready. The shared design passed fresh High review after correcting annotate document admission. Slice A records the design and plan; native implementation and all surface adoption remain open.
+Status: inprogress. Native implementation is underway in lane 0; no whole-code review or landing claim. The shared design passed fresh High review after correcting annotate document admission. Slice A records the design and plan; native implementation and all surface adoption remain open.
 
 Milestone: 0.2
 
@@ -135,3 +135,228 @@ Use the existing parser/schema corpus for the subset and metadata bounds, and pu
 1. Fresh High whole-ticket/design review; correct blocking findings before native implementation. Planning WIP does not need product gates or a landing record.
 2. Native owner integrates pure grammar/types/resolved metadata and outside-core name loading, then admission with must-land 0407/0414. Update contracts, generated schemas/corpus and old-file compatibility together; no merge of active native WIP to manufacture readiness.
 3. Existing C/MCP/family/SQL/frame owners adopt the settled additions after native interfaces are available; 0432 executes their actual named methods. Keep each existing owner's complete 0.2 scope and no duplicate context tickets. Full tests/lint on the eventual landing commit, policy before Rust review, affected spec/surface checks then.
+
+## Native constituent implementation, 2026-10-06
+
+Lane 0 implements the closed ordered declaration types, pure question-file/member/recognize/relate/find metadata parsing, explicit bounded native named/reference resolution and shared CLI @ resolution. Metadata travels beside semantic questions; complete atomic/member/aggregate serializers preserve it without changing semantic serialization or identity. Public getters expose declarations through the existing resolved readings and owned atomic/member observations. Typed atomic projections and all materialized complete annotation members validate before lookup/send; annotation documents retain parsed JSON while explicitly composed text remains text. Named loader and CLI checks use isolated ordinary config directories, real path collisions/escaping symlinks and counted loopback requests.
+
+This is a concrete WIP constituent, not the whole accepted outcome. Structured explicit object context, declaration admission for every remaining convenience/whole-set/streaming path, atomic staged-batch refusal, canonical result/2 generated schema/CLI adoption and host consumer adoption remain open. Existing declaration grammar corpus/schema are updated; the result schema still belongs to the complete result/2 integration. No new dependency, catalog cache, scheduler, proof tool or landing record is introduced.
+
+Source growth for this constituent is 1582 nonblank Rust lines (140842 → 142424): validated ordered declaration types/parser, reusable metadata accessors and semantic/presentation separation, confined named resolution shared with CLI, selected typed admission and outside-in regressions. Existing ordered JSON, capped reader, config-directory rules, projection and packing were reused; no parallel parser or execution engine was added. The reusable accessor macros avoid duplicating wrapper/builder behavior. Every Rust file remains below 500 nonblank lines.
+
+### Added public declarations
+
+```text
+InputDeclaration::Object(ObjectDeclaration)
+InputDeclaration::String
+InputPropertyType::Boolean
+InputPropertyType::Number
+InputPropertyType::String
+InputPropertyType::StringList
+const fn ChooseBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn DecideBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn InputProperty::kind(&self) -> InputPropertyType
+const fn LabelBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn Question::wording_version(&self) -> Option<WordingVersion>
+const fn Recognize::wording_version(&self) -> Option<WordingVersion>
+const fn RecordChooseQuestion::wording_version(&self) -> Option<WordingVersion>
+const fn Relate::wording_version(&self) -> Option<WordingVersion>
+const fn ScoreBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn TagBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn WordingVersion::get(self) -> u32
+enum InputDeclaration
+enum InputPropertyType
+fn BandedQuestion::context_schema(&self) -> Option<&InputDeclaration>
+fn BandedQuestion::item_schema(&self) -> Option<&InputDeclaration>
+fn BandedQuestion::name(&self) -> Option<&QuestionName>
+fn BandedQuestion::with_context_schema(self, InputDeclaration) -> Result<BandedQuestion, Error>
+fn BandedQuestion::with_item_schema(self, InputDeclaration) -> Result<BandedQuestion, Error>
+fn BandedQuestion::with_name(self, QuestionName) -> Result<BandedQuestion, Error>
+fn BandedQuestion::with_wording_version(self, WordingVersion) -> Result<BandedQuestion, Error>
+fn BandedQuestion::wording_version(&self) -> Option<WordingVersion>
+fn ChooseBuilder::context_schema(&self) -> Option<&InputDeclaration>
+fn ChooseBuilder::item_schema(&self) -> Option<&InputDeclaration>
+fn ChooseBuilder::name(&self) -> Option<&QuestionName>
+fn ChooseBuilder::with_context_schema(self, InputDeclaration) -> Result<ChooseBuilder<C>, Error>
+fn ChooseBuilder::with_item_schema(self, InputDeclaration) -> Result<ChooseBuilder<C>, Error>
+fn ChooseBuilder::with_name(self, QuestionName) -> Result<ChooseBuilder<C>, Error>
+fn ChooseBuilder::with_wording_version(self, WordingVersion) -> Result<ChooseBuilder<C>, Error>
+fn ChooseQuestion::context_schema(&self) -> Option<&InputDeclaration>
+fn ChooseQuestion::item_schema(&self) -> Option<&InputDeclaration>
+fn ChooseQuestion::name(&self) -> Option<&QuestionName>
+fn ChooseQuestion::with_context_schema(self, InputDeclaration) -> Result<ChooseQuestion<C>, Error>
+fn ChooseQuestion::with_item_schema(self, InputDeclaration) -> Result<ChooseQuestion<C>, Error>
+fn ChooseQuestion::with_name(self, QuestionName) -> Result<ChooseQuestion<C>, Error>
+fn ChooseQuestion::with_wording_version(self, WordingVersion) -> Result<ChooseQuestion<C>, Error>
+fn ChooseQuestion::wording_version(&self) -> Option<WordingVersion>
+fn DecideBuilder::context_schema(&self) -> Option<&InputDeclaration>
+fn DecideBuilder::item_schema(&self) -> Option<&InputDeclaration>
+fn DecideBuilder::name(&self) -> Option<&QuestionName>
+fn DecideBuilder::with_context_schema(self, InputDeclaration) -> Result<DecideBuilder, Error>
+fn DecideBuilder::with_item_schema(self, InputDeclaration) -> Result<DecideBuilder, Error>
+fn DecideBuilder::with_name(self, QuestionName) -> Result<DecideBuilder, Error>
+fn DecideBuilder::with_wording_version(self, WordingVersion) -> Result<DecideBuilder, Error>
+fn FindReading::context_schema(&self) -> Option<&InputDeclaration>
+fn FindReading::item_schema(&self) -> Option<&InputDeclaration>
+fn FindReading::name(&self) -> Option<&QuestionName>
+fn FindReading::wording_version(&self) -> Option<WordingVersion>
+fn InputProperty::name(&self) -> &str
+fn InputProperty::new(&str, InputPropertyType) -> Result<InputProperty, Error>
+fn LabelBuilder::context_schema(&self) -> Option<&InputDeclaration>
+fn LabelBuilder::item_schema(&self) -> Option<&InputDeclaration>
+fn LabelBuilder::name(&self) -> Option<&QuestionName>
+fn LabelBuilder::with_context_schema(self, InputDeclaration) -> Result<LabelBuilder, Error>
+fn LabelBuilder::with_item_schema(self, InputDeclaration) -> Result<LabelBuilder, Error>
+fn LabelBuilder::with_name(self, QuestionName) -> Result<LabelBuilder, Error>
+fn LabelBuilder::with_wording_version(self, WordingVersion) -> Result<LabelBuilder, Error>
+fn LoadedQuestion::context_schema(&self) -> Option<&InputDeclaration>
+fn LoadedQuestion::item_schema(&self) -> Option<&InputDeclaration>
+fn LoadedQuestion::name(&self) -> Option<&QuestionName>
+fn LoadedQuestion::wording_version(&self) -> Option<WordingVersion>
+fn ObjectDeclaration::new(Vec<InputProperty>, Vec<String>) -> Result<ObjectDeclaration, Error>
+fn ObjectDeclaration::properties(&self) -> &[InputProperty]
+fn ObjectDeclaration::required(&self) -> &[String]
+fn Question::context_schema(&self) -> Option<&InputDeclaration>
+fn Question::item_schema(&self) -> Option<&InputDeclaration>
+fn Question::load_named(&str) -> Result<LoadedQuestion, Error>
+fn Question::load_reference(&str) -> Result<LoadedQuestion, Error>
+fn Question::name(&self) -> Option<&QuestionName>
+fn Question::with_context_schema(self, InputDeclaration) -> Result<Question, Error>
+fn Question::with_item_schema(self, InputDeclaration) -> Result<Question, Error>
+fn Question::with_name(self, QuestionName) -> Result<Question, Error>
+fn Question::with_wording_version(self, WordingVersion) -> Result<Question, Error>
+fn QuestionName::as_str(&self) -> &str
+fn QuestionName::new(&str) -> Result<QuestionName, Error>
+fn QuestionSet::load_named(&str) -> Result<QuestionSet, Error>
+fn QuestionSet::load_reference(&str) -> Result<QuestionSet, Error>
+fn RecognitionReading::context_schema(&self) -> Option<&InputDeclaration>
+fn RecognitionReading::item_schema(&self) -> Option<&InputDeclaration>
+fn RecognitionReading::name(&self) -> Option<&QuestionName>
+fn RecognitionReading::wording_version(&self) -> Option<WordingVersion>
+fn Recognize::context_schema(&self) -> Option<&InputDeclaration>
+fn Recognize::item_schema(&self) -> Option<&InputDeclaration>
+fn Recognize::load_named(&str) -> Result<Recognize, Error>
+fn Recognize::load_reference(&str) -> Result<Recognize, Error>
+fn Recognize::name(&self) -> Option<&QuestionName>
+fn Recognize::with_context_schema(self, InputDeclaration) -> Result<Recognize, Error>
+fn Recognize::with_item_schema(self, InputDeclaration) -> Result<Recognize, Error>
+fn Recognize::with_name(self, QuestionName) -> Result<Recognize, Error>
+fn Recognize::with_wording_version(self, WordingVersion) -> Result<Recognize, Error>
+fn RecognizeQuestionFile::load_named(&str) -> Result<RecognizeQuestionFile, Error>
+fn RecognizeQuestionFile::load_reference(&str) -> Result<RecognizeQuestionFile, Error>
+fn RecordChooseQuestion::context_schema(&self) -> Option<&InputDeclaration>
+fn RecordChooseQuestion::item_schema(&self) -> Option<&InputDeclaration>
+fn RecordChooseQuestion::load_named(&str) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::load_reference(&str) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::name(&self) -> Option<&QuestionName>
+fn RecordChooseQuestion::with_context_schema(self, InputDeclaration) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::with_item_schema(self, InputDeclaration) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::with_name(self, QuestionName) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::with_wording_version(self, WordingVersion) -> Result<RecordChooseQuestion, Error>
+fn Relate::context_schema(&self) -> Option<&InputDeclaration>
+fn Relate::item_schema(&self) -> Option<&InputDeclaration>
+fn Relate::load_named(&str) -> Result<Relate, Error>
+fn Relate::load_reference(&str) -> Result<Relate, Error>
+fn Relate::name(&self) -> Option<&QuestionName>
+fn Relate::with_context_schema(self, InputDeclaration) -> Result<Relate, Error>
+fn Relate::with_item_schema(self, InputDeclaration) -> Result<Relate, Error>
+fn Relate::with_name(self, QuestionName) -> Result<Relate, Error>
+fn Relate::with_wording_version(self, WordingVersion) -> Result<Relate, Error>
+fn RelationReading::context_schema(&self) -> Option<&InputDeclaration>
+fn RelationReading::item_schema(&self) -> Option<&InputDeclaration>
+fn RelationReading::name(&self) -> Option<&QuestionName>
+fn RelationReading::wording_version(&self) -> Option<WordingVersion>
+fn ResolvedQuestion::context_schema(&self) -> Option<&InputDeclaration>
+fn ResolvedQuestion::item_schema(&self) -> Option<&InputDeclaration>
+fn ResolvedQuestion::name(&self) -> Option<&QuestionName>
+fn ResolvedQuestion::wording_version(&self) -> Option<WordingVersion>
+fn ScoreBuilder::context_schema(&self) -> Option<&InputDeclaration>
+fn ScoreBuilder::item_schema(&self) -> Option<&InputDeclaration>
+fn ScoreBuilder::name(&self) -> Option<&QuestionName>
+fn ScoreBuilder::with_context_schema(self, InputDeclaration) -> Result<ScoreBuilder, Error>
+fn ScoreBuilder::with_item_schema(self, InputDeclaration) -> Result<ScoreBuilder, Error>
+fn ScoreBuilder::with_name(self, QuestionName) -> Result<ScoreBuilder, Error>
+fn ScoreBuilder::with_wording_version(self, WordingVersion) -> Result<ScoreBuilder, Error>
+fn TagBuilder::context_schema(&self) -> Option<&InputDeclaration>
+fn TagBuilder::item_schema(&self) -> Option<&InputDeclaration>
+fn TagBuilder::name(&self) -> Option<&QuestionName>
+fn TagBuilder::with_context_schema(self, InputDeclaration) -> Result<TagBuilder<C>, Error>
+fn TagBuilder::with_item_schema(self, InputDeclaration) -> Result<TagBuilder<C>, Error>
+fn TagBuilder::with_name(self, QuestionName) -> Result<TagBuilder<C>, Error>
+fn TagBuilder::with_wording_version(self, WordingVersion) -> Result<TagBuilder<C>, Error>
+fn TagQuestion::context_schema(&self) -> Option<&InputDeclaration>
+fn TagQuestion::item_schema(&self) -> Option<&InputDeclaration>
+fn TagQuestion::name(&self) -> Option<&QuestionName>
+fn TagQuestion::with_context_schema(self, InputDeclaration) -> Result<TagQuestion<C>, Error>
+fn TagQuestion::with_item_schema(self, InputDeclaration) -> Result<TagQuestion<C>, Error>
+fn TagQuestion::with_name(self, QuestionName) -> Result<TagQuestion<C>, Error>
+fn TagQuestion::with_wording_version(self, WordingVersion) -> Result<TagQuestion<C>, Error>
+fn TagQuestion::wording_version(&self) -> Option<WordingVersion>
+fn WordingVersion::new(u32) -> Result<WordingVersion, Error>
+impl Serialize for InputDeclaration
+impl Serialize for InputPropertyType
+impl Serialize for ObjectDeclaration
+impl Serialize for QuestionName
+impl Serialize for WordingVersion
+struct InputProperty
+struct ObjectDeclaration
+struct QuestionName
+struct WordingVersion
+struct ObjectContext
+fn ObjectContext::new(&RawRecord) -> Result<ObjectContext, Error>
+const fn ObjectContext::content(&self) -> QuestionContent<'_>
+impl Serialize for ObjectContext
+enum RecordContext
+RecordContext::Text(String)
+RecordContext::Object(ObjectContext)
+impl From<String> for RecordContext
+impl From<&str> for RecordContext
+impl Serialize for RecordContext
+RecordInput::context: Option<RecordContext>
+fn RecordReading::with_context_schema(self, InputDeclaration) -> RecordReading
+```
+
+Focused constituent checks: 46 native complete cases passed before the declaration test was split by behavior; the final five declaration tests and both isolated native-name/CLI tests passed. The production question-file corpus and published schema self-test passed, as did the 74-row settings check, offline policy (268 resolved packages), format, affected Clippy and public inventory (1484 declarations; four existing plants refused). Root whole-code High review and full landing gates remain pending.
+
+### Retired public declarations
+
+```text
+RecordInput::context: Option<String>
+```
+
+The unpublished native record-input draft now settles `context` as `Option<RecordContext>`, with concrete text and validated ordered-object variants. Existing released scalar/convenience functions and the old C ABI are unchanged. `ObjectContext::new(&RawRecord)` accepts an already parsed object; literal JSON-looking text never becomes an object. `RecordReading::with_context_schema` admits an explicitly selected object through the same ordered record/pointer reader; each question independently validates it before lookup/send. The original record, selected evidence and physical coordinates stay separate. Undeclared context remains text only. Annotation wraps the typed context around the existing state without changing evidence or offsets; text context bytes remain compatible. Cache/replay use actual typed state, with no declaration metadata in identity. Whole-set shared context remains text.
+
+Three public regressions pin exact ordered object wire bodies, finite invalid-row zero sends, absence/fallback, null and JSON-looking text refusal, original preservation, annotation separation and zero-send replay of the accepted observation. Growth is 343 nonblank Rust lines (142592 → 142935), for the typed context carrier, reused native composition/packing integration and caller behavior checks. Streaming batch admission, remaining convenience paths, canonical result/2 schema/CLI and hosts are still open.
+
+## Bounded streamed declaration admission constituent, 2026-10-06
+
+Declared native atomic/annotation streams and CLI judgments/annotation now stage a bounded group of prepared inputs through the existing pure packer before looking any of them up. Record caps, state/body/profile/question limits and the existing input pause bound admission; split questions retain their whole logical input. A declaration/read refusal discards its uncommitted stage, while earlier admitted/dispatched work retains its ordered completed prefix and final facts. The existing send coordinator, global concurrency, configured batch sizes/defaults/precedence, retries, per-question keys and actual observed wire counts remain in use. Admission stages are not a new wire grouping policy. Native stop diagnostics retain an already known original bad-record position rather than replacing it with the first discarded row. Annotate's existing missing-pointer exception still flushes valid staged inputs and refuses only that input; declaration failures are terminal.
+
+Both public streamed regressions failed on the previous coordinator, which sent valid rows from the malformed batch and could surface a backend error first. Four focused public cases now pin bad-second-row zero sends, a preserved two-row prefix with input887/output unknown, declaration refusal before an unstored replay question lookup, and all-member annotation admission. The CLI case pins exact error sentences, rows, rank withholding and independently expected wire bodies. Existing 68 batching and 70 annotation checks plus five native streaming checks pass. Focused Clippy and the 1496-declaration inventory pass. Whole review and full landing gates remain root-owned.
+
+Source grows 411 nonblank Rust lines (142935 → 143346), for reusable bounded staging inside the existing coordinator, declaration admission on native/CLI callers and meaningful public/CLI regressions. No scheduler, cache namespace, test hook, proof tool or dependency is introduced. Materialized remaining convenience/aggregate admission, canonical result/2 schema/CLI, remaining complete rank-set/selection consumer needs and host adoption still remain open.
+
+Lane1 reviewer correction on coherent 2922fd8a1: the coordinator retains whether
+deadline admission abandoned staged inputs, so EOF cannot suppress their
+terminal stop. Controlled public iterators pin deadline delivery with zero
+sends and after two completed rows, retaining actual prefix counts, usage,
+attempts and invocation facts. The original EOF case returned normal exhaustion
+before this fix. Together with the 0300 pricing correction, measured source
+grows 186 nonblank Rust lines (143695 → 143881), mainly public regressions using
+the existing loopback fixtures and a controlled iterator. Root owns original
+reviewer confirmation and full landing gates; remaining adoption stays open.
+
+The fourth existing `public_controls` failure is now reconciled in lane1's
+bounded test-only step. Ticket 0414's admitted outcome includes find, recognize
+and relate: their old shared-context refusal rows were obsolete. The released
+calls now use valid choice/boundary/decision replies and check typed results,
+one actual send each, original candidate/entity evidence and separate context.
+The still-ineligible decide/details calls retain exact Usage sentences, absent
+started facts and zero-send assertions. Full `public_controls` passes 24 cases
+with its one existing stress ignore. No staging/context production source is
+changed; 0300 records this step's measured source growth. All four new pricing/
+EOF regressions fail on original source and pass on corrected source.
+Corrected-source checks: 63 native complete and 63 routine public batch cases
+pass (two existing batch stress cases remain explicitly ignored), along with
+two tally unit cases and three legacy public tally consumers. Focused library/
+native-test Clippy, offline policy, formatting and the exact ratchet pass.

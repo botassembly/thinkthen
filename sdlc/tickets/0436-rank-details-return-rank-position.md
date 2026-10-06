@@ -1,6 +1,6 @@
 # 0436: Return rank position in detailed rank values
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
 Milestone: 0.2
 
@@ -26,3 +26,15 @@ Settle exact public contract before code; coordinate 0406/0417/0418 and typed ho
 ## Schema compatibility
 
 The current result specification requires thinkthen.result/2 and a changelog entry when a detailed member’s type or meaning changes. 0442 owns one coordinated detailed-result schema transition, including this numeric rank value, the strict host readers and public examples. This ticket supplies the rank contract/implementation; 0442 supplies the versioned envelope. Acceptance pins thinkthen.result/2 together with numeric positions through affected public consumers. Preserve old bare convenience results and raw provider recordings; do not emit changed value semantics under thinkthen.result/1.
+
+## Native work in progress
+
+Separate canonical result/2 atomic serialization accepts a positive integer rank position while retaining the legacy result/1 projection. CompleteRank exposes the position and complete probabilities. Pure serializer cases pin integer semantics and unchanged legacy null. Position finalization, runtime routing, CLI/schema/corpus adoption and observation routes remain open.
+
+### Added public declarations
+
+```text
+fn Question::rank_described(&str, Option<Description>, Option<Description>) -> Result<Question, Error>
+fn Question::rank_from_json(&str) -> Result<Question, Error>
+fn Question::load_rank(impl AsRef<Path>) -> Result<Question, Error>
+```

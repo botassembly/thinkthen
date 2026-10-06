@@ -27,7 +27,9 @@ fn the_schema_and_the_parser_agree_on_the_shared_corpus() {
         let has_batch = case["file"].get("batch").is_some();
         let input: &[u8] = if verb == "relate" {
             br#"[{"name":"Ada","kind":"person","label":"Ada","type":"person"},{"name":"Acme","kind":"organization","label":"Acme","type":"organization"}]"#
-        } else if has_batch {
+        } else if verb == "find" && case["file"].get("on").is_some() {
+            b"{\"body\":\"One.\"}\n{\"body\":\"Two.\"}\n"
+        } else if has_batch || verb == "find" {
             b"Refund me please.\nAnother message.\n"
         } else {
             b"Refund me please."
@@ -36,6 +38,9 @@ fn the_schema_and_the_parser_agree_on_the_shared_corpus() {
         if has_batch {
             // A file batch is ignored on one document; a stream exercises its value.
             arguments.push("--lines");
+        }
+        if verb == "find" && case["file"].get("on").is_some() {
+            arguments.push("--jsonl");
         }
         let output = run(&arguments, input).expect("the compiled binary runs");
         if case["valid"].as_bool().expect("a case verdict") {

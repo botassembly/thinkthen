@@ -18,7 +18,7 @@ use thiserror::Error;
 
 use crate::core::text::ModelName;
 
-pub(crate) use crate::core::adapters::systemone::recorded::decoder;
+pub(crate) use crate::core::adapters::systemone::recorded::{canonical_question, decoder};
 pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::{
     drops_any, drops_detail, drops_detail_of, encode_raw, join, parts,

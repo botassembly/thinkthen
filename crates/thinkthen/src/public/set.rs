@@ -133,13 +133,18 @@ impl QuestionSetBuilder {
     ///
     /// Returns [`Error::Usage`] for a set with no question.
     pub fn build(self) -> Result<QuestionSet, Error> {
+        let metadata = self
+            .0
+            .iter()
+            .map(|(_, question)| question.metadata.clone())
+            .collect::<Vec<_>>();
         let members: Vec<(String, core::Question, Option<Threshold>)> = self
             .0
             .into_iter()
             .map(|(name, question)| (name, question.core, question.threshold))
             .collect();
         core::QuestionSet::from_parts(members)
-            .map(QuestionSet)
+            .map(|set| QuestionSet(set.with_metadata(metadata.into_iter())))
             .map_err(Error::refused)
     }
 }

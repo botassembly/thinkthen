@@ -11,6 +11,8 @@
 
 #[path = "public_controls/call_facts.rs"]
 mod call_facts;
+#[path = "public_controls/context.rs"]
+mod context;
 
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::atomic::{AtomicUsize, Ordering};

@@ -49,7 +49,7 @@ impl Bound {
 
 /// The wire questions of some plans, in order, beside the logical question
 /// that reads them. A tag question asks once per label.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub(crate) struct Asks {
     asks: Vec<Ask>,
     questions: Vec<Question>,
@@ -67,6 +67,19 @@ pub(crate) struct Request {
 }
 
 impl Asks {
+    pub(crate) fn with_context(mut self, backend: &Backend, context: &str) -> Result<Self, Error> {
+        let model = pack::model_json(backend.model().as_str())
+            .map_err(|_| Error::Defect("an aggregate model could not be rendered"))?;
+        for ask in &mut self.asks {
+            ask.state = ask
+                .state
+                .with_context(context)
+                .map_err(|_| Error::Defect("an aggregate context could not be rendered"))?;
+            ask.key = ask.state.key(backend.url(), &model, &ask.question);
+        }
+        Ok(self)
+    }
+
     /// Add every question of `plan`, each with its wire questions.
     pub(crate) fn add(&mut self, backend: &Backend, plan: &Plan) -> Result<(), Error> {
         let asks = pack::asks(backend.url(), plan)
@@ -257,16 +270,24 @@ impl Engine {
         cancel: &Cancel,
         mut each: impl FnMut(usize, Answered) -> Result<(), Error>,
     ) -> Result<(), Error> {
+        cancel.invocation()?;
         if asks.is_empty() {
             return Ok(());
         }
+        let contextual;
+        let asks = if let Some(context) = &self.aggregate_context {
+            contextual = asks.clone().with_context(&self.backend, context)?;
+            &contextual
+        } else {
+            asks
+        };
         let planned = asks.requests(&self.backend, self.profile(), bound)?.len();
         let packing = Packing {
             inputs: Some(asks.inputs()),
             questions: bound.questions,
             sized: bound.sized,
             context: false,
-            detailed: false,
+            detailed: cancel.detailed(),
             continues: false,
         };
         let mut failure = None;

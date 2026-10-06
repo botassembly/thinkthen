@@ -67,7 +67,7 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     for (actual, expected) in requests.iter().zip(expected) {
         assert_eq!(actual.body, expected.as_bytes());
     }
-    let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes());
+    let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes(), "jev-latest");
     for place in [0, 2, 3] {
         let thinkthen::RecoverableDetails::Answered(details) = &result.value()[place] else {
             panic!("answered member")
@@ -249,7 +249,7 @@ fn native_denied_right_keeps_answered_left_with_its_question_keys() {
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].body, SPLIT_ORIGINAL.as_bytes());
     assert_eq!(requests[1].body, SPLIT_LEFT.as_bytes());
-    let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes());
+    let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes(), "jev-latest");
     for (row, key) in result.value()[..2].iter().zip(&keys) {
         let thinkthen::RecoverableDetails::Answered(details) = row else {
             panic!("answered left member")

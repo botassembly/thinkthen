@@ -56,6 +56,10 @@ impl<A: Asker> Host<A> for Bridge<A> {
 pub(crate) type Pair<'a, A, I, T> =
     Box<dyn FnMut(&Stop<'_>, usize, Option<I>, Row<A>) -> Result<Option<T>, Error> + 'a>;
 
+/// Admit a pulled original into the existing scheduler's concrete input.
+pub(crate) type Prepare<'a, A, R> =
+    Box<dyn FnMut(usize, &R) -> Result<<A as Asker>::Input, Error> + 'a>;
+
 /// What one pulled call holds besides its records.
 pub(crate) struct Call<'a> {
     pub(crate) engine: Arc<facade::Engine>,
@@ -95,6 +99,34 @@ where
     I: Iterator<Item = Result<R, Error>> + 'a,
     R: InputEvidence + 'a,
 {
+    try_start_prepared(
+        call,
+        asker,
+        records,
+        Box::new(|at, item| {
+            Ok(Text {
+                at,
+                input: item.question_input(),
+            })
+        }),
+        pair,
+    )
+}
+
+/// Pull fallible originals with typed per-record preparation on their owning thread.
+pub(crate) fn try_start_prepared<'a, A, I, R: 'a, T: 'a>(
+    call: Call<'a>,
+    asker: A,
+    records: I,
+    prepare: Prepare<'a, A, R>,
+    pair: Pair<'a, A, R, T>,
+) -> Batch<'a, T>
+where
+    A: Asker + Send + 'static,
+    A::Row: Send + 'static,
+    A::Error: From<Error> + Send + 'static,
+    I: Iterator<Item = Result<R, Error>> + 'a,
+{
     let (events, received) = channel();
     let cancel = call.stop.shared();
     let (engine, packing) = (call.engine, call.packing);
@@ -119,6 +151,7 @@ where
         held: VecDeque::new(),
         ready: VecDeque::new(),
         pair,
+        prepare,
         events: received,
         port: None,
         stop: call.stop,
@@ -137,6 +170,7 @@ struct Pull<'a, A: Asker, I: Iterator, R, T> {
     held: VecDeque<R>,
     ready: VecDeque<Result<T, Error>>,
     pair: Pair<'a, A, R, T>,
+    prepare: Prepare<'a, A, R>,
     events: Receiver<Event<A>>,
     port: Option<Port<A::Input, A::Error>>,
     stop: Stop<'a>,
@@ -152,10 +186,9 @@ struct Pull<'a, A: Asker, I: Iterator, R, T> {
 
 impl<A, I, R, T> Source<T> for Pull<'_, A, I, R, T>
 where
-    A: Asker<Input = Text>,
+    A: Asker,
     A::Error: From<Error>,
     I: Iterator<Item = Result<R, Error>>,
-    R: InputEvidence,
 {
     fn pull(&mut self) -> Option<Result<T, Error>> {
         if self.deferred && self.coordinator.is_some() {
@@ -200,10 +233,9 @@ fn ended_early<A: Asker>() -> Event<A> {
 
 impl<A, I, R, T> Pull<'_, A, I, R, T>
 where
-    A: Asker<Input = Text>,
+    A: Asker,
     A::Error: From<Error>,
     I: Iterator<Item = Result<R, Error>>,
-    R: InputEvidence,
 {
     /// Take one event; `Some` once the call has ended.
     fn take(&mut self, event: Event<A>) -> Option<Option<Result<T, Error>>> {
@@ -235,15 +267,14 @@ where
                     self.fed
                 ))))
             }
-            Some(Ok(item)) => {
-                let input = item.question_input();
-                self.held.push_back(item);
-                self.fed += 1;
-                Input::Item(Text {
-                    at: self.fed - 1,
-                    input,
-                })
-            }
+            Some(Ok(item)) => match (self.prepare)(self.fed, &item) {
+                Ok(input) => {
+                    self.held.push_back(item);
+                    self.fed += 1;
+                    Input::Item(input)
+                }
+                Err(error) => Input::Failed(A::Error::from(error)),
+            },
         };
         if let Some(port) = &self.port {
             let _sent = port.send(input);

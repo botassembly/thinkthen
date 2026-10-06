@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Found, JSONL, SQLITE, exists, storage};
 use crate::core::pack::{QuestionKey, State, model_json};
-use crate::core::{Url, Usage, bytes_sha256, hex};
+use crate::core::{ReportedUsage, Url, bytes_sha256, hex};
 use crate::engine::error::Error;
 
 /// One state line.
@@ -27,6 +27,14 @@ struct StateLine {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Answer {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) key_version: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) adapter: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) observation_id: Option<crate::core::ObservationId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) batch_size: Option<std::num::NonZeroU32>,
     pub(crate) key: String,
     pub(crate) url: String,
     pub(crate) model: String,
@@ -45,11 +53,13 @@ pub(crate) struct Answer {
 enum Line {
     State(StateLine),
     Answer(Answer),
+    Original(super::Original),
 }
 
 /// Every state and answer of one store, keyed as the fixture sorts them.
 #[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) struct Entries {
+    pub(crate) originals: BTreeMap<String, super::Original>,
     /// State JSON by its SHA-256 in hex.
     pub(crate) states: BTreeMap<String, String>,
     /// Answers by key in hex.
@@ -57,22 +67,31 @@ pub(crate) struct Entries {
 }
 
 impl Entries {
-    /// Add `other`'s answers. On one key the newer `taken_at` wins, and a
-    /// tie keeps the answer already held.
-    pub(crate) fn merge(&mut self, other: Self) {
-        for (key, answer) in other.answers {
-            let newer = self
-                .answers
-                .get(&key)
-                .is_none_or(|held| answer.taken_at > held.taken_at);
-            if !newer {
-                continue;
+    /// Merge identical snapshots, refusing any conflicting answer or history.
+    pub(crate) fn merge(&mut self, other: Self) -> Result<(), Error> {
+        for (key, answer) in &other.answers {
+            if self.answers.get(key).is_some_and(|held| held != answer) {
+                return Err(super::versioned::invalid());
             }
-            if let Some(state) = other.states.get(&answer.state) {
-                self.states.insert(answer.state.clone(), state.clone());
-            }
-            self.answers.insert(key, answer);
         }
+        for (digest, state) in &other.states {
+            if self.states.get(digest).is_some_and(|held| held != state) {
+                return Err(super::versioned::invalid());
+            }
+        }
+        for (digest, original) in &other.originals {
+            if self
+                .originals
+                .get(digest)
+                .is_some_and(|held| held != original)
+            {
+                return Err(super::versioned::invalid());
+            }
+        }
+        self.originals.extend(other.originals);
+        self.states.extend(other.states);
+        self.answers.extend(other.answers);
+        Ok(())
     }
 
     /// The fixture text: states, then answers, each sorted, one per line.
@@ -99,6 +118,12 @@ impl Entries {
             text.push_str(&serde_json::to_string(answer).map_err(|_| Error::RecordingStorage)?);
             text.push('\n');
         }
+        for original in self.originals.values() {
+            text.push_str(
+                &serde_json::to_string(original).map_err(|_| super::versioned::invalid())?,
+            );
+            text.push('\n');
+        }
         Ok(text)
     }
 
@@ -113,19 +138,49 @@ impl Entries {
                 }
                 self.states.insert(state.sha256, state.state);
             }
-            Line::Answer(answer) => {
-                let state = self
-                    .states
-                    .get(&answer.state)
-                    .ok_or("names a state no earlier line holds")?;
-                if key_of(&answer, state).map(|key| key.hex()) != Some(answer.key.clone()) {
-                    return Err(
-                        "records a different question, so the file was damaged or hand-edited",
-                    );
+            Line::Original(original) => {
+                original
+                    .validate()
+                    .map_err(|_| "holds invalid original exchange bodies")?;
+                if self
+                    .originals
+                    .get(&original.digest)
+                    .is_some_and(|held| held != &original)
+                {
+                    return Err("holds conflicting original exchange bodies");
                 }
-                self.answers.insert(answer.key.clone(), answer);
+                self.originals.insert(original.digest.clone(), original);
+            }
+            Line::Answer(answer) => self.take_answer(answer, line)?,
+        }
+        Ok(())
+    }
+
+    fn take_answer(&mut self, mut answer: Answer, line: &str) -> Result<(), &'static str> {
+        let state = self
+            .states
+            .get(&answer.state)
+            .ok_or("names a state no earlier line holds")?;
+        if answer.key_version.unwrap_or(1) == 1 {
+            if key_of(&answer, state).map(|key| key.hex()) != Some(answer.key.clone()) {
+                return Err("records a different question, so the file was damaged or hand-edited");
+            }
+            if answer.observation_id.is_none() {
+                let source = crate::core::Json::parse(line).map_err(|_| "has invalid metadata")?;
+                answer.observation_id = Some(
+                    super::versioned::legacy_id(&answer, state, Some(&source))
+                        .map_err(|_| "has invalid constituents")?,
+                );
             }
         }
+        if self
+            .answers
+            .get(&answer.key)
+            .is_some_and(|held| held != &answer)
+        {
+            return Err("repeats a question with conflicting saved history");
+        }
+        self.answers.insert(answer.key.clone(), answer);
         Ok(())
     }
 
@@ -143,21 +198,41 @@ impl Entries {
     /// Read every entry of one store's database.
     pub(crate) fn read(connection: &Connection) -> Result<Self, Error> {
         let mut entries = Self::default();
+        let mut states = connection
+            .prepare("SELECT sha256, state FROM states")
+            .map_err(storage)?;
+        let rows = states
+            .query_map([], |row| {
+                Ok((hex(&row.get::<_, Vec<u8>>(0)?), row.get::<_, String>(1)?))
+            })
+            .map_err(storage)?;
+        for state in rows {
+            let (digest, state) = state.map_err(storage)?;
+            if entries.states.insert(digest, state).is_some() {
+                return Err(super::versioned::invalid());
+            }
+        }
+        let version: u32 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .map_err(storage)?;
+        if !matches!(version, 1 | 2) {
+            return Err(super::versioned::invalid());
+        }
         let mut statement = connection
             .prepare(
                 "SELECT a.key, a.url, a.model, s.sha256, s.state, a.question, a.answer, a.answered_by,
                         a.input_tokens, a.output_tokens, a.taken_at, a.origin
-                 FROM answers a JOIN states s ON s.id = a.state",
+                 FROM answers a LEFT JOIN states s ON s.id = a.state",
             )
             .map_err(storage)?;
         let rows = statement
             .query_map([], |row| {
-                let tokens = |at| {
-                    row.get::<_, Option<i64>>(at)
-                        .map(|value| value.and_then(|value| u64::try_from(value).ok()))
-                };
                 Ok((
                     Answer {
+                        key_version: None,
+                        adapter: None,
+                        observation_id: None,
+                        batch_size: None,
                         key: hex(&row.get::<_, Vec<u8>>(0)?),
                         url: row.get(1)?,
                         model: row.get(2)?,
@@ -165,8 +240,8 @@ impl Entries {
                         question: row.get(5)?,
                         answer: row.get(6)?,
                         answered_by: row.get(7)?,
-                        input_tokens: tokens(8)?,
-                        output_tokens: tokens(9)?,
+                        input_tokens: super::rows::count(row, 8)?,
+                        output_tokens: super::rows::count(row, 9)?,
                         taken_at: row.get(10)?,
                         origin: row.get(11)?,
                     },
@@ -175,10 +250,29 @@ impl Entries {
             })
             .map_err(storage)?;
         for row in rows {
-            let (answer, state) = row.map_err(storage)?;
+            let (mut answer, state) = row.map_err(|_| super::versioned::invalid())?;
+            if version == 2 {
+                let key = bytes_of(&answer.key).ok_or_else(super::versioned::invalid)?;
+                let (key_version, adapter, id, batch): (u32, String, String, Option<u32>) = connection.query_row(
+                    "SELECT key_version, adapter, observation_id, batch_size FROM answers WHERE key=?1", [key.as_slice()],
+                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+                ).map_err(storage)?;
+                answer.key_version = Some(key_version);
+                answer.adapter = Some(adapter);
+                answer.observation_id = Some(
+                    crate::core::ObservationId::new(id).map_err(|_| super::versioned::invalid())?,
+                );
+                answer.batch_size = match batch {
+                    Some(batch) => Some(
+                        std::num::NonZeroU32::new(batch).ok_or_else(super::versioned::invalid)?,
+                    ),
+                    None => None,
+                };
+            }
             entries.states.insert(answer.state.clone(), state);
             entries.answers.insert(answer.key.clone(), answer);
         }
+        entries.read_originals(connection)?;
         Ok(entries)
     }
 
@@ -201,14 +295,13 @@ impl Entries {
             )?;
             ids.insert(sha256.as_str(), id);
         }
-        let signed = |value: Option<u64>| value.and_then(|value| i64::try_from(value).ok());
         for answer in self.answers.values() {
             let key = bytes_of(&answer.key).ok_or_else(unconvertible)?;
             let state = ids.get(answer.state.as_str()).ok_or_else(unconvertible)?;
             connection
                 .execute(
-                    "INSERT OR IGNORE INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                    "INSERT OR IGNORE INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin, key_version, adapter, observation_id, batch_size)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
                     rusqlite::params![
                         key.as_slice(),
                         answer.url,
@@ -217,12 +310,18 @@ impl Entries {
                         answer.question,
                         answer.answer,
                         answer.answered_by,
-                        signed(answer.input_tokens),
-                        signed(answer.output_tokens),
+                        super::signed(answer.input_tokens)?,
+                        super::signed(answer.output_tokens)?,
                         answer.taken_at,
                         answer.origin,
+                        answer.key_version, answer.adapter,
+                        answer.observation_id.as_ref().map(crate::core::ObservationId::as_str),
+                        answer.batch_size.map(std::num::NonZeroU32::get),
                     ],
                 )?;
+        }
+        for original in self.originals.values() {
+            original.insert(connection)?;
         }
         Ok(())
     }
@@ -236,36 +335,66 @@ pub(super) fn read(path: &Path) -> Result<Entries, Error> {
 /// A replay fixture's answers by key. One engine reads its fixture once per
 /// process, so a call that asks one line of many does not read it again.
 #[derive(Debug)]
-pub(crate) struct Replayed(HashMap<[u8; 32], Found>);
+pub(crate) struct Replayed(HashMap<[u8; 32], Vec<Found>>);
 
 impl Replayed {
-    /// The fixture a replay folder holds alone, read and checked. A folder
-    /// without one, or with a live file beside it, gives `None`, and opening
-    /// the store says why when that matters.
     pub(crate) fn of(folder: &Path) -> Result<Option<Arc<Self>>, Error> {
         let (sqlite, jsonl) = (folder.join(SQLITE), folder.join(JSONL));
-        if !folder.is_dir() || !exists(&jsonl).unwrap_or(false) || exists(&sqlite).unwrap_or(true) {
+        if !folder.is_dir() || !exists(&jsonl)? || exists(&sqlite)? {
             return Ok(None);
         }
         Self::read(&jsonl).map(|read| Some(Arc::new(read)))
     }
 
     pub(super) fn read(path: &Path) -> Result<Self, Error> {
-        let answers = read(path)?.answers.into_values().map(|answer| {
-            let key = bytes_of(&answer.key).ok_or(Error::Defect("a checked key was not hex"))?;
-            let usage = answer.input_tokens.zip(answer.output_tokens);
-            let found = Found {
-                answer: answer.answer,
-                answered_by: answer.answered_by,
-                usage: usage.map(|(input, output)| Usage::new(input, output)),
-            };
-            Ok((key, found))
-        });
-        answers.collect::<Result<_, Error>>().map(Self)
+        Self::indexed(read(path)?)
     }
 
-    pub(super) fn get(&self, key: &QuestionKey) -> Option<Found> {
-        self.0.get(key.bytes()).cloned()
+    pub(super) fn connection(connection: &Connection) -> Result<Self, Error> {
+        connection.execute_batch("BEGIN").map_err(storage)?;
+        let indexed = Entries::read(connection).and_then(Self::indexed);
+        let ended = connection.execute_batch("ROLLBACK").map_err(storage);
+        indexed.and_then(|index| ended.map(|()| index))
+    }
+
+    fn indexed(entries: Entries) -> Result<Self, Error> {
+        let entries = entries.normalized()?;
+        let mut index: HashMap<[u8; 32], Vec<Found>> = HashMap::new();
+        for answer in entries.answers.into_values() {
+            let state = entries
+                .states
+                .get(&answer.state)
+                .ok_or_else(super::versioned::invalid)?;
+            let lookup = super::versioned::lookup_key(&answer, state)?;
+            let usage = Some(ReportedUsage::new(
+                answer.input_tokens,
+                answer.output_tokens,
+            ))
+            .filter(|usage| usage.input_tokens().is_some() || usage.output_tokens().is_some());
+            let found = Found {
+                key: QuestionKey::parse(&answer.key).ok_or_else(super::versioned::invalid)?,
+                observation_id: answer
+                    .observation_id
+                    .ok_or_else(super::versioned::invalid)?,
+                batch_size: answer.batch_size,
+                answer: answer.answer,
+                answered_by: answer.answered_by,
+                usage,
+            };
+            index.entry(*lookup.bytes()).or_default().push(found);
+        }
+        Ok(Self(index))
+    }
+
+    pub(super) fn get(&self, key: &QuestionKey) -> Result<Option<Found>, Error> {
+        match self.0.get(key.bytes()).map(Vec::as_slice) {
+            None | Some([]) => Ok(None),
+            Some([found]) => Ok(Some(found.clone())),
+            Some(_) => Err(Error::Entry(
+                JSONL.to_owned(),
+                "multiple historical reported models match this question".to_owned(),
+            )),
+        }
     }
 }
 
