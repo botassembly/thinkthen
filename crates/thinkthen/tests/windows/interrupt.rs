@@ -99,11 +99,7 @@ fn native_ctrl_c_stops_retry_admission_after_one_counted_request() {
     assert_eq!(totals["usage"]["total"]["retries"], 0);
 }
 
-/// The smoke harness supplies the exact executable extracted from the checked
-/// release archive. No hidden product variable or shortened timeout is used.
-#[test]
-#[ignore = "release smoke supplies an exact reviewed packed command path"]
-fn release_binary_console_interrupt() {
+fn release_interrupted(records: bool) -> (std::process::Output, serde_json::Value) {
     use crate::child::ChildEnvironment as _;
     use std::io::Write as _;
     use std::process::{Command, Stdio};
@@ -121,20 +117,24 @@ fn release_binary_console_interrupt() {
         sent,
     )
     .expect("held counted listener");
+    let mut arguments = vec![
+        "decide",
+        "Accepted?",
+        "--no-cache",
+        "--facts",
+        "--url",
+        listener.base(),
+        "--model",
+        "local-1",
+    ];
+    if records {
+        arguments.extend(["--lines", "--jobs", "1", "--batch", "1"]);
+    }
     let mut command = Command::new(binary);
     command
         .clear_environment()
         .home(&scratch.0)
-        .args([
-            "decide",
-            "Accepted?",
-            "--no-cache",
-            "--facts",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ])
+        .args(arguments)
         .env("THINKTHEN_API_KEY", "sk-release-fixture-only")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -147,15 +147,21 @@ fn release_binary_console_interrupt() {
         .stdin
         .take()
         .expect("input")
-        .write_all(b"fixture evidence")
+        .write_all(if records {
+            b"fixture evidence\nsecond evidence\n"
+        } else {
+            b"fixture evidence"
+        })
         .expect("input bytes");
     assert!(matches!(
         observed.recv_timeout(Duration::from_secs(30)),
         Ok(Observed::Request)
     ));
     process::inject(child.id(), "console_injector", None);
-    // The admitted attempt retains its normal 30-second timeout. Its cancellation
-    // cleanup returns 130 even while the canned answer remains held.
+    // The injector waits for the target's exit before it detaches. The admitted
+    // attempt retains its normal 30-second timeout with the answer still held;
+    // first Ctrl-C stops further admission rather than aborting that attempt.
+    assert!(!child.alive(), "command exits before the injector detaches");
     let output = child
         .finish_after(Duration::from_secs(45))
         .expect("normal attempt timeout and cleanup");
@@ -163,20 +169,45 @@ fn release_binary_console_interrupt() {
     assert_eq!(output.status.code(), Some(130));
     assert!(output.stdout.is_empty());
     assert_eq!(listener.requests().len(), 1);
-    let totals = support::status(&scratch);
-    assert_eq!(totals["usage"]["total"]["requests_sent"], 1);
-    let text = String::from_utf8(output.stderr).expect("diagnostic");
-    let mut lines = text.lines();
-    assert_eq!(
-        lines.next(),
-        Some("thinkthen: stopped by a signal; 0 records finished")
-    );
-    let facts: serde_json::Value =
-        serde_json::from_str(lines.next().expect("facts")).expect("facts JSON");
-    assert_eq!(
-        facts["stopped"],
-        serde_json::json!({"cause":"cancelled","retryable":false})
-    );
-    assert_eq!(facts["requests_sent"], 1);
-    assert!(lines.next().is_none());
+    (output, support::status(&scratch))
+}
+
+/// The smoke harness supplies the exact executable extracted from the checked
+/// release archive. No hidden product variable or shortened timeout is used.
+#[test]
+#[ignore = "release smoke supplies an exact reviewed packed command path"]
+fn release_binary_console_interrupt() {
+    for records in [false, true] {
+        let (output, totals) = release_interrupted(records);
+        assert_eq!(totals["usage"]["total"]["requests_sent"], 1);
+        assert_eq!(totals["usage"]["total"]["retries"], 0);
+        let text = String::from_utf8(output.stderr).expect("diagnostic");
+        let mut lines = text.lines();
+        if records {
+            assert_eq!(
+                lines.next(),
+                Some("thinkthen: stopped by a signal; 0 records finished")
+            );
+        }
+        let mut facts: serde_json::Value =
+            serde_json::from_str(lines.next().expect("facts")).expect("facts JSON");
+        assert!(lines.next().is_none());
+        let seconds = facts
+            .as_object_mut()
+            .expect("facts object")
+            .remove("seconds");
+        let elapsed = seconds
+            .expect("elapsed time")
+            .as_f64()
+            .expect("seconds number");
+        assert!((0.0..45.0).contains(&elapsed));
+        assert_eq!(
+            facts,
+            serde_json::json!({
+                "schema":"thinkthen.run/1", "records":0, "requests_sent":1,
+                "retries":0, "cache_answers":0,
+                "stopped":{"cause":"cancelled","retryable":false}
+            })
+        );
+    }
 }
