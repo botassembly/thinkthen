@@ -22,3 +22,5 @@ Every surface offers complete ordered question probabilities, identities, confid
 ## Dependencies and ownership
 
 0426–0431 expose typed fields; 0435 owns invocation facts; 0432 enforces them.
+
+When this change is pushed to main, notify the experiments team through pm with the commit, changed behavior and affected experiment 0035 steps. They rerun only affected steps without waiting for release. Note the notification in this ticket’s single landing record.

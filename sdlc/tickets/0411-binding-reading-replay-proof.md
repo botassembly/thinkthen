@@ -28,3 +28,5 @@ All named SDK, SQL and dataframe routes reread stored answers under each free re
 0450 requires a different answer ID for a different normalized reading of stored observations, even if the bare value stays equal; restoring the original rule restores its ID. Full typed, SQL and frame consumers test this with zero sends. IDs do not change merely because retrieval origin, host index spelling or call ID changes.
 
 Adopt the ordered image and storage contracts from 0447, 0448 and 0444. Saved multi-image decide and choose cases must reread changed cuts with unchanged request identity, expected results and zero sends on every full-result surface. Restoring a cut restores the answer ID. Image score explicitly has no reading cut; its saved ordered images and full result replay with zero sends. Image implementation stays with its existing owners.
+
+When this change is pushed to main, notify the experiments team through pm with the commit, changed behavior and affected experiment 0035 steps. They rerun only affected steps without waiting for release. Note the notification in this ticket’s single landing record.

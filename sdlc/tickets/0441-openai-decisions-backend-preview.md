@@ -22,3 +22,5 @@ A complete backend implementation ticket is ready for admitted preview documenta
 ## Dependencies and ownership
 
 External prerequisite: preview access and its admitted API schema. Ready means the task is specified, not that the backend is built. Write the missing-contract dependency explicitly in the plan; do not invent endpoints, model names, prices or dates.
+
+0.2 ships without this backend. Implement it in a 0.2 point release when preview access and documentation arrive; ticket preparation remains part of the current plan.

@@ -25,3 +25,5 @@ Every image request is admitted against its exact route’s documented capabilit
 ## Design notes
 
 Historical 0034 reports Liquid eight images, JSON below 4.5 MB, 10,000 patches and ≤100:1 ratio; llama.cpp has eight images and compatible projector/physical-batch requirements. These are documentation leads, not newly verified shipping limits. Recheck admitted primary sources at implementation. Undocumented/unsupported route capability cannot be enabled by accepting transport alone. OpenRouter’s tested Clef/Clef-flash route showed no observable image use and stays disabled for images. Keep SDK memory/safety caps distinct from vendor limits. Validate allowed media under bounded decoding; a new decoder dependency follows normal dependency review. No silent resizing, OCR, external-URL fetching or fallback model. A future explicitly requested resize must be a reviewed transformation recorded in the result, not a hidden way to pass a cap.
+
+Start from vendors’ documented limits now. Experiment 0036 is later feedback, not an implementation or release dependency.
