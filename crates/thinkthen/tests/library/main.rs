@@ -8,7 +8,9 @@
 
 #[path = "../../src/test_deadline/child.rs"]
 mod child;
-use child::{run, wait};
+use child::run;
+#[cfg(unix)]
+use child::wait;
 
 mod ca_bundle;
 mod compile_contract;

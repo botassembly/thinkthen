@@ -137,7 +137,7 @@ pub(crate) fn private_file(path: &Path) -> std::io::Result<()> {
     {
         let mut command = powershell(
             "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $acl=Get-Acl -LiteralPath $env:THINKTHEN_TEST_FIXTURE_PATH; $acl.SetSecurityDescriptorSddlForm(\"O:${sid}D:P(A;;FA;;;${sid})(A;;FA;;;SY)\"); Set-Acl -LiteralPath $env:THINKTHEN_TEST_FIXTURE_PATH -AclObject $acl",
-        );
+        )?;
         command.env("THINKTHEN_TEST_FIXTURE_PATH", path);
         let output = run::output(&mut command)?;
         if !output.status.success() {
@@ -158,8 +158,14 @@ pub(crate) fn private_file(path: &Path) -> std::io::Result<()> {
 /// Native ACL fixtures load only the built-in modules, with no inherited
 /// module search path or module-analysis cache in the runner user's profile.
 #[cfg(windows)]
-pub(crate) fn powershell(script: &str) -> Command {
-    let root = PathBuf::from(std::env::var_os("SystemRoot").expect("Windows system directory"));
+pub(crate) fn powershell(script: &str) -> std::io::Result<Command> {
+    let root = std::env::var_os("SystemRoot").ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "native PowerShell requires SystemRoot",
+        )
+    })?;
+    let root = PathBuf::from(root);
     let modules = root.join("System32/WindowsPowerShell/v1.0/Modules");
     let mut command = command("powershell.exe", &[]);
     command.clear_environment()
@@ -168,7 +174,7 @@ pub(crate) fn powershell(script: &str) -> Command {
         .env("PSModuleAnalysisCachePath", "NUL")
         .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
             &format!("$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; Import-Module -Name ($env:PSModulePath + '/Microsoft.PowerShell.Security'), ($env:PSModulePath + '/Microsoft.PowerShell.Management'), ($env:PSModulePath + '/Microsoft.PowerShell.Utility'); $PSModuleAutoLoadingPreference='None'; {script}")]);
-    command
+    Ok(command)
 }
 
 impl ChildEnvironment for Command {
