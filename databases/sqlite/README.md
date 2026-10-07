@@ -132,7 +132,6 @@ NULL constructor operands return NULL. NULL question or collection returns NULL 
 
 SQLite accepts image judgments with 2, 3 or 4 arguments; omitted trailing arguments mean NULL. `thinkthen_image_file(path)` explicitly selects one local regular image through the native reader. `thinkthen_image_file_name(image)` returns its retained source name, or NULL for a byte constructor. No text line positions are invented.
 
-Complete result/2 identities, invocation facts, started-failure facts and caller prices still await 0435 adoption of the shared native APIs (0442/0445/0450 and 0300). The additive SQL rank-set route exposes native turns and combined count facts; complete rank result/identity adoption remains with 0417/0435. These image calls expose landed native details; this is not a full SDK parity claim.
 
 `thinkthen_rank_set(questions, keyed_json[, settings])` is the explicit additive
 rank-set route. It takes the native version-one ordered set of named decide
@@ -150,16 +149,103 @@ uses the existing host configuration. Per-call model, cuts, pointers and
 score members refuse before sending. One-member sets preserve the plain
 question's wire/cache identity. Recording each member individually supports
 strict set replay with zero sends. Described decide members retain their
-authored true/false meanings. Independent single described/saved-score rank
-awaits the native richer-rank API under 0406.
+authored true/false meanings. The additive `thinkthen_rank_complete` route also accepts described decide and
+saved score questions through the native complete rank API.
 
 `facts` comes directly from the same completed native call, counts original
 records and combined member requests, and repeats on every output row. It
-is the current count-facts shape; full observations, call/answer IDs and
-started-failure carriers await native/0435 adoption. An empty object yields
+is the compatibility count-facts shape. Use `thinkthen_rank_complete` for full
+observations, call/answer IDs and started-failure envelopes. An empty object yields
 no rows. Set JSON and files use native RankSet admission, preserving member
 order and rejecting duplicates, authored thresholds/on and non-decide kinds.
 
 Questions/keyed input and facts are TEXT JSON. Questions may name an explicit
 `@file` through the existing question reader. NULL questions or keyed input
 raises required-argument Usage without sends; NULL settings uses defaults.
+
+## Complete native calls (0.2 development)
+
+`thinkthen_decide_complete`, `thinkthen_choose_complete`,
+`thinkthen_tag_complete`, `thinkthen_score_complete`,
+`thinkthen_filter_complete`, `thinkthen_rank_complete`,
+`thinkthen_find_complete`, `thinkthen_annotate_complete`,
+`thinkthen_recognize_complete` and `thinkthen_relate_complete` take
+`(question TEXT, inputs TEXT, settings TEXT := NULL)` and return JSON text.
+These are additive doors; existing scalar/table calls and usage totals keep
+their signatures. PostgreSQL returns `json` for the same three arguments;
+DuckDB returns JSON text. Each complete invocation evaluates once.
+
+Use native saved-question JSON, including authored descriptions, declarations,
+metadata and reading, or plain wording for an atomic question. Rank accepts
+native saved decide/score questions or an ordered rank set. Annotation takes a
+native question set; find, recognize and relate take their native saved grammar.
+`@reference` selects native reference loading and `@@NAME` explicitly selects
+named loading. DuckDB retains the native selection while its executing session
+authorizes and reads the selected path. PostgreSQL authorizes before resolution
+and checks the same opened descriptor against its allowed directory and the
+captured named root before reading content. Native parsing receives the original
+bytes; resolution grants no read permission.
+
+The ordered input descriptor is explicit:
+
+```sql
+SELECT thinkthen_decide_complete(
+  'Does this ask for a refund?',
+  '{"records":[{"text":"Refund me."}],"attempts":true}');
+```
+
+A text/JSON record contains one of `text`, `json`, `json_text` or `document`, optionally
+`context`, `options`, `images` and `source`. `json` retains the original authored
+JSON. `json_text` admits a JSON line when the native iterator consumes it;
+`document` uses annotation document semantics. Options are an ordered array of
+names or `{ "name": ..., "description": ... }` objects. Images are an explicit
+ordered array of `{ "media": "image/png", "bytes": [137,80,...] }` or JPEG with
+its complete original compressed bytes. Image-only records contain only the explicit image collection. Paths, strings and
+JSON never imply images. Native media, pixel, count, size, profile and function admission apply.
+A source carries `file` and paired `first_line`/`last_line`; locations stay outside
+model evidence and answer-cache identity.
+
+`reading` contains native `fields`, `context`/`options` pointers and optional
+`context_schema`. Per-record context and options retain false, empty and missing
+distinctions. `incremental: true` selects native fallible admission; row-producing
+calls retain their completed prefix on failure. Aggregate calls use native whole
+set admission. `cancelled: true` pre-cancels a native token. NULL question or inputs
+returns NULL; NULL settings uses defaults. Empty records use native semantics.
+
+SQLite and DuckDB additionally accept `files` instead of `records`, with `paths`,
+native reader `options` and optional `format: "jsonl"`. DuckDB opens only handles
+authorized by its own filesystem settings. PostgreSQL accepts only client-read
+records. Its native client reader transports actual Local/Usage read failures as
+a terminal `{ "read_error": <native Error::complete envelope> }` record. This
+bounded descriptor admits no caller facts, IDs or started stops. The consuming
+native SQL iterator supplies its own terminal facts. PostgreSQL question files
+retain the privileged descriptor loader and all confinement/link/size rules.
+
+The `native` member contains the strict native `Call::complete()` envelope: `value` contains complete
+result/2 rows (or the native find/relation object), and `facts` contains the owning
+call ID, records, requests, cache answers, reported tokens, elapsed time, optional
+caller-priced cost and requested attempts. Result rows retain full probabilities,
+authors, answer IDs, reading, question sources and observation identities. The
+separate ordered `observations` array snapshots that same native observer. `ordinals`
+uses native occurrence getters; find adds its native `selection`. No SQL
+wrapper subtracts cumulative usage or evaluates again to obtain details.
+
+On failure, `native` contains strict `Error::complete()`, with all six kinds, safe diagnostic,
+retryability and structured stopping information. Facts are absent before the
+native call starts and final after its workers join. Incremental row failures add
+actual canonical `completed` rows and their ordinals outside `native`. SQL interrupts keep host
+cancellation behavior. Existing ordinary calls continue raising their errors.
+
+Per-call settings use native context, batch and deadline controls and atomic
+literal fields. Duplicate authorship/settings refuse before transport. Rank/find
+accept model selection; set/recognize/relation model selection uses existing host
+engine settings. Engine settings also admit `base_url`, `refresh_cache` and the
+paired decimal strings `usd_per_million_input`/`usd_per_million_output`. Costs
+use exact native combined rounding and are estimates, never provider bills.
+Missing/overflowed usage omits cost; cache and replay have zero sends and cost.
+The existing cache/record/replay and backend/key selection remain native.
+
+The existing surface checks execute all applicable shared cases through these
+named calls against counted owned loopback, check known JSON fields using SQL
+types, and repeat them against the installed extension package. They also retain
+ordinary compatibility, secrecy, cancellation and wrong-model regressions.

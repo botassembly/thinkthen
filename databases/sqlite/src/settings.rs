@@ -14,6 +14,9 @@ use crate::{Failure, guard};
 /// The settings SQL stored, each applied over the environment at the build.
 #[derive(Debug, Default)]
 struct Stored {
+    base_url: Option<String>,
+    prices: Option<(String, String)>,
+    refresh_cache: bool,
     backend: Option<String>,
     throttle: Option<u8>,
     batch: Option<BatchSetting>,
@@ -50,6 +53,10 @@ impl Stored {
     }
 
     fn apply(&self, mut builder: EngineBuilder) -> Result<EngineBuilder, thinkthen::Error> {
+        builder = builder.refresh_cache(self.refresh_cache);
+        if let Some(value) = &self.base_url {
+            builder = builder.base_url(value)?;
+        }
         if let Some(value) = &self.backend {
             builder = builder.backend(value)?;
         }
@@ -91,11 +98,17 @@ impl Stored {
         if let Some(value) = &self.replay {
             builder = builder.replay(value)?;
         }
+        if let Some((input, output)) = &self.prices {
+            builder = builder.prices_usd_per_million(input, output)?;
+        }
         Ok(builder)
     }
 }
 
 static STORED: Mutex<Stored> = Mutex::new(Stored {
+    base_url: None,
+    prices: None,
+    refresh_cache: false,
     backend: None,
     throttle: None,
     batch: None,
@@ -200,17 +213,19 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
         let mut next = Stored::default();
         for (key, value) in fields {
             match key.as_str() {
+                "refresh_cache" => next.refresh_cache = value.as_bool().unwrap_or(false),
                 "backend" => next.backend = value.as_str().map(str::to_owned),
-                "base_url" => return Err(Failure::usage("settings JSON has unknown key base_url")),
+                "base_url" => next.base_url = value.as_str().map(str::to_owned),
                 "max_estimated_input_tokens_total" => {
                     return Err(Failure::usage(
                         "settings JSON has unknown key max_estimated_input_tokens_total",
                     ));
                 }
                 "usd_per_million_input" | "usd_per_million_output" => {
-                    return Err(Failure::usage(format!(
-                        "settings JSON has unsupported price key {key}"
-                    )));
+                    next.prices = Some((
+                        price(fields, "usd_per_million_input")?,
+                        price(fields, "usd_per_million_output")?,
+                    ));
                 }
                 "model" => next.model = value.as_str().map(str::to_owned),
                 "throttle" => next.throttle = value.as_u64().and_then(|n| u8::try_from(n).ok()),
@@ -254,4 +269,15 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
         *held = next;
         Ok(source.to_owned())
     })?)
+}
+
+fn price(
+    fields: &serde_json::Map<String, serde_json::Value>,
+    name: &str,
+) -> Result<String, Failure> {
+    fields
+        .get(name)
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .ok_or_else(|| Failure::usage("prices require input and output decimal strings"))
 }

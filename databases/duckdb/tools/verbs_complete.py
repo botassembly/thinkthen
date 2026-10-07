@@ -107,3 +107,25 @@ def complete_question_rechecks_prepared_authority():
                    "SELECT thinkthen_choose('{\"choose\":\"x\",\"options\":[\"a\",\"b\"]}', 'x')"], backend.base())
         assert said(got[1]).startswith("thinkthen deadline:"), said(got[1])
         expect(backend.count(), 0, "spent statement budget sends nothing")
+
+
+def native_complete_file_authorization_precedes_content_parsing():
+    """The additive complete door authorizes every prepared execution before parsing."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / "question.json"
+        path.write_text('{"decide":"Refund?"}')
+        payload = '{"records":[]}'
+        got = run([f"PREPARE complete AS SELECT thinkthen_decide_complete('@{path}', '{payload}')",
+                   "EXECUTE complete", "SET enable_external_access=false", "EXECUTE complete"], backend.base())
+        first = json.loads(rows(got[1])[0][0])
+        assert 'error' not in first['native'], first
+        refused = json.loads(rows(got[3])[0][0])
+        assert refused['native']['error']['kind'] == 'local' and 'facts' not in refused['native'], refused
+        assert refused['observations'] == []
+        path.write_text('{"decide":"PRIVATE_DENIED_COMPLETE_CONTENT"')
+        denied = json.loads(rows(run(["SET enable_external_access=false",
+                               f"SELECT thinkthen_decide_complete('@{path}', '{payload}')"], backend.base())[-1])[0][0])
+        assert denied['native']['error']['kind'] == 'local'
+        assert 'file' in denied['native']['error']['message'] and 'parse' not in denied['native']['error']['message'], denied
+        assert 'PRIVATE_DENIED_COMPLETE_CONTENT' not in json.dumps(denied), denied
+        expect(backend.count(), 0, "denied complete question content sends nothing")

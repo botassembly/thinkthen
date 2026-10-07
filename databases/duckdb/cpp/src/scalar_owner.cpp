@@ -2,6 +2,7 @@
 #include "bridge.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/file_system.hpp"
+#include <filesystem>
 
 namespace duckdb {
 
@@ -15,15 +16,25 @@ bool QueryInterrupted(ClientContext &context) noexcept {
 }
 
 ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument, const char *role) {
-	if (argument.empty() || argument[0] != '@') {
-		return {argument, false};
-	}
-	const auto path = argument.substr(1);
+	if (argument.empty() || argument[0] != '@') { return {argument, false}; }
+	return {ReadQuestion(context, argument.substr(1), role), true};
+}
+
+string ReadQuestion(ClientContext &context, const string &path, const char *role, bool regular) {
 	auto &files = FileSystem::GetFileSystem(context);
+	if (regular) {
+		std::error_code error;
+		if (!std::filesystem::is_regular_file(std::filesystem::status(files.ExpandPath(path), error))) {
+			throw OrdinaryError("thinkthen local: the question file must be regular");
+		}
+	}
 	string content;
 	bool too_large = false;
 	try {
 		auto handle = files.OpenFile(path, FileOpenFlags::FILE_FLAGS_READ);
+		if (regular && files.GetFileType(*handle) != FileType::FILE_TYPE_REGULAR) {
+			throw OrdinaryError("thinkthen local: the question file must be regular");
+		}
 		vector<char> buffer(64 * 1024);
 		for (;;) {
 			const auto read = files.Read(*handle, buffer.data(), static_cast<int64_t>(buffer.size()));
@@ -49,7 +60,7 @@ ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument,
 	if (!Value::StringIsValid(content)) {
 		throw OrdinaryError("thinkthen local: the %s file %s was not read: it is not UTF-8 text", role, path.c_str());
 	}
-	return {content, true};
+	return content;
 }
 
 } // namespace duckdb

@@ -24,7 +24,7 @@ import sqlite3
 import sys
 
 from helper import ROOT, Backend, Child, child, environment, expect
-from portable import question_keys
+from question_keys import question_keys
 
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 NOT_RUN = {
@@ -167,7 +167,7 @@ def check(case: dict, backend: Backend) -> None:
     served = backend.base(arm) + "/systemone"
     exchanges = case.get("exchanges", [])
     # Every row lists question keys, by ADR 0111.
-    renamed = {digest(CANONICAL, one["request"]): question_keys(served, one["request"]) for one in exchanges}
+    renamed = {digest(CANONICAL, one["request"]): question_keys(served, one["request"], one["response"]["model"]) for one in exchanges}
     success = swap(case["expect"]["success"], renamed)
     texts = [one["evidence"] for one in exchanges]
     env = environment(backend, arm)
@@ -264,7 +264,7 @@ def check(case: dict, backend: Backend) -> None:
     else:
         raise AssertionError(f"no SQL form is written for the {kind} kind")
     # ADR 0111: the case ran on the question store, one row per good answer.
-    keys = {key for one in exchanges for key in question_keys(served, one["request"])}
+    keys = {key for one in exchanges for key in question_keys(served, one["request"], one["response"]["model"])}
     same("stored answers", stored(env["THINKTHEN_CACHE"]), len(keys) - success.get("failed_questions", 0))
     return None
 

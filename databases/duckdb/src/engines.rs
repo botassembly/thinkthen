@@ -26,6 +26,9 @@ const MOST: usize = 16;
 /// The engine settings as the caller's session holds them; `None` is unset.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Asked {
+    pub(crate) base_url: Option<String>,
+    pub(crate) prices: Option<(String, String)>,
+    pub(crate) refresh_cache: bool,
     pub(crate) backend: Option<String>,
     pub(crate) throttle: Option<i64>,
     pub(crate) max_requests: Option<i64>,
@@ -60,6 +63,7 @@ type Key = (
     Option<String>,
     Option<String>,
     Option<String>,
+    (Option<String>, Option<(String, String)>, bool),
 );
 
 #[allow(dead_code, reason = "used by the C++ bridge across its verb families")]
@@ -280,7 +284,10 @@ fn request_bytes(value: Option<i64>) -> Result<Option<usize>, RowError> {
 
 fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
     let refused = RowError::from;
-    let mut builder = EngineBuilder::from_env().map_err(refused)?.shared_host();
+    let mut builder = complete_builder(
+        asked,
+        EngineBuilder::from_env().map_err(refused)?.shared_host(),
+    )?;
     if let Some(backend) = &asked.backend {
         builder = builder.backend(backend).map_err(refused)?;
     }
@@ -340,15 +347,6 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
     if let Some(retries) = retries {
         builder = builder.max_retries(retries);
     }
-    if let Some(profile) = &asked.profile {
-        builder = builder.profile_json(profile).map_err(refused)?;
-    }
-    if let Some(folder) = &asked.record {
-        builder = builder.record(folder).map_err(refused)?;
-    }
-    if let Some(folder) = &asked.replay {
-        builder = builder.replay(folder).map_err(refused)?;
-    }
     if let Some(total) = asked.max_requests_total {
         total_of(total)
             .map_err(|_| RowError::usage("a request total is a whole number of 0 or more"))?;
@@ -366,6 +364,11 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
             asked.profile.clone(),
             asked.record.clone(),
             asked.replay.clone(),
+            (
+                asked.base_url.clone(),
+                asked.prices.clone(),
+                asked.refresh_cache,
+            ),
         ),
         builder,
     ))
@@ -422,4 +425,27 @@ pub(crate) fn usage_totals() -> [(&'static str, u64); 4] {
         ("input_tokens", totals.input_tokens()),
         ("output_tokens", totals.output_tokens()),
     ]
+}
+
+fn complete_builder(asked: &Asked, mut builder: EngineBuilder) -> Result<EngineBuilder, RowError> {
+    let refused = RowError::from;
+    builder = builder.refresh_cache(asked.refresh_cache);
+    if let Some(url) = &asked.base_url {
+        builder = builder.base_url(url).map_err(refused)?;
+    }
+    if let Some((input, output)) = &asked.prices {
+        builder = builder
+            .prices_usd_per_million(input, output)
+            .map_err(refused)?;
+    }
+    if let Some(profile) = &asked.profile {
+        builder = builder.profile_json(profile).map_err(refused)?;
+    }
+    if let Some(folder) = &asked.record {
+        builder = builder.record(folder).map_err(refused)?;
+    }
+    if let Some(folder) = &asked.replay {
+        builder = builder.replay(folder).map_err(refused)?;
+    }
+    Ok(builder)
 }

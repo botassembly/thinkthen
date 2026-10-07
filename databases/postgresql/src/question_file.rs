@@ -1,7 +1,7 @@
 //! Explicit privileged loader; authored JSON never passes through jsonb.
 
 use pgrx::prelude::*;
-use thinkthen::{Error, ErrorKind, Question, QuestionSet};
+use thinkthen::{Error, ErrorKind};
 
 use crate::{call, files};
 use call::OrRaise as _;
@@ -19,7 +19,22 @@ fn thinkthen_question_file(path: Option<&str>) -> Option<String> {
             files::read_named("question", path, call::file_directory().as_deref()).or_raise();
         // Both grammars are owned by native Rust. Keep the original bytes for
         // the eventual consumer, including whitespace and authored ordering.
-        if Question::from_json(&source).is_err() && QuestionSet::from_json(&source).is_err() {
+        if !source.trim_start().starts_with('{')
+            || [
+                "decide",
+                "choose",
+                "tag",
+                "score",
+                "filter",
+                "rank",
+                "find",
+                "annotate",
+                "recognize",
+                "relate",
+            ]
+            .iter()
+            .all(|verb| crate::complete_native::Prepared::parse(verb, &source).is_err())
+        {
             call::raise(Error::new(
                 ErrorKind::Local,
                 "the question file does not parse as a question or question set",

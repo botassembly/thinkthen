@@ -466,5 +466,7 @@ mod question_metadata;
 mod question_preparation;
 
 pub(crate) mod named_question;
+pub use crate::core::QuestionRole as QuestionFileRole;
+pub use named_question::QuestionFileReference;
 
 pub use results::{SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation};

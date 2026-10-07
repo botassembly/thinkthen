@@ -179,7 +179,7 @@ fn ranked(question: &str, settings: &str) -> Result<(String, LoadedQuestion, Set
 }
 
 enum KeyedQuestion {
-    Ordinary(LoadedQuestion),
+    Ordinary(Box<LoadedQuestion>),
     Set(RankSet),
 }
 
@@ -191,7 +191,7 @@ fn parse_call(
 ) -> Result<(KeyedQuestion, Settings), String> {
     if kind != 9 {
         let (_, asked, controls) = parse(question, file, settings, kind)?;
-        return Ok((KeyedQuestion::Ordinary(asked), controls));
+        return Ok((KeyedQuestion::Ordinary(Box::new(asked)), controls));
     }
     let controls =
         Settings::parse(settings).map_err(|error| RowError::usage(&error.to_string()).text)?;
@@ -299,6 +299,7 @@ fn run(
         let KeyedQuestion::Ordinary(question) = &question else {
             return Err("thinkthen defect: a keyed question was lost".into());
         };
+        let question = question.as_ref();
         if kind == RANK {
             let LoadedQuestion::Question(question) = question else {
                 return Err("thinkthen defect: a rank question was banded".into());

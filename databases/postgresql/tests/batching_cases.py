@@ -12,7 +12,8 @@ import sqlite3
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
-from portable import question_keys  # noqa: E402  the ADR 0111 question key
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "sqlite/tests"))
+from question_keys import question_keys  # noqa: E402  the ADR 0111 question key
 
 
 QUESTION = "Is this a complaint?"
