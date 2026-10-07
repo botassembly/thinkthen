@@ -338,6 +338,13 @@ impl Store {
         } else {
             self.migrate(&connection, cancel)?;
         }
+        self.transaction(cancel, &connection, || {
+            self.waiting(cancel, || {
+                connection.execute_batch(
+                    "CREATE INDEX IF NOT EXISTS answers_route_question_state ON answers(url,model,question,state)",
+                )
+            })
+        })?;
         self.connection = Some(connection);
         Ok(())
     }
