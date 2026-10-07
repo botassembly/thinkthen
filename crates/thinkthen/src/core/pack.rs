@@ -16,9 +16,10 @@ use crate::core::digest::hex;
 use crate::core::plan::Plan;
 use crate::core::question::Question;
 use crate::core::reply::{AnswerOutcome, BackendFailure, BackendFailureCause};
-use crate::core::result::Usage;
+use crate::core::result::ReportedUsage;
 use crate::core::text::{Evidence, Url, Withheld};
 
+mod context;
 mod packer;
 mod split;
 
@@ -55,9 +56,10 @@ impl State {
         input: &crate::core::image::ImageState,
         route: built_in::images::ImageRoute,
         model: &str,
+        profile: Option<&crate::core::BackendProfile>,
     ) -> Result<Self, EncodeError> {
         let wire = route
-            .admit(model, input)
+            .admit_profiled(model, input, profile)
             .map_err(|error| EncodeError::of(&error))?;
         let json = serde_json::to_string(input).map_err(|error| EncodeError::of(&error))?;
         let evidence_bytes = crate::core::render::json_line(&input.text)
@@ -119,6 +121,9 @@ impl State {
 
     pub(crate) fn estimated_tokens(&self, model: &str, questions: &[Arc<str>]) -> Option<u64> {
         let wire = self.0.image_wire.as_ref()?;
+        if !wire.image_tokens_known {
+            return None;
+        }
         let text_bytes = self
             .evidence_bytes()
             .checked_add(model.len())?
@@ -150,11 +155,22 @@ impl State {
     }
 
     pub(crate) fn key(&self, url: &Url, model: &str, question: &str) -> QuestionKey {
-        if self.0.image_wire.is_some() {
-            QuestionKey::images_of(url, model, self.json(), question)
+        self.complete_key(url, model, model, question)
+    }
+
+    pub(crate) fn complete_key(
+        &self,
+        url: &Url,
+        requested: &str,
+        reported: &str,
+        question: &str,
+    ) -> QuestionKey {
+        let constructor = if self.0.image_wire.is_some() {
+            QuestionKey::complete_image
         } else {
-            QuestionKey::of(url, model, self.json(), question)
-        }
+            QuestionKey::complete
+        };
+        constructor(url, requested, reported, self.json(), question)
     }
 
     pub(crate) fn evidence_bytes(&self) -> usize {
@@ -180,71 +196,8 @@ impl fmt::Debug for State {
     }
 }
 
-/// The SHA-256 of the adapter, the address, the model, the state and one
-/// question, each as sent and joined by one line feed.
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(crate) struct QuestionKey([u8; 32]);
-
-impl QuestionKey {
-    /// Hash the five parts. `model`, `state` and `question` are compact JSON,
-    /// so none holds a raw line feed, and the address refuses control bytes.
-    pub(crate) fn of(url: &Url, model: &str, state: &str, question: &str) -> Self {
-        Self::of_parts(Sha256::new(), url, model, state, question)
-    }
-
-    pub(crate) fn images_of(url: &Url, model: &str, state: &str, question: &str) -> Self {
-        let mut hasher = Sha256::new();
-        hasher.update(b"thinkthen.image-question/1\n");
-        Self::of_parts(hasher, url, model, state, question)
-    }
-
-    fn of_parts(mut hasher: Sha256, url: &Url, model: &str, state: &str, question: &str) -> Self {
-        for (place, part) in [built_in::NAME, url.as_str(), model, state, question]
-            .into_iter()
-            .enumerate()
-        {
-            if place > 0 {
-                hasher.update(b"\n");
-            }
-            hasher.update(part.as_bytes());
-        }
-        Self(hasher.finalize().into())
-    }
-
-    pub(crate) const fn bytes(&self) -> &[u8; 32] {
-        &self.0
-    }
-
-    /// The key as 64 lowercase hex figures.
-    pub(crate) fn hex(&self) -> String {
-        hex(&self.0)
-    }
-
-    /// Read 64 lowercase hex figures back.
-    pub(crate) fn parse(text: &str) -> Option<Self> {
-        let digits = text.as_bytes();
-        if digits.len() != 64 {
-            return None;
-        }
-        let figure = |byte: u8| match byte {
-            b'0'..=b'9' => Some(byte - b'0'),
-            b'a'..=b'f' => Some(byte - b'a' + 10),
-            _ => None,
-        };
-        let mut bytes = [0; 32];
-        for (slot, pair) in bytes.iter_mut().zip(digits.chunks(2)) {
-            let [high, low] = pair else { return None };
-            *slot = (figure(*high)? << 4) | figure(*low)?;
-        }
-        Some(Self(bytes))
-    }
-}
-
-impl fmt::Debug for QuestionKey {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.hex())
-    }
-}
+mod key;
+pub(crate) use key::QuestionKey;
 
 /// One wire question: its request's state, its bytes as sent, the logical
 /// question that reads its answer alone, and its key.
@@ -289,7 +242,12 @@ pub(crate) fn asks(url: &Url, plan: &Plan) -> Result<Vec<Ask>, EncodeError> {
         .as_text()
         .map_err(|error| EncodeError::of(&error))?;
     let state = match plan.images() {
-        Some(images) => State::images(images, plan.image_route(), plan.model().as_str())?,
+        Some(images) => State::images(
+            images,
+            plan.image_route(),
+            plan.model().as_str(),
+            plan.image_profile(),
+        )?,
         None => State::new(parts.state, evidence.len()),
     };
     let decoders = plan.questions().iter().flat_map(decoders);
@@ -380,7 +338,7 @@ fn synthetic<'a>(
 
 /// Each question's even share of a request's usage, the remainder to the
 /// earliest, by ADR 0111 section 3.
-pub(crate) fn shares(usage: Option<Usage>, questions: usize) -> Vec<Option<Usage>> {
+pub(crate) fn shares(usage: Option<ReportedUsage>, questions: usize) -> Vec<Option<ReportedUsage>> {
     (0..questions)
         .map(|position| usage.map(|usage| usage.share(questions, position)))
         .collect()

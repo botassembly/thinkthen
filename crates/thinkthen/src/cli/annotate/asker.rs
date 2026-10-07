@@ -42,6 +42,16 @@ impl Asker for AnnotateAsker<'_> {
     type Row = Judged;
     type Error = Refused;
 
+    fn validates_batches(&self) -> bool {
+        self.judging.set().questions().iter().any(|member| {
+            member.metadata().item_schema.is_some() || member.metadata().context_schema.is_some()
+        })
+    }
+
+    fn refuses_batch(&self, error: &Refused) -> bool {
+        !matches!(error.error, PrepareError::MissingOn(_))
+    }
+
     fn label(&self, held: &Held) -> usize {
         held.at
     }

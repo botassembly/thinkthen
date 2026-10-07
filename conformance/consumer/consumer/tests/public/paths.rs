@@ -81,6 +81,7 @@ fn convenience_child() {
     let token = CancelToken::new();
     token.cancel();
     // Twice, so the second round comes from each path's own cache.
+    let mut previous_observations = None;
     for _ in 0..2 {
         assert_eq!(
             explicit
@@ -95,15 +96,31 @@ fn convenience_child() {
                 .map(thinkthen::Call::into_value),
             Some(thinkthen::Answer::Yes)
         );
-        assert_eq!(
-            explicit
-                .details(&score, "a note")
-                .expect("the engine detailss")
-                .into_value(),
-            thinkthen::details(&score, "a note")
-                .expect("the convenience detailss")
-                .into_value()
-        );
+        let one = explicit
+            .details(&score, "a note")
+            .expect("the engine details")
+            .into_value();
+        let other = thinkthen::details(&score, "a note")
+            .expect("the convenience details")
+            .into_value();
+        assert_eq!(one.to_json(), other.to_json());
+        assert_eq!(one.to_scalar_json(), other.to_scalar_json());
+        assert_eq!(one.value(), other.value());
+        assert_eq!(one.probabilities(), other.probabilities());
+        assert_eq!(one.reported_usage(), other.reported_usage());
+        let observations = (one.observations().to_vec(), other.observations().to_vec());
+        if let Some(previous) = previous_observations {
+            assert_eq!(
+                observations, previous,
+                "each cache retains its own observation"
+            );
+        } else {
+            assert_ne!(
+                observations.0, observations.1,
+                "separate live answers have separate observations"
+            );
+        }
+        previous_observations = Some(observations);
         assert_eq!(
             explicit
                 .choose(&team, "a note")

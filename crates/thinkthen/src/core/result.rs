@@ -11,12 +11,19 @@ use crate::core::text::{ModelName, Url};
 use crate::core::threshold::Threshold;
 
 mod attempt;
+mod reported_usage;
+pub(crate) use reported_usage::ReportedSum;
+pub use reported_usage::ReportedUsage;
+pub(crate) mod complete;
+pub use complete::{Observation, Origin, QuestionSource, ResultIdentity};
 mod batch_warning;
+mod fields;
 mod meta;
+pub(crate) use fields::Fields;
 mod profile_warning;
 mod record_value;
 
-pub use attempt::{AttemptObservation, AttemptOutcome};
+pub use attempt::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub(crate) use batch_warning::{BatchSetting, BatchWarning};
 pub(crate) use meta::Meta;
 pub(crate) use profile_warning::ProfileWarning;
@@ -254,6 +261,9 @@ pub(crate) struct AnnotateMeta {
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    reported_usage: Option<ReportedUsage>,
     requests_sent: u64,
     cached: bool,
     requests: Vec<String>,
@@ -289,12 +299,17 @@ impl AnnotateMeta {
             url,
             model,
             usage,
+            reported_usage: usage.map(ReportedUsage::from_complete),
             requests_sent,
             cached: replayed,
             requests,
             failed_questions,
             profile_warning,
         }
+    }
+    pub(crate) fn with_reported_usage(mut self, usage: Option<ReportedUsage>) -> Self {
+        self.reported_usage = usage;
+        self
     }
 }
 
@@ -387,6 +402,14 @@ pub(crate) struct DecisionResult {
 }
 
 impl DecisionResult {
+    pub(crate) fn with_captured_attempts(
+        mut self,
+        attempts: Option<Vec<AttemptObservation>>,
+    ) -> Self {
+        self.meta.attempts = attempts;
+        self
+    }
+
     /// Gather one judgment into the document the tool prints.
     ///
     /// `value` is the bare value the command would have printed, so a reader of

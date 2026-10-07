@@ -48,7 +48,7 @@ fn answered(place: usize) -> String {
     let odds = ODDS.get(place.saturating_sub(1)).copied().unwrap_or("0.5");
     format!(
         concat!(
-            r#"{{"model":"jev-1.13.0","answers":{{"q1":{{"type":"noul","noul":{odds}}}}},"#,
+            r#"{{"model":"local-1","answers":{{"q1":{{"type":"noul","noul":{odds}}}}},"#,
             r#""usage":{{"input_tokens":88,"output_tokens":12}}}}"#,
         ),
         odds = odds

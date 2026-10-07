@@ -88,13 +88,12 @@ fn images_and_structured_evidence_have_distinct_keys_and_replay_their_own_answer
 }
 
 #[test]
-fn corrupt_sqlite_image_replay_exits_local_without_output_or_sends() {
+fn corrupt_sqlite_images_refuse_cache_and_replay_without_output_sends_or_writes() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
     let cache = crate::batching::folder("corrupt-image-replay");
     let red = fixture("red.png");
     let call = |mode| {
-        super::call(
-            &listener,
+        spawn(
             &[
                 "decide",
                 "Q?",
@@ -102,9 +101,19 @@ fn corrupt_sqlite_image_replay_exits_local_without_output_or_sends() {
                 red.to_str().unwrap(),
                 mode,
                 &cache,
+                "--backend",
+                "liquid",
+                "--model",
+                "d1",
+                "--url",
+                listener.base(),
+                "--max-retries",
+                "0",
             ],
+            &[("THINKTHEN_API_KEY", "sk-image-test")],
             b"",
         )
+        .unwrap()
     };
     assert_eq!(call("--record").status.code(), Some(0));
     let database = std::path::Path::new(&cache).join("thinkthen.sqlite");
@@ -114,18 +123,20 @@ fn corrupt_sqlite_image_replay_exits_local_without_output_or_sends() {
         .unwrap();
     drop(connection);
     let before = fs::read(&database).unwrap();
-    let output = call("--replay");
-    assert_eq!(output.status.code(), Some(5));
-    assert_eq!(
-        text(&output.stderr),
-        "thinkthen: the entry `thinkthen.sqlite` was refused: stored image constituents or identity are invalid\n"
-    );
-    assert!(output.stdout.is_empty());
-    assert_eq!(listener.count(), 1, "strict replay sends nothing");
-    assert_eq!(
-        fs::read(&database).unwrap(),
-        before,
-        "replay writes nothing"
-    );
+    for mode in ["--replay", "--cache"] {
+        let output = call(mode);
+        assert_eq!(output.status.code(), Some(5));
+        assert_eq!(
+            text(&output.stderr),
+            "thinkthen: the entry `thinkthen.sqlite` was refused: stored constituents or identity are invalid\n"
+        );
+        assert!(output.stdout.is_empty());
+        assert_eq!(listener.count(), 1, "{mode} sends nothing");
+        assert_eq!(
+            fs::read(&database).unwrap(),
+            before,
+            "{mode} writes nothing"
+        );
+    }
     fs::remove_dir_all(cache).unwrap();
 }

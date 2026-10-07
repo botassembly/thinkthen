@@ -460,7 +460,8 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
 
 #[test]
 fn usage_overflow_fails_safely() {
-    // One question a request; the two requests' totals overflow together.
+    // Without durable storage, each individual u64 count is representable;
+    // one question a request makes the two accepted totals overflow together.
     let sent = std::sync::atomic::AtomicBool::new(false);
     let listener = Listener::answering(move |body| {
         let input = if sent.swap(true, std::sync::atomic::Ordering::SeqCst) {
@@ -481,6 +482,7 @@ fn usage_overflow_fails_safely() {
             "--model",
             "local-1",
             "--details",
+            "--no-cache",
             "--profile",
             &one_question().to_string_lossy(),
         ],

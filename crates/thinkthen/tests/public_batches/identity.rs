@@ -3,10 +3,9 @@
 use super::*;
 use sha2::{Digest as _, Sha256};
 
-/// Every question key of one request body, in wire order, by ADR 0111
-/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
-/// one question as the body carries them, joined by line feeds.
-pub(super) fn question_keys(url: &str, body: &[u8]) -> Vec<String> {
+/// Independent result/2 question keys in wire order; these fixtures report
+/// the requested model, so both normalized model fields have the same bytes.
+pub(super) fn question_keys(url: &str, body: &[u8], reported: &str) -> Vec<String> {
     use serde_json::value::RawValue;
     #[derive(serde::Deserialize)]
     struct Parts<'a> {
@@ -17,6 +16,7 @@ pub(super) fn question_keys(url: &str, body: &[u8]) -> Vec<String> {
         #[serde(borrow)]
         questions: std::collections::BTreeMap<String, &'a RawValue>,
     }
+    let reported = serde_json::to_string(reported).expect("a reported model");
     let parts: Parts<'_> = serde_json::from_slice(body).expect("a request body");
     let mut questions: Vec<_> = parts
         .questions
@@ -27,15 +27,21 @@ pub(super) fn question_keys(url: &str, body: &[u8]) -> Vec<String> {
     questions
         .into_iter()
         .map(|(_, question)| {
-            let joined = [
+            let mut digest = Sha256::new();
+            digest.update(b"thinkthen.question-key/2\0");
+            for part in [
                 "systemone",
                 url,
                 parts.model.get(),
+                &reported,
                 parts.state.get(),
                 question.get(),
-            ]
-            .join("\n");
-            Sha256::digest(joined.as_bytes())
+            ] {
+                digest.update((part.len() as u64).to_be_bytes());
+                digest.update(part.as_bytes());
+            }
+            digest
+                .finalize()
                 .iter()
                 .map(|byte| format!("{byte:02x}"))
                 .collect()
@@ -81,13 +87,13 @@ fn assert_retry_receipts(listener: &Listener, details: &Mutex<Vec<RetryReceipt>>
         [
             (
                 0,
-                question_keys(listener.url(), &alpha.body),
+                question_keys(listener.url(), &alpha.body, "jev-latest"),
                 Some((3, 1)),
                 listener.url().to_owned()
             ),
             (
                 1,
-                question_keys(listener.url(), &beta.body),
+                question_keys(listener.url(), &beta.body, "jev-latest"),
                 Some((5, 2)),
                 listener.url().to_owned()
             ),
@@ -151,9 +157,12 @@ fn duplicate_records_share_one_question_key_in_one_literal_request() {
     let expected =
         include_str!("../../../../specification/fixtures/systemone/batch-duplicate.request.json");
     assert_eq!(requests[0].body, expected.trim_end().as_bytes());
-    let [come_together, because] =
-        <[String; 2]>::try_from(question_keys(listener.url(), &requests[0].body))
-            .expect("two distinct questions");
+    let [come_together, because] = <[String; 2]>::try_from(question_keys(
+        listener.url(),
+        &requests[0].body,
+        "jev-latest",
+    ))
+    .expect("two distinct questions");
     assert_eq!(
         *seen.lock().expect("observations"),
         [

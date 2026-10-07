@@ -3,7 +3,7 @@
 use serde::Serialize;
 
 use crate::core::answer::Answer;
-use crate::core::result::Usage;
+use crate::core::result::{ReportedUsage, Usage};
 use crate::core::text::ModelName;
 
 /// The model that answered, one answer per planned question, and the usage.
@@ -12,6 +12,7 @@ pub(crate) struct Reply {
     model: ModelName,
     outcomes: Vec<AnswerOutcome>,
     usage: Option<Usage>,
+    reported_usage: Option<ReportedUsage>,
 }
 
 impl Reply {
@@ -25,7 +26,18 @@ impl Reply {
             model,
             outcomes,
             usage,
+            reported_usage: usage.map(ReportedUsage::from_complete),
         }
+    }
+
+    pub(crate) fn with_reported_usage(mut self, usage: Option<ReportedUsage>) -> Self {
+        self.usage = usage.and_then(ReportedUsage::complete);
+        self.reported_usage = usage;
+        self
+    }
+
+    pub(crate) const fn reported_usage(&self) -> Option<ReportedUsage> {
+        self.reported_usage
     }
 
     /// Read the model the backend reported.

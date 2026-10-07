@@ -12,6 +12,7 @@ use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{self, Description};
 use crate::public::results::Written;
 
+mod debug;
 mod observation;
 use crate::public::results::observe_question;
 use observation::observe_row;
@@ -30,7 +31,7 @@ pub(super) fn cut(value: f64) -> Result<f64, Error> {
 }
 
 /// One kind of name recognition looks for, and what it means.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct Kind {
     name: String,
     description: Option<Description>,
@@ -63,7 +64,7 @@ impl Kind {
 }
 
 /// One named relation between a source kind and a target kind; `*` is any kind.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct RelationRule(core::RelationRule);
 
 impl RelationRule {
@@ -150,8 +151,8 @@ pub(super) fn add_rule(
 pub(super) use crate::public::question::model_of as model;
 
 /// A recognition request: its kinds, relations, cuts, and model.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Recognize(RecognizeSpec);
+#[derive(Clone, PartialEq)]
+pub struct Recognize(pub(crate) RecognizeSpec);
 
 impl Recognize {
     /// Start one; with no kind every name takes the kind `ENTITY`.
@@ -173,7 +174,9 @@ impl Recognize {
     ///
     /// Returns [`Error::Usage`] naming what the file breaks.
     pub fn from_json(value: &str) -> Result<Self, Error> {
-        let spec = RecognizeSpec::parse(value).map_err(Error::refused)?;
+        let prepared = crate::public::RecognizeQuestionFile::from_json(value)?;
+        let (question, _) = prepared.into_parts();
+        let spec = question.0;
         if spec.on.iter().any(|pointer| !pointer.as_str().is_empty()) {
             return Err(Error::usage(
                 "a library recognize reads its evidence whole, so it takes no `on`",
@@ -194,7 +197,6 @@ impl Recognize {
 }
 
 /// A recognition request under construction.
-#[derive(Debug)]
 pub struct RecognizeBuilder {
     kinds: Vec<Kind>,
     relations: Vec<core::RelationRule>,
@@ -401,7 +403,7 @@ impl Relation {
 }
 
 /// The names one text holds, and their relations when rules were given.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Recognized {
     entities: Vec<RecognizedEntity>,
     relations: Option<Vec<Relation>>,
@@ -409,6 +411,27 @@ pub struct Recognized {
 }
 
 impl Recognized {
+    pub(crate) fn from_native(found: core::RecognizedValue) -> Result<Self, Error> {
+        let json = Written::of(&found)?;
+        let row = Self {
+            json,
+            entities: found.entities.into_iter().map(RecognizedEntity).collect(),
+            relations: found.relations.map(|edges| {
+                edges
+                    .into_iter()
+                    .map(|edge| Relation {
+                        relation: edge.relation,
+                        source: RecognizedEntity(edge.source),
+                        target: RecognizedEntity(edge.target),
+                        probability: edge.probability,
+                        either: edge.either,
+                    })
+                    .collect()
+            }),
+        };
+        Ok(row)
+    }
+
     /// Every recognized name, in text order.
     #[must_use]
     pub fn entities(&self) -> &[RecognizedEntity] {
@@ -453,8 +476,8 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<crate::public::Call<Recognized>, Error> {
-        options.without_context("recognize")?;
-        let engine = self.for_model(ask.0.model.as_ref())?;
+        let engine =
+            crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
             let mut positions = [0; 4];
@@ -468,31 +491,23 @@ impl Engine {
                         observe_question(
                             &stop,
                             engine.backend(),
-                            (stage, question),
+                            (
+                                crate::public::InputFunction::Recognize,
+                                stage,
+                                question,
+                                match stage {
+                                    "boundary" => None,
+                                    "relation" => Some(ask.0.relation_threshold),
+                                    _ => Some(ask.0.threshold),
+                                },
+                            ),
                             answered,
                             &mut positions,
                         )
                     },
                 )
                 .map_err(Error::from)?;
-            let found = found.value;
-            let json = Written::of(&found)?;
-            let row = Recognized {
-                json,
-                entities: found.entities.into_iter().map(RecognizedEntity).collect(),
-                relations: found.relations.map(|edges| {
-                    edges
-                        .into_iter()
-                        .map(|edge| Relation {
-                            relation: edge.relation,
-                            source: RecognizedEntity(edge.source),
-                            target: RecognizedEntity(edge.target),
-                            probability: edge.probability,
-                            either: edge.either,
-                        })
-                        .collect()
-                }),
-            };
+            let row = Recognized::from_native(found.value)?;
             observe_row(&stop, &row);
             Ok(row)
         })

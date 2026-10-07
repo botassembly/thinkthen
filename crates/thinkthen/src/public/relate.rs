@@ -13,7 +13,9 @@ use crate::public::options::{CallOptions, Stop};
 use crate::public::recognize::{RelationRule, add_rule, cut, model};
 use crate::public::results::Written;
 
+mod debug;
 mod observation;
+mod records;
 use crate::public::results::observe_question;
 use observation::observe_row;
 
@@ -21,8 +23,8 @@ use observation::observe_row;
 const MOST_ENTITIES: usize = 255;
 
 /// A relate request: its rules, cut, and model.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Relate(RelateSpec);
+#[derive(Clone, PartialEq)]
+pub struct Relate(pub(crate) RelateSpec);
 
 impl Relate {
     /// Start one.
@@ -64,7 +66,6 @@ impl Relate {
 }
 
 /// A relate request under construction.
-#[derive(Debug)]
 pub struct RelateBuilder {
     relations: Vec<core::RelationRule>,
     threshold: Option<f64>,
@@ -207,7 +208,7 @@ impl Entity {
         }
     }
 
-    fn of(held: &impl RelationEntityView) -> Self {
+    pub(super) fn of(held: &impl RelationEntityView) -> Self {
         Self {
             name: held.name().to_owned(),
             kind: held.kind().to_owned(),
@@ -216,7 +217,7 @@ impl Entity {
 }
 
 /// One relation between two given entities.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Edge {
     relation: String,
     source: Entity,
@@ -227,6 +228,19 @@ pub struct Edge {
 }
 
 impl Edge {
+    pub(crate) fn from_native(
+        edge: core::RelationEdge<core::RelationEntity>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            json: Written::of(&edge)?,
+            source: Entity::of(&edge.source),
+            target: Entity::of(&edge.target),
+            probability: edge.probability,
+            either: edge.either,
+            relation: edge.relation,
+        })
+    }
+
     /// The rule's name.
     #[must_use]
     pub fn relation(&self) -> &str {
@@ -296,7 +310,6 @@ impl Engine {
     where
         I: IntoIterator<Item = Entity>,
     {
-        options.without_context("relate")?;
         let pairs: Vec<(String, String)> = entities
             .into_iter()
             .take(MOST_ENTITIES + 1)
@@ -311,7 +324,8 @@ impl Engine {
                 Ok(edges)
             });
         }
-        let engine = self.for_model(ask.0.model.as_ref())?;
+        let engine =
+            crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let prepared =
             facade::relations(&admitted, &ask.0, engine.backend(), self.profile.as_ref())?;
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
@@ -328,7 +342,12 @@ impl Engine {
                         observe_question(
                             &stop,
                             engine.backend(),
-                            ("relation", question),
+                            (
+                                crate::public::InputFunction::Relate,
+                                "relation",
+                                question,
+                                Some(ask.0.threshold),
+                            ),
                             answered,
                             &mut positions,
                         )
@@ -348,16 +367,7 @@ impl Engine {
             let edges = execution
                 .edges
                 .into_iter()
-                .map(|edge| {
-                    Ok(Edge {
-                        json: Written::of(&edge)?,
-                        source: Entity::of(&edge.source),
-                        target: Entity::of(&edge.target),
-                        probability: edge.probability,
-                        either: edge.either,
-                        relation: edge.relation,
-                    })
-                })
+                .map(Edge::from_native)
                 .collect::<Result<Vec<_>, Error>>()?;
             observe_row(&stop, &edges);
             Ok(edges)

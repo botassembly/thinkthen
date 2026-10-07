@@ -495,3 +495,6 @@ fn saved_0034_liquid_one_image_exchange_keeps_original_wire_and_usage() {
     let actual: Value = serde_json::from_slice(&listener.requests()[0].body).unwrap();
     assert_eq!(&actual, request);
 }
+
+#[path = "images/local.rs"]
+mod local;

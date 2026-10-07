@@ -83,14 +83,26 @@ fn a_cached_answer_from_another_version_takes_no_part_in_the_model_check() {
     let (listener, _sent) = versioned(1, ["fake-1", "fake-2"]);
     let cache = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("annotate-cache-versions");
     let _absent = fs::remove_dir_all(&cache);
-    let first = run(&listener, &cache, "cache-versions", "right?", &[]);
+    let first = run(
+        &listener,
+        &cache,
+        "cache-versions",
+        "right?",
+        &["--model", "fake-1"],
+    );
     assert_eq!(
         first.status.code(),
         Some(0),
         "{}",
         String::from_utf8_lossy(&first.stderr)
     );
-    let second = run(&listener, &cache, "cache-versions", "is it right?", &[]);
+    let second = run(
+        &listener,
+        &cache,
+        "cache-versions",
+        "is it right?",
+        &["--model", "fake-1"],
+    );
     assert_eq!(
         second.status.code(),
         Some(0),

@@ -1,8 +1,7 @@
 //! Recognition in three steps (ADR 0056): BILOU boundaries over windowed
 //! requests, kinds and edges per step-1 request, then stated relations.
 
-use serde::Serialize;
-
+use super::context::contextual_requests;
 use super::each::Models;
 use super::{Answered, Asks, Bound, Engine, Request};
 use crate::core::relation::count_pairs;
@@ -21,59 +20,19 @@ pub(crate) const MAX_TEXT_BYTES: usize = 600_000;
 const MAX_RELATION_NAMES: usize = 255;
 const MAX_RELATION_QUESTIONS: usize = 4_000;
 
-/// The names one text holds, and the edges between them when rules were given.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "recognize"))]
-pub(crate) struct Recognized {
-    pub(crate) entities: Vec<RecognizedName>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) relations: Option<Vec<RelationEdge<RecognizedName>>>,
-}
-
-/// Every probability behind one text's names, as `--details` keeps them.
-#[derive(Debug, Default, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-#[cfg_attr(test, schemars(rename = "recognizeAnswer"))]
-pub(crate) struct Probabilities {
-    pub(crate) pieces: Vec<PieceOdds>,
-    pub(crate) names: Vec<NameOdds>,
-    pub(crate) pairs: Vec<PairOdds>,
-}
-
-/// One asked pair's probability.
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "pairOdds"))]
-pub(crate) struct PairOdds {
-    relation: String,
-    source: Place,
-    target: Place,
-    probability: f64,
-}
-
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "place"))]
-struct Place {
-    start: usize,
-    end: usize,
-}
-
-impl Place {
-    const fn of(name: &RecognizedName) -> Self {
-        Self {
-            start: name.start,
-            end: name.end,
-        }
-    }
-}
+use crate::core::{PairOdds, Place};
+pub(crate) use crate::core::{RecognitionOdds as Probabilities, RecognizedValue as Recognized};
 
 /// The request metadata of every stage, in construction order. `live` says
 /// whether any answer came from the backend rather than a recording or cache.
 #[derive(Debug, Default)]
 pub(crate) struct Aggregate {
+    pub(crate) trace: crate::core::LogicalTrace,
     pub(crate) model: Option<ModelName>,
     models: Models,
     shares: RowUsage,
     pub(crate) usage: Option<Usage>,
+    pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) live: bool,
     pub(crate) requests_sent: u64,
     pub(crate) requests: Vec<String>,
@@ -99,6 +58,19 @@ fn asked_stages(asked: &[Asked]) -> impl Iterator<Item = &'static str> + '_ {
 }
 
 impl Engine {
+    /// Admit all first-stage/profile/context boundaries before a whole input set starts.
+    pub(crate) fn admit_recognition(&self, spec: &RecognizeSpec, text: &str) -> Result<(), Error> {
+        step_one_context(
+            &self.backend,
+            self.profile.as_ref(),
+            spec,
+            text,
+            MAX_TEXT_BYTES,
+            self.aggregate_context.as_deref(),
+        )
+        .map(|_| ())
+    }
+
     /// Recognize the names in one text, then relate them when rules were given.
     /// A text over `limit` bytes is refused before any request.
     pub(crate) fn recognize(
@@ -121,7 +93,14 @@ impl Engine {
         cancel: &Cancel,
         mut observe: impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
     ) -> Result<Recognition, Error> {
-        let (pieces, asks, _) = step_one(&self.backend, self.profile.as_ref(), spec, text, limit)?;
+        let (pieces, asks, _) = step_one_context(
+            &self.backend,
+            self.profile.as_ref(),
+            spec,
+            text,
+            limit,
+            self.aggregate_context.as_deref(),
+        )?;
         let mut meta = Aggregate::default();
         let mut details = Probabilities::default();
         if pieces.is_empty() {
@@ -184,6 +163,7 @@ impl Engine {
         )?;
         meta.model = meta.models.model().cloned();
         meta.usage = meta.shares.total()?;
+        meta.reported_usage = meta.shares.reported()?;
         Ok(Recognition {
             value: Recognized {
                 entities,
@@ -294,6 +274,8 @@ impl Engine {
             else {
                 return Err(Error::RecognizeLogical);
             };
+            meta.trace
+                .take(stage, question, &answered.sources, &answered.observations);
             observe(stage, question, &answered)?;
             for outcome in answered.reply.outcomes() {
                 match outcome {
@@ -321,6 +303,17 @@ pub(crate) fn step_one(
     text: &str,
     limit: usize,
 ) -> Result<StepOne, Error> {
+    step_one_context(backend, profile, spec, text, limit, None)
+}
+
+fn step_one_context(
+    backend: &Backend,
+    profile: Option<&BackendProfile>,
+    spec: &RecognizeSpec,
+    text: &str,
+    limit: usize,
+    context: Option<&str>,
+) -> Result<StepOne, Error> {
     if text.len() > limit {
         return Err(Error::TextTooLong {
             bytes: text.len(),
@@ -340,7 +333,7 @@ pub(crate) fn step_one(
             backend,
             &window_plan(backend, (text, &pieces), (0, 0), vec![probe])?,
         )?;
-        alone.requests(backend, profile, Bound::WHOLE)?;
+        contextual_requests(&alone, backend, profile, context)?;
     }
     let mut asks = Asks::default();
     for group in step_one_groups(pieces.len()) {
@@ -352,7 +345,7 @@ pub(crate) fn step_one(
             &window_plan(backend, (text, &pieces), (group.start, last), questions)?,
         )?;
     }
-    let requests = asks.requests(backend, profile, Bound::WHOLE)?;
+    let requests = contextual_requests(&asks, backend, profile, context)?;
     Ok((pieces, asks, requests))
 }
 
@@ -447,7 +440,7 @@ impl Aggregate {
         self.models.take(answered, |held, model| {
             super::annotate::check_model(held, model, requested)
         })?;
-        self.shares.add(answered.reply.usage());
+        self.shares.add_reported(answered.reply.reported_usage());
         self.live |= !answered.replayed;
         self.requests_sent = self
             .requests_sent

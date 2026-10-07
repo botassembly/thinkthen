@@ -34,10 +34,42 @@ pub(crate) fn receipt(
         ModelName::reported(model(answers)).map_err(|_| Error::Defect("a reply named no model"))?;
     let mut usage = RowUsage::default();
     for answered in answers {
-        usage.add(answered.usage);
+        usage.add_reported(answered.usage);
     }
+    let attempts: std::collections::BTreeMap<_, _> = answers
+        .iter()
+        .flat_map(|answer| answer.attempts.iter())
+        .map(|attempt| (attempt.ordinal(), attempt.clone()))
+        .collect();
     Ok(facade::Answered {
-        reply: Reply::new(model, outcomes, usage.total()?),
+        attempts: attempts.into_values().collect(),
+        sources: answers
+            .iter()
+            .map(|answered| {
+                let model = ModelName::reported(answered.answered_by.to_string())
+                    .map_err(|_| Error::Defect("an observation names no model"))?;
+                Ok(crate::core::QuestionSource::new(
+                    answered.origin,
+                    model,
+                    answered.batch_size,
+                ))
+            })
+            .collect::<Result<_, Error>>()?,
+        observations: answers
+            .iter()
+            .map(|answered| match &answered.observation_id {
+                Some(observation_id) => Ok(crate::core::Observation::Answered {
+                    observation_id: observation_id.clone(),
+                }),
+                None if answered.answer.is_err() => Ok(crate::core::Observation::Failed {
+                    failure_id: crate::engine::invocation::failure_id()?,
+                }),
+                None => Err(Error::Defect(
+                    "an accepted answer has no observation identity",
+                )),
+            })
+            .collect::<Result<_, Error>>()?,
+        reply: Reply::new(model, outcomes, usage.total()?).with_reported_usage(usage.reported()?),
         replayed: answers.iter().all(|answered| answered.cached),
         request: Digest::named(
             answers
@@ -61,36 +93,29 @@ fn model(answers: &[Answered]) -> &str {
 /// the shares arrive in never changes the total.
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct RowUsage {
-    sum: Option<Usage>,
-    missing: bool,
-    overflowed: bool,
+    sum: crate::core::ReportedSum,
 }
 
 impl RowUsage {
-    /// Add one share.
+    /// Add one complete legacy share.
+    #[cfg(test)]
     pub(crate) fn add(&mut self, share: Option<Usage>) {
-        let Some(share) = share else {
-            self.missing = true;
-            return;
-        };
-        match self.sum {
-            None => self.sum = Some(share),
-            Some(sum) => match sum.checked_plus(share) {
-                Some(next) => self.sum = Some(next),
-                None => self.overflowed = true,
-            },
-        }
+        self.add_reported(share.map(crate::core::ReportedUsage::from_complete));
     }
 
-    /// The row's usage by the rule above.
+    pub(crate) fn add_reported(&mut self, share: Option<crate::core::ReportedUsage>) {
+        self.sum.add(share);
+    }
+
+    pub(crate) fn reported(self) -> Result<Option<crate::core::ReportedUsage>, Error> {
+        self.sum.total().map_err(|()| Error::UsageOverflow)
+    }
+
+    /// Full legacy usage remains absent unless both dimensions are known.
     pub(crate) fn total(self) -> Result<Option<Usage>, Error> {
-        match self {
-            Self { missing: true, .. } => Ok(None),
-            Self {
-                overflowed: true, ..
-            } => Err(Error::UsageOverflow),
-            Self { sum, .. } => Ok(sum),
-        }
+        Ok(self
+            .reported()?
+            .and_then(crate::core::ReportedUsage::complete))
     }
 }
 

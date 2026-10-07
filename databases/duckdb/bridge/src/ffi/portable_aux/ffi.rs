@@ -61,7 +61,7 @@ pub(crate) fn call_settings(raw: &str) -> Result<(Settings, Option<String>), Str
 
 fn nested_settings(
     argument: &str,
-    from_file: bool,
+    _from_file: bool,
     raw: &str,
     kind: i32,
 ) -> Result<(Settings, Option<String>), String> {
@@ -69,7 +69,7 @@ fn nested_settings(
         return Err("thinkthen defect: unknown nested kind".into());
     }
     let (call, model) = call_settings(raw)?;
-    if kind == 9 && from_file {
+    if !argument.is_empty() {
         let source: serde_json::Value = serde_json::from_str(argument)
             .map_err(|error| RowError::usage(&error.to_string()).text)?;
         if source.get("model").is_some() {

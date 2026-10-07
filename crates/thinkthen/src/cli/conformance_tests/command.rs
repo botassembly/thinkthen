@@ -22,6 +22,9 @@ use std::process::{self, ExitCode, Output};
 use std::time::Duration;
 use std::{fs, thread};
 
+#[path = "../../../../../conformance/consumer/consumer/tests/public/keys.rs"]
+mod shared_keys;
+
 /// A case's temporary folder, removed when the case ends, pass or fail.
 pub(super) struct Scratch(PathBuf);
 
@@ -135,36 +138,22 @@ pub(super) fn replay(case: &Case) -> (Scratch, PathBuf) {
     (scratch, replay)
 }
 
-/// Every question key of one request body, in wire order, by ADR 0111
-/// section 2.
-pub(super) fn question_keys(url: &Url, body: &str) -> Vec<String> {
-    #[derive(Deserialize)]
-    struct Parts<'a> {
-        #[serde(borrow)]
-        state: &'a serde_json::value::RawValue,
-        #[serde(borrow)]
-        model: &'a serde_json::value::RawValue,
-        #[serde(borrow)]
-        questions: BTreeMap<String, &'a serde_json::value::RawValue>,
-    }
-    let parts: Parts<'_> = serde_json::from_str(body).expect("a request body");
-    let mut questions: Vec<_> = parts
-        .questions
-        .into_iter()
-        .map(|(name, question)| (name[1..].parse::<usize>().expect("a qN name"), question))
-        .collect();
-    questions.sort_by_key(|(place, _)| *place);
-    questions
-        .into_iter()
-        .map(|(_, question)| {
-            crate::core::pack::QuestionKey::of(
-                url,
-                parts.model.get(),
-                parts.state.get(),
-                question.get(),
-            )
-            .hex()
+/// Map original exchange digests to independently framed v2 metadata keys.
+pub(super) fn metadata_keys(case: &Case, url: &Url) -> BTreeMap<String, Vec<String>> {
+    let exchanges = case
+        .exchanges
+        .iter()
+        .map(|exchange| {
+            serde_json::json!({
+                "request":exchange.request,
+                "response":serde_json::from_str::<serde_json::Value>(exchange.response.get()).expect("saved reply")
+            })
         })
+        .collect::<Vec<_>>();
+    shared_keys::fixture_keys(url.as_str(), url.as_str(), &exchanges)
+        .expect("independent v2 fixture keys")
+        .into_iter()
+        .map(|(digest, keys)| (digest, serde_json::from_value(keys).expect("question keys")))
         .collect()
 }
 
@@ -212,10 +201,14 @@ pub(super) fn staged(case: &Case, success: &Success) {
     );
     assert_eq!(printed.meta.model, held.details.model, "{}", case.id);
     let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
+    let expected = metadata_keys(case, &url);
     let keys: Vec<String> = case
         .exchanges
         .iter()
-        .flat_map(|exchange| question_keys(&url, &exchange.request))
+        .flat_map(|exchange| {
+            let digest = Recorded::new(&url, exchange.request.as_bytes()).digest();
+            expected[digest.as_str()].clone()
+        })
         .collect();
     assert_eq!(printed.meta.requests, keys, "{}", case.id);
 }

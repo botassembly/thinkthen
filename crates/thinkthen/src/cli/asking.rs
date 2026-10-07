@@ -59,6 +59,9 @@ pub(crate) fn engine(
 ) -> Result<Engine, Failure> {
     let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
     let roots = environment.roots()?;
+    if !common.dry_run {
+        environment.cancel().invocation()?;
+    }
     if !common.dry_run && folders.writable_by_another() {
         writeln!(
             io::stderr().lock(),

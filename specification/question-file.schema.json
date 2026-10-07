@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:thinkthen:question-file",
   "title": "thinkthen question file",
-  "description": "The structural grammar of a question file, shared by the parser and this schema. A question file is one object that names exactly one verb, so it validates under exactly one entry definition. Semantic checks the schema cannot express are listed in specification/question-file.md: blank-string and control-character rules beyond the name pattern, unique and unrepeated names, threshold ranges and band form, RFC 6901 pointers, and the duplicate-member rejection the parser performs before any member is read.",
+  "description": "The structural grammar of a question file, shared by the parser and this schema. A question file is one object that names exactly one verb, so it validates under exactly one entry definition. Semantic checks the schema cannot express are listed in specification/question-file.md: blank-string and control-character rules beyond the name pattern, unique and unrepeated names, threshold ranges and band form, RFC 6901 pointers, and the duplicate-member rejection the parser performs before any member is read. Author metadata is excluded from semantic identity. Required declaration names must be declared properties, and wording_version rejects fractional or exponent spellings in native parsing; those semantic/lexical checks exceed structural JSON Schema.",
   "anyOf": [
     {
       "$ref": "#/$defs/decide"
@@ -18,9 +18,49 @@
     },
     {
       "$ref": "#/$defs/relate"
+    },
+    {
+      "$ref": "#/$defs/find"
     }
   ],
   "$defs": {
+    "find": {
+      "description": "A whole-set find reading; candidates come from the actual ordered input units. Cuts, batch and authored candidates are absent.",
+      "type": "object",
+      "required": [
+        "find"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "find": {
+          "$ref": "#/$defs/questionText"
+        },
+        "on": {
+          "$ref": "#/$defs/pointers"
+        },
+        "model": {
+          "$ref": "#/$defs/name"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "wording_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "item_schema": {
+          "$ref": "#/$defs/inputDeclaration"
+        },
+        "context_schema": {
+          "$ref": "#/$defs/inputDeclaration"
+        }
+      }
+    },
     "decide": {
       "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under. A question file's `batch` is the most records of a stream one request carries. An annotate question set's entries take no `batch`.",
       "type": "object",
@@ -61,6 +101,21 @@
               "minimum": 1
             }
           ]
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "wording_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "item_schema": {
+          "$ref": "#/$defs/inputDeclaration"
+        },
+        "context_schema": {
+          "$ref": "#/$defs/inputDeclaration"
         }
       }
     },
@@ -93,9 +148,29 @@
         "batch": {
           "description": "`max`, or a whole number of at least 1.",
           "anyOf": [
-            { "const": "max" },
-            { "type": "integer", "minimum": 1 }
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
           ]
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "wording_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "item_schema": {
+          "$ref": "#/$defs/inputDeclaration"
+        },
+        "context_schema": {
+          "$ref": "#/$defs/inputDeclaration"
         }
       }
     },
@@ -128,9 +203,29 @@
         "batch": {
           "description": "`max`, or a whole number of at least 1.",
           "anyOf": [
-            { "const": "max" },
-            { "type": "integer", "minimum": 1 }
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
           ]
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "wording_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "item_schema": {
+          "$ref": "#/$defs/inputDeclaration"
+        },
+        "context_schema": {
+          "$ref": "#/$defs/inputDeclaration"
         }
       }
     },
@@ -160,9 +255,29 @@
         "batch": {
           "description": "`max`, or a whole number of at least 1.",
           "anyOf": [
-            { "const": "max" },
-            { "type": "integer", "minimum": 1 }
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
           ]
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "wording_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "item_schema": {
+          "$ref": "#/$defs/inputDeclaration"
+        },
+        "context_schema": {
+          "$ref": "#/$defs/inputDeclaration"
         }
       }
     },
@@ -218,6 +333,21 @@
         },
         "profile": {
           "$ref": "#/$defs/profile"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "wording_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "item_schema": {
+          "$ref": "#/$defs/inputDeclaration"
+        },
+        "context_schema": {
+          "$ref": "#/$defs/inputDeclaration"
         }
       }
     },
@@ -413,66 +543,648 @@
     },
     "doorRequest": {
       "description": "The C JSON door request: one verb, its question members, and up to six envelope keys. Moved here from the result schema by ADR 0112, because it is input.",
-      "type": "object", "minProperties": 1,
+      "type": "object",
+      "minProperties": 1,
       "properties": {
-        "evidence": {"type": "string"}, "records": {"type": "array"},
-        "units": {"type": "array", "items": {"type": "string"}},
-        "details": {"type": "boolean"}, "usage": {"const": true},
-        "call": {"type": "object", "additionalProperties": false,
-          "properties": {"batch": {"anyOf": [{"const": "max"}, {"type": "integer", "minimum": 1}]}, "context": {"type": "string", "minLength": 1}}},
-        "rank": {"type": "string"}, "find": {"type": "string"},
-        "annotate": {"type": "object"}, "recognize": {"type": "object"},
-        "relate": {"type": "object"}, "none": {"type": "boolean"},
-        "decide": {"type": ["string", "object", "array"]},
-        "choose": {"type": ["string", "object", "array"]},
-        "tag": {"type": ["string", "object", "array"]},
-        "score": {"type": ["string", "object", "array"]},
-        "filter": {"type": ["string", "object", "array"]}
+        "evidence": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array"
+        },
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "details": {
+          "type": "boolean"
+        },
+        "usage": {
+          "const": true
+        },
+        "call": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "batch": {
+              "anyOf": [
+                {
+                  "const": "max"
+                },
+                {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              ]
+            },
+            "context": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "rank": {
+          "type": "string"
+        },
+        "find": {
+          "type": "string"
+        },
+        "annotate": {
+          "type": "object"
+        },
+        "recognize": {
+          "type": "object"
+        },
+        "relate": {
+          "type": "object"
+        },
+        "none": {
+          "type": "boolean"
+        },
+        "decide": {
+          "type": [
+            "string",
+            "object",
+            "array"
+          ]
+        },
+        "choose": {
+          "type": [
+            "string",
+            "object",
+            "array"
+          ]
+        },
+        "tag": {
+          "type": [
+            "string",
+            "object",
+            "array"
+          ]
+        },
+        "score": {
+          "type": [
+            "string",
+            "object",
+            "array"
+          ]
+        },
+        "filter": {
+          "type": [
+            "string",
+            "object",
+            "array"
+          ]
+        }
       },
       "oneOf": [
-        {"required": ["usage"]},
-        {"required": ["decide"]}, {"required": ["choose"]},
-        {"required": ["tag"]}, {"required": ["score"]},
-        {"required": ["filter"]}, {"required": ["rank"]},
-        {"required": ["find"]}, {"required": ["annotate"]},
-        {"required": ["recognize"]}, {"required": ["relate"]}
+        {
+          "required": [
+            "usage"
+          ]
+        },
+        {
+          "required": [
+            "decide"
+          ]
+        },
+        {
+          "required": [
+            "choose"
+          ]
+        },
+        {
+          "required": [
+            "tag"
+          ]
+        },
+        {
+          "required": [
+            "score"
+          ]
+        },
+        {
+          "required": [
+            "filter"
+          ]
+        },
+        {
+          "required": [
+            "rank"
+          ]
+        },
+        {
+          "required": [
+            "find"
+          ]
+        },
+        {
+          "required": [
+            "annotate"
+          ]
+        },
+        {
+          "required": [
+            "recognize"
+          ]
+        },
+        {
+          "required": [
+            "relate"
+          ]
+        }
       ],
       "allOf": [
-        {"if": {"required": ["usage"]}, "then": {"maxProperties": 1}},
-        {"if": {"required": ["recognize"]}, "then": {"required": ["evidence"]}},
-        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
-          {"required": ["tag"]}, {"required": ["score"]}]},
-          "then": {"oneOf": [{"required": ["evidence"]}, {"required": ["records"]}]}},
-        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
-          {"required": ["annotate"]}, {"required": ["relate"]}]},
-          "then": {"required": ["records"]}},
-        {"if": {"required": ["find"]}, "then": {"required": ["units"]}},
-        {"if": {"required": ["none"]}, "then": {"required": ["find"]}},
-        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
-          {"required": ["tag"]}, {"required": ["score"]}, {"required": ["filter"]},
-          {"required": ["rank"]}, {"required": ["annotate"]}]},
-          "then": {"properties": {"records": {"items": {"type": "string"}}}}},
-        {"if": {"required": ["relate"]},
-          "then": {"properties": {"records": {"items": {"type": "object"}}}}},
-        {"if": {"required": ["details"]}, "then": {"anyOf": [
-          {"required": ["decide"]}, {"required": ["choose"]},
-          {"required": ["tag"]}, {"required": ["score"]}
-        ]}},
-        {"if": {"required": ["recognize"]},
-          "then": {"not": {"anyOf": [{"required": ["records"]}, {"required": ["units"]}]}}},
-        {"if": {"required": ["call"]}, "then": {"required": ["records"],
-          "not": {"anyOf": [{"required": ["find"]}, {"required": ["recognize"]}, {"required": ["relate"]}]}}},
-        {"if": {"required": ["annotate"]},
-          "then": {"properties": {"call": {"not": {"required": ["context"]}}}}},
-        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
-          {"required": ["annotate"]}, {"required": ["relate"]}]},
-          "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["units"]}]}}},
-        {"if": {"required": ["find"]},
-          "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["records"]}]}}},
-        {"not": {"anyOf": [
-          {"required": ["evidence", "records"]}, {"required": ["evidence", "units"]},
-          {"required": ["records", "units"]}
-        ]}}
+        {
+          "if": {
+            "required": [
+              "usage"
+            ]
+          },
+          "then": {
+            "maxProperties": 1
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "recognize"
+            ]
+          },
+          "then": {
+            "required": [
+              "evidence"
+            ]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "decide"
+                ]
+              },
+              {
+                "required": [
+                  "choose"
+                ]
+              },
+              {
+                "required": [
+                  "tag"
+                ]
+              },
+              {
+                "required": [
+                  "score"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "oneOf": [
+              {
+                "required": [
+                  "evidence"
+                ]
+              },
+              {
+                "required": [
+                  "records"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "filter"
+                ]
+              },
+              {
+                "required": [
+                  "rank"
+                ]
+              },
+              {
+                "required": [
+                  "annotate"
+                ]
+              },
+              {
+                "required": [
+                  "relate"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "required": [
+              "records"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "find"
+            ]
+          },
+          "then": {
+            "required": [
+              "units"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "none"
+            ]
+          },
+          "then": {
+            "required": [
+              "find"
+            ]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "decide"
+                ]
+              },
+              {
+                "required": [
+                  "choose"
+                ]
+              },
+              {
+                "required": [
+                  "tag"
+                ]
+              },
+              {
+                "required": [
+                  "score"
+                ]
+              },
+              {
+                "required": [
+                  "filter"
+                ]
+              },
+              {
+                "required": [
+                  "rank"
+                ]
+              },
+              {
+                "required": [
+                  "annotate"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "records": {
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "relate"
+            ]
+          },
+          "then": {
+            "properties": {
+              "records": {
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "details"
+            ]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "decide"
+                ]
+              },
+              {
+                "required": [
+                  "choose"
+                ]
+              },
+              {
+                "required": [
+                  "tag"
+                ]
+              },
+              {
+                "required": [
+                  "score"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "recognize"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "records"
+                  ]
+                },
+                {
+                  "required": [
+                    "units"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "call"
+            ]
+          },
+          "then": {
+            "required": [
+              "records"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "find"
+                  ]
+                },
+                {
+                  "required": [
+                    "recognize"
+                  ]
+                },
+                {
+                  "required": [
+                    "relate"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "annotate"
+            ]
+          },
+          "then": {
+            "properties": {
+              "call": {
+                "not": {
+                  "required": [
+                    "context"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "filter"
+                ]
+              },
+              {
+                "required": [
+                  "rank"
+                ]
+              },
+              {
+                "required": [
+                  "annotate"
+                ]
+              },
+              {
+                "required": [
+                  "relate"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "evidence"
+                  ]
+                },
+                {
+                  "required": [
+                    "units"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "find"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "evidence"
+                  ]
+                },
+                {
+                  "required": [
+                    "records"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "evidence",
+                  "records"
+                ]
+              },
+              {
+                "required": [
+                  "evidence",
+                  "units"
+                ]
+              },
+              {
+                "required": [
+                  "records",
+                  "units"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "inputProperty": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "number"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "items"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "array"
+            },
+            "items": {
+              "type": "object",
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "inputDeclaration": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "properties"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "object"
+            },
+            "properties": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+              },
+              "additionalProperties": {
+                "$ref": "#/$defs/inputProperty"
+              }
+            },
+            "required": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
       ]
     }
   }
