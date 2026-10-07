@@ -72,9 +72,6 @@ including original ordered duplicate attachments and zero-send strict replay.
 All 24 image and nine storage cases plus affected Clippy pass. Whole review and
 main landing remain open.
 
-Held-model warning constituent WIP: cache lookup checks a missed exact key for validated historical answers on the same configured URL, literal requested model, selected state and wire question. Excluded mismatches trigger a fixed command warning and a call-scoped `Facts::held_model_mismatch()` getter, with optional true-only complete-facts serialization. Stored model/address values never enter the warning. Exact corrected hits, unrelated questions and offline historical replay remain silent; ambiguous replay still refuses before sends. Primitive keys, grouping, image domains and accepted observation identity are unchanged. The getter is recorded in 0443's canonical inventory delta. Bounded timing history and final whole review/host adoption remain open.
-
-Native foundation update: versioned per-question keys, accepted persistent observations, partial reported usage, original ordered image domains, atomic validated migration and read-only replay are implemented in this branch. Corrected 0454 batching remains outside key/legacy observation identity. Complete getters/CLI preserve original per-observation wire counts and actual cache/replay provenance. Optional timing recording and the fixed held-model warning are implemented; their failure boundaries are documented in 0445/recording.md. Root whole review/landing and required host adoption remain open.
 Lane1 legacy-key diagnosis: the saved C integration log's two failures are
 `cases::portable::c_json_records_keep_fixture_questions_and_keys_in_one_request`
 and `cases::every_applicable_shared_case_passes_through_the_door`. Committed C
@@ -92,6 +89,17 @@ No native compatibility exception or C expectation edit is made here. Root must
 coordinate the authorized metadata-oracle adoption with the C/corpus owners;
 original v1 stored keys and request-envelope validation remain distinct.
 
+Authorized C/shared legacy oracle adoption (0426 integration): the Rust public
+consumer and C share one independent specification/cache.md framed v2 helper.
+Reported model is supplied explicitly from each saved response; the final URL
+is the actual owned loopback fixture endpoint. Canonical legacy request-digest
+placeholders still identify their original request, then map to these v2 keys.
+No production hash, saved v1 row/recording, question bytes or packed counts change.
+Synthetic case 40 previously requested jev-1.13.0 but reported jev-latest while
+expecting a cache hit. Under v2 freshness that mismatch correctly resends; this
+controlled synthetic fixture now reports jev-1.13.0 and its detailed model
+expectation agrees. Its exact request and two-calls/one-send/one-cache-answer
+expectations stay intact. Captured historical mismatches are preserved.
 Lane1 CLI oracle correction on actual native-foundation candidate 1bbcc0bb1:
 the full-test replay failure reproduces in shared case 01 (v2 1c38… versus
 legacy v1 2bc2…). Current facade/staged metadata now uses the accepted shared
@@ -172,3 +180,6 @@ starting tracked-file hit, zero path hits and zero edited-file hits. No
 collected failure or legacy-key contract conflict remains; root retains that
 starting scan issue, narrow confirmation and the final actual landing ladder.
 Overall parity remains open.
+Held-model warning constituent WIP: cache lookup checks a missed exact key for validated historical answers on the same configured URL, literal requested model, selected state and wire question. Excluded mismatches trigger a fixed command warning and a call-scoped `Facts::held_model_mismatch()` getter, with optional true-only complete-facts serialization. Stored model/address values never enter the warning. Exact corrected hits, unrelated questions and offline historical replay remain silent; ambiguous replay still refuses before sends. Primitive keys, grouping, image domains and accepted observation identity are unchanged. The getter is recorded in 0443's canonical inventory delta. Bounded timing history and final whole review/host adoption remain open.
+
+Native foundation update: versioned per-question keys, accepted persistent observations, partial reported usage, original ordered image domains, atomic validated migration and read-only replay are implemented in this branch. Corrected 0454 batching remains outside key/legacy observation identity. Complete getters/CLI preserve original per-observation wire counts and actual cache/replay provenance. Optional timing recording and the fixed held-model warning are implemented; their failure boundaries are documented in 0445/recording.md. Root whole review/landing and required host adoption remain open.

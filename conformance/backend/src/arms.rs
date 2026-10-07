@@ -61,6 +61,8 @@ struct Document {
 struct Case {
     id: String,
     exchanges: Vec<Exchange>,
+    #[serde(default)]
+    runtime_exchanges: Option<Vec<Exchange>>,
 }
 
 #[derive(Deserialize)]
@@ -152,12 +154,16 @@ impl Backend {
         let document: Document = serde_json::from_str(CASES).map_err(io::Error::other)?;
         let mut cases = Cases::new();
         for case in document.cases {
-            let bodies = case.exchanges.into_iter().map(|exchange| {
-                (
-                    exchange.request.into_bytes(),
-                    exchange.response.get().to_owned(),
-                )
-            });
+            let bodies = case
+                .runtime_exchanges
+                .unwrap_or(case.exchanges)
+                .into_iter()
+                .map(|exchange| {
+                    (
+                        exchange.request.into_bytes(),
+                        exchange.response.get().to_owned(),
+                    )
+                });
             cases.insert(case.id, bodies.collect());
         }
         let gate = Arc::new(Gate::default());
