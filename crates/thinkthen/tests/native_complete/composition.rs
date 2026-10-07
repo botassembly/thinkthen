@@ -236,6 +236,15 @@ fn explicit_composed_images_keep_bytes_duplicates_and_filename_out_of_live_and_r
     let doc = serde_json::to_value(&held.value()[0]).unwrap();
     assert_located_duplicate_images(&doc, RED);
     assert_eq!(listener.count(), 1);
+    drop(replay);
+    drop(engine);
+    std::fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+fn file_images_retain_canonical_bytes_and_physical_sources() {
+    use base64::Engine as _;
+    const RED: &[u8] = include_bytes!("../../../../specification/fixtures/images/red.png");
     let source = thinkthen::InputFileReader::new(
         "original.png",
         std::io::Cursor::new(RED),
@@ -255,15 +264,92 @@ fn explicit_composed_images_keep_bytes_duplicates_and_filename_out_of_live_and_r
         .unwrap()
         .compose_source(source)
         .unwrap();
-    let thinkthen::QuestionInput::Images(images) = composed.original else {
+    let thinkthen::QuestionInput::Images(images) = &composed.original else {
         panic!("explicit image")
     };
     assert_eq!(images.location().unwrap().file(), "original.png");
     assert_eq!(images.location().unwrap().first_line(), None);
     assert_eq!(images.location().unwrap().last_line(), None);
-    drop(replay);
-    drop(engine);
-    std::fs::remove_dir_all(folder).unwrap();
+    for (verb, reply) in [
+        (
+            "decide",
+            include_str!("../../../../specification/fixtures/images/liquid-decide-reply.json"),
+        ),
+        (
+            "choose",
+            include_str!("../../../../specification/fixtures/images/liquid-choose-reply.json"),
+        ),
+        (
+            "score",
+            include_str!("../../../../specification/fixtures/images/liquid-score-reply.json"),
+        ),
+    ] {
+        let listener = Listener::answering(move |_| Canned::ok(reply)).unwrap();
+        let engine = storage_builder(&listener, "liquid", "d1")
+            .no_cache()
+            .build()
+            .unwrap();
+        let rows = complete_file_image_call(&engine, verb, &composed.original);
+        assert_eq!(rows[0]["source"], json!({"file":"original.png"}));
+        assert_eq!(
+            rows[0]["images"],
+            json!([{"media":"image/png","base64":base64::engine::general_purpose::STANDARD.encode(RED),"width":1,"height":1}])
+        );
+        assert_eq!(listener.count(), 1);
+    }
+}
+
+#[cfg(test)]
+fn complete_file_image_call(
+    engine: &Engine,
+    verb: &str,
+    input: &thinkthen::QuestionInput,
+) -> Value {
+    let record = || thinkthen::RecordInput {
+        original: input.clone(),
+        context: None,
+        options: None,
+    };
+    match verb {
+        "decide" => {
+            let q = Question::decide("Seen?").unwrap().cut();
+            let call = engine
+                .decide_records_complete_with(&q, [record()], CallOptions::new())
+                .unwrap();
+            schema::call(&call, "completeDecide");
+            serde_json::to_value(call.value()).unwrap()
+        }
+        "choose" => {
+            let q = Question::choose_labels("Color?")
+                .unwrap()
+                .label("red", None)
+                .unwrap()
+                .label("blue", None)
+                .unwrap()
+                .build()
+                .unwrap();
+            let call = engine
+                .choose_records_complete_with(&q, [record()], CallOptions::new())
+                .unwrap();
+            schema::call(&call, "completeChoose");
+            serde_json::to_value(call.value()).unwrap()
+        }
+        _ => {
+            let q = Question::score("How red?")
+                .unwrap()
+                .level("none", None)
+                .unwrap()
+                .level("all", None)
+                .unwrap()
+                .build()
+                .unwrap();
+            let call = engine
+                .score_records_complete_with(&q, [record()], CallOptions::new())
+                .unwrap();
+            schema::call(&call, "completeScore");
+            serde_json::to_value(call.value()).unwrap()
+        }
+    }
 }
 
 #[cfg(test)]
