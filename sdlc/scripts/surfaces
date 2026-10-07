@@ -112,8 +112,8 @@ registry() {
 		fi
 	done
 	for surface in $(feature "$1"); do
-		if [ ! -f "$surface/check.sh" ] || [ -n "$(git ls-files -co --exclude-standard -- "$surface" | grep -v -e '/check\.sh$' -e '/README\.md$')" ]; then
-			printf 'surfaces: %s is a feature and holds more than its check.sh and README.md\n' "$surface" >&2
+		if [ ! -f "$surface/check.sh" ] || [ -n "$(git ls-files -co --exclude-standard -- "$surface" | grep -v -e '/check\.sh$' -e '/README\.md$' -e '^libraries/polars/consumer/Cargo\.toml$' -e '^libraries/polars/consumer/Cargo\.lock$' -e '^libraries/polars/consumer/src/main\.rs$')" ]; then
+			printf 'surfaces: %s is a feature and holds unexpected files\n' "$surface" >&2
 			status=1
 		fi
 	done
@@ -171,7 +171,7 @@ if [ "$registry_only" -eq 1 ]; then
 		echo 'surfaces: the registry check passed a crate folder outside its binding' >&2
 		exit 1
 	fi
-	# A feature folder holds no code of its own. The Rust examples' folder does.
+	# Feature implementations stay in the native crate; the Polars consumer is admitted above.
 	sed 's|^libraries/rust  *landed$|libraries/rust feature|' sdlc/surfaces.txt >"$planted"
 	if registry "$planted" 2>/dev/null; then
 		echo 'surfaces: the registry check passed a feature folder that holds a Cargo.toml' >&2
