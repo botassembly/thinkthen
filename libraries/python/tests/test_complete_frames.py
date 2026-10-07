@@ -130,13 +130,13 @@ def test_frame_surface_reaches_eager_and_lazy_native_calls_without_changing_shar
             facade=frames.Engine(engine=engine,library=library)
             done=facade.decide(question,source,**controls)
             assert done.source is source and done.native.results is done.results
-            assert done.results[0].meta.model=='frame-model'
+            assert done.results[0].meta.model=='frame-reported'
             assert done.results[0].meta.answered_by=='frame-reported'
             batch=facade.decide_batch(question,source,**controls)
             assert len(requests)==(1 if library=='pandas' else 3)
             with batch:
                 rows=list(batch)
-                assert rows[0].result.meta.model=='frame-model'
+                assert rows[0].result.meta.model=='frame-reported'
                 assert rows[0].result.meta.answered_by=='frame-reported'
                 assert batch.source is source and batch.position(rows[0])==0
             assert batch.facts.records==1
