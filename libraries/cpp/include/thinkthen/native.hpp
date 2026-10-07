@@ -21,9 +21,9 @@ struct Result {
     std::vector<QuestionAuthor> authors, observation_authors;
     std::vector<std::vector<QuestionAuthor>> member_authors;
     std::vector<std::vector<RankView>> rank_members;
-    std::vector<std::vector<Details>> rank_member_details;
     std::vector<SourceRecognition> located_recognition;
     std::vector<SourceRelations> located_relations;
+    std::vector<std::vector<Details>> rank_member_details{};
     const DecideView& decide(size_t i) const { return rows.at(i).data.decide.value(); }
     const ChooseView& choose(size_t i) const { return rows.at(i).data.choose.value(); }
     const TagView& tag(size_t i) const { return rows.at(i).data.tag.value(); }

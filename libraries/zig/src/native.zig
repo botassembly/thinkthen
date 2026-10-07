@@ -160,7 +160,7 @@ pub const Snapshot = struct {
     observation_authors: []const c.thinkthen_question_author_v1,
     member_authors: []const []const c.thinkthen_question_author_v1,
     rank_members: []const []const c.thinkthen_rank_view_v1,
-    rank_member_details: []const []const c.thinkthen_details_v1,
+    rank_member_details: []const []const c.thinkthen_details_v1 = &.{},
     located_recognition: []const c.thinkthen_source_recognition_v1,
     located_relations: []const c.thinkthen_source_relations_v1,
     pub fn kind(self: *const Snapshot) !tt.FailureKind {
