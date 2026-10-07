@@ -21,11 +21,12 @@ corpus = json.loads((SHARED / "corpus.json").read_text())
 checks = shared.validators(json.loads((ROOT / "specification/result.schema.json").read_text()))
 shared.check_schema(corpus["cases"], checks)
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
-backend, port = shared.start_backend()
 run = Path(os.environ.get("THINKTHEN_TYPECASE_DLL", HERE / "bin/Release/net8.0/TypeCase.dll")).resolve(strict=True)
 native = Path(os.environ["THINKTHEN_RELEASE_C_DIR"]) / "lib" if os.environ.get("THINKTHEN_RELEASE_C_DIR") else HERE.parent / "target/scratch/lib"
 if os.environ.get("THINKTHEN_ARTIFACT") and not os.environ.get("THINKTHEN_TYPECASE_DLL"):
     raise ValueError("installed C# parity requires its package-referenced caller")
+(native / "libthinkthen.so").resolve(strict=True)
+backend, port = shared.start_backend()
 count = 0
 FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
                                    "severity": "answered", "topics": "answered"}]}

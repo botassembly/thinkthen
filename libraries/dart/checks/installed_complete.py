@@ -29,7 +29,7 @@ def prepare(package, native, consumer):
     shutil.copy2(source / 'pubspec.yaml', app / 'pubspec.yaml')
     env = dict(os.environ, FLUTTER_SUPPRESS_ANALYTICS='true', CI='true')
     subprocess.run([dart, 'pub', 'get', '--offline', '--directory', str(app)], env=env, check=True)
-    
+
     resolution(app, 'thinkthen_dart', package)
     env.update(THINKTHEN_PARITY_PACKAGE=str(package), THINKTHEN_DART_CONSUMER=str(app),
                THINKTHEN_COMPLETE_LIBRARY=str(native / 'lib/libthinkthen.so'))
