@@ -1,6 +1,6 @@
 # 0430: Complete Ada and COBOL typed parity
 
-Status: building independent typed carriers; complete native execution remains pending.
+Status: native APIs implemented; complete source/archive checks and whole-family review remain pending.
 
 Milestone: 0.2
 
@@ -63,7 +63,7 @@ remain full-width and index access checks arithmetic/alignment. Executed boundar
 checks prove those refusals and preserve prior output; README pages state the bounds.
 Ian may overturn these language-copy rulings; no configuration choice is needed.
 
-### Exact continuation dependencies
+### Historical continuation dependencies (2026-10-06)
 
 The current main library exports only its 31 released symbols, so constructor and
 complete runtime integration cannot execute here yet. 0426 constructor/layout work
@@ -83,3 +83,9 @@ destruction; output-on-success errors and pre-start/started snapshots. Carrier f
 coordinates are conversion expectations, not reader execution. No required case is
 skipped or counted as pass. Root owns fresh High whole-family review and full
 repository test/lint on the landing commit. Ticket remains open; no landing record yet.
+
+### Native adoption (2026-10-07)
+
+The integrated native foundation at 5e22b01d7 supplies the reviewed complete ABI. Both compiled public family consumers execute all 247 applicable shared cases with zero failures. Each includes 24 image cases, all ten named functions, file/named question loaders, context/options/sets, native files, typed result/2 fields, six errors, cache/record/changed-reading replay and six native lazy record batches. The active MCP inventory correction is adopted from d6a2efe85; its three MCP-only cases do not apply to these two families. No applicable case is skipped or supplied by a known-result JSON fallback.
+
+The typed modules and counted bridges now live in public source folders and are included in the declared source archives. Both new archive examples execute 9,000-byte records, mutate caller bytes after native construction and read typed results after native engine/input owners are freed. Retained fixed-width copy bounds and legacy compatibility JSON overflow refusals remain explicit. Whole source/archive verification and the coordinator's fresh High review/landing gates must finish before this ticket closes. The coordinator writes the single landing record.

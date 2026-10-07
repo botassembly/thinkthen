@@ -38,6 +38,8 @@ Explicit files and folders use the [library reader contract](../files.md), with 
 
 ## Native typed API
 
+These APIs are built from this 0.2 source checkout and require its matching C header and library.
+
 Copy `copybooks/*.cpy` and `src/tt_inputs.c`, `tt_complete.c`, `tt_counted.c` and `tt_native.h` into the project. The public bridge header includes the matching native `thinkthen.h`. `thinkthen-typed.cpy` provides input/result/metadata/location groups and constants. Strings and lists use pointers with exact 64-bit counts; known engine fields have native groups, never JSON projections. Overlay a nested field with its matching typed BASED group using `SET ADDRESS OF`. Check presence and state/kind constants before reading optional/union arms. Zero input storage with `MOVE LOW-VALUES`; `INITIALIZE` space-fills nested PIC X storage and cannot initialize native descriptors.
 
 `TT_QUESTION_NEW` accepts a counted question specification. `TT_QUESTION_NEW_AUTHORED` adds optional name, wording version and item/context declarations. `TT_QUESTION_PARSE`, `TT_QUESTION_LOAD_NAMED` and `TT_QUESTION_LOAD_REFERENCE` take an explicit native loader role plus a counted string descriptor. `TT_QUESTION_LOAD` takes an explicit question-file path. Native loaders own parsing, catalog lookup and admission. `TT_SOURCE_RECORDS` clones originals, per-item context, ordered options and image handles. `TT_SOURCE_FILES` delegates line/window/whole-file/image-file/JSONL reading to native code; `TT_SOURCE_IMAGE_FILES` admits image units before opening a path. `TT_IMAGE_CLONE` takes counted PNG/JPEG bytes, media and optional filename. Images do not pass through compatibility JSON or an 8 KB base64 field.

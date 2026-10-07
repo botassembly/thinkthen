@@ -29,6 +29,8 @@ Explicit files and folders use the [library reader contract](../files.md), with 
 
 ## Native typed API
 
+These APIs are built from this 0.2 source checkout and require its matching C header and library.
+
 `Thinkthen.Typed` owns native `Question`, `Source` and `Image` handles. `New_Question` takes counted `Question_Spec_V1` fields, including descriptions, ordered choices, thresholds, pointer projections, rank/annotation members, entity kinds and relation specifications. Its authored overload accepts optional name, wording version and item/context declarations. `Parse_Question` imports saved question grammar with an explicit loader role. `Load_Question` takes an explicit file; `Load_Named` and `Load_Reference` delegate names/references and role admission to the native loader. `Author` returns typed resolved metadata. No Ada parser, path search, cache or scheduler enters these calls.
 
 `Records` clones typed records with arbitrary authored original/context values, ordered choices and image handles. `Files` loads native line, window, whole-file, image-file or JSONL sources. `Image_Files` admits image mode before opening any path. `Clone_Image` preserves counted PNG/JPEG bytes and optional filenames; `Image_View` exposes bytes, media and dimensions. Decide, choose and score admit ordered single/multiple images. The other seven functions return Usage before a send. Native route limits govern all images; filenames and ordinary strings never imply image input.
