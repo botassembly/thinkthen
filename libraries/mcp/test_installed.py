@@ -45,6 +45,135 @@ class Installed(unittest.TestCase):
         return Client.launch((BINARY, 'mcp', '--url', f'http://127.0.0.1:{self.port}/{route}/v1',
                               '--max-retries', '0', *options), env=self.env)
 
+    def test_dynamic_explicit_field_overrides_saved_on_without_disclosing_private_evidence(self):
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        captured = []
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                captured.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+                body = json.dumps({'model': 'selected', 'answers': {'q1': {
+                    'type': 'choice', 'probabilities': {'zebra': 0.9, 'alpha': 0.1}}}}).encode()
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(body)))
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.wfile.write(body)
+            def log_message(self, *_):
+                pass
+        server = HTTPServer(('127.0.0.1', 0), Handler)
+        worker = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05))
+        worker.start()
+        record = {'public': 'Only selected evidence.', 'private': 'PRIVATE-SAVED-EVIDENCE',
+                  'context': {'ready': False}, 'choices': ['zebra', 'alpha']}
+        question = {'choose': 'Which?', 'on': '/private', 'model': 'old', 'threshold': 0.95,
+                    'name': 'override', 'wording_version': 7, 'item_schema': {'type': 'string'},
+                    'context_schema': {'type': 'object', 'properties': {}}}
+        command = (BINARY, 'mcp', '--url', f'http://127.0.0.1:{server.server_port}/v1',
+                   '--no-cache', '--max-retries', '0')
+        try:
+            with Client.launch(command, env=self.env) as client:
+                reply = client.choose(question=question, records=[record], options={
+                    'field': '/public', 'options_field': '/choices', 'context_field': '/context',
+                    'model': 'selected', 'batch': 1})
+                row = reply['value'][0]
+                self.assertEqual(row['input'], record)
+                self.assertIsNone(row['value'])
+                self.assertEqual(row['question']['name'], 'override')
+                self.assertEqual(row['question']['wording_version'], 7)
+                self.assertEqual(row['question']['item_schema'], {'type': 'string'})
+                self.assertEqual(row['question']['context_schema'], question['context_schema'])
+                self.assertEqual(row['threshold'], 0.95)
+                self.assertEqual(reply['facts']['requests_sent'], 1)
+        finally:
+            server.shutdown()
+            worker.join(timeout=2)
+            server.server_close()
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(len(captured), 1)
+        self.assertEqual(captured[0]['model'], 'selected')
+        self.assertEqual(captured[0]['state'], {'ready': False})
+        self.assertEqual(captured[0]['questions']['q1']['instructions'],
+                         'The text is "Only selected evidence.". Which?')
+        self.assertNotIn('PRIVATE-SAVED-EVIDENCE', json.dumps(captured))
+        self.assertEqual(self.count(), 0)
+
+    def test_materialized_arrays_admit_every_atomic_item_and_annotation_member_before_sends(self):
+        questions = {'decide': {'decide': 'Q?'}, 'choose': {'choose': 'Q?', 'options': ['a', 'b']},
+                     'tag': {'tag': 'Q?', 'labels': ['a', 'b']}, 'score': {'score': 'Q?', 'levels': ['a', 'b']},
+                     'filter': {'decide': 'Q?'}}
+        with self.launch('generic', '--no-cache', '--jobs', '1') as client:
+            for name, question in questions.items():
+                declared = dict(question, item_schema={'type': 'string'})
+                with self.assertRaises(ToolError) as failure:
+                    getattr(client, name)(question=declared, records=['first', 'second', False],
+                                          options={'batch': 1})
+                self.assertEqual(failure.exception.result['error']['kind'], 'usage')
+                self.assertEqual(failure.exception.result['error']['message'], 'the item does not match item_schema')
+                self.assertEqual(self.count(), 0)
+            checks = {'version': 1, 'questions': {'valid': {'decide': 'Q?'},
+                      'declared': {'decide': 'Q?', 'item_schema': {'type': 'string'}}}}
+            with self.assertRaises(ToolError) as failure:
+                client.annotate(question=checks, records=['first', 'second', False], options={'batch': 1})
+            self.assertEqual(failure.exception.result['error']['kind'], 'usage')
+            self.assertEqual(failure.exception.result['error']['message'], 'the item does not match item_schema')
+            self.assertEqual(self.count(), 0)
+            source = self.home / 'incremental.jsonl'
+            source.write_text('{"body":"first"}\n{"body":"second"}\n{"body":false}\n')
+            with self.assertRaises(ToolError) as failure:
+                client.decide(question={'decide': 'Q?', 'item_schema': {'type': 'string'}},
+                              source={'paths': [str(source)], 'unit': 'line'},
+                              options={'field': '/body', 'batch': 1})
+            self.assertEqual(failure.exception.result['error']['kind'], 'usage')
+            self.assertGreater(self.count(), 0)
+            self.assertEqual(failure.exception.result['facts']['requests_sent'], self.count())
+
+    def test_both_source_rank_branches_bound_original_bytes_before_projection(self):
+        paths = [self.home / f'large-{n}.json' for n in range(2)]
+        content = json.dumps({'public': 'x', 'private': 'z' * (8 * 1024 * 1024)})
+        for path in paths:
+            path.write_text(content)
+        tail = self.home / 'unread-tail.txt'
+        tail.write_bytes(b'\xff')
+        with self.launch('generic', '--no-cache') as client:
+            for question in ('Q?', {'version': 1, 'questions': {'q': {'decide': 'Q?'}}}):
+                with self.assertRaises(ToolError) as failure:
+                    client.rank(question=question, source={'paths': [str(p) for p in (*paths, tail)], 'unit': 'file'},
+                                options={'field': '/public', 'batch': 1})
+                self.assertEqual(failure.exception.result['error']['kind'], 'usage')
+                self.assertEqual(failure.exception.result['error']['message'],
+                                 'source rank reads at most 16 MiB across all input records')
+                self.assertEqual(self.count(), 0)
+
+    def test_file_size_limit_reports_recording_and_cache_failure_and_keeps_owned_session_alive(self):
+        for mode in ('record', 'cache'):
+            folder = self.home / f'limited-{mode}'
+            before = self.count()
+            storage = ('--no-cache', '--record', str(folder)) if mode == 'record' else ('--cache', str(folder))
+            command = ('/usr/bin/prlimit', '--fsize=1024:1024', '--', BINARY, 'mcp', '--url',
+                       f'http://127.0.0.1:{self.port}/generic/v1', '--max-retries', '0', *storage)
+            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE, env=self.env)
+            client = Client(process.stdin, process.stdout, process)
+            try:
+                client.initialize()
+                with self.assertRaises(ToolError) as failure:
+                    client.decide(question='Q?', evidence='x' * 8192)
+                self.assertEqual(failure.exception.result['error']['kind'], 'local')
+                self.assertEqual(failure.exception.result['error']['message'], 'the recording folder could not be written')
+                self.assertEqual(failure.exception.result['facts']['requests_sent'], 1)
+                self.assertEqual(self.count() - before, 1)
+                self.assertEqual(client.ping(), {})
+            finally:
+                process.stdin.close()
+                self.assertEqual(process.wait(timeout=3), 0)
+                diagnostics = process.stderr.read().decode()
+                process.stderr.close()
+                client.close()
+            self.assertNotIn('sk-mcp-loopback-only', diagnostics)
+            # The native store may remain; no transient write or journal survives.
+            self.assertEqual(sorted(p.name for p in folder.iterdir()),
+                             ['thinkthen.sqlite'])
+
     def test_names_files_and_literal_at_text_use_the_native_loaders(self):
         directory = self.home / 'config/thinkthen/questions'
         directory.mkdir(parents=True)

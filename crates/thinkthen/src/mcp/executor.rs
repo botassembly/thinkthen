@@ -57,9 +57,17 @@ impl Executor for NativeExecutor {
                 reply(engine.try_find_records_complete_with(file.question(), records, controls)?)
             }
             PreparedQuestion::Annotate(set) => {
-                let call = engine
-                    .try_annotate_records_complete_with(set, records, controls)
-                    .into_call()?;
+                let call = if invocation.arguments.records.is_some() {
+                    engine.annotate_records_complete_with(
+                        set,
+                        records.collect::<Result<Vec<_>, _>>()?,
+                        controls,
+                    )?
+                } else {
+                    engine
+                        .try_annotate_records_complete_with(set, records, controls)
+                        .into_call()?
+                };
                 let failed = call.value().iter().any(|row| {
                     row.result()
                         .members()
@@ -108,39 +116,55 @@ fn atomic<'a>(
         };
         return reply(engine.try_find_records_complete_with(q, records, controls)?);
     }
+    // Materialized originals require whole-call native admission before lookup.
+    macro_rules! complete {
+        ($eager:ident, $stream:ident, $question:expr) => {
+            if invocation.arguments.records.is_some() {
+                engine.$eager($question, records.collect::<Result<Vec<_>, _>>()?, controls)?
+            } else {
+                engine.$stream($question, records, controls).into_call()?
+            }
+        };
+    }
     match invocation.tool {
         Tool::Decide => rows_reply(
-            engine
-                .try_decide_records_complete_with(q, records, controls)
-                .into_call()?,
+            complete!(
+                decide_records_complete_with,
+                try_decide_records_complete_with,
+                q
+            ),
             single,
             false,
         ),
         Tool::Choose => rows_reply(
-            engine
-                .try_choose_records_complete_with(q, records, controls)
-                .into_call()?,
+            complete!(
+                choose_records_complete_with,
+                try_choose_records_complete_with,
+                q
+            ),
             single,
             false,
         ),
         Tool::Tag => rows_reply(
-            engine
-                .try_tag_records_complete_with(q, records, controls)
-                .into_call()?,
+            complete!(tag_records_complete_with, try_tag_records_complete_with, q),
             single,
             false,
         ),
         Tool::Score => rows_reply(
-            engine
-                .try_score_records_complete_with(plain(q)?, records, controls)
-                .into_call()?,
+            complete!(
+                score_records_complete_with,
+                try_score_records_complete_with,
+                plain(q)?
+            ),
             single,
             false,
         ),
         Tool::Filter => {
-            let call = engine
-                .try_filter_records_complete_with(plain(q)?, records, controls)
-                .into_call()?;
+            let call = complete!(
+                filter_records_complete_with,
+                try_filter_records_complete_with,
+                plain(q)?
+            );
             reply(selected_files(
                 call,
                 invocation.arguments.options.files_only,
@@ -237,6 +261,9 @@ fn apply(prepared: &mut PreparedQuestion, invocation: &Invocation) -> Result<(),
         ask.0.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
     }
     if let PreparedQuestion::Dynamic(q) = prepared {
+        if options.field.is_some() {
+            *q = q.clone().without_authored_on();
+        }
         if let Some(model) = &options.model {
             *q = q.clone().with_model_override(model)?;
         }

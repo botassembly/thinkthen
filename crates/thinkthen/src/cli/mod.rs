@@ -62,7 +62,7 @@ pub fn entry() -> ExitCode {
         };
     }
     if let Some(Command::Mcp(arguments)) = &cli.command {
-        return crate::mcp::startup::entry(arguments);
+        return mcp_entry(arguments);
     }
     let offline = match &cli.command {
         Some(Command::Transform(arguments)) => {
@@ -136,6 +136,13 @@ pub fn entry() -> ExitCode {
     match activation.finish(code) {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
+    }
+}
+
+fn mcp_entry(arguments: &crate::mcp::startup::Arguments) -> ExitCode {
+    match file_size::claim() {
+        Ok(()) => crate::mcp::startup::entry(arguments),
+        Err(failure) => failure::report(&failure, io::stderr().lock()),
     }
 }
 

@@ -46,11 +46,13 @@ impl Invocation {
         });
         if let Some(source) = self.source()? {
             let annotate = matches!(prepared, PreparedQuestion::Annotate(_)) && !explicit;
-            return Ok(Box::new(source.map(move |item| {
-                controls.admission()?;
-                let item = item?;
-                compose_source(&reading, item, annotate)
-            })));
+            return Ok(source_records(
+                reading,
+                source,
+                controls,
+                annotate,
+                self.tool == super::tools::Tool::Rank,
+            ));
         }
         if let Some(records) = &self.arguments.records {
             return Ok(Box::new(records.iter().map(move |raw| {
@@ -91,6 +93,46 @@ impl Invocation {
             options: None,
         }))))
     }
+}
+
+pub(super) fn source_records<'a>(
+    reading: RecordReading,
+    mut source: impl Iterator<Item = Result<crate::SourceItem, Error>> + 'a,
+    controls: CallOptions<'a>,
+    annotate: bool,
+    rank: bool,
+) -> Inputs<'a> {
+    let mut remaining = crate::core::MAX_RECORD_BYTES;
+    let mut stopped = false;
+    Box::new(std::iter::from_fn(move || {
+        if stopped {
+            return None;
+        }
+        let next = controls
+            .admission()
+            .and_then(|()| source.next().transpose());
+        let result = match next {
+            Ok(None) => return None,
+            Ok(Some(item)) => (|| {
+                if rank {
+                    charge_rank(&item, &mut remaining)?;
+                }
+                compose_source(&reading, item, annotate)
+            })(),
+            Err(error) => Err(error),
+        };
+        stopped = result.is_err();
+        Some(result)
+    }))
+}
+
+fn charge_rank(item: &crate::SourceItem, remaining: &mut usize) -> Result<(), Error> {
+    if let crate::SourceItem::Text(text) = item {
+        *remaining = remaining.checked_sub(text.record.len()).ok_or_else(|| {
+            Error::usage("source rank reads at most 16 MiB across all input records")
+        })?;
+    }
+    Ok(())
 }
 
 fn declared_context(prepared: &PreparedQuestion) -> Option<&crate::InputDeclaration> {
