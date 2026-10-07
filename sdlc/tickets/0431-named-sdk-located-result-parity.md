@@ -34,3 +34,11 @@ Own item 7 of the public-library-api-gaps issue for these SDKs: string and struc
 ## Vision and answer identity in 0.2
 
 Second PM message `2026-10-06-pm-vision-ships-in-0-2-and-the-sdk-stays-one-endpoint-while-the-proxy-owns-the.md`, asks 1–4, supersedes the image deferral. Adopt 0447 typed single/multiple-image and image-source inputs for decide/choose/score, 0448 route admission, and 0450 stable full-result identity/proxy reservations. Preserve image order/duplicates and absent text lines; ordinary strings/bytes do not imply images. Execute text-only refusals for the other seven functions, with zero sends. This ticket owns its public typed carriers/consumers; shared native image behavior stays in 0447 and SQL adaptation in 0452. Respect 0449’s single endpoint/key/API-type boundary. Known image/result/identity fields cannot remain raw JSON.
+
+### Added public declarations
+
+```text
+fn Engine::try_choose_dynamic_records_complete_with<'a, I, T>(&'a self, &'a RecordChooseQuestion, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteChoice>> where I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
+```
+
+The lazy dynamic choose prerequisite reuses native record admission and scheduling. It requires candidates on every original and yields the completed prefix, one terminal error with joined final facts, then exhaustion. Empty input validates call controls and completes without a question or request. The eager dynamic choose method retains whole-set admission before sending.

@@ -62,6 +62,8 @@ mod calls;
 mod composition;
 #[path = "native_complete/dynamic_choose.rs"]
 mod dynamic_choose;
+#[path = "native_complete/dynamic_choose_streaming.rs"]
+mod dynamic_choose_streaming;
 #[path = "native_complete/find_reading.rs"]
 mod find_reading;
 #[path = "native_complete/model_facts.rs"]
