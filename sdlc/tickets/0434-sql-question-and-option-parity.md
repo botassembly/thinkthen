@@ -1,6 +1,6 @@
 # 0434: Match SQL question inputs and descriptions
 
-Status: in progress. Slice A implements the reviewed SQL inputs and images. Native 0456 additions and final complete SQL adoption remain open.
+Status: in progress. Complete SQL question and file adoption passed all 248 required cases through each source and installed extension. Final family gates and landing remain.
 
 Milestone: 0.2
 
@@ -56,3 +56,5 @@ validation API for this door. No SQL-local input-declaration parser or
 `@NAME` resolution is introduced here.
 
 - Code review: ACCEPT 2026-10-06. Fresh High whole-family review; the sole NULL-before-kind-validation defect was corrected and its resolution confirmed.
+
+Complete family adoption is qualified under 0435. Its [single family record](../records/0435-sql-call-facts-and-prices.md) carries the source and installed results, review corrections and remaining integration gates.

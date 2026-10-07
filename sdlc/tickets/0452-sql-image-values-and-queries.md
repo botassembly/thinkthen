@@ -1,6 +1,6 @@
 # 0452: Carry typed image values through SQL
 
-Status: in progress. Slice A implements the reviewed SQL inputs and images. Complete result/facts and rank-set integration belong to 0435/0417; final parity remains open.
+Status: in progress. Complete SQL image inputs, results and facts passed all 248 required cases through each source and installed extension. Final family gates and landing remain.
 
 Milestone: 0.2
 Owner: builder.
@@ -92,3 +92,5 @@ environment tier; no SQL backend setter can replace that address. This is
 recorded for the whole High review, not represented as an offline test pass.
 
 - Code review: ACCEPT 2026-10-06. Fresh High whole-family review; the sole NULL-before-kind-validation defect was corrected and its resolution confirmed.
+
+Complete family adoption is qualified under 0435. Its [single family record](../records/0435-sql-call-facts-and-prices.md) carries the source and installed results, review corrections and remaining integration gates.

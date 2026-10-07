@@ -4,7 +4,7 @@ Status: in progress. Reviewed SQL family adoption passed all 248 required cases 
 
 Milestone: 0.2
 
-Owner: builder.
+Owner: lane 0 builder on `ticket/0435-sql-complete-adoption`.
 Ticket review: ACCEPT, 2026-10-06; fresh read-only review. Conflicting image deferrals corrected where found.
 
 ## Outcome
@@ -76,3 +76,5 @@ fn QuestionFileReference::path(&self) -> &Path
 fn QuestionFileReference::named_root(&self) -> Option<&Path>
 fn QuestionFileReference::parse<T>(&self, &str, QuestionFileRole, impl FnOnce(&str) -> Result<T, Error>) -> Result<T, Error>
 ```
+
+Complete family code review: ACCEPT, 2026-10-07; fresh High whole-family review and fresh High acceptance of the two blocking corrections at dcfbf6cc7. All three source and installed SQL consumers passed 248 required cases each. Final integration checks run on the candidate carrying the [single family record](../records/0435-sql-call-facts-and-prices.md).

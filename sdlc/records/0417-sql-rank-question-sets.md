@@ -7,3 +7,5 @@ Fresh whole-family High review accepted0066b0639. Focused public set and legacy 
 ## What the build taught us
 
 Cache hits do not prove recording replay. Empty-cache tests now establish that individual member recordings supply the set without requests. Later integration updates this same record.
+
+Complete ordered rank-member results, identities and named/declaration adoption are now qualified through all three source and installed SQL consumers. The [0435 family record](0435-sql-call-facts-and-prices.md) owns those results and final integration gates.

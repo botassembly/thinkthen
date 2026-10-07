@@ -1,6 +1,6 @@
 # 0417: Rank question sets on every SQL surface
 
-Status: in progress. Additive SQL turns adoption is implemented; complete result/identity adoption remains open.
+Status: in progress. Complete SQL rank-set results and ordered member identities passed all 248 required cases through each source and installed extension. Final family gates and landing remain.
 
 Milestone: 0.2
 
@@ -79,3 +79,5 @@ Slice A code review: ACCEPT, 2026-10-06; fresh read-only High whole-family revie
 ## What the build taught us
 
 Recording replay must start with empty caches to prove the recordings supply the answers. The shared native turns merge preserves duplicate keyed records without a SQL-specific sorting implementation.
+
+Complete family adoption is qualified under 0435. Its [single family record](../records/0435-sql-call-facts-and-prices.md) carries the source and installed results, review corrections and remaining integration gates.
