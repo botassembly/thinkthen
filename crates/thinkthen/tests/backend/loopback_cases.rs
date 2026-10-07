@@ -109,7 +109,19 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     // Every row lists question keys by ADR 0111.
     let renamed = shared_keys::fixture_keys(CANONICAL, &served, list(&case["exchanges"]))?;
     let success = &case["expect"]["success"];
-    let answers = recomputed(&success["answers"], &renamed);
+    let mut answers = recomputed(&success["answers"], &renamed);
+    // Complete decision details present the authored content. Canonical bare
+    // answers retain their boolean contract, including filter membership.
+    if case["verb"] == "decide" {
+        for answer in &mut answers {
+            if let Some(selected) = answer["bare"].as_bool()
+                && let Some(authored) =
+                    case["question"].get(if selected { "true" } else { "false" })
+            {
+                answer["bare"] = authored.clone();
+            }
+        }
+    }
     let tail = ["--details", "--url", base.as_str(), "--no-cache"].map(str::to_owned);
     let rows = rows(&[arguments.as_slice(), &tail].concat(), &input, success)?;
     match text(&case["verb"]) {
