@@ -103,6 +103,10 @@ package body Ada_Parity is
    begin
       return Thinkthen.Native.Results.Result_Observation (P1, P2, P3);
    end Result_Observation;
+   function Result_Row (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Row_Observation_V1) return Interfaces.C.int is
+   begin
+      return Thinkthen.Native.Results.Result_Row (P1, P2, P3);
+   end Result_Row;
    function Result_Decide (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Decide_View_V1) return Interfaces.C.int is
    begin
       return Thinkthen.Native.Results.Result_Decide (P1, P2, P3);

@@ -48,6 +48,8 @@ package Thinkthen.Typed.Complete is
                     View : in out Relate_View_V1; Code : out Interfaces.C.int);
    procedure Summary (Item : Result; View : in out Summary_V1; Code : out Interfaces.C.int);
    procedure Observation (Item : Result; Index : Interfaces.C.size_t; View : in out Observation_V1; Code : out Interfaces.C.int);
+   -- Output position is zero-based; View.Index retains the original occurrence.
+   procedure Row (Item : Result; Index : Interfaces.C.size_t; View : in out Row_Observation_V1; Code : out Interfaces.C.int);
    procedure Error_Snapshot (Client : Engine; Item : in out Result; Code : out Interfaces.C.int);
    -- Null-engine overload reads the calling thread's failed-build slot.
    procedure Error_Snapshot (Item : in out Result; Code : out Interfaces.C.int);

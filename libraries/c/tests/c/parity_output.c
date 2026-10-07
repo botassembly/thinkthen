@@ -28,11 +28,6 @@ static void recognized(thinkthen_recognize_value_v1 v) {
     if(v.relations.present) { fputs(",\"relations\":[",stdout); for(size_t i=0;i<v.relations.value.len;++i) { if(i) putchar(','); thinkthen_entity_edge_v1 e=v.relations.value.data[i]; fputs("{\"relation\":",stdout); quoted(e.relation); fputs(",\"source\":",stdout); entity(e.source); fputs(",\"target\":",stdout); entity(e.target); printf(",\"probability\":%.17g",e.probability); if(e.either) fputs(",\"either\":true",stdout); putchar('}'); } putchar(']'); }
     putchar('}');
 }
-static size_t ordinal(thinkthen_result *r,thinkthen_row_v1 row) {
-    thinkthen_summary_v1 s={0}; if(thinkthen_result_summary(r,&s)) abort();
-    for(size_t i=0;i<s.observation_count;++i) { thinkthen_observation_v1 e={0}; if(thinkthen_result_observation(r,i,&e)) abort(); if(e.kind==2) { thinkthen_row_v1 v={0}; switch(e.data.row.function) { case 1:v=e.data.row.data.decide.common;break;case 2:v=e.data.row.data.choose.common;break;case 3:v=e.data.row.data.tag.common;break;case 4:v=e.data.row.data.score.common;break;case 5:v=e.data.row.data.filter.common;break;case 6:v=e.data.row.data.rank.common;break;case 8:v=e.data.row.data.annotate.common;break;case 9:v=e.data.row.data.recognize.common;break;default:break; } if(v.answer_id.len==row.answer_id.len && !memcmp(v.answer_id.data,row.answer_id.data,v.answer_id.len)) return e.data.row.index; } }
-    return 0;
-}
 static void details(thinkthen_result *r,size_t at) {
     thinkthen_details_v1 d={0}; if(thinkthen_result_details(r,at,&d)) abort();
     fputs(",\"detail_inputs\":[",stdout);
@@ -97,7 +92,11 @@ static void row(thinkthen_result *r,unsigned kind,size_t at) {
         case 10:{ thinkthen_relate_view_v1 v={0}; if(thinkthen_result_relate(r,at,&v)) abort(); common=v.common; edges(v.value); break; }
         default:abort();
     }
-    if(kind!=7) index=ordinal(r,common);
+    if(kind!=7) {
+        thinkthen_row_observation_v1 final={0};
+        if(thinkthen_result_row(r,at,&final)) abort();
+        index=final.index;
+    }
     printf(",\"index\":"); if(index==SIZE_MAX) fputs("null",stdout); else printf("%zu",index);
     fputs(",\"answer_id\":",stdout); quoted(common.answer_id);
     fputs(",\"origin\":",stdout); if(common.meta.origin.present) printf("%u",common.meta.origin.value); else fputs("null",stdout);

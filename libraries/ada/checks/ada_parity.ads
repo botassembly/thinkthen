@@ -65,6 +65,8 @@ package Ada_Parity is
      with Export, Convention => C, External_Name => "ada_thinkthen_result_summary";
    function Result_Observation (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Observation_V1) return Interfaces.C.int
      with Export, Convention => C, External_Name => "ada_thinkthen_result_observation";
+   function Result_Row (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Row_Observation_V1) return Interfaces.C.int
+     with Export, Convention => C, External_Name => "ada_thinkthen_result_row";
    function Result_Decide (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Decide_View_V1) return Interfaces.C.int
      with Export, Convention => C, External_Name => "ada_thinkthen_result_decide";
    function Result_Choose (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Choose_View_V1) return Interfaces.C.int
