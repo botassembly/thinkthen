@@ -8,7 +8,7 @@ using ThinkThen;
 // "plan INPUT" reads one thinkthen.plan-input/1 object and prints Engine.Plan's object.
 // "limits" checks ticket 0291's zero budgets and zero cap; "helper" checks
 // AnnotatedField.Read's edge table. Each prints one JSON line.
-if(args.Length==2 && args[0]=="complete"){Console.WriteLine(NativeCases.Run(args[1]));return;}
+if(args.Length>=1 && args[0]=="complete"){Console.WriteLine(NativeCases.Run(args.Length==2?args[1]:Console.ReadLine()!));return;}
 if(args.Length==1 && args[0]=="native"){NativeChecks.Run();Console.WriteLine("{\"native\":\"pass\"}");return;}
 if (args.Length == 1 && args[0] == "carriers") { CarrierChecks.Run(); Console.WriteLine("{\"carriers\":\"pass\"}"); return; }
 string mode = args.Length == 2 ? args[0] : args.Length == 1 && args[0] is "limits" or "helper" ? args[0] : "";

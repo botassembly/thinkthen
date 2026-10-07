@@ -23,7 +23,7 @@ func nativeAtomicAnswer(v C.thinkthen_answer_v1) AtomicAnswer {
 	switch v.kind {
 	case 1:
 		out.Probability = Some(float64(*(*C.double)(unsafe.Pointer(&v.data))))
-	case 2, 5, 7:
+	case 2, 5:
 		a := *(*C.thinkthen_named_answer_v1)(unsafe.Pointer(&v.data))
 		out.Pick = Some(nativeString(a.pick))
 		out.Probabilities = nativeProbabilities(a.probabilities)

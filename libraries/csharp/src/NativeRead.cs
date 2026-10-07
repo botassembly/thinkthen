@@ -12,9 +12,9 @@ internal static partial class NativeComplete {
  internal static DecideValue ReadDecideValue(DecideValueV1 v)=>new((ValueKind)v.kind,v.kind==1&&v.data.boolean!=0,v.kind==2?Optional.Some(ReadContent(v.data.authored)):default);
  internal static AtomicAnswer ReadAtomicAnswer(AnswerV1 v) {
   IReadOnlyList<Probability> p=System.Array.Empty<Probability>();Optional<double> yes=default,confidence=default;Optional<string> pick=default,level=default;
-  AtomicKind kind=v.kind==7?AtomicKind.Find:(AtomicKind)(v.kind-1);
+  AtomicKind kind=v.kind switch {1=>AtomicKind.YesNo,2=>AtomicKind.Choice,3=>AtomicKind.Tag,4=>AtomicKind.Score,5=>AtomicKind.Find,_=>throw new InvalidOperationException("invalid native atomic kind")};
   if(v.kind==1)yes=Optional.Some(v.data.probability);
-  else if(v.kind==2||v.kind==5||v.kind==7){var a=v.kind==2?v.data.choice:v.data.find;pick=Optional.Some(String(a.pick));p=Array<ProbabilityV1,Probability>(a.probabilities.data,a.probabilities.len,ReadProbability);confidence=Opt(a.confidence.present,()=>a.confidence.value);}
+  else if(v.kind==2||v.kind==5){var a=v.kind==2?v.data.choice:v.data.find;pick=Optional.Some(String(a.pick));p=Array<ProbabilityV1,Probability>(a.probabilities.data,a.probabilities.len,ReadProbability);confidence=Opt(a.confidence.present,()=>a.confidence.value);}
   else if(v.kind==3)p=Array<ProbabilityV1,Probability>(v.data.tag.data,v.data.tag.len,ReadProbability);
   else if(v.kind==4){level=Optional.Some(String(v.data.score.level));p=Array<ProbabilityV1,Probability>(v.data.score.probabilities.data,v.data.score.probabilities.len,ReadProbability);confidence=Opt(v.data.score.confidence.present,()=>v.data.score.confidence.value);}
   else throw new InvalidOperationException("invalid native atomic kind");return new(kind,yes,pick,level,p,confidence);

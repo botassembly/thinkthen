@@ -191,15 +191,32 @@ func normalizedRow(value any, index int, events []thinkthen.ObservationEvent) ma
 		out["origin"] = map[thinkthen.Origin]int{thinkthen.OriginLive: 1, thinkthen.OriginCache: 2, thinkthen.OriginReplay: 3}[common.Meta.Origin.Value]
 	}
 	locationValue(out, common.Position)
+	ids := []string{}
+	for _, id := range common.Meta.Observations {
+		if id.ObservationId.Present {
+			ids = append(ids, id.ObservationId.Value.String())
+		}
+	}
+	out["observation_ids"] = ids
 	if common.Images.Present {
 		images := []string{}
 		for _, image := range common.Images.Value {
 			images = append(images, hex.EncodeToString(image.Bytes))
 		}
 		out["images"] = images
+		props := [][]uint64{}
+		for _, i := range common.Images.Value {
+			media := uint64(2)
+			if i.Media == thinkthen.MediaJpeg {
+				media = 1
+			}
+			props = append(props, []uint64{media, i.Width, i.Height})
+		}
+		out["image_properties"] = props
 	}
 	if common.Answer.Present {
 		a := common.Answer.Value
+		out["answer_kind"] = string(a.Kind)
 		if a.Probability.Present {
 			out["probability"] = a.Probability.Value
 		} else {

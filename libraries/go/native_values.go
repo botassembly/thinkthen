@@ -141,7 +141,7 @@ func nativeAtomicKind(v uint32) AtomicKind {
 		return AtomicKind("tag")
 	case 4:
 		return AtomicKind("score")
-	case 5, 7:
+	case 5:
 		return AtomicKind("find")
 	default:
 		panic("invalid native AtomicKind")

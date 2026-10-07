@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,24 +10,28 @@ import (
 )
 
 type nativeDocument struct {
-	Verb           string            `json:"verb"`
-	Question       json.RawMessage   `json:"question"`
-	Raw            *string           `json:"raw"`
-	Items          []json.RawMessage `json:"items"`
-	Text           bool              `json:"text"`
-	Paths          []string          `json:"paths"`
-	Unit           uint32            `json:"source_unit"`
-	Window         uint64            `json:"window"`
-	ImagePaths     []string          `json:"image_paths"`
-	ImageOnly      bool              `json:"image_only"`
-	ImageReader    bool              `json:"image_reader"`
-	Context        json.RawMessage   `json:"context"`
-	ContextPresent bool              `json:"context_present"`
-	SharedContext  json.RawMessage   `json:"shared_context"`
-	Loader         string            `json:"loader"`
-	Reference      string            `json:"reference"`
-	QuestionForm   string            `json:"question_form"`
-	Metadata       struct {
+	Verb            string            `json:"verb"`
+	Question        json.RawMessage   `json:"question"`
+	Raw             *string           `json:"raw"`
+	Items           []json.RawMessage `json:"items"`
+	Text            bool              `json:"text"`
+	Paths           []string          `json:"paths"`
+	Unit            uint32            `json:"source_unit"`
+	Window          uint64            `json:"window"`
+	ImagePaths      []string          `json:"image_paths"`
+	ImageOnly       bool              `json:"image_only"`
+	CaptionFiles    bool              `json:"caption_files"`
+	Media           string            `json:"media"`
+	CandidateOrders [][]string        `json:"candidate_orders"`
+	HeldCancel      bool              `json:"held_cancel"`
+	ImageReader     bool              `json:"image_reader"`
+	Context         json.RawMessage   `json:"context"`
+	ContextPresent  bool              `json:"context_present"`
+	SharedContext   json.RawMessage   `json:"shared_context"`
+	Loader          string            `json:"loader"`
+	Reference       string            `json:"reference"`
+	QuestionForm    string            `json:"question_form"`
+	Metadata        struct {
 		Name           string `json:"name"`
 		WordingVersion uint64 `json:"wording_version"`
 	} `json:"metadata"`
@@ -108,10 +113,18 @@ func completeCase(raw []byte) string {
 		source = thinkthen.SourceFiles(thinkthen.FileSource{Paths: d.Paths, Unit: units[d.Unit], Window: d.Window, ImageReader: d.ImageReader})
 	} else {
 		records := []thinkthen.RecordInput{}
-		for _, item := range d.Items {
+		for at, item := range d.Items {
 			r := thinkthen.RecordInput{}
 			if !d.ImageOnly {
-				r.Original = thinkthen.Some(caseContent(item, d.Text))
+				if d.CaptionFiles {
+					b, err := os.ReadFile(fmt.Sprintf("caption-%d.txt", at))
+					if err != nil {
+						panic(err)
+					}
+					r.Original = thinkthen.Some(thinkthen.Content{Kind: thinkthen.ContentKindText, Text: string(b)})
+				} else {
+					r.Original = thinkthen.Some(caseContent(item, d.Text))
+				}
 			}
 			if d.ContextPresent {
 				r.Context = thinkthen.Some(caseContent(d.Context, true))
@@ -121,13 +134,39 @@ func completeCase(raw []byte) string {
 				if err != nil {
 					panic(err)
 				}
-				r.Images = append(r.Images, thinkthen.ImageInput{Media: thinkthen.MediaPng, Bytes: b})
+				r.Images = append(r.Images, thinkthen.ImageInput{Media: func() thinkthen.Media {
+					if d.Media == "image/jpeg" {
+						return thinkthen.MediaJpeg
+					}
+					return thinkthen.MediaPng
+				}(), Bytes: b})
+			}
+			if at < len(d.CandidateOrders) {
+				for _, name := range d.CandidateOrders[at] {
+					r.Options = append(r.Options, thinkthen.Choice{Name: name})
+				}
 			}
 			records = append(records, r)
 		}
 		source = thinkthen.Records(records)
 	}
 	ctx := context.Background()
+	if d.HeldCancel {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithCancel(ctx)
+		defer cancel()
+		joined := make(chan struct{})
+		defer func() { <-joined }()
+		go func() {
+			defer close(joined)
+			b, err := bufio.NewReader(os.Stdin).ReadByte()
+			if err != nil || b != '!' {
+				panic("missing cancellation signal")
+			}
+			cancel()
+			fmt.Println("cancel-fired")
+		}()
+	}
 	if d.Operation.Injection == "cancel_token" {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithCancel(ctx)

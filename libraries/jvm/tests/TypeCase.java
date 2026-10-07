@@ -15,7 +15,7 @@ import thinkthen.Json;
 public final class TypeCase {
     public static void main(String[] args) {
         if(args.length==1&&args[0].equals("native")){try(Door e=new Door(System.getenv("TT_NATIVE_SETTINGS"))){NativeChecks.run(e);}System.out.println("{\"native\":\"pass\"}");return;}
-        if(args.length==2&&args[0].equals("complete")){var d=Json.parseObject(args[1]);try(Door e=new Door((String)d.get("engine_settings"));Door.Token token=e.token()){System.out.println(NativeCases.run(e,d,token));}catch(Door.NativeFailure f){System.out.println(NativeCases.failure(f));}return;}
+        if(args[0].equals("complete")){var d=Json.parseObject(args.length==2?args[1]:NativeCases.frame());try(Door e=new Door((String)d.get("engine_settings"));Door.Token token=e.token()){System.out.println(NativeCases.run(e,d,token));}catch(Door.NativeFailure f){System.out.println(NativeCases.failure(f));}return;}
         String mode = args.length == 2 || args[0].equals("limits") ? args[0] : "";
         try (Door door = new Door()) {
             System.out.println(switch (mode) {

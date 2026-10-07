@@ -1,7 +1,7 @@
 import thinkthen.Door
 
 fun main(args: Array<String>) {
-    if(args.size==2&&args[0]=="complete") { val d=thinkthen.Json.parseObject(args[1]);try { KotlinComplete(d["engine_settings"] as String).use { e -> e.token().use { token -> println(NativeCases.run(e,d,token)) } } } catch(f:Door.NativeFailure) {println(NativeCases.failure(f))};return }
+    if(args[0]=="complete") { val d=thinkthen.Json.parseObject(if(args.size==2)args[1] else NativeCases.frame());try { KotlinComplete(d["engine_settings"] as String).use { e -> e.token().use { token -> println(NativeCases.run(e,d,token)) } } } catch(f:Door.NativeFailure) {println(NativeCases.failure(f))};return }
     if(args.size==1&&args[0]=="native") { KotlinComplete(System.getenv("TT_NATIVE_SETTINGS")).use { engine ->
         val call = NativeChecks.run(engine)
         check(call.rows()[0].common().answer().value().probability().value()==0.9)

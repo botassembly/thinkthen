@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -16,7 +17,7 @@ import (
 // reads each annotate row member through ReadField and prints its state.
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "complete" {
-		raw, err := io.ReadAll(os.Stdin)
+		raw, err := bufio.NewReaderSize(os.Stdin, 1).ReadBytes('\n')
 		if err != nil {
 			panic(err)
 		}
