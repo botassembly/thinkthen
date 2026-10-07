@@ -1,6 +1,6 @@
 # 0443: Carry SDK call identity and cache instructions
 
-Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
+Status: in progress. Native behavior is implemented and landed. Remaining surface adoption is tracked in the existing SDK, foreign binding, SQL, dataframe and MCP family checklists; final shared-case qualification remains.
 
 Lane1 foundation correction against reviewed 30e42a974 plus main e316a9a7e:
 CallFacts permanently retains reported-model disagreement and omits the scalar

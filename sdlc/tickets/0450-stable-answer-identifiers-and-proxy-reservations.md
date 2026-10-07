@@ -1,6 +1,6 @@
 # 0450: Give each answer a stable identifier and reserve proxy policy fields
 
-Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
+Status: in progress. Native behavior is implemented and landed. Remaining surface adoption is tracked in the existing SDK, foreign binding, SQL, dataframe and MCP family checklists; final shared-case qualification remains.
 
 Native admission WIP: reserved opaque IDs, normalized code readings,
 question/recognition reservations and typed response overrides are concrete

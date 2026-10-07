@@ -1,6 +1,6 @@
 # 0444: Version cache keys and preserve offline replay
 
-Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
+Status: in progress. Native versioned identity, migration/replay and the cache index fix are landed. Reconcile all listed Python, TypeScript, Ruby, R and DuckDB key tests and the core key comment; required main library checks must pass without exit 77 before completion.
 
 Milestone: 0.2
 

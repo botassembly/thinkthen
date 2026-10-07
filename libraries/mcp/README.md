@@ -88,15 +88,17 @@ Run the independent client fixtures with `python3 libraries/mcp/test_client.py`.
 makes an actual recorded decide call. Release smoke runs it against the unpacked
 executable and checks its existing backend counter for zero sends.
 `conformance.py LOOPBACK_PORT ABSOLUTE_BINARY` runs the entire required MCP
-inventory, currently 250 entries, through named public methods. It reuses the
+inventory, currently 251 entries, through named public methods. Ordered rank-set
+members retain their actual native child results, authors, identities, probabilities
+and metadata. Call token totals come from native call facts. It reuses the
 canonical fixture projection and independent assertions, isolates request counts
 and body capture per case, and fails for missing native fields or unsupported
 inputs. It accepts no case selector. `test_installed.py ABSOLUTE_BINARY ABSOLUTE_BACKEND`
 uses an owned loopback backend and scratch home for names/files, sources,
 controls, secrecy, cache/replay, cancellation and EOF. Required cells beyond the
 executed consumer remain failed in the shared parity runner; fixture success
-never qualifies parity. Complete adoption remains pending while these failures
-are fixed; the current script is a failing full baseline.
+never qualifies parity. Final qualification also requires the owning shared parity
+run, bounded timing and real Windows checks.
 
 Unix uses owned unbuffered descriptors and bounded polling. Windows uses owned
 pipe handles with a joined cancellation watcher. Each synchronous operation

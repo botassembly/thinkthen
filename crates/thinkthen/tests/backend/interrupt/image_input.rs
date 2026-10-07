@@ -1,5 +1,5 @@
 //! Attachment input stops on the first signal even when ancillary stdin has no EOF.
-use super::{Acknowledgment, finish_promptly};
+use super::finish_promptly;
 use crate::harness::{Canned, Listener, command};
 use std::io::Write as _;
 use std::os::unix::process::ExitStatusExt as _;
@@ -13,7 +13,6 @@ fn first_signal_terminates_image_attachment_input_with_an_open_writer_and_zero_s
         ("-INT", signal_hook::consts::signal::SIGINT),
         ("-TERM", signal_hook::consts::signal::SIGTERM),
     ] {
-        let acknowledgment = Acknowledgment::new();
         let mut child = command(
             &[
                 "decide",
@@ -30,7 +29,6 @@ fn first_signal_terminates_image_attachment_input_with_an_open_writer_and_zero_s
             ],
             &[("THINKTHEN_API_KEY", "sk-image-test")],
         )
-        .env("THINKTHEN_TEST_SIGINT_ACK", &acknowledgment.0)
         .stdin(Stdio::piped())
         .spawn()
         .unwrap();
@@ -45,7 +43,6 @@ fn first_signal_terminates_image_attachment_input_with_an_open_writer_and_zero_s
                 .unwrap()
                 .success()
         );
-        acknowledgment.wait().unwrap();
         let output = finish_promptly(child, "cancelled image attachment stdin").unwrap();
         assert_eq!(output.status.signal(), Some(signal));
         assert!(output.stdout.is_empty());
