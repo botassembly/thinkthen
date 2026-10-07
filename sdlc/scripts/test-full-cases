@@ -13,6 +13,12 @@ case ${1:-} in
 --run) ;;
 *) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;
 esac
+shift
+artifact_dir=
+if [ "$#" -gt 0 ]; then
+    [ "$#" -eq 2 ] && [ "$1" = --artifacts ] && [ -d "$2" ] || { echo 'test-full-cases: expected --artifacts DIR' >&2; exit 2; }
+    artifact_dir=$(CDPATH= cd -- "$2" && pwd)
+fi
 . "$(dirname -- "$0")/heavy-lock"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 sh "$REPO/sdlc/scripts/test"
@@ -20,4 +26,8 @@ cd -- "$REPO"
 THINKTHEN_TEST_PROFILE=full
 export THINKTHEN_TEST_PROFILE
 unset THINKTHEN_CONFORMANCE_IDS
-sh sdlc/scripts/surfaces --full-functional
+if [ -n "$artifact_dir" ]; then
+    sh sdlc/scripts/surfaces --full-functional --artifacts "$artifact_dir"
+else
+    sh sdlc/scripts/surfaces --full-functional
+fi

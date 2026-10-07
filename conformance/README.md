@@ -88,16 +88,33 @@ Each shared consumer command executes once, including each distinct public
 variant. Missing or failed required cells, skipped cases and exit 77 fail the
 checkpoint. It also retains the C crate's private safety checks and the
 release-pack/release-smoke tail. `surfaces --parity` uses the same strict path.
+For final installed parity, pass `--artifacts DIR` to either entry point. This
+mode selects each release package before starting consumers, extracts the
+command and C boundary once, then runs C safety and the strict installed
+matrix. It does not repeat the source matrices or rebuild product packages.
+The separate release-pack/release-smoke checkpoint remains required. Missing,
+ambiguous or linked package selections and incomplete public layouts fail.
 Routine gates validate the inventory and retain their existing scope; the
 Rust-only hosted gate does not qualify the complete support table. The overall
 ticket stays open until the required final checkpoint passes.
 
 Consumers receive owned HOME/XDG directories. Explicit `THINKTHEN_TOOLCHAINS`,
-`R_LIBS_USER`, `PUB_CACHE` and `UV_CACHE_DIR` paths supply build dependencies
+`R_LIBS_USER`, `PUB_CACHE`, `UV_CACHE_DIR` and `UV_PYTHON_INSTALL_DIR` paths supply build dependencies
 without copying user configuration. Use owned writable pub and uv caches
 seeded from available offline dependencies; do not write a shared cache while
 holding its read lock.
 The caller's `CARGO_BUILD_JOBS` limit is retained and defaults to one.
+
+Installed callers may copy test code and read the shared fixtures from the
+checkout. Product imports, headers, libraries and commands resolve to the
+selected archives. The existing C executor accepts `consumer`, `header`,
+`library` and `compile_consumer` keywords. Its compiler callback receives the
+scratch directory, compiler environment, public include directory, library
+file and generated C source, and returns its actual executable. Optional
+`adapter_header` and `initialize` inputs compose wrapper declarations and
+runtime startup in that same caller. They do not copy or rewrite the shared
+Python executor. Rust's shared fixture compiler accepts the installed
+consumer manifest and retains the lane's existing Python target directory.
 
 Each required declaration has `id`, one of the ten `verb` values, `kind`,
 `input`, `expect` and `preconditions`. References resolve to existing fixtures;

@@ -12,6 +12,38 @@ fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    [ -f "$THINKTHEN_ARTIFACT" ] && [ ! -L "$THINKTHEN_ARTIFACT" ] || { echo 'rust: installed crate is missing or linked' >&2; exit 1; }
+    root=$(CDPATH= cd ../.. && pwd)
+    scratch_dir installed
+    mkdir "$installed/crate" "$installed/consumer"
+    tar -xzf "$THINKTHEN_ARTIFACT" -C "$installed/crate" --strip-components=1
+    python3 - "$root" "$installed" <<'RUSTCONSUMER'
+import shutil,sys
+from pathlib import Path
+root,installed=map(Path,sys.argv[1:])
+project=installed/'consumer'
+manifest=(root/'libraries/python/Cargo.toml').read_text()
+start=manifest.index('[lib]\n');end=manifest.index('[dependencies]\n',start)
+manifest=manifest[:start]+manifest[end:]
+manifest=manifest.replace('../../crates/thinkthen',str(installed/'crate'))
+(project/'Cargo.toml').write_text(manifest)
+shutil.copyfile(root/'libraries/python/Cargo.lock',project/'Cargo.lock')
+shutil.copytree(root/'libraries/python/examples/native_case',project/'src')
+main=project/'src/main.rs'
+main.write_text(main.read_text().replace('../../../r/thinkthen/src/rust/src/complete/mod.rs',str(root/'libraries/r/thinkthen/src/rust/src/complete/mod.rs')))
+RUSTCONSUMER
+    python3 - "$root" "$installed/consumer/Cargo.toml" <<'RUSTNATIVE'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+binary=root/'libraries/python/target/debug/thinkthen-python'
+sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]))))
+RUSTNATIVE
+    echo 'rust: pass, installed'
+    exit 0
+fi
 if [ "$profile" = smoke ]; then
     smoke_guard
     cargo build --quiet --locked --offline --bin smoke

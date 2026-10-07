@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+import tarfile
 import tempfile
 
 
@@ -164,10 +165,11 @@ def consumer_environment(scratch, port):
              'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD',
              'THINKTHEN_TOOLCHAINS', 'THINKTHEN_DUCKDB_CLI',
              'SQLITE_AMALGAMATION', 'THINKTHEN_PRIVATE_NAMES',
-             'R_LIBS_USER', 'PUB_CACHE', 'UV_CACHE_DIR')
+             'R_LIBS_USER', 'PUB_CACHE', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     for name, fallback in [('CARGO_HOME', '.cargo'), ('RUSTUP_HOME', '.rustup')]:
         env[name] = os.environ.get(name, str(Path.home() / fallback))
+    env.setdefault('UV_PYTHON_INSTALL_DIR', str(Path.home() / '.local/share/uv/python'))
     for name, folder in [('HOME', 'home'), ('XDG_CONFIG_HOME', 'config'),
                          ('XDG_CACHE_HOME', 'cache'), ('XDG_STATE_HOME', 'state'),
                          ('APPDATA', 'appdata'), ('LOCALAPPDATA', 'localappdata')]:
@@ -184,6 +186,50 @@ def consumer_environment(scratch, port):
                THINKTHEN_BASE_URL=f'http://127.0.0.1:{port}/generic/v1',
                THINKTHEN_API_KEY='sk-conformance-loopback')
     return env
+
+
+def installed_artifacts(directory, consumers):
+    """Select the actual release inputs before any public consumer starts."""
+    directory = Path(directory).resolve(strict=True)
+    if not directory.is_dir():
+        raise ValueError('parity artifacts must be a directory')
+    version = re.search(r'^version = "([^"]+)"$',
+                        (ROOT / 'crates/thinkthen/Cargo.toml').read_text(), re.M).group(1)
+    target = subprocess.check_output(['rustc', '-vV'], text=True).split('host: ', 1)[1].splitlines()[0]
+
+    def select(patterns):
+        matches = sorted({path for pattern in patterns for path in directory.glob(pattern)})
+        if len(matches) != 1 or not matches[0].is_file() or matches[0].is_symlink():
+            raise ValueError(f'parity requires one regular artifact: {", ".join(patterns)}')
+        return str(matches[0])
+
+    command_targets = [target]
+    if target.endswith('-linux-gnu'):
+        command_targets.append(target.removesuffix('-gnu') + '-musl')
+    command = select([f'thinkthen-{version}-{host}.tar.gz' for host in command_targets])
+    native = select([f'thinkthen-c-{version}-{target}.tar.gz'])
+    dart = select([f'thinkthen-dart-{version}-{target}.tar.gz'])
+    found = {}
+    for consumer, row in consumers.items():
+        surface = row['surface']
+        if consumer in ('cli', 'mcp'):
+            artifact = command
+        elif consumer in ('rust', 'rust-polars'):
+            artifact = select([f'thinkthen-{version}.crate'])
+        elif surface == 'libraries/python':
+            artifact = select([f'thinkthen-{version}-*.whl'])
+        elif surface == 'libraries/typescript':
+            artifact = select([f'thinkthen-{version}.tgz'])
+        elif surface == 'libraries/ruby':
+            artifact = select([f'thinkthen-{version}-*.gem'])
+        elif consumer == 'r':
+            artifact = select([f'thinkthen_{version}.tar.gz'])
+        else:
+            family = 'postgresql16' if consumer == 'postgresql' else 'flutter' if consumer in ('dart', 'flutter') else surface.split('/')[-1]
+            artifact = select([f'thinkthen-{family}-{version}-{target}.tar.gz'])
+        found[consumer] = dict(THINKTHEN_ARTIFACT=artifact,
+                               THINKTHEN_C_ARTIFACT=native, THINKTHEN_DART_ARTIFACT=dart)
+    return found, command, native
 
 
 def summarize(consumer, cases, code, seen, error, log):
@@ -232,7 +278,7 @@ def support_table(parity, matrix):
     return '\n'.join(lines) + '\n'
 
 
-def run(port, baseline=False):
+def run(port, baseline=False, artifact_dir=None):
     if not re.fullmatch(r'[0-9]+', port) or not 0 < int(port) < 65536:
         raise ValueError('parity needs an owned loopback port')
     parity = inventory()
@@ -240,13 +286,40 @@ def run(port, baseline=False):
         raise ValueError('strict parity refuses a case selector')
     cases = {case['id']: case for case in parity['required_cases']}
     consumers = {row['id']: row for row in all_consumers(parity)}
+    if artifact_dir is not None and baseline:
+        raise ValueError('installed parity cannot be a partial baseline')
+    artifacts, command_archive, native_archive = installed_artifacts(artifact_dir, consumers) if artifact_dir is not None else ({}, None, None)
     output_dir = ROOT / 'target/parity'
     output_dir.mkdir(parents=True, exist_ok=True)
     commands = {}
     for row in consumers.values():
         command = ['python3', 'conformance/c_parity.py'] if row['id'] == 'c' else row['baseline']
+        if artifacts and row['id'] == 'rust':
+            command = ['sh', 'libraries/rust/check.sh']
+        if artifacts and row['id'] == 'cli' and command[0] == 'cargo':
+            raise ValueError('installed parity requires the actual CLI consumer')
         commands.setdefault(tuple(command), []).append(row['id'])
     matrix = []
+    with tempfile.TemporaryDirectory(prefix='thinkthen-parity-artifacts-') as unpacked:
+        installed = Path(unpacked)
+        if artifacts:
+            for archive, folder in [(command_archive, 'command'), (native_archive, 'c')]:
+                with tarfile.open(archive) as packed:
+                    packed.extractall(installed / folder, filter='data')
+            binary = installed / 'command/thinkthen'
+            header = installed / 'c/include/thinkthen.h'
+            libraries = [path for name in ('libthinkthen.so', 'libthinkthen.dylib')
+                         if (path := installed / 'c/lib' / name).is_file()]
+            if not binary.is_file() or not os.access(binary, os.X_OK) or not header.is_file() or len(libraries) != 1:
+                raise ValueError('installed command or native archive has an incomplete public layout')
+            installed_library = libraries[0]
+        else:
+            installed_library = None
+        return run_consumers(port, baseline, parity, cases, consumers, commands, output_dir,
+                             artifacts, installed, installed_library, matrix)
+
+
+def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir, artifacts, installed, installed_library, matrix):
     for command, ids in commands.items():
         label = '+'.join(ids)
         log = output_dir / (label + '.log')
@@ -255,8 +328,14 @@ def run(port, baseline=False):
         if execute:
             print(f'parity consumer: {label}', flush=True)
             args = list(command) + ([] if command[0] == 'cargo' else [port])
+            if artifacts and ids == ['cli']:
+                args.append(str(installed / 'command/thinkthen'))
             with tempfile.TemporaryDirectory(prefix='thinkthen-parity-') as scratch, log.open('w') as stream:
                 env = consumer_environment(scratch, port)
+                if artifacts:
+                    env.update(artifacts[ids[0]], THINKTHEN_COMMAND=str(installed / 'command/thinkthen'),
+                               THINKTHEN_C_HEADER=str(installed / 'c/include/thinkthen.h'),
+                               THINKTHEN_C_LIBRARY=str(installed_library))
                 try:
                     process = subprocess.run(['sh', 'sdlc/scripts/time-limit', '1800', *args],
                                              cwd=ROOT, env=env, stdout=stream,
@@ -291,9 +370,11 @@ def main():
         return 0
     if len(sys.argv) == 3 and sys.argv[2] == '--baseline':
         return run(sys.argv[1], baseline=True)
+    if len(sys.argv) == 4 and sys.argv[2] == '--artifacts':
+        return run(sys.argv[1], artifact_dir=sys.argv[3])
     if len(sys.argv) == 2:
         return run(sys.argv[1])
-    raise ValueError('usage: parity.py --validate|PORT [--baseline] (called by surfaces)')
+    raise ValueError('usage: parity.py --validate|PORT [--baseline|--artifacts DIR] (called by surfaces)')
 
 
 if __name__ == '__main__':

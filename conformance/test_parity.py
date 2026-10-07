@@ -146,6 +146,7 @@ class PublicAssertions(unittest.TestCase):
             'THINKTHEN_TOOLCHAINS': str(Path(scratch) / 'tools'), 'CARGO_BUILD_JOBS': '1',
             'R_LIBS_USER': str(Path(scratch) / 'r-library'), 'PUB_CACHE': str(Path(scratch) / 'pub-cache'),
             'UV_CACHE_DIR': str(Path(scratch) / 'uv-cache'),
+            'UV_PYTHON_INSTALL_DIR': str(Path(scratch) / 'uv-python'),
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
@@ -160,6 +161,7 @@ class PublicAssertions(unittest.TestCase):
             self.assertEqual(env['R_LIBS_USER'], str(Path(scratch) / 'r-library'))
             self.assertEqual(env['PUB_CACHE'], str(Path(scratch) / 'pub-cache'))
             self.assertEqual(env['UV_CACHE_DIR'], str(Path(scratch) / 'uv-cache'))
+            self.assertEqual(env['UV_PYTHON_INSTALL_DIR'], str(Path(scratch) / 'uv-python'))
             self.assertEqual((Path(env['HOME']) / '.cache/thinkthen-toolchains').resolve(),
                              Path(scratch) / 'tools')
             self.assertFalse((Path(env['HOME']) / '.config').exists())
@@ -214,13 +216,88 @@ class PublicAssertions(unittest.TestCase):
                 parity.run(port)
 
 
+class InstalledInputs(unittest.TestCase):
+    def setUp(self):
+        self.consumers = {row['id']: row for row in parity.all_consumers(parity.inventory())}
+        self.native = 'thinkthen-c-0.2.0-x86_64-unknown-linux-gnu.tar.gz'
+        self.command = 'thinkthen-0.2.0-x86_64-unknown-linux-musl.tar.gz'
+        self.dart = 'thinkthen-dart-0.2.0-x86_64-unknown-linux-gnu.tar.gz'
+
+    def packages(self, folder):
+        names = [self.command, self.native, self.dart, 'thinkthen-0.2.0.crate',
+                 'thinkthen-0.2.0-cp310-abi3-linux_x86_64.whl', 'thinkthen-0.2.0.tgz',
+                 'thinkthen-0.2.0-x86_64-linux.gem', 'thinkthen_0.2.0.tar.gz']
+        names += [f'thinkthen-{family}-0.2.0-x86_64-unknown-linux-gnu.tar.gz' for family in
+                  ['go', 'csharp', 'jvm', 'cpp', 'swift', 'zig', 'objective-c', 'php',
+                   'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16']]
+        for name in names:
+            (folder / name).touch()
+        # The plain diagnostic gem is shipped alongside the actual native gem.
+        (folder / 'thinkthen-0.2.0.gem').touch()
+
+    def select(self, folder):
+        with patch.object(parity.subprocess, 'check_output', return_value='host: x86_64-unknown-linux-gnu\n'):
+            return parity.installed_artifacts(folder, self.consumers)
+
+    def test_each_group_uses_its_actual_package_and_shared_native_inputs(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch)
+            self.packages(folder)
+            inputs, command, native = self.select(folder)
+            self.assertEqual(set(inputs), set(self.consumers))
+            self.assertEqual(Path(command).name, self.command)
+            self.assertEqual(Path(native).name, self.native)
+            for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
+                          ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
+                          ('dart', 'flutter'), ('rust', 'rust-polars')]:
+                self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
+            self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
+                             'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+            for row in inputs.values():
+                self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
+                self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
+                self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
+
+    def test_missing_ambiguous_linked_and_non_file_inputs_refuse(self):
+        for defect in ['missing', 'ambiguous', 'linked', 'directory']:
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as scratch:
+                folder = Path(scratch)
+                self.packages(folder)
+                if defect == 'ambiguous':
+                    (folder / 'thinkthen-0.2.0-x86_64-unknown-linux-gnu.tar.gz').touch()
+                else:
+                    required = folder / self.native
+                    required.unlink()
+                    if defect == 'linked':
+                        required.symlink_to(folder / self.dart)
+                    elif defect == 'directory':
+                        required.mkdir()
+                with self.assertRaisesRegex(ValueError, 'one regular artifact'):
+                    self.select(folder)
+
+    def test_installed_c_inputs_refuse_before_any_checkout_build(self):
+        for inputs in [dict(THINKTHEN_ARTIFACT='/missing/archive'),
+                       dict(THINKTHEN_C_HEADER='/missing/header'),
+                       dict(THINKTHEN_C_HEADER='/missing/header', THINKTHEN_C_LIBRARY='/missing/library')]:
+            with self.subTest(inputs=inputs):
+                result = subprocess.run([sys.executable, str(parity.ROOT / 'conformance/c_parity.py')],
+                                        env={'PATH': '/nonexistent', **inputs}, capture_output=True,
+                                        text=True, check=False)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn("'cargo'", result.stderr)
+                self.assertTrue('explicit header and library' in result.stderr or 'No such file or directory' in result.stderr)
+
+
 class FullCheckpoint(unittest.TestCase):
     def test_required_parity_keeps_private_safety_and_release_checks_without_duplicate_consumers(self):
         for entry, args in [('test-full-cases', ['--run']),
                             ('surfaces', ['--full-functional']), ('surfaces', ['--parity']),
                             ('surfaces', ['--full-functional', '--publish', 'checkpoint/surfaces/test',
-                                          '--publish-root', '/unused-publication-root'])]:
-            for failed in [None, 'safety', 'parity', 'smoke']:
+                                          '--publish-root', '/unused-publication-root']),
+                            ('test-full-cases', ['--run', '--artifacts', '.']),
+                            ('surfaces', ['--full-functional', '--artifacts', '.'])]:
+            installed = '--artifacts' in args
+            for failed in [None, 'safety', 'parity'] + ([] if installed else ['smoke']):
                 with self.subTest(entry=entry, failed=failed), tempfile.TemporaryDirectory() as folder:
                     root = Path(folder)
                     scripts = root / 'sdlc/scripts'
@@ -245,6 +322,7 @@ class FullCheckpoint(unittest.TestCase):
                             'if sys.argv[1:] != ["--validate"]:\n'
                             ' assert "THINKTHEN_CONFORMANCE_IDS" not in os.environ\n'
                             ' assert os.environ["THINKTHEN_TEST_PROFILE"] == "full"\n'
+                            ' assert ("--artifacts" in sys.argv) == bool(os.environ["INSTALLED"])\n'
                             ' with open("calls", "a") as f: f.write("parity\\n")\n'
                             ' sys.exit(int(os.environ["PARITY_CODE"]))\n'),
                     }
@@ -258,11 +336,12 @@ class FullCheckpoint(unittest.TestCase):
                            'HOME': str(root / 'home'), 'SAFETY_CODE': '77' if failed == 'safety' else '0',
                            'PARITY_CODE': '1' if failed == 'parity' else '0',
                            'SMOKE_CODE': '77' if failed == 'smoke' else '0',
+                           'INSTALLED': 'yes' if installed else '',
                            'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
                     result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
                                             env=env, capture_output=True, text=True, check=False)
                     expected = ['safety'] if failed == 'safety' else ['safety', 'parity']
-                    if failed not in ('safety', 'parity'):
+                    if failed not in ('safety', 'parity') and not installed:
                         expected += ['pack', 'smoke']
                     if entry == 'test-full-cases':
                         expected.insert(0, 'workspace')

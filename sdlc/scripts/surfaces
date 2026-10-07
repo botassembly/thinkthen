@@ -18,6 +18,7 @@ profile=routine
 registry_only=0
 parity=0
 parity_baseline=
+artifact_dir=
 # `--publish TAG` copies the release files this run packs to ROOT/TAG through publish-builds.
 # ROOT is `--publish-root`, else THINKTHEN_PUBLISH_ROOT; with neither, it refuses. Only the coordinator asks for it.
 publish_tag= publish_root=
@@ -29,12 +30,16 @@ while [ "$#" -gt 0 ]; do
     --registry) registry_only=1 ;;
     --parity) parity=1; profile=full; mode=release ;;
     --parity-baseline) parity=1; parity_baseline=--baseline; profile=full; mode=release ;;
+    --artifacts) [ "$#" -ge 2 ] && [ -d "$2" ] || { echo 'surfaces: --artifacts needs a directory' >&2; exit 2; }; artifact_dir=$(CDPATH= cd -- "$2" && pwd); shift ;;
     --publish) [ "$#" -ge 2 ] && [ "${2#-}" = "$2" ] || { echo 'surfaces: --publish needs a tag' >&2; exit 2; }; publish_tag=$2; shift ;;
     --publish-root) [ "$#" -ge 2 ] || { echo 'surfaces: --publish-root needs a folder' >&2; exit 2; }; publish_root=$2; shift ;;
     *) echo "surfaces: unknown option $1" >&2; exit 2 ;;
     esac
     shift
 done
+if [ -n "$artifact_dir" ] && { [ -n "$parity_baseline" ] || [ "$profile" != full ] || [ "$registry_only" -eq 1 ] || [ -n "$publish_tag" ]; }; then
+    echo 'surfaces: installed artifacts require full parity without baseline, registry or publication' >&2; exit 2
+fi
 if [ "$parity" -eq 1 ] && { [ "$registry_only" -eq 1 ] || [ -n "$publish_tag" ]; }; then
     echo 'surfaces: --parity cannot combine registry or publication' >&2; exit 2
 fi
@@ -260,6 +265,10 @@ if [ "$parity" -eq 1 ] || [ "$profile" = full ]; then
     verdict "$mode" libraries/c "$code" || exit 1
     unset THINKTHEN_CONFORMANCE_IDS
     export THINKTHEN_TEST_PROFILE=full
+    if [ -n "$artifact_dir" ]; then
+        python3 conformance/parity.py "$port" --artifacts "$artifact_dir"
+        exit 0
+    fi
     python3 conformance/parity.py "$port" ${parity_baseline:+"$parity_baseline"}
 else
 for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
