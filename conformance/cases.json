@@ -7953,16 +7953,8 @@
         "surface": ".",
         "owner": "0432",
         "baseline": [
-          "cargo",
-          "test",
-          "--locked",
-          "--offline",
-          "-j2",
-          "--package",
-          "thinkthen",
-          "conformance_tests",
-          "--",
-          "--nocapture"
+          "python3",
+          "conformance/cli_parity.py"
         ]
       },
       {
