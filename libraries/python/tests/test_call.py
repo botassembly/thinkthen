@@ -352,7 +352,7 @@ def test_portable_questions_ride_one_request_in_public_bulk_text_shapes(backend,
 
 
 @contextmanager
-def capturing_filter_listener(answer=None, usage=True):
+def capturing_filter_listener(answer=None, usage=True, model="jev-latest"):
     """Keep wire bodies; a callback's None retains the normal decision answer."""
     bodies = []
 
@@ -377,7 +377,7 @@ def capturing_filter_listener(answer=None, usage=True):
                     continue
                 first = request["state"] == "one" or 'The text is "one"' in question["instructions"]
                 answers[name] = {"type": "noul", "noul": 0.1 if first else 0.9}
-            reply_fields = {"model": "jev-latest", "answers": answers}
+            reply_fields = {"model": model, "answers": answers}
             if usage:
                 reply_fields["usage"] = {"input_tokens": 6, "output_tokens": 3}
             reply = json.dumps(reply_fields,
@@ -433,15 +433,15 @@ def test_judge_eager_and_stream_share_exact_distinct_record_bodies(backend, tmp_
 def test_explicit_tally_counts_completed_calls_cache_and_missing_usage(backend, tmp_path):
     """Two simultaneously started calls, one identical cached replay, and a
     no-usage reply use the core tally without a mutable last-call slot."""
-    with capturing_filter_listener() as (url, first), \
-         capturing_filter_listener(usage=False) as (other, second):
+    with capturing_filter_listener(model="jev-1.13.0") as (url, first), \
+         capturing_filter_listener(usage=False, model="jev-1.13.0") as (other, second):
         env = child_env(backend, tmp_path, OWNED_CACHE=str(tmp_path / "owned-cache"),
                         OTHER_URL=other.removesuffix("/systemone"))
         env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
         printed = run("""
         import os, threading, concurrent.futures, thinkthen as tt
         tally = tt.Tally()
-        engine = tt.Engine(model="jev-latest", cache=os.environ["OWNED_CACHE"])
+        engine = tt.Engine(model="jev-1.13.0", cache=os.environ["OWNED_CACHE"])
         judge = engine.decide("Is it late?", tally=tally)
         gate = threading.Barrier(2)
         def ask(text):
@@ -463,7 +463,7 @@ def test_explicit_tally_counts_completed_calls_cache_and_missing_usage(backend, 
         assert printed.splitlines() == [
             "[False, True] 2 2 0 True True",
             "False 3 2 1",
-            "True 4 3 1 None None jev-latest",
+            "True 4 3 1 None None jev-1.13.0",
         ]
         assert len(first) == 2
         assert len(second) == 1
