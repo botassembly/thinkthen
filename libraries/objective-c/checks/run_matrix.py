@@ -129,7 +129,7 @@ ROOT = Path(__file__).resolve().parents[3]
 CONSUMER = 'objective-c'
 # Complete native public cases, using the shared input and assertion inventory.
 import sqlite3
-sys.path.insert(0, str(ROOT / 'conformance'))
+sys.path[:0] = [str(ROOT / 'conformance/children'), str(ROOT / 'conformance')]
 import c_parity as shared
 from children import child_env
 import parity
