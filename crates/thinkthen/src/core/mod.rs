@@ -92,9 +92,10 @@ pub(crate) use crate::core::plan_summary::PlanSummary;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::price::Prices;
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
+pub use crate::core::question_file::QuestionRole;
 pub(crate) use crate::core::question_file::{
-    Cutting, QuestionFile, QuestionFileError, QuestionRole, Resolved, Source, Sources, Typed, Verb,
-    pointers, resolve, safe_key,
+    Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
+    resolve, safe_key,
 };
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{

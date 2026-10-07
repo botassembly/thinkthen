@@ -54,3 +54,25 @@ Implementation checkpoint: all ten SQL complete doors and shared native composit
 The explicit PostgreSQL client-reader workaround serializes an actual native reader failure as a terminal `read_error` record containing the native Error::complete envelope. Only pre-start Local/Usage failures without facts/IDs are admitted. The SQL native input iterator recreates that typed failure; eager admission returns it before starting, while incremental admission obtains any started facts from its own native batch. DuckDB authorized-reader failures use the same descriptor, and host admission failures return native pre-start error envelopes. `document` selects native annotation-document composition; `json_text` defers JSON-line admission until the owned iterator consumes it. These transport fields never supply facts, spend or identities. Root reviews this concrete bounded extension as part of the complete family contract.
 
 Strict-envelope correction before implementation: the native complete schema forbids unevaluated root properties. The complete SQL return therefore contains `native` holding the untouched formal Call::complete or Error::complete document, plus separate `observations`, `ordinals`, `selection` and incremental `completed` supplements where applicable. This supersedes flattening supplements into the formal native envelope. Actual consumers validate `native` against the existing generated complete schema and extract its known fields with SQL types. No native/shared schema changes. Root reviews this concrete carrier spelling in the whole-family High review; Ian can overturn it.
+
+Authorized-reader native API decision (2026-10-07): add `QuestionFileReference::named`, `reference` and `reference_in`, with `path`, `named_root` and content-only `parse(original_json, QuestionFileRole, parser)`. Re-export the existing pure `QuestionRole` as `QuestionFileRole`; retain its seven roles and ordinary loader behavior. Resolution opens no content. The selected absolute path preserves symlink spelling and `..`; named selection captures the checked canonical questions root. Parsing caps caller-read text, compares the original ordered authored name, checks the existing role classifier, then calls the supplied existing native grammar once and maps grammar failures to Local. Wrong roles and invalid explicit names remain Usage. A missing authored name stays absent. The value has private fields and redacted Debug. Existing private CLI/MCP entrypoints remain. PostgreSQL uses its configured relative lookup directory with `reference_in`, authorizes before resolution, and checks its opened descriptor against the captured named root before content reading. DuckDB keeps its session reader. These adapters adopt the API after the bounded native prerequisite; resolution grants no read permission. The existing whole-family High review covers this choice; Ian can overturn it. Source growth adds 358 nonblank Rust lines (157204 → 157562) for the shared selection/content boundary and focused public regressions; the existing loaders share the name comparison and selector instead of duplicating them.
+
+### Added public declarations
+
+```text
+struct QuestionFileReference
+enum QuestionFileRole
+QuestionFileRole::Atomic
+QuestionFileRole::Choose
+QuestionFileRole::Rank
+QuestionFileRole::Set
+QuestionFileRole::Find
+QuestionFileRole::Recognize
+QuestionFileRole::Relate
+fn QuestionFileReference::named(&str) -> Result<QuestionFileReference, Error>
+fn QuestionFileReference::reference(&str) -> Result<QuestionFileReference, Error>
+fn QuestionFileReference::reference_in(&str, &Path) -> Result<QuestionFileReference, Error>
+fn QuestionFileReference::path(&self) -> &Path
+fn QuestionFileReference::named_root(&self) -> Option<&Path>
+fn QuestionFileReference::parse<T>(&self, &str, QuestionFileRole, impl FnOnce(&str) -> Result<T, Error>) -> Result<T, Error>
+```
