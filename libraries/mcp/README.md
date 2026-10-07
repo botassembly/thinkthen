@@ -72,6 +72,11 @@ before preparation and remains shared through execution. Literal evidence never
 becomes parsed JSON to satisfy an authored pointer or declaration. Structural
 selection requires explicit records or native source composition.
 
+`options.cancelled` is a boolean initial native call cancellation state, defaulting
+to false. True cancels the call's native token before admission and returns the
+native cancelled error with zero sends. Notification cancellation continues to
+cancel active requests and retire their owned work.
+
 Successes return unchanged native complete call envelopes and the packaged native
 output schema. Safe errors use `Error::complete()`, including joined started-call
 facts. Incremental failures additionally retain actual ordered `completed` results. Admission failures invent no call facts. No adapter rewrites schemas,

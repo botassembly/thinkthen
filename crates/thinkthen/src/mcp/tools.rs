@@ -76,6 +76,7 @@ fn input_schema(tool: Tool) -> Value {
         "evidence":{"type":"string"},"records":{"type":"array"},
         "source":source_schema(false, tool.images()),
         "options":{"type":"object","additionalProperties":false,"properties":{
+            "cancelled":{"type":"boolean","default":false,"description":"Initial native call cancellation state; true cancels before admission."},
             "deadline_ms":{"type":"integer","minimum":-1,"maximum":4294967295000u64},
             "max_requests_total":{"type":"integer","minimum":0},
             "batch":{"oneOf":[{"type":"integer","minimum":1},{"const":"max"}]},"context":{"type":"string"},

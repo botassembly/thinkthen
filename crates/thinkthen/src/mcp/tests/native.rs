@@ -1,5 +1,10 @@
 //! Real native control/error serialization checks, not complete-result parity.
-use super::super::output::{NativeObject, native_error, tool_result};
+use super::super::{
+    admission::{CallParams, Invocation},
+    executor::NativeExecutor,
+    output::{NativeObject, native_error, tool_result},
+    runtime::Executor,
+};
 use crate::{CallOptions, CancelToken, Engine, ErrorKind, Question};
 use conformance_backend::Backend;
 
@@ -51,6 +56,24 @@ fn pre_cancel_and_zero_deadline_send_nothing_and_do_not_fabricate_success() {
         .decide_with(&question, "x", CallOptions::new().cancel(&token))
         .unwrap_err();
     assert_eq!(cancelled.kind(), ErrorKind::Cancelled);
+    let notification_token = CancelToken::new();
+    let params: CallParams = serde_json::from_value(serde_json::json!({
+        "name":"decide", "arguments":{"question":"q", "evidence":"x",
+        "options":{"cancelled":true}}
+    }))
+    .unwrap();
+    let initial = NativeExecutor {
+        engine: engine.clone(),
+        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
+    }
+    .execute(Invocation::admit(params).unwrap(), &notification_token)
+    .err()
+    .expect("initial native cancellation");
+    assert_eq!(
+        serde_json::to_value(native_error(&initial)).unwrap(),
+        serde_json::to_value(native_error(&cancelled)).unwrap()
+    );
+    assert!(!notification_token.is_cancelled());
     let deadline = engine
         .decide_with(&question, "x", CallOptions::new().deadline_ms(0).unwrap())
         .unwrap_err();

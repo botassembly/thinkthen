@@ -24,6 +24,11 @@ def fixture(row, cases, named):
                 'setup': case['input'].get('setup'), 'question': {},
                 'items': [], 'expect': case['expect'], 'arm': 'arm/full/capture/v1'}
     value = document(row, cases, named)
+    if row['kind'] == 'settings':
+        for step in value['steps']:
+            if step.get('incremental'):
+                # Reuse the canonical owned JSONL recipe and the native lazy reader.
+                step.update(owned_jsonl=True, paths=['records.jsonl'], source_unit=5, jsonl_root=True)
     if row['kind'] == 'named-input' and named[row['input']['case_ref']]['input'].get('source_case'):
         value['author_expect'] = named[row['input']['case_ref']]['expect']
     if row['kind'] == 'refusal':
@@ -56,9 +61,13 @@ def arguments(step, home, settings):
     for key in ('batch', 'threshold'):
         if key in settings:
             args['options'][key] = settings[key]
+    if step.get('jsonl_root'):
+        args['options']['field'] = ''
     operation = step.get('operation') or {}
     if operation.get('injection') == 'expired_deadline':
         args['options']['deadline_ms'] = 0
+    if operation.get('injection') == 'cancel_token':
+        args['options']['cancelled'] = True
     paths = step.get('paths')
     if operation.get('injection') == 'recording_read_failure':
         paths = [str(home / 'missing-input')]
@@ -126,6 +135,7 @@ def project(packet, verb):
                'observation_ids': [o.get('observation_id', o.get('failure_id')) for o in meta['observations']],
                'detail_inputs': [dict(input=candidate['input'], **candidate.get('source', {})) for candidate in result.get('candidates', []) if candidate['index'] is not None]}
         row['question'] = result.get('question', {})
+        row['answer'] = answer
         row['question_digest'] = meta.get('question_sha256', meta.get('questions_sha256'))
         assert re.fullmatch('[0-9a-f]{64}', row['answer_id']), 'invalid native answer ID'
         assert meta['cached'] is (meta['origin'] in ('cache', 'replay')), 'native cache fact differs from origin'
@@ -209,7 +219,34 @@ def known_fields(step, got, bodies):
             assert 'context' not in body, body
         elif step.get('shared_context') is not None:
             assert body['state'] == step['shared_context'], body
-    if step['verb'] == 'annotate' and 'success' in step['expect']:
+    if step.get('paths') and step.get('source_unit') == 3 and step.get('arm') == 'arm/full/capture/v1':
+        for row in got['rows']:
+            if step['verb'] not in ('find', 'relate'):
+                assert row['input'] == Path(row['file']).read_text(), row
+                assert row['first_line'] == 1 and row['last_line'] == len(row['input'].splitlines()), row
+            if step['verb'] == 'annotate':
+                for member in row['answers'].values():
+                    answer = member['answer']
+                    if answer['kind'] == 'yes_no':
+                        assert answer['probability'] == .9 and member['value'] is True, member
+                    elif answer['kind'] == 'tag':
+                        assert all(p == .9 for p in answer['probabilities'].values()), member
+                        assert member['value'] == list(member['question']['labels']), member
+                    else:
+                        choices = member['question'].get('options', member['question'].get('levels'))
+                        assert list(answer['probabilities']) == choices, member
+                        assert answer['probabilities'][choices[0]] == .9 and answer['confidence'] == .9, member
+                        assert all(abs(p - .1 / (len(choices) - 1)) < 1e-10
+                                   for p in list(answer['probabilities'].values())[1:]), member
+            elif step['verb'] == 'recognize':
+                assert row['answer']['pieces'] and row['answer']['names'], row
+                for piece in row['answer']['pieces']:
+                    assert 0 <= piece['start'] < piece['end'] <= len(row['input']), piece
+                    assert sorted(piece['tags'].values()) == [.025, .025, .025, .025, .9], piece
+                for entity in row['value']['entities']:
+                    assert entity['text'] == row['input'][entity['start']:entity['end']], entity
+                    assert entity['kind'] == 'person', entity
+    elif step['verb'] == 'annotate' and 'success' in step['expect']:
         wanted = step['expect']['success']['answers']
         for actual in got['rows']:
             for member in wanted:
@@ -303,6 +340,8 @@ def run(port, binary):
                     prepare(home, value)
                     identities = []
                     for step in value.get('steps', [value]):
+                        if step.get('owned_jsonl'):
+                            prepare(home, step)
                         if step.get('copy_store'):
                             (home / 'refreshed').mkdir()
                             with sqlite3.connect(home / 'saved/thinkthen.sqlite') as a, sqlite3.connect(home / 'refreshed/thinkthen.sqlite') as b:
@@ -324,6 +363,7 @@ def run(port, binary):
                         before = int(backend.read('count'))
                         got = invoke(binary, backend, env, home, step, settings)
                         count = int(backend.read('count'))
+                        assert got.get('requests_sent', count - before) == count - before, (got, count - before)
                         assertions(row, step, got, count - before if step.get('count_delta') else count)
                         if row['kind'] in ('typed-result', 'result2'):
                             assertions({**row, 'kind': 'behavior'}, {**step, 'metadata_only': False}, got, count)

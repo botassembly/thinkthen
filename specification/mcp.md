@@ -66,6 +66,11 @@ rank top, find none and source filter files-only semantics. Supplied `options.pr
 arguments fail without echoing the payload. Complete input composition follows
 native semantic owners rather than introducing a second reader or scheduler.
 
+`options.cancelled` is a boolean initial native call cancellation state, default
+false. True maps to a cancelled native call token before admission; native checks
+produce the safe cancelled error and zero sends. This does not cancel the protocol
+request token or replace notification cancellation of active work.
+
 Successes return `structuredContent` holding the complete native call object
 and one text content block encoding the equivalent JSON. Declared output
 schemas come from the settled native complete serializers. False, null, empty

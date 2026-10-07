@@ -68,6 +68,8 @@ impl Source {
 #[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Options {
+    #[serde(default)]
+    pub(super) cancelled: bool,
     #[serde(default, deserialize_with = "present")]
     pub(super) deadline_ms: Option<i64>,
     #[serde(default, deserialize_with = "present")]

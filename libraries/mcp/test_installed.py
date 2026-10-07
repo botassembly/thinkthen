@@ -7,7 +7,7 @@ import sys
 import tempfile
 import threading
 import unittest
-from client import Client, CancelledError, ToolError
+from client import Client, CancelledError, ProtocolError, ToolError
 
 ROOT = Path(__file__).resolve().parents[2]
 BINARY, BACKEND = sys.argv[1:3]
@@ -280,6 +280,21 @@ class Installed(unittest.TestCase):
                                      options={'model': 'selected', 'threshold': '0.95:1', 'attempts': True})
             self.assertIs(decision['value']['value'], False)
             self.assertTrue(decision['facts']['attempts'])
+            before = self.count()
+            with self.assertRaises(ToolError) as initial:
+                client.decide(question='Q?', evidence='private-cancel-evidence', options={'cancelled': True})
+            self.assertEqual(initial.exception.result['error']['kind'], 'cancelled')
+            self.assertNotIn('facts', initial.exception.result)
+            self.assertNotIn('private-cancel-evidence', str(initial.exception.result))
+            self.assertEqual(self.count(), before)
+            for invalid in ('true', None, 1):
+                with self.assertRaises(ProtocolError):
+                    client.decide(question='Q?', evidence='x', options={'cancelled': invalid})
+                self.assertEqual(self.count(), before)
+            active = client.decide(question='Q?', evidence='x', options={'cancelled': False})
+            self.assertIs(active['value']['value'], True)
+            self.assertEqual(active['facts']['requests_sent'], 1)
+            self.assertEqual(self.count(), before + 1)
 
     def test_file_folder_text_windows_and_files_only_keep_physical_locations(self):
         folder = self.home / 'inputs'
