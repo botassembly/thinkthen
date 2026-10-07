@@ -1,6 +1,6 @@
 # 0457: Warn on large hand-written source and retain a hard limit
 
-Status: in progress. Policy thresholds and standing instructions are implemented. The C header is 986 nonblank lines after moving extended schema prose to its existing online reference without changing declarations. The named core-freeze checkpoint f464b9b5e permits the bounded Swift question-definition move. NativeViews.swift is 971 nonblank lines and NativeQuestionViews.swift is 140; focused checks and whole-change review remain pending.
+Status: in progress. Source policy and standing instructions warn at 500 and fail at 1,000 across hand-written Rust and binding code. The C documentation and Swift question-carrier repairs passed focused checks and fresh whole review at c76333c98; full lint passed. Final tests and specification checks remain.
 
 Milestone: 0.2
 
