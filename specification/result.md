@@ -191,6 +191,7 @@ For example, one detailed `decide` result is:
 ```
 
 - `value` is the bare judgment. For `filter --details`, it is the cut's boolean; `filter` keeps the record when that boolean is true.
+- Complete native atomic results include `source` only when the input supplied a physical location. It holds the exact `file`, with paired `first_line` and `last_line` for text units. Image filenames omit line coordinates. The original `input` remains intact; physical location changes no model request, cache key or answer identity.
 - `question` names the question kind and the text the model received. `filter` and ordinary `rank` ask a `decide` question, so their `question.verb` is `decide`. `rank` with a saved `score` question has `question.verb: score`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.

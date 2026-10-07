@@ -230,7 +230,7 @@ impl DescriptionBuilder {
 /// A question and its rule, ready for the calls its kind accepts.
 ///
 /// `Debug` names the kind alone.
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct Question {
     pub(crate) metadata: core::declaration::QuestionMetadata,
     pub(crate) core: core::Question,
@@ -239,6 +239,18 @@ pub struct Question {
     pub(crate) profile: Option<ProfileName>,
     pub(crate) batch: Option<Json>,
     pub(crate) kind: Kind,
+}
+
+impl PartialEq for Question {
+    fn eq(&self, other: &Self) -> bool {
+        self.core == other.core
+            && self.threshold == other.threshold
+            && self.model == other.model
+            && self.profile == other.profile
+            && self.batch == other.batch
+            && self.kind == other.kind
+            && self.reading_metadata() == other.reading_metadata()
+    }
 }
 
 impl fmt::Debug for Question {

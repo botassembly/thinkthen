@@ -67,5 +67,6 @@ pub(crate) fn atomic(
         identity,
         legacy,
         rank_position: spec.rank_position,
+        source: None,
     })
 }

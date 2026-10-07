@@ -29,8 +29,9 @@ pub(crate) fn judgment(mut row: Value) -> Value {
             }
         }
     }
-    if let Some(members) = row["answer"]
-        .get_mut("questions")
+    if let Some(members) = row
+        .get_mut("answer")
+        .and_then(|answer| answer.get_mut("questions"))
         .and_then(Value::as_array_mut)
     {
         for member in members {

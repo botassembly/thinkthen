@@ -191,7 +191,7 @@ impl Engine {
                 run.batch_setting = Some(setting.into());
                 run.context_sha256 = held.context_sha256;
                 let events = attempts.then(|| judged.answered.attempts.clone());
-                let canonical = super::atomic(
+                let mut canonical = super::atomic(
                     run,
                     &judged,
                     super::spec(function, &held.question, judged.value.clone(), at),
@@ -200,6 +200,7 @@ impl Engine {
                     events,
                 )
                 .map_err(|_| super::wrong())?;
+                canonical.source = held.source;
                 Ok(Some(CompleteRecord {
                     original: held.original,
                     ordinal: at,

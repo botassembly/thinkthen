@@ -1941,6 +1941,13 @@
         "schema": {
           "$ref": "#/$defs/completeVersion"
         },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
         "threshold": {
           "anyOf": [
             {
@@ -2258,6 +2265,13 @@
         "schema": {
           "$ref": "#/$defs/completeVersion"
         },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
         "threshold": {
           "anyOf": [
             {
@@ -2449,6 +2463,13 @@
         },
         "schema": {
           "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
         },
         "threshold": {
           "anyOf": [
@@ -2845,6 +2866,13 @@
         },
         "schema": {
           "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
         },
         "threshold": {
           "anyOf": [
@@ -3285,6 +3313,42 @@
         }
       ]
     },
+    "completePhysicalSource": {
+      "dependentRequired": {
+        "first_line": [
+          "last_line"
+        ],
+        "last_line": [
+          "first_line"
+        ]
+      },
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": [
+            "integer"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 1,
+          "type": [
+            "integer"
+          ]
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
     "completePosition": {
       "properties": {
         "file": {
@@ -3503,6 +3567,13 @@
         },
         "schema": {
           "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
         },
         "threshold": {
           "type": "null"
@@ -4214,6 +4285,13 @@
         "schema": {
           "$ref": "#/$defs/completeVersion"
         },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
+        },
         "threshold": {
           "type": "null"
         },
@@ -4694,6 +4772,13 @@
         },
         "schema": {
           "$ref": "#/$defs/completeVersion"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completePhysicalSource"
+            }
+          ]
         },
         "threshold": {
           "anyOf": [

@@ -38,7 +38,7 @@ impl RecordChooseQuestion {
     /// Admit ordinary saved choose text, rules, model, profile and batch.
     /// Record candidates replace the entire saved list, when one was authored.
     /// # Errors
-    /// Refuses another verb, invalid question grammar or non-root evidence pointers.
+    /// Refuses another verb or invalid question grammar. Authored pointers use native record selection.
     pub fn from_json(text: &str) -> Result<Self, Error> {
         let (file, batch) = QuestionFile::parse_top(text).map_err(Error::refused)?;
         let typed = Typed {
@@ -48,15 +48,6 @@ impl RecordChooseQuestion {
         };
         let resolved =
             core::resolve(Verb::Choose, None, Some(&file), &typed).map_err(Error::refused)?;
-        if resolved
-            .on()
-            .iter()
-            .any(|pointer| !pointer.as_str().is_empty())
-        {
-            return Err(Error::usage(
-                "a library record choose reading takes no on pointer; select evidence with RecordReading",
-            ));
-        }
         Ok(Self {
             metadata: file.metadata.clone(),
             text: resolved.text().clone(),
@@ -84,6 +75,15 @@ impl RecordChooseQuestion {
     /// # Errors
     /// Refuses a blank or already named model.
     pub fn model(mut self, value: &str) -> Result<Self, Error> {
+        model_of(&mut self.model, value)?;
+        Ok(self)
+    }
+    /// Replace a saved or previously selected model with an explicit caller model.
+    /// The endpoint, credentials and remaining question preparation stay intact.
+    /// # Errors
+    /// Refuses an invalid or blank model.
+    pub fn with_model_override(mut self, value: &str) -> Result<Self, Error> {
+        self.model = None;
         model_of(&mut self.model, value)?;
         Ok(self)
     }
