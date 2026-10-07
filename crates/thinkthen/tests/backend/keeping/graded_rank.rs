@@ -134,7 +134,7 @@ fn compare_score_requests(
         let scored = scored_rows
             .iter()
             .find(|scored| scored["input"] == ranked["input"]);
-        assert_eq!(scored.map(|row| &row["value"]), Some(&ranked["value"]));
+        assert_eq!(scored.map(|row| &row["answer"]), Some(&ranked["answer"]));
         if let Some(scored) = scored {
             assert_present_fixture_digest(scored, body, listener.url());
         }
@@ -190,7 +190,7 @@ fn graded_rank_orders_weighted_positions_and_keeps_the_earlier_top_tie() -> io::
         rows.iter()
             .map(|row| row["value"].as_f64())
             .collect::<Vec<_>>(),
-        [Some(1.5), Some(1.0), Some(1.0), Some(0.3)]
+        [Some(1.0), Some(2.0), Some(3.0), Some(4.0)]
     );
     for row in &rows {
         assert_eq!(row["question"]["verb"], "score");

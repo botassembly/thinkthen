@@ -124,7 +124,7 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
     };
     let invalid = "thinkthen: a backend name uses 1 to 32 lowercase letters, digits, and hyphens\n"
         .to_owned();
-    let unknown = "thinkthen: unknown backend `nowhere`; the built-in backends are `liquid`, `llamacpp`, `mlx`, `ollama`, `openrouter`, `perplexity` and `typesafe`, and the configuration file may name more\n".to_owned();
+    let unknown = "thinkthen: unknown backend `nowhere`; the built-in backends are `liquid`, `llamacpp`, `mlx`, `ollama`, `openai`, `openrouter`, `perplexity` and `typesafe`, and the configuration file may name more\n".to_owned();
     let marker = "Sk_config_marker_0334";
     let built_in = "thinkthen: a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n".to_owned();
     let rate = "thinkthen: configuration backend field `requests_per_minute` must be a whole number from 1 to 60000\n".to_owned();

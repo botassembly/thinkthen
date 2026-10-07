@@ -20,18 +20,22 @@ pub use input_files::{
     read_inputs,
 };
 mod files;
+mod find_question;
 pub use files::{
     FileReader, ReaderOptions, SourceRecord, SourceRecords, SourceUnit, enumerate_files, read_files,
 };
+pub use find_question::FindQuestionFile;
 
 mod annotated;
 mod asking;
 mod batch;
 mod builders;
 mod bulk;
+mod rank_question;
 mod rank_set;
 pub use rank_set::RankSet;
 mod choice;
+mod complete;
 mod engine;
 mod error;
 #[cfg(feature = "polars")]
@@ -40,16 +44,34 @@ mod native_batch;
 mod options;
 mod panic;
 mod plan;
+mod proxy;
 mod pull;
 mod question;
 mod question_file;
+mod record_choose;
+mod record_composition;
+pub use record_choose::RecordChooseQuestion;
+mod record_context;
+mod record_input;
+pub use crate::core::{Surface, SurfaceError};
+pub use proxy::{
+    CodeThreshold, ProxyActivation, ProxyId, ProxyMetadata, ProxyOverride, ProxyRequest,
+};
+pub use record_composition::{RawRecord, RecordEvidence, RecordReading, SourceLocation};
+pub use record_context::{ObjectContext, RecordContext};
+pub use record_input::{RecordInput, RecordOption, RecordOptions};
 mod recognize;
+mod recognize_question;
+pub use recognize_question::RecognizeQuestionFile;
 mod relate;
 mod results;
 mod set;
 mod settings;
 
 pub use crate::core::settings::{For, Settings, SettingsError};
+pub use crate::core::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
+pub use crate::core::{MemberIdentity, Observation, Origin, QuestionSource, ResultIdentity};
+pub use crate::core::{RelationDirection, RelationMethod, ReportedUsage};
 /// The channel every ThinkThen binding waits on, so a forked child on macOS
 /// can wait too (ticket 0365). It is for the bindings, not a documented API.
 #[doc(hidden)]
@@ -57,9 +79,13 @@ pub use crate::engine::fork_safe;
 pub use annotated::{Annotated, AnnotatedRecord, Failed, FailureCause, NamedAnnotation};
 pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
+pub use bulk::functions::{
+    choose_many, choose_many_with, decide_many, decide_many_with, score_many, score_many_with,
+    tag_many, tag_many_with,
+};
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
-pub use error::{Error, ErrorDetail, ErrorKind};
+pub use error::{Error, ErrorDetail, ErrorKind, StopCause, Stopped};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use native_batch::RecoverableDetails;
@@ -78,13 +104,26 @@ pub use recognize::{
     Kind, Recognize, RecognizeBuilder, Recognized, RecognizedEntity, Relation, RelationRule,
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
+pub use results::FindSelection;
 #[cfg(test)]
 pub(crate) use results::QuestionJson;
 pub use results::{
-    Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, DoorReply,
-    Facts, Found, Judgment, NamedProbability, ObservedRow, Picked, Probabilities, QuestionDetail,
-    Ranked, RankedRow, RecordObservation, Row, SetRanked, Tally, TallyStart, Usage,
+    Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, Candidate, CompleteAnnotated,
+    CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision, CompleteFacts,
+    CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord, CompleteScore,
+    CompleteSetRank, CompleteTags, Counters, Details, DoorReply, Facts, Found, Judgment,
+    NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail, Ranked,
+    RankedRow, RecordObservation, ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
+    complete_call_schema,
 };
+pub use results::{
+    CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
+    RecognitionProbabilities,
+};
+pub use results::{
+    CompleteRelated, CompleteRelationMember, SourceRelationEdge, SourceRelationEndpoint,
+};
+pub use results::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
 
@@ -375,115 +414,6 @@ where
     default_engine()?.relate_with(ask, entities, options)
 }
 
-/// [`Engine::decide_many`] on the [`default_engine`]; a failed build is the batch's first item.
-pub fn decide_many<'a, I, Q: DecisionQuestion + ?Sized>(
-    question: &'a Q,
-    records: I,
-) -> Batch<'a, Row<I::Item, Answer>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    decide_many_with(question, records, CallOptions::new())
-}
-
-/// [`Engine::decide_many_with`] on the [`default_engine`]; a failed build is the batch's first item.
-pub fn decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(
-    question: &'a Q,
-    records: I,
-    options: CallOptions<'a>,
-) -> Batch<'a, Row<I::Item, Answer>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    match default_engine() {
-        Ok(engine) => engine.decide_many_with(question, records, options),
-        Err(error) => Batch::failed(error),
-    }
-}
-
-/// [`Engine::choose_many`] on the [`default_engine`]; a failed build is the first row.
-pub fn choose_many<'a, I, C: Choice>(
-    question: &'a ChooseQuestion<C>,
-    records: I,
-) -> Batch<'a, Row<I::Item, Option<C>>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    choose_many_with(question, records, CallOptions::new())
-}
-
-/// [`Engine::choose_many_with`] on the [`default_engine`].
-pub fn choose_many_with<'a, I, C: Choice>(
-    question: &'a ChooseQuestion<C>,
-    records: I,
-    options: CallOptions<'a>,
-) -> Batch<'a, Row<I::Item, Option<C>>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    match default_engine() {
-        Ok(engine) => engine.choose_many_with(question, records, options),
-        Err(error) => Batch::failed(error),
-    }
-}
-
-/// [`Engine::score_many`] on the [`default_engine`]; a failed build is the first row.
-pub fn score_many<'a, I>(question: &'a Question, records: I) -> Batch<'a, Row<I::Item, f64>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    score_many_with(question, records, CallOptions::new())
-}
-
-/// [`Engine::score_many_with`] on the [`default_engine`].
-pub fn score_many_with<'a, I>(
-    question: &'a Question,
-    records: I,
-    options: CallOptions<'a>,
-) -> Batch<'a, Row<I::Item, f64>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    match default_engine() {
-        Ok(engine) => engine.score_many_with(question, records, options),
-        Err(error) => Batch::failed(error),
-    }
-}
-
-/// [`Engine::tag_many`] on the [`default_engine`]; a failed build is the first row.
-pub fn tag_many<'a, I, C: Choice>(
-    question: &'a TagQuestion<C>,
-    records: I,
-) -> Batch<'a, Row<I::Item, Vec<C>>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    tag_many_with(question, records, CallOptions::new())
-}
-
-/// [`Engine::tag_many_with`] on the [`default_engine`].
-pub fn tag_many_with<'a, I, C: Choice>(
-    question: &'a TagQuestion<C>,
-    records: I,
-    options: CallOptions<'a>,
-) -> Batch<'a, Row<I::Item, Vec<C>>>
-where
-    I: IntoIterator + 'a,
-    I::Item: Evidence,
-{
-    match default_engine() {
-        Ok(engine) => engine.tag_many_with(question, records, options),
-        Err(error) => Batch::failed(error),
-    }
-}
-
 /// [`Engine::details`] on the [`default_engine`].
 ///
 /// # Errors
@@ -517,3 +447,24 @@ pub fn details_with<Q: DetailQuestion + ?Sized>(
 pub fn usage() -> Result<Counters, Error> {
     Ok(default_engine()?.usage())
 }
+
+pub use results::{
+    FindReading, QuestionContent, ResolvedOption, ResolvedQuestion, ResolvedThreshold,
+};
+
+pub use results::{RecognitionReading, RelationReading, ResolvedRelationRule};
+
+pub use results::{CompleteCall, CompleteError, ErrorSnapshot};
+
+mod declarations;
+pub use crate::core::{
+    InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
+    WordingVersion,
+};
+
+mod question_metadata;
+mod question_preparation;
+
+pub(crate) mod named_question;
+
+pub use results::{SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation};

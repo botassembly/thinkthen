@@ -39,6 +39,7 @@ use reading::read_by;
 /// What one row shows beside its answer: the line it arrived as, the keys
 /// of its questions, and its requests' attempts.
 struct RowContext<'a> {
+    record: usize,
     arrived: Option<&'a [u8]>,
     requests: Vec<String>,
     attempts: Vec<AttemptObservation>,
@@ -59,6 +60,9 @@ pub(crate) fn engine(
 ) -> Result<Engine, Failure> {
     let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
     let roots = environment.roots()?;
+    if !common.dry_run {
+        environment.cancel().invocation()?;
+    }
     if !common.dry_run && folders.writable_by_another() {
         writeln!(
             io::stderr().lock(),
@@ -68,8 +72,7 @@ pub(crate) fn engine(
     }
     if folders.record.is_some()
         && folders.replay.is_some()
-        && (folders.refresh_cache
-            || crate::core::adapters::built_in::is_mutable_alias(backend.model()))
+        && (folders.refresh_cache || backend.api_type().is_mutable_alias(backend.model()))
     {
         writeln!(
             io::stderr().lock(),
@@ -259,6 +262,15 @@ pub(crate) fn run(
     let profile = profile::read(common, environment, &backend)?;
     crate::cli::intake::window(common, !settled.on().is_empty())?;
     let reading = read_by(common, settled, keeping)?;
+    let reading = match &asks {
+        Asks::Set(set) => reading.with_item_schemas(
+            set.questions()
+                .iter()
+                .filter_map(|member| member.metadata().item_schema.clone())
+                .collect(),
+        ),
+        _ => reading,
+    };
     output.validate_display(common)?;
     let documents = !reading.streams() && (common.input.len() > 1 || common.located());
     if documents && (view.raw || view.quiet) {
@@ -306,6 +318,7 @@ pub(crate) fn run(
     )?;
     output.snapshot(snapshot);
     let configuration = JudgingInput {
+        declarations: settled.metadata().clone(),
         common,
         environment,
         folders,
@@ -336,6 +349,7 @@ pub(crate) fn run(
 
 /// One question over one engine, asked of every record in turn.
 struct Judging<'a> {
+    declarations: crate::core::declaration::QuestionMetadata,
     environment: &'a Environment,
     engine: Engine,
     asks: Asks,
@@ -350,6 +364,7 @@ struct Judging<'a> {
 }
 
 struct JudgingInput<'a> {
+    declarations: crate::core::declaration::QuestionMetadata,
     common: &'a Common,
     environment: &'a Environment,
     folders: Folders,
@@ -370,6 +385,7 @@ struct JudgingInput<'a> {
 impl Judging<'_> {
     fn new(input: JudgingInput<'_>) -> Result<Judging<'_>, Failure> {
         let JudgingInput {
+            declarations,
             common,
             environment,
             folders,
@@ -387,6 +403,7 @@ impl Judging<'_> {
             context,
         } = input;
         Ok(Judging {
+            declarations,
             environment,
             engine: engine(common, environment, folders, backend, profile, common.jobs)?,
             asks,

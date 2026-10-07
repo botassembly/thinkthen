@@ -165,7 +165,11 @@ fn details_carry_every_probability_and_request_metadata() {
         .replace("$VERSION", env!("CARGO_PKG_VERSION"))
         .replace("$URL", listener.url())
         .replace("$REQUESTS", &Value::from(keys).to_string());
-    assert_eq!(stdout(&output), expected);
+    let row: Value = serde_json::from_str(&stdout(&output)).unwrap();
+    crate::native_results::validate(&[("completeRecognition".into(), row.clone())]);
+    let mut retained = crate::native_results::compatibility::judgment(row);
+    retained["schema"] = "thinkthen.result/1".into();
+    assert_eq!(retained, serde_json::from_str::<Value>(&expected).unwrap());
 }
 
 #[test]

@@ -227,7 +227,7 @@ test "$(find "$review" -mindepth 1 -maxdepth 1 -exec basename {} \; | sort)" = "
 review.jsonl"
 test "$(wc -l < "$review/decisions.jsonl" | tr -d ' ')" = 5
 test "$(wc -l < "$review/review.jsonl" | tr -d ' ')" = 1
-jq -e -s 'length == 5 and all(.[]; .schema == "thinkthen.result/1" and has("policy"))' \
+jq -e -s 'length == 5 and all(.[]; .schema == "thinkthen.result/2" and has("policy"))' \
 	"$review/decisions.jsonl" >/dev/null
 jq -e -s 'length == 1 and .[0].schema == "thinkthen.record-error/1" and
   .[0].policy == {action:"review",reason:"record_error"}' "$review/review.jsonl" >/dev/null

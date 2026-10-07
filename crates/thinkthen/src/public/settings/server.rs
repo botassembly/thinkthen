@@ -14,6 +14,13 @@ pub(crate) const NOT_READY: &str =
     "the answer folder cannot be created or read by this process user; name another folder";
 
 impl EngineBuilder {
+    /// Supply a reserved proxy activation. Build refuses before reading local resources.
+    #[must_use]
+    pub fn proxy(mut self, _value: &crate::public::ProxyActivation) -> Self {
+        self.proxy_supplied = true;
+        self
+    }
+
     /// Settle folders for a host that serves callers who do not own it, such
     /// as a database server. The platform default cache is off, so answers
     /// are cached only in a folder named by `THINKTHEN_CACHE` or

@@ -1,0 +1,2757 @@
+{
+  "contract": "accepted 0456; targets until native loaders/admission/typed result schema land",
+  "backend": {
+    "url": "http://127.0.0.1:$OWNED_PORT/generic/v1",
+    "key": "sk-conformance-loopback",
+    "response": "existing generic arm: yes=0.9, no=0.1",
+    "config": "fresh owned HOME/platform config/cache/state; no ambient settings",
+    "response_body": {
+      "model": "jev-1.13.0",
+      "answers": {
+        "q1": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "selected-object-false-unicode",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "record": {
+          "message": {
+            "body": "Please refund.",
+            "amount": 12,
+            "ready": false,
+            "labels": [
+              "café",
+              "😀"
+            ],
+            "extra": "retained"
+          },
+          "private": "unsent"
+        },
+        "field": [
+          "/message"
+        ]
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        }
+      }
+    },
+    {
+      "id": "item-missing-required",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "ready": false
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "item-null-property",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "x",
+          "ready": null
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "item-number-string",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "x",
+          "amount": "12"
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "item-boolean-string",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "x",
+          "ready": "false"
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "item-list-nonstring",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "x",
+          "labels": [
+            "ok",
+            12
+          ]
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "item-root-null",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": null
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "item-root-string",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": "{\"body\":\"x\"}"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "optional-properties-absent",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "Please refund."
+        }
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": {
+          "body": "Please refund."
+        }
+      }
+    },
+    {
+      "id": "undeclared-properties-retained",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        }
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        }
+      }
+    },
+    {
+      "id": "projection-cannot-recover-field",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "record": {
+          "body": "x",
+          "other": "selected"
+        },
+        "field": [
+          "/other"
+        ]
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "multiple-pointer-object",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "record": {
+          "body": "Please refund.",
+          "ready": false,
+          "private": "unsent"
+        },
+        "field": [
+          "/body",
+          "/ready"
+        ]
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": {
+          "body": "Please refund.",
+          "ready": false
+        }
+      }
+    },
+    {
+      "id": "string-reader",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string"
+          }
+        },
+        "item": "Please refund."
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": "Please refund."
+      }
+    },
+    {
+      "id": "string-no-coercion-number",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string"
+          }
+        },
+        "item": 12
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "string-no-coercion-false",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string"
+          }
+        },
+        "item": false
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "string-no-coercion-null",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string"
+          }
+        },
+        "item": null
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "string-no-coercion-object",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string"
+          }
+        },
+        "item": {
+          "body": "x"
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "csv-number-remains-string",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "reader": "csv",
+        "data": "body,amount\nPlease refund.,12\n"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declared-object-context",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          },
+          "context_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        },
+        "per_item_context": {
+          "body": "Private context",
+          "ready": false
+        }
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        },
+        "per_item_context": {
+          "body": "Private context",
+          "ready": false
+        }
+      }
+    },
+    {
+      "id": "absent-context-shared-fallback",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          },
+          "context_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        },
+        "shared_context": "plain shared text",
+        "note": "Shared text is not checked against the object context declaration."
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        }
+      }
+    },
+    {
+      "id": "empty-context-suppresses-shared",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          },
+          "context_schema": {
+            "type": "string"
+          }
+        },
+        "item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        },
+        "per_item_context": "",
+        "shared_context": "unsent fallback"
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        },
+        "per_item_context": ""
+      }
+    },
+    {
+      "id": "context-null",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          },
+          "context_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        },
+        "per_item_context": null
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the per-item context does not match context_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "context-mistyped",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          },
+          "context_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        },
+        "per_item_context": {
+          "body": false
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the per-item context does not match context_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "context-json-looking-text",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          },
+          "context_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "body": "Please refund.",
+          "amount": 12,
+          "ready": false,
+          "labels": [
+            "café",
+            "😀"
+          ],
+          "extra": "retained"
+        },
+        "per_item_context": "{\"body\":\"x\"}"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the per-item context does not match context_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "legacy-context-object-refused",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "item": "x",
+        "per_item_context": {
+          "body": "x"
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declaration-shorthand",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": "string"
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the question declaration uses an unsupported feature",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declaration-null",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": null
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the question declaration uses an unsupported feature",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declaration-empty",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {}
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the question declaration uses an unsupported feature",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declaration-nested",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "child": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the question declaration uses an unsupported feature",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declaration-unknown-keyword",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the question declaration uses an unsupported feature",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declaration-required-unknown",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the question declaration uses an unsupported feature",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declaration-duplicate-required",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "body",
+              "body"
+            ]
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the question declaration uses an unsupported feature",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "wording-version-zero",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "wording_version": 0
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "wording-version-overflow",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "wording_version": 2147483648
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "wording-version-string",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "wording_version": "2"
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "wording-version-boolean",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "wording_version": true
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "wording-version-null",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "wording_version": null
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "named-missing",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_named",
+        "reference": "refund",
+        "item": "x"
+      },
+      "expect": {
+        "error": "local",
+        "requests_sent": 0,
+        "message": "the named question is unavailable"
+      }
+    },
+    {
+      "id": "named-traversal",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_named",
+        "reference": "../refund",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "named-uppercase",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_named",
+        "reference": "Refund",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "named-overlong",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_named",
+        "reference": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "named-file-symlink-escape",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_named",
+        "reference": "refund",
+        "setup": {
+          "file_symlink_outside": true
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "local",
+        "requests_sent": 0,
+        "message": "the named question is unavailable"
+      }
+    },
+    {
+      "id": "named-folder-symlink-escape",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_named",
+        "reference": "refund",
+        "setup": {
+          "questions_symlink_outside": true
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "local",
+        "requests_sent": 0,
+        "message": "the named question is unavailable"
+      }
+    },
+    {
+      "id": "named-name-mismatch",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_named",
+        "reference": "refund",
+        "setup": {
+          "named_file": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5,
+            "name": "other"
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "local",
+        "requests_sent": 0,
+        "message": "the named question name does not match the file"
+      }
+    },
+    {
+      "id": "lookup-explicit-name",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_named",
+        "reference": "refund",
+        "setup": {
+          "cwd_refund": {
+            "decide": "Working directory wording"
+          },
+          "named_file": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5,
+            "name": "refund"
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "resolved_wording": "Does this ask for a refund?",
+        "requests_sent": 1,
+        "value": true
+      }
+    },
+    {
+      "id": "lookup-cwd-precedence",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_reference",
+        "reference": "@refund",
+        "setup": {
+          "cwd_refund": {
+            "decide": "Working directory wording"
+          },
+          "named_file": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "resolved_wording": "Working directory wording",
+        "requests_sent": 1,
+        "value": true
+      }
+    },
+    {
+      "id": "lookup-named-without-config",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_reference",
+        "reference": "@refund",
+        "setup": {
+          "named_file": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          },
+          "config_json_absent": true
+        },
+        "item": "x"
+      },
+      "expect": {
+        "resolved_wording": "Does this ask for a refund?",
+        "requests_sent": 1,
+        "value": true
+      }
+    },
+    {
+      "id": "lookup-at-path-literal",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load",
+        "reference": "@refund",
+        "setup": {
+          "cwd_at_refund": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "resolved_wording": "Does this ask for a refund?",
+        "requests_sent": 1,
+        "value": true
+      }
+    },
+    {
+      "id": "lookup-traversal-is-explicit-path",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_reference",
+        "reference": "@../refund.json",
+        "setup": {
+          "parent_refund_json": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "resolved_wording": "Does this ask for a refund?",
+        "requests_sent": 1,
+        "value": true
+      }
+    },
+    {
+      "id": "lookup-cwd-failure-no-fallback",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5
+        },
+        "loader": "load_reference",
+        "reference": "@refund",
+        "setup": {
+          "cwd_refund_directory": true,
+          "named_file": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "local",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "metadata-decide",
+      "verb": "decide",
+      "input": {
+        "source_case": "01-decide-yes-captured",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-choose",
+      "verb": "choose",
+      "input": {
+        "source_case": "06-choose-billing",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-tag",
+      "verb": "tag",
+      "input": {
+        "source_case": "09-tag-two",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-score",
+      "verb": "score",
+      "input": {
+        "source_case": "11-score-middle",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-filter",
+      "verb": "filter",
+      "input": {
+        "source_case": "13-filter-records",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-rank",
+      "verb": "rank",
+      "input": {
+        "source_case": "15-rank-records",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-find",
+      "verb": "find",
+      "input": {
+        "source_case": "18-find-second",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-annotate",
+      "verb": "annotate",
+      "input": {
+        "source_case": "17-annotate-mixed",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-recognize",
+      "verb": "recognize",
+      "input": {
+        "source_case": "41-offsets-past-an-accent-and-an-emoji",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "metadata-relate",
+      "verb": "relate",
+      "input": {
+        "source_case": "51-same-kind-alerts",
+        "metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "note": "Apply metadata to the actual question/member or recognize/relate envelope; find uses typed builder, no new file grammar."
+      },
+      "expect": {
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2
+        },
+        "metadata_only_preserves": [
+          "question_digest",
+          "cache_key",
+          "observation_id",
+          "answer_id"
+        ],
+        "absent_metadata_stays_absent": true,
+        "compare_to_independent_unadorned_case": true
+      }
+    },
+    {
+      "id": "finite-all-before-send",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "records": [
+          {
+            "body": "first"
+          },
+          {
+            "body": "second"
+          },
+          {
+            "ready": false
+          }
+        ],
+        "batch": 1,
+        "mode": "finite",
+        "prior_dispatch": 0
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "stream-staged-batch",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "records": [
+          {
+            "body": "first"
+          },
+          {
+            "body": "second"
+          },
+          {
+            "body": "third"
+          },
+          {
+            "ready": false
+          },
+          {
+            "body": "unread fifth"
+          }
+        ],
+        "batch": 2,
+        "mode": "incremental",
+        "prior_dispatch": 1,
+        "verb_input": "fallible records pulled by the ordinary native batch packer"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 1,
+        "completed_prefix": [
+          0,
+          1
+        ],
+        "bad_batch_requests": 0,
+        "message": "the item does not match item_schema",
+        "stopped_at": 4
+      }
+    },
+    {
+      "id": "annotate-member-validation-before-send",
+      "verb": "annotate",
+      "input": {
+        "question_set": {
+          "version": 1,
+          "questions": {
+            "ok": {
+              "decide": "Does this ask for a refund?",
+              "threshold": 0.5,
+              "on": "/message"
+            },
+            "bad": {
+              "decide": "Does this ask for a refund?",
+              "threshold": 0.5,
+              "item_schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              },
+              "on": "/other"
+            }
+          }
+        },
+        "record": {
+          "message": "valid",
+          "other": false
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "annotate-document-json",
+      "verb": "annotate",
+      "input": {
+        "question_set": {
+          "version": 1,
+          "questions": {
+            "result": {
+              "decide": "Does this ask for a refund?",
+              "threshold": 0.5,
+              "item_schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "document": "{\"body\":\"x\"}"
+      },
+      "expect": {
+        "selected_item": {
+          "body": "x"
+        },
+        "requests_sent": 1
+      }
+    },
+    {
+      "id": "annotate-document-invalid-json",
+      "verb": "annotate",
+      "input": {
+        "question_set": {
+          "version": 1,
+          "questions": {
+            "result": {
+              "decide": "Does this ask for a refund?",
+              "threshold": 0.5,
+              "item_schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "document": "not json"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "image-only-declared-item-missing",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string"
+          }
+        },
+        "images": [
+          "specification/fixtures/images/red.png"
+        ]
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "image-ancillary-item",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string"
+          }
+        },
+        "item": "Please refund.",
+        "images": [
+          "specification/fixtures/images/red.png",
+          "specification/fixtures/images/blue.png",
+          "specification/fixtures/images/red.png"
+        ],
+        "note": "Native image owner supplies exact admitted wire/response; no pass until it executes."
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "selected_item": "Please refund."
+      }
+    },
+    {
+      "id": "cache-hit-cannot-bypass-declaration",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "ready": false
+        },
+        "store": {
+          "mode": "cache",
+          "seed_question": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          },
+          "seed_item": {
+            "ready": false
+          },
+          "fixture": "owned saved generic response"
+        },
+        "note": "Count zero sends for the invalid ask after seeding; declaration check precedes lookup."
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "replay-hit-cannot-bypass-declaration",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "body"
+            ]
+          }
+        },
+        "item": {
+          "ready": false
+        },
+        "store": {
+          "mode": "replay",
+          "seed_question": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          },
+          "seed_item": {
+            "ready": false
+          },
+          "fixture": "owned saved generic response"
+        },
+        "note": "Count zero sends for the invalid ask after seeding; declaration check precedes lookup."
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the item does not match item_schema",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "mcp-question-inline-at",
+      "verb": "decide",
+      "input": {
+        "arguments": {
+          "question": "@refund",
+          "evidence": "x"
+        },
+        "setup": {
+          "named_file": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          }
+        }
+      },
+      "expect": {
+        "resolved_wording": "@refund",
+        "requests_sent": 1
+      }
+    },
+    {
+      "id": "mcp-question-explicit-name",
+      "verb": "decide",
+      "input": {
+        "arguments": {
+          "question_name": "refund",
+          "evidence": "x"
+        },
+        "setup": {
+          "named_file": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          }
+        }
+      },
+      "expect": {
+        "resolved_wording": "Does this ask for a refund?",
+        "requests_sent": 1
+      }
+    },
+    {
+      "id": "mcp-question-mutually-exclusive",
+      "verb": "decide",
+      "input": {
+        "arguments": {
+          "question_name": "refund",
+          "question_file": "refund.json",
+          "evidence": "x"
+        },
+        "setup": {
+          "named_file": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          }
+        }
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "author-name-blank",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "name": ""
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "author-name-uppercase",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "name": "Refund"
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "author-name-leading-digit",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "name": "1refund"
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "author-name-control",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "name": "a\nb"
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "author-name-nonascii",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "name": "café"
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "wording-version-fraction",
+      "verb": "decide",
+      "input": {
+        "question_json": "{\"decide\":\"Does this ask for a refund?\",\"wording_version\":2.5}",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "wording-version-integral-float",
+      "verb": "decide",
+      "input": {
+        "question_json": "{\"decide\":\"Does this ask for a refund?\",\"wording_version\":2.0}",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "wording-version-exponent",
+      "verb": "decide",
+      "input": {
+        "question_json": "{\"decide\":\"Does this ask for a refund?\",\"wording_version\":2e0}",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "metadata-name-only",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "name": "refund"
+        },
+        "item": "Please refund."
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "resolved_metadata": {
+          "name": "refund"
+        },
+        "no_inferred_metadata": true
+      }
+    },
+    {
+      "id": "metadata-version-only",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "wording_version": 2147483647
+        },
+        "item": "Please refund."
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "resolved_metadata": {
+          "wording_version": 2147483647
+        },
+        "no_inferred_metadata": true
+      }
+    },
+    {
+      "id": "metadata-typed-declarations",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "name": "refund",
+          "wording_version": 2,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "body"
+            ]
+          },
+          "context_schema": {
+            "type": "string"
+          }
+        },
+        "item": {
+          "body": "Please refund.",
+          "ready": false
+        },
+        "per_item_context": "separate"
+      },
+      "expect": {
+        "value": true,
+        "probability": 0.9,
+        "requests_sent": 1,
+        "resolved_metadata": {
+          "name": "refund",
+          "wording_version": 2,
+          "item_schema": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "body"
+            ]
+          },
+          "context_schema": {
+            "type": "string"
+          }
+        },
+        "ordered_properties": [
+          "body",
+          "ready"
+        ],
+        "required_properties": [
+          "body"
+        ],
+        "selected_item": {
+          "body": "Please refund.",
+          "ready": false
+        },
+        "per_item_context": "separate"
+      }
+    },
+    {
+      "id": "duplicate-metadata",
+      "verb": "decide",
+      "input": {
+        "question_json": "{\"decide\":\"x\",\"name\":\"refund\",\"name\":\"other\"}",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "duplicate-schema",
+      "verb": "decide",
+      "input": {
+        "question_json": "{\"decide\":\"x\",\"item_schema\":{\"type\":\"string\",\"type\":\"object\"}}",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "single-format-version",
+      "verb": "decide",
+      "input": {
+        "question_json": "{\"version\":1,\"decide\":\"x\"}",
+        "item": "x"
+      },
+      "expect": {
+        "error": "usage",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declaration-file-unsupported",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "item_schema": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "loader": "load",
+        "path": "owned-question.json",
+        "item": "x"
+      },
+      "expect": {
+        "error": "local",
+        "message": "the question declaration uses an unsupported feature",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "named-malformed-no-fallback",
+      "verb": "decide",
+      "input": {
+        "loader": "load_named",
+        "reference": "refund",
+        "setup": {
+          "named_file_json": "{bad",
+          "cwd_refund": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          }
+        },
+        "item": "x"
+      },
+      "expect": {
+        "error": "local",
+        "requests_sent": 0
+      }
+    },
+    {
+      "id": "declared-string-null-context",
+      "verb": "decide",
+      "input": {
+        "question": {
+          "decide": "Does this ask for a refund?",
+          "threshold": 0.5,
+          "context_schema": {
+            "type": "string"
+          }
+        },
+        "item": "Please refund.",
+        "per_item_context": null,
+        "shared_context": "fallback"
+      },
+      "expect": {
+        "error": "usage",
+        "message": "the per-item context does not match context_schema",
+        "requests_sent": 0
+      }
+    }
+  ]
+}

@@ -3,10 +3,8 @@
 #[cfg(test)]
 use std::collections::BTreeMap;
 
-#[cfg(test)]
 use serde::Deserialize;
 use serde::{Serialize, Serializer};
-use serde_json::value::RawValue;
 
 use crate::core::adapters::systemone::{EncodeError, wire_name};
 use crate::core::json::Json;
@@ -48,9 +46,9 @@ impl<'de> Deserialize<'de> for Questions {
 }
 
 /// One named question inside a request, in the shape its verb asks for.
-#[derive(Serialize)]
-#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum RequestQuestion {
     /// A yes/no question, which the vendor calls `noul`.
     Noul {
@@ -75,8 +73,9 @@ pub(crate) enum RequestQuestion {
 /// The tool's own words for these two are `--true` and `--false`, and this
 /// module alone knows they travel here. An absent or null description has no
 /// wire member; a question with neither carries no `criteria` at all.
-#[derive(Serialize)]
-#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
+#[serde(deny_unknown_fields)]
 pub(crate) struct NoulCriteria {
     #[serde(rename = "true", skip_serializing_if = "Option::is_none")]
     yes: Option<Json>,
@@ -114,10 +113,8 @@ impl Serialize for Criteria {
 }
 
 /// The visitor that reads a `criteria` map back, keeping its document order.
-#[cfg(test)]
 struct Keys;
 
-#[cfg(test)]
 impl<'de> serde::de::Visitor<'de> for Keys {
     type Value = Criteria;
 
@@ -134,7 +131,6 @@ impl<'de> serde::de::Visitor<'de> for Keys {
     }
 }
 
-#[cfg(test)]
 impl<'de> serde::Deserialize<'de> for Criteria {
     /// Read the keys back in document order, so a fixture pins that order.
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -150,8 +146,12 @@ impl<'de> serde::Deserialize<'de> for Criteria {
 pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
     let parts = parts(plan)?;
     if let Some(images) = plan.images() {
-        let state =
-            crate::core::pack::State::images(images, plan.image_route(), plan.model().as_str())?;
+        let state = crate::core::pack::State::images(
+            images,
+            plan.image_route(),
+            plan.model().as_str(),
+            plan.image_profile(),
+        )?;
         let body = state.body(&parts.model, parts.questions.iter().map(String::as_str));
         if state.body_limit().is_some_and(|limit| body.len() > limit) {
             return Err(EncodeError::of(&"image route body limit exceeded"));
@@ -163,12 +163,6 @@ pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
         &parts.model,
         parts.questions.iter().map(String::as_str),
     ))
-}
-
-/// Write the plan as the request body the plan document embeds.
-pub(crate) fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
-    let body = String::from_utf8(encode(plan)?).map_err(|error| EncodeError::of(&error))?;
-    RawValue::from_string(body).map_err(|error| EncodeError::of(&error))
 }
 
 /// One plan's state, model and wire questions, each as the compact JSON the

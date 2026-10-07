@@ -115,6 +115,11 @@ def held_cancel(query: str, in_flight: int) -> None:
             child.close()
 
 
+@case
+def rank_set_cancel_stops_the_shared_worker_without_later_sends():
+    held_cancel("SELECT key FROM thinkthen_rank_set('{\"version\":1,\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}', '{\"batch\":\"max\"}')", 1)
+
+
 @timed
 def r5_23_a_held_batch_stops_within_100_ms():
     # The lazy default packs these 64 rows into one held request. Cancellation

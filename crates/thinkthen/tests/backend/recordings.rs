@@ -15,7 +15,7 @@ mod replay_context;
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
-    r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
+    r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92}},"#,
     r#""usage":{"input_tokens":312,"output_tokens":48}}"#,
 );
 
@@ -158,12 +158,18 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
         Some(1),
         "the live send is one attempt"
     );
-    assert_eq!(attempts(&output), None, "a replay adds no attempt");
+    assert_eq!(attempts(&output), Some(0), "a replay adds no attempt");
     let live = normalized_details(&recorded.1).expect("live details");
     let replayed = normalized_details(&output).expect("replayed details");
     assert_eq!((live.1, live.2), (false, 1));
     assert_eq!((replayed.1, replayed.2), (true, 0));
-    assert_eq!(live.0, replayed.0);
+    let mut live: serde_json::Value = serde_json::from_str(&live.0).unwrap();
+    let replayed: serde_json::Value = serde_json::from_str(&replayed.0).unwrap();
+    assert_eq!(live["meta"]["origin"], "live");
+    assert_eq!(live["meta"]["question_sources"][0]["origin"], "live");
+    live["meta"]["origin"] = "replay".into();
+    live["meta"]["question_sources"][0]["origin"] = "replay".into();
+    assert_eq!(live, replayed);
 }
 
 #[test]
@@ -232,7 +238,7 @@ fn meta_holds_the_url_the_model_the_usage_and_the_cached_flag() {
             r#""requests_sent":0,"cached":true,"requests":[""#,
         ),
         request,
-        r#""],"failed_questions":0}"#,
+        r#""],"failed_questions":0,"#,
     ]
     .concat();
     assert!(printed.contains(&expected), "{printed}");
@@ -301,7 +307,10 @@ fn an_answer_that_records_another_question_is_refused_by_name() {
     assert_eq!(output.status.code(), Some(5));
     let message = String::from_utf8_lossy(&output.stderr);
     assert!(message.contains("thinkthen.jsonl"), "{message}");
-    assert!(message.contains("damaged or hand-edited"), "{message}");
+    assert!(
+        message.contains("holds invalid original exchange bodies"),
+        "{message}"
+    );
 
     fs::write(folder.join("thinkthen.jsonl"), "not an entry at all").expect("writable");
     let output = decide(

@@ -11,17 +11,17 @@
 pub(crate) mod backends;
 pub(crate) mod images;
 mod recorded;
-mod request;
-mod response;
+pub(super) mod request;
+pub(super) mod response;
 
 use thiserror::Error;
 
 use crate::core::text::ModelName;
 
-pub(crate) use crate::core::adapters::systemone::recorded::decoder;
+pub(crate) use crate::core::adapters::systemone::recorded::{canonical_question, decoder};
 pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::{
-    drops_any, drops_detail, drops_detail_of, encode_raw, join, parts,
+    drops_any, drops_detail, drops_detail_of, join, parts,
 };
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode;
@@ -108,6 +108,10 @@ pub(crate) enum DecodeError {
     /// on, so quoting the reader would print the evidence.
     #[error("the response is not a systemone response: the JSON at line {0} column {1} is not one")]
     Malformed(usize, usize),
+    #[error("the response is not a valid response for this API type")]
+    OtherMalformed,
+    #[error("the backend refused the question")]
+    Refused(usize),
     /// The response names no model, so nothing says what answered.
     #[error("the response names no model")]
     NoModel,

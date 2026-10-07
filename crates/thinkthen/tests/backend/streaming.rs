@@ -360,12 +360,17 @@ fn a_record_row_carries_the_whole_record_under_input() {
 
     assert_eq!(output.status.code(), Some(0));
     let row = printed(&output);
+    let details: serde_json::Value = serde_json::from_str(&row).unwrap();
+    let preserved = crate::native_results::compatibility::judgment(details);
+    assert_eq!(preserved["value"], true);
+    assert_eq!(
+        preserved["question"],
+        serde_json::json!({
+            "verb":"decide", "text":"Does this report a payment failure?"
+        })
+    );
     assert!(
-        row.starts_with(concat!(
-            r#"{"schema":"thinkthen.result/1","value":true,"#,
-            r#""input":{"id":"R-1","body":"The payout failed again.","seen":false},"#,
-            r#""question":{"verb":"decide","text":"Does this report a payment failure?"},"#,
-        )),
+        row.contains(r#""input":{"id":"R-1","body":"The payout failed again.","seen":false}"#),
         "{row}"
     );
     assert!(

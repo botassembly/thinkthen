@@ -17,6 +17,7 @@
 pub mod ffi;
 
 mod call;
+mod current;
 mod door;
 mod failures;
 mod plan;
@@ -38,3 +39,5 @@ pub struct Judgment {
 /// The header's opaque `thinkthen_engine`: one engine and its failure table.
 #[derive(Debug)]
 pub struct Door(Held);
+
+mod complete;

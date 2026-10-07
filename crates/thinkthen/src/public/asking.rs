@@ -22,18 +22,26 @@ impl Text {
     pub(crate) fn plain(&self, function: super::InputFunction) -> Result<&str, Error> {
         match &self.input {
             super::QuestionInput::Text(text) => Ok(text),
-            super::QuestionInput::Images(_) => Err(Error::usage(format!(
-                "{} accepts text only; images are unsupported",
-                function.name()
-            ))),
+            super::QuestionInput::Record(record) if record.images().is_empty() => {
+                Ok(record.plain())
+            }
+            super::QuestionInput::Record(_) | super::QuestionInput::Images(_) => {
+                Err(Error::usage(format!(
+                    "{} accepts text only; images are unsupported",
+                    function.name()
+                )))
+            }
         }
     }
 }
 
 /// What one question needs of each text beside the text.
 pub(crate) struct Decisions {
+    metadata: crate::core::declaration::QuestionMetadata,
+    prepared: Question,
     question: core::Question,
     asked: (ModelName, core::Descriptions),
+    api: core::adapters::ApiType,
     url: core::Url,
     context: Option<core::Evidence>,
     profile: Option<core::BackendProfile>,
@@ -48,8 +56,11 @@ impl Decisions {
         context: Option<core::Evidence>,
     ) -> Self {
         Self {
+            metadata: question.metadata.clone(),
+            prepared: question.clone(),
             question: question.core.clone(),
             asked: engine.backend().asked(),
+            api: engine.backend().api_type(),
             url: engine.backend().url().clone(),
             context,
             profile: engine.profile().cloned(),
@@ -61,6 +72,7 @@ impl Decisions {
 
 /// One text's answer, with the receipt its row reports.
 pub(crate) struct Decided {
+    input: std::sync::Arc<super::QuestionInput>,
     pub(crate) outcome: AnswerOutcome,
     pub(crate) answered: facade::Answered,
     pub(crate) keys: Vec<String>,
@@ -71,7 +83,7 @@ pub(crate) enum Miss {
     /// The call refused the text before any send.
     Refused(Error),
     /// The backend failed its question; the receipt stays for observers.
-    Failed(Decided),
+    Failed(Box<Decided>),
 }
 
 impl From<Error> for Miss {
@@ -85,12 +97,26 @@ impl Asker for Decisions {
     type Row = Decided;
     type Error = Miss;
 
+    fn validates_batches(&self) -> bool {
+        self.metadata.item_schema.is_some()
+            || self.metadata.context_schema.is_some()
+            || self
+                .prepared
+                .metadata
+                .reading
+                .on
+                .iter()
+                .any(|pointer| !pointer.is_empty())
+    }
+
     fn label(&self, text: &Text) -> usize {
         text.at
     }
 
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Miss> {
-        let plan = match &text.input {
+        let input = self.prepared.selected_input(&text.input)?;
+        self.metadata.validate_item(&input).map_err(Miss::Refused)?;
+        let plan = match &input {
             super::QuestionInput::Text(text) => {
                 let record = evidence(text).map_err(Miss::Refused)?;
                 quoted_plan_of(
@@ -103,16 +129,32 @@ impl Asker for Decisions {
                 )
                 .map_err(|error| Miss::Refused(planned(error)))?
             }
+            super::QuestionInput::Record(record) => {
+                let function = input_function(self.kind);
+                super::images::guard(function, &text.input)?;
+                if let Some(images) = record.image_state() {
+                    core::image::plan(
+                        self.asked.clone(),
+                        images,
+                        self.context.as_ref(),
+                        vec![self.question.clone()],
+                        self.profile.as_ref(),
+                        self.route,
+                    )
+                } else {
+                    quoted_plan_of(
+                        self.asked.clone(),
+                        record.evidence.clone(),
+                        &record.value,
+                        self.context.as_ref(),
+                        vec![self.question.clone()],
+                        self.profile.as_ref(),
+                    )
+                }
+                .map_err(|error| Miss::Refused(planned(error)))?
+            }
             super::QuestionInput::Images(images) => {
-                use super::{InputFunction, question::Kind};
-                let function = match self.kind {
-                    Kind::Decide | Kind::Banded => InputFunction::Decide,
-                    Kind::Choose => InputFunction::Choose,
-                    Kind::Score => InputFunction::Score,
-                    Kind::Tag => InputFunction::Tag,
-                    Kind::Rank => InputFunction::Rank,
-                    Kind::Find | Kind::FindNone => InputFunction::Find,
-                };
+                let function = input_function(self.kind);
                 super::images::guard(function, &text.input)?;
                 core::image::plan(
                     self.asked.clone(),
@@ -125,7 +167,7 @@ impl Asker for Decisions {
                 .map_err(|error| Miss::Refused(planned(error)))?
             }
         };
-        pack::asks(&self.url, &plan).map_err(|error| {
+        pack::asks_for(self.api, &self.url, &plan).map_err(|error| {
             if plan.images().is_some() {
                 Miss::Refused(Error::usage(error.to_string()))
             } else {
@@ -134,22 +176,39 @@ impl Asker for Decisions {
         })
     }
 
-    fn row(&self, _text: Text, answers: Vec<Answered>) -> Result<Decided, Miss> {
+    fn row(&self, text: Text, answers: Vec<Answered>) -> Result<Decided, Miss> {
         let refused = |error: EngineError| Miss::Refused(Error::from(error));
         let outcomes = pipeline::read(&self.question, &answers)
             .map_err(|error| refused(EngineError::from(error)))?;
         let [outcome] = <[AnswerOutcome; 1]>::try_from(outcomes)
             .map_err(|_| Miss::Refused(Error::defect("a question read more than one outcome")))?;
         let decided = Decided {
+            input: std::sync::Arc::new(text.input),
             answered: pipeline::receipt(&answers, vec![outcome.clone()]).map_err(refused)?,
             keys: answers.iter().map(|answered| answered.key.hex()).collect(),
             outcome,
         };
         match decided.outcome {
             AnswerOutcome::Answered(_) => Ok(decided),
-            AnswerOutcome::Failed(_) => Err(Miss::Failed(decided)),
+            AnswerOutcome::Failed(_) => Err(Miss::Failed(Box::new(decided))),
         }
     }
+}
+
+fn input_function(kind: super::question::Kind) -> super::InputFunction {
+    use super::{InputFunction, question::Kind};
+    match kind {
+        Kind::Decide | Kind::Banded => InputFunction::Decide,
+        Kind::Choose => InputFunction::Choose,
+        Kind::Score => InputFunction::Score,
+        Kind::Tag => InputFunction::Tag,
+        Kind::Rank => InputFunction::Rank,
+        Kind::Find | Kind::FindNone => InputFunction::Find,
+    }
+}
+
+pub(crate) fn observed_function(question: &Question) -> super::InputFunction {
+    input_function(question.kind)
 }
 
 impl Decided {
@@ -187,7 +246,10 @@ impl Decided {
             0,
         )?;
         observed.requests.clone_from(&self.keys);
-        Ok(observed)
+        Ok(observed
+            .with_receipt(&self.answered)
+            .with_declarations(&question.reading_metadata())
+            .with_input(self.input.clone()))
     }
 
     /// The receipt a detailed row reports.

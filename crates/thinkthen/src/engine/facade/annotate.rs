@@ -18,6 +18,7 @@ struct ChunkAnswer {
     requests_sent: u64,
     replayed: bool,
     keys: Vec<String>,
+    trace: super::Answered,
 }
 
 /// Every chunk of one question group, and the one model they reported.
@@ -38,6 +39,7 @@ impl GroupAnswer {
                 requests_sent: question.requests_sent,
                 replayed: question.cached,
                 keys: question.keys,
+                trace: question.trace,
             })
             .collect();
         Self { answered }
@@ -51,6 +53,7 @@ pub(crate) struct QuestionAnswer {
     pub(crate) keys: Vec<String>,
     pub(crate) requests_sent: u64,
     pub(crate) cached: bool,
+    trace: super::Answered,
 }
 
 impl QuestionAnswer {
@@ -60,21 +63,24 @@ impl QuestionAnswer {
         let answered = pipeline::receipt(own, outcomes)?;
         Ok(Self {
             place,
-            reply: answered.reply,
+            reply: answered.reply.clone(),
             keys: own.iter().map(|answered| answered.key.hex()).collect(),
             requests_sent: answered.requests_sent,
             cached: answered.replayed,
+            trace: answered,
         })
     }
 }
 
 /// One record's named values and details, in set order, with the metadata.
+#[derive(Clone)]
 pub(crate) struct Annotation {
     pub(crate) values: Vec<(String, AnnotatedValue)>,
     pub(crate) details: Vec<(String, AnnotatedEntry)>,
     pub(crate) receipts: Vec<MemberReceipt>,
     pub(crate) model: Option<ModelName>,
     pub(crate) usage: Option<Usage>,
+    pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) requests: Vec<String>,
     pub(crate) requests_sent: u64,
     pub(crate) replayed: bool,
@@ -82,7 +88,9 @@ pub(crate) struct Annotation {
 }
 
 /// One set member's even share of the request chunk that answered it.
+#[derive(Clone)]
 pub(crate) struct MemberReceipt {
+    pub(crate) trace: super::Answered,
     pub(crate) usage: Option<Usage>,
     pub(crate) requests_sent: u64,
     pub(crate) replayed: bool,
@@ -104,6 +112,7 @@ pub(crate) fn assemble(
         receipts: Vec::new(),
         model: None,
         usage: None,
+        reported_usage: None,
         requests: Vec::new(),
         requests_sent: 0,
         replayed: true,
@@ -119,7 +128,7 @@ pub(crate) fn assemble(
             check_model(&mut annotation.model, chunk.reply.model(), requested)?;
         }
         annotation.requests.extend(chunk.keys.iter().cloned());
-        usage.add(chunk.reply.usage());
+        usage.add_reported(chunk.reply.reported_usage());
         annotation.replayed &= chunk.replayed;
         annotation.requests_sent = annotation
             .requests_sent
@@ -129,6 +138,7 @@ pub(crate) fn assemble(
             take_answers(set, &chunk, &mut values, &mut details, &mut receipts)?;
     }
     annotation.usage = usage.total()?;
+    annotation.reported_usage = usage.reported()?;
     annotation.model = annotation.model.or(stored_model);
     annotation.values = pair(set, values, "a question has no value")?;
     annotation.details = pair(set, details, "a question has no detailed answer")?;
@@ -167,6 +177,7 @@ fn take_answers(
             return Err(Error::Defect("a receipt points outside its set"));
         };
         *receipt_slot = Some(MemberReceipt {
+            trace: chunk.trace.clone(),
             usage: chunk
                 .reply
                 .usage()

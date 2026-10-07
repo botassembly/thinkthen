@@ -971,7 +971,7 @@ export const BACKEND_PAGES = [
   { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Built in' },
   { slug: 'system-one', title: 'Any System One server', label: 'Any System One server', group: 'Your own' },
   { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
-  { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Announced' },
+  { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Built in' },
 ].map((p) => ({ ...p, route: `/install/backends/${p.slug ? `${p.slug}/` : ''}` }));
 
 // The three built-in backends each language page shows, in this order. The
@@ -993,9 +993,8 @@ export const BACKEND_ROUTES = [
   return { ...r, title: page.title, route: page.route, base: r.address ?? row.base };
 });
 
-// What each language page says about OpenAI's Decisions API. It states the
-// announcement and nothing more.
-export const OPENAI_ANNOUNCED = 'OpenAI announced its Decisions API on 2026-09-29 in its <a href="https://openai.com/index/devday-2026-recap/">DevDay 2026 recap</a>. OpenAI has published no address, schema or price, so ThinkThen cannot call it. The <a href="/install/backends/openai/">OpenAI Decisions API</a> page says what ThinkThen knows.';
+// Public installation remains 0.1.2; this explicitly describes the development route.
+export const OPENAI_ANNOUNCED = 'Development 0.2 supports OpenAI Decisions text through the named <code>openai</code> backend. Public installation remains 0.1.2. The <a href="/install/backends/openai/">OpenAI Decisions API page</a> gives development setup and its text-only limits.';
 
 export const BACKENDS_SEE = {
   typesafe: {

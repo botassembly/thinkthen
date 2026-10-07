@@ -154,22 +154,36 @@ fn a_detailed_pick_keeps_every_option_in_order_and_the_backends_confidence() {
         choose(PICKED, &["--details", "--threshold", "0.8"]).expect("a loopback exchange");
 
     let printed = printed(&output);
-    assert!(
-        printed.starts_with(concat!(
-            r#"{"schema":"thinkthen.result/1","value":"billing","#,
-            r#""question":{"verb":"choose","text":"Which team owns this request?","#,
-            r#""options":["billing","shipping","account","other"]},"#,
-            r#""answer":{"kind":"choice","pick":"billing","#,
-            r#""probabilities":{"billing":0.9,"shipping":0.04,"account":0.04,"other":0.02},"#,
-            r#""confidence":0.91},"threshold":0.8,"#,
-            r#""meta":{"tool":"thinkthen "#,
-            env!("CARGO_PKG_VERSION"),
-            r#"","#,
-            r#""question_sha256":"84ee9333d3eef7fb2cd628892cd284a033919333149a5c9475393341dd91f172","#,
-            r#""url":""#,
-        )),
-        "{printed}"
+    let row: serde_json::Value = serde_json::from_str(&printed).unwrap();
+    let preserved = crate::native_results::compatibility::judgment(row);
+    assert_eq!(preserved["value"], "billing");
+    assert_eq!(
+        preserved["question"],
+        serde_json::json!({
+            "verb":"choose", "text":"Which team owns this request?",
+            "options":["billing","shipping","account","other"]
+        })
     );
+    assert_eq!(
+        preserved["answer"],
+        serde_json::json!({
+            "kind":"choice", "pick":"billing",
+            "probabilities":{"billing":0.9,"shipping":0.04,"account":0.04,"other":0.02},
+            "confidence":0.91
+        })
+    );
+    assert_eq!(preserved["threshold"], 0.8);
+    assert_eq!(
+        preserved["meta"]["tool"],
+        concat!("thinkthen ", env!("CARGO_PKG_VERSION"))
+    );
+    assert_eq!(
+        preserved["meta"]["question_sha256"],
+        "84ee9333d3eef7fb2cd628892cd284a033919333149a5c9475393341dd91f172"
+    );
+    assert!(printed.contains(
+        r#""probabilities":{"billing":0.9,"shipping":0.04,"account":0.04,"other":0.02}"#
+    ));
     assert!(printed.contains(r#""model":"jev-1.13.0""#), "{printed}");
     assert!(
         printed.contains(r#""cached":false,"requests":[""#),

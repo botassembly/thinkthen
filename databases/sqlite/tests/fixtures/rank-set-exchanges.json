@@ -1,0 +1,69 @@
+{
+  "model": "judge-rank",
+  "usage": {
+    "input_tokens": 6,
+    "output_tokens": 2
+  },
+  "exchanges": [
+    {
+      "question": {
+        "type": "noul",
+        "instructions": "The text is \"a\". First?"
+      },
+      "answer": {
+        "type": "noul",
+        "noul": 0.7
+      }
+    },
+    {
+      "question": {
+        "type": "noul",
+        "instructions": "The text is \"b\". First?"
+      },
+      "answer": {
+        "type": "noul",
+        "noul": 0.6
+      }
+    },
+    {
+      "question": {
+        "type": "noul",
+        "instructions": "The text is \"c\". First?"
+      },
+      "answer": {
+        "type": "noul",
+        "noul": 0.5
+      }
+    },
+    {
+      "question": {
+        "type": "noul",
+        "instructions": "The text is \"a\". Second?"
+      },
+      "answer": {
+        "type": "noul",
+        "noul": 1.0
+      }
+    },
+    {
+      "question": {
+        "type": "noul",
+        "instructions": "The text is \"b\". Second?"
+      },
+      "answer": {
+        "type": "noul",
+        "noul": 0.98
+      }
+    },
+    {
+      "question": {
+        "type": "noul",
+        "instructions": "The text is \"c\". Second?"
+      },
+      "answer": {
+        "type": "noul",
+        "noul": 0.99
+      }
+    }
+  ]
+}

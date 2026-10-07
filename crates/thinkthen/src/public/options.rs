@@ -1,5 +1,6 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
+mod admission;
 mod observer;
 
 pub use crate::core::{EstimatedInputDenial, SendBudgetDenial};
@@ -109,6 +110,9 @@ pub struct CallOptions<'a> {
     context: Option<&'a str>,
     observer: Option<Observer<'a>>,
     attempt_observer: Option<AttemptObserver<'a>>,
+    capture_attempts: bool,
+    proxy: Option<&'a crate::public::ProxyActivation>,
+    surface: Option<crate::public::Surface>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -124,6 +128,9 @@ impl fmt::Debug for CallOptions<'_> {
             .field("context", &self.context.is_some())
             .field("observer", &self.observer.is_some())
             .field("attempt_observer", &self.attempt_observer.is_some())
+            .field("capture_attempts", &self.capture_attempts)
+            .field("proxy", &self.proxy.is_some())
+            .field("surface", &self.surface)
             .finish()
     }
 }
@@ -150,6 +157,9 @@ impl<'a> CallOptions<'a> {
             context: None,
             observer: None,
             attempt_observer: None,
+            capture_attempts: false,
+            proxy: None,
+            surface: None,
         }
     }
 
@@ -157,6 +167,20 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn cancel(mut self, value: &'a CancelToken) -> Self {
         self.cancel = Some(value);
+        self
+    }
+
+    /// Supply a reserved proxy activation. Every supplied variant refuses before execution.
+    #[must_use]
+    pub const fn proxy(mut self, value: &'a crate::public::ProxyActivation) -> Self {
+        self.proxy = Some(value);
+        self
+    }
+
+    /// Identify the outer wrapper explicitly for the compiled-engine User-Agent.
+    #[must_use]
+    pub const fn surface(mut self, value: crate::public::Surface) -> Self {
+        self.surface = Some(value);
         self
     }
 
@@ -211,6 +235,14 @@ impl<'a> CallOptions<'a> {
         observer: &'a (dyn Fn(AttemptObservation) + Send + Sync),
     ) -> Self {
         self.attempt_observer = Some(observer);
+        self
+    }
+
+    /// Retain ordered live attempts in final success and started-failure facts.
+    /// Requested zero-send work retains an empty list; the default retains none.
+    #[must_use]
+    pub const fn attempts(mut self, requested: bool) -> Self {
+        self.capture_attempts = requested;
         self
     }
 
@@ -360,7 +392,14 @@ pub(crate) struct Stop<'a> {
 impl<'a> Stop<'a> {
     /// Fix the deadline and refuse a call whose token already fired.
     pub(crate) fn begin(options: CallOptions<'a>) -> Result<Self, Error> {
-        let facts = CallFacts::new();
+        if options.proxy.is_some() {
+            return Err(Error::usage(
+                "proxy activation is reserved and is not supported in 0.2",
+            ));
+        }
+        let deadline = options.deadline()?;
+        let facts = CallFacts::start(options.surface.unwrap_or(crate::public::Surface::Rust))?;
+        facts.capture_attempts(options.capture_attempts || options.attempt_observer.is_some());
         let (sender, attempts) = if options.attempt_observer.is_some() {
             let (sender, receiver) = sync_channel(32);
             (Some(sender), Some(Mutex::new(receiver)))
@@ -368,7 +407,7 @@ impl<'a> Stop<'a> {
             (None, None)
         };
         let mut base = Cancel::default()
-            .with_deadline(options.deadline()?)
+            .with_deadline(deadline)
             .with_token(options.cancel.map(CancelToken::flag))
             .with_send_budget(
                 options

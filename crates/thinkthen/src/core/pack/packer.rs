@@ -131,6 +131,19 @@ struct Open<T> {
 }
 
 impl<T> Packer<T> {
+    /// The same admission bounds, with no retained request or caller handles.
+    pub(crate) fn fresh<U>(&self) -> Packer<U> {
+        Packer::new(self.limits.clone(), self.model.clone())
+    }
+
+    pub(crate) const fn inputs_limit(&self) -> usize {
+        self.limits.inputs
+    }
+
+    pub(crate) fn first_open_item(&self) -> Option<&T> {
+        self.open.as_ref().and_then(|open| open.items.first())
+    }
+
     /// Pack for one backend. `model` is the model's compact JSON string.
     pub(crate) const fn new(limits: PackLimits, model: String) -> Self {
         Self {
@@ -193,7 +206,12 @@ impl<T> Packer<T> {
                 bytes: base,
                 inputs: 0,
             });
-            open.bytes = grown(open.bytes, open.questions.len(), entry.question.len());
+            open.bytes = grown(
+                &open.state,
+                open.bytes,
+                open.questions.len(),
+                entry.question.len(),
+            );
             open.questions.push(entry.question);
             open.items.push(entry.item);
         }
@@ -232,7 +250,12 @@ impl<T> Packer<T> {
     }
 
     fn fits(&self, open: &Open<T>, entry: &Entry<T>) -> bool {
-        let bytes = grown(open.bytes, open.questions.len(), entry.question.len());
+        let bytes = grown(
+            &open.state,
+            open.bytes,
+            open.questions.len(),
+            entry.question.len(),
+        );
         self.limits
             .over(&open.state, bytes, open.questions.len() + 1, 0)
             .is_none()
@@ -245,7 +268,7 @@ impl<T> Packer<T> {
             if entry.state != open.state {
                 return false;
             }
-            bytes = grown(bytes, count, entry.question.len());
+            bytes = grown(&open.state, bytes, count, entry.question.len());
             count += 1;
         }
         self.limits.over(&open.state, bytes, count, 0).is_none()
@@ -253,7 +276,12 @@ impl<T> Packer<T> {
 
     /// Refuse a question that passes a limit in a request of its own.
     fn lone(&self, entry: &Entry<T>) -> Result<(), PackError> {
-        let bytes = grown(self.base(&entry.state), 0, entry.question.len());
+        let bytes = grown(
+            &entry.state,
+            self.base(&entry.state),
+            0,
+            entry.question.len(),
+        );
         if let Some(limit) = entry
             .state
             .body_limit()
@@ -312,12 +340,8 @@ impl<T> Packer<T> {
 
 /// The body bytes after adding a question of `length` bytes to a request of
 /// `count` questions: its `"qN":` name, its bytes, and a comma after the first.
-fn grown(bytes: usize, count: usize, length: usize) -> usize {
-    let name = 4 + (count + 1).to_string().len();
-    bytes
-        .saturating_add(name)
-        .saturating_add(length)
-        .saturating_add(usize::from(count > 0))
+fn grown(state: &State, bytes: usize, count: usize, length: usize) -> usize {
+    bytes.saturating_add(state.api().added_bytes(count, length))
 }
 
 #[cfg(test)]

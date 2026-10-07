@@ -102,8 +102,10 @@ fn unique_some<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Wire
 /// The token counts a response reports.
 #[derive(Debug, Deserialize)]
 struct ResponseUsage {
-    input_tokens: u64,
-    output_tokens: u64,
+    #[serde(default)]
+    input_tokens: Option<u64>,
+    #[serde(default)]
+    output_tokens: Option<u64>,
 }
 
 mod observed;
@@ -200,14 +202,15 @@ impl DecodeError {
     pub(crate) const fn cause(&self) -> BackendFailureCause {
         match self {
             DecodeError::MissingAnswer(_) => BackendFailureCause::MissingAnswer,
-            DecodeError::WrongKind(_) => BackendFailureCause::WrongKind,
+            DecodeError::WrongKind(_) | DecodeError::Refused(_) => BackendFailureCause::WrongKind,
             DecodeError::MissingProbability(_) => BackendFailureCause::MissingProbability,
             DecodeError::ProbabilityOutOfRange(_) => BackendFailureCause::InvalidProbability,
             DecodeError::DistributionTotal { .. } => BackendFailureCause::InvalidDistribution,
             DecodeError::UnexpectedProbability(_) => BackendFailureCause::UnexpectedProbability,
-            DecodeError::Malformed(..) | DecodeError::NoModel | DecodeError::UnexpectedAnswer => {
-                BackendFailureCause::WrongKind
-            }
+            DecodeError::OtherMalformed
+            | DecodeError::Malformed(..)
+            | DecodeError::NoModel
+            | DecodeError::UnexpectedAnswer => BackendFailureCause::WrongKind,
         }
     }
 }

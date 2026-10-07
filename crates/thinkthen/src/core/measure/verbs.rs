@@ -115,7 +115,12 @@ pub(super) fn verb(
         Some("decide")
             if audit
                 && entry.member("threshold") == Some(&Json::Null)
-                && matches!(value, Some(Json::Null)) =>
+                && (matches!(value, Some(Json::Null))
+                    || (entry.member("schema").and_then(Json::as_str)
+                        == Some("thinkthen.result/2")
+                        && entry.member("input").is_some()
+                        && matches!(value, Some(Json::Number(number))
+                            if number.as_u64().is_some_and(|position| position > 0)))) =>
         {
             Verb::Rank
         }

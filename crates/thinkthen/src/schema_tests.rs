@@ -4,6 +4,7 @@
 //! difference the test fails. With `THINKTHEN_WRITE_SCHEMA=1` it rewrites the
 //! file and still fails, so a green run always compares.
 
+mod complete;
 use schemars::Schema;
 use schemars::generate::SchemaSettings;
 use schemars::transform::RecursiveTransform;
@@ -71,7 +72,7 @@ fn paired(details: &mut Value) {
     details["allOf"] = rules.into();
 }
 
-fn generated() -> String {
+fn generated(reference: &str) -> String {
     let mut generator = SchemaSettings::draft2020_12()
         .for_serialize()
         .with_transform(RecursiveTransform(|schema: &mut Schema| {
@@ -123,23 +124,10 @@ fn generated() -> String {
             ]),
         ),
     ];
-    // Each result type below is a named definition.
-    let _registered = [
-        generator.subschema_for::<Recognized>(),
-        generator.subschema_for::<DecisionResult>(),
-        generator.subschema_for::<FindResult>(),
-        generator.subschema_for::<AnnotateResult>(),
-        generator.subschema_for::<Detailed<'_>>(),
-        generator.subschema_for::<Details<'_>>(),
-        generator.subschema_for::<RecordValue<Bare>>(),
-        generator.subschema_for::<Row<'_>>(),
-        generator.subschema_for::<Counters>(),
-        generator.subschema_for::<DoorReply>(),
-        generator.subschema_for::<CallError>(),
-        generator.subschema_for::<QuestionJson<'_>>(),
-        generator.subschema_for::<PlanEstimate>(),
-    ];
+    register(&mut generator);
+    complete::register(&mut generator);
     let mut definitions: Map<String, Value> = generator.take_definitions(true);
+    complete::finish(&mut definitions);
     let decision = definitions
         .get_mut("decisionDetails")
         .expect("decision details");
@@ -156,28 +144,63 @@ fn generated() -> String {
             "{name} is named twice"
         );
     }
+    if reference == "completeCall" {
+        definitions.retain(|name, _| name.starts_with("complete"));
+    }
     let root = json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:thinkthen:result",
-        "title": "thinkthen result and JSON door structures",
-        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a C door value against its verb's definition; the root checks one detailed thinkthen.result/1 row."),
-        "$ref": "#/$defs/detailed",
+        "$id": if reference == "completeCall" { "urn:thinkthen:complete-call" } else { "urn:thinkthen:result" },
+        "title": "thinkthen native results and compatibility structures",
+        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a C door value against its verb's definition; released definitions retain result/1 and complete definitions describe result/2 and its additive call envelope."),
+        "$ref": format!("#/$defs/{reference}"),
         "$defs": definitions,
     });
     serde_json::to_string_pretty(&root).expect("schema text") + "\n"
 }
 
+fn register(generator: &mut schemars::SchemaGenerator) {
+    // Each result type below is a named definition.
+    let _registered = [
+        generator.subschema_for::<Recognized>(),
+        generator.subschema_for::<DecisionResult>(),
+        generator.subschema_for::<FindResult>(),
+        generator.subschema_for::<AnnotateResult>(),
+        generator.subschema_for::<Detailed<'_>>(),
+        generator.subschema_for::<Details<'_>>(),
+        generator.subschema_for::<RecordValue<Bare>>(),
+        generator.subschema_for::<Row<'_>>(),
+        generator.subschema_for::<Counters>(),
+        generator.subschema_for::<DoorReply>(),
+        generator.subschema_for::<CallError>(),
+        generator.subschema_for::<QuestionJson<'_>>(),
+        generator.subschema_for::<PlanEstimate>(),
+    ];
+}
+
 #[test]
 fn the_committed_result_schema_is_the_one_the_rust_types_derive() {
-    let schema = generated();
-    if std::fs::read_to_string(FILE).is_ok_and(|committed| committed == schema) {
-        return;
+    let schemas = [
+        (FILE, generated("detailed")),
+        (
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/src/public/results/complete.schema.json"
+            ),
+            generated("completeCall"),
+        ),
+    ];
+    let mut changed = false;
+    for (path, schema) in schemas {
+        if std::fs::read_to_string(path).is_ok_and(|committed| committed == schema) {
+            continue;
+        }
+        changed = true;
+        if std::env::var_os("THINKTHEN_WRITE_SCHEMA").is_some_and(|value| value == "1") {
+            std::fs::write(path, schema).expect("rewrite the result schema");
+        }
     }
-    if std::env::var_os("THINKTHEN_WRITE_SCHEMA").is_some_and(|value| value == "1") {
-        std::fs::write(FILE, schema).expect("rewrite the result schema");
-        panic!("schema rewritten; rerun");
-    }
-    panic!(
-        "specification/result.schema.json differs from the Rust types; rewrite it with: {REWRITE}"
+    assert!(
+        !changed,
+        "generated result schemas differ; rewrite with {REWRITE}, then rerun"
     );
 }

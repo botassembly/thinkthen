@@ -13,7 +13,7 @@ mod config;
 mod dry_run;
 mod input;
 pub(crate) mod result;
-mod source;
+pub(crate) mod source;
 
 pub(crate) fn run(
     arguments: &RelateArguments,
@@ -72,8 +72,11 @@ pub(crate) fn run(
         arguments.common.jobs,
     )?;
     let threshold = settled.spec.threshold.cut_value().unwrap_or(0.5);
+    let cancel = environment
+        .cancel()
+        .with_captured_attempts(arguments.common.details);
     let execution = engine
-        .relate(prepared, &entities, threshold, environment.cancel())
+        .relate(prepared, &entities, threshold, &cancel)
         .map_err(|error| Failure::from(error).with_replay_context(ReplayContext::Relate))?;
     let partial = execution.failed > 0;
     let output = result::Output {
@@ -81,8 +84,7 @@ pub(crate) fn run(
         framing: settled.framing,
         spec: &settled.spec,
         entities: &entities,
-        backend: &backend,
-        warning: mismatch.warning(),
+        engine: &engine,
     };
     if let Some(sources) = &sources {
         source::write(&mut writer, &output, &execution, sources)?;

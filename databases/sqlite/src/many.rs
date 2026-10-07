@@ -251,11 +251,7 @@ fn scan(
     // interpreting it as a UTF-8 key.
     let lookup = lookup(values[3]);
     // A rank question is literal text, as find's is, so it names no file.
-    let file_stamp = if verb == For::Rank {
-        None
-    } else {
-        stamp(question)
-    };
+    let file_stamp = if kind == RANK { None } else { stamp(question) };
     {
         let mut held = store
             .lock()
@@ -268,7 +264,9 @@ fn scan(
     let packed_text = string(packed, "the keyed records")?;
     string(settings, "the settings")?;
     let controls = call_settings(ValueRef::Text(settings))?;
-    let rows = if verb == For::Rank {
+    let rows = if kind == "thinkthen_rank_set" {
+        crate::rank_set::ranked(db, &question_text, &packed_text, values[2])?
+    } else if verb == For::Rank {
         ranked(db, &question_text, &packed_text, controls)?
     } else {
         answered(db, &question_text, &packed_text, controls, kind, verb)?
@@ -392,16 +390,25 @@ fn ranked(
 
 macro_rules! many {
     ($name:ident, $sql:literal, $schema:literal, $verb:expr) => {
+        many!(
+            $name,
+            $sql,
+            $schema,
+            $verb,
+            if matches!($verb, For::Decide | For::Choose | For::Rank) {
+                3
+            } else {
+                2
+            }
+        );
+    };
+    ($name:ident, $sql:literal, $schema:literal, $verb:expr, $visible:expr) => {
         #[derive(Debug)]
         pub(crate) struct $name;
         impl Table for $name {
             const NAME: &'static str = $sql;
             const SCHEMA: &'static CStr = $schema;
-            const FIRST_HIDDEN: usize = if matches!($verb, For::Decide | For::Choose | For::Rank) {
-                3
-            } else {
-                2
-            };
+            const FIRST_HIDDEN: usize = $visible;
             const COLUMNS: usize = Self::FIRST_HIDDEN + 4;
             const REQUIRED: usize = 2;
             fn rows(_: *mut sqlite3, _: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
@@ -424,3 +431,4 @@ many!(ChooseMany, "thinkthen_choose_many", c"CREATE TABLE x(key TEXT, value TEXT
 many!(ScoreMany, "thinkthen_score_many", c"CREATE TABLE x(key TEXT, value REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Score);
 many!(TagMany, "thinkthen_tag_many", c"CREATE TABLE x(key TEXT, value TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Tag);
 many!(Rank, "thinkthen_rank", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Rank);
+many!(RankSetTable, "thinkthen_rank_set", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question_name TEXT, facts TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Rank, 5);

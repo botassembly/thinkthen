@@ -45,7 +45,7 @@ fn missing_field_in_the_middle_stops_without_an_error_row_or_send() -> io::Resul
         .map(serde_json::from_slice)
         .collect::<Result<_, _>>()?;
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0]["schema"], "thinkthen.result/1");
+    assert_eq!(rows[0]["schema"], "thinkthen.result/2");
     assert_eq!(rows[0]["input"], json!({"id":"a","outer":{"body":"first"}}));
     assert_eq!(rows[0]["value"], json!({"urgent":true}));
     let requests = listener.requests();

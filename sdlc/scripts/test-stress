@@ -10,6 +10,7 @@ case ${1:-} in
     echo 'public batches: 20,000-record memory; engine churn'
     echo 'engine width: 50 repeated first-width races'
     echo 'Polars: 200-record throttle equality'
+    echo 'MCP: bounded paired native/installed stdio atomic, record and whole-set timing'
     echo 'ports: THINKTHEN_TEST_PROFILE=stress via surfaces --stress'
     exit 0 ;;
 --check|--run) mode=$1 ;;
@@ -57,6 +58,7 @@ ignored_case thinkthen backend exchange::a_server_retry_floor_is_waited_once
 ignored_case thinkthen public_controls overlap::a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight
 ignored_case thinkthen public_batches a_long_batch_keeps_memory_flat_as_its_input_grows
 ignored_case thinkthen public_batches engines_built_and_dropped_across_threads_fail_fast_on_a_refused_port
+ignored_case thinkthen mcp_timing paired_native_and_installed_mcp_calls_measure_atomic_records_and_whole_set_overhead
 ignored_lib engine::width_tests::fifty_racing_first_widths_select_exactly_one_and_the_loser_names_it
 # The Polars cases build engines from the environment, so their sends go to a scratch usage
 # folder of their own, as in libraries/polars/check.sh. The decoy above still guards the rest.
@@ -70,5 +72,5 @@ if [ "$mode" = --run ]; then
 else
     cargo test --locked --offline -p thinkthen --features polars --test polars \
         throttle_equality::a_series_runs_at_the_throttle_as_a_slice_does -- --exact
-    echo 'test-stress: all twelve ignored Rust filters exist; port stress selections are checked by their own check.sh'
+    echo 'test-stress: all ignored Rust filters exist; port stress selections are checked by their own check.sh'
 fi

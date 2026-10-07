@@ -221,7 +221,17 @@ fn structured_question_text_keeps_singleton_request_bytes_at_max() {
     first.sort();
     second.sort();
     assert_eq!(first, second);
-    assert_eq!(singleton.stdout, maximum.stdout);
+    let rows = |output: &std::process::Output| {
+        String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(|line| {
+                crate::native_results::compatibility::judgment(
+                    serde_json::from_str(line).expect("complete row"),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(rows(&singleton), rows(&maximum));
 }
 
 #[test]

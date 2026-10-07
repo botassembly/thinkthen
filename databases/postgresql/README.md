@@ -166,3 +166,52 @@ $thinkthen_grant$;
 ## The check
 
 `check.sh` runs on Linux, and on macOS with the Homebrew bottle `runtime-darwin.env` pins. On Linux it builds the extension against `/usr/bin/pg_config`, then runs PostgreSQL 16.15 from Ubuntu's server package as this user. The server listens on a socket in a private temporary folder and on no TCP port. Each test restarts it with its own loopback backend (ticket 0117) and cache folder. The server gets a fake key beside a 127.0.0.1 address alone. One-time setup fetches the package at `runtime.url` into `~/.cache/thinkthen-toolchains/postgresql/`, and `runtime.sha256` pins its hash. A missing package or tool reports "not run" with the fetch command. `NOTES.md` records what the port found.
+
+## Explicit images (0.2 development)
+
+`thinkthen_image(bytes bytea, mime text)` returns `thinkthen_image_value(media text, data bytea, file text)`. Pass an ordered `thinkthen_image_value[]`; clients may retain file names in the composite. MIME is exactly `image/png` or `image/jpeg`; the native reader/decoder validates original compressed pixels. Each question takes 1–8 images and at most 24 MiB of compressed bytes. Order and duplicates are preserved. Source file names stay outside model evidence and cache identity.
+
+`thinkthen_decide_images(question, images, text := NULL, settings := NULL)`, `thinkthen_choose_images`, `thinkthen_score_images` and `thinkthen_details_images` use the existing native image engine. The first three return their ordinary scalar value; the last returns native detailed JSON. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional.
+
+NULL constructor operands return NULL. NULL question or collection returns NULL without sending; NULL ancillary text means absent text and NULL settings means defaults. A NULL member inside a collection, empty collection, invalid media/pixels/tag or exceeded limit is Usage before sending. Unsure decide/choose is NULL; failures remain errors. Arbitrary BLOB/bytea, text, paths, URLs and generic JSON never become images implicitly. Other functions retain their text input contract.
+
+PostgreSQL exposes no privileged image/evidence-path reader. A client uses the native SDK `read_inputs` in image mode or `read_files` for text, inserts keyed bytes/media or text with file/ordinal/physical-line columns, and judges the stored evidence. Join rank keys and find indexes back to those rows; map recognition offsets with the native SourceRecord span mapper in the client, and join both relation endpoint ids to their retained source rows. Keep locations separate from submitted evidence.
+
+The checked [Rust client consumer](examples/client_files.rs) demonstrates duplicate source occurrences, keyed rank/find joins, Unicode/CRLF recognition spans and both retained relation endpoints against an owned PostgreSQL server.
+
+`thinkthen_question_file(path text) RETURNS text` is the explicit privileged question/set loader. NULL returns NULL. It reads a literal path, including a leading `@` in the filename, validates with the existing native question/set parsers, and preserves the original JSON bytes, order and duplicate detection. It retains the existing 1 MiB regular-file, role, descriptor/link and administrator confinement rules and has PUBLIC execution revoked. It does not interpret pending 0456 named inputs.
+
+Complete result/2 identities, invocation facts, started-failure facts and caller prices still await 0435 adoption of the shared native APIs (0442/0445/0450 and 0300). The additive SQL rank-set route exposes native turns and combined count facts; complete rank result/identity adoption remains with 0417/0435. These image calls expose landed native details; this is not a full SDK parity claim.
+
+`thinkthen_rank_set(questions, keyed_json[, settings])` is the explicit additive
+rank-set route. It takes the native version-one ordered set of named decide
+questions, returns `key, rank, probability, question_name, facts`, and preserves
+each original keyed identity even when several keys have equal text. Each
+member sorts with the host's existing input-order ties; native turns visits
+each depth in authored member order, consumes duplicate visits, and emits
+each original once. `probability` and `question_name` belong to the selecting
+member. Use `ORDER BY rank` after a join and `LIMIT` for the merged prefix;
+every member still judges every record. The literal `thinkthen_rank` route
+retains its existing signatures and behavior.
+
+Settings take `batch`, `context` and `deadline_ms`; model/backend selection
+uses the existing host configuration. Per-call model, cuts, pointers and
+score members refuse before sending. One-member sets preserve the plain
+question's wire/cache identity. Recording each member individually supports
+strict set replay with zero sends. Described decide members retain their
+authored true/false meanings. Independent single described/saved-score rank
+awaits the native richer-rank API under 0406.
+
+`facts` comes directly from the same completed native call, counts original
+records and combined member requests, and repeats on every output row. It
+is the current count-facts shape; full observations, call/answer IDs and
+started-failure carriers await native/0435 adoption. An empty object yields
+no rows. Set JSON and files use native RankSet admission, preserving member
+order and rejecting duplicates, authored thresholds/on and non-decide kinds.
+
+Questions are text, keyed input is jsonb and settings is json; facts is jsonb.
+Preserve the authored set as text, including text returned by
+`thinkthen_question_file(path)`, rather than converting the set to jsonb.
+The existing privileged/confined `@file` door also applies. NULL questions
+raises Usage; NULL keyed input yields no rows; NULL settings uses defaults.
+PUBLIC execution is revoked by the extension default.
