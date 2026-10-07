@@ -93,6 +93,9 @@ verify_selected_package() {
 	done
 }
 older_suites() {
+    for verb in decide choose tag score filter rank find annotate recognize relate; do
+        sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py duckdb "complete-$verb" >"$home/complete-$verb.log"
+    done
 	sh "$LIMIT" 900 "$PY" tools/images_suite.py
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
 	sh "$LIMIT" 900 "$PY" tools/files_suite.py
@@ -121,6 +124,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	select_host "$DEFAULT_VERSION"
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/$DEFAULT_VERSION/$platform/thinkthen.duckdb_extension"
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
+	sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
+	sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py duckdb
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
 	sh "$LIMIT" 900 "$PY" tools/plan_suite.py p1_native_struct_is_keyless_and_sends_nothing plan_refusals_and_named_binding_never_send positive_process_total_denies_the_next_actual_send
 	sh "$LIMIT" 900 "$PY" tools/find_suite.py original_duplicate_and_ties null_empty_and_invalid_units_do_not_send portable_find_settings_and_removed_slots held_find_and_spent_statement_budget
@@ -166,6 +171,9 @@ if [ "$profile" = stress ]; then
 	exit 0
 fi
 
+echo "== complete native calls"
+sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
+sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py duckdb
 echo "== suites"
 sh "$LIMIT" 900 "$PY" tools/images_suite.py
 sh "$LIMIT" 900 "$PY" tools/backend_setups.py

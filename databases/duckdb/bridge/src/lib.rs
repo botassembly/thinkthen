@@ -7,6 +7,8 @@
 #[path = "../../src/engines.rs"]
 mod engines;
 
+#[path = "../../../sqlite/src/complete_native/mod.rs"]
+mod complete_native;
 mod errors;
 mod ffi;
 

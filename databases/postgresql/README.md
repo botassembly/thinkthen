@@ -159,7 +159,7 @@ $thinkthen_grant$;
 
 - **Named files.** `'@name'` reads one regular file of at most 1 MiB, opened once and never through a final symlink. The role needs the privileges of `pg_read_server_files`, or the file must sit inside `thinkthen.file_directory`. When `thinkthen.file_directory` is set, a relative name such as `'@refund.json'` names a file inside that folder, for every role. A superuser who keeps relative-named files in the data folder names them absolutely once the folder is set. When the folder is unset, a relative name starts from the backend's working folder, the server's data folder, and only a role with `pg_read_server_files` reads it. A confined path is judged before any open. Linux opens it beneath the folder with `openat2`. macOS opens it with `openat` and refuses a symlink at any step, even one that stays inside the folder, and it needs read permission on the folder. The opened file must have one link and a path inside the folder. Every unreadable cause gives one message, so a refusal tells nothing about the filesystem. `thinkthen_relate` reads no file. It runs its query through SPI.
 - **The key.** The engine reads `THINKTHEN_API_KEY` from the server's environment and nothing else. `SET thinkthen.api_key` succeeds and a nonempty interactive value warns; the next call refuses with 22023 until reset. A server with `log_statement = all` or `pg_stat_statements` can record the `SET` statement, so do not put a real key there.
-- **The backend.** The engine builds in each backend on its first call, after the fork, from the server's environment. SQL cannot name an address. `_PG_init` registers settings and sends nothing.
+- **The backend.** The engine builds in each backend on its first call, after the fork, from the server's environment. Only administrators can set `thinkthen.base_url`; ordinary roles retain the selected server address. `_PG_init` registers settings and sends nothing.
 - **Threads.** Each call runs on a worker thread that blocks every signal, so PostgreSQL's handlers run only on the backend thread. Every function is `PARALLEL RESTRICTED`.
 - **One boundary.** `session_replication_role = replica` disables event triggers, so an update script that adds functions carries its own revoke.
 
@@ -181,7 +181,6 @@ The checked [Rust client consumer](examples/client_files.rs) demonstrates duplic
 
 `thinkthen_question_file(path text) RETURNS text` is the explicit privileged question/set loader. NULL returns NULL. It reads a literal path, including a leading `@` in the filename, validates with the existing native question/set parsers, and preserves the original JSON bytes, order and duplicate detection. It retains the existing 1 MiB regular-file, role, descriptor/link and administrator confinement rules and has PUBLIC execution revoked. It does not interpret pending 0456 named inputs.
 
-Complete result/2 identities, invocation facts, started-failure facts and caller prices still await 0435 adoption of the shared native APIs (0442/0445/0450 and 0300). The additive SQL rank-set route exposes native turns and combined count facts; complete rank result/identity adoption remains with 0417/0435. These image calls expose landed native details; this is not a full SDK parity claim.
 
 `thinkthen_rank_set(questions, keyed_json[, settings])` is the explicit additive
 rank-set route. It takes the native version-one ordered set of named decide
@@ -199,13 +198,13 @@ uses the existing host configuration. Per-call model, cuts, pointers and
 score members refuse before sending. One-member sets preserve the plain
 question's wire/cache identity. Recording each member individually supports
 strict set replay with zero sends. Described decide members retain their
-authored true/false meanings. Independent single described/saved-score rank
-awaits the native richer-rank API under 0406.
+authored true/false meanings. The additive `thinkthen_rank_complete` route also accepts described decide and
+saved score questions through the native complete rank API.
 
 `facts` comes directly from the same completed native call, counts original
 records and combined member requests, and repeats on every output row. It
-is the current count-facts shape; full observations, call/answer IDs and
-started-failure carriers await native/0435 adoption. An empty object yields
+is the compatibility count-facts shape. Use `thinkthen_rank_complete` for full
+observations, call/answer IDs and started-failure envelopes. An empty object yields
 no rows. Set JSON and files use native RankSet admission, preserving member
 order and rejecting duplicates, authored thresholds/on and non-decide kinds.
 
@@ -215,3 +214,27 @@ Preserve the authored set as text, including text returned by
 The existing privileged/confined `@file` door also applies. NULL questions
 raises Usage; NULL keyed input yields no rows; NULL settings uses defaults.
 PUBLIC execution is revoked by the extension default.
+
+## Complete native calls (0.2 development)
+
+All ten `thinkthen_FUNCTION_complete(question TEXT, inputs TEXT, settings TEXT :=
+NULL)` calls expose the owning native result/2 envelope and final facts, including
+started-failure facts, full probabilities, authors, call/answer/observation IDs,
+structured stops, requested attempts and optional exact caller-priced cost.
+Ordinary scalar/table signatures and cumulative usage remain compatible. See the
+[shared SQL complete API](../sqlite/README.md#complete-native-calls-02-development)
+for explicit records, context, reading, options, images, rank sets, file controls,
+error envelopes and native cache/record/replay behavior.
+
+PostgreSQL returns `json`. Evidence and image paths remain the explicit native
+client-reader/keyed-table workaround. Question files retain the accepted role,
+descriptor, regular-file, final-link, size, confinement and PUBLIC revoke checks.
+For complete calls, `@@NAME` selects the native catalog; `@reference` retains
+local-entry precedence. Relative references use the administrator
+`thinkthen.file_directory` when set, otherwise the server working directory.
+The role check precedes resolution probes. Named files must also lie inside the
+captured native questions root on the same opened descriptor, including for
+privileged readers. Original authored bytes reach native role/name validation
+before caller settings are applied.
+`thinkthen.base_url` and `thinkthen.refresh_cache` are administrator settings;
+the paired price GUCs are decimal strings. No key GUC becomes a credential source.

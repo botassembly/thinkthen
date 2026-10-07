@@ -1,13 +1,21 @@
 //! Explicit file-role admission shares the ordinary ordered JSON reader.
 use crate::core::Json;
-#[derive(Clone, Copy)]
-pub(crate) enum QuestionRole {
+/// The existing native saved-file grammar selected by a caller.
+#[derive(Clone, Copy, Debug)]
+pub enum QuestionRole {
+    /// One decide, choose, tag or score question.
     Atomic,
+    /// A choose reading with per-record candidates.
     Choose,
+    /// A decide or score reading for ordinary rank.
     Rank,
+    /// A question set, including a rank set.
     Set,
+    /// A find reading.
     Find,
+    /// A recognition file.
     Recognize,
+    /// A relation file.
     Relate,
 }
 impl QuestionRole {

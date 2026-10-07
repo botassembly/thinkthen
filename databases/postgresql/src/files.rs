@@ -69,6 +69,15 @@ pub(crate) fn read_within(
     cap: u64,
     confined: Option<&Path>,
 ) -> Result<String, CheckedReadError> {
+    read_checked(path, cap, confined, None)
+}
+
+fn read_checked(
+    path: &Path,
+    cap: u64,
+    confined: Option<&Path>,
+    named_root: Option<&Path>,
+) -> Result<String, CheckedReadError> {
     use std::io::Read;
     use std::os::unix::fs::MetadataExt;
     let real_base = match confined {
@@ -90,6 +99,12 @@ pub(crate) fn read_within(
     if let Some(real_base) = &real_base {
         let real = ffi::path_of(&file).ok_or(CheckedReadError::Refused)?;
         if meta.nlink() != 1 || !real.starts_with(real_base) {
+            return Err(CheckedReadError::Refused);
+        }
+    }
+    if let Some(root) = named_root {
+        let real = ffi::path_of(&file).ok_or(CheckedReadError::Refused)?;
+        if !real.starts_with(root) {
             return Err(CheckedReadError::Refused);
         }
     }
@@ -121,18 +136,7 @@ fn resolve(path: &str, directory: Option<&str>) -> PathBuf {
 /// `pg_read_server_files` reads only inside `thinkthen.file_directory`.
 pub(crate) fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String, Error> {
     let directory = directory.filter(|held| !held.trim().is_empty());
-    let confined = if ffi::may_read_files() {
-        None
-    } else {
-        match directory {
-            Some(held) => Some(PathBuf::from(held)),
-            None => {
-                return Err(call::usage(
-                    "a named file needs pg_read_server_files, or an administrator's thinkthen.file_directory",
-                ));
-            }
-        }
-    };
+    let confined = authorize(directory)?;
     read_within(&resolve(path, directory), FILE_CAP, confined.as_deref()).map_err(|error| match error {
         CheckedReadError::Refused => Error::new(
             ErrorKind::Local,
@@ -145,6 +149,44 @@ pub(crate) fn read_named(what: &str, path: &str, directory: Option<&str>) -> Res
             Error::new(ErrorKind::Local, format!("the {what} file '@{path}' is over the {FILE_CAP} byte cap"))
         }
     })
+}
+
+/// The same privilege decision precedes native metadata selection and content opening.
+fn authorize(directory: Option<&str>) -> Result<Option<PathBuf>, Error> {
+    let confined = if ffi::may_read_files() {
+        None
+    } else {
+        match directory {
+            Some(held) => Some(PathBuf::from(held)),
+            None => {
+                return Err(call::usage(
+                    "a named file needs pg_read_server_files, or an administrator's thinkthen.file_directory",
+                ));
+            }
+        }
+    };
+    Ok(confined)
+}
+
+pub(crate) fn read_resolved_question(
+    source: &str,
+    directory: Option<&str>,
+) -> Result<(thinkthen::QuestionFileReference, String), Error> {
+    let directory = directory.filter(|held| !held.trim().is_empty());
+    let confined = authorize(directory)?;
+    let reference = if let Some(name) = source.strip_prefix("@@") {
+        thinkthen::QuestionFileReference::named(name)?
+    } else if let Some(directory) = directory {
+        thinkthen::QuestionFileReference::reference_in(source, Path::new(directory))?
+    } else {
+        thinkthen::QuestionFileReference::reference(source)?
+    };
+    let text = read_checked(reference.path(), FILE_CAP, confined.as_deref(), reference.named_root())
+        .map_err(|error| Error::new(ErrorKind::Local, match error {
+            CheckedReadError::Refused => "the question file was not read: the descriptor is outside its admitted roots or is not a permitted regular file",
+            CheckedReadError::OverCap => "the question file is over the 1048576 byte cap",
+        }))?;
+    Ok((reference, text))
 }
 
 /// One argument's text, and the file it came from.
@@ -311,7 +353,7 @@ mod tests {
         );
     }
 
-    fn scratch(name: &str) -> PathBuf {
+    pub(super) fn scratch(name: &str) -> PathBuf {
         let held = std::env::temp_dir().join(format!("thinkthen-pg-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&held);
         std::fs::create_dir_all(held.join("base")).expect("the base directory creates");
@@ -467,3 +509,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&held);
     }
 }
+
+#[cfg(test)]
+#[path = "files_complete_tests.rs"]
+mod complete_tests;

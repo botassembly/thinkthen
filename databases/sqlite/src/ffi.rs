@@ -386,6 +386,31 @@ unsafe impl<T: Table> VTabCursor for Cursor<T> {
     }
 }
 
+/// The path the kernel holds for an open descriptor.
+#[cfg(target_os = "linux")]
+pub(crate) fn path_of(file: &std::fs::File) -> Option<std::path::PathBuf> {
+    use std::os::fd::AsRawFd;
+    std::fs::read_link(format!("/proc/self/fd/{}", file.as_raw_fd())).ok()
+}
+
+/// The path the kernel holds for an open descriptor, from `F_GETPATH`.
+#[cfg(target_os = "macos")]
+pub(crate) fn path_of(file: &std::fs::File) -> Option<std::path::PathBuf> {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::ffi::OsStrExt;
+    let mut buf = [0_u8; libc::MAXPATHLEN as usize];
+    // SAFETY: `F_GETPATH` writes at most `MAXPATHLEN` bytes, NUL included,
+    // into this live buffer of that size.
+    let got = unsafe { libc::fcntl(file.as_raw_fd(), libc::F_GETPATH, buf.as_mut_ptr()) };
+    if got == -1 {
+        return None;
+    }
+    let path = std::ffi::CStr::from_bytes_until_nul(&buf).ok()?;
+    Some(std::path::PathBuf::from(std::ffi::OsStr::from_bytes(
+        path.to_bytes(),
+    )))
+}
+
 #[cfg(test)]
 mod tests {
     use super::version_refusal;

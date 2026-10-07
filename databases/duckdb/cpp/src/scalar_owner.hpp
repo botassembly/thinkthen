@@ -24,6 +24,7 @@ struct ResolvedQuestion {
 	}
 };
 
+string ReadQuestion(ClientContext &context, const string &path, const char *role = "question", bool regular = false);
 ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument, const char *role = "question");
 
 struct StatementOwner : ClientContextState {

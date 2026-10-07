@@ -30,7 +30,7 @@ def rank_orders_recorded_probabilities_exactly():
         ], backend.base("case/15-rank-records"))
         expect(rows(got[0]), [["1", 1, 0.9], ["2", 2, 0.5], ["0", 3, 0.2]], "best first with exact probabilities")
         expect(rows(got[1]), [["VARCHAR", "BIGINT", "DOUBLE"]], "column types")
-        expect(backend.count(), 3, "one recorded request per record, then the cache")
+        expect(backend.count(), 6, "historical replies naming a different model are excluded from writable cache")
 
 
 @case

@@ -30,6 +30,13 @@ pub(crate) struct BridgeSettings {
     replay_len: usize,
     record_allowed: i32,
     replay_allowed: i32,
+    base_url_bytes: *const u8,
+    base_url_len: usize,
+    input_price_bytes: *const u8,
+    input_price_len: usize,
+    output_price_bytes: *const u8,
+    output_price_len: usize,
+    refresh_cache: i32,
 }
 
 pub(crate) fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String> {
@@ -40,7 +47,22 @@ pub(crate) fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String>
             .transpose()
     };
     let cache = optional(settings.cache_bytes, settings.cache_len)?;
+    let prices = match (
+        optional(settings.input_price_bytes, settings.input_price_len)?,
+        optional(settings.output_price_bytes, settings.output_price_len)?,
+    ) {
+        (None, None) => None,
+        (Some(input), Some(output)) => Some((input, output)),
+        _ => {
+            return Err(crate::errors::usage(
+                "prices require both input and output decimal strings",
+            ));
+        }
+    };
     Ok(engines::Asked {
+        base_url: optional(settings.base_url_bytes, settings.base_url_len)?,
+        prices,
+        refresh_cache: settings.refresh_cache != 0,
         backend: optional(settings.backend_bytes, settings.backend_len)?,
         throttle: present(settings.throttle),
         max_requests: present(settings.max_requests),

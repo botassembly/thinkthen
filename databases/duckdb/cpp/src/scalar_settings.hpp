@@ -25,6 +25,10 @@ struct SessionSettings {
 	std::optional<string> replay;
 	int32_t record_allowed = 1;
 	int32_t replay_allowed = 1;
+    std::optional<string> base_url;
+    std::optional<string> input_price;
+    std::optional<string> output_price;
+    int32_t refresh_cache = 0;
 
 	ThinkThenSettings Bridge() const {
 		const auto bytes = [](const std::optional<string> &value) {
@@ -36,7 +40,7 @@ struct SessionSettings {
 		        cache ? reinterpret_cast<const uint8_t *>(cache->data()) : nullptr,
 		        cache ? cache->size() : 0, cache_allowed,
 		        bytes(model), length(model), timeout, max_retries, bytes(profile), length(profile),
-		        bytes(record), length(record), bytes(replay), length(replay), record_allowed, replay_allowed};
+		        bytes(record), length(record), bytes(replay), length(replay), record_allowed, replay_allowed,bytes(base_url),length(base_url),bytes(input_price),length(input_price),bytes(output_price),length(output_price),refresh_cache};
 	}
 };
 

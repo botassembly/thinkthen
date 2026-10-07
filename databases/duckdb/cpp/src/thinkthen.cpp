@@ -15,6 +15,8 @@
 
 namespace duckdb {
 
+void RegisterComplete(ExtensionLoader &loader);
+
 void LoadThinkThen(ExtensionLoader &loader) {
 	if (thinkthen_cpp_init() != 0) {
 		throw OrdinaryError("thinkthen defect: the Rust bridge did not initialize");
@@ -30,6 +32,10 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	                          LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_cache", "Local ThinkThen cache folder", LogicalType::VARCHAR);
 	config.AddExtensionOption("thinkthen_backend", "ThinkThen named backend", LogicalType::VARCHAR);
+	config.AddExtensionOption("thinkthen_base_url", "Explicit ThinkThen backend address",LogicalType::VARCHAR);
+    config.AddExtensionOption("thinkthen_usd_per_million_input", "Caller input price per million tokens",LogicalType::VARCHAR);
+    config.AddExtensionOption("thinkthen_usd_per_million_output", "Caller output price per million tokens",LogicalType::VARCHAR);
+    config.AddExtensionOption("thinkthen_refresh_cache", "Refresh cached native answers: 0 or 1",LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_model", "ThinkThen model", LogicalType::VARCHAR);
 	config.AddExtensionOption("thinkthen_timeout", "Live attempt timeout in seconds", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_max_retries", "Maximum live retries", LogicalType::BIGINT);
@@ -42,6 +48,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	RegisterFind(loader);
 	RegisterFiles(loader);
 	RegisterImages(loader);
+	RegisterComplete(loader);
 	RegisterUsage(loader);
 	RegisterRemoved(loader);
 	RegisterRelate(loader);

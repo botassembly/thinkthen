@@ -22,7 +22,8 @@ from pathlib import Path
 
 import harness
 from harness import ROOT, Backend, expect, rows, run, said
-from portable import question_keys
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/"sqlite/tests"))
+from question_keys import question_keys
 from signal_suite import CANCELLED, held_cancel
 
 CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / "conformance" / "cases.json"))
@@ -103,7 +104,7 @@ def single(case: dict, base: str) -> list:
 def single_wanted(case: dict, base: str) -> list:
     served = base + "/systemone"
     # A recorded request digest stands for its questions' keys (ADR 0111 section 7); a row reads them flattened.
-    renamed = {digest(CANONICAL, one["request"]): question_keys(served, one["request"]) for one in case["exchanges"]}
+    renamed = {digest(CANONICAL, one["request"]): question_keys(served, one["request"], one["response"]["model"]) for one in case["exchanges"]}
     wanted = []
     for answer in case["expect"]["success"]["answers"]:
         details = answer["details"] | {"requests": [key for held in answer["details"]["requests"] for key in renamed[held]]}
@@ -336,7 +337,7 @@ def check(case: dict) -> str | None:
 
 def kept(case: dict, base: str, success: dict) -> str | None:
     """ADR 0111: the case's first child ran on the question store, one row per good answer."""
-    keys = {key for one in case.get("exchanges", []) for key in question_keys(base + "/systemone", one["request"])}
+    keys = {key for one in case.get("exchanges", []) for key in question_keys(base + "/systemone", one["request"], one["response"]["model"])}
     wanted = len(keys) - success.get("failed_questions", 0)
     got = harness.STORED[0] if harness.STORED else 0
     return None if got == wanted else f"stored answers: wanted {wanted}, got {got}"
