@@ -225,7 +225,9 @@ class CliApplicability(unittest.TestCase):
             case_id: {'boundary': boundary, 'reason': 'Actual CLI boundary'}
             | ({} if boundary == 'sdk-only' else {'expect': {
                 'error': 'local', 'exit': 5, 'requests_sent': 0, 'no_result': True, 'secrecy': True}
-               if boundary == 'question-file' else {'signals': ['SIGINT', 'SIGTERM'], 'requests_sent': 1}})
+               if boundary == 'question-file' else {'signals': ['SIGINT', 'SIGTERM'], 'requests_sent': 1, 'completed_rows': 1,
+                     'completed_rows_ordered': True, 'no_suffix_output': True, 'cancelled_facts': True,
+                     'signal_exit': True, 'secrecy': True}})
             for case_id, boundary in parity.CLI_BOUNDARIES.items()}
 
     def test_cli_resolves_actual_boundary_checks_without_changing_sdk_or_mcp(self):
@@ -243,7 +245,7 @@ class CliApplicability(unittest.TestCase):
         self.assertEqual(original, self.contract['required_cases'])
 
     def test_closed_rulings_refuse_unrelated_exclusions_and_other_consumers(self):
-        for defect in ['missing-all', 'missing', 'unrelated', 'wrong-boundary', 'other-consumer', 'checks', 'expect']:
+        for defect in ['missing-all', 'missing', 'unrelated', 'wrong-boundary', 'other-consumer', 'checks', 'expect', 'signal-expect']:
             with self.subTest(defect=defect):
                 changed = copy.deepcopy(self.contract)
                 cli = next(row for row in changed['consumers'] if row['id'] == 'cli')
@@ -260,6 +262,8 @@ class CliApplicability(unittest.TestCase):
                     changed['consumers'][1]['case_rulings'] = cli['case_rulings']
                 elif defect == 'checks':
                     cli['required_checks'] = ['runtime']
+                elif defect == 'signal-expect':
+                    cli['case_rulings']['cancellation-held-call']['expect']['requests_sent'] = 2
                 else:
                     cli['case_rulings']['declaration-null']['expect'] = {'error': 'Usage'}
                 with self.assertRaises(ValueError):

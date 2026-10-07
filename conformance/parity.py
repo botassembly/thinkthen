@@ -83,6 +83,11 @@ def validate_consumer_contracts(parity):
             if boundary == 'question-file' and ruling['expect'] != {
                     'error': 'local', 'exit': 5, 'requests_sent': 0, 'no_result': True, 'secrecy': True}:
                 raise ValueError(f'{case_id}: CLI question-file boundary must refuse locally without sends')
+            if boundary == 'signal-drain' and ruling['expect'] != {
+                    'signals': ['SIGINT', 'SIGTERM'], 'requests_sent': 1, 'completed_rows': 1,
+                    'completed_rows_ordered': True, 'no_suffix_output': True, 'cancelled_facts': True,
+                    'signal_exit': True, 'secrecy': True}:
+                raise ValueError(f'{case_id}: CLI signal boundary must preserve the held row and stop')
 
 
 ROOT = Path(__file__).resolve().parents[1]

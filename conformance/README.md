@@ -145,7 +145,10 @@ analogue. Each ruling has a fixed `boundary` and a nonempty `reason`.
 Executable analogues also declare concrete `expect` assertions. Question-file
 analogues retain the original invalid bytes, including duplicate keys and
 numeric spelling, and require Local, exit 5, no requests, no result and secrecy.
-The signal-drain analogue executes the real process cancellation boundary.
+The signal-drain analogue runs SIGINT and SIGTERM through the real process.
+It requires one completed row in order, one request, no suffix output, final
+cancelled facts, the actual signal exit and secrecy. Signal-delivery coordination
+never counts as a passing assertion.
 SDK cases and expectations retain their full compile/runtime requirements.
 
 SDK-only CLI rulings never become cells. Emitting a cell for one fails the
