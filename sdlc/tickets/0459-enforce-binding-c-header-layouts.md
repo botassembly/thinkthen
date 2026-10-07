@@ -4,7 +4,7 @@ Status: in progress. Shared compiler-derived ABI foundation is implemented; copi
 
 Milestone: 0.2
 
-Owner: lane 0 owns the shared checker and C/lint integration; family owners retain copied declarations.
+Owner: lane 2 resumes the shared foundation and copied-family gate adoption. Current exact PHP claims: `libraries/php/fixtures/abi.py` `libraries/php/check.sh` `libraries/php/ratchet.py.json`. Shared foundation paths: `sdlc/scripts/check-c-exports.py` `libraries/c/check.sh` `sdlc/scripts/lint`; add exact host paths as each existing gate is adopted. Native header and product APIs stay unchanged.
 
 ## Outcome
 
