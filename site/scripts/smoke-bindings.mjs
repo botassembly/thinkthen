@@ -255,8 +255,15 @@ const BINDINGS = {
       const modules = path.join(tmp, 'typescript', 'node_modules');
       const pkg = path.join(modules, 'thinkthen');
       fs.mkdirSync(pkg, { recursive: true });
-      for (const f of ['index.js', 'index.mjs', 'index.d.ts', 'loader.js', 'package.json', 'LICENSE']) fs.copyFileSync(path.join(repo, 'libraries/typescript', f), path.join(pkg, f));
-      fs.copyFileSync(path.join(release, 'libthinkthen_typescript.so'), path.join(pkg, `thinkthen-${process.platform}-${process.arch}.node`));
+      const source = path.join(repo, 'libraries/typescript');
+      const manifest = JSON.parse(fs.readFileSync(path.join(source, 'package.json'), 'utf8'));
+      const addon = `thinkthen-${process.platform}-${process.arch}.node`;
+      if (!manifest.files.includes(addon)) throw new Error(`typescript package does not ship ${addon}`);
+      for (const f of ['package.json', ...manifest.files.filter((f) => !f.endsWith('.node'))]) {
+        fs.mkdirSync(path.dirname(path.join(pkg, f)), { recursive: true });
+        fs.copyFileSync(path.join(source, f), path.join(pkg, f));
+      }
+      fs.copyFileSync(path.join(release, 'libthinkthen_typescript.so'), path.join(pkg, addon));
       return {
         toolchain: [`Node ${firstLine('node', ['--version'])}`, firstLine('rustc', ['--version'])],
         command: (file) => ['sh', ['-c', `ln -s "$1" node_modules && node "$2"`, 'sh', modules, file]],
@@ -275,10 +282,21 @@ const BINDINGS = {
       if (!clang) return { missing: 'libclang' };
       const rubyEnv = { LD_LIBRARY_PATH: path.join(prefix, 'lib') };
       const release = cargoBuild('libraries/ruby', 'site-ruby', { ...rubyEnv, RUBY: ruby, LIBCLANG_PATH: clang, PATH: `${path.join(prefix, 'bin')}:${process.env.PATH}` });
-      const lib = path.join(tmp, 'ruby', 'lib');
+      const staged = path.join(tmp, 'ruby');
+      const pkg = path.join(staged, 'libraries', 'ruby');
+      const lib = path.join(pkg, 'lib');
       fs.mkdirSync(path.join(lib, 'thinkthen'), { recursive: true });
-      for (const f of ['thinkthen.rb', 'thinkthen/version.rb']) fs.copyFileSync(path.join(repo, 'libraries/ruby/lib', f), path.join(lib, f));
       fs.copyFileSync(path.join(release, 'libthinkthen_ruby.so'), path.join(lib, 'thinkthen', 'thinkthen.so'));
+      fs.copyFileSync(path.join(repo, 'libraries/ruby/thinkthen.gemspec'), path.join(pkg, 'thinkthen.gemspec'));
+      const crate = path.join(staged, 'crates', 'thinkthen');
+      fs.mkdirSync(crate, { recursive: true });
+      fs.copyFileSync(path.join(repo, 'crates/thinkthen/Cargo.toml'), path.join(crate, 'Cargo.toml'));
+      const inventory = run(ruby, ['-rjson', '-e', 'puts JSON.generate(Gem::Specification.load(ARGV.fetch(0)).files)', path.join(pkg, 'thinkthen.gemspec')], { env: { ...process.env, ...rubyEnv } });
+      if (inventory.status !== 0) throw new Error(`ruby package inventory failed\n${inventory.stderr}`);
+      for (const f of JSON.parse(inventory.stdout).filter((f) => f !== 'lib/thinkthen/thinkthen.so')) {
+        fs.mkdirSync(path.dirname(path.join(pkg, f)), { recursive: true });
+        fs.copyFileSync(path.join(repo, 'libraries/ruby', f), path.join(pkg, f));
+      }
       return {
         toolchain: [run(ruby, ['-v'], { env: { ...process.env, ...rubyEnv } }).stdout.trim(), firstLine('rustc', ['--version'])],
         command: (file) => [ruby, [file]],
