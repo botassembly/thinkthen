@@ -7,6 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+use crate::support::{encoded_decide, legacy_keys, reported_keys};
 use serde_json::Value;
 
 type Try<T> = Result<T, Box<dyn Error>>;
@@ -225,14 +226,32 @@ fn each_old_form_converts_to_its_keys_states_and_origins() {
         let lines = lines(&folder).expect("a fixture");
         let written = answers(&folder).expect("answers");
         assert_eq!(written.len(), case.written.len(), "{name}");
-        for (answer, (key, state, origin)) in written.iter().zip(case.written) {
-            if !key.is_empty() {
-                assert_eq!(answer["key"], key, "{name}");
-            }
+        for (key, state, origin) in case.written {
             let held = lines
                 .iter()
-                .find(|line| line["sha256"] == answer["state"])
-                .expect("its state");
+                .find(|line| line["state"] == serde_json::to_string(state).expect("JSON"))
+                .expect("expected state");
+            let answer = written
+                .iter()
+                .find(|answer| answer["state"] == held["sha256"] && answer["origin"] == origin)
+                .expect("expected state and origin");
+            let request = if state == QUOTED_STATE {
+                encoded_decide(STATE, "jev-latest", "Does this convey urgency?")
+            } else {
+                case.request.as_bytes().to_vec()
+            };
+            if !key.is_empty() {
+                assert_eq!(
+                    legacy_keys(URL, &request),
+                    [key],
+                    "{name}: original v1 identity"
+                );
+                assert_eq!(
+                    answer["key"],
+                    reported_keys(URL, &request, "jev-1.13.0")[0],
+                    "{name}: normalized v2 identity"
+                );
+            }
             assert_eq!(
                 held["state"],
                 serde_json::to_string(state).expect("JSON"),
@@ -294,6 +313,8 @@ fn live(
     taken_at: i64,
 ) -> Try<()> {
     let sha = bytes(&line["state"])?;
+    let request = request(line, state)?;
+    let key = legacy_keys(URL, request.as_bytes());
     connection.execute(
         "INSERT OR IGNORE INTO states (sha256, state) VALUES (?1, ?2)",
         (&sha, state),
@@ -302,7 +323,7 @@ fn live(
         "INSERT INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin)
          VALUES (?1, ?2, ?3, (SELECT id FROM states WHERE sha256 = ?4), ?5, ?6, 'jev-1.13.0', 1, 1, ?7, 'live')",
         rusqlite::params![
-            bytes(&line["key"])?,
+            bytes(&Value::from(key.first().ok_or("one key")?.clone()))?,
             line["url"].as_str(),
             line["model"].as_str(),
             sha,
@@ -314,8 +335,16 @@ fn live(
     Ok(())
 }
 
+fn request(line: &Value, state: &str) -> Try<String> {
+    Ok(format!(
+        r#"{{"state":{state},"model":{},"questions":{{"q1":{}}}}}"#,
+        line["model"],
+        line["question"].as_str().ok_or("question")?
+    ))
+}
+
 #[test]
-fn a_fixture_a_live_file_and_old_entries_merge_newest_first_and_a_tie_keeps_the_fixture() {
+fn conflicting_fixture_live_and_old_histories_refuse_without_rewriting_any_source() {
     let folder = scratch("merge").expect("a folder");
     old_folder(&folder).expect("old entries");
     assert_eq!(convert(&folder, &[]).expect("a run").0, Some(0));
@@ -348,34 +377,23 @@ fn a_fixture_a_live_file_and_old_entries_merge_newest_first_and_a_tie_keeps_the_
     .expect("a row");
     drop(connection);
 
+    let before = fs::read(folder.join("thinkthen.sqlite")).expect("database bytes");
+    let fixture_before = fs::read(folder.join("thinkthen.jsonl")).expect("fixture bytes");
     let (code, said) = convert(&folder, &[]).expect("a run");
-    assert_eq!(code, Some(0), "{said}");
-    let merged = answers(&folder).expect("answers");
-    let found = |key: &Value| {
-        merged
-            .iter()
-            .find(|answer| &answer["key"] == key)
-            .expect("a merged key")
-    };
+    assert_eq!(code, Some(5), "{said}");
     assert_eq!(
-        found(&tie["key"])["answer"],
-        r#"{"type":"noul","noul":0.11}"#
+        said,
+        "thinkthen: the entry `thinkthen.jsonl` was refused: stored constituents or identity are invalid\n"
     );
-    let newest = found(&newer["key"]);
     assert_eq!(
-        (
-            newest["answer"].as_str(),
-            newest["taken_at"].as_i64(),
-            newest["origin"].as_str()
-        ),
-        (
-            Some(r#"{"type":"noul","noul":0.44}"#),
-            Some(9),
-            Some("live")
-        )
+        fs::read(folder.join("thinkthen.sqlite")).expect("kept database"),
+        before
     );
-    assert!(!folder.join("thinkthen.sqlite").exists());
-    assert_eq!(fs::read_dir(&folder).expect("a folder").count(), 3);
+    assert_eq!(
+        fs::read(folder.join("thinkthen.jsonl")).expect("kept fixture"),
+        fixture_before
+    );
+    assert_eq!(fs::read_dir(&folder).expect("a folder").count(), 4);
 }
 
 #[test]
@@ -385,7 +403,20 @@ fn convert_waits_for_a_writer_holding_the_live_file_and_keeps_its_row() {
     assert_eq!(convert(&folder, &[]).expect("a run").0, Some(0));
     let lines = lines(&folder).expect("a fixture");
     let state = lines[0]["state"].as_str().expect("a state").to_owned();
-    let line = lines[1].clone();
+    let mut line = lines[1].clone();
+    line["question"] = line["question"]
+        .as_str()
+        .expect("question")
+        .replace("?", "? Keep the writer's distinct row?")
+        .into();
+    line["key"] = reported_keys(
+        URL,
+        request(&line, &state).expect("request").as_bytes(),
+        "jev-1.13.0",
+    )[0]
+    .clone()
+    .into();
+    let written_key = line["key"].clone();
     let sqlite = folder.join("thinkthen.sqlite");
     rusqlite::Connection::open(&sqlite)
         .expect("a live file")
@@ -423,7 +454,7 @@ fn convert_waits_for_a_writer_holding_the_live_file_and_keeps_its_row() {
     let written = answers(&folder).expect("answers");
     let found = written
         .iter()
-        .find(|answer| answer["key"] == lines[1]["key"])
+        .find(|answer| answer["key"] == written_key)
         .expect("the written key");
     assert_eq!(
         (found["answer"].as_str(), found["origin"].as_str()),

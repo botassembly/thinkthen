@@ -7,7 +7,7 @@ use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
 use crate::recordings::folder;
-use crate::support::{encoded_decide, keys, stored};
+use crate::support::{encoded_decide, reported_keys, stored};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -306,7 +306,9 @@ fn dns_host_case_spellings_share_one_recording_identity() {
 
     let written = stored(&folder).expect("one canonical answer");
     let request = encoded_decide("Refund me please.", "local-1", "asks for a refund");
-    let [key] = keys(&canonical, &request).try_into().expect("one question");
+    let [key] = reported_keys(&canonical, &request, "jev-1.13.0")
+        .try_into()
+        .expect("one question");
     assert_eq!(written.len(), 1, "{written:?}");
     assert_eq!(written[0]["url"], canonical.as_str());
     assert_eq!(written[0]["key"], key.as_str());

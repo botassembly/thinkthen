@@ -236,6 +236,7 @@ fn started_failure_and_zero_send_success_keep_ids_and_explicit_outer_surface_is_
     assert_eq!(listener.count(), 1);
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_headers_and_final_facts_share_the_admitted_invocation_id() {
     use std::io::Write as _;
@@ -292,6 +293,7 @@ fn cli_headers_and_final_facts_share_the_admitted_invocation_id() {
     );
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_typed_admission_refusal_emits_no_invocation_id_and_sends_nothing() {
     use std::process::{Command, Stdio};
