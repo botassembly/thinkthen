@@ -1,6 +1,6 @@
 # 0431: Complete typed located results in existing named SDKs
 
-Status: in progress. Implementation is pushed; installed-package qualification and final family landing remain.
+Status: landed. The complete SDK family and installed/archive qualification are complete; final lane checks and coordinator integration use the same landing change. See [0431 record](../records/0431-complete-existing-typed-sdks.md).
 
 Milestone: 0.2
 
