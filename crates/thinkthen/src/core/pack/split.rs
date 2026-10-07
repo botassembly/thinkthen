@@ -7,7 +7,7 @@ use serde_json::value::RawValue;
 
 use crate::core::adapters::built_in::{self, DecodeError};
 use crate::core::question::Question;
-use crate::core::result::Usage;
+use crate::core::result::ReportedUsage;
 use crate::core::text::ModelName;
 
 /// One wire answer: its JSON as received, or the error that failed it.
@@ -16,7 +16,7 @@ pub(crate) type WireAnswer = Result<String, DecodeError>;
 /// A reply's model, its whole-request usage, and one answer per wire question.
 pub(crate) struct Split {
     pub(crate) model: ModelName,
-    pub(crate) usage: Option<Usage>,
+    pub(crate) usage: Option<ReportedUsage>,
     pub(crate) answers: Vec<WireAnswer>,
 }
 
@@ -46,7 +46,17 @@ struct Raw {
 pub(crate) fn split(
     decoders: &[Question],
     body: &[u8],
-) -> Result<Split, (DecodeError, Option<Usage>)> {
+) -> Result<Split, (DecodeError, Option<ReportedUsage>)> {
+    split_for(crate::core::adapters::ApiType::Primary, decoders, body)
+}
+pub(crate) fn split_for(
+    api: crate::core::adapters::ApiType,
+    decoders: &[Question],
+    body: &[u8],
+) -> Result<Split, (DecodeError, Option<ReportedUsage>)> {
+    if api == crate::core::adapters::ApiType::Decisions {
+        return api.split(decoders, body);
+    }
     let (usage, decoded) = built_in::decode_answers(decoders, body);
     let (model, each) = decoded.map_err(|error| (error, usage))?;
     let raw: Raw = serde_json::from_slice(body)

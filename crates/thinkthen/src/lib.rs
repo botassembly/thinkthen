@@ -49,6 +49,9 @@ mod schema_forms;
 mod schema_tests;
 
 #[cfg(feature = "cli")]
+mod mcp;
+
+#[cfg(feature = "cli")]
 mod cli;
 
 #[cfg(feature = "cli")]

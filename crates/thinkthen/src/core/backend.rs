@@ -27,6 +27,7 @@ pub(crate) const MAX_PER_MINUTE: u32 = 60_000;
 /// and the rate its named backend's configuration entry sets.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Backend {
+    api_type: crate::core::adapters::ApiType,
     url: Url,
     model: ModelName,
     descriptions: Descriptions,
@@ -103,6 +104,7 @@ impl Backend {
     #[cfg(test)]
     pub(crate) const fn from_parts(url: Url, model: ModelName) -> Self {
         Self {
+            api_type: crate::core::adapters::ApiType::Primary,
             url,
             model,
             descriptions: Descriptions::Authored,
@@ -142,6 +144,7 @@ impl Backend {
         path: &str,
     ) -> Result<Self, BackendError> {
         Ok(Self {
+            api_type: crate::core::adapters::ApiType::Primary,
             url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE), path)?,
             model: ModelName::new(model)?,
             descriptions: Descriptions::Authored,
@@ -150,6 +153,14 @@ impl Backend {
             image_route: built_in::images::ImageRoute::Unsupported,
             per_minute: None,
         })
+    }
+
+    pub(crate) const fn with_api_type(mut self, api: crate::core::adapters::ApiType) -> Self {
+        self.api_type = api;
+        self
+    }
+    pub(crate) const fn api_type(&self) -> crate::core::adapters::ApiType {
+        self.api_type
     }
 
     /// Send descriptions in this form. Only a named backend sets one other
@@ -282,6 +293,12 @@ fn address(base: &str, path: &str) -> Result<Url, BackendError> {
     if base.is_empty() {
         return Err(BackendError::Blank(BlankTextError::Url));
     }
+    if base
+        .chars()
+        .any(|character| character.is_control() || character.is_whitespace())
+    {
+        return Err(BackendError::NotAnAddress);
+    }
     let base = base.trim_end_matches('/');
     let (scheme, rest) = after_scheme(base).ok_or(BackendError::InvalidScheme)?;
     // The address is printed in a plan and kept in a recording, so a base that
@@ -300,6 +317,12 @@ fn address(base: &str, path: &str) -> Result<Url, BackendError> {
     }
     let rest = canonical_rest(rest, host);
     Ok(Url::new(format!("{scheme}{rest}/{path}"))?)
+}
+
+/// Normalize an already resolved posting URL without appending an endpoint again.
+pub(crate) fn posting_address(value: &str) -> Result<Url, BackendError> {
+    let url = address(value, "")?;
+    Url::new(url.as_str().trim_end_matches('/')).map_err(BackendError::Blank)
 }
 
 /// Lowercase literal ASCII letters in an unbracketed host and keep every other byte.

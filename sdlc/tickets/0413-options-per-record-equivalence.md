@@ -1,6 +1,6 @@
 # 0413: Supply per-record candidate options everywhere
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
 
 Milestone: 0.2
 
@@ -22,3 +22,33 @@ Choose batches across every SDK, keyed SQL and frames carry independent ordered 
 ## Dependencies and ownership
 
 0407 owns per-record context; family tickets adopt shared carriers.
+
+## Native work in progress
+
+Lane0 adds `RecordInput<T>`, validated ordered `RecordOptions` and `RecordOption`, reusing LabelBuilder and Record::choices. `Description::from_json` admits the existing string/object/array/null grammar through the shared ordered parser. Projected options now retain object/array/null descriptions as authored. Null option descriptions mean absent; shortlists replace rather than merge. Public admission tests pin order, descriptions, invalid candidates and withheld Debug. Execution routes and complete-result integration remain open. The unpublished C draft will receive optional choices and text-only optional context once, preserving released layouts without an extra draft record_v2 API.
+
+### Added public declarations
+
+```text
+struct RecordOption
+RecordOption::name: String
+RecordOption::description: Option<Description>
+struct RecordOptions
+fn RecordOptions::new(Vec<RecordOption>) -> Result<RecordOptions, Error>
+fn RecordOptions::project(&str, &str) -> Result<RecordOptions, Error>
+fn RecordOptions::options(&self) -> &[RecordOption]
+fn Description::from_json(&str) -> Result<Description, Error>
+struct RecordChooseQuestion
+fn Question::choose_records(&str) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::from_json(&str) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::load(impl AsRef<Path>) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::cut_at(self, f64) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::model(self, &str) -> Result<RecordChooseQuestion, Error>
+fn RecordChooseQuestion::text(&self) -> QuestionContent<'_>
+fn RecordChooseQuestion::threshold(&self) -> Option<ResolvedThreshold>
+fn Engine::choose_dynamic_records_complete_with<I, T>(&self, &RecordChooseQuestion, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteChoice>>>, Error> where I: IntoIterator<Item = RecordInput<T>>, T: InputEvidence
+```
+
+Native execution now admits a required whole shortlist on every eager original, including later-record zero-send refusal and an empty zero-observation call. Saved choose controls use the existing resolver and batch precedence. Host adoption remains open.
+
+Native foundation update: eager and fallible complete choose routes accept required whole ordered shortlists with authored descriptions, including record-only saved choose preparation. Selected native pointers and metadata declarations validate before lookup/send and retain originals. Replacement candidates never merge with fixed options and their actual semantics determine ordinary per-question identity. Native/CLI execution is implemented; host/SQL/frame adoption and root whole review/landing remain open.

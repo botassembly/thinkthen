@@ -73,6 +73,7 @@ mod exchange;
 mod facts;
 mod find;
 mod find_display;
+mod find_file;
 mod from_record;
 mod images;
 #[allow(
@@ -221,3 +222,5 @@ mod rank_set;
     reason = "checked result objects and recorded keys stop the identity proof"
 )]
 mod rank_set_identity;
+
+mod native_results;

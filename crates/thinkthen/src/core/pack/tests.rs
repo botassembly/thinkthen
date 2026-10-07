@@ -34,11 +34,10 @@ fn quoted(record: &str, question: Question) -> Plan {
     .expect("a quoted plan")
 }
 
-/// The SHA-256 of `systemone`, the address, `"jev-1.13.0"`, the fixed
-/// sentence as a JSON string and the question below, joined by line feeds,
-/// taken outside this program with `printf … | sha256sum`.
+/// Both expected hashes were computed independently: legacy LF parts and
+/// question-key/2 tagged NUL/u64-BE framing, with both model constituents.
 #[test]
-fn the_key_hashes_the_five_parts_as_sent() {
+fn versioned_keys_frame_both_models_and_legacy_keys_keep_original_lf_bytes() {
     let plan = quoted("Ringo", decide("Is this a drummer?"));
     let asked = asks(&url(), &plan).expect("asks");
     let [ask] = asked.as_slice() else {
@@ -50,6 +49,10 @@ fn the_key_hashes_the_five_parts_as_sent() {
     );
     assert_eq!(
         ask.key.hex(),
+        "d21000051b969fadc4e76c230216012443229ca36fcd7302ee94b3883d73af2f"
+    );
+    assert_eq!(
+        QuestionKey::of(&url(), "\"jev-1.13.0\"", ask.state.json(), &ask.question).hex(),
         "6950b38cb4dbbf9ccc90be362a126dee1e40c1ff72dd1f81168ccd37a110fa5f"
     );
     assert_eq!(
@@ -133,12 +136,15 @@ fn a_stored_answer_of_the_wrong_shape_does_not_decode() {
 #[test]
 fn shares_split_usage_evenly_with_the_remainder_to_the_earliest() {
     assert_eq!(
-        shares(Some(Usage::new(10, 3)), 4),
+        shares(
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(10, 3))),
+            4
+        ),
         vec![
-            Some(Usage::new(3, 1)),
-            Some(Usage::new(3, 1)),
-            Some(Usage::new(2, 1)),
-            Some(Usage::new(2, 0)),
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(3, 1))),
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(3, 1))),
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(2, 1))),
+            Some(crate::core::ReportedUsage::from_complete(Usage::new(2, 0))),
         ]
     );
     assert_eq!(shares(None, 2), vec![None, None]);

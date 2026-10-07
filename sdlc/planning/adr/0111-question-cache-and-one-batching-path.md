@@ -71,7 +71,7 @@ CREATE TABLE answers (
   input_tokens  INTEGER,               -- this question's share; NULL when unreported
   output_tokens INTEGER,
   taken_at      INTEGER NOT NULL,      -- Unix seconds, UTC, when the reply arrived
-  origin        TEXT NOT NULL          -- 'live', 'converted' or 'quoted'
+  origin        TEXT NOT NULL          -- 'live', 'converted', 'quoted' or 'fixture'
 );
 ```
 
@@ -281,3 +281,7 @@ The design author's calls:
 7. `cache_answers` counts questions.
 8. Probe replay leaves the `spec` gate.
 9. No automatic conversion of a user's old cache.
+
+## 2026-10-07 amendment: controlled fixture provenance
+
+Ticket 0443 admits `fixture` alongside `live`, `converted` and `quoted` in the closed persisted-origin set for both v1 and v2. It identifies a controlled or synthetic test/example answer and makes no claim of a live provider observation. Preserve the saved origin through legacy observation identity, migration and export. Keep existing recording bytes and the meanings of the other three values. Public retrieval origins remain `live`, `cache` and `replay`. The cache contract defines validation and identity; this amendment adds no public result origin.

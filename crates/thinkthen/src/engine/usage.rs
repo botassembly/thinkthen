@@ -7,12 +7,11 @@ use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use crate::core::Usage;
-
 mod counts;
 pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
+mod timing;
 pub(crate) use facts::Snapshot as RunSnapshot;
 mod files;
 mod lock;
@@ -32,6 +31,7 @@ pub(crate) struct Counters {
     /// The one read before this process's first send (ticket 0360). It keeps
     /// its result, so after a refusal every later send refuses too.
     readable: std::sync::OnceLock<Result<(), String>>,
+    held_model_mismatch: std::sync::atomic::AtomicBool,
 }
 
 /// What the requests hand the one writer thread, so no request waits on a file.
@@ -39,6 +39,7 @@ pub(crate) struct Counters {
 struct Shared {
     queue: Mutex<Queue>,
     changed: Condvar,
+    http: timing::Timeline,
 }
 
 #[derive(Debug, Default)]
@@ -64,6 +65,7 @@ impl Counters {
             path,
             shared: Arc::default(),
             readable: std::sync::OnceLock::new(),
+            held_model_mismatch: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -98,15 +100,6 @@ impl Counters {
         self.add(Counts {
             requests_sent: 1,
             retries: u64::from(retry),
-            ..Counts::default()
-        });
-    }
-
-    pub(crate) fn tokens(&self, usage: Usage) {
-        let (input_tokens, output_tokens) = usage.token_counts();
-        self.add(Counts {
-            input_tokens,
-            output_tokens,
             ..Counts::default()
         });
     }

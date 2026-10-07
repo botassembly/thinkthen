@@ -25,9 +25,13 @@ def declarations(header):
         raise ValueError('unterminated header comment')
     code = re.sub(r'/\*.*?\*/|//[^\n]*', ' ', header, flags=re.S)
     code = re.sub(r'^\s*#.*$', '', code, flags=re.M)
-    for statement in code.split(';'):
+    aggregate_depth = 0
+    aggregate_code = re.sub(r'extern\s+"C"\s*\{', '', code)
+    for statement in aggregate_code.split(';'):
+        at_top_level = aggregate_depth == 0
+        aggregate_depth = max(0, aggregate_depth + statement.count('{') - statement.count('}'))
         statement = statement.strip()
-        if ('thinkthen_' in statement and '(' not in statement and
+        if (at_top_level and 'thinkthen_' in statement and '(' not in statement and
                 not statement.startswith(('typedef ', '}')) and '{' not in statement):
             raise ValueError('malformed header declaration')
     names = []

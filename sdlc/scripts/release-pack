@@ -277,19 +277,22 @@ zig)
 		cp libraries/zig/src/thinkthen.zig "$folder/src/"
 		;;
 php)
-		mkdir -p "$folder/examples" "$folder/src"
+		mkdir -p "$folder/examples" "$folder/src/complete" "$folder/src/native"
 		cp libraries/php/LICENSE libraries/php/README.md libraries/php/composer.json \
 			libraries/php/autoload.php "$folder/"
 		cp libraries/php/examples/direct.php "$folder/examples/"
 		cp libraries/php/src/ThinkThen.php "$folder/src/"
+		cp libraries/php/src/complete/models.php "$folder/src/complete/"
+		cp libraries/php/src/native/abi.h libraries/php/src/native/*.php "$folder/src/native/"
 		;;
 dart)
-		mkdir -p "$folder/lib/src"
+		mkdir -p "$folder/lib/src/native"
 		cp libraries/dart/CHANGELOG.md libraries/dart/LICENSE libraries/dart/README.md \
 			libraries/dart/pubspec.yaml libraries/dart/pubspec.lock "$folder/"
-		cp libraries/dart/lib/thinkthen_dart.dart "$folder/lib/"
+		cp libraries/dart/lib/thinkthen_dart.dart libraries/dart/lib/thinkthen_complete.dart "$folder/lib/"
 		cp libraries/dart/lib/src/allocator.dart libraries/dart/lib/src/door.dart \
 			libraries/dart/lib/src/typed.dart "$folder/lib/src/"
+		cp libraries/dart/lib/src/native/*.dart "$folder/lib/src/native/"
 		;;
 flutter)
 		[ "$dart_built" = 1 ] || { echo 'release-pack: flutter needs dart built earlier in this invocation' >&2; exit 1; }
@@ -300,7 +303,8 @@ flutter)
 			"$folder/flutter/example/linux/flutter" "$folder/flutter/example/linux/runner"
 		cp libraries/dart/flutter/README.md libraries/dart/flutter/pubspec.yaml \
 			libraries/dart/flutter/pubspec.lock "$folder/flutter/"
-		cp libraries/dart/flutter/lib/thinkthen_flutter.dart "$folder/flutter/lib/"
+		cp libraries/dart/flutter/lib/thinkthen_flutter.dart \
+			libraries/dart/flutter/lib/thinkthen_complete_flutter.dart "$folder/flutter/lib/"
 		cp libraries/dart/flutter/example/.metadata libraries/dart/flutter/example/README.md \
 			libraries/dart/flutter/example/pubspec.yaml libraries/dart/flutter/example/pubspec.lock \
 			libraries/dart/flutter/example/analysis_options.yaml "$folder/flutter/example/"

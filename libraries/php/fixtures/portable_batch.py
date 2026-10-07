@@ -21,7 +21,18 @@ if RELEASE_PACKAGE:
     package = Path(RELEASE_PACKAGE).resolve()
     native = Path(RELEASE_NATIVE).resolve()
     expected = {"LICENSE", "README.md", "composer.json", "autoload.php",
-                "src/ThinkThen.php", "examples/direct.php", "THINKTHEN-PACKAGE-INPUTS"}
+                "src/ThinkThen.php", "examples/direct.php", "THINKTHEN-PACKAGE-INPUTS",
+                'src/complete/models.php',
+                'src/native/abi.h',
+                'src/native/views.php',
+                'src/native/views_0.php',
+                'src/native/views_1.php',
+                'src/native/input.php',
+                'src/native/question.php',
+                'src/native/question_adapter.php',
+                'src/native/result.php',
+                'src/native/batch.php',
+                'src/native/engine.php'}
     members = {str(path.relative_to(package)) for path in package.rglob("*") if path.is_file()}
     assert members == expected and not any(path.is_symlink() for path in package.rglob("*")), ("PHP_ARCHIVE_MEMBERS", members)
     metadata = json.loads((package / "composer.json").read_text())
@@ -75,17 +86,18 @@ for named in (False, True):
         server.stdin.write("capture\n")
         server.stdin.flush()
         captured = json.loads(server.stdout.readline())
-        assert count == 1, (count, captured)
-        one_portable_request(captured["bodies"])
+        assert count == 2, (count, captured)
+        for body in captured["bodies"]:one_portable_request([body])
+        assert "sk-loopback-php-portable" not in run.stdout + run.stderr
         if named:
-            for command, expected in (("paths", paths(row["path"])),
-                                      ("bearers", {"markers":{"local":1},"absent":0,"unknown":0,"overflow":False})):
+            for command, expected in (("paths", paths(row["path"], 2)),
+                                      ("bearers", {"markers":{"local":2},"absent":0,"unknown":0,"overflow":False})):
                 server.stdin.write(command + "\n"); server.stdin.flush()
                 assert json.loads(server.stdout.readline()) == expected, command
             assert "tt-named-loopback" not in run.stdout + run.stderr
             assert "tt-named-loopback" not in json.dumps(captured["bodies"])
             print("php named backend: selected path, bearer, result and secrecy PASS")
-        print("php portable: five typed rows, one request with the fixture questions")
+        print("php portable: legacy and complete typed rows, two requests with the fixture questions")
     finally:
         server.stdin.close()
         server.wait(timeout=10)

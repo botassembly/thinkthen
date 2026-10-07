@@ -28,3 +28,4 @@ libraries/r           landed  thinkthen/src/rust
 databases/duckdb      landed
 databases/sqlite      landed
 databases/postgresql  landed
+libraries/mcp         planned

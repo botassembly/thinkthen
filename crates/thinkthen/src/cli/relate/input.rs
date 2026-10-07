@@ -1,7 +1,7 @@
 use std::io::BufRead;
 
 use crate::core::{
-    EntitySetError, Framing, Pointer, Reading, Record, RecordError, RelateSpec, RelationEntity,
+    EntitySetError, Framing, Reading, Record, RecordError, RelateSpec, RelationEntity,
 };
 use crate::edge::Chunks;
 use crate::failure::Failure;
@@ -21,6 +21,7 @@ pub(super) fn read(
     };
     let mut pairs = Vec::new();
     for record in records {
+        record.validate_item(spec.metadata.item_schema.as_ref())?;
         pairs.push((
             name_of(&record, spec)?.to_owned(),
             record.entity_text(spec.kind_field())?.to_owned(),
@@ -32,14 +33,7 @@ pub(super) fn read(
 /// The entity's name. A name `recognize` found carries `text` in place of
 /// `name`, so a record with no `name` at the default field reads its `text`.
 pub(super) fn name_of<'a>(record: &'a Record, spec: &RelateSpec) -> Result<&'a str, RecordError> {
-    let field = spec.name_field();
-    match record.entity_text(field) {
-        Err(missed @ RecordError::Missed(_)) if field.as_str() == "/name" => Pointer::new("/text")
-            .ok()
-            .and_then(|text| record.entity_text(&text).ok())
-            .ok_or(missed),
-        read => read,
-    }
+    spec.record_name(record)
 }
 
 fn document(source: Box<dyn BufRead + Send>, spec: &RelateSpec) -> Result<Vec<Record>, Failure> {
@@ -75,7 +69,11 @@ fn lines(
     let reading = Reading::new(Framing::Lines, Vec::new())?;
     let mut pairs = Vec::new();
     for bytes in Chunks::new(source, true) {
-        pairs.push((reading.as_it_arrived(&bytes?)?.to_owned(), "*".to_owned()));
+        let bytes = bytes?;
+        reading
+            .record(&bytes)?
+            .validate_item(spec.metadata.item_schema.as_ref())?;
+        pairs.push((reading.as_it_arrived(&bytes)?.to_owned(), "*".to_owned()));
     }
     admitted(spec, &pairs)
 }

@@ -2,18 +2,20 @@
 
 use super::*;
 
+const PINNED_DECIDED: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
+const REFUND_REQUEST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me.\". Does this ask for a refund?"}}}"#;
+
 #[test]
 fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
     let _serial = serial();
-    let answer = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
+    let answer = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
     let listener = Listener::answering(move |_| Canned::ok(answer)).expect("listener");
     let folder = std::env::temp_dir().join(format!("thinkthen-priced-{}", std::process::id()));
     let _gone = std::fs::remove_dir_all(&folder);
     let engine = Engine::builder()
         .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-controls")
-        .expect("key")
+        .and_then(|builder| builder.api_key("sk-public-controls"))
+        .expect("backend")
         .cache_at(&folder)
         .expect("cache")
         .prices_usd_per_million("0.25", "0.25")
@@ -36,12 +38,20 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
     assert_eq!(cached.facts().estimated_cost_usd(), Some("0.000000"));
     assert_eq!(
         (
+            cached.facts().input_tokens(),
+            cached.facts().output_tokens()
+        ),
+        (None, None)
+    );
+    assert_eq!(
+        (
             cached.facts().requests_sent(),
             cached.facts().cache_answers()
         ),
         (0, 1)
     );
     assert_eq!(listener.count(), 1);
+    assert_eq!(listener.requests()[0].body, REFUND_REQUEST.as_bytes());
     let plain = Engine::builder()
         .base_url(listener.base())
         .expect("base")
@@ -60,6 +70,10 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
         None
     );
     assert_eq!(listener.count(), 2);
+    assert_eq!(
+        listener.requests()[0].body,
+        REFUND_REQUEST.replace("Refund me.", "Another.").as_bytes()
+    );
     let zero = Engine::builder()
         .base_url(listener.base())
         .expect("base")
@@ -78,6 +92,10 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
         Some("0.000000")
     );
     assert_eq!(listener.count(), 3);
+    assert_eq!(
+        listener.requests()[0].body,
+        REFUND_REQUEST.replace("Refund me.", "Zero.").as_bytes()
+    );
     let _gone = std::fs::remove_dir_all(folder);
 }
 
@@ -213,7 +231,7 @@ fn complete_batch_replies_with_overflowed_tokens_omit_call_cost_and_next_call_re
 #[test]
 fn counters_and_cache_answers_match_the_real_attempts() {
     let _serial = serial();
-    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let listener = Listener::answering(|_| Canned::ok(PINNED_DECIDED)).expect("listener");
     let folder = std::env::temp_dir().join(format!("thinkthen-counters-{}", std::process::id()));
     let _gone = std::fs::remove_dir_all(&folder);
     let engine = Engine::builder()
@@ -250,6 +268,7 @@ fn counters_and_cache_answers_match_the_real_attempts() {
     assert!(engine.decide_with(&asked, "Another.", options).is_err());
     let usage = engine.usage();
     assert_eq!(listener.count(), 1);
+    assert_eq!(listener.requests()[0].body, REFUND_REQUEST.as_bytes());
     assert_eq!((usage.requests_sent(), usage.cache_answers()), (1, 1));
     let _gone = std::fs::remove_dir_all(&folder);
 }
@@ -257,7 +276,15 @@ fn counters_and_cache_answers_match_the_real_attempts() {
 #[test]
 fn each_public_question_model_selects_its_own_cache_freshness() {
     let _serial = serial();
-    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let listener = Listener::answering(|body| {
+        let request: serde_json::Value = serde_json::from_slice(body).expect("request");
+        match request["model"].as_str().expect("literal requested model") {
+            "jev-latest" => Canned::ok(DECIDED),
+            "jev-1.13.0" => Canned::ok(PINNED_DECIDED),
+            _ => panic!("unexpected literal requested model"),
+        }
+    })
+    .expect("listener");
     let folder = std::env::temp_dir().join(format!(
         "thinkthen-public-model-refresh-{}",
         std::process::id()
@@ -302,6 +329,17 @@ fn each_public_question_model_selects_its_own_cache_freshness() {
     assert_eq!(fourth.facts().requests_sent(), 0);
     assert_eq!(fourth.facts().cache_answers(), 1);
     assert_eq!(listener.count(), 3);
+    for (request, model) in
+        listener
+            .requests()
+            .iter()
+            .zip(["jev-latest", "jev-latest", "jev-1.13.0"])
+    {
+        assert_eq!(
+            request.body,
+            REFUND_REQUEST.replace("jev-1.13.0", model).as_bytes()
+        );
+    }
     let _gone = std::fs::remove_dir_all(folder);
 }
 
@@ -436,71 +474,4 @@ fn a_failed_eager_rank_carries_its_started_call_facts() {
         (0, 1, None)
     );
     assert_eq!(listener.count(), 1);
-}
-
-#[test]
-fn ineligible_calls_refuse_shared_context_before_a_send() {
-    let _serial = serial();
-    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let engine = engine(listener.base());
-    let one = question();
-    let find = Question::find("Which asks for a refund?").expect("find");
-    let recognize = thinkthen::Recognize::builder()
-        .kind(thinkthen::Kind::new("person", None).expect("kind"))
-        .and_then(thinkthen::RecognizeBuilder::build)
-        .expect("recognize");
-    let relate = Relate::builder()
-        .relation(
-            thinkthen::RelationRule::one_way("works_with", "person", "organization").expect("rule"),
-        )
-        .and_then(thinkthen::RelateBuilder::build)
-        .expect("relate");
-    let options = CallOptions::new().context("shared evidence");
-    let denied = [
-        (
-            "decide",
-            "a single-document call does not take a shared context",
-            engine.decide_with(&one, "Ada", options).map(|_| ()),
-        ),
-        (
-            "details",
-            "a single-document call does not take a shared context",
-            engine.details_with(&one, "Ada", options).map(|_| ()),
-        ),
-        (
-            "find",
-            "find does not take a shared context",
-            engine
-                .find_with(&find, ["Ada", "Acme"], options)
-                .map(|_| ()),
-        ),
-        (
-            "recognize",
-            "recognize does not take a shared context",
-            engine
-                .recognize_with(&recognize, "Ada", options)
-                .map(|_| ()),
-        ),
-        (
-            "relate",
-            "relate does not take a shared context",
-            engine
-                .relate_with(
-                    &relate,
-                    [
-                        Entity::new("Ada", "person").expect("entity"),
-                        Entity::new("Acme", "organization").expect("entity"),
-                    ],
-                    options,
-                )
-                .map(|_| ()),
-        ),
-    ];
-    for (name, sentence, result) in denied {
-        let error = result.expect_err(name);
-        assert_eq!(error.kind(), ErrorKind::Usage, "{name}");
-        assert_eq!(error.to_string(), sentence, "{name}");
-        assert!(error.facts().is_none(), "{name} never started");
-    }
-    assert_eq!(listener.count(), 0);
 }

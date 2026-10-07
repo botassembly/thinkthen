@@ -46,7 +46,27 @@ if RELEASE_PACKAGE:
     native = Path(RELEASE_NATIVE).resolve() / "lib/libthinkthen.so"
     expected = {"CHANGELOG.md", "LICENSE", "README.md", "pubspec.yaml", "pubspec.lock",
                 "lib/thinkthen_dart.dart", "lib/src/allocator.dart", "lib/src/door.dart",
-                "lib/src/typed.dart", "THINKTHEN-PACKAGE-INPUTS"}
+                "lib/src/typed.dart", "THINKTHEN-PACKAGE-INPUTS",
+                'lib/thinkthen_complete.dart',
+                'lib/src/native/abi.dart',
+                'lib/src/native/abi_0.dart',
+                'lib/src/native/abi_1.dart',
+                'lib/src/native/abi_2.dart',
+                'lib/src/native/api.dart',
+                'lib/src/native/batch.dart',
+                'lib/src/native/engine.dart',
+                'lib/src/native/execution.dart',
+                'lib/src/native/functions.dart',
+                'lib/src/native/input.dart',
+                'lib/src/native/question.dart',
+                'lib/src/native/question_adapter.dart',
+                'lib/src/native/result.dart',
+                'lib/src/native/views.dart',
+                'lib/src/native/views_0.dart',
+                'lib/src/native/views_1.dart',
+                'lib/src/native/views_2.dart',
+                'lib/src/native/views_3.dart',
+                'lib/src/native/views_4.dart'}
     members = {str(path.relative_to(package)) for path in package.rglob("*") if path.is_file()}
     assert members == expected and not any(path.is_symlink() for path in package.rglob("*")), ("DART_ARCHIVE_MEMBERS", members)
     manifest = (package / "pubspec.yaml").read_text()
@@ -108,20 +128,21 @@ for named in (False, True):
             assert done.returncode == 0 and "DART_PORTABLE_BATCH_PASS" in done.stdout, done.stderr
         backend.stdin.write("count\n")
         backend.stdin.flush()
-        assert int(backend.stdout.readline()) == 1
+        assert int(backend.stdout.readline()) == 2
         backend.stdin.write("capture\n")
         backend.stdin.flush()
         actual = [body.encode() for body in json.loads(backend.stdout.readline())["bodies"]]
-        one_portable_request(actual)
+        for body in actual:one_portable_request([body])
+        assert "tt-portable-loopback" not in done.stdout + done.stderr
         if named:
-            for command, expected in (("paths", paths(row["path"])),
-                                      ("bearers", {"markers":{"local":1},"absent":0,"unknown":0,"overflow":False})):
+            for command, expected in (("paths", paths(row["path"], 2)),
+                                      ("bearers", {"markers":{"local":2},"absent":0,"unknown":0,"overflow":False})):
                 backend.stdin.write(command + "\n"); backend.stdin.flush()
                 assert json.loads(backend.stdout.readline()) == expected, command
             assert "tt-named-loopback" not in done.stdout + done.stderr
             assert b"tt-named-loopback" not in b"".join(actual)
             print("dart named backend: selected path, bearer, result and secrecy PASS")
-        print("Dart public bulk: five values, one request with the fixture questions")
+        print("Dart public bulk: legacy and complete typed values, two requests with the fixture questions")
     finally:
         backend.stdin.close()
         assert backend.wait(timeout=10) == 0

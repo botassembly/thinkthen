@@ -57,7 +57,21 @@ fn final_body_limits_are_exact_and_explicit_caller_limits_narrow_images() {
 #[test]
 fn moved_file_names_do_not_change_existing_identity_and_source_has_no_lines() {
     let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
-    let engine = engine(&listener, "liquid", "d1");
+    let place = super::folder();
+    let engine = Engine::builder()
+        .backend("liquid")
+        .unwrap()
+        .base_url(listener.base())
+        .unwrap()
+        .model("d1")
+        .unwrap()
+        .api_key("fake-key")
+        .unwrap()
+        .cache_at(&place)
+        .unwrap()
+        .max_retries(0)
+        .build()
+        .unwrap();
     let options = InputReaderOptions {
         media: ReaderMedia::Image,
         reading: ReaderOptions {
@@ -81,12 +95,48 @@ fn moved_file_names_do_not_change_existing_identity_and_source_has_no_lines() {
         .details_input(&question(), &moved.question_input())
         .unwrap();
     assert_eq!(first.value().requests(), second.value().requests());
+    let first_complete = engine
+        .decide_input_complete_with(
+            &question(),
+            &old.question_input(),
+            thinkthen::CallOptions::new(),
+        )
+        .unwrap();
+    let second_complete = engine
+        .decide_input_complete_with(
+            &question(),
+            &moved.question_input(),
+            thinkthen::CallOptions::new(),
+        )
+        .unwrap();
+    assert_eq!(
+        first_complete.value().answer_id(),
+        second_complete.value().answer_id()
+    );
+    assert_eq!(first_complete.facts().requests_sent(), 0);
+    assert_eq!(second_complete.facts().requests_sent(), 0);
+    let first_doc = serde_json::to_value(first_complete.complete().unwrap()).unwrap();
+    assert_eq!(
+        first_doc["value"]["source"],
+        serde_json::json!({"file":"original.png"})
+    );
+    let complete = serde_json::to_value(second_complete.complete().unwrap()).unwrap();
+    assert_eq!(
+        complete["value"]["source"],
+        serde_json::json!({"file":"elsewhere/image.dat"})
+    );
+    assert_eq!(listener.count(), 1);
     let located = serde_json::to_value(moved).unwrap();
     assert_eq!(located["file"], "elsewhere/image.dat");
     assert!(located.get("first_line").is_none());
     assert!(located.get("last_line").is_none());
     let requests = listener.requests();
-    assert_eq!(requests[0].body, requests[1].body);
+    assert_eq!(requests.len(), 1);
+    let body = std::str::from_utf8(&requests[0].body).unwrap();
+    assert!(!body.contains("original.png"));
+    assert!(!body.contains("elsewhere/image.dat"));
+    drop(engine);
+    std::fs::remove_dir_all(place).unwrap();
 }
 
 #[test]

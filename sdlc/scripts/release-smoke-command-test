@@ -25,6 +25,32 @@ plant() {
 	cat >"$work/$1/bin/thinkthen" <<-EOF
 		#!/bin/sh
 		[ "\$1" != --version ] || { echo 'thinkthen $version'; exit 0; }
+		if [ "\$1" = mcp ]; then
+			exec python3 -c '
+		import json, sys
+		for line in sys.stdin:
+		    message = json.loads(line)
+		    if "id" not in message:
+		        continue
+		    method = message["method"]
+		    if method == "initialize":
+		        result = {"protocolVersion": "2025-11-25", "capabilities": {"tools": {}},
+		                  "serverInfo": {"name": "fixture", "version": "1"}}
+		    elif method == "ping":
+		        result = {}
+		    elif method == "tools/list":
+		        result = {"tools": [{"name": name} for name in
+		                  "decide choose tag score filter rank find annotate recognize relate".split()]}
+		    elif method == "tools/call":
+		        value = {"value": {"schema": "thinkthen.result/2", "value": True,
+		                           "meta": {"origin": "replay"}}, "facts": {"requests_sent": 0}}
+		        result = {"structuredContent": value, "isError": False,
+		                  "content": [{"type": "text", "text": json.dumps(value)}]}
+		    else:
+		        sys.exit(4)
+		    print(json.dumps({"jsonrpc": "2.0", "id": message["id"], "result": result}), flush=True)
+		'
+		fi
 		${3:-:}
 		${4-$cap}
 		case " \$* " in *' --replay recording '*) [ -d recording ] && [ -f report.txt ] && echo $2 ;; *) exit 4 ;; esac

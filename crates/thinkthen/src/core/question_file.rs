@@ -132,6 +132,9 @@ pub(crate) enum QuestionFileError {
     /// The file holds something other than one JSON object.
     #[error("a question file is one JSON object")]
     NotAnObject,
+    /// An unsupported author declaration.
+    #[error(transparent)]
+    Declaration(#[from] crate::core::declaration::DeclarationError),
     /// The file names none of the four question types.
     #[error("a question file holds one of `decide`, `choose`, `tag`, or `score`")]
     NoVerb,
@@ -307,6 +310,7 @@ impl QuestionFileError {
 /// One question file, read and checked, with every setting it did not hold absent.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct QuestionFile {
+    pub(crate) metadata: crate::core::declaration::QuestionMetadata,
     verb: Verb,
     text: QuestionText,
     yes: Option<Meaning>,
@@ -368,7 +372,9 @@ impl QuestionFile {
         };
         let verb = verb_of(members)?;
         for (name, _) in members {
-            if verb.keys().contains(&name.as_str()) {
+            if verb.keys().contains(&name.as_str())
+                || crate::core::declaration::QuestionMetadata::is_key(name)
+            {
                 continue;
             }
             if EVERY_KEY.contains(&name.as_str()) {
@@ -380,6 +386,7 @@ impl QuestionFile {
             return Err(QuestionFileError::UnknownKey(name.clone()));
         }
         Ok(Self {
+            metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
             verb,
             text: question_text(&value, verb.word())?,
             yes: meaning(&value, "true")?,
@@ -409,7 +416,10 @@ fn verb_of(members: &[(String, Json)]) -> Result<Verb, QuestionFileError> {
 }
 
 mod fields;
+mod find;
 mod profile;
+mod role;
+pub(crate) use role::QuestionRole;
 mod resolve;
 
 pub(crate) use crate::core::question_file::fields::pointers;

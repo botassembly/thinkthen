@@ -15,7 +15,18 @@ ROOT = Path(__file__).resolve().parents[3]
 PHP = ROOT / "libraries/php"
 NATIVE = ROOT / "libraries/c/target/debug/libthinkthen_c.so"
 HEADER = ROOT / "libraries/c/include/thinkthen.h"
-PACKAGE_FILES = ["LICENSE", "README.md", "autoload.php", "composer.json", "examples/direct.php", "src/ThinkThen.php"]
+PACKAGE_FILES = sorted(["LICENSE", "README.md", "autoload.php", "composer.json", "examples/direct.php", "src/ThinkThen.php",
+    'src/complete/models.php',
+    'src/native/abi.h',
+    'src/native/views.php',
+    'src/native/views_0.php',
+    'src/native/views_1.php',
+    'src/native/input.php',
+    'src/native/question.php',
+    'src/native/question_adapter.php',
+    'src/native/result.php',
+    'src/native/batch.php',
+    'src/native/engine.php'])
 PRIVATE_PATTERNS = (b"tt-canary-291", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
@@ -42,7 +53,9 @@ def main():
             install = work / "install with spaces"
             package = install / "package"
             native = install / "native"
-            shutil.copytree(PHP, package, ignore=shutil.ignore_patterns("fixtures", "check.sh", "ratchet*.json", "__pycache__"))
+            for name in PACKAGE_FILES:
+                (package/name).parent.mkdir(parents=True,exist_ok=True)
+                shutil.copy2(PHP/name,package/name)
             (native / "lib").mkdir(parents=True)
             (native / "include").mkdir()
             shutil.copy2(NATIVE, native / "lib/libthinkthen.so")
@@ -92,9 +105,9 @@ def main():
                     print("PHP_INSTALLED_PLANT_REJECTED wrong-value: public envelope assertion")
                     return
                 assert result.returncode == 0 and "INSTALLED_PHP_CONSUMER_PASS" in result.stdout and not result.stderr, (mode, result.returncode, result.stdout, result.stderr)
-                assert collections.Counter(server.arrivals) == {"consumer-php": 1, "consumer-json": 1}, (mode, server.arrivals)
-                assert server.attempts == 2, (mode, server.attempts)
-                print(f"PHP_INSTALLED_PASS {mode} arrivals=2")
+                assert collections.Counter(server.arrivals) == {"consumer-php": 1, "consumer-json": 1, "consumer-native": 1}, (mode, server.arrivals)
+                assert server.attempts == 3, (mode, server.attempts)
+                print(f"PHP_INSTALLED_PASS {mode} arrivals=3")
             finally:
                 server.close()
 

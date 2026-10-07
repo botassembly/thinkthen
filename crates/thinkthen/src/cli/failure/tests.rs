@@ -45,6 +45,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         outcome: crate::core::Outcome::Yes,
         order_value: Some(0.91),
         replayed: false,
+        rank: None,
         partial_failure: false,
         profile_mismatch: None,
     };
@@ -66,6 +67,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             outcome: crate::core::Outcome::Yes,
             order_value: Some(0.91),
             replayed: false,
+            rank: None,
             partial_failure: false,
             profile_mismatch: None,
         })

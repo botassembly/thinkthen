@@ -36,7 +36,8 @@ pub(crate) struct Failure {
     code: i32,
     retryable: bool,
     message: String,
-    facts: Option<String>,
+    facts: Option<Box<Facts>>,
+    stopped: Option<thinkthen::Stopped>,
 }
 
 impl fmt::Debug for Failure {
@@ -65,6 +66,7 @@ impl Failure {
             retryable: false,
             message: message.into(),
             facts: None,
+            stopped: None,
         }
     }
 
@@ -75,6 +77,7 @@ impl Failure {
             retryable: false,
             message: message.into(),
             facts: None,
+            stopped: None,
         }
     }
 
@@ -85,12 +88,13 @@ impl Failure {
             retryable: false,
             message: format!("defect: {message}"),
             facts: None,
+            stopped: None,
         }
     }
 
     pub(crate) fn completed(mut self, facts: Option<&Facts>) -> Self {
         if self.facts.is_none() {
-            self.facts = facts.map(facts_json);
+            self.facts = facts.map(|facts| Box::new(facts.clone()));
         }
         self
     }
@@ -102,7 +106,8 @@ impl From<thinkthen::Error> for Failure {
             code: code_of(error.kind()),
             retryable: error.retryable(),
             message: error.to_string(),
-            facts: error.facts().map(facts_json),
+            facts: error.facts().map(|facts| Box::new(facts.clone())),
+            stopped: Some(error.stopped()),
         }
     }
 }
@@ -113,6 +118,8 @@ pub(crate) struct Last {
     retryable: bool,
     message: CString,
     facts: Option<CString>,
+    native_facts: Option<Box<Facts>>,
+    stopped: Option<thinkthen::Stopped>,
 }
 
 impl Last {
@@ -123,7 +130,12 @@ impl Last {
             code: failure.code,
             retryable: failure.retryable,
             message,
-            facts: failure.facts.and_then(|facts| CString::new(facts).ok()),
+            facts: failure
+                .facts
+                .as_ref()
+                .and_then(|facts| CString::new(facts_json(facts)).ok()),
+            native_facts: failure.facts,
+            stopped: failure.stopped,
         }
     }
 }
@@ -272,6 +284,35 @@ pub(crate) fn facts(held: Option<&Held>) -> *const std::ffi::c_char {
     last(held, |last| last.facts.as_ref().map(|facts| facts.as_ptr()))
         .flatten()
         .unwrap_or(std::ptr::null())
+}
+
+/// Independent saved-error data; no successful-result provenance is synthesized.
+#[derive(Clone)]
+pub(crate) struct FailureSnapshot {
+    pub(crate) code: i32,
+    pub(crate) retryable: bool,
+    pub(crate) message: String,
+    pub(crate) facts: Option<Box<Facts>>,
+    pub(crate) stopped: Option<thinkthen::Stopped>,
+}
+impl fmt::Debug for FailureSnapshot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FailureSnapshot")
+            .field("code", &self.code)
+            .field("retryable", &self.retryable)
+            .field("facts", &self.facts.is_some())
+            .finish_non_exhaustive()
+    }
+}
+/// Clone under the existing thread/engine lock; never clears or replaces the saved error.
+pub(crate) fn snapshot(held: Option<&Held>) -> Option<FailureSnapshot> {
+    last(held, |last| FailureSnapshot {
+        code: last.code,
+        retryable: last.retryable,
+        message: last.message.to_string_lossy().into_owned(),
+        facts: last.native_facts.clone(),
+        stopped: last.stopped,
+    })
 }
 
 /// Run one door body so no panic unwinds into the host. A panic records the

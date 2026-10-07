@@ -6,4 +6,6 @@ Each new or materially amended ticket received a fresh read-only review. Four fi
 
 Ticket and whitespace checks pass; new text passes the private-name check. The landing runs full tests and lint before main is pushed. Existing product and qualified-run evidence remains historical evidence, not proof of the expanded SDK outcome. No paid call, migration, registry change or release run follows from this planning change.
 
-Remaining work is the implementation in the named tickets and final parity checks. Decisions access/schema is an explicit external prerequisite; images and Windows Node/C#/JVM packaging remain deferred. The builder answers every PM slot with its owners. One record is kept for this planning change; no receipt framework is added.
+Remaining work is the implementation in the named tickets and final parity checks. Later Ian rulings require admitted images and OpenAI Decisions text in 0.2; access, documentation and recorded replies are now available. Windows Node/C#/JVM packaging remains deferred. The builder answers every PM slot with its owners. One record is kept for this planning change; no receipt framework is added.
+
+The remaining queue now orders native/OpenAI integration, typed C, MCP, binding families, SQL/dataframes, full parity and final package/platform checks. A fresh read-only planning review accepted the update. Main e2c2a03cb provides the tested cache foundation; prepared branches remain incomplete until actual public consumers and landing checks pass. No new scope, paid calls or verification machinery is introduced.

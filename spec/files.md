@@ -14,7 +14,14 @@ thinkthen() { "$binary" "$@" --replay "$root/site/recordings"; }
 cd "$root/specification/fixtures/files"
 for script in "$root"/site/examples/learn/read-files/*.sh; do
   source "$script" > "$work/printed"
-  cmp "$work/printed" "${script%.sh}.out"
+  case "${script##*/}" in
+    2-files-only.sh) cmp "$work/printed" "${script%.sh}.out" ;;
+    *)
+      jq -cS . "$work/printed" > "$work/actual"
+      jq -cS . "${script%.sh}.out" > "$work/expected"
+      cmp "$work/actual" "$work/expected"
+      ;;
+  esac
 done
 policy=$(thinkthen find 'Which line gives the refund policy?' --input documents --unit line --model local-1)
 printf '%s\n' "$policy" | jq -c '[.input,.file,.first_line,.last_line]' | mustmatch '["Customers may request a refund within 30 days.","documents/01-policy.txt",2,2]'

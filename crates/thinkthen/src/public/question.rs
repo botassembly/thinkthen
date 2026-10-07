@@ -116,7 +116,7 @@ impl Description {
         &self.text
     }
 
-    fn of(value: Json) -> Result<Self, Error> {
+    pub(super) fn of(value: Json) -> Result<Self, Error> {
         let text =
             json_line(&value).map_err(|_| Error::defect("a description could not be written"))?;
         Ok(Self { value, text })
@@ -230,14 +230,27 @@ impl DescriptionBuilder {
 /// A question and its rule, ready for the calls its kind accepts.
 ///
 /// `Debug` names the kind alone.
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct Question {
+    pub(crate) metadata: core::declaration::QuestionMetadata,
     pub(crate) core: core::Question,
     pub(crate) threshold: Option<Threshold>,
     pub(crate) model: Option<ModelName>,
     pub(crate) profile: Option<ProfileName>,
     pub(crate) batch: Option<Json>,
     pub(crate) kind: Kind,
+}
+
+impl PartialEq for Question {
+    fn eq(&self, other: &Self) -> bool {
+        self.core == other.core
+            && self.threshold == other.threshold
+            && self.model == other.model
+            && self.profile == other.profile
+            && self.batch == other.batch
+            && self.kind == other.kind
+            && self.reading_metadata() == other.reading_metadata()
+    }
 }
 
 impl fmt::Debug for Question {
@@ -326,6 +339,7 @@ impl Question {
     /// Returns [`Error::Usage`] for blank text.
     pub fn decide(text: &str) -> Result<DecideBuilder, Error> {
         Ok(DecideBuilder {
+            metadata: core::declaration::QuestionMetadata::default(),
             text: text_of(text)?,
             yes: None,
             no: None,
@@ -418,8 +432,8 @@ impl Question {
         }
     }
 
-    /// Read one question file. A file whose `on` names a part of a record is
-    /// refused, because a library call's evidence is one whole text.
+    /// Read one question file. Authored `on` pointers select original JSON
+    /// fields through native record reading before item declaration admission.
     ///
     /// # Errors
     ///
@@ -428,15 +442,6 @@ impl Question {
         let (file, batch) = QuestionFile::parse_top(value).map_err(Error::refused)?;
         let resolved =
             resolve(file.verb(), None, Some(&file), &Typed::default()).map_err(Error::refused)?;
-        if resolved
-            .on()
-            .iter()
-            .any(|pointer| !pointer.as_str().is_empty())
-        {
-            return Err(Error::usage(
-                "a library question reads its evidence whole, so it takes no `on`",
-            ));
-        }
         let core = resolved
             .question()
             .cloned()
@@ -452,6 +457,7 @@ impl Question {
             Verb::Score => Kind::Score,
         };
         let question = Self {
+            metadata: file.metadata.clone(),
             core,
             threshold,
             model,
@@ -521,7 +527,7 @@ impl Question {
         Ok(self)
     }
 
-    pub(super) const fn yes_no(
+    pub(super) fn yes_no(
         text: QuestionText,
         yes: Option<Meaning>,
         no: Option<Meaning>,
@@ -529,6 +535,7 @@ impl Question {
         kind: Kind,
     ) -> Self {
         Self {
+            metadata: core::declaration::QuestionMetadata::default(),
             core: core::Question::Decide { text, yes, no },
             threshold,
             model: None,

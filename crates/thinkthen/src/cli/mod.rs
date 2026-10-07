@@ -51,6 +51,7 @@ pub fn entry() -> ExitCode {
         Ok(cli) => cli,
         Err(error) => return hint::refused(error),
     };
+    let accepted = Instant::now();
     let wants_facts = cli.command.as_ref().is_some_and(facts::enabled);
     let stdout = io::stdout();
     let stderr = io::stderr();
@@ -59,6 +60,9 @@ pub fn entry() -> ExitCode {
             Ok(_) => ExitCode::SUCCESS,
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
+    }
+    if let Some(Command::Mcp(arguments)) = &cli.command {
+        return mcp_entry(arguments);
     }
     let offline = match &cli.command {
         Some(Command::Transform(arguments)) => {
@@ -73,32 +77,26 @@ pub fn entry() -> ExitCode {
         _ => None,
     };
     if let Some(result) = offline {
-        return match result {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(failure) => failure::report(&failure, stderr.lock()),
-        };
+        return report_offline(result, stderr.lock());
     }
     // Every command that reads input may write a recording or a cache entry.
     if cli.command.as_ref().is_some_and(Command::reads_input)
         && let Err(failure) = file_size::claim()
     {
-        return report_early(&failure, wants_facts, started, stderr.lock());
+        return report_early(&failure, wants_facts, (started, accepted), stderr.lock());
     }
     let mut environment = match Environment::read() {
         Ok(environment) => environment,
-        Err(failure) => return report_early(&failure, wants_facts, started, stderr.lock()),
+        Err(failure) => {
+            return report_early(&failure, wants_facts, (started, accepted), stderr.lock());
+        }
     };
-    if environment.config().shared() {
-        let mut writer = stderr.lock();
-        #[cfg(not(windows))]
-        let warning = "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go";
-        #[cfg(windows)]
-        let warning = "thinkthen: another user owns the configuration file or its Windows access permissions allow another user to change it; it decides where the key and evidence go";
-        let _unwritten = writeln!(writer, "{warning}").and_then(|()| writer.flush());
-    }
+    warn_configuration(&environment, stderr.lock());
     let activation = match interrupt::activate(&mut environment) {
         Ok(activation) => activation,
-        Err(failure) => return report_early(&failure, wants_facts, started, stderr.lock()),
+        Err(failure) => {
+            return report_early(&failure, wants_facts, (started, accepted), stderr.lock());
+        }
     };
     let result = run(&cli, &environment, stdout.lock());
     let (code, stopped) = match result {
@@ -110,18 +108,13 @@ pub fn entry() -> ExitCode {
             (ExitCode::from(code), stopped)
         }
     };
-    if environment.usage().finish() {
-        let mut writer = stderr.lock();
-        let advice = environment.usage().failed_file().map_or_else(
-            || "check the usage folder permissions and free space".to_owned(),
-            |(name, category)| format!("local usage file {name} has {category}"),
-        );
+    if environment.usage().has_held_model_mismatch() {
         let _unwritten = writeln!(
-            writer,
-            "thinkthen: usage counters could not be updated; {advice}"
-        )
-        .and_then(|()| writer.flush());
+            stderr.lock(),
+            "thinkthen: warning: a held answer names a different model and cannot be reused online"
+        );
     }
+    finish_usage(&environment);
     if wants_facts {
         let snapshot = environment.usage().run_snapshot();
         let elapsed = started.elapsed();
@@ -131,11 +124,50 @@ pub fn entry() -> ExitCode {
         } else {
             stopped
         };
-        facts::write(writer, snapshot, elapsed, stopped);
+        facts::write(
+            writer,
+            snapshot,
+            elapsed,
+            accepted.elapsed(),
+            stopped,
+            environment.cancel().call_id(),
+        );
     }
     match activation.finish(code) {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
+    }
+}
+
+fn mcp_entry(arguments: &crate::mcp::startup::Arguments) -> ExitCode {
+    match file_size::claim() {
+        Ok(()) => crate::mcp::startup::entry(arguments),
+        Err(failure) => failure::report(&failure, io::stderr().lock()),
+    }
+}
+
+fn warn_configuration(environment: &Environment, mut writer: impl Write) {
+    if environment.config().shared() {
+        #[cfg(not(windows))]
+        let warning = "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go";
+        #[cfg(windows)]
+        let warning = "thinkthen: another user owns the configuration file or its Windows access permissions allow another user to change it; it decides where the key and evidence go";
+        let _unwritten = writeln!(writer, "{warning}").and_then(|()| writer.flush());
+    }
+}
+
+fn finish_usage(environment: &Environment) {
+    if environment.usage().finish() {
+        let mut writer = io::stderr().lock();
+        let advice = environment.usage().failed_file().map_or_else(
+            || "check the usage folder permissions and free space".to_owned(),
+            |(name, category)| format!("local usage file {name} has {category}"),
+        );
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: usage counters could not be updated; {advice}"
+        )
+        .and_then(|()| writer.flush());
     }
 }
 
@@ -161,7 +193,7 @@ fn parsed_cli() -> Result<Cli, clap::Error> {
 fn report_early(
     failure: &Failure,
     wants_facts: bool,
-    started: Instant,
+    (started, accepted): (Instant, Instant),
     mut writer: impl Write,
 ) -> ExitCode {
     let code = failure::facts::report(failure, &mut writer);
@@ -170,7 +202,9 @@ fn report_early(
             &mut writer,
             crate::engine::usage::Counters::default().run_snapshot(),
             started.elapsed(),
+            accepted.elapsed(),
             Some(failure::facts::Stopped::of(failure, code)),
+            None,
         );
     }
     ExitCode::from(code)
@@ -199,6 +233,7 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
     }
     let input = io::stdin();
     match &cli.command {
+        Some(Command::Mcp(_)) => Err(Failure::Defect("MCP command bypassed startup")),
         Some(Command::Decide(arguments)) => judge::decide(arguments, environment, input, writer),
         Some(Command::Choose(arguments)) => judge::choose(arguments, environment, input, writer),
         Some(Command::Tag(arguments)) => judge::tag(arguments, environment, input, writer),
@@ -287,11 +322,19 @@ fn in_default_cache(command: &Command, environment: &Environment) -> bool {
         Command::Relate(arguments) => default(&arguments.common),
         Command::Cache(_)
         | Command::Status(_)
+        | Command::Mcp(_)
         | Command::Check(_)
         | Command::Backends(_)
         | Command::Transform(_)
         | Command::Runs(_)
         | Command::Audit(_)
         | Command::Diff(_) => false,
+    }
+}
+
+fn report_offline(result: Result<(), Failure>, writer: impl Write) -> ExitCode {
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(failure) => failure::report(&failure, writer),
     }
 }

@@ -21,8 +21,10 @@ mod budget;
 )]
 mod ffi;
 mod files;
+mod images;
 mod many;
 mod question;
+mod rank_set;
 mod recognize_document;
 mod scalars;
 mod settings;

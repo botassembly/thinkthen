@@ -35,7 +35,7 @@ Written 2026-09-19. Ian brought a list of ten uses of the decider model that was
 | Share one connection pool across records | Build, in ticket 0013 | It adds no surface, and `--jobs` means little without it |
 | `--jobs N` | Build, in ticket 0013 | Already specified |
 | Honor `Retry-After` on a 429 | Build | The vendor asks for it, and parallel requests make a 429 likelier |
-| A `serve` command or a daemon | Decline | A process that waits for work is a service. Record mode through a `coproc` already serves a loop. A how-to shows it. Ian ruled on 2026-10-02 that the service is a second program in this repository, the proxy, which serves the functions over HTTP and MCP; the command still has no `serve` (`../issues/2026-09-30-proxy-service-for-shared-limits-and-traces.md`) |
+| A local MCP server | Build in 0.2 | Ian superseded the starting rejection on 2026-10-06. Ticket 0455 exposes the ten functions and ordinary question files through the existing engine over local stdio. Proxy service and business policy remain separate. |
 | Several questions in one call with no file | Document only | `annotate` with a question set is the home for several questions, and `thinkthen annotate <(jq -n '...')` needs no file on disk |
 | Many yes/no questions in, a list of tags out | Document only | A question set and a small `tags` transform do it |
 | More than 255 options | Document only | A Bash loop of `choose` walks a tree of groups. The vendor also reports weaker picks above about 240 options, and `choose.md` says so |

@@ -96,8 +96,16 @@ impl<T: AsRef<str>> SourceRecord<T> {
         if start >= end || end > text.chars().count() {
             return Err(Error::usage("source span is outside its record"));
         }
-        let first = self.first_line + text.chars().take(start).filter(|&c| c == '\n').count();
-        let last = self.first_line + text.chars().take(end - 1).filter(|&c| c == '\n').count();
+        let offset = |count| {
+            self.first_line
+                .checked_add(count)
+                .ok_or_else(|| Error::usage("source span is outside its record"))
+        };
+        let first = offset(text.chars().take(start).filter(|&c| c == '\n').count())?;
+        let last = offset(text.chars().take(end - 1).filter(|&c| c == '\n').count())?;
+        if self.first_line == 0 || last > self.last_line {
+            return Err(Error::usage("source span is outside its record"));
+        }
         Ok((first, last))
     }
 }

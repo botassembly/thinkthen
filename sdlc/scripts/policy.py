@@ -77,7 +77,7 @@ INHERITED = {"workspace": True}
 # vendor's words live behind one adapter. These are the words that name the
 # vendor rather than the judgment: its question type, its field for what an
 # option means, its module, its host, and the stem of its model names.
-VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe", "jev")
+VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe", "jev", "openai", "luna")
 # The adapters folder, where every vendor word belongs. `adapters.rs` names the
 # modules it holds and says which one this build uses, and each adapter's own
 # module owns its name, its default address, its default model, and its
@@ -272,7 +272,7 @@ WINDOWS_PRODUCTION_SPEC = {
     "version": "=0.61.2",
     "default-features": False,
     "features": ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization",
-                 "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_Console"],
+                 "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_Console", "Win32_System_IO"],
 }
 WINDOWS_TEST_SPEC = {
     "version": "=0.61.2", "default-features": False, "features": ["Win32_System_Console"],
@@ -894,7 +894,8 @@ def check_bindings() -> None:
     for folder in sorted(path for path in [*REPO.glob("libraries/*"), *REPO.glob("databases/*")] if path.is_dir()):
         name = folder.relative_to(REPO).as_posix()
         crate = crates.get(name, name)
-        if name in feature_folders():
+        # MCP consumes the main executable; its Rust is covered by crate policy.
+        if name in feature_folders() or name == "libraries/mcp":
             continue
         noncargo = NONCARGO_MANIFESTS.get(name)
         if noncargo is not None:
@@ -1248,7 +1249,7 @@ def token_path_at(tokens: list[str], place: int, path: tuple[str, ...]) -> bool:
 
 
 # Core depends on none of the outer modules.
-CORE_REFUSED_ROOTS = {"engine", "cli", "public", "windows"}
+CORE_REFUSED_ROOTS = {"engine", "cli", "mcp", "public", "windows"}
 
 
 def direct_root_references(tokens: list[str], refused: set[str] = CORE_REFUSED_ROOTS) -> set[str]:
@@ -1313,7 +1314,7 @@ def core_policy_failures(text: str) -> list[str]:
 
 # ADR 0111 section 10: the engine names nothing from the public API, which
 # sits on top of it. The public API re-exports what callers need.
-ENGINE_REFUSED_ROOTS = {"public"}
+ENGINE_REFUSED_ROOTS = {"public", "mcp"}
 
 
 def engine_policy_failures(text: str) -> list[str]:
@@ -1738,6 +1739,8 @@ def check_measure_policy() -> None:
 # HTTP module, so no other production file reaches the HTTP library. Ticket
 # 0304 slice 3d: only the one accessor names the process send limits.
 HTTP_DOOR = "crates/thinkthen/src/engine/http.rs"
+# 0443 extracts the one prepared send to keep both HTTP leaves below the cap.
+HTTP_LEAVES = {HTTP_DOOR, "crates/thinkthen/src/engine/http/send.rs"}
 WIDTH_DOOR = "crates/thinkthen/src/engine/limits.rs"
 WIDTH_STATE = "PROCESS_LIMITS"
 # Ticket 0078: an embedding host keeps its signal dispositions.
@@ -1753,7 +1756,7 @@ def door_failures(sources: dict[str, list[str]]) -> list[str]:
     """Name each second live-send door and each second width-state reference."""
     held = []
     for relative, tokens in sorted(sources.items()):
-        if "ureq" in tokens and relative != HTTP_DOOR and not is_test_source(relative):
+        if "ureq" in tokens and relative not in HTTP_LEAVES and not is_test_source(relative):
             held.append(f"{relative} reaches ureq outside {HTTP_DOOR}")
         if ("signal_hook" in tokens and relative.startswith(ENGINE)
                 and not is_test_source(relative)):
@@ -1777,6 +1780,7 @@ def check_doors() -> None:
     plants = (
         ("crates/thinkthen/src/cli/find.rs", "ureq::post(url).send(body)"),
         ("crates/thinkthen/src/engine/request.rs", "use ureq::Agent;"),
+        ("crates/thinkthen/src/engine/http/other.rs", "ureq::post(url).send(body)"),
         ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::limits::PROCESS_LIMITS.current()"),
         ("crates/thinkthen/src/engine/width_tests.rs", "&super::limits::PROCESS_LIMITS"),
         (WIDTH_DOOR, "fn second() -> &'static Limits { &PROCESS_LIMITS }"),
@@ -1918,6 +1922,7 @@ WINDOWS_UNSAFE_LEAVES = {
     "crates/thinkthen/src/windows/security/ffi.rs": "windows",
     "crates/thinkthen/src/windows/files/ffi.rs": "windows",
     "crates/thinkthen/src/windows/console/ffi.rs": "windows",
+    "crates/thinkthen/src/mcp/input/windows/ffi.rs": "windows",
     "crates/thinkthen/tests/windows/ffi.rs": "all(windows, test)",
 }
 
@@ -1946,7 +1951,7 @@ def rust_attributes(tokens: list[str]) -> list[tuple[bool, list[str]]]:
 
 
 def windows_unsafe_failures(sources: dict[str, str]) -> list[str]:
-    """Confine unsafe tokens and lint allowances to the four reviewed leaves."""
+    """Confine unsafe tokens and lint allowances to the exact reviewed leaves."""
     held = []
     for relative, text in sources.items():
         tokens = rust_tokens(text)

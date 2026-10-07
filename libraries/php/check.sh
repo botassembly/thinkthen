@@ -66,7 +66,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_RELEASE_PHP_DIR="$package" THINKTHEN_RELEASE_C_DIR="$native" \
         THINKTHEN_BACKEND_BIN="$repo/target/debug/conformance-backend" "$python_bin" fixtures/portable_batch.py
     "$python_bin" fixtures/release_plants.py "$package" "$native"
-    echo 'PHP installed release PASS: five typed rows and three literal requests'
+    echo 'PHP installed release PASS: legacy and complete typed rows, two requests per route, zero-send cancellation and usage'
     exit 0
 fi
 for named in "$bwrap_bin" "$git_bin"; do
@@ -81,7 +81,8 @@ command -v node >/dev/null 2>&1 || { echo 'php: not run: no node' >&2; exit 77; 
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.php.json
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
 "$python_bin" -c 'import json; p=json.load(open("composer.json")); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"}'
-for file in src/*.php examples/*.php fixtures/*.php; do "$php_bin" -d ffi.enable=1 -l "$file" >/dev/null; done
+for file in src/*.php src/complete/*.php examples/*.php fixtures/*.php; do "$php_bin" -d ffi.enable=1 -l "$file" >/dev/null; done
+"$php_bin" -n fixtures/complete_carriers.php
 lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
 locked "$lock" env CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
@@ -94,4 +95,5 @@ for plant in source header native canary private-key wrong-value; do "$python_bi
 "$python_bin" fixtures/run_matrix.py
 "$python_bin" fixtures/plant.py
 "$python_bin" fixtures/type_cases.py
+if [ "$profile" = full ]; then "$python_bin" fixtures/complete_parity.py php; fi
 echo 'php: pass'

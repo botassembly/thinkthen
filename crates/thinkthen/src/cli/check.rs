@@ -129,7 +129,10 @@ fn inspect(
     for probe in probes {
         if dry_run {
             // The one request a probe makes, from the encoder every command uses.
-            let body = built_in::encode(&probe.plan)
+            let body = engine
+                .backend()
+                .api_type()
+                .encode(&probe.plan)
                 .map_err(|_| Failure::Defect("a check probe could not be written as JSON"))?;
             summary
                 .record()
