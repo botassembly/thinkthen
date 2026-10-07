@@ -151,7 +151,7 @@ echo "== package"
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
-	STEPS=${STEPS:-examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
+	STEPS=${STEPS:-examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -246,7 +246,8 @@ plain_question_contract() {
 	bcapture | python3 -c '
 import json, sys
 sys.path.insert(0, "../../conformance/children")
-from portable import question_keys
+sys.path.insert(0, "../sqlite/tests")
+from question_keys import question_keys
 case = next(one for one in json.load(open("../../conformance/cases.json"))["cases"] if one["id"] == "02-decide-no")
 bodies = json.load(sys.stdin)["bodies"]
 assert bodies == [case["exchanges"][0]["request"]], (bodies, case["exchanges"][0]["request"])
@@ -730,6 +731,47 @@ the_file_gate() {
 	same "$(PGUSER_AS=tt_exec q -c "SELECT thinkthen_decide('@$RUN/anywhere.json', 'I want a refund')")" t
 }
 check the_file_gate
+complete_question_resolution_keeps_privilege_and_content_boundaries() {
+	local catalog="$SCRATCH/.config/thinkthen/questions" allowed="$RUN/complete-questions" kind name
+	mkdir -p "$catalog" "$allowed"
+	trap "$(printf 'rm -rf -- %q' "$catalog")" EXIT
+	printf '{"decide":"Refund?"}' >"$catalog/refund.json"
+	printf '{"decide":"Refund?"}' >"$allowed/refund.json"
+	printf '{"score":"Strength?","levels":["low","medium","high"]}' >"$allowed/wrong.json"
+	printf '{"decide":"one","decide":"two"}' >"$allowed/duplicate.json"
+	printf '{"decide":"private-complete-evidence"' >"$allowed/broken.json"
+	printf '{"decide":"Refund?","threshold":0.6}' >"$allowed/context.json"
+	fresh generic
+	q -c 'CREATE ROLE tt_complete LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_decide_complete(text,text,text) TO tt_complete' >/dev/null
+	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)_complete$' AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
+	# Metadata selection cannot disclose a missing/invalid catalog to an unauthorized role.
+	for name in '@@bad/name' '@@absent' '@missing.json'; do
+		has "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('$name','{\"records\":[]}')->'native'->'error'->>'message'")" "a named file needs pg_read_server_files"
+	done
+	same "$(q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
+	same "$(q -c "SELECT thinkthen_decide_complete('@@bad/name','{\"records\":[]}')->'native'->'error'->>'kind'")" usage
+	same "$(bcount)" 0
+	fresh generic "thinkthen.file_directory = '$allowed'"
+	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@refund.json','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error'->>'kind'")" local
+	ln -s refund.json "$allowed/symlink.json"
+	ln "$allowed/refund.json" "$allowed/hardlink.json"
+	ln -s "$catalog" "$allowed/hop"
+	mkfifo "$allowed/fifo"
+	python3 -c 'import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b" " * 1048577)' "$allowed/big.json"
+	for name in symlink.json hardlink.json hop/refund.json fifo big.json duplicate.json broken.json ../complete-questions/refund.json; do
+		kind=$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@$name','{\"records\":[]}')->'native'->'error'->>'kind'")
+		same "$kind" local
+	done
+	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@wrong.json','{\"records\":[]}')->'native'->'error'->>'kind'")" usage
+	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@context.json','{\"records\":[]}','{\"threshold\":0.7}')->'native'->'error'->>'kind'")" usage
+	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@context.json','{\"records\":[]}','{\"context\":\" \"}')->'native'->'error'->>'kind'")" usage
+	same "$(bcount)" 0
+	q -c 'GRANT pg_read_server_files TO tt_complete' >/dev/null
+	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
+	same "$(bcount)" 0
+}
+check complete_question_resolution_keeps_privilege_and_content_boundaries
 bad_files_name_themselves() {
 	fresh generic
 	for call in "SELECT thinkthen_decide('@no-such-file.json', 'a')" \

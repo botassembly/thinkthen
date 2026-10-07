@@ -122,6 +122,7 @@ def main():
                             frame['question']='@'+str(home/frame['question'][1:])
                         # Reading fields belong to the complete door; engine fields retain configure.
                         engine={k:v for k,v in settings.items() if k not in frame['controls']}
+                        if consumer=='postgresql' and step.get('loader')=='load_reference':engine['file_directory']=str(home)
                         if isinstance(engine.get('profile'),str) and Path(engine['profile']).is_file():engine['profile']=Path(engine['profile']).read_text()
                         frame['engine_settings']=engine
                         before=int(backend.read('count'))

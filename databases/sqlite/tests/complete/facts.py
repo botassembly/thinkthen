@@ -18,7 +18,7 @@ class Reply(BaseHTTPRequestHandler):
         if self.server.wrong:answer['answers']={}
         if self.server.usage is not None:answer['usage']=self.server.usage
         body=json.dumps(answer,separators=(',',':')).encode()
-        self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+        self.send_response(200);self.send_header("Connection", "close");self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
 
 def main():
     consumer=sys.argv[1]
@@ -34,9 +34,9 @@ def main():
             host=PostgresqlHost();host.start({**env,'THINKTHEN_BASE_URL':base})
         try:
             defaults={'base_url':base,'model':'jev-1.13.0','cache':False,'batch':1,'max_retries':0,'usd_per_million_input':'0.25','usd_per_million_output':'0.25'}
-            def call(settings=None,records=1):
+            def call(settings=None,records=1,inputs=None):
                 before=server.count
-                frame={'held_cancel':False,'verb':'decide','question':'Does this ask for a refund?','inputs':{'records':[{'text':f'Refund {i}.'} for i in range(records)],'attempts':True},'controls':{},'engine_settings':{**defaults,**(settings or {})}}
+                frame={'held_cancel':False,'verb':'decide','question':'Does this ask for a refund?','inputs':inputs if inputs is not None else {'records':[{'text':f'Refund {i}.'} for i in range(records)],'attempts':True},'controls':{},'engine_settings':{**defaults,**(settings or {})}}
                 got=execute(consumer,frame,env,home,None)
                 assert got.get('facts',{}).get('requests_sent',0)==server.count-before,got
                 return got
@@ -66,7 +66,27 @@ def main():
             assert failure['code']==ERRORS['backend'] and failure['facts']['requests_sent']==1
             assert failure['facts']['estimated_cost_usd']=='0.000001' and len(failure['facts']['attempts'])==1
             assert server.count==6,server.count
-            print(consumer+': exact owning costs, incomplete usage, overflow, cache/replay and started-failure facts pass')
+            # Caller-supplied terminal errors may stop reading, never supply started facts.
+            terminal={'error':{'kind':'local','message':'owned reader stopped','retryable':False,'stopped':{'cause':'local','retryable':False}}}
+            descriptors=[{'text':'Refund before stop.'},{'read_error':terminal},{'text':'Never sent after stop.'}]
+            eager=call(inputs={'records':descriptors,'attempts':True})
+            assert eager['code']==ERRORS['local'] and 'facts' not in eager,eager
+            server.wrong=False
+            incremental=call(inputs={'records':descriptors,'attempts':True,'incremental':True})
+            assert incremental['code']==ERRORS['local'] and incremental['requests_sent']==1,incremental
+            assert incremental['stopped_at']==2 and len(incremental['completed'])==1,incremental
+            assert incremental['facts']['estimated_cost_usd']=='0.000001' and len(incremental['facts']['attempts'])==1
+            forged=[]
+            for extra in ({'facts':live['facts']},{'call_id':'forged'},{'attempts':[]}):forged.append({**terminal,**extra})
+            for key,value in (('retryable',True),('call_id','forged'),('kind','backend')):
+                forged.append({'error':{**terminal['error'],key:value}})
+            for key,value in (('at',1),('status',200),('retryable',True),('cause','backend')):
+                forged.append({'error':{**terminal['error'],'stopped':{**terminal['error']['stopped'],key:value}}})
+            for error in forged:
+                refusal=call(inputs={'records':[{'read_error':error}]})
+                assert refusal['code']==ERRORS['usage'] and 'facts' not in refusal,refusal
+            assert server.count==7,server.count
+            print(consumer+': exact owning costs, incomplete usage, overflow, cache/replay, started facts and terminal reader boundary pass')
         finally:
             if host:host.stop()
             server.shutdown();server.server_close();thread.join()

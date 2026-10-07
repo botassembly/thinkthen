@@ -229,5 +229,12 @@ error envelopes and native cache/record/replay behavior.
 PostgreSQL returns `json`. Evidence and image paths remain the explicit native
 client-reader/keyed-table workaround. Question files retain the accepted role,
 descriptor, regular-file, final-link, size, confinement and PUBLIC revoke checks.
+For complete calls, `@@NAME` selects the native catalog; `@reference` retains
+local-entry precedence. Relative references use the administrator
+`thinkthen.file_directory` when set, otherwise the server working directory.
+The role check precedes resolution probes. Named files must also lie inside the
+captured native questions root on the same opened descriptor, including for
+privileged readers. Original authored bytes reach native role/name validation
+before caller settings are applied.
 `thinkthen.base_url` and `thinkthen.refresh_cache` are administrator settings;
 the paired price GUCs are decimal strings. No key GUC becomes a credential source.

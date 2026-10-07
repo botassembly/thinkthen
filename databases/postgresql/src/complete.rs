@@ -10,43 +10,44 @@ fn invoke(
     inputs: Option<&str>,
     settings: Option<&str>,
 ) -> Option<Json> {
-    call::guarded(|| {
-        let (question, inputs) = (question?, inputs?);
-        let prepared = (|| {
-            let source = match question.strip_prefix('@') {
-                Some(path) => {
-                    files::read_named("question", path, call::file_directory().as_deref())?
-                }
-                None => question.to_owned(),
-            };
-            let settings = thinkthen::Settings::parse(settings.unwrap_or("{}"))
-                .map_err(|e| call::usage(e.to_string()))?;
-            let prepared = if question.starts_with('@') {
-                crate::complete_native::settings::prepare_file(verb, &source, &settings)?
-            } else {
-                crate::complete_native::prepare(verb, &source, &settings)?
-            };
-            let inputs = crate::complete_native::Inputs::parse(inputs, false)?;
-            let call = call::read_result()?.with_settings(&settings)?;
-            Ok::<_, thinkthen::Error>((prepared, inputs, call))
-        })();
-        let result = match prepared {
-            Err(error) => crate::complete_native::admission(&error),
-            Ok((prepared, inputs, call)) => match call::run_result(call, move |engine, options| {
-                Ok(crate::complete_native::run(
-                    engine,
-                    &prepared,
-                    inputs,
-                    options,
-                    Surface::Postgresql,
-                ))
-            }) {
-                Ok(value) => value,
-                Err(error) => crate::complete_native::admission(&error),
-            },
+    let (question, inputs) = (question?, inputs?);
+    let prepared = (|| {
+        let saved = if question.starts_with('@') {
+            let (reference, source) =
+                files::read_resolved_question(question, call::file_directory().as_deref())?;
+            let parsed = crate::complete_native::settings::parse_file(verb, &source, &reference)?;
+            Some((parsed, source))
+        } else {
+            None
         };
-        Some(Json(result))
-    })
+        let settings = thinkthen::Settings::parse(settings.unwrap_or("{}"))
+            .map_err(|e| call::usage(e.to_string()))?;
+        let prepared = match saved {
+            Some((parsed, source)) => {
+                crate::complete_native::settings::prepare_file(verb, &source, &settings, parsed)?
+            }
+            None => crate::complete_native::prepare(verb, question, &settings)?,
+        };
+        let inputs = crate::complete_native::Inputs::parse(inputs, false)?;
+        let call = call::read_result()?.with_settings(&settings)?;
+        Ok::<_, thinkthen::Error>((prepared, inputs, call))
+    })();
+    let result = match prepared {
+        Err(error) => crate::complete_native::admission(&error),
+        Ok((prepared, inputs, call)) => match call::run_result(call, move |engine, options| {
+            Ok(crate::complete_native::run(
+                engine,
+                &prepared,
+                inputs,
+                options,
+                Surface::Postgresql,
+            ))
+        }) {
+            Ok(value) => value,
+            Err(error) => crate::complete_native::admission(&error),
+        },
+    };
+    Some(Json(result))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -55,7 +56,7 @@ fn thinkthen_decide_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("decide", question, inputs, settings)
+    call::guarded(|| invoke("decide", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -64,7 +65,7 @@ fn thinkthen_choose_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("choose", question, inputs, settings)
+    call::guarded(|| invoke("choose", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -73,7 +74,7 @@ fn thinkthen_tag_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("tag", question, inputs, settings)
+    call::guarded(|| invoke("tag", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -82,7 +83,7 @@ fn thinkthen_score_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("score", question, inputs, settings)
+    call::guarded(|| invoke("score", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -91,7 +92,7 @@ fn thinkthen_filter_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("filter", question, inputs, settings)
+    call::guarded(|| invoke("filter", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -100,7 +101,7 @@ fn thinkthen_rank_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("rank", question, inputs, settings)
+    call::guarded(|| invoke("rank", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -109,7 +110,7 @@ fn thinkthen_find_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("find", question, inputs, settings)
+    call::guarded(|| invoke("find", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -118,7 +119,7 @@ fn thinkthen_annotate_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("annotate", question, inputs, settings)
+    call::guarded(|| invoke("annotate", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -127,7 +128,7 @@ fn thinkthen_recognize_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("recognize", question, inputs, settings)
+    call::guarded(|| invoke("recognize", question, inputs, settings))
 }
 
 #[pg_extern(parallel_restricted)]
@@ -136,5 +137,5 @@ fn thinkthen_relate_complete(
     inputs: Option<&str>,
     settings: default!(Option<&str>, "NULL"),
 ) -> Option<Json> {
-    invoke("relate", question, inputs, settings)
+    call::guarded(|| invoke("relate", question, inputs, settings))
 }

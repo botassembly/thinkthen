@@ -67,11 +67,14 @@ fn span(context: &rusqlite::functions::Context<'_>) -> Result<String, Failure> {
     if first_line == 0 {
         return Err(Failure::usage("source first_line must be positive"));
     }
+    let last_line = first_line
+        .checked_add(record.split_inclusive('\n').count().saturating_sub(1))
+        .ok_or_else(|| Failure::usage("source line exceeds SQL INTEGER"))?;
     let source = SourceRecord {
         record,
         file: String::new(),
         first_line,
-        last_line: first_line,
+        last_line,
     };
     let (first, last) = source.span_lines(offset(2)?, offset(3)?)?;
     let sql_line =

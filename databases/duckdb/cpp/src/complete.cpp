@@ -1,5 +1,7 @@
 #include "bridge.hpp"
 #include "complete_files.hpp"
+#include "files_manifest.hpp"
+#include "duckdb/common/file_system.hpp"
 #include "duckdb/common/error_data.hpp"
 #include "portable.hpp"
 #include "scalar_owner.hpp"
@@ -11,7 +13,9 @@
 extern "C" {
 ThinkThenReply thinkthen_cpp_complete_failure_envelope(ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete(ThinkThenText, ThinkThenText, ThinkThenText, ThinkThenText,
-                                     int32_t,int64_t, ThinkThenSettings, ThinkThenStop);
+                                     const void *,int64_t, ThinkThenSettings, ThinkThenStop);
+ThinkThenReply thinkthen_cpp_complete_question_resolve(ThinkThenText, void **);
+void thinkthen_cpp_complete_question_free(void *);
 }
 namespace duckdb {
 namespace {
@@ -21,6 +25,10 @@ string FailureEnvelope(const string &error) {
     Checked(reply.value);
     return ReplyText(reply.value);
 }
+struct QuestionSelection {
+    void *value = nullptr;
+    ~QuestionSelection() { thinkthen_cpp_complete_question_free(value); }
+};
 struct Bind : FunctionData {
     weak_ptr<ClientContext> context;
     explicit Bind(weak_ptr<ClientContext> context) : context(std::move(context)) {}
@@ -47,9 +55,16 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
         const auto source = question.GetValue<string>(), input = CompleteFileInputs(*context,inputs.GetValue<string>(),failure), controls = settings.IsNull() ? "{}" : settings.GetValue<string>();
         if (!failure.empty()) { result.SetValue(row,Value(FailureEnvelope(failure))); continue; }
         try {
-        if (source.rfind("@@",0)==0) { throw OrdinaryError("thinkthen usage: named questions require the pending authorized native resolver"); }
-        const auto resolved = owner->Resolve(*context,source);
-        RustReply reply(thinkthen_cpp_complete(View(verb), View(resolved.text), View(input), View(controls), resolved.from_file ? 1 : 0, owner->Remaining(*context), session.Bridge(), StopFor(*context)));
+        QuestionSelection selection;
+        string content = source;
+        if (!source.empty() && source[0]=='@') {
+            RustReply resolved(thinkthen_cpp_complete_question_resolve(View(source), &selection.value));
+            if (resolved.value.status!=0) { result.SetValue(row, Value(FailureEnvelope(ReplyText(resolved.value)))); continue; }
+            const auto path = ReplyText(resolved.value);
+            AuthorizeLocalSource(FileSystem::GetFileSystem(*context), path);
+            content = ReadQuestion(*context, path, "question", true);
+        }
+        RustReply reply(thinkthen_cpp_complete(View(verb), View(content), View(input), View(controls), selection.value, owner->Remaining(*context), session.Bridge(), StopFor(*context)));
         Checked(reply.value);
         result.SetValue(row, Value(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
         } catch (const Exception &error) {

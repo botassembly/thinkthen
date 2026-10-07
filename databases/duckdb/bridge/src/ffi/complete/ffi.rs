@@ -14,7 +14,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete(
     question: BridgeText,
     inputs: BridgeText,
     settings: BridgeText,
-    from_file: i32,
+    reference: *const thinkthen::QuestionFileReference,
     deadline: i64,
     session: BridgeSettings,
     stop: BridgeStop,
@@ -24,19 +24,30 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete(
         let question = text(question.bytes, question.len)?;
         let inputs = text(inputs.bytes, inputs.len)?;
         let raw = text(settings.bytes, settings.len)?;
-        let call = thinkthen::Settings::parse(raw)
-            .map_err(|e| crate::errors::RowError::usage(&e.to_string()).text)?;
         let parsed = (|| {
+            // SAFETY: C++ retains this selection through synchronous return.
+            let saved = unsafe { reference.as_ref() }
+                .map(|held| complete_native::settings::parse_file(verb, question, held))
+                .transpose()?;
+            let call = thinkthen::Settings::parse(raw)
+                .map_err(|e| complete_native::usage(&e.to_string()))?;
+            if saved.is_none() && question.starts_with('@') {
+                return Err(complete_native::usage(
+                    "the question reference was not read by this database",
+                ));
+            }
+            let prepared = if let Some(saved) = saved {
+                complete_native::settings::prepare_file(verb, question, &call, saved)?
+            } else {
+                complete_native::prepare(verb, question, &call)?
+            };
             Ok::<_, thinkthen::Error>((
-                if from_file != 0 {
-                    complete_native::settings::prepare_file(verb, question, &call)?
-                } else {
-                    complete_native::prepare(verb, question, &call)?
-                },
+                call,
+                prepared,
                 complete_native::Inputs::parse(inputs, false)?,
             ))
         })();
-        let (prepared, inputs) = match parsed {
+        let (call, prepared, inputs) = match parsed {
             Ok(value) => value,
             Err(error) => return Ok(complete_native::admission(&error).to_string().into_bytes()),
         };

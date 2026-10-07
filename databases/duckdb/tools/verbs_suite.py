@@ -21,13 +21,14 @@ from verbs_budget import (
     b13c_try_details_split_denials,
     b13c_try_details_total_zero_sends_nothing,
 )
-from verbs_complete import complete_question_files_keep_identity, complete_question_refusals_and_nulls, complete_question_rechecks_prepared_authority
+from verbs_complete import native_complete_file_authorization_precedes_content_parsing, complete_question_files_keep_identity, complete_question_refusals_and_nulls, complete_question_rechecks_prepared_authority
 from verbs_portable import portable_batch_identity
-from portable import question_keys
+from question_keys import question_keys
 
 REFUND = "Does the writer ask for a refund?"
 SHUFFLED = "(VALUES (1, 'good morning'), (2, NULL), (3, 'refund now'), (4, 'good morning'), (5, NULL), (6, 'refund now')) t(i, x)"
 
+case(native_complete_file_authorization_precedes_content_parsing)
 case(complete_question_files_keep_identity)
 case(complete_question_refusals_and_nulls)
 case(complete_question_rechecks_prepared_authority)

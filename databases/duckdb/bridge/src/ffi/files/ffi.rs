@@ -141,11 +141,15 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_span_lines(
         if first_line == 0 {
             return Err("thinkthen usage: source first_line must be positive".to_owned());
         }
+        let content = text(bytes, len)?;
+        let last_line = first_line
+            .checked_add(content.split_inclusive('\n').count().saturating_sub(1))
+            .ok_or_else(|| "thinkthen usage: source line exceeds SQL BIGINT".to_owned())?;
         let record = SourceRecord {
-            record: text(bytes, len)?,
+            record: content,
             file: String::new(),
             first_line,
-            last_line: first_line,
+            last_line,
         };
         let (first, last) = record
             .span_lines(start, end)

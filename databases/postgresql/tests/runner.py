@@ -24,7 +24,8 @@ import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
 from children import child_env  # noqa: E402  the shared helper, ticket 0127
-from portable import question_keys  # noqa: E402  the ADR 0111 question key
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "sqlite/tests"))
+from question_keys import question_keys  # noqa: E402  the ADR 0111 question key
 
 CASES = pathlib.Path(__file__).resolve().parents[3] / "conformance" / "cases.json"
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
@@ -145,7 +146,7 @@ def served(case):
     """Each recorded request digest, renamed for the served URL. Every row
     lists its question keys (ADR 0111 section 2), so a digest maps to its
     request's keys."""
-    return {digest(CANONICAL, exchange["request"]): question_keys(url(case), exchange["request"])
+    return {digest(CANONICAL, exchange["request"]): question_keys(url(case), exchange["request"], exchange["response"]["model"])
             for exchange in case.get("exchanges", [])}
 
 
@@ -347,7 +348,7 @@ def run(case):
 
 def stored(case, success):
     """ADR 0111: the case ran on the question store, one row per good answer."""
-    keys = {key for exchange in case.get("exchanges", []) for key in question_keys(url(case), exchange["request"])}
+    keys = {key for exchange in case.get("exchanges", []) for key in question_keys(url(case), exchange["request"], exchange["response"]["model"])}
     if not os.environ.get("STORE"):
         raise Failed("stored answers: no STORE folder to count")
     store = pathlib.Path(os.environ["STORE"]) / "thinkthen.sqlite"

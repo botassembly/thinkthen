@@ -27,6 +27,10 @@ impl Prepared {
         if source.starts_with('@') {
             return Self::reference(verb, source);
         }
+        Self::content(verb, source)
+    }
+    /// Parse only supplied content, never an embedded file reference.
+    pub(crate) fn content(verb: &str, source: &str) -> Result<Self, Error> {
         match verb {
             "annotate" => QuestionSet::from_json(source).map(Self::Annotate),
             "rank" => {

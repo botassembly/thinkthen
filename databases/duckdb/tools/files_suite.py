@@ -35,7 +35,7 @@ def ten_folder_examples_keep_original_documents_and_mapped_endpoints():
     with tempfile.TemporaryDirectory(prefix='thinkthen-files-cache-') as cache, Backend() as backend, ConditionalBackend(backend.base()) as proxy:
         extra = {'THINKTHEN_CACHE': cache}
         def reply(answers):
-            proxy.reply = json.dumps({'model':'jev-latest','answers':answers}).encode()
+            proxy.reply = json.dumps({'model':'jev-1.13.0','answers':answers}).encode()
         # Seed real judgment cache entries with controlled yes/no replies. The
         # published WHERE runs over every source row and must reject five lines.
         for row in lines:

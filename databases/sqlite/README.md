@@ -180,8 +180,11 @@ metadata and reading, or plain wording for an atomic question. Rank accepts
 native saved decide/score questions or an ordered rank set. Annotation takes a
 native question set; find, recognize and relate take their native saved grammar.
 `@reference` selects native reference loading and `@@NAME` explicitly selects
-named loading. Authorized name resolution in the database hosts is a tracked
-native prerequisite; it never licenses an unrestricted server read.
+named loading. DuckDB retains the native selection while its executing session
+authorizes and reads the selected path. PostgreSQL authorizes before resolution
+and checks the same opened descriptor against its allowed directory and the
+captured named root before reading content. Native parsing receives the original
+bytes; resolution grants no read permission.
 
 The ordered input descriptor is explicit:
 

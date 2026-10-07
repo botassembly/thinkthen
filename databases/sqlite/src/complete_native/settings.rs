@@ -63,20 +63,58 @@ fn merge(source: &str, settings: &Settings, role: For) -> Result<String, Error> 
 
 #[allow(
     dead_code,
-    reason = "shared authorized file grammar used by PostgreSQL and DuckDB"
+    reason = "authorized file grammar used by PostgreSQL and DuckDB"
+)]
+pub(crate) fn parse_file(
+    verb: &str,
+    source: &str,
+    reference: &thinkthen::QuestionFileReference,
+) -> Result<Prepared, Error> {
+    use thinkthen::QuestionFileRole as Role;
+    let role = match verb {
+        "annotate" => Role::Set,
+        "rank" => {
+            let fields: BTreeMap<String, Box<RawValue>> =
+                serde_json::from_str(source).unwrap_or_default();
+            if fields.contains_key("questions") {
+                Role::Set
+            } else {
+                Role::Rank
+            }
+        }
+        "find" => Role::Find,
+        "recognize" => Role::Recognize,
+        "relate" => Role::Relate,
+        "choose" => Role::Choose,
+        _ => Role::Atomic,
+    };
+    reference.parse(source, role, |text| Prepared::content(verb, text))
+}
+#[allow(
+    dead_code,
+    reason = "authorized file settings used by PostgreSQL and DuckDB"
 )]
 pub(crate) fn prepare_file(
     verb: &str,
     source: &str,
     settings: &Settings,
+    parsed: Prepared,
 ) -> Result<Prepared, Error> {
-    if !source.trim_start().starts_with('{') {
-        return Err(Error::new(
-            thinkthen::ErrorKind::Local,
-            "the question file does not parse as a question",
-        ));
+    let for_role = match verb {
+        "decide" | "filter" => Some(For::Decide),
+        "choose" => Some(For::Choose),
+        "tag" => Some(For::Tag),
+        "score" => Some(For::Score),
+        _ => None,
+    };
+    // Caller fields are a separate Usage boundary after the saved-file grammar.
+    let merged = for_role
+        .map(|role| merge(source, settings, role))
+        .transpose()?;
+    match merged {
+        Some(merged) if merged != source => {
+            Prepared::content(verb, &merged)?.configured(verb, settings)
+        }
+        _ => parsed.configured(verb, settings),
     }
-    Prepared::parse(verb, source)
-        .map_err(|e| Error::new(thinkthen::ErrorKind::Local, e.detail().message()))?;
-    prepare(verb, source, settings)
 }

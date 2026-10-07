@@ -14,6 +14,8 @@ mod complete;
 mod complete_files;
 #[path = "ffi/complete_listed/ffi.rs"]
 mod complete_listed;
+#[path = "ffi/complete_questions/ffi.rs"]
+mod complete_questions;
 #[path = "ffi/files/ffi.rs"]
 mod files;
 mod find;

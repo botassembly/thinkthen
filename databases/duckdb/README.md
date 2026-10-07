@@ -210,6 +210,10 @@ for explicit records, context, reading, options, images, rank sets, file control
 error envelopes and native cache/record/replay behavior.
 
 DuckDB returns JSON text. Explicit native file inputs read DuckDB-authorized
-handles. Engine options add `thinkthen_base_url`, paired price strings and
+handles. Complete question `@reference` and `@@NAME` use native metadata
+selection, then the executing session authorizes the selected path and reads
+capped UTF-8 through DuckDB. The same retained selection parses the original
+bytes; Rust never opens that question content. Engine options add
+`thinkthen_base_url`, paired price strings and
 `thinkthen_refresh_cache` (0/1); the same native engine owns cache, replay and
 usage. No complete call creates another SQL scheduler or cumulative facts ledger.
