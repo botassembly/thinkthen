@@ -1,10 +1,11 @@
 //! Convert the public R constructor settings without changing positional arguments.
 
+use crate::usage;
 use extendr_api::{Rinternals, Types};
 
 use super::{Crossed, Robj, Rtype, batch_of, text_of, whole_of};
 
-pub(super) fn configure(values: [Robj; 14]) -> Crossed<()> {
+pub(super) fn configure(values: [Robj; 15]) -> Crossed<()> {
     let [
         base_url,
         model,
@@ -20,6 +21,7 @@ pub(super) fn configure(values: [Robj; 14]) -> Crossed<()> {
         profile,
         batch,
         backend,
+        refresh_cache,
     ] = values;
     let optional =
         |value: &Robj, what: &str| (!value.is_null()).then(|| text_of(value, what)).transpose();
@@ -43,5 +45,8 @@ pub(super) fn configure(values: [Robj; 14]) -> Crossed<()> {
         replay: optional(&replay, "replay")?,
         profile: optional(&profile, "profile")?,
         batch: batch_of(&batch)?,
+        refresh_cache: refresh_cache
+            .as_bool()
+            .ok_or_else(|| usage("refresh_cache is TRUE or FALSE"))?,
     })
 }

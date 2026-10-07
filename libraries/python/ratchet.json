@@ -1,8 +1,10 @@
 {
   "directory": [
     "src",
-    "../r/thinkthen/src/rust/src/source"
+    "../r/thinkthen/src/rust/src/source",
+    "../r/thinkthen/src/rust/src/complete",
+    "examples/native_case"
   ],
   "extension": ".rs",
-  "max": 7980
+  "max": 9317
 }

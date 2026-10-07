@@ -27,6 +27,7 @@ pub(super) fn row(
     )?;
     let mut authors = Vec::new();
     let mut members = Vec::new();
+    let mut details = Vec::new();
     for member in set.members() {
         let result = member.result();
         authors.push(s.author(&native_author!(result.question())));
@@ -44,6 +45,12 @@ pub(super) fn row(
             result.threshold(),
             answer,
         )?;
+        details.push(s.details(
+            common,
+            result.meta(),
+            std::iter::once(&row.original().native),
+            raw.as_deref(),
+        )?);
         members.push(RankViewV1 {
             common,
             value: metadata::size(Some(result.value())),
@@ -52,6 +59,7 @@ pub(super) fn row(
     }
     s.row_author(&native_author!(r.question()), authors);
     s.5.push(members);
+    s.8.push(details);
     s.row_details(
         common,
         r.meta(),

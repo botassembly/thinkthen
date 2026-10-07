@@ -120,10 +120,11 @@ tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completi
 # packs kind, retryable, and message around \u{1f} marks.
 .tt_condition <- function(text) {
   parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
-  if (length(parts) != 3L) return(simpleError(text))
+  if (!(length(parts) %in% c(3L,4L))) return(simpleError(text))
   structure(
     class = c(paste0("thinkthen_", parts[[1]]), "thinkthen_error", "error", "condition"),
     list(message = parts[[3]], kind = parts[[1]], retryable = identical(parts[[2]], "true"),
+         complete = if (length(parts)==4L) .tt_complete_decode("CallError",jsonlite::fromJSON(parts[[4L]],simplifyVector=FALSE)) else NULL,
          call = NULL)
   )
 }
@@ -774,7 +775,7 @@ tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_reques
                       max_requests_total = NULL,
                       max_request_bytes = NULL,
                       cache = NULL, timeout = NULL, max_retries = NULL,
-                      record = NULL, replay = NULL, profile = NULL, batch = NULL, ..., backend = NULL) {
+                      record = NULL, replay = NULL, profile = NULL, batch = NULL, ..., backend = NULL, refresh_cache = FALSE) {
   if (length(list(...))) .tt_unknown(...)
   string <- function(x) is.null(x) || (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x))
   whole <- function(x) is.null(x) || (is.numeric(x) && is.null(attr(x, "class")) &&
@@ -796,7 +797,7 @@ tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_reques
   }
   .tt_call(tt_engine_set(base_url, model, throttle, max_requests, max_requests_total,
                          max_request_bytes, cache,
-                         timeout, max_retries, record, replay, profile, batch, backend))
+                         timeout, max_retries, record, replay, profile, batch, backend, refresh_cache))
   invisible(NULL)
 }
 

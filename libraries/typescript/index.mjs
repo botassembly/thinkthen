@@ -4,6 +4,8 @@ import { createRequire } from 'node:module';
 const cjs = createRequire(import.meta.url)('./index.js');
 
 export const {
+  complete,
+  CompleteTypes,
   ThinkThenError,
   Engine,
   question,

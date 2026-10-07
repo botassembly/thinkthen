@@ -2752,6 +2752,122 @@
         "message": "the per-item context does not match context_schema",
         "requests_sent": 0
       }
+    },
+    {
+      "id": "rank-set-ordered-members",
+      "verb": "rank",
+      "input": {
+        "mode": "finite",
+        "question": {
+          "version": 1,
+          "questions": {
+            "first": {
+              "decide": "First?",
+              "name": "authored_first",
+              "wording_version": 4
+            },
+            "second": {
+              "decide": "Second?",
+              "name": "authored_second"
+            }
+          }
+        },
+        "records": [
+          "a",
+          "b",
+          "c"
+        ],
+        "batch": 6,
+        "model": "fixed",
+        "shared_context": "Each question quotes the text it asks about."
+      },
+      "expect": {
+        "requests_sent": 1,
+        "records": 3,
+        "input_tokens": 12,
+        "rank_members": [
+          {
+            "index": 0,
+            "value": 1,
+            "question_name": "first",
+            "probability": 0.7,
+            "member_positions": [
+              1,
+              1
+            ],
+            "member_probabilities": [
+              0.7,
+              1.0
+            ]
+          },
+          {
+            "index": 1,
+            "value": 2,
+            "question_name": "first",
+            "probability": 0.6,
+            "member_positions": [
+              2,
+              3
+            ],
+            "member_probabilities": [
+              0.6,
+              0.98
+            ]
+          },
+          {
+            "index": 2,
+            "value": 3,
+            "question_name": "second",
+            "probability": 0.99,
+            "member_positions": [
+              3,
+              2
+            ],
+            "member_probabilities": [
+              0.5,
+              0.99
+            ]
+          }
+        ],
+        "member_names": [
+          "first",
+          "second"
+        ],
+        "member_authors": [
+          "authored_first",
+          "authored_second"
+        ],
+        "capture_request": {
+          "state": "Each question quotes the text it asks about.",
+          "model": "fixed",
+          "questions": {
+            "q1": {
+              "type": "noul",
+              "instructions": "The text is \"a\". First?"
+            },
+            "q2": {
+              "type": "noul",
+              "instructions": "The text is \"a\". Second?"
+            },
+            "q3": {
+              "type": "noul",
+              "instructions": "The text is \"b\". First?"
+            },
+            "q4": {
+              "type": "noul",
+              "instructions": "The text is \"b\". Second?"
+            },
+            "q5": {
+              "type": "noul",
+              "instructions": "The text is \"c\". First?"
+            },
+            "q6": {
+              "type": "noul",
+              "instructions": "The text is \"c\". Second?"
+            }
+          }
+        }
+      }
     }
   ]
 }

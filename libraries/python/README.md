@@ -88,3 +88,54 @@ A question read with `tt.question(file=...)` keeps its saved calibration `profil
 `tt.Engine(backend="liquid")` selects a named backend in code. The Rust builder captures its key from that backend's environment variable. Explicit `backend` outranks environment and configuration selection. With `base_url` too, the selected key, posting path, description form and setup prices/profile apply at that address. An explicit model or profile overrides its setup value. No Python key argument exists. Omission preserves the environment-driven default engine. A pickled judge keeps the backend name and reconstructs its engine from the receiving process's environment.
 
 Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
+
+## Complete native calls
+
+`engine.complete` exposes `decide`, `choose`, `tag`, `score`, `filter`, `rank`,
+`find`, `annotate`, `recognize` and `relate`. Each returns a `Completed` with typed
+`results`, native final `facts`, original `inputs` and zero-based `ordinals`.
+The same facade is available as `thinkthen.complete.Engine`.
+
+```python
+from thinkthen import complete as c
+
+engine = c.Engine(cache=False)
+question = c.QuestionSource(role="atomic", body={"decide": "Is this a complaint?"})
+source = c.Records((c.Item(value="Please refund.", text=True),))
+call = engine.decide(question, source, attempts=True)
+probability = call.results[0].answer.probability
+requests = call.facts.requests_sent
+```
+
+Use `QuestionSource(path="question.json", role="atomic")` for a question file,
+`name=` for a native named question, or `reference=` for the native reference
+syntax. `body=` accepts caller JSON or a typed question carrier. Set, rank,
+find, recognize and relate use their explicit grammar roles; a rank set uses
+`role="set"`. Native loaders preserve author names, wording versions,
+declarations, structured descriptions and question-set members.
+
+`Files(paths=("report.txt",), unit="file")` uses the native located reader;
+`unit="line"` and `unit="window", window=3` select physical units. Set
+`jsonl=True` for records, or `media="image"` for explicit image files.
+`Item.images` accepts ordered `Image(media="image/png", data=bytes)` attachments.
+`Item.context` distinguishes absent, empty text and JSON null; `Item.options`
+accepts ordered `(name, description)` pairs. Native admission permits images
+for decide, choose and score and refuses them for the other seven functions.
+
+Six methods (`decide_batch`, `choose_batch`, `tag_batch`, `score_batch`,
+`filter_batch`, `annotate_batch`) return native lazy `Batch` iterators. Each row
+contains a typed `result`, native `ordinal` and `input`; `facts` becomes available
+at exhaustion or a terminal failure. Use a context manager or `close()` when
+leaving early; `cancel()` and the ordinary token/deadline controls stop native
+work. Creating a batch does not read source files or send a request.
+
+Complete failures retain the six ordinary error kinds and expose typed
+`error.complete`, including available native final facts and stopped position.
+`attempts=True` includes native attempt data. Native cache, record and replay
+settings apply to these calls, including zero-send strict replay and changed
+reading identity. Known results are validated carriers; arbitrary caller values
+remain JSON. Existing bare, dataframe and JSON APIs retain their behavior.
+
+Dynamic choose batches accept a `dynamic` question source with `choose`, optional input/context/candidate pointers, and a whole ordered candidate list on every record. The native lazy dynamic choose API admits each record and supplies its own probabilities and identity. Missing later candidates yield the completed prefix, then a usage error with joined final facts.
+
+Rank set results retain ordered `members`, each with its saved `name` and typed `RankMemberResult`. The child carries its own positive member position, answer ID, authored question, probability, source and metadata; the parent carries the final turns position and winner. Usage dimensions remain independently optional. Parent and member usage overlap; use the final call facts for invocation totals. Ordinary ranks retain absent members.

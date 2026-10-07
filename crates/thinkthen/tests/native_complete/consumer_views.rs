@@ -395,3 +395,64 @@ fn atomic_and_rank_pointer_reading_preserves_literal_text_and_admits_explicit_js
         assert!(!String::from_utf8(request.body).unwrap().contains("payload"));
     }
 }
+
+#[test]
+fn annotation_documents_send_structural_json_without_inventing_a_location() {
+    let listener = Listener::answering(|body| {
+        assert_eq!(serde_json::from_slice::<Value>(body).unwrap(), json!({
+            "state":"Each question quotes the text it asks about.","model":"fixed",
+            "questions":{"q1":{"type":"noul","instructions":r#"The text is "{\"body\":\"x\",\"ready\":false}". Refund?"#}}
+        }));
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#)
+    }).unwrap();
+    let engine = engine(&listener);
+    let set = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"result":{"decide":"Refund?","item_schema":{"type":"object","properties":{"body":{"type":"string"},"ready":{"type":"boolean"}},"required":["body"]}}}}"#).unwrap();
+    let input =
+        thinkthen::QuestionInput::annotation_document(r#"{"body":"x","ready":false}"#).unwrap();
+    let thinkthen::QuestionInput::Record(record) = &input else {
+        panic!("native document")
+    };
+    assert!(record.location().is_none());
+    let call = engine
+        .annotate_records_complete_with(
+            &set,
+            [RecordInput {
+                original: input.clone(),
+                context: None,
+                options: None,
+            }],
+            CallOptions::new(),
+        )
+        .unwrap();
+    assert_eq!(call.value()[0].original(), &input);
+    assert_eq!(call.facts().requests_sent(), 1);
+    let mut batch = engine.try_annotate_records_complete_with(
+        &set,
+        [Ok(RecordInput {
+            original: input.clone(),
+            context: None,
+            options: None,
+        })],
+        CallOptions::new(),
+    );
+    assert_eq!(batch.next().unwrap().unwrap().original(), &input);
+    assert!(batch.next().is_none());
+    assert_eq!(listener.count(), 2);
+}
+
+#[test]
+fn annotation_document_constructor_retains_native_literal_and_refusal_boundaries() {
+    let literal = thinkthen::QuestionInput::annotation_document("{literal document").unwrap();
+    let thinkthen::QuestionInput::Record(record) = literal else {
+        panic!("native document")
+    };
+    assert_eq!(record.original().literal(), Some("{literal document"));
+    assert!(record.location().is_none());
+    let depth = format!("{}0{}", "[".repeat(128), "]".repeat(128));
+    let oversized = "x".repeat(16 * 1024 * 1024 + 1);
+    for input in [" ", r#"{"private":1,"private":2}"#, &depth, &oversized] {
+        let error = thinkthen::QuestionInput::annotation_document(input).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert!(!error.to_string().contains("private"));
+    }
+}

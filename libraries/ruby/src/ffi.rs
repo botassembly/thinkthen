@@ -16,7 +16,7 @@ use std::time::Instant;
 
 use magnus::prelude::*;
 use magnus::{
-    Error, Exception, ExceptionClass, RHash, RModule, Ruby, TryConvert, Value, function, method,
+    Error, Exception, ExceptionClass, RModule, Ruby, TryConvert, Value, function, method,
 };
 use thinkthen::{
     BatchSetting, CancelToken, Engine, Entity, LoadedQuestion, Question, QuestionSet, Recognize,
@@ -25,10 +25,14 @@ use thinkthen::{
 
 use crate::call::Ask;
 
+mod complete;
+mod engine;
 mod plan;
 mod question_file;
+mod register;
 mod result;
 use crate::{Controls, Crossing, Fault, Handoff, Settings, Taken, class_name, guarded, start};
+use engine::new_engine;
 use result::{
     PANICKED, attach_completion, details_value, facts_value, output, protected_completion,
     ruby_json,
@@ -177,6 +181,9 @@ fn raise(ruby: &Ruby, fault: Fault) -> Error {
                 },
             ),
         )?;
+        if let Some(snapshot) = fault.native_complete {
+            made.funcall::<_, _, Value>("instance_variable_set", ("@native_complete", snapshot))?;
+        }
         Exception::from_value(made)
             .map(Error::from)
             .ok_or_else(|| Error::new(ruby.exception_runtime_error(), "thinkthen failed"))
@@ -350,7 +357,11 @@ impl EngineValue {
         batch: Option<Value>,
         context: Option<String>,
     ) -> Result<Value, Error> {
-        let asked = ask(ruby, &verb, subject, input)?;
+        let asked = if verb == "complete" {
+            Ask::Complete(String::try_convert(input)?)
+        } else {
+            ask(ruby, &verb, subject, input)?
+        };
         let batch = batch
             .map(|value| batch_of(ruby, value))
             .transpose()?
@@ -409,38 +420,6 @@ fn default_engine(ruby: &Ruby) -> Result<EngineValue, Error> {
     })
 }
 
-fn new_engine(ruby: &Ruby, options: RHash) -> Result<EngineValue, Error> {
-    fn read<T: TryConvert>(ruby: &Ruby, options: RHash, key: &str) -> Result<Option<T>, Error> {
-        options
-            .get(ruby.to_symbol(key))
-            .filter(|value| !value.is_nil())
-            .map(T::try_convert)
-            .transpose()
-    }
-    let settings = Settings {
-        backend: read(ruby, options, "backend")?,
-        base_url: read(ruby, options, "base_url")?,
-        model: read(ruby, options, "model")?,
-        throttle: read(ruby, options, "throttle")?,
-        max_requests: read(ruby, options, "max_requests")?,
-        max_request_bytes: read(ruby, options, "max_request_bytes")?,
-        cache_at: read(ruby, options, "cache_at")?,
-        no_cache: read(ruby, options, "no_cache")?.unwrap_or(false),
-        timeout: read(ruby, options, "timeout")?,
-        max_retries: read(ruby, options, "max_retries")?,
-        record: read(ruby, options, "record")?,
-        replay: read(ruby, options, "replay")?,
-        profile: read(ruby, options, "profile")?,
-        batch: options
-            .get(ruby.to_symbol("batch"))
-            .map(|value| batch_of(ruby, value))
-            .transpose()?
-            .flatten(),
-        max_requests_total: read(ruby, options, "max_requests_total")?,
-    };
-    checked(ruby, guarded(|| settings.build())).map(|engine| EngineValue { engine })
-}
-
 fn question(ruby: &Ruby, json: String) -> Result<QuestionValue, Error> {
     let loaded = checked(ruby, Question::from_json(&json).map_err(Fault::from))?;
     Ok(QuestionValue { json, loaded })
@@ -463,33 +442,37 @@ fn set_file(ruby: &Ruby, path: String) -> Result<SetValue, Error> {
     checked(ruby, QuestionSet::load(path).map_err(Fault::from)).map(SetValue)
 }
 
-/// Register the public value classes and the private `ThinkThen::Native`
-/// functions. `lib/thinkthen.rb` defines the error classes and the verbs.
-#[magnus::init(name = "thinkthen")]
-fn init(ruby: &Ruby) -> Result<(), Error> {
-    let module = ruby.define_module("ThinkThen")?;
-    let cancel = module.define_class("Cancel", ruby.class_object())?;
-    cancel.define_singleton_method("new", function!(CancelValue::default, 0))?;
-    cancel.define_method("cancel", method!(CancelValue::cancel, 0))?;
-    cancel.define_method("cancelled?", method!(CancelValue::is_cancelled, 0))?;
-    let question_class = module.define_class("Question", ruby.class_object())?;
-    question_class.define_method("json", method!(QuestionValue::json, 0))?;
-    let set_class = module.define_class("QuestionSet", ruby.class_object())?;
-    set_class.define_method("names", method!(SetValue::names, 0))?;
-    let native = module.define_module("Native")?;
-    let completion = native.define_class("Completion", ruby.class_object())?;
-    completion.define_method("done?", method!(CompletionValue::done, 0))?;
-    completion.define_method("result", method!(CompletionValue::result, 1))?;
-    let engine = native.define_class("Engine", ruby.class_object())?;
-    engine.define_method("call", method!(EngineValue::call, 8))?;
-    engine.define_method("usage", method!(EngineValue::usage, 0))?;
-    engine.define_method("plan", method!(EngineValue::plan, 4))?;
-    native.define_module_function("default_engine", function!(default_engine, 0))?;
-    native.define_module_function("engine", function!(new_engine, 1))?;
-    native.define_module_function("question", function!(question, 1))?;
-    native.define_module_function("question_file", function!(file_question, 1))?;
-    native.define_module_function("plan_file", function!(file_plan, 2))?;
-    native.define_module_function("set_json", function!(set_json, 1))?;
-    native.define_module_function("set_file", function!(set_file, 1))?;
-    Ok(())
+struct Poll<'a> {
+    session: &'a crate::call::complete::stream::Session,
+    result: Option<Result<Option<String>, thinkthen::Error>>,
+}
+unsafe extern "C" fn poll(data: *mut c_void) -> *mut c_void {
+    // SAFETY: the calling frame keeps this owned slot and session alive until this returns.
+    let slot = unsafe { &mut *data.cast::<Poll<'_>>() };
+    slot.result = thinkthen::contained(|| slot.session.poll());
+    std::ptr::null_mut()
+}
+unsafe extern "C" fn cancel(data: *mut c_void) {
+    // SAFETY: Ruby's unblock callback receives the same still-live slot.
+    unsafe { &*data.cast::<Poll<'_>>() }.session.cancel();
+}
+fn complete_poll(
+    ruby: &Ruby,
+    session: &crate::call::complete::stream::Session,
+) -> Result<Result<Option<String>, thinkthen::Error>, Error> {
+    let mut slot = Poll {
+        session,
+        result: None,
+    };
+    let pointer = std::ptr::from_mut(&mut slot).cast::<c_void>();
+    magnus::rb_sys::protect(|| {
+        // SAFETY: the frame owns the slot and both callbacks avoid Ruby.
+        unsafe {
+            rb_sys::rb_thread_call_without_gvl(Some(poll), pointer, Some(cancel), pointer);
+            rb_sys::rb_thread_check_ints();
+        }
+        rb_sys::Qnil.into()
+    })?;
+    slot.result
+        .ok_or_else(|| Error::new(ruby.exception_runtime_error(), "complete poll panicked"))
 }

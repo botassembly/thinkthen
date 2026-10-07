@@ -1,5 +1,6 @@
 //! Additive concrete complete calls retain the existing transport and scalar doors.
 mod annotate;
+mod dynamic_choose;
 mod find;
 mod many;
 mod rank;
@@ -261,6 +262,13 @@ fn physical_source(input: &QuestionInput) -> Option<core::CompletePhysicalSource
 
 fn ancillary_images(input: &QuestionInput) -> Option<Vec<core::image::Image>> {
     match input {
+        QuestionInput::Images(images) => Some(
+            images
+                .images()
+                .iter()
+                .map(|image| image.0.clone())
+                .collect(),
+        ),
         QuestionInput::Record(record) if !record.images().is_empty() => Some(
             record
                 .images()

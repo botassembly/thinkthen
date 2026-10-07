@@ -429,3 +429,27 @@ test('the helper refuses a backend that is not loopback', async (t) => {
     /refusing a backend that is not loopback/,
   );
 });
+
+test('rank and find keep literal text and refuse unsupported specifications without sends', async (t) => {
+  const backend = await startBackend(t);
+  const { value, error } = await ask(backend, `
+    const ranks = await tt.rank({decide:'@literal {'}, ['first','second']);
+    const found = await tt.find({decide:'@literal {'}, ['first','second']);
+    const refused = [];
+    for (const call of [
+      () => tt.find({score:'Q?',levels:['low','high']}, ['first','second']),
+      () => tt.find({decide:'Q?',threshold:0.8}, ['first','second']),
+      () => tt.rank({decide:'Q?',true:'wanted'}, ['first','second']),
+      () => tt.find({decide:'Q?',model:'other'}, ['first','second']),
+      () => tt.rank({decide:'Q?',profile:'other'}, ['first','second']),
+    ]) {
+      try { await call(); refused.push('accepted'); }
+      catch (failure) { refused.push(failure.kind); }
+    }
+    return { ranks:ranks.value, found:found.value, refused };`);
+  assert.equal(error, undefined);
+  assert.deepEqual(value.ranks.map(r => r.index), [0,1]);
+  assert.equal(value.found.index, 0);
+  assert.deepEqual(value.refused, ['usage','usage','usage','usage','usage']);
+  assert.equal(await backend.count(), 2);
+});

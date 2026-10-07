@@ -15,9 +15,9 @@ pub struct RecordChooseQuestion {
     pub(super) metadata: core::declaration::QuestionMetadata,
     text: core::QuestionText,
     threshold: Option<core::Threshold>,
-    model: Option<core::ModelName>,
+    pub(super) model: Option<core::ModelName>,
     profile: Option<core::ProfileName>,
-    batch: Option<core::Json>,
+    pub(super) batch: Option<core::Json>,
 }
 impl Question {
     /// Prepare choose with no fixed candidates; every input supplies its own list.
@@ -102,7 +102,7 @@ impl RecordChooseQuestion {
     pub fn threshold(&self) -> Option<ResolvedThreshold> {
         self.threshold.map(ResolvedThreshold::of)
     }
-    fn with_options(&self, options: &RecordOptions) -> Result<Question, Error> {
+    pub(super) fn with_options(&self, options: &RecordOptions) -> Result<Question, Error> {
         Ok(Question {
             metadata: self.metadata.clone(),
             core: core::Question::Choose {

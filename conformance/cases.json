@@ -13428,6 +13428,65 @@
           "compile",
           "runtime"
         ]
+      },
+      {
+        "id": "rank-set-ordered-members",
+        "verb": "rank",
+        "kind": "named-input",
+        "input": {
+          "fixture": "conformance/named-inputs.json",
+          "case_ref": "rank-set-ordered-members"
+        },
+        "expect": {
+          "fixture_ref": "rank-set-ordered-members"
+        },
+        "preconditions": [
+          "0418",
+          "0431",
+          "0432"
+        ],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ],
+        "exchanges": [
+          {
+            "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"fixed\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"a\\\". First?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"a\\\". Second?\"},\"q3\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"b\\\". First?\"},\"q4\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"b\\\". Second?\"},\"q5\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"c\\\". First?\"},\"q6\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"c\\\". Second?\"}}}",
+            "response": {
+              "model": "fixed",
+              "answers": {
+                "q1": {
+                  "type": "noul",
+                  "noul": 0.7
+                },
+                "q2": {
+                  "type": "noul",
+                  "noul": 1.0
+                },
+                "q3": {
+                  "type": "noul",
+                  "noul": 0.6
+                },
+                "q4": {
+                  "type": "noul",
+                  "noul": 0.98
+                },
+                "q5": {
+                  "type": "noul",
+                  "noul": 0.5
+                },
+                "q6": {
+                  "type": "noul",
+                  "noul": 0.99
+                }
+              },
+              "usage": {
+                "input_tokens": 12
+              }
+            }
+          }
+        ]
       }
     ],
     "image_profiles": {

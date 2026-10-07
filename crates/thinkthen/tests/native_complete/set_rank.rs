@@ -1,4 +1,6 @@
 use super::*;
+#[path = "../../src/test_deadline/child.rs"]
+mod child;
 use thinkthen::{
     BatchSetting, InputEvidence, QuestionInput, RankSet, RecordInput, RecordObservation,
 };
@@ -25,6 +27,41 @@ fn assert_actual_metadata(result: &thinkthen::CompleteSetRank) {
     );
     assert_eq!(result.result().meta().attempts().unwrap().len(), 1);
     assert!(!format!("{result:?}").contains(result.question_name()));
+}
+#[cfg(test)]
+fn assert_serialized_members(result: &thinkthen::CompleteSetRank, ordinal: usize) {
+    let document: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
+    assert!(document.get("input").is_none());
+    assert!(document.get("index").is_none());
+    assert_eq!(document["members"].as_array().unwrap().len(), 2);
+    for ((member, child), probability) in result
+        .members()
+        .iter()
+        .zip(document["members"].as_array().unwrap())
+        .zip([[0.7, 1.0], [0.6, 0.98], [0.5, 0.99]][ordinal])
+    {
+        assert_eq!(child["name"], member.name());
+        assert_eq!(
+            child["result"],
+            serde_json::to_value(member.result()).unwrap()
+        );
+        assert_eq!(child["result"]["value"], member.result().value());
+        assert_eq!(child["result"]["answer"]["probability"], probability);
+        assert_eq!(
+            child["result"]["answer_id"],
+            member.result().answer_id().as_str()
+        );
+        assert_eq!(child["result"]["meta"]["usage"], json!({"input_tokens":2}));
+        assert_eq!(
+            child["result"]["meta"]["question_sources"][0]["batch_size"],
+            6
+        );
+        assert_eq!(child["result"]["meta"]["model"], "fixed");
+        assert_eq!(
+            child["result"]["meta"]["context_sha256"],
+            document["meta"]["context_sha256"]
+        );
+    }
 }
 #[test]
 fn complete_set_rank_keeps_all_members_originals_partial_usage_and_independent_turns_order() {
@@ -81,6 +118,7 @@ fn complete_set_rank_keeps_all_members_originals_partial_usage_and_independent_t
             vec![("first", first), ("second", second)]
         );
         assert_actual_metadata(result);
+        assert_serialized_members(result, ordinal);
     }
     assert_eq!(
         call.value()
@@ -197,7 +235,7 @@ fn complete_set_rank_duplicate_occurrences_keep_observations_and_replay_ids_acro
 fn complete_set_rank_admits_every_member_and_empty_input_without_inventing_observations() {
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let engine = engine(&listener);
-    let set = RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?","context_schema":{"type":"string"}},"second":{"decide":"Second?","item_schema":{"type":"object","properties":{}}}}}"#).unwrap();
+    let set = RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?","context_schema":{"type":"string"}},"second":{"decide":"Second?","name":"authored_second","item_schema":{"type":"object","properties":{}}}}}"#).unwrap();
     let error = engine
         .rank_set_complete_with(&set, ["a", "b"], CallOptions::new())
         .unwrap_err();
@@ -278,7 +316,7 @@ fn complete_set_rank_started_member_failure_retains_actual_observer_identity_and
 fn complete_set_rank_preserves_selected_objects_typed_context_and_actual_source_coordinates() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":0.4}}}"#)).unwrap();
     let engine = engine(&listener);
-    let set = RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?","item_schema":{"type":"object","properties":{"body":{"type":"string"}},"required":["body"]},"context_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}},"second":{"decide":"Second?","item_schema":{"type":"object","properties":{}},"context_schema":{"type":"object","properties":{}}}}}"#).unwrap();
+    let set = RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?","name":"authored_first","wording_version":4,"item_schema":{"type":"object","properties":{"body":{"type":"string"}},"required":["body"]},"context_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}},"second":{"decide":"Second?","name":"authored_second","item_schema":{"type":"object","properties":{}},"context_schema":{"type":"object","properties":{}}}}}"#).unwrap();
     let reading = thinkthen::RecordReading::new(&["/item"], Some("/ctx"), None)
         .unwrap()
         .with_context_schema(thinkthen::InputDeclaration::Object(
@@ -293,12 +331,21 @@ fn complete_set_rank_preserves_selected_objects_typed_context_and_actual_source_
             last_line: 4,
         }))
         .unwrap();
+    let second = reading
+        .compose_source(thinkthen::SourceItem::Text(thinkthen::SourceRecord {
+            record: r#"{"private":null,"item":{"body":"b","extra":false},"ctx":{"ready":true}}"#
+                .to_owned(),
+            file: "other-source.jsonl".into(),
+            first_line: 8,
+            last_line: 8,
+        }))
+        .unwrap();
     let events = std::sync::Mutex::new(Vec::new());
     let observer = |event: RecordObservation<'_>| events.lock().unwrap().push(event.to_owned());
     let call = engine
         .rank_set_records_complete_with(
             &set,
-            [record],
+            [record, second],
             CallOptions::new()
                 .context("Unused shared text.")
                 .observe(&observer),
@@ -306,24 +353,142 @@ fn complete_set_rank_preserves_selected_objects_typed_context_and_actual_source_
         .unwrap();
     assert_eq!(call.value()[0].result().value(), 1);
     assert_eq!(call.value()[0].result().members().len(), 2);
+    let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+    assert_located_documents(&document);
+    assert_rank_schema(&document);
+
     for event in events.lock().unwrap().iter() {
-        let thinkthen::OwnedRecordObservation::Question { detail, .. } = event else {
+        let thinkthen::OwnedRecordObservation::Question { index, detail, .. } = event else {
             continue;
         };
         let detail = detail.detail();
         let QuestionInput::Record(original) = detail.input().unwrap() else {
             panic!("record")
         };
-        assert_eq!(original.location().unwrap().file(), "private-source.jsonl");
-        assert_eq!(original.location().unwrap().first_line(), Some(4));
+        assert_eq!(
+            original.location().unwrap().file(),
+            if *index == 0 {
+                "private-source.jsonl"
+            } else {
+                "other-source.jsonl"
+            }
+        );
+        assert_eq!(
+            original.location().unwrap().first_line(),
+            Some(if *index == 0 { 4 } else { 8 })
+        );
         assert_eq!(
             original.selected().to_json().unwrap(),
-            r#"{"body":"a","extra":false}"#
+            if *index == 0 {
+                r#"{"body":"a","extra":false}"#
+            } else {
+                r#"{"body":"b","extra":false}"#
+            }
         );
     }
-    assert_eq!(listener.count(), 1);
+    assert_eq!(listener.count(), 2);
+    let mut bodies = listener
+        .requests()
+        .iter()
+        .map(|request| String::from_utf8(request.body.clone()).unwrap())
+        .collect::<Vec<_>>();
+    bodies.sort();
+    assert_eq!(bodies, vec![
+        r#"{"state":{"ready":false},"model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is {\"body\":\"a\",\"extra\":false}. First?"},"q2":{"type":"noul","instructions":"The text is {\"body\":\"a\",\"extra\":false}. Second?"}}}"#.to_owned(),
+        r#"{"state":{"ready":true},"model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is {\"body\":\"b\",\"extra\":false}. First?"},"q2":{"type":"noul","instructions":"The text is {\"body\":\"b\",\"extra\":false}. Second?"}}}"#.to_owned(),
+    ]);
+}
+
+#[cfg(test)]
+fn assert_located_documents(document: &Value) {
+    let row = &document["value"][0];
+    assert_eq!(row["index"], 0);
     assert_eq!(
-        String::from_utf8(listener.requests()[0].body.clone()).unwrap(),
-        r#"{"state":{"ready":false},"model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is {\"body\":\"a\",\"extra\":false}. First?"},"q2":{"type":"noul","instructions":"The text is {\"body\":\"a\",\"extra\":false}. Second?"}}}"#
+        row["source"],
+        json!({"file":"private-source.jsonl","first_line":4,"last_line":4})
+    );
+    assert_eq!(
+        row["input"],
+        json!({"private":null,"item":{"body":"a","extra":false},"ctx":{"ready":false}})
+    );
+    for (member, authored) in row["members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(["authored_first", "authored_second"])
+    {
+        assert_eq!(member["result"]["source"], row["source"]);
+        assert_eq!(member["result"]["question"]["name"], authored);
+        assert_eq!(
+            member["result"]["meta"]["context_sha256"],
+            row["meta"]["context_sha256"]
+        );
+        assert!(member["result"].get("input").is_none());
+        assert!(member["result"].get("index").is_none());
+    }
+    assert_eq!(
+        row["members"][0]["result"]["question"]["wording_version"],
+        4
+    );
+
+    let other = &document["value"][1];
+    assert_eq!(other["index"], 1);
+    assert_eq!(other["input"]["item"]["body"], "b");
+    assert_eq!(
+        other["source"],
+        json!({"file":"other-source.jsonl","first_line":8,"last_line":8})
+    );
+    assert_ne!(
+        other["meta"]["context_sha256"],
+        row["meta"]["context_sha256"]
+    );
+    for member in other["members"].as_array().unwrap() {
+        assert_eq!(member["result"]["source"], other["source"]);
+        assert_eq!(
+            member["result"]["meta"]["context_sha256"],
+            other["meta"]["context_sha256"]
+        );
+    }
+}
+
+#[cfg(test)]
+fn assert_rank_schema(document: &Value) {
+    schema::check(document, "completeRank");
+    // Mutate actual native output at the reader boundary, never fabricate a result.
+    let script = r#"
+import copy, json, sys
+from jsonschema import Draft202012Validator
+case = json.load(sys.stdin)
+validator = Draft202012Validator(case['schema'])
+document = case['document']
+for change in ['negative', 'unknown', 'nested', 'missing', 'null', 'empty', 'score']:
+    bad = copy.deepcopy(document)
+    row = bad['value'][0]
+    member = row['members'][0]
+    if change == 'negative': member['result']['value'] = -1
+    elif change == 'unknown': member['extra'] = True
+    elif change == 'nested': member['result']['members'] = row['members']
+    elif change == 'missing': del member['result']
+    elif change == 'null': row['members'] = None
+    elif change == 'empty': row['members'] = []
+    elif change == 'score': row['question']['verb'] = 'score'
+    assert not validator.is_valid(bad), change
+historical = copy.deepcopy(document)
+del historical['value'][0]['members']
+validator.validate(historical)
+"#;
+    use std::io::Write as _;
+    let mut child = child::command("python3", &[])
+        .args(["-c", script])
+        .stdin(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(json!({"schema":serde_json::from_str::<Value>(thinkthen::complete_call_schema()).unwrap(),"document":document}).to_string().as_bytes()).unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
     );
 }

@@ -125,8 +125,10 @@ def document(row, cases, named):
                     'incremental': True, 'arm': 'arm/full/capture/v1'}
         if given.get('mode') == 'finite':
             return {'verb': row['verb'], 'question': given['question'], 'items': given['records'],
-                    'text': False, 'expect': case['expect'], 'settings': {'batch': given['batch']},
-                    'arm': 'arm/full/capture/v1'}
+                    'text': False, 'expect': case['expect'],
+                    'settings': {'batch': given['batch'], **({'model': given['model']} if 'model' in given else {})},
+                    'shared_context': given.get('shared_context'),
+                    'arm': 'case/'+row['id']+'/capture/v1' if row.get('exchanges') else 'arm/full/capture/v1'}
         if 'store' in given:
             store = given['store']
             return {'arm': 'arm/full/capture/v1', 'steps': [
@@ -370,6 +372,29 @@ def assertions(row, value, got, count):
         return
     if value.get('metadata_only'):
         assert got['rows'], got
+        return
+    if 'rank_members' in expect:
+        assert count == expect['requests_sent'] and got['requests_sent'] == expect['requests_sent'], got
+        assert got['records'] == expect['records'] and got['input_tokens'] == expect['input_tokens'], got
+        assert 'output_tokens' not in got, got
+        assert len(got['rows']) == len(expect['rank_members']), got
+        for actual, wanted in zip(got['rows'], expect['rank_members'], strict=True):
+            for key in ('index', 'value', 'question_name', 'probability'):
+                assert equivalent(actual[key], wanted[key]), (actual, wanted)
+            assert actual['usage'] == {'input_tokens': 4} and actual['model'] == 'fixed', actual
+            assert len(actual['context_digest']) == 64 and actual['source_batch_sizes'] == [6,6], actual
+            members = actual['members']
+            assert [m['name'] for m in members] == expect['member_names'], actual
+            assert [m['author'] for m in members] == expect['member_authors'], actual
+            assert members[0]['wording_version'] == 4 and 'wording_version' not in members[1], actual
+            assert [m['value'] for m in members] == wanted['member_positions'], actual
+            assert equivalent([m['probability'] for m in members], wanted['member_probabilities']), actual
+            assert len({m['answer_id'] for m in members}) == len(members), actual
+            for m in members:
+                assert len(m['answer_id']) == 64 and m['answer_id'] != actual['answer_id'], m
+                assert m['usage'] == {'input_tokens': 2} and m['model'] == 'fixed', m
+                assert m['source_batch_sizes'] == [6] and m['observations'] == m['sources'] == 1, m
+                assert m['context_digest'] == actual['context_digest'], m
         return
     if 'edges' in expect:
         assert len(got['rows'][0]['value']) == expect['edges'], got

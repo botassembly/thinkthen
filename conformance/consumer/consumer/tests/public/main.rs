@@ -9,6 +9,9 @@
     reason = "a missing member of a shared case reads as null and fails its comparison"
 )]
 mod cases;
+#[path = "../../../../../crates/thinkthen/src/test_deadline/child.rs"]
+mod child;
+mod native;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,
@@ -21,13 +24,10 @@ mod parts;
     reason = "a loopback fixture that fails should stop this proof"
 )]
 mod paths;
-#[path = "../../../../../crates/thinkthen/src/test_deadline/run.rs"]
-mod run;
+use child::run;
 #[allow(
     clippy::expect_used,
     reason = "public settings regression fixtures must load"
 )]
 mod settings;
 mod values;
-#[path = "../../../../../crates/thinkthen/src/test_deadline/wait.rs"]
-mod wait;

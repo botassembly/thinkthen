@@ -270,6 +270,25 @@ pub(crate) unsafe extern "C" fn thinkthen_result_rank_member(
     }
 }
 
+/// Borrow full member details, including partial usage and source batch sizes.
+/// # Safety
+/// Owner and output obey the installed header's storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_rank_member_details(
+    owner: *const ResultHandle,
+    row: usize,
+    member: usize,
+    out: *mut DetailsV1,
+) -> i32 {
+    // SAFETY: view validates NULLs and checked indices before publication.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows.get(row).filter(|row| row.function == 6)?;
+            r.rank_member_details.get(row)?.get(member).copied()
+        })
+    }
+}
+
 row!(thinkthen_result_find, FindViewV1, 7, find);
 row!(thinkthen_result_annotate, AnnotateViewV1, 8, annotate);
 row!(thinkthen_result_recognize, RecognizeViewV1, 9, recognize);
@@ -338,7 +357,7 @@ pub(crate) unsafe extern "C" fn thinkthen_result_question_author(
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.authors.get(at).copied()) }
 }
-/// Borrow one annotation member's actual authored metadata.
+/// Borrow one annotation or rank member's actual authored metadata.
 /// # Safety
 /// Owner and output obey the header's lifetime/storage contract.
 #[unsafe(no_mangle)]
