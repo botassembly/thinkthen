@@ -12,7 +12,7 @@ final class CompleteResult
      * @param list<list<RankView>> $rankMembers */
     public function __construct(public readonly SummaryView $summary,public readonly array $rows,
         public readonly array $observations,public readonly array $details,public readonly array $authors,
-        public readonly array $memberAuthors,public readonly array $rankMembers,
+        public readonly array $memberAuthors,public readonly array $rankMembers,public readonly array $rankMemberDetails,
         public readonly array $observationDetails,public readonly array $observationAuthors,
         public readonly array $sourceRecognitions,public readonly array $sourceRelations) {}
 }

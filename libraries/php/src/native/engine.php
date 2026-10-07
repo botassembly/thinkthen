@@ -108,17 +108,17 @@ final class Engine
     }
     public function copyResult(\FFI\CData $r,string $verb): CompleteResult
     {
-        $summary=$this->view($r,'summary','thinkthen_result_summary');$rows=[];$details=[];$authors=[];$memberAuthors=[];$rankMembers=[];$recognitions=[];$relations=[];
+        $summary=$this->view($r,'summary','thinkthen_result_summary');$rows=[];$details=[];$authors=[];$memberAuthors=[];$rankMembers=[];$rankMemberDetails=[];$recognitions=[];$relations=[];
         for($i=0;$i<$summary->count;++$i) {
             $rows[]=$this->view($r,$verb.'_view','thinkthen_result_'.$verb,$i);
             $details[]=$this->view($r,'details','thinkthen_result_details',$i);$authors[]=$this->view($r,'question_author','thinkthen_result_question_author',$i);
-            $ma=[];if($verb==='annotate')foreach($rows[$i]->answers->data as $j=>$_){$v=$this->ffi->new('thinkthen_question_author_v1');if($this->ffi->thinkthen_result_member_author($r,$i,$j,\FFI::addr($v)))throw new \LogicException('native member author');$ma[]=QuestionAuthorView::copy($v);}$memberAuthors[]=$ma;
-            $rm=[];if($verb==='rank'){$n=$this->ffi->new('size_t');if($this->ffi->thinkthen_result_rank_member_count($r,$i,\FFI::addr($n)))throw new \LogicException('native rank member count');for($j=0;$j<$n->cdata;++$j){$v=$this->ffi->new('thinkthen_rank_view_v1');if($this->ffi->thinkthen_result_rank_member($r,$i,$j,\FFI::addr($v)))throw new \LogicException('native rank member');$rm[]=RankView::copy($v);}}$rankMembers[]=$rm;
+            $ma=[];if($verb==='annotate')foreach($rows[$i]->answers->data as $j=>$_){$v=$this->ffi->new('thinkthen_question_author_v1');if($this->ffi->thinkthen_result_member_author($r,$i,$j,\FFI::addr($v)))throw new \LogicException('native member author');$ma[]=QuestionAuthorView::copy($v);}
+            $rm=[];$rd=[];if($verb==='rank'){$n=$this->ffi->new('size_t');if($this->ffi->thinkthen_result_rank_member_count($r,$i,\FFI::addr($n)))throw new \LogicException('native rank member count');for($j=0;$j<$n->cdata;++$j){$v=$this->ffi->new('thinkthen_rank_view_v1');if($this->ffi->thinkthen_result_rank_member($r,$i,$j,\FFI::addr($v)))throw new \LogicException('native rank member');$rm[]=RankView::copy($v);$a=$this->ffi->new('thinkthen_question_author_v1');if($this->ffi->thinkthen_result_member_author($r,$i,$j,\FFI::addr($a)))throw new \LogicException('native rank member author');$ma[]=QuestionAuthorView::copy($a);$d=$this->ffi->new('thinkthen_details_v1');if($this->ffi->thinkthen_result_rank_member_details($r,$i,$j,\FFI::addr($d)))throw new \LogicException('native rank member details');$rd[]=DetailsView::copy($d);}}$memberAuthors[]=$ma;$rankMembers[]=$rm;$rankMemberDetails[]=$rd;
             $recognitions[]=$verb==='recognize'?$this->view($r,'source_recognition','thinkthen_result_source_recognition',$i):null;
             $relations[]=$verb==='relate'?$this->view($r,'source_relations','thinkthen_result_source_relations',$i):null;
         }
         $obs=[];$od=[];$oa=[];for($i=0;$i<$summary->observation_count;++$i){$obs[]=$this->view($r,'observation','thinkthen_result_observation',$i);$od[]=$this->view($r,'details','thinkthen_result_observation_details',$i);$oa[]=$this->view($r,'question_author','thinkthen_result_observation_author',$i);}
-        return new CompleteResult($summary,$rows,$obs,$details,$authors,$memberAuthors,$rankMembers,$od,$oa,$recognitions,$relations);
+        return new CompleteResult($summary,$rows,$obs,$details,$authors,$memberAuthors,$rankMembers,$rankMemberDetails,$od,$oa,$recognitions,$relations);
     }
     private function execute(string $verb,Question $question,Source $input,?Controls $controls,bool $lazy=false): CompleteResult|Batch
     {

@@ -58,6 +58,7 @@ package Thinkthen.Typed.Complete is
    procedure Observation_Author (Item : Result; Index : Interfaces.C.size_t; View : in out Question_Author_V1; Code : out Interfaces.C.int);
    procedure Source_Recognition (Item : Result; Index : Interfaces.C.size_t; View : in out Source_Recognition_V1; Code : out Interfaces.C.int);
    procedure Source_Relations (Item : Result; Index : Interfaces.C.size_t; View : in out Source_Relations_V1; Code : out Interfaces.C.int);
+   procedure Rank_Member_Details (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Details_V1; Code : out Interfaces.C.int);
    procedure Rank_Member (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Rank_View_V1; Code : out Interfaces.C.int);
    procedure Rank_Member_Count (Item : Result; Index : Interfaces.C.size_t; View : in out Interfaces.C.size_t; Code : out Interfaces.C.int);
 private

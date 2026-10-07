@@ -56,6 +56,17 @@ fn emit(s: *const n.Snapshot) !void {
         _ = io.putchar(93);
     }
     _ = io.putchar(93);
+    key("rank_member_details");
+    for (s.rank_member_details, 0..) |members, i| {
+        if (i != 0) _ = io.putchar(44);
+        _ = io.putchar(91);
+        for (members, 0..) |v, j| {
+            if (j != 0) _ = io.putchar(44);
+            native_print_details(&v);
+        }
+        _ = io.putchar(93);
+    }
+    _ = io.putchar(93);
     key("rank_members");
     for (s.rank_members, 0..) |members, i| {
         if (i != 0) _ = io.putchar(44);

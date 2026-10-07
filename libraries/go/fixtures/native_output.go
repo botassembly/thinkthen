@@ -247,7 +247,39 @@ func normalizedRow(value any, index int, events []thinkthen.ObservationEvent) ma
 		}
 		out["member_authors"] = authors
 	}
+	if rank, ok := value.(thinkthen.RankRow); ok && len(rank.Members) > 0 {
+		addRankFacts(out, common)
+		out["question_name"] = optValue(rank.QuestionName)
+		children := []any{}
+		for _, m := range rank.Members {
+			child := normalizedRow(m, 0, nil)
+			child["name"] = optValue(m.QuestionName)
+			child["author"] = optValue(m.Common.Author.Name)
+			addRankFacts(child, m.Common)
+			children = append(children, child)
+		}
+		out["members"] = children
+	}
 	return out
+}
+func addRankFacts(out map[string]any, c thinkthen.CommonRow) {
+	out["model"] = c.Meta.Model
+	if c.Meta.ContextSha256.Present {
+		out["context_digest"] = c.Meta.ContextSha256.Value.String()
+	}
+	u := map[string]any{}
+	if c.Details.Usage.InputTokens.Present {
+		u["input_tokens"] = c.Details.Usage.InputTokens.Value
+	}
+	if c.Details.Usage.OutputTokens.Present {
+		u["output_tokens"] = c.Details.Usage.OutputTokens.Value
+	}
+	out["usage"] = u
+	sizes := []any{}
+	for _, s := range c.Details.QuestionSources {
+		sizes = append(sizes, optValue(s.BatchSize))
+	}
+	out["source_batch_sizes"] = sizes
 }
 func normalizedError(err error) map[string]any {
 	var e *thinkthen.Error
@@ -292,6 +324,13 @@ func normalizedCall[T any](call thinkthen.CompleteCall[T], err error) map[string
 		out["call_id"] = call.Facts.Value.CallId.String()
 		out["requests_sent"] = call.Facts.Value.RequestsSent
 		out["cache_answers"] = call.Facts.Value.CacheAnswers
+		out["records"] = call.Facts.Value.Records
+		if call.Facts.Value.InputTokens.Present {
+			out["input_tokens"] = call.Facts.Value.InputTokens.Value
+		}
+		if call.Facts.Value.OutputTokens.Present {
+			out["output_tokens"] = call.Facts.Value.OutputTokens.Value
+		}
 	}
 	return out
 }

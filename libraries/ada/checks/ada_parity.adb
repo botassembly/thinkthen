@@ -131,6 +131,10 @@ package body Ada_Parity is
    begin
       return Thinkthen.Native.Results.Result_Rank_Member_Count (P1, P2, P3);
    end Result_Rank_Member_Count;
+   function Result_Rank_Member_Details (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : Interfaces.C.size_t; P4 : access Details_V1) return Interfaces.C.int is
+   begin
+      return Thinkthen.Native.Results.Result_Rank_Member_Details (P1, P2, P3, P4);
+   end Result_Rank_Member_Details;
    function Result_Rank_Member (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : Interfaces.C.size_t; P4 : access Rank_View_V1) return Interfaces.C.int is
    begin
       return Thinkthen.Native.Results.Result_Rank_Member (P1, P2, P3, P4);

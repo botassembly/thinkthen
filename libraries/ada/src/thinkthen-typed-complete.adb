@@ -291,6 +291,13 @@ package body Thinkthen.Typed.Complete is
         (Item.Handle, Index, Copy'Access);
       if Code = 0 then View := Copy; end if;
    end Source_Relations;
+   procedure Rank_Member_Details (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Details_V1; Code : out Interfaces.C.int) is
+      Copy : aliased Details_V1 := View;
+   begin
+      Code := Native.Results.Result_Rank_Member_Details
+        (Item.Handle, Index, Member, Copy'Access);
+      if Code = 0 then View := Copy; end if;
+   end Rank_Member_Details;
    procedure Rank_Member (Item : Result; Index : Interfaces.C.size_t; Member : Interfaces.C.size_t; View : in out Rank_View_V1; Code : out Interfaces.C.int) is
       Copy : aliased Rank_View_V1 := View;
    begin

@@ -79,6 +79,8 @@ package Ada_Parity is
      with Export, Convention => C, External_Name => "ada_thinkthen_result_rank";
    function Result_Rank_Member_Count (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Interfaces.C.size_t) return Interfaces.C.int
      with Export, Convention => C, External_Name => "ada_thinkthen_result_rank_member_count";
+   function Result_Rank_Member_Details (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : Interfaces.C.size_t; P4 : access Details_V1) return Interfaces.C.int
+     with Export, Convention => C, External_Name => "ada_thinkthen_result_rank_member_details";
    function Result_Rank_Member (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : Interfaces.C.size_t; P4 : access Rank_View_V1) return Interfaces.C.int
      with Export, Convention => C, External_Name => "ada_thinkthen_result_rank_member";
    function Result_Find (P1 : System.Address; P2 : Interfaces.C.size_t; P3 : access Find_View_V1) return Interfaces.C.int
