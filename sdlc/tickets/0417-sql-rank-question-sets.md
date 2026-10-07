@@ -1,6 +1,6 @@
 # 0417: Rank question sets on every SQL surface
 
-Status: in progress. Complete SQL rank-set results and ordered member identities passed all 248 required cases through each source and installed extension. Final family gates and landing remain.
+Status: in progress. Complete SQL rank-set results and ordered member identities passed all 248 required cases through each source and installed extension. Final family checks passed. Landing remains.
 
 Milestone: 0.2
 

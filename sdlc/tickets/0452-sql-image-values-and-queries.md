@@ -1,6 +1,6 @@
 # 0452: Carry typed image values through SQL
 
-Status: in progress. Complete SQL image inputs, results and facts passed all 248 required cases through each source and installed extension. Final family gates and landing remain.
+Status: in progress. Complete SQL image inputs, results and facts passed all 248 required cases through each source and installed extension. Final family checks passed. Landing remains.
 
 Milestone: 0.2
 Owner: builder.

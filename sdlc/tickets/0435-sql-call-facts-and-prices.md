@@ -1,6 +1,6 @@
 # 0435: Return isolated SQL call facts and caller-priced cost
 
-Status: in progress. Reviewed SQL family adoption passed all 248 required cases through each source and installed extension. Final family gates and landing remain.
+Status: in progress. Reviewed SQL family adoption passed all 248 required cases through each source and installed extension. Final family checks passed. Landing remains.
 
 Milestone: 0.2
 

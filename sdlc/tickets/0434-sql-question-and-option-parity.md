@@ -1,6 +1,6 @@
 # 0434: Match SQL question inputs and descriptions
 
-Status: in progress. Complete SQL question and file adoption passed all 248 required cases through each source and installed extension. Final family gates and landing remain.
+Status: in progress. Complete SQL question and file adoption passed all 248 required cases through each source and installed extension. Final family checks passed. Landing remains.
 
 Milestone: 0.2
 
