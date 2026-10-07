@@ -22,6 +22,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     jdk=${THINKTHEN_JDK_HOME:+$THINKTHEN_JDK_HOME/bin/}
     "${jdk}javac" --enable-preview --release 21 -d "$smoke/door" "$here"/door/thinkthen/*.java
     "${jdk}jar" --create --file "$smoke/thinkthen-door.jar" -C "$smoke/door" .
+    python3 "$here/tests/package_check.py" "$smoke/native/include/thinkthen.h" "$smoke/thinkthen-door.jar" "$smoke/native/lib/libthinkthen.so"
     "${jdk}javac" --enable-preview --release 21 -cp "$smoke/thinkthen-door.jar" -d "$smoke/app" "$here/tests/Smoke.java"
     "${jdk}java" --enable-preview --enable-native-access=ALL-UNNAMED -XX:ActiveProcessorCount=2 \
         -Dthinkthen.library="$smoke/native/lib/libthinkthen.so" -cp "$smoke/thinkthen-door.jar:$smoke/app" Smoke
@@ -39,6 +40,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     scratch_dir native
     tar -xzf "$THINKTHEN_C_ARTIFACT" -C "$native"
     python3 "$root/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
+    python3 "$here/tests/package_check.py" "$native/include/thinkthen.h" "$managed/thinkthen-door.jar" "$native/lib/libthinkthen.so"
     THINKTHEN_RELEASE_JVM_DIR="$managed" THINKTHEN_RELEASE_C_DIR="$native" \
         python3 "$here/tests/installed.py"
     if [ "${THINKTHEN_PORTABLE_BATCH:-}" = 1 ]; then
