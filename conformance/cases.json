@@ -9861,7 +9861,18 @@
             "specification/fixtures/files/documents"
           ],
           "unit": "file",
-          "case_ref": "51-same-kind-alerts"
+          "question": {
+            "version": 1,
+            "relate": {
+              "relations": [
+                {
+                  "name": "linked",
+                  "source": "*",
+                  "target": "*"
+                }
+              ]
+            }
+          }
         },
         "expect": {
           "locations": [
@@ -9885,6 +9896,28 @@
           "named",
           "compile",
           "runtime"
+        ],
+        "exchanges": [
+          {
+            "request": "{\"state\":{\"entities\":[{\"id\":\"i1\",\"name\":\"Refund policy\\nCustomers may request a refund within 30 days.\\nAda approves refunds for Acme.\\nBilling disputes require a receipt.\\n\",\"kind\":\"*\"},{\"id\":\"i2\",\"name\":\"Support contract\\nAcme provides support under this contract.\\nAda reviews customer requests.\\nAn urgent billing dispute needs attention today.\\n\",\"kind\":\"*\"}]},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 linked i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 linked i1?\"}}}",
+            "response": {
+              "model": "jev-1.13.0",
+              "answers": {
+                "q1": {
+                  "type": "noul",
+                  "noul": 0.8
+                },
+                "q2": {
+                  "type": "noul",
+                  "noul": 0.2
+                }
+              },
+              "usage": {
+                "input_tokens": 25,
+                "output_tokens": 2
+              }
+            }
+          }
         ]
       },
       {
@@ -15248,6 +15281,86 @@
           "fixture_ref": "plan-tokens-are-a-band",
           "schema": "specification/result.schema.json",
           "schema_version": "landed result/1"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-native-result2-text-source",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "native-result2-text-source"
+        },
+        "expect": {
+          "fixture_ref": "native-result2-text-source",
+          "schema": "specification/result.schema.json",
+          "schema_version": "native result/2"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-native-result2-image-source-no-lines",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "native-result2-image-source-no-lines"
+        },
+        "expect": {
+          "fixture_ref": "native-result2-image-source-no-lines",
+          "schema": "specification/result.schema.json",
+          "schema_version": "native result/2"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-native-result2-source-missing-last-line",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "native-result2-source-missing-last-line"
+        },
+        "expect": {
+          "fixture_ref": "native-result2-source-missing-last-line",
+          "schema": "specification/result.schema.json",
+          "schema_version": "native result/2"
+        },
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
+      },
+      {
+        "id": "type-native-result2-source-zero-line",
+        "verb": "decide",
+        "kind": "type-fixture",
+        "input": {
+          "fixture": "specification/fixtures/types/corpus.json",
+          "case_ref": "native-result2-source-zero-line"
+        },
+        "expect": {
+          "fixture_ref": "native-result2-source-zero-line",
+          "schema": "specification/result.schema.json",
+          "schema_version": "native result/2"
         },
         "preconditions": [],
         "checks": [

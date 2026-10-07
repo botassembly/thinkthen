@@ -1,6 +1,6 @@
 # 0426: Expose typed C calls and complete result carriers
 
-Status: in progress. Lane2 implements the canonical complete C integration against pushed native 76e925432; remaining native dependencies and root whole-change qualification are open.
+Status: in progress. The C library exposes all ten named complete functions, typed authored and located results, image inputs and owned native file batches on the current shared native implementation. Final shared-case execution, whole-change review and landing checks remain.
 
 Milestone: 0.2
 
@@ -25,9 +25,9 @@ Settle shared schema with 0408, 0300 and 0442 first. This ticket owns the additi
 
 ## Design notes
 
-The coordinator accepted the reviewed complete signatures retained in [the private integration contract](../../libraries/c/src/complete-signatures.h) with the ruling that unpublished `record_v1` can include context and candidates. Preserve released symbols/layouts; do not freeze a temporary `*_current` ABI or invent `record_v2`. The branch reuses 22f9f787b constructors, storage and native regression behavior. [The C contract](../../libraries/c/TYPED.md) describes the unpublished target and its remaining integration. The coherent checkpoint now exports the complete signatures against actual native support. Publication, parity claims and the landing record await remaining dependencies and root's fresh High whole-change review.
+The coordinator accepted the reviewed complete signatures retained in [the private integration contract](../../libraries/c/src/complete-signatures.h) with the ruling that unpublished `record_v1` can include context and candidates. Preserve released symbols/layouts; do not freeze a temporary `*_current` ABI or invent `record_v2`. The branch reuses 22f9f787b constructors, storage and native regression behavior. [The C contract](../../libraries/c/TYPED.md) describes the unpublished target and its remaining integration. The coherent checkpoint now exports the complete signatures against actual native support. Publication and the landing record await actual final parity, root's fresh High whole-change review and landing checks.
 
-Current implementation executes all ten native complete routes and clones ordered context/candidates/images. It uses native pixel validation, shared text/image readers and owned observations, and stores immutable canonical question/value/location/image/result/failure backing allocations. Complete identities, provenance, facts/attempts and stops come from native getters. Lane0 is read-only to this builder; its active WIP is not merged. Final full tests/lint on the landing candidate remain with the coordinator.
+Current implementation executes all ten native complete routes and clones ordered context/candidates/images. It uses native pixel validation, shared text/image readers and owned observations, and stores immutable canonical question/value/location/image/result/failure backing allocations. Complete identities, provenance, facts/attempts and stops come from native getters. Only coherent committed native checkpoints are merged; lane0 remains read-only. Final full tests/lint on the landing candidate remain with the coordinator.
 
 Review exact exported signatures before code. Existing ABI symbols remain valid. The borrowed/owned lifetime contract and invalid-handle behavior must be explicit; memory safety needs High review.
 
@@ -37,32 +37,7 @@ Second PM message `2026-10-06-pm-vision-ships-in-0-2-and-the-sdk-stays-one-endpo
 
 ## Coherent native integration (2026-10-06)
 
-Lane2 integrates pushed native checkpoint 76e925432 against the preserved canonical
-complete-signatures.h layouts. Native getters now supply all atomic/record,
-find, annotate, recognize and relate complete routes, owned question events,
-raw selections, normalized questions/thresholds, aligned provenance/identities,
-actual call/send IDs, final facts and structured stops. No result JSON is decoded.
-
-Exact remaining native dependency: there is no public complete `RankSet` route
-returning native final ranked complete rows, their `question_name`, original
-ordinal and final answer identity. Existing `rank_set_with` returns the released
-legacy carrier and cannot supply the final complete identity. Complete C refuses
-that variant before sends rather than building a second merge/scheduler. The
-0456 coherent native update is separately pending: name/wording_version,
-item_schema/context_schema getters and setters on authored/resolved questions,
-validated typed declarations, named/reference loaders, and declared object
-per-record context admission. Lane2 does not edit native sources to supply them.
-
-Additional missing native interfaces: typed authored model/profile/batch/on getters
-for `ResolvedQuestion`, authored model/on for `FindReading`/`RecognitionReading`,
-authored model for `RelationReading`, atomic/rank non-root reading admission,
-custom relate pointer admission, and a
-located annotation-text composition entry point that applies the native
-annotation parser (valid JSON structurally; syntax-invalid JSON as literal text)
-while retaining `SourceLocation`. C does not supply substitute parsers or infer
-authored setup from response metadata. Unlocated annotation text already uses
-the existing native parser. Native saved find/recognize selected readers are
-integrated.
+The coherent C implementation uses the committed native complete routes, authored settings/declarations, lossless loaded-member composition, rank sets and located annotation admission. Remaining qualification is actual shared public parity, root's fresh High review and landing checks.
 
 Additive C details preserve every canonical v1 layout. The implemented additive
 `thinkthen_details_v1` exposes a native question/threshold/raw selection, separate
@@ -70,9 +45,7 @@ optional input/output token counts, ordered source details with optional batch
 sizes, and ordered original input views with physical locations/images. New
 `thinkthen_result_observation_details` and `thinkthen_result_details` accessors
 borrow immutable owned storage. These additions are recorded here before any
-family adoption; the exact installed declarations are the ABI authority. Optional
-0456 metadata/declaration additions will be recorded here when its coherent native
-interfaces are supplied. This is integration work, not a landing/parity record.
+family adoption; the exact installed declarations are the ABI authority. 0456 metadata/declaration additions below use the supplied native interfaces. This is integration work, not a landing/parity record.
 
 Exact additive detail declarations (installed header is the layout authority):
 
@@ -125,16 +98,6 @@ and seven zero-send refusals execute actual native judgments. Existing JSON-door
 request-key tests report native/fixture hash mismatches; they are not rewritten
 or bypassed here. Root retains whole-change review, final gates and landing.
 
-Actual checkpoint checks: offline `policy.py` passed; C all-targets Clippy with
-`-D warnings` passed; C/C++ canonical/additive layout checks and exact static/dynamic
-header export inventories passed. C `cargo test --locked --offline` finished with
-19/19 Rust tests and 65/67 public-consumer tests passing, including all eight
-`current::` consumer tests. The two unchanged failures are
-`cases::portable::c_json_records_keep_fixture_questions_and_keys_in_one_request`
-and `cases::every_applicable_shared_case_passes_through_the_door` (15 shared
-request-key expectations differ). Both C ratchets equal measured totals. These
-are C-local integration checks, not root landing gates.
-
 ## Coherent 0456 integration API
 
 The following additive API preserves every existing layout and symbol. Native declarations validate both constructors and execution. Explicit object context uses native `ObjectContext` and `RecordContext`; literal JSON-looking text remains text.
@@ -157,7 +120,8 @@ enum thinkthen_input_property_kind_v1 {
 enum thinkthen_question_loader_role_v1 {
     THINKTHEN_LOAD_ATOMIC_V1=1, THINKTHEN_LOAD_SET_V1=2,
     THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1=3, THINKTHEN_LOAD_RECOGNIZE_V1=4,
-    THINKTHEN_LOAD_RELATE_V1=5
+    THINKTHEN_LOAD_RELATE_V1=5, THINKTHEN_LOAD_RANK_V1=6,
+    THINKTHEN_LOAD_RANK_SET_V1=7, THINKTHEN_LOAD_FIND_V1=8
 };
 typedef struct thinkthen_input_property_v1 {
     thinkthen_string_v1 name; uint32_t kind;
@@ -182,9 +146,9 @@ int thinkthen_question_new_authored(const thinkthen_engine *, const thinkthen_qu
 /* Borrow metadata owned by this immutable question until question_free. */
 int thinkthen_question_author(const thinkthen_question *, thinkthen_question_author_v1 *);
 /* Explicit native loader role: ATOMIC=1, SET=2, DYNAMIC_CHOOSE=3,
- * RECOGNIZE=4, RELATE=5. No host search or fallback after file refusal.
- * These native-loaded handles execute directly. Embedding them as typed set
- * members awaits a native authored serialization/set composition API.
+ * RECOGNIZE=4, RELATE=5, RANK=6, RANK_SET=7, FIND=8.
+ * No host search or fallback after file refusal. Loaded members use native
+ * lossless authored grammar for composition; known fields remain typed.
  */
 int thinkthen_question_load_named(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 name, thinkthen_question **);
 int thinkthen_question_load_reference(const thinkthen_engine *, uint32_t role, thinkthen_string_v1 reference, thinkthen_question **);
@@ -199,76 +163,9 @@ int thinkthen_result_member_author(const thinkthen_result *, size_t row, size_t 
 int thinkthen_result_observation_author(const thinkthen_result *, size_t observation, thinkthen_question_author_v1 *);
 ```
 
-## Current coherent native integration and remaining interfaces
+## Current native adoption
 
-Merged committed native 8140d01dc and 8463aa30c (including current main) at the
-clean pushed checkpoint; no uncommitted lane0 input is used. The source-count
-merge conflict was resolved by measuring 143695 nonblank Rust lines from the
-configured directories. The additions above now map actual native 0456
-name/version/declaration getters on questions, complete rows, annotation members
-and native question/row observations. Typed object context is constructed with
-native RawRecord/ObjectContext/RecordContext. All ten real judgments run with
-metadata after their original handles/buffers are freed; named/reference native
-roles also execute real judgments. Invalid later declared records/context send
-nothing. No production hash, parser, cache, scheduler, IDs or authored settings
-are reconstructed at the host.
-
-Exact remaining native getter needs: authored `ResolvedQuestion::{model,
-profile,batch,on}`, `FindReading::{model,on}`, `RecognitionReading::{model,on}`,
-and `RelationReading::model`. Existing author name/wording_version/item_schema/
-context_schema getters are adopted; effective metadata.model is not used to
-fill authored model. Complete saved rank-set execution still needs a public
-record route and complete row values with question_name/original ordinal/native
-identity/final facts. Custom relate pointers and located annotation text need
-native admission/composition while keeping original coordinates and native
-JSON-versus-literal parsing. Existing atomic/rank non-root on refusal is retained
-until a coherent native record-selection route is supplied.
-
-Additional native loader needs identified while adopting the actual available
-interfaces: rank-specific named/reference admission (ordinary LoadedQuestion
-cannot preserve whether a cut was authored during host conversion), and native
-authored serialization or complete set composition for native-loaded members.
-The existing C member constructor serializes its already-owned original
-question grammar; native named handles expose no equivalent original grammar.
-They are refused as new typed members rather than reconstructed from incomplete
-getters. FindQuestionFile has no named/reference loader; native literal/builder
-find metadata is adopted without adding a new grammar. The additive named C
-roles are precisely the five native-supported roles documented above.
-
-The controlled shared/C v2 oracle adoption is coordinated in existing 0444.
-Rust and C consumers now reuse one independent framing/fixture-mapping helper.
-Only synthetic case 40's reported model and corresponding detailed-model
-expectation change, aligning the fixture with its literal requested model so
-its two-calls/one-send/one-cache-answer behavior remains valid under v2 freshness.
-Every request/question byte and distinct case remains; all committed v1 saved
-record fixtures stay unchanged. The existing portable C test additionally pins
-original fixture question bytes and read-only v1 replay bytes/mtime with zero
-sends through the actual JSON compatibility door.
-
-Current checkpoint checks: C `cargo test --locked --offline` passes 19/19 Rust
-and 69/69 public-consumer tests, including all ten sanitizer judgments for
-records/files (13 sends each), five native named roles (7 sends), declared
-object/absent/empty context (3 sends) and seven staged declaration refusals
-(0 sends). Full C shared corpus: 55 cases, 53 applicable pass, 0 fail, the
-same 2 established inapplicable cases. C/C++ layout/signature checks and exact
-static/dynamic installed-header export checks pass. C all-targets Clippy with
--D warnings, shared Rust public consumer Clippy, formatting and offline
-policy.py pass. The shared Rust public corpus passes the same 53 applicable
-cases with no failures. The original-v1 portable C replay check passes with
-unchanged request/question bytes, no new sends and unchanged saved bytes/mtime.
-
-Measured ceilings now equal actual: root 143731 Rust lines, C 13899 Rust lines,
-C 2177 C lines. Root growth from the measured merge total 143695 is the shared
-independent fixture/key oracle; C growth from 13236/1983 is typed author storage,
-validated additive FFI, native loader/context adoption and actual consumer
-coverage. Duplication was checked in the existing descriptor constructor,
-complete question/row/observation storage and both legacy key helpers: the
-constructor is shared, backing conversions are reused, and duplicate key/
-fixture mapping algorithms are replaced with the one shared independent oracle.
-No new dependency or runner is introduced. These are integration checks;
-root retains fresh whole High C+shared-oracle review and full landing gates
-once native dependencies are main. No full parity or source landing is claimed.
-
+All eight named/reference roles, authored setting getters, selected-record admission, loaded-member composition and complete rank sets use native APIs. C performs no substitute parser, cache or scheduler work; original v1 saved replay and generic ABI compatibility remain covered separately.
 
 C adoption checkpoint after main cache fixes and native e714bb018: complete
 saved rank sets now execute through the native record route and retain their
@@ -279,7 +176,7 @@ record grammar. Additive located recognition/relation accessors preserve the
 native physical spans and expanded endpoint occurrences, with typed originals;
 old layouts and symbols remain unchanged. Actual ASan consumers retain these
 views after engine, question and source handles are freed. Focused checks pass
-14 Rust checks and 11 public consumers; all-target Clippy passes. Shared 293-case
+14 Rust checks and 11 public consumers; all-target Clippy passes. Shared applicable public
 C parity adoption remains in progress; no whole-surface parity claim is made.
 
 Native consumer adoption preserves loaded atomic/rank questions through the native file grammar for set composition. Complete C views now retain explicit model/profile/batch/pointer settings and located annotation uses native structural/literal admission. Bare score levels remain absent descriptions; fully described levels preserve authored null; mixed levels refuse with the same Usage as the public Rust ScoreBuilder. Fourteen private Rust tests and eleven actual ASan C consumers pass; a focused public regression also proves authored null versus absence and mixed refusal. Shared public parity remains open and currently reports actual gaps, without compatibility JSON substituting for typed known fields.
@@ -287,3 +184,9 @@ Native consumer adoption preserves loaded atomic/rank questions through the nati
 The additive lazy C batch starts cover the six native streaming record routes. The batch owns stable question/source/context/cancellation backing, uses the existing fallible native scheduler and explicit JSONL input, and drops the native batch before backing. The engine stays live through batch_free and all batch operations stay on the creating thread. Independently owned typed row results outlive the batch. Rank, find, recognize and relate keep their native aggregate complete APIs. The public sanitizer consumer checks a completed two-row prefix, rejected valid sibling, first-stage zero-send refusal, literal-text distinction, cancellation after start, and drop before/after a yielded row.
 
 Named-provider fixture isolation was corrected after six fake-key Liquid calls received 401 responses from its default endpoint: the generic URL environment variable does not override a named provider. Every fixture now supplies its owned loopback URL explicitly in settings, and the C consumer validates that setting before engine creation. Only the literal fixture key was used; no real credentials or paid probes were read or sent. Whole-change review must inspect this isolation across new projections.
+
+## What the build taught us
+
+The C boundary must preserve native distinctions between literal files, explicit JSONL, absent descriptions and authored nulls. Native batching chooses its own admitted prefix; caller stage markers were not a public capability. Named providers require an explicit owned address in fixture settings, and refreshing a stored answer creates a new observation and answer ID while replaying the preserved original keeps its original identities.
+
+The shared C executor now passes all 247 applicable public cases through typed complete calls and known-field accessors, including all 24 image admission cells. Schema-only envelopes and private invariant injection remain at their actual decoder and safety boundaries. Whole-change review and landing checks remain open.

@@ -7,7 +7,7 @@ static void quoted(thinkthen_string_v1 s) {
     putchar('"');
     for(size_t i=0;i<s.len;++i) { unsigned char c=(unsigned char)s.data[i];
         if(c=='"' || c=='\\') { putchar('\\'); putchar(c); }
-        else if(c<32) printf("\\u%04x",c); else putchar(c);
+        else if(c=='\n') fputs("\\n",stdout); else if(c=='\r') fputs("\\r",stdout); else if(c=='\t') fputs("\\t",stdout); else if(c<32) printf("\\u%04x",c); else putchar(c);
     }
     putchar('"');
 }
@@ -67,9 +67,11 @@ static void row(thinkthen_result *r,unsigned kind,size_t at) {
     fputs(",\"origin\":",stdout); if(common.meta.origin.present) printf("%u",common.meta.origin.value); else fputs("null",stdout);
     fputs(",\"answered_by\":",stdout); if(common.meta.answered_by.present) quoted(common.meta.answered_by.value); else fputs("null",stdout);
     printf(",\"observations\":%zu,\"sources\":%zu",common.meta.observations.len,common.meta.question_sources.len);
+    fputs(",\"observation_ids\":[",stdout); for(size_t i=0;i<common.meta.observations.len;++i) { if(i) putchar(','); quoted(common.meta.observations.data[i].data.observation_id); } putchar(']');
     fputs(",\"input\":",stdout); if(common.input.present) content(common.input.value); else fputs("null",stdout);
     if(common.position.present) { fputs(",\"file\":",stdout); quoted(common.position.value.file.value); if(common.position.value.first_line.present) printf(",\"first_line\":%zu",common.position.value.first_line.value); if(common.position.value.last_line.present) printf(",\"last_line\":%zu",common.position.value.last_line.value); }
     if(common.images.present) { fputs(",\"images\":[",stdout); for(size_t i=0;i<common.images.value.len;++i) { if(i) putchar(','); putchar('"'); for(size_t j=0;j<common.images.value.data[i].bytes_len;++j) printf("%02x",common.images.value.data[i].bytes[j]); putchar('"'); } putchar(']'); }
+    if(common.images.present) { fputs(",\"image_properties\":[",stdout); for(size_t i=0;i<common.images.value.len;++i) { if(i) putchar(','); thinkthen_image_view_v1 image=common.images.value.data[i]; printf("[%u,%u,%u]",image.media,image.width,image.height); } putchar(']'); }
     if(common.answer.present) { thinkthen_answer_v1 a=common.answer.value; if(a.kind==1) printf(",\"probability\":%.17g",a.data.probability); else { fputs(",\"probabilities\":",stdout); if(a.kind==2) probabilities(a.data.choice.probabilities); else if(a.kind==3) probabilities(a.data.tag); else if(a.kind==4) probabilities(a.data.score.probabilities); else probabilities(a.data.find.probabilities); } }
     if(kind==8) {
         thinkthen_annotate_view_v1 v={0}; if(thinkthen_result_annotate(r,at,&v)) abort();
