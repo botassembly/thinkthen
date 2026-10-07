@@ -225,6 +225,12 @@ pub(crate) fn read(
             {
                 line.to_string()
             }
+            None if verb_named(row) == Some("relate")
+                && id.as_str() == "/id"
+                && matches!(row.member("input"), Some(Json::Array(_))) =>
+            {
+                line.to_string()
+            }
             None => return Err(MeasureError::NoId(*line)),
         };
         read.extend(answers(*line, &record, row, identity)?);

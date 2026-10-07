@@ -5,8 +5,8 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use crate::core::{
-    Backend, BackendProfile, BatchError, Framing, PartError, Plan, Pointer, QuestionSet,
-    QuestionSetError, Reading, ReadingError, Record, RecordError, Setting, quoted_plan,
+    Backend, BackendProfile, Framing, PartError, Plan, Pointer, QuestionSet, QuestionSetError,
+    Reading, ReadingError, Record, RecordError, Setting, quoted_plan,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -110,7 +110,7 @@ pub(crate) fn run(
         profile,
         arguments.common.jobs,
     )?;
-    let judging = Judging::new(arguments, environment, engine, set, mismatch);
+    let judging = Judging::new(arguments, environment, engine, set, mismatch)?;
     if arguments.common.dry_run {
         return plan::dry_run(&judging, &reading, inputs, inputs_cap, &mut writer);
     }
@@ -146,11 +146,6 @@ fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
     if arguments.raw {
         return Err(Failure::Usage(
             "--raw prints one bare label; `annotate` always prints one JSON object",
-        ));
-    }
-    if arguments.batching.context.is_some() {
-        return Err(Failure::Usage(
-            "--context does not act on annotate; each question's `on` selects its evidence",
         ));
     }
     Ok(())
@@ -220,6 +215,8 @@ pub(crate) struct Judging<'a> {
     mismatch: Mismatch,
     streams: bool,
     continue_missing: bool,
+    context: Option<String>,
+    context_field: Option<String>,
 }
 
 impl<'a> Judging<'a> {
@@ -229,9 +226,11 @@ impl<'a> Judging<'a> {
         engine: Engine,
         set: QuestionSet,
         mismatch: Mismatch,
-    ) -> Self {
+    ) -> Result<Self, Failure> {
         let common = &arguments.common;
-        Self {
+        Ok(Self {
+            context: asking::context::shared(arguments.batching.context.as_deref())?,
+            context_field: arguments.batching.context_field.clone(),
             streams: common.framing() != Framing::Document,
             continue_missing: arguments.on_error.is_some(),
             engine,
@@ -239,7 +238,7 @@ impl<'a> Judging<'a> {
             environment,
             set,
             mismatch,
-        }
+        })
     }
 
     pub(crate) const fn engine(&self) -> &Engine {
@@ -270,6 +269,25 @@ impl<'a> Judging<'a> {
         self.set.groups()
     }
 
+    fn context_for(&self, record: &Record) -> Result<Option<crate::core::Evidence>, Failure> {
+        let schema = self
+            .set
+            .questions()
+            .first()
+            .and_then(|member| member.metadata().context_schema.as_ref());
+        let explicit = asking::context::record(record, self.context_field.as_deref(), schema)?;
+        const REFUSAL: &str = "the per-item context does not match context_schema";
+        if let Some(context) = &explicit {
+            for member in self.set.questions() {
+                context
+                    .validate(member.metadata().context_schema.as_ref())
+                    .map_err(|_| Failure::Usage(REFUSAL))?;
+            }
+        }
+        crate::public::RecordContext::resolved(explicit.as_ref(), self.context.as_deref())
+            .map_err(|_| Failure::Usage("the per-item context does not match context_schema"))
+    }
+
     pub(crate) const fn continue_missing(&self) -> bool {
         self.continue_missing
     }
@@ -297,7 +315,7 @@ fn plan_for(
     set: &QuestionSet,
     group: &[usize],
     backend: &Backend,
-    profile: Option<&BackendProfile>,
+    (profile, context): (Option<&BackendProfile>, Option<&crate::core::Evidence>),
     base: &Reading,
     record: &Record,
 ) -> Result<Plan, PrepareError> {
@@ -330,10 +348,7 @@ fn plan_for(
                 )))
         })
         .collect::<Result<Vec<_>, _>>()?;
-    quoted_plan(backend.asked(), evidence, None, questions, profile).map_err(|error| {
-        PrepareError::Other(match error {
-            BatchError::Profile(limit) => Failure::ProfileLimit(limit),
-            _ => Failure::Defect("an annotate group asks nothing"),
-        })
+    quoted_plan(backend.asked(), evidence, context, questions, profile).map_err(|error| {
+        PrepareError::Other(crate::failure::context::Limits::new(profile).refused(error, false))
     })
 }

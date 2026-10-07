@@ -77,7 +77,7 @@ pub(super) fn records(
                 )
                 .map_err(|error| Placed::at(error, item.at))?,
                 record,
-                images,
+                images: item.images.or(images),
                 arrived,
                 at: item.at,
                 ordinal,
@@ -116,9 +116,13 @@ impl Planner<'_> {
             if self.reading.declares_item() {
                 self.reading.evidence(&held.record)?;
             }
+            let mut state = images.state();
+            if self.reading.streams() || self.reading.has_fields() {
+                state.text = self.reading.batch_record(&held.record)?.value;
+            }
             return crate::core::image::plan(
                 self.asked.clone(),
-                images.state(),
+                state,
                 context.as_ref(),
                 self.asks.questions(&held.record)?,
                 self.profile,
@@ -351,6 +355,7 @@ pub(super) fn run(
     if matches!(configuration.keeping, Keeping::Passing | Keeping::Ordered) {
         output.guard_models();
     }
+    let per_record_context = configuration.context_field.is_some();
     let judging = Judging::new(configuration)?;
     let downstream = edge::Downstream::default();
     let asker = JudgeAsker {
@@ -371,7 +376,7 @@ pub(super) fn run(
         questions: None,
         sized: true,
         inputs,
-        context: asker.planner.context.is_some(),
+        context: asker.planner.context.is_some() || per_record_context,
         detailed: judging.view.details,
         continues: false,
     };

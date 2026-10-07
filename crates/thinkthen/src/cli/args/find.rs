@@ -33,6 +33,18 @@ pub(crate) struct FindArguments {
 /// The shared options that apply to one aggregate `find` request.
 #[derive(Args)]
 pub(crate) struct FindCommon {
+    /// Share the exact UTF-8 contents of FILE separately from the complete candidate set.
+    #[arg(long, value_name = "FILE", hide_short_help = true)]
+    pub(crate) context: Option<PathBuf>,
+
+    /// Refuse an aggregate request exceeding N bytes. [default: 96000]
+    #[arg(
+        long,
+        value_name = "N",
+        hide_short_help = true,
+        allow_negative_numbers = true
+    )]
+    pub(crate) max_request_bytes: Option<String>,
     /// Print one machine-readable run-facts line last on standard error.
     #[arg(long, hide_short_help = true)]
     pub(crate) facts: bool,

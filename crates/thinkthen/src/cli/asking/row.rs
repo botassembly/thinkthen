@@ -7,6 +7,19 @@ use crate::failure::Failure;
 use crate::judge::Keeping;
 use crate::result_json::Run;
 use crate::schedule::Judged;
+use serde::{Serialize, Serializer};
+
+struct Occurrence<'a> {
+    canonical: &'a crate::core::CompleteAtomic,
+    index: usize,
+    original: &'a Record,
+}
+impl Serialize for Occurrence<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.canonical
+            .serialize_occurrence(Some(self.original), None, Some(self.index), serializer)
+    }
+}
 
 impl Judging<'_> {
     /// Build the line one answered record prints.
@@ -99,9 +112,16 @@ impl Judging<'_> {
         mismatch: &crate::profile::Mismatch,
         context: &mut RowContext<'_>,
     ) -> Result<String, Failure> {
-        Ok(json_line(
-            &self.canonical(record, question, judged, mismatch, context)?,
-        )?)
+        let canonical = self.canonical(record.clone(), question, judged, mismatch, context)?;
+        if self.keeping == Keeping::Passing {
+            Ok(json_line(&Occurrence {
+                canonical: &canonical,
+                index: context.record,
+                original: &record,
+            })?)
+        } else {
+            Ok(json_line(&canonical)?)
+        }
     }
     fn canonical(
         &self,
@@ -142,7 +162,7 @@ impl Judging<'_> {
                 Question::Score { .. } => crate::core::image::InputFunction::Score,
             }
         };
-        let canonical = crate::result_json::complete::atomic(
+        let mut canonical = crate::result_json::complete::atomic(
             run,
             judged,
             crate::result_json::complete::AtomicSpec {
@@ -158,6 +178,13 @@ impl Judging<'_> {
             input,
             Some(attempts),
         )?;
+        canonical.images = context.images.map(|images| {
+            images
+                .images()
+                .iter()
+                .map(|image| image.0.clone())
+                .collect()
+        });
         Ok(canonical)
     }
     fn mismatch_of(&self, question: &Question) -> crate::profile::Mismatch {
@@ -184,7 +211,9 @@ impl Judging<'_> {
             return Ok(false);
         };
         if self.view.details {
-            crate::cli::intake::image_input(printed, images)?;
+            if !self.streams {
+                crate::cli::intake::image_input(printed, images)?;
+            }
             crate::cli::intake::source_members(printed, position)?;
         } else if let Some(position) = position.filter(|p| p.located) {
             *printed = printed

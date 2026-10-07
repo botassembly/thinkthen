@@ -73,10 +73,10 @@ impl Common {
             || self.window.is_some()
             || !self.field.is_empty();
         if !self.image.is_empty()
-            && (framed || !self.input.is_empty() || self.unit.is_some() || self.media.is_some())
+            && (self.media.is_some() || self.unit.is_some() || self.window.is_some())
         {
             return Err(Failure::Usage(
-                "--image cannot accompany --input, --media, --unit or record framing",
+                "--image cannot accompany --media, --unit or --window",
             ));
         }
         if self.media.as_deref() == Some("image")

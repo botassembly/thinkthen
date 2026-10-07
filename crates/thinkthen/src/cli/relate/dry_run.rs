@@ -57,6 +57,7 @@ pub(super) struct Context<'a> {
     pub(super) from: Option<From>,
     pub(super) entity_count: usize,
     pub(super) key_env: &'a str,
+    pub(super) shared_context: Option<&'a str>,
 }
 
 pub(super) fn write(
@@ -64,11 +65,23 @@ pub(super) fn write(
     context: Context<'_>,
     prepared: &PreparedRelations,
 ) -> Result<(), Failure> {
+    let asks = match context.shared_context {
+        Some(shared) => prepared
+            .asks
+            .clone()
+            .with_context(context.backend, shared)?,
+        None => prepared.asks.clone(),
+    };
+    let prepared_requests = asks.requests(
+        context.backend,
+        context.profile,
+        crate::engine::facade::Bound::pairs(context.profile),
+    )?;
     let mut summary = PlanSummary::new(true);
     summary
         .records_added(context.entity_count)
         .map_err(|_| Failure::Defect("a plan is too large"))?;
-    for request in &prepared.requests {
+    for request in &prepared_requests {
         summary
             .request(&request.body)
             .map_err(|_| Failure::Defect("a plan is too large"))?;
@@ -77,21 +90,39 @@ pub(super) fn write(
         .rules
         .iter()
         .zip(&prepared.questions_per_rule)
-        .zip(&prepared.requests_per_rule)
-        .map(|((rule, questions), requests)| Relation {
-            name: &rule.name,
-            source: &rule.source,
-            target: &rule.target,
-            reads: &rule.reads,
-            either: rule.either,
-            method: if rule.single { "choice" } else { "yes_no" },
-            fallback: None,
-            logical_questions: *questions,
-            request_count: *requests,
+        .enumerate()
+        .map(|(at, (rule, questions))| {
+            Ok(Relation {
+                name: &rule.name,
+                source: &rule.source,
+                target: &rule.target,
+                reads: &rule.reads,
+                either: rule.either,
+                method: if rule.single { "choice" } else { "yes_no" },
+                fallback: None,
+                logical_questions: *questions,
+                request_count: if context.shared_context.is_none() {
+                    prepared
+                        .requests_per_rule
+                        .get(at)
+                        .copied()
+                        .ok_or(Failure::Defect("a relation has no request count"))?
+                } else {
+                    let belongs = |place: &usize| {
+                        prepared
+                            .asked
+                            .get(*place)
+                            .is_some_and(|asked| asked.rule() == at)
+                    };
+                    prepared_requests
+                        .iter()
+                        .filter(|request| request.places.iter().any(&belongs))
+                        .count()
+                },
+            })
         })
-        .collect::<Vec<_>>();
-    let requests = prepared
-        .requests
+        .collect::<Result<Vec<_>, Failure>>()?;
+    let requests = prepared_requests
         .iter()
         .map(|request| {
             Ok(Request {

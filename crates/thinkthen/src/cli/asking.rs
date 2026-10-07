@@ -24,7 +24,7 @@ use crate::profile::{self, Mismatch};
 use crate::public::AttemptObservation;
 use crate::schedule::{self, Output};
 
-mod context;
+pub(crate) mod context;
 mod folders;
 mod judged;
 mod plan;
@@ -222,7 +222,7 @@ pub(crate) fn run(
         batch,
     } = asked;
     common.check_plan_name()?;
-    if common.images() && !settled.on().is_empty() {
+    if common.media.as_deref() == Some("image") && !settled.on().is_empty() {
         return Err(Failure::Usage("images cannot accompany saved on pointers"));
     }
     let threshold = settled.threshold();

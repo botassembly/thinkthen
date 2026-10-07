@@ -17,6 +17,7 @@ use crate::harness::{Canned, Gathering, Listener, Tally, spawn};
 mod audited;
 mod ceiling;
 mod choose;
+mod cli_complete;
 mod context;
 mod pause;
 mod portable;

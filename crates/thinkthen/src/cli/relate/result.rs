@@ -6,8 +6,7 @@ use crate::core::{self, Framing, json_line};
 use crate::core::{BackendFailure, Meta, RelationEdge, RelationEntity};
 use crate::engine::facade::{Engine, Execution};
 use crate::failure::Failure;
-#[cfg(test)]
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use std::io::Write;
 pub(super) struct Output<'a> {
     pub(super) details: bool,
@@ -15,6 +14,8 @@ pub(super) struct Output<'a> {
     pub(super) spec: &'a core::RelateSpec,
     pub(super) entities: &'a [core::RelationEntity],
     pub(super) engine: &'a Engine,
+    pub(super) context: Option<&'a str>,
+    pub(super) originals: &'a [core::Record],
 }
 
 #[cfg(test)]
@@ -77,7 +78,10 @@ pub(super) fn write(
 ) -> Result<(), Failure> {
     let mut text = String::new();
     if output.details {
-        text = json_line(&details(output, execution)?)? + "\n";
+        text = json_line(&Complete {
+            canonical: &details(output, execution)?,
+            originals: output.originals,
+        })? + "\n";
     } else {
         for edge in &execution.edges {
             text += &(json_line(edge)? + "\n");
@@ -109,9 +113,24 @@ pub(super) fn details(
         execution,
         crate::result_json::complete::RelationRow {
             lines: output.framing == Framing::Lines,
-            context_sha256: None,
+            context_sha256: crate::asking::context::digest(output.context),
             attempts: Some(events.into_values().collect()),
         },
     )
     .map_err(|_| Failure::Defect("a complete relation result could not be constructed"))
+}
+
+struct Complete<'a> {
+    canonical: &'a core::CompleteRelation,
+    originals: &'a [core::Record],
+}
+impl Serialize for Complete<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.canonical.serialize_occurrence(
+            Some(&self.originals),
+            &self.canonical.value,
+            Some(0),
+            serializer,
+        )
+    }
 }
