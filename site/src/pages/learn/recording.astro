@@ -34,7 +34,7 @@ const MODES = [
   <p>The cache is on by default. The <a href="/install/configuration/#locations">Configuration page</a> says where its folder lives on Linux and macOS, and how <code>THINKTHEN_CACHE</code> moves it.</p>
 
   <h2 id="the-key">What makes two questions the same</h2>
-  <p>Each saved answer has a key. The key is the SHA-256 of five things: the adapter, the address, the model, the shared state, and the question as sent. The question as sent includes the quoted evidence. So <code>hello\n</code> and <code>hello\r\n</code> make two keys, and a cosmetic change to the text misses. In a stream, the framing may strip a line end or re-encode parsed JSON before the question is built. Answers from two addresses never mix, because the address is part of every key.</p>
+  <p>Each saved answer has a key. The versioned key includes the adapter, the address, the requested and reported models, the shared state, and the question as sent. The question as sent includes the quoted evidence. So <code>hello\n</code> and <code>hello\r\n</code> make two keys, and a cosmetic change to the text misses. In a stream, the framing may strip a line end or re-encode parsed JSON before the question is built. Answers from two addresses never mix, because the address is part of every key.</p>
   <p>The answer cache keeps its answers in <code>thinkthen.sqlite</code>. A folder committed for replay keeps the same rows in <code>thinkthen.jsonl</code>. A saved answer holds the question and the reply's answer, never a header. No API key can reach it. Only a good answer is saved. A failure is never saved. A later run asks only the questions that failed.</p>
 
   <h2 id="modes">The modes</h2>
@@ -52,6 +52,7 @@ const MODES = [
 
   <h2 id="facts">--facts</h2>
   <p><code>--facts</code> prints one <code>thinkthen.run/1</code> line last on standard error. It counts the records finished, the requests sent and the retries. It always gives <code>seconds</code>, the time the run took. It names the model when every reply named the same one. It adds token counts when every live reply reported them. <code>cache_answers</code> counts answers from the answer cache, never from a replay or record folder.</p>
+  <p>A started call includes an opaque <code>call_id</code>. <code>command_ms</code> measures the command's elapsed milliseconds outside HTTP and body reads. This example removes <code>seconds</code>, <code>call_id</code> and <code>command_ms</code> because they vary between runs.</p>
   <Terminal run={facts} caption={facts.see} />
 
   <h2 id="batching">Batching</h2>
