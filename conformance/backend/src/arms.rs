@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::io::{self, BufRead, Write};
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -18,6 +18,7 @@ use serde::Deserialize;
 use serde::de::{Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor};
 use serde_json::value::RawValue;
 
+use crate::capture::{CAPTURE_BYTES, Capture};
 use crate::lifetime::Gate;
 use crate::listener::{Canned, Listener, Recorded};
 use crate::observations::Observations;
@@ -31,10 +32,6 @@ const MOST_DELAY: u64 = 10_000;
 /// How long a `wait` line waits for its count. It is a hang guard, far past
 /// any honest wait on a loaded machine (ticket 0352).
 const WAIT_BOUND: Duration = Duration::from_secs(30);
-
-/// Only three requests from an opted-in relation case or full-answer arm are retained.
-const CAPTURE_BODIES: usize = 3;
-const CAPTURE_BYTES: usize = 96_000;
 
 /// The shared cases, compiled in so the binary needs no path.
 const CASES: &str = include_str!("../../cases.json");
@@ -55,11 +52,17 @@ type Cases = BTreeMap<String, BTreeMap<Vec<u8>, String>>;
 #[derive(Deserialize)]
 struct Document {
     cases: Vec<Case>,
+    parity: Parity,
+}
+#[derive(Deserialize)]
+struct Parity {
+    required_cases: Vec<Case>,
 }
 
 #[derive(Deserialize)]
 struct Case {
     id: String,
+    #[serde(default)]
     exchanges: Vec<Exchange>,
     #[serde(default)]
     runtime_exchanges: Option<Vec<Exchange>>,
@@ -89,43 +92,13 @@ struct Question {
 #[derive(Default)]
 struct Criteria(Vec<String>);
 
-#[derive(Debug, Default)]
-struct Capture {
-    bodies: Vec<Vec<u8>>,
-    overflow: bool,
-}
-
-impl Capture {
-    fn push(&mut self, body: &[u8]) {
-        if self.bodies.len() == CAPTURE_BODIES || body.len() > CAPTURE_BYTES {
-            self.overflow = true;
-        } else {
-            self.bodies.push(body.to_vec());
-        }
-    }
-
-    fn json(&self) -> String {
-        if self.overflow {
-            return serde_json::json!({"error": "capture overflow"}).to_string();
-        }
-        let bodies = self
-            .bodies
-            .iter()
-            .map(|body| std::str::from_utf8(body))
-            .collect::<Result<Vec<_>, _>>();
-        match bodies {
-            Ok(bodies) => serde_json::json!({"bodies": bodies}).to_string(),
-            Err(_) => serde_json::json!({"error": "capture is not UTF-8"}).to_string(),
-        }
-    }
-}
-
 /// The dedicated find/relation case path or full-answer arm opts in.
 fn capturing(request: &Recorded) -> bool {
     let path = request.line.split(' ').nth(1).unwrap_or_default();
     let mut parts = path.trim_start_matches('/').split('/');
     match (parts.next(), parts.next(), parts.next()) {
         (Some("arm"), Some("full"), Some("capture")) => true,
+        (Some("case"), Some("files-relate"), _) => true,
         (Some("case"), Some(id), Some("capture")) => id
             .split_once('-')
             .and_then(|(number, _)| number.parse::<u8>().ok())
@@ -153,7 +126,13 @@ impl Backend {
     pub fn with_markers(markers: BTreeMap<String, String>) -> io::Result<Self> {
         let document: Document = serde_json::from_str(CASES).map_err(io::Error::other)?;
         let mut cases = Cases::new();
-        for case in document.cases {
+        for case in document.cases.into_iter().chain(
+            document
+                .parity
+                .required_cases
+                .into_iter()
+                .filter(|case| !case.exchanges.is_empty()),
+        ) {
             let bodies = case
                 .runtime_exchanges
                 .unwrap_or(case.exchanges)
@@ -172,16 +151,45 @@ impl Backend {
         let observed = Arc::clone(&capture);
         let observations = Arc::new(Mutex::new(Observations::new(markers)?));
         let counts = Arc::clone(&observations);
+        let reported = AtomicUsize::new(0);
         let listener = Listener::routing(move |request| {
+            if request
+                .line
+                .split(' ')
+                .nth(1)
+                .is_some_and(|path| path.starts_with("/arm/reported/"))
+            {
+                let model = if reported.fetch_add(1, Ordering::Relaxed) == 0 {
+                    "A"
+                } else {
+                    "B"
+                };
+                let Ok(mut body) = serde_json::from_slice::<serde_json::Value>(&request.body)
+                else {
+                    return drift("reported-model fixture got invalid JSON");
+                };
+                let Some(reported_model) = body.get_mut("model") else {
+                    return drift("reported-model fixture requires a model");
+                };
+                *reported_model = serde_json::Value::String(model.to_owned());
+                return generic(body.to_string().as_bytes(), None, true);
+            }
             counts
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .observe(request);
-            if capturing(request) {
+            if capturing(request) || crate::images::role(request).is_some() {
                 observed
                     .lock()
                     .unwrap_or_else(std::sync::PoisonError::into_inner)
-                    .push(&request.body);
+                    .push(
+                        &request.body,
+                        if crate::images::role(request).is_some() {
+                            33_554_433
+                        } else {
+                            CAPTURE_BYTES
+                        },
+                    );
             }
             route(&cases, &held, request)
         })?;
@@ -334,6 +342,9 @@ fn whole<T: FromStr>(text: &str) -> Option<T> {
 
 /// Pick the arm the request's path names.
 fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
+    if let Some((vendor, role)) = crate::images::role(request) {
+        return crate::images::reply(vendor, role);
+    }
     let path = request.line.split(' ').nth(1).unwrap_or_default();
     let mut parts = path.trim_start_matches('/').split('/');
     match (parts.next(), parts.next(), parts.next()) {
@@ -346,6 +357,9 @@ fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
             ),
         (Some("generic"), ..) => generic(&request.body, None, false),
         (Some("arm"), Some("full"), _) => generic(&request.body, None, true),
+        (Some("arm"), Some("no-store"), _) => {
+            generic(&request.body, None, true).asking("Cache-Control", "no-store")
+        }
         (Some("arm"), Some("status"), code) => match code.and_then(whole::<u16>) {
             Some(code @ 401..=404) => Canned::status(code, "status arm"),
             _ => drift("the status arm takes 401, 402, 403, or 404"),

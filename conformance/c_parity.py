@@ -35,6 +35,9 @@ def content(value, text=False):
 
 def document(row, cases, named):
     kind = row['kind']
+    if kind == 'image-admission':
+        from c_images import project
+        return project(row)
     if kind in ('images', 'image-location', 'refusal'):
         base = document({**row, 'kind': 'behavior'}, cases, named)
         base.update(arm='arm/full/capture/v1', metadata_only=True,
@@ -46,10 +49,36 @@ def document(row, cases, named):
         if kind == 'refusal':
             base['expect'] = {'error': 'usage', 'requests_sent': 0}
         return base
+    if row['id'] == 'files-relate':
+        return {'verb':'relate','question':row['input']['question'],'items':[], 'text':True,
+                'paths':row['input']['paths'],'source_unit':3,'expect':row['expect'],'arm':'case/files-relate/v1'}
     if kind == 'boundary':
         base = {'verb': row['verb'], 'question': {'decide': 'Does this need attention?'},
                 'items': ['evidence'], 'text': True, 'arm': 'arm/full/capture/v1',
                 'expect': {'error': row['expect'].get('kind'), 'requests_sent': row['expect'].get('requests', 0)}}
+        if row['id'].startswith('storage-'):
+            base['question']={'decide':'Refund?'}
+            base['items']=['Refund me.']
+            base['settings']={'model':'literal'}
+            if row['id'] == 'storage-no-store-record-refusal':
+                return {**base,'arm':'arm/no-store/v1','settings':{'model':'literal','record':'$FOLDER'},'stored_answers':0}
+            if row['id'] == 'storage-observation-identity':
+                return {'arm':base['arm'],'identity_steps':True,'steps':[
+                    {**base,'settings':{'model':'literal','record':'$FOLDER'},'expect':{'value':True,'requests_sent':1}},
+                    {**base,'settings':{'model':'literal','cache':'$FOLDER'},'expect':{'value':True,'requests_sent':0},'count_delta':True},
+                    {**base,'settings':{'model':'literal','replay':'$FOLDER'},'expect':{'value':True,'requests_sent':0},'count_delta':True},
+                    {**base,'settings':{'model':'literal','cache':'$REFRESH','refresh_cache':True},'expect':{'value':True,'requests_sent':1},'count_delta':True,'copy_store':True},
+                    {**base,'settings':{'model':'literal','cache':'$REFRESH'},'expect':{'value':True,'requests_sent':0},'count_delta':True},
+                    {**base,'settings':{'model':'literal','replay':'$FOLDER'},'expect':{'value':True,'requests_sent':0},'count_delta':True}]}
+            seed={**base,'settings':{'model':'literal','record':'$FOLDER'},'expect':{'value':True,'requests_sent':1}}
+            replay={**base,'settings':{'model':'literal','replay':'$FOLDER'},'expect':{'error':'local','requests_sent':0},'count_delta':True}
+            if row['id'] == 'storage-damaged-replay':
+                replay['damage_store']=True
+                return {'arm':base['arm'],'steps':[seed,replay]}
+            if row['id'] == 'storage-ambiguous-replay':
+                return {'arm':'arm/reported/v1','steps':[seed,{**seed,'expect':{'value':True,'requests_sent':2}},replay]}
+        if row['id'] == 'cancellation-held-call':
+            return {**base,'arm':'arm/held/v1','held_cancel':True,'expect':{'error':'cancelled','requests_sent':1}}
         if row['id'] == 'image-dropping-route':
             return {**base, 'image_paths': row['input']['images'], 'settings': {'backend': 'openrouter', 'model': 'arcee-ai/clef'}}
         if row['id'] in ('image-line-refusal', 'image-window-refusal'):
@@ -183,8 +212,8 @@ def generated(at, value):
     lines = ['static void case_%d(thinkthen_engine *e) {' % at,
              'thinkthen_question *q=NULL; thinkthen_source *source=NULL; thinkthen_result *result=NULL;',
              'thinkthen_controls_v1 controls={0}; controls.deadline_ms=-1; controls.attempts=1;',
-             'int code=0;', 'thinkthen_cancel_token *cancel=NULL;',
-             'thinkthen_image *images[%d]={0};' % max(1, len(image_paths))]
+             'int code=0;', 'thinkthen_cancel_token *cancel=NULL;', 'thrd_t cancellation_thread; int cancellation_started=0;',
+             'thinkthen_image *images[%d]={0};' % max(1, len(image_paths)), 'char *caption_allocations[%d]={0};' % max(1, len(value['items']))]
     if verb == 'find' and value['question'].get('none'):
         text = value['question']['find']
         lines.extend(['thinkthen_question_spec_v1 question_spec={0}; question_spec.kind=7; question_spec.none=1;', 'question_spec.text=%s;' % content(text, isinstance(text, str)),  ])
@@ -214,10 +243,10 @@ def generated(at, value):
     if (value.get('operation') or {}).get('injection') == 'expired_deadline':
         lines.append('controls.deadline_ms=0;')
     lines.append('if(code) goto finished;')
-    for index, path in enumerate(image_paths):
+    for index, path in enumerate(image_paths if not value.get('paths') else []):
         raw = (ROOT / path).read_bytes()
         data = '"' + ''.join('\\%03o' % byte for byte in raw) + '"'
-        lines.extend(['code=thinkthen_image_clone(e,(const uint8_t *)%s,%d,2,(thinkthen_optional_string_v1){0},&images[%d]);' % (data, len(raw), index), 'if(code) goto finished;'])
+        lines.extend(['code=thinkthen_image_clone(e,(const uint8_t *)%s,%d,%d,(thinkthen_optional_string_v1){0},&images[%d]);' % (data, len(raw), 1 if value.get('media') == 'image/jpeg' else 2, index), 'if(code) goto finished;'])
     items = value['items']
     if value.get('paths') or (value.get('operation') or {}).get('injection') == 'recording_read_failure':
         paths = [path if value.get('owned_jsonl') else str(ROOT / path) for path in (value.get('paths') or ['target/c-parity-missing-input'])]
@@ -229,7 +258,14 @@ def generated(at, value):
         for index, item in enumerate(items):
             if value.get('image_only'):
                 continue
-            lines.append('records[%d].original=(thinkthen_optional_content_v1){1,%s};' % (index, content(item, value.get('text', False) and isinstance(item, str))))
+            if value.get('caption_files'):
+                lines.append('caption_allocations[%d]=read_caption("caption-%d.txt",&records[%d].original);' % (index,index,index))
+            else:
+                lines.append('records[%d].original=(thinkthen_optional_content_v1){1,%s};' % (index, content(item, value.get('text', False) and isinstance(item, str))))
+            if value.get('candidate_orders'):
+                order=value['candidate_orders'][index]
+                lines.append('thinkthen_choice_v1 options_%d[]={%s};' % (index, ','.join('{.name=%s}' % counted(option) for option in order)))
+                lines.append('records[%d].options=(thinkthen_choices_v1){options_%d,%d};' % (index,index,len(order)))
             if image_paths:
                 lines.append('records[%d].images=(thinkthen_images_v1){(const thinkthen_image *const *)images,%d};' % (index, len(image_paths)))
             if value.get('context_present'):
@@ -241,6 +277,8 @@ def generated(at, value):
     if value.get('shared_context') is not None:
         context = value['shared_context']
         lines.append('controls.context=(thinkthen_optional_content_v1){1,%s};' % content(context, isinstance(context, str)))
+    if value.get('held_cancel'):
+        lines.extend(['if(code) goto finished;', 'cancel=thinkthen_cancel_token_new(); if(!cancel) abort(); controls.cancel=cancel;', 'if(thrd_create(&cancellation_thread,cancel_on_input,cancel)!=thrd_success) { abort(); } cancellation_started=1;'])
     if value.get('incremental'):
         lines.extend(['if(code) goto finished;', 'thinkthen_batch *batch=NULL;',
                       'code=thinkthen_%s_batch_start(e,q,source,&controls,&batch); if(code) goto finished;' % verb,
@@ -248,7 +286,7 @@ def generated(at, value):
                       'if(thinkthen_batch_facts(batch,&result)) abort();', 'thinkthen_batch_free(batch);'])
     else:
         lines.extend(['if(code) goto finished;', 'code=thinkthen_%s_complete(e,q,source,&controls,&result);' % verb])
-    lines.extend(['finished: output(e,%d,code,result); thinkthen_result_free(result); thinkthen_source_free(source); thinkthen_question_free(q); thinkthen_cancel_token_free(cancel); for(size_t i=0;i<%d;++i) thinkthen_image_free(images[i]);' % (kind, max(1, len(image_paths))), '}'])
+    lines.extend(['finished: if(cancellation_started && thrd_join(cancellation_thread,NULL)!=thrd_success) abort(); output(e,%d,code,result); thinkthen_result_free(result); thinkthen_source_free(source); thinkthen_question_free(q); thinkthen_cancel_token_free(cancel); for(size_t i=0;i<%d;++i) thinkthen_image_free(images[i]); for(size_t i=0;i<%d;++i) free(caption_allocations[i]);' % (kind, max(1, len(image_paths)), max(1,len(items))), '}'])
     return '\n'.join(lines)
 
 
@@ -328,7 +366,7 @@ def assertions(row, value, got, count):
             assert {Path(answer['file']).name for answer in inputs} == set(row['expect']['locations']), got
             for original in inputs:
                 assert original['input'] == Path(original['file']).read_text(), original
-                assert original['first_line'] == 1 and original['last_line'] >= 1, original
+                assert original['first_line'] == 1 and original['last_line'] == len(Path(original['file']).read_text().splitlines()), original
         return
     if value.get('metadata_only'):
         assert got['rows'], got
@@ -377,6 +415,9 @@ def assertions(row, value, got, count):
 
 
 def prepare(home, value):
+    if value.get('caption_files'):
+        for at, caption in enumerate(value['items']):
+            (home / ('caption-%d.txt' % at)).write_text(caption)
     if value.get('owned_jsonl'):
         (home / 'records.jsonl').write_text(''.join(compact(item) + '\n' for item in value['items']))
     if value.get('profile'):
@@ -439,7 +480,9 @@ def main():
                        if 'steps' in value for step in range(len(value['steps'])))
         dispatch = '\n'.join('case %d: case_%d(e); break;' % (number, number)
                              for number in numbers)
-        source.write_text('#include "%s"\n' % (ROOT / 'libraries/c/tests/c/parity_output.c')
+        source.write_text('#include <threads.h>\n#include "%s"\n' % (ROOT / 'libraries/c/tests/c/parity_output.c')
+                          + '\nint cancel_on_input(void *token) { if(getchar()!=\'!\') abort(); thinkthen_cancel(token); fputs("cancel-fired\\n",stdout); fflush(stdout); return 0; }\n'
+                          + '\nchar *read_caption(const char *path,thinkthen_optional_content_v1 *out) { FILE *f=fopen(path,"rb"); if(!f || fseek(f,0,SEEK_END)) abort(); long n=ftell(f); if(n<0 || n>16777216 || fseek(f,0,SEEK_SET)) abort(); char *s=malloc((size_t)n+1); if(!s || fread(s,1,(size_t)n,f)!=(size_t)n || fclose(f)) abort(); s[n]=0; *out=(thinkthen_optional_content_v1){1,{1,{s,(size_t)n}}}; return s; }\n'
                           + '\n'.join(definitions)
                           + '\nint main(int argc,char **argv) { if(argc!=3) return 2; '
                           'if(!strstr(argv[2], \"\\\"base_url\\\":\\\"http://127.0.0.1:\")) return 3; '
@@ -450,7 +493,7 @@ def main():
         library = ROOT / 'libraries/c/target/debug'
         # Match the shipped soname using an owned directory; do not alter build files.
         (scratch / 'libthinkthen.so.0').symlink_to(library / 'libthinkthen_c.so')
-        subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-g', '-fsanitize=address', '-fno-omit-frame-pointer', '-I', str(ROOT / 'libraries/c/include'), str(source), '-L', str(library), '-lthinkthen_c', '-Wl,-rpath,' + str(scratch), '-o', str(binary)], check=True)
+        subprocess.run(['cc', '-pthread', '-std=c11', '-Wall', '-Wextra', '-Werror', '-g', '-fsanitize=address', '-fno-omit-frame-pointer', '-I', str(ROOT / 'libraries/c/include'), str(source), '-L', str(library), '-lthinkthen_c', '-Wl,-rpath,' + str(scratch), '-o', str(binary)], check=True)
         failures = 0
         for at, row in enumerate(rows):
             error = errors.get(at)
@@ -465,16 +508,50 @@ def main():
                             child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s' % (backend.port, value['arm']), THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback', OPENROUTER_API_KEY='sk-conformance-loopback')
                             prepare(home, value)
                             steps = value.get('steps', [value])
+                            identities=[]
                             for step_at, step in enumerate(steps):
+                                if step.get('copy_store'):
+                                    import sqlite3
+                                    (home / 'refreshed').mkdir()
+                                    with sqlite3.connect(home / 'saved/thinkthen.sqlite') as original, sqlite3.connect(home / 'refreshed/thinkthen.sqlite') as target:
+                                        original.backup(target)
+                                if step.get('damage_store'):
+                                    import sqlite3
+                                    with sqlite3.connect(home / 'saved/thinkthen.sqlite') as db:
+                                        db.execute("UPDATE answers SET answer='damaged fixture answer'")
+                                if value.get('image_variants'):
+                                    backend.close()
+                                    backend = Backend(ROOT / 'target/debug/conformance-backend', child)
+                                    child['THINKTHEN_BASE_URL']='http://127.0.0.1:%d/%s' % (backend.port, step['arm'])
+                                    child['PERPLEXITY_API_KEY']='sk-conformance-loopback'
+                                    prepare(home,step)
                                 settings = {'cache': False, 'model': 'jev-latest' if 'steps' in value else 'jev-1.13.0', 'batch': 1, 'max_retries': 0}
                                 settings.update(step.get('settings', {}))
                                 settings['base_url'] = child['THINKTHEN_BASE_URL']
-                                settings = {key: (str(home / 'saved') if entry == '$FOLDER' else str(home / 'profile.json') if entry == '$PROFILE' else entry) for key, entry in settings.items()}
+                                settings = {key: (str(home / 'saved') if entry == '$FOLDER' else str(home / 'refreshed') if entry == '$REFRESH' else str(home / 'profile.json') if entry == '$PROFILE' else entry) for key, entry in settings.items()}
                                 if row['kind'] in ('images', 'image-location'):
                                     settings['record'] = str(home / 'recorded')
                                 number = 10000 + at * 100 + step_at if 'steps' in value else at
                                 before = int(backend.read('count'))
-                                output = subprocess.run([str(binary), str(number), compact(settings)], env=child, cwd=home, capture_output=True, text=True, timeout=60)
+                                if step.get('held_cancel'):
+                                    running=subprocess.Popen([str(binary),str(number),compact(settings)],env=child,cwd=home,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+                                    try:
+                                        assert backend.read('wait 1') == 'wait 1'
+                                        running.stdin.write('!')
+                                        running.stdin.flush()
+                                        assert running.stdout.readline() == 'cancel-fired\n'
+                                        backend.process.stdin.write('release\n')
+                                        backend.process.stdin.flush()
+                                        stdout,stderr=running.communicate(timeout=60)
+                                        output=subprocess.CompletedProcess(running.args,running.returncode,stdout,stderr)
+                                    finally:
+                                        backend.process.stdin.write('release\n')
+                                        backend.process.stdin.flush()
+                                        if running.poll() is None:
+                                            running.kill()
+                                            running.wait()
+                                else:
+                                    output = subprocess.run([str(binary), str(number), compact(settings)], env=child, cwd=home, capture_output=True, text=True, timeout=120 if value.get('image_variants') else 60)
                                 assert output.returncode == 0 and not output.stderr, output.stderr
                                 if step.get('incremental'):
                                     emitted = [json.loads(line) for line in output.stdout.splitlines()]
@@ -486,6 +563,17 @@ def main():
                                         assert request['questions'] == expected, request
                                 else:
                                     got = json.loads(output.stdout)
+                                if value.get('identity_steps'):
+                                    identities.append(got)
+                                if step.get('stored_answers') == 0:
+                                    import sqlite3
+                                    path=home / 'saved/thinkthen.sqlite'
+                                    if path.exists():
+                                        with sqlite3.connect(path) as db:
+                                            assert db.execute('SELECT count(*) FROM answers').fetchone()[0] == 0
+                                if value.get('image_variants'):
+                                    from c_images import assert_images
+                                    assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
                                 assertions(row, step, got, int(backend.read('count')) - (before if step.get('count_delta') else 0))
                                 if row['kind'] in ('images', 'image-location'):
                                     before = int(backend.read('count'))
@@ -497,6 +585,12 @@ def main():
                                     assertions(row, step, saved, int(backend.read('count')))
                                     assert saved['requests_sent'] == 0 and int(backend.read('count')) == before, saved
                                     assert saved['rows'][0]['answer_id'] == got['rows'][0]['answer_id'], saved
+                            if value.get('identity_steps'):
+                                ids=[entry['rows'][0]['observation_ids'] for entry in identities]
+                                assert ids[0] == ids[1] == ids[2] and ids[3] != ids[0] and ids[4] == ids[3] and ids[5] == ids[0], ids
+                                assert len({entry['call_id'] for entry in identities}) == 6, identities
+                                assert len({identities[i]['rows'][0]['answer_id'] for i in (0,1,2,5)}) == 1, identities
+                                assert identities[3]['rows'][0]['answer_id'] == identities[4]['rows'][0]['answer_id'] != identities[0]['rows'][0]['answer_id'], identities
                         finally:
                             backend.close()
                 except (AssertionError, ValueError, KeyError, subprocess.SubprocessError, OSError) as failure:

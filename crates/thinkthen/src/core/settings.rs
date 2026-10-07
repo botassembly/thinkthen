@@ -350,6 +350,7 @@ pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
             }
             "max_request_bytes" => number().is_some_and(|count| count > 0),
             "cache" => matches!(value, Json::Bool(false)) || string(),
+            "refresh_cache" => matches!(value, Json::Bool(_)),
             "timeout" => number().is_some(),
             "max_retries" => number().is_some_and(|count| u32::try_from(count).is_ok()),
             "batch" => Setting::of_json(&value).is_some(),
@@ -500,6 +501,7 @@ mod tests {
             (r#"{"max_requests_total":-1}"#, "max_requests_total"),
             (r#"{"batch":0}"#, "batch"),
             (r#"{"api_key":"secret"}"#, "api_key"),
+            (r#"{"refresh_cache":1}"#, "refresh_cache"),
         ] {
             assert!(engine_settings(text).expect_err(text).contains(reason));
         }
@@ -509,6 +511,8 @@ mod tests {
             r#"{"max_requests_total":0}"#,
             r#"{"max_requests_total":1}"#,
             r#"{"max_requests_total":null}"#,
+            r#"{"refresh_cache":true}"#,
+            r#"{"refresh_cache":false}"#,
         ] {
             engine_settings(text).expect(text);
         }
