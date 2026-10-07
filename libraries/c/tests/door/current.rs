@@ -377,24 +377,26 @@ fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_prece
 
 #[test]
 fn saved_rank_sets_retain_turns_order_and_each_native_member_judgment() {
-    let backend = Backend::start().expect("owned backend");
+    let listener = conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok(
+        r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":1.0},"q3":{"type":"noul","noul":0.6},"q4":{"type":"noul","noul":0.98},"q5":{"type":"noul","noul":0.5},"q6":{"type":"noul","noul":0.99}},"usage":{"input_tokens":12}}"#,
+    )).expect("owned listener");
     let output = super::run(
         &compile(&crate_dir().join("tests/c/complete_rank_sets.c")),
-        &format!("{}/arm/full/capture/v1", backend.origin()),
+        listener.base(),
         b"",
     );
     assert_eq!(
         (output.status.code(), text(&output.stderr)),
         (Some(0), String::new())
     );
-    assert_eq!(backend.count(), 1);
-    let capture: serde_json::Value = serde_json::from_str(&backend.capture()).expect("captured");
-    let body = capture["bodies"][0].as_str().expect("request");
+    assert_eq!(listener.count(), 1);
+    let body = String::from_utf8(listener.requests()[0].body.clone()).expect("request");
     assert!(
         body.contains("Criterion A?")
             && body.contains("Criterion B?")
             && body.contains("One")
             && body.contains("Two")
+            && body.contains("Three")
     );
 }
 

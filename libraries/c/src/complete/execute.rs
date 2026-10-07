@@ -62,6 +62,7 @@ pub(super) fn result(
     let source_recognition = std::mem::take(&mut storage.6);
     let source_relations = std::mem::take(&mut storage.7);
     let rank_members = std::mem::take(&mut storage.5);
+    let rank_member_details = std::mem::take(&mut storage.8);
     let observations = observations::convert(&mut storage, events, &rows)?;
     let facts = facts_native
         .map(|f| metadata::facts(&mut storage, f))
@@ -107,6 +108,7 @@ pub(super) fn result(
         member_authors,
         observation_authors,
         rank_members,
+        rank_member_details,
         source_recognition,
         source_relations,
         row_details,

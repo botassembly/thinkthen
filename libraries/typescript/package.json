@@ -10,9 +10,20 @@
   },
   "homepage": "https://thinkthen.dev",
   "bugs": "https://github.com/botassembly/thinkthen/issues",
-  "keywords": ["classification", "llm", "text", "judgment"],
-  "os": ["linux", "darwin"],
-  "cpu": ["x64", "arm64"],
+  "keywords": [
+    "classification",
+    "llm",
+    "text",
+    "judgment"
+  ],
+  "os": [
+    "linux",
+    "darwin"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
   "main": "index.js",
   "types": "index.d.ts",
   "exports": {
@@ -28,6 +39,10 @@
     "index.mjs",
     "index.d.ts",
     "loader.js",
+    "complete.js",
+    "complete.d.ts",
+    "_complete.js",
+    "_complete.d.ts",
     "LICENSE",
     "thinkthen-linux-x64.node",
     "thinkthen-linux-arm64.node",

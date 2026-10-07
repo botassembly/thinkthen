@@ -36,6 +36,8 @@ pub(crate) struct AtomicDocument<'a, T: Serialize> {
     pub(crate) images: Option<&'a [crate::core::image::Image]>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) question_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) members: Option<Vec<RankMemberDocument<'a>>>,
     pub(crate) question: ReadableQuestion<'a, Question>,
     pub(crate) answer: &'a Answer,
     pub(crate) threshold: Option<Threshold>,
@@ -64,4 +66,17 @@ impl std::fmt::Debug for PhysicalSource {
             .field("last_line", &self.last_line)
             .finish()
     }
+}
+
+/// Borrowed presentation of an actual ordered set-rank member.
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completeRankMember")
+)]
+pub(crate) struct RankMemberDocument<'a> {
+    pub(crate) name: &'a str,
+    #[cfg_attr(test, schemars(with = "AtomicDocument<'a, serde_json::Value>"))]
+    pub(crate) result: &'a super::Atomic,
 }

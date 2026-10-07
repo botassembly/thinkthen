@@ -2,7 +2,7 @@
 
 Rank accepts an ordered saved decide set on the CLI and through Rust's additive `RankSet` and `SetRanked` API. Each member ranks its own list by yes probability with stable ties. The merge visits one depth across members in saved order. A duplicate consumes that visit; the next member runs without a refill. Top follows first appearances of original input identities. Backend boundary tests independently declare `[0,1,2]` and `[0,2,1]`, expecting `[0,1,2]` selected by `[first,first,second]`.
 
-This example reuses a saved individual question's recording. Repeating it under two names sends nothing; both keep the same cache keys, and the first member selects every original. Default bytes and top match ordinary rank. The complete details use result/2 numeric final positions. SQL, C and language set adoption remains with the owning family tickets.
+This example reuses a saved individual question's recording. Repeating it under two names sends nothing; both keep the same cache keys, and the first member selects every original. Default bytes and top match ordinary rank. The complete details use result/2 numeric final positions and preserve ordered standalone member judgments. SQL, C and language set adoption remains with the owning family tickets.
 
 ```bash
 set -euo pipefail
@@ -18,6 +18,7 @@ cmp "$HOME/ordinary" "$HOME/set"
 wc -l < "$HOME/set" | mustmatch '3'
 thinkthen rank @"$HOME/search.json" --batch 1 --jsonl --field /query --field /passage --top 3 --details --replay recording/ < "$HOME/input.jsonl" > "$HOME/details"
 jq -sr '[.[] | [.question_name, .question.verb, .answer.kind, .threshold, .value]] == [["first","decide","yes_no",null,1],["first","decide","yes_no",null,2],["first","decide","yes_no",null,3]]' "$HOME/details" | mustmatch 'true'
+jq -sr '[.[] | [.members[] | [.name, .result.value]]] == [[["first",1],["second",1]],[["first",2],["second",2]],[["first",3],["second",3]]]' "$HOME/details" | mustmatch 'true'
 ```
 
 Authored cuts and pointers are refused before normalization. A set owns its meanings; CLI overrides cannot replace them. These exact diagnostic examples validate admission; counted loopback tests prove the no-send claim at runtime.

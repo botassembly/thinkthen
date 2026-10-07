@@ -1082,6 +1082,10 @@ int thinkthen_result_rank(const thinkthen_result *, size_t, thinkthen_rank_view_
  * Views borrow the result; invalid indices return EUSAGE without writing output. */
 int thinkthen_result_rank_member_count(const thinkthen_result *, size_t, size_t *);
 int thinkthen_result_rank_member(const thinkthen_result *, size_t, size_t, thinkthen_rank_view_v1 *);
+/* Full member details retain independently present usage dimensions and source
+ * batch sizes. Nested views borrow the result until result_free. NULL arguments,
+ * wrong function, and invalid row/member indices return EUSAGE without writing. */
+int thinkthen_result_rank_member_details(const thinkthen_result *, size_t row, size_t member, thinkthen_details_v1 *);
 int thinkthen_result_find(const thinkthen_result *, size_t, thinkthen_find_view_v1 *);
 int thinkthen_result_annotate(const thinkthen_result *, size_t, thinkthen_annotate_view_v1 *);
 int thinkthen_result_recognize(const thinkthen_result *, size_t, thinkthen_recognize_view_v1 *);

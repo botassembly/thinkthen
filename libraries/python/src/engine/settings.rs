@@ -121,6 +121,7 @@ pub(super) fn folder_path(
 
 /// The checked settings of `tt.Engine`, each applied over the environment.
 pub(super) struct Settings<'a> {
+    pub(super) refresh_cache: bool,
     pub(super) backend: Option<String>,
     pub(super) base_url: Option<&'a str>,
     pub(super) model: Option<&'a str>,
@@ -184,6 +185,9 @@ impl Settings<'_> {
         if let Some(batch) = self.batch {
             builder = builder.batch(batch);
         }
-        builder.build().map_err(refused)
+        builder
+            .refresh_cache(self.refresh_cache)
+            .build()
+            .map_err(refused)
     }
 }

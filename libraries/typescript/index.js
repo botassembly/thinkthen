@@ -55,6 +55,7 @@ function opened(envelope) {
   const parsed = JSON.parse(envelope);
   if (parsed.err) {
     const error = new ThinkThenError(parsed.err.kind, parsed.err.message, parsed.err.retryable);
+    if (parsed.err.native_complete !== undefined) error.complete = require('./_complete.js').decode('CallError',parsed.err.native_complete);
     if (parsed.err.facts !== undefined) error.facts = freezeJson(parsed.err.facts);
     if (parsed.err.details !== undefined) error.details = freezeJson(parsed.err.details);
     throw error;
@@ -481,6 +482,10 @@ class Engine {
     return opened(native.usage(this.#native));
   }
 
+  get complete() {
+    return new (require('./complete.js').Functions)((request, controls) => invoke(this.#native, 'complete', null, request, controls), (request, controls) => completeBatch(this.#native, request, controls), opened);
+  }
+
   static {
     for (const [name, verb] of Object.entries(verbs)) {
       Object.defineProperty(this.prototype, name, {
@@ -494,7 +499,13 @@ class Engine {
   }
 }
 
-const exported = { ThinkThenError, Engine, question, questionFile, usage, failed, outcome, YES, NO, UNSURE };
+function completeBatch(engine, request, controls) {
+  const { deadlineMs, context } = callOptions(controls);
+  try { return native.completeBatch(engine, request, deadlineMs, context); }
+  catch (error) { return opened(error.message); }
+}
+const complete = new (require('./complete.js').Functions)((request, controls) => invoke(null, 'complete', null, request, controls), (request, controls) => completeBatch(null, request, controls), opened);
+const exported = { complete, CompleteTypes: require('./_complete.js'), ThinkThenError, Engine, question, questionFile, usage, failed, outcome, YES, NO, UNSURE };
 for (const [name, verb] of Object.entries(verbs)) exported[name] = (...args) => verb(null, ...args);
 
 module.exports = exported;

@@ -50,8 +50,6 @@ tt_recognize_column <- function(spec, path, texts, positions, deadline, completi
 
 tt_relate_frame <- function(spec, path, names, kinds, deadline, completion) .Call(wrap__tt_relate_frame, spec, path, names, kinds, deadline, completion)
 
-tt_engine_set <- function(base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend)
-
 tt_completion_new <- function() .Call(wrap__tt_completion_new)
 
 tt_completion_claim <- function(value) .Call(wrap__tt_completion_claim, value)
@@ -59,5 +57,19 @@ tt_completion_claim <- function(value) .Call(wrap__tt_completion_claim, value)
 tt_completion_read_native <- function(value) .Call(wrap__tt_completion_read_native, value)
 
 tt_completion_settle_early <- function(value, kind) .Call(wrap__tt_completion_settle_early, value, kind)
+
+tt_engine_set <- function(base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend, refresh_cache) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend, refresh_cache)
+
+tt_complete_native <- function(request, deadline, completion) .Call(wrap__tt_complete_native, request, deadline, completion)
+
+tt_complete_batch_start <- function(request, deadline) .Call(wrap__tt_complete_batch_start, request, deadline)
+
+tt_complete_batch_pull <- function(batch) .Call(wrap__tt_complete_batch_pull, batch)
+
+tt_complete_batch_poll <- function(batch, advance) .Call(wrap__tt_complete_batch_poll, batch, advance)
+
+tt_complete_batch_close <- function(batch) .Call(wrap__tt_complete_batch_close, batch)
+
+tt_complete_batch_cancel <- function(batch) .Call(wrap__tt_complete_batch_cancel, batch)
 
 # nolint end
