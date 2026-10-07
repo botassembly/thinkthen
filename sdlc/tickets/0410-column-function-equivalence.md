@@ -92,3 +92,5 @@ The coordinator assigned the bounded shared fixture correction: an additive priv
 The coordinator assigned the existing feature registry declaration to admit exactly the Polars consumer manifest, lock and `src/main.rs`. Other feature files and a Rust binding misdeclared as a feature remain refused. The final release wheel rebuilt successfully; installed affected record-limit and ordered rank-member cases passed on both Python dataframe surfaces with strict typing, and all seven frame regressions passed. Full lint exposed this registry declaration after its earlier guards passed; full lint will rerun after the bounded correction.
 
 The shared helper adds thirteen nonblank Rust lines. Both R and Python ratchets include that same existing module, so their measured ceilings are 3431 and 9487. Python runtime carriers and ordinary admission semantics are unchanged.
+
+TypeScript and Ruby also include the same shared complete fixture module in their measured Rust totals. Their ceilings rise by the same thirteen lines to 2328 and 2773; no host implementation changed.
