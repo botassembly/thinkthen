@@ -58,7 +58,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
   THINKTHEN_PORTABLE_PACKAGE="$wrapper" THINKTHEN_PORTABLE_NATIVE="$consumer" \
     THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
-  echo 'COBOL installed release PASS: five JSON rows and three literal sends'
+  echo 'COBOL installed release PASS: five legacy rows and owned native results for direct and named backends'
   exit 0
 fi
 command -v node >/dev/null 2>&1 || { echo 'COBOL gate missing node' >&2; exit 77; }
