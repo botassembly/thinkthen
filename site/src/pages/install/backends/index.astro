@@ -19,7 +19,7 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
 ---
 <SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'The backends ThinkThen knows by name, where every question goes by default, and how the key stays safe.' }} name="Backends">
   <h1>Backends</h1>
-  <p class="lede">A backend is an address and a model. ThinkThen speaks one wire shape, System One, and any server that speaks it can answer.</p>
+  <p class="lede">A backend is an address and a model. Development 0.2 speaks System One and, when explicitly selected, OpenAI Decisions. Each named backend selects one API type.</p>
 
   <p><a href="/install/backends/local/">Run a model locally</a> shows Ollama, llama.cpp and the Strands MLX server.</p>
   <p>Public installation remains 0.1.2. This table describes development 0.2, including the llama.cpp/MLX built-ins and provider setup fields. Text check results qualify only their dated routes, models and inputs. Experimental image evidence and the 0447/0448 implementation in review fixes establish no released image support.</p>
@@ -36,10 +36,7 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
         <td><code>{r.model}</code></td>
       </tr>
     ))}
-    <tr data-announced="openai">
-      <td><a href="/install/backends/openai/">OpenAI Decisions API</a></td>
-      <td colspan="4">Announced, not released</td>
-    </tr>
+
   </table>
   <p>This table gives the last <code>thinkthen backends check</code> of each built-in backend.</p>
   <table class="backend-checks">

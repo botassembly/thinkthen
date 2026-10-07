@@ -73,7 +73,7 @@ pub(crate) fn engine(
     if folders.record.is_some()
         && folders.replay.is_some()
         && (folders.refresh_cache
-            || crate::core::adapters::built_in::is_mutable_alias(backend.model()))
+            || backend.api_type().is_mutable_alias(backend.model()))
     {
         writeln!(
             io::stderr().lock(),

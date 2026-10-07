@@ -170,10 +170,10 @@ impl Planner<'_> {
     }
 
     /// The wire questions one record sends.
-    pub(super) fn asks(&self, url: &Url, held: &Held) -> Result<Vec<Ask>, Failure> {
+    pub(super) fn asks(&self, api: crate::core::adapters::ApiType, url: &Url, held: &Held) -> Result<Vec<Ask>, Failure> {
         let mut asks = Vec::new();
         for plan in self.plans(held)? {
-            asks.extend(pack::asks(url, &plan).map_err(|error| super::encoded(&plan, error))?);
+            asks.extend(pack::asks_for(api, url, &plan).map_err(|error| super::encoded(&plan, error))?);
         }
         Ok(asks)
     }
@@ -221,7 +221,7 @@ impl Asker for JudgeAsker<'_> {
 
     fn asks(&self, held: &Held) -> Result<Vec<Ask>, Placed> {
         self.planner
-            .asks(&self.url, held)
+            .asks(self.judging.engine.backend().api_type(), &self.url, held)
             .map_err(|error| Placed::at(error, held.at))
     }
 

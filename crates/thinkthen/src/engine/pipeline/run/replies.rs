@@ -19,7 +19,8 @@ impl<A: Asker> Run<'_, A> {
         label: usize,
         cancel: &Cancel,
     ) -> Result<Answered, Option<Error>> {
-        let decodes = pack::read(
+        let decodes = pack::read_for(
+            ask.state.api(),
             std::slice::from_ref(&ask.decoder),
             &[Ok(found.answer.as_str())],
             &found.answered_by,
@@ -44,6 +45,7 @@ impl<A: Asker> Run<'_, A> {
         }
         cancel.answered_by(&found.answered_by);
         Ok(Answered {
+            api: ask.state.api(),
             key: found.key,
             observation_id: Some(found.observation_id),
             batch_size: found.batch_size,
@@ -112,6 +114,7 @@ impl<A: Asker> Run<'_, A> {
             .enumerate()
         {
             let answered = Answered {
+                api: ask.state.api(),
                 key,
                 observation_id,
                 batch_size: Some(accepted.batch_size),

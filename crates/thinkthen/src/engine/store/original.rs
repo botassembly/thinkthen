@@ -36,6 +36,10 @@ impl Original {
             let text = std::str::from_utf8(body).map_err(|_| super::versioned::invalid())?;
             crate::core::Json::parse(text).map_err(|_| super::versioned::invalid())?;
         }
+        crate::core::adapters::ApiType::recorded_type(&self.request)
+            .ok_or_else(super::versioned::invalid)?
+            .validate_exchange(&self.request, &self.response)
+            .map_err(|_| super::versioned::invalid())?;
         Ok(())
     }
 

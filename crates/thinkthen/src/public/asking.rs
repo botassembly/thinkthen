@@ -40,6 +40,7 @@ pub(crate) struct Decisions {
     metadata: crate::core::declaration::QuestionMetadata,
     question: core::Question,
     asked: (ModelName, core::Descriptions),
+    api: core::adapters::ApiType,
     url: core::Url,
     context: Option<core::Evidence>,
     profile: Option<core::BackendProfile>,
@@ -57,6 +58,7 @@ impl Decisions {
             metadata: question.metadata.clone(),
             question: question.core.clone(),
             asked: engine.backend().asked(),
+            api: engine.backend().api_type(),
             url: engine.backend().url().clone(),
             context,
             profile: engine.profile().cloned(),
@@ -156,7 +158,7 @@ impl Asker for Decisions {
                 .map_err(|error| Miss::Refused(planned(error)))?
             }
         };
-        pack::asks(&self.url, &plan).map_err(|error| {
+        pack::asks_for(self.api, &self.url, &plan).map_err(|error| {
             if plan.images().is_some() {
                 Miss::Refused(Error::usage(error.to_string()))
             } else {

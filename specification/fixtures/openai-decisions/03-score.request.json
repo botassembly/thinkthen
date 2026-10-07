@@ -1,0 +1,1 @@
+{"model":"gpt-6-luna","input":"Export fails in Safari but works in Chrome.","questions":[{"type":"score","name":"q1","instructions":"How severe is the issue?","levels":[{"label":"cosmetic","description":"Appearance only."},{"label":"workaround","description":"Another way works."},{"label":"blocked","description":"No workaround works."}]}]}
