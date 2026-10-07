@@ -146,7 +146,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
         compiler=['cargo','build','--locked','--offline','--manifest-path',str(root/'libraries/python/Cargo.toml'),'--example','native_case']
     if compiler:
         with tempfile.TemporaryDirectory(prefix='thinkthen-0431-types-') as tmp:
-            env={k:v for k,v in os.environ.items() if k in ('PATH','CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS')}
+            env={name:value for name in ('PATH','CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS') if (value:=os.environ.get(name)) is not None}
             env.setdefault('CARGO_HOME',str(Path.home()/'.cargo'))
             env.setdefault('RUSTUP_HOME',str(Path.home()/'.rustup'))
             env['CARGO_NET_OFFLINE']='true'
