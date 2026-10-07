@@ -7,6 +7,10 @@ use std::{
 };
 use thinkthen::{ErrorKind, Question};
 
+#[path = "../src/test_deadline/child.rs"]
+mod child;
+use child::ChildEnvironment as _;
+
 struct Folder(PathBuf);
 impl Folder {
     fn new() -> std::io::Result<Self> {
@@ -38,10 +42,14 @@ fn config(root: &Path) -> PathBuf {
 }
 fn child_environment(command: &mut Command, root: &Path) {
     command
-        .env("HOME", root)
+        .home(root)
         .env("XDG_CONFIG_HOME", root)
         .env("APPDATA", root)
         .current_dir(root);
+    for folder in [child::Folder::Cache, child::Folder::Usage] {
+        let (name, value) = folder.variable(root);
+        command.env(name, value);
+    }
 }
 
 #[test]
@@ -74,6 +82,7 @@ fn named_native_loaders_preserve_path_collisions_and_confine_symlinks_without_co
     .unwrap();
     fs::write(root.path().join("@literal.json"), authored).unwrap();
     let mut command = Command::new(std::env::current_exe().unwrap());
+    command.clear_environment();
     child_environment(&mut command, root.path());
     let output = command.env(CHILD, root.path()).args(["--exact", "named_native_loaders_preserve_path_collisions_and_confine_symlinks_without_config_json", "--nocapture"]).output().unwrap();
     assert!(
@@ -85,6 +94,7 @@ fn named_native_loaders_preserve_path_collisions_and_confine_symlinks_without_co
     assert!(!config(root.path()).join("config.json").exists());
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_errors() {
     let root = Folder::new().unwrap();
@@ -97,6 +107,7 @@ fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_er
     let input = root.path().join("input.jsonl");
     let run = || {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        command.clear_environment();
         child_environment(&mut command, root.path());
         command
             .env("THINKTHEN_API_KEY", "named-fixture-private")
@@ -151,6 +162,10 @@ fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_er
         String::from_utf8_lossy(&accepted.stderr)
     );
     assert_eq!(listener.count(), 1);
+    assert!(
+        child::Folder::Usage.under(root.path()).is_dir(),
+        "the live call writes only owned usage"
+    );
     assert_eq!(
         serde_json::from_slice::<serde_json::Value>(&listener.requests()[0].body).unwrap(),
         serde_json::json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{"q1":{"type":"noul","instructions":r#"The text is {"body":"Refund me.","ready":false}. Refund?"#}}})
@@ -244,6 +259,7 @@ fn check_named(root: &Path) {
     }
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batches() {
     let root = Folder::new().unwrap();
@@ -257,6 +273,7 @@ fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batche
     let input = root.path().join("input.jsonl");
     let run = |function: &str| {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        command.clear_environment();
         child_environment(&mut command, root.path());
         command
             .env("THINKTHEN_API_KEY", "named-fixture-private")
@@ -313,4 +330,8 @@ fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batche
     assert_eq!(rank.status.code(), Some(2));
     assert!(rank.stdout.is_empty());
     assert_eq!(listener.count(), 2);
+    assert!(
+        child::Folder::Usage.under(root.path()).is_dir(),
+        "the completed prefix writes only owned usage"
+    );
 }

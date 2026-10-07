@@ -18,6 +18,74 @@ fn two() -> CallOptions<'static> {
 }
 
 #[test]
+fn deadline_at_eof_reports_the_unfinished_declared_input_without_sending() {
+    check_eof_deadline(0);
+}
+
+#[test]
+fn deadline_at_eof_keeps_the_completed_prefix_and_final_facts() {
+    check_eof_deadline(2);
+}
+
+#[cfg(test)]
+fn check_eof_deadline(prefix: usize) {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":0.2}},"usage":{"input_tokens":887}}"#)).unwrap();
+    let engine = engine(&listener);
+    let question =
+        Question::from_json(r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#).unwrap();
+    let due = std::time::Instant::now() + std::time::Duration::from_secs(1);
+    let mut position = 0;
+    let eof = Cell::new(false);
+    let records = std::iter::from_fn(|| {
+        if position > prefix {
+            std::thread::sleep(due.saturating_duration_since(std::time::Instant::now()));
+            eof.set(true);
+            return None;
+        }
+        if position == prefix {
+            let before = due - std::time::Duration::from_millis(40);
+            std::thread::sleep(before.saturating_duration_since(std::time::Instant::now()));
+        }
+        let text = [r#""A.""#, r#""B.""#, r#""Pending.""#][position];
+        position += 1;
+        Some(Ok(input(text)))
+    });
+    let mut batch =
+        engine.try_decide_records_complete_with(&question, records, two().deadline_at(due));
+    for (at, value) in [Answer::Yes, Answer::No]
+        .into_iter()
+        .take(prefix)
+        .enumerate()
+    {
+        let row = batch.next().unwrap().unwrap();
+        assert_eq!(row.ordinal(), at);
+        assert_eq!(row.result().value(), value);
+    }
+    let terminal = batch.next();
+    assert!(
+        eof.get(),
+        "the stop occurs while EOF admits the pending stage"
+    );
+    let error = terminal
+        .expect("pending input must produce a deadline, not normal exhaustion")
+        .unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Deadline);
+    assert_eq!(error.stopped().cause(), thinkthen::StopCause::Deadline);
+    let facts = error.facts().unwrap();
+    assert_eq!(facts.records(), prefix as u64);
+    assert_eq!(facts.requests_sent(), (prefix / 2) as u64);
+    assert_eq!(facts.attempts().unwrap().len(), prefix / 2);
+    assert_eq!(facts.input_tokens(), (prefix > 0).then_some(887));
+    assert_eq!(facts.output_tokens(), None);
+    assert_eq!(error.stopped().status(), None);
+    assert!(!error.stopped().retryable());
+    assert!(facts.call_id().is_some());
+    assert!(batch.next().is_none());
+    assert_eq!(batch.facts().unwrap().records(), prefix as u64);
+    assert_eq!(listener.count(), prefix / 2);
+}
+
+#[test]
 fn invalid_second_streamed_item_prevents_the_entire_staged_batch_from_sending() {
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)

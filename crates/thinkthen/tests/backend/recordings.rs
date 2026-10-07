@@ -15,7 +15,7 @@ mod replay_context;
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
-    r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
+    r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92}},"#,
     r#""usage":{"input_tokens":312,"output_tokens":48}}"#,
 );
 
@@ -301,7 +301,10 @@ fn an_answer_that_records_another_question_is_refused_by_name() {
     assert_eq!(output.status.code(), Some(5));
     let message = String::from_utf8_lossy(&output.stderr);
     assert!(message.contains("thinkthen.jsonl"), "{message}");
-    assert!(message.contains("damaged or hand-edited"), "{message}");
+    assert!(
+        message.contains("holds invalid original exchange bodies"),
+        "{message}"
+    );
 
     fs::write(folder.join("thinkthen.jsonl"), "not an entry at all").expect("writable");
     let output = decide(

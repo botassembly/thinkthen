@@ -68,6 +68,7 @@ pub(super) struct Run<'a, A: Asker> {
     busy: usize,
     reading: bool,
     exhausted: bool,
+    unfinished_staging: bool,
     /// Why the call is stopping: it sends and reads nothing more, and waits
     /// for the requests on their way so their rows still print.
     stopping: Option<Error>,
@@ -105,6 +106,7 @@ impl<'a, A: Asker> Run<'a, A> {
             busy: 0,
             reading: false,
             exhausted: false,
+            unfinished_staging: false,
             stopping: None,
             halted: false,
             arrived: Instant::now(),
@@ -147,7 +149,7 @@ impl<'a, A: Asker> Run<'a, A> {
             && self.busy == 0
             && let Some(stop) = self.stopping.clone()
         {
-            if !self.slots.is_empty() || !self.exhausted {
+            if !self.slots.is_empty() || !self.exhausted || self.unfinished_staging {
                 let _flow = host.row(self.first, Err(Failed::Stopped(stop)));
             }
             self.halted = true;
@@ -367,6 +369,7 @@ impl<'a, A: Asker> Run<'a, A> {
         for input in inputs {
             if let Some(stop) = cancel.stop_between_sends() {
                 self.stopping = Some(stop);
+                self.unfinished_staging = true;
                 self.closed.clear();
                 return;
             }
