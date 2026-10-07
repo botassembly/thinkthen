@@ -27,7 +27,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-0429-') as tmp:
         scratch=Path(tmp)
         helper=scratch/'cancel.so'
-        subprocess.run(['cc','-shared','-fPIC','-pthread','-Wall','-Wextra','-Werror',str(ROOT/'libraries/php/fixtures/cancel_reader.c'),'-ldl','-o',str(helper)],check=True)
+        subprocess.run(['cc','-shared','-fPIC','-pthread','-Wall','-Wextra','-Werror',str(ROOT/'libraries/php/fixtures/cancel_reader.c'),'-ldl','-o',str(helper)],env={'PATH':os.environ['PATH'],'LANG':'C.UTF-8'},check=True)
         # Counted descriptor constructors are an additional public door, with no synthetic parity cells.
         with tempfile.TemporaryDirectory(prefix='constructors-',dir=scratch) as owned:
             env={'PATH':os.environ['PATH'],'HOME':owned,'XDG_CONFIG_HOME':owned+'/config',
