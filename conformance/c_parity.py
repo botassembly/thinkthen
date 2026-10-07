@@ -456,7 +456,10 @@ def main():
     rows = list(parity.required_cases(inventory, 'c').values())
     cases = {row['id']: row for row in json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
     named = {row['id']: row for row in json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']}
-    env = {key: value for key, value in os.environ.items() if not key.endswith('_API_KEY')}
+    names = ('PATH', 'HOME', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN',
+             'RUSTFLAGS', 'CFLAGS', 'TMPDIR', 'XDG_RUNTIME_DIR',
+             'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD')
+    env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     env.update(CARGO_BUILD_JOBS='1', CARGO_NET_OFFLINE='true')
     subprocess.run(['cargo', 'build', '--locked', '--offline', '--lib'], cwd=ROOT / 'libraries/c', env=env, check=True)
     subprocess.run(['cargo', 'build', '--locked', '--offline', '-p', 'conformance-backend'], cwd=ROOT, env=env, check=True)
@@ -493,7 +496,7 @@ def main():
         library = ROOT / 'libraries/c/target/debug'
         # Match the shipped soname using an owned directory; do not alter build files.
         (scratch / 'libthinkthen.so.0').symlink_to(library / 'libthinkthen_c.so')
-        subprocess.run(['cc', '-pthread', '-std=c11', '-Wall', '-Wextra', '-Werror', '-g', '-fsanitize=address', '-fno-omit-frame-pointer', '-I', str(ROOT / 'libraries/c/include'), str(source), '-L', str(library), '-lthinkthen_c', '-Wl,-rpath,' + str(scratch), '-o', str(binary)], check=True)
+        subprocess.run(['cc', '-pthread', '-std=c11', '-Wall', '-Wextra', '-Werror', '-g', '-fsanitize=address', '-fno-omit-frame-pointer', '-I', str(ROOT / 'libraries/c/include'), str(source), '-L', str(library), '-lthinkthen_c', '-Wl,-rpath,' + str(scratch), '-o', str(binary)], env=env, check=True)
         failures = 0
         for at, row in enumerate(rows):
             error = errors.get(at)
