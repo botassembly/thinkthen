@@ -236,7 +236,17 @@ impl Invocation {
         })
     }
 
-    /// Borrow the request token; native execution remains responsible for all
+    pub(super) fn call_token(&self, notification: &CancelToken) -> CancelToken {
+        if self.arguments.options.cancelled {
+            let initial = CancelToken::new();
+            initial.cancel();
+            initial
+        } else {
+            notification.clone()
+        }
+    }
+
+    /// Borrow the call token; native execution remains responsible for all
     /// request reservation, observed attempts, scheduling and started failures.
     pub(super) fn controls<'a>(&'a self, token: &'a CancelToken) -> Result<CallOptions<'a>, Error> {
         let options = &self.arguments.options;

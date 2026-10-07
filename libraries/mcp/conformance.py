@@ -61,7 +61,7 @@ def arguments(step, home, settings):
     for key in ('batch', 'threshold'):
         if key in settings:
             args['options'][key] = settings[key]
-    if step.get('jsonl_root'):
+    if step.get('jsonl_root') or (step.get('source_unit') == 5 and not question.get('on')):
         args['options']['field'] = ''
     operation = step.get('operation') or {}
     if operation.get('injection') == 'expired_deadline':
@@ -136,6 +136,7 @@ def project(packet, verb):
                'detail_inputs': [dict(input=candidate['input'], **candidate.get('source', {})) for candidate in result.get('candidates', []) if candidate['index'] is not None]}
         row['question'] = result.get('question', {})
         row['answer'] = answer
+        row['candidates'] = result.get('candidates', [])
         row['question_digest'] = meta.get('question_sha256', meta.get('questions_sha256'))
         assert re.fullmatch('[0-9a-f]{64}', row['answer_id']), 'invalid native answer ID'
         assert meta['cached'] is (meta['origin'] in ('cache', 'replay')), 'native cache fact differs from origin'
@@ -187,6 +188,18 @@ def known_fields(step, got, bodies):
     if got['code']:
         return
     for row in got['rows']:
+        if step['verb'] == 'find':
+            originals = [Path(ROOT / path).read_text() for path in step['paths']] if step.get('paths') else step['items']
+            candidates = row['candidates']
+            assert [c['index'] for c in candidates if c['index'] is not None] == list(range(len(originals))), candidates
+            for candidate in candidates:
+                if candidate['index'] is None:
+                    assert candidate['input'] is None and 'source' not in candidate, candidate
+                else:
+                    assert candidate['input'] == originals[candidate['index']], candidate
+            wanted = expected.get('success', {}).get('operation', {}).get('probabilities')
+            if wanted is not None:
+                assert [{k: c[k] for k in ('index', 'probability')} for c in candidates] == wanted, candidates
         if 'resolved_wording' in expected:
             assert row['question']['text'] == expected['resolved_wording'], row['question']
         metadata = expected.get('resolved_metadata', {})
@@ -215,7 +228,8 @@ def known_fields(step, got, bodies):
                 for question in body['questions'].values():
                     assert question['instructions'].startswith('The text is ' + wire + '. '), question
         if 'per_item_context' in expected:
-            assert body['state'] == expected['per_item_context'], body
+            context = expected['per_item_context']
+            assert body['state'] == (context if context != '' else 'Each question quotes the text it asks about.'), body
             assert 'context' not in body, body
         elif step.get('shared_context') is not None:
             assert body['state'] == step['shared_context'], body
@@ -360,6 +374,8 @@ def run(port, binary):
                                     if isinstance(v, str) and v.startswith('$') else v for k, v in settings.items()}
                         if row['kind'] in ('images', 'image-location'):
                             settings['record'] = str(home / 'recorded')
+                        if step.get('author_expect'):
+                            settings['record'] = str(home / 'authored')
                         before = int(backend.read('count'))
                         got = invoke(binary, backend, env, home, step, settings)
                         count = int(backend.read('count'))
@@ -379,11 +395,15 @@ def run(port, binary):
                         if step.get('author_expect'):
                             unadorned = fixture({**row, 'kind': 'behavior', 'input': {
                                 'case_ref': named[row['input']['case_ref']]['input']['source_case']}}, cases, named)
-                            baseline = invoke(binary, backend, env, home, unadorned, settings)
+                            prepare(home, unadorned)
+                            baseline = invoke(binary, backend, env, home, unadorned,
+                                              {**settings, 'record': None, 'replay': str(home / 'authored')})
+                            assert int(backend.read('count')) == count and baseline['requests_sent'] == 0, baseline
                             for actual, original in zip(got['rows'], baseline['rows'], strict=True):
                                 for key in ('question_digest', 'answer_id', 'observation_ids'):
                                     assert actual[key] == original[key], key
-                                assert all(k not in original['question'] for k in ('name', 'wording_version')), original
+                                questions = [a['question'] for a in original['answers'].values()] if step['verb'] == 'annotate' else [original['question']]
+                                assert all(k not in q for q in questions for k in ('name', 'wording_version')), original
                         if value.get('image_variants'):
                             assert_images(step, got, bodies)
                         if row['kind'] in ('images', 'image-location') and got['code'] == 0:

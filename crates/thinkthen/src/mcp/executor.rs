@@ -19,14 +19,8 @@ impl Executor for NativeExecutor {
         self.schema.clone()
     }
     fn execute(&self, invocation: Invocation, token: &CancelToken) -> Result<NativeReply, Error> {
-        let initial = CancelToken::new();
-        let token = if invocation.arguments.options.cancelled {
-            initial.cancel();
-            &initial
-        } else {
-            token
-        };
-        let controls = invocation.controls(token)?.started()?;
+        let token = invocation.call_token(token);
+        let controls = invocation.controls(&token)?.started()?;
         controls.admission()?;
         let mut prepared = invocation.question()?;
         apply(&mut prepared, &invocation)?;
