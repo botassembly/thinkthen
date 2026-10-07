@@ -1,6 +1,6 @@
 # 0408: Expose complete probabilities and details everywhere
 
-Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
+Status: in progress. Native behavior is implemented and landed. Remaining surface adoption is tracked in the existing SDK, foreign binding, SQL, dataframe and MCP family checklists; final shared-case qualification remains.
 
 Native carrier WIP: all ten functions now have concrete complete types.
 Recognition's existing typed entities and stage distributions moved from the

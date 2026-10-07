@@ -1,6 +1,6 @@
 # 0418: Rank question sets through typed language and frame APIs
 
-Status: in progress. Native complete execution is being built; host adoption and whole review remain open.
+Status: in progress. Native ordered rank members and existing SDK adoption landed through 0431 at e2641d87c. Foreign binding and dataframe adoption remain under their family checklists.
 
 Milestone: 0.2
 

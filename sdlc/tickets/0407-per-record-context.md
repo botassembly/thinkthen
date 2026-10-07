@@ -1,6 +1,6 @@
 # 0407: Supply separate per-record context everywhere
 
-Status: in progress. Native implementation in lane0 on ticket/0443-native-complete-results; host adoption and final landing checks remain open.
+Status: in progress. Native behavior is implemented and landed. Remaining surface adoption is tracked in the existing SDK, foreign binding, SQL, dataframe and MCP family checklists; final shared-case qualification remains.
 
 Milestone: 0.2
 

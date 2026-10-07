@@ -1,6 +1,6 @@
 # 0447: Execute typed image questions and read image files
 
-Status: in progress. Native/CLI hosted slice A reviewed and landing. Local runtime profiles and required host adoption remain open.
+Status: in progress. Native/CLI image behavior and local runtime profiles are implemented and qualified. Complete typed adoption and installed-package shared cases remain under the surface family checklists.
 
 Milestone: 0.2
 Owner: builder.
