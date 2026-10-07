@@ -1,6 +1,6 @@
 # 0444: Version cache keys and preserve offline replay
 
-Status: in progress. Native versioned identity, migration/replay and the cache index fix are landed. Reconcile all listed Python, TypeScript, Ruby, R and DuckDB key tests and the core key comment; required main library checks must pass without exit 77 before completion.
+Status: in progress. Native cache behavior and reviewed host test-oracle reconciliation are implemented, with all four full library checks passing. Integrated source tests, lint and specification checks remain before completion.
 
 Milestone: 0.2
 
@@ -15,7 +15,7 @@ Saved answers carry enough validated identity to rebuild their key without a cal
 
 - Starts from: Current main c64b71859; 0405 audit is historical and predates 0377/0420. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 10.
 - Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
-- Changes: Implement 0442’s versioned pure key, canonical posting URL, requested/concrete model identity and validated offline store conversion. Preserve original rows on failed atomic migration. Read-only replay indexes in memory. Unknown/damaged/incomplete records refuse locally before any send.
+- Changes: Implement 0442’s versioned pure key, canonical posting URL, requested/concrete model identity and validated offline store conversion. Preserve original rows on failed atomic migration. Read-only replay indexes in memory. Unknown/damaged/incomplete records refuse locally before any send. Final reconciliation owns `libraries/python/tests/**`, `libraries/typescript/tests/**`, `libraries/ruby/tests/**`, `libraries/r/tests/**`, `libraries/python/ratchet.py.json`, `libraries/typescript/ratchet.mjs.json`, `libraries/ruby/ratchet.rb.json`, `libraries/r/ratchet.R.json`, comment only in `crates/thinkthen/src/core/pack/key.rs`, and this ticket, `sdlc/records/0444-versioned-cache-identity-and-replay.md` and `sdlc/planning/team-0-2-2026-10-04.md`.
 - Proof: Two processes share keys for trailing-slash/host-case variants; distinct paths differ. Rebuild saved keys offline. Pin valid v1 conversion/idempotence/read-only bytes and tampered/missing-field zero-send refusal. Pinned models cache; opaque selector returning model1 then model2 goes live again and cannot reuse model1. Multiple historical concrete versions refuse ambiguous replay with zero sends. Keep jev-latest refresh and no key/address leakage.
 - Defers: Proxy service/screens, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
@@ -31,7 +31,7 @@ Saved answers carry enough validated identity to rebuild their key without a cal
 
 When this change is pushed to main, notify the experiments team through pm with the commit, changed behavior and affected experiment 0035 steps. They rerun only affected steps without waiting for release. Note the notification in this ticket’s single landing record.
 
-Native WIP partial usage: optional reported dimensions now remain independent through decoding, wire shares, SQLite/JSONL lookup, zero-send replay and aggregate receipts. Explicit recording retains exact request and response bodies (no headers) in the answers' SQLite transaction. The Imajev fixture reports input887 and no output; no output zero is synthesized. Result/1 retains its full-count usage projection, and result/2 metadata and typed accessors retain partial counts. Versioned key/migration execution is now concrete WIP; whole native review, held-model warning integration, schema/corpus adoption and final landing remain open.
+Main implements versioned text/image identity, validated atomic migration, read-only replay, persistent observations, partial reported usage, original exchanges, held-model diagnostics and bounded timing history; the distinct contracts and native evidence remain in specification/cache.md and records/0443-sdk-call-identity-and-cache-policy.md. This reconciliation completes the four host test oracles and retained cancellation/public-contract assertions, with final integrated qualification still pending.
 
 ### Added public declarations
 
@@ -54,8 +54,6 @@ fn Details::question_sources(&self) -> &[QuestionSource]
 fn Details::observations(&self) -> &[Observation]
 ```
 
-Native WIP storage slice: framed question-key/2 includes the normalized existing posting URL and requested/reported models, outside batch and persistent IDs. Writable v1 stores validate every constituent and normalize in one rollback-capable transaction; read-only replay indexes the same validated snapshot in memory. Conflicting normalized histories and ambiguous historical models refuse before sends. Existing image digest/key domains stay available for original v1 validation. SQL hit validation covers text and image constituents in the hit's read snapshot. Undecodable saved answers refuse rather than trigger a repair send. Explicit original exchange bodies now survive SQLite-to-fixture conversion; no request header or transient ID is saved. Counts beyond SQLite integer bounds refuse storage atomically rather than silently become unknown.
-
 Focused public/CLI cases in native_store cover read-only bytes/mtime, independent expected framing/legacy identity, v1 migration/idempotence, collision rollback, malformed unrelated entries in all modes, changed reported models and offline ambiguity, 13/5/8 per-question missing pieces, coalescing/refresh observation identity, and original body conversion/replay. These are constituent checks, not whole-ticket acceptance. Root owns the experiments notification after main landing.
 
 ```rust
@@ -69,8 +67,7 @@ The existing validated state digest selects the domain during migration and
 snapshot replay; an image-looking ordinary JSON value does not infer images.
 A prior-failing independently framed public recording regression now passes,
 including original ordered duplicate attachments and zero-send strict replay.
-All 24 image and nine storage cases plus affected Clippy pass. Whole review and
-main landing remain open.
+All 24 image and nine storage cases plus affected Clippy passed before the native foundation landed.
 
 Lane1 legacy-key diagnosis: the saved C integration log's two failures are
 `cases::portable::c_json_records_keep_fixture_questions_and_keys_in_one_request`
@@ -182,8 +179,6 @@ starting scan issue, narrow confirmation and the final actual landing ladder.
 Overall parity remains open.
 Held-model warning constituent WIP: cache lookup checks a missed exact key for validated historical answers on the same configured URL, literal requested model, selected state and wire question. Excluded mismatches trigger a fixed command warning and a call-scoped `Facts::held_model_mismatch()` getter, with optional true-only complete-facts serialization. Stored model/address values never enter the warning. Exact corrected hits, unrelated questions and offline historical replay remain silent; ambiguous replay still refuses before sends. Primitive keys, grouping, image domains and accepted observation identity are unchanged. The getter is recorded in 0443's canonical inventory delta. Bounded timing history and final whole review/host adoption remain open.
 
-Native foundation update: versioned per-question keys, accepted persistent observations, partial reported usage, original ordered image domains, atomic validated migration and read-only replay are implemented in this branch. Corrected 0454 batching remains outside key/legacy observation identity. Complete getters/CLI preserve original per-observation wire counts and actual cache/replay provenance. Optional timing recording and the fixed held-model warning are implemented; their failure boundaries are documented in 0445/recording.md. Root whole review/landing and required host adoption remain open.
-
 ## Final test-oracle adoption, 2026-10-07
 
 The bounded design found no remaining native cache defect. This slice owns `libraries/python/tests/**`, `libraries/typescript/tests/**`, `libraries/ruby/tests/**`, `libraries/r/tests/**`, their measured host ratchets, and the stale comment in `crates/thinkthen/src/core/pack/key.rs`. SQL0435 owns its active DuckDB reconciliation. Original v1 fixtures and whole-request exchange digests remain unchanged.
@@ -199,3 +194,8 @@ The full Python check exposed a cache-hit tally test whose default requested mod
 The full TypeScript check exposed two stale test contracts. Legacy scalar details remain result/1 while the CLI emits result/2; their answer and original metadata fields still compare exactly, both schema versions are asserted, and reader-position checks remain. The export test now recognizes the existing `export * as CompleteTypes` declaration alongside classes, functions and constants. The measured TypeScript test total grows by seven lines to retain these checks explicitly. Ruby's exact public-name test now includes its shipped `Complete` namespace and `Engine#complete` method. R's explicit native arity and positional-refusal checks now pin the reviewed 15-parameter signature including `refresh_cache`; arbitrary invalid names/types, partial-name refusal and zero-send checks remain. No runtime export, result decoder or native serializer changes.
 
 The R vendored consumer exposed a held-cancellation test race: cancelling after 150 ms could precede the request. The reviewed two-file correction advances once through the existing public poll, requires no completed row, waits for the owned listener's exact next-request acknowledgement through its existing 30-second wait guard, and then permits cancellation through the existing stdin `continue` protocol. Preserve the one-second request timeout, held reply, exact native facts and independent one-send assertion, cancellation/error/secrecy checks, and existing pre-pull zero-send protocol. Only the created consumer is killed and reaped on handshake failure; outer backend cleanup remains. Other host routing and production APIs remain unchanged. Reusing the existing child lifecycle adds five measured Python lines and replaces three R timer lines; totals are 7740 Python and 3285 R.
+
+
+Code review: ACCEPT, 2026-10-07; fresh whole-change read-only Sol review of 2b9ce8b25904a4180ce82afbc8b33c864bd1285f. The separately reviewed 0460 planner is adopted from main f723dde1d; affected host tests retain exact preview and runtime assertions while pinning the conservative occurrence bound.
+
+Reviews: accept
