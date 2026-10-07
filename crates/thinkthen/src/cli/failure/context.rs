@@ -10,7 +10,6 @@ pub(crate) enum Error {
     Open(io::Error),
     NotUtf8,
     Empty,
-    SingleDocument,
     StructuredQuestion,
     OverLimit {
         initial: bool,
@@ -73,7 +72,6 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
         Error::Open(error) => (5, format!("--context could not be opened: {error}")),
         Error::NotUtf8 => (5, "--context is not UTF-8 text".to_owned()),
         Error::Empty => (2, "--context names an empty file".to_owned()),
-        Error::SingleDocument => (2, "--context shares one text across the records of a stream, and a single text is one record".to_owned()),
         Error::StructuredQuestion => (2, "--context needs a question written as text; a question written as JSON cannot quote a record".to_owned()),
         Error::OverLimit { initial, kind, limit, actual, profile } => {
             let message = if let Some(profile) = profile {

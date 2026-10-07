@@ -125,10 +125,7 @@ impl Judging<'_> {
             warning: mismatch.warning(),
             batch_setting: mismatch.batch_setting(),
             batch_warning: mismatch.batch_warning(),
-            context_sha256: self
-                .context
-                .as_ref()
-                .map(|context| context.digest().to_owned()),
+            context_sha256: context.context_sha256.clone(),
         };
         let input = (self.streams || self.keeping == Keeping::Ordered).then_some(record);
         let requests = std::mem::take(&mut context.requests);

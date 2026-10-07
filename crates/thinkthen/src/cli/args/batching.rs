@@ -11,6 +11,10 @@ pub(crate) struct Batching {
     #[arg(long, value_name = "FILE", hide_short_help = true)]
     pub(crate) context: Option<PathBuf>,
 
+    /// Select each JSON record's separate context; empty text suppresses shared context.
+    #[arg(long, value_name = "POINTER", hide_short_help = true)]
+    pub(crate) context_field: Option<String>,
+
     /// Send at most N records of a stream in one request, or `max`. [default: max]
     ///
     /// `max` fills each request to the backend's limits. `--batch 1` asks one

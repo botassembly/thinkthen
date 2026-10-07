@@ -20,6 +20,7 @@ mod choose;
 mod context;
 mod pause;
 mod portable;
+mod record_context;
 mod tag_score;
 mod tiers;
 mod too_large;

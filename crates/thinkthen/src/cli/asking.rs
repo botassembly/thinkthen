@@ -45,6 +45,7 @@ struct RowContext<'a> {
     attempts: Vec<AttemptObservation>,
     position: Option<&'a crate::cli::intake::Position>,
     images: Option<&'a crate::public::ImageEvidence>,
+    context_sha256: Option<String>,
 }
 
 /// Build the one engine a command calls, from what the command resolved.
@@ -284,9 +285,12 @@ pub(crate) fn run(
     schedule::jobs_of(common.jobs, reading.streams())?;
     let context = context::for_run(
         batch.as_ref().and_then(|tiers| tiers.context),
-        reading.streams(),
         settled.text().as_json().as_str().is_some(),
     )?;
+    let context_field = batch
+        .as_ref()
+        .and_then(|tiers| tiers.context_field)
+        .map(str::to_owned);
     let tuned_for = batch
         .as_ref()
         .filter(|tiers| tiers.tuned)
@@ -333,6 +337,7 @@ pub(crate) fn run(
         profile,
         mismatch,
         context,
+        context_field,
         sources: (settled.sources().question_is_from_file() || configured_model.is_some()).then(
             || {
                 if configured_model.is_some() {
@@ -360,7 +365,6 @@ struct Judging<'a> {
     documents: bool,
     text_view: bool,
     mismatch: Mismatch,
-    context: Option<Context>,
 }
 
 struct JudgingInput<'a> {
@@ -380,6 +384,7 @@ struct JudgingInput<'a> {
     profile: Option<BackendProfile>,
     mismatch: Mismatch,
     context: Option<Context>,
+    context_field: Option<String>,
 }
 
 impl Judging<'_> {
@@ -400,7 +405,8 @@ impl Judging<'_> {
             sources: _,
             profile,
             mismatch,
-            context,
+            context: _,
+            context_field: _,
         } = input;
         Ok(Judging {
             declarations,
@@ -414,7 +420,6 @@ impl Judging<'_> {
             documents,
             text_view,
             mismatch,
-            context,
         })
     }
 }
