@@ -1,6 +1,6 @@
 # 0410: Complete all ten dataframe functions and located files
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: in progress. Dataframe APIs are implemented; installed qualification, fresh whole-family review and final landing gates remain open.
 
 Milestone: 0.2
 
@@ -80,3 +80,9 @@ The installed Rust Polars archive exposed a native prerequisite: canonical decid
 The focused file-image result regression failed on the missing canonical image field before the helper change. Afterward, all five existing native composition tests and native complete Clippy pass. The file case exercises all three concrete native calls, exact saved image bytes, source coordinates and strict result schemas. Offline policy still accepts 268 resolved packages.
 
 Final adoption uses the settled native closed `pandas` and `python-polars` Surface values. A frame-owned thin bridge forwards eager completion and native batch creation to the same selected native engine with that explicit value. The existing complete facade still owns request construction, decoding, cancellation, lifetime and close. The bridge does not mutate the shared ordinary engine or introduce a native engine, cache, scheduler or parser. Actual typed ordered rank members and their facts/provenance remain the SDK's native carriers, including independent optional usage dimensions; call facts remain the invocation total.
+
+## Current qualification, 2026-10-07
+
+Source pandas and Python Polars consumers passed all 248 required shared cases at `01db05a0b`, with strict frame typing and no skipped required cells. Non-file eager pandas cases use the actual `Series.tt.complete` accessor. Preloading the selected library before the existing cancellation timer corrected seven zero-send fixture cancellations; the native cancellation and timer remain unchanged.
+
+Rust qualification exposed a fixture preparation gap: eagerly collecting `inputs::read` enforces the engine row limit before the actual public frame batch starts. Native pulling already applies the limit after the permitted completed prefix. The shared composer needs a bounded preparation path for this frame consumer; no copied parser, additional engine or product admission workaround is authorized. Pre-review policy passed. Lint identified a missing host-setup fetch declaration for the conventional Polars consumer manifest. The coordinator owns that declaration. Installed archives and the remaining whole-family checks are not claimed complete.
