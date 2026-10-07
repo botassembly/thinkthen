@@ -284,7 +284,7 @@ PYWIN
 	case $2:${RELEASE_SMOKE:-0} in *-linux-gnu:0) rustup target add --toolchain 1.95.0 "${2%-gnu}-musl" ;; esac
 	for manifest in Cargo.toml libraries/c/Cargo.toml databases/sqlite/Cargo.toml databases/duckdb/Cargo.toml \
 		databases/duckdb/bridge/Cargo.toml databases/postgresql/Cargo.toml libraries/python/Cargo.toml \
-		libraries/typescript/Cargo.toml libraries/ruby/Cargo.toml; do
+		libraries/typescript/Cargo.toml libraries/ruby/Cargo.toml libraries/polars/consumer/Cargo.toml; do
 		cargo fetch --locked --manifest-path "$manifest"
 	done
 	if [ "$(cargo deny --version 2>/dev/null || true)" != 'cargo-deny 0.19.4' ]; then

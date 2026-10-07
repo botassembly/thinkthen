@@ -28,6 +28,25 @@ export XDG_CACHE_HOME="$scratch/cache" XDG_CONFIG_HOME="$scratch/config" THINKTH
 
 # Its own target folder keeps these builds from evicting the other rungs'.
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/polars"
+consumer=libraries/polars/consumer/Cargo.toml
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    # The same public consumer links the unpacked source archive.
+    scratch_dir source
+    scratch_dir installed
+    tar -xzf "$THINKTHEN_ARTIFACT" -C "$source" --strip-components=1
+    python3 - "$PWD" "$source" "$installed" <<'RUSTFRAME'
+import shutil,sys
+from pathlib import Path
+root,source,installed=map(Path,sys.argv[1:])
+consumer=installed/'consumer'
+shutil.copytree(root/'libraries/polars/consumer',consumer,ignore=shutil.ignore_patterns('target'))
+manifest=consumer/'Cargo.toml'
+manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(source)))
+main=consumer/'src/main.rs'
+main.write_text(main.read_text().replace('../../../r/thinkthen/src/rust/src/complete/mod.rs',str(root/'libraries/r/thinkthen/src/rust/src/complete/mod.rs')).replace('../../../python/examples/native_case/native_settings.rs',str(root/'libraries/python/examples/native_case/native_settings.rs')))
+RUSTFRAME
+    consumer="$installed/consumer/Cargo.toml"
+else
 set -- --locked --offline --package thinkthen --features polars
 cargo clippy "$@" --lib --bins --test polars -- -D warnings
 cargo clippy "$@" --no-default-features --lib -- -D warnings
@@ -37,3 +56,15 @@ if [ "$profile" = stress ]; then
 fi
 cargo test "$@" --test polars
 cargo test "$@" --doc PolarsEngine
+fi
+
+# Actual frame consumers reuse the same native corpus, framing and projectors.
+cargo clippy --locked --offline --manifest-path "$consumer" --all-targets -- -D warnings
+cargo build --locked --offline --manifest-path "$consumer"
+python3 - "$PWD" "$CARGO_TARGET_DIR/debug/thinkthen-polars-consumer" <<'PYFRAME'
+import sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+from native_fixture import run
+sys.exit(bool(run('rust-polars',[str(Path(sys.argv[2]).resolve())],root)))
+PYFRAME

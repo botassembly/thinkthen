@@ -22,6 +22,8 @@ use crate::result::{self, Completed};
 use crate::worker::{Controls, run_tallied};
 use crate::{defect, guard, raised, usage};
 
+mod collections;
+pub(crate) use collections::{_collection_column, _recognize_series};
 mod names;
 mod nullable;
 mod plan;

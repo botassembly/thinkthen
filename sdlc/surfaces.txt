@@ -4,7 +4,8 @@
 # A third field names the crate folder inside the binding when it is not the
 # binding folder itself.
 # The state `feature` names a surface that is a Cargo feature of `thinkthen`
-# (ticket 0130). Its folder holds only `check.sh` and `README.md`. The rung
+# (ticket 0130). Its folder holds `check.sh` and `README.md`; Polars also
+# holds its conventional public consumer (0410). The rung
 # runs its check as it runs a landed one, and the root ratchet and the root
 # `deny.toml` cover its code.
 libraries/rust        landed
