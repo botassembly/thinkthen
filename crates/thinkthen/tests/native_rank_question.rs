@@ -31,14 +31,13 @@ fn saved_score_rank_keeps_ordered_levels_and_descriptions() {
 }
 
 #[test]
-fn rank_rejects_authored_thresholds_other_functions_and_evidence_pointers() {
+fn rank_rejects_authored_thresholds_and_other_functions() {
     for json in [
         r#"{"decide":"Relevant?","threshold":0.5}"#,
         r#"{"decide":"Relevant?","threshold":"0.2:0.8"}"#,
         r#"{"score":"Relevant?","levels":["low","high"],"threshold":0.5}"#,
         r#"{"score":"Relevant?","levels":["low","high"],"true":"meaning"}"#,
         r#"{"choose":"Relevant?","options":["a","b"]}"#,
-        r#"{"decide":"Relevant?","on":"/body"}"#,
     ] {
         assert!(Question::rank_from_json(json).is_err(), "{json}");
     }

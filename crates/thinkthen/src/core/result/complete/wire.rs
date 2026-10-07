@@ -29,9 +29,35 @@ pub(crate) struct AtomicDocument<'a, T: Serialize> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) input: Option<&'a T>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) source: Option<&'a PhysicalSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) question_name: Option<&'a str>,
     pub(crate) question: ReadableQuestion<'a, Question>,
     pub(crate) answer: &'a Answer,
     pub(crate) threshold: Option<Threshold>,
     pub(crate) meta: CompleteMeta<'a>,
+}
+
+/// Supplied physical provenance, outside model evidence and result identity.
+#[derive(Clone, PartialEq, Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "completePhysicalSource")
+)]
+pub(crate) struct PhysicalSource {
+    pub(crate) file: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) first_line: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) last_line: Option<usize>,
+}
+impl std::fmt::Debug for PhysicalSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PhysicalSource")
+            .field("file", &"<withheld>")
+            .field("first_line", &self.first_line)
+            .field("last_line", &self.last_line)
+            .finish()
+    }
 }

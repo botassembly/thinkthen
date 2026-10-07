@@ -53,6 +53,7 @@ pub(super) struct Held<T> {
     pub(super) original: T,
     pub(super) question: Question,
     pub(super) context_sha256: Option<String>,
+    pub(super) source: Option<core::CompletePhysicalSource>,
 }
 
 impl Engine {
@@ -236,7 +237,7 @@ impl Engine {
                     run.batch_setting = Some(setting.into());
                     run.context_sha256 = item.context_sha256;
                     let attempts = requested_attempts.then(|| judged.answered.attempts.clone());
-                    let result = atomic(
+                    let mut result = atomic(
                         run,
                         &judged,
                         spec(function, &item.question, judged.value.clone(), at),
@@ -245,6 +246,7 @@ impl Engine {
                         attempts,
                     )
                     .map_err(|_| Error::defect("a complete record could not be constructed"))?;
+                    result.source = item.source;
                     Ok(CompleteRecord {
                         original: item.original,
                         ordinal: at,
@@ -332,6 +334,7 @@ pub(super) fn prepare_record<T: InputEvidence>(
     }
     Ok((
         Held {
+            source: super::physical_source(&input),
             original: record.original,
             question: question.clone(),
             context_sha256,
