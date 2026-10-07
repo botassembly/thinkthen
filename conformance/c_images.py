@@ -64,7 +64,8 @@ def assert_images(step, got, bodies):
         if step['verb'] != 'decide':
             assert row['probabilities'] == ({'red': .8, 'blue': .2} if step['verb'] == 'choose' else {'none': .2, 'all': .8}), (scenario['id'],row['probabilities'])
     urls = ['data:%s;base64,%s' % ('image/jpeg' if path.endswith('.jpg') else 'image/png', base64.b64encode(raw).decode()) for path, raw in zip(step['image_paths'], images)]
-    for at, body in enumerate(bodies):
+    wants = []
+    for at in range(expected_count):
         caption = step['items'][at] or ''
         role = step['verb']
         q = {'type': 'noul', 'instructions': 'Is red visible?'} if role == 'decide' else {'type': 'choice' if role == 'choose' else 'score', 'instructions': 'Which color?' if role == 'choose' else 'How red?', 'criteria': {'red': None, 'blue': None} if role == 'choose' else ['none', 'all']}
@@ -74,10 +75,17 @@ def assert_images(step, got, bodies):
         want = {'state': caption, 'model': profile['model'], 'questions': {'q1': q}, 'images': urls}
         if profile['model'] == 'pplx-decider-v1-27b':
             want = {'state': ([caption] if caption else []) + [{'type': 'image_url', 'image_url': {'url': url}} for url in urls], 'model': profile['model'], 'questions': {'q1': q}}
+        wants.append(want)
+    # Concurrent requests can arrive in either order. Consume whole matches so
+    # duplicates cannot hide a missing request; candidate and image order stay exact.
+    for body in bodies:
         actual=json.loads(body)
-        assert actual == want, (scenario['id'], 'wire fields differ')
+        matches = [at for at, want in enumerate(wants) if actual == want]
+        assert matches, (scenario['id'], 'wire fields differ')
         if role == 'choose':
-            assert list(actual['questions']['q1']['criteria']) == list(q['criteria']), (scenario['id'],'candidate order changed')
+            matches = [at for at in matches if list(actual['questions']['q1']['criteria']) == list(wants[at]['questions']['q1']['criteria'])]
+            assert matches, (scenario['id'],'candidate order changed')
+        wants.pop(matches[0])
         construction = scenario['construction']
         target = construction.get('final_serialized_body_bytes')
         if construction.get('mode') == 'many inputs':
