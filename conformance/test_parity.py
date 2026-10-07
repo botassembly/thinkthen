@@ -216,6 +216,83 @@ class PublicAssertions(unittest.TestCase):
                 parity.run(port)
 
 
+class CliApplicability(unittest.TestCase):
+    def setUp(self):
+        self.contract = copy.deepcopy(parity.inventory())
+        self.cli = next(row for row in self.contract['consumers'] if row['id'] == 'cli')
+        self.cli['required_checks'] = ['named', 'runtime']
+        self.cli['case_rulings'] = {
+            case_id: {'boundary': boundary, 'reason': 'Actual CLI boundary'}
+            | ({} if boundary == 'sdk-only' else {'expect': {
+                'error': 'local', 'exit': 5, 'requests_sent': 0, 'no_result': True, 'secrecy': True}
+               if boundary == 'question-file' else {'signals': ['SIGINT', 'SIGTERM'], 'requests_sent': 1}})
+            for case_id, boundary in parity.CLI_BOUNDARIES.items()}
+
+    def test_cli_resolves_actual_boundary_checks_without_changing_sdk_or_mcp(self):
+        original = copy.deepcopy(self.contract['required_cases'])
+        parity.validate_consumer_contracts(self.contract)
+        cli = parity.required_cases(self.contract, 'cli')
+        self.assertEqual(len(cli), 238)
+        self.assertEqual(len(parity.required_cases(self.contract, 'rust')), 248)
+        self.assertEqual(len(parity.required_cases(self.contract, 'mcp')), 251)
+        self.assertTrue(all(case['checks'] == ['named', 'runtime'] for case in cli.values()))
+        self.assertEqual(cli['declaration-null']['expect']['error'], 'local')
+        self.assertEqual(cli['cancellation-held-call']['cli_boundary'], 'signal-drain')
+        self.assertEqual(parity.required_cases(self.contract, 'rust')['typed-decide']['checks'],
+                         ['named', 'compile', 'runtime'])
+        self.assertEqual(original, self.contract['required_cases'])
+
+    def test_closed_rulings_refuse_unrelated_exclusions_and_other_consumers(self):
+        for defect in ['missing', 'unrelated', 'wrong-boundary', 'other-consumer', 'checks', 'expect']:
+            with self.subTest(defect=defect):
+                changed = copy.deepcopy(self.contract)
+                cli = next(row for row in changed['consumers'] if row['id'] == 'cli')
+                if defect == 'missing':
+                    del cli['case_rulings']['named-uppercase']
+                elif defect == 'unrelated':
+                    cli['case_rulings']['typed-decide'] = {'boundary': 'sdk-only', 'reason': 'unsupported'}
+                elif defect == 'wrong-boundary':
+                    cli['case_rulings']['declaration-null']['boundary'] = 'sdk-only'
+                elif defect == 'other-consumer':
+                    changed['consumers'][1]['case_rulings'] = cli['case_rulings']
+                elif defect == 'checks':
+                    cli['required_checks'] = ['runtime']
+                else:
+                    cli['case_rulings']['declaration-null']['expect'] = {'error': 'Usage'}
+                with self.assertRaises(ValueError):
+                    parity.validate_consumer_contracts(changed)
+
+    def test_cells_require_actual_cli_checks_and_refuse_sdk_only_passes(self):
+        cases = {case['id']: case for case in self.contract['required_cases']}
+        def cell(case_id, checks):
+            return parity.PREFIX + json.dumps({'consumer': 'cli', 'case': case_id,
+                                               'checks': checks, 'status': 'pass'})
+        self.assertEqual(parity.cells(cell('typed-decide', ['named', 'runtime']), ['cli'], cases,
+                                      self.contract), {('cli', 'typed-decide'): 'pass'})
+        for case_id, checks, cause in [
+            ('named-uppercase', ['named', 'runtime'], 'sdk-only CLI case'),
+            ('typed-decide', ['named', 'compile', 'runtime'], 'missing named/compiler/runtime'),
+            ('typed-decide', ['runtime'], 'missing named/compiler/runtime'),
+        ]:
+            with self.subTest(case_id=case_id, checks=checks), self.assertRaisesRegex(ValueError, cause):
+                parity.cells(cell(case_id, checks), ['cli'], cases, self.contract)
+
+    def test_matrix_keeps_rulings_separate_and_analogue_missing_when_unexecuted(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            cli_contract = self.contract | {'consumers': [self.cli], 'pending_consumers': []}
+            def command(args, **kwargs):
+                return subprocess.CompletedProcess(args, 0)
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                self.assertEqual(parity.run('12345'), 1)
+            row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
+            self.assertEqual(row['case_rulings'], self.cli['case_rulings'])
+            self.assertNotIn('named-uppercase', row['cells'])
+            self.assertEqual(row['cells']['declaration-null'], 'missing')
+            table = (Path(scratch) / 'target/parity/matrix.md').read_text()
+            self.assertIn('named-uppercase: sdk-only, outside CLI', table)
+            self.assertIn('declaration-null: question-file, boundary coverage missing', table)
+
+
 class InstalledInputs(unittest.TestCase):
     def setUp(self):
         self.consumers = {row['id']: row for row in parity.all_consumers(parity.inventory())}

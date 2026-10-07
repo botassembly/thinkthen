@@ -136,8 +136,24 @@ one JSON line on stdout, for example:
 parity: {"consumer":"rust","case":"annotate-packed-groups","checks":["named","runtime"],"status":"pass"}
 ```
 
-The `checks` list must equal the declaration's list (default `named,runtime`;
-typed cells also require `compile`). Emit `fail` for a completed failed case;
+The `checks` list must equal the resolved declaration's list (default
+`named,runtime`; SDK and MCP typed cells also require `compile`). The CLI
+consumer declares `required_checks: ["named", "runtime"]` because its actual
+public boundary is a process. Its closed `case_rulings` map names ten SDK-only
+cases, twenty-three question-file analogues and the held-call signal-drain
+analogue. Each ruling has a fixed `boundary` and a nonempty `reason`.
+Executable analogues also declare concrete `expect` assertions. Question-file
+analogues retain the original invalid bytes, including duplicate keys and
+numeric spelling, and require Local, exit 5, no requests, no result and secrecy.
+The signal-drain analogue executes the real process cancellation boundary.
+SDK cases and expectations retain their full compile/runtime requirements.
+
+SDK-only CLI rulings never become cells. Emitting a cell for one fails the
+runner. The matrix stores `case_rulings` separately from executed `cells`;
+the table shows each SDK-only reason and each analogue's actual boundary
+coverage. A ruling cannot turn a missing or failed execution into a pass.
+Unrelated exclusions and CLI applicability fields at another consumer fail
+inventory validation. Emit `fail` for a completed failed case;
 never emit a pass from a generic JSON call, schema-only validation, selector,
 ruling or missing toolchain. A shared folder must emit separate consumer IDs
 at each actual door. Unknown/duplicate IDs and skipped statuses fail. Process

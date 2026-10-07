@@ -17,9 +17,76 @@ def all_consumers(parity):
     return parity["consumers"] + parity.get("pending_consumers", [])
 
 
+SDK_ONLY_CLI_CASES = {
+    '23-cancelled-fault', '24-deadline-fault', 'boundary-cancelled', 'boundary-deadline',
+    'named-traversal', 'named-uppercase', 'named-overlong', 'lookup-explicit-name',
+    'named-malformed-no-fallback', 'proxy-reservation-refusal',
+}
+QUESTION_FILE_CLI_CASES = {
+    'declaration-shorthand', 'declaration-null', 'declaration-empty', 'declaration-nested',
+    'declaration-unknown-keyword', 'declaration-required-unknown', 'declaration-duplicate-required',
+    'wording-version-zero', 'wording-version-overflow', 'wording-version-string',
+    'wording-version-boolean', 'wording-version-null', 'wording-version-fraction',
+    'wording-version-integral-float', 'wording-version-exponent', 'author-name-blank',
+    'author-name-uppercase', 'author-name-leading-digit', 'author-name-control',
+    'author-name-nonascii', 'duplicate-metadata', 'duplicate-schema', 'single-format-version',
+}
+CLI_BOUNDARIES = (dict.fromkeys(SDK_ONLY_CLI_CASES, 'sdk-only')
+                  | dict.fromkeys(QUESTION_FILE_CLI_CASES, 'question-file')
+                  | {'cancellation-held-call': 'signal-drain'})
+
+
 def required_cases(parity, consumer):
-    return {case["id"]: case for case in parity["required_cases"]
-            if consumer in case.get("consumers", [consumer])}
+    """Resolve the assertions at a public door without changing shared SDK cases."""
+    contract = next(row for row in all_consumers(parity) if row['id'] == consumer)
+    rulings = contract.get('case_rulings', {})
+    resolved = {}
+    for case in parity['required_cases']:
+        if consumer not in case.get('consumers', [consumer]):
+            continue
+        ruling = rulings.get(case['id'], {})
+        if ruling.get('boundary') == 'sdk-only':
+            continue
+        case = dict(case)
+        if 'required_checks' in contract:
+            case['checks'] = contract['required_checks']
+        if ruling:
+            case['expect'] = ruling['expect']
+            case['cli_boundary'] = ruling['boundary']
+            case['cli_reason'] = ruling['reason']
+        resolved[case['id']] = case
+    return resolved
+
+
+def validate_consumer_contracts(parity):
+    cases = {case['id']: case for case in parity['required_cases']}
+    for consumer in all_consumers(parity):
+        fields = {'required_checks', 'case_rulings'} & set(consumer)
+        if consumer['id'] != 'cli':
+            if fields:
+                raise ValueError(f"{consumer['id']}: CLI applicability fields at another public door")
+            continue
+        # The original source inventory remains valid until the CLI owner adopts it.
+        if not fields:
+            continue
+        if consumer.get('required_checks') != ['named', 'runtime']:
+            raise ValueError('cli: required checks must be named and runtime')
+        rulings = consumer.get('case_rulings')
+        if not isinstance(rulings, dict) or set(rulings) != set(CLI_BOUNDARIES):
+            raise ValueError('cli: case rulings differ from the closed applicability contract')
+        for case_id, boundary in CLI_BOUNDARIES.items():
+            ruling = rulings[case_id]
+            expected_fields = {'boundary', 'reason'} | ({'expect'} if boundary != 'sdk-only' else set())
+            if (case_id not in cases or not isinstance(ruling, dict)
+                    or set(ruling) != expected_fields or ruling.get('boundary') != boundary
+                    or not isinstance(ruling.get('reason'), str) or not ruling['reason'].strip()):
+                raise ValueError(f'{case_id}: invalid closed CLI boundary ruling')
+            if boundary != 'sdk-only' and (not isinstance(ruling['expect'], dict) or not ruling['expect']):
+                raise ValueError(f'{case_id}: CLI analogue needs concrete assertions')
+            if boundary == 'question-file' and ruling['expect'] != {
+                    'error': 'local', 'exit': 5, 'requests_sent': 0, 'no_result': True, 'secrecy': True}:
+                raise ValueError(f'{case_id}: CLI question-file boundary must refuse locally without sends')
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCUMENT = ROOT / 'conformance/cases.json'
@@ -33,6 +100,7 @@ def inventory():
         raise ValueError('unknown parity case schema')
     cases = parity['required_cases']
     consumers = parity['consumers']
+    validate_consumer_contracts(parity)
     for label, rows in [('case', cases), ('consumer', all_consumers(parity))]:
         ids = [row['id'] for row in rows]
         if len(ids) != len(set(ids)) or not ids:
@@ -126,9 +194,10 @@ def inventory():
     return parity
 
 
-def cells(output, consumers, cases):
+def cells(output, consumers, cases, parity=None):
     """Read asserted named cells, never infer typed support from generic tests."""
     found = {}
+    resolved_cases = {consumer: required_cases(parity, consumer) for consumer in consumers} if parity is not None else {}
     for line in output.splitlines():
         # Existing consumers already report these full-case counters.
         if re.search(r'\b(?:not_run|unselected)=[1-9][0-9]*\b', line):
@@ -147,7 +216,10 @@ def cells(output, consumers, cases):
             raise ValueError(f'parity cell at wrong public variant {key}')
         if key in found:
             raise ValueError(f'duplicate parity cell {key}')
-        required = cases[row['case']].get('checks', ['named', 'runtime'])
+        resolved = resolved_cases.get(row['consumer'], cases)
+        if row['case'] not in resolved:
+            raise ValueError(f'sdk-only CLI case emitted as a parity cell {key}')
+        required = resolved[row['case']].get('checks', ['named', 'runtime'])
         if row['status'] not in ('pass', 'fail'):
             raise ValueError(f'{key}: skipped or unknown status')
         if not isinstance(row['checks'], list) or not all(isinstance(check, str) for check in row['checks']):
@@ -276,6 +348,12 @@ def support_table(parity, matrix):
         images += '; text-only: tag/filter/rank/annotate/find/recognize/relate'
         if rulings:
             remaining += '; written ruling: ' + '; '.join(rulings)
+        for case_id, ruling in row.get('case_rulings', {}).items():
+            boundary = ruling['boundary']
+            coverage = ('outside CLI' if boundary == 'sdk-only'
+                        else 'boundary coverage ' + row['cells'].get(case_id, 'missing'))
+            reason = ruling['reason'].replace('|', '/').replace('\n', ' ')
+            remaining += f'; {case_id}: {boundary}, {coverage}, {reason}'
         lines.append(f"| {row['consumer']} | {count} | {files} | {images} | {remaining} |")
     return '\n'.join(lines) + '\n'
 
@@ -346,7 +424,7 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
                 except OSError:
                     error = 'required runner or toolchain unavailable'
             try:
-                seen = cells(log.read_text(), ids, cases)
+                seen = cells(log.read_text(), ids, cases, parity)
             except (ValueError, KeyError, TypeError) as failure:
                 error = str(failure)
             print(f'parity consumer: {label} exit={code}; asserted cells={len(seen)}', flush=True)
@@ -354,6 +432,7 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             dependency = parity.get('unavailable_dependencies', {}).get(consumer)
             row = summarize(consumer, required_cases(parity, consumer), code, seen, error or dependency,
                             str(log.relative_to(ROOT)) if execute else None)
+            row['case_rulings'] = consumers[consumer].get('case_rulings', {})
             matrix.append(row)
     (output_dir / 'matrix.json').write_text(json.dumps(matrix, indent=2) + '\n')
     table = support_table(parity, matrix)
