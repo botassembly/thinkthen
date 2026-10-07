@@ -12,6 +12,16 @@ def known(engine: frames.Engine, question: c.QuestionSource, series: object) -> 
     score: float = engine.score(question, series).results[0].value
     accepted: bool = engine.filter(question, series).results[0].value
     place: int = engine.rank(question, series).results[0].value
+    rank_members: tuple[c.RankMember, ...] | c.Absent = engine.rank(question, series).results[0].members
+    if not isinstance(rank_members, c.Absent):
+        for member in rank_members:
+            result: c.RankMemberResult = member.result
+            member_id: c.AnswerId = result.answer_id
+            member_position: int = result.value
+            member_probability: float = result.answer.probability
+            member_question: c.DecideQuestion = result.question
+            usage: c.Usage | c.Absent = result.meta.usage
+            physical: c.PhysicalSource | c.Absent = result.source
     selected: int | None | c.Absent = engine.find(question, series).results[0].index
     candidates = engine.find(question, series).results[0].candidates
     members = engine.annotate(question, series).results[0].answers

@@ -98,3 +98,50 @@ def test_complete_filter_retains_multiindex_names_and_batch_snapshots_presentati
     ''',child_env(backend,tmp_path))
     assert output.strip() == '2'
     assert backend.count() == 4
+
+
+def test_frame_surface_reaches_eager_and_lazy_native_calls_without_changing_shared_engine(monkeypatch, tmp_path):
+    import json
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import pandas as pd
+    import polars as pl
+    from thinkthen import complete as c, frames
+    for name in ('HOME','XDG_CONFIG_HOME','XDG_CACHE_HOME','XDG_STATE_HOME'):
+        monkeypatch.setenv(name,str(tmp_path/name))
+    monkeypatch.setenv('THINKTHEN_API_KEY','sk-frame-loopback')
+    requests=[]
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            requests.append((self.headers['User-Agent'],body['model']))
+            reply=b'{"model":"frame-reported","answers":{"q1":{"type":"noul","noul":0.9}}}'
+            self.send_response(200);self.send_header('Content-Length',str(len(reply)))
+            self.send_header('Connection','close');self.end_headers();self.wfile.write(reply)
+        def log_message(self,*args): pass
+    server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+    worker=threading.Thread(target=server.serve_forever);worker.start()
+    try:
+        engine=c.Engine(base_url=f'http://127.0.0.1:{server.server_port}/v1',model='frame-model',cache=False,max_retries=0)
+        question=c.QuestionSource(role='atomic',body={'decide':'Q'})
+        for library in ('pandas','polars'):
+            source=pd.Series(['a'],name='body') if library=='pandas' else pl.DataFrame({'body':['a']}).lazy()
+            controls={} if library=='pandas' else {'on':'body'}
+            facade=frames.Engine(engine=engine,library=library)
+            done=facade.decide(question,source,**controls)
+            assert done.source is source and done.native.results is done.results
+            assert done.results[0].meta.model=='frame-model'
+            assert done.results[0].meta.answered_by=='frame-reported'
+            batch=facade.decide_batch(question,source,**controls)
+            assert len(requests)==(1 if library=='pandas' else 3)
+            with batch:
+                rows=list(batch)
+                assert rows[0].result.meta.model=='frame-model'
+                assert rows[0].result.meta.answered_by=='frame-reported'
+                assert batch.source is source and batch.position(rows[0])==0
+            assert batch.facts.records==1
+        ordinary=engine.decide(question,c.Records((c.Item(value='a',text=True),)))
+        assert ordinary.facts.records==1
+        assert requests==[(f'thinkthen/0.2.0 ({surface})','frame-model') for surface in ('pandas','pandas','python-polars','python-polars','python')]
+    finally:
+        server.shutdown();server.server_close();worker.join()

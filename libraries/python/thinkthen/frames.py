@@ -87,6 +87,16 @@ def _presented(native, source, present, verb, library, presentation, original):
     return FrameCompleted(native, output, original, positions, labels, name)
 
 
+class _SurfaceEngine:
+    def __init__(self, native, library):
+        self._native = native
+        self._surface = 'pandas' if library == 'pandas' else 'python-polars'
+    def _complete(self, request, deadline, token):
+        return self._native._complete(request, deadline, token, self._surface)
+    def _complete_batch(self, request, deadline, token):
+        return self._native._complete_batch(request, deadline, token, self._surface)
+
+
 class Engine:
     """Share an ordinary or complete Engine; no dataframe cache or scheduler exists."""
     def __init__(self, *, engine=None, library='pandas', **settings):
@@ -95,6 +105,8 @@ class Engine:
         self._engine = c.Engine(**settings) if engine is None else (engine if isinstance(engine, c.Engine) else engine.complete)
         self._library = library
     def __repr__(self): return '<CompleteFrameEngine>'
+    def _for(self, library):
+        return c.Engine(_engine=_SurfaceEngine(self._engine._engine, library))
 
     def _call(self, verb, question, source, *, on=None, **controls):
         if isinstance(source, (c.Files, carriers.Files)):
@@ -109,7 +121,7 @@ class Engine:
             library = 'pandas' if type(original).__module__.partition('.')[0] == 'pandas' else 'polars'
             presentation = _presentation(original, library)
             inputs, present = _records(original)
-        done = getattr(self._engine, verb)(question, inputs, **controls)
+        done = getattr(self._for(library), verb)(question, inputs, **controls)
         if present is None: present = tuple(range(len(done.inputs)))
         return _presented(done, original, present, verb, library, presentation, source)
 
@@ -133,7 +145,8 @@ class Engine:
             inputs, present = _records(original)
         library = 'pandas' if original is not None and type(original).__module__.partition('.')[0] == 'pandas' else 'polars'
         presentation = (None, None) if original is None else _presentation(original, library)
-        native = getattr(self._engine, verb + '_batch')(question, inputs, **controls)
+        if original is None: library = self._library
+        native = getattr(self._for(library), verb + '_batch')(question, inputs, **controls)
         return FrameBatch(native, source, present, presentation)
 
     def decide_batch(self, question, source, **controls): return self._batch('decide', question, source, **controls)

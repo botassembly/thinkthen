@@ -36,6 +36,16 @@ class FrameConsumer:
                 if LIBRARY == 'pandas': assert list(done.index) == [7] * len(source)
                 assert done.positions == done.native.ordinals
             assert len(done.frame) == (len(done.index) if verb in ('decide','choose','tag','score','annotate','recognize') else len(done.results))
+            if verb == 'rank':
+                shown = list(done.frame) if LIBRARY == 'pandas' else done.frame.to_list()
+                for visible, result in zip(shown, done.native.results, strict=True):
+                    assert visible is result
+                    if result.members is not c.ABSENT:
+                        assert visible.members is result.members
+                        for member in visible.members:
+                            assert isinstance(member, c.RankMember)
+                            assert isinstance(member.result, c.RankMemberResult)
+                            assert isinstance(member.result.meta, c.Meta)
             return done.native
         return call
 

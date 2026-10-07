@@ -324,7 +324,14 @@ fn run(f: Fixture) -> Result<String, Error> {
                 .0,
             |r| {
                 let _: usize = r.value();
-                let _ = r.members();
+                for member in r.members() {
+                    let _: &str = member.name();
+                    let result: &thinkthen::CompleteRank = member.result();
+                    let _ = result.answer_id();
+                    let _ = result.identity();
+                    let _: usize = result.value();
+                    let _ = result.probabilities();
+                }
             },
         ),
         ("annotate", Asked::Set(q)) => records(

@@ -168,6 +168,9 @@ THINKTHEN_API_KEY=sk-fake-loopback-python-0105 "$python" tests/examples.py "$por
 
 echo "== typed native Python consumer"
 "$python" tests/native_fixture.py
+for frame_library in pandas polars; do
+    THINKTHEN_FRAME_LIBRARY=$frame_library "$python" tests/native_fixture.py
+done
 
 echo "== the release wheel and its contents"
 sh build-wheel.sh
