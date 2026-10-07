@@ -42,7 +42,6 @@ fn config(root: &Path) -> PathBuf {
 }
 fn child_environment(command: &mut Command, root: &Path) {
     command
-        .clear_environment()
         .home(root)
         .env("XDG_CONFIG_HOME", root)
         .env("APPDATA", root)
@@ -83,6 +82,7 @@ fn named_native_loaders_preserve_path_collisions_and_confine_symlinks_without_co
     .unwrap();
     fs::write(root.path().join("@literal.json"), authored).unwrap();
     let mut command = Command::new(std::env::current_exe().unwrap());
+    command.clear_environment();
     child_environment(&mut command, root.path());
     let output = command.env(CHILD, root.path()).args(["--exact", "named_native_loaders_preserve_path_collisions_and_confine_symlinks_without_config_json", "--nocapture"]).output().unwrap();
     assert!(
@@ -107,6 +107,7 @@ fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_er
     let input = root.path().join("input.jsonl");
     let run = || {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        command.clear_environment();
         child_environment(&mut command, root.path());
         command
             .env("THINKTHEN_API_KEY", "named-fixture-private")
@@ -273,6 +274,7 @@ fn cli_declared_batches_refuse_before_any_lookup_and_keep_only_prior_wire_batche
     let input = root.path().join("input.jsonl");
     let run = |function: &str| {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        command.clear_environment();
         child_environment(&mut command, root.path());
         command
             .env("THINKTHEN_API_KEY", "named-fixture-private")
