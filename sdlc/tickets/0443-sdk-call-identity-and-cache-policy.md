@@ -79,6 +79,18 @@ Native complete execution WIP: additive decide/choose/tag/score scalar and input
 ### Added public declarations
 
 ```text
+fn Question::to_json(&self) -> Result<String, Error>
+fn LoadedQuestion::to_json(&self) -> Result<String, Error>
+fn QuestionInput::annotation_text(&str, SourceLocation) -> Result<QuestionInput, Error>
+fn ResolvedQuestion::model(&self) -> Option<&str>
+fn ResolvedQuestion::profile(&self) -> Option<&str>
+fn ResolvedQuestion::batch(&self) -> Option<BatchSetting>
+fn ResolvedQuestion::on(&self) -> impl Iterator<Item = &str>
+fn FindReading::model(&self) -> Option<&str>
+fn FindReading::on(&self) -> impl Iterator<Item = &str>
+fn RecognitionReading::model(&self) -> Option<&str>
+fn RecognitionReading::on(&self) -> impl Iterator<Item = &str>
+fn RelationReading::model(&self) -> Option<&str>
 struct SourceRecognition
 const fn SourceRecognition::location(&self) -> &SourceLocation
 fn SourceRecognition::entities(&self) -> &[SourceRecognizedEntity]
@@ -378,3 +390,5 @@ Find's ordinary collector now checks cancellation/proxy admission before each pu
 Three prior-failing public cases observed four pulls after first-unit cancellation, three pulls when pre-cancelled, and all 1,000 composed units before the 256th-unit range refusal. They now pin one/zero/256 (255 with none) pulls and zero requests, with no invented started facts. Existing pure find behavior and affected CLI checks remain required. Source grows 126 nonblank Rust lines (149193 to 149319) for shared admission and the three regressions; checked both find preparation routes and reused the primitive bound rather than duplicating admission or adding a reader/scheduler.
 
 Native foundation handoff at the final working branch: all ten concrete complete execution routes, typed resolved readings/metadata/raw selection, owned observations/failure identities, shared record/source composition and strict complete-call serialization are implemented. CLI details use result/2 and numeric rank positions; released convenience/scalar calls, old C ABI and explicit generic compatibility envelopes remain available. The closed MCP surface uses the existing compiled-version/call/send headers and canonical schema. Host owners can now integrate their actual named execution/views rather than private fixture constructors. C652/MCP2243/family/frame/SQL adoption, fresh whole High review and full landing gates remain open; no whole 0.2 parity or main claim is made.
+
+Whole integration review correction: CLI rank sets now attach every member item declaration to their shared selected-record reading. That reading validates their conjunction before plans reach lookup, and any member declaration enables existing bounded wire-batch staging. The counted CLI regression uses an undeclared first member and object-declared second member over text, both without a cache and with an empty replay fixture. It pins local Usage before replay miss, zero sends, unchanged fixture bytes and no SQLite creation. Existing native set-rank refusal remains unchanged.

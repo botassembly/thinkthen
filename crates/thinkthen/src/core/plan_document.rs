@@ -3,7 +3,7 @@
 use serde::{Serialize, Serializer};
 use serde_json::value::RawValue;
 
-use crate::core::adapters::built_in::{self, EncodeError};
+use crate::core::adapters::built_in::EncodeError;
 use crate::core::backend::{Backend, KEY_VAR};
 use crate::core::plan::Plan;
 use crate::core::question_file::Sources;
@@ -65,7 +65,11 @@ impl<'a> PlanDocument<'a> {
     /// Returns [`EncodeError`] when the request cannot be written as JSON.
     pub(crate) fn of(backend: &'a Backend, plan: &Plan) -> Result<Self, EncodeError> {
         Ok(Self {
-            request: built_in::encode_raw(plan)?,
+            request: RawValue::from_string(
+                String::from_utf8(backend.api_type().encode(plan)?)
+                    .map_err(|error| EncodeError::of(&error))?,
+            )
+            .map_err(|error| EncodeError::of(&error))?,
             ..Self::of_nothing(backend)
         })
     }

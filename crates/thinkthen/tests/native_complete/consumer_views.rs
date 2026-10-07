@@ -150,3 +150,159 @@ fn materialized_convenience_rank_find_recognize_and_entities_validate_before_any
     }
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn loaded_atomic_and_rank_preparation_selects_original_fields_and_retains_authored_controls() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#)
+    })
+    .unwrap();
+    let engine = engine(&listener);
+    let authored = r#"{"name":"selected","wording_version":2,"decide":"Refund?","model":"fixed","batch":1,"on":["/payload"],"item_schema":{"type":"string"}}"#;
+    let question = Question::from_json(authored).unwrap();
+    let restored = Question::from_json(&question.to_json().unwrap()).unwrap();
+    assert_eq!(restored, question);
+    for text in [
+        r#"{"choose":"Route?","options":{"first":{"z":null,"a":"first description"},"second":null},"threshold":0.8}"#,
+        r#"{"score":"Grade?","levels":{"low":null,"high":"Excellent."}}"#,
+    ] {
+        let loaded = Question::from_json(text).unwrap();
+        assert_eq!(
+            Question::from_json(&loaded.to_json().unwrap()).unwrap(),
+            loaded
+        );
+    }
+
+    let location = thinkthen::SourceLocation::new("notes.jsonl".into(), Some(7), Some(7)).unwrap();
+    let input = thinkthen::QuestionInput::annotation_text(
+        r#"{"payload":"Yes.","private":"Never send."}"#,
+        location,
+    )
+    .unwrap();
+    let records = || {
+        [thinkthen::RecordInput {
+            original: input.clone(),
+            context: None,
+            options: None,
+        }]
+    };
+    let call = engine
+        .decide_records_complete_with(&restored, records(), CallOptions::new())
+        .unwrap();
+    let row = &call.value()[0];
+    assert_eq!(row.result().value(), Answer::Yes);
+    assert_eq!(row.result().question().model(), Some("fixed"));
+    assert_eq!(
+        row.result().question().batch(),
+        Some(thinkthen::BatchSetting::Records(
+            std::num::NonZeroUsize::MIN
+        ))
+    );
+    assert_eq!(
+        row.result().question().on().collect::<Vec<_>>(),
+        ["/payload"]
+    );
+    assert_eq!(row.result().question().name().unwrap().as_str(), "selected");
+    assert_eq!(row.original(), &input);
+    let body = &listener.requests()[0].body;
+    assert_eq!(
+        serde_json::from_slice::<Value>(body).unwrap(),
+        json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"Yes.\". Refund?"}}})
+    );
+    let rank = Question::rank_from_json(authored).unwrap();
+    let ranked = engine
+        .rank_records_complete_with(&rank, records(), CallOptions::new())
+        .unwrap();
+    assert_eq!(ranked.value()[0].ordinal(), 0);
+    assert_eq!(
+        ranked.value()[0]
+            .result()
+            .question()
+            .on()
+            .collect::<Vec<_>>(),
+        ["/payload"]
+    );
+    assert_eq!(listener.count(), 2);
+    let missing = thinkthen::QuestionInput::annotation_text(
+        r#"{"other":"No."}"#,
+        thinkthen::SourceLocation::new("bad.jsonl".into(), Some(1), Some(1)).unwrap(),
+    )
+    .unwrap();
+    let error = engine
+        .decide_records_complete_with(
+            &question,
+            [thinkthen::RecordInput {
+                original: missing,
+                context: None,
+                options: None,
+            }],
+            CallOptions::new(),
+        )
+        .unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert!(error.facts().is_none());
+    assert_eq!(listener.count(), 2);
+}
+
+#[test]
+fn located_annotation_documents_use_the_native_json_or_literal_reading_without_losing_source() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#)
+    })
+    .unwrap();
+    let engine = engine(&listener);
+    let set = thinkthen::QuestionSet::from_json(
+        r#"{"version":1,"questions":{"selected":{"decide":"Refund?","on":["/payload"]}}}"#,
+    )
+    .unwrap();
+    let location = thinkthen::SourceLocation::new("input.txt".into(), Some(3), Some(3)).unwrap();
+    let structured =
+        thinkthen::QuestionInput::annotation_text(r#"{"payload":"Yes."}"#, location.clone())
+            .unwrap();
+    let call = engine
+        .annotate_records_complete_with(
+            &set,
+            [RecordInput {
+                original: structured.clone(),
+                context: None,
+                options: None,
+            }],
+            CallOptions::new(),
+        )
+        .unwrap();
+    assert_eq!(call.value()[0].original(), &structured);
+    let thinkthen::QuestionInput::Record(record) = &structured else {
+        panic!("record")
+    };
+    assert_eq!(record.location(), Some(&location));
+    assert!(record.original().content().is_some());
+    let literal = thinkthen::QuestionInput::annotation_text("{plain text", location).unwrap();
+    let root = thinkthen::QuestionSet::builder()
+        .question("selected", Question::decide("Refund?").unwrap().cut())
+        .unwrap()
+        .build()
+        .unwrap();
+    let call = engine
+        .annotate_records_complete_with(
+            &root,
+            [RecordInput {
+                original: literal.clone(),
+                context: None,
+                options: None,
+            }],
+            CallOptions::new(),
+        )
+        .unwrap();
+    assert_eq!(call.value()[0].original(), &literal);
+    let thinkthen::QuestionInput::Record(record) = &literal else {
+        panic!("record")
+    };
+    assert_eq!(record.original().literal(), Some("{plain text"));
+    assert_eq!(listener.count(), 2);
+    assert!(
+        listener
+            .requests()
+            .iter()
+            .all(|request| !String::from_utf8_lossy(&request.body).contains("input.txt"))
+    );
+}

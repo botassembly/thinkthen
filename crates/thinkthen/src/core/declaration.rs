@@ -2,7 +2,9 @@
 use super::Json;
 use serde::Serialize;
 use serde::ser::Serializer;
+mod reading;
 mod wire;
+pub(crate) use reading::AuthoredReading;
 use std::fmt;
 use thiserror::Error;
 
@@ -209,6 +211,8 @@ pub(crate) struct DeclarationError;
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub(crate) struct QuestionMetadata {
+    #[serde(skip)]
+    pub(crate) reading: AuthoredReading,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) name: Option<QuestionName>,
     #[serde(skip_serializing_if = "Option::is_none")]

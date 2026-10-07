@@ -156,9 +156,11 @@ impl<'a> Sender<'a> {
         let budgeted = cancel
             .with_cache_refresh(
                 self.engine.storage().refresh_cache
-                    || crate::core::adapters::built_in::is_mutable_alias(
-                        self.engine.backend().model(),
-                    ),
+                    || self
+                        .engine
+                        .backend()
+                        .api_type()
+                        .is_mutable_alias(self.engine.backend().model()),
             )
             .with_process_budget(self.transport.send_budget.clone())
             .with_estimated_tokens(self.image_estimate(&asks));
@@ -242,7 +244,11 @@ impl<'a> Sender<'a> {
         cancel: &Cancel,
     ) -> Result<Split, Error> {
         let decoders: Vec<_> = asks.iter().map(|(ask, _)| ask.decoder.clone()).collect();
-        match pack::split(&decoders, body) {
+        if let Some(model) = self.engine.backend().api_type().reported_model(body) {
+            self.transport.usage.answered_by(&model);
+            cancel.answered_by(model.as_str());
+        }
+        match pack::split_for(self.engine.backend().api_type(), &decoders, body) {
             Ok(split) => {
                 self.transport.usage.live_reply(split.usage);
                 cancel.live_reply(split.usage);

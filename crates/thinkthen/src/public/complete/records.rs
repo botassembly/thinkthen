@@ -324,8 +324,7 @@ pub(super) fn prepare_record<T: InputEvidence>(
         .transpose()?;
     let input = record.original.question_input();
     question
-        .metadata
-        .validate_item(&input)
+        .admit_input(&input)
         .map_err(|error| error.at_record(at))?;
     crate::public::images::guard(function, &input)?;
     if let crate::public::QuestionInput::Text(text) = &input {
