@@ -195,7 +195,9 @@ def installed_artifacts(directory, consumers):
         raise ValueError('parity artifacts must be a directory')
     version = re.search(r'^version = "([^"]+)"$',
                         (ROOT / 'crates/thinkthen/Cargo.toml').read_text(), re.M).group(1)
-    target = subprocess.check_output(['rustc', '-vV'], text=True).split('host: ', 1)[1].splitlines()[0]
+    tool_env = {name: value for name in ('PATH', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'LANG', 'LC_ALL')
+                if (value := os.environ.get(name)) is not None}
+    target = subprocess.check_output(['rustc', '-vV'], env=tool_env, text=True).split('host: ', 1)[1].splitlines()[0]
 
     def select(patterns):
         matches = sorted({path for pattern in patterns for path in directory.glob(pattern)})
