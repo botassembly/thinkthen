@@ -5,7 +5,16 @@ use std::collections::BTreeMap;
 use thinkthen::{Error, For, Settings};
 pub(crate) fn prepare(verb: &str, source: &str, settings: &Settings) -> Result<Prepared, Error> {
     if source.starts_with('@') {
-        return Prepared::parse(verb, source)?.configured(verb, settings);
+        let parsed = Prepared::parse(verb, source)?;
+        let encoded = match &parsed {
+            Prepared::Atomic(q) => Some(q.to_json()?),
+            Prepared::Filter(q) => Some(q.to_json()?),
+            _ => None,
+        };
+        return match encoded {
+            Some(source) => prepare(verb, &source, settings),
+            None => parsed.configured(verb, settings),
+        };
     }
     let role = match verb {
         "decide" | "filter" => Some(For::Decide),

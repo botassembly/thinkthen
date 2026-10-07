@@ -16,9 +16,21 @@ try:
         db.execute('SET thinkthen_'+key+'='+('NULL' if value is None else literal(value)))
     result=db.execute('SELECT thinkthen_'+payload['verb']+'_complete(?,?,?)',[payload['question'],json.dumps(payload['inputs'],ensure_ascii=False,separators=(',',':')),json.dumps(payload.get('controls',{}))]).fetchone()[0]
     db.execute('CREATE TEMP TABLE result(value JSON)')
-    db.execute('INSERT INTO result VALUES (?)',[result])
+    db.execute("INSERT INTO result SELECT json_extract(?,'$.native')",[result])
     typed=db.execute("SELECT json_extract_string(value,'$.facts.call_id'),CAST(json_extract(value,'$.facts.requests_sent') AS BIGINT),json_extract_string(value,'$.error.kind') FROM result").fetchone()
-    decoded=json.loads(result)
+    decoded=json.loads(result)['native']
+    if db.execute("SELECT json_type(value,'$.facts') FROM result").fetchone()[0] is not None:
+        for key in ('requests_sent','records','cache_answers'):
+            kind,count=db.execute("SELECT json_type(value,?),CAST(json_extract(value,?) AS UBIGINT) FROM result",['$.facts.'+key]*2).fetchone()
+            assert kind in ('UBIGINT','BIGINT') and count>=0
+        kind,identity=db.execute("SELECT json_type(value,'$.facts.call_id'),json_extract_string(value,'$.facts.call_id') FROM result").fetchone()
+        assert kind=='VARCHAR' and len(identity)==64
+        for key,types in (('seconds',('DOUBLE','UBIGINT','BIGINT')),('input_tokens',('UBIGINT','BIGINT')),('output_tokens',('UBIGINT','BIGINT')),('estimated_cost_usd',('VARCHAR',)),('attempts',('ARRAY',))):
+            kind=db.execute("SELECT json_type(value,?) FROM result",['$.facts.'+key]).fetchone()[0]
+            assert kind is None or kind in types
+    if 'error' in decoded:
+        kind,retry,stop=db.execute("SELECT json_type(value,'$.error.kind'),json_type(value,'$.error.retryable'),json_type(value,'$.error.stopped.cause') FROM result").fetchone()
+        assert kind=='VARCHAR' and retry=='BOOLEAN' and stop=='VARCHAR'
     if 'error' not in decoded:
         assert isinstance(typed[0],str) and len(typed[0])==64 and isinstance(typed[1],int)
         for row in db.execute("SELECT json_extract_string(j.value,'$.answer_id'),CAST(json_extract(j.value,'$.answer.probability') AS DOUBLE),json_extract_string(j.value,'$.schema') FROM result,json_each(CASE json_type(result.value,'$.value') WHEN 'ARRAY' THEN json_extract(result.value,'$.value') ELSE json_array(json_extract(result.value,'$.value')) END) j").fetchall():

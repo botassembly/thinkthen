@@ -85,6 +85,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 		step "$test, installed"
 		sh "$LIMIT" 300 "$python" "$test"
 	done
+	step "complete native calls, installed"
+	sh "$LIMIT" 1800 "$python" tests/complete/parity.py sqlite
+	sh "$LIMIT" 300 "$python" tests/complete/facts.py sqlite
 	step "plan, keyed rows, safe lookup, file freshness, caps and the JSON-only counter, installed"
 	sh "$LIMIT" 300 "$python" -c '
 import sys
@@ -168,5 +171,8 @@ for test in tests/test_*.py tests/examples.py tests/conformance.py; do
 	step "$test"
 	sh "$LIMIT" 300 "$python" "$test" || failed="$failed $test"
 done
+step "complete native calls"
+THINKTHEN_SQLITE_EXTENSION="$library" sh "$LIMIT" 1800 "$python" tests/complete/parity.py sqlite || failed="$failed complete"
+THINKTHEN_SQLITE_EXTENSION="$library" sh "$LIMIT" 300 "$python" tests/complete/facts.py sqlite || failed="$failed facts"
 [ -z "$failed" ] || { echo "FAIL     databases/sqlite:$failed" >&2; exit 1; }
 echo "pass     databases/sqlite"

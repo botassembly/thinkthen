@@ -38,7 +38,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete(
         })();
         let (prepared, inputs) = match parsed {
             Ok(value) => value,
-            Err(error) => return Ok(complete_native::failure(&error).to_string().into_bytes()),
+            Err(error) => return Ok(complete_native::admission(&error).to_string().into_bytes()),
         };
         let held = asked(&session)?;
         let engine = engines::engine_for(&held, |path| probe(&session, path))?;
@@ -73,5 +73,21 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete(
             .to_string()
             .into_bytes())
         })
+    })
+}
+
+/// Wrap an already typed native admission error without adding native fields.
+/// # Safety
+/// The counted native JSON range is readable until return.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_failure_envelope(
+    error: BridgeText,
+) -> Reply {
+    reply_boundary(|| {
+        let native = serde_json::from_str(text(error.bytes, error.len)?)
+            .map_err(|_| "thinkthen defect: invalid native admission error".to_owned())?;
+        Ok(complete_native::carrier(native, serde_json::json!([]))
+            .to_string()
+            .into_bytes())
     })
 }

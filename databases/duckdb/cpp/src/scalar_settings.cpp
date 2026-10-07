@@ -59,6 +59,7 @@ SessionSettings Settings(ClientContext &context) {
     settings.input_price = TextSetting(context,"thinkthen_usd_per_million_input");
     settings.output_price = TextSetting(context,"thinkthen_usd_per_million_output");
     const auto refresh = NumericSetting(context,"thinkthen_refresh_cache");
+    if (refresh != std::numeric_limits<int64_t>::min() && refresh != 0 && refresh != 1) { throw OrdinaryError("thinkthen usage: thinkthen_refresh_cache is 0 or 1"); }
     settings.refresh_cache = refresh==1 ? 1 : 0;
     settings.cache_allowed = FolderAllowed(context, settings.cache) ? 1 : 0;
 	settings.record_allowed = FolderAllowed(context, settings.record) ? 1 : 0;

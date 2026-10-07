@@ -17,10 +17,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or_else(|| serde_json::json!({})),
     )?;
     let jsonl = files.get("format").and_then(serde_json::Value::as_str) == Some("jsonl");
-    let records=thinkthen::read_inputs(paths,options)?.map(|item|item.map(|item|match item {
-        SourceItem::Text(s)=>serde_json::json!({if jsonl {"json_text"}else{"text"}:s.record,"source":{"file":s.file,"first_line":s.first_line,"last_line":s.last_line}}),
-        SourceItem::Image(s)=>serde_json::json!({"images":[{"media":match s.record.media(){thinkthen::ImageMedia::Png=>"image/png",thinkthen::ImageMedia::Jpeg=>"image/jpeg"},"bytes":s.record.bytes()}],"source":{"file":s.file}}),
-    })).collect::<Result<Vec<_>,_>>()?;
+    let descriptor = |item: SourceItem| match item {
+        SourceItem::Text(s) => {
+            serde_json::json!({if jsonl {"json_text"}else{"text"}:s.record,"source":{"file":s.file,"first_line":s.first_line,"last_line":s.last_line}})
+        }
+        SourceItem::Image(s) => {
+            serde_json::json!({"images":[{"media":match s.record.media(){thinkthen::ImageMedia::Png=>"image/png",thinkthen::ImageMedia::Jpeg=>"image/jpeg"},"bytes":s.record.bytes()}],"source":{"file":s.file}})
+        }
+    };
+    let mut records = Vec::new();
+    match thinkthen::read_inputs(paths, options) {
+        Err(error) => records.push(serde_json::json!({"read_error":error.complete()})),
+        Ok(items) => {
+            for item in items {
+                match item {
+                    Ok(item) => records.push(descriptor(item)),
+                    Err(error) => {
+                        records.push(serde_json::json!({"read_error":error.complete()}));
+                        break;
+                    }
+                }
+            }
+        }
+    }
     value
         .as_object_mut()
         .ok_or("inputs must be one object")?

@@ -17,3 +17,4 @@ EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
 export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
 python3 ../sqlite/tests/complete/parity.py postgresql "$@"
+python3 ../sqlite/tests/complete/facts.py postgresql

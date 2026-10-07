@@ -6,6 +6,7 @@ sys.path.insert(0,str(ROOT/'conformance'))
 import parity as inventory
 from c_parity import document,prepare,assertions,compact,Backend
 from project import project
+from jsonschema.exceptions import ValidationError
 
 sys.path.insert(0,str(ROOT/'databases/duckdb/tools'))
 import inputs as duckdb_inputs
@@ -116,6 +117,9 @@ def main():
                         settings={k:str(home/'saved') if v=='$FOLDER' else str(home/'refreshed') if v=='$REFRESH' else str(home/'profile.json') if v=='$PROFILE' else v for k,v in settings.items()}
                         if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')
                         frame=framing(step)
+                        if consumer=='postgresql' and (step.get('loader')=='load' or step.get('question_form')=='file'):
+                            # PostgreSQL's server CWD is PGDATA; a client names its owned file absolutely.
+                            frame['question']='@'+str(home/frame['question'][1:])
                         # Reading fields belong to the complete door; engine fields retain configure.
                         engine={k:v for k,v in settings.items() if k not in frame['controls']}
                         if isinstance(engine.get('profile'),str) and Path(engine['profile']).is_file():engine['profile']=Path(engine['profile']).read_text()
@@ -149,7 +153,7 @@ def main():
                 finally:
                     if host:host.stop()
                     backend.close()
-        except (AssertionError,ValueError,KeyError,TypeError,AttributeError,StopIteration,IndexError,OSError,subprocess.SubprocessError) as error:
+        except (ValidationError,AssertionError,ValueError,KeyError,TypeError,AttributeError,StopIteration,IndexError,OSError,subprocess.SubprocessError) as error:
             failed+=1;failure=f'{type(error).__name__}: {str(error)[:2000]}'
             print(f'{consumer} {row["id"]} failed: {failure}',file=sys.stderr,flush=True)
         print('parity: '+compact({'consumer':consumer,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'fail' if failure else 'pass'}),flush=True)

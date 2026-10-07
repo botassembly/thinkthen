@@ -6,6 +6,7 @@ mod execute;
 mod inputs;
 mod observations;
 mod questions;
+mod reader_error;
 pub(crate) mod settings;
 pub(crate) use inputs::Inputs;
 pub(crate) use questions::Prepared;
@@ -53,7 +54,7 @@ pub(crate) fn run(
         .attempts(inputs.attempts)
         .observe(&observer);
     let result = execute::run(engine, prepared, inputs, options);
-    let mut document = match result {
+    let document = match result {
         Ok(value) => value,
         Err(error) => failure(&error),
     };
@@ -62,10 +63,7 @@ pub(crate) fn run(
             .into_inner()
             .unwrap_or_else(std::sync::PoisonError::into_inner),
     );
-    if let Err(error) = put(&mut document, "observations", recorded) {
-        return failure(&error);
-    }
-    document
+    carrier(document, recorded)
 }
 
 pub(super) fn put(value: &mut Value, key: &str, field: Value) -> Result<(), Error> {
@@ -74,4 +72,23 @@ pub(super) fn put(value: &mut Value, key: &str, field: Value) -> Result<(), Erro
         .ok_or_else(defect)?
         .insert(key.to_owned(), field);
     Ok(())
+}
+
+/// Keep the generated strict native envelope intact, with SQL supplements alongside.
+pub(crate) fn carrier(mut native: Value, observations: Value) -> Value {
+    let mut output = json!({"observations":observations});
+    for key in ["ordinals", "selection", "completed"] {
+        if let Some(value) = native.as_object_mut().and_then(|fields| fields.remove(key))
+            && let Err(error) = put(&mut output, key, value)
+        {
+            return failure(&error);
+        }
+    }
+    if let Err(error) = put(&mut output, "native", native) {
+        return failure(&error);
+    }
+    output
+}
+pub(crate) fn admission(error: &Error) -> Value {
+    carrier(failure(error), json!([]))
 }

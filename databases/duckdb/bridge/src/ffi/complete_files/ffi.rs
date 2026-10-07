@@ -34,9 +34,10 @@ impl std::fmt::Debug for Reader {
 pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeText) -> Reply {
     reply_boundary(|| {
         let source = text(input.bytes, input.len)?;
-        crate::complete_native::Inputs::parse(source, true).map_err(|e| e.to_string())?;
+        crate::complete_native::Inputs::parse(source, true)
+            .map_err(|e| crate::complete_native::failure(&e).to_string())?;
         let value: serde_json::Value = serde_json::from_str(source)
-            .map_err(|_| "thinkthen usage: invalid inputs".to_owned())?;
+            .map_err(|_| reject(thinkthen::ErrorKind::Usage, "invalid inputs"))?;
         let Some(files) = value.get("files") else {
             return Ok(Vec::new());
         };
@@ -46,8 +47,10 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeTe
                 .cloned()
                 .unwrap_or_else(|| serde_json::json!({})),
         )
-        .map_err(|_| "thinkthen usage: invalid native reader options".to_owned())?;
-        options.validate().map_err(|e| e.to_string())?;
+        .map_err(|_| reject(thinkthen::ErrorKind::Usage, "invalid native reader options"))?;
+        options
+            .validate()
+            .map_err(|e| crate::complete_native::failure(&e).to_string())?;
         serde_json::to_vec(&serde_json::json!({"paths":files.get("paths"),"options":options,"jsonl":files.get("format").and_then(serde_json::Value::as_str)==Some("jsonl")})).map_err(|_|"thinkthen defect: source plan did not encode".to_owned())
     })
 }
@@ -70,13 +73,13 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_reader_new(
         let read =
             read.ok_or_else(|| "thinkthen defect: missing authorized source callback".to_owned())?;
         let options = serde_json::from_str(text(options.bytes, options.len)?)
-            .map_err(|_| "thinkthen usage: invalid native reader options".to_owned())?;
+            .map_err(|_| reject(thinkthen::ErrorKind::Usage, "invalid native reader options"))?;
         let items = InputFileReader::new(
             text(file.bytes, file.len)?,
             BufReader::new(Host { context, read }),
             options,
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| crate::complete_native::failure(&e).to_string())?;
         // SAFETY: host lends the out range and takes exclusive reader ownership.
         unsafe {
             out.write(Box::into_raw(Box::new(Reader {
@@ -99,7 +102,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_reader_next(reader: *mut 
         let Some(item) = reader.items.next() else {
             return Ok(Vec::new());
         };
-        let descriptor = match item.map_err(|e| e.to_string())? {
+        let descriptor = match item.map_err(|e| crate::complete_native::failure(&e).to_string())? {
             SourceItem::Text(s) => {
                 serde_json::json!({if reader.jsonl {"json_text"}else{"text"}:s.record,"source":{"file":s.file,"first_line":s.first_line,"last_line":s.last_line}})
             }
@@ -133,18 +136,42 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_records(
 ) -> Reply {
     reply_boundary(|| {
         let mut value: serde_json::Value = serde_json::from_str(text(input.bytes, input.len)?)
-            .map_err(|_| "thinkthen usage: invalid inputs".to_owned())?;
+            .map_err(|_| reject(thinkthen::ErrorKind::Usage, "invalid inputs"))?;
         value
             .as_object_mut()
-            .ok_or_else(|| "thinkthen usage: inputs is one object".to_owned())?
+            .ok_or_else(|| reject(thinkthen::ErrorKind::Usage, "inputs is one object"))?
             .remove("files");
         let records = serde_json::from_str(text(records.bytes, records.len)?)
             .map_err(|_| "thinkthen defect: invalid authorized descriptors".to_owned())?;
         value
             .as_object_mut()
-            .ok_or_else(|| "thinkthen usage: inputs is one object".to_owned())?
+            .ok_or_else(|| reject(thinkthen::ErrorKind::Usage, "inputs is one object"))?
             .insert("records".to_owned(), records);
         serde_json::to_vec(&value)
             .map_err(|_| "thinkthen defect: source descriptors did not encode".to_owned())
+    })
+}
+
+fn reject(kind: thinkthen::ErrorKind, message: &str) -> String {
+    crate::complete_native::failure(&thinkthen::Error::new(kind, message)).to_string()
+}
+/// Serialize a host admission failure without any invocation facts.
+/// # Safety
+/// The counted diagnostic range is readable until return.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_admission_error(
+    message: BridgeText,
+    kind: BridgeText,
+) -> Reply {
+    reply_boundary(|| {
+        let kind = match text(kind.bytes, kind.len)? {
+            "usage" => thinkthen::ErrorKind::Usage,
+            "local" => thinkthen::ErrorKind::Local,
+            "backend" => thinkthen::ErrorKind::Backend,
+            "deadline" => thinkthen::ErrorKind::Deadline,
+            "cancelled" => thinkthen::ErrorKind::Cancelled,
+            _ => thinkthen::ErrorKind::Defect,
+        };
+        Ok(reject(kind, text(message.bytes, message.len)?).into_bytes())
     })
 }

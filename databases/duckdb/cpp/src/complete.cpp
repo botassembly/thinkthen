@@ -1,5 +1,6 @@
 #include "bridge.hpp"
 #include "complete_files.hpp"
+#include "duckdb/common/error_data.hpp"
 #include "portable.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
@@ -8,12 +9,18 @@
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 
 extern "C" {
+ThinkThenReply thinkthen_cpp_complete_failure_envelope(ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete(ThinkThenText, ThinkThenText, ThinkThenText, ThinkThenText,
                                      int32_t,int64_t, ThinkThenSettings, ThinkThenStop);
 }
 namespace duckdb {
 namespace {
 ThinkThenText View(const string &text) { return {reinterpret_cast<const uint8_t *>(text.data()), text.size()}; }
+string FailureEnvelope(const string &error) {
+    RustReply reply(thinkthen_cpp_complete_failure_envelope(View(error)));
+    Checked(reply.value);
+    return ReplyText(reply.value);
+}
 struct Bind : FunctionData {
     weak_ptr<ClientContext> context;
     explicit Bind(weak_ptr<ClientContext> context) : context(std::move(context)) {}
@@ -36,12 +43,19 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
     for (idx_t row = 0; row < args.size(); ++row) {
         auto question = args.data[0].GetValue(row), inputs = args.data[1].GetValue(row), settings = args.data[2].GetValue(row);
         if (question.IsNull() || inputs.IsNull()) { result.SetValue(row, Value(LogicalType::VARCHAR)); continue; }
-        const auto source = question.GetValue<string>(), input = CompleteFileInputs(*context,inputs.GetValue<string>()), controls = settings.IsNull() ? "{}" : settings.GetValue<string>();
+        string failure;
+        const auto source = question.GetValue<string>(), input = CompleteFileInputs(*context,inputs.GetValue<string>(),failure), controls = settings.IsNull() ? "{}" : settings.GetValue<string>();
+        if (!failure.empty()) { result.SetValue(row,Value(FailureEnvelope(failure))); continue; }
+        try {
         if (source.rfind("@@",0)==0) { throw OrdinaryError("thinkthen usage: named questions require the pending authorized native resolver"); }
         const auto resolved = owner->Resolve(*context,source);
         RustReply reply(thinkthen_cpp_complete(View(verb), View(resolved.text), View(input), View(controls), resolved.from_file ? 1 : 0, owner->Remaining(*context), session.Bridge(), StopFor(*context)));
         Checked(reply.value);
         result.SetValue(row, Value(string(reinterpret_cast<const char *>(reply.value.bytes), reply.value.len)));
+        } catch (const Exception &error) {
+            if (ErrorData(error).Type()==ExceptionType::INTERRUPT) { throw; }
+            result.SetValue(row,Value(FailureEnvelope(CompleteAdmissionError(error))));
+        }
     }
 }
 }

@@ -4,6 +4,9 @@ from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'conformance'))
 from c_parity import ERRORS
+import json
+from jsonschema import Draft202012Validator
+NATIVE=Draft202012Validator(json.loads((Path(__file__).resolve().parents[4]/'crates/thinkthen/src/public/results/complete.schema.json').read_text()))
 
 def projected(row,verb,index,events):
     meta=row['meta']
@@ -39,14 +42,19 @@ def project(doc,verb):
         kind=next((k for k in ERRORS if 'thinkthen '+k+':' in message),None)
         assert kind is not None,message
         return {'code':ERRORS[kind],'message':message}
+    wrapper=doc
+    doc=wrapper['native']
+    NATIVE.validate(doc)
+    # Supplemental fields came from the same SQL invocation's native getters.
+    doc={**doc,**{key:wrapper[key] for key in ('ordinals','selection','completed','observations') if key in wrapper}}
     if 'error' in doc:
         error=doc['error'];out={'code':ERRORS[error['kind']],'message':error['message'],'completed':[projected(row,verb,(doc.get('ordinals') or list(range(len(doc.get('completed',[])))))[at],doc.get('observations',[])) for at,row in enumerate(doc.get('completed',[]))]}
-        if 'facts' in doc:out.update(requests_sent=doc['facts']['requests_sent'],records=doc['facts']['records'])
+        if 'facts' in doc:out.update(facts=doc['facts'],requests_sent=doc['facts']['requests_sent'],records=doc['facts']['records'])
         if 'at' in error.get('stopped',{}):out['stopped_at']=error['stopped']['at']
         return out
     values=doc['value'] if isinstance(doc['value'],list) else [doc['value']]
     facts=doc['facts'];events=doc.get('observations',[])
-    out={'code':0,'schema':values[0]['schema'] if values else 'thinkthen.result/2','requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'call_id':facts['call_id'],'observations':len(events)}
+    out={'facts':facts,'code':0,'schema':values[0]['schema'] if values else 'thinkthen.result/2','requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'call_id':facts['call_id'],'observations':len(events)}
     out['rows']=[projected(row,verb,(doc.get('ordinals') or list(range(len(values))))[at],events) for at,row in enumerate(values)]
     if verb=='find':out['rows'][0]['index']=doc['selection']
     return out

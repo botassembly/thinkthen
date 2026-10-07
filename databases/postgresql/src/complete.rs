@@ -31,7 +31,7 @@ fn invoke(
             Ok::<_, thinkthen::Error>((prepared, inputs, call))
         })();
         let result = match prepared {
-            Err(error) => crate::complete_native::failure(&error),
+            Err(error) => crate::complete_native::admission(&error),
             Ok((prepared, inputs, call)) => match call::run_result(call, move |engine, options| {
                 Ok(crate::complete_native::run(
                     engine,
@@ -42,7 +42,7 @@ fn invoke(
                 ))
             }) {
                 Ok(value) => value,
-                Err(error) => crate::complete_native::failure(&error),
+                Err(error) => crate::complete_native::admission(&error),
             },
         };
         Some(Json(result))

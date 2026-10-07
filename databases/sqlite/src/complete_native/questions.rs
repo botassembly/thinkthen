@@ -129,10 +129,21 @@ impl Prepared {
             "tag" => Some(thinkthen::For::Tag),
             "find" => Some(thinkthen::For::Find),
             "rank" => Some(thinkthen::For::Rank),
-            _ => None,
+            _ => Some(thinkthen::For::Rank),
         };
         if let Some(check) = check {
             settings.check(check).map_err(|e| usage(&e.to_string()))?;
+        }
+        if let Some(model) = settings.model() {
+            match &mut self {
+                Self::Rank(q) | Self::Find(q, _) => *q = q.clone().with_model(model)?,
+                Self::Recognize(_, _) | Self::Relate(_) | Self::Annotate(_) | Self::RankSet(_) => {
+                    return Err(usage(
+                        "aggregate model selection uses the host engine settings",
+                    ));
+                }
+                _ => {}
+            }
         }
         Ok(self)
     }

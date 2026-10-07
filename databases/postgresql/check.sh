@@ -46,6 +46,7 @@ COMMAND=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
 	cargo clippy --locked --offline --all-targets -- -D warnings
 	cargo test --locked --offline --lib
 }
+cargo build --locked --offline --quiet --bin thinkthen_read_inputs
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend --package thinkthen --bin conformance-backend --bin thinkthen)
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
 # package.sh reads the same pg_config and target folder (ticket 0128).
@@ -150,7 +151,7 @@ echo "== package"
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
-	STEPS=${STEPS:-examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
+	STEPS=${STEPS:-examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -1479,6 +1480,15 @@ an_update_cannot_grant_public() {
 	same "$(extension_owned "AND has_function_privilege('public', p.oid, 'EXECUTE')")" 0
 }
 check an_update_cannot_grant_public
+
+complete_cases() {
+    pg_stop
+    [ -z "${BPID:-}" ] || backend_stop
+    export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
+    sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
+    sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
+}
+check complete_cases
 
 echo "== conformance"
 # Each case on its own server, backend, and cache folder. Every case counts

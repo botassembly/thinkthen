@@ -152,6 +152,12 @@ impl Inputs {
 
 fn compose(raw: &str, reading: &RecordReading) -> Result<RecordInput<QuestionInput>, Error> {
     let fields = fields(raw)?;
+    if let Some(error) = fields.get("read_error") {
+        if fields.len() != 1 {
+            return Err(usage("a terminal reader error has no record fields"));
+        }
+        return Err(super::reader_error::decode(error.get())?);
+    }
     if fields.keys().any(|k| {
         !matches!(
             k.as_str(),

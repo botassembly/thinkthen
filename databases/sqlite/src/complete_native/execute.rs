@@ -156,8 +156,42 @@ fn streaming(
         Prepared::Annotate(q) => {
             stream!(engine.try_annotate_records_complete_with(q, records, options))
         }
-        _ => Err(usage(
-            "incremental complete inputs require an atomic or annotate question",
+        _ => aggregate_streaming(engine, prepared, records, options),
+    }
+}
+fn aggregate_streaming(
+    engine: &Engine,
+    prepared: &Prepared,
+    records: super::inputs::Records<'_>,
+    options: CallOptions<'_>,
+) -> Result<Value, Error> {
+    match prepared {
+        Prepared::Dynamic(q) => rows!(engine.choose_dynamic_records_complete_with(
+            q,
+            records.collect::<Result<Vec<_>, _>>()?,
+            options
         )),
+        Prepared::Rank(q) => rows!(engine.try_rank_records_complete_with(q, records, options)),
+        Prepared::RankSet(q) => {
+            rows!(engine.try_rank_set_records_complete_with(q, records, options))
+        }
+        Prepared::Find(q, _) => {
+            let call = engine.try_find_records_complete_with(q, records, options)?;
+            let index = match call.value().selection() {
+                thinkthen::FindSelection::None => None,
+                thinkthen::FindSelection::Unit(at) => Some(at),
+            };
+            let mut value =
+                serde_json::to_value(call.complete().ok_or_else(defect)?).map_err(|_| defect())?;
+            super::put(&mut value, "selection", serde_json::json!(index))?;
+            Ok(value)
+        }
+        Prepared::Recognize(q, _) => {
+            rows!(engine.try_recognize_records_complete_with(q, records, options))
+        }
+        Prepared::Relate(q) => {
+            envelope!(engine.try_relate_records_complete_with(q, records, options))
+        }
+        _ => Err(defect()),
     }
 }

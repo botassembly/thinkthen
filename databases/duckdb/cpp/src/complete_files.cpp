@@ -3,8 +3,10 @@
 #include "bridge.hpp"
 #include "duckdb/common/file_system.hpp"
 #include "yyjson.hpp"
+#include "duckdb/common/error_data.hpp"
 extern "C" {
 ThinkThenReply thinkthen_cpp_complete_file_plan(ThinkThenText);
+ThinkThenReply thinkthen_cpp_complete_admission_error(ThinkThenText,ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete_reader_new(ThinkThenText, ThinkThenText, int32_t, void *, int64_t (*)(void *,uint8_t *,size_t),void **);
 ThinkThenReply thinkthen_cpp_complete_reader_next(void *);
 void thinkthen_cpp_complete_reader_free(void *);
@@ -32,9 +34,24 @@ int64_t Read(void *opaque,uint8_t *bytes,size_t count) noexcept {
     catch (...) { return -1; }
 }
 }
-string CompleteFileInputs(ClientContext &context,const string &inputs) {
+string CompleteAdmissionError(const std::exception &error) {
+    auto message=ErrorData(error).RawMessage();
+    string kind="local";
+    for (auto name:{"usage","local","backend","deadline","cancelled","defect"}) {
+        const auto prefix=string("thinkthen ")+name+": ";
+        if (message.rfind(prefix,0)==0) { kind=name;message=message.substr(prefix.size());break; }
+    }
+    const string suffix=" (retryable: no)";
+    const auto end=message.find('\n'), at=message.rfind(suffix,end);
+    if (at!=string::npos && at+suffix.size()==(end==string::npos ? message.size():end)) { message.erase(at,suffix.size()); }
+    RustReply reply(thinkthen_cpp_complete_admission_error(View(message),View(kind)));
+    Checked(reply.value);
+    return ReplyText(reply.value);
+}
+string CompleteFileInputs(ClientContext &context,const string &inputs,string &failure) {
+    try {
     RustReply planned(thinkthen_cpp_complete_file_plan(View(inputs)));
-    Checked(planned.value);
+    if (planned.value.status!=0) { failure=ReplyText(planned.value); return inputs; }
     if (planned.value.len==0) { return inputs; }
     Json parsed(planned.value);
     auto root=yyjson_doc_get_root(parsed.doc);
@@ -53,7 +70,9 @@ string CompleteFileInputs(ClientContext &context,const string &inputs) {
     auto &files=FileSystem::GetFileSystem(context);
     const auto manifest=FileManifest(files,operands);
     string records="[";
+    bool terminal=false;
     for (auto &name:manifest) {
+        try {
         AuthorizeLocalSource(files,name);
         Handle held{files,files.OpenFile(name,FileOpenFlags::FILE_FLAGS_READ)};
         if (files.GetFileType(*held.handle)!=FileType::FILE_TYPE_REGULAR) { throw OrdinaryError("thinkthen local: source file must be regular"); }
@@ -61,15 +80,32 @@ string CompleteFileInputs(ClientContext &context,const string &inputs) {
         Checked(created.value);
         for (;;) {
             RustReply next(thinkthen_cpp_complete_reader_next(held.reader));
-            Checked(next.value);
+            if (next.value.status!=0) {
+                if (records.size()>1) { records+=","; }
+                records+="{\"read_error\":"+ReplyText(next.value)+"}";
+                terminal=true;
+                break;
+            }
             if (next.value.len==0) { break; }
             if (records.size()>1) { records+=","; }
             records.append(reinterpret_cast<char *>(next.value.bytes),next.value.len);
+        }
+        if (terminal) { break; }
+        } catch (const Exception &error) {
+            if (ErrorData(error).Type()==ExceptionType::INTERRUPT) { throw; }
+            if (records.size()>1) { records+=","; }
+            records+="{\"read_error\":"+CompleteAdmissionError(error)+"}";
+            break;
         }
     }
     records+="]";
     RustReply replaced(thinkthen_cpp_complete_file_records(View(inputs),View(records)));
     Checked(replaced.value);
     return ReplyText(replaced.value);
+    } catch (const Exception &error) {
+        if (ErrorData(error).Type()==ExceptionType::INTERRUPT) { throw; }
+        failure=CompleteAdmissionError(error);
+        return inputs;
+    }
 }
 }

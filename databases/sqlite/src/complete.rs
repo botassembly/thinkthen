@@ -4,10 +4,10 @@ use rusqlite::{
     Connection,
     functions::{Context, FunctionFlags},
 };
-use thinkthen::Surface;
+use thinkthen::{Error, ErrorKind, Surface};
 
 fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<String>> {
-    Ok(guard("a complete SQL call", || {
+    let result = guard("a complete SQL call", || {
         let Some(question) = question::text(context.get_raw(0), "the question")? else {
             return Ok(None);
         };
@@ -25,7 +25,7 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
             Ok::<_, thinkthen::Error>((prepared, inputs))
         })();
         let value = match result {
-            Err(error) => crate::complete_native::failure(&error),
+            Err(error) => crate::complete_native::admission(&error),
             Ok((prepared, inputs)) => {
                 let shared = settings.context().map(str::to_owned);
                 worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
@@ -43,7 +43,16 @@ fn invoke(context: &Context<'_>, verb: &'static str) -> rusqlite::Result<Option<
             }
         };
         Ok(Some(value.to_string()))
-    })?)
+    });
+    result.or_else(|failure| {
+        if matches!(failure.kind, ErrorKind::Cancelled | ErrorKind::Deadline) {
+            return Err(failure.into());
+        }
+        Ok(Some(
+            crate::complete_native::admission(&Error::new(failure.kind, &failure.message))
+                .to_string(),
+        ))
+    })
 }
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     for verb in [
