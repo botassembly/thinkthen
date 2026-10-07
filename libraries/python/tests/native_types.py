@@ -4,13 +4,17 @@ from thinkthen import complete as c
 def known(engine:c.Engine, question:c.QuestionSource, inputs:c.Records|c.Files)->None:
     decision=engine.decide(question,inputs)
     yes:float=decision.results[0].answer.probability
+    images:tuple[c.NativeImage,...]|c.Absent=decision.results[0].images
     choose=engine.choose(question,inputs)
     probability:float=choose.results[0].answer.probabilities['blue']
     tags=engine.tag(question,inputs).results[0].answer.probabilities
     score:float=engine.score(question,inputs).results[0].value
     accepted:bool=engine.filter(question,inputs).results[0].value
     place:int=engine.rank(question,inputs).results[0].value
-    found:c.JsonValue=engine.find(question,inputs).results[0].value
+    found_call=engine.find(question,inputs)
+    found:c.JsonValue=found_call.results[0].value
+    selected:int|None|c.Absent=found_call.results[0].index
+    candidates:tuple[c.FindCandidate,...]|c.Absent=found_call.results[0].candidates
     annotated=engine.annotate(question,inputs).results[0].answers
     entities=engine.recognize(question,inputs).results[0].value.entities
     end:int=entities[0].end

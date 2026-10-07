@@ -13,7 +13,13 @@ class CompleteCarrierTest < Minitest::Test
       assert_equal ["e" * 64, "e" * 64], result.meta.requests
       refute_includes result.inspect, "reported"
       assert result.frozen?
+      assert_equal 0, C.decode(row.fetch("type"),row.fetch("result").merge("index"=>0)).index
+      assert_raises(ArgumentError) { C.decode(row.fetch("type"),row.fetch("result").merge("index"=>-1)) }
     end
+    candidate=C.decode("FindCandidate",{"index"=>0,"input"=>false,"probability"=>0.25,"source"=>{"file"=>"é.txt","first_line"=>2,"last_line"=>2}})
+    assert_equal false,candidate.input
+    assert_equal 2,candidate.source.first_line
+    assert_equal 0.25,candidate.probability
     decide = C.decode("DecideResult", FIXTURE["results"][0]["result"])
     assert_equal false, decide.value
     assert_nil decide.question.true

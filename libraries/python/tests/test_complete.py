@@ -24,6 +24,9 @@ def test_all_ten_results_keep_typed_answers_and_original_values():
         assert result.meta.requests == ("e" * 64, "e" * 64)
         assert c.to_json(result) == row["result"]
         assert "reported" not in repr(result)
+        occurrence = c.decode(row["type"], {**row["result"], "index": 0})
+        assert occurrence.index == 0
+        with pytest.raises(ValueError): c.decode(row["type"], {**row["result"], "index": -1})
     decide = c.decode("DecideResult", FIXTURE["results"][0]["result"])
     assert decide.value is False
     assert decide.question.true_ is None
@@ -33,6 +36,9 @@ def test_all_ten_results_keep_typed_answers_and_original_values():
     assert tuple(choose.answer.probabilities) == ("b", "a")
     assert choose.position.images == ("red.png", "blue.png", "red.png")
     assert choose.position.first is c.ABSENT
+    candidate = c.decode("FindCandidate", {"index": 0, "input": False, "probability": .25, "source": {"file": "é.txt", "first_line": 2, "last_line": 2}})
+    assert candidate.input is False and candidate.source.first_line == 2
+    assert candidate.probability == .25
     recognized = c.decode("RecognizeResult", FIXTURE["results"][8]["result"])
     assert recognized.value.entities[0].end == 2
     assert recognized.answer.names[0].edges is None

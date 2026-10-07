@@ -15,10 +15,16 @@ same_json <- function(a, b) {
 }
 for (row in f$results) {
   result <- .tt_complete_decode(row$type, row$result)
+  occurrence <- row$result; occurrence$index <- 0
+  stopifnot(.tt_complete_decode(row$type, occurrence)$index == 0)
+  occurrence$index <- -1
+  stopifnot(inherits(try(.tt_complete_decode(row$type, occurrence),silent=TRUE),"try-error"))
   encoded <- jsonlite::fromJSON(.tt_complete_json_text(result), simplifyVector = FALSE)
   stopifnot(same_json(encoded, row$result), inherits(result$answer_id, "thinkthen_AnswerId"),
             identical(.tt_complete_plain(result$meta$requests), list(paste(rep("e", 64), collapse=""), paste(rep("e", 64), collapse=""))))
 }
+candidate <- .tt_complete_decode("FindCandidate",list(index=0,input=FALSE,probability=.25,source=list(file="é.txt",first_line=2,last_line=2)))
+stopifnot(identical(candidate$input,FALSE),candidate$source$first_line==2,candidate$probability==.25)
 decide <- .tt_complete_decode("DecideResult", f$results[[1L]]$result)
 stopifnot(identical(decide$value, FALSE), is.null(decide$question$true))
 choose <- .tt_complete_decode("ChooseResult", f$results[[2L]]$result)

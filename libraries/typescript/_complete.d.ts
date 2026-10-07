@@ -323,6 +323,7 @@ export interface DecideResult {
   readonly last_line?: number;
   readonly source?: PhysicalSource;
   readonly images?: readonly NativeImage[];
+  readonly index?: number;
 }
 export interface ChooseResult {
   readonly schema: "thinkthen.result/2";
@@ -340,6 +341,7 @@ export interface ChooseResult {
   readonly last_line?: number;
   readonly source?: PhysicalSource;
   readonly images?: readonly NativeImage[];
+  readonly index?: number;
 }
 export interface TagResult {
   readonly schema: "thinkthen.result/2";
@@ -356,6 +358,7 @@ export interface TagResult {
   readonly first_line?: number;
   readonly last_line?: number;
   readonly source?: PhysicalSource;
+  readonly index?: number;
 }
 export interface ScoreResult {
   readonly schema: "thinkthen.result/2";
@@ -373,6 +376,7 @@ export interface ScoreResult {
   readonly last_line?: number;
   readonly source?: PhysicalSource;
   readonly images?: readonly NativeImage[];
+  readonly index?: number;
 }
 export interface FilterResult {
   readonly schema: "thinkthen.result/2";
@@ -388,6 +392,7 @@ export interface FilterResult {
   readonly first_line?: number;
   readonly last_line?: number;
   readonly source?: PhysicalSource;
+  readonly index?: number;
 }
 export interface RankResult {
   readonly schema: "thinkthen.result/2";
@@ -404,6 +409,7 @@ export interface RankResult {
   readonly first_line?: number;
   readonly last_line?: number;
   readonly source?: PhysicalSource;
+  readonly index?: number;
 }
 export interface FindResult {
   readonly schema: "thinkthen.result/2";
@@ -417,6 +423,8 @@ export interface FindResult {
   readonly file?: string;
   readonly first_line?: number;
   readonly last_line?: number;
+  readonly index?: number | null;
+  readonly candidates?: readonly FindCandidate[];
 }
 export interface AnnotateResult {
   readonly schema: "thinkthen.result/2";
@@ -429,6 +437,8 @@ export interface AnnotateResult {
   readonly file?: string;
   readonly first_line?: number;
   readonly last_line?: number;
+  readonly index?: number;
+  readonly source?: PhysicalSource;
 }
 export interface RecognizeResult {
   readonly schema: "thinkthen.result/2";
@@ -441,6 +451,8 @@ export interface RecognizeResult {
   readonly file?: string;
   readonly first_line?: number;
   readonly last_line?: number;
+  readonly index?: number;
+  readonly source?: PhysicalSource;
 }
 export interface RelateResult {
   readonly input?: JsonValue;
@@ -453,6 +465,7 @@ export interface RelateResult {
   readonly file?: string;
   readonly first_line?: number;
   readonly last_line?: number;
+  readonly index?: number;
 }
 export interface CallError {
   readonly kind: "usage" | "backend" | "local" | "cancelled" | "deadline" | "defect";
@@ -803,3 +816,10 @@ export type InputDeclaration = StringDeclaration | ObjectDeclaration;
 export type PropertyDeclaration = StringDeclaration | NumberDeclaration | BooleanDeclaration | ArrayDeclaration;
 
 export interface NativeInput { readonly original: JsonValue; readonly images: readonly NativeImage[]; readonly location?: PhysicalSource; }
+
+export interface FindCandidate {
+  readonly index: number | null;
+  readonly input: JsonValue;
+  readonly probability: number;
+  readonly source?: PhysicalSource;
+}

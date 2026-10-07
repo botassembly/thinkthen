@@ -77,6 +77,13 @@ def assert_required(packet,row,value,bodies,root):
     expect=value['expect']
     for result in results:
         assert result['schema']=='thinkthen.result/2'
+        paths=value.get('image_paths') or (value.get('paths') if value.get('source_unit')==4 else [])
+        if paths:
+            assert 'images' in result,'native canonical image propagation prerequisite is missing'
+            assert [base64.b64decode(im['base64']) for im in result['images']]==[(root/path).read_bytes() for path in paths]
+            dimensions=value.get('image_scenario',{}).get('construction',{}).get('dimensions',[1,1])
+            assert [[im['width'],im['height']] for im in result['images']]==[dimensions]*len(paths)
+            assert [im['media'] for im in result['images']]==[value.get('media','image/png')]*len(paths)
         assert len(result['answer_id'])==64 and len(packet['facts']['call_id'])==64
         questions=[a['question'] for a in result.get('answers',{}).values() if 'question' in a] or [result['question']]
         for question in questions:
@@ -84,7 +91,8 @@ def assert_required(packet,row,value,bodies,root):
             for key,want in expect.get('resolved_metadata',{}).items():assert question[key]==want,(key,question,want)
             if 'ordered_properties' in expect:assert list(question['item_schema']['properties'])==expect['ordered_properties']
             if 'required_properties' in expect:assert question['item_schema']['required']==expect['required_properties']
-        if 'selected_item' in expect:assert result['input']==(expect['selected_item'] if value['verb']=='annotate' else packet['inputs'][0]['original']),(result,packet)
+        # Complete records retain caller originals; selected evidence is pinned below.
+        if 'selected_item' in expect:assert result['input']==packet['inputs'][0]['original'],(result,packet)
     if 'per_item_context' in expect:
         want=expect['per_item_context']
         if want=='':want='Each question quotes the text it asks about.'

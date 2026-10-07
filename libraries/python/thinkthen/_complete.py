@@ -389,6 +389,8 @@ class DecideResult(Carrier):
     source: PhysicalSource | Absent = ABSENT
     images: tuple[NativeImage, ...] | Absent = ABSENT
 
+    index: int | Absent = ABSENT
+
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ChooseResult(Carrier):
     schema: Literal['thinkthen.result/2']
@@ -407,6 +409,8 @@ class ChooseResult(Carrier):
     source: PhysicalSource | Absent = ABSENT
     images: tuple[NativeImage, ...] | Absent = ABSENT
 
+    index: int | Absent = ABSENT
+
 @dataclass(frozen=True, repr=False, kw_only=True)
 class TagResult(Carrier):
     schema: Literal['thinkthen.result/2']
@@ -423,6 +427,8 @@ class TagResult(Carrier):
     first_line: int | Absent = ABSENT
     last_line: int | Absent = ABSENT
     source: PhysicalSource | Absent = ABSENT
+
+    index: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ScoreResult(Carrier):
@@ -442,6 +448,8 @@ class ScoreResult(Carrier):
     source: PhysicalSource | Absent = ABSENT
     images: tuple[NativeImage, ...] | Absent = ABSENT
 
+    index: int | Absent = ABSENT
+
 @dataclass(frozen=True, repr=False, kw_only=True)
 class FilterResult(Carrier):
     schema: Literal['thinkthen.result/2']
@@ -457,6 +465,8 @@ class FilterResult(Carrier):
     first_line: int | Absent = ABSENT
     last_line: int | Absent = ABSENT
     source: PhysicalSource | Absent = ABSENT
+
+    index: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RankResult(Carrier):
@@ -475,6 +485,8 @@ class RankResult(Carrier):
     last_line: int | Absent = ABSENT
     source: PhysicalSource | Absent = ABSENT
 
+    index: int | Absent = ABSENT
+
 @dataclass(frozen=True, repr=False, kw_only=True)
 class FindResult(Carrier):
     schema: Literal['thinkthen.result/2']
@@ -489,6 +501,9 @@ class FindResult(Carrier):
     first_line: int | Absent = ABSENT
     last_line: int | Absent = ABSENT
 
+    index: int | None | Absent = ABSENT
+    candidates: tuple[FindCandidate, ...] | Absent = ABSENT
+
 @dataclass(frozen=True, repr=False, kw_only=True)
 class AnnotateResult(Carrier):
     schema: Literal['thinkthen.result/2']
@@ -501,6 +516,9 @@ class AnnotateResult(Carrier):
     file: str | Absent = ABSENT
     first_line: int | Absent = ABSENT
     last_line: int | Absent = ABSENT
+
+    index: int | Absent = ABSENT
+    source: PhysicalSource | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RecognizeResult(Carrier):
@@ -515,6 +533,9 @@ class RecognizeResult(Carrier):
     first_line: int | Absent = ABSENT
     last_line: int | Absent = ABSENT
 
+    index: int | Absent = ABSENT
+    source: PhysicalSource | Absent = ABSENT
+
 @dataclass(frozen=True, repr=False, kw_only=True)
 class RelateResult(Carrier):
     input: JsonValue | Absent = ABSENT
@@ -527,6 +548,8 @@ class RelateResult(Carrier):
     file: str | Absent = ABSENT
     first_line: int | Absent = ABSENT
     last_line: int | Absent = ABSENT
+
+    index: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class CallError(Carrier):
@@ -1022,16 +1045,16 @@ _MODELS = {
     'RelationSuccess': {'relation': 'str', 'reads': 'str', 'method': 'str', 'direction': 'str', 'source': 'Endpoint', 'target': 'Endpoint|null', 'request': 'Digest', 'answer_id': 'AnswerId', 'probability': 'probability', 'accepted': 'bool', 'answer?': 'AtomicAnswer'},
     'RelationFailure': {'relation': 'str', 'reads': 'str', 'method': 'str', 'direction': 'str', 'source': 'Endpoint', 'target': 'Endpoint|null', 'request': 'Digest', 'failure_id': 'FailureId', 'failure': 'Failure'},
     'RelationAnswer': {'questions': '[RelationEntry]'},
-    'DecideResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool|null', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]'},
-    'ChooseResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'str|null', 'question': 'ChooseQuestion', 'answer': 'Choice', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]'},
-    'TagResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[str]', 'question': 'TagQuestion', 'answer': 'Tags', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
-    'ScoreResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'number', 'question': 'ScoreQuestion', 'answer': 'Score', 'threshold': 'null', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]'},
-    'FilterResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool', 'input': 'json', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
-    'RankResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'positive', 'input': 'json', 'question': 'AtomicQuestion', 'answer': 'AtomicAnswer', 'threshold': 'null', 'question_name?': 'str', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource'},
-    'FindResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'json', 'question': 'FindQuestion', 'answer': 'FindAnswer', 'threshold': 'null', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
-    'AnnotateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'input': 'json', 'value': '{AnnotatedValue}', 'answers': '{AnnotationEntry}', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
-    'RecognizeResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'Recognition', 'question': 'RecognizeQuestion', 'answer': 'RecognitionAnswer', 'input?': 'json', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive'},
-    'RelateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[Edge]', 'question': 'RelateQuestion', 'answer': 'RelationAnswer', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'input?': 'json'},
+    'DecideResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool|null', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]', 'index?': 'uint'},
+    'ChooseResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'str|null', 'question': 'ChooseQuestion', 'answer': 'Choice', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]', 'index?': 'uint'},
+    'TagResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[str]', 'question': 'TagQuestion', 'answer': 'Tags', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'index?': 'uint'},
+    'ScoreResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'number', 'question': 'ScoreQuestion', 'answer': 'Score', 'threshold': 'null', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]', 'index?': 'uint'},
+    'FilterResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool', 'input': 'json', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'index?': 'uint'},
+    'RankResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'positive', 'input': 'json', 'question': 'AtomicQuestion', 'answer': 'AtomicAnswer', 'threshold': 'null', 'question_name?': 'str', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'index?': 'uint'},
+    'FindResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'json', 'question': 'FindQuestion', 'answer': 'FindAnswer', 'threshold': 'null', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'index?': 'uint|null', 'candidates?': '[FindCandidate]'},
+    'AnnotateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'input': 'json', 'value': '{AnnotatedValue}', 'answers': '{AnnotationEntry}', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'index?': 'uint', 'source?': 'PhysicalSource'},
+    'RecognizeResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'Recognition', 'question': 'RecognizeQuestion', 'answer': 'RecognitionAnswer', 'input?': 'json', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'index?': 'uint', 'source?': 'PhysicalSource'},
+    'RelateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[Edge]', 'question': 'RelateQuestion', 'answer': 'RelationAnswer', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'input?': 'json', 'index?': 'uint'},
     'CallError': {'kind': 'error_kind', 'message': 'str', 'retryable': 'bool', 'facts?': 'Facts', 'attempts?': '[Attempt]', 'stopped?': 'Stopped'},
     'DecideSpec': {'decide': 'text', 'true?': 'description', 'false?': 'description', 'threshold?': 'threshold', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
     'ChooseSpec': {'choose': 'text', 'options': 'Labels', 'threshold?': 'probability', 'model?': 'str', 'profile?': 'str', 'batch?': 'batch', 'on?': 'str|[str]', 'name?': 'str', 'wording_version?': 'positive', 'item_schema?': 'InputDeclaration', 'context_schema?': 'InputDeclaration'},
@@ -1081,3 +1104,12 @@ class NativeInput(Carrier):
 _MODELS["NativeInput"] = {'original': 'json', 'location?': 'PhysicalSource', 'images': '[NativeImage]'}
 
 _MODELS["RelateResult"]["input?"]="json"
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class FindCandidate(Carrier):
+    index: int | None
+    input: JsonValue
+    probability: float
+    source: PhysicalSource | Absent = ABSENT
+
+_MODELS["FindCandidate"] = {"index": "uint|null", "input": "json", "probability": "probability", "source?": "PhysicalSource"}

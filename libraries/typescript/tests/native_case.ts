@@ -36,13 +36,13 @@ async function main() {
       if(batch.facts===undefined) throw new Error('missing native facts');
       done={results:prefix.map(r=>r.result),facts:batch.facts,ordinals:prefix.map(r=>r.ordinal),inputs:prefix.map(r=>r.input)};
     } else switch (document.verb) {
-      case 'decide': { const v=await engine.complete.decide(q,input,control); const p:number|undefined=v.results[0]?.answer.probability; done=v; break; }
+      case 'decide': { const v=await engine.complete.decide(q,input,control); const p:number|undefined=v.results[0]?.answer.probability; const images:readonly C.NativeImage[]|undefined=v.results[0]?.images; done=v; break; }
       case 'choose': { const v=await engine.complete.choose(q,input,control); const p:Readonly<Record<string,number>>|undefined=v.results[0]?.answer.probabilities; done=v; break; }
       case 'tag': { const v=await engine.complete.tag(q,input,control); const p:Readonly<Record<string,number>>|undefined=v.results[0]?.answer.probabilities; done=v; break; }
       case 'score': { const v=await engine.complete.score(q,input,control); const p:Readonly<Record<string,number>>|undefined=v.results[0]?.answer.probabilities; done=v; break; }
       case 'filter': done=await engine.complete.filter(q,input,control); break;
       case 'rank': { const v=await engine.complete.rank(q,input,control); const place:number|undefined=v.results[0]?.value; done=v; break; }
-      case 'find': done=await engine.complete.find(q,input,control); break;
+      case 'find': { const v=await engine.complete.find(q,input,control); const candidates:readonly C.FindCandidate[]|undefined=v.results[0]?.candidates; const index:number|null|undefined=v.results[0]?.index; done=v; break; }
       case 'annotate': { const v=await engine.complete.annotate(q,input,control); const a:C.AnnotationEntry|undefined=v.results[0]?.answers['ready']; done=v; break; }
       case 'recognize': { const v=await engine.complete.recognize(q,input,control); const end:number|undefined=v.results[0]?.value.entities[0]?.end; done=v; break; }
       case 'relate': { const v=await engine.complete.relate(q,input,control); const f:string|undefined=v.results[0]?.value[0]?.source.file; done=v; break; }

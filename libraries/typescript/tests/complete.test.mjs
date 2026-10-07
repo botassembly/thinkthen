@@ -17,7 +17,11 @@ test('all ten private complete carriers preserve probabilities, locations and fa
     assert.equal(result.meta.requests.length, 2);
     assert.equal(Object.isFrozen(result), true);
     assert.equal(inspect(result).includes('reported'), false);
+    assert.equal(decode(row.type, {...row.result,index:0}).index, 0);
+    assert.throws(()=>decode(row.type,{...row.result,index:-1}),/invalid/);
   }
+  const candidate=decode('FindCandidate',{index:0,input:false,probability:.25,source:{file:'é.txt',first_line:2,last_line:2}});
+  assert.equal(candidate.input,false);assert.equal(candidate.source.first_line,2);assert.equal(candidate.probability,.25);
   const decide = decode('DecideResult', fixture.results[0].result);
   assert.equal(decide.value, false);
   assert.equal(decide.question.true, null);

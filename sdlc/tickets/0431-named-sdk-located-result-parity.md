@@ -42,6 +42,8 @@ fn Engine::try_choose_dynamic_records_complete_with<'a, I, T>(&'a self, &'a Reco
 fn QuestionInput::annotation_document(&str) -> Result<QuestionInput, Error>
 ```
 
-The location-free annotation document constructor reuses the existing native document reading and record composition. Valid JSON stays structural, syntax-invalid text stays literal, and duplicate/depth/size/blank refusals stay native. `annotation_text(text, location)` reuses that constructor and retains its physical source separately. No location is invented for caller documents.
+The location-free annotation document constructor reuses the existing native document reading and record composition. Valid JSON stays structural, syntax-invalid text stays literal, and duplicate/depth/size/blank refusals stay native. `annotation_text(text, location)` shares the constructor’s native admission helper and retains its physical source separately. No location is invented for caller documents.
 
 The lazy dynamic choose prerequisite reuses native record admission and scheduling. It requires candidates on every original and yields the completed prefix, one terminal error with joined final facts, then exhaustion. Empty input validates call controls and completes without a question or request. The eager dynamic choose method retains whole-set admission before sending.
+
+This family adopts the supported 0409 rank/find declarations, 0411 native changed-reading cache/record/replay and answer identities, and 0418 typed complete rank sets. The R docs retain 0412’s separate complete/native and ordinary R position conventions. Host carriers admit the pending shared serializer’s typed occurrence index, physical source and ordered find candidates; native serialization remains with its owner.
