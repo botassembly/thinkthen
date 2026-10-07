@@ -56,7 +56,8 @@ static void row(thinkthen_result *r,unsigned kind,size_t at) {
     fputs(",\"answered_by\":",stdout); if(common.meta.answered_by.present) quoted(common.meta.answered_by.value); else fputs("null",stdout);
     printf(",\"observations\":%zu,\"sources\":%zu",common.meta.observations.len,common.meta.question_sources.len);
     fputs(",\"input\":",stdout); if(common.input.present) content(common.input.value); else fputs("null",stdout);
-    if(common.position.present) { fputs(",\"file\":",stdout); quoted(common.position.value.file.value); printf(",\"first_line\":%zu,\"last_line\":%zu",common.position.value.first_line.value,common.position.value.last_line.value); }
+    if(common.position.present) { fputs(",\"file\":",stdout); quoted(common.position.value.file.value); if(common.position.value.first_line.present) printf(",\"first_line\":%zu",common.position.value.first_line.value); if(common.position.value.last_line.present) printf(",\"last_line\":%zu",common.position.value.last_line.value); }
+    if(common.images.present) { fputs(",\"images\":[",stdout); for(size_t i=0;i<common.images.value.len;++i) { if(i) putchar(','); putchar('"'); for(size_t j=0;j<common.images.value.data[i].bytes_len;++j) printf("%02x",common.images.value.data[i].bytes[j]); putchar('"'); } putchar(']'); }
     if(common.answer.present) { thinkthen_answer_v1 a=common.answer.value; if(a.kind==1) printf(",\"probability\":%.17g",a.data.probability); else { fputs(",\"probabilities\":",stdout); if(a.kind==2) probabilities(a.data.choice.probabilities); else if(a.kind==3) probabilities(a.data.tag); else if(a.kind==4) probabilities(a.data.score.probabilities); else probabilities(a.data.find.probabilities); } }
     thinkthen_question_author_v1 author={0}; if(thinkthen_result_question_author(r,at,&author)) abort();
     if(author.name.present) { fputs(",\"name\":",stdout); quoted(author.name.value); }

@@ -59,7 +59,7 @@ def inventory():
         raise ValueError('parity functions differ from the canonical ten')
     if len(parity['functions']) != len(set(parity['functions'])):
         raise ValueError('duplicate parity function')
-    if {case['id'] for case in cases if case['kind'] == 'behavior'} != set(canonical):
+    if {case['id'] for case in cases if case['kind'] == 'behavior'} != set(canonical) - {'25-defect-fault'}:
         raise ValueError('required behavior cases differ from canonical cases')
     registered = {line.split()[0] for line in (ROOT / 'sdlc/surfaces.txt').read_text().splitlines()
                   if line.strip() and not line.startswith('#')}
@@ -106,6 +106,19 @@ def inventory():
         for owner in case['preconditions']:
             if not list((ROOT / 'sdlc/tickets').glob(owner + '-*.md')):
                 raise ValueError(f"{case['id']}: unknown precondition {owner}")
+    private_ids = {case['id'] for case in parity.get('private_cases', [])}
+    if private_ids != {'25-defect-fault', 'boundary-defect'}:
+        raise ValueError('private invariant coverage inventory differs from its safety boundary')
+    schema_cases = parity.get('schema_cases', [])
+    schema_ids = [case['id'] for case in schema_cases]
+    if len(schema_ids) != len(set(schema_ids)) or set(schema_ids) & {case['id'] for case in cases}:
+        raise ValueError('duplicate schema boundary case')
+    corpus = {case['name']: case for case in json.loads(
+        (ROOT / 'specification/fixtures/types/corpus.json').read_text())['cases']}
+    for case in schema_cases:
+        fixture = corpus.get(case['input']['case_ref'])
+        if fixture is None or fixture.get('case_id') or fixture['name'] == 'described-choice':
+            raise ValueError('schema boundary contains a real public call case')
     parity['unavailable_dependencies'] = {row['id']: row['dependency'] for row in pending
                                           if row['id'] not in expected_consumers
                                           or not (ROOT / row['surface'] / 'check.sh').is_file()}
@@ -168,11 +181,12 @@ def consumer_environment(scratch, port):
 
 
 def summarize(consumer, cases, code, seen, error, log):
-    states = {case: ('fail' if code or error else seen.get((consumer, case), 'missing'))
+    invalid = bool(error) or code not in (0, 1)
+    states = {case: ('fail' if invalid else seen.get((consumer, case), 'missing'))
               for case in cases}
     typed = [case['verb'] for case in cases.values()
              if case['kind'] == 'typed-result' and states[case['id']] == 'pass']
-    checked = any((consumer, case) in seen for case in cases) and code == 0 and not error
+    checked = any((consumer, case) in seen for case in cases) and not invalid
     return {'consumer': consumer, 'baseline_exit': code, 'baseline_error': error,
             'named_typed_functions': typed if checked else None,
             'adopted_case_count': sum(state == 'pass' for state in states.values()),
@@ -258,7 +272,7 @@ def run(port, baseline=False):
     table = support_table(parity, matrix)
     (output_dir / 'matrix.md').write_text(table)
     print(table, end='')
-    return int(any(state != 'pass' for row in matrix for state in row['cells'].values()))
+    return int(any(row['baseline_exit'] != 0 or row['baseline_error'] or any(state != 'pass' for state in row['cells'].values()) for row in matrix))
 
 
 def main():

@@ -35,13 +35,24 @@ def content(value, text=False):
 
 def document(row, cases, named):
     kind = row['kind']
+    if kind in ('images', 'image-location', 'refusal'):
+        base = document({**row, 'kind': 'behavior'}, cases, named)
+        base.update(arm='arm/full/capture/v1', metadata_only=True,
+                    settings={'backend': 'liquid', 'model': 'd1'},
+                    image_paths=row['input'].get('images', []))
+        base['items'] = base['items'][:1]
+        if kind == 'image-location':
+            base.update(paths=row['input']['paths'], source_unit=4)
+        if kind == 'refusal':
+            base['expect'] = {'error': 'usage', 'requests_sent': 0}
+        return base
     if kind == 'settings':
         fixture = next(c for c in json.loads((ROOT / 'conformance/settings.json').read_text())['cases'] if c['id'] == row['input']['case_ref'])
         steps = []
         for step in fixture['steps']:
             verb = step.get('verb', 'decide')
             verb = 'decide' if verb == 'decide_many' else verb
-            steps.append({'verb': verb, 'question': {'decide': 'Is this a refund?'}, 'items': step.get('records', [step.get('text', 'refund now')]), 'text': True, 'expect': step, 'settings': step['settings']})
+            steps.append({'verb': verb, 'question': {'decide': json.loads((ROOT / 'conformance/settings.json').read_text())['question']}, 'items': step.get('records', [step.get('text', 'refund now')]), 'text': True, 'expect': step, 'settings': step['settings']})
         return {'steps': steps, 'arm': fixture['arm'], 'profile': fixture.get('profile')}
     if kind == 'named-input':
         case = named[row['input']['case_ref']]
@@ -67,13 +78,19 @@ def document(row, cases, named):
                 'shared_context': given.get('shared_context'), 'loader': given.get('loader'),
                 'reference': given.get('reference', given.get('path')), 'file_body': given.get('question'), 'setup': given.get('setup'),
                 'expect': case['expect'], 'arm': 'arm/full/capture/v1'}
-    if kind not in ('behavior', 'typed-result', 'result2', 'type-fixture', 'located'):
+    if kind not in ('behavior', 'typed-result', 'result2', 'type-fixture', 'located', 'error'):
         raise ValueError('shared ' + kind + ' projection not yet implemented')
     reference = row['input'].get('case_ref')
     if kind == 'type-fixture':
         corpus = json.loads((ROOT / 'specification/fixtures/types/corpus.json').read_text())['cases']
         typed = next(value for value in corpus if value['name'] == reference)
         reference = typed.get('case_id')
+        if typed['name'] == 'described-choice':
+            request = dict(typed['request'])
+            evidence = request.pop('evidence')
+            return {'verb': 'choose', 'question': request, 'items': [evidence],
+                    'text': True, 'expect': {'value': typed['response'], 'requests_sent': 1},
+                    'arm': 'arm/full/capture/v1'}
         if reference is None:
             raise ValueError('type fixture lacks a public call case')
     case = cases[reference]
@@ -99,7 +116,7 @@ def document(row, cases, named):
         items = ['' if operation == 'invalid_arguments' else 'public refusal probe']
     return {'verb': row['verb'], 'question': question, 'items': items,
             'text': row['verb'] != 'relate', 'expect': case['expect'],
-            'paths': row['input'].get('paths'), 'arm': ('arm/full/capture/v1' if kind == 'located' else 'arm/refuse/v1' if operation == 'response_refusal' else 'generic/v1' if operation else 'case/' + reference + '/v1'),
+            'paths': row['input'].get('paths'), 'source_unit': {'file': 3, 'line': 1, 'window': 2}.get(row['input'].get('unit'), 3), 'arm': ('arm/full/capture/v1' if kind == 'located' else 'arm/refuse/v1' if operation == 'response_refusal' else 'generic/v1' if operation else 'case/' + reference + '/v1'),
             'operation': case.get('operation'), 'question_form': case.get('question_form'),
             'metadata_only': kind in ('typed-result', 'result2', 'located')}
 
@@ -114,10 +131,12 @@ def generated(at, value):
     verb = value['verb']
     kind = FUNCTIONS.index(verb) + 1
     question = value['raw'] if value.get('raw') is not None else compact(value['question'])
+    image_paths = value.get('image_paths', [])
     lines = ['static void case_%d(thinkthen_engine *e) {' % at,
              'thinkthen_question *q=NULL; thinkthen_source *source=NULL; thinkthen_result *result=NULL;',
              'thinkthen_controls_v1 controls={0}; controls.deadline_ms=-1; controls.attempts=1;',
-             'int code=0;', 'thinkthen_cancel_token *cancel=NULL;']
+             'int code=0;', 'thinkthen_cancel_token *cancel=NULL;',
+             'thinkthen_image *images[%d]={0};' % max(1, len(image_paths))]
     if verb == 'find' and value['question'].get('none'):
         text = value['question']['find']
         lines.extend(['thinkthen_question_spec_v1 question_spec={0}; question_spec.kind=7; question_spec.none=1;', 'question_spec.text=%s;' % content(text, isinstance(text, str)), 'code=thinkthen_question_new(e,&question_spec,&q);'])
@@ -139,16 +158,22 @@ def generated(at, value):
     if (value.get('operation') or {}).get('injection') == 'expired_deadline':
         lines.append('controls.deadline_ms=0;')
     lines.append('if(code) goto finished;')
+    for index, path in enumerate(image_paths):
+        raw = (ROOT / path).read_bytes()
+        data = '"' + ''.join('\\%03o' % byte for byte in raw) + '"'
+        lines.extend(['code=thinkthen_image_clone(e,(const uint8_t *)%s,%d,2,(thinkthen_optional_string_v1){0},&images[%d]);' % (data, len(raw), index), 'if(code) goto finished;'])
     items = value['items']
     if value.get('paths') or (value.get('operation') or {}).get('injection') == 'recording_read_failure':
-        paths = [str(ROOT / path) for path in value.get('paths', ['target/c-parity-missing-input'])]
+        paths = [str(ROOT / path) for path in (value.get('paths') or ['target/c-parity-missing-input'])]
         lines.extend(['thinkthen_string_v1 paths[]={%s};' % ','.join(map(counted, paths)),
-                      'thinkthen_source_spec_v1 spec={{paths,%d},THINKTHEN_SOURCE_FILE_V1,0};' % len(paths),
+                      'thinkthen_source_spec_v1 spec={{paths,%d},%d,0};' % (len(paths), value.get('source_unit', 3)),
                       'code=thinkthen_source_files(e,&spec,&source);'])
     else:
         lines.append('thinkthen_record_v1 records[%d]={0};' % max(1, len(items)))
         for index, item in enumerate(items):
             lines.append('records[%d].original=(thinkthen_optional_content_v1){1,%s};' % (index, content(item, value.get('text', False) and isinstance(item, str))))
+            if image_paths:
+                lines.append('records[%d].images=(thinkthen_images_v1){(const thinkthen_image *const *)images,%d};' % (index, len(image_paths)))
             if value.get('context_present'):
                 context = value['context']
                 lines.append('records[%d].context=(thinkthen_optional_content_v1){1,%s};' % (index, content(context, isinstance(context, str))))
@@ -157,7 +182,7 @@ def generated(at, value):
         context = value['shared_context']
         lines.append('controls.context=(thinkthen_optional_content_v1){1,%s};' % content(context, isinstance(context, str)))
     lines.extend(['if(code) goto finished;', 'code=thinkthen_%s_complete(e,q,source,&controls,&result);' % verb,
-                  'finished: output(e,%d,code,result); thinkthen_result_free(result); thinkthen_source_free(source); thinkthen_question_free(q); thinkthen_cancel_token_free(cancel);' % kind, '}'])
+                  'finished: output(e,%d,code,result); thinkthen_result_free(result); thinkthen_source_free(source); thinkthen_question_free(q); thinkthen_cancel_token_free(cancel); for(size_t i=0;i<%d;++i) thinkthen_image_free(images[i]);' % (kind, max(1, len(image_paths))), '}'])
     return '\n'.join(lines)
 
 
@@ -191,7 +216,7 @@ def equivalent(got, want):
 def assertions(row, value, got, count):
     expect = value['expect']
     error = expect.get('error')
-    if error:
+    if error is not None:
         error = error.get('kind') if isinstance(error, dict) else error
         assert got['code'] == ERRORS[error], got
         assert got['message'], got
@@ -207,6 +232,12 @@ def assertions(row, value, got, count):
             for name, field in value['metadata'].items():
                 if name in ('name', 'wording_version'):
                     assert answer[name] == field, answer
+    if row['kind'] in ('images', 'image-location'):
+        expected = value.get('image_paths') or value['paths']
+        assert [bytes.fromhex(data) for data in got['rows'][0]['images']] == [(ROOT / path).read_bytes() for path in expected], got
+        if row['kind'] == 'image-location':
+            assert len(got['rows']) == 1 and 'first_line' not in got['rows'][0] and 'last_line' not in got['rows'][0], got
+        return
     if row['kind'] == 'located':
         assert got['rows'], got
         if value['verb'] not in ('find', 'relate'):
@@ -341,26 +372,38 @@ def main():
                         backend = Backend(ROOT / 'target/debug/conformance-backend', child)
                         try:
                             value = ready[at]
-                            child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s' % (backend.port, value['arm']), THINKTHEN_API_KEY='sk-conformance-loopback')
+                            child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s' % (backend.port, value['arm']), THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback', OPENROUTER_API_KEY='sk-conformance-loopback')
                             prepare(home, value)
                             steps = value.get('steps', [value])
                             for step_at, step in enumerate(steps):
-                                settings = {'cache': False, 'model': 'jev-1.13.0', 'batch': 1, 'max_retries': 0}
+                                settings = {'cache': False, 'model': 'jev-latest' if 'steps' in value else 'jev-1.13.0', 'batch': 1, 'max_retries': 0}
                                 settings.update(step.get('settings', {}))
                                 settings = {key: (str(home / 'saved') if entry == '$FOLDER' else str(home / 'profile.json') if entry == '$PROFILE' else entry) for key, entry in settings.items()}
+                                if row['kind'] in ('images', 'image-location'):
+                                    settings['record'] = str(home / 'recorded')
                                 number = 10000 + at * 100 + step_at if 'steps' in value else at
                                 output = subprocess.run([str(binary), str(number), compact(settings)], env=child, cwd=home, capture_output=True, text=True, timeout=60)
                                 assert output.returncode == 0 and not output.stderr, output.stderr
                                 got = json.loads(output.stdout)
                                 assertions(row, step, got, int(backend.read('count')))
+                                if row['kind'] in ('images', 'image-location'):
+                                    before = int(backend.read('count'))
+                                    replay = {key: entry for key, entry in settings.items() if key != 'record'}
+                                    replay['replay'] = str(home / 'recorded')
+                                    repeated = subprocess.run([str(binary), str(number), compact(replay)], env=child, cwd=home, capture_output=True, text=True, timeout=60)
+                                    assert repeated.returncode == 0 and not repeated.stderr, repeated.stderr
+                                    saved = json.loads(repeated.stdout)
+                                    assertions(row, step, saved, int(backend.read('count')))
+                                    assert saved['requests_sent'] == 0 and int(backend.read('count')) == before, saved
+                                    assert saved['rows'][0]['answer_id'] == got['rows'][0]['answer_id'], saved
                         finally:
                             backend.close()
                 except (AssertionError, ValueError, KeyError, subprocess.SubprocessError, OSError) as failure:
-                    error = str(failure)
-            if error:
+                    error = type(failure).__name__ + ': ' + str(failure)
+            if error is not None:
                 failures += 1
                 print('C fixture %s failed: %s' % (row['id'], error), file=sys.stderr)
-            print('parity: ' + json.dumps({'consumer': 'c', 'case': row['id'], 'checks': row.get('checks', ['named', 'runtime']), 'status': 'fail' if error else 'pass'}), flush=True)
+            print('parity: ' + json.dumps({'consumer': 'c', 'case': row['id'], 'checks': row.get('checks', ['named', 'runtime']), 'status': 'fail' if error is not None else 'pass'}), flush=True)
         print('C shared fixture results: %d passed, %d failed' % (len(rows) - failures, failures))
         return bool(failures)
 

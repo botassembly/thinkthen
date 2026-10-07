@@ -6,7 +6,7 @@
 
 `routine-ids.txt` selects 32 IDs from `cases.json` for the routine surface checks in `sdlc/scripts/surfaces`. Each runner reads the canonical 55-case JSON and filters by the absolute path in `THINKTHEN_CONFORMANCE_IDS`; a direct runner with that name unset still checks all 55. A missing or duplicate ID fails before a case runs. Supported cases count as pass or fail, unsupported injections as not run with a reason, and unselected cases are reported separately. The nine `settings.json` cases keep their own counted replay, cache-miss, and request-size relation split proof. Stored loopback replies in `cases.json` are not cache hits. `sdlc/scripts/test-full-cases --run` chooses the full functional set at a batch checkpoint; `sdlc/scripts/test-stress --run` is the separate repeated load campaign.
 
-A successful exchange has one of two provenance values. `captured` names a committed public recording folder, under `demos/` or `specification/`, whose `thinkthen.jsonl` holds each question of the embedded exchange with the answer and model its response carries. `synthetic_contract` says the exchange was written against the accepted wire contract. Fault cases name deterministic injection points. They are schema contracts until the private engine runner lands with the one-crate merge.
+A successful exchange has one of two provenance values. `captured` names a committed public recording folder, under `demos/` or `specification/`, whose `thinkthen.jsonl` holds each question of the embedded exchange with the answer and model its response carries. `synthetic_contract` says the exchange was written against the accepted wire contract. Fault cases name deterministic public refusal inputs or private invariant checks. Internal invariant injection is exercised only by the existing native and C safety tests; it is not an SDK input.
 
 The mixed `annotate` case keeps successful `decide`, `choose`, `score`, and `tag` answers together in one request. The separate partial case keeps three good answers, distinguishes one valid `null` answer from one failed answer, checks the exact failure marker and count, and keeps the logical request identity. The two-group case fixes aggregate request identity in question-set group order.
 
@@ -188,3 +188,9 @@ never SDK parity. Development selectors stay in individual existing consumers;
 the final `surfaces --parity` run has none and permits no skip. Routine gates
 continue validating declarations during adoption. The passing complete run
 must become mandatory before 0432 can close.
+
+## Public input and safety boundaries (0432 ruling)
+
+The public parity suite requires only inputs admitted by a real public call. The internal `25-defect-fault` and its `boundary-defect` reference remain in `parity.private_cases` for native/C panic containment and safe Defect error mapping. They do not require a caller-injectable crash or a public fault bridge. Existing secrecy, panic containment and all six C error mappings remain mandatory in the ordinary native/C tests.
+
+`parity.schema_cases` retains every distinct result-envelope, legacy JSON-door, usage and plan example without a public typed call fixture. These run at their actual schema/decoder boundary through `specification/fixtures/types/self-test`, which the existing full test rung already executes, and the existing generic-door tests. C owned-result accessors cannot accept an arbitrary malformed result envelope. Their parity proof executes actual named calls and reads known fields through typed getters. The described-choice fixture and every corpus entry with a real call case remain required public cells. All 24 image admission cells remain required.
