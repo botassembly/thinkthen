@@ -160,6 +160,52 @@ def compare_abi(expected, actual):
     raise ValueError('C ABI mismatch: ' + ', '.join(changed))
 
 
+def wire_type(kind, width, signed=True):
+    """Compare represented ABI types; opaque host pointers erase their pointees."""
+    if '*' in kind or kind == 'pointer':
+        return 'pointer'
+    if kind in ('void', 'union') or kind.startswith('thinkthen_'):
+        return kind
+    if kind in ('float', 'double'):
+        return 'float' + str(width * 8)
+    if not signed:
+        return 'integer' + str(width * 8)
+    unsigned = kind.startswith(('uint', 'unsigned')) or kind == 'size_t'
+    return ('unsigned' if unsigned else 'signed') + str(width * 8)
+
+
+def pointee_type(kind, native, signed=True):
+    """Describe a represented typed reference without guessing opaque pointees."""
+    if not kind.endswith('*'):
+        return 'not-a-pointer'
+    pointed = re.sub(r'\bconst\b', '', kind[:-1]).strip()
+    if '*' in pointed:
+        return 'pointer'
+    if pointed.startswith('thinkthen_'):
+        return pointed
+    widths = {'size_t': native['platform']['size_t'], 'int': native['platform']['int'],
+              'long': native['platform']['long'], 'double': 8, 'float': 4,
+              'uint64_t': 8, 'int64_t': 8, 'uint32_t': 4, 'int32_t': 4,
+              'uint16_t': 2, 'int16_t': 2, 'uint8_t': 1, 'int8_t': 1, 'char': 1}
+    return wire_type(pointed, widths[pointed], signed)
+
+
+def represented_abi(native, records, functions, constants, signed=True):
+    """Select independently required host imports and normalize represented types."""
+    result = {'records': {}, 'functions': {}, 'constants': {n: native['constants'][n] for n in constants}}
+    for name in records:
+        record = copy.deepcopy(native['records'][name])
+        for field in record['fields'].values():
+            field['type'] = wire_type(field['type'], field['width'], signed)
+        result['records'][name] = record
+    for name in functions:
+        prototype = copy.deepcopy(native['functions'][name])
+        prototype['return'] = wire_type(prototype['return'], prototype['return_width'], signed)
+        prototype['arguments'] = [wire_type(t, w, signed) for t, w in zip(prototype['arguments'], prototype['argument_widths'])]
+        result['functions'][name] = prototype
+    return result
+
+
 def check_exports(header, library):
     text = re.sub(r'/\*.*?\*/|//[^\n]*', '', Path(header).read_text(), flags=re.S)
     declared = set(re.findall(r'\b(thinkthen_\w+)\s*\([^;{}]*\)\s*;', text, flags=re.S))
