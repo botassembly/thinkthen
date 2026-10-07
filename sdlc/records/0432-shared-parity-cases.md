@@ -68,3 +68,10 @@ The expanded public table proves audit grades and diff pairing for authored obje
 The failed site run at source `8e7cc4d77` identified four stale CLI examples in `target/0432-union-final-docs.log`. Help now lists the landed MCP command. Recognition retains every value and updates only JSON member order. The replay-miss example retains exit 5 and refreshes the versioned cache key. The facts example explicitly removes the variable `seconds`, `call_id` and `command_ms` fields; its page explains those omissions and the current cache identity. Stable facts retain zero requests sent, zero retries and zero cache answers. Recordings and runner code remain unchanged.
 
 Clean-environment focused replay passed all six selected examples using the existing release command and saved fixtures; output is in `target/0432-union-docs-focused.log`. Parsed recognition output equals the prior values. Sample checks and whitespace checks passed. The external privacy list checked 35 names with zero path or file hits. The source count remains 163238/163238. The coordinator reports full source tests, lint and specification checks passed on `8e7cc4d77`; this documentation fix did not repeat unchanged Rust gates. Fresh review and final qualification remain with the coordinator.
+
+
+## Global flag catalog follow-up, 2026-10-07
+
+The complete site run on `9933220d2` passed all 160 CLI examples, then the existing flag check found six catalog gaps. Every function now accepts shared context and the request-byte limit. Both existing flag definitions move to `GLOBAL_FLAGS`, and the record/set shared lists remove them. Descriptions, defaults and behavior remain unchanged; each function page renders each flag once. No product, runner or test changes were needed.
+
+Clean-environment checks against the current release command passed: all ten functions match long help with 26 global flags, all samples keep their rules, and the diff has no whitespace errors. Full Rust tests, lint and specification checks remain applicable from `8e7cc4d77`. The coordinator owns complete site replay and fresh review; installed and platform qualification remain open.

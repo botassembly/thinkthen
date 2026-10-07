@@ -44,9 +44,9 @@ const MEANS = [
 ];
 const QUIET = flag('--quiet', 'nothing', 'off', 'Prints nothing. The exit code carries the answer. It works on one document only.');
 // The shared flags every record function takes. find takes none of them.
-const RECORD_FLAGS = ['--csv', '--tsv', '--image-media', '--context', '--context-field', '--batch', '--max-request-bytes', '--jobs'];
+const RECORD_FLAGS = ['--csv', '--tsv', '--image-media', '--context-field', '--batch', '--jobs'];
 // recognize and relate do not batch records.
-const SET_FLAGS = ['--csv', '--tsv', '--image-media', '--max-request-bytes', '--jobs'];
+const SET_FLAGS = ['--csv', '--tsv', '--image-media', '--jobs'];
 
 // The failure codes every function shares, from specification/channels.md.
 // A function's own list puts its answers first and then these.
