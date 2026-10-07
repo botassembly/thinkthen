@@ -45,20 +45,10 @@ pub(crate) fn ask(
     let member_authors = std::mem::take(&mut storage.4);
     let observation_authors = observations::authors(&mut storage, &events, &rows, &authors)?;
     let row_details = std::mem::take(&mut storage.1);
-    let observation_details = events
-        .iter()
-        .map(|event| match event {
-            OwnedRecordObservation::Question { detail, .. } => {
-                storage.question_details(detail.detail())
-            }
-            OwnedRecordObservation::Row { index, .. } => rows
-                .iter()
-                .position(|row| row.index == *index)
-                .and_then(|at| row_details.get(at))
-                .copied()
-                .ok_or_else(|| Failure::defect("native row event lost its details")),
-        })
-        .collect::<Result<Vec<_>, Failure>>()?;
+    let observation_details = observation_details(&mut storage, &events, &rows, &row_details)?;
+    let source_recognition = std::mem::take(&mut storage.6);
+    let source_relations = std::mem::take(&mut storage.7);
+    let rank_members = std::mem::take(&mut storage.5);
     let observations = observations::convert(&mut storage, &events, &rows)?;
     let f = completed
         .as_ref()
@@ -103,6 +93,9 @@ pub(crate) fn ask(
         authors,
         member_authors,
         observation_authors,
+        rank_members,
+        source_recognition,
+        source_relations,
         row_details,
         observation_details,
     })
@@ -206,11 +199,34 @@ fn execute(
             *completed = Some(call.facts().clone());
             Ok(vec![structured::relate(s, call.value())?])
         }
-        (Native::RankSet(_) | Native::Set(_), 6) => Err(Failure::usage(
-            "complete saved rank sets await the native complete rank-set route",
-        )),
+        (Native::RankSet(set), 6) => collect!(completed;
+            engine.rank_set_records_complete_with(set, records, options),
+            |r| super::rank_set::row(s, r, &events.lock().unwrap_or_else(PoisonError::into_inner))
+        ),
         _ => Err(Failure::usage(
             "this question reading is not admitted by the named complete call",
         )),
     }
+}
+
+fn observation_details(
+    storage: &mut Storage,
+    events: &[OwnedRecordObservation],
+    rows: &[RowObservationV1],
+    row_details: &[crate::ffi::carriers::DetailsV1],
+) -> Result<Vec<crate::ffi::carriers::DetailsV1>, Failure> {
+    events
+        .iter()
+        .map(|event| match event {
+            OwnedRecordObservation::Question { detail, .. } => {
+                storage.question_details(detail.detail())
+            }
+            OwnedRecordObservation::Row { index, .. } => rows
+                .iter()
+                .position(|row| row.index == *index)
+                .and_then(|at| row_details.get(at))
+                .copied()
+                .ok_or_else(|| Failure::defect("native row event lost its details")),
+        })
+        .collect::<Result<Vec<_>, Failure>>()
 }

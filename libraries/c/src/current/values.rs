@@ -83,7 +83,7 @@ impl Storage {
         };
         ObservedProbabilitiesV1 { kind, data }
     }
-    fn entity(&mut self, entity: &RecognizedEntity) -> EntityV1 {
+    pub(crate) fn entity(&mut self, entity: &RecognizedEntity) -> EntityV1 {
         EntityV1 {
             text: self.string(entity.text()),
             start: entity.start(),

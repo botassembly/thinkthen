@@ -318,6 +318,18 @@ fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_prece
             "relation",
             r#"{"version":1,"name":"relation","wording_version":33,"relate":{"relations":[{"name":"supports","source":"*","target":"*"}]}}"#,
         ),
+        (
+            "ranking",
+            r#"{"name":"ranking","wording_version":34,"decide":"Rank this?"}"#,
+        ),
+        (
+            "rank-members",
+            r#"{"version":1,"questions":{"first":{"decide":"Criterion A?"},"second":{"decide":"Criterion B?"}}}"#,
+        ),
+        (
+            "finding",
+            r#"{"name":"finding","wording_version":34,"find":"Find this?"}"#,
+        ),
     ] {
         std::fs::write(questions.join(format!("{name}.json")), body).expect("named question");
     }
@@ -343,5 +355,28 @@ fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_prece
         (output.status.code(), text(&output.stderr)),
         (Some(0), String::new())
     );
-    assert_eq!(backend.count(), 7);
+    assert_eq!(backend.count(), 10);
+}
+
+#[test]
+fn saved_rank_sets_retain_turns_order_and_each_native_member_judgment() {
+    let backend = Backend::start().expect("owned backend");
+    let output = super::run(
+        &compile(&crate_dir().join("tests/c/complete_rank_sets.c")),
+        &format!("{}/arm/full/capture/v1", backend.origin()),
+        b"",
+    );
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(backend.count(), 1);
+    let capture: serde_json::Value = serde_json::from_str(&backend.capture()).expect("captured");
+    let body = capture["bodies"][0].as_str().expect("request");
+    assert!(
+        body.contains("Criterion A?")
+            && body.contains("Criterion B?")
+            && body.contains("One")
+            && body.contains("Two")
+    );
 }

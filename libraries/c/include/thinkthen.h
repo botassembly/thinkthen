@@ -1005,6 +1005,21 @@ typedef struct thinkthen_details_v1 {
  * usage.present retains a reported usage object even with an unknown dimension;
  * each token dimension has its own presence flag. Input views retain originals,
  * not model projections. Multirow summaries have no invented aggregate meta/ID. */
+
+/* Additive located values come from native span/occurrence mapping. An
+ * unlocated call returns present=0. Every nested view borrows result ownership. */
+typedef struct thinkthen_source_entity_v1 { thinkthen_entity_v1 entity; thinkthen_optional_location_v1 position; } thinkthen_source_entity_v1;
+typedef struct thinkthen_source_entities_v1 { const thinkthen_source_entity_v1 *data; size_t len; } thinkthen_source_entities_v1;
+typedef struct thinkthen_source_entity_edge_v1 { thinkthen_string_v1 relation; thinkthen_source_entity_v1 source, target; double probability; int either; } thinkthen_source_entity_edge_v1;
+typedef struct thinkthen_source_entity_edges_v1 { const thinkthen_source_entity_edge_v1 *data; size_t len; } thinkthen_source_entity_edges_v1;
+typedef struct thinkthen_optional_source_entity_edges_v1 { int present; thinkthen_source_entity_edges_v1 value; } thinkthen_optional_source_entity_edges_v1;
+typedef struct thinkthen_source_recognition_v1 { int present; thinkthen_source_entities_v1 entities; thinkthen_optional_source_entity_edges_v1 relations; } thinkthen_source_recognition_v1;
+typedef struct thinkthen_source_endpoint_v1 { size_t ordinal; thinkthen_endpoint_v1 endpoint; thinkthen_content_v1 record; thinkthen_optional_location_v1 position; } thinkthen_source_endpoint_v1;
+typedef struct thinkthen_source_edge_v1 { thinkthen_string_v1 relation; thinkthen_source_endpoint_v1 source, target; double probability; int either; } thinkthen_source_edge_v1;
+typedef struct thinkthen_source_edges_v1 { const thinkthen_source_edge_v1 *data; size_t len; } thinkthen_source_edges_v1;
+typedef struct thinkthen_source_relations_v1 { int present; thinkthen_source_edges_v1 edges; } thinkthen_source_relations_v1;
+int thinkthen_result_source_recognition(const thinkthen_result *, size_t, thinkthen_source_recognition_v1 *);
+int thinkthen_result_source_relations(const thinkthen_result *, size_t, thinkthen_source_relations_v1 *);
 int thinkthen_result_details(const thinkthen_result *, size_t, thinkthen_details_v1 *);
 int thinkthen_result_observation_details(const thinkthen_result *, size_t, thinkthen_details_v1 *);
 
@@ -1027,6 +1042,11 @@ int thinkthen_result_tag(const thinkthen_result *, size_t, thinkthen_tag_view_v1
 int thinkthen_result_score(const thinkthen_result *, size_t, thinkthen_score_view_v1 *);
 int thinkthen_result_filter(const thinkthen_result *, size_t, thinkthen_filter_view_v1 *);
 int thinkthen_result_rank(const thinkthen_result *, size_t, thinkthen_rank_view_v1 *);
+/* Saved rank sets retain every ordered member. Simple rank has zero members.
+ * Each member view has its own answer ID, complete probabilities and metadata.
+ * Views borrow the result; invalid indices return EUSAGE without writing output. */
+int thinkthen_result_rank_member_count(const thinkthen_result *, size_t, size_t *);
+int thinkthen_result_rank_member(const thinkthen_result *, size_t, size_t, thinkthen_rank_view_v1 *);
 int thinkthen_result_find(const thinkthen_result *, size_t, thinkthen_find_view_v1 *);
 int thinkthen_result_annotate(const thinkthen_result *, size_t, thinkthen_annotate_view_v1 *);
 int thinkthen_result_recognize(const thinkthen_result *, size_t, thinkthen_recognize_view_v1 *);
@@ -1073,7 +1093,8 @@ enum thinkthen_input_property_kind_v1 {
 enum thinkthen_question_loader_role_v1 {
     THINKTHEN_LOAD_ATOMIC_V1=1, THINKTHEN_LOAD_SET_V1=2,
     THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1=3, THINKTHEN_LOAD_RECOGNIZE_V1=4,
-    THINKTHEN_LOAD_RELATE_V1=5
+    THINKTHEN_LOAD_RELATE_V1=5, THINKTHEN_LOAD_RANK_V1=6,
+    THINKTHEN_LOAD_RANK_SET_V1=7, THINKTHEN_LOAD_FIND_V1=8
 };
 typedef struct thinkthen_input_property_v1 {
     thinkthen_string_v1 name; uint32_t kind;
@@ -1098,7 +1119,7 @@ int thinkthen_question_new_authored(const thinkthen_engine *, const thinkthen_qu
 /* Borrow metadata owned by this immutable question until question_free. */
 int thinkthen_question_author(const thinkthen_question *, thinkthen_question_author_v1 *);
 /* Explicit native loader role: ATOMIC=1, SET=2, DYNAMIC_CHOOSE=3,
- * RECOGNIZE=4, RELATE=5. No host search or fallback after file refusal.
+ * RECOGNIZE=4, RELATE=5, RANK=6, RANK_SET=7, FIND=8. No host search or fallback after file refusal.
  * These native-loaded handles execute directly. Embedding them as typed set
  * members awaits a native authored serialization/set composition API.
  */

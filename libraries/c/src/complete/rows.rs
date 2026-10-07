@@ -90,7 +90,7 @@ impl Storage {
             ..RowV1::default()
         }
     }
-    fn atomic_row(
+    pub(super) fn atomic_row(
         &mut self,
         original: &Original,
         meta: ResultMetadata<'_>,

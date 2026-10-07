@@ -268,3 +268,16 @@ fixture mapping algorithms are replaced with the one shared independent oracle.
 No new dependency or runner is introduced. These are integration checks;
 root retains fresh whole High C+shared-oracle review and full landing gates
 once native dependencies are main. No full parity or source landing is claimed.
+
+
+C adoption checkpoint after main cache fixes and native e714bb018: complete
+saved rank sets now execute through the native record route and retain their
+selecting member, original ordinals, every member judgment, separate metadata
+and authors through additive rank-member accessors. Eight explicit named roles
+include rank, rank set and find. Custom relation record plans use the native
+record grammar. Additive located recognition/relation accessors preserve the
+native physical spans and expanded endpoint occurrences, with typed originals;
+old layouts and symbols remain unchanged. Actual ASan consumers retain these
+views after engine, question and source handles are freed. Focused checks pass
+14 Rust checks and 11 public consumers; all-target Clippy passes. Shared 293-case
+C parity adoption remains in progress; no whole-surface parity claim is made.

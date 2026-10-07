@@ -77,6 +77,30 @@ static void check(thinkthen_result *r,unsigned kind,int files) {
     if(kind!=8) assert(same(author.name.value,"call-check") && author.wording_version.present && author.wording_version.value==17);
     if(kind==8) { assert(thinkthen_result_member_author(r,0,0,&author)==0); assert(same(author.name.value,"call-check") && author.wording_version.value==17); }
     else assert(thinkthen_result_member_author(r,0,0,&author)==THINKTHEN_EUSAGE);
+    if(kind==9) {
+        thinkthen_source_recognition_v1 located={0}; assert(thinkthen_result_source_recognition(r,0,&located)==0);
+        assert(located.present==files);
+        if(files) {
+            assert(located.entities.len>0);
+            for(size_t at=0;at<located.entities.len;++at) {
+                assert(located.entities.data[at].position.present && located.entities.data[at].position.value.file.present);
+                assert(located.entities.data[at].entity.start<=row.input.value.data.len);
+                size_t line=row.position.value.first_line.value;
+                for(size_t scalar=0;scalar<located.entities.data[at].entity.start;++scalar) if(row.input.value.data.data[scalar]=='\n') ++line;
+                assert(located.entities.data[at].position.value.first_line.present && located.entities.data[at].position.value.first_line.value==line);
+                assert(located.entities.data[at].entity.text.len>0);
+            }
+        }
+    }
+    if(kind==10) {
+        thinkthen_source_relations_v1 located={0}; assert(thinkthen_result_source_relations(r,0,&located)==0);
+        assert(located.present==files);
+        if(files) { assert(located.edges.len==2); for(size_t at=0;at<located.edges.len;++at) {
+            assert(located.edges.data[at].source.position.present && located.edges.data[at].target.position.present);
+            assert(located.edges.data[at].source.record.kind==1 && located.edges.data[at].source.record.data.len>0);
+            assert(located.edges.data[at].source.ordinal!=located.edges.data[at].target.ordinal);
+        } }
+    }
     common(row,kind==5 || kind==6 ? 1:kind);
     thinkthen_details_v1 detail={0}; assert(thinkthen_result_details(r,0,&detail)==0);
     assert(detail.inputs.len==((kind==7 || kind==10)?2:1));

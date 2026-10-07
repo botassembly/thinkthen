@@ -33,7 +33,7 @@ pub(crate) fn parse(kind: u32, json: String) -> Result<QuestionHandle, Failure> 
             reading = Some(selected);
             Native::Recognize(question)
         }
-        10 => Native::Relate(Relate::from_json(&json)?),
+        10 => Native::Relate(Relate::from_records_json(&json)?),
         _ => return Err(Failure::usage("invalid question kind")),
     };
     Ok(finish(json, native, reading))
@@ -89,7 +89,22 @@ pub(crate) fn named(role: u32, value: &str, reference: bool) -> Result<QuestionH
             reading = Some(selected);
             Native::Recognize(q)
         }
-        5 => Native::Relate(load!(Relate)),
+        5 => Native::Relate(if reference {
+            Relate::load_records_reference(value)?
+        } else {
+            Relate::load_records_named(value)?
+        }),
+        6 => Native::Rank(if reference {
+            Question::load_rank_reference(value)?
+        } else {
+            Question::load_rank_named(value)?
+        }),
+        7 => Native::RankSet(load!(RankSet)),
+        8 => {
+            let (q, selected) = load!(thinkthen::FindQuestionFile).into_parts();
+            reading = Some(selected);
+            Native::Find(q)
+        }
         _ => return Err(Failure::usage("invalid native named question role")),
     };
     Ok(finish(String::new(), native, reading))

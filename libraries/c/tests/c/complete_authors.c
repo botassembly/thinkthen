@@ -145,6 +145,20 @@ static void named(void) {
         else assert(a.wording_version.present && a.wording_version.value==33);
         thinkthen_result_free(result);
     }
+    const char *more[]={"ranking","rank-members","finding"};
+    for(unsigned role=6;role<=8;++role) {
+        thinkthen_question *loaded=NULL;
+        assert(thinkthen_question_load_named(e,role,(thinkthen_string_v1){more[role-6],strlen(more[role-6])},&loaded)==0);
+        inputs[0].options=(thinkthen_choices_v1){0};
+        thinkthen_source *records=source(e,inputs,2); thinkthen_result *result=NULL;
+        int code=role==8?thinkthen_find_complete(e,loaded,records,&c,&result):thinkthen_rank_complete(e,loaded,records,&c,&result);
+        if(code) { fprintf(stderr,"native named role %u: %d %s\n",role,code,thinkthen_error_message(e)); abort(); }
+        thinkthen_question_free(loaded); thinkthen_source_free(records);
+        thinkthen_question_author_v1 a={0}; assert(thinkthen_result_question_author(result,0,&a)==0);
+        if(role!=7) assert(a.wording_version.present && a.wording_version.value==34);
+        else { size_t count=0; assert(thinkthen_result_rank_member_count(result,0,&count)==0 && count==2); }
+        thinkthen_result_free(result);
+    }
     thinkthen_question *q=(thinkthen_question *)(uintptr_t)1;
     assert(thinkthen_question_load_named(e,1,STR("mismatch"),&q)==THINKTHEN_ELOCAL && q==(thinkthen_question *)(uintptr_t)1);
     assert(thinkthen_question_load_reference(e,1,STR("catalog"),&q)==THINKTHEN_EUSAGE);

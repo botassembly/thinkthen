@@ -74,3 +74,22 @@ SIGNATURE(thinkthen_result_question_author, result_author_fn);
 SIGNATURE(thinkthen_result_observation_author, result_author_fn);
 typedef int (*member_author_fn)(const thinkthen_result *, size_t, size_t, thinkthen_question_author_v1 *);
 SIGNATURE(thinkthen_result_member_author, member_author_fn);
+
+typedef int (*rank_member_count_fn)(const thinkthen_result *,size_t,size_t *);
+SIGNATURE(thinkthen_result_rank_member_count, rank_member_count_fn);
+typedef int (*rank_member_fn)(const thinkthen_result *,size_t,size_t,thinkthen_rank_view_v1 *);
+SIGNATURE(thinkthen_result_rank_member, rank_member_fn);
+
+typedef int (*source_recognition_fn)(const thinkthen_result *,size_t,thinkthen_source_recognition_v1 *);
+SIGNATURE(thinkthen_result_source_recognition, source_recognition_fn);
+typedef int (*source_relations_fn)(const thinkthen_result *,size_t,thinkthen_source_relations_v1 *);
+SIGNATURE(thinkthen_result_source_relations, source_relations_fn);
+
+#ifdef RUST_SOURCE_RECOGNITION_SIZE
+STATIC_ASSERT(sizeof(thinkthen_source_recognition_v1)==RUST_SOURCE_RECOGNITION_SIZE);
+STATIC_ASSERT(ALIGNOF(thinkthen_source_recognition_v1)==RUST_SOURCE_RECOGNITION_ALIGN);
+STATIC_ASSERT(sizeof(thinkthen_source_relations_v1)==RUST_SOURCE_RELATIONS_SIZE);
+STATIC_ASSERT(ALIGNOF(thinkthen_source_relations_v1)==RUST_SOURCE_RELATIONS_ALIGN);
+STATIC_ASSERT(sizeof(thinkthen_source_endpoint_v1)==RUST_SOURCE_ENDPOINT_SIZE);
+STATIC_ASSERT(ALIGNOF(thinkthen_source_endpoint_v1)==RUST_SOURCE_ENDPOINT_ALIGN);
+#endif

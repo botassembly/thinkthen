@@ -40,10 +40,12 @@ macro_rules! union_layout {
 mod answers;
 mod author;
 mod inputs;
+mod located;
 mod metadata;
 mod results;
 pub use answers::*;
 pub use author::*;
 pub use inputs::*;
+pub use located::*;
 pub use metadata::*;
 pub use results::*;

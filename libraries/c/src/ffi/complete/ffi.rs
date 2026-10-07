@@ -220,6 +220,43 @@ row!(thinkthen_result_tag, TagViewV1, 3, tag);
 row!(thinkthen_result_score, ScoreViewV1, 4, score);
 row!(thinkthen_result_filter, FilterViewV1, 5, filter);
 row!(thinkthen_result_rank, RankViewV1, 6, rank);
+/// Number of saved member judgments; simple rank has none.
+/// # Safety
+/// Owner and output obey the installed header's storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_rank_member_count(
+    owner: *const ResultHandle,
+    row: usize,
+    out: *mut usize,
+) -> i32 {
+    // SAFETY: view validates the live owner/output and row kind before publication.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows
+                .get(row)
+                .filter(|v| v.function == 6)
+                .map(|_| r.rank_members.get(row).map_or(0, Vec::len))
+        })
+    }
+}
+/// Borrow an actual saved rank member with its independent identity and probabilities.
+/// # Safety
+/// Owner and output obey the installed header's storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_rank_member(
+    owner: *const ResultHandle,
+    row: usize,
+    member: usize,
+    out: *mut RankViewV1,
+) -> i32 {
+    // SAFETY: view validates NULLs and checked indices before publication.
+    unsafe {
+        view(owner, out, |r| {
+            r.rank_members.get(row)?.get(member).copied()
+        })
+    }
+}
+
 row!(thinkthen_result_find, FindViewV1, 7, find);
 row!(thinkthen_result_annotate, AnnotateViewV1, 8, annotate);
 row!(thinkthen_result_recognize, RecognizeViewV1, 9, recognize);
@@ -319,4 +356,39 @@ pub(crate) unsafe extern "C" fn thinkthen_result_observation_author(
 ) -> i32 {
     // SAFETY: view validates owner/output and get validates the ordinal.
     unsafe { view(owner, out, |r| r.observation_authors.get(at).copied()) }
+}
+
+/// Borrow native located recognition spans; absent for unlocated input.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_source_recognition(
+    owner: *const ResultHandle,
+    row: usize,
+    out: *mut crate::ffi::carriers::SourceRecognitionV1,
+) -> i32 {
+    // SAFETY: checked row kind and indices select constructed immutable storage.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows.get(row).filter(|v| v.function == 9)?;
+            r.source_recognition.get(row).copied()
+        })
+    }
+}
+/// Borrow native expanded relation occurrences; absent for unlocated input.
+/// # Safety
+/// Owner and output obey the header's lifetime/storage contract.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_result_source_relations(
+    owner: *const ResultHandle,
+    row: usize,
+    out: *mut crate::ffi::carriers::SourceRelationsV1,
+) -> i32 {
+    // SAFETY: checked row kind and indices select constructed immutable storage.
+    unsafe {
+        view(owner, out, |r| {
+            r.rows.get(row).filter(|v| v.function == 10)?;
+            r.source_relations.get(row).copied()
+        })
+    }
 }

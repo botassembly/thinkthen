@@ -2,9 +2,11 @@
 mod details;
 mod execute;
 mod inputs;
+mod located;
 mod metadata;
 mod observations;
 mod questions;
+mod rank_set;
 mod rows;
 mod structured;
 use crate::current::Storage;
@@ -20,6 +22,9 @@ pub(crate) struct ResultHandle {
     pub(crate) authors: Vec<crate::ffi::carriers::QuestionAuthorV1>,
     pub(crate) member_authors: Vec<Vec<crate::ffi::carriers::QuestionAuthorV1>>,
     pub(crate) observation_authors: Vec<crate::ffi::carriers::QuestionAuthorV1>,
+    pub(crate) rank_members: Vec<Vec<crate::ffi::carriers::RankViewV1>>,
+    pub(crate) source_recognition: Vec<crate::ffi::carriers::SourceRecognitionV1>,
+    pub(crate) source_relations: Vec<crate::ffi::carriers::SourceRelationsV1>,
     pub(crate) row_details: Vec<crate::ffi::carriers::DetailsV1>,
     pub(crate) observation_details: Vec<crate::ffi::carriers::DetailsV1>,
 }
@@ -69,6 +74,9 @@ pub(crate) fn failure(
         authors: Vec::new(),
         member_authors: Vec::new(),
         observation_authors: Vec::new(),
+        rank_members: Vec::new(),
+        source_recognition: Vec::new(),
+        source_relations: Vec::new(),
         row_details: Vec::new(),
         observation_details: Vec::new(),
     })

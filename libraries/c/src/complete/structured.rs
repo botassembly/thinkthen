@@ -122,6 +122,8 @@ pub(super) fn recognize(
     row: &CompleteRecord<Original, CompleteRecognized>,
 ) -> Result<RowObservationV1, Failure> {
     let r = row.result();
+    let located = super::located::recognition(s, r.source_value());
+    s.6.push(located);
     let mut common = s.original_row(Some(row.original()), r.meta());
     let q = r.question();
     s.row_author(&native_author!(q), Vec::new());
@@ -138,61 +140,7 @@ pub(super) fn recognize(
         },
     };
     common.threshold = questions::threshold(Some(q.threshold()));
-    let p = r.probabilities();
-    let pieces = p
-        .pieces()
-        .map(|p| PieceV1 {
-            start: p.range().start,
-            end: p.range().end,
-            tags: s.named_probabilities(&p.tags()),
-        })
-        .collect();
-    let (data, len) = s.array(pieces);
-    let pieces = PiecesV1 { data, len };
-    let names = p
-        .names()
-        .map(|p| NameV1 {
-            start: p.range().start,
-            end: p.range().end,
-            kinds: p
-                .kinds()
-                .map(|p| OptionalProbabilitiesV1 {
-                    present: 1,
-                    value: s.named_probabilities(&p),
-                })
-                .unwrap_or_default(),
-            edges: p
-                .edges()
-                .map(|p| OptionalProbabilitiesV1 {
-                    present: 1,
-                    value: s.named_probabilities(&p),
-                })
-                .unwrap_or_default(),
-        })
-        .collect();
-    let (data, len) = s.array(names);
-    let names = NamesV1 { data, len };
-    let pairs = p
-        .pairs()
-        .map(|p| PairV1 {
-            relation: s.string(p.relation()),
-            source: PlaceV1 {
-                start: p.source().start,
-                end: p.source().end,
-            },
-            target: PlaceV1 {
-                start: p.target().start,
-                end: p.target().end,
-            },
-            probability: p.probability(),
-        })
-        .collect();
-    let (data, len) = s.array(pairs);
-    let answer = RecognizeAnswerV1 {
-        pieces,
-        names,
-        pairs: PairsV1 { data, len },
-    };
+    let answer = recognition_answer(s, r);
     s.row_details(
         common,
         r.meta(),
@@ -222,6 +170,8 @@ pub(super) fn relate(
     row: &CompleteRecord<Vec<Original>, CompleteRelated>,
 ) -> Result<RowObservationV1, Failure> {
     let r = row.result();
+    let located = super::located::relations(s, r.source_edges())?;
+    s.7.push(located);
     let mut common = s.original_row(None, r.meta());
     let originals = row
         .original()
@@ -335,4 +285,62 @@ fn relation_members(
             })
         })
         .collect()
+}
+
+fn recognition_answer(s: &mut Storage, r: &CompleteRecognized) -> RecognizeAnswerV1 {
+    let p = r.probabilities();
+    let pieces = p
+        .pieces()
+        .map(|p| PieceV1 {
+            start: p.range().start,
+            end: p.range().end,
+            tags: s.named_probabilities(&p.tags()),
+        })
+        .collect();
+    let (data, len) = s.array(pieces);
+    let pieces = PiecesV1 { data, len };
+    let names = p
+        .names()
+        .map(|p| NameV1 {
+            start: p.range().start,
+            end: p.range().end,
+            kinds: p
+                .kinds()
+                .map(|p| OptionalProbabilitiesV1 {
+                    present: 1,
+                    value: s.named_probabilities(&p),
+                })
+                .unwrap_or_default(),
+            edges: p
+                .edges()
+                .map(|p| OptionalProbabilitiesV1 {
+                    present: 1,
+                    value: s.named_probabilities(&p),
+                })
+                .unwrap_or_default(),
+        })
+        .collect();
+    let (data, len) = s.array(names);
+    let names = NamesV1 { data, len };
+    let pairs = p
+        .pairs()
+        .map(|p| PairV1 {
+            relation: s.string(p.relation()),
+            source: PlaceV1 {
+                start: p.source().start,
+                end: p.source().end,
+            },
+            target: PlaceV1 {
+                start: p.target().start,
+                end: p.target().end,
+            },
+            probability: p.probability(),
+        })
+        .collect();
+    let (data, len) = s.array(pairs);
+    RecognizeAnswerV1 {
+        pieces,
+        names,
+        pairs: PairsV1 { data, len },
+    }
 }
