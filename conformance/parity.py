@@ -164,7 +164,7 @@ def consumer_environment(scratch, port):
              'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD',
              'THINKTHEN_TOOLCHAINS', 'THINKTHEN_DUCKDB_CLI',
              'SQLITE_AMALGAMATION', 'THINKTHEN_PRIVATE_NAMES',
-             'R_LIBS_USER', 'PUB_CACHE')
+             'R_LIBS_USER', 'PUB_CACHE', 'UV_CACHE_DIR')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     for name, fallback in [('CARGO_HOME', '.cargo'), ('RUSTUP_HOME', '.rustup')]:
         env[name] = os.environ.get(name, str(Path.home() / fallback))

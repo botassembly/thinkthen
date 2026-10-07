@@ -145,6 +145,7 @@ class PublicAssertions(unittest.TestCase):
             'THINKTHEN_TEST_PROFILE': 'routine', 'OTHER_API_KEY': 'unrelated-secret',
             'THINKTHEN_TOOLCHAINS': str(Path(scratch) / 'tools'), 'CARGO_BUILD_JOBS': '1',
             'R_LIBS_USER': str(Path(scratch) / 'r-library'), 'PUB_CACHE': str(Path(scratch) / 'pub-cache'),
+            'UV_CACHE_DIR': str(Path(scratch) / 'uv-cache'),
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
@@ -158,6 +159,7 @@ class PublicAssertions(unittest.TestCase):
             self.assertEqual(env['CARGO_BUILD_JOBS'], '1')
             self.assertEqual(env['R_LIBS_USER'], str(Path(scratch) / 'r-library'))
             self.assertEqual(env['PUB_CACHE'], str(Path(scratch) / 'pub-cache'))
+            self.assertEqual(env['UV_CACHE_DIR'], str(Path(scratch) / 'uv-cache'))
             self.assertEqual((Path(env['HOME']) / '.cache/thinkthen-toolchains').resolve(),
                              Path(scratch) / 'tools')
             self.assertFalse((Path(env['HOME']) / '.config').exists())

@@ -93,9 +93,10 @@ Rust-only hosted gate does not qualify the complete support table. The overall
 ticket stays open until the required final checkpoint passes.
 
 Consumers receive owned HOME/XDG directories. Explicit `THINKTHEN_TOOLCHAINS`,
-`R_LIBS_USER` and `PUB_CACHE` paths supply build dependencies without copying
-user configuration. Set `PUB_CACHE` to an owned writable cache when tools
-need to write; do not write a shared cache while holding its read lock.
+`R_LIBS_USER`, `PUB_CACHE` and `UV_CACHE_DIR` paths supply build dependencies
+without copying user configuration. Use owned writable pub and uv caches
+seeded from available offline dependencies; do not write a shared cache while
+holding its read lock.
 The caller's `CARGO_BUILD_JOBS` limit is retained and defaults to one.
 
 Each required declaration has `id`, one of the ten `verb` values, `kind`,
