@@ -18,6 +18,7 @@ def test_complete_surface_is_closed_immediate_and_used_by_eager_and_lazy_calls(m
             body=b'{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}'
             self.send_response(200)
             self.send_header('Content-Length',str(len(body)))
+            self.send_header("Connection", "close")
             self.end_headers()
             self.wfile.write(body)
         def log_message(self,*args): pass

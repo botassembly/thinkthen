@@ -10,18 +10,20 @@ export interface QuestionSource {
   readonly none?: boolean;
 }
 export interface Content { readonly kind: 'text' | 'json' | 'images'; readonly value?: C.JsonValue; }
+export type Context = { readonly kind: 'text'; readonly value: string }
+  | { readonly kind: 'json'; readonly value: C.JsonValue };
 export interface Image { readonly media: 'image/png' | 'image/jpeg'; readonly bytes: readonly number[]; }
 export interface Item {
   readonly content: Content;
   readonly images?: readonly Image[];
-  readonly context?: Content;
+  readonly context?: Context;
   readonly options?: readonly { readonly name: string; readonly description?: C.Description }[];
 }
 export type Input = { readonly kind: 'records'; readonly records: readonly Item[] }
   | { readonly kind: 'files'; readonly paths: readonly string[]; readonly options: {
     readonly reading: { readonly unit: 'line' | 'window' | 'file'; readonly window?: number };
     readonly media: 'text' | 'image'; }; readonly jsonl?: boolean };
-export interface Controls { readonly signal?: globalThis.AbortSignal; readonly deadlineMs?: number; readonly attempts?: boolean; readonly context?: C.QuestionText; }
+export interface Controls { readonly signal?: globalThis.AbortSignal; readonly deadlineMs?: number; readonly attempts?: boolean; readonly context?: string; }
 export interface Completed<R> { readonly results: readonly R[]; readonly facts: C.Facts; readonly ordinals: readonly (number | null)[]; readonly inputs: readonly C.NativeInput[]; }
 export class Functions {
   decideBatch(q:QuestionSource,input:Input,controls?:Controls):Batch<C.DecideResult>;

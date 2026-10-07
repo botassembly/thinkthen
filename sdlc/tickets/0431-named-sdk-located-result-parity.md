@@ -1,6 +1,6 @@
 # 0431: Complete typed located results in existing named SDKs
 
-Status: ready. Planning only; implementation follows accepted ticket review.
+Status: landed. The complete SDK family and installed/archive qualification are complete; final lane checks and coordinator integration use the same landing change. See [0431 record](../records/0431-complete-existing-typed-sdks.md).
 
 Milestone: 0.2
 
@@ -15,7 +15,7 @@ Rust, Python, TypeScript/JavaScript, Ruby and R expose all ten file routes with 
 
 - Starts from: Current main c64b71859; 0405 audit is historical and predates 0377/0420. PM message `2026-10-06-pm-0-2-is-not-done-every-sdk-consistent-and-the-sdk-ready-for-the-proxy.md`, asks 2, 3 and 5.
 - Keeps: Preserve existing bare calls and generic JSON compatibility doors, backend selection from 0377, six error kinds, cancellation, secrecy, count-only usage, and zero-send strict replay. Reuse the Rust engine, C boundary and native file reader; add no host cache, scheduler or second parser.
-- Changes: Every admitted function/input combination is required; function-specific refusals remain explicit. Named calls are decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Known result fields must have typed accessors, including details, probabilities, final facts, annotation states, spans, relation endpoints and located file/first-line/last-line coordinates. Arbitrary caller payloads may remain JSON; known engine fields may not. Explicit question/file variants avoid guessing paths from text. Reuse Rust SourceRecord/read_files and Python FileSelection. Replace known object/raw-JSON holes with validated result carriers. Retain original source occurrences and both relation endpoints.
+- Changes: Every admitted function/input combination is required; function-specific refusals remain explicit. Named calls are decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Known result fields must have typed accessors, including details, probabilities, final facts, annotation states, spans, relation endpoints and located file/first-line/last-line coordinates. Arbitrary caller payloads may remain JSON; known engine fields may not. Explicit question/file variants avoid guessing paths from text. Reuse Rust SourceRecord/read_files and Python FileSelection. Replace known object/raw-JSON holes with validated result carriers. Retain original source occurrences and both relation endpoints. Ownership: `libraries/python/**` `libraries/typescript/**` `libraries/ruby/**` `libraries/r/**` `conformance/consumer/**`.
 - Proof: Use the existing canonical behavior/settings/types/files fixtures through actual named public consumers. Check admitted text, records, files, question files/sets, descriptions, contexts and options; six errors; complete typed results; cache, record and changed-reading replay with counted zero sends. Compile consumers where the language is static; inspect documented carrier accessors where dynamic. Retain duplicate identities, Unicode/CRLF locations, empty/null states and started-failure facts. No paid calls or new evidence system.
 - Defers: Proxy service/screens, unrelated features and Windows Node/C#/JVM packaging remain outside this outcome.
 
