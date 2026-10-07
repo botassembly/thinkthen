@@ -21,8 +21,8 @@ export interface Position {
   readonly images?: readonly (string)[];
 }
 export interface Usage {
-  readonly input_tokens: number;
-  readonly output_tokens: number;
+  readonly input_tokens?: number;
+  readonly output_tokens?: number;
 }
 export interface ProfileWarning {
   readonly tuned_for: string;
@@ -394,6 +394,20 @@ export interface FilterResult {
   readonly source?: PhysicalSource;
   readonly index?: number;
 }
+export interface RankMemberResult {
+  readonly schema: "thinkthen.result/2";
+  readonly answer_id: AnswerId;
+  readonly value: number;
+  readonly question: DecideQuestion;
+  readonly answer: YesNo;
+  readonly threshold: null;
+  readonly meta: Meta;
+  readonly source?: PhysicalSource;
+}
+export interface RankMember {
+  readonly name: string;
+  readonly result: RankMemberResult;
+}
 export interface RankResult {
   readonly schema: "thinkthen.result/2";
   readonly answer_id: AnswerId;
@@ -410,6 +424,7 @@ export interface RankResult {
   readonly last_line?: number;
   readonly source?: PhysicalSource;
   readonly index?: number;
+  readonly members?: readonly RankMember[];
 }
 export interface FindResult {
   readonly schema: "thinkthen.result/2";
@@ -532,6 +547,8 @@ export interface Models {
   ScoreResult: ScoreResult;
   FilterResult: FilterResult;
   RankResult: RankResult;
+  RankMemberResult: RankMemberResult;
+  RankMember: RankMember;
   FindResult: FindResult;
   AnnotateResult: AnnotateResult;
   RecognizeResult: RecognizeResult;

@@ -130,3 +130,24 @@ def test_input_carriers_keep_native_grammar_boundaries():
         if case["valid"]:
             kind = "RelationSpec" if case["verb"] == "relate" else case["verb"].title() + "Spec"
             assert c.to_json(c.decode(kind, case["file"])) == case["file"]
+
+
+def test_rank_members_preserve_order_positions_partial_usage_and_closed_children():
+    parent = copy.deepcopy(FIXTURE['results'][5]['result'])
+    judgment = copy.deepcopy(FIXTURE['results'][0]['result'])
+    child = {k: judgment[k] for k in ('schema', 'answer_id', 'question', 'answer', 'meta')}
+    child.update(value=3, threshold=None, source={'file':'é.txt','first_line':2,'last_line':2})
+    child['meta']['usage'] = {'input_tokens':2}
+    parent.update(question=child['question'],answer=child['answer'],question_name='saved',members=[{'name':'saved','result':child}])
+    ranked = c.decode('RankResult',parent)
+    assert ranked.members[0].result.value == 3
+    assert ranked.members[0].result.meta.usage.output_tokens is c.ABSENT
+    assert ranked.members[0].result.source.first_line == 2
+    assert c.to_json(ranked) == parent
+    for changes in ({'value':0}, {'value':-1}, {'input':False}, {'members':[]}, {'question':{'verb':'score','text':'Q','levels':['x']}}):
+        invalid = copy.deepcopy(parent)
+        invalid['members'][0]['result'].update(changes)
+        with pytest.raises(ValueError,match='invalid'): c.decode('RankResult',invalid)
+    for members in ([],None,[{'name':'saved'}]):
+        with pytest.raises(ValueError,match='invalid'): c.decode('RankResult',{**parent,'members':members})
+    with pytest.raises(ValueError,match='invalid'): c.decode('Usage',{})

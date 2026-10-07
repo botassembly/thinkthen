@@ -1,6 +1,78 @@
 use super::*;
 
 #[test]
+fn valid_v2_without_lookup_index_replays_unchanged_and_writer_indexes_retained_answers() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let place = folder();
+    let question = Question::decide("Refund?").unwrap().cut();
+    let engine = build(&listener).cache_at(&place).unwrap().build().unwrap();
+    let live = engine.details(&question, "Refund me.").unwrap();
+    assert_eq!(listener.count(), 1);
+    drop(engine);
+    let database = place.join("thinkthen.sqlite");
+    let db = Connection::open(&database).unwrap();
+    db.execute_batch("DROP INDEX IF EXISTS answers_route_question_state")
+        .unwrap();
+    let retained = stored_metadata(&db);
+    let saved_answer: String = db
+        .query_row("SELECT answer FROM answers", [], |row| row.get(0))
+        .unwrap();
+    drop(db);
+    let original = std::fs::read(&database).unwrap();
+    let modified = std::fs::metadata(&database).unwrap().modified().unwrap();
+    let replay = build(&listener).replay(&place).unwrap().build().unwrap();
+    let historical = replay.details(&question, "Refund me.").unwrap();
+    assert_eq!(historical.value().value(), live.value().value());
+    assert_eq!(
+        historical.value().observations(),
+        live.value().observations()
+    );
+    assert_eq!(historical.value().requests(), live.value().requests());
+    assert_eq!(
+        historical.value().question_sources()[0].origin(),
+        Origin::Replay
+    );
+    assert_eq!(listener.count(), 1);
+    assert_eq!(std::fs::read(&database).unwrap(), original);
+    assert_eq!(
+        std::fs::metadata(&database).unwrap().modified().unwrap(),
+        modified
+    );
+    drop(replay);
+    let writer = build(&listener).cache_at(&place).unwrap().build().unwrap();
+    let held = writer.details(&question, "Refund me.").unwrap();
+    assert_eq!(held.value().value(), live.value().value());
+    assert_eq!(held.value().observations(), live.value().observations());
+    assert_eq!(held.value().requests(), live.value().requests());
+    assert_eq!(held.value().question_sources()[0].origin(), Origin::Cache);
+    assert_eq!(listener.count(), 1);
+    let db = Connection::open(&database).unwrap();
+    let columns: Vec<String> = db
+        .prepare("PRAGMA index_info(answers_route_question_state)")
+        .unwrap()
+        .query_map([], |row| row.get(2))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(columns, ["url", "model", "question", "state"]);
+    assert_eq!(stored_metadata(&db), retained);
+    assert_eq!(
+        db.query_row("SELECT answer FROM answers", [], |row| row
+            .get::<_, String>(0))
+            .unwrap(),
+        saved_answer
+    );
+    assert_eq!(
+        db.query_row("PRAGMA user_version", [], |row| row.get::<_, u32>(0))
+            .unwrap(),
+        2
+    );
+    drop(db);
+    drop(writer);
+    std::fs::remove_dir_all(place).unwrap();
+}
+
+#[test]
 fn differing_reported_models_never_reuse_online_and_ambiguous_history_refuses_offline() {
     let responses = AtomicUsize::new(0);
     let listener = Listener::answering(move |_| {

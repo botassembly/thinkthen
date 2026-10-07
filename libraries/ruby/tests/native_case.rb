@@ -23,6 +23,12 @@ begin
   end
   raise 'native identity' unless done.facts.call_id.is_a?(ThinkThen.const_get(:Complete)::CallId)
   c = ThinkThen.const_get(:Complete)
+  done.results.each do |r|
+    next unless r.is_a?(c::RankResult) && !r.members.equal?(c::ABSENT)
+    r.members.each do |m|
+      raise 'native rank member' unless m.is_a?(c::RankMember) && m.result.is_a?(c::RankMemberResult) && m.result.answer_id.is_a?(c::AnswerId) && m.result.value.positive? && m.result.question.is_a?(c::DecideQuestion) && m.result.answer.is_a?(c::YesNo) && m.result.meta.is_a?(c::Meta)
+    end
+  end
   puts JSON.generate({results:done.results.map { |r| c.to_json_value(r) }, facts:c.to_json_value(done.facts), ordinals:done.ordinals, inputs:done.inputs.map { |i| c.to_json_value(i) }})
 rescue ThinkThen::Error => error
   if error.complete

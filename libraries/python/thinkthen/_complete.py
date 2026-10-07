@@ -46,8 +46,8 @@ class Position(Carrier):
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class Usage(Carrier):
-    input_tokens: int
-    output_tokens: int
+    input_tokens: int | Absent = ABSENT
+    output_tokens: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class ProfileWarning(Carrier):
@@ -469,6 +469,22 @@ class FilterResult(Carrier):
     index: int | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
+class RankMemberResult(Carrier):
+    schema: Literal['thinkthen.result/2']
+    answer_id: AnswerId
+    value: int
+    question: DecideQuestion
+    answer: YesNo
+    threshold: None
+    meta: Meta
+    source: PhysicalSource | Absent = ABSENT
+
+@dataclass(frozen=True, repr=False, kw_only=True)
+class RankMember(Carrier):
+    name: str
+    result: RankMemberResult
+
+@dataclass(frozen=True, repr=False, kw_only=True)
 class RankResult(Carrier):
     schema: Literal['thinkthen.result/2']
     answer_id: AnswerId
@@ -486,6 +502,7 @@ class RankResult(Carrier):
     source: PhysicalSource | Absent = ABSENT
 
     index: int | Absent = ABSENT
+    members: tuple[RankMember, ...] | Absent = ABSENT
 
 @dataclass(frozen=True, repr=False, kw_only=True)
 class FindResult(Carrier):
@@ -681,6 +698,9 @@ def decode(kind, value):
 
 
 def _check(kind, value):
+    if kind == "Usage" and not value: _invalid()
+    if kind == "RankResult" and "members" in value:
+        if not value["members"] or "question_name" not in value or value["question"]["verb"] != "decide" or value["answer"]["kind"] != "yes_no": _invalid()
     cut_only = ("ChooseSpec", "TagSpec", "ChooseMember", "TagMember", "RecognitionSpec", "RelationSpec", "TagResult", "FilterResult", "RecognizeQuestion", "RelateQuestion")
     if kind in cut_only:
         for key in ("threshold", "relation_threshold"):
@@ -1005,7 +1025,7 @@ PropertyDeclaration = StringDeclaration | NumberDeclaration | BooleanDeclaration
 
 _MODELS = {
     'Position': {'file?': 'str', 'first?': 'positive', 'last?': 'positive', 'images?': '[str]'},
-    'Usage': {'input_tokens': 'uint', 'output_tokens': 'uint'},
+    'Usage': {'input_tokens?': 'uint', 'output_tokens?': 'uint'},
     'ProfileWarning': {'tuned_for': 'str', 'running': 'str'},
     'BatchWarning': {'tuned_for': 'batch', 'running': 'batch'},
     'Attempt': {'ordinal': 'positive', 'request_sha256': 'Digest', 'wall_ms': 'uint', 'outcome': 'outcome', 'sdk_request_id': 'SdkRequestId', 'status?': 'uint', 'server_ms?': 'uint', 'request_id?': 'str'},
@@ -1050,7 +1070,9 @@ _MODELS = {
     'TagResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': '[str]', 'question': 'TagQuestion', 'answer': 'Tags', 'threshold': 'threshold', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'index?': 'uint'},
     'ScoreResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'number', 'question': 'ScoreQuestion', 'answer': 'Score', 'threshold': 'null', 'input?': 'json', 'position?': 'Position', 'input_file?': 'str', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'images?': '[NativeImage]', 'index?': 'uint'},
     'FilterResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'bool', 'input': 'json', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'threshold', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'index?': 'uint'},
-    'RankResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'positive', 'input': 'json', 'question': 'AtomicQuestion', 'answer': 'AtomicAnswer', 'threshold': 'null', 'question_name?': 'str', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'index?': 'uint'},
+    'RankMemberResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'value': 'positive', 'question': 'DecideQuestion', 'answer': 'YesNo', 'threshold': 'null', 'meta': 'Meta', 'source?': 'PhysicalSource'},
+    'RankMember': {'name': 'str', 'result': 'RankMemberResult'},
+    'RankResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'positive', 'input': 'json', 'question': 'AtomicQuestion', 'answer': 'AtomicAnswer', 'threshold': 'null', 'question_name?': 'str', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'source?': 'PhysicalSource', 'index?': 'uint', 'members?': '[RankMember]'},
     'FindResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'json', 'question': 'FindQuestion', 'answer': 'FindAnswer', 'threshold': 'null', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'index?': 'uint|null', 'candidates?': '[FindCandidate]'},
     'AnnotateResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'input': 'json', 'value': '{AnnotatedValue}', 'answers': '{AnnotationEntry}', 'position?': 'Position', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'index?': 'uint', 'source?': 'PhysicalSource'},
     'RecognizeResult': {'schema': '=thinkthen.result/2', 'answer_id': 'AnswerId', 'meta': 'Meta', 'value': 'Recognition', 'question': 'RecognizeQuestion', 'answer': 'RecognitionAnswer', 'input?': 'json', 'file?': 'str', 'first_line?': 'positive', 'last_line?': 'positive', 'index?': 'uint', 'source?': 'PhysicalSource'},

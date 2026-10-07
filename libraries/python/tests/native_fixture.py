@@ -48,6 +48,7 @@ def project(packet,verb):
         if e.get('stopped',{}).get('at') is not None:out['stopped_at']=e['stopped']['at']
         return out
     facts=packet['facts'];out={'code':0,'schema':'thinkthen.result/2','call_id':facts['call_id'],'requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'rows':[]}
+    out.update({k:facts[k] for k in ('records','input_tokens','output_tokens') if k in facts})
     results=packet['results'] if isinstance(packet['results'],list) else [packet['results']]
     for at,r in enumerate(results):
         meta=r['meta'];v=r['value'];answer=r.get('answer',{})
@@ -67,6 +68,19 @@ def project(packet,verb):
         if images:
             row['images']=[base64.b64decode(im['base64']).hex() for im in images]
             row['image_properties']=[[1 if im['media']=='image/jpeg' else 2,im['width'],im['height']] for im in images]
+        if 'members' in r:
+            row.update(question_name=r['question_name'],usage=meta['usage'],model=meta['model'],context_digest=meta.get('context_sha256'),source_batch_sizes=[s['batch_size'] for s in meta['question_sources']])
+            row['members']=[]
+            for member in r['members']:
+                child=member['result'];cm=child['meta'];cq=child['question']
+                projected={'name':member['name'],'value':child['value'],'answer_id':child['answer_id'],
+                    'author':cq['name'],'probability':child['answer']['probability'],'usage':cm['usage'],
+                    'model':cm['model'],'context_digest':cm.get('context_sha256'),
+                    'source_batch_sizes':[s['batch_size'] for s in cm['question_sources']],
+                    'observations':len(cm['observations']),'sources':len(cm['question_sources'])}
+                if 'wording_version' in cq:projected['wording_version']=cq['wording_version']
+                if 'source' in child:projected['source']=child['source']
+                row['members'].append(projected)
         out['rows'].append(row)
     return out
 
@@ -93,6 +107,8 @@ def assert_required(packet,row,value,bodies,root):
             if 'required_properties' in expect:assert question['item_schema']['required']==expect['required_properties']
         # Complete records retain caller originals; selected evidence is pinned below.
         if 'selected_item' in expect:assert result['input']==packet['inputs'][0]['original'],(result,packet)
+    if 'capture_request' in expect:
+        assert [json.loads(body) for body in bodies]==[expect['capture_request']],(bodies,expect)
     if 'per_item_context' in expect:
         want=expect['per_item_context']
         if want=='':want='Each question quotes the text it asks about.'
@@ -123,7 +139,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
     source=Path(command[-1])
     compiler=None
     if consumer in ('python','pandas','python-polars'):
-        compiler=[sys.executable,'-m','mypy','--strict','--python-executable',command[0],str(source.with_name('native_types.py'))]
+        compiler=[sys.executable,'-m','mypy','--strict','--python-executable',command[0],str(source.with_name('native_types.py' if consumer=='python' else 'native_frame_types.py'))]
     elif consumer=='typescript':
         compiler=[command[0],str(root/'libraries/typescript/target/npm/node_modules/typescript/bin/tsc'),'--strict','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','--rootDir',str(source.parent),'--outDir',str(source.parent),str(source.with_suffix('.ts'))]
     elif consumer=='rust':
@@ -204,7 +220,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
                             assert 'sk-conformance-loopback' not in child.stdout
                             packet=json.loads(child.stdout)
                             if packet.get('facts') is not None:assert packet['facts']['requests_sent']==int(backend.read('count'))-invocation_count,(packet,invocation_count)
-                            needs_body=any(key in step['expect'] for key in ('selected_item','per_item_context'))
+                            needs_body=any(key in step['expect'] for key in ('selected_item','per_item_context','capture_request'))
                             bodies=json.loads(backend.read('capture'))['bodies'] if needs_body else []
                             assert_required(packet,row,step,bodies,root)
                             return project(packet,step['verb'])
@@ -247,7 +263,10 @@ def run(consumer, command, root, extra_env=None, settings_names=None):
 if __name__=='__main__':
     import os,sys
     root=Path(__file__).resolve().parents[3]
-    failures=run('python',[sys.executable,str(root/'libraries/python/tests/native_case.py')],root,{'PYTHONPATH':str(root/'libraries/python')})
-    for consumer,library in [('pandas','pandas'),('python-polars','polars')]:
-        failures += run(consumer,[sys.executable,str(root/'libraries/python/tests/native_frame_case.py')],root,{'PYTHONPATH':str(root/'libraries/python'),'THINKTHEN_FRAME_LIBRARY':library})
+    library=os.environ.get('THINKTHEN_FRAME_LIBRARY')
+    if library is None:
+        failures=run('python',[sys.executable,str(root/'libraries/python/tests/native_case.py')],root,{'PYTHONPATH':str(root/'libraries/python')})
+    else:
+        consumer={'pandas':'pandas','polars':'python-polars'}[library]
+        failures=run(consumer,[sys.executable,str(root/'libraries/python/tests/native_frame_case.py')],root,{'PYTHONPATH':str(root/'libraries/python'),'THINKTHEN_FRAME_LIBRARY':library})
     sys.exit(bool(failures))

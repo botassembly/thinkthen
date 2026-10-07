@@ -49,6 +49,13 @@ def main():
             done=methods[document['verb']](question,source,token=token,deadline_ms=document.get('deadline_ms'),attempts=True,context=document.get('shared_context'))
         assert isinstance(done.facts.call_id,c.CallId)
         assert all(isinstance(r.answer_id,c.AnswerId) for r in done.results)
+        for result in done.results:
+            if isinstance(result,c.RankResult) and result.members is not c.ABSENT:
+                for member in result.members:
+                    assert isinstance(member,c.RankMember) and isinstance(member.result,c.RankMemberResult)
+                    assert isinstance(member.result.answer_id,c.AnswerId)
+                    assert member.result.value>0 and isinstance(member.result.answer,c.YesNo)
+                    assert isinstance(member.result.question,c.DecideQuestion) and isinstance(member.result.meta,c.Meta)
         packet={'results':[c.to_json(r) for r in done.results],'facts':c.to_json(done.facts),'ordinals':done.ordinals,'inputs':[c.to_json(i) for i in done.inputs]}
         print(json.dumps(packet,separators=(',',':'),ensure_ascii=False))
     except ThinkThenError as error:

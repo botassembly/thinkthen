@@ -27,6 +27,11 @@ tryCatch({
   } else done <- method(document$question, document$input, attempts = TRUE, deadline_ms = document$deadline_ms,cancel=isTRUE(document$cancel),context=document$shared_context)
   stopifnot(inherits(done$facts$call_id,"thinkthen_CallId"))
   plain <- get(".tt_complete_plain",asNamespace("thinkthen"))
+  for (result in done$results) {
+    if (inherits(result,"thinkthen_RankResult") && !inherits(result$members,"thinkthen_absent")) {
+      for (member in result$members) stopifnot(inherits(member,"thinkthen_RankMember"),inherits(member$result,"thinkthen_RankMemberResult"),inherits(member$result$answer_id,"thinkthen_AnswerId"),member$result$value>0,inherits(member$result$question,"thinkthen_DecideQuestion"),inherits(member$result$answer,"thinkthen_YesNo"),inherits(member$result$meta,"thinkthen_Meta"))
+    }
+  }
   packet <- list(results = lapply(done$results,plain), facts=plain(done$facts), ordinals=done$ordinals, inputs=lapply(done$inputs,plain))
   cat(jsonlite::toJSON(packet,auto_unbox=TRUE,null="null",digits=NA))
 }, error=function(e) {

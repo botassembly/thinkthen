@@ -169,7 +169,11 @@ fn run_inner(
 ) -> Result<(Output, Facts), Fault> {
     Ok(match ask {
         Ask::Complete(request) => {
-            let (value, facts) = complete::execute(engine, complete::parse(&request)?, options)?;
+            let (value, facts) = complete::execute(
+                engine,
+                complete::parse(&request)?,
+                options.surface(thinkthen::Surface::Ruby),
+            )?;
 
             (Output::Json(value), facts)
         }

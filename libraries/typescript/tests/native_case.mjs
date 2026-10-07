@@ -28,6 +28,9 @@ try {
     done={results:prefix.map(r=>r.result),facts:batch.facts,ordinals:prefix.map(r=>r.ordinal),inputs:prefix.map(r=>r.input)};
   } else done=await methods[document.verb](document.question,document.input,controls);
   if (done.facts.call_id.length !== 64 || done.results.some(r=>r.answer_id.length!==64)) throw new Error('native identity');
+  for(const result of done.results) for(const member of result.members??[]) {
+    if(typeof member.name!=='string'||member.result.answer_id.length!==64||member.result.value<=0||member.result.question.verb!=='decide'||member.result.answer.kind!=='yes_no'||!member.result.meta) throw new Error('native rank member');
+  }
   console.log(JSON.stringify(done));
 } catch (error) {
   if (!(error instanceof tt.ThinkThenError)) throw error;
