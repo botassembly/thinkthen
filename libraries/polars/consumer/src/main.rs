@@ -153,12 +153,13 @@ fn run(f: Fixture) -> Result<String, Error> {
         options
     };
     let asked = complete::questions::load(&request.verb, request.question)?;
-    let inputs = complete::inputs::read(
-        &engine,
+    let inputs = complete::inputs::prepare(
+        (!f.incremental).then_some(&engine),
         request.input,
         asked.reading(),
         request.verb == "annotate",
-    )?;
+    )?
+    .collect::<Result<Vec<_>, _>>()?;
     let column = Series::new(
         "original".into(),
         inputs

@@ -181,13 +181,24 @@ pub(crate) fn iter<'a>(
     reading: Option<&RecordReading>,
     annotation: bool,
 ) -> Result<Rows<'a>, Error> {
+    prepare(Some(engine), input, reading, annotation)
+}
+// Frame batches prepare their actual column before native pulling owns admission.
+pub(crate) fn prepare<'a>(
+    engine: Option<&'a Engine>,
+    input: Input,
+    reading: Option<&RecordReading>,
+    annotation: bool,
+) -> Result<Rows<'a>, Error> {
     let reading = reading
         .cloned()
         .unwrap_or(RecordReading::new(&[], None, None)?);
     Ok(match input.kind {
         InputKind::Records => Box::new(input.records.into_iter().enumerate().map(
             move |(at, item)| {
-                engine.check_record_limit(at)?;
+                if let Some(engine) = engine {
+                    engine.check_record_limit(at)?;
+                }
                 compose(item, &reading, annotation)
             },
         )),
@@ -199,7 +210,9 @@ pub(crate) fn iter<'a>(
                     .ok_or_else(|| super::usage("files require reader options"))?,
             )?;
             Box::new(sources.enumerate().map(move |(at, item)| {
-                engine.check_record_limit(at)?;
+                if let Some(engine) = engine {
+                    engine.check_record_limit(at)?;
+                }
                 source(item?, &reading, input.jsonl, annotation)
             }))
         }
